@@ -1,0 +1,35 @@
+# 开发环境配置
+server:
+  name: "RuoYi-Next-Dev"
+  host: "0.0.0.0"
+  port: 8080
+  mode: "debug"
+
+database:
+  host: "postgres"
+  port: 5432
+  user: "ruoyi"
+  password: "ruoyi123"
+  dbname: "ruoyi_next"
+  sslmode: "disable"
+  max_open_conns: 10
+  max_idle_conns: 5
+  max_lifetime: 1800
+
+redis:
+  host: "redis"
+  port: 6379
+  password: ""
+  db: 0
+  pool_size: 5
+
+jwt:
+  secret_key: "ruoyi-next-dev-secret-key"
+  access_key_expire: 3600
+  refresh_key_expire: 86400
+  issuer: "RuoYi-Next-Dev"
+
+log:
+  level: "debug"
+  format: "text"
+  output: "stdout"

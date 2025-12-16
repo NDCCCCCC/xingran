@@ -1,0 +1,39 @@
+# 服务器配置
+server:
+  name: "RuoYi-Next"
+  host: "0.0.0.0"
+  port: 9000
+  mode: "debug"  # debug, release, test
+
+# 数据库配置 - PostgreSQL
+database:
+  host: "10.62.10.34"
+  port: 5432
+  user: "postgres"
+  password: "Cpic1234"
+  dbname: "ruoyi"
+  sslmode: "disable"
+  max_open_conns: 10
+  max_idle_conns: 5
+  max_lifetime: 1800
+
+# Redis配置 - 开发环境
+redis:
+  host: "10.62.10.34"
+  port: 6379
+  password: ")(PO09po"
+  db: 0
+  pool_size: 10
+
+# JWT配置
+jwt:
+  secret_key: "ruoyi-next-secret-key-please-change-in-production"
+  access_key_expire: 7200   # 访问令牌过期时间（秒）
+  refresh_key_expire: 604800  # 刷新令牌过期时间（秒）
+  issuer: "RuoYi-Next"
+
+# 日志配置
+log:
+  level: "info"  # debug, info, warn, error
+  format: "json"  # json, text
+  output: "stdout"  # stdout, stderr, file

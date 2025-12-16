@@ -1,0 +1,61 @@
+package models
+
+import (
+	"time"
+)
+
+// User 用户模型
+type User struct {
+	BaseModel
+	Username      string     `gorm:"uniqueIndex;size:64;not null" json:"username"`
+	Password      string     `gorm:"size:128;not null" json:"-"`
+	Salt          string     `gorm:"size:64;not null" json:"-"`
+	Nickname      *string    `gorm:"size:64" json:"nickname,omitempty"`
+	Email         *string    `gorm:"size:128" json:"email,omitempty"`
+	Phone         *string    `gorm:"size:32" json:"phone,omitempty"`
+	Avatar        *string    `gorm:"size:255" json:"avatar,omitempty"`
+	Gender        Gender     `gorm:"default:0" json:"gender"`
+	Status        UserStatus `gorm:"default:1" json:"status"`
+	DeptID        *string    `gorm:"size:64" json:"deptId,omitempty"`
+	DeptName      *string    `gorm:"size:64" json:"deptName,omitempty"`
+	LoginIP       *string    `gorm:"size:128" json:"loginIp,omitempty"`
+	LoginTime     *time.Time `json:"loginTime,omitempty"`
+	PwdUpdateTime *time.Time `json:"pwdUpdateTime,omitempty"`
+	PwdExpireDays int        `gorm:"default:90" json:"pwdExpireDays"`
+	InitFlag      bool       `gorm:"default:false" json:"initFlag"`
+	Remark        string     `gorm:"size:500" json:"remark,omitempty"`
+
+	// 关联
+	Roles       []string     `gorm:"-" json:"roles"`  // 简化为字符串数组，避免复杂关联
+	Posts       []Post       `gorm:"many2many:user_posts;" json:"posts,omitempty"`
+	Department  *Department  `gorm:"foreignKey:DeptID" json:"department,omitempty"`
+}
+
+// UserRole 用户角色关联
+type UserRole struct {
+	UserID    string    `gorm:"type:uuid;not null" json:"userId"`
+	RoleID    string    `gorm:"type:uuid;not null" json:"roleId"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+// UserPost 用户岗位关联
+type UserPost struct {
+	UserID    string    `gorm:"type:uuid;not null" json:"userId"`
+	PostID    string    `gorm:"type:uuid;not null" json:"postId"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+// TableName 设置表名
+func (User) TableName() string {
+	return "sys_user"
+}
+
+// TableName 设置表名
+func (UserRole) TableName() string {
+	return "sys_user_role"
+}
+
+// TableName 设置表名
+func (UserPost) TableName() string {
+	return "sys_user_post"
+}

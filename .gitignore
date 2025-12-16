@@ -1,0 +1,58 @@
+# 编译生成的二进制文件
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# 临时文件
+*.tmp
+*.temp
+.cache/
+
+# 环境变量文件
+.env
+.env.local
+.env.*.local
+
+# IDE 和编辑器生成的文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# 日志文件
+logs/
+*.log
+
+# Go 构建缓存
+build/
+*.a
+*.o
+
+# Go 依赖管理
+go.work.sum
+
+# 测试覆盖率文件
+coverage.out
+coverage.html
+
+# 数据库文件（如果有）
+*.db
+*.sqlite
+*.sqlite3
+
+# 密码和密钥文件
+*.pem
+*.key
+*.crt
+
+# 备份文件
+*.bak
+*.backup
+
+# 生产配置文件
+configs/config.prod.yaml
