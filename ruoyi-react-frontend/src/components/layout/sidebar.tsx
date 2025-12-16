@@ -84,14 +84,14 @@ const Sidebar: React.FC = () => {
     >
       <div className="h-16 flex items-center justify-center border-b border-gray-700">
         <h1
-          className={`text-xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent ${
+          className={`text-xl font-bold bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent ${
             collapsed ? 'hidden' : 'block'
           }`}
         >
           RuoYi Next
         </h1>
         {collapsed && (
-          <span className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">R</span>
+          <span className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">R</span>
         )}
       </div>
 

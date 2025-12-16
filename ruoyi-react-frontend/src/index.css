@@ -110,13 +110,32 @@ html, body {
   /* 暗色菜单样式 */
   .ant-menu-dark {
     background: transparent;
+    color: #f1f5f9;
+  }
+
+  .ant-menu-dark .ant-menu-item {
+    color: #cbd5e1;
   }
 
   .ant-menu-dark .ant-menu-item-selected {
     @apply bg-blue-600;
+    color: white !important;
   }
 
   .ant-menu-dark .ant-menu-item:hover {
     @apply bg-gray-700;
+    color: white;
+  }
+
+  .ant-menu-dark .ant-menu-submenu-title {
+    color: #cbd5e1;
+  }
+
+  .ant-menu-dark .ant-menu-submenu-title:hover {
+    color: white;
+  }
+
+  .ant-menu-dark .ant-menu-submenu-open > .ant-menu-submenu-title {
+    color: white;
   }
 }
