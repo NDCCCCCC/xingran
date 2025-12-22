@@ -34,10 +34,10 @@ function getItem(
 const menuItems: MenuItem[] = [
   getItem('仪表盘', '/dashboard', <DashboardOutlined />),
   getItem('系统管理', '/system', <SettingOutlined />, [
-    getItem('用户管理', '/system/users', <UserOutlined />),
-    getItem('角色管理', '/system/roles', <TeamOutlined />),
-    getItem('菜单管理', '/system/menus', <MenuOutlined />),
-    getItem('部门管理', '/system/depts', <TeamOutlined />),
+    getItem('用户管理', '/system/user', <UserOutlined />),
+    getItem('角色管理', '/system/role', <TeamOutlined />),
+    getItem('菜单管理', '/system/menu', <MenuOutlined />),
+    getItem('部门管理', '/system/dept', <TeamOutlined />),
     getItem('岗位管理', '/system/posts', <UserOutlined />),
     getItem('字典管理', '/system/dicts', <FileTextOutlined />),
     getItem('参数配置', '/system/configs', <SettingOutlined />),

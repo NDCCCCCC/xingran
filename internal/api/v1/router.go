@@ -5,25 +5,6 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 )
 
-// SetupUserRouter 设置用户路由
-func SetupUserRouter(r *gin.RouterGroup, core *core.Core) {
-	// TODO: 实现用户管理路由
-}
-
-// SetupRoleRouter 设置角色路由
-func SetupRoleRouter(r *gin.RouterGroup, core *core.Core) {
-	// TODO: 实现角色管理路由
-}
-
-// SetupMenuRouter 设置菜单路由
-func SetupMenuRouter(r *gin.RouterGroup, core *core.Core) {
-	// TODO: 实现菜单管理路由
-}
-
-// SetupDeptRouter 设置部门路由
-func SetupDeptRouter(r *gin.RouterGroup, core *core.Core) {
-	// TODO: 实现部门管理路由
-}
 
 // SetupPostRouter 设置岗位路由
 func SetupPostRouter(r *gin.RouterGroup, core *core.Core) {

@@ -1,0 +1,12 @@
+uid=3_0 RootWebArea "ruoyi-react-frontend"
+  uid=3_1 heading "RuoYi Next" level="1"
+  uid=3_2 StaticText "企业级权限管理系统"
+  uid=3_3 image "user"
+  uid=3_4 textbox "用户名" description="请输入用户名" invalid="true" required
+  uid=3_5 StaticText "请输入用户名"
+  uid=3_6 image "lock"
+  uid=3_7 textbox "密码" description="请输入密码" invalid="true" required
+  uid=3_8 image "eye-invisible"
+  uid=3_9 StaticText "请输入密码"
+  uid=3_10 button "登 录"
+  uid=3_11 StaticText "默认账号：admin / admin123"

@@ -14,7 +14,7 @@ import (
 type Config struct {
 	Server   ServerConfig   `mapstructure:"server"`
 	Database DatabaseConfig `mapstructure:"database"`
-	Redis    RedisConfig    `mapstructure:"redis"`
+	Cache    CacheConfig    `mapstructure:"cache"`
 	JWT      JWTConfig      `mapstructure:"jwt"`
 	Log      LogConfig      `mapstructure:"log"`
 }
@@ -40,13 +40,16 @@ type DatabaseConfig struct {
 	MaxLifetime  int    `mapstructure:"max_lifetime"`
 }
 
-// RedisConfig Redis配置
-type RedisConfig struct {
-	Host     string `mapstructure:"host"`
-	Port     int    `mapstructure:"port"`
-	Password string `mapstructure:"password"`
-	DB       int    `mapstructure:"db"`
-	PoolSize int    `mapstructure:"pool_size"`
+// CacheConfig 缓存配置
+type CacheConfig struct {
+	Type        string `mapstructure:"type"`        // redis, memory
+	Host        string `mapstructure:"host"`
+	Port        int    `mapstructure:"port"`
+	Password    string `mapstructure:"password"`
+	DB          int    `mapstructure:"db"`
+	PoolSize    int    `mapstructure:"pool_size"`
+	MaxSize     int    `mapstructure:"max_size"`
+	CleanupTime int    `mapstructure:"cleanup_time"`
 }
 
 // JWTConfig JWT配置
@@ -55,6 +58,9 @@ type JWTConfig struct {
 	AccessKeyExpire  int    `mapstructure:"access_key_expire"`
 	RefreshKeyExpire int    `mapstructure:"refresh_key_expire"`
 	Issuer           string `mapstructure:"issuer"`
+	UseSM2           bool   `mapstructure:"use_sm2"`           // 是否使用SM2算法
+	SM2PrivateKey    string `mapstructure:"sm2_private_key"`  // SM2私钥(十六进制)
+	SM2PublicKey     string `mapstructure:"sm2_public_key"`   // SM2公钥(十六进制)
 }
 
 // LogConfig 日志配置
@@ -147,12 +153,15 @@ func setDefaults() {
 	viper.SetDefault("database.max_idle_conns", 10)
 	viper.SetDefault("database.max_lifetime", 3600)
 
-	// Redis默认配置
-	viper.SetDefault("redis.host", "localhost")
-	viper.SetDefault("redis.port", 6379)
-	viper.SetDefault("redis.password", "")
-	viper.SetDefault("redis.db", 0)
-	viper.SetDefault("redis.pool_size", 10)
+	// 缓存默认配置
+	viper.SetDefault("cache.type", "memory")
+	viper.SetDefault("cache.host", "localhost")
+	viper.SetDefault("cache.port", 6379)
+	viper.SetDefault("cache.password", "")
+	viper.SetDefault("cache.db", 0)
+	viper.SetDefault("cache.pool_size", 10)
+	viper.SetDefault("cache.max_size", 1000)
+	viper.SetDefault("cache.cleanup_time", 600)
 
 	// JWT默认配置
 	viper.SetDefault("jwt.secret_key", "ruoyi-next-secret-key")
@@ -173,6 +182,6 @@ func (c *DatabaseConfig) GetDSN() string {
 }
 
 // GetRedisAddr 获取Redis地址
-func (c *RedisConfig) GetRedisAddr() string {
+func (c *CacheConfig) GetRedisAddr() string {
 	return fmt.Sprintf("%s:%d", c.Host, c.Port)
 }

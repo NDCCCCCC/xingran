@@ -1,3 +1,5 @@
+// Package security 提供安全相关功能
+// 包括密码哈希、JWT管理、国密算法支持等
 package security
 
 import (
@@ -5,32 +7,34 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"fmt"
+	"strconv"
+	"strings"
 
-	"golang.org/x/crypto/argon2"
+	"github.com/tjfoc/gmsm/sm3"
 )
 
 // PasswordConfig 密码配置
+// 定义密码哈希算法的参数配置
 type PasswordConfig struct {
-	Time    uint32
-	Memory  uint32
-	Threads uint8
-	KeyLen  uint32
+	Iterations int  // PBKDF2迭代次数，影响哈希强度和计算时间
+	SaltLength int  // 盐值长度，用于防止彩虹表攻击
 }
 
 // DefaultPasswordConfig 默认密码配置
+// 提供安全且性能平衡的默认配置
 var DefaultPasswordConfig = &PasswordConfig{
-	Time:    3,       // 迭代次数
-	Memory:  64 * 1024, // 内存使用量 (64MB)
-	Threads: 4,       // 线程数
-	KeyLen:  32,      // 密钥长度
+	Iterations: 1000,   // SM3-PBKDF2推荐迭代次数，兼顾安全性和性能
+	SaltLength: 16,     // 128位盐值，提供足够的随机性
 }
 
 // PasswordManager 密码管理器
+// 提供密码哈希、验证等安全功能，基于国密SM3算法
 type PasswordManager struct {
-	config *PasswordConfig
+	config *PasswordConfig  // 密码配置参数
 }
 
 // NewPasswordManager 创建密码管理器
+// 如果未提供配置，则使用默认配置
 func NewPasswordManager(config *PasswordConfig) *PasswordManager {
 	if config == nil {
 		config = DefaultPasswordConfig
@@ -38,72 +42,117 @@ func NewPasswordManager(config *PasswordConfig) *PasswordManager {
 	return &PasswordManager{config: config}
 }
 
+// pbkdf2SM3 基于SM3的PBKDF2实现
+// 使用国密SM3算法作为伪随机函数(PRF)，实现PBKDF2密钥派生
+// 参数：
+//   - password: 原始密码
+//   - salt: 盐值
+//   - iterations: 迭代次数
+//   - keyLen: 期望的密钥长度
+// 算法流程：
+//   1. U1 = SM3(password || salt || 00000001)
+//   2. U2 = SM3(U1)
+//   3. ...
+//   4. result = U1 XOR U2 XOR ... XOR Uc
+func (pm *PasswordManager) pbkdf2SM3(password, salt []byte, iterations, keyLen int) []byte {
+	// 初始化数据块和结果
+	block := make([]byte, 32)  // SM3输出长度为32字节
+	result := make([]byte, keyLen)
+
+	// 构造初始数据块：password || salt || 计数器(00000001)
+	blockData := append(password, salt...)
+	blockData = append(blockData, 0x00, 0x00, 0x00, 0x01)
+
+	// 第一次迭代：计算U1
+	h := sm3.New()
+	h.Write(blockData)
+	copy(block, h.Sum(nil))
+	copy(result, block)  // 初始化结果为U1
+
+	// 后续迭代：计算U2到Uc
+	for i := 1; i < iterations; i++ {
+		h.Reset()
+		h.Write(block)       // 上一次的结果作为输入
+		block = h.Sum(nil)   // 计算新的Ui
+
+		// XOR累加：result = result XOR Ui
+		for j := 0; j < keyLen && j < len(block); j++ {
+			result[j] ^= block[j]
+		}
+	}
+
+	return result
+}
+
 // HashPassword 哈希密码
+// 使用国密SM3-PBKDF2算法对密码进行安全哈希
+// 返回格式：$sm3$iterations$salt$hash
 func (pm *PasswordManager) HashPassword(password string) (string, error) {
-	// 生成随机盐
-	salt := make([]byte, 16)
+	// 1. 生成随机盐值
+	salt := make([]byte, pm.config.SaltLength)
 	if _, err := rand.Read(salt); err != nil {
 		return "", fmt.Errorf("生成盐失败: %w", err)
 	}
 
-	// 使用Argon2哈希密码
-	hash := argon2.IDKey([]byte(password), salt, pm.config.Time, pm.config.Memory, pm.config.Threads, pm.config.KeyLen)
+	// 2. 使用SM3进行PBKDF2迭代哈希
+	hash := pm.pbkdf2SM3([]byte(password), salt, pm.config.Iterations, 32)
 
-	// 编码为Base64
+	// 3. 编码为Base64格式，便于存储
 	b64Salt := base64.RawStdEncoding.EncodeToString(salt)
 	b64Hash := base64.RawStdEncoding.EncodeToString(hash)
 
-	// 组合格式: $argon2id$v=19$m=65536,t=3,p=4$<salt>$<hash>
-	format := "$argon2id$v=%d$m=%d,t=%d,p=%d$%s$%s"
-	return fmt.Sprintf(format, argon2.Version, pm.config.Memory, pm.config.Time, pm.config.Threads, b64Salt, b64Hash), nil
+	// 4. 组合存储格式：$sm3$iterations$salt$hash
+	// 便于解析和验证，同时包含所有必要信息
+	format := "$sm3$%d$%s$%s"
+	return fmt.Sprintf(format, pm.config.Iterations, b64Salt, b64Hash), nil
 }
 
 // VerifyPassword 验证密码
+// 验证明文密码是否与存储的哈希值匹配
 func (pm *PasswordManager) VerifyPassword(password, hash string) (bool, error) {
-	// 解析哈希格式
-	var version int
-	var memory, time uint32
-	var threads uint8
-	var salt, hashBytes []byte
-
-	_, err := fmt.Sscanf(hash, "$argon2id=v=%d&m=%d,t=%d,p=%d$%x$%x",
-		&version, &memory, &time, &threads, &salt, &hashBytes)
-	if err != nil {
-		// 尝试解析Base64格式
-		var saltStr, hashStr string
-		_, err = fmt.Sscanf(hash, "$argon2id$v=%d$m=%d,t=%d,p=%d$%s$%s",
-			&version, &memory, &time, &threads, &saltStr, &hashStr)
-		if err != nil {
-			return false, fmt.Errorf("解析密码哈希失败: %w", err)
-		}
-
-		salt, err = base64.RawStdEncoding.DecodeString(saltStr)
-		if err != nil {
-			return false, fmt.Errorf("解码盐失败: %w", err)
-		}
-
-		hashBytes, err = base64.RawStdEncoding.DecodeString(hashStr)
-		if err != nil {
-			return false, fmt.Errorf("解码哈希失败: %w", err)
-		}
+	// 1. 解析哈希格式：$sm3$iterations$salt$hash
+	parts := strings.Split(hash, "$")
+	if len(parts) != 5 || parts[1] != "sm3" {
+		return false, fmt.Errorf("解析密码哈希失败: 无效的格式")
 	}
 
-	// 使用相同的参数哈希输入密码
-	comparisonHash := argon2.IDKey([]byte(password), salt, time, memory, threads, uint32(len(hashBytes)))
+	// 2. 提取迭代次数
+	iterations, err := strconv.Atoi(parts[2])
+	if err != nil {
+		return false, fmt.Errorf("解析迭代次数失败: %w", err)
+	}
 
-	// 安全比较哈希
+	// 3. 解码Base64编码的盐值和哈希
+	salt, err := base64.RawStdEncoding.DecodeString(parts[3])
+	if err != nil {
+		return false, fmt.Errorf("解码盐失败: %w", err)
+	}
+
+	hashBytes, err := base64.RawStdEncoding.DecodeString(parts[4])
+	if err != nil {
+		return false, fmt.Errorf("解码哈希失败: %w", err)
+	}
+
+	// 4. 使用相同参数重新计算密码哈希
+	comparisonHash := pm.pbkdf2SM3([]byte(password), salt, iterations, len(hashBytes))
+
+	// 5. 使用恒定时间比较，防止时序攻击
 	return subtle.ConstantTimeCompare(hashBytes, comparisonHash) == 1, nil
 }
 
 // GenerateRandomPassword 生成随机密码
+// 生成指定长度的强密码，包含大小写字母、数字和特殊字符
 func GenerateRandomPassword(length int) (string, error) {
+	// 确保最小长度为8位
 	if length < 8 {
 		length = 8
 	}
 
+	// 定义字符集：大小写字母、数字、特殊字符
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*"
 	password := make([]byte, length)
 
+	// 生成随机密码
 	for i := range password {
 		randomByte := make([]byte, 1)
 		if _, err := rand.Read(randomByte); err != nil {
@@ -116,15 +165,19 @@ func GenerateRandomPassword(length int) (string, error) {
 }
 
 // GenerateRandomToken 生成随机令牌
+// 生成指定长度的随机令牌，用于验证码、重置令牌等场景
 func GenerateRandomToken(length int) (string, error) {
+	// 确保最小长度为32位
 	if length < 32 {
 		length = 32
 	}
 
+	// 生成随机字节序列
 	token := make([]byte, length)
 	if _, err := rand.Read(token); err != nil {
 		return "", fmt.Errorf("生成随机令牌失败: %w", err)
 	}
 
+	// 使用URL安全的Base64编码，避免特殊字符问题
 	return base64.RawURLEncoding.EncodeToString(token), nil
 }

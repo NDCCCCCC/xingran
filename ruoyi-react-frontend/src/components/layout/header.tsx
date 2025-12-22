@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layout, Avatar, Dropdown, Space, Button } from 'antd';
+import { Layout, Avatar, Dropdown, Space } from 'antd';
 import { UserOutlined, LogoutOutlined, SettingOutlined } from '@ant-design/icons';
 import { useAuthStore } from '@/store/authStore';
 import type { MenuProps } from 'antd';

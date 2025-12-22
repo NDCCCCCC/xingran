@@ -1,24 +1,20 @@
 package db
 
 import (
-	"crypto/rand"
-	"crypto/subtle"
-	"encoding/base64"
+	"database/sql"
 	"fmt"
 	"log"
-	"strings"
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"golang.org/x/crypto/argon2"
+	_ "github.com/lib/pq"
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	_ "modernc.org/sqlite"
-	"database/sql"
-	_ "github.com/lib/pq"
 )
 
 // Database 数据库管理器
@@ -160,16 +156,22 @@ func (d *Database) GetDB() *gorm.DB {
 
 // AutoMigrate 自动迁移所有模型
 func (d *Database) AutoMigrate() error {
-	// 临时只迁移核心表，避免UUID默认值问题
+	// 迁移所有表
 	if err := d.DB.AutoMigrate(
 		&models.User{},
+		&models.UserRole{},
+		&models.Department{},
 		&models.Role{},
 		&models.Menu{},
+		&models.Post{},
+		&models.RoleMenu{},
+		&models.RoleDept{},
+		&models.UserPost{},
 	); err != nil {
 		return err
 	}
 
-	log.Println("核心表迁移成功")
+	log.Println("所有表迁移成功")
 	return nil
 }
 
@@ -181,6 +183,11 @@ func (d *Database) InitData() error {
 
 // initData 初始化基础数据
 func initData(db *gorm.DB) error {
+	// 创建默认部门
+	if err := createDefaultDept(db); err != nil {
+		return fmt.Errorf("创建默认部门失败: %w", err)
+	}
+
 	// 创建默认用户
 	if err := createDefaultUser(db); err != nil {
 		return fmt.Errorf("创建默认用户失败: %w", err)
@@ -191,12 +198,132 @@ func initData(db *gorm.DB) error {
 		return fmt.Errorf("创建默认角色失败: %w", err)
 	}
 
+	// 创建用户角色关联
+	if err := createUserRoleRelations(db); err != nil {
+		return fmt.Errorf("创建用户角色关联失败: %w", err)
+	}
+
 	// 创建默认菜单
 	if err := createDefaultMenu(db); err != nil {
 		return fmt.Errorf("创建默认菜单失败: %w", err)
 	}
 
+	// 创建角色菜单关联
+	if err := createRoleMenuRelations(db); err != nil {
+		return fmt.Errorf("创建角色菜单关联失败: %w", err)
+	}
+
 	log.Println("基础数据初始化完成")
+	return nil
+}
+
+// createDefaultDept 创建默认部门
+func createDefaultDept(db *gorm.DB) error {
+	// 检查是否已有部门数据
+	var count int64
+	db.Model(&models.Department{}).Count(&count)
+	if count > 0 {
+		log.Println("部门数据已存在，跳过初始化")
+		return nil
+	}
+
+	// 创建顶级部门
+	topDept := models.Department{
+		DeptName:  "若依科技有限公司",
+		OrderNum:  1,
+		Leader:    func() *string { s := "若依"; return &s }(),
+		Phone:     func() *string { s := "15888888888"; return &s }(),
+		Email:     func() *string { s := "ruoyi@qq.com"; return &s }(),
+		Status:    models.DeptStatusNormal,
+		Remark:    "",
+	}
+
+	if err := db.Create(&topDept).Error; err != nil {
+		return fmt.Errorf("创建顶级部门失败: %w", err)
+	}
+
+	// 创建子部门
+	subDepts := []models.Department{
+		{
+			DeptName:  "深圳总公司",
+			ParentID:  &topDept.ID,
+			Ancestors: topDept.ID,
+			OrderNum:  1,
+			Leader:    func() *string { s := "若依"; return &s }(),
+			Phone:     func() *string { s := "15888888888"; return &s }(),
+			Email:     func() *string { s := "ruoyi@qq.com"; return &s }(),
+			Status:    models.DeptStatusNormal,
+			Remark:    "",
+		},
+		{
+			DeptName:  "长沙分公司",
+			ParentID:  &topDept.ID,
+			Ancestors: topDept.ID,
+			OrderNum:  2,
+			Leader:    func() *string { s := "若依"; return &s }(),
+			Phone:     func() *string { s := "15888888888"; return &s }(),
+			Email:     func() *string { s := "ruoyi@qq.com"; return &s }(),
+			Status:    models.DeptStatusNormal,
+			Remark:    "",
+		},
+	}
+
+	var shenzhenDeptID string
+	for _, dept := range subDepts {
+		if err := db.Create(&dept).Error; err != nil {
+			return fmt.Errorf("创建部门 %s 失败: %w", dept.DeptName, err)
+		}
+		if dept.DeptName == "深圳总公司" {
+			shenzhenDeptID = dept.ID
+		}
+		log.Printf("创建部门 %s 成功", dept.DeptName)
+	}
+
+	// 创建深圳总公司的子部门
+	shenzhenSubDepts := []models.Department{
+		{
+			DeptName:  "研发部门",
+			ParentID:  &shenzhenDeptID,
+			Ancestors: topDept.ID + "," + shenzhenDeptID,
+			OrderNum:  1,
+			Leader:    func() *string { s := "若依"; return &s }(),
+			Phone:     func() *string { s := "15888888888"; return &s }(),
+			Email:     func() *string { s := "ruoyi@qq.com"; return &s }(),
+			Status:    models.DeptStatusNormal,
+			Remark:    "",
+		},
+		{
+			DeptName:  "市场部门",
+			ParentID:  &shenzhenDeptID,
+			Ancestors: topDept.ID + "," + shenzhenDeptID,
+			OrderNum:  2,
+			Leader:    func() *string { s := "若依"; return &s }(),
+			Phone:     func() *string { s := "15888888888"; return &s }(),
+			Email:     func() *string { s := "ruoyi@qq.com"; return &s }(),
+			Status:    models.DeptStatusNormal,
+			Remark:    "",
+		},
+		{
+			DeptName:  "测试部门",
+			ParentID:  &shenzhenDeptID,
+			Ancestors: topDept.ID + "," + shenzhenDeptID,
+			OrderNum:  3,
+			Leader:    func() *string { s := "若依"; return &s }(),
+			Phone:     func() *string { s := "15888888888"; return &s }(),
+			Email:     func() *string { s := "ruoyi@qq.com"; return &s }(),
+			Status:    models.DeptStatusNormal,
+			Remark:    "",
+		},
+	}
+
+	for _, dept := range shenzhenSubDepts {
+		if err := db.Create(&dept).Error; err != nil {
+			return fmt.Errorf("创建部门 %s 失败: %w", dept.DeptName, err)
+		}
+		log.Printf("创建部门 %s 成功", dept.DeptName)
+	}
+
+	log.Println("默认部门创建完成")
 	return nil
 }
 
@@ -210,8 +337,8 @@ func createDefaultUser(db *gorm.DB) error {
 		return nil // 已存在，跳过
 	}
 
-	// 创建密码管理器
-	pwdManager := NewSimplePasswordManager()
+	// 使用新的SM3密码管理器
+	pwdManager := security.NewPasswordManager(nil)
 
 	// 生成密码哈希
 	passwordHash, err := pwdManager.HashPassword("admin123")
@@ -281,6 +408,40 @@ func createDefaultRole(db *gorm.DB) error {
 	}
 
 	log.Println("默认角色检查/创建完成")
+	return nil
+}
+
+// createUserRoleRelations 创建用户角色关联
+func createUserRoleRelations(db *gorm.DB) error {
+	// 获取默认用户
+	var adminUser models.User
+	if err := db.Where("username = ?", "admin").First(&adminUser).Error; err != nil {
+		log.Printf("未找到管理员用户: %v", err)
+		return nil // 如果用户不存在，跳过
+	}
+
+	// 获取管理员角色
+	var adminRole models.Role
+	if err := db.Where("role_key = ?", "admin").First(&adminRole).Error; err != nil {
+		log.Printf("未找到管理员角色: %v", err)
+		return nil // 如果角色不存在，跳过
+	}
+
+	// 检查关联是否已存在
+	var count int64
+	db.Table("sys_user_role").Where("user_id = ? AND role_id = ?", adminUser.ID, adminRole.ID).Count(&count)
+	if count > 0 {
+		log.Println("用户角色关联已存在，跳过创建")
+		return nil
+	}
+
+	// 创建用户角色关联
+	if err := db.Exec("INSERT INTO sys_user_role (user_id, role_id) VALUES (?, ?)",
+		adminUser.ID, adminRole.ID).Error; err != nil {
+		return fmt.Errorf("创建用户角色关联失败: %w", err)
+	}
+
+	log.Println("创建用户角色关联成功")
 	return nil
 }
 
@@ -372,6 +533,18 @@ func createDefaultMenu(db *gorm.DB) error {
 				Perms:      func() *string { s := "system:menu:list"; return &s }(),
 				Icon:       func() *string { s := "tree-table"; return &s }(),
 			},
+			{
+				MenuName:   "部门管理",
+				ParentID:   systemID,
+				OrderNum:   4,
+				Path:       func() *string { s := "system/dept"; return &s }(),
+				Component:  func() *string { s := "system/dept/index"; return &s }(),
+				MenuType:   models.MenuType("C"),
+				Visible:    models.VisibleShow,
+				Status:     models.MenuStatusNormal,
+				Perms:      func() *string { s := "system:dept:list"; return &s }(),
+				Icon:       func() *string { s := "tree"; return &s }(),
+			},
 		}
 
 		for _, menu := range systemSubMenus {
@@ -458,96 +631,42 @@ func createDatabaseIfNotExists(adminDSN, dbName string) error {
 	return nil
 }
 
-// SimplePasswordManager 简单密码管理器
-type SimplePasswordManager struct {
-	time    uint32
-	memory  uint32
-	threads uint8
-	keyLen  uint32
-}
 
-// NewSimplePasswordManager 创建简单密码管理器
-func NewSimplePasswordManager() *SimplePasswordManager {
-	return &SimplePasswordManager{
-		time:    3,
-		memory:  64 * 1024,
-		threads: 4,
-		keyLen:  32,
-	}
-}
-
-// HashPassword 哈希密码
-func (pm *SimplePasswordManager) HashPassword(password string) (string, error) {
-	// 生成随机盐
-	salt := make([]byte, 16)
-	if _, err := rand.Read(salt); err != nil {
-		return "", fmt.Errorf("生成盐失败: %w", err)
+// createRoleMenuRelations 创建角色菜单关联
+func createRoleMenuRelations(db *gorm.DB) error {
+	// 获取admin角色
+	var adminRole models.Role
+	if err := db.Where("role_key = ?", "admin").First(&adminRole).Error; err != nil {
+		log.Printf("未找到admin角色: %v", err)
+		return nil // 如果角色不存在，跳过
 	}
 
-	// 使用Argon2哈希密码
-	hash := argon2.IDKey([]byte(password), salt, pm.time, pm.memory, pm.threads, pm.keyLen)
-
-	// 编码为Base64
-	b64Salt := base64.RawStdEncoding.EncodeToString(salt)
-	b64Hash := base64.RawStdEncoding.EncodeToString(hash)
-
-	// 组合格式: $argon2id$v=19$m=65536,t=3,p=4$<salt>$<hash>
-	format := "$argon2id=v=%d$m=%d,t=%d,p=%d$%s$%s"
-	return fmt.Sprintf(format, argon2.Version, pm.memory, pm.time, pm.threads, b64Salt, b64Hash), nil
-}
-
-// VerifyPassword 验证密码
-func (pm *SimplePasswordManager) VerifyPassword(password, hash string) (bool, error) {
-	// 使用字符串分割解析哈希格式
-	// 实际格式: $argon2id=v=19$m=65536,t=3,p=4$<salt>$<hash>
-	parts := strings.Split(hash, "$")
-	if len(parts) != 5 || parts[0] != "" || !strings.HasPrefix(parts[1], "argon2id=") {
-		return false, fmt.Errorf("无效的密码哈希格式")
+	// 检查是否已有角色菜单关联
+	var count int64
+	db.Table("sys_role_menu").Where("role_id = ?", adminRole.ID).Count(&count)
+	if count > 0 {
+		log.Println("角色菜单关联已存在，跳过创建")
+		return nil
 	}
 
-	// 解析版本部分 "argon2id=v=19"
-	var version int
-	_, err := fmt.Sscanf(parts[1], "argon2id=v=%d", &version)
-	if err != nil {
-		return false, fmt.Errorf("解析版本失败: %w", err)
+	// 获取所有菜单ID
+	var menus []models.Menu
+	if err := db.Select("id").Find(&menus).Error; err != nil {
+		return fmt.Errorf("获取菜单列表失败: %w", err)
 	}
 
-	// 解析参数部分 "m=65536,t=3,p=4"
-	paramParts := strings.Split(parts[2], ",")
-	if len(paramParts) != 3 {
-		return false, fmt.Errorf("无效的参数格式")
+	// 为admin角色创建所有菜单的权限关联
+	for _, menu := range menus {
+		roleMenu := models.RoleMenu{
+			RoleID: adminRole.ID,
+			MenuID: menu.ID,
+		}
+		if err := db.Create(&roleMenu).Error; err != nil {
+			log.Printf("创建角色菜单关联失败 (角色: %s, 菜单: %s): %v", adminRole.ID, menu.ID, err)
+			continue
+		}
 	}
 
-	var memory, timeVal, threads int
-	_, err = fmt.Sscanf(paramParts[0], "m=%d", &memory)
-	if err != nil {
-		return false, fmt.Errorf("解析内存失败: %w", err)
-	}
-	_, err = fmt.Sscanf(paramParts[1], "t=%d", &timeVal)
-	if err != nil {
-		return false, fmt.Errorf("解析时间失败: %w", err)
-	}
-	_, err = fmt.Sscanf(paramParts[2], "p=%d", &threads)
-	if err != nil {
-		return false, fmt.Errorf("解析线程数失败: %w", err)
-	}
-
-	saltStr := parts[3]
-	hashStr := parts[4]
-
-	salt, err := base64.RawStdEncoding.DecodeString(saltStr)
-	if err != nil {
-		return false, fmt.Errorf("解码盐失败: %w", err)
-	}
-
-	hashBytes, err := base64.RawStdEncoding.DecodeString(hashStr)
-	if err != nil {
-		return false, fmt.Errorf("解码哈希失败: %w", err)
-	}
-
-	// 使用相同的参数哈希输入密码
-	comparisonHash := argon2.IDKey([]byte(password), salt, uint32(timeVal), uint32(memory), uint8(threads), uint32(len(hashBytes)))
-
-	// 安全比较哈希
-	return subtle.ConstantTimeCompare(hashBytes, comparisonHash) == 1, nil
+	log.Printf("为admin角色创建了 %d 个菜单权限", len(menus))
+	return nil
 }

@@ -17,13 +17,16 @@ database:
   max_idle_conns: 5
   max_lifetime: 1800
 
-# Redis配置 - 开发环境
-redis:
+# 缓存配置 - 开发环境
+cache:
+  type: "redis"  # redis, memory
   host: "10.62.10.34"
   port: 6379
   password: ")(PO09po"
   db: 0
   pool_size: 10
+  max_size: 1000
+  cleanup_time: 600
 
 # JWT配置
 jwt:
@@ -31,6 +34,11 @@ jwt:
   access_key_expire: 7200   # 访问令牌过期时间（秒）
   refresh_key_expire: 604800  # 刷新令牌过期时间（秒）
   issuer: "RuoYi-Next"
+  use_sm2: true  # 是否使用SM2国密算法
+  # SM2密钥对（生产环境请使用安全的密钥管理方式）
+  # 以下为示例密钥，生产环境请替换为实际密钥
+  sm2_private_key: ""  # SM2私钥(十六进制格式)，留空则自动生成
+  sm2_public_key: ""   # SM2公钥(十六进制格式)，留空则自动生成
 
 # 日志配置
 log:

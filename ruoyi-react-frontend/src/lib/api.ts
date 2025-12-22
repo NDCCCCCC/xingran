@@ -1,6 +1,7 @@
 import axios from 'axios';
-import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
+import type { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
 import { message } from 'antd';
+import { useAuthStore } from '@/store/authStore';
 
 // 创建axios实例
 const api: AxiosInstance = axios.create({
@@ -13,18 +14,15 @@ const api: AxiosInstance = axios.create({
 
 // 请求拦截器
 api.interceptors.request.use(
-  (config: AxiosRequestConfig) => {
+  (config: InternalAxiosRequestConfig) => {
     // 从localStorage获取token
     const token = localStorage.getItem('accessToken');
     if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
+      config.headers.set('Authorization', `Bearer ${token}`);
     }
 
     // 添加请求ID
-    config.headers = {
-      ...config.headers,
-      'X-Request-ID': generateRequestId(),
-    };
+    config.headers.set('X-Request-ID', generateRequestId());
 
     return config;
   },
@@ -38,7 +36,7 @@ api.interceptors.response.use(
   (response: AxiosResponse) => {
     const { data } = response;
 
-    // 检查业务状态码
+    // 检查业务状态码 - 根据后端实际返回调整
     if (data.code === 0) {
       return data;
     } else {
@@ -58,6 +56,8 @@ api.interceptors.response.use(
           // 未授权，清除token并跳转到登录页
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
+          // 清除 Zustand store 中的认证状态
+          useAuthStore.getState().logout();
           window.location.href = '/login';
           break;
         case 403:

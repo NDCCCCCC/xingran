@@ -7,6 +7,11 @@ import { useAuthStore } from '@/store/authStore';
 import Layout from '@/components/layout';
 import Login from '@/pages/login';
 import Dashboard from '@/pages/dashboard';
+// 系统管理页面
+import UserManagement from '@/pages/system/user';
+import RoleManagement from '@/pages/system/role';
+import MenuManagement from '@/pages/system/menu';
+import DepartmentManagement from '@/pages/system/dept';
 import './App.css';
 
 // 创建React Query客户端
@@ -23,7 +28,11 @@ const queryClient = new QueryClient({
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useAuthStore();
 
-  if (!isAuthenticated) {
+  // 检查 Zustand store 和 localStorage 中的认证状态
+  const token = localStorage.getItem('accessToken');
+
+  if (!isAuthenticated || !token) {
+    // 如果 store 或 localStorage 中没有认证信息，重定向到登录页
     return <Navigate to="/login" replace />;
   }
 
@@ -33,8 +42,10 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 // 公共路由组件（已登录用户不能访问）
 const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useAuthStore();
+  const token = localStorage.getItem('accessToken');
 
-  if (isAuthenticated) {
+  // 如果 store 和 localStorage 中都有认证信息，重定向到 dashboard
+  if (isAuthenticated && token) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -66,7 +77,14 @@ function App() {
                     <Routes>
                       <Route path="/" element={<Navigate to="/dashboard" replace />} />
                       <Route path="/dashboard" element={<Dashboard />} />
-                      {/* 其他路由将在后续添加 */}
+
+                      {/* 系统管理路由 */}
+                      <Route path="/system" element={<Navigate to="/system/user" replace />} />
+                      <Route path="/system/user" element={<UserManagement />} />
+                      <Route path="/system/role" element={<RoleManagement />} />
+                      <Route path="/system/menu" element={<MenuManagement />} />
+                      <Route path="/system/dept" element={<DepartmentManagement />} />
+
                       <Route path="*" element={<Navigate to="/dashboard" replace />} />
                     </Routes>
                   </Layout>

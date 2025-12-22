@@ -5,7 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/db"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
@@ -76,7 +76,11 @@ func login(core *core.Core) gin.HandlerFunc {
 		// 查找用户
 		var user models.User
 		if err := core.DB.GetDB().Where("username = ?", req.Username).First(&user).Error; err != nil {
-			response.Error(c, response.ErrUnauthorized, "用户名或密码错误")
+			if err.Error() == "record not found" {
+				response.Error(c, response.ErrUserNotFound)
+			} else {
+				response.Error(c, response.ErrDatabaseError, "查询用户失败: "+err.Error())
+			}
 			return
 		}
 
@@ -86,15 +90,28 @@ func login(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-	// 验证密码
-	pwdManager := db.NewSimplePasswordManager()
+	// 验证密码 - 使用SM3算法
+	pwdManager := security.NewPasswordManager(nil)
 	if ok, err := pwdManager.VerifyPassword(req.Password, user.Password); err != nil || !ok {
-		response.Error(c, response.ErrUnauthorized, "用户名或密码错误")
+		if err != nil {
+			response.Error(c, response.ErrPasswordDecrypt, "密码验证失败: "+err.Error())
+			return
+		}
+		response.Error(c, response.ErrCredentialInvalid)
 		return
 	}
 
+	// 查询用户角色
+	var userRoles []models.UserRole
+	var roleIds []string
+	if err := core.DB.GetDB().Where("user_id = ?", user.ID).Find(&userRoles).Error; err == nil {
+		for _, ur := range userRoles {
+			roleIds = append(roleIds, ur.RoleID)
+		}
+	}
+
 		// 生成JWT令牌
-		tokenPair, err := core.JWTManager.GenerateTokenPair(user.ID, user.Username, user.Roles)
+		tokenPair, err := core.JWTManager.GenerateTokenPair(user.ID, user.Username, roleIds)
 		if err != nil {
 			response.Error(c, response.ErrServerError, "生成令牌失败")
 			return
@@ -109,7 +126,7 @@ func login(core *core.Core) gin.HandlerFunc {
 			Gender:      user.Gender,
 			Status:      user.Status,
 			DeptName:    user.DeptName,
-			Roles:       user.Roles,
+			Roles:       roleIds, // 使用数据库中的角色ID
 			CreateTime:  user.CreatedAt,
 		}
 
@@ -168,14 +185,65 @@ func refreshToken(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		// 刷新令牌
-		tokenPair, err := core.JWTManager.RefreshToken(req.RefreshToken)
+		// 验证刷新令牌并获取用户ID
+		claims, err := core.JWTManager.ValidateToken(req.RefreshToken)
 		if err != nil {
 			response.Error(c, err)
 			return
 		}
 
-		response.Success(c, tokenPair)
+		// 检查是否为刷新令牌
+		if len(claims.Roles) != 1 || claims.Roles[0] != "refresh" {
+			response.Error(c, response.ErrTokenInvalid)
+			return
+		}
+
+		// 从数据库获取用户及其角色信息
+		var user models.User
+		if err := core.DB.GetDB().Where("id = ?", claims.UserID).First(&user).Error; err != nil {
+			response.Error(c, response.ErrUserNotFound)
+			return
+		}
+
+		// 查询用户角色
+		var userRoles []models.UserRole
+		var roleIds []string
+		if err := core.DB.GetDB().Where("user_id = ?", user.ID).Find(&userRoles).Error; err == nil {
+			for _, ur := range userRoles {
+				roleIds = append(roleIds, ur.RoleID)
+			}
+		}
+
+		// 生成新的令牌对
+		tokenPair, err := core.JWTManager.GenerateTokenPair(user.ID, user.Username, roleIds)
+		if err != nil {
+			response.Error(c, response.ErrServerError, "生成令牌失败")
+			return
+		}
+
+		// 构建用户信息
+		userInfo := &UserInfo{
+			ID:          user.ID,
+			Username:    user.Username,
+			Nickname:    user.Nickname,
+			Email:       user.Email,
+			Gender:      user.Gender,
+			Status:      user.Status,
+			DeptName:    user.DeptName,
+			Roles:       roleIds, // 使用实际的角色ID
+			CreateTime:  user.CreatedAt,
+		}
+
+		// 构建响应
+		loginResp := &LoginResponse{
+			User:         userInfo,
+			AccessToken:  tokenPair.AccessToken,
+			RefreshToken: tokenPair.RefreshToken,
+			ExpiresIn:    7200, // 2小时
+			TokenType:    "Bearer",
+		}
+
+		response.Success(c, loginResp)
 	}
 }
 
@@ -196,3 +264,4 @@ func getCaptcha(core *core.Core) gin.HandlerFunc {
 		})
 	}
 }
+

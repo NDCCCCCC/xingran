@@ -24,7 +24,7 @@ export interface User {
   phone?: string;
   avatar?: string;
   gender: 0 | 1 | 2;  // 0:未知 1:男 2:女
-  status: 0 | 1;     // 0:禁用 1:启用
+  status: 0 | 1;     // 0:启用 1:禁用
   deptId?: string;
   deptName?: string;
   roles: string[];
@@ -44,7 +44,7 @@ export interface Role {
   dataScope: 1 | 2 | 3 | 4 | 5; // 数据范围：1:全部 2:部门 3:部门及子部门 4:个人 5:自定义
   menuCheckStrictly: boolean;
   deptCheckStrictly: boolean;
-  status: 0 | 1; // 0:停用 1:正常
+  status: 0 | 1; // 0:正常 1:停用
   menuIds: string[];
   deptIds?: string[];
   createTime: string;
@@ -62,7 +62,7 @@ export interface Menu {
   component?: string;
   menuType: 'M' | 'C' | 'F'; // 目录/菜单/按钮
   visible: 0 | 1;
-  status: 0 | 1;
+  status: 0 | 1; // 0:显示 1:隐藏
   perms?: string;
   icon?: string;
   children?: Menu[];
@@ -71,19 +71,20 @@ export interface Menu {
 }
 
 // 部门相关类型
-export interface Dept {
+export interface Department {
   id: string;
   deptName: string;
-  parentId: string;  // '0' 表示顶级部门
+  parentId?: string;
   ancestors: string;
   orderNum: number;
   leader?: string;
   phone?: string;
   email?: string;
   status: 0 | 1;  // 0:正常 1:停用
-  children?: Dept[];
-  createTime: string;
-  updateTime: string;
+  children?: Department[];
+  createdAt: string;
+  updatedAt: string;
+  remark?: string;
 }
 
 // 登录相关类型

@@ -7,7 +7,9 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	"github.com/tjfoc/gmsm/sm2"
 )
 
 // JWTManager JWT管理器
@@ -16,6 +18,9 @@ type JWTManager struct {
 	accessKeyExpire  time.Duration
 	refreshKeyExpire time.Duration
 	issuer           string
+	useSM2           bool          // 是否使用SM2算法
+	sm2PrivateKey    *sm2.PrivateKey // SM2私钥
+	sm2PublicKey     *sm2.PublicKey  // SM2公钥
 }
 
 // CustomClaims 自定义JWT声明
@@ -36,12 +41,47 @@ type TokenPair struct {
 
 // NewJWTManager 创建JWT管理器
 func NewJWTManager(cfg *config.JWTConfig) *JWTManager {
-	return &JWTManager{
+	jwtManager := &JWTManager{
 		secretKey:        cfg.SecretKey,
 		accessKeyExpire:  time.Duration(cfg.AccessKeyExpire) * time.Second,
 		refreshKeyExpire: time.Duration(cfg.RefreshKeyExpire) * time.Second,
 		issuer:           cfg.Issuer,
+		useSM2:           cfg.UseSM2,
 	}
+
+	// 如果配置使用SM2算法，则初始化SM2密钥对
+	if cfg.UseSM2 {
+		// 如果配置中有密钥，则使用配置的密钥
+		if cfg.SM2PrivateKey != "" && cfg.SM2PublicKey != "" {
+			privateKey, err := crypto.ParsePrivateKeyFromHex(cfg.SM2PrivateKey)
+			if err != nil {
+				panic(fmt.Sprintf("解析SM2私钥失败: %v", err))
+			}
+
+			publicKey, err := crypto.ParsePublicKeyFromHex(cfg.SM2PublicKey)
+			if err != nil {
+				panic(fmt.Sprintf("解析SM2公钥失败: %v", err))
+			}
+
+			jwtManager.sm2PrivateKey = privateKey
+			jwtManager.sm2PublicKey = publicKey
+		} else {
+			// 否则生成新的密钥对
+			privateKey, publicKey, err := crypto.GenerateKeyPair()
+			if err != nil {
+				panic(fmt.Sprintf("生成SM2密钥对失败: %v", err))
+			}
+
+			jwtManager.sm2PrivateKey = privateKey
+			jwtManager.sm2PublicKey = publicKey
+
+			// TODO: 将生成的密钥保存到配置文件或密钥管理系统中
+			fmt.Printf("生成的SM2私钥: %x\n", privateKey.D)
+			fmt.Printf("生成的SM2公钥: %x\n", publicKey.X)
+		}
+	}
+
+	return jwtManager
 }
 
 // GenerateTokenPair 生成令牌对
@@ -64,9 +104,34 @@ func (j *JWTManager) GenerateTokenPair(userID, username string, roles []string) 
 		},
 	}
 
-	accessToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims).SignedString([]byte(j.secretKey))
-	if err != nil {
-		return nil, fmt.Errorf("生成访问令牌失败: %w", err)
+	var accessToken string
+	var err error
+	if j.useSM2 {
+		// 使用SM2算法签名
+		claims := &crypto.Claims{
+			UserID:    accessClaims.UserID,
+			Username:  accessClaims.Username,
+			Roles:     accessClaims.Roles,
+			Issuer:    accessClaims.Issuer,
+			Subject:   accessClaims.Subject,
+			Audience:  accessClaims.Audience,
+			RegisteredClaims: jwt.RegisteredClaims{
+				ID:        accessClaims.ID,
+				ExpiresAt: accessClaims.ExpiresAt,
+				NotBefore: accessClaims.NotBefore,
+				IssuedAt:  accessClaims.IssuedAt,
+			},
+		}
+		accessToken, err = crypto.GenerateTokenWithSM2(claims, j.sm2PrivateKey)
+		if err != nil {
+			return nil, fmt.Errorf("生成SM2访问令牌失败: %w", err)
+		}
+	} else {
+		// 使用HS256算法签名
+		accessToken, err = jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims).SignedString([]byte(j.secretKey))
+		if err != nil {
+			return nil, fmt.Errorf("生成访问令牌失败: %w", err)
+		}
 	}
 
 	// 生成刷新令牌
@@ -85,9 +150,19 @@ func (j *JWTManager) GenerateTokenPair(userID, username string, roles []string) 
 		},
 	}
 
-	refreshToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims).SignedString([]byte(j.secretKey))
-	if err != nil {
-		return nil, fmt.Errorf("生成刷新令牌失败: %w", err)
+	var refreshToken string
+	if j.useSM2 {
+		// 使用SM2算法签名
+		refreshToken, err = crypto.GenerateRefreshTokenWithSM2(refreshClaims.UserID, refreshClaims.Username, j.sm2PrivateKey)
+		if err != nil {
+			return nil, fmt.Errorf("生成SM2刷新令牌失败: %w", err)
+		}
+	} else {
+		// 使用HS256算法签名
+		refreshToken, err = jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims).SignedString([]byte(j.secretKey))
+		if err != nil {
+			return nil, fmt.Errorf("生成刷新令牌失败: %w", err)
+		}
 	}
 
 	return &TokenPair{
@@ -100,33 +175,62 @@ func (j *JWTManager) GenerateTokenPair(userID, username string, roles []string) 
 
 // ValidateToken 验证令牌
 func (j *JWTManager) ValidateToken(tokenString string) (*CustomClaims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &CustomClaims{}, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("意外的签名方法: %v", token.Header["alg"])
+	if j.useSM2 {
+		// 使用SM2算法验证
+		claims, err := crypto.ValidateTokenWithSM2(tokenString, j.sm2PublicKey)
+		if err != nil {
+			if errors.Is(err, jwt.ErrTokenExpired) {
+				return nil, response.ErrTokenExpired
+			} else if errors.Is(err, jwt.ErrTokenNotValidYet) {
+				return nil, response.ErrTokenNotValidYet
+			}
+			return nil, response.ErrTokenInvalid
 		}
-		return []byte(j.secretKey), nil
-	})
 
-	if err != nil {
-		if errors.Is(err, jwt.ErrTokenExpired) {
-			return nil, response.ErrTokenExpired
-		} else if errors.Is(err, jwt.ErrTokenNotValidYet) {
-			return nil, response.ErrTokenNotValidYet
+		// 验证签发者
+		if claims.Issuer != j.issuer {
+			return nil, response.ErrTokenInvalid
 		}
-		return nil, response.ErrTokenInvalid
-	}
 
-	claims, ok := token.Claims.(*CustomClaims)
-	if !ok || !token.Valid {
-		return nil, response.ErrTokenInvalid
-	}
+		// 转换为CustomClaims格式
+		customClaims := &CustomClaims{
+			UserID:   claims.UserID,
+			Username: claims.Username,
+			Roles:    claims.Roles,
+			RegisteredClaims: claims.RegisteredClaims,
+		}
 
-	// 验证签发者
-	if claims.Issuer != j.issuer {
-		return nil, response.ErrTokenInvalid
-	}
+		return customClaims, nil
+	} else {
+		// 使用HS256算法验证
+		token, err := jwt.ParseWithClaims(tokenString, &CustomClaims{}, func(token *jwt.Token) (interface{}, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("意外的签名方法: %v", token.Header["alg"])
+			}
+			return []byte(j.secretKey), nil
+		})
 
-	return claims, nil
+		if err != nil {
+			if errors.Is(err, jwt.ErrTokenExpired) {
+				return nil, response.ErrTokenExpired
+			} else if errors.Is(err, jwt.ErrTokenNotValidYet) {
+				return nil, response.ErrTokenNotValidYet
+			}
+			return nil, response.ErrTokenInvalid
+		}
+
+		claims, ok := token.Claims.(*CustomClaims)
+		if !ok || !token.Valid {
+			return nil, response.ErrTokenInvalid
+		}
+
+		// 验证签发者
+		if claims.Issuer != j.issuer {
+			return nil, response.ErrTokenInvalid
+		}
+
+		return claims, nil
+	}
 }
 
 // RefreshToken 刷新令牌
@@ -142,9 +246,9 @@ func (j *JWTManager) RefreshToken(refreshTokenString string) (*TokenPair, error)
 		return nil, response.ErrTokenInvalid
 	}
 
-	// TODO: 从数据库获取用户最新的角色信息
-	// 这里简化处理，实际应该查询数据库
-	roles := []string{"user"} // 临时使用
+	// 从数据库获取用户最新的角色信息
+	// 这里返回空角色，调用者需要从数据库加载
+	roles := []string{}
 
 	// 生成新的令牌对
 	return j.GenerateTokenPair(claims.UserID, claims.Username, roles)

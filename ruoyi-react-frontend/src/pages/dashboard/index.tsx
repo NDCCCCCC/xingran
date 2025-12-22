@@ -19,7 +19,7 @@ const Dashboard: React.FC = () => {
               title="在线用户"
               value={1128}
               prefix={<UserOutlined />}
-              valueStyle={{ color: '#3f8600' }}
+              styles={{ content: { color: '#3f8600' } }}
             />
           </Card>
         </Col>
@@ -30,7 +30,7 @@ const Dashboard: React.FC = () => {
               title="今日访问"
               value={2156}
               prefix={<MonitorOutlined />}
-              valueStyle={{ color: '#1890ff' }}
+              styles={{ content: { color: '#1890ff' } }}
             />
           </Card>
         </Col>
@@ -41,7 +41,7 @@ const Dashboard: React.FC = () => {
               title="消息通知"
               value={12}
               prefix={<FileTextOutlined />}
-              valueStyle={{ color: '#722ed1' }}
+              styles={{ content: { color: '#722ed1' } }}
             />
           </Card>
         </Col>
@@ -52,7 +52,7 @@ const Dashboard: React.FC = () => {
               title="待办事项"
               value={5}
               prefix={<TeamOutlined />}
-              valueStyle={{ color: '#eb2f96' }}
+              styles={{ content: { color: '#eb2f96' } }}
             />
           </Card>
         </Col>

@@ -1,0 +1,420 @@
+package cache
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"strconv"
+	"sync"
+	"time"
+)
+
+// MemoryCache 内存缓存实现
+type MemoryCache struct {
+	items    map[string]*CacheItem
+	mutex    sync.RWMutex
+	maxSize  int
+	stopChan chan struct{}
+}
+
+// NewMemoryCache 创建内存缓存实例
+func NewMemoryCache(maxSize int, cleanupTime time.Duration) *MemoryCache {
+	cache := &MemoryCache{
+		items:    make(map[string]*CacheItem),
+		maxSize:  maxSize,
+		stopChan: make(chan struct{}),
+	}
+
+	// 启动清理协程
+	go cache.startCleanup(cleanupTime)
+
+	return cache
+}
+
+// Get 获取缓存值
+func (m *MemoryCache) Get(ctx context.Context, key string) (string, error) {
+	if key == "" {
+		return "", ErrKeyEmpty
+	}
+
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
+	item, exists := m.items[key]
+	if !exists {
+		return "", ErrNotFound
+	}
+
+	if item.IsExpired() {
+		return "", ErrExpired
+	}
+
+	// 类型断言
+	switch v := item.Value.(type) {
+	case string:
+		return v, nil
+	case []byte:
+		return string(v), nil
+	default:
+		return fmt.Sprintf("%v", v), nil
+	}
+}
+
+// Set 设置缓存值
+func (m *MemoryCache) Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error {
+	if key == "" {
+		return ErrKeyEmpty
+	}
+	if value == nil {
+		return ErrValueEmpty
+	}
+
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	// 检查缓存大小
+	if len(m.items) >= m.maxSize {
+		m.evictLRU()
+	}
+
+	var expirationTime int64
+	if expiration > 0 {
+		expirationTime = time.Now().Add(expiration).UnixNano()
+	}
+
+	m.items[key] = &CacheItem{
+		Value:      value,
+		Expiration: expirationTime,
+		Created:    time.Now(),
+	}
+
+	return nil
+}
+
+// Delete 删除缓存
+func (m *MemoryCache) Delete(ctx context.Context, key string) error {
+	if key == "" {
+		return ErrKeyEmpty
+	}
+
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	delete(m.items, key)
+	return nil
+}
+
+// Exists 检查键是否存在
+func (m *MemoryCache) Exists(ctx context.Context, key string) (bool, error) {
+	if key == "" {
+		return false, ErrKeyEmpty
+	}
+
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
+	item, exists := m.items[key]
+	if !exists {
+		return false, nil
+	}
+
+	return !item.IsExpired(), nil
+}
+
+// MGet 批量获取
+func (m *MemoryCache) MGet(ctx context.Context, keys ...string) ([]string, error) {
+	if len(keys) == 0 {
+		return []string{}, nil
+	}
+
+	values := make([]string, len(keys))
+	for i, key := range keys {
+		value, err := m.Get(ctx, key)
+		if err != nil {
+			values[i] = ""
+		} else {
+			values[i] = value
+		}
+	}
+
+	return values, nil
+}
+
+// MSet 批量设置
+func (m *MemoryCache) MSet(ctx context.Context, pairs ...interface{}) error {
+	if len(pairs)%2 != 0 {
+		return fmt.Errorf("参数数量必须为偶数")
+	}
+
+	for i := 0; i < len(pairs); i += 2 {
+		key, ok := pairs[i].(string)
+		if !ok {
+			return fmt.Errorf("键必须是字符串类型")
+		}
+		value := pairs[i+1]
+
+		if err := m.Set(ctx, key, value, 0); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// MDelete 批量删除
+func (m *MemoryCache) MDelete(ctx context.Context, keys ...string) error {
+	for _, key := range keys {
+		if err := m.Delete(ctx, key); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Increment 递增
+func (m *MemoryCache) Increment(ctx context.Context, key string) (int64, error) {
+	return m.IncrementBy(ctx, key, 1)
+}
+
+// IncrementBy 按值递增
+func (m *MemoryCache) IncrementBy(ctx context.Context, key string, value int64) (int64, error) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	item, exists := m.items[key]
+	var currentValue int64
+
+	if exists && !item.IsExpired() {
+		// 尝试转换当前值为整数
+		switch v := item.Value.(type) {
+		case int:
+			currentValue = int64(v)
+		case int64:
+			currentValue = v
+		case string:
+			if parsed, err := strconv.ParseInt(v, 10, 64); err == nil {
+				currentValue = parsed
+			}
+		default:
+			return 0, ErrInvalidType
+		}
+	}
+
+	currentValue += value
+
+	// 更新值
+	m.items[key] = &CacheItem{
+		Value:      currentValue,
+		Expiration: item.Expiration,
+		Created:    time.Now(),
+	}
+
+	return currentValue, nil
+}
+
+// Decrement 递减
+func (m *MemoryCache) Decrement(ctx context.Context, key string) (int64, error) {
+	return m.IncrementBy(ctx, key, -1)
+}
+
+// DecrementBy 按值递减
+func (m *MemoryCache) DecrementBy(ctx context.Context, key string, value int64) (int64, error) {
+	return m.IncrementBy(ctx, key, -value)
+}
+
+// Expire 设置过期时间
+func (m *MemoryCache) Expire(ctx context.Context, key string, expiration time.Duration) error {
+	if key == "" {
+		return ErrKeyEmpty
+	}
+
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	item, exists := m.items[key]
+	if !exists {
+		return ErrNotFound
+	}
+
+	var expirationTime int64
+	if expiration > 0 {
+		expirationTime = time.Now().Add(expiration).UnixNano()
+	}
+
+	item.Expiration = expirationTime
+	return nil
+}
+
+// TTL 获取剩余时间
+func (m *MemoryCache) TTL(ctx context.Context, key string) (time.Duration, error) {
+	if key == "" {
+		return 0, ErrKeyEmpty
+	}
+
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
+	item, exists := m.items[key]
+	if !exists {
+		return 0, ErrNotFound
+	}
+
+	if item.Expiration == 0 {
+		return -1, nil // 永不过期
+	}
+
+	remaining := time.Duration(item.Expiration-time.Now().UnixNano())
+	if remaining <= 0 {
+		return 0, ErrExpired
+	}
+
+	return remaining, nil
+}
+
+// Keys 模式匹配（简单实现）
+func (m *MemoryCache) Keys(ctx context.Context, pattern string) ([]string, error) {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
+	var keys []string
+	for key := range m.items {
+		// 简单的通配符匹配
+		if matchPattern(key, pattern) {
+			keys = append(keys, key)
+		}
+	}
+
+	return keys, nil
+}
+
+// FlushDB 清空数据库
+func (m *MemoryCache) FlushDB(ctx context.Context) error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	m.items = make(map[string]*CacheItem)
+	return nil
+}
+
+// Close 关闭缓存
+func (m *MemoryCache) Close() error {
+	close(m.stopChan)
+	return nil
+}
+
+// startCleanup 启动清理协程
+func (m *MemoryCache) startCleanup(interval time.Duration) {
+	if interval <= 0 {
+		return
+	}
+
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			m.cleanup()
+		case <-m.stopChan:
+			return
+		}
+	}
+}
+
+// cleanup 清理过期项
+func (m *MemoryCache) cleanup() {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	for key, item := range m.items {
+		if item.IsExpired() {
+			delete(m.items, key)
+		}
+	}
+}
+
+// evictLRU LRU淘汰策略
+func (m *MemoryCache) evictLRU() {
+	var oldestKey string
+	var oldestTime time.Time
+
+	for key, item := range m.items {
+		if oldestKey == "" || item.Created.Before(oldestTime) {
+			oldestKey = key
+			oldestTime = item.Created
+		}
+	}
+
+	if oldestKey != "" {
+		delete(m.items, oldestKey)
+	}
+}
+
+// matchPattern 简单的模式匹配
+func matchPattern(key, pattern string) bool {
+	// 这里实现一个简单的通配符匹配
+	// 只支持 * 通配符
+	if pattern == "*" {
+		return true
+	}
+
+	// 简单的前缀匹配
+	if len(pattern) > 0 && pattern[len(pattern)-1] == '*' {
+		prefix := pattern[:len(pattern)-1]
+		return len(key) >= len(prefix) && key[:len(prefix)] == prefix
+	}
+
+	return key == pattern
+}
+
+// GetJSON 获取JSON对象
+func (m *MemoryCache) GetJSON(ctx context.Context, key string, dest interface{}) error {
+	data, err := m.Get(ctx, key)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal([]byte(data), dest)
+}
+
+// SetJSON 设置JSON对象
+func (m *MemoryCache) SetJSON(ctx context.Context, key string, value interface{}, expiration time.Duration) error {
+	data, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	return m.Set(ctx, key, data, expiration)
+}
+
+// GetInt 获取整数
+func (m *MemoryCache) GetInt(ctx context.Context, key string) (int, error) {
+	data, err := m.Get(ctx, key)
+	if err != nil {
+		return 0, err
+	}
+	return strconv.Atoi(data)
+}
+
+// SetInt 设置整数
+func (m *MemoryCache) SetInt(ctx context.Context, key string, value int, expiration time.Duration) error {
+	return m.Set(ctx, key, strconv.Itoa(value), expiration)
+}
+
+// GetBool 获取布尔值
+func (m *MemoryCache) GetBool(ctx context.Context, key string) (bool, error) {
+	data, err := m.Get(ctx, key)
+	if err != nil {
+		return false, err
+	}
+	return strconv.ParseBool(data)
+}
+
+// SetBool 设置布尔值
+func (m *MemoryCache) SetBool(ctx context.Context, key string, value bool, expiration time.Duration) error {
+	var strValue string
+	if value {
+		strValue = "1"
+	} else {
+		strValue = "0"
+	}
+	return m.Set(ctx, key, strValue, expiration)
+}

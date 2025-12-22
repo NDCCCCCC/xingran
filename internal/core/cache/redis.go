@@ -17,7 +17,7 @@ type Redis struct {
 }
 
 // NewRedis 创建Redis连接
-func NewRedis(cfg *config.RedisConfig) (*Redis, error) {
+func NewRedis(cfg *config.CacheConfig) (*Redis, error) {
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     cfg.GetRedisAddr(),
 		Password: cfg.Password,

@@ -18,10 +18,10 @@ type Response struct {
 
 // PageResponse 分页响应结构
 type PageResponse struct {
-	List     interface{} `json:"list"`      // 数据列表
-	Total    int64       `json:"total"`     // 总数
-	Current  int         `json:"current"`   // 当前页
-	PageSize int         `json:"page_size"` // 每页大小
+	List     interface{} `json:"list"`     // 数据列表
+	Total    int64       `json:"total"`    // 总数
+	Current  int         `json:"current"`  // 当前页
+	PageSize int         `json:"pageSize"` // 每页大小
 }
 
 // 错误定义
@@ -43,6 +43,12 @@ var (
 	ErrParamError        = &AppError{Code: 1001, Message: "参数错误", HTTPStatus: 400}
 	ErrRecordExists      = &AppError{Code: 1009, Message: "记录已存在", HTTPStatus: 400}
 	ErrRecordNotFound    = &AppError{Code: 1010, Message: "记录不存在", HTTPStatus: 404}
+	ErrNotImplemented    = &AppError{Code: 501, Message: "功能暂未实现", HTTPStatus: 501}
+	// 新增的错误类型
+	ErrPasswordHashFailed = &AppError{Code: 1011, Message: "密码哈希格式不支持", HTTPStatus: 500}
+	ErrPasswordDecrypt   = &AppError{Code: 1012, Message: "密码解析失败", HTTPStatus: 500}
+	ErrCredentialInvalid = &AppError{Code: 1013, Message: "用户名或密码错误", HTTPStatus: 401}
+	ErrDatabaseError     = &AppError{Code: 1014, Message: "数据库操作失败", HTTPStatus: 500}
 )
 
 // AppError 应用错误
