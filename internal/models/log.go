@@ -36,27 +36,51 @@ type LoginLog struct {
 	LoginTime     time.Time  `json:"loginTime"`
 }
 
+// MisfirePolicy 错误策略枚举
+type MisfirePolicy int
+
+const (
+	MisfirePolicyDefault     MisfirePolicy = 0 // 默认策略
+	MisfirePolicyImmediately MisfirePolicy = 1 // 立即执行
+	MisfirePolicyExecuteOnce MisfirePolicy = 2 // 执行一次
+	MisfirePolicyDiscard     MisfirePolicy = 3 // 放弃执行
+)
+
+// JobStatus 任务状态枚举（遵循状态值规范：0=正常,1=暂停）
+type JobStatus int
+
+const (
+	JobStatusNormal JobStatus = 0 // 0: 正常
+	JobStatusPause  JobStatus = 1 // 1: 暂停
+)
+
 // Job 定时任务模型
 type Job struct {
 	BaseModel
-	JobName          string `gorm:"size:64;not null" json:"jobName"`
-	JobGroup         string `gorm:"size:64;not null" json:"jobGroup"`
-	InvokeTarget     string `gorm:"size:500;not null" json:"invokeTarget"`
-	CronExpression   *string `gorm:"size:255" json:"cronExpression,omitempty"`
-	MisfirePolicy    int    `gorm:"default:0" json:"misfirePolicy"`
-	Concurrent       bool   `gorm:"default:false" json:"concurrent"`
-	Status           int    `gorm:"default:0" json:"status"`
+	JobName        string        `gorm:"size:64;not null" json:"jobName"`
+	JobGroup       string        `gorm:"size:64;not null" json:"jobGroup"`
+	InvokeTarget   string        `gorm:"size:500;not null" json:"invokeTarget"`
+	CronExpression string        `gorm:"size:255" json:"cronExpression"`
+	MisfirePolicy  MisfirePolicy `gorm:"default:0" json:"misfirePolicy"`
+	Concurrent     bool          `gorm:"default:false" json:"concurrent"`
+	Status         JobStatus     `gorm:"default:0" json:"status"`
+	NextRunTime    *time.Time    `gorm:"column:next_run_time" json:"nextRunTime,omitempty"`
+	PrevRunTime    *time.Time    `gorm:"column:prev_run_time" json:"prevRunTime,omitempty"`
+	Remark         *string       `gorm:"size:500" json:"remark,omitempty"`
 }
 
 // JobLog 任务日志模型
 type JobLog struct {
 	BaseTimeLine
-	JobName      string `gorm:"size:64;not null;index" json:"jobName"`
-	JobGroup     string `gorm:"size:64;not null" json:"jobGroup"`
-	InvokeTarget string `gorm:"size:500;not null" json:"invokeTarget"`
-	JobMessage   string `gorm:"size:500" json:"jobMessage,omitempty"`
-	Status       int    `json:"status"`
-	ExceptionInfo *string `gorm:"type:text" json:"exceptionInfo,omitempty"`
+	JobName       string     `gorm:"size:64;not null;index" json:"jobName"`
+	JobGroup      string     `gorm:"size:64;not null" json:"jobGroup"`
+	InvokeTarget  string     `gorm:"size:500;not null" json:"invokeTarget"`
+	JobMessage    string     `gorm:"size:500" json:"jobMessage,omitempty"`
+	Status        int        `json:"status"`
+	ExceptionInfo *string    `gorm:"type:text" json:"exceptionInfo,omitempty"`
+	StartTime     *time.Time `gorm:"column:start_time" json:"startTime,omitempty"`
+	EndTime       *time.Time `gorm:"column:end_time" json:"endTime,omitempty"`
+	Duration      int64      `gorm:"default:0" json:"duration"` // 执行时长(毫秒)
 }
 
 // Notice 通知公告模型

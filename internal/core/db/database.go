@@ -167,6 +167,8 @@ func (d *Database) AutoMigrate() error {
 		&models.RoleMenu{},
 		&models.RoleDept{},
 		&models.UserPost{},
+		&models.Job{},
+		&models.JobLog{},
 	); err != nil {
 		return err
 	}

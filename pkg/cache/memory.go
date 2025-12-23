@@ -302,6 +302,178 @@ func (m *MemoryCache) Close() error {
 	return nil
 }
 
+// MGetJSON 批量获取JSON对象
+func (m *MemoryCache) MGetJSON(ctx context.Context, keys ...string) (map[string]interface{}, error) {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
+	result := make(map[string]interface{})
+	for _, key := range keys {
+		if item, exists := m.items[key]; exists && !item.IsExpired() {
+			var value interface{}
+			if err := json.Unmarshal([]byte(item.Value.(string)), &value); err == nil {
+				result[key] = value
+			} else {
+				result[key] = item.Value
+			}
+		}
+	}
+
+	return result, nil
+}
+
+// MSetJSON 批量设置JSON对象
+func (m *MemoryCache) MSetJSON(ctx context.Context, data map[string]interface{}, expiration time.Duration) error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	for key, value := range data {
+		jsonValue, err := json.Marshal(value)
+		if err != nil {
+			return err
+		}
+
+		var expirationTime int64
+		if expiration > 0 {
+			expirationTime = time.Now().Add(expiration).UnixNano()
+		}
+
+		// 检查容量限制
+		if len(m.items) >= m.maxSize {
+			m.evictLRU()
+		}
+
+		m.items[key] = &CacheItem{
+			Value:     string(jsonValue),
+			Expiration: expirationTime,
+			Created:    time.Now(),
+		}
+	}
+
+	return nil
+}
+
+// HGet 获取Hash字段（内存缓存简化实现）
+func (m *MemoryCache) HGet(ctx context.Context, key, field string) (string, error) {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
+	if item, exists := m.items[key]; exists && !item.IsExpired() {
+		// 简化实现：将Hash存储为JSON对象
+		var hashMap map[string]string
+		if err := json.Unmarshal([]byte(item.Value.(string)), &hashMap); err == nil {
+			return hashMap[field], nil
+		}
+	}
+
+	return "", fmt.Errorf("key or field not found")
+}
+
+// HSet 设置Hash字段（内存缓存简化实现）
+func (m *MemoryCache) HSet(ctx context.Context, key, field string, value interface{}) error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	var hashMap map[string]string
+
+	// 获取现有Hash
+	if item, exists := m.items[key]; exists && !item.IsExpired() {
+		json.Unmarshal([]byte(item.Value.(string)), &hashMap)
+	} else {
+		hashMap = make(map[string]string)
+	}
+
+	// 设置字段值
+	if strValue, ok := value.(string); ok {
+		hashMap[field] = strValue
+	} else {
+		jsonValue, _ := json.Marshal(value)
+		hashMap[field] = string(jsonValue)
+	}
+
+	// 存储回缓存
+	jsonValue, err := json.Marshal(hashMap)
+	if err != nil {
+		return err
+	}
+
+	var expirationTime int64
+	if item, exists := m.items[key]; exists {
+		expirationTime = item.Expiration
+	}
+
+	m.items[key] = &CacheItem{
+		Value:      string(jsonValue),
+		Expiration: expirationTime,
+		Created:    time.Now(),
+	}
+
+	return nil
+}
+
+// HGetAll 获取Hash所有字段
+func (m *MemoryCache) HGetAll(ctx context.Context, key string) (map[string]string, error) {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
+	if item, exists := m.items[key]; exists && !item.IsExpired() {
+		var hashMap map[string]string
+		if err := json.Unmarshal([]byte(item.Value.(string)), &hashMap); err == nil {
+			return hashMap, nil
+		}
+	}
+
+	return make(map[string]string), nil
+}
+
+// HDel 删除Hash字段
+func (m *MemoryCache) HDel(ctx context.Context, key string, fields ...string) error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	if item, exists := m.items[key]; exists && !item.IsExpired() {
+		var hashMap map[string]string
+		if err := json.Unmarshal([]byte(item.Value.(string)), &hashMap); err == nil {
+			for _, field := range fields {
+				delete(hashMap, field)
+			}
+
+			// 如果Hash为空，删除整个key
+			if len(hashMap) == 0 {
+				delete(m.items, key)
+			} else {
+				jsonValue, _ := json.Marshal(hashMap)
+				m.items[key] = &CacheItem{
+					Value:      string(jsonValue),
+					Expiration: item.Expiration,
+					Created:    item.Created,
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+// HKeys 获取Hash所有字段名
+func (m *MemoryCache) HKeys(ctx context.Context, key string) ([]string, error) {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
+	if item, exists := m.items[key]; exists && !item.IsExpired() {
+		var hashMap map[string]string
+		if err := json.Unmarshal([]byte(item.Value.(string)), &hashMap); err == nil {
+			keys := make([]string, 0, len(hashMap))
+			for field := range hashMap {
+				keys = append(keys, field)
+			}
+			return keys, nil
+		}
+	}
+
+	return []string{}, nil
+}
+
 // startCleanup 启动清理协程
 func (m *MemoryCache) startCleanup(interval time.Duration) {
 	if interval <= 0 {

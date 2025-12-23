@@ -3,12 +3,14 @@
 package core
 
 import (
+	"context"
 	"log"
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/db"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/scheduler"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/permission"
 	"gorm.io/gorm"
@@ -17,11 +19,13 @@ import (
 // Core 核心模块管理器
 // 负责管理系统的所有核心服务组件，包括数据库连接、缓存、JWT管理、密码加密等
 type Core struct {
-	Config     *config.Config          // 系统配置
-	DB         *db.Database           // 数据库连接管理器
-	Cache      cache.Cache            // 缓存管理器
-	JWTManager *security.JWTManager   // JWT令牌管理器
-	PwdManager *security.PasswordManager // 密码管理器
+	Config               *config.Config            // 系统配置
+	DB                   *db.Database             // 数据库连接管理器
+	Cache                cache.Cache              // 缓存管理器
+	JWTManager           *security.JWTManager     // JWT令牌管理器
+	PwdManager           *security.PasswordManager // 密码管理器
+	MetricsCacheService  *MetricsCacheService      // 系统指标缓存服务
+	Scheduler            *scheduler.Scheduler      // 定时任务调度器
 }
 
 // GetDB 获取数据库连接
@@ -90,17 +94,37 @@ func (c *Core) Init() error {
 		// 缓存失败不影响服务启动
 	}
 
+	// 6. 初始化系统指标缓存服务
+	c.MetricsCacheService = NewMetricsCacheService(c)
+	log.Println("系统指标缓存服务初始化完成")
+
+	// 7. 初始化定时任务调度器
+	c.Scheduler = scheduler.NewScheduler(c.GetDB())
+	if err := c.Scheduler.Start(context.Background()); err != nil {
+		log.Printf("警告：启动调度器失败: %v", err)
+	} else {
+		log.Println("定时任务调度器启动成功")
+	}
+
 	return nil
 }
 
 // Close 关闭核心模块
 // 优雅关闭所有核心服务，释放资源
 func (c *Core) Close() {
+	// 停止定时任务调度器
+	if c.Scheduler != nil {
+		c.Scheduler.Stop()
+		log.Println("定时任务调度器已停止")
+	}
 	if c.DB != nil {
 		c.DB.Close()
 	}
 	if c.Cache != nil {
 		c.Cache.Close()
+	}
+	if c.MetricsCacheService != nil {
+		c.MetricsCacheService.Stop()
 	}
 }
 

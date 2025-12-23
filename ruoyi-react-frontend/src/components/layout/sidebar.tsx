@@ -9,6 +9,11 @@ import {
   FileTextOutlined,
   BellOutlined,
   MonitorOutlined,
+  DatabaseOutlined,
+  BarChartOutlined,
+  HistoryOutlined,
+  CloudServerOutlined,
+  ClockCircleOutlined
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -44,9 +49,11 @@ const menuItems: MenuItem[] = [
     getItem('通知公告', '/system/notices', <BellOutlined />),
   ]),
   getItem('系统监控', '/monitor', <MonitorOutlined />, [
-    getItem('在线用户', '/monitor/online', <UserOutlined />),
-    getItem('操作日志', '/monitor/operlog', <FileTextOutlined />),
-    getItem('登录日志', '/monitor/loginlog', <FileTextOutlined />),
+    getItem('监控仪表盘', '/monitor/dashboard', <BarChartOutlined />),
+    getItem('服务监控', '/monitor/server', <CloudServerOutlined />),
+    getItem('日志管理', '/monitor/logs', <HistoryOutlined />),
+    getItem('定时任务', '/monitor/job', <ClockCircleOutlined />),
+    getItem('缓存管理', '/monitor/cache', <DatabaseOutlined />),
   ]),
 ];
 

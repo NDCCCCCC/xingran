@@ -8,6 +8,7 @@ import {
   Input,
   InputNumber,
   Select,
+  TreeSelect,
   message,
   Popconfirm,
   Tag,
@@ -66,17 +67,12 @@ const DepartmentManagement: React.FC = () => {
       const deptData = result.data || [];
       setDepartments(deptData);
 
-      // 组建父级选项
-      const flatList = flattenTreeToList(deptData);
-      const options = flatList.map(dept => ({
-        title: dept.deptName,
-        value: dept.id,
-        key: dept.id,
-      }));
-      options.unshift({ title: '顶级部门', value: '', key: '' });
+      // 组建父级选项（树形结构）
+      const options = transformToParentTreeOptions(deptData);
       setParentOptions(options);
 
       // 统计数据
+      const flatList = flattenTreeToList(deptData);
       const stats = {
         total: flatList.length,
         topLevel: flatList.filter(d => !d.parentId).length,
@@ -87,7 +83,7 @@ const DepartmentManagement: React.FC = () => {
       console.error('加载部门列表失败:', error);
       // 设置默认值
       setDepartments([]);
-      setParentOptions([{ title: '顶级部门', value: '', key: '' }]);
+      setParentOptions([{ label: '顶级部门', value: '', key: '' }]);
       setStatistics({ total: 0, topLevel: 0, subLevel: 0 });
     } finally {
       setLoading(false);
@@ -115,6 +111,20 @@ const DepartmentManagement: React.FC = () => {
     };
     traverse(tree);
     return result;
+  };
+
+  // 转换为 TreeSelect 所需的树形结构
+  const transformToParentTreeOptions = (data: any[]): any[] => {
+    if (!data || !Array.isArray(data)) {
+      return [];
+    }
+
+    return data.map(item => ({
+      title: item.deptName,
+      value: item.id,
+      key: item.id,
+      children: item.children && item.children.length > 0 ? transformToParentTreeOptions(item.children) : undefined,
+    }));
   };
 
   // 渲染树形表格数据
@@ -376,11 +386,14 @@ const DepartmentManagement: React.FC = () => {
             name="parentId"
             label="上级部门"
           >
-            <Select
+            <TreeSelect
               style={{ width: '100%' }}
               placeholder="请选择上级部门"
-              options={parentOptions}
+              treeData={[{ title: '顶级部门', value: '', key: '' }, ...parentOptions]}
               allowClear
+              showSearch
+              treeDefaultExpandAll
+              treeLine={{ showLeafIcon: false }}
             />
           </Form.Item>
           <Form.Item

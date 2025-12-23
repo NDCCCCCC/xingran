@@ -49,9 +49,18 @@ api.interceptors.response.use(
     const { response } = error;
 
     if (response) {
-      const { status } = response;
+      const { status, data } = response;
+
+      // 尝试从后端响应中获取错误消息
+      let errorMessage = '请求失败';
+      if (data?.message) {
+        errorMessage = data.message;
+      }
 
       switch (status) {
+        case 400:
+          message.error(errorMessage);
+          break;
         case 401:
           // 未授权，清除token并跳转到登录页
           localStorage.removeItem('accessToken');
@@ -61,16 +70,16 @@ api.interceptors.response.use(
           window.location.href = '/login';
           break;
         case 403:
-          message.error('没有权限访问');
+          message.error(errorMessage);
           break;
         case 404:
-          message.error('请求的资源不存在');
+          message.error(errorMessage);
           break;
         case 500:
-          message.error('服务器内部错误');
+          message.error(errorMessage);
           break;
         default:
-          message.error('网络错误，请稍后重试');
+          message.error(errorMessage || '网络错误，请稍后重试');
       }
     } else if (error.code === 'ECONNABORTED') {
       message.error('请求超时，请检查网络连接');
@@ -118,5 +127,8 @@ export function upload<T = any>(url: string, file: File): Promise<T> {
     },
   });
 }
+
+// 导出axios实例以供自定义使用
+export { api };
 
 export default api;

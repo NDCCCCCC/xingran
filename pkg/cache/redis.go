@@ -253,6 +253,119 @@ func (r *RedisCache) SetBool(ctx context.Context, key string, value bool, expira
 	return r.Set(ctx, key, strValue, expiration)
 }
 
+// MGetJSON 批量获取JSON对象
+func (r *RedisCache) MGetJSON(ctx context.Context, keys ...string) (map[string]interface{}, error) {
+	if len(keys) == 0 {
+		return make(map[string]interface{}), nil
+	}
+
+	redisKeys := make([]string, len(keys))
+	for i, key := range keys {
+		redisKeys[i] = r.buildKey(key)
+	}
+
+	values, err := r.client.MGet(ctx, redisKeys...).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[string]interface{})
+	for i, key := range keys {
+		if values[i] != nil {
+			var value interface{}
+			if strValue, ok := values[i].(string); ok {
+				if err := json.Unmarshal([]byte(strValue), &value); err == nil {
+					result[key] = value
+				} else {
+					result[key] = strValue
+				}
+			} else {
+				result[key] = values[i]
+			}
+		}
+	}
+
+	return result, nil
+}
+
+// MSetJSON 批量设置JSON对象
+func (r *RedisCache) MSetJSON(ctx context.Context, data map[string]interface{}, expiration time.Duration) error {
+	if len(data) == 0 {
+		return nil
+	}
+
+	// 先设置所有数据
+	pairs := make([]interface{}, len(data)*2)
+	i := 0
+	for key, value := range data {
+		pairs[i] = r.buildKey(key)
+		pairs[i+1] = value
+		i += 2
+	}
+
+	if err := r.client.MSet(ctx, pairs...).Err(); err != nil {
+		return err
+	}
+
+	// 如果需要设置过期时间，为每个键单独设置
+	if expiration > 0 {
+		for key := range data {
+			if err := r.client.Expire(ctx, r.buildKey(key), expiration).Err(); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+// HGet 获取Hash字段
+func (r *RedisCache) HGet(ctx context.Context, key, field string) (string, error) {
+	return r.client.HGet(ctx, r.buildKey(key), field).Result()
+}
+
+// HSet 设置Hash字段
+func (r *RedisCache) HSet(ctx context.Context, key, field string, value interface{}) error {
+	return r.client.HSet(ctx, r.buildKey(key), field, value).Err()
+}
+
+// HGetAll 获取Hash所有字段
+func (r *RedisCache) HGetAll(ctx context.Context, key string) (map[string]string, error) {
+	result, err := r.client.HGetAll(ctx, r.buildKey(key)).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	// Redis的HGetAll已经返回map[string]string，直接返回
+	return result, nil
+}
+
+// HDel 删除Hash字段
+func (r *RedisCache) HDel(ctx context.Context, key string, fields ...string) error {
+	// HDel接受字符串参数，不需要转换
+	return r.client.HDel(ctx, r.buildKey(key), fields...).Err()
+}
+
+// HKeys 获取Hash所有字段名
+func (r *RedisCache) HKeys(ctx context.Context, key string) ([]string, error) {
+	keys, err := r.client.HKeys(ctx, r.buildKey(key)).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	// 移除前缀（如果需要）
+	if r.prefix != "" {
+		prefixLen := len(r.prefix) + 1
+		for i, key := range keys {
+			if len(key) > prefixLen {
+				keys[i] = key[prefixLen:]
+			}
+		}
+	}
+
+	return keys, nil
+}
+
 // MultiLevelCache 多级缓存
 type MultiLevelCache struct {
 	l1Cache Cache // 本地缓存
@@ -362,4 +475,154 @@ func (m *MultiLevelCache) Keys(ctx context.Context, pattern string) ([]string, e
 func (m *MultiLevelCache) FlushDB(ctx context.Context) error {
 	m.l1Cache.FlushDB(ctx)
 	return m.l2Cache.FlushDB(ctx)
+}
+
+// GetStats 获取多级缓存统计信息（主要返回L2缓存的统计信息）
+func (m *MultiLevelCache) GetStats(ctx context.Context) (map[string]interface{}, error) {
+	// 尝试从L2缓存（Redis）获取统计信息
+	if cacheWithStats, ok := m.l2Cache.(interface {
+		GetStats(ctx context.Context) (map[string]interface{}, error)
+	}); ok {
+		return cacheWithStats.GetStats(ctx)
+	}
+
+	// 如果L2缓存不支持统计信息，返回基本信息
+	stats := map[string]interface{}{
+		"cache_type": "multi_level",
+		"l1_cache":   "memory",
+		"l2_cache":   "redis",
+	}
+
+	// 获取键的总数
+	keys, err := m.Keys(ctx, "*")
+	if err == nil {
+		stats["key_count"] = int64(len(keys))
+	}
+
+	return stats, nil
+}
+
+// MGetJSON 批量获取JSON对象
+func (m *MultiLevelCache) MGetJSON(ctx context.Context, keys ...string) (map[string]interface{}, error) {
+	if len(keys) == 0 {
+		return make(map[string]interface{}), nil
+	}
+
+	// 优先从L1缓存获取
+	result := make(map[string]interface{})
+	missingKeys := make([]string, 0, len(keys))
+
+	for _, key := range keys {
+		if value, err := m.l1Cache.Get(ctx, key); err == nil && value != "" {
+			var jsonValue interface{}
+			if err := json.Unmarshal([]byte(value), &jsonValue); err == nil {
+				result[key] = jsonValue
+			} else {
+				result[key] = value
+			}
+		} else {
+			missingKeys = append(missingKeys, key)
+		}
+	}
+
+	// 从L2缓存获取缺失的数据
+	if len(missingKeys) > 0 {
+		if cacheWithMGet, ok := m.l2Cache.(interface {
+			MGetJSON(ctx context.Context, keys ...string) (map[string]interface{}, error)
+		}); ok {
+			l2Result, err := cacheWithMGet.MGetJSON(ctx, missingKeys...)
+			if err == nil {
+				for key, value := range l2Result {
+					result[key] = value
+					// 回写L1缓存
+					if jsonValue, err := json.Marshal(value); err == nil {
+						m.l1Cache.Set(ctx, key, jsonValue, 5*time.Minute)
+					}
+				}
+			}
+		} else {
+			// 降级到单个获取
+			for _, key := range missingKeys {
+				if value, err := m.l2Cache.Get(ctx, key); err == nil && value != "" {
+					var jsonValue interface{}
+					if err := json.Unmarshal([]byte(value), &jsonValue); err == nil {
+						result[key] = jsonValue
+						// 回写L1缓存
+						m.l1Cache.Set(ctx, key, value, 5*time.Minute)
+					}
+				}
+			}
+		}
+	}
+
+	return result, nil
+}
+
+// MSetJSON 批量设置JSON对象
+func (m *MultiLevelCache) MSetJSON(ctx context.Context, data map[string]interface{}, expiration time.Duration) error {
+	if len(data) == 0 {
+		return nil
+	}
+
+	// 设置到L1缓存（短时间）
+	l1Data := make(map[string]interface{})
+	for key, value := range data {
+		if jsonValue, err := json.Marshal(value); err == nil {
+			l1Data[key] = jsonValue
+		}
+	}
+
+	if len(l1Data) > 0 {
+		if cacheWithMSet, ok := m.l1Cache.(interface {
+			MSetJSON(ctx context.Context, data map[string]interface{}, expiration time.Duration) error
+		}); ok {
+			cacheWithMSet.MSetJSON(ctx, l1Data, 5*time.Minute)
+		} else {
+			// 降级到单个设置
+			for key, value := range l1Data {
+				m.l1Cache.Set(ctx, key, value, 5*time.Minute)
+			}
+		}
+	}
+
+	// 设置到L2缓存（长过期时间）
+	if cacheWithMSet, ok := m.l2Cache.(interface {
+		MSetJSON(ctx context.Context, data map[string]interface{}, expiration time.Duration) error
+	}); ok {
+		return cacheWithMSet.MSetJSON(ctx, data, expiration)
+	} else {
+		// 降级到单个设置
+		for key, value := range data {
+			if err := m.l2Cache.Set(ctx, key, value, expiration); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+// HGet 获取Hash字段
+func (m *MultiLevelCache) HGet(ctx context.Context, key, field string) (string, error) {
+	return m.l2Cache.HGet(ctx, key, field)
+}
+
+// HSet 设置Hash字段
+func (m *MultiLevelCache) HSet(ctx context.Context, key, field string, value interface{}) error {
+	return m.l2Cache.HSet(ctx, key, field, value)
+}
+
+// HGetAll 获取Hash所有字段
+func (m *MultiLevelCache) HGetAll(ctx context.Context, key string) (map[string]string, error) {
+	return m.l2Cache.HGetAll(ctx, key)
+}
+
+// HDel 删除Hash字段
+func (m *MultiLevelCache) HDel(ctx context.Context, key string, fields ...string) error {
+	return m.l2Cache.HDel(ctx, key, fields...)
+}
+
+// HKeys 获取Hash所有字段名
+func (m *MultiLevelCache) HKeys(ctx context.Context, key string) ([]string, error) {
+	return m.l2Cache.HKeys(ctx, key)
 }

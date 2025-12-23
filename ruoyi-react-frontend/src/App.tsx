@@ -12,6 +12,12 @@ import UserManagement from '@/pages/system/user';
 import RoleManagement from '@/pages/system/role';
 import MenuManagement from '@/pages/system/menu';
 import DepartmentManagement from '@/pages/system/dept';
+// 系统监控页面
+import MonitorDashboard from '@/pages/monitor/dashboard';
+import ServerMonitor from '@/pages/monitor/server';
+import LogMonitor from '@/pages/monitor/logs';
+import JobManager from '@/pages/monitor/job';
+import CacheManager from '@/pages/monitor/cache';
 import './App.css';
 
 // 创建React Query客户端
@@ -84,6 +90,14 @@ function App() {
                       <Route path="/system/role" element={<RoleManagement />} />
                       <Route path="/system/menu" element={<MenuManagement />} />
                       <Route path="/system/dept" element={<DepartmentManagement />} />
+
+                      {/* 系统监控路由 */}
+                      <Route path="/monitor" element={<Navigate to="/monitor/dashboard" replace />} />
+                      <Route path="/monitor/dashboard" element={<MonitorDashboard />} />
+                      <Route path="/monitor/server" element={<ServerMonitor />} />
+                      <Route path="/monitor/logs" element={<LogMonitor />} />
+                      <Route path="/monitor/job" element={<JobManager />} />
+                      <Route path="/monitor/cache" element={<CacheManager />} />
 
                       <Route path="*" element={<Navigate to="/dashboard" replace />} />
                     </Routes>

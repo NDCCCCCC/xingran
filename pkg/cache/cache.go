@@ -34,6 +34,17 @@ type Cache interface {
 
 	// 关闭连接
 	Close() error
+
+	// JSON操作扩展
+	MGetJSON(ctx context.Context, keys ...string) (map[string]interface{}, error)
+	MSetJSON(ctx context.Context, data map[string]interface{}, expiration time.Duration) error
+
+	// Hash操作扩展（用于缓存元数据管理）
+	HGet(ctx context.Context, key, field string) (string, error)
+	HSet(ctx context.Context, key, field string, value interface{}) error
+	HGetAll(ctx context.Context, key string) (map[string]string, error)
+	HDel(ctx context.Context, key string, fields ...string) error
+	HKeys(ctx context.Context, key string) ([]string, error)
 }
 
 // CacheStrategy 缓存策略

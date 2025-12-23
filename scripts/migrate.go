@@ -50,6 +50,12 @@ func main() {
 		// 通知模型
 		&models.Notice{},
 
+		// 监控模型
+		&models.ServerInfo{},
+		&models.SystemMetrics{},
+		&models.CacheInfo{},
+		&models.CacheStats{},
+
 		// 代码生成模型
 		&models.GenTable{},
 		&models.GenColumn{},
