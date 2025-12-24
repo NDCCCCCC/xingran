@@ -123,7 +123,7 @@ const UserManagement: React.FC = () => {
   // 加载部门列表
   const loadDepartments = async () => {
     try {
-      const result = await post('/system/depts/list');
+      const result = await post('/system/departments/list');
       // 直接存储树形结构数据
       setDepartments(result.data || []);
     } catch (error) {
@@ -495,49 +495,47 @@ const UserManagement: React.FC = () => {
             </Col>
           </Row>
 
-          {/* 搜索表单 */}
+          {/* 搜索表单和操作按钮 */}
           <Card style={{ marginBottom: 16 }}>
-            <Form form={searchForm} layout="inline">
-              <Form.Item name="username" label="用户名">
-                <Input placeholder="请输入用户名" />
-              </Form.Item>
-              <Form.Item name="nickname" label="昵称">
-                <Input placeholder="请输入昵称" />
-              </Form.Item>
-              <Form.Item name="status" label="状态">
-                <Select placeholder="请选择状态" style={{ width: 120 }} allowClear>
-                  <Option value="0">启用</Option>
-                  <Option value="1">禁用</Option>
-                </Select>
-              </Form.Item>
-              <Form.Item>
-                <Space>
-                  <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
-                    搜索
-                  </Button>
-                  <Button onClick={handleReset}>重置</Button>
-                  <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
-                    刷新
-                  </Button>
-                </Space>
-              </Form.Item>
-            </Form>
-          </Card>
-
-          {/* 操作按钮 */}
-          <Card style={{ marginBottom: 16 }}>
-            <Space>
-              <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-                新增用户
-              </Button>
-              <Button
-                danger
-                onClick={handleBatchDelete}
-                disabled={selectedRowKeys.length === 0}
-              >
-                批量删除
-              </Button>
-            </Space>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+              <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
+                <Form.Item name="username" label="用户名">
+                  <Input placeholder="请输入用户名" />
+                </Form.Item>
+                <Form.Item name="nickname" label="昵称">
+                  <Input placeholder="请输入昵称" />
+                </Form.Item>
+                <Form.Item name="status" label="状态">
+                  <Select placeholder="请选择状态" style={{ width: 120 }} allowClear>
+                    <Option value="0">启用</Option>
+                    <Option value="1">禁用</Option>
+                  </Select>
+                </Form.Item>
+                <Form.Item>
+                  <Space>
+                    <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+                      搜索
+                    </Button>
+                    <Button onClick={handleReset}>重置</Button>
+                    <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
+                      刷新
+                    </Button>
+                  </Space>
+                </Form.Item>
+              </Form>
+              <Space>
+                <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+                  新增用户
+                </Button>
+                <Button
+                  danger
+                  onClick={handleBatchDelete}
+                  disabled={selectedRowKeys.length === 0}
+                >
+                  批量删除
+                </Button>
+              </Space>
+            </div>
           </Card>
 
           {/* 用户表格 */}

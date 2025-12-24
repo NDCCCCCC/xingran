@@ -372,39 +372,37 @@ const MenuManagement: React.FC = () => {
         </Col>
       </Row>
 
-      {/* 搜索表单 */}
+      {/* 搜索表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>
-        <Form form={searchForm} layout="inline">
-          <Form.Item name="menuName" label="菜单名称">
-            <Input placeholder="请输入菜单名称" />
-          </Form.Item>
-          <Form.Item name="status" label="状态">
-            <Select placeholder="请选择状态" style={{ width: 120 }} allowClear>
-              <Option value="0">显示</Option>
-              <Option value="1">隐藏</Option>
-            </Select>
-          </Form.Item>
-          <Form.Item>
-            <Space>
-              <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
-                搜索
-              </Button>
-              <Button onClick={handleReset}>重置</Button>
-              <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
-                刷新
-              </Button>
-            </Space>
-          </Form.Item>
-        </Form>
-      </Card>
-
-      {/* 操作按钮 */}
-      <Card style={{ marginBottom: 16 }}>
-        <Space>
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-            新增菜单
-          </Button>
-        </Space>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+          <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
+            <Form.Item name="menuName" label="菜单名称">
+              <Input placeholder="请输入菜单名称" />
+            </Form.Item>
+            <Form.Item name="status" label="状态">
+              <Select placeholder="请选择状态" style={{ width: 120 }} allowClear>
+                <Option value="0">显示</Option>
+                <Option value="1">隐藏</Option>
+              </Select>
+            </Form.Item>
+            <Form.Item>
+              <Space>
+                <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+                  搜索
+                </Button>
+                <Button onClick={handleReset}>重置</Button>
+                <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
+                  刷新
+                </Button>
+              </Space>
+            </Form.Item>
+          </Form>
+          <Space>
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+              新增菜单
+            </Button>
+          </Space>
+        </div>
       </Card>
 
       {/* 菜单表格 */}

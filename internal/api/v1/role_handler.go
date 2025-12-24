@@ -318,15 +318,9 @@ func createRole(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		// 设置默认值
-		if req.MenuCheckStrictly == nil {
-			menuCheckStrictly := true
-			req.MenuCheckStrictly = &menuCheckStrictly
-		}
-		if req.DeptCheckStrictly == nil {
-			deptCheckStrictly := true
-			req.DeptCheckStrictly = &deptCheckStrictly
-		}
+		// 设置默认值（固定为关联模式）
+		menuCheckStrictly := true
+		deptCheckStrictly := true
 
 		// 开始事务
 		tx := core.DB.GetDB().Begin()
@@ -342,8 +336,8 @@ func createRole(core *core.Core) gin.HandlerFunc {
 			RoleKey:          req.RoleKey,
 			RoleSort:         req.RoleSort,
 			DataScope:        models.DataScope(req.DataScope),
-			MenuCheckStrictly: *req.MenuCheckStrictly,
-			DeptCheckStrictly: *req.DeptCheckStrictly,
+			MenuCheckStrictly: menuCheckStrictly,
+			DeptCheckStrictly: deptCheckStrictly,
 			Status:           models.RoleStatus(req.Status),
 			Remark:           func() string { if req.Remark != nil { return *req.Remark }; return "" }(),
 		}
@@ -603,13 +597,9 @@ func updateRole(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		// 设置默认值
-		if req.MenuCheckStrictly == nil {
-			req.MenuCheckStrictly = &role.MenuCheckStrictly
-		}
-		if req.DeptCheckStrictly == nil {
-			req.DeptCheckStrictly = &role.DeptCheckStrictly
-		}
+		// 设置默认值（固定为关联模式）
+		menuCheckStrictly := true
+		deptCheckStrictly := true
 
 		// 开始事务
 		tx := core.DB.GetDB().Begin()
@@ -625,8 +615,8 @@ func updateRole(core *core.Core) gin.HandlerFunc {
 			"role_key":           req.RoleKey,
 			"role_sort":          req.RoleSort,
 			"data_scope":         models.DataScope(req.DataScope),
-			"menu_check_strictly": *req.MenuCheckStrictly,
-			"dept_check_strictly": *req.DeptCheckStrictly,
+			"menu_check_strictly": menuCheckStrictly,
+			"dept_check_strictly": deptCheckStrictly,
 			"status":             models.RoleStatus(req.Status),
 			"remark":             func() string { if req.Remark != nil { return *req.Remark }; return "" }(),
 		}

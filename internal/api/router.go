@@ -63,7 +63,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			}
 
 			// 部门管理
-			depts := authorized.Group("/depts")
+			depts := authorized.Group("/departments")
 			depts.Use(middleware.RequirePermissions([]string{
 				string(permission.DeptList),
 				string(permission.DeptAdd),

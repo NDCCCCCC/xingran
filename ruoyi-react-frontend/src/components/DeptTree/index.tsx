@@ -32,7 +32,7 @@ const DeptTree: React.FC<DeptTreeProps> = ({
   const loadDeptTree = async () => {
     setLoading(true);
     try {
-      const result = await post('/system/depts/list');
+      const result = await post('/system/departments/list');
       const deptData = result.data || [];
       const treeData = transformToTreeData(deptData);
       setTreeData(treeData);

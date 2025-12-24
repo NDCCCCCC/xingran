@@ -63,7 +63,7 @@ const DepartmentManagement: React.FC = () => {
   const loadDepartments = async (searchParams?: any) => {
     setLoading(true);
     try {
-      const result = await post('/system/depts/list', searchParams || {});
+      const result = await post('/system/departments/list', searchParams || {});
       const deptData = result.data || [];
       setDepartments(deptData);
 
@@ -177,7 +177,7 @@ const DepartmentManagement: React.FC = () => {
   // 删除部门
   const handleDelete = async (id: string) => {
     try {
-      await post(`/system/depts/${id}/delete`);
+      await post(`/system/departments/${id}/delete`);
       message.success('删除成功');
       loadDepartments();
     } catch (error) {
@@ -191,9 +191,9 @@ const DepartmentManagement: React.FC = () => {
       const values = await editForm.validateFields();
 
       if (editingDept) {
-        await post(`/system/depts/${editingDept.id}/update`, values);
+        await post(`/system/departments/${editingDept.id}/update`, values);
       } else {
-        await post('/system/depts', values);
+        await post('/system/departments', values);
       }
 
       message.success(editingDept ? '更新成功' : '创建成功');
@@ -324,39 +324,37 @@ const DepartmentManagement: React.FC = () => {
         </Col>
       </Row>
 
-      {/* 搜索表单 */}
+      {/* 搜索表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>
-        <Form form={searchForm} layout="inline">
-          <Form.Item name="deptName" label="部门名称">
-            <Input placeholder="请输入部门名称" />
-          </Form.Item>
-          <Form.Item name="status" label="状态">
-            <Select placeholder="请选择状态" style={{ width: 120 }} allowClear>
-              <Option value="0">正常</Option>
-              <Option value="1">停用</Option>
-            </Select>
-          </Form.Item>
-          <Form.Item>
-            <Space>
-              <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
-                搜索
-              </Button>
-              <Button onClick={handleReset}>重置</Button>
-              <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
-                刷新
-              </Button>
-            </Space>
-          </Form.Item>
-        </Form>
-      </Card>
-
-      {/* 操作按钮 */}
-      <Card style={{ marginBottom: 16 }}>
-        <Space>
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-            新增部门
-          </Button>
-        </Space>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+          <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
+            <Form.Item name="deptName" label="部门名称">
+              <Input placeholder="请输入部门名称" />
+            </Form.Item>
+            <Form.Item name="status" label="状态">
+              <Select placeholder="请选择状态" style={{ width: 120 }} allowClear>
+                <Option value="0">正常</Option>
+                <Option value="1">停用</Option>
+              </Select>
+            </Form.Item>
+            <Form.Item>
+              <Space>
+                <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+                  搜索
+                </Button>
+                <Button onClick={handleReset}>重置</Button>
+                <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
+                  刷新
+                </Button>
+              </Space>
+            </Form.Item>
+          </Form>
+          <Space>
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+              新增部门
+            </Button>
+          </Space>
+        </div>
       </Card>
 
       {/* 部门表格 */}

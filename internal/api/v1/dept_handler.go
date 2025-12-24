@@ -411,7 +411,7 @@ func deleteDept(core *core.Core) gin.HandlerFunc {
 		}
 
 		// 检查是否被角色关联
-		if err := core.DB.GetDB().Table("role_depts").Where("dept_id = ?", id).Count(&count).Error; err != nil {
+		if err := core.DB.GetDB().Table("sys_role_dept").Where("dept_id = ?", id).Count(&count).Error; err != nil {
 			response.Error(c, response.ErrServerError, "检查部门关联情况失败")
 			return
 		}
@@ -503,7 +503,7 @@ func getRoleDeptTreeSelect(core *core.Core) gin.HandlerFunc {
 
 		// 查询角色已关联的部门ID
 		var deptIds []string
-		if err := core.DB.GetDB().Table("role_depts").
+		if err := core.DB.GetDB().Table("sys_role_dept").
 			Where("role_id = ?", roleId).Pluck("dept_id", &deptIds).Error; err != nil {
 			response.Error(c, response.ErrServerError, "查询角色部门关联失败")
 			return

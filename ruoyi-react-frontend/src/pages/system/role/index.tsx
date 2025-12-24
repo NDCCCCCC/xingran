@@ -23,9 +23,8 @@ import {
   SearchOutlined,
   ReloadOutlined,
   SafetyCertificateOutlined,
-  SettingOutlined,
 } from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
+import type { ColumnsType, TreeDataNode } from 'antd/es/table';
 import type { Role } from '@/types';
 import { post } from '@/lib/api';
 
@@ -42,9 +41,11 @@ const RoleManagement: React.FC = () => {
   const [editForm] = Form.useForm();
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-  const [menuTreeVisible, setMenuTreeVisible] = useState(false);
-  const [menuTree, setMenuTree] = useState<any[]>([]);
-  const [selectedMenuIds, setSelectedMenuIds] = useState<string[]>([]);
+
+  // 新增状态：菜单树、部门树、数据范围
+  const [menuTree, setMenuTree] = useState<TreeDataNode[]>([]);
+  const [deptTree, setDeptTree] = useState<TreeDataNode[]>([]);
+  const [currentDataScope, setCurrentDataScope] = useState<number>(1);
 
   // 统计数据
   const [statistics, setStatistics] = useState({
@@ -74,7 +75,6 @@ const RoleManagement: React.FC = () => {
   // 加载统计数据
   const loadStatistics = async () => {
     try {
-      // 从服务器获取统计数据
       const result = await post('/system/roles/list', { current: 1, pageSize: 1000 });
       const allRoles = result.data.list || [];
       const activeCount = allRoles.filter(r => r.status === 0).length;
@@ -86,7 +86,6 @@ const RoleManagement: React.FC = () => {
       });
     } catch (error) {
       console.error('加载统计数据失败', error);
-      // 如果接口失败，使用当前角色数据统计
       const activeCount = roles.filter(r => r.status === 0).length;
       const inactiveCount = roles.filter(r => r.status === 1).length;
       setStatistics({
@@ -101,8 +100,7 @@ const RoleManagement: React.FC = () => {
   const loadMenuTree = async () => {
     try {
       const result = await post('/system/menus/tree-select');
-      // 处理树形数据，使其符合Antd Tree的数据格式
-      const processTreeData = (nodes: any[]): any[] => {
+      const processTreeData = (nodes: any[]): TreeDataNode[] => {
         return nodes.map((node: any) => ({
           key: node.key || node.id,
           title: node.title || node.menuName,
@@ -116,9 +114,51 @@ const RoleManagement: React.FC = () => {
     }
   };
 
+  // 加载部门树
+  const loadDeptTree = async () => {
+    try {
+      const result = await post('/system/departments/tree-select');
+      const processTreeData = (nodes: any[]): TreeDataNode[] => {
+        return nodes.map((node: any) => ({
+          key: node.key || node.id,
+          title: node.title || node.deptName,
+          value: node.value || node.id,
+          children: node.children && node.children.length > 0 ? processTreeData(node.children) : undefined,
+        }));
+      };
+      setDeptTree(processTreeData(result.data));
+    } catch (error) {
+      console.error('加载部门树失败:', error);
+    }
+  };
+
+  // 加载角色的菜单权限
+  const loadRoleMenus = async (roleId: string): Promise<string[]> => {
+    try {
+      const result = await post(`/system/menus/role-menu-tree-select/${roleId}`);
+      return result.data.checkedKeys || [];
+    } catch (error) {
+      console.error('加载角色菜单权限失败:', error);
+      return [];
+    }
+  };
+
+  // 加载角色的部门权限
+  const loadRoleDepts = async (roleId: string): Promise<string[]> => {
+    try {
+      const result = await post(`/system/departments/role-dept-tree-select/${roleId}`);
+      return result.data.checkedKeys || [];
+    } catch (error) {
+      console.error('加载角色部门权限失败:', error);
+      return [];
+    }
+  };
+
   useEffect(() => {
     loadRoles();
     loadStatistics();
+    loadMenuTree();
+    loadDeptTree();
   }, []);
 
   // 搜索
@@ -143,13 +183,32 @@ const RoleManagement: React.FC = () => {
   const handleAdd = () => {
     setEditingRole(null);
     editForm.resetFields();
+    editForm.setFieldsValue({
+      dataScope: 1,
+      status: 0,
+      menuIds: [],
+      deptIds: [],
+    });
+    setCurrentDataScope(1);
     setEditModalVisible(true);
   };
 
   // 编辑角色
-  const handleEdit = (record: Role) => {
+  const handleEdit = async (record: Role) => {
     setEditingRole(record);
-    editForm.setFieldsValue(record);
+
+    // 加载角色的菜单和部门权限
+    const [menuIds, deptIds] = await Promise.all([
+      loadRoleMenus(record.id),
+      loadRoleDepts(record.id),
+    ]);
+
+    editForm.setFieldsValue({
+      ...record,
+      menuIds,
+      deptIds,
+    });
+    setCurrentDataScope(record.dataScope || 1);
     setEditModalVisible(true);
   };
 
@@ -200,14 +259,13 @@ const RoleManagement: React.FC = () => {
     try {
       const values = await editForm.validateFields();
 
-      // 添加缺失的字段并确保数据类型正确
       const roleData = {
         roleName: values.roleName,
         roleKey: values.roleKey,
         roleSort: parseInt(values.roleSort) || 0,
-        dataScope: values.dataScope || 1, // 默认数据范围：全部数据
-        menuCheckStrictly: values.menuCheckStrictly !== undefined ? values.menuCheckStrictly : true,
-        deptCheckStrictly: values.deptCheckStrictly !== undefined ? values.deptCheckStrictly : true,
+        dataScope: values.dataScope || 1,
+        menuCheckStrictly: true,
+        deptCheckStrictly: true,
         status: parseInt(values.status) || 0,
         remark: values.remark,
         menuIds: values.menuIds || [],
@@ -229,34 +287,12 @@ const RoleManagement: React.FC = () => {
     }
   };
 
-  // 分配菜单权限
-  const handleAssignMenu = async (role: Role) => {
-    setEditingRole(role);
-    await loadMenuTree();
-
-    // 加载角色已选中的菜单
-    try {
-      const result = await post(`/system/menus/role-menu-tree-select/${role.id}`);
-      setSelectedMenuIds(result.data.checkedKeys || []);
-    } catch (error) {
-      console.error('加载角色菜单权限失败:', error);
-    }
-
-    setMenuTreeVisible(true);
-  };
-
-  // 保存菜单权限
-  const handleSaveMenu = async () => {
-    if (!editingRole) return;
-
-    try {
-      await post(`/system/roles/${editingRole.id}/menus`, {
-        menuIds: selectedMenuIds,
-      });
-      message.success('菜单权限分配成功');
-      setMenuTreeVisible(false);
-    } catch (error) {
-      console.error('保存菜单权限失败:', error);
+  // 数据范围变更时更新状态
+  const handleDataScopeChange = (value: number) => {
+    setCurrentDataScope(value);
+    // 如果不是自定义数据权限，清空部门权限选择
+    if (value !== 2) {
+      editForm.setFieldsValue({ deptIds: [] });
     }
   };
 
@@ -314,14 +350,7 @@ const RoleManagement: React.FC = () => {
           </Button>
           <Button
             type="link"
-            icon={<SettingOutlined />}
-            onClick={() => handleAssignMenu(record)}
-          >
-            菜单权限
-          </Button>
-          <Button
-            type="link"
-            icon={record.status === 0 ? <DeleteOutlined /> : <SettingOutlined />}
+            icon={record.status === 0 ? <DeleteOutlined /> : <SafetyCertificateOutlined />}
             onClick={() => handleUpdateStatus(record.id, record.status === 0 ? 1 : 0)}
           >
             {record.status === 0 ? '停用' : '启用'}
@@ -339,6 +368,15 @@ const RoleManagement: React.FC = () => {
         </Space>
       ),
     },
+  ];
+
+  // 数据范围选项
+  const dataScopeOptions = [
+    { label: '全部数据', value: 1 },
+    { label: '自定义数据', value: 2 },
+    { label: '本部门数据', value: 3 },
+    { label: '本部门及子部门数据', value: 4 },
+    { label: '仅本人数据', value: 5 },
   ];
 
   return (
@@ -360,7 +398,7 @@ const RoleManagement: React.FC = () => {
               title="正常角色"
               value={statistics.active}
               styles={{ content: { color: '#3f8600' } }}
-              prefix={<SettingOutlined />}
+              prefix={<SafetyCertificateOutlined />}
             />
           </Card>
         </Col>
@@ -376,49 +414,47 @@ const RoleManagement: React.FC = () => {
         </Col>
       </Row>
 
-      {/* 搜索表单 */}
+      {/* 搜索表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>
-        <Form form={searchForm} layout="inline">
-          <Form.Item name="roleName" label="角色名称">
-            <Input placeholder="请输入角色名称" />
-          </Form.Item>
-          <Form.Item name="roleKey" label="权限字符">
-            <Input placeholder="请输入权限字符" />
-          </Form.Item>
-          <Form.Item name="status" label="状态">
-            <Select placeholder="请选择状态" style={{ width: 120 }} allowClear>
-              <Option value="0">正常</Option>
-              <Option value="1">停用</Option>
-            </Select>
-          </Form.Item>
-          <Form.Item>
-            <Space>
-              <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
-                搜索
-              </Button>
-              <Button onClick={handleReset}>重置</Button>
-              <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
-                刷新
-              </Button>
-            </Space>
-          </Form.Item>
-        </Form>
-      </Card>
-
-      {/* 操作按钮 */}
-      <Card style={{ marginBottom: 16 }}>
-        <Space>
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-            新增角色
-          </Button>
-          <Button
-            danger
-            onClick={handleBatchDelete}
-            disabled={selectedRowKeys.length === 0}
-          >
-            批量删除
-          </Button>
-        </Space>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+          <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
+            <Form.Item name="roleName" label="角色名称">
+              <Input placeholder="请输入角色名称" />
+            </Form.Item>
+            <Form.Item name="roleKey" label="权限字符">
+              <Input placeholder="请输入权限字符" />
+            </Form.Item>
+            <Form.Item name="status" label="状态">
+              <Select placeholder="请选择状态" style={{ width: 120 }} allowClear>
+                <Option value="0">正常</Option>
+                <Option value="1">停用</Option>
+              </Select>
+            </Form.Item>
+            <Form.Item>
+              <Space>
+                <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+                  搜索
+                </Button>
+                <Button onClick={handleReset}>重置</Button>
+                <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
+                  刷新
+                </Button>
+              </Space>
+            </Form.Item>
+          </Form>
+          <Space>
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+              新增角色
+            </Button>
+            <Button
+              danger
+              onClick={handleBatchDelete}
+              disabled={selectedRowKeys.length === 0}
+            >
+              批量删除
+            </Button>
+          </Space>
+        </div>
       </Card>
 
       {/* 角色表格 */}
@@ -454,61 +490,114 @@ const RoleManagement: React.FC = () => {
         open={editModalVisible}
         onOk={handleSave}
         onCancel={() => setEditModalVisible(false)}
-        width={600}
+        width={800}
+        styles={{ body: { maxHeight: '70vh', overflowY: 'auto' } }}
       >
         <Form form={editForm} layout="vertical">
-          <Form.Item
-            name="roleName"
-            label="角色名称"
-            rules={[{ required: true, message: '请输入角色名称' }]}
-          >
-            <Input />
-          </Form.Item>
-          <Form.Item
-            name="roleKey"
-            label="权限字符"
-            rules={[{ required: true, message: '请输入权限字符' }]}
-          >
-            <Input />
-          </Form.Item>
-          <Form.Item
-            name="roleSort"
-            label="显示顺序"
-            rules={[{ required: true, message: '请输入显示顺序' }]}
-          >
-            <Input type="number" />
-          </Form.Item>
-          <Form.Item name="status" label="状态" initialValue={0}>
-            <Select>
-              <Option value={0}>正常</Option>
-              <Option value={1}>停用</Option>
-            </Select>
-          </Form.Item>
-          <Form.Item name="remark" label="备注">
-            <Input.TextArea rows={4} />
-          </Form.Item>
-        </Form>
-      </Modal>
+          {/* 基本信息 */}
+          <Card title="基本信息" size="small" style={{ marginBottom: 16 }}>
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item
+                  name="roleName"
+                  label="角色名称"
+                  rules={[{ required: true, message: '请输入角色名称' }]}
+                >
+                  <Input />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  name="roleKey"
+                  label="权限字符"
+                  rules={[{ required: true, message: '请输入权限字符' }]}
+                >
+                  <Input />
+                </Form.Item>
+              </Col>
+            </Row>
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item
+                  name="roleSort"
+                  label="显示顺序"
+                  rules={[{ required: true, message: '请输入显示顺序' }]}
+                  initialValue={0}
+                >
+                  <Input type="number" />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  name="status"
+                  label="状态"
+                  initialValue={0}
+                >
+                  <Select>
+                    <Option value={0}>正常</Option>
+                    <Option value={1}>停用</Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+            </Row>
+            <Form.Item name="remark" label="备注">
+              <Input.TextArea rows={2} />
+            </Form.Item>
+          </Card>
 
-      {/* 菜单权限弹窗 */}
-      <Modal
-        title="分配菜单权限"
-        open={menuTreeVisible}
-        onOk={handleSaveMenu}
-        onCancel={() => setMenuTreeVisible(false)}
-        width={600}
-      >
-        <div style={{ marginBottom: 16 }}>
-          <span>角色：{editingRole?.roleName}</span>
-        </div>
-        <Tree
-          checkable
-          treeData={menuTree}
-          checkedKeys={selectedMenuIds}
-          onCheck={(checkedKeys) => {
-            setSelectedMenuIds(checkedKeys as string[]);
-          }}
-        />
+          {/* 菜单权限和数据权限横向排列 */}
+          <Row gutter={16}>
+            {/* 左侧：菜单权限 */}
+            <Col span={12}>
+              <Card title="菜单权限" size="small">
+                <Form.Item
+                  name="menuIds"
+                  label="权限菜单"
+                  tooltip="选择角色可以访问的菜单（选择父菜单时自动选择子菜单）"
+                >
+                  <Tree
+                    checkable
+                    treeData={menuTree}
+                    placeholder="请选择菜单"
+                    style={{ background: '#f5f5f5', padding: '8px', borderRadius: '4px', maxHeight: '400px', overflowY: 'auto' }}
+                  />
+                </Form.Item>
+              </Card>
+            </Col>
+
+            {/* 右侧：数据权限 */}
+            <Col span={12}>
+              <Card title="数据权限" size="small">
+                <Form.Item
+                  name="dataScope"
+                  label="数据范围"
+                  initialValue={1}
+                >
+                  <Select onChange={handleDataScopeChange}>
+                    {dataScopeOptions.map(opt => (
+                      <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+
+                {currentDataScope === 2 && (
+                  <Form.Item
+                    name="deptIds"
+                    label="部门权限"
+                    tooltip="选择角色可以访问的部门数据（选择父部门时自动选择子部门）"
+                  >
+                    <Tree
+                      checkable
+                      treeData={deptTree}
+                      placeholder="请选择部门"
+                      style={{ background: '#f5f5f5', padding: '8px', borderRadius: '4px', maxHeight: '400px', overflowY: 'auto' }}
+                    />
+                  </Form.Item>
+                )}
+              </Card>
+            </Col>
+          </Row>
+        </Form>
       </Modal>
     </div>
   );
