@@ -73,35 +73,39 @@ func (s *service) createDefaultAdminRole(db *gorm.DB) error {
 
 // createDefaultMenus 创建默认菜单
 func (s *service) createDefaultMenus(db *gorm.DB) error {
-	// 先创建系统管理菜单（父菜单）
+	// 1. 创建仪表盘菜单（顶级菜单）
+	dashboardMenu := models.Menu{
+		MenuName:  "仪表盘",
+		OrderNum:  0,
+		MenuType:  models.MenuTypeMenu,
+		Visible:   models.VisibleShow,
+		Status:    models.MenuStatusNormal,
+		Path:      func() *string { s := "/dashboard"; return &s }(),
+		Component: func() *string { s := "dashboard/index"; return &s }(),
+		Icon:      func() *string { s := "dashboard"; return &s }(),
+		Perms:     func() *string { s := string(System); return &s }(),
+	}
+
+	s.createMenuIfNotExists(db, &dashboardMenu)
+
+	// 2. 创建系统管理菜单（父菜单）
 	systemMenu := models.Menu{
 		MenuName: "系统管理",
 		OrderNum: 1,
 		MenuType: models.MenuTypeDir,
 		Visible:  models.VisibleShow,
 		Status:   models.MenuStatusNormal,
-		Icon:     func() *string { s := "system"; return &s }(),
+		Icon:     func() *string { s := "setting"; return &s }(),
 		Perms:    func() *string { s := string(System); return &s }(),
 	}
 
-	// 检查系统管理菜单是否已存在
-	var count int64
-	db.Model(&models.Menu{}).Where("menu_name = ? AND path IS NULL", systemMenu.MenuName).Count(&count)
-	if count == 0 {
-		if err := db.Create(&systemMenu).Error; err != nil {
-			return err
-		}
-	} else {
-		// 如果已存在，获取其ID
-		var existingMenu models.Menu
-		if err := db.Where("menu_name = ? AND path IS NULL", systemMenu.MenuName).First(&existingMenu).Error; err != nil {
-			return err
-		}
-		systemMenu.ID = existingMenu.ID
+	s.createMenuIfNotExists(db, &systemMenu)
+	if systemMenu.ID == "" {
+		db.Where("menu_name = ? AND path IS NULL", systemMenu.MenuName).First(&systemMenu)
 	}
 
-	// 现在创建子菜单，使用已保存的父菜单ID
-	childMenus := []models.Menu{
+	// 系统管理子菜单
+	systemChildMenus := []models.Menu{
 		{
 			MenuName:  "用户管理",
 			OrderNum:  1,
@@ -123,7 +127,7 @@ func (s *service) createDefaultMenus(db *gorm.DB) error {
 			ParentID:  &systemMenu.ID,
 			Path:      func() *string { s := "/system/role"; return &s }(),
 			Component: func() *string { s := "system/role/index"; return &s }(),
-			Icon:      func() *string { s := "peoples"; return &s }(),
+			Icon:      func() *string { s := "users"; return &s }(),
 			Perms:     func() *string { s := string(SystemRole); return &s }(),
 		},
 		{
@@ -135,7 +139,7 @@ func (s *service) createDefaultMenus(db *gorm.DB) error {
 			ParentID:  &systemMenu.ID,
 			Path:      func() *string { s := "/system/menu"; return &s }(),
 			Component: func() *string { s := "system/menu/index"; return &s }(),
-			Icon:      func() *string { s := "tree-table"; return &s }(),
+			Icon:      func() *string { s := "menu"; return &s }(),
 			Perms:     func() *string { s := string(SystemMenu); return &s }(),
 		},
 		{
@@ -147,41 +151,110 @@ func (s *service) createDefaultMenus(db *gorm.DB) error {
 			ParentID:  &systemMenu.ID,
 			Path:      func() *string { s := "/system/dept"; return &s }(),
 			Component: func() *string { s := "system/dept/index"; return &s }(),
-			Icon:      func() *string { s := "tree"; return &s }(),
+			Icon:      func() *string { s := "users"; return &s }(),
 			Perms:     func() *string { s := string(SystemDept); return &s }(),
 		},
+	}
+
+	for _, menu := range systemChildMenus {
+		s.createMenuIfNotExists(db, &menu)
+	}
+
+	// 3. 创建系统监控菜单（父菜单）
+	monitorMenu := models.Menu{
+		MenuName: "系统监控",
+		OrderNum: 2,
+		MenuType: models.MenuTypeDir,
+		Visible:  models.VisibleShow,
+		Status:   models.MenuStatusNormal,
+		Icon:     func() *string { s := "monitor"; return &s }(),
+		Perms:    func() *string { s := string(Monitor); return &s }(),
+	}
+
+	s.createMenuIfNotExists(db, &monitorMenu)
+	if monitorMenu.ID == "" {
+		db.Where("menu_name = ? AND path IS NULL", monitorMenu.MenuName).First(&monitorMenu)
+	}
+
+	// 系统监控子菜单
+	monitorChildMenus := []models.Menu{
 		{
-			MenuName:  "岗位管理",
+			MenuName:  "监控仪表盘",
+			OrderNum:  1,
+			MenuType:  models.MenuTypeMenu,
+			Visible:   models.VisibleShow,
+			Status:    models.MenuStatusNormal,
+			ParentID:  &monitorMenu.ID,
+			Path:      func() *string { s := "/monitor/dashboard"; return &s }(),
+			Component: func() *string { s := "monitor/dashboard/index"; return &s }(),
+			Icon:      func() *string { s := "dashboard"; return &s }(),
+			Perms:     func() *string { s := string(Monitor); return &s }(),
+		},
+		{
+			MenuName:  "服务监控",
+			OrderNum:  2,
+			MenuType:  models.MenuTypeMenu,
+			Visible:   models.VisibleShow,
+			Status:    models.MenuStatusNormal,
+			ParentID:  &monitorMenu.ID,
+			Path:      func() *string { s := "/monitor/server"; return &s }(),
+			Component: func() *string { s := "monitor/server/index"; return &s }(),
+			Icon:      func() *string { s := "server"; return &s }(),
+			Perms:     func() *string { s := string(MonitorServer); return &s }(),
+		},
+		{
+			MenuName:  "日志管理",
+			OrderNum:  3,
+			MenuType:  models.MenuTypeMenu,
+			Visible:   models.VisibleShow,
+			Status:    models.MenuStatusNormal,
+			ParentID:  &monitorMenu.ID,
+			Path:      func() *string { s := "/monitor/logs"; return &s }(),
+			Component: func() *string { s := "monitor/logs/index"; return &s }(),
+			Icon:      func() *string { s := "history"; return &s }(),
+			Perms:     func() *string { s := string(MonitorLog); return &s }(),
+		},
+		{
+			MenuName:  "定时任务",
+			OrderNum:  4,
+			MenuType:  models.MenuTypeMenu,
+			Visible:   models.VisibleShow,
+			Status:    models.MenuStatusNormal,
+			ParentID:  &monitorMenu.ID,
+			Path:      func() *string { s := "/monitor/job"; return &s }(),
+			Component: func() *string { s := "monitor/job/index"; return &s }(),
+			Icon:      func() *string { s := "clock"; return &s }(),
+			Perms:     func() *string { s := string(MonitorJob); return &s }(),
+		},
+		{
+			MenuName:  "缓存管理",
 			OrderNum:  5,
 			MenuType:  models.MenuTypeMenu,
 			Visible:   models.VisibleShow,
 			Status:    models.MenuStatusNormal,
-			ParentID:  &systemMenu.ID,
-			Path:      func() *string { s := "/system/post"; return &s }(),
-			Component: func() *string { s := "system/post/index"; return &s }(),
-			Icon:      func() *string { s := "post"; return &s }(),
-			Perms:     func() *string { s := string(SystemPost); return &s }(),
+			ParentID:  &monitorMenu.ID,
+			Path:      func() *string { s := "/monitor/cache"; return &s }(),
+			Component: func() *string { s := "monitor/cache/index"; return &s }(),
+			Icon:      func() *string { s := "database"; return &s }(),
+			Perms:     func() *string { s := string(MonitorCache); return &s }(),
 		},
 	}
 
-	// 合并所有菜单
-	menus := []models.Menu{systemMenu}
-	for _, child := range childMenus {
-		menus = append(menus, child)
-	}
-
-	for _, menu := range menus {
-		var count int64
-		db.Model(&models.Menu{}).Where("menu_name = ? AND COALESCE(path, '') = COALESCE(?, '')", menu.MenuName, menu.Path).Count(&count)
-
-		if count == 0 {
-			if err := db.Create(&menu).Error; err != nil {
-				return err
-			}
-		}
+	for _, menu := range monitorChildMenus {
+		s.createMenuIfNotExists(db, &menu)
 	}
 
 	return nil
+}
+
+// createMenuIfNotExists 如果菜单不存在则创建
+func (s *service) createMenuIfNotExists(db *gorm.DB, menu *models.Menu) {
+	var count int64
+	db.Model(&models.Menu{}).Where("menu_name = ? AND COALESCE(path, '') = COALESCE(?, '')", menu.MenuName, menu.Path).Count(&count)
+
+	if count == 0 {
+		db.Create(menu)
+	}
 }
 
 // assignAllMenusToAdmin 为管理员分配所有菜单权限

@@ -3,6 +3,7 @@ import { Form, Input, Button, Card, message } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
+import { useMenuStore } from '@/store/menuStore';
 import type { LoginRequest } from '@/types';
 import './login.css';
 
@@ -11,11 +12,14 @@ const Login: React.FC = () => {
   const [form] = Form.useForm();
   const navigate = useNavigate();
   const { login } = useAuthStore();
+  const { fetchMenus } = useMenuStore();
 
   const handleFinish = async (values: LoginRequest) => {
     setLoading(true);
     try {
       await login(values);
+      // 登录成功后获取用户菜单
+      await fetchMenus();
       message.success('登录成功');
       navigate('/dashboard');
     } catch (error) {

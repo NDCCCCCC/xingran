@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { post } from '@/lib/api';
 import type { User, LoginRequest } from '@/types';
+import { useMenuStore } from './menuStore';
 
 interface AuthState {
   user: User | null;
@@ -57,6 +58,9 @@ export const useAuthStore = create<AuthState & AuthActions>()(
         // 清除localStorage
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
+
+        // 清除菜单数据
+        useMenuStore.getState().clearMenus();
 
         // 清除状态
         set({

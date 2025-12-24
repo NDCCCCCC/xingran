@@ -56,15 +56,16 @@ export interface Role {
 export interface Menu {
   id: string;
   menuName: string;
-  parentId: string;
+  parentId?: string | null;
   orderNum: number;
-  path?: string;
-  component?: string;
-  menuType: 'M' | 'C' | 'F'; // 目录/菜单/按钮
-  visible: 0 | 1;
-  status: 0 | 1; // 0:显示 1:隐藏
-  perms?: string;
-  icon?: string;
+  path?: string | null;
+  component?: string | null;
+  menuType: 'M' | 'C' | 'F'; // M:目录 C:菜单 F:按钮
+  visible: 0 | 1; // 0:隐藏 1:显示
+  status: 0 | 1; // 0:正常 1:停用
+  perms?: string | null;
+  icon?: string | null;
+  remark?: string;
   children?: Menu[];
   createTime: string;
   updateTime: string;

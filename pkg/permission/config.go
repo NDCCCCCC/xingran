@@ -113,6 +113,13 @@ const (
 	CacheView PermissionCode = "monitor:cache:view"
 	CacheClean PermissionCode = "monitor:cache:clean"
 
+	// 监控模块权限
+	Monitor       PermissionCode = "monitor"
+	MonitorServer PermissionCode = "monitor:server"
+	MonitorLog    PermissionCode = "monitor:log"
+	MonitorJob    PermissionCode = "monitor:job"
+	MonitorCache  PermissionCode = "monitor:cache"
+
 	// 在线构建权限
 	BuildList   PermissionCode = "tool:build:list"
 	BuildAdd    PermissionCode = "tool:build:add"
