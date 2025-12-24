@@ -211,14 +211,35 @@ const UserManagement: React.FC = () => {
   const handleAdd = () => {
     setEditingUser(null);
     editForm.resetFields();
+    // 设置默认值
+    const defaultValues: any = {
+      gender: 0,
+      status: 0,
+    };
+    // 设置第一个部门为默认值
+    if (departments.length > 0) {
+      defaultValues.deptId = departments[0].id;
+    }
+    // 设置第一个角色为默认值
+    if (roles.length > 0) {
+      defaultValues.roleIds = [roles[0].id];
+    }
+    editForm.setFieldsValue(defaultValues);
     setEditModalVisible(true);
   };
 
   // 编辑用户
   const handleEdit = (record: User) => {
     setEditingUser(record);
-    editForm.setFieldsValue(record);
     setEditModalVisible(true);
+  };
+
+  // Modal 打开后的回调
+  const handleModalOpenChange = (open: boolean) => {
+    if (open && editingUser) {
+      // Modal 打开时设置表单值
+      editForm.setFieldsValue(editingUser);
+    }
   };
 
   // 删除用户
@@ -576,6 +597,7 @@ const UserManagement: React.FC = () => {
         title={editingUser ? '编辑用户' : '新增用户'}
         open={editModalVisible}
         onOk={handleSave}
+        afterOpenChange={handleModalOpenChange}
         onCancel={() => setEditModalVisible(false)}
         width={600}
       >

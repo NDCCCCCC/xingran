@@ -26,6 +26,10 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 		authorized := system.Group("")
 		authorized.Use(middleware.JWTAuth(core.JWTManager))
 		{
+			// 用户菜单和权限接口（所有已登录用户都可访问，不需要特定权限）
+			// user-menus 和 user-permissions 放在权限检查之前
+			v1.SetupUserMenuRouter(authorized, core)
+
 			// 用户管理
 			users := authorized.Group("/users")
 			users.Use(middleware.RequirePermissions([]string{
@@ -34,6 +38,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 				string(permission.UserEdit),
 				string(permission.UserView),
 			}, core))
+			// 添加数据权限中间件
+			users.Use(middleware.DataScopePermission(core))
 			{
 				v1.SetupUserRouter(users, core)
 			}
@@ -50,7 +56,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 				v1.SetupRoleRouter(roles, core)
 			}
 
-			// 菜单管理
+			// 菜单管理（需要菜单管理权限）
 			menus := authorized.Group("/menus")
 			menus.Use(middleware.RequirePermissions([]string{
 				string(permission.MenuList),
@@ -70,6 +76,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 				string(permission.DeptEdit),
 				string(permission.DeptView),
 			}, core))
+			// 添加数据权限中间件
+			depts.Use(middleware.DataScopePermission(core))
 			{
 				v1.SetupDeptRouter(depts, core)
 			}

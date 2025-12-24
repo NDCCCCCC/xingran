@@ -131,6 +131,11 @@ func createMenu(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
+		// 处理空字符串的 ParentID，将其转换为 nil
+		if req.ParentID != nil && *req.ParentID == "" {
+			req.ParentID = nil
+		}
+
 		// 检查菜单名称是否已存在
 		var count int64
 		db := core.DB.GetDB().Model(&models.Menu{})
@@ -231,6 +236,11 @@ func updateMenu(core *core.Core) gin.HandlerFunc {
 		if err := c.ShouldBindJSON(&req); err != nil {
 			response.Error(c, response.ErrBadRequest, "请求参数错误")
 			return
+		}
+
+		// 处理空字符串的 ParentID，将其转换为 nil
+		if req.ParentID != nil && *req.ParentID == "" {
+			req.ParentID = nil
 		}
 
 		// 检查菜单是否存在

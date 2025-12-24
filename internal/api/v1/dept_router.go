@@ -21,4 +21,6 @@ func SetupDeptRouter(r *gin.RouterGroup, core *core.Core) {
 	r.POST("/tree-select", getDeptTreeSelect(core))
 	// 获取角色部门树选择器
 	r.POST("/role-dept-tree-select/:roleId", getRoleDeptTreeSelect(core))
+	// 获取部门用户列表
+	r.GET("/:deptId/users", getDeptUsers(core))
 }

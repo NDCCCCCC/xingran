@@ -27,12 +27,22 @@ import {
   TeamOutlined,
   PhoneOutlined,
   MailOutlined,
+  UserOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { Department } from '@/types';
-import { post } from '@/lib/api';
+import { post, get } from '@/lib/api';
 
 const { Option } = Select;
+
+// 部门用户类型
+interface DeptUser {
+  id: string;
+  username: string;
+  nickname?: string;
+  phone?: string;
+  email?: string;
+}
 
 const DepartmentManagement: React.FC = () => {
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -42,6 +52,8 @@ const DepartmentManagement: React.FC = () => {
   const [editForm] = Form.useForm();
   const [editingDept, setEditingDept] = useState<Department | null>(null);
   const [parentOptions, setParentOptions] = useState<any[]>([]);
+  const [deptUsers, setDeptUsers] = useState<DeptUser[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
 
   // 统计数据
   const [statistics, setStatistics] = useState({
@@ -67,12 +79,16 @@ const DepartmentManagement: React.FC = () => {
       const deptData = result.data || [];
       setDepartments(deptData);
 
+      // 调试日志：查看后端返回的数据格式
+      console.log('部门数据:', deptData);
+      const flatList = flattenTreeToList(deptData);
+      console.log('扁平化后的部门数据:', flatList);
+
       // 组建父级选项（树形结构）
       const options = transformToParentTreeOptions(deptData);
       setParentOptions(options);
 
       // 统计数据
-      const flatList = flattenTreeToList(deptData);
       const stats = {
         total: flatList.length,
         topLevel: flatList.filter(d => !d.parentId).length,
@@ -164,14 +180,58 @@ const DepartmentManagement: React.FC = () => {
   const handleAdd = () => {
     setEditingDept(null);
     editForm.resetFields();
+    setDeptUsers([]);
     setEditModalVisible(true);
   };
 
   // 编辑部门
   const handleEdit = (record: Department) => {
     setEditingDept(record);
-    editForm.setFieldsValue(record);
     setEditModalVisible(true);
+    // 加载该部门的用户列表
+    loadDeptUsers(record.id);
+  };
+
+  // Modal 打开后的回调
+  const handleModalOpenChange = (open: boolean) => {
+    if (open && editingDept) {
+      // Modal 打开时设置表单值
+      editForm.setFieldsValue(editingDept);
+    }
+  };
+
+  // 加载部门用户列表
+  const loadDeptUsers = async (deptId: string) => {
+    setLoadingUsers(true);
+    try {
+      const result = await get(`/system/departments/${deptId}/users`);
+      setDeptUsers(result.data || []);
+    } catch (error) {
+      console.error('加载部门用户失败:', error);
+      setDeptUsers([]);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  // 上级部门改变时加载用户列表
+  const handleParentChange = (value: string) => {
+    if (value) {
+      loadDeptUsers(value);
+    } else {
+      setDeptUsers([]);
+    }
+  };
+
+  // 负责人改变时自动填充电话和邮箱
+  const handleLeaderChange = (userId: string) => {
+    const selectedUser = deptUsers.find(u => u.id === userId);
+    if (selectedUser) {
+      editForm.setFieldsValue({
+        phone: selectedUser.phone || '',
+        email: selectedUser.email || '',
+      });
+    }
   };
 
   // 删除部门
@@ -190,10 +250,30 @@ const DepartmentManagement: React.FC = () => {
     try {
       const values = await editForm.validateFields();
 
+      // 处理电话和邮箱字段：如果没有选择负责人，则不发送这些字段
+      const submitData: any = {
+        deptName: values.deptName,
+        parentId: values.parentId || null,
+        orderNum: values.orderNum,
+        status: values.status,
+        remark: values.remark || '',
+      };
+
+      // 只有选择了负责人时才发送 leader、phone、email
+      if (values.leader) {
+        submitData.leader = values.leader;
+        submitData.phone = values.phone || '';
+        submitData.email = values.email || '';
+      }
+
       if (editingDept) {
-        await post(`/system/departments/${editingDept.id}/update`, values);
+        // 更新时需要添加 id 字段
+        await post(`/system/departments/${editingDept.id}/update`, {
+          ...submitData,
+          id: editingDept.id,
+        });
       } else {
-        await post('/system/departments', values);
+        await post('/system/departments', submitData);
       }
 
       message.success(editingDept ? '更新成功' : '创建成功');
@@ -204,16 +284,27 @@ const DepartmentManagement: React.FC = () => {
     }
   };
 
+  // 表格行样式：不可访问的部门显示为灰色
+  const getRowClassName = (record: Department) => {
+    if (record.accessible === false) {
+      return 'dept-inaccessible-row';
+    }
+    return '';
+  };
+
   // 表格列定义
   const columns: ColumnsType<Department> = [
     {
       title: '部门名称',
       dataIndex: 'deptName',
       key: 'deptName',
-      render: (text) => (
-        <Space>
+      render: (text, record) => (
+        <Space style={{ opacity: record.accessible === false ? 0.5 : 1 }}>
           <ApartmentOutlined />
           {text}
+          {record.accessible === false && (
+            <Tag color="default" style={{ fontSize: '12px', marginLeft: 4 }}>无权限</Tag>
+          )}
         </Space>
       ),
     },
@@ -221,7 +312,12 @@ const DepartmentManagement: React.FC = () => {
       title: '负责人',
       dataIndex: 'leader',
       key: 'leader',
-      render: (leader) => leader || '-',
+      render: (_, record) => {
+        if (record.leaderName && record.leaderUsername) {
+          return `${record.leaderName}（${record.leaderUsername}）`;
+        }
+        return '-';
+      },
     },
     {
       title: '联系电话',
@@ -271,6 +367,7 @@ const DepartmentManagement: React.FC = () => {
             type="link"
             icon={<EditOutlined />}
             onClick={() => handleEdit(record)}
+            disabled={record.accessible === false}
           >
             编辑
           </Button>
@@ -279,8 +376,9 @@ const DepartmentManagement: React.FC = () => {
             onConfirm={() => handleDelete(record.id)}
             okText="确定"
             cancelText="取消"
+            disabled={record.accessible === false}
           >
-            <Button type="link" danger icon={<DeleteOutlined />}>
+            <Button type="link" danger icon={<DeleteOutlined />} disabled={record.accessible === false}>
               删除
             </Button>
           </Popconfirm>
@@ -365,6 +463,7 @@ const DepartmentManagement: React.FC = () => {
           rowKey="id"
           loading={loading}
           pagination={false}
+          rowClassName={(record) => getRowClassName(record)}
           expandable={{
             defaultExpandAllRows: true,
           }}
@@ -377,12 +476,14 @@ const DepartmentManagement: React.FC = () => {
         open={editModalVisible}
         onOk={handleSave}
         onCancel={() => setEditModalVisible(false)}
+        afterOpenChange={handleModalOpenChange}
         width={600}
       >
         <Form form={editForm} layout="vertical">
           <Form.Item
             name="parentId"
             label="上级部门"
+            initialValue=""
           >
             <TreeSelect
               style={{ width: '100%' }}
@@ -392,6 +493,7 @@ const DepartmentManagement: React.FC = () => {
               showSearch
               treeDefaultExpandAll
               treeLine={{ showLeafIcon: false }}
+              onChange={handleParentChange}
             />
           </Form.Item>
           <Form.Item
@@ -405,17 +507,54 @@ const DepartmentManagement: React.FC = () => {
             name="orderNum"
             label="显示顺序"
             rules={[{ required: true, message: '请输入显示顺序' }]}
+            initialValue={0}
           >
             <InputNumber min={0} style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item name="leader" label="负责人">
-            <Input placeholder="请输入负责人" />
+            <Select
+              placeholder="请选择负责人"
+              loading={loadingUsers}
+              showSearch
+              allowClear
+              optionFilterProp="label"
+              onChange={handleLeaderChange}
+              notFoundContent={loadingUsers ? '加载中...' : '请先选择上级部门'}
+            >
+              {deptUsers.length > 0 && (
+                <Option
+                  key={deptUsers[0].id}
+                  value={deptUsers[0].id}
+                  label={`${deptUsers[0].nickname || deptUsers[0].username} (${deptUsers[0].username})`}
+                >
+                  <Space>
+                    <UserOutlined />
+                    {deptUsers[0].nickname || deptUsers[0].username}
+                    <span style={{ color: '#999' }}>({deptUsers[0].username})</span>
+                  </Space>
+                </Option>
+              )}
+              {deptUsers.slice(1).map(user => (
+                <Option
+                  key={user.id}
+                  value={user.id}
+                  label={`${user.nickname || user.username} (${user.username})`}
+                >
+                  <Space>
+                    <UserOutlined />
+                    {user.nickname || user.username}
+                    <span style={{ color: '#999' }}>({user.username})</span>
+                  </Space>
+                </Option>
+              ))}
+            </Select>
           </Form.Item>
-          <Form.Item name="phone" label="联系电话">
-            <Input placeholder="请输入联系电话" />
+          {/* 隐藏字段：电话和邮箱，通过选择负责人自动填充 */}
+          <Form.Item name="phone" hidden>
+            <Input />
           </Form.Item>
-          <Form.Item name="email" label="邮箱">
-            <Input placeholder="请输入邮箱" />
+          <Form.Item name="email" hidden>
+            <Input />
           </Form.Item>
           <Form.Item name="status" label="状态" initialValue={0}>
             <Select>

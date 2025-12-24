@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
@@ -150,6 +151,10 @@ func listUsers(core *core.Core) gin.HandlerFunc {
 		// 构建查询条件
 		db := core.DB.GetDB().Model(&models.User{})
 
+		// 应用数据权限过滤
+		// 对于用户表，使用 "dept_id" 字段进行过滤
+		db = middleware.ApplyDataScopeFromContext(c, db, core, "dept_id")
+
 		// 用户名过滤
 		if req.Username != nil && *req.Username != "" {
 			db = db.Where("username LIKE ?", "%"+*req.Username+"%")
@@ -212,10 +217,12 @@ func listUsers(core *core.Core) gin.HandlerFunc {
 			// 查询用户角色
 			var userRoles []models.UserRole
 			var roleNames []string
+			var roleIds []string
 			if err := core.DB.GetDB().Where("user_id = ?", user.ID).Find(&userRoles).Error; err == nil {
 				for _, ur := range userRoles {
 					if roleName, ok := roleMap[ur.RoleID]; ok {
 						roleNames = append(roleNames, roleName)
+						roleIds = append(roleIds, ur.RoleID)
 					}
 				}
 			}
@@ -231,6 +238,7 @@ func listUsers(core *core.Core) gin.HandlerFunc {
 				"deptId":    user.DeptID,
 				"deptName":  "", // 默认值
 				"roles":     roleNames, // 角色名称数组
+				"roleIds":   roleIds,  // 角色ID数组
 				"remark":    user.Remark,
 				"createdAt": user.CreatedAt,
 				"updatedAt": user.UpdatedAt,

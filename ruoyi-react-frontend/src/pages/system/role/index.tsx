@@ -26,6 +26,7 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType, TreeDataNode } from 'antd/es/table';
 import type { Role } from '@/types';
+import type { Key } from 'antd/es/table/interface';
 import { post } from '@/lib/api';
 
 const { Option } = Select;
@@ -46,6 +47,11 @@ const RoleManagement: React.FC = () => {
   const [menuTree, setMenuTree] = useState<TreeDataNode[]>([]);
   const [deptTree, setDeptTree] = useState<TreeDataNode[]>([]);
   const [currentDataScope, setCurrentDataScope] = useState<number>(1);
+  // 待设置的表单数据
+  const [pendingFormData, setPendingFormData] = useState<any>(null);
+  // 菜单和部门选中状态
+  const [checkedMenuKeys, setCheckedMenuKeys] = useState<Key[]>([]);
+  const [checkedDeptKeys, setCheckedDeptKeys] = useState<Key[]>([]);
 
   // 统计数据
   const [statistics, setStatistics] = useState({
@@ -186,10 +192,10 @@ const RoleManagement: React.FC = () => {
     editForm.setFieldsValue({
       dataScope: 1,
       status: 0,
-      menuIds: [],
-      deptIds: [],
     });
     setCurrentDataScope(1);
+    setCheckedMenuKeys([]);
+    setCheckedDeptKeys([]);
     setEditModalVisible(true);
   };
 
@@ -203,13 +209,27 @@ const RoleManagement: React.FC = () => {
       loadRoleDepts(record.id),
     ]);
 
-    editForm.setFieldsValue({
+    // 设置选中的菜单和部门
+    setCheckedMenuKeys(menuIds);
+    setCheckedDeptKeys(deptIds);
+
+    // 保存待设置的表单数据
+    setPendingFormData({
       ...record,
       menuIds,
       deptIds,
     });
     setCurrentDataScope(record.dataScope || 1);
     setEditModalVisible(true);
+  };
+
+  // Modal 打开后的回调
+  const handleModalOpenChange = (open: boolean) => {
+    if (open && pendingFormData) {
+      // Modal 打开时设置表单值
+      editForm.setFieldsValue(pendingFormData);
+      setPendingFormData(null);
+    }
   };
 
   // 删除角色
@@ -273,7 +293,10 @@ const RoleManagement: React.FC = () => {
       };
 
       if (editingRole) {
-        await post(`/system/roles/${editingRole.id}/update`, roleData);
+        await post(`/system/roles/${editingRole.id}/update`, {
+          ...roleData,
+          id: editingRole.id,
+        });
       } else {
         await post('/system/roles', roleData);
       }
@@ -489,6 +512,7 @@ const RoleManagement: React.FC = () => {
         title={editingRole ? '编辑角色' : '新增角色'}
         open={editModalVisible}
         onOk={handleSave}
+        afterOpenChange={handleModalOpenChange}
         onCancel={() => setEditModalVisible(false)}
         width={800}
         styles={{ body: { maxHeight: '70vh', overflowY: 'auto' } }}
@@ -557,6 +581,12 @@ const RoleManagement: React.FC = () => {
                 >
                   <Tree
                     checkable
+                    checkedKeys={checkedMenuKeys}
+                    onCheck={(keys) => {
+                      const keyArray = keys as Key[];
+                      setCheckedMenuKeys(keyArray);
+                      editForm.setFieldsValue({ menuIds: keyArray });
+                    }}
                     treeData={menuTree}
                     placeholder="请选择菜单"
                     style={{ background: '#f5f5f5', padding: '8px', borderRadius: '4px', maxHeight: '400px', overflowY: 'auto' }}
@@ -588,6 +618,12 @@ const RoleManagement: React.FC = () => {
                   >
                     <Tree
                       checkable
+                      checkedKeys={checkedDeptKeys}
+                      onCheck={(keys) => {
+                        const keyArray = keys as Key[];
+                        setCheckedDeptKeys(keyArray);
+                        editForm.setFieldsValue({ deptIds: keyArray });
+                      }}
                       treeData={deptTree}
                       placeholder="请选择部门"
                       style={{ background: '#f5f5f5', padding: '8px', borderRadius: '4px', maxHeight: '400px', overflowY: 'auto' }}

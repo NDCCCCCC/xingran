@@ -5,14 +5,21 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 )
 
-// SetupMenuRouter 设置菜单路由
+// SetupUserMenuRouter 设置用户菜单和权限路由（所有已登录用户可访问）
+func SetupUserMenuRouter(r *gin.RouterGroup, core *core.Core) {
+	menus := r.Group("/menus")
+	{
+		// 获取用户菜单树
+		menus.POST("/user-menus", getUserMenus(core))
+		// 获取用户权限列表
+		menus.POST("/user-permissions", getUserPermissions(core))
+	}
+}
+
+// SetupMenuRouter 设置菜单路由（需要菜单管理权限）
 func SetupMenuRouter(r *gin.RouterGroup, core *core.Core) {
 	// 查询菜单列表
 	r.POST("/list", listMenus(core))
-	// 获取用户菜单树
-	r.POST("/user-menus", getUserMenus(core))
-	// 获取用户权限列表
-	r.POST("/user-permissions", getUserPermissions(core))
 	// 创建菜单
 	r.POST("", createMenu(core))
 	// 获取菜单详情

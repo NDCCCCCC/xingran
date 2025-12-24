@@ -7,7 +7,7 @@ type Department struct {
 	ParentID   *string    `gorm:"type:uuid" json:"parentId,omitempty"`
 	Ancestors  string     `gorm:"size:500;default:''" json:"ancestors"`
 	OrderNum   int        `gorm:"default:0" json:"orderNum"`
-	Leader     *string    `gorm:"size:32" json:"leader,omitempty"`
+	Leader     *string    `gorm:"size:36" json:"leader,omitempty"`  // UUID is 36 characters
 	Phone      *string    `gorm:"size:20" json:"phone,omitempty"`
 	Email      *string    `gorm:"size:50" json:"email,omitempty"`
 	Status     DeptStatus `gorm:"default:0" json:"status"`

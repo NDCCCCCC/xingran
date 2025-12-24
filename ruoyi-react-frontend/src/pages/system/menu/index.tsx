@@ -185,19 +185,32 @@ const MenuManagement: React.FC = () => {
   const handleAdd = () => {
     setEditingMenu(null);
     editForm.resetFields();
+    // 设置默认值
+    editForm.setFieldsValue({
+      parentId: '',
+      menuType: 'M',
+      orderNum: 0,
+      status: true,
+    });
     setEditModalVisible(true);
   };
 
   // 编辑菜单
   const handleEdit = (record: Menu) => {
     setEditingMenu(record);
-    // 转换状态值：0->true(显示), 1->false(隐藏)
-    const formData = {
-      ...record,
-      status: record.status === 0
-    };
-    editForm.setFieldsValue(formData);
     setEditModalVisible(true);
+  };
+
+  // Modal 打开后的回调
+  const handleModalOpenChange = (open: boolean) => {
+    if (open && editingMenu) {
+      // Modal 打开时设置表单值
+      // 转换状态值：0->true(显示), 1->false(隐藏)
+      editForm.setFieldsValue({
+        ...editingMenu,
+        status: editingMenu.status === 0
+      });
+    }
   };
 
   // 删除菜单
@@ -222,7 +235,10 @@ const MenuManagement: React.FC = () => {
       }
 
       if (editingMenu) {
-        await post(`/system/menus/${editingMenu.id}/update`, values);
+        await post(`/system/menus/${editingMenu.id}/update`, {
+          ...values,
+          id: editingMenu.id,
+        });
       } else {
         await post('/system/menus', values);
       }
@@ -424,6 +440,7 @@ const MenuManagement: React.FC = () => {
         title={editingMenu ? '编辑菜单' : '新增菜单'}
         open={editModalVisible}
         onOk={handleSave}
+        afterOpenChange={handleModalOpenChange}
         onCancel={() => setEditModalVisible(false)}
         width={600}
       >

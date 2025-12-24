@@ -27,7 +27,8 @@ export interface User {
   status: 0 | 1;     // 0:启用 1:禁用
   deptId?: string;
   deptName?: string;
-  roles: string[];
+  roles: string[];   // 角色名称数组
+  roleIds?: string[]; // 角色ID数组
   permissions: string[];
   loginIp?: string;
   loginTime?: string;
@@ -79,6 +80,8 @@ export interface Department {
   ancestors: string;
   orderNum: number;
   leader?: string;
+  leaderName?: string;
+  leaderUsername?: string;
   phone?: string;
   email?: string;
   status: 0 | 1;  // 0:正常 1:停用
@@ -86,6 +89,7 @@ export interface Department {
   createdAt: string;
   updatedAt: string;
   remark?: string;
+  accessible?: boolean; // 用户是否真正有权限访问该部门
 }
 
 // 登录相关类型

@@ -40,7 +40,7 @@ func checkUserPermission(core *core.Core, userID, permission string) bool {
 		return true
 	}
 
-	// 查询用户所有角色权限
+	// 1. 首先检查精确匹配的权限
 	var count int64
 	err := core.DB.GetDB().Raw(`
 		SELECT COUNT(DISTINCT rm.menu_id)
@@ -50,11 +50,50 @@ func checkUserPermission(core *core.Core, userID, permission string) bool {
 		WHERE ur.user_id = ? AND m.perms = ? AND m.status = ? AND m.visible = ?
 	`, userID, permission, models.MenuStatusNormal, models.VisibleShow).Scan(&count).Error
 
-	if err != nil {
-		return false
+	if err == nil && count > 0 {
+		return true
 	}
 
-	return count > 0
+	// 2. 如果精确匹配失败，检查模块级权限
+	// 例如：system:menu:list -> system:menu
+	modulePermission := extractModulePermission(permission)
+	if modulePermission != "" {
+		err = core.DB.GetDB().Raw(`
+			SELECT COUNT(DISTINCT rm.menu_id)
+			FROM sys_user_role ur
+			INNER JOIN sys_role_menu rm ON ur.role_id = rm.role_id
+			INNER JOIN sys_menu m ON rm.menu_id = m.id
+			WHERE ur.user_id = ? AND m.perms = ? AND m.status = ? AND m.visible = ?
+		`, userID, modulePermission, models.MenuStatusNormal, models.VisibleShow).Scan(&count).Error
+
+		if err == nil && count > 0 {
+			return true
+		}
+	}
+
+	return false
+}
+
+// extractModulePermission 从具体权限中提取模块权限
+// 例如：system:menu:list -> system:menu
+// 例如：system:user:add -> system:user
+func extractModulePermission(permission string) string {
+	// 找到最后一个冒号的位置
+	lastColon := -1
+	for i := len(permission) - 1; i >= 0; i-- {
+		if permission[i] == ':' {
+			lastColon = i
+			break
+		}
+	}
+
+	// 如果没有冒号或者只有一个部分，返回空
+	if lastColon <= 0 {
+		return ""
+	}
+
+	// 返回冒号之前的部分（模块权限）
+	return permission[:lastColon]
 }
 
 // isSuperAdmin 检查是否是超级管理员
@@ -177,7 +216,7 @@ func getUserMaxDataScope(core *core.Core, userID string) (models.DataScope, erro
 
 	err := core.DB.GetDB().Raw(`
 		SELECT COALESCE(MAX(r.data_scope), ?) as data_scope
-		FROM sys_user_roles ur
+		FROM sys_user_role ur
 		INNER JOIN sys_role r ON ur.role_id = r.id
 		WHERE ur.user_id = ? AND r.status = ?
 	`, models.DataScopeSelf, userID, models.RoleStatusEnabled).Scan(&dataScope).Error
@@ -196,7 +235,7 @@ func ApplyDataScope(db *gorm.DB, userID string, dataScope models.DataScope, core
 		var deptIds []string
 		core.DB.GetDB().Raw(`
 			SELECT DISTINCT rd.dept_id
-			FROM sys_user_roles ur
+			FROM sys_user_role ur
 			INNER JOIN sys_role_dept rd ON ur.role_id = rd.role_id
 			WHERE ur.user_id = ?
 		`, userID).Scan(&deptIds)
@@ -246,4 +285,29 @@ func getChildDepts(core *core.Core, parentId string, deptIds *[]string) {
 		*deptIds = append(*deptIds, dept.ID)
 		getChildDepts(core, dept.ID, deptIds)
 	}
+}
+
+// ApplyDataScopeFromContext 从 Gin 上下文中应用数据权限过滤
+// 这是一个便捷函数，用于在 handler 中应用数据权限
+// deptField 是要过滤的部门字段名，如 "dept_id" 或 "id"（对于部门表本身）
+func ApplyDataScopeFromContext(c *gin.Context, db *gorm.DB, core *core.Core, deptField string) *gorm.DB {
+	// 获取用户ID
+	userID, exists := c.Get("user_id")
+	if !exists {
+		return db
+	}
+
+	// 检查是否是超级管理员
+	if isSuperAdmin(core, userID.(string)) {
+		return db // 超级管理员不过滤数据
+	}
+
+	// 从上下文中获取数据权限范围
+	dataScope, exists := c.Get("data_scope")
+	if !exists {
+		return db // 没有数据权限信息，不做过滤
+	}
+
+	// 应用数据权限过滤
+	return ApplyDataScope(db, userID.(string), dataScope.(models.DataScope), core, deptField)
 }
