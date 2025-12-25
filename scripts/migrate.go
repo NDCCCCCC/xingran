@@ -50,6 +50,9 @@ func main() {
 		// 通知模型
 		&models.Notice{},
 
+		// 工位模型
+		&models.Workstation{},
+
 		// 监控模型
 		&models.ServerInfo{},
 		&models.SystemMetrics{},

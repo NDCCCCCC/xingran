@@ -94,6 +94,18 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 				v1.SetupPostRouter(posts, core)
 			}
 
+			// 工位管理
+			workstations := authorized.Group("/workstations")
+			workstations.Use(middleware.RequirePermissions([]string{
+				string(permission.WorkstationList),
+				string(permission.WorkstationAdd),
+				string(permission.WorkstationEdit),
+				string(permission.WorkstationView),
+			}, core))
+			{
+				v1.SetupWorkstationRouter(workstations, core)
+			}
+
 			// 字典管理
 			dicts := authorized.Group("/dicts")
 			dicts.Use(middleware.RequirePermissions([]string{
@@ -128,28 +140,6 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			}, core))
 			{
 				v1.SetupNoticeRouter(notices, core)
-			}
-
-			// 操作日志
-			operLogs := authorized.Group("/oper-logs")
-			operLogs.Use(middleware.RequirePermissions([]string{
-				string(permission.OperLogList),
-				string(permission.OperLogView),
-				string(permission.OperLogExport),
-			}, core))
-			{
-				v1.SetupOperLogRouter(operLogs, core)
-			}
-
-			// 登录日志
-			loginLogs := authorized.Group("/login-logs")
-			loginLogs.Use(middleware.RequirePermissions([]string{
-				string(permission.LoginLogList),
-				string(permission.LoginLogView),
-				string(permission.LoginLogExport),
-			}, core))
-			{
-				v1.SetupLoginLogRouter(loginLogs, core)
 			}
 		}
 	}

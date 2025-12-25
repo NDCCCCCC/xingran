@@ -178,10 +178,50 @@ const iconMap: Record<string, React.ReactNode> = {
   lineChart: <LineChartOutlined />,
 };
 
+// 完整的 Ant Design 图标名映射到 iconMap 的键名
+const fullIconNameMap: Record<string, string> = {
+  // 单词图标
+  'UserOutlined': 'user',
+  'TeamOutlined': 'users',
+  'MenuOutlined': 'menu',
+  'SettingOutlined': 'setting',
+  'FileTextOutlined': 'file',
+  'BellOutlined': 'bell',
+  'MonitorOutlined': 'monitor',
+  'DatabaseOutlined': 'database',
+  'HistoryOutlined': 'history',
+  'ClockCircleOutlined': 'clock',
+  'HomeOutlined': 'home',
+  'FolderOutlined': 'folder',
+  'LaptopOutlined': 'laptop',
+  'DashboardOutlined': 'dashboard',
+  'DashboardFilled': 'dashboard',
+  'SettingFilled': 'setting',
+
+  // 复合词图标 - 需要特殊映射
+  'CloudServerOutlined': 'server',
+  'ApartmentOutlined': 'users',
+  'IdcardOutlined': 'check',
+  'DesktopOutlined': 'laptop',
+  'BookOutlined': 'file',
+};
+
 // 获取图标组件
 function getIcon(iconName?: string | null): React.ReactNode {
   if (!iconName) return undefined;
-  return iconMap[iconName] || undefined;
+
+  // 首先尝试直接从 iconMap 获取
+  if (iconMap[iconName]) {
+    return iconMap[iconName];
+  }
+
+  // 尝试从完整图标名映射中获取
+  const mappedName = fullIconNameMap[iconName];
+  if (mappedName && iconMap[mappedName]) {
+    return iconMap[mappedName];
+  }
+
+  return undefined;
 }
 
 // 将后端菜单数据转换为 Ant Design Menu 组件所需的格式

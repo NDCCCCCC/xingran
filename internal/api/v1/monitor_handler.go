@@ -427,7 +427,7 @@ func getLoginLogs(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		
+
 		response.Page(c, logs, total, req.Current, req.PageSize)
 	}
 }

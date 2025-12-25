@@ -47,6 +47,13 @@ const (
 	PostEdit   PermissionCode = "system:post:edit"
 	PostRemove PermissionCode = "system:post:remove"
 
+	// 工位管理权限
+	WorkstationList   PermissionCode = "system:workstation:list"
+	WorkstationView   PermissionCode = "system:workstation:view"
+	WorkstationAdd    PermissionCode = "system:workstation:add"
+	WorkstationEdit   PermissionCode = "system:workstation:edit"
+	WorkstationRemove PermissionCode = "system:workstation:remove"
+
 	// 字典管理权限
 	DictTypeList   PermissionCode = "system:dict:list"
 	DictTypeView   PermissionCode = "system:dict:view"
@@ -183,6 +190,14 @@ func GetRoutePermissions() []RoutePermission {
 		{"/system/posts", "POST", PostAdd, "新增岗位"},
 		{"/system/posts/:id/update", "POST", PostEdit, "编辑岗位"},
 		{"/system/posts/:id/delete", "POST", PostRemove, "删除岗位"},
+
+		// 工位管理
+		{"/system/workstations/list", "POST", WorkstationList, "查询工位列表"},
+		{"/system/workstations/:id", "POST", WorkstationView, "查看工位详情"},
+		{"/system/workstations", "POST", WorkstationAdd, "新增工位"},
+		{"/system/workstations/:id/update", "POST", WorkstationEdit, "编辑工位"},
+		{"/system/workstations/:id/delete", "POST", WorkstationRemove, "删除工位"},
+		{"/system/workstations/batch-delete", "POST", WorkstationRemove, "批量删除工位"},
 	}
 }
 

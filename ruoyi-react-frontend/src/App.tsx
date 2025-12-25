@@ -12,6 +12,10 @@ import UserManagement from '@/pages/system/user';
 import RoleManagement from '@/pages/system/role';
 import MenuManagement from '@/pages/system/menu';
 import DepartmentManagement from '@/pages/system/dept';
+import DictManagement from '@/pages/system/dict';
+import ConfigManagement from '@/pages/system/config';
+import NoticeManagement from '@/pages/system/notice';
+import WorkstationManagement from '@/pages/system/workstation';
 // 系统监控页面
 import MonitorDashboard from '@/pages/monitor/dashboard';
 import ServerMonitor from '@/pages/monitor/server';
@@ -90,6 +94,10 @@ function App() {
                       <Route path="/system/role" element={<RoleManagement />} />
                       <Route path="/system/menu" element={<MenuManagement />} />
                       <Route path="/system/dept" element={<DepartmentManagement />} />
+                      <Route path="/system/dict" element={<DictManagement />} />
+                      <Route path="/system/config" element={<ConfigManagement />} />
+                      <Route path="/system/notice" element={<NoticeManagement />} />
+                      <Route path="/system/workstation" element={<WorkstationManagement />} />
 
                       {/* 系统监控路由 */}
                       <Route path="/monitor" element={<Navigate to="/monitor/dashboard" replace />} />

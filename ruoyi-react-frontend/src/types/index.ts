@@ -121,3 +121,112 @@ export interface UserListParams extends PageParams {
   status?: number;
   dateRange?: [string, string];
 }
+
+// 字典类型
+export interface DictType {
+  id: string;
+  dictName: string;
+  dictType: string;
+  status: 0 | 1;  // 0:启用 1:禁用
+  remark?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 字典数据
+export interface DictData {
+  id: string;
+  dictSort: number;
+  dictLabel: string;
+  dictValue: string;
+  dictType: string;
+  cssClass?: string;
+  listClass?: string;
+  isDefault: boolean;
+  status: 0 | 1;  // 0:启用 1:禁用
+  remark?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 参数配置
+export interface Config {
+  id: string;
+  configName: string;
+  configKey: string;
+  configValue: string;
+  configType: 'Y' | 'N';  // Y:系统内置 N:非系统内置
+  isSystem: 0 | 1;  // 0:否 1:是
+  remark?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 通知公告
+export interface Notice {
+  id: string;
+  noticeTitle: string;
+  noticeType: '1' | '2';  // 1:公告 2:警告
+  noticeContent?: string;
+  status: 0 | 1;  // 0:正常 1:关闭
+  remark?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 操作日志
+export interface OperLog {
+  id: string;
+  title?: string;
+  businessType: number;
+  method?: string;
+  requestMethod?: string;
+  operatorType: number;
+  operatorName?: string;
+  deptName?: string;
+  operUrl?: string;
+  operIp?: string;
+  operLocation?: string;
+  operParam?: string;
+  jsonResult?: string;
+  status: 0 | 1;  // 0:成功 1:失败
+  errorMsg?: string;
+  operTime: string;
+  costTime: number;
+}
+
+// 登录日志
+export interface LoginLog {
+  id: string;
+  username?: string;
+  ipaddr?: string;
+  loginLocation?: string;
+  browser?: string;
+  os?: string;
+  status: 0 | 1;  // 0:成功 1:失败
+  msg?: string;
+  loginTime: string;
+}
+
+// 工位类型
+export type WorkstationType = 0 | 1 | 2;  // 0:固定工位 1:灵活工位 2:管理工位
+export type WorkstationStatus = 0 | 1;  // 0:启用 1:禁用
+
+// 工位
+export interface Workstation {
+  id: string;
+  workstationCode: string;
+  workstationName: string;
+  deptId?: string;
+  deptName?: string;
+  location?: string;
+  floor?: string;
+  workstationType: WorkstationType;
+  status: WorkstationStatus;
+  capacity: number;
+  description?: string;
+  userId?: string;
+  userName?: string;
+  createdAt: string;
+  updatedAt: string;
+}
