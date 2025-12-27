@@ -169,11 +169,145 @@ func (d *Database) AutoMigrate() error {
 		&models.UserPost{},
 		&models.Job{},
 		&models.JobLog{},
+		// 网络设备相关模型
+		&models.AuthCredential{},
+		&models.NetworkDevice{},
+		&models.ConfigTemplate{},
+		&models.ConfigExecution{},
+		&models.ConfigExecutionDetail{},
+		&models.ConfigBackup{},
+		&models.DeviceMACAddress{},
+		&models.DevicePortStatus{},
+		&models.DeviceDiscovery{},
+		&models.DeviceEnrichmentTask{},
 	); err != nil {
 		return err
 	}
 
 	log.Println("所有表迁移成功")
+
+	// 执行凭证模型重新设计迁移
+	if err := d.migrateCredentialModel(); err != nil {
+		log.Printf("凭证模型迁移失败: %v", err)
+		// 迁移失败不中断启动，只记录日志
+	}
+
+	return nil
+}
+
+// migrateCredentialModel 迁移凭证模型（从 credential_type 到 protocol_type）
+// 这个迁移将凭证从 SSH/Telnet/SNMP 分类改为统一的凭证模型
+func (d *Database) migrateCredentialModel() error {
+	// 只对 PostgreSQL 执行 SQL 迁移
+	if d.Type != "postgres" {
+		log.Println("非 PostgreSQL 数据库，跳过凭证模型 SQL 迁移")
+		return nil
+	}
+
+	// 检查迁移是否已经执行过（通过检查 protocol_type 列是否存在）
+	var columnExists bool
+	err := d.DB.Raw(`
+		SELECT EXISTS (
+			SELECT 1 FROM information_schema.columns
+			WHERE table_name = 'sys_auth_credential' AND column_name = 'protocol_type'
+		)
+	`).Scan(&columnExists).Error
+
+	if err != nil {
+		return fmt.Errorf("检查迁移状态失败: %w", err)
+	}
+
+	// 如果 protocol_type 列已存在，说明迁移已执行过
+	if columnExists {
+		log.Println("凭证模型迁移已执行，跳过")
+		return nil
+	}
+
+	log.Println("开始执行凭证模型迁移...")
+
+	// 开始事务
+	tx := d.DB.Begin()
+	if tx.Error != nil {
+		return fmt.Errorf("开启事务失败: %w", tx.Error)
+	}
+
+	// 步骤1：添加新列
+	if err := tx.Exec("ALTER TABLE sys_auth_credential ADD COLUMN IF NOT EXISTS protocol_type VARCHAR(10)").Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("添加 protocol_type 列失败: %w", err)
+	}
+
+	if err := tx.Exec("ALTER TABLE sys_auth_credential ADD COLUMN IF NOT EXISTS snmp_communities TEXT[]").Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("添加 snmp_communities 列失败: %w", err)
+	}
+
+	// 步骤2：根据旧的 credential_type 设置 protocol_type
+	if err := tx.Exec("UPDATE sys_auth_credential SET protocol_type = 'ssh' WHERE credential_type = 'ssh'").Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("迁移 SSH 凭证失败: %w", err)
+	}
+
+	if err := tx.Exec("UPDATE sys_auth_credential SET protocol_type = 'telnet' WHERE credential_type = 'telnet'").Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("迁移 Telnet 凭证失败: %w", err)
+	}
+
+	if err := tx.Exec("UPDATE sys_auth_credential SET protocol_type = 'ssh' WHERE credential_type = 'snmp' AND protocol_type IS NULL").Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("迁移 SNMP 凭证失败: %w", err)
+	}
+
+	// 步骤3：将旧的 snmp_community 转换为数组
+	if err := tx.Exec("UPDATE sys_auth_credential SET snmp_communities = ARRAY[snmp_community] WHERE snmp_community IS NOT NULL AND snmp_community != '' AND snmp_community != ' '").Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("转换 SNMP community 失败: %w", err)
+	}
+
+	// 步骤4：初始化空数组
+	if err := tx.Exec("UPDATE sys_auth_credential SET snmp_communities = ARRAY[]::TEXT[] WHERE snmp_communities IS NULL").Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("初始化 SNMP communities 数组失败: %w", err)
+	}
+
+	// 步骤5：设置默认 protocol_type
+	if err := tx.Exec("UPDATE sys_auth_credential SET protocol_type = 'ssh' WHERE protocol_type IS NULL").Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("设置默认 protocol_type 失败: %w", err)
+	}
+
+	// 步骤6：删除旧列（先注释掉，等用户确认后再执行）
+	// if err := tx.Exec("ALTER TABLE sys_auth_credential DROP COLUMN IF EXISTS credential_type").Error; err != nil {
+	// 	tx.Rollback()
+	// 	return fmt.Errorf("删除 credential_type 列失败: %w", err)
+	// }
+	//
+	// if err := tx.Exec("ALTER TABLE sys_auth_credential DROP COLUMN IF EXISTS snmp_community").Error; err != nil {
+	// 	tx.Rollback()
+	// 	return fmt.Errorf("删除 snmp_community 列失败: %w", err)
+	// }
+
+	// 步骤7：添加约束
+	if err := tx.Exec("ALTER TABLE sys_auth_credential ADD CONSTRAINT chk_protocol_type CHECK (protocol_type IN ('ssh', 'telnet'))").Error; err != nil {
+		// 约束可能已存在，忽略错误
+		log.Printf("添加 protocol_type 约束失败（可能已存在）: %v", err)
+	}
+
+	if err := tx.Exec("ALTER TABLE sys_auth_credential ADD CONSTRAINT chk_snmp_version CHECK (snmp_version IN ('v1', 'v2c', 'v3'))").Error; err != nil {
+		// 约束可能已存在，忽略错误
+		log.Printf("添加 snmp_version 约束失败（可能已存在）: %v", err)
+	}
+
+	// 提交事务
+	if err := tx.Commit().Error; err != nil {
+		return fmt.Errorf("提交迁移事务失败: %w", err)
+	}
+
+	log.Println("凭证模型迁移完成（旧列保留，请手动验证后删除）")
+	log.Println("验证通过后请手动执行：")
+	log.Println("  ALTER TABLE sys_auth_credential DROP COLUMN credential_type;")
+	log.Println("  ALTER TABLE sys_auth_credential DROP COLUMN snmp_community;")
+
 	return nil
 }
 
@@ -203,6 +337,16 @@ func initData(db *gorm.DB) error {
 	// 创建用户角色关联
 	if err := createUserRoleRelations(db); err != nil {
 		return fmt.Errorf("创建用户角色关联失败: %w", err)
+	}
+
+	// 创建网络设备系统参数
+	if err := createNetworkDeviceSystemParams(db); err != nil {
+		return fmt.Errorf("创建网络设备系统参数失败: %w", err)
+	}
+
+	// 创建网络设备定时任务
+	if err := createNetworkDeviceScheduledJobs(db); err != nil {
+		return fmt.Errorf("创建网络设备定时任务失败: %w", err)
 	}
 
 	log.Println("基础数据初始化完成")
@@ -465,5 +609,135 @@ func createDatabaseIfNotExists(adminDSN, dbName string) error {
 		log.Printf("数据库 %s 已存在", dbName)
 	}
 
+	return nil
+}
+
+// createNetworkDeviceSystemParams 创建网络设备系统参数
+func createNetworkDeviceSystemParams(db *gorm.DB) error {
+	params := []models.Config{
+		{
+			ConfigName:  "配置备份文件大小阈值",
+			ConfigKey:   "network.config.backup.threshold",
+			ConfigValue: "100",
+			ConfigType:  models.ConfigTypeYes,
+			IsSystem:    models.ConfigIsSystemYes,
+			Remark:      "配置备份文件大小阈值（单位：KB），小于此值的配置存储在数据库，大于此值存储在文件系统",
+		},
+		{
+			ConfigName:  "设备连接超时时间",
+			ConfigKey:   "network.device.connect.timeout",
+			ConfigValue: "30",
+			ConfigType:  models.ConfigTypeYes,
+			IsSystem:    models.ConfigIsSystemYes,
+			Remark:      "设备连接超时时间（单位：秒）",
+		},
+		{
+			ConfigName:  "命令执行超时时间",
+			ConfigKey:   "network.command.execute.timeout",
+			ConfigValue: "300",
+			ConfigType:  models.ConfigTypeYes,
+			IsSystem:    models.ConfigIsSystemYes,
+			Remark:      "命令执行超时时间（单位：秒）",
+		},
+		{
+			ConfigName:  "批量命令并发数",
+			ConfigKey:   "network.command.batch.concurrency",
+			ConfigValue: "10",
+			ConfigType:  models.ConfigTypeYes,
+			IsSystem:    models.ConfigIsSystemYes,
+			Remark:      "批量命令执行时的最大并发设备数量",
+		},
+	}
+
+	for _, param := range params {
+		var count int64
+		db.Model(&models.Config{}).Where("config_key = ?", param.ConfigKey).Count(&count)
+		if count > 0 {
+			log.Printf("系统参数 %s 已存在，跳过创建", param.ConfigName)
+			continue
+		}
+
+		if err := db.Create(&param).Error; err != nil {
+			return fmt.Errorf("创建系统参数 %s 失败: %w", param.ConfigName, err)
+		}
+		log.Printf("创建系统参数 %s 成功", param.ConfigName)
+	}
+
+	log.Println("网络设备系统参数创建完成")
+	return nil
+}
+
+// createNetworkDeviceScheduledJobs 创建网络设备定时任务
+func createNetworkDeviceScheduledJobs(db *gorm.DB) error {
+	remark := func(s string) *string { return &s }
+
+	jobs := []models.Job{
+		{
+			JobName:        "设备状态检查",
+			JobGroup:       "NETWORK",
+			InvokeTarget:   "device_status_check",
+			CronExpression: "0 */5 * * * ?", // 每5分钟执行一次
+			Status:         models.JobStatusPause, // 默认暂停，由用户手动启动
+			Concurrent:     false, // 禁止并发
+			MisfirePolicy:  models.MisfirePolicyImmediately,
+			Remark:         remark("通过SNMP定时检查所有网络设备的在线/离线状态"),
+		},
+		{
+			JobName:        "设备信息更新",
+			JobGroup:       "NETWORK",
+			InvokeTarget:   "device_info_update",
+			CronExpression: "0 0 * * * ?", // 每小时执行一次
+			Status:         models.JobStatusPause,
+			Concurrent:     false,
+			MisfirePolicy:  models.MisfirePolicyImmediately,
+			Remark:         remark("通过SSH采集网络设备的详细信息（型号、版本、序列号等）"),
+		},
+		{
+			JobName:        "端口状态采集",
+			JobGroup:       "NETWORK",
+			InvokeTarget:   "port_collection",
+			CronExpression: "0 0 * * * ?", // 每小时执行一次
+			Status:         models.JobStatusPause,
+			Concurrent:     false,
+			MisfirePolicy:  models.MisfirePolicyImmediately,
+			Remark:         remark("采集所有在线网络设备的端口状态信息（启用/禁用、802.1X、端口安全等）"),
+		},
+		{
+			JobName:        "MAC地址采集",
+			JobGroup:       "NETWORK",
+			InvokeTarget:   "mac_collection",
+			CronExpression: "0 0 * * * ?", // 每小时执行一次
+			Status:         models.JobStatusPause,
+			Concurrent:     false,
+			MisfirePolicy:  models.MisfirePolicyImmediately,
+			Remark:         remark("采集网络设备的MAC地址表信息"),
+		},
+		{
+			JobName:        "配置备份",
+			JobGroup:       "NETWORK",
+			InvokeTarget:   "config_backup",
+			CronExpression: "0 0 2 * * ?", // 每天凌晨2点执行
+			Status:         models.JobStatusPause,
+			Concurrent:     false,
+			MisfirePolicy:  models.MisfirePolicyImmediately,
+			Remark:         remark("自动备份网络设备配置文件"),
+		},
+	}
+
+	for _, job := range jobs {
+		var count int64
+		db.Model(&models.Job{}).Where("invoke_target = ?", job.InvokeTarget).Count(&count)
+		if count > 0 {
+			log.Printf("定时任务 %s 已存在，跳过创建", job.JobName)
+			continue
+		}
+
+		if err := db.Create(&job).Error; err != nil {
+			return fmt.Errorf("创建定时任务 %s 失败: %w", job.JobName, err)
+		}
+		log.Printf("创建定时任务 %s 成功", job.JobName)
+	}
+
+	log.Println("网络设备定时任务创建完成")
 	return nil
 }

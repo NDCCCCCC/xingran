@@ -3,6 +3,7 @@ package scheduler
 import (
 	"context"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
@@ -18,9 +19,10 @@ type JobTask interface {
 
 // JobExecutor 任务执行器
 type JobExecutor struct {
-	job    *models.Job
-	db     *gorm.DB
-	logger Logger
+	job       *models.Job
+	db        *gorm.DB
+	logger    Logger
+	scheduler *Scheduler // 引用调度器以访问 taskRegistry
 }
 
 // Execute 执行任务
@@ -71,21 +73,21 @@ func (e *JobExecutor) Execute(ctx context.Context) error {
 
 // executeTask 执行具体任务逻辑
 func (e *JobExecutor) executeTask(ctx context.Context, jobLog *models.JobLog) error {
-	// 这里可以根据 InvokeTarget 调用不同的任务
-	// 示例：可以支持调用内部函数、HTTP请求、脚本执行等
+	// 根据 InvokeTarget 查找并执行注册的任务处理函数
+	if e.scheduler == nil {
+		return fmt.Errorf("调度器引用为空")
+	}
 
-	// 简单示例：模拟任务执行
+	taskHandler := e.scheduler.GetTaskHandler(e.job.InvokeTarget)
+	if taskHandler == nil {
+		return fmt.Errorf("未找到任务处理器: %s", e.job.InvokeTarget)
+	}
+
 	e.logger.Infof("执行任务: %s, 目标: %s", e.job.JobName, e.job.InvokeTarget)
 
-	// TODO: 实现实际的任务调用逻辑
-	// 1. 解析 InvokeTarget
-	// 2. 根据类型执行不同的任务：
-	//    - 内部函数调用
-	//    - HTTP请求
-	//    - Shell脚本
-	//    - Python脚本等
-
-	return nil
+	// 调用注册的任务处理函数
+	// 任务处理函数接收 context 和 params，这里传入空参数
+	return taskHandler(ctx, nil)
 }
 
 // calculateNextRunTime 计算下次执行时间
@@ -94,7 +96,9 @@ func (e *JobExecutor) calculateNextRunTime() *time.Time {
 		return nil
 	}
 
-	schedule, err := cron.ParseStandard(e.job.CronExpression)
+	// 使用支持秒的解析器 - 与 cron.WithSeconds() 保持一致
+	parser := cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
+	schedule, err := parser.Parse(e.job.CronExpression)
 	if err != nil {
 		return nil
 	}
@@ -106,6 +110,7 @@ func (e *JobExecutor) calculateNextRunTime() *time.Time {
 // Logger 日志接口
 type Logger interface {
 	Infof(format string, args ...interface{})
+	Warnf(format string, args ...interface{})
 	Errorf(format string, args ...interface{})
 }
 
@@ -113,11 +118,15 @@ type Logger interface {
 type defaultLogger struct{}
 
 func (l *defaultLogger) Infof(format string, args ...interface{}) {
-	// 使用项目的日志系统
+	log.Printf("[INFO] "+format, args...)
+}
+
+func (l *defaultLogger) Warnf(format string, args ...interface{}) {
+	log.Printf("[WARN] "+format, args...)
 }
 
 func (l *defaultLogger) Errorf(format string, args ...interface{}) {
-	// 使用项目的日志系统
+	log.Printf("[ERROR] "+format, args...)
 }
 
 // Scheduler 定时任务调度器
@@ -155,6 +164,13 @@ func (s *Scheduler) RegisterTask(taskType string, handler func(ctx context.Conte
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.taskRegistry[taskType] = handler
+}
+
+// GetTaskHandler 获取任务处理器
+func (s *Scheduler) GetTaskHandler(taskType string) func(ctx context.Context, params map[string]interface{}) error {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.taskRegistry[taskType]
 }
 
 // Start 启动调度器
@@ -196,10 +212,20 @@ func (s *Scheduler) Stop() {
 	}
 
 	ctx := s.cron.Stop()
-	<-ctx.Done()
+
+	// 等待所有正在运行的任务完成，但设置 5 秒超时
+	// 避免某个任务卡住导致整个服务无法关闭
+	timeout := time.After(5 * time.Second)
+	select {
+	case <-ctx.Done():
+		// 所有任务正常完成
+		s.logger.Infof("调度器已停止")
+	case <-timeout:
+		// 超时强制停止
+		s.logger.Warnf("调度器停止超时，强制关闭")
+	}
 
 	s.running = false
-	s.logger.Infof("调度器已停止")
 }
 
 // AddJob 添加任务
@@ -219,19 +245,18 @@ func (s *Scheduler) AddJob(job *models.Job) error {
 
 // addJob 内部添加任务方法
 func (s *Scheduler) addJob(job *models.Job) error {
-	// 验证 Cron 表达式
-	if _, err := cron.ParseStandard(job.CronExpression); err != nil {
-		return fmt.Errorf("无效的 Cron 表达式: %w", err)
-	}
+	// 验证 Cron 表达式 - 使用 Parse 支持6位表达式(秒 分 时 日 月 周)
+	// ParseStandard 只支持5位，所以移除这个验证，由 AddFunc 自动验证
 
-	// 创建执行器
+	// 创建执行器，传入调度器引用
 	executor := &JobExecutor{
-		job:    job,
-		db:     s.db,
-		logger: s.logger,
+		job:       job,
+		db:        s.db,
+		logger:    s.logger,
+		scheduler: s, // 传递调度器引用以访问 taskRegistry
 	}
 
-	// 添加到调度器
+	// 添加到调度器 - cron.AddFunc 会自动验证表达式格式
 	jobID, err := s.cron.AddFunc(job.CronExpression, func() {
 		ctx := context.Background()
 		if err := executor.Execute(ctx); err != nil {
@@ -340,9 +365,10 @@ func (s *Scheduler) ExecuteJob(jobID string) error {
 	}
 
 	executor := &JobExecutor{
-		job:    job,
-		db:     s.db,
-		logger: s.logger,
+		job:       job,
+		db:        s.db,
+		logger:    s.logger,
+		scheduler: s, // 传递调度器引用
 	}
 
 	ctx := context.Background()
@@ -366,4 +392,130 @@ func (s *Scheduler) GetJobCount() (total int, running int) {
 	total = len(s.jobs)
 	running = len(s.executors)
 	return
+}
+
+// ==================== 网络设备定时任务注册函数 ====================
+// 这些函数需要在Core初始化时注册到Scheduler
+
+// DeviceMonitorService 设备监控服务接口
+// 使用接口避免循环依赖
+type DeviceMonitorService interface {
+	CheckAllDevicesStatus(ctx context.Context) (int, int, error)
+	UpdateAllDeviceInfo(ctx context.Context) error
+	CollectAllPortStatus(ctx context.Context) error
+	CollectAllMACAddresses(ctx context.Context) error
+	BackupAllConfigurations(ctx context.Context) error
+}
+
+// GlobalDeviceMonitorService 全局设备监控服务
+// 在Core初始化时设置
+var GlobalDeviceMonitorService DeviceMonitorService
+
+// RegisterNetworkDeviceTasks 注册网络设备相关定时任务
+func RegisterNetworkDeviceTasks(scheduler *Scheduler, db *gorm.DB) {
+	// 设备状态检查任务 - 每5分钟执行
+	scheduler.RegisterTask("device_status_check", func(ctx context.Context, params map[string]interface{}) error {
+		return executeDeviceStatusCheckTask(ctx)
+	})
+
+	// 设备信息更新任务 - 每小时执行
+	scheduler.RegisterTask("device_info_update", func(ctx context.Context, params map[string]interface{}) error {
+		return executeDeviceInfoUpdateTask(ctx)
+	})
+
+	// 端口状态采集任务 - 每小时执行
+	scheduler.RegisterTask("port_collection", func(ctx context.Context, params map[string]interface{}) error {
+		return executePortCollectionTask(ctx)
+	})
+
+	// MAC地址采集任务 - 每小时执行
+	scheduler.RegisterTask("mac_collection", func(ctx context.Context, params map[string]interface{}) error {
+		return executeMACCollectionTask(ctx)
+	})
+
+	// 配置备份任务 - 每天凌晨2点执行
+	scheduler.RegisterTask("config_backup", func(ctx context.Context, params map[string]interface{}) error {
+		return executeConfigBackupTask(ctx)
+	})
+}
+
+// executeDeviceStatusCheckTask 执行设备状态检查任务
+// 通过SNMP定时检查所有设备的在线/离线状态
+func executeDeviceStatusCheckTask(ctx context.Context) error {
+	if GlobalDeviceMonitorService == nil {
+		return fmt.Errorf("设备监控服务未初始化")
+	}
+
+	online, offline, err := GlobalDeviceMonitorService.CheckAllDevicesStatus(ctx)
+	if err != nil {
+		return fmt.Errorf("设备状态检查失败: %w", err)
+	}
+
+	log.Printf("设备状态检查完成: 在线=%d, 离线=%d", online, offline)
+	return nil
+}
+
+// executeDeviceInfoUpdateTask 执行设备信息更新任务
+// 通过SSH采集设备的详细信息（型号、版本、序列号等）
+func executeDeviceInfoUpdateTask(ctx context.Context) error {
+	if GlobalDeviceMonitorService == nil {
+		return fmt.Errorf("设备监控服务未初始化")
+	}
+
+	if err := GlobalDeviceMonitorService.UpdateAllDeviceInfo(ctx); err != nil {
+		return fmt.Errorf("设备信息更新失败: %w", err)
+	}
+
+	log.Printf("设备信息更新完成")
+	return nil
+}
+
+// executePortCollectionTask 执行端口采集任务
+// 采集所有在线设备的端口状态信息
+func executePortCollectionTask(ctx context.Context) error {
+	if GlobalDeviceMonitorService == nil {
+		return fmt.Errorf("设备监控服务未初始化")
+	}
+
+	if err := GlobalDeviceMonitorService.CollectAllPortStatus(ctx); err != nil {
+		return fmt.Errorf("端口状态采集失败: %w", err)
+	}
+
+	log.Printf("端口状态采集完成")
+	return nil
+}
+
+// executeMACCollectionTask 执行MAC采集任务
+// 采集所有在线设备的MAC地址表
+func executeMACCollectionTask(ctx context.Context) error {
+	if GlobalDeviceMonitorService == nil {
+		return fmt.Errorf("设备监控服务未初始化")
+	}
+
+	if err := GlobalDeviceMonitorService.CollectAllMACAddresses(ctx); err != nil {
+		return fmt.Errorf("MAC地址采集失败: %w", err)
+	}
+
+	log.Printf("MAC地址采集完成")
+	return nil
+}
+
+// executeConfigBackupTask 执行配置备份任务
+// 备份所有设备配置
+func executeConfigBackupTask(ctx context.Context) error {
+	if GlobalDeviceMonitorService == nil {
+		return fmt.Errorf("设备监控服务未初始化")
+	}
+
+	if err := GlobalDeviceMonitorService.BackupAllConfigurations(ctx); err != nil {
+		return fmt.Errorf("配置备份失败: %w", err)
+	}
+
+	log.Printf("配置备份完成")
+	return nil
+}
+
+// SetDeviceMonitorService 设置设备监控服务
+func SetDeviceMonitorService(service DeviceMonitorService) {
+	GlobalDeviceMonitorService = service
 }

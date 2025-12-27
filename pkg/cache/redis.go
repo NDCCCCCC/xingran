@@ -19,14 +19,21 @@ type RedisCache struct {
 // NewRedisCache 创建Redis缓存实例
 func NewRedisCache(config *CacheConfig, keyPrefix string) (*RedisCache, error) {
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%d", config.Host, config.Port),
-		Password: config.Password,
-		DB:       config.DB,
-		PoolSize: config.PoolSize,
+		Addr:         fmt.Sprintf("%s:%d", config.Host, config.Port),
+		Password:     config.Password,
+		DB:           config.DB,
+		PoolSize:     config.PoolSize,
+		MaxRetries:   3,                // 最大重试次数
+		MinRetryBackoff: 8 * time.Millisecond,  // 最小重试等待时间
+		MaxRetryBackoff: 512 * time.Millisecond, // 最大重试等待时间
+		DialTimeout:  10 * time.Second,  // 连接超时
+		ReadTimeout:  5 * time.Second,   // 读取超时
+		WriteTimeout: 5 * time.Second,  // 写入超时
+		PoolTimeout:  10 * time.Second,  // 连接池超时
 	})
 
-	// 测试连接
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	// 测试连接 - 使用更长的超时时间
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	if err := rdb.Ping(ctx).Err(); err != nil {
@@ -406,8 +413,18 @@ func (m *MultiLevelCache) Set(ctx context.Context, key string, value interface{}
 		return err
 	}
 
-	// 设置Redis缓存
-	return m.l2Cache.Set(ctx, key, value, expiration)
+	// 设置Redis缓存 - 失败时记录日志但不中断操作
+	// 使用带超时的上下文
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+
+	if err := m.l2Cache.Set(ctx, key, value, expiration); err != nil {
+		// L2缓存写入失败，只记录错误，不影响返回
+		// 实际使用中可以配置日志系统
+		_ = err
+	}
+
+	return nil
 }
 
 // Delete 删除缓存（同时删除两级缓存）

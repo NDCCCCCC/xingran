@@ -45,3 +45,10 @@ log:
   level: "info"  # debug, info, warn, error
   format: "json"  # json, text
   output: "stdout"  # stdout, stderr, file
+
+# 安全配置
+security:
+  # SM4 加密密钥（16字节，Base64编码）
+  # 默认值: dGVzdC1zZWNyZXQxNiEhIQ== 解码后为 "test-secret16!!!" (16字节)
+  # 生产环境请使用: export SM4_KEY="$(openssl rand -base64 16)"
+  sm4_key: "dGVzdC1zZWNyZXQxNiEhIQ=="

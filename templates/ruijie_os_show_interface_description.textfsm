@@ -1,0 +1,22 @@
+# 锐捷设备 show int des 命令解析模板
+# 获取端口名称、操作状态(Status)、管理状态(Administrative)、描述
+# 输出格式为固定列宽：
+# Interface (32字符) | Status (8字符) | Administrative (14字符) | Description
+#
+# 示例输出：
+# Interface                        Status   Administrative Description
+# -------------------------------- -------- -------------- -----------
+# FastEthernet 1/0                 up       up             connect  XianTao-SW01
+# FastEthernet 1/1                 down     down
+# GigabitEthernet 0/0              up       up             connect to DX_MSTP
+# VLAN 10                          up       up
+
+Value Required INTERFACE (.{32})
+Value Required STATUS (\S+)
+Value Required ADMINISTRATIVE (\S+)
+Value DESCRIPTION (.*)
+
+Start
+  ^Interface\s+Status\s+Administrative\s+Description
+  ^-+\s+-+\s+-+\s+-+
+  ^${INTERFACE}\s+${STATUS}\s+${ADMINISTRATIVE}\s*${DESCRIPTION} -> Record

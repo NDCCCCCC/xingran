@@ -47,8 +47,8 @@ type JobUpdateRequest struct {
 
 // JobStatusRequest 任务状态请求
 type JobStatusRequest struct {
-	ID     string `json:"id" binding:"required"`
-	Status int    `json:"status" binding:"oneof=0 1"`
+	ID     string `json:"id"`
+	Status int    `json:"status" binding:"oneof=0 1"` // 移除required，因为0会被认为是零值
 }
 
 // JobExecuteRequest 执行任务请求
@@ -159,7 +159,7 @@ func createJob(core *core.Core) gin.HandlerFunc {
 		}
 
 		// 验证Cron表达式
-		if _, err := cron.ParseStandard(req.CronExpression); err != nil {
+		if _, err := cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor).Parse(req.CronExpression); err != nil {
 			response.Error(c, response.ErrBadRequest, "无效的Cron表达式: "+err.Error())
 			return
 		}
@@ -282,7 +282,7 @@ func updateJob(core *core.Core) gin.HandlerFunc {
 		}
 
 		// 验证Cron表达式
-		if _, err := cron.ParseStandard(req.CronExpression); err != nil {
+		if _, err := cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor).Parse(req.CronExpression); err != nil {
 			response.Error(c, response.ErrBadRequest, "无效的Cron表达式: "+err.Error())
 			return
 		}
@@ -407,16 +407,32 @@ func deleteJob(core *core.Core) gin.HandlerFunc {
 func updateJobStatus(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
+		fmt.Printf("=== updateJobStatus 开始 ===\n")
+		fmt.Printf("URL参数 ID: %s\n", id)
+
 		if id == "" {
+			fmt.Println("错误: ID为空")
 			response.Error(c, response.ErrBadRequest, "任务ID不能为空")
 			return
 		}
 
 		var req JobStatusRequest
+		fmt.Println("开始绑定JSON...")
 		if err := c.ShouldBindJSON(&req); err != nil {
-			response.Error(c, response.ErrBadRequest, "请求参数错误")
+			// 记录详细的绑定错误
+			fmt.Printf("=== updateJobStatus 绑定错误 ===\n")
+			fmt.Printf("URL参数 ID: %s\n", id)
+			fmt.Printf("绑定错误类型: %T\n", err)
+			fmt.Printf("绑定错误信息: %v\n", err)
+			response.Error(c, response.ErrBadRequest, "请求参数错误: "+err.Error())
 			return
 		}
+
+		// 记录绑定成功的数据
+		fmt.Printf("=== updateJobStatus 绑定成功 ===\n")
+		fmt.Printf("URL参数 ID: %s\n", id)
+		fmt.Printf("请求体 ID: %s\n", req.ID)
+		fmt.Printf("请求体 Status: %d\n", req.Status)
 
 		// 检查任务是否存在
 		var job models.Job
@@ -609,13 +625,13 @@ func getCurrentUser(c *gin.Context) string {
 
 // Cron表达式验证辅助函数
 func validateCronExpression(expr string) bool {
-	_, err := cron.ParseStandard(expr)
+	_, err := cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor).Parse(expr)
 	return err == nil
 }
 
 // calculateNextRunTime 计算下次执行时间
 func calculateNextRunTime(expr string) time.Time {
-	schedule, err := cron.ParseStandard(expr)
+	schedule, err := cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor).Parse(expr)
 	if err != nil {
 		return time.Time{}
 	}
@@ -638,7 +654,7 @@ func GetCronDescription(expr string) string {
 	}
 
 	// 解析表达式
-	if _, err := cron.ParseStandard(expr); err != nil {
+	if _, err := cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor).Parse(expr); err != nil {
 		return "无效的Cron表达式"
 	}
 
@@ -801,7 +817,7 @@ func GetCommonCronExpressions() []map[string]string {
 
 // ParseNextRunTimes 解析并返回接下来几次的执行时间
 func ParseNextRunTimes(expr string, count int) ([]string, error) {
-	schedule, err := cron.ParseStandard(expr)
+	schedule, err := cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor).Parse(expr)
 	if err != nil {
 		return nil, err
 	}

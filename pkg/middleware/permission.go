@@ -34,6 +34,9 @@ func Permission(permission string, core *core.Core) gin.HandlerFunc {
 }
 
 // checkUserPermission 检查用户权限
+// 注意：只检查 status（停用），不检查 visible（隐藏）
+// - 隐藏的菜单（visible=0）：不显示在导航栏，但权限仍然有效，可通过直接URL访问
+// - 停用的菜单（status=1）：完全不可用，权限无效，即使知道URL也无法访问
 func checkUserPermission(core *core.Core, userID, permission string) bool {
 	// 超级管理员直接通过
 	if isSuperAdmin(core, userID) {
@@ -47,8 +50,8 @@ func checkUserPermission(core *core.Core, userID, permission string) bool {
 		FROM sys_user_role ur
 		INNER JOIN sys_role_menu rm ON ur.role_id = rm.role_id
 		INNER JOIN sys_menu m ON rm.menu_id = m.id
-		WHERE ur.user_id = ? AND m.perms = ? AND m.status = ? AND m.visible = ?
-	`, userID, permission, models.MenuStatusNormal, models.VisibleShow).Scan(&count).Error
+		WHERE ur.user_id = ? AND m.perms = ? AND m.status = ?
+	`, userID, permission, models.MenuStatusNormal).Scan(&count).Error
 
 	if err == nil && count > 0 {
 		return true
@@ -63,8 +66,8 @@ func checkUserPermission(core *core.Core, userID, permission string) bool {
 			FROM sys_user_role ur
 			INNER JOIN sys_role_menu rm ON ur.role_id = rm.role_id
 			INNER JOIN sys_menu m ON rm.menu_id = m.id
-			WHERE ur.user_id = ? AND m.perms = ? AND m.status = ? AND m.visible = ?
-		`, userID, modulePermission, models.MenuStatusNormal, models.VisibleShow).Scan(&count).Error
+			WHERE ur.user_id = ? AND m.perms = ? AND m.status = ?
+		`, userID, modulePermission, models.MenuStatusNormal).Scan(&count).Error
 
 		if err == nil && count > 0 {
 			return true

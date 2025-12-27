@@ -271,6 +271,198 @@ func (s *service) createDefaultMenus(db *gorm.DB) error {
 		s.createMenuIfNotExists(db, &menu)
 	}
 
+	// 4. 创建网络设备管理菜单（父菜单）
+	networkMenuPath := "/network"
+	networkMenu := models.Menu{
+		MenuName: "网络设备管理",
+		OrderNum: 3,
+		MenuType: models.MenuTypeDir,
+		Visible:  models.VisibleShow,
+		Status:   models.MenuStatusNormal,
+		Path:     &networkMenuPath,
+		Icon:     func() *string { s := "cloud"; return &s }(),
+		Perms:    func() *string { s := string(Network); return &s }(),
+	}
+
+	s.createMenuIfNotExists(db, &networkMenu)
+	if networkMenu.ID == "" {
+		db.Where("menu_name = ? AND path = ?", networkMenu.MenuName, networkMenuPath).First(&networkMenu)
+	}
+
+	// 网络设备管理子菜单
+	networkChildMenus := []models.Menu{
+		{
+			MenuName:  "设备管理",
+			OrderNum:  1,
+			MenuType:  models.MenuTypeMenu,
+			Visible:   models.VisibleShow,
+			Status:    models.MenuStatusNormal,
+			ParentID:  &networkMenu.ID,
+			Path:      func() *string { s := "/network/devices"; return &s }(),
+			Component: func() *string { s := "network/device/index"; return &s }(),
+			Icon:      func() *string { s := "cloud-server"; return &s }(),
+			Perms:     func() *string { s := string(NetworkDevice); return &s }(),
+		},
+		{
+			MenuName:  "授权凭证",
+			OrderNum:  2,
+			MenuType:  models.MenuTypeMenu,
+			Visible:   models.VisibleShow,
+			Status:    models.MenuStatusNormal,
+			ParentID:  &networkMenu.ID,
+			Path:      func() *string { s := "/network/credentials"; return &s }(),
+			Component: func() *string { s := "network/credential/index"; return &s }(),
+			Icon:      func() *string { s := "key"; return &s }(),
+			Perms:     func() *string { s := string(NetworkCredential); return &s }(),
+		},
+		{
+			MenuName:  "配置模板",
+			OrderNum:  3,
+			MenuType:  models.MenuTypeMenu,
+			Visible:   models.VisibleShow,
+			Status:    models.MenuStatusNormal,
+			ParentID:  &networkMenu.ID,
+			Path:      func() *string { s := "/network/templates"; return &s }(),
+			Component: func() *string { s := "network/template/index"; return &s }(),
+			Icon:      func() *string { s := "file-text"; return &s }(),
+			Perms:     func() *string { s := string(NetworkTemplate); return &s }(),
+		},
+		{
+			MenuName:  "命令分发",
+			OrderNum:  4,
+			MenuType:  models.MenuTypeMenu,
+			Visible:   models.VisibleShow,
+			Status:    models.MenuStatusNormal,
+			ParentID:  &networkMenu.ID,
+			Path:      func() *string { s := "/network/command"; return &s }(),
+			Component: func() *string { s := "network/command/index"; return &s }(),
+			Icon:      func() *string { s := "code"; return &s }(),
+			Perms:     func() *string { s := string(NetworkCommand); return &s }(),
+		},
+		{
+			MenuName:  "配置执行",
+			OrderNum:  5,
+			MenuType:  models.MenuTypeMenu,
+			Visible:   models.VisibleShow,
+			Status:    models.MenuStatusNormal,
+			ParentID:  &networkMenu.ID,
+			Path:      func() *string { s := "/network/executions"; return &s }(),
+			Component: func() *string { s := "network/execution/index"; return &s }(),
+			Icon:      func() *string { s := "play-circle"; return &s }(),
+			Perms:     func() *string { s := string(NetworkCommand); return &s }(),
+		},
+		{
+			MenuName:  "配置备份",
+			OrderNum:  6,
+			MenuType:  models.MenuTypeMenu,
+			Visible:   models.VisibleShow,
+			Status:    models.MenuStatusNormal,
+			ParentID:  &networkMenu.ID,
+			Path:      func() *string { s := "/network/backups"; return &s }(),
+			Component: func() *string { s := "network/backup/index"; return &s }(),
+			Icon:      func() *string { s := "database"; return &s }(),
+			Perms:     func() *string { s := string(NetworkBackup); return &s }(),
+		},
+		{
+			MenuName:  "设备发现",
+			OrderNum:  7,
+			MenuType:  models.MenuTypeMenu,
+			Visible:   models.VisibleShow,
+			Status:    models.MenuStatusNormal,
+			ParentID:  &networkMenu.ID,
+			Path:      func() *string { s := "/network/discoveries"; return &s }(),
+			Component: func() *string { s := "network/discovery/index"; return &s }(),
+			Icon:      func() *string { s := "radar-chart"; return &s }(),
+			Perms:     func() *string { s := string(NetworkDiscovery); return &s }(),
+		},
+		{
+			MenuName:  "MAC地址",
+			OrderNum:  8,
+			MenuType:  models.MenuTypeMenu,
+			Visible:   models.VisibleShow,
+			Status:    models.MenuStatusNormal,
+			ParentID:  &networkMenu.ID,
+			Path:      func() *string { s := "/network/mac"; return &s }(),
+			Component: func() *string { s := "network/mac/index"; return &s }(),
+			Icon:      func() *string { s := "audit"; return &s }(),
+			Perms:     func() *string { s := string(NetworkMac); return &s }(),
+		},
+		{
+			MenuName:  "端口状态",
+			OrderNum:  9,
+			MenuType:  models.MenuTypeMenu,
+			Visible:   models.VisibleHidden, // 隐藏菜单，只能从设备管理页面跳转
+			Status:    models.MenuStatusNormal,
+			ParentID:  &networkMenu.ID,
+			Path:      func() *string { s := "/network/ports"; return &s }(),
+			Component: func() *string { s := "network/port/index"; return &s }(),
+			Icon:      func() *string { s := "apartment"; return &s }(),
+			Perms:     func() *string { s := string(NetworkDevice); return &s }(), // 使用设备管理的权限
+		},
+	}
+
+	for _, menu := range networkChildMenus {
+		s.createMenuIfNotExists(db, &menu)
+	}
+
+	// 获取创建后的网络设备菜单ID（用于创建按钮）
+	// 通过 path 查询子菜单，因为 path 是唯一的
+	var deviceMenu, credentialMenu, templateMenu, commandMenu, executionMenu, backupMenu, discoveryMenu, macMenu, portMenu models.Menu
+	db.Where("menu_name = ? AND path = ?", "设备管理", "/network/devices").First(&deviceMenu)
+	db.Where("menu_name = ? AND path = ?", "授权凭证", "/network/credentials").First(&credentialMenu)
+	db.Where("menu_name = ? AND path = ?", "配置模板", "/network/templates").First(&templateMenu)
+	db.Where("menu_name = ? AND path = ?", "命令分发", "/network/command").First(&commandMenu)
+	db.Where("menu_name = ? AND path = ?", "配置执行", "/network/executions").First(&executionMenu)
+	db.Where("menu_name = ? AND path = ?", "配置备份", "/network/backups").First(&backupMenu)
+	db.Where("menu_name = ? AND path = ?", "设备发现", "/network/discoveries").First(&discoveryMenu)
+	db.Where("menu_name = ? AND path = ?", "MAC地址", "/network/mac").First(&macMenu)
+	db.Where("menu_name = ? AND path = ?", "端口状态", "/network/ports").First(&portMenu)
+
+	// 创建设备管理按钮
+	s.createButtonMenus(db, deviceMenu.ID, []PermissionCode{
+		NetworkDeviceList, NetworkDeviceAdd, NetworkDeviceEdit, NetworkDeviceDelete, NetworkDeviceExport,
+	})
+
+	// 创建授权凭证按钮
+	s.createButtonMenus(db, credentialMenu.ID, []PermissionCode{
+		NetworkCredentialList, NetworkCredentialAdd, NetworkCredentialEdit, NetworkCredentialDelete,
+	})
+
+	// 创建配置模板按钮
+	s.createButtonMenus(db, templateMenu.ID, []PermissionCode{
+		NetworkTemplateList, NetworkTemplateAdd, NetworkTemplateEdit, NetworkTemplateDelete,
+	})
+
+	// 创建命令分发按钮
+	s.createButtonMenus(db, commandMenu.ID, []PermissionCode{
+		NetworkCommandExecute, NetworkCommandView,
+	})
+
+	// 创建配置执行按钮
+	s.createButtonMenus(db, executionMenu.ID, []PermissionCode{
+		NetworkCommandExecute, NetworkCommandView,
+	})
+
+	// 创建配置备份按钮
+	s.createButtonMenus(db, backupMenu.ID, []PermissionCode{
+		NetworkBackupList, NetworkBackupAdd, NetworkBackupRestore, NetworkBackupDiff,
+	})
+
+	// 创建设备发现按钮
+	s.createButtonMenus(db, discoveryMenu.ID, []PermissionCode{
+		NetworkDiscoveryAdd, NetworkDiscoveryView,
+	})
+
+	// 创建MAC地址查询按钮
+	s.createButtonMenus(db, macMenu.ID, []PermissionCode{
+		NetworkMacQuery,
+	})
+
+	// 创建端口状态查询按钮
+	s.createButtonMenus(db, portMenu.ID, []PermissionCode{
+		NetworkPortQuery,
+	})
+
 	return nil
 }
 
@@ -321,6 +513,40 @@ func (s *service) createButtonMenus(db *gorm.DB, parentID string, permissions []
 		PostAdd:    "新增",
 		PostEdit:   "修改",
 		PostRemove: "删除",
+
+		// 网络设备管理按钮
+		NetworkDeviceList:   "查询",
+		NetworkDeviceView:   "查看",
+		NetworkDeviceAdd:    "新增",
+		NetworkDeviceEdit:   "修改",
+		NetworkDeviceDelete: "删除",
+		NetworkDeviceExport: "导出",
+
+		NetworkCredentialList:   "查询",
+		NetworkCredentialView:   "查看",
+		NetworkCredentialAdd:    "新增",
+		NetworkCredentialEdit:   "修改",
+		NetworkCredentialDelete: "删除",
+
+		NetworkTemplateList:   "查询",
+		NetworkTemplateView:   "查看",
+		NetworkTemplateAdd:    "新增",
+		NetworkTemplateEdit:   "修改",
+		NetworkTemplateDelete: "删除",
+
+		NetworkCommandExecute: "执行",
+		NetworkCommandView:    "查看",
+
+		NetworkBackupList:    "查询",
+		NetworkBackupAdd:     "备份",
+		NetworkBackupRestore: "恢复",
+		NetworkBackupDiff:    "对比",
+
+		NetworkDiscoveryAdd:  "发现",
+		NetworkDiscoveryView: "查看",
+
+		NetworkMacQuery:  "查询",
+		NetworkPortQuery: "查询",
 	}
 
 	// 按钮图标映射（可选）
@@ -352,6 +578,40 @@ func (s *service) createButtonMenus(db *gorm.DB, parentID string, permissions []
 		DeptAdd:    "plus",
 		DeptEdit:   "edit",
 		DeptRemove: "delete",
+
+		// 网络设备管理按钮图标
+		NetworkDeviceList:     "search",
+		NetworkDeviceView:     "eye",
+		NetworkDeviceAdd:      "plus",
+		NetworkDeviceEdit:     "edit",
+		NetworkDeviceDelete:   "delete",
+		NetworkDeviceExport:   "export",
+
+		NetworkCredentialList:   "search",
+		NetworkCredentialView:   "eye",
+		NetworkCredentialAdd:    "plus",
+		NetworkCredentialEdit:   "edit",
+		NetworkCredentialDelete: "delete",
+
+		NetworkTemplateList:   "search",
+		NetworkTemplateView:   "eye",
+		NetworkTemplateAdd:    "plus",
+		NetworkTemplateEdit:   "edit",
+		NetworkTemplateDelete: "delete",
+
+		NetworkCommandExecute: "play",
+		NetworkCommandView:    "eye",
+
+		NetworkBackupList:    "search",
+		NetworkBackupAdd:     "download",
+		NetworkBackupRestore: "upload",
+		NetworkBackupDiff:    "diff",
+
+		NetworkDiscoveryAdd:  "radar",
+		NetworkDiscoveryView: "eye",
+
+		NetworkMacQuery:  "search",
+		NetworkPortQuery: "search",
 	}
 
 	for _, perm := range permissions {
@@ -484,8 +744,11 @@ func (s *service) UpdateRoleDepts(db *gorm.DB, roleID string, deptIDs []string) 
 }
 
 // GetUserMenus 获取用户的菜单树
+// 设计原则：
+// - visible=0（隐藏）：不显示在导航栏，但权限有效，可通过直接URL访问
+// - status=1（停用）：显示在导航栏但为灰色，点击后提示"功能已停用"，权限无效
 func (s *service) GetUserMenus(db *gorm.DB, userID string) ([]models.Menu, error) {
-	// 首先获取用户直接有权限的菜单
+	// 首先获取用户直接有权限的菜单（包括正常和停用但显示的）
 	var menus []models.Menu
 
 	err := db.Raw(`
@@ -494,16 +757,16 @@ func (s *service) GetUserMenus(db *gorm.DB, userID string) ([]models.Menu, error
 		INNER JOIN sys_role_menu rm ON m.id = rm.menu_id
 		INNER JOIN sys_user_role ur ON rm.role_id = ur.role_id
 		WHERE ur.user_id = ?
-		AND m.status = ?
 		AND m.visible = ?
+		AND m.menu_type IN ('M', 'C')
 		ORDER BY m.order_num
-	`, userID, models.MenuStatusNormal, models.VisibleShow).Scan(&menus).Error
+	`, userID, models.VisibleShow).Scan(&menus).Error
 
 	if err != nil {
 		return nil, err
 	}
 
-	// 收集所有父菜单ID
+	// 收集所有父菜单ID（包括停用菜单的父菜单）
 	parentIDs := make(map[string]bool)
 	for _, menu := range menus {
 		if menu.ParentID != nil && *menu.ParentID != "" {
@@ -525,7 +788,6 @@ func (s *service) GetUserMenus(db *gorm.DB, userID string) ([]models.Menu, error
 
 		err := db.Table("sys_menu").
 			Where("id IN ?", ids).
-			Where("status = ?", models.MenuStatusNormal).
 			Where("visible = ?", models.VisibleShow).
 			Order("order_num ASC").
 			Find(&parentMenus).Error
@@ -603,6 +865,9 @@ func (s *service) buildMenuTree(menus []models.Menu, parentID string) []models.M
 }
 
 // GetUserPermissions 获取用户的所有权限
+// 注意：只检查 status（停用），不检查 visible（隐藏）
+// - 隐藏的菜单（visible=0）：不显示在导航栏，但权限仍然有效，可通过直接URL访问
+// - 停用的菜单（status=1）：完全不可用，权限无效，即使知道URL也无法访问
 func (s *service) GetUserPermissions(db *gorm.DB, userID string) ([]string, error) {
 	var permissions []string
 	err := db.Raw(`
@@ -614,8 +879,7 @@ func (s *service) GetUserPermissions(db *gorm.DB, userID string) ([]string, erro
 		AND m.perms IS NOT NULL
 		AND m.perms != ''
 		AND m.status = ?
-		AND m.visible = ?
-	`, userID, models.MenuStatusNormal, models.VisibleShow).Scan(&permissions).Error
+	`, userID, models.MenuStatusNormal).Scan(&permissions).Error
 
 	return permissions, err
 }

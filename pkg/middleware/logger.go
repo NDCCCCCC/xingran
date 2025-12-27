@@ -10,44 +10,69 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const requestBodyKey = "request_body"
+
 // Logger 返回日志中间件
 func Logger() gin.HandlerFunc {
-	return gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string {
-		// 记录请求和响应信息
-		logger := logrus.WithFields(logrus.Fields{
-			"status_code": param.StatusCode,
-			"latency":     param.Latency,
-			"client_ip":   param.ClientIP,
-			"method":      param.Method,
-			"path":        param.Path,
-			"user_agent":  param.Request.UserAgent(),
-			"error":       param.ErrorMessage,
-		})
+	return func(c *gin.Context) {
+		// 在请求处理之前读取请求体
+		startTime := time.Now()
 
-		// 如果有请求体，记录请求体（排除敏感信息）
-		if param.Request.Body != nil && param.Request.Method != "GET" {
-			bodyBytes, _ := io.ReadAll(param.Request.Body)
-			param.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+		// 读取请求体并存储到上下文中
+		var bodyBytes []byte
+		if c.Request.Body != nil && c.Request.Method != "GET" {
+			bodyBytes, _ = io.ReadAll(c.Request.Body)
+			// 恢复请求体以便后续处理器读取
+			c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+		}
 
-			// 排除密码等敏感字段
+		// 处理请求
+		c.Next()
+
+		// 请求处理完成后记录日志
+		latency := time.Since(startTime)
+		statusCode := c.Writer.Status()
+		clientIP := c.ClientIP()
+		method := c.Request.Method
+		path := c.Request.URL.Path
+		userAgent := c.Request.UserAgent()
+
+		// 构建日志字段
+		fields := logrus.Fields{
+			"status_code": statusCode,
+			"latency":     latency,
+			"client_ip":   clientIP,
+			"method":      method,
+			"path":        path,
+			"user_agent":  userAgent,
+		}
+
+		// 添加错误信息（如果有）
+		if len(c.Errors) > 0 {
+			fields["error"] = c.Errors.String()
+		}
+
+		// 记录请求体（排除敏感信息）
+		if len(bodyBytes) > 0 {
 			bodyStr := string(bodyBytes)
+			// 排除密码等敏感字段
 			if len(bodyStr) > 1000 {
 				bodyStr = bodyStr[:1000] + "..."
 			}
-			logger = logger.WithField("request_body", bodyStr)
+			fields["request_body"] = bodyStr
 		}
 
+		logger := logrus.WithFields(fields)
+
 		// 根据状态码选择日志级别
-		if param.StatusCode >= 500 {
+		if statusCode >= 500 {
 			logger.Error("Internal server error")
-		} else if param.StatusCode >= 400 {
+		} else if statusCode >= 400 {
 			logger.Warn("Client error")
 		} else {
 			logger.Info("Request processed")
 		}
-
-		return ""
-	})
+	}
 }
 
 // RequestID 生成请求ID中间件

@@ -32,6 +32,7 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import type { Menu } from '@/types';
 import { post } from '@/lib/api';
+import { refreshMenuCache } from '@/store/menuStore';
 
 const { Option } = Select;
 
@@ -205,10 +206,12 @@ const MenuManagement: React.FC = () => {
   const handleModalOpenChange = (open: boolean) => {
     if (open && editingMenu) {
       // Modal 打开时设置表单值
-      // 转换状态值：0->true(显示), 1->false(隐藏)
+      // visible: 1->true(显示), 0->false(隐藏)
+      // status: 0->true(正常), 1->false(停用)
       editForm.setFieldsValue({
         ...editingMenu,
-        status: editingMenu.status === 0
+        visible: editingMenu.visible === 1,
+        status: editingMenu.status === 0,
       });
     }
   };
@@ -219,6 +222,10 @@ const MenuManagement: React.FC = () => {
       await post(`/system/menus/${id}/delete`);
       message.success('删除成功');
       loadMenus();
+
+      // 刷新菜单缓存，使菜单变更立即生效
+      await refreshMenuCache();
+      message.success('菜单已刷新，变更已生效');
     } catch (error) {
       console.error('删除菜单失败:', error);
     }
@@ -229,7 +236,12 @@ const MenuManagement: React.FC = () => {
     try {
       const values = await editForm.validateFields();
 
-      // 转换Switch状态值：true->0(显示), false->1(隐藏)
+      // 转换Switch状态值
+      // visible: true->1(显示), false->0(隐藏)
+      // status: true->0(正常), false->1(停用)
+      if (typeof values.visible === 'boolean') {
+        values.visible = values.visible ? 1 : 0;
+      }
       if (typeof values.status === 'boolean') {
         values.status = values.status ? 0 : 1;
       }
@@ -246,6 +258,10 @@ const MenuManagement: React.FC = () => {
       message.success(editingMenu ? '更新成功' : '创建成功');
       setEditModalVisible(false);
       loadMenus();
+
+      // 刷新菜单缓存，使菜单变更立即生效
+      await refreshMenuCache();
+      message.success('菜单已刷新，变更已生效');
     } catch (error) {
       console.error('保存菜单失败:', error);
     }
@@ -292,12 +308,22 @@ const MenuManagement: React.FC = () => {
       key: 'orderNum',
     },
     {
-      title: '状态',
+      title: '显示状态',
+      dataIndex: 'visible',
+      key: 'visible',
+      render: (visible) => (
+        <Tag color={visible === 1 ? 'success' : 'default'}>
+          {visible === 1 ? '显示' : '隐藏'}
+        </Tag>
+      ),
+    },
+    {
+      title: '菜单状态',
       dataIndex: 'status',
       key: 'status',
       render: (status) => (
         <Tag color={status === 0 ? 'success' : 'error'}>
-          {status === 0 ? '显示' : '隐藏'}
+          {status === 0 ? '正常' : '停用'}
         </Tag>
       ),
     },
@@ -523,9 +549,18 @@ const MenuManagement: React.FC = () => {
             </Col>
           </Row>
 
-          <Form.Item name="status" label="显示状态" valuePropName="checked" initialValue={true}>
-            <Switch checkedChildren="显示" unCheckedChildren="隐藏" />
-          </Form.Item>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="visible" label="显示状态" valuePropName="checked" initialValue={true}>
+                <Switch checkedChildren="显示" unCheckedChildren="隐藏" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="status" label="菜单状态" valuePropName="checked" initialValue={true}>
+                <Switch checkedChildren="正常" unCheckedChildren="停用" />
+              </Form.Item>
+            </Col>
+          </Row>
 
           <Form.Item name="remark" label="备注">
             <Input.TextArea rows={4} />

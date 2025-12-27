@@ -14,6 +14,8 @@ import (
 type LoginRequest struct {
 	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"`
+	// EncryptedPassword 表示密码是否已加密（SM2）
+	EncryptedPassword bool `json:"encryptedPassword,omitempty"`
 	Captcha  string `json:"captcha,omitempty"`
 	CaptchaID string `json:"captchaId,omitempty"`
 }
@@ -42,6 +44,9 @@ type UserInfo struct {
 
 // SetupAuthRouter 设置认证路由
 func SetupAuthRouter(r *gin.RouterGroup, core *core.Core) {
+	// GET /api/v1/system/auth/public-key - 获取 SM2 公钥（用于密码加密）
+	r.GET("/public-key", getPublicKey(core))
+
 	// POST /api/v1/system/auth/login - 用户登录
 	r.POST("/login", login(core))
 
@@ -90,9 +95,20 @@ func login(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
+	// 解密密码（如果使用 SM2 加密）
+	passwordToVerify := req.Password
+	if req.EncryptedPassword {
+		decrypted, err := core.JWTManager.DecryptPassword(req.Password)
+		if err != nil {
+			response.Error(c, response.ErrBadRequest, "密码解密失败: "+err.Error())
+			return
+		}
+		passwordToVerify = decrypted
+	}
+
 	// 验证密码 - 使用SM3算法
 	pwdManager := security.NewPasswordManager(nil)
-	if ok, err := pwdManager.VerifyPassword(req.Password, user.Password); err != nil || !ok {
+	if ok, err := pwdManager.VerifyPassword(passwordToVerify, user.Password); err != nil || !ok {
 		if err != nil {
 			response.Error(c, response.ErrPasswordDecrypt, "密码验证失败: "+err.Error())
 			return
@@ -265,3 +281,24 @@ func getCaptcha(core *core.Core) gin.HandlerFunc {
 	}
 }
 
+// getPublicKey 获取 SM2 公钥
+// @Summary 获取 SM2 公钥
+// @Description 获取 SM2 公钥用于前端加密密码
+// @Tags 认证
+// @Accept json
+// @Produce json
+// @Success 200 {object} response.Response{data=map[string]string}
+// @Router /system/auth/public-key [get]
+func getPublicKey(core *core.Core) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		publicKey := core.JWTManager.GetPublicKey()
+		if publicKey == "" {
+			response.Error(c, response.ErrServerError, "SM2 未启用或公钥不可用")
+			return
+		}
+
+		response.Success(c, gin.H{
+			"publicKey": publicKey,
+		})
+	}
+}

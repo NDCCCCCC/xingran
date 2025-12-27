@@ -128,6 +128,11 @@ export function upload<T = any>(url: string, file: File): Promise<T> {
   });
 }
 
+// 封装长时间运行请求（用于任务执行等耗时操作）
+export function postLongRequest<T = any>(url: string, data?: any, timeout: number = 300000): Promise<T> {
+  return api.post(url, data, { timeout });
+}
+
 // 导出axios实例以供自定义使用
 export { api };
 

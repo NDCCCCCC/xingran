@@ -133,6 +133,60 @@ const (
 	BuildEdit   PermissionCode = "tool:build:edit"
 	BuildRemove PermissionCode = "tool:build:remove"
 	BuildExport PermissionCode = "tool:build:export"
+
+	// ==================== 网络设备管理权限 ====================
+	// 设备管理权限
+	NetworkDeviceList   PermissionCode = "network:device:list"
+	NetworkDeviceView   PermissionCode = "network:device:view"
+	NetworkDeviceAdd    PermissionCode = "network:device:add"
+	NetworkDeviceEdit   PermissionCode = "network:device:edit"
+	NetworkDeviceDelete PermissionCode = "network:device:delete"
+	NetworkDeviceExport PermissionCode = "network:device:export"
+
+	// 授权凭证管理权限
+	NetworkCredentialList   PermissionCode = "network:credential:list"
+	NetworkCredentialView   PermissionCode = "network:credential:view"
+	NetworkCredentialAdd    PermissionCode = "network:credential:add"
+	NetworkCredentialEdit   PermissionCode = "network:credential:edit"
+	NetworkCredentialDelete PermissionCode = "network:credential:delete"
+
+	// 配置模板管理权限
+	NetworkTemplateList   PermissionCode = "network:template:list"
+	NetworkTemplateView   PermissionCode = "network:template:view"
+	NetworkTemplateAdd    PermissionCode = "network:template:add"
+	NetworkTemplateEdit   PermissionCode = "network:template:edit"
+	NetworkTemplateDelete PermissionCode = "network:template:delete"
+
+	// 命令分发权限
+	NetworkCommandExecute PermissionCode = "network:command:execute"
+	NetworkCommandView    PermissionCode = "network:command:view"
+
+	// 配置备份权限
+	NetworkBackupList   PermissionCode = "network:backup:list"
+	NetworkBackupAdd    PermissionCode = "network:backup:add"
+	NetworkBackupRestore PermissionCode = "network:backup:restore"
+	NetworkBackupDiff   PermissionCode = "network:backup:diff"
+
+	// 设备发现权限
+	NetworkDiscoveryAdd  PermissionCode = "network:discovery:add"
+	NetworkDiscoveryView PermissionCode = "network:discovery:view"
+
+	// MAC地址查询权限
+	NetworkMacQuery PermissionCode = "network:mac:query"
+
+	// 端口状态查询权限
+	NetworkPortQuery PermissionCode = "network:port:query"
+
+	// 网络设备模块权限
+	Network         PermissionCode = "network"
+	NetworkDevice   PermissionCode = "network:device"
+	NetworkCredential PermissionCode = "network:credential"
+	NetworkTemplate PermissionCode = "network:template"
+	NetworkCommand  PermissionCode = "network:command"
+	NetworkBackup   PermissionCode = "network:backup"
+	NetworkDiscovery PermissionCode = "network:discovery"
+	NetworkMac      PermissionCode = "network:mac"
+	NetworkPort     PermissionCode = "network:port"
 )
 
 // RoutePermission 路由权限映射

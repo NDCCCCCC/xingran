@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { post } from '@/lib/api';
 import type { User, LoginRequest } from '@/types';
 import { useMenuStore } from './menuStore';
+import { getEncryptedLoginRequest } from '@/utils/sm2';
 
 interface AuthState {
   user: User | null;
@@ -33,7 +34,13 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       login: async (credentials: LoginRequest) => {
         set({ loading: true });
         try {
-          const response = await post('/system/auth/login', credentials);
+          // 使用 SM2 加密密码
+          const encryptedRequest = await getEncryptedLoginRequest(
+            credentials.username,
+            credentials.password
+          );
+
+          const response = await post('/system/auth/login', encryptedRequest);
           const { user, accessToken, refreshToken } = response.data;
 
           // 保存到localStorage

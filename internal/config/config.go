@@ -16,6 +16,7 @@ type Config struct {
 	Database DatabaseConfig `mapstructure:"database"`
 	Cache    CacheConfig    `mapstructure:"cache"`
 	JWT      JWTConfig      `mapstructure:"jwt"`
+	Security SecurityConfig `mapstructure:"security"`
 	Log      LogConfig      `mapstructure:"log"`
 }
 
@@ -68,6 +69,11 @@ type LogConfig struct {
 	Level  string `mapstructure:"level"`
 	Format string `mapstructure:"format"`
 	Output string `mapstructure:"output"`
+}
+
+// SecurityConfig 安全配置
+type SecurityConfig struct {
+	SM4Key string `mapstructure:"sm4_key"` // SM4 加密密钥（16字节，Base64编码）
 }
 
 // Load 加载配置
@@ -130,6 +136,10 @@ func Load() *Config {
 			config.Server.Port = p
 		}
 	}
+	// SM4 密钥从环境变量读取
+	if sm4Key := os.Getenv("SM4_KEY"); sm4Key != "" {
+		config.Security.SM4Key = sm4Key
+	}
 
 	return &config
 }
@@ -173,6 +183,11 @@ func setDefaults() {
 	viper.SetDefault("log.level", "info")
 	viper.SetDefault("log.format", "json")
 	viper.SetDefault("log.output", "stdout")
+
+	// 安全默认配置（注意：生产环境必须从环境变量设置）
+	// SM4 密钥必须是 16 字节（Base64 编码）
+	// 默认值 "dGVzdC1zZWNyZXQxNiEhIQ==" 解码后是 "test-secret16!!!" （16字节）
+	viper.SetDefault("security.sm4_key", "dGVzdC1zZWNyZXQxNiEhIQ==")
 }
 
 // GetDSN 获取数据库连接字符串

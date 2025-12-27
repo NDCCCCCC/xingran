@@ -1,0 +1,8 @@
+Value VLAN (\d+)
+Value MAC_ADDRESS ([0-9a-fA-F]{4}\.[0-9a-fA-F]{4}\.[0-9a-fA-F]{4})
+Value TYPE (\S+)
+Value PORT (\S+)
+
+^Vlan\s+Mac Address\s+Type\s+Port\s*$$
+^[-\s]+\s*$$
+^${VLAN}\s+${MAC_ADDRESS}\s+${TYPE}\s+${PORT}\s*$$

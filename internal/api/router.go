@@ -150,4 +150,105 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 	{
 		v1.SetupMonitorRouter(monitor, core)
 	}
+
+	// 网络设备管理模块
+	network := r.Group("/network")
+	network.Use(middleware.JWTAuth(core.JWTManager))
+	{
+		// 网络设备管理
+		devices := network.Group("/devices")
+		devices.Use(middleware.RequirePermissions([]string{
+			"network:device:list",
+			"network:device:add",
+			"network:device:edit",
+			"network:device:delete",
+		}, core))
+		{
+			v1.SetupNetworkDeviceRouter(devices, core)
+		}
+
+		// 授权凭证管理
+		credentials := network.Group("/credentials")
+		credentials.Use(middleware.RequirePermissions([]string{
+			"network:credential:list",
+			"network:credential:add",
+			"network:credential:edit",
+			"network:credential:delete",
+		}, core))
+		{
+			v1.SetupAuthCredentialRouter(credentials, core)
+		}
+
+		// 配置模板管理
+		templates := network.Group("/templates")
+		templates.Use(middleware.RequirePermissions([]string{
+			"network:template:list",
+			"network:template:add",
+			"network:template:edit",
+			"network:template:delete",
+		}, core))
+		{
+			v1.SetupConfigTemplateRouter(templates, core)
+		}
+
+		// 命令分发
+		command := network.Group("/command")
+		command.Use(middleware.RequirePermissions([]string{
+			"network:command:execute",
+			"network:command:view",
+		}, core))
+		{
+			v1.SetupCommandRouter(command, core)
+		}
+
+		// 配置执行
+		executions := network.Group("/executions")
+		executions.Use(middleware.RequirePermissions([]string{
+			"network:command:execute",
+			"network:command:view",
+		}, core))
+		{
+			v1.SetupConfigExecutionRouter(executions, core)
+		}
+
+		// 配置备份
+		backups := network.Group("/backups")
+		backups.Use(middleware.RequirePermissions([]string{
+			"network:backup:list",
+			"network:backup:add",
+			"network:backup:restore",
+			"network:backup:diff",
+		}, core))
+		{
+			v1.SetupConfigBackupRouter(backups, core)
+		}
+
+		// 设备发现
+		discoveries := network.Group("/discoveries")
+		discoveries.Use(middleware.RequirePermissions([]string{
+			"network:discovery:add",
+			"network:discovery:view",
+		}, core))
+		{
+			v1.SetupDeviceDiscoveryRouter(discoveries, core)
+		}
+
+		// MAC地址管理
+		macAddrs := network.Group("/mac")
+		macAddrs.Use(middleware.RequirePermissions([]string{
+			"network:mac:query",
+		}, core))
+		{
+			v1.SetupMACAddressRouter(macAddrs, core)
+		}
+
+		// 端口状态管理
+		ports := network.Group("/ports")
+		ports.Use(middleware.RequirePermissions([]string{
+			"network:port:query",
+		}, core))
+		{
+			v1.SetupPortStatusRouter(ports, core)
+		}
+	}
 }

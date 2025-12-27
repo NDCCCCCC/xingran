@@ -253,3 +253,29 @@ func (j *JWTManager) RefreshToken(refreshTokenString string) (*TokenPair, error)
 	// 生成新的令牌对
 	return j.GenerateTokenPair(claims.UserID, claims.Username, roles)
 }
+
+// GetPublicKey 获取 SM2 公钥（用于前端加密密码）
+// 返回十六进制格式的公钥（原始字节格式，用于 sm-crypto）
+func (j *JWTManager) GetPublicKey() string {
+	if !j.useSM2 || j.sm2PublicKey == nil {
+		return ""
+	}
+
+	// 返回原始十六进制格式，供前端 sm-crypto 直接使用
+	return crypto.ExportPublicKeyToHex(j.sm2PublicKey)
+}
+
+// DecryptPassword 使用 SM2 私钥解密密码
+func (j *JWTManager) DecryptPassword(ciphertext string) (string, error) {
+	if !j.useSM2 || j.sm2PrivateKey == nil {
+		return "", fmt.Errorf("SM2 未启用")
+	}
+
+	// 使用 SM2 解密密码
+	plaintext, err := crypto.DecryptWithSM2(ciphertext, j.sm2PrivateKey)
+	if err != nil {
+		return "", fmt.Errorf("SM2 解密失败: %w", err)
+	}
+
+	return plaintext, nil
+}

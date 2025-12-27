@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Layout, Menu, Spin } from 'antd';
+import { Layout, Menu, Spin, message } from 'antd';
 import {
   DashboardOutlined,
   UserOutlined,
@@ -233,33 +233,41 @@ function convertToMenuItem(menu: MenuType): MenuItem {
     return null as any;
   }
 
+  // 隐藏的菜单（visible=0）不显示
+  if (menu.visible !== 1) {
+    return null as any;
+  }
+
+  const isDisabled = menu.status !== 0; // 停用的菜单
+
   // 如果有子菜单，递归转换
   if (menu.children && menu.children.length > 0) {
     const validChildren = menu.children
-      .filter(child => child.menuType !== 'F' && child.visible === 1 && child.status === 0)
+      .filter(child => child.menuType !== 'F' && child.visible === 1)
       .map(convertToMenuItem)
       .filter((item): item is MenuItem => item !== null);
 
-    if (validChildren.length > 0) {
+    // 如果有正常子菜单，或者是父级目录，都显示
+    if (validChildren.length > 0 || menu.menuType === 'M') {
       return {
         key: menu.path || menu.id,
         icon,
         label: menu.menuName,
-        children: validChildren,
+        children: validChildren.length > 0 ? validChildren : undefined,
+        disabled: isDisabled,
+        style: isDisabled ? { opacity: 0.5 } : undefined,
       };
     }
   }
 
-  // 只显示可见且状态正常的菜单
-  if (menu.visible === 1 && menu.status === 0) {
-    return {
-      key: menu.path || menu.id,
-      icon,
-      label: menu.menuName,
-    };
-  }
-
-  return null as any;
+  // 显示所有可见的菜单（包括停用的）
+  return {
+    key: menu.path || menu.id,
+    icon,
+    label: menu.menuName,
+    disabled: isDisabled,
+    style: isDisabled ? { opacity: 0.5 } : undefined,
+  };
 }
 
 const Sidebar: React.FC = () => {
@@ -278,12 +286,34 @@ const Sidebar: React.FC = () => {
   // 将后端菜单数据转换为 Ant Design Menu 组件所需的格式
   const menuItems: MenuItem[] = useMemo(() => {
     return menus
-      .filter(menu => menu.menuType !== 'F' && menu.visible === 1 && menu.status === 0)
+      .filter(menu => menu.menuType !== 'F' && menu.visible === 1)
       .map(convertToMenuItem)
       .filter((item): item is MenuItem => item !== null);
   }, [menus]);
 
   const handleMenuClick: MenuProps['onClick'] = (e) => {
+    // 查找被点击的菜单
+    const findMenuByPath = (menuList: MenuType[], key: string): MenuType | null => {
+      for (const menu of menuList) {
+        if ((menu.path === key || menu.id === key) && menu.visible === 1) {
+          return menu;
+        }
+        if (menu.children) {
+          const found = findMenuByPath(menu.children, key);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    const clickedMenu = findMenuByPath(menus, e.key);
+
+    // 检查菜单是否停用
+    if (clickedMenu && clickedMenu.status !== 0) {
+      message.warning('该功能已停用，暂时无法访问');
+      return;
+    }
+
     navigate(e.key);
   };
 

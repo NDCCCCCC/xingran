@@ -22,6 +22,16 @@ import ServerMonitor from '@/pages/monitor/server';
 import LogMonitor from '@/pages/monitor/logs';
 import JobManager from '@/pages/monitor/job';
 import CacheManager from '@/pages/monitor/cache';
+// 网络设备管理页面
+import DeviceManagement from '@/pages/network/devices';
+import CredentialManagement from '@/pages/network/credentials';
+import TemplateManagement from '@/pages/network/templates';
+import CommandDispatch from '@/pages/network/command';
+import ConfigExecutionPage from '@/pages/network/executions';
+import ConfigBackupPage from '@/pages/network/backups';
+import DeviceDiscoveryPage from '@/pages/network/discoveries';
+import MACAddressPage from '@/pages/network/mac';
+import PortStatusPage from '@/pages/network/ports';
 import './App.css';
 
 // 创建React Query客户端
@@ -106,6 +116,17 @@ function App() {
                       <Route path="/monitor/logs" element={<LogMonitor />} />
                       <Route path="/monitor/job" element={<JobManager />} />
                       <Route path="/monitor/cache" element={<CacheManager />} />
+
+                      {/* 网络设备管理路由 - 注意：不要为 /network 添加重定向，它应该作为父菜单展开 */}
+                      <Route path="/network/devices" element={<DeviceManagement />} />
+                      <Route path="/network/credentials" element={<CredentialManagement />} />
+                      <Route path="/network/templates" element={<TemplateManagement />} />
+                      <Route path="/network/command" element={<CommandDispatch />} />
+                      <Route path="/network/executions" element={<ConfigExecutionPage />} />
+                      <Route path="/network/backups" element={<ConfigBackupPage />} />
+                      <Route path="/network/discoveries" element={<DeviceDiscoveryPage />} />
+                      <Route path="/network/mac" element={<MACAddressPage />} />
+                      <Route path="/network/ports" element={<PortStatusPage />} />
 
                       <Route path="*" element={<Navigate to="/dashboard" replace />} />
                     </Routes>

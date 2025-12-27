@@ -30,7 +30,7 @@ import {
   HistoryOutlined,
   ClockCircleOutlined
 } from '@ant-design/icons';
-import { post, put, del, get } from '@/lib/api';
+import { post, put, del, get, postLongRequest } from '@/lib/api';
 import type { ColumnsType } from 'antd/es/table';
 
 const { TextArea } = Input;
@@ -224,7 +224,8 @@ const JobManager: React.FC = () => {
   // 立即执行任务
   const handleExecute = async (record: JobInfo) => {
     try {
-      await post(`/monitor/jobs/${record.id}/execute`, {});
+      // 使用长时间请求函数（5分钟超时），因为设备监控任务可能耗时较长
+      await postLongRequest(`/monitor/jobs/${record.id}/execute`, {});
       message.success('执行成功');
       if (selectedJob?.id === record.id) {
         fetchJobLogs(record.jobName, record.jobGroup);
