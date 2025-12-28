@@ -410,6 +410,7 @@ export interface ConfigBackup {
   id: string;
   deviceId: string;
   deviceName: string;
+  ipAddress: string;
   backupType: BackupType;
   configHash: string;
   version: number;
@@ -417,6 +418,7 @@ export interface ConfigBackup {
   backupSize: number;
   filePath: string;
   createdAt: string;
+  updatedAt: string;
   createdBy?: string;
 }
 

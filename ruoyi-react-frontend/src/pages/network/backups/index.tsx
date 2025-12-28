@@ -84,8 +84,8 @@ const ConfigBackupPage: React.FC = () => {
         pageSize: params.pageSize || pageSize,
         ...values,
       });
-      setBackups(result.data.list);
-      setTotal(result.data.total);
+      setBackups(result.data.list || []);
+      setTotal(result.data.total || 0);
       // 更新统计数据
       updateStatistics(result.data.list || []);
     } catch (error) {
@@ -213,7 +213,7 @@ const ConfigBackupPage: React.FC = () => {
 
   // 备份列表表格列
   const backupColumns: ColumnsType<ConfigBackup> = [
-    { title: '设备名称', dataIndex: 'deviceName', key: 'deviceName', width: 150 },
+    { title: '设备名称', dataIndex: 'deviceName', key: 'deviceName', width: 200 },
     { title: 'IP地址', dataIndex: 'ipAddress', key: 'ipAddress', width: 140 },
     {
       title: '备份类型',
@@ -226,7 +226,6 @@ const ConfigBackupPage: React.FC = () => {
       },
     },
     { title: '版本号', dataIndex: 'version', key: 'version', width: 80 },
-    { title: '配置哈希', dataIndex: 'configHash', key: 'configHash', width: 120, ellipsis: true },
     {
       title: '文件大小',
       dataIndex: 'backupSize',
@@ -237,9 +236,44 @@ const ConfigBackupPage: React.FC = () => {
         return `${kb} KB`;
       },
     },
-    { title: '变更原因', dataIndex: 'changeReason', key: 'changeReason', ellipsis: true },
+    { title: '变更原因', dataIndex: 'changeReason', key: 'changeReason', width: 150, ellipsis: true },
     { title: '创建人', dataIndex: 'createdBy', key: 'createdBy', width: 100 },
-    { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 180 },
+    {
+      title: '创建时间',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      width: 180,
+      render: (dateStr: string) => {
+        if (!dateStr) return '-';
+        // 格式化为 yyyy-mm-dd hh:mm:ss
+        const date = new Date(dateStr);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+      },
+    },
+    {
+      title: '更新时间',
+      dataIndex: 'updatedAt',
+      key: 'updatedAt',
+      width: 180,
+      render: (dateStr: string) => {
+        if (!dateStr) return '-';
+        // 格式化为 yyyy-mm-dd hh:mm:ss
+        const date = new Date(dateStr);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+      },
+    },
     {
       title: '操作',
       key: 'action',

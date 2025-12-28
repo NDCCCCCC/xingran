@@ -16,8 +16,8 @@ import (
 
 // MACCollector MAC地址采集器
 type MACCollector struct {
-	db      *gorm.DB
-	manager *device.Manager
+	db       *gorm.DB
+	executor *device.DeviceExecutor
 }
 
 // MACAddressEntry MAC地址条目
@@ -29,10 +29,10 @@ type MACAddressEntry struct {
 }
 
 // NewMACCollector 创建MAC地址采集器
-func NewMACCollector(db *gorm.DB, manager *device.Manager) *MACCollector {
+func NewMACCollector(db *gorm.DB, executor *device.DeviceExecutor) *MACCollector {
 	return &MACCollector{
-		db:      db,
-		manager: manager,
+		db:       db,
+		executor: executor,
 	}
 }
 
@@ -44,23 +44,17 @@ func (c *MACCollector) CollectFromDevice(ctx context.Context, deviceID string) (
 		return nil, fmt.Errorf("查询设备失败: %w", err)
 	}
 
-	// 获取连接
-	wrapper, err := c.manager.ConnectWithCredential(ctx, deviceID, *device.CredentialID)
-	if err != nil {
-		return nil, fmt.Errorf("连接设备失败: %w", err)
-	}
-
 	// 获取MAC地址表命令
 	command := c.getMACCommand(device.Vendor)
 
-	// 发送命令
-	response, err := wrapper.SendCommand(command, true)
+	// 使用 executor 执行命令
+	output, err := c.executor.ExecuteOnDevice(ctx, deviceID, command, true)
 	if err != nil {
 		return nil, fmt.Errorf("获取MAC地址表失败: %w", err)
 	}
 
 	// 解析MAC地址表
-	entries, err := c.parseMACAddressTable(device.Vendor, response.Result)
+	entries, err := c.parseMACAddressTable(device.Vendor, output)
 	if err != nil {
 		return nil, fmt.Errorf("解析MAC地址表失败: %w", err)
 	}

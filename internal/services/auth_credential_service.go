@@ -101,21 +101,18 @@ func (s *AuthCredentialService) Create(ctx context.Context, req *CreateCredentia
 	}
 
 	// 使用 SM4 加密密码
-	var encryptedPassword, encryptedEnablePassword string
-	if s.sm4Cipher != nil {
-		var err error
-		encryptedPassword, err = s.sm4Cipher.Encrypt(req.Password)
-		if err != nil {
-			return nil, fmt.Errorf("密码加密失败: %w", err)
-		}
-		encryptedEnablePassword, err = s.sm4Cipher.Encrypt(req.EnablePassword)
-		if err != nil {
-			return nil, fmt.Errorf("特权密码加密失败: %w", err)
-		}
-	} else {
-		// 如果加密器不可用，使用明文（不推荐，仅用于向后兼容）
-		encryptedPassword = req.Password
-		encryptedEnablePassword = req.EnablePassword
+	if s.sm4Cipher == nil {
+		return nil, fmt.Errorf("SM4 加密器未初始化，无法加密密码")
+	}
+
+	encryptedPassword, err := s.sm4Cipher.Encrypt(req.Password)
+	if err != nil {
+		return nil, fmt.Errorf("密码加密失败: %w", err)
+	}
+
+	encryptedEnablePassword, err := s.sm4Cipher.Encrypt(req.EnablePassword)
+	if err != nil {
+		return nil, fmt.Errorf("特权密码加密失败: %w", err)
 	}
 
 	credential := models.AuthCredential{
@@ -217,26 +214,24 @@ func (s *AuthCredentialService) Update(ctx context.Context, req *UpdateCredentia
 
 	// 如果提供了新密码，则加密并更新密码
 	if req.Password != "" {
-		if s.sm4Cipher != nil {
-			encrypted, err := s.sm4Cipher.Encrypt(req.Password)
-			if err != nil {
-				return fmt.Errorf("密码加密失败: %w", err)
-			}
-			credential.Password = encrypted
-		} else {
-			credential.Password = req.Password
+		if s.sm4Cipher == nil {
+			return fmt.Errorf("SM4 加密器未初始化，无法加密密码")
 		}
+		encrypted, err := s.sm4Cipher.Encrypt(req.Password)
+		if err != nil {
+			return fmt.Errorf("密码加密失败: %w", err)
+		}
+		credential.Password = encrypted
 	}
 	if req.EnablePassword != "" {
-		if s.sm4Cipher != nil {
-			encrypted, err := s.sm4Cipher.Encrypt(req.EnablePassword)
-			if err != nil {
-				return fmt.Errorf("特权密码加密失败: %w", err)
-			}
-			credential.EnablePassword = encrypted
-		} else {
-			credential.EnablePassword = req.EnablePassword
+		if s.sm4Cipher == nil {
+			return fmt.Errorf("SM4 加密器未初始化，无法加密特权密码")
 		}
+		encrypted, err := s.sm4Cipher.Encrypt(req.EnablePassword)
+		if err != nil {
+			return fmt.Errorf("特权密码加密失败: %w", err)
+		}
+		credential.EnablePassword = encrypted
 	}
 
 	if err := s.db.Save(&credential).Error; err != nil {

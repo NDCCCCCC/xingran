@@ -15,15 +15,15 @@ import (
 
 // AssetCollector 资产信息采集器
 type AssetCollector struct {
-	db      *gorm.DB
-	manager *device.Manager
+	db       *gorm.DB
+	executor *device.DeviceExecutor
 }
 
 // NewAssetCollector 创建资产信息采集器
-func NewAssetCollector(db *gorm.DB, manager *device.Manager) *AssetCollector {
+func NewAssetCollector(db *gorm.DB, executor *device.DeviceExecutor) *AssetCollector {
 	return &AssetCollector{
-		db:      db,
-		manager: manager,
+		db:       db,
+		executor: executor,
 	}
 }
 
@@ -68,29 +68,39 @@ func (c *AssetCollector) CollectDevice(ctx context.Context, deviceID string) (*A
 		CollectedAt: time.Now(),
 	}
 
-	// 获取设备和凭证
-	_, credential, err := c.manager.GetDeviceWithCredentials(ctx, device.ID)
-	if err != nil {
-		result.Success = false
-		result.Error = err.Error()
-		return result, fmt.Errorf("获取设备凭证失败: %w", err)
-	}
+	assetInfo := &AssetInfo{}
+	vendor := device.Vendor
 
-	// 获取设备连接
-	wrapper, err := c.manager.ConnectToDevice(ctx, &device, credential)
+	// 直接使用连接池获取连接
+	pool := c.executor.GetScheduler().GetConnectionPool()
+	conn, err := pool.GetConnection(ctx, deviceID)
 	if err != nil {
 		result.Success = false
 		result.Error = err.Error()
 		return result, fmt.Errorf("获取设备连接失败: %w", err)
 	}
-	defer wrapper.Close()
 
-	// 采集资产信息
-	assetInfo, err := c.collectAssetInfo(wrapper, &device)
-	if err != nil {
+	if !conn.Acquire() {
 		result.Success = false
-		result.Error = err.Error()
-		return result, fmt.Errorf("采集资产信息失败: %w", err)
+		result.Error = "无法获取连接锁"
+		return result, fmt.Errorf("无法获取连接锁")
+	}
+	defer conn.Release()
+
+	wrapper := conn.GetWrapper()
+
+	// 获取版本信息（包含序列号、版本等）
+	versionCmd := c.getVersionCommand(vendor)
+	versionResp, err := wrapper.SendCommand(versionCmd, true)
+	if err == nil {
+		c.parseVersionInfo(versionResp.Result, vendor, assetInfo)
+	}
+
+	// 获取系统信息（内存、CPU等）
+	deviceCmd := c.getDeviceCommand(vendor)
+	deviceResp, err := wrapper.SendCommand(deviceCmd, true)
+	if err == nil {
+		c.parseDeviceInfo(deviceResp.Result, vendor, assetInfo)
 	}
 
 	// 保存资产信息到数据库
@@ -134,27 +144,6 @@ func (c *AssetCollector) CollectAllDevices(ctx context.Context) ([]*AssetCollect
 	}
 
 	return results, nil
-}
-
-// collectAssetInfo 采集资产信息
-func (c *AssetCollector) collectAssetInfo(wrapper *device.ScrapliWrapper, device *models.NetworkDevice) (*AssetInfo, error) {
-	asset := &AssetInfo{}
-
-	// 获取版本信息（包含序列号、版本等）
-	versionCmd := c.getVersionCommand(device.Vendor)
-	versionResp, err := wrapper.SendCommand(versionCmd, true)
-	if err == nil {
-		c.parseVersionInfo(versionResp.Result, device.Vendor, asset)
-	}
-
-	// 获取系统信息（内存、CPU等）
-	deviceCmd := c.getDeviceCommand(device.Vendor)
-	deviceResp, err := wrapper.SendCommand(deviceCmd, true)
-	if err == nil {
-		c.parseDeviceInfo(deviceResp.Result, device.Vendor, asset)
-	}
-
-	return asset, nil
 }
 
 // getVersionCommand 获取版本信息命令

@@ -13,15 +13,15 @@ import (
 
 // InterfaceCollector 接口信息采集器
 type InterfaceCollector struct {
-	db      *gorm.DB
-	manager *device.Manager
+	db       *gorm.DB
+	executor *device.DeviceExecutor
 }
 
 // NewInterfaceCollector 创建接口信息采集器
-func NewInterfaceCollector(db *gorm.DB, manager *device.Manager) *InterfaceCollector {
+func NewInterfaceCollector(db *gorm.DB, executor *device.DeviceExecutor) *InterfaceCollector {
 	return &InterfaceCollector{
-		db:      db,
-		manager: manager,
+		db:       db,
+		executor: executor,
 	}
 }
 
@@ -65,29 +65,23 @@ func (c *InterfaceCollector) CollectDevice(ctx context.Context, deviceID string)
 		CollectedAt: time.Now(),
 	}
 
-	// 获取设备和凭证
-	_, credential, err := c.manager.GetDeviceWithCredentials(ctx, device.ID)
-	if err != nil {
-		result.Success = false
-		result.Error = err.Error()
-		return result, fmt.Errorf("获取设备凭证失败: %w", err)
-	}
+	// 获取接口信息命令
+	cmd := c.getInterfaceCommand(device.Vendor)
 
-	// 获取设备连接
-	wrapper, err := c.manager.ConnectToDevice(ctx, &device, credential)
-	if err != nil {
-		result.Success = false
-		result.Error = err.Error()
-		return result, fmt.Errorf("获取设备连接失败: %w", err)
-	}
-	defer wrapper.Close()
-
-	// 获取接口列表
-	interfaces, err := c.collectInterfaceInfo(wrapper, &device)
+	// 使用 executor 执行命令
+	output, err := c.executor.ExecuteOnDevice(ctx, device.ID, cmd, true)
 	if err != nil {
 		result.Success = false
 		result.Error = err.Error()
 		return result, fmt.Errorf("采集接口信息失败: %w", err)
+	}
+
+	// 解析接口信息
+	interfaces, err := c.parseInterfaceOutput(output, device.Vendor)
+	if err != nil {
+		result.Success = false
+		result.Error = err.Error()
+		return result, fmt.Errorf("解析接口信息失败: %w", err)
 	}
 
 	// 保存接口信息到数据库
@@ -132,22 +126,6 @@ func (c *InterfaceCollector) CollectAllDevices(ctx context.Context) ([]*Interfac
 	}
 
 	return results, nil
-}
-
-// collectInterfaceInfo 采集接口信息
-func (c *InterfaceCollector) collectInterfaceInfo(wrapper *device.ScrapliWrapper, device *models.NetworkDevice) ([]InterfaceInfo, error) {
-	cmd := c.getInterfaceCommand(device.Vendor)
-	resp, err := wrapper.SendCommand(cmd, true)
-	if err != nil {
-		return nil, err
-	}
-
-	interfaces, err := c.parseInterfaceOutput(resp.Result, device.Vendor)
-	if err != nil {
-		return nil, err
-	}
-
-	return interfaces, nil
 }
 
 // getInterfaceCommand 获取接口信息命令

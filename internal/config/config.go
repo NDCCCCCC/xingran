@@ -66,9 +66,12 @@ type JWTConfig struct {
 
 // LogConfig 日志配置
 type LogConfig struct {
-	Level  string `mapstructure:"level"`
-	Format string `mapstructure:"format"`
-	Output string `mapstructure:"output"`
+	Level      string `mapstructure:"level"`       // 日志级别: debug, info, warn, error
+	LogDir     string `mapstructure:"log_dir"`     // 日志目录
+	MaxSize    int    `mapstructure:"max_size"`    // 单个日志文件最大大小(MB)
+	MaxBackups int    `mapstructure:"max_backups"` // 保留的旧日志文件最大数量
+	MaxAge     int    `mapstructure:"max_age"`     // 保留旧日志文件的最大天数
+	Compress   bool   `mapstructure:"compress"`    // 是否压缩旧日志文件
 }
 
 // SecurityConfig 安全配置
@@ -181,8 +184,11 @@ func setDefaults() {
 
 	// 日志默认配置
 	viper.SetDefault("log.level", "info")
-	viper.SetDefault("log.format", "json")
-	viper.SetDefault("log.output", "stdout")
+	viper.SetDefault("log.log_dir", "logs")
+	viper.SetDefault("log.max_size", 100)      // 100MB
+	viper.SetDefault("log.max_backups", 30)    // 保留30个备份
+	viper.SetDefault("log.max_age", 90)        // 保留90天
+	viper.SetDefault("log.compress", true)     // 压缩旧日志
 
 	// 安全默认配置（注意：生产环境必须从环境变量设置）
 	// SM4 密钥必须是 16 字节（Base64 编码）

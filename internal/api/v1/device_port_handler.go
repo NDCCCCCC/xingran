@@ -3,7 +3,6 @@ package v1
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
@@ -11,11 +10,14 @@ import (
 
 // PortStatusListRequest 端口状态列表请求
 type PortStatusListRequest struct {
-	Current       int    `json:"current" binding:"min=1"`
-	PageSize      int    `json:"pageSize" binding:"min=1,max=100"`
-	DeviceID      string `json:"deviceId,omitempty"`
-	InterfaceName string `json:"interfaceName,omitempty"`
-	Dot1xEnabled  *bool  `json:"dot1xEnabled,omitempty"`
+	Current               int    `json:"current" binding:"min=1"`
+	PageSize              int    `json:"pageSize" binding:"min=1,max=100"`
+	DeviceID              string `json:"deviceId,omitempty"`
+	InterfaceName         string `json:"interfaceName,omitempty"`
+	AdminStatus           string `json:"adminStatus,omitempty"`
+	OperStatus            string `json:"operStatus,omitempty"`
+	Dot1xEnabled          *bool  `json:"dot1xEnabled,omitempty"`
+	PortSecurityEnabled   *bool  `json:"portSecurityEnabled,omitempty"`
 }
 
 // PortCollectionRequest 端口采集请求
@@ -41,11 +43,12 @@ func listPortStatus(core *core.Core) gin.HandlerFunc {
 			pageSize = 10
 		}
 
-		manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
-		defer manager.Close()
+		// 使用核心设备管理器（新架构）
+		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
+		// defer manager.Close()
 
-		svc := services.NewPortCollectionService(core.DB.GetDB(), manager)
-		portStatuses, total, err := svc.GetPortStatusList(c.Request.Context(), current, pageSize, req.DeviceID, req.InterfaceName, req.Dot1xEnabled)
+		svc := services.NewPortCollectionService(core.DB.GetDB(), core.DeviceExecutor)
+		portStatuses, total, err := svc.GetPortStatusList(c.Request.Context(), current, pageSize, req.DeviceID, req.InterfaceName, req.AdminStatus, req.OperStatus, req.Dot1xEnabled, req.PortSecurityEnabled)
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
@@ -71,10 +74,11 @@ func collectPortStatus(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
-		defer manager.Close()
+		// 使用核心设备管理器（新架构）
+		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
+		// defer manager.Close()
 
-		svc := services.NewPortCollectionService(core.DB.GetDB(), manager)
+		svc := services.NewPortCollectionService(core.DB.GetDB(), core.DeviceExecutor)
 		result, err := svc.CollectDevice(c.Request.Context(), req.DeviceID)
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
@@ -88,10 +92,11 @@ func collectPortStatus(core *core.Core) gin.HandlerFunc {
 // collectAllPortStatus 采集所有设备端口状态
 func collectAllPortStatus(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
-		defer manager.Close()
+		// 使用核心设备管理器（新架构）
+		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
+		// defer manager.Close()
 
-		svc := services.NewPortCollectionService(core.DB.GetDB(), manager)
+		svc := services.NewPortCollectionService(core.DB.GetDB(), core.DeviceExecutor)
 		results, err := svc.CollectAllDevices(c.Request.Context())
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
@@ -105,10 +110,11 @@ func collectAllPortStatus(core *core.Core) gin.HandlerFunc {
 // getPortStatusStats 获取端口状态统计信息
 func getPortStatusStats(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
-		defer manager.Close()
+		// 使用核心设备管理器（新架构）
+		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
+		// defer manager.Close()
 
-		svc := services.NewPortCollectionService(core.DB.GetDB(), manager)
+		svc := services.NewPortCollectionService(core.DB.GetDB(), core.DeviceExecutor)
 		stats, err := svc.GetPortStatusStats(c.Request.Context())
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
@@ -164,10 +170,11 @@ func cleanOldPortRecords(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
-		defer manager.Close()
+		// 使用核心设备管理器（新架构）
+		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
+		// defer manager.Close()
 
-		svc := services.NewPortCollectionService(core.DB.GetDB(), manager)
+		svc := services.NewPortCollectionService(core.DB.GetDB(), core.DeviceExecutor)
 		count, err := svc.CleanOldRecords(c.Request.Context(), req.Days)
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())

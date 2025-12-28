@@ -3,7 +3,6 @@ package v1
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
@@ -40,10 +39,11 @@ func listMACAddresses(core *core.Core) gin.HandlerFunc {
 			pageSize = 10
 		}
 
-		manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
-		defer manager.Close()
+		// 使用核心设备管理器（新架构）
+		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
+		// defer manager.Close()
 
-		svc := services.NewMACCollectionService(core.DB.GetDB(), manager)
+		svc := services.NewMACCollectionService(core.DB.GetDB(), core.DeviceExecutor)
 		macAddrs, total, err := svc.GetMACAddressList(c.Request.Context(), current, pageSize, req.DeviceID, req.MACAddress, req.InterfaceName)
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
@@ -70,10 +70,11 @@ func collectMACAddress(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
-		defer manager.Close()
+		// 使用核心设备管理器（新架构）
+		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
+		// defer manager.Close()
 
-		svc := services.NewMACCollectionService(core.DB.GetDB(), manager)
+		svc := services.NewMACCollectionService(core.DB.GetDB(), core.DeviceExecutor)
 		result, err := svc.CollectDevice(c.Request.Context(), req.DeviceID)
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
@@ -87,10 +88,11 @@ func collectMACAddress(core *core.Core) gin.HandlerFunc {
 // collectAllMACAddresses 采集所有设备MAC地址
 func collectAllMACAddresses(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
-		defer manager.Close()
+		// 使用核心设备管理器（新架构）
+		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
+		// defer manager.Close()
 
-		svc := services.NewMACCollectionService(core.DB.GetDB(), manager)
+		svc := services.NewMACCollectionService(core.DB.GetDB(), core.DeviceExecutor)
 		results, err := svc.CollectAllDevices(c.Request.Context())
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
@@ -104,10 +106,11 @@ func collectAllMACAddresses(core *core.Core) gin.HandlerFunc {
 // getMACAddressStats 获取MAC地址统计信息
 func getMACAddressStats(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
-		defer manager.Close()
+		// 使用核心设备管理器（新架构）
+		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
+		// defer manager.Close()
 
-		svc := services.NewMACCollectionService(core.DB.GetDB(), manager)
+		svc := services.NewMACCollectionService(core.DB.GetDB(), core.DeviceExecutor)
 		stats, err := svc.GetMACAddressStats(c.Request.Context())
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
@@ -132,10 +135,11 @@ func cleanOldMACRecords(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
-		defer manager.Close()
+		// 使用核心设备管理器（新架构）
+		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
+		// defer manager.Close()
 
-		svc := services.NewMACCollectionService(core.DB.GetDB(), manager)
+		svc := services.NewMACCollectionService(core.DB.GetDB(), core.DeviceExecutor)
 		count, err := svc.CleanOldRecords(c.Request.Context(), req.Days)
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())

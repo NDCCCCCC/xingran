@@ -14,15 +14,15 @@ import (
 
 // ConfigExecutionService 配置执行服务
 type ConfigExecutionService struct {
-	db      *gorm.DB
-	manager *device.Manager
+	db       *gorm.DB
+	executor *device.DeviceExecutor
 }
 
 // NewConfigExecutionService 创建配置执行服务
-func NewConfigExecutionService(db *gorm.DB, manager *device.Manager) *ConfigExecutionService {
+func NewConfigExecutionService(db *gorm.DB, executor *device.DeviceExecutor) *ConfigExecutionService {
 	return &ConfigExecutionService{
-		db:      db,
-		manager: manager,
+		db:       db,
+		executor: executor,
 	}
 }
 
@@ -224,17 +224,6 @@ func (s *ConfigExecutionService) executeConfigOnDevice(ctx context.Context, exec
 	}
 	s.db.Create(detail)
 
-	// 获取凭证
-	credential, err := s.getDeviceCredential(ctx, device)
-	if err != nil {
-		result.Status = models.ExecutionStatusFailed
-		result.ErrorMessage = err.Error()
-		detail.Status = models.ExecutionStatusFailed
-		detail.ErrorMessage = result.ErrorMessage
-		s.db.Save(detail)
-		return result
-	}
-
 	// 设置超时上下文
 	if timeout > 0 {
 		var cancel context.CancelFunc
@@ -242,19 +231,29 @@ func (s *ConfigExecutionService) executeConfigOnDevice(ctx context.Context, exec
 		defer cancel()
 	}
 
-	// 连接并执行配置
-	wrapper, err := s.manager.ConnectToDevice(ctx, device, credential)
+	// 通过连接池直接执行配置发送
+	pool := s.executor.GetScheduler().GetConnectionPool()
+	conn, err := pool.GetConnection(ctx, device.ID)
 	if err != nil {
 		result.Status = models.ExecutionStatusFailed
-		result.ErrorMessage = err.Error()
+		result.ErrorMessage = fmt.Sprintf("获取连接失败: %v", err)
 		detail.Status = models.ExecutionStatusFailed
 		detail.ErrorMessage = result.ErrorMessage
 		s.db.Save(detail)
 		return result
 	}
-	defer s.manager.DisconnectFromDevice(device.ID)
 
-	// 发送配置命令
+	if !conn.Acquire() {
+		result.Status = models.ExecutionStatusFailed
+		result.ErrorMessage = "无法获取连接锁"
+		detail.Status = models.ExecutionStatusFailed
+		detail.ErrorMessage = result.ErrorMessage
+		s.db.Save(detail)
+		return result
+	}
+	defer conn.Release()
+
+	wrapper := conn.GetWrapper()
 	response, err := wrapper.SendConfig(config)
 	if err != nil {
 		result.Status = models.ExecutionStatusFailed

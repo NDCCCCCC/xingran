@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -14,6 +13,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/api"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -42,10 +42,29 @@ func main() {
 	// 加载配置
 	cfg := config.Load()
 
+	// 初始化日志系统
+	logConfig := &applogger.Config{
+		Level:         cfg.Log.Level,
+		LogDir:        cfg.Log.LogDir,
+		MaxSize:       cfg.Log.MaxSize,
+		MaxBackups:    cfg.Log.MaxBackups,
+		MaxAge:        cfg.Log.MaxAge,
+		Compress:      cfg.Log.Compress,
+		ConsoleOutput: true,
+	}
+	if err := applogger.Init(logConfig); err != nil {
+		fmt.Printf("初始化日志系统失败: %v\n", err)
+		os.Exit(1)
+	}
+
+	applogger.Info("========== 应用启动 ==========")
+	applogger.Infof("日志级别: %s", cfg.Log.Level)
+	applogger.Infof("日志目录: %s", cfg.Log.LogDir)
+
 	// 初始化核心模块
 	coreModule := core.New(cfg)
 	if err := coreModule.Init(); err != nil {
-		log.Fatalf("初始化核心模块失败: %v", err)
+		applogger.Fatalf("初始化核心模块失败: %v", err)
 	}
 
 	// 设置 Gin 模式
@@ -91,13 +110,13 @@ func main() {
 
 	// 启动服务器
 	go func() {
-		log.Printf("服务器启动在端口: %d", cfg.Server.Port)
-		log.Printf("环境: %s", cfg.Server.Mode)
+		applogger.Infof("服务器启动在端口: %d", cfg.Server.Port)
+		applogger.Infof("环境: %s", cfg.Server.Mode)
 		if cfg.Server.Mode != "release" {
-			log.Printf("Swagger 文档: http://localhost:%d/swagger/index.html", cfg.Server.Port)
+			applogger.Infof("Swagger 文档: http://localhost:%d/swagger/index.html", cfg.Server.Port)
 		}
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("服务器启动失败: %v", err)
+			applogger.Fatalf("服务器启动失败: %v", err)
 		}
 	}()
 
@@ -105,18 +124,19 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	log.Println("正在关闭服务器...")
+	applogger.Info("正在关闭服务器...")
 
 	// 设置关闭超时时间
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatal("服务器强制关闭:", err)
+		applogger.Errorf("服务器强制关闭: %v", err)
 	}
 
 	// 清理资源
 	coreModule.Close()
+	applogger.Close()
 
-	log.Println("服务器已退出")
+	applogger.Info("服务器已退出")
 }

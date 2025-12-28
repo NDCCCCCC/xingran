@@ -1,6 +1,11 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
+)
 
 // BackupType 备份类型枚举
 type BackupType string
@@ -38,8 +43,30 @@ type ConfigBackup struct {
 	Compressed    bool        `gorm:"default:false" json:"compressed"` // 是否压缩
 
 	CreatedAt     time.Time   `json:"createdAt"`
+	UpdatedAt     time.Time   `json:"updatedAt"`
 	CreatedBy     string      `gorm:"size:64" json:"createdBy"`
 	DeletedAt     *time.Time  `gorm:"index" json:"deletedAt,omitempty"`
+}
+
+// BeforeCreate GORM 钩子：在创建记录前生成 UUID 和设置创建时间
+func (cb *ConfigBackup) BeforeCreate(tx *gorm.DB) error {
+	if cb.ID == "" {
+		cb.ID = uuid.New().String()
+	}
+	now := time.Now()
+	if cb.CreatedAt.IsZero() {
+		cb.CreatedAt = now
+	}
+	if cb.UpdatedAt.IsZero() {
+		cb.UpdatedAt = now
+	}
+	return nil
+}
+
+// BeforeUpdate GORM 钩子：在更新记录前更新 UpdatedAt
+func (cb *ConfigBackup) BeforeUpdate(tx *gorm.DB) error {
+	cb.UpdatedAt = time.Now()
+	return nil
 }
 
 // TableName 设置表名

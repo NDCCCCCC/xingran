@@ -29,7 +29,8 @@ type Core struct {
 	SM4Cipher               *security.SM4Cipher      // SM4加密器（用于凭证密码加密）
 	MetricsCacheService     *MetricsCacheService      // 系统指标缓存服务
 	Scheduler               *scheduler.Scheduler      // 定时任务调度器
-	DeviceManager           *device.Manager           // 网络设备连接管理器
+	DeviceManager           *device.Manager           // 网络设备管理器（简化版，仅辅助方法）
+	DeviceExecutor          *device.DeviceExecutor    // 设备执行器（新架构，统一入口）
 	DeviceDiscoveryService  *services.DeviceDiscoveryService  // 设备发现服务
 	DeviceEnrichmentService *services.DeviceEnrichmentService // 设备信息补充服务
 	NetworkDeviceService    *services.NetworkDeviceService    // 网络设备服务
@@ -117,9 +118,32 @@ func (c *Core) Init() error {
 	c.MetricsCacheService = NewMetricsCacheService(c)
 	log.Println("系统指标缓存服务初始化完成")
 
-	// 7. 初始化网络设备连接管理器
-	c.DeviceManager = device.NewManager(c.GetDB(), c.SM4Cipher, device.DefaultManagerConfig())
-	log.Println("网络设备连接管理器初始化完成")
+	// 7. 初始化网络设备管理器（新架构）
+	// 7.1 创建简化版管理器（仅辅助方法）
+	c.DeviceManager = device.NewManager(c.GetDB())
+	// 7.2 创建连接池
+	poolConfig := &device.PoolConfig{
+		MaxIdle:        5 * time.Minute,
+		MaxConnections: 50,
+	}
+	connectionPool := device.NewDeviceConnectionPool(c.GetDB(), c.SM4Cipher, poolConfig)
+	// 7.3 创建任务调度器
+	schedulerConfig := &device.SchedulerConfig{
+		TaskTimeout: 5 * time.Minute,
+		QueueSize:   100,
+	}
+	taskScheduler := device.NewDeviceTaskScheduler(connectionPool, schedulerConfig)
+	// 7.4 创建执行器
+	executorConfig := &device.ExecutionConfig{
+		MaxRetries:          2,
+		RetryDelay:          time.Second,
+		Timeout:             30 * time.Second,
+		EnablePanicRecovery: true,
+	}
+	c.DeviceExecutor = device.NewDeviceExecutor(taskScheduler, executorConfig)
+	// 7.5 将执行器设置到管理器（兼容层）
+	c.DeviceManager.SetExecutor(c.DeviceExecutor)
+	log.Println("网络设备管理器（新架构）初始化完成")
 
 	// 8. 初始化设备发现服务
 	c.DeviceDiscoveryService = services.NewDeviceDiscoveryService(c.GetDB())
@@ -150,6 +174,8 @@ func (c *Core) Init() error {
 
 	// 12. 初始化设备监控服务
 	c.DeviceMonitorService = services.NewDeviceMonitorService(c.GetDB(), c.SM4Cipher, services.DefaultDeviceMonitorConfig())
+	// 设置执行器并初始化子服务
+	c.DeviceMonitorService.SetExecutor(c.DeviceExecutor)
 	// 设置设备监控服务到调度器，供定时任务调用
 	scheduler.SetDeviceMonitorService(c.DeviceMonitorService)
 	log.Println("设备监控服务初始化完成")

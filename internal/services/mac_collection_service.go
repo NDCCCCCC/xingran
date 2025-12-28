@@ -3,6 +3,8 @@ package services
 import (
 	"context"
 	"fmt"
+	"log"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -14,16 +16,24 @@ import (
 
 // MACCollectionService MAC地址采集服务
 type MACCollectionService struct {
-	db      *gorm.DB
-	manager *device.Manager
+	db            *gorm.DB
+	executor      *device.DeviceExecutor
+	maxConcurrent int
 }
 
+// MAC采集并发数的默认配置键
+const macConcurrentConfigKey = "network.mac.collection.concurrent"
+
 // NewMACCollectionService 创建MAC采集服务
-func NewMACCollectionService(db *gorm.DB, manager *device.Manager) *MACCollectionService {
-	return &MACCollectionService{
-		db:      db,
-		manager: manager,
+func NewMACCollectionService(db *gorm.DB, executor *device.DeviceExecutor) *MACCollectionService {
+	svc := &MACCollectionService{
+		db:            db,
+		executor:      executor,
+		maxConcurrent: 10, // 默认值
 	}
+	// 从数据库加载配置
+	svc.loadConfigFromDB()
+	return svc
 }
 
 // MACCollectionResult MAC采集结果
@@ -51,7 +61,7 @@ func (s *MACCollectionService) CollectAllDevices(ctx context.Context) ([]*MACCol
 	var results []*MACCollectionResult
 	var wg sync.WaitGroup
 	var mu sync.Mutex
-	semaphore := make(chan struct{}, 10) // 限制并发数为10
+	semaphore := make(chan struct{}, s.maxConcurrent) // 使用动态并发数
 
 	for _, dev := range devices {
 		wg.Add(1)
@@ -60,7 +70,12 @@ func (s *MACCollectionService) CollectAllDevices(ctx context.Context) ([]*MACCol
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
 
-			result := s.collectDeviceMAC(ctx, &device)
+			// 为每个设备创建独立的 context（带超时控制）
+			// 这样单个设备的问题不会影响其他设备
+			deviceCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+			defer cancel()
+
+			result := s.collectDeviceMAC(deviceCtx, &device)
 
 			mu.Lock()
 			results = append(results, result)
@@ -85,39 +100,31 @@ func (s *MACCollectionService) CollectDevice(ctx context.Context, deviceID strin
 
 // collectDeviceMAC 采集设备MAC地址表（内部方法）
 func (s *MACCollectionService) collectDeviceMAC(ctx context.Context, device *models.NetworkDevice) *MACCollectionResult {
+	// 添加 panic recovery，防止 scrapligo 库的 panic 导致程序崩溃
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("[MAC采集] 设备 %s 发生 panic: %v", device.DeviceName, r)
+		}
+	}()
+
 	result := &MACCollectionResult{
 		DeviceID:       device.ID,
 		DeviceName:     device.DeviceName,
 		CollectionTime: time.Now(),
 	}
 
-	// 获取凭证
-	credential, err := s.getDeviceCredential(ctx, device)
-	if err != nil {
-		result.ErrorMessage = err.Error()
-		return result
-	}
-
-	// 连接设备
-	wrapper, err := s.manager.ConnectToDevice(ctx, device, credential)
-	if err != nil {
-		result.ErrorMessage = err.Error()
-		return result
-	}
-	defer s.manager.DisconnectFromDevice(device.ID)
-
 	// 获取MAC地址表命令
 	command := s.getMACCommand(device.Vendor)
 
-	// 发送命令
-	response, err := wrapper.SendCommand(command, true)
+	// 使用 executor 发送命令
+	response, err := s.executor.ExecuteOnDevice(ctx, device.ID, command, true)
 	if err != nil {
 		result.ErrorMessage = err.Error()
 		return result
 	}
 
 	// 解析MAC地址表
-	macAddresses, err := s.parseMACAddressTable(response.Result, device.Vendor)
+	macAddresses, err := s.parseMACAddressTable(response, device.Vendor)
 	if err != nil {
 		result.ErrorMessage = err.Error()
 		return result
@@ -327,4 +334,21 @@ func (s *MACCollectionService) CleanOldRecords(ctx context.Context, days int) (i
 	}
 
 	return result.RowsAffected, nil
+}
+
+// loadConfigFromDB 从数据库加载并发数配置
+func (s *MACCollectionService) loadConfigFromDB() {
+	var config models.Config
+	err := s.db.Where("config_key = ?", macConcurrentConfigKey).First(&config).Error
+	if err == nil && config.ConfigValue != "" {
+		if concurrent, parseErr := strconv.Atoi(config.ConfigValue); parseErr == nil && concurrent > 0 {
+			s.maxConcurrent = concurrent
+			log.Printf("[MAC采集] 从数据库读取并发数配置: %d", s.maxConcurrent)
+		}
+	}
+}
+
+// ReloadConfig 重新加载配置（从数据库）
+func (s *MACCollectionService) ReloadConfig() {
+	s.loadConfigFromDB()
 }

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
@@ -67,9 +68,20 @@ func createSQLiteConnection(cfg *config.DatabaseConfig) (*gorm.DB, error) {
 		dbPath = "./data/ruoyi.db"
 	}
 
+	// 配置GORM日志：只记录慢查询和真正的错误，忽略 ErrRecordNotFound
+	gormLogger := logger.New(
+		log.New(os.Stdout, "\r\n", log.LstdFlags),
+		logger.Config{
+			SlowThreshold:             200 * time.Millisecond, // 慢查询阈值200ms
+			LogLevel:                  logger.Warn,              // 只记录警告和错误
+			IgnoreRecordNotFoundError: true,                    // 忽略 ErrRecordNotFound
+			Colorful:                  false,
+		},
+	)
+
 	// 配置SQLite选项
 	gormConfig := &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
+		Logger: gormLogger,
 		NowFunc: func() time.Time {
 			return time.Now().Local()
 		},
@@ -97,9 +109,20 @@ func createPostgresConnection(cfg *config.DatabaseConfig) (*gorm.DB, error) {
 
 	dsn := cfg.GetDSN()
 
+	// 配置GORM日志：只记录慢查询和真正的错误，忽略 ErrRecordNotFound
+	gormLogger := logger.New(
+		log.New(os.Stdout, "\r\n", log.LstdFlags),
+		logger.Config{
+			SlowThreshold:             200 * time.Millisecond, // 慢查询阈值200ms
+			LogLevel:                  logger.Warn,              // 只记录警告和错误
+			IgnoreRecordNotFoundError: true,                    // 忽略 ErrRecordNotFound
+			Colorful:                  false,
+		},
+	)
+
 	// 配置GORM
 	gormConfig := &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
+		Logger: gormLogger,
 		NowFunc: func() time.Time {
 			return time.Now().Local()
 		},
@@ -217,6 +240,27 @@ func (d *Database) migrateCredentialModel() error {
 		return fmt.Errorf("检查迁移状态失败: %w", err)
 	}
 
+	// 检查旧列是否存在，如果存在则删除（即使主迁移已执行）
+	var oldColumnExists bool
+	err = d.DB.Raw(`
+		SELECT EXISTS (
+			SELECT 1 FROM information_schema.columns
+			WHERE table_name = 'sys_auth_credential' AND column_name = 'credential_type'
+		)
+	`).Scan(&oldColumnExists).Error
+
+	if err != nil {
+		return fmt.Errorf("检查旧列状态失败: %w", err)
+	}
+
+	// 如果旧列存在，需要删除
+	if oldColumnExists {
+		log.Println("发现旧的 credential_type 列，执行清理...")
+		if err := d.dropOldCredentialColumns(); err != nil {
+			return fmt.Errorf("删除旧列失败: %w", err)
+		}
+	}
+
 	// 如果 protocol_type 列已存在，说明迁移已执行过
 	if columnExists {
 		log.Println("凭证模型迁移已执行，跳过")
@@ -276,16 +320,16 @@ func (d *Database) migrateCredentialModel() error {
 		return fmt.Errorf("设置默认 protocol_type 失败: %w", err)
 	}
 
-	// 步骤6：删除旧列（先注释掉，等用户确认后再执行）
-	// if err := tx.Exec("ALTER TABLE sys_auth_credential DROP COLUMN IF EXISTS credential_type").Error; err != nil {
-	// 	tx.Rollback()
-	// 	return fmt.Errorf("删除 credential_type 列失败: %w", err)
-	// }
-	//
-	// if err := tx.Exec("ALTER TABLE sys_auth_credential DROP COLUMN IF EXISTS snmp_community").Error; err != nil {
-	// 	tx.Rollback()
-	// 	return fmt.Errorf("删除 snmp_community 列失败: %w", err)
-	// }
+	// 步骤6：删除旧列
+	if err := tx.Exec("ALTER TABLE sys_auth_credential DROP COLUMN IF EXISTS credential_type").Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("删除 credential_type 列失败: %w", err)
+	}
+
+	if err := tx.Exec("ALTER TABLE sys_auth_credential DROP COLUMN IF EXISTS snmp_community").Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("删除 snmp_community 列失败: %w", err)
+	}
 
 	// 步骤7：添加约束
 	if err := tx.Exec("ALTER TABLE sys_auth_credential ADD CONSTRAINT chk_protocol_type CHECK (protocol_type IN ('ssh', 'telnet'))").Error; err != nil {
@@ -303,11 +347,36 @@ func (d *Database) migrateCredentialModel() error {
 		return fmt.Errorf("提交迁移事务失败: %w", err)
 	}
 
-	log.Println("凭证模型迁移完成（旧列保留，请手动验证后删除）")
-	log.Println("验证通过后请手动执行：")
-	log.Println("  ALTER TABLE sys_auth_credential DROP COLUMN credential_type;")
-	log.Println("  ALTER TABLE sys_auth_credential DROP COLUMN snmp_community;")
+	log.Println("凭证模型迁移完成")
 
+	return nil
+}
+
+// dropOldCredentialColumns 删除旧的凭证列（credential_type 和 snmp_community）
+func (d *Database) dropOldCredentialColumns() error {
+	tx := d.DB.Begin()
+	if tx.Error != nil {
+		return fmt.Errorf("开启事务失败: %w", tx.Error)
+	}
+
+	// 删除旧的 credential_type 列
+	if err := tx.Exec("ALTER TABLE sys_auth_credential DROP COLUMN IF EXISTS credential_type").Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("删除 credential_type 列失败: %w", err)
+	}
+
+	// 删除旧的 snmp_community 列
+	if err := tx.Exec("ALTER TABLE sys_auth_credential DROP COLUMN IF EXISTS snmp_community").Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("删除 snmp_community 列失败: %w", err)
+	}
+
+	// 提交事务
+	if err := tx.Commit().Error; err != nil {
+		return fmt.Errorf("提交删除事务失败: %w", err)
+	}
+
+	log.Println("旧列清理完成")
 	return nil
 }
 
@@ -646,6 +715,47 @@ func createNetworkDeviceSystemParams(db *gorm.DB) error {
 			ConfigType:  models.ConfigTypeYes,
 			IsSystem:    models.ConfigIsSystemYes,
 			Remark:      "批量命令执行时的最大并发设备数量",
+		},
+		// 新增：网络设备并发配置参数
+		{
+			ConfigName:  "网络设备监控并发数",
+			ConfigKey:   "network.device.monitor.concurrent",
+			ConfigValue: "10",
+			ConfigType:  models.ConfigTypeYes,
+			IsSystem:    models.ConfigIsSystemYes,
+			Remark:      "设备状态检查和信息更新的最大并发数，默认10",
+		},
+		{
+			ConfigName:  "端口采集并发数",
+			ConfigKey:   "network.port.collection.concurrent",
+			ConfigValue: "10",
+			ConfigType:  models.ConfigTypeYes,
+			IsSystem:    models.ConfigIsSystemYes,
+			Remark:      "端口状态采集的最大并发数，默认10",
+		},
+		{
+			ConfigName:  "MAC地址采集并发数",
+			ConfigKey:   "network.mac.collection.concurrent",
+			ConfigValue: "10",
+			ConfigType:  models.ConfigTypeYes,
+			IsSystem:    models.ConfigIsSystemYes,
+			Remark:      "MAC地址表采集的最大并发数，默认10",
+		},
+		{
+			ConfigName:  "配置备份并发数",
+			ConfigKey:   "network.config.backup.concurrent",
+			ConfigValue: "5",
+			ConfigType:  models.ConfigTypeYes,
+			IsSystem:    models.ConfigIsSystemYes,
+			Remark:      "配置备份的最大并发数，默认5（配置备份较耗时，建议较低并发）",
+		},
+		{
+			ConfigName:  "设备操作超时时间",
+			ConfigKey:   "network.device.timeout",
+			ConfigValue: "30",
+			ConfigType:  models.ConfigTypeYes,
+			IsSystem:    models.ConfigIsSystemYes,
+			Remark:      "单个设备连接和操作的超时时间（秒），默认30秒",
 		},
 	}
 

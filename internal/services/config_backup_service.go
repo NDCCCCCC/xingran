@@ -5,10 +5,12 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"gorm.io/gorm"
@@ -18,16 +20,24 @@ import (
 
 // ConfigBackupService 配置备份服务
 type ConfigBackupService struct {
-	db      *gorm.DB
-	manager *device.Manager
+	db            *gorm.DB
+	executor      *device.DeviceExecutor
+	maxConcurrent int
 }
 
+// 配置备份并发数的默认配置键
+const backupConcurrentConfigKey = "network.config.backup.concurrent"
+
 // NewConfigBackupService 创建配置备份服务
-func NewConfigBackupService(db *gorm.DB, manager *device.Manager) *ConfigBackupService {
-	return &ConfigBackupService{
-		db:      db,
-		manager: manager,
+func NewConfigBackupService(db *gorm.DB, executor *device.DeviceExecutor) *ConfigBackupService {
+	svc := &ConfigBackupService{
+		db:            db,
+		executor:      executor,
+		maxConcurrent: 5, // 默认值（配置备份较耗时，建议较低并发）
 	}
+	// 从数据库加载配置
+	svc.loadConfigFromDB()
+	return svc
 }
 
 // BackupRequest 备份请求
@@ -84,21 +94,8 @@ func (s *ConfigBackupService) CreateBackup(ctx context.Context, req *BackupReque
 		return nil, fmt.Errorf("设备不存在: %w", err)
 	}
 
-	// 获取设备凭证
-	credential, err := s.getDeviceCredential(ctx, &device)
-	if err != nil {
-		return nil, fmt.Errorf("获取设备凭证失败: %w", err)
-	}
-
-	// 连接设备
-	wrapper, err := s.manager.ConnectToDevice(ctx, &device, credential)
-	if err != nil {
-		return nil, fmt.Errorf("连接设备失败: %w", err)
-	}
-	defer s.manager.DisconnectFromDevice(device.ID)
-
-	// 获取配置
-	config, err := wrapper.GetConfig()
+	// 使用 executor 获取配置
+	config, err := s.executor.GetConfig(ctx, req.DeviceID)
 	if err != nil {
 		return nil, fmt.Errorf("获取配置失败: %w", err)
 	}
@@ -209,38 +206,58 @@ func (s *ConfigBackupService) GetBackupContent(ctx context.Context, backupID str
 	return string(content), nil
 }
 
-// BatchBackupDevices 批量备份设备
+// BatchBackupDevices 批量备份设备（并发执行）
 func (s *ConfigBackupService) BatchBackupDevices(ctx context.Context, deviceIDs []string, backupType models.BackupType, createdBy string) ([]*BackupResult, error) {
 	var results []*BackupResult
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	semaphore := make(chan struct{}, s.maxConcurrent) // 使用动态并发数
+
+	log.Printf("[配置备份] 开始批量备份 %d 个设备", len(deviceIDs))
 
 	for _, deviceID := range deviceIDs {
-		var device models.NetworkDevice
-		if err := s.db.WithContext(ctx).Where("id = ?", deviceID).First(&device).Error; err != nil {
-			continue // 跳过不存在的设备
-		}
+		wg.Add(1)
+		go func(id string) {
+			defer wg.Done()
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
 
-		req := &BackupRequest{
-			DeviceID:     deviceID,
-			DeviceName:   device.DeviceName,
-			BackupType:   backupType,
-			ChangeReason: "",
-			CreatedBy:    createdBy,
-			CompressLarge: true,
-		}
+			var device models.NetworkDevice
+			if err := s.db.WithContext(ctx).Where("id = ?", id).First(&device).Error; err != nil {
+				log.Printf("[配置备份] 设备不存在，跳过: %s", id)
+				return // 跳过不存在的设备
+			}
 
-		result, err := s.CreateBackup(ctx, req)
-		if err != nil {
-			// 记录错误但继续处理其他设备
-			continue
-		}
+			req := &BackupRequest{
+				DeviceID:      id,
+				DeviceName:    device.DeviceName,
+				BackupType:    backupType,
+				ChangeReason:  "",
+				CreatedBy:     createdBy,
+				CompressLarge: true,
+			}
 
-		results = append(results, result)
+			log.Printf("[配置备份] 开始备份设备: %s (%s)", device.DeviceName, device.IPAddress)
+			result, err := s.CreateBackup(ctx, req)
+			if err != nil {
+				log.Printf("[配置备份] 备份失败 [%s]: %v", device.DeviceName, err)
+				return
+			}
+
+			log.Printf("[配置备份] 备份成功 [%s] 版本: %d, 大小: %d 字节", device.DeviceName, result.Version, result.ConfigSize)
+
+			mu.Lock()
+			results = append(results, result)
+			mu.Unlock()
+		}(deviceID)
 	}
 
+	wg.Wait()
+	log.Printf("[配置备份] 批量备份完成，成功: %d/%d", len(results), len(deviceIDs))
 	return results, nil
 }
 
-// AutoBackupAllDevices 自动备份所有设备
+// AutoBackupAllDevices 自动备份所有设备（智能备份：配置未改变则仅更新时间）
 func (s *ConfigBackupService) AutoBackupAllDevices(ctx context.Context) error {
 	var devices []models.NetworkDevice
 	if err := s.db.WithContext(ctx).Find(&devices).Error; err != nil {
@@ -251,17 +268,145 @@ func (s *ConfigBackupService) AutoBackupAllDevices(ctx context.Context) error {
 		return nil
 	}
 
-	var deviceIDs []string
+	log.Printf("[配置备份] 开始智能备份 %d 个设备", len(devices))
+
+	var successCount, skippedCount int
 	for _, device := range devices {
-		deviceIDs = append(deviceIDs, device.ID)
+		skipped, err := s.AutoBackupSingleDevice(ctx, &device)
+		if err != nil {
+			log.Printf("[配置备份] 备份失败 [%s]: %v", device.DeviceName, err)
+			continue
+		}
+		if skipped {
+			skippedCount++
+		} else {
+			successCount++
+		}
 	}
 
-	_, err := s.BatchBackupDevices(ctx, deviceIDs, models.BackupTypeAuto, "system")
-	return err
+	log.Printf("[配置备份] 智能备份完成: 新备份=%d, 配置未变=%d, 总计=%d", successCount, skippedCount, len(devices))
+	return nil
 }
 
-// GetBackupList 获取备份列表
-func (s *ConfigBackupService) GetBackupList(ctx context.Context, current, pageSize int, deviceID string) ([]models.ConfigBackup, int64, error) {
+// AutoBackupSingleDevice 自动备份单个设备（智能备份：配置未改变则仅更新时间）
+// 返回值: skipped-是否跳过创建新备份（配置未改变）, error-错误信息
+func (s *ConfigBackupService) AutoBackupSingleDevice(ctx context.Context, device *models.NetworkDevice) (bool, error) {
+	// 使用 executor 获取配置
+	config, err := s.executor.GetConfig(ctx, device.ID)
+	if err != nil {
+		return false, fmt.Errorf("获取配置失败: %w", err)
+	}
+
+	// 计算当前配置的哈希值
+	currentHash := calculateHash(config)
+
+	// 查询该设备最近的一次备份
+	var latestBackup models.ConfigBackup
+	err = s.db.WithContext(ctx).
+		Where("device_id = ?", device.ID).
+		Order("created_at DESC, version DESC").
+		First(&latestBackup).Error
+
+	if err != nil {
+		// 没有找到历史备份，创建新备份
+		log.Printf("[配置备份] 设备 %s 无历史备份，创建新备份", device.DeviceName)
+		return s.createNewAutoBackup(ctx, device, config, currentHash)
+	}
+
+	// 比较配置哈希
+	if latestBackup.ConfigHash == currentHash {
+		// 配置未改变，仅更新 UpdatedAt
+		log.Printf("[配置备份] 设备 %s 配置未改变，更新时间", device.DeviceName)
+		if err := s.db.WithContext(ctx).
+			Model(&latestBackup).
+			Update("updated_at", time.Now()).Error; err != nil {
+			return false, fmt.Errorf("更新备份时间失败: %w", err)
+		}
+		return true, nil // skipped = true
+	}
+
+	// 配置已改变，创建新备份
+	log.Printf("[配置备份] 设备 %s 配置已改变，创建新备份 (版本: %d -> %d)",
+		device.DeviceName, latestBackup.Version, latestBackup.Version+1)
+	return s.createNewAutoBackup(ctx, device, config, currentHash)
+}
+
+// createNewAutoBackup 创建新的自动备份记录
+// 返回值: skipped-始终为false（创建了新备份）, error-错误信息
+func (s *ConfigBackupService) createNewAutoBackup(ctx context.Context, device *models.NetworkDevice, config, configHash string) (bool, error) {
+	configSize := len(config)
+
+	// 获取阈值
+	threshold := s.getDefaultThreshold(ctx) // KB
+	thresholdBytes := threshold * 1024
+
+	// 获取最新版本号
+	var latestBackup models.ConfigBackup
+	s.db.WithContext(ctx).Where("device_id = ?", device.ID).Order("version DESC").First(&latestBackup)
+	newVersion := 1
+	if latestBackup.ID != "" {
+		newVersion = latestBackup.Version + 1
+	}
+
+	// 创建备份记录
+	backup := &models.ConfigBackup{
+		DeviceID:     device.ID,
+		DeviceName:   device.DeviceName,
+		BackupType:   models.BackupTypeAuto,
+		ConfigHash:   configHash,
+		Version:      newVersion,
+		ChangeReason: "自动备份",
+		BackupSize:   configSize,
+		CreatedBy:    "system",
+	}
+
+	// 根据大小决定存储方式
+	if configSize < thresholdBytes {
+		// 小配置：存储在数据库
+		backup.StorageType = models.StorageTypeDatabase
+		backup.ConfigContent = config
+		backup.Compressed = false
+	} else {
+		// 大配置：存储在文件系统
+		backup.StorageType = models.StorageTypeFile
+
+		// 确保目录存在
+		backupDir := s.getBackupDir(device.ID)
+		if err := os.MkdirAll(backupDir, 0755); err != nil {
+			return false, fmt.Errorf("创建备份目录失败: %w", err)
+		}
+
+		// 生成文件名
+		timestamp := time.Now().Format("20060102_150405")
+		fileName := fmt.Sprintf("%s_v%d_%s.conf", device.DeviceName, newVersion, timestamp)
+		filePath := filepath.Join(backupDir, fileName)
+
+		// 写入文件
+		if err := os.WriteFile(filePath, []byte(config), 0644); err != nil {
+			return false, fmt.Errorf("写入备份文件失败: %w", err)
+		}
+
+		backup.FilePath = filePath
+		backup.Compressed = false
+	}
+
+	// 保存备份记录
+	if err := s.db.WithContext(ctx).Create(backup).Error; err != nil {
+		return false, fmt.Errorf("保存备份记录失败: %w", err)
+	}
+
+	log.Printf("[配置备份] 备份成功 [%s] 版本: %d, 大小: %d 字节", device.DeviceName, newVersion, configSize)
+	return false, nil // 创建了新备份，skipped = false
+}
+
+// BackupListItem 备份列表项（包含设备信息）
+type BackupListItem struct {
+	models.ConfigBackup
+	IPAddress string `json:"ipAddress"`
+}
+
+// GetBackupList 获取备份列表（包含设备IP地址）
+func (s *ConfigBackupService) GetBackupList(ctx context.Context, current, pageSize int, deviceID string) ([]BackupListItem, int64, error) {
 	var backups []models.ConfigBackup
 	var total int64
 
@@ -282,7 +427,22 @@ func (s *ConfigBackupService) GetBackupList(ctx context.Context, current, pageSi
 		return nil, 0, fmt.Errorf("查询备份记录失败: %w", err)
 	}
 
-	return backups, total, nil
+	// 查询设备信息并组装返回数据
+	var result []BackupListItem
+	for _, backup := range backups {
+		var device models.NetworkDevice
+		ipAddress := ""
+		if err := s.db.WithContext(ctx).Where("id = ?", backup.DeviceID).First(&device).Error; err == nil {
+			ipAddress = device.IPAddress
+		}
+
+		result = append(result, BackupListItem{
+			ConfigBackup: backup,
+			IPAddress:    ipAddress,
+		})
+	}
+
+	return result, total, nil
 }
 
 // GetBackupByID 获取备份详情
@@ -354,35 +514,13 @@ func (s *ConfigBackupService) DiffBackups(ctx context.Context, backupID1, backup
 // RestoreBackup 恢复配置（预留接口，实际需要设备支持）
 func (s *ConfigBackupService) RestoreBackup(ctx context.Context, backupID string, deviceID string) error {
 	// 获取备份内容
-	config, err := s.GetBackupContent(ctx, backupID)
+	_, err := s.GetBackupContent(ctx, backupID)
 	if err != nil {
 		return err
 	}
-
-	// 获取设备
-	var device models.NetworkDevice
-	if err := s.db.WithContext(ctx).Where("id = ?", deviceID).First(&device).Error; err != nil {
-		return fmt.Errorf("设备不存在: %w", err)
-	}
-
-	// 获取凭证
-	credential, err := s.getDeviceCredential(ctx, &device)
-	if err != nil {
-		return err
-	}
-
-	// 连接设备
-	wrapper, err := s.manager.ConnectToDevice(ctx, &device, credential)
-	if err != nil {
-		return err
-	}
-	defer s.manager.DisconnectFromDevice(device.ID)
 
 	// TODO: 实现配置恢复逻辑
 	// 这需要根据设备厂商和型号使用不同的命令
-	_ = wrapper
-	_ = config
-
 	return fmt.Errorf("配置恢复功能待实现")
 }
 
@@ -479,4 +617,21 @@ func generateDiff(content1, content2 string) string {
 	}
 
 	return diff.String()
+}
+
+// loadConfigFromDB 从数据库加载并发数配置
+func (s *ConfigBackupService) loadConfigFromDB() {
+	var config models.Config
+	err := s.db.Where("config_key = ?", backupConcurrentConfigKey).First(&config).Error
+	if err == nil && config.ConfigValue != "" {
+		if concurrent, parseErr := strconv.Atoi(config.ConfigValue); parseErr == nil && concurrent > 0 {
+			s.maxConcurrent = concurrent
+			log.Printf("[配置备份] 从数据库读取并发数配置: %d", s.maxConcurrent)
+		}
+	}
+}
+
+// ReloadConfig 重新加载配置（从数据库）
+func (s *ConfigBackupService) ReloadConfig() {
+	s.loadConfigFromDB()
 }

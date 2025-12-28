@@ -273,7 +273,7 @@ const CredentialManagement: React.FC = () => {
         isDefault ? <Tag color="gold">默认</Tag> : <Tag>普通</Tag>
       ),
     },
-    { title: '备注', dataIndex: 'description', key: 'description', ellipsis: true },
+    { title: '备注', dataIndex: 'description', key: 'description', width: 150, ellipsis: true },
     { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 180 },
     {
       title: '操作',

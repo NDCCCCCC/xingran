@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 )
 
 const requestBodyKey = "request_body"
@@ -38,18 +38,23 @@ func Logger() gin.HandlerFunc {
 		userAgent := c.Request.UserAgent()
 
 		// 构建日志字段
-		fields := logrus.Fields{
+		logger := applogger.WithFields(map[string]interface{}{
 			"status_code": statusCode,
-			"latency":     latency,
+			"latency":     latency.Milliseconds(),
 			"client_ip":   clientIP,
 			"method":      method,
 			"path":        path,
 			"user_agent":  userAgent,
+		})
+
+		// 添加请求ID（如果有）
+		if requestID, exists := c.Get("request_id"); exists {
+			logger = logger.WithField("request_id", requestID)
 		}
 
 		// 添加错误信息（如果有）
 		if len(c.Errors) > 0 {
-			fields["error"] = c.Errors.String()
+			logger = logger.WithField("error", c.Errors.String())
 		}
 
 		// 记录请求体（排除敏感信息）
@@ -59,10 +64,8 @@ func Logger() gin.HandlerFunc {
 			if len(bodyStr) > 1000 {
 				bodyStr = bodyStr[:1000] + "..."
 			}
-			fields["request_body"] = bodyStr
+			logger = logger.WithField("request_body", bodyStr)
 		}
-
-		logger := logrus.WithFields(fields)
 
 		// 根据状态码选择日志级别
 		if statusCode >= 500 {

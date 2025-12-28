@@ -3,7 +3,6 @@ package v1
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
@@ -44,10 +43,11 @@ func listConfigExecutions(core *core.Core) gin.HandlerFunc {
 			pageSize = 10
 		}
 
-		manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
-		defer manager.Close()
+			// 使用核心设备管理器（新架构）
+		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
+		// defer manager.Close()
 
-		svc := services.NewConfigExecutionService(core.DB.GetDB(), manager)
+		svc := services.NewConfigExecutionService(core.DB.GetDB(), core.DeviceExecutor)
 		executions, total, err := svc.GetExecutionList(c.Request.Context(), current, pageSize)
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
@@ -84,10 +84,11 @@ func executeTemplateByDevices(core *core.Core) gin.HandlerFunc {
 			req.Timeout = 300
 		}
 
-		manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
-		defer manager.Close()
+			// 使用核心设备管理器（新架构）
+		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
+		// defer manager.Close()
 
-		svc := services.NewConfigExecutionService(core.DB.GetDB(), manager)
+		svc := services.NewConfigExecutionService(core.DB.GetDB(), core.DeviceExecutor)
 		result, err := svc.ExecuteByTemplate(c.Request.Context(), &services.TemplateExecutionRequest{
 			ExecutionName:     req.ExecutionName,
 			TemplateID:        req.TemplateID,
@@ -116,10 +117,11 @@ func getConfigExecution(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
-		defer manager.Close()
+			// 使用核心设备管理器（新架构）
+		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
+		// defer manager.Close()
 
-		svc := services.NewConfigExecutionService(core.DB.GetDB(), manager)
+		svc := services.NewConfigExecutionService(core.DB.GetDB(), core.DeviceExecutor)
 		result, err := svc.GetExecutionResult(c.Request.Context(), id)
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
@@ -139,10 +141,11 @@ func cancelConfigExecution(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
-		defer manager.Close()
+			// 使用核心设备管理器（新架构）
+		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
+		// defer manager.Close()
 
-		svc := services.NewConfigExecutionService(core.DB.GetDB(), manager)
+		svc := services.NewConfigExecutionService(core.DB.GetDB(), core.DeviceExecutor)
 		if err := svc.CancelExecution(c.Request.Context(), id); err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
@@ -161,10 +164,11 @@ func deleteConfigExecution(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
-		defer manager.Close()
+			// 使用核心设备管理器（新架构）
+		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
+		// defer manager.Close()
 
-		svc := services.NewConfigExecutionService(core.DB.GetDB(), manager)
+		svc := services.NewConfigExecutionService(core.DB.GetDB(), core.DeviceExecutor)
 		if err := svc.DeleteExecution(c.Request.Context(), id); err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
@@ -188,10 +192,11 @@ func batchDeleteConfigExecutions(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
-		defer manager.Close()
+			// 使用核心设备管理器（新架构）
+		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
+		// defer manager.Close()
 
-		svc := services.NewConfigExecutionService(core.DB.GetDB(), manager)
+		svc := services.NewConfigExecutionService(core.DB.GetDB(), core.DeviceExecutor)
 		if err := svc.BatchDeleteExecutions(c.Request.Context(), req.ExecutionIDs); err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return

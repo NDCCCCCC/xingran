@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -20,11 +21,13 @@ import (
 type DeviceMonitorService struct {
 	db                   *gorm.DB
 	deviceManager        *device.Manager
+	deviceExecutor       *device.DeviceExecutor
 	portCollectionSvc    *PortCollectionService
 	macCollectionSvc     *MACCollectionService
 	configBackupSvc      *ConfigBackupService
 	maxConcurrent        int
 	timeout              time.Duration
+	useDynamicConfig     bool // 是否使用动态配置（从数据库读取）
 }
 
 // DeviceMonitorConfig 监控服务配置
@@ -47,18 +50,31 @@ func NewDeviceMonitorService(db *gorm.DB, sm4Cipher *security.SM4Cipher, config 
 		config = DefaultDeviceMonitorConfig()
 	}
 
-	deviceManager := device.NewManager(db, sm4Cipher, device.DefaultManagerConfig())
+	// 创建设备管理器（新架构：简化版，执行器由外部设置）
+	deviceManager := device.NewManager(db)
 
-	return &DeviceMonitorService{
+	svc := &DeviceMonitorService{
 		db:            db,
 		deviceManager: deviceManager,
-		// 初始化时同时创建子服务
-		portCollectionSvc: NewPortCollectionService(db, deviceManager),
-		macCollectionSvc:  NewMACCollectionService(db, deviceManager),
-		configBackupSvc:   NewConfigBackupService(db, deviceManager),
-		maxConcurrent:     config.MaxConcurrent,
-		timeout:           config.Timeout,
+		// 子服务在 SetExecutor 之后创建
+		maxConcurrent:    config.MaxConcurrent,
+		timeout:          config.Timeout,
+		useDynamicConfig: true, // 默认启用动态配置
 	}
+
+	// 尝试从数据库读取配置
+	svc.loadConfigFromDB()
+
+	return svc
+}
+
+// SetExecutor 设置执行器并初始化子服务
+func (s *DeviceMonitorService) SetExecutor(executor *device.DeviceExecutor) {
+	s.deviceExecutor = executor
+	// 初始化子服务
+	s.portCollectionSvc = NewPortCollectionService(s.db, executor)
+	s.macCollectionSvc = NewMACCollectionService(s.db, executor)
+	s.configBackupSvc = NewConfigBackupService(s.db, executor)
 }
 
 // SetPortCollectionService 设置端口采集服务
@@ -74,6 +90,45 @@ func (s *DeviceMonitorService) SetMACCollectionService(svc *MACCollectionService
 // SetConfigBackupService 设置配置备份服务
 func (s *DeviceMonitorService) SetConfigBackupService(svc *ConfigBackupService) {
 	s.configBackupSvc = svc
+}
+
+// loadConfigFromDB 从数据库加载并发数和超时配置
+func (s *DeviceMonitorService) loadConfigFromDB() {
+	// 读取并发数配置
+	var concurrentConfig models.Config
+	err := s.db.Where("config_key = ?", "network.device.monitor.concurrent").First(&concurrentConfig).Error
+	if err == nil && concurrentConfig.ConfigValue != "" {
+		if concurrent, parseErr := strconv.Atoi(concurrentConfig.ConfigValue); parseErr == nil && concurrent > 0 {
+			s.maxConcurrent = concurrent
+			log.Printf("[设备监控] 从数据库读取并发数配置: %d", s.maxConcurrent)
+		}
+	}
+
+	// 读取超时配置
+	var timeoutConfig models.Config
+	err = s.db.Where("config_key = ?", "network.device.timeout").First(&timeoutConfig).Error
+	if err == nil && timeoutConfig.ConfigValue != "" {
+		if seconds, parseErr := strconv.Atoi(timeoutConfig.ConfigValue); parseErr == nil && seconds > 0 {
+			s.timeout = time.Duration(seconds) * time.Second
+			log.Printf("[设备监控] 从数据库读取超时配置: %v", s.timeout)
+		}
+	}
+}
+
+// ReloadConfig 重新加载配置（从数据库）
+func (s *DeviceMonitorService) ReloadConfig() {
+	s.loadConfigFromDB()
+	// 同时刷新子服务的配置
+	if s.portCollectionSvc != nil {
+		s.portCollectionSvc.ReloadConfig()
+	}
+	if s.macCollectionSvc != nil {
+		s.macCollectionSvc.ReloadConfig()
+	}
+	if s.configBackupSvc != nil {
+		s.configBackupSvc.ReloadConfig()
+	}
+	log.Println("[设备监控] 配置已重新加载")
 }
 
 // CheckAllDevicesStatus 检查所有设备状态（通过SNMP）
@@ -180,17 +235,25 @@ func (s *DeviceMonitorService) CheckDeviceStatus(ctx context.Context, deviceID s
 		status = models.DeviceStatusOnline
 	}
 
+	// 更新 last_seen_at（无论状态是否改变，都要更新最后看到的时间）
+	// 这样可以反映设备最后一次被检测到的时间
 	updates := map[string]interface{}{
-		"status":      status,
 		"last_seen_at": &now,
 	}
 
-	// 如果设备从离线变为在线，或状态改变，更新数据库
+	// 如果状态改变了，也更新状态
 	if device.Status != status {
+		updates["status"] = status
 		if err := s.db.WithContext(ctx).Model(&device).Updates(updates).Error; err != nil {
 			return isOnline, fmt.Errorf("更新设备状态失败: %w", err)
 		}
-		log.Printf("设备 [%s] 状态更新: %d -> %d", device.IPAddress, device.Status, status)
+		log.Printf("设备 [%s] 状态更新: %d -> %d, 最后看到时间: %s", device.IPAddress, device.Status, status, now.Format("2006-01-02 15:04:05"))
+	} else {
+		// 状态没有改变，只更新最后看到时间
+		if err := s.db.WithContext(ctx).Model(&device).Updates(updates).Error; err != nil {
+			return isOnline, fmt.Errorf("更新设备最后看到时间失败: %w", err)
+		}
+		log.Printf("设备 [%s] 状态未变 (%d)，更新最后看到时间: %s", device.IPAddress, status, now.Format("2006-01-02 15:04:05"))
 	}
 
 	return isOnline, nil
@@ -254,32 +317,54 @@ func (s *DeviceMonitorService) UpdateAllDeviceInfo(ctx context.Context) error {
 	sem := semaphore.NewWeighted(int64(s.maxConcurrent))
 	var wg sync.WaitGroup
 
-	for _, dev := range devices {
+	processedCount := 0
+	successCount := 0
+	var mu sync.Mutex
+
+	for i, dev := range devices {
 		// 跳过没有凭证的设备
 		if dev.CredentialID == nil || *dev.CredentialID == "" {
+			log.Printf("跳过设备 %s: 没有关联凭证", dev.DeviceName)
 			continue
 		}
 
 		wg.Add(1)
-		go func(deviceID string) {
-			defer wg.Done()
+		go func(deviceID string, deviceName string, index int) {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("更新设备信息时发生 panic [%s]: %v", deviceName, r)
+				}
+				wg.Done()
+			}()
 
 			// 获取信号量
 			if err := sem.Acquire(ctx, 1); err != nil {
-				log.Printf("获取信号量失败: %v", err)
+				log.Printf("设备 %s: 获取信号量失败: %v", deviceName, err)
 				return
 			}
 			defer sem.Release(1)
 
+			log.Printf("[%d/%d] 开始更新设备 %s (%s)", index+1, len(devices), deviceName, deviceID)
+
 			// 更新设备信息
 			if err := s.UpdateDeviceInfo(ctx, deviceID); err != nil {
-				log.Printf("更新设备信息失败 [%s]: %v", deviceID, err)
+				log.Printf("更新设备信息失败 [%s]: %v", deviceName, err)
+			} else {
+				log.Printf("更新设备信息成功 [%s]", deviceName)
+				mu.Lock()
+				successCount++
+				mu.Unlock()
 			}
-		}(dev.ID)
+
+			mu.Lock()
+			processedCount++
+			log.Printf("进度: %d/%d 设备已处理", processedCount, len(devices))
+			mu.Unlock()
+		}(dev.ID, dev.DeviceName, i)
 	}
 
 	wg.Wait()
-	log.Println("设备详细信息更新完成")
+	log.Printf("设备详细信息更新完成: 成功=%d/%d", successCount, len(devices))
 	return nil
 }
 
@@ -296,23 +381,55 @@ func (s *DeviceMonitorService) UpdateDeviceInfo(ctx context.Context, deviceID st
 		return fmt.Errorf("设备没有关联凭证")
 	}
 
-	// 获取凭证信息
-	var credential models.AuthCredential
-	if err := s.db.WithContext(ctx).Where("id = ?", *device.CredentialID).First(&credential).Error; err != nil {
-		return fmt.Errorf("查询凭证失败: %w", err)
+	// 使用 DeviceExecutor 执行命令采集设备信息
+	if s.deviceExecutor == nil {
+		return fmt.Errorf("DeviceExecutor 未初始化")
 	}
 
-	// 连接设备
-	wrapper, err := s.deviceManager.ConnectToDevice(ctx, &device, &credential)
-	if err != nil {
-		return fmt.Errorf("连接设备失败: %w", err)
-	}
-	defer s.deviceManager.DisconnectFromDevice(device.ID)
+	// 获取设备厂商
+	vendor := device.Vendor
 
-	// 根据厂商获取设备信息
-	info, err := s.collectDeviceInfo(device.Vendor, wrapper)
+	// 根据厂商确定需要执行的命令
+	var commands []string
+	switch vendor {
+	case models.VendorHuawei, models.VendorH3C:
+		commands = []string{
+			"display version",
+			"display device",
+		}
+	case models.VendorRuijie, models.VendorMaipu:
+		commands = []string{
+			"show version",
+		}
+	default:
+		commands = []string{
+			"show version",
+		}
+	}
+
+	info := &DeviceInfo{}
+
+	// 直接使用连接池获取连接
+	pool := s.deviceExecutor.GetScheduler().GetConnectionPool()
+	conn, err := pool.GetConnection(ctx, deviceID)
 	if err != nil {
-		return fmt.Errorf("采集设备信息失败: %w", err)
+		return fmt.Errorf("获取设备连接失败: %w", err)
+	}
+
+	if !conn.Acquire() {
+		return fmt.Errorf("无法获取连接锁")
+	}
+	defer conn.Release()
+
+	wrapper := conn.GetWrapper()
+
+	// 执行命令并解析结果
+	for _, cmd := range commands {
+		response, err := wrapper.SendCommand(cmd, true)
+		if err != nil {
+			continue // 命令失败继续执行下一个
+		}
+		s.parseDeviceInfo(response.Result, vendor, info)
 	}
 
 	// 更新数据库

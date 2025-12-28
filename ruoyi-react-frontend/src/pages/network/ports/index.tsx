@@ -25,8 +25,9 @@ import {
   ArrowLeftOutlined,
 } from '@ant-design/icons';
 import type { DevicePortStatus, NetworkDevice } from '@/types';
-import { post } from '@/lib/api';
+import { post, get } from '@/lib/api';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import dayjs from 'dayjs';
 
 const { Option } = Select;
 
@@ -80,9 +81,14 @@ const PortStatusPage: React.FC = () => {
   // 加载统计数据
   const loadStatistics = async () => {
     try {
-      const result = await post('/network/ports/list', { current: 1, pageSize: 100 });
-      const allPorts = result.data.list || [];
-      updateStatistics(allPorts);
+      const result = await get('/network/ports/statistics');
+      const stats = result.data || {};
+      setStatistics({
+        total: stats.totalRecords || 0,
+        up: stats.upPortsCount || 0,
+        down: stats.downPortsCount || 0,
+        dot1xEnabled: stats.dot1xEnabledCount || 0,
+      });
     } catch (error) {
       console.error('加载统计数据失败:', error);
     }
@@ -264,7 +270,13 @@ const PortStatusPage: React.FC = () => {
         </span>
       ),
     },
-    { title: '采集时间', dataIndex: 'collectedAt', key: 'collectedAt', width: 180 },
+    {
+      title: '采集时间',
+      dataIndex: 'collectedAt',
+      key: 'collectedAt',
+      width: 180,
+      render: (date: string) => date ? dayjs(date).format('YYYY-MM-DD HH:mm:ss') : '-',
+    },
   ];
 
   useEffect(() => {
@@ -274,10 +286,7 @@ const PortStatusPage: React.FC = () => {
     }
     loadPortStatus();
     loadStatistics();
-    // 只有在不是从设备页面跳转时才加载设备列表
-    if (!isFromDevice) {
-      loadDevices();
-    }
+    loadDevices();
   }, [current, pageSize]);
 
   return (
@@ -340,15 +349,13 @@ const PortStatusPage: React.FC = () => {
       <Card style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
-            {!isFromDevice && (
-              <Form.Item name="deviceId" label="设备">
-                <Select placeholder="请选择设备" allowClear style={{ width: 200 }} showSearch optionFilterProp="deviceName">
-                  {devices.map(device => (
-                    <Option key={device.id} value={device.id}>{device.deviceName}</Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            )}
+            <Form.Item name="deviceId" label="设备">
+              <Select placeholder="请选择设备" allowClear style={{ width: 200 }} showSearch optionFilterProp="label">
+                {devices.map(device => (
+                  <Option key={device.id} value={device.id} label={device.deviceName}>{device.deviceName}</Option>
+                ))}
+              </Select>
+            </Form.Item>
             <Form.Item name="interfaceName" label="接口">
               <Input placeholder="请输入接口名称" allowClear style={{ width: 150 }} />
             </Form.Item>

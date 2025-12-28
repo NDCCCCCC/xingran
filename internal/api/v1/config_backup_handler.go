@@ -5,7 +5,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
@@ -56,10 +55,11 @@ func listConfigBackups(core *core.Core) gin.HandlerFunc {
 			pageSize = 10
 		}
 
-		manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
-		defer manager.Close()
+			// 使用核心设备管理器（新架构）
+		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
+		// defer manager.Close()
 
-		svc := services.NewConfigBackupService(core.DB.GetDB(), manager)
+		svc := services.NewConfigBackupService(core.DB.GetDB(), core.DeviceExecutor)
 		backups, total, err := svc.GetBackupList(c.Request.Context(), current, pageSize, req.DeviceID)
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
@@ -93,10 +93,11 @@ func createConfigBackup(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
-		defer manager.Close()
+			// 使用核心设备管理器（新架构）
+		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
+		// defer manager.Close()
 
-		svc := services.NewConfigBackupService(core.DB.GetDB(), manager)
+		svc := services.NewConfigBackupService(core.DB.GetDB(), core.DeviceExecutor)
 		result, err := svc.CreateBackup(c.Request.Context(), &services.BackupRequest{
 			DeviceID:      req.DeviceID,
 			DeviceName:    netDevice.DeviceName,
@@ -123,10 +124,11 @@ func getBackupContent(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
-		defer manager.Close()
+			// 使用核心设备管理器（新架构）
+		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
+		// defer manager.Close()
 
-		svc := services.NewConfigBackupService(core.DB.GetDB(), manager)
+		svc := services.NewConfigBackupService(core.DB.GetDB(), core.DeviceExecutor)
 		content, err := svc.GetBackupContent(c.Request.Context(), id)
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
@@ -146,10 +148,11 @@ func deleteConfigBackup(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
-		defer manager.Close()
+			// 使用核心设备管理器（新架构）
+		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
+		// defer manager.Close()
 
-		svc := services.NewConfigBackupService(core.DB.GetDB(), manager)
+		svc := services.NewConfigBackupService(core.DB.GetDB(), core.DeviceExecutor)
 		if err := svc.DeleteBackup(c.Request.Context(), id); err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
@@ -170,10 +173,11 @@ func batchDeleteConfigBackups(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
-		defer manager.Close()
+			// 使用核心设备管理器（新架构）
+		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
+		// defer manager.Close()
 
-		svc := services.NewConfigBackupService(core.DB.GetDB(), manager)
+		svc := services.NewConfigBackupService(core.DB.GetDB(), core.DeviceExecutor)
 		if err := svc.BatchDeleteBackups(c.Request.Context(), req.BackupIDs); err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
@@ -192,10 +196,11 @@ func diffConfigBackups(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
-		defer manager.Close()
+			// 使用核心设备管理器（新架构）
+		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
+		// defer manager.Close()
 
-		svc := services.NewConfigBackupService(core.DB.GetDB(), manager)
+		svc := services.NewConfigBackupService(core.DB.GetDB(), core.DeviceExecutor)
 		name1, name2, diff, err := svc.DiffBackups(c.Request.Context(), req.BackupID1, req.BackupID2)
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
@@ -219,10 +224,11 @@ func restoreConfigBackup(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
-		defer manager.Close()
+			// 使用核心设备管理器（新架构）
+		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
+		// defer manager.Close()
 
-		svc := services.NewConfigBackupService(core.DB.GetDB(), manager)
+		svc := services.NewConfigBackupService(core.DB.GetDB(), core.DeviceExecutor)
 		if err := svc.RestoreBackup(c.Request.Context(), req.BackupID, req.DeviceID); err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
@@ -235,10 +241,11 @@ func restoreConfigBackup(core *core.Core) gin.HandlerFunc {
 // getBackupStatistics 获取备份统计信息
 func getBackupStatistics(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
-		defer manager.Close()
+			// 使用核心设备管理器（新架构）
+		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
+		// defer manager.Close()
 
-		svc := services.NewConfigBackupService(core.DB.GetDB(), manager)
+		svc := services.NewConfigBackupService(core.DB.GetDB(), core.DeviceExecutor)
 		stats, err := svc.GetBackupStatistics(c.Request.Context())
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
@@ -261,10 +268,11 @@ func batchBackupDevices(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
-		defer manager.Close()
+			// 使用核心设备管理器（新架构）
+		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
+		// defer manager.Close()
 
-		svc := services.NewConfigBackupService(core.DB.GetDB(), manager)
+		svc := services.NewConfigBackupService(core.DB.GetDB(), core.DeviceExecutor)
 		results, err := svc.BatchBackupDevices(c.Request.Context(), req.DeviceIDs, req.BackupType, c.GetString("userId"))
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())

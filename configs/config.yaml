@@ -42,9 +42,12 @@ jwt:
 
 # 日志配置
 log:
-  level: "info"  # debug, info, warn, error
-  format: "json"  # json, text
-  output: "stdout"  # stdout, stderr, file
+  level: "info"        # 日志级别: debug, info, warn, error
+  log_dir: "logs"      # 日志目录
+  max_size: 100        # 单个日志文件最大大小(MB)
+  max_backups: 30      # 保留的旧日志文件最大数量
+  max_age: 90          # 保留旧日志文件的最大天数
+  compress: true       # 是否压缩旧日志文件
 
 # 安全配置
 security:

@@ -15,8 +15,8 @@ import (
 
 // PortCollector 端口状态采集器
 type PortCollector struct {
-	db      *gorm.DB
-	manager *device.Manager
+	db       *gorm.DB
+	executor *device.DeviceExecutor
 }
 
 // PortStatusEntry 端口状态条目
@@ -33,10 +33,10 @@ type PortStatusEntry struct {
 }
 
 // NewPortCollector 创建端口状态采集器
-func NewPortCollector(db *gorm.DB, manager *device.Manager) *PortCollector {
+func NewPortCollector(db *gorm.DB, executor *device.DeviceExecutor) *PortCollector {
 	return &PortCollector{
-		db:      db,
-		manager: manager,
+		db:       db,
+		executor: executor,
 	}
 }
 
@@ -48,11 +48,19 @@ func (c *PortCollector) CollectFromDevice(ctx context.Context, deviceID string) 
 		return nil, fmt.Errorf("查询设备失败: %w", err)
 	}
 
-	// 获取连接
-	wrapper, err := c.manager.ConnectWithCredential(ctx, deviceID, *device.CredentialID)
+	// 直接使用连接池获取连接
+	pool := c.executor.GetScheduler().GetConnectionPool()
+	conn, err := pool.GetConnection(ctx, deviceID)
 	if err != nil {
-		return nil, fmt.Errorf("连接设备失败: %w", err)
+		return nil, fmt.Errorf("获取设备连接失败: %w", err)
 	}
+
+	if !conn.Acquire() {
+		return nil, fmt.Errorf("无法获取连接锁")
+	}
+	defer conn.Release()
+
+	wrapper := conn.GetWrapper()
 
 	// 采集接口状态
 	interfaceStatus, err := c.collectInterfaceStatus(device, wrapper)

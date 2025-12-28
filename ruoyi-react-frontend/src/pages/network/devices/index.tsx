@@ -34,6 +34,7 @@ import {
   ThunderboltOutlined,
   ApiOutlined,
   EyeOutlined,
+  CloudUploadOutlined,
 } from '@ant-design/icons';
 import type { NetworkDevice, Department, AuthCredential } from '@/types';
 import { post } from '@/lib/api';
@@ -75,6 +76,9 @@ const DeviceManagement: React.FC = () => {
   const [probing, setProbing] = useState(false);
   const [probeResult, setProbeResult] = useState<any>(null);
   const [creating, setCreating] = useState(false);
+
+  // 采集端口相关状态
+  const [collectingDeviceId, setCollectingDeviceId] = useState<string | null>(null);
 
   // 统计数据
   const [statistics, setStatistics] = useState({
@@ -320,6 +324,27 @@ const DeviceManagement: React.FC = () => {
     }
   };
 
+  // 采集设备端口
+  const handleCollectPorts = async (device: NetworkDevice) => {
+    try {
+      setCollectingDeviceId(device.id);
+      const result = await post('/network/ports/collect', { deviceId: device.id });
+
+      const data = result.data;
+      if (data.errorMessage) {
+        message.warning(`采集完成但有错误: ${data.errorMessage}`);
+      } else if (data.successCount > 0) {
+        message.success(`采集成功: 成功 ${data.successCount} 个端口${data.failedCount > 0 ? `，失败 ${data.failedCount} 个` : ''}`);
+      } else {
+        message.error('采集失败: 未获取到端口数据');
+      }
+    } catch (error: any) {
+      message.error(error?.data?.message || '采集失败');
+    } finally {
+      setCollectingDeviceId(null);
+    }
+  };
+
   // 打开编辑模态框
   const openModal = (record?: NetworkDevice) => {
     if (record) {
@@ -483,9 +508,18 @@ const DeviceManagement: React.FC = () => {
       title: '操作',
       key: 'action',
       fixed: 'right',
-      width: 180,
+      width: 240,
       render: (_, record) => (
         <Space size="small">
+          <Button
+            type="link"
+            size="small"
+            icon={<CloudUploadOutlined />}
+            onClick={() => handleCollectPorts(record)}
+            loading={collectingDeviceId === record.id}
+          >
+            采集端口
+          </Button>
           <Button type="link" size="small" icon={<EyeOutlined />} onClick={() => openDetailModal(record)}>详情</Button>
           <Button type="link" size="small" icon={<EditOutlined />} onClick={() => openModal(record)}>编辑</Button>
           <Popconfirm title="确认删除?" onConfirm={() => handleDelete(record.id)}>

@@ -447,7 +447,15 @@ const JobManager: React.FC = () => {
       dataIndex: 'duration',
       key: 'duration',
       width: 100,
-      render: (duration: number) => duration ? `${duration}ms` : '-',
+      render: (duration: number) => {
+        if (!duration) return '-';
+        if (duration >= 1000) {
+          // 超过1秒，显示秒（保留2位小数）
+          const seconds = (duration / 1000).toFixed(2);
+          return `${seconds}s`;
+        }
+        return `${duration}ms`;
+      },
     },
     {
       title: '执行消息',

@@ -14,15 +14,15 @@ import (
 
 // ARPCollector ARP表采集器
 type ARPCollector struct {
-	db      *gorm.DB
-	manager *device.Manager
+	db       *gorm.DB
+	executor *device.DeviceExecutor
 }
 
 // NewARPCollector 创建ARP表采集器
-func NewARPCollector(db *gorm.DB, manager *device.Manager) *ARPCollector {
+func NewARPCollector(db *gorm.DB, executor *device.DeviceExecutor) *ARPCollector {
 	return &ARPCollector{
-		db:      db,
-		manager: manager,
+		db:       db,
+		executor: executor,
 	}
 }
 
@@ -60,29 +60,23 @@ func (c *ARPCollector) CollectDevice(ctx context.Context, deviceID string) (*ARP
 		CollectedAt: time.Now(),
 	}
 
-	// 获取设备和凭证
-	_, credential, err := c.manager.GetDeviceWithCredentials(ctx, device.ID)
-	if err != nil {
-		result.Success = false
-		result.Error = err.Error()
-		return result, fmt.Errorf("获取设备凭证失败: %w", err)
-	}
+	// 获取ARP表命令
+	cmd := c.getARPCommand(device.Vendor)
 
-	// 获取设备连接
-	wrapper, err := c.manager.ConnectToDevice(ctx, &device, credential)
-	if err != nil {
-		result.Success = false
-		result.Error = err.Error()
-		return result, fmt.Errorf("获取设备连接失败: %w", err)
-	}
-	defer wrapper.Close()
-
-	// 获取ARP表
-	arpEntries, err := c.collectARPTable(wrapper, &device)
+	// 使用 executor 执行命令
+	output, err := c.executor.ExecuteOnDevice(ctx, device.ID, cmd, true)
 	if err != nil {
 		result.Success = false
 		result.Error = err.Error()
 		return result, fmt.Errorf("采集ARP表失败: %w", err)
+	}
+
+	// 解析ARP表
+	arpEntries, err := c.parseARPOutput(output, device.Vendor)
+	if err != nil {
+		result.Success = false
+		result.Error = err.Error()
+		return result, fmt.Errorf("解析ARP表失败: %w", err)
 	}
 
 	// 保存ARP条目到数据库
@@ -121,22 +115,6 @@ func (c *ARPCollector) CollectAllDevices(ctx context.Context) ([]*ARPCollectionR
 	}
 
 	return results, nil
-}
-
-// collectARPTable 采集ARP表
-func (c *ARPCollector) collectARPTable(wrapper *device.ScrapliWrapper, device *models.NetworkDevice) ([]ARPEntry, error) {
-	cmd := c.getARPCommand(device.Vendor)
-	resp, err := wrapper.SendCommand(cmd, true)
-	if err != nil {
-		return nil, err
-	}
-
-	arpEntries, err := c.parseARPOutput(resp.Result, device.Vendor)
-	if err != nil {
-		return nil, err
-	}
-
-	return arpEntries, nil
 }
 
 // getARPCommand 获取ARP表命令

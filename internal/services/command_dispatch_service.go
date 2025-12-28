@@ -14,15 +14,15 @@ import (
 
 // CommandDispatchService 命令分发服务
 type CommandDispatchService struct {
-	db      *gorm.DB
-	manager *device.Manager
+	db       *gorm.DB
+	executor *device.DeviceExecutor
 }
 
 // NewCommandDispatchService 创建命令分发服务
-func NewCommandDispatchService(db *gorm.DB, manager *device.Manager) *CommandDispatchService {
+func NewCommandDispatchService(db *gorm.DB, executor *device.DeviceExecutor) *CommandDispatchService {
 	return &CommandDispatchService{
-		db:      db,
-		manager: manager,
+		db:       db,
+		executor: executor,
 	}
 }
 
@@ -209,38 +209,16 @@ func (s *CommandDispatchService) executeOnDevice(ctx context.Context, executionI
 	}
 	s.db.Create(detail)
 
-	// 获取凭证
-	credential, err := s.getDeviceCredential(ctx, device)
-	if err != nil {
-		result.Status = models.ExecutionStatusFailed
-		result.ErrorMessage = err.Error()
-		detail.Status = models.ExecutionStatusFailed
-		detail.ErrorMessage = result.ErrorMessage
-		s.db.Save(detail)
-		return result
-	}
-
 	// 设置超时上下文
+	execCtx := ctx
 	if timeout > 0 {
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
+		execCtx, cancel = context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
 		defer cancel()
 	}
 
-	// 连接并执行命令
-	wrapper, err := s.manager.ConnectToDevice(ctx, device, credential)
-	if err != nil {
-		result.Status = models.ExecutionStatusFailed
-		result.ErrorMessage = err.Error()
-		detail.Status = models.ExecutionStatusFailed
-		detail.ErrorMessage = result.ErrorMessage
-		s.db.Save(detail)
-		return result
-	}
-	defer s.manager.DisconnectFromDevice(device.ID)
-
-	// 发送命令
-	response, err := wrapper.SendCommand(command, true)
+	// 使用 DeviceExecutor 执行命令
+	output, err := s.executor.ExecuteOnDevice(execCtx, device.ID, command, true)
 	if err != nil {
 		result.Status = models.ExecutionStatusFailed
 		result.ErrorMessage = err.Error()
@@ -253,37 +231,18 @@ func (s *CommandDispatchService) executeOnDevice(ctx context.Context, executionI
 	// 更新结果
 	result.Status = models.ExecutionStatusSuccess
 	result.CommandSent = command
-	result.OutputReceived = response.Result
+	result.OutputReceived = output
 	endTime := time.Now()
 	result.CompletedAt = &endTime
 	result.Duration = int(endTime.Sub(startTime).Milliseconds())
 
 	detail.Status = models.ExecutionStatusSuccess
-	detail.OutputReceived = response.Result
+	detail.OutputReceived = output
 	detail.CompletedAt = &endTime
 	detail.Duration = result.Duration
 	s.db.Save(detail)
 
 	return result
-}
-
-// getDeviceCredential 获取设备凭证
-func (s *CommandDispatchService) getDeviceCredential(ctx context.Context, device *models.NetworkDevice) (*models.AuthCredential, error) {
-	// 优先使用设备关联的凭证
-	if device.CredentialID != nil && *device.CredentialID != "" {
-		var credential models.AuthCredential
-		if err := s.db.Where("id = ?", *device.CredentialID).First(&credential).Error; err != nil {
-			return nil, fmt.Errorf("查询凭证失败: %w", err)
-		}
-		return &credential, nil
-	}
-
-	// 使用默认凭证
-	var credential models.AuthCredential
-	if err := s.db.Where("is_default = ?", true).First(&credential).Error; err != nil {
-		return nil, fmt.Errorf("未找到可用凭证")
-	}
-	return &credential, nil
 }
 
 // GetExecutionResult 获取执行结果

@@ -19,16 +19,24 @@ import (
 
 // PortCollectionService 端口状态采集服务
 type PortCollectionService struct {
-	db      *gorm.DB
-	manager *device.Manager
+	db            *gorm.DB
+	executor      *device.DeviceExecutor
+	maxConcurrent int
 }
 
+// 端口采集并发数的默认配置键
+const portConcurrentConfigKey = "network.port.collection.concurrent"
+
 // NewPortCollectionService 创建端口采集服务
-func NewPortCollectionService(db *gorm.DB, manager *device.Manager) *PortCollectionService {
-	return &PortCollectionService{
-		db:      db,
-		manager: manager,
+func NewPortCollectionService(db *gorm.DB, executor *device.DeviceExecutor) *PortCollectionService {
+	svc := &PortCollectionService{
+		db:            db,
+		executor:      executor,
+		maxConcurrent: 10, // 默认值
 	}
+	// 从数据库加载配置
+	svc.loadConfigFromDB()
+	return svc
 }
 
 // PortCollectionResult 端口采集结果
@@ -56,7 +64,7 @@ func (s *PortCollectionService) CollectAllDevices(ctx context.Context) ([]*PortC
 	var results []*PortCollectionResult
 	var wg sync.WaitGroup
 	var mu sync.Mutex
-	semaphore := make(chan struct{}, 10) // 限制并发数为10
+	semaphore := make(chan struct{}, s.maxConcurrent) // 使用动态并发数
 
 	for _, dev := range devices {
 		wg.Add(1)
@@ -65,7 +73,12 @@ func (s *PortCollectionService) CollectAllDevices(ctx context.Context) ([]*PortC
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
 
-			result := s.collectDevicePort(ctx, &device)
+			// 为每个设备创建独立的 context（带超时控制）
+			// 这样单个设备的问题不会影响其他设备
+			deviceCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+			defer cancel()
+
+			result := s.collectDevicePort(deviceCtx, &device)
 
 			mu.Lock()
 			results = append(results, result)
@@ -90,43 +103,74 @@ func (s *PortCollectionService) CollectDevice(ctx context.Context, deviceID stri
 
 // collectDevicePort 采集设备端口状态（内部方法）
 func (s *PortCollectionService) collectDevicePort(ctx context.Context, device *models.NetworkDevice) *PortCollectionResult {
+	log.Printf("[端口采集] 开始采集设备 %s (%s)", device.DeviceName, device.IPAddress)
+
+	// 添加 panic recovery，防止 scrapligo 库的 panic 导致程序崩溃
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("[端口采集] 设备 %s 发生 panic: %v", device.DeviceName, r)
+		}
+	}()
+
 	result := &PortCollectionResult{
 		DeviceID:       device.ID,
 		DeviceName:     device.DeviceName,
 		CollectionTime: time.Now(),
 	}
 
-	// 获取凭证
-	credential, err := s.getDeviceCredential(ctx, device)
+	// 从 executor 获取连接池
+	pool := s.executor.GetScheduler().GetConnectionPool()
+
+	// 获取设备连接
+	log.Printf("[端口采集] 设备 %s: 获取连接...", device.DeviceName)
+	conn, err := pool.GetConnection(ctx, device.ID)
 	if err != nil {
+		log.Printf("[端口采集] 设备 %s: 获取连接失败: %v", device.DeviceName, err)
 		result.ErrorMessage = err.Error()
 		return result
 	}
 
-	// 连接设备
-	wrapper, err := s.manager.ConnectToDevice(ctx, device, credential)
-	if err != nil {
-		result.ErrorMessage = err.Error()
+	// 增加引用计数
+	if !conn.Acquire() {
+		log.Printf("[端口采集] 设备 %s: 无法获取连接锁", device.DeviceName)
+		result.ErrorMessage = "无法获取连接锁"
 		return result
 	}
-	defer s.manager.DisconnectFromDevice(device.ID)
+	defer conn.Release()
+
+	// 获取 wrapper
+	wrapper := conn.GetWrapper()
+	if wrapper == nil {
+		log.Printf("[端口采集] 设备 %s: wrapper 为空", device.DeviceName)
+		result.ErrorMessage = "wrapper 为空"
+		return result
+	}
+
+	log.Printf("[端口采集] 设备 %s: 连接成功", device.DeviceName)
 
 	// 获取接口列表命令
 	interfaceCmd := s.getInterfaceCommand(device.Vendor)
+	log.Printf("[端口采集] 设备 %s: 使用接口命令: %s", device.DeviceName, interfaceCmd)
 
 	// 发送命令获取接口信息
+	log.Printf("[端口采集] 设备 %s: 发送命令获取接口信息...", device.DeviceName)
 	interfaceResp, err := wrapper.SendCommand(interfaceCmd, true)
 	if err != nil {
+		log.Printf("[端口采集] 设备 %s: 发送命令失败: %v", device.DeviceName, err)
 		result.ErrorMessage = err.Error()
 		return result
 	}
+	log.Printf("[端口采集] 设备 %s: 命令响应长度: %d 字符", device.DeviceName, len(interfaceResp.Result))
 
 	// 解析接口列表（物理属性）
+	log.Printf("[端口采集] 设备 %s: 开始解析接口列表...", device.DeviceName)
 	interfaces, err := s.parseInterfaceList(interfaceResp.Result, device.Vendor)
 	if err != nil {
+		log.Printf("[端口采集] 设备 %s: 解析接口列表失败: %v", device.DeviceName, err)
 		result.ErrorMessage = err.Error()
 		return result
 	}
+	log.Printf("[端口采集] 设备 %s: 解析到 %d 个接口", device.DeviceName, len(interfaces))
 
 	// 获取接口状态和描述信息（仅锐捷/迈普设备）
 	descriptionMap := make(map[string]InterfaceDescription)
@@ -146,76 +190,159 @@ func (s *PortCollectionService) collectDevicePort(ctx context.Context, device *m
 	// 收集所有端口状态数据
 	var portStatuses []*models.DevicePortStatus
 
-	for _, iface := range interfaces {
-		// 标准化接口名称
-		normalizedName := normalizeInterfaceName(iface.Name)
+	log.Printf("[端口采集] 开始处理接口数据，物理属性解析到 %d 个接口", len(interfaces))
+	if len(interfaces) == 0 && len(descriptionMap) > 0 {
+		// 物理属性解析失败，但状态/描述解析成功
+		// 这种情况通常发生在路由器上（不支持 show interfaces status 命令）
+		// 使用降级方案：仅基于状态/描述数据创建端口记录（不包含 VLAN/Duplex/Speed/Type）
+		log.Printf("[端口采集] 物理属性解析为空，但状态/描述有 %d 条记录，使用降级方案", len(descriptionMap))
+		for ifaceName, desc := range descriptionMap {
+			portStatus := &models.DevicePortStatus{
+				DeviceID:      device.ID,
+				InterfaceName: ifaceName,
+				AdminStatus:   desc.AdminStatus,
+				OperStatus:    desc.OperStatus,
+				Description:   desc.Description,
+				// VLAN, Duplex, Speed, PortType 保持空值（路由器通常不需要这些字段）
+				CollectedAt: collectionTime,
+			}
 
-		// 从状态和描述映射中获取状态信息（使用标准化名称查找）
-		var adminStatus, operStatus, description string
-		if desc, ok := descriptionMap[normalizedName]; ok {
-			adminStatus = desc.AdminStatus
-			operStatus = desc.OperStatus
-			description = desc.Description
+			// 获取802.1X状态（路由器可能不支持，但不影响采集）
+			dot1xEnabled, dot1xPortStatusStr := s.getDot1xStatus(wrapper, ifaceName, device.Vendor)
+			portStatus.Dot1xEnabled = dot1xEnabled
+			switch strings.ToUpper(dot1xPortStatusStr) {
+			case "AUTHORIZED":
+				portStatus.Dot1xPortStatus = models.Dot1xStatusAuthorized
+			case "UNAUTHORIZED":
+				portStatus.Dot1xPortStatus = models.Dot1xStatusUnauthorized
+			default:
+				portStatus.Dot1xPortStatus = models.Dot1xStatusUnknown
+			}
+
+			// 获取端口安全配置
+			securityEnabled, securityModeStr, maxMAC, currentMAC := s.getPortSecurity(wrapper, ifaceName, device.Vendor)
+			portStatus.PortSecurityEnabled = securityEnabled
+
+			var securityMode models.PortSecurityMode
+			switch strings.ToUpper(securityModeStr) {
+			case "RESTRICT":
+				securityMode = models.PortSecurityModeRestrict
+			case "PROTECT":
+				securityMode = models.PortSecurityModeProtect
+			case "SHUTDOWN":
+				securityMode = models.PortSecurityModeShutdown
+			default:
+				securityMode = models.PortSecurityModeNone
+			}
+			portStatus.PortSecurityMode = securityMode
+
+			if maxMAC > 0 {
+				portStatus.MaxMACCount = &maxMAC
+			}
+			if currentMAC > 0 {
+				portStatus.CurrentMACCount = &currentMAC
+			}
+
+			portStatuses = append(portStatuses, portStatus)
+		}
+		log.Printf("[端口采集] 降级方案创建了 %d 个端口记录（基于状态/描述数据）", len(portStatuses))
+	} else {
+		// 正常流程：基于物理属性数据创建端口记录
+		if len(interfaces) == 0 {
+			log.Printf("[端口采集] 警告：interfaces 切片为空！descriptionMap 有 %d 条记录", len(descriptionMap))
+			// 打印 descriptionMap 的所有 key 用于调试
+			for k := range descriptionMap {
+				log.Printf("[端口采集] descriptionMap key: %s", k)
+			}
 		}
 
-		portStatus := &models.DevicePortStatus{
-			DeviceID:      device.ID,
-			InterfaceName: normalizedName, // 使用标准化后的名称
-			AdminStatus:   adminStatus,
-			OperStatus:    operStatus,
-			Description:   description,
-			VLAN:          iface.VLAN,
-			Duplex:        iface.Duplex,
-			Speed:         iface.Speed,
-			PortType:      iface.PortType,
-			CollectedAt:   collectionTime,
-		}
+		for i, iface := range interfaces {
+			// 标准化接口名称
+			normalizedName := normalizeInterfaceName(iface.Name)
 
-		// 获取802.1X状态（使用标准化名称）
-		dot1xEnabled, dot1xPortStatusStr := s.getDot1xStatus(wrapper, normalizedName, device.Vendor)
-		portStatus.Dot1xEnabled = dot1xEnabled
-		switch strings.ToUpper(dot1xPortStatusStr) {
-		case "AUTHORIZED":
-			portStatus.Dot1xPortStatus = models.Dot1xStatusAuthorized
-		case "UNAUTHORIZED":
-			portStatus.Dot1xPortStatus = models.Dot1xStatusUnauthorized
-		default:
-			portStatus.Dot1xPortStatus = models.Dot1xStatusUnknown
-		}
+			log.Printf("[端口采集] 处理接口 %d: 原始名=%s, 标准化名=%s", i, iface.Name, normalizedName)
 
-		// 获取端口安全配置（使用标准化名称）
-		securityEnabled, securityModeStr, maxMAC, currentMAC := s.getPortSecurity(wrapper, normalizedName, device.Vendor)
-		portStatus.PortSecurityEnabled = securityEnabled
+			// 从状态和描述映射中获取状态信息（使用标准化名称查找）
+			var adminStatus, operStatus, description string
+			if desc, ok := descriptionMap[normalizedName]; ok {
+				adminStatus = desc.AdminStatus
+				operStatus = desc.OperStatus
+				description = desc.Description
+			} else {
+				log.Printf("[端口采集] 警告：未找到接口 %s 的状态信息", normalizedName)
+			}
 
-		var securityMode models.PortSecurityMode
-		switch strings.ToUpper(securityModeStr) {
-		case "RESTRICT":
-			securityMode = models.PortSecurityModeRestrict
-		case "PROTECT":
-			securityMode = models.PortSecurityModeProtect
-		case "SHUTDOWN":
-			securityMode = models.PortSecurityModeShutdown
-		default:
-			securityMode = models.PortSecurityModeNone
-		}
-		portStatus.PortSecurityMode = securityMode
+			portStatus := &models.DevicePortStatus{
+				DeviceID:      device.ID,
+				InterfaceName: normalizedName, // 使用标准化后的名称
+				AdminStatus:   adminStatus,
+				OperStatus:    operStatus,
+				Description:   description,
+				VLAN:          iface.VLAN,
+				Duplex:        iface.Duplex,
+				Speed:         iface.Speed,
+				PortType:      iface.PortType,
+				CollectedAt:   collectionTime,
+			}
 
-		if maxMAC > 0 {
-			portStatus.MaxMACCount = &maxMAC
-		}
-		if currentMAC > 0 {
-			portStatus.CurrentMACCount = &currentMAC
-		}
+			// 获取802.1X状态（使用标准化名称）
+			dot1xEnabled, dot1xPortStatusStr := s.getDot1xStatus(wrapper, normalizedName, device.Vendor)
+			portStatus.Dot1xEnabled = dot1xEnabled
+			switch strings.ToUpper(dot1xPortStatusStr) {
+			case "AUTHORIZED":
+				portStatus.Dot1xPortStatus = models.Dot1xStatusAuthorized
+			case "UNAUTHORIZED":
+				portStatus.Dot1xPortStatus = models.Dot1xStatusUnauthorized
+			default:
+				portStatus.Dot1xPortStatus = models.Dot1xStatusUnknown
+			}
 
-		portStatuses = append(portStatuses, portStatus)
-	}
+			// 获取端口安全配置（使用标准化名称）
+			securityEnabled, securityModeStr, maxMAC, currentMAC := s.getPortSecurity(wrapper, normalizedName, device.Vendor)
+			portStatus.PortSecurityEnabled = securityEnabled
+
+			var securityMode models.PortSecurityMode
+			switch strings.ToUpper(securityModeStr) {
+			case "RESTRICT":
+				securityMode = models.PortSecurityModeRestrict
+			case "PROTECT":
+				securityMode = models.PortSecurityModeProtect
+			case "SHUTDOWN":
+				securityMode = models.PortSecurityModeShutdown
+			default:
+				securityMode = models.PortSecurityModeNone
+			}
+			portStatus.PortSecurityMode = securityMode
+
+			if maxMAC > 0 {
+				portStatus.MaxMACCount = &maxMAC
+			}
+			if currentMAC > 0 {
+				portStatus.CurrentMACCount = &currentMAC
+			}
+
+			portStatuses = append(portStatuses, portStatus)
+		}
+	} // end of else (正常流程)
 
 	// 批量保存到数据库（使用 Save 实现 upsert）
 	successCount := 0
-	for _, portStatus := range portStatuses {
+	failedCount := 0
+
+	log.Printf("[端口采集] 设备 %s 开始保存 %d 个端口数据", device.DeviceName, len(portStatuses))
+
+	for i, portStatus := range portStatuses {
+		// 检查 context 是否已取消，但不要立即退出
+		// 使用一个新的 context 来避免 context 取消导致保存失败
+		saveCtx := context.Background()
+		if ctx.Err() != nil {
+			log.Printf("[端口采集] 设备 %s 保存端口时 context 已取消，使用新 context 继续保存 (已保存 %d/%d)",
+				device.DeviceName, successCount, len(portStatuses))
+		}
+
 		// 先查找是否存在
 		var existing models.DevicePortStatus
-		err := s.db.WithContext(ctx).
+		err := s.db.WithContext(saveCtx).
 			Where("device_id = ? AND interface_name = ?", portStatus.DeviceID, portStatus.InterfaceName).
 			First(&existing).Error
 
@@ -223,42 +350,48 @@ func (s *PortCollectionService) collectDevicePort(ctx context.Context, device *m
 			// 记录存在，更新
 			portStatus.ID = existing.ID
 			portStatus.CreatedAt = existing.CreatedAt // 保留创建时间
-			if err := s.db.WithContext(ctx).Save(portStatus).Error; err == nil {
+			if err := s.db.WithContext(saveCtx).Save(portStatus).Error; err == nil {
 				successCount++
-				log.Printf("[端口采集] 更新端口: %s (ID: %s)", portStatus.InterfaceName, portStatus.ID)
+				if i == 0 || i == len(portStatuses)-1 || i%50 == 49 {
+					log.Printf("[端口采集] 设备 %s 更新端口进度: %d/%d",
+						device.DeviceName, i+1, len(portStatuses))
+				}
 			} else {
-				log.Printf("[端口采集] 更新端口失败 %s: %v", portStatus.InterfaceName, err)
+				failedCount++
+				log.Printf("[端口采集] 设备 %s 更新端口失败 %s: %v",
+					device.DeviceName, portStatus.InterfaceName, err)
 			}
 		} else if errors.Is(err, gorm.ErrRecordNotFound) {
-			// 记录不存在，检查是否有相似名称的记录（用于调试）
-			var similarRecords []models.DevicePortStatus
-			s.db.WithContext(ctx).
-				Where("device_id = ?", portStatus.DeviceID).
-				Find(&similarRecords)
-			if len(similarRecords) > 0 {
-				log.Printf("[端口采集] 未找到匹配端口 %s，设备现有 %d 条端口记录", portStatus.InterfaceName, len(similarRecords))
-				// 打印前 5 条记录的名称用于调试
-				for i, r := range similarRecords {
-					if i >= 5 {
-						break
-					}
-					log.Printf("[端口采集]   现有记录 %d: %s", i+1, r.InterfaceName)
-				}
-			}
-
 			// 记录不存在，新增
-			if err := s.db.WithContext(ctx).Create(portStatus).Error; err == nil {
+			if err := s.db.WithContext(saveCtx).Create(portStatus).Error; err == nil {
 				successCount++
-				log.Printf("[端口采集] 新增端口: %s (ID: %s)", portStatus.InterfaceName, portStatus.ID)
+				if i == 0 || i == len(portStatuses)-1 || i%50 == 49 {
+					log.Printf("[端口采集] 设备 %s 新增端口进度: %d/%d",
+						device.DeviceName, i+1, len(portStatuses))
+				}
 			} else {
-				log.Printf("[端口采集] 新增端口失败 %s: %v", portStatus.InterfaceName, err)
+				failedCount++
+				log.Printf("[端口采集] 设备 %s 新增端口失败 %s: %v",
+					device.DeviceName, portStatus.InterfaceName, err)
 			}
 		} else {
-			log.Printf("[端口采集] 查询端口失败 %s: %v", portStatus.InterfaceName, err)
+			failedCount++
+			// 详细的错误日志
+			if ctx.Err() != nil {
+				log.Printf("[端口采集] 设备 %s 查询端口失败 %s: %v (context 已取消)",
+					device.DeviceName, portStatus.InterfaceName, err)
+			} else {
+				log.Printf("[端口采集] 设备 %s 查询端口失败 %s: %v",
+					device.DeviceName, portStatus.InterfaceName, err)
+			}
 		}
 	}
 
+	log.Printf("[端口采集] 设备 %s 保存完成: 成功=%d, 失败=%d, 总数=%d",
+		device.DeviceName, successCount, failedCount, len(portStatuses))
+
 	result.SuccessCount = successCount
+	result.FailedCount = failedCount
 	return result
 }
 
@@ -277,7 +410,7 @@ type InterfaceInfo struct {
 // getInterfaceCommand 根据厂商获取接口命令
 func (s *PortCollectionService) getInterfaceCommand(vendor models.DeviceVendor) string {
 	commands := map[models.DeviceVendor]string{
-		models.VendorHuawei: "display interface",
+		models.VendorHuawei: "display interface brief", // 华为使用 brief 命令
 		models.VendorH3C:     "display interface",
 		models.VendorRuijie:  "show interfaces status",
 		models.VendorMaipu:   "show interface",
@@ -292,7 +425,7 @@ func (s *PortCollectionService) getInterfaceCommand(vendor models.DeviceVendor) 
 // getInterfaceTemplate 根据厂商获取接口解析模板
 func (s *PortCollectionService) getInterfaceTemplate(vendor models.DeviceVendor) string {
 	templates := map[models.DeviceVendor]string{
-		models.VendorHuawei: "templates/huawei_vrp_display_interface.textfsm",
+		models.VendorHuawei: "templates/huawei_vrp_display_interface_brief.textfsm", // 华为使用 brief 模板
 		models.VendorH3C:     "templates/huawei_vrp_display_interface.textfsm",
 		models.VendorRuijie:  "templates/ruijie_os_show_interfaces_status.textfsm",
 		models.VendorMaipu:   "templates/ruijie_os_show_interfaces_status.textfsm",
@@ -328,18 +461,38 @@ func (s *PortCollectionService) parseInterfaceList(output string, vendor models.
 		return nil, err
 	}
 
-	log.Printf("[端口采集] 物理属性解析成功，提取到 %d 条记录", len(records))
+	log.Printf("[端口采集] 物理属性解析成功，textfsm 提取到 %d 条记录", len(records))
 
 	// 转换为 InterfaceInfo（只包含物理属性）
 	var interfaces []InterfaceInfo
-	for _, record := range records {
+	for i, record := range records {
 		info := InterfaceInfo{}
 
-		// 提取并标准化接口名称
-		if name, ok := record["INTERFACE"]; ok {
-			originalName := strings.ReplaceAll(name, " ", "")
-			info.Name = normalizeInterfaceName(originalName)
+		// 打印所有字段用于调试（前3条记录）
+		if i < 3 {
+			log.Printf("[端口采集] Record %d 原始数据: %+v", i, record)
 		}
+
+		// 尝试多种可能的字段名（textfsm 可能使用不同的大小写）
+		var name string
+		if n, ok := record["INTERFACE"]; ok && n != "" {
+			name = n
+		} else if n, ok := record["Interface"]; ok && n != "" {
+			name = n
+		} else if n, ok := record["interface"]; ok && n != "" {
+			name = n
+		}
+
+		if name == "" {
+			log.Printf("[端口采集] Record %d 没有接口名称字段，跳过。可用字段: %v", i, getAvailableKeys(record))
+			continue
+		}
+
+		// 提取并标准化接口名称
+		originalName := strings.ReplaceAll(name, " ", "")
+		info.Name = normalizeInterfaceName(originalName)
+
+		log.Printf("[端口采集] Record %d: 原始名=%s, 标准化名=%s", i, name, info.Name)
 
 		// 提取 VLAN
 		if vlanStr, ok := record["VLAN"]; ok && vlanStr != "--" && vlanStr != "" {
@@ -363,16 +516,20 @@ func (s *PortCollectionService) parseInterfaceList(output string, vendor models.
 			info.PortType = strings.ToLower(portType)
 		}
 
-		// 验证接口名称
-		if info.Name != "" {
-			interfaces = append(interfaces, info)
-			log.Printf("[端口采集] 物理属性: %s, VLAN=%v, Duplex=%s, Speed=%s, Type=%s",
-				info.Name, info.VLAN, info.Duplex, info.Speed, info.PortType)
-		}
+		interfaces = append(interfaces, info)
 	}
 
 	log.Printf("[端口采集] 物理属性解析完成，共 %d 个有效接口", len(interfaces))
 	return interfaces, nil
+}
+
+// getAvailableKeys 获取 map 中所有可用的 key（用于调试）
+func getAvailableKeys(record map[string]string) []string {
+	keys := make([]string, 0, len(record))
+	for k := range record {
+		keys = append(keys, k)
+	}
+	return keys
 }
 
 // parseInterfaceListSimple 简单解析（降级方案）
@@ -583,7 +740,7 @@ func (s *PortCollectionService) getDeviceCredential(ctx context.Context, device 
 }
 
 // GetPortStatusList 获取端口状态列表
-func (s *PortCollectionService) GetPortStatusList(ctx context.Context, current, pageSize int, deviceID, interfaceName string, dot1xEnabled *bool) ([]models.DevicePortStatus, int64, error) {
+func (s *PortCollectionService) GetPortStatusList(ctx context.Context, current, pageSize int, deviceID, interfaceName, adminStatus, operStatus string, dot1xEnabled, portSecurityEnabled *bool) ([]models.DevicePortStatus, int64, error) {
 	var portStatuses []models.DevicePortStatus
 	var total int64
 
@@ -591,12 +748,27 @@ func (s *PortCollectionService) GetPortStatusList(ctx context.Context, current, 
 
 	if deviceID != "" {
 		query = query.Where("device_id = ?", deviceID)
+		log.Printf("[端口查询] 筛选设备ID: %s", deviceID)
 	}
 	if interfaceName != "" {
 		query = query.Where("interface_name LIKE ?", "%"+interfaceName+"%")
+		log.Printf("[端口查询] 筛选接口名: %s", interfaceName)
+	}
+	if adminStatus != "" {
+		query = query.Where("admin_status = ?", adminStatus)
+		log.Printf("[端口查询] 筛选管理状态: %s", adminStatus)
+	}
+	if operStatus != "" {
+		query = query.Where("oper_status = ?", operStatus)
+		log.Printf("[端口查询] 筛选操作状态: %s", operStatus)
 	}
 	if dot1xEnabled != nil {
 		query = query.Where("dot1x_enabled = ?", *dot1xEnabled)
+		log.Printf("[端口查询] 筛选802.1X: %v", *dot1xEnabled)
+	}
+	if portSecurityEnabled != nil {
+		query = query.Where("port_security_enabled = ?", *portSecurityEnabled)
+		log.Printf("[端口查询] 筛选端口安全: %v", *portSecurityEnabled)
 	}
 
 	// 获取总数
@@ -604,13 +776,61 @@ func (s *PortCollectionService) GetPortStatusList(ctx context.Context, current, 
 		return nil, 0, fmt.Errorf("查询端口状态总数失败: %w", err)
 	}
 
+	log.Printf("[端口查询] 查询结果: 总数=%d, 当前页=%d, 每页=%d", total, current, pageSize)
+
 	// 分页查询
 	offset := (current - 1) * pageSize
 	if err := query.Offset(offset).Limit(pageSize).Order("collected_at DESC").Find(&portStatuses).Error; err != nil {
 		return nil, 0, fmt.Errorf("查询端口状态列表失败: %w", err)
 	}
 
+	log.Printf("[端口查询] 返回 %d 条记录", len(portStatuses))
+	if len(portStatuses) > 0 {
+		log.Printf("[端口查询] 首条记录: 设备ID=%s, 接口名=%s, 采集时间=%s",
+			portStatuses[0].DeviceID, portStatuses[0].InterfaceName, portStatuses[0].CollectedAt.Format("2006-01-02 15:04:05"))
+	}
+
 	return portStatuses, total, nil
+}
+
+// DiagnoseDevicePortData 诊断指定设备的端口数据
+func (s *PortCollectionService) DiagnoseDevicePortData(ctx context.Context, deviceIP string) {
+	log.Printf("[诊断] 开始检查设备 %s 的端口数据", deviceIP)
+
+	// 先找到设备ID
+	var device models.NetworkDevice
+	if err := s.db.WithContext(ctx).Where("ip_address = ?", deviceIP).First(&device).Error; err != nil {
+		log.Printf("[诊断] 设备不存在: %v", err)
+		return
+	}
+
+	log.Printf("[诊断] 设备ID=%s, 设备名=%s", device.ID, device.DeviceName)
+
+	// 检查该设备的端口数据
+	var portData []models.DevicePortStatus
+	if err := s.db.WithContext(ctx).Where("device_id = ?", device.ID).Find(&portData).Error; err != nil {
+		log.Printf("[诊断] 查询端口数据失败: %v", err)
+		return
+	}
+
+	log.Printf("[诊断] 找到 %d 条端口数据", len(portData))
+	if len(portData) == 0 {
+		// 检查是否有其他设备的端口名称相同的情况
+		var allPorts []models.DevicePortStatus
+		s.db.WithContext(ctx).Find(&allPorts)
+		log.Printf("[诊断] 数据库中共有 %d 条端口记录", len(allPorts))
+		for _, p := range allPorts {
+			log.Printf("[诊断] 端口记录: 设备ID=%s, 接口名=%s, 采集时间=%s",
+				p.DeviceID, p.InterfaceName, p.CollectedAt.Format("2006-01-02 15:04:05"))
+		}
+	} else {
+		for i, p := range portData {
+			if i < 5 || i >= len(portData)-2 { // 只打印前5条和最后2条
+				log.Printf("[诊断] 端口%d: 接口名=%s, 操作状态=%s, 采集时间=%s",
+					i+1, p.InterfaceName, p.OperStatus, p.CollectedAt.Format("2006-01-02 15:04:05"))
+			}
+		}
+	}
 }
 
 // GetPortStatusStats 获取端口状态统计信息
@@ -822,8 +1042,10 @@ func (s *PortCollectionService) parseInterfaceDescriptions(wrapper *device.Scrap
 // getInterfaceDescriptionCommand 根据厂商获取接口描述命令
 func (s *PortCollectionService) getInterfaceDescriptionCommand(vendor models.DeviceVendor) string {
 	commands := map[models.DeviceVendor]string{
-		models.VendorRuijie: "show int des",
-		models.VendorMaipu:  "show int des",
+		models.VendorHuawei: "display interface description", // 华为使用 display interface description
+		models.VendorH3C:     "display interface description", // H3C 使用 display interface description
+		models.VendorRuijie:  "show int des",
+		models.VendorMaipu:   "show int des",
 	}
 
 	if cmd, ok := commands[vendor]; ok {
@@ -835,12 +1057,31 @@ func (s *PortCollectionService) getInterfaceDescriptionCommand(vendor models.Dev
 // getInterfaceDescriptionTemplate 根据厂商获取接口描述解析模板
 func (s *PortCollectionService) getInterfaceDescriptionTemplate(vendor models.DeviceVendor) string {
 	templates := map[models.DeviceVendor]string{
-		models.VendorRuijie: "templates/ruijie_os_show_interface_description.textfsm",
-		models.VendorMaipu:  "templates/ruijie_os_show_interface_description.textfsm",
+		models.VendorHuawei: "templates/huawei_vrp_display_interface_description.textfsm", // 华为使用 description 模板
+		models.VendorH3C:     "templates/huawei_vrp_display_interface_description.textfsm", // H3C 使用 description 模板
+		models.VendorRuijie:  "templates/ruijie_os_show_interface_description.textfsm",
+		models.VendorMaipu:   "templates/ruijie_os_show_interface_description.textfsm",
 	}
 
 	if tmpl, ok := templates[vendor]; ok {
 		return tmpl
 	}
 	return "templates/ruijie_os_show_interface_description.textfsm" // 默认模板
+}
+
+// loadConfigFromDB 从数据库加载并发数配置
+func (s *PortCollectionService) loadConfigFromDB() {
+	var config models.Config
+	err := s.db.Where("config_key = ?", portConcurrentConfigKey).First(&config).Error
+	if err == nil && config.ConfigValue != "" {
+		if concurrent, parseErr := strconv.Atoi(config.ConfigValue); parseErr == nil && concurrent > 0 {
+			s.maxConcurrent = concurrent
+			log.Printf("[端口采集] 从数据库读取并发数配置: %d", s.maxConcurrent)
+		}
+	}
+}
+
+// ReloadConfig 重新加载配置（从数据库）
+func (s *PortCollectionService) ReloadConfig() {
+	s.loadConfigFromDB()
 }

@@ -3,7 +3,6 @@ package v1
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
@@ -54,26 +53,26 @@ func dispatchCommand(core *core.Core) gin.HandlerFunc {
 			req.Timeout = 300
 		}
 
-		// 创建设备管理器
-	manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
-		defer manager.Close()
+		// 使用核心设备管理器（新架构）
+		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
+		// defer manager.Close()
 
-		svc := services.NewCommandDispatchService(core.DB.GetDB(), manager)
+		svc := services.NewCommandDispatchService(core.DB.GetDB(), core.DeviceExecutor)
 		result, err := svc.Dispatch(c.Request.Context(), &services.DispatchRequest{
-		ExecutionName:     req.ExecutionName,
-		DeviceIDs:         req.DeviceIDs,
-		CommandContent:    req.CommandContent,
-		ExecutionStrategy: req.ExecutionStrategy,
-		Concurrency:       req.Concurrency,
-		Timeout:           req.Timeout,
-		CreatedBy:         c.GetString("userId"),
-	})
-	if err != nil {
-		response.Error(c, response.ErrServerError, err.Error())
-		return
-	}
+			ExecutionName:     req.ExecutionName,
+			DeviceIDs:         req.DeviceIDs,
+			CommandContent:    req.CommandContent,
+			ExecutionStrategy: req.ExecutionStrategy,
+			Concurrency:       req.Concurrency,
+			Timeout:           req.Timeout,
+			CreatedBy:         c.GetString("userId"),
+		})
+		if err != nil {
+			response.Error(c, response.ErrServerError, err.Error())
+			return
+		}
 
-	response.Success(c, result)
+		response.Success(c, result)
 	}
 }
 
@@ -98,11 +97,11 @@ func quickCommand(core *core.Core) gin.HandlerFunc {
 			req.Timeout = 60
 		}
 
-		// 创建设备管理器
-		manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
-		defer manager.Close()
+		// 使用核心设备管理器（新架构）
+		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
+		// defer manager.Close()
 
-		svc := services.NewCommandDispatchService(core.DB.GetDB(), manager)
+		svc := services.NewCommandDispatchService(core.DB.GetDB(), core.DeviceExecutor)
 		result, err := svc.QuickCommand(c.Request.Context(), req.DeviceID, req.Command, req.Timeout)
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
@@ -130,10 +129,11 @@ func getCommandExecution(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
-		defer manager.Close()
+		// 使用核心设备管理器（新架构）
+		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
+		// defer manager.Close()
 
-		svc := services.NewCommandDispatchService(core.DB.GetDB(), manager)
+		svc := services.NewCommandDispatchService(core.DB.GetDB(), core.DeviceExecutor)
 		result, err := svc.GetExecutionResult(c.Request.Context(), id)
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
@@ -163,10 +163,11 @@ func listCommandExecutions(core *core.Core) gin.HandlerFunc {
 		current := getIntField(rawReq, "current", 1)
 		pageSize := getIntField(rawReq, "pageSize", 10)
 
-		manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
-		defer manager.Close()
+		// 使用核心设备管理器（新架构）
+		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
+		// defer manager.Close()
 
-		svc := services.NewCommandDispatchService(core.DB.GetDB(), manager)
+		svc := services.NewCommandDispatchService(core.DB.GetDB(), core.DeviceExecutor)
 		executions, total, err := svc.GetExecutionList(c.Request.Context(), current, pageSize)
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
