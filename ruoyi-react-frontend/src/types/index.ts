@@ -149,6 +149,18 @@ export interface DictData {
   updatedAt: string;
 }
 
+// 岗位
+export interface Post {
+  id: string;
+  postCode: string;
+  postName: string;
+  postSort: number;
+  status: 0 | 1;  // 0:正常 1:停用
+  remark?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // 参数配置
 export interface Config {
   id: string;

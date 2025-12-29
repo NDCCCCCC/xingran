@@ -151,8 +151,56 @@ func (s *service) createDefaultMenus(db *gorm.DB) error {
 			ParentID:  &systemMenu.ID,
 			Path:      func() *string { s := "/system/dept"; return &s }(),
 			Component: func() *string { s := "system/dept/index"; return &s }(),
-			Icon:      func() *string { s := "users"; return &s }(),
+			Icon:      func() *string { s := "apartment"; return &s }(),
 			Perms:     func() *string { s := string(SystemDept); return &s }(),
+		},
+		{
+			MenuName:  "岗位管理",
+			OrderNum:  5,
+			MenuType:  models.MenuTypeMenu,
+			Visible:   models.VisibleShow,
+			Status:    models.MenuStatusNormal,
+			ParentID:  &systemMenu.ID,
+			Path:      func() *string { s := "/system/post"; return &s }(),
+			Component: func() *string { s := "system/post/index"; return &s }(),
+			Icon:      func() *string { s := "idcard"; return &s }(),
+			Perms:     func() *string { s := string(SystemPost); return &s }(),
+		},
+		{
+			MenuName:  "字典管理",
+			OrderNum:  6,
+			MenuType:  models.MenuTypeMenu,
+			Visible:   models.VisibleShow,
+			Status:    models.MenuStatusNormal,
+			ParentID:  &systemMenu.ID,
+			Path:      func() *string { s := "/system/dict"; return &s }(),
+			Component: func() *string { s := "system/dict/index"; return &s }(),
+			Icon:      func() *string { s := "book"; return &s }(),
+			Perms:     func() *string { s := string(SystemDict); return &s }(),
+		},
+		{
+			MenuName:  "参数配置",
+			OrderNum:  7,
+			MenuType:  models.MenuTypeMenu,
+			Visible:   models.VisibleShow,
+			Status:    models.MenuStatusNormal,
+			ParentID:  &systemMenu.ID,
+			Path:      func() *string { s := "/system/config"; return &s }(),
+			Component: func() *string { s := "system/config/index"; return &s }(),
+			Icon:      func() *string { s := "setting"; return &s }(),
+			Perms:     func() *string { s := string(SystemConfig); return &s }(),
+		},
+		{
+			MenuName:  "通知公告",
+			OrderNum:  8,
+			MenuType:  models.MenuTypeMenu,
+			Visible:   models.VisibleShow,
+			Status:    models.MenuStatusNormal,
+			ParentID:  &systemMenu.ID,
+			Path:      func() *string { s := "/system/notice"; return &s }(),
+			Component: func() *string { s := "system/notice/index"; return &s }(),
+			Icon:      func() *string { s := "notification"; return &s }(),
+			Perms:     func() *string { s := string(SystemNotice); return &s }(),
 		},
 	}
 
@@ -161,11 +209,15 @@ func (s *service) createDefaultMenus(db *gorm.DB) error {
 	}
 
 	// 获取创建后的菜单ID（用于创建按钮）
-	var userMenu, roleMenu, menuMenu, deptMenu models.Menu
+	var userMenu, roleMenu, menuMenu, deptMenu, postMenu, dictMenu, configMenu, noticeMenu models.Menu
 	db.Where("menu_name = ?", "用户管理").First(&userMenu)
 	db.Where("menu_name = ?", "角色管理").First(&roleMenu)
 	db.Where("menu_name = ?", "菜单管理").First(&menuMenu)
 	db.Where("menu_name = ?", "部门管理").First(&deptMenu)
+	db.Where("menu_name = ?", "岗位管理").First(&postMenu)
+	db.Where("menu_name = ?", "字典管理").First(&dictMenu)
+	db.Where("menu_name = ?", "参数配置").First(&configMenu)
+	db.Where("menu_name = ?", "通知公告").First(&noticeMenu)
 
 	// 创建用户管理按钮
 	s.createButtonMenus(db, userMenu.ID, []PermissionCode{
@@ -185,6 +237,26 @@ func (s *service) createDefaultMenus(db *gorm.DB) error {
 	// 创建部门管理按钮
 	s.createButtonMenus(db, deptMenu.ID, []PermissionCode{
 		DeptList, DeptView, DeptAdd, DeptEdit, DeptRemove,
+	})
+
+	// 创建岗位管理按钮
+	s.createButtonMenus(db, postMenu.ID, []PermissionCode{
+		PostList, PostView, PostAdd, PostEdit, PostRemove,
+	})
+
+	// 创建字典管理按钮
+	s.createButtonMenus(db, dictMenu.ID, []PermissionCode{
+		DictTypeList, DictTypeView, DictTypeAdd, DictTypeEdit, DictTypeRemove,
+	})
+
+	// 创建参数配置按钮
+	s.createButtonMenus(db, configMenu.ID, []PermissionCode{
+		ConfigList, ConfigView, ConfigAdd, ConfigEdit, ConfigRemove,
+	})
+
+	// 创建通知公告按钮
+	s.createButtonMenus(db, noticeMenu.ID, []PermissionCode{
+		NoticeList, NoticeView, NoticeAdd, NoticeEdit, NoticeRemove,
 	})
 
 	// 3. 创建系统监控菜单（父菜单）
@@ -508,6 +580,24 @@ func (s *service) createButtonMenus(db *gorm.DB, parentID string, permissions []
 		DeptEdit:   "修改",
 		DeptRemove: "删除",
 
+		DictTypeList:   "查询",
+		DictTypeView:   "查看",
+		DictTypeAdd:    "新增",
+		DictTypeEdit:   "修改",
+		DictTypeRemove: "删除",
+
+		ConfigList:   "查询",
+		ConfigView:   "查看",
+		ConfigAdd:    "新增",
+		ConfigEdit:   "修改",
+		ConfigRemove: "删除",
+
+		NoticeList:   "查询",
+		NoticeView:   "查看",
+		NoticeAdd:    "新增",
+		NoticeEdit:   "修改",
+		NoticeRemove: "删除",
+
 		PostList:   "查询",
 		PostView:   "查看",
 		PostAdd:    "新增",
@@ -578,6 +668,24 @@ func (s *service) createButtonMenus(db *gorm.DB, parentID string, permissions []
 		DeptAdd:    "plus",
 		DeptEdit:   "edit",
 		DeptRemove: "delete",
+
+		DictTypeList:   "search",
+		DictTypeView:   "eye",
+		DictTypeAdd:    "plus",
+		DictTypeEdit:   "edit",
+		DictTypeRemove: "delete",
+
+		ConfigList:   "search",
+		ConfigView:   "eye",
+		ConfigAdd:    "plus",
+		ConfigEdit:   "edit",
+		ConfigRemove: "delete",
+
+		NoticeList:   "search",
+		NoticeView:   "eye",
+		NoticeAdd:    "plus",
+		NoticeEdit:   "edit",
+		NoticeRemove: "delete",
 
 		// 网络设备管理按钮图标
 		NetworkDeviceList:     "search",

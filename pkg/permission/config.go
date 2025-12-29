@@ -69,14 +69,15 @@ const (
 	ConfigRemove PermissionCode = "system:config:remove"
 
 	// 系统模块权限
-	System     PermissionCode = "system"
-	SystemUser PermissionCode = "system:user"
-	SystemRole PermissionCode = "system:role"
-	SystemMenu PermissionCode = "system:menu"
-	SystemDept PermissionCode = "system:dept"
-	SystemPost PermissionCode = "system:post"
-	SystemDict PermissionCode = "system:dict"
+	System       PermissionCode = "system"
+	SystemUser   PermissionCode = "system:user"
+	SystemRole   PermissionCode = "system:role"
+	SystemMenu   PermissionCode = "system:menu"
+	SystemDept   PermissionCode = "system:dept"
+	SystemPost   PermissionCode = "system:post"
+	SystemDict   PermissionCode = "system:dict"
 	SystemConfig PermissionCode = "system:config"
+	SystemNotice PermissionCode = "system:notice"
 
 	// 通知公告权限
 	NoticeList   PermissionCode = "system:notice:list"

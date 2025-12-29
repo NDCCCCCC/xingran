@@ -85,6 +85,26 @@ func main() {
 
 	log.Println("\n=== 验证更新结果 ===")
 
+	// 检查是否有网络设备管理父菜单
+	var parentMenu models.Menu
+	db.Where("menu_name = ? OR path = ?", "网络设备管理", "/network").First(&parentMenu)
+
+	if parentMenu.ID != "" {
+		icon := ""
+		if parentMenu.Icon != nil {
+			icon = *parentMenu.Icon
+		}
+		log.Printf("✓ 找到父菜单: %s, 路径: %s, 图标: %s", parentMenu.MenuName,
+			func() string {
+				if parentMenu.Path != nil {
+					return *parentMenu.Path
+				}
+				return ""
+			}(), icon)
+	} else {
+		log.Println("⚠ 未找到网络设备管理父菜单！需要创建父菜单")
+	}
+
 	var menus []models.Menu
 	db.Where("menu_name IN (?)",
 		[]string{"设备管理", "授权凭证", "配置模板", "命令分发",

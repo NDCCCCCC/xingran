@@ -93,6 +93,7 @@ import {
   YoutubeOutlined,
   ZhihuOutlined,
   DingdingOutlined,
+  IdcardOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -128,6 +129,7 @@ const iconMap: Record<string, React.ReactNode> = {
   cache: <DatabaseOutlined />,
   home: <HomeOutlined />,
   system: <SettingOutlined />,
+  idcard: <IdcardOutlined />,
   edit: <EditOutlined />,
   delete: <DeleteOutlined />,
   search: <SearchOutlined />,
@@ -197,11 +199,11 @@ const fullIconNameMap: Record<string, string> = {
   'DashboardOutlined': 'dashboard',
   'DashboardFilled': 'dashboard',
   'SettingFilled': 'setting',
+  'IdcardOutlined': 'idcard',
 
   // 复合词图标 - 需要特殊映射
   'CloudServerOutlined': 'server',
   'ApartmentOutlined': 'users',
-  'IdcardOutlined': 'check',
   'DesktopOutlined': 'laptop',
   'BookOutlined': 'file',
 };
@@ -272,6 +274,7 @@ function convertToMenuItem(menu: MenuType): MenuItem {
 
 const Sidebar: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
+  const [openKeys, setOpenKeys] = useState<string[]>([]);
   const navigate = useNavigate();
   const location = useLocation();
   const { menus, loading, fetchMenus } = useMenuStore();
@@ -290,6 +293,49 @@ const Sidebar: React.FC = () => {
       .map(convertToMenuItem)
       .filter((item): item is MenuItem => item !== null);
   }, [menus]);
+
+  // 根据当前路径查找父菜单的 key
+  const findParentKey = (pathname: string): string | null => {
+    const findMenuByPath = (menuList: MenuType[], path: string): { menu: MenuType | null; parentKey: string | null } => {
+      for (const menu of menuList) {
+        // 检查子菜单是否匹配当前路径
+        if (menu.children && menu.children.length > 0) {
+          for (const child of menu.children) {
+            if (child.path === path) {
+              // 找到匹配的子菜单，返回父菜单的 key（id 或 path）
+              return { menu, parentKey: menu.path || menu.id };
+            }
+            // 递归检查更深层的子菜单
+            const result = findMenuByPath([child], path);
+            if (result.menu) {
+              return { menu: result.menu, parentKey: menu.path || menu.id };
+            }
+          }
+        }
+      }
+      return { menu: null, parentKey: null };
+    };
+
+    const result = findMenuByPath(menus, pathname);
+    return result.parentKey;
+  };
+
+  // 当路由变化时，自动展开包含当前页面的父菜单
+  useEffect(() => {
+    // 不要对 dashboard 或根路径做处理
+    if (location.pathname === '/' || location.pathname === '/dashboard') {
+      setOpenKeys([]);
+      return;
+    }
+
+    const parentKey = findParentKey(location.pathname);
+    if (parentKey) {
+      setOpenKeys([parentKey]);
+    } else {
+      // 如果找不到父菜单，保持当前展开状态或清空
+      setOpenKeys([]);
+    }
+  }, [location.pathname, menus]);
 
   const handleMenuClick: MenuProps['onClick'] = (e) => {
     // 查找被点击的菜单
@@ -317,18 +363,21 @@ const Sidebar: React.FC = () => {
     navigate(e.key);
   };
 
+  // 处理菜单展开/收起 - 手风琴效果
+  const handleOpenChange: MenuProps['onOpenChange'] = (keys) => {
+    // 只保留最新展开的菜单
+    const latestOpenKey = keys.find((key) => !openKeys.includes(key));
+    if (latestOpenKey) {
+      setOpenKeys([latestOpenKey]);
+    } else {
+      // 如果没有新的展开菜单，说明是收起操作
+      setOpenKeys(keys);
+    }
+  };
+
   // 获取当前选中的菜单项
   const getSelectedKeys = () => {
     return [location.pathname];
-  };
-
-  // 获取当前展开的菜单项
-  const getOpenKeys = () => {
-    const pathSnippets = location.pathname.split('/').filter((i) => i);
-    if (pathSnippets.length >= 2) {
-      return [`/${pathSnippets[0]}/${pathSnippets[1]}`];
-    }
-    return [];
   };
 
   return (
@@ -362,7 +411,8 @@ const Sidebar: React.FC = () => {
           theme="dark"
           mode="inline"
           selectedKeys={getSelectedKeys()}
-          defaultOpenKeys={getOpenKeys()}
+          openKeys={openKeys}
+          onOpenChange={handleOpenChange}
           items={menuItems}
           onClick={handleMenuClick}
           className="border-r-0 px-2 py-4"
