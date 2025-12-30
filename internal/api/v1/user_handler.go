@@ -52,6 +52,7 @@ type UserCreateRequest struct {
 	Username     string  `json:"username" binding:"required,min=2,max=20"`
 	Password     string  `json:"password" binding:"required,min=6,max=20"`
 	Nickname     *string `json:"nickname,omitempty"`
+	EmployeeNo   *string `json:"employeeNo,omitempty"` // 工号（企业微信代码）
 	Email        *string `json:"email,omitempty" binding:"omitempty,email"`
 	Phone        *string `json:"phone,omitempty"`
 	Gender       int     `json:"gender" binding:"min=0,max=2"`
@@ -66,6 +67,7 @@ type UserCreateRequest struct {
 type UserUpdateRequest struct {
 	ID           string  `json:"id,omitempty"`
 	Nickname     *string `json:"nickname,omitempty"`
+	EmployeeNo   *string `json:"employeeNo,omitempty"` // 工号（企业微信代码）
 	Email        *string `json:"email,omitempty" binding:"omitempty,email"`
 	Phone        *string `json:"phone,omitempty"`
 	Gender       int     `json:"gender" binding:"min=0,max=2"`
@@ -228,20 +230,21 @@ func listUsers(core *core.Core) gin.HandlerFunc {
 			}
 
 			userMap := map[string]interface{}{
-				"id":        user.ID,
-				"username":  user.Username,
-				"nickname":  user.Nickname,
-				"email":     user.Email,
-				"phone":     user.Phone,
-				"gender":    user.Gender,
-				"status":    user.Status,
-				"deptId":    user.DeptID,
-				"deptName":  "", // 默认值
-				"roles":     roleNames, // 角色名称数组
-				"roleIds":   roleIds,  // 角色ID数组
-				"remark":    user.Remark,
-				"createdAt": user.CreatedAt,
-				"updatedAt": user.UpdatedAt,
+				"id":         user.ID,
+				"username":   user.Username,
+				"nickname":   user.Nickname,
+				"employeeNo": user.EmployeeNo, // 工号（企业微信代码）
+				"email":      user.Email,
+				"phone":      user.Phone,
+				"gender":     user.Gender,
+				"status":     user.Status,
+				"deptId":     user.DeptID,
+				"deptName":   "", // 默认值
+				"roles":      roleNames, // 角色名称数组
+				"roleIds":    roleIds,  // 角色ID数组
+				"remark":     user.Remark,
+				"createdAt":  user.CreatedAt,
+				"updatedAt":  user.UpdatedAt,
 			}
 
 			// 如果有部门ID，查询部门名称
@@ -316,6 +319,7 @@ func createUser(core *core.Core) gin.HandlerFunc {
 			Username:  req.Username,
 			Password:  hashedPassword,
 			Nickname:  req.Nickname,
+			EmployeeNo: req.EmployeeNo, // 工号（企业微信代码）
 			Email:     req.Email,
 			Phone:     req.Phone,
 			Gender:    models.Gender(req.Gender),
@@ -415,14 +419,15 @@ func updateUser(core *core.Core) gin.HandlerFunc {
 		}
 
 		var req struct {
-			Nickname *string  `json:"nickname,omitempty"`
-			Email    *string  `json:"email,omitempty" binding:"omitempty,email"`
-			Phone    *string  `json:"phone,omitempty"`
-			Gender   int      `json:"gender"`
-			Status   int      `json:"status"`
-			DeptID   *string  `json:"deptId,omitempty"`
-			RoleIds  []string `json:"roleIds,omitempty"`
-			Remark   *string  `json:"remark,omitempty"`
+			Nickname   *string  `json:"nickname,omitempty"`
+			EmployeeNo *string  `json:"employeeNo,omitempty"` // 工号（企业微信代码）
+			Email      *string  `json:"email,omitempty" binding:"omitempty,email"`
+			Phone      *string  `json:"phone,omitempty"`
+			Gender     int      `json:"gender"`
+			Status     int      `json:"status"`
+			DeptID     *string  `json:"deptId,omitempty"`
+			RoleIds    []string `json:"roleIds,omitempty"`
+			Remark     *string  `json:"remark,omitempty"`
 		}
 		if err := c.ShouldBindJSON(&req); err != nil {
 			response.Error(c, response.ErrBadRequest, "请求参数错误: "+err.Error())
@@ -461,6 +466,9 @@ func updateUser(core *core.Core) gin.HandlerFunc {
 		// 只更新非空字段
 		if req.Nickname != nil {
 			updates["nickname"] = req.Nickname
+		}
+		if req.EmployeeNo != nil {
+			updates["employee_no"] = req.EmployeeNo
 		}
 		if req.Email != nil {
 			updates["email"] = req.Email

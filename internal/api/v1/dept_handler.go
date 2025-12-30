@@ -651,6 +651,37 @@ func getChildDeptIds(db *gorm.DB, parentId string) []string {
 	return childIds
 }
 
+// getDeptTree 获取部门树
+// @Summary 获取部门树
+// @Description 获取部门树结构，用于部门选择
+// @Tags 部门管理
+// @Accept json
+// @Produce json
+// @Success 200 {object} response.Response{data=object}
+// @Failure 500 {object} response.Response
+// @Router /departments/tree [get]
+func getDeptTree(core *core.Core) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var depts []models.Department
+		// 应用数据权限过滤
+		db := core.DB.GetDB().Model(&models.Department{})
+		db = middleware.ApplyDataScopeFromContext(c, db, core, "id")
+
+		if err := db.Where("status = ?", models.DeptStatusNormal).
+			Order("order_num ASC").Find(&depts).Error; err != nil {
+			response.Error(c, response.ErrServerError, "查询部门列表失败")
+			return
+		}
+
+		// 构建树形结构
+		deptTree := buildDeptTree(depts, nil)
+
+		response.Success(c, gin.H{
+			"list": deptTree,
+		})
+	}
+}
+
 // getDeptTreeSelect 获取部门树选择器
 // @Summary 获取部门树选择器
 // @Description 获取所有正常状态的部门树，用于部门选择器组件

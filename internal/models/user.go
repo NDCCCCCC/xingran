@@ -11,6 +11,7 @@ type User struct {
 	Password      string     `gorm:"size:128;not null" json:"-"`
 	Salt          string     `gorm:"size:64;not null" json:"-"`
 	Nickname      *string    `gorm:"size:64" json:"nickname,omitempty"`
+	EmployeeNo    *string    `gorm:"size:64" json:"employeeNo,omitempty"` // 工号（企业微信代码）
 	Email         *string    `gorm:"size:128" json:"email,omitempty"`
 	Phone         *string    `gorm:"size:32" json:"phone,omitempty"`
 	Avatar        *string    `gorm:"size:255" json:"avatar,omitempty"`

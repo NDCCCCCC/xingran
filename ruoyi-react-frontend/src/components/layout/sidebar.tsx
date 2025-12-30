@@ -18,6 +18,9 @@ import {
   AppstoreOutlined,
   HomeOutlined,
   LaptopOutlined,
+  CloudOutlined,
+  KeyOutlined,
+  ApartmentOutlined,
   CodeOutlined,
   BugOutlined,
   SafetyOutlined,
@@ -130,6 +133,9 @@ const iconMap: Record<string, React.ReactNode> = {
   home: <HomeOutlined />,
   system: <SettingOutlined />,
   idcard: <IdcardOutlined />,
+  cloud: <CloudOutlined />,
+  key: <KeyOutlined />,
+  apartment: <ApartmentOutlined />,
   edit: <EditOutlined />,
   delete: <DeleteOutlined />,
   search: <SearchOutlined />,
@@ -201,9 +207,13 @@ const fullIconNameMap: Record<string, string> = {
   'SettingFilled': 'setting',
   'IdcardOutlined': 'idcard',
 
+  // 网络设备管理相关图标
+  'CloudOutlined': 'cloud',
+  'KeyOutlined': 'key',
+  'ApartmentOutlined': 'apartment',
+
   // 复合词图标 - 需要特殊映射
   'CloudServerOutlined': 'server',
-  'ApartmentOutlined': 'users',
   'DesktopOutlined': 'laptop',
   'BookOutlined': 'file',
 };
@@ -395,7 +405,7 @@ const Sidebar: React.FC = () => {
             collapsed ? 'hidden' : 'block'
           }`}
         >
-          RuoYi Next
+          产险湖北数智化平台
         </h1>
         {collapsed && (
           <span className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">R</span>

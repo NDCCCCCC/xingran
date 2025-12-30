@@ -9,6 +9,8 @@ import (
 func SetupDeptRouter(r *gin.RouterGroup, core *core.Core) {
 	// 查询部门列表
 	r.POST("/list", listDepts(core))
+	// 获取部门树
+	r.GET("/tree", getDeptTree(core))
 	// 创建部门
 	r.POST("", createDept(core))
 	// 获取部门详情

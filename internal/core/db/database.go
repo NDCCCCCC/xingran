@@ -203,6 +203,15 @@ func (d *Database) AutoMigrate() error {
 		&models.DevicePortStatus{},
 		&models.DeviceDiscovery{},
 		&models.DeviceEnrichmentTask{},
+		// 通知公告相关模型（增强版）
+		&models.Notice{},
+		&models.NoticeTarget{},
+		&models.NoticeRead{},
+		&models.NoticeAttachment{},
+		&models.NotificationChannel{},
+		// 通知配置相关模型
+		&models.EmailConfig{},
+		&models.APINotificationConfig{},
 	); err != nil {
 		return err
 	}

@@ -11,26 +11,26 @@ import (
 // JWTAuth JWT认证中间件
 func JWTAuth(jwtManager *security.JWTManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 获取Authorization头
+		var token string
+
+		// 首先尝试从 Authorization 头获取
 		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			response.Error(c, response.ErrUnauthorized, "缺少认证令牌")
-			c.Abort()
-			return
+		if authHeader != "" {
+			// 检查Bearer前缀
+			const bearerPrefix = "Bearer "
+			if !strings.HasPrefix(authHeader, bearerPrefix) {
+				response.Error(c, response.ErrUnauthorized, "认证令牌格式错误")
+				c.Abort()
+				return
+			}
+			token = authHeader[len(bearerPrefix):]
+		} else {
+			// WebSocket 连接可能通过 query 参数传递 token
+			token = c.Query("token")
 		}
 
-		// 检查Bearer前缀
-		const bearerPrefix = "Bearer "
-		if !strings.HasPrefix(authHeader, bearerPrefix) {
-			response.Error(c, response.ErrUnauthorized, "认证令牌格式错误")
-			c.Abort()
-			return
-		}
-
-		// 提取令牌
-		token := authHeader[len(bearerPrefix):]
 		if token == "" {
-			response.Error(c, response.ErrUnauthorized, "认证令牌不能为空")
+			response.Error(c, response.ErrUnauthorized, "缺少认证令牌")
 			c.Abort()
 			return
 		}

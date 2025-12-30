@@ -13,6 +13,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/scheduler"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/websocket"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/permission"
 	"gorm.io/gorm"
@@ -35,6 +36,7 @@ type Core struct {
 	DeviceEnrichmentService *services.DeviceEnrichmentService // 设备信息补充服务
 	NetworkDeviceService    *services.NetworkDeviceService    // 网络设备服务
 	DeviceMonitorService    *services.DeviceMonitorService    // 设备监控服务
+	NoticeHub               *websocket.NoticeHub     // WebSocket通知中心
 }
 
 // GetDB 获取数据库连接
@@ -167,9 +169,20 @@ func (c *Core) Init() error {
 		log.Printf("警告：启动调度器失败: %v", err)
 	} else {
 		log.Println("定时任务调度器启动成功")
+
+		// 设置全局调度器引用（供定时任务使用）
+		scheduler.SetGlobalScheduler(c.Scheduler)
+
 		// 注册网络设备相关定时任务
 		scheduler.RegisterNetworkDeviceTasks(c.Scheduler, c.GetDB())
 		log.Println("网络设备定时任务注册完成")
+
+		// 注册通知相关定时任务
+		scheduler.RegisterNoticeTasks(c.Scheduler)
+		log.Println("通知定时任务注册完成")
+
+		// 设置全局数据库访问器，供定时任务使用
+		scheduler.SetDB(c)
 	}
 
 	// 12. 初始化设备监控服务
@@ -186,6 +199,11 @@ func (c *Core) Init() error {
 // Close 关闭核心模块
 // 优雅关闭所有核心服务，释放资源
 func (c *Core) Close() {
+	// 停止通知中心
+	if c.NoticeHub != nil {
+		c.NoticeHub.Stop()
+		log.Println("通知中心已停止")
+	}
 	// 停止设备信息补充服务
 	if c.DeviceEnrichmentService != nil {
 		c.DeviceEnrichmentService.Stop()

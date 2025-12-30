@@ -19,6 +19,21 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
+// 时区常量
+const (
+	// DefaultTimeZone 默认时区：东八区（中国标准时间）
+	DefaultTimeZone = "Asia/Shanghai"
+)
+
+func init() {
+	// 设置全局时区
+	tz, err := time.LoadLocation(DefaultTimeZone)
+	if err != nil {
+		panic(fmt.Sprintf("加载时区失败: %v", err))
+	}
+	time.Local = tz
+}
+
 // @title RuoYi Next API
 // @version 1.0
 // @description 企业级权限管理系统 API

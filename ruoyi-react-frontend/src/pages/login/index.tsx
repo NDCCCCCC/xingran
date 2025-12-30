@@ -88,7 +88,7 @@ const Login: React.FC = () => {
         </Form>
 
         <div className="text-center text-sm text-gray-500">
-          <p>默认账号：admin / admin123</p>
+          {/* <p>默认账号：admin / admin123</p> */}
         </div>
       </Card>
     </div>

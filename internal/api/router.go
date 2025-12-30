@@ -1,17 +1,42 @@
 package api
 
 import (
+	"log"
+
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/scheduler"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/websocket"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/permission"
 )
+
+// noticeHubAdapter 适配器，将 websocket.NoticeHub 适配为 scheduler.NoticeHub
+type noticeHubAdapter struct {
+	hub *websocket.NoticeHub
+}
+
+func (a *noticeHubAdapter) BroadcastToUsers(userIDs []string, message interface{}) {
+	if msg, ok := message.(websocket.NoticeMessage); ok {
+		a.hub.BroadcastToUsers(userIDs, msg)
+	}
+}
 
 // SetupRouter 设置路由
 func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 	// 添加请求ID中间件
 	r.Use(middleware.RequestID())
+
+	// 创建并启动通知中心
+	noticeHub := websocket.NewNoticeHub()
+	go noticeHub.Run()
+	log.Println("通知中心已启动")
+	// 将 NoticeHub 设置到 Core 中，供其他服务使用
+	core.NoticeHub = noticeHub
+	// 将 NoticeHub 设置到调度器全局变量，供通知发布定时任务使用
+	// 使用适配器将 websocket.NoticeHub 转换为 scheduler.NoticeHub
+	scheduler.SetNoticeHub(&noticeHubAdapter{hub: noticeHub})
 
 	// 系统管理模块
 	system := r.Group("/system")
@@ -29,6 +54,27 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			// 用户菜单和权限接口（所有已登录用户都可访问，不需要特定权限）
 			// user-menus 和 user-permissions 放在权限检查之前
 			v1.SetupUserMenuRouter(authorized, core)
+
+			// 个人信息相关接口（所有已登录用户可访问）
+			profile := authorized.Group("/profile")
+			{
+				v1.SetupProfileRouter(profile, core)
+			}
+
+			// 系统设置相关接口（所有已登录用户可访问）
+			settings := authorized.Group("/settings")
+			{
+				v1.SetupSettingsRouter(settings, core)
+			}
+
+			// 通知配置管理（需要系统配置权限）
+			notificationConfigs := authorized.Group("/settings")
+			notificationConfigs.Use(middleware.RequirePermissions([]string{
+				string(permission.SystemConfig),
+			}, core))
+			{
+				v1.SetupNotificationConfigRouter(notificationConfigs, core)
+			}
 
 			// 用户管理
 			users := authorized.Group("/users")
@@ -140,6 +186,16 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			}, core))
 			{
 				v1.SetupNoticeRouter(notices, core)
+			}
+
+			// 用户端通知（所有已登录用户可访问，不需要特定权限）
+			v1.SetupNoticeUserRouter(authorized, core)
+
+			// WebSocket路由（需要认证，但不需要权限验证）
+			wsGroup := authorized.Group("/ws")
+			wsGroup.Use(middleware.CORSForWebSocket())
+			{
+				v1.SetupNoticeWebSocketRouter(wsGroup, noticeHub, core)
 			}
 		}
 	}

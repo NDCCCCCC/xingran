@@ -1,7 +1,7 @@
 import React from 'react';
 import { Layout as AntLayout } from 'antd';
 import Header from './header';
-import Sidebar from './sidebar';
+import Sidebar from './Sidebar';
 import Breadcrumb from './breadcrumb';
 
 const { Content } = AntLayout;

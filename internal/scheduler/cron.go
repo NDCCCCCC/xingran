@@ -10,6 +10,7 @@ import (
 	"github.com/robfig/cron/v3"
 	"gorm.io/gorm"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/websocket"
 )
 
 // JobTask 任务执行接口
@@ -78,16 +79,33 @@ func (e *JobExecutor) executeTask(ctx context.Context, jobLog *models.JobLog) er
 		return fmt.Errorf("调度器引用为空")
 	}
 
-	taskHandler := e.scheduler.GetTaskHandler(e.job.InvokeTarget)
+	// 解析 InvokeTarget，格式可能为 "task_type" 或 "task_type:param"
+	taskType, params := e.parseInvokeTarget(e.job.InvokeTarget)
+
+	taskHandler := e.scheduler.GetTaskHandler(taskType)
 	if taskHandler == nil {
-		return fmt.Errorf("未找到任务处理器: %s", e.job.InvokeTarget)
+		return fmt.Errorf("未找到任务处理器: %s", taskType)
 	}
 
 	e.logger.Infof("执行任务: %s, 目标: %s", e.job.JobName, e.job.InvokeTarget)
 
 	// 调用注册的任务处理函数
-	// 任务处理函数接收 context 和 params，这里传入空参数
-	return taskHandler(ctx, nil)
+	return taskHandler(ctx, params)
+}
+
+// parseInvokeTarget 解析 InvokeTarget，返回任务类型和参数
+// 格式：task_type 或 task_type:param1,param2=value,...
+func (e *JobExecutor) parseInvokeTarget(invokeTarget string) (string, map[string]interface{}) {
+	// 简单处理：如果包含冒号，则分割
+	for i, c := range invokeTarget {
+		if c == ':' {
+			taskType := invokeTarget[:i]
+			param := invokeTarget[i+1:]
+			return taskType, map[string]interface{}{"noticeId": param}
+		}
+	}
+	// 没有冒号，返回原始值
+	return invokeTarget, nil
 }
 
 // calculateNextRunTime 计算下次执行时间
@@ -233,13 +251,19 @@ func (s *Scheduler) AddJob(job *models.Job) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	// 先保存到数据库以获取 ID
+	if err := s.db.Create(job).Error; err != nil {
+		return fmt.Errorf("保存任务到数据库失败: %w", err)
+	}
+
 	if s.running {
 		// 调度器运行中，直接添加
 		return s.addJob(job)
 	}
 
-	// 调度器未运行，只保存到内存
+	// 调度器未运行，只保存到数据库和内存
 	s.jobs[job.ID] = job
+	s.logger.Infof("任务已保存到数据库，等待调度器启动 [%s]", job.JobName)
 	return nil
 }
 
@@ -284,9 +308,14 @@ func (s *Scheduler) UpdateJob(job *models.Job) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// 先移除旧任务
+	// 先移除旧任务（从调度器和数据库）
 	if err := s.removeJob(job.ID); err != nil {
 		return err
+	}
+
+	// 更新数据库记录
+	if err := s.db.Save(job).Error; err != nil {
+		return fmt.Errorf("更新任务到数据库失败: %w", err)
 	}
 
 	// 添加新任务
@@ -307,12 +336,18 @@ func (s *Scheduler) RemoveJob(jobID string) error {
 
 // removeJob 内部移除任务方法
 func (s *Scheduler) removeJob(jobID string) error {
+	// 从调度器中移除
 	if cronID, exists := s.executors[jobID]; exists {
 		s.cron.Remove(cronID)
 		delete(s.executors, jobID)
 	}
 
+	// 从内存中移除
 	delete(s.jobs, jobID)
+
+	// 从数据库中删除
+	s.db.Delete(&models.Job{}, "id = ?", jobID)
+
 	s.logger.Infof("任务已从调度器移除 [%s]", jobID)
 	return nil
 }
@@ -396,6 +431,170 @@ func (s *Scheduler) GetJobCount() (total int, running int) {
 
 // ==================== 网络设备定时任务注册函数 ====================
 // 这些函数需要在Core初始化时注册到Scheduler
+
+// NoticeHub 通知中心接口
+// 定义为函数类型以避免循环依赖
+type NoticeHub interface {
+	BroadcastToUsers(userIDs []string, message interface{})
+}
+
+// GlobalNoticeHub 全局通知中心
+// 在Core初始化时设置
+var GlobalNoticeHub NoticeHub
+
+// SetNoticeHub 设置通知中心
+func SetNoticeHub(hub NoticeHub) {
+	GlobalNoticeHub = hub
+}
+
+// DBGetter 数据库获取接口
+type DBGetter interface {
+	GetDB() *gorm.DB
+}
+
+// GlobalDB 全局数据库访问器
+var GlobalDB DBGetter
+
+// SetDB 设置数据库访问器
+func SetDB(db DBGetter) {
+	GlobalDB = db
+}
+
+// GlobalScheduler 全局调度器引用
+// 在Core初始化时设置，用于任务执行函数中访问调度器
+var GlobalScheduler *Scheduler
+
+// SetGlobalScheduler 设置全局调度器
+func SetGlobalScheduler(scheduler *Scheduler) {
+	GlobalScheduler = scheduler
+}
+
+// ==================== 通知定时任务注册函数 ====================
+
+// RegisterNoticeTasks 注册通知相关定时任务
+func RegisterNoticeTasks(scheduler *Scheduler) {
+	// 通知发布任务 - 在指定时间发布通知
+	scheduler.RegisterTask("notice_publish", func(ctx context.Context, params map[string]interface{}) error {
+		return executeNoticePublishTask(ctx, params)
+	})
+}
+
+// executeNoticePublishTask 执行通知发布任务
+func executeNoticePublishTask(ctx context.Context, params map[string]interface{}) error {
+	if GlobalDB == nil {
+		return fmt.Errorf("数据库未初始化")
+	}
+
+	// 从参数中获取通知ID
+	noticeID, ok := params["noticeId"].(string)
+	if !ok || noticeID == "" {
+		return fmt.Errorf("通知ID参数无效")
+	}
+
+	db := GlobalDB.GetDB()
+
+	// 查询通知和对应的 Job 信息
+	var notice struct {
+		ID            string
+		NoticeTitle   string
+		Priority      int
+		PublishStatus int
+		TargetType    int
+	}
+	var job models.Job
+
+	if err := db.Table("sys_notice").
+		Select("id, notice_title, priority, publish_status, target_type").
+		Where("id = ? AND publish_status = ?", noticeID, 2). // PublishStatusScheduled = 2
+		First(&notice).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			log.Printf("通知不存在或已发布: %s", noticeID)
+			return nil // 不是错误，任务已被处理
+		}
+		return fmt.Errorf("查询通知失败: %w", err)
+	}
+
+	// 查询对应的 Job
+	jobName := getNoticeJobName(noticeID)
+	if err := db.Where("job_name = ?", jobName).First(&job).Error; err != nil {
+		log.Printf("警告：未找到对应任务 [%s]", jobName)
+	} else {
+		// 如果是一次性任务（ExecuteOnce），执行后删除
+		if job.MisfirePolicy == models.MisfirePolicyExecuteOnce {
+			log.Printf("检测到一次性任务，执行完成后将删除: %s", jobName)
+		}
+	}
+
+	// 更新发布状态为已发布
+	if err := db.Table("sys_notice").
+		Where("id = ?", noticeID).
+		Update("publish_status", 1).Error; err != nil { // PublishStatusPublished = 1
+		return fmt.Errorf("更新发布状态失败: %w", err)
+	}
+
+	// 【关键】一次性任务执行后删除，周期性任务保留
+	if job.MisfirePolicy == models.MisfirePolicyExecuteOnce {
+		if GlobalScheduler != nil {
+			if err := GlobalScheduler.RemoveJob(job.ID); err != nil {
+				log.Printf("删除一次性任务失败: %v", err)
+			} else {
+				log.Printf("一次性任务已自动删除: %s", jobName)
+			}
+		}
+	} else if job.ID != "" {
+		log.Printf("周期性任务继续执行: %s", jobName)
+	}
+
+	// 通过 WebSocket 推送给目标用户
+	if GlobalNoticeHub != nil {
+		// 获取目标用户ID列表
+		targetUserIDs, err := getTargetUserIDs(db, noticeID, notice.TargetType)
+		if err != nil {
+			log.Printf("获取目标用户失败: %v", err)
+			// 继续执行，不中断流程
+		} else if len(targetUserIDs) > 0 {
+			message := websocket.NoticeMessage{
+				Type:      "new_notice",
+				NoticeID:  noticeID,
+				Title:     notice.NoticeTitle,
+				Priority:  notice.Priority,
+				Timestamp: time.Now().Unix(),
+			}
+			GlobalNoticeHub.BroadcastToUsers(targetUserIDs, message)
+			log.Printf("通知已发布并推送给 %d 个用户: %s", len(targetUserIDs), notice.NoticeTitle)
+		}
+	}
+
+	log.Printf("通知发布成功: %s", notice.NoticeTitle)
+	return nil
+}
+
+// getTargetUserIDs 获取通知的目标用户ID列表
+func getTargetUserIDs(db *gorm.DB, noticeID string, targetType int) ([]string, error) {
+	var userIDs []string
+
+	// 如果是全部用户，需要从用户表获取所有用户ID
+	if targetType == 0 {
+		if err := db.Table("sys_user").Where("del_flag = 0").Pluck("id", &userIDs).Error; err != nil {
+			return nil, fmt.Errorf("查询用户列表失败: %w", err)
+		}
+		return userIDs, nil
+	}
+
+	// 否则从通知目标表查询
+	if err := db.Table("sys_notice_target").
+		Where("notice_id = ?", noticeID).
+		Pluck("target_id", &userIDs).Error; err != nil {
+		return nil, fmt.Errorf("查询目标用户失败: %w", err)
+	}
+
+	return userIDs, nil
+}
+
+// getNoticeJobName 获取通知定时任务的名称
+func getNoticeJobName(noticeID string) string {
+	return fmt.Sprintf("notice_publish_%s", noticeID)
+}
 
 // DeviceMonitorService 设备监控服务接口
 // 使用接口避免循环依赖

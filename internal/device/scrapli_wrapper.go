@@ -164,6 +164,13 @@ func NewScrapliWrapperWithPort(device *models.NetworkDevice, username, password 
 
 // Open 打开设备连接
 func (w *ScrapliWrapper) Open() error {
+	// 捕获 scrapligo 库可能的 panic
+	defer func() {
+		if r := recover(); r != nil {
+			w.closed = true
+		}
+	}()
+
 	if err := w.driver.Open(); err != nil {
 		return fmt.Errorf("连接设备失败 [%s]: %w", w.device.IPAddress, err)
 	}
@@ -180,6 +187,13 @@ func (w *ScrapliWrapper) OpenContext(ctx context.Context) error {
 
 	// 在 goroutine 中执行连接
 	go func() {
+		// 捕获 panic
+		defer func() {
+			if r := recover(); r != nil {
+				resultCh <- result{err: fmt.Errorf("连接 panic: %v", r)}
+			}
+		}()
+
 		err := w.driver.Open()
 		resultCh <- result{err: err}
 	}()
@@ -205,7 +219,17 @@ func (w *ScrapliWrapper) Close() error {
 	}
 
 	w.closed = true
-	close(w.closing) // 通知所有等待的 goroutine
+
+	// 先通知所有等待的 goroutine（不关闭 closing channel，以防双重 close）
+	select {
+	case <-w.closing:
+	default:
+		close(w.closing)
+	}
+
+	// 短暂等待，让 scrapligo 内部的 goroutine 有机会退出
+	// 这些 goroutine 可能在 GetPrompt 等方法中被 spawn
+	time.Sleep(50 * time.Millisecond)
 
 	if w.driver != nil {
 		return w.driver.Close()
@@ -229,6 +253,14 @@ func (w *ScrapliWrapper) SendCommand(command string, stripPrompt bool) (*Respons
 	if w.driver == nil {
 		return nil, fmt.Errorf("设备未连接")
 	}
+
+	// 捕获 scrapligo 库可能的 panic
+	defer func() {
+		if r := recover(); r != nil {
+			// panic 被捕获，连接可能已损坏
+			w.closed = true
+		}
+	}()
 
 	r, err := w.driver.SendCommand(command)
 	if err != nil {
@@ -287,6 +319,13 @@ func (w *ScrapliWrapper) SendConfig(config string) (*Response, error) {
 	if w.driver == nil {
 		return nil, fmt.Errorf("设备未连接")
 	}
+
+	// 捕获 scrapligo 库可能的 panic
+	defer func() {
+		if r := recover(); r != nil {
+			w.closed = true
+		}
+	}()
 
 	r, err := w.driver.SendConfig(config)
 	if err != nil {
@@ -366,11 +405,30 @@ func (w *ScrapliWrapper) GetConfig() (string, error) {
 
 // GetResponse 获取命令响应
 func (w *ScrapliWrapper) GetResponse() string {
-	if w.driver != nil && !w.closed {
-		prompt, _ := w.driver.GetPrompt()
-		return prompt
+	// 检查连接是否有效
+	if w.driver == nil || w.closed {
+		return ""
 	}
-	return ""
+
+	// 检查是否已连接
+	if !w.IsConnected() {
+		return ""
+	}
+
+	// 使用 recover 捕获 scrapligo 库可能的内部 panic
+	defer func() {
+		if r := recover(); r != nil {
+			// panic 被捕获，记录日志但不让程序崩溃
+			// 连接状态不好时，GetPrompt 内部的 goroutine 可能触发 nil pointer
+		}
+	}()
+
+	// 安全地获取 prompt，忽略错误（GetPrompt 可能在连接状态不好时失败）
+	prompt, err := w.driver.GetPrompt()
+	if err != nil {
+		return ""
+	}
+	return prompt
 }
 
 // Response 命令响应

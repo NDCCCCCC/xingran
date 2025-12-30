@@ -20,6 +20,7 @@ export interface User {
   id: string;
   username: string;
   nickname?: string;
+  employeeNo?: string; // 工号（企业微信代码）
   email?: string;
   phone?: string;
   avatar?: string;
@@ -455,4 +456,37 @@ export interface DeviceDiscovery {
   errorMessage?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+// ==================== 个人信息相关类型 ====================
+
+// 用户详细信息
+export interface UserProfile extends User {
+  remark?: string;
+  pwdUpdateTime?: string;
+}
+
+// 个人信息更新请求
+export interface UpdateProfileRequest {
+  nickname?: string;
+  email?: string;
+  phone?: string;
+  gender: 0 | 1 | 2;
+  remark?: string;
+}
+
+// 修改密码请求
+export interface ChangePasswordRequest {
+  oldPassword: string;
+  newPassword: string;
+}
+
+// ==================== 系统设置相关类型 ====================
+
+// 用户个人设置
+export interface UserPreferences {
+  theme: 'light' | 'dark';
+  language: 'zh-CN' | 'en-US';
+  pageSize: number;
+  sidebarCollapsed: boolean;
 }

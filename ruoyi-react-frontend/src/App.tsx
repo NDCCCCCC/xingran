@@ -17,6 +17,9 @@ import DictManagement from '@/pages/system/dict';
 import ConfigManagement from '@/pages/system/config';
 import NoticeManagement from '@/pages/system/notice';
 import WorkstationManagement from '@/pages/system/workstation';
+// 系统设置页面
+import { EmailConfigPage, APIConfigPage } from '@/pages/system/settings';
+import SystemSettingsPage from '@/pages/system/settings-page';
 // 系统监控页面
 import MonitorDashboard from '@/pages/monitor/dashboard';
 import ServerMonitor from '@/pages/monitor/server';
@@ -33,6 +36,15 @@ import ConfigBackupPage from '@/pages/network/backups';
 import DeviceDiscoveryPage from '@/pages/network/discoveries';
 import MACAddressPage from '@/pages/network/mac';
 import PortStatusPage from '@/pages/network/ports';
+// 个人中心和系统设置页面
+import ProfilePage from '@/pages/profile';
+import SettingsPage from '@/pages/settings';
+// 用户通知中心页面
+import MyNoticesPage from '@/pages/my-notices';
+import NoticeDetailPage from '@/pages/my-notices/detail';
+// 管理端通知页面
+import SystemNoticesPage from '@/pages/system/notice';
+import AdminNoticeDetailPage from '@/pages/system/notice/detail';
 import './App.css';
 
 // 创建React Query客户端
@@ -99,6 +111,14 @@ function App() {
                       <Route path="/" element={<Navigate to="/dashboard" replace />} />
                       <Route path="/dashboard" element={<Dashboard />} />
 
+                      {/* 个人中心和系统设置路由 */}
+                      <Route path="/profile" element={<ProfilePage />} />
+                      <Route path="/settings" element={<SettingsPage />} />
+
+                      {/* 用户通知中心路由 */}
+                      <Route path="/my-notices" element={<MyNoticesPage />} />
+                      <Route path="/my-notices/:id" element={<NoticeDetailPage />} />
+
                       {/* 系统管理路由 */}
                       <Route path="/system" element={<Navigate to="/system/user" replace />} />
                       <Route path="/system/user" element={<UserManagement />} />
@@ -109,7 +129,12 @@ function App() {
                       <Route path="/system/dict" element={<DictManagement />} />
                       <Route path="/system/config" element={<ConfigManagement />} />
                       <Route path="/system/notice" element={<NoticeManagement />} />
+                      <Route path="/system/notice/:id" element={<AdminNoticeDetailPage />} />
                       <Route path="/system/workstation" element={<WorkstationManagement />} />
+                      <Route path="/system/settings-page" element={<SystemSettingsPage />} />
+                      {/* 系统设置路由 */}
+                      <Route path="/system/settings/email-config" element={<EmailConfigPage />} />
+                      <Route path="/system/settings/api-config" element={<APIConfigPage />} />
 
                       {/* 系统监控路由 */}
                       <Route path="/monitor" element={<Navigate to="/monitor/dashboard" replace />} />

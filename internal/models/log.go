@@ -86,10 +86,24 @@ type JobLog struct {
 // Notice 通知公告模型
 type Notice struct {
 	BaseModel
-	NoticeTitle   string `gorm:"size:50;not null" json:"noticeTitle"`
-	NoticeType    string `gorm:"default:'1';size:1" json:"noticeType"`
-	NoticeContent *string `gorm:"type:text" json:"noticeContent,omitempty"`
-	Status        int    `gorm:"default:0" json:"status"`
+	NoticeTitle   string        `gorm:"size:100;not null" json:"noticeTitle"`
+	NoticeType    string        `gorm:"default:'1';size:1" json:"noticeType"`           // 1=公告 2=警告
+	NoticeContent string        `gorm:"type:text;not null" json:"noticeContent"`          // 通知内容
+	Status        int           `gorm:"default:0" json:"status"`                         // 0=正常 1=关闭
+
+	// 新增字段
+	Priority      NoticePriority `gorm:"default:0" json:"priority"`                       // 优先级: 0=普通 1=重要 2=紧急
+	PublishTime   *time.Time     `json:"publishTime,omitempty"`                          // 定时发布时间
+	PublishStatus PublishStatus  `gorm:"default:0" json:"publishStatus"`                  // 发布状态: 0=草稿 1=已发布 2=定时发布中 3=已撤回
+	TargetType    TargetType     `gorm:"default:0" json:"targetType"`                     // 目标类型: 0=全部 1=部门 2=角色 3=用户
+	CreatedByName string         `gorm:"size:64" json:"createdByName"`                    // 创建人姓名
+	IsMarkdown    bool           `gorm:"default:false" json:"isMarkdown"`                // 是否为Markdown格式
+
+	// 关联
+	Targets       []NoticeTarget      `gorm:"foreignKey:NoticeID" json:"targets,omitempty"`
+	Reads         []NoticeRead       `gorm:"foreignKey:NoticeID" json:"reads,omitempty"`
+	Attachments   []NoticeAttachment  `gorm:"foreignKey:NoticeID" json:"attachments,omitempty"`
+	Channels      []NotificationChannel `gorm:"foreignKey:NoticeID" json:"channels,omitempty"`
 }
 
 // GenTable 代码生成表信息模型

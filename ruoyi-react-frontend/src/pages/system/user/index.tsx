@@ -366,6 +366,12 @@ const UserManagement: React.FC = () => {
       key: 'nickname',
     },
     {
+      title: '工号',
+      dataIndex: 'employeeNo',
+      key: 'employeeNo',
+      render: (text) => text || '-',
+    },
+    {
       title: '邮箱',
       dataIndex: 'email',
       key: 'email',
@@ -624,6 +630,9 @@ const UserManagement: React.FC = () => {
             rules={[{ required: true, message: '请输入昵称' }]}
           >
             <Input />
+          </Form.Item>
+          <Form.Item name="employeeNo" label="工号（企业微信代码）">
+            <Input placeholder="请输入工号" />
           </Form.Item>
           <Form.Item name="email" label="邮箱">
             <Input />
