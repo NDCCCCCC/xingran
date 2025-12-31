@@ -45,6 +45,12 @@ type Cache interface {
 	HGetAll(ctx context.Context, key string) (map[string]string, error)
 	HDel(ctx context.Context, key string, fields ...string) error
 	HKeys(ctx context.Context, key string) ([]string, error)
+
+	// 类型扩展方法（用于验证码服务）
+	SetInt(ctx context.Context, key string, value int, expiration time.Duration) error
+	GetInt(ctx context.Context, key string) (int, error)
+	SetJSON(ctx context.Context, key string, value interface{}, expiration time.Duration) error
+	GetJSON(ctx context.Context, key string, dest interface{}) error
 }
 
 // CacheStrategy 缓存策略

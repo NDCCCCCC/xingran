@@ -12,6 +12,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gosnmp/gosnmp v1.35.0
 	github.com/lib/pq v1.10.9
+	github.com/mojocn/base64Captcha v1.3.6
 	github.com/redis/go-redis/v9 v9.7.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/scrapli/scrapligo v1.3.3
@@ -28,7 +29,11 @@ require (
 	modernc.org/sqlite v1.40.1
 )
 
-require github.com/gorilla/websocket v1.5.3 // indirect
+require (
+	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
+	github.com/gorilla/websocket v1.5.3
+	golang.org/x/image v0.13.0 // indirect
+)
 
 require (
 	github.com/KyleBanks/depth v1.2.1 // indirect

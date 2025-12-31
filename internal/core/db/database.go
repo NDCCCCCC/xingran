@@ -208,10 +208,12 @@ func (d *Database) AutoMigrate() error {
 		&models.NoticeTarget{},
 		&models.NoticeRead{},
 		&models.NoticeAttachment{},
-		&models.NotificationChannel{},
+		// NotificationChannel 已通过 SQL 迁移创建，不需要 AutoMigrate
 		// 通知配置相关模型
 		&models.EmailConfig{},
 		&models.APINotificationConfig{},
+		// 验证码背景图相关模型
+		&models.CaptchaBackground{},
 	); err != nil {
 		return err
 	}
@@ -426,6 +428,13 @@ func initData(db *gorm.DB) error {
 	if err := createNetworkDeviceScheduledJobs(db); err != nil {
 		return fmt.Errorf("创建网络设备定时任务失败: %w", err)
 	}
+
+	// 创建验证码背景图系统参数
+	if err := createCaptchaBackgroundSystemParams(db); err != nil {
+		return fmt.Errorf("创建验证码背景图系统参数失败: %w", err)
+	}
+
+	// 注意：验证码背景图菜单不再自动创建，请在系统管理中手动添加
 
 	log.Println("基础数据初始化完成")
 	return nil
@@ -859,4 +868,196 @@ func createNetworkDeviceScheduledJobs(db *gorm.DB) error {
 
 	log.Println("网络设备定时任务创建完成")
 	return nil
+}
+
+// createCaptchaBackgroundSystemParams 创建验证码背景图系统参数
+func createCaptchaBackgroundSystemParams(db *gorm.DB) error {
+	params := []models.Config{
+		{
+			ConfigName:  "验证码背景图模式",
+			ConfigKey:   "sys.account.captchaBackgroundMode",
+			ConfigValue: "mixed",
+			ConfigType:  models.ConfigTypeYes,
+			IsSystem:    models.ConfigIsSystemYes,
+			Remark:      "背景图模式: auto=自动生成 custom=仅自定义图片 mixed=混合模式",
+		},
+		{
+			ConfigName:  "验证码默认拼图形状",
+			ConfigKey:   "sys.account.captchaPieceShape",
+			ConfigValue: "circle",
+			ConfigType:  models.ConfigTypeYes,
+			IsSystem:    models.ConfigIsSystemYes,
+			Remark:      "默认拼图形状: circle=圆形 square=方形 star=星形 heart=心形",
+		},
+		{
+			ConfigName:  "验证码默认难度",
+			ConfigKey:   "sys.account.captchaDifficulty",
+			ConfigValue: "1",
+			ConfigType:  models.ConfigTypeYes,
+			IsSystem:    models.ConfigIsSystemYes,
+			Remark:      "难度级别: 1=简单 2=中等 3=困难",
+		},
+		{
+			ConfigName:  "验证码缓存池大小",
+			ConfigKey:   "sys.account.captchaCachePoolSize",
+			ConfigValue: "50",
+			ConfigType:  models.ConfigTypeYes,
+			IsSystem:    models.ConfigIsSystemYes,
+			Remark:      "每种形状和难度预生成的验证码数量",
+		},
+		{
+			ConfigName:  "验证码图片存储路径",
+			ConfigKey:   "sys.account.captchaStoragePath",
+			ConfigValue: "./uploads/captcha/backgrounds",
+			ConfigType:  models.ConfigTypeYes,
+			IsSystem:    models.ConfigIsSystemYes,
+			Remark:      "背景图存储路径",
+		},
+		{
+			ConfigName:  "验证码图片最大大小",
+			ConfigKey:   "sys.account.captchaMaxFileSize",
+			ConfigValue: "2097152",
+			ConfigType:  models.ConfigTypeYes,
+			IsSystem:    models.ConfigIsSystemYes,
+			Remark:      "单张图片最大大小(字节)，默认2MB",
+		},
+		{
+			ConfigName:  "验证码允许的图片格式",
+			ConfigKey:   "sys.account.captchaAllowedFormats",
+			ConfigValue: "jpg,jpeg,png",
+			ConfigType:  models.ConfigTypeYes,
+			IsSystem:    models.ConfigIsSystemYes,
+			Remark:      "允许的图片格式，逗号分隔",
+		},
+	}
+
+	for _, param := range params {
+		var count int64
+		db.Model(&models.Config{}).Where("config_key = ?", param.ConfigKey).Count(&count)
+		if count > 0 {
+			log.Printf("系统参数 %s 已存在，跳过创建", param.ConfigName)
+			continue
+		}
+
+		if err := db.Create(&param).Error; err != nil {
+			return fmt.Errorf("创建系统参数 %s 失败: %w", param.ConfigName, err)
+		}
+		log.Printf("创建系统参数 %s 成功", param.ConfigName)
+	}
+
+	log.Println("验证码背景图系统参数创建完成")
+	return nil
+}
+
+// createCaptchaBackgroundMenus 创建验证码背景图管理菜单
+func createCaptchaBackgroundMenus(db *gorm.DB) error {
+	// 先查找系统管理菜单的ID
+	var systemMenu models.Menu
+	if err := db.Where("menu_name = ? AND menu_type = ?", "系统管理", "M").First(&systemMenu).Error; err != nil {
+		log.Printf("未找到系统管理菜单，跳过创建验证码背景图子菜单: %v", err)
+		return nil
+	}
+
+	// 检查验证码背景图菜单是否已存在
+	var existingCount int64
+	db.Model(&models.Menu{}).Where("menu_name = ?", "验证码背景图").Count(&existingCount)
+	if existingCount > 0 {
+		log.Println("验证码背景图菜单已存在，跳过创建")
+		return nil
+	}
+
+	menus := []models.Menu{
+		{
+			MenuName:  "验证码背景图",
+			ParentID:  &systemMenu.ID,
+			OrderNum:  10,
+			Path:      func() *string { s := "captcha-background"; return &s }(),
+			Component: NULL_STRING_PTR(""),
+			MenuType:  models.MenuTypeDir,
+			Visible:   models.VisibleShow,
+			Status:    models.MenuStatusNormal,
+			Perms:     NULL_STRING_PTR(""),
+			Icon:      func() *string { s := "picture"; return &s }(),
+			Remark:    "验证码背景图管理",
+		},
+		{
+			MenuName:  "背景图查询",
+			ParentID:  nil, // 稍后更新
+			OrderNum:  1,
+			Path:      func() *string { s := "background"; return &s }(),
+			Component: func() *string { s := "system/captcha-background/index"; return &s }(),
+			MenuType:  models.MenuTypeMenu,
+			Visible:   models.VisibleShow,
+			Status:    models.MenuStatusNormal,
+			Perms:     func() *string { s := "system:captchaBackground:list"; return &s }(),
+			Icon:      NULL_STRING_PTR(""),
+			Remark:    "验证码背景图查询菜单",
+		},
+		{
+			MenuName:  "背景图新增",
+			ParentID:  nil, // 稍后更新
+			OrderNum:  2,
+			Path:      NULL_STRING_PTR(""),
+			Component: NULL_STRING_PTR(""),
+			MenuType:  models.MenuTypeButton,
+			Visible:   models.VisibleShow,
+			Status:    models.MenuStatusNormal,
+			Perms:     func() *string { s := "system:captchaBackground:add"; return &s }(),
+			Icon:      NULL_STRING_PTR(""),
+			Remark:    "验证码背景图新增按钮",
+		},
+		{
+			MenuName:  "背景图修改",
+			ParentID:  nil, // 稍后更新
+			OrderNum:  3,
+			Path:      NULL_STRING_PTR(""),
+			Component: NULL_STRING_PTR(""),
+			MenuType:  models.MenuTypeButton,
+			Visible:   models.VisibleShow,
+			Status:    models.MenuStatusNormal,
+			Perms:     func() *string { s := "system:captchaBackground:edit"; return &s }(),
+			Icon:      NULL_STRING_PTR(""),
+			Remark:    "验证码背景图修改按钮",
+		},
+		{
+			MenuName:  "背景图删除",
+			ParentID:  nil, // 稍后更新
+			OrderNum:  4,
+			Path:      NULL_STRING_PTR(""),
+			Component: NULL_STRING_PTR(""),
+			MenuType:  models.MenuTypeButton,
+			Visible:   models.VisibleShow,
+			Status:    models.MenuStatusNormal,
+			Perms:     func() *string { s := "system:captchaBackground:remove"; return &s }(),
+			Icon:      NULL_STRING_PTR(""),
+			Remark:    "验证码背景图删除按钮",
+		},
+	}
+
+	// 首先创建目录菜单
+	if err := db.Create(&menus[0]).Error; err != nil {
+		return fmt.Errorf("创建验证码背景图目录菜单失败: %w", err)
+	}
+	log.Printf("创建菜单 %s 成功", menus[0].MenuName)
+
+	// 更新子菜单的ParentID为目录菜单的ID
+	catalogID := menus[0].ID
+	for i := 1; i < len(menus); i++ {
+		menus[i].ParentID = &catalogID
+		if err := db.Create(&menus[i]).Error; err != nil {
+			return fmt.Errorf("创建菜单 %s 失败: %w", menus[i].MenuName, err)
+		}
+		log.Printf("创建菜单 %s 成功", menus[i].MenuName)
+	}
+
+	log.Println("验证码背景图管理菜单创建完成")
+	return nil
+}
+
+// NULL_STRING_PTR 返回字符串指针的辅助函数
+func NULL_STRING_PTR(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
 }

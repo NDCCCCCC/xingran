@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -56,8 +57,8 @@ func SetupAuthRouter(r *gin.RouterGroup, core *core.Core) {
 	// POST /api/v1/system/auth/refresh - 刷新令牌
 	r.POST("/refresh", refreshToken(core))
 
-	// GET /api/v1/system/auth/captcha - 获取验证码
-	r.GET("/captcha", getCaptcha(core))
+	// 设置验证码路由
+	SetupCaptchaRouter(r, core)
 }
 
 // login 用户登录
@@ -75,6 +76,33 @@ func login(core *core.Core) gin.HandlerFunc {
 		var req LoginRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			response.Error(c, response.ErrBadRequest, "请求参数错误")
+			return
+		}
+
+		// 检查验证码（如果启用）
+		// 添加调试日志
+		config := core.CaptchaService.GetConfig()
+		fmt.Printf("[DEBUG] Captcha Enabled: %s (IsEnabled: %v)\n", config.Enabled, core.CaptchaService.IsEnabled())
+
+		if core.CaptchaService.IsEnabled() {
+			// 获取客户端IP
+			clientIP := c.ClientIP()
+
+			// 验证验证码
+			if req.Captcha == "" || req.CaptchaID == "" {
+				response.Error(c, response.ErrCaptchaError, "请输入验证码")
+				return
+			}
+
+			if err := core.CaptchaService.VerifyCaptcha(c.Request.Context(), req.CaptchaID, req.Captcha, clientIP); err != nil {
+				response.Error(c, response.ErrCaptchaError, err.Error())
+				return
+			}
+		}
+
+		// 检查账号是否被锁定
+		if err := core.CaptchaService.CheckLoginLock(c.Request.Context(), req.Username); err != nil {
+			response.Error(c, response.ErrForbidden, err.Error())
 			return
 		}
 
@@ -113,9 +141,18 @@ func login(core *core.Core) gin.HandlerFunc {
 			response.Error(c, response.ErrPasswordDecrypt, "密码验证失败: "+err.Error())
 			return
 		}
-		response.Error(c, response.ErrCredentialInvalid)
+
+		// 记录登录失败
+		if failErr := core.CaptchaService.RecordLoginFailure(c.Request.Context(), req.Username); failErr != nil {
+			response.Error(c, response.ErrCredentialInvalid, failErr.Error())
+		} else {
+			response.Error(c, response.ErrCredentialInvalid)
+		}
 		return
 	}
+
+	// 登录成功，清除失败记录
+	core.CaptchaService.ClearLoginFailure(c.Request.Context(), req.Username)
 
 	// 查询用户角色
 	var userRoles []models.UserRole
@@ -260,24 +297,6 @@ func refreshToken(core *core.Core) gin.HandlerFunc {
 		}
 
 		response.Success(c, loginResp)
-	}
-}
-
-// getCaptcha 获取验证码
-// @Summary 获取验证码
-// @Description 获取图形验证码
-// @Tags 认证
-// @Accept json
-// @Produce json
-// @Success 200 {object} response.Response
-// @Router /system/auth/captcha [get]
-func getCaptcha(core *core.Core) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// TODO: 实现验证码生成
-		response.Success(c, gin.H{
-			"captchaId": "temp-id",
-			"captchaImg": "data:image/png;base64,temp-image",
-		})
 	}
 }
 

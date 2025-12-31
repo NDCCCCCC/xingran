@@ -68,6 +68,13 @@ const (
 	ConfigEdit   PermissionCode = "system:config:edit"
 	ConfigRemove PermissionCode = "system:config:remove"
 
+	// 验证码背景图权限
+	CaptchaBackgroundList   PermissionCode = "system:captchaBackground:list"
+	CaptchaBackgroundView   PermissionCode = "system:captchaBackground:view"
+	CaptchaBackgroundAdd    PermissionCode = "system:captchaBackground:add"
+	CaptchaBackgroundEdit   PermissionCode = "system:captchaBackground:edit"
+	CaptchaBackgroundRemove PermissionCode = "system:captchaBackground:remove"
+
 	// 系统模块权限
 	System       PermissionCode = "system"
 	SystemUser   PermissionCode = "system:user"

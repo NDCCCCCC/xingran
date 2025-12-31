@@ -40,7 +40,14 @@ export const useAuthStore = create<AuthState & AuthActions>()(
             credentials.password
           );
 
-          const response = await post('/system/auth/login', encryptedRequest);
+          // 添加验证码参数
+          const loginRequest = {
+            ...encryptedRequest,
+            captcha: credentials.captcha,
+            captchaId: credentials.captchaId,
+          };
+
+          const response = await post('/system/auth/login', loginRequest);
           const { user, accessToken, refreshToken } = response.data;
 
           // 保存到localStorage

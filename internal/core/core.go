@@ -5,6 +5,7 @@ package core
 import (
 	"context"
 	"log"
+	"os"
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
@@ -37,6 +38,8 @@ type Core struct {
 	NetworkDeviceService    *services.NetworkDeviceService    // 网络设备服务
 	DeviceMonitorService    *services.DeviceMonitorService    // 设备监控服务
 	NoticeHub               *websocket.NoticeHub     // WebSocket通知中心
+	CaptchaService          *CaptchaService          // 验证码服务
+	CaptchaBackgroundService *CaptchaBackgroundService // 验证码背景图服务
 }
 
 // GetDB 获取数据库连接
@@ -192,6 +195,29 @@ func (c *Core) Init() error {
 	// 设置设备监控服务到调度器，供定时任务调用
 	scheduler.SetDeviceMonitorService(c.DeviceMonitorService)
 	log.Println("设备监控服务初始化完成")
+
+	// 13. 初始化验证码服务
+	c.CaptchaService = NewCaptchaService(c.DB, c.Cache)
+	if err := c.CaptchaService.LoadConfig(context.Background()); err != nil {
+		log.Printf("警告：加载验证码配置失败: %v", err)
+	} else {
+		log.Printf("验证码服务初始化完成，类型: %s", c.CaptchaService.GetConfig().Enabled)
+	}
+
+	// 14. 初始化验证码背景图服务
+	c.CaptchaBackgroundService = NewCaptchaBackgroundService(c.DB, c.Cache)
+	// 将背景图服务设置到验证码服务
+	c.CaptchaService.SetBackgroundService(c.CaptchaBackgroundService)
+
+	// 14.1 确保存储目录存在
+	storagePath := "./uploads/captcha/backgrounds"
+	if err := os.MkdirAll(storagePath, 0755); err != nil {
+		log.Printf("警告：创建验证码背景图存储目录失败: %v", err)
+	} else {
+		log.Printf("验证码背景图存储目录已创建: %s", storagePath)
+	}
+
+	log.Println("验证码背景图服务初始化完成")
 
 	return nil
 }

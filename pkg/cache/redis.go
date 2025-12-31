@@ -643,3 +643,35 @@ func (m *MultiLevelCache) HDel(ctx context.Context, key string, fields ...string
 func (m *MultiLevelCache) HKeys(ctx context.Context, key string) ([]string, error) {
 	return m.l2Cache.HKeys(ctx, key)
 }
+
+// SetInt 设置整数
+func (m *MultiLevelCache) SetInt(ctx context.Context, key string, value int, expiration time.Duration) error {
+	return m.l2Cache.SetInt(ctx, key, value, expiration)
+}
+
+// GetInt 获取整数
+func (m *MultiLevelCache) GetInt(ctx context.Context, key string) (int, error) {
+	return m.l2Cache.GetInt(ctx, key)
+}
+
+// SetJSON 设置JSON对象
+func (m *MultiLevelCache) SetJSON(ctx context.Context, key string, value interface{}, expiration time.Duration) error {
+	// 设置到L1缓存（短时间）
+	if jsonValue, err := json.Marshal(value); err == nil {
+		m.l1Cache.Set(ctx, key, jsonValue, 5*time.Minute)
+	}
+	// 设置到L2缓存
+	return m.l2Cache.SetJSON(ctx, key, value, expiration)
+}
+
+// GetJSON 获取JSON对象
+func (m *MultiLevelCache) GetJSON(ctx context.Context, key string, dest interface{}) error {
+	// 先尝试从L1缓存获取
+	if value, err := m.l1Cache.Get(ctx, key); err == nil && value != "" {
+		if err := json.Unmarshal([]byte(value), dest); err == nil {
+			return nil
+		}
+	}
+	// 从L2缓存获取
+	return m.l2Cache.GetJSON(ctx, key, dest)
+}

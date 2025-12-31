@@ -176,6 +176,10 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 				v1.SetupConfigRouter(configs, core)
 			}
 
+			// 验证码背景图管理（所有已登录用户可访问，作为系统设置的一部分）
+			captchaBackgrounds := authorized.Group("/captcha-backgrounds")
+			v1.SetupCaptchaBackgroundRouter(captchaBackgrounds, core)
+
 			// 通知公告
 			notices := authorized.Group("/notices")
 			notices.Use(middleware.RequirePermissions([]string{

@@ -18,7 +18,6 @@ import ConfigManagement from '@/pages/system/config';
 import NoticeManagement from '@/pages/system/notice';
 import WorkstationManagement from '@/pages/system/workstation';
 // 系统设置页面
-import { EmailConfigPage, APIConfigPage } from '@/pages/system/settings';
 import SystemSettingsPage from '@/pages/system/settings-page';
 // 系统监控页面
 import MonitorDashboard from '@/pages/monitor/dashboard';
@@ -132,9 +131,6 @@ function App() {
                       <Route path="/system/notice/:id" element={<AdminNoticeDetailPage />} />
                       <Route path="/system/workstation" element={<WorkstationManagement />} />
                       <Route path="/system/settings-page" element={<SystemSettingsPage />} />
-                      {/* 系统设置路由 */}
-                      <Route path="/system/settings/email-config" element={<EmailConfigPage />} />
-                      <Route path="/system/settings/api-config" element={<APIConfigPage />} />
 
                       {/* 系统监控路由 */}
                       <Route path="/monitor" element={<Navigate to="/monitor/dashboard" replace />} />

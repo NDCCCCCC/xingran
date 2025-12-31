@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Card, Tabs } from 'antd';
-import { MailOutlined, ApiOutlined } from '@ant-design/icons';
-import { EmailConfigPage, APIConfigPage } from '../settings';
+import { MailOutlined, ApiOutlined, PictureOutlined } from '@ant-design/icons';
+import { EmailConfigPage, APIConfigPage, CaptchaBackgroundSettingsPage } from '../settings';
 
 /**
  * 系统设置页面
- * 使用Tabs组织邮箱配置和API配置
+ * 使用Tabs组织邮箱配置、API配置和验证码背景图配置
  */
 const SystemSettingsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('email');
@@ -30,6 +30,16 @@ const SystemSettingsPage: React.FC = () => {
         </span>
       ),
       children: <APIConfigPage />,
+    },
+    {
+      key: 'captcha-background',
+      label: (
+        <span>
+          <PictureOutlined />
+          验证码背景图
+        </span>
+      ),
+      children: <CaptchaBackgroundSettingsPage />,
     },
   ];
 

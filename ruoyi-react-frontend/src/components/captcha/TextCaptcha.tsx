@@ -1,0 +1,87 @@
+import React, { useState, useEffect } from 'react';
+import { Button, message } from 'antd';
+import { ReloadOutlined } from '@ant-design/icons';
+import { getCaptcha } from '@/services/captcha';
+import type { CaptchaResponse, CaptchaProps } from '@/types/captcha';
+import './TextCaptcha.css';
+
+const TextCaptcha: React.FC<CaptchaProps> = ({ value, onChange, onError }) => {
+  const [captchaData, setCaptchaData] = useState<CaptchaResponse | null>(null);
+  const [inputValue, setInputValue] = useState(value || '');
+  const [loading, setLoading] = useState(false);
+
+  // 加载验证码
+  const loadCaptcha = async () => {
+    setLoading(true);
+    try {
+      const data = await getCaptcha();
+      console.log('[TextCaptcha] 获取到的验证码数据:', data);
+      console.log('[TextCaptcha] captchaImg:', data?.captchaImg);
+      // 如果返回空对象或没有 captchaType，说明验证码未启用
+      if (!data || !data.captchaType) {
+        return; // 静默返回，不显示验证码
+      }
+      if (data.captchaType === 'normal') {
+        setCaptchaData(data);
+        setInputValue('');
+        onChange?.('', data.captchaId);
+      } else if (data.captchaType === 'slider') {
+        // 如果返回的是滑动验证码，通知父组件切换
+        onError?.('CAPTCHA_TYPE_MISMATCH');
+      }
+    } catch (error) {
+      console.error('[TextCaptcha] 加载验证码失败:', error);
+      message.error('加载验证码失败');
+      onError?.(error instanceof Error ? error.message : '加载验证码失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadCaptcha();
+  }, []);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setInputValue(val);
+    onChange?.(val, captchaData?.captchaId || '');
+  };
+
+  return (
+    <div className="text-captcha-container">
+      <div className="captcha-input-wrapper">
+        <input
+          type="text"
+          value={inputValue}
+          onChange={handleChange}
+          placeholder="请输入验证码"
+          className="captcha-input"
+          maxLength={6}
+        />
+        <div className="captcha-image-wrapper">
+          {captchaData?.captchaImg && (
+            <img
+              src={captchaData.captchaImg}
+              alt="验证码"
+              className="captcha-image"
+              onClick={loadCaptcha}
+              title="点击刷新"
+            />
+          )}
+          {!loading && (
+            <Button
+              type="text"
+              icon={<ReloadOutlined />}
+              onClick={loadCaptcha}
+              className="refresh-btn"
+              size="small"
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default TextCaptcha;

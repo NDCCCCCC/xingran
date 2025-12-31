@@ -111,6 +111,9 @@ func main() {
 		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}
 
+	// 静态文件服务 - 验证码背景图访问
+	r.Static("/uploads/captcha/backgrounds", "./uploads/captcha/backgrounds")
+
 	// API 路由
 	apiRouter := r.Group("/api/v1")
 	{
