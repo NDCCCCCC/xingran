@@ -1,0 +1,8 @@
+Value Required INTERFACE (\S+(?:/\d+)+)
+Value STATUS (UP|DOWN)
+Value ENABLED (Enabled|Disabled)
+Value CURRENT_USERS (\d+)
+
+Start
+  ^\s+${INTERFACE}\s+status:\s+${STATUS}\s+802.1x\s+protocol\s+is\s+${ENABLED} -> Continue
+  ^\s+Current\s+users:\s+${CURRENT_USERS} -> Record

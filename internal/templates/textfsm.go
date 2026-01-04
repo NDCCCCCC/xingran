@@ -8,6 +8,9 @@ import (
 	"strings"
 )
 
+// debug 模式开关（设置为 true 启用 TextFSM 调试日志）
+const debugTextFSM = false
+
 // TextFSM 解析器 - 简化且正确的实现
 type FSM struct {
 	Variables     map[string]*Variable
@@ -53,17 +56,19 @@ func ParseTemplate(filename string) (*FSM, error) {
 	}
 
 	// 输出调试信息
-	fmt.Printf("[TextFSM] 模板解析成功: %s\n", filename)
-	fmt.Printf("[TextFSM] 变量数量: %d\n", len(fsm.Variables))
-	for name, v := range fsm.Variables {
-		fmt.Printf("[TextFSM]   变量: %s = %s (Required=%v, List=%v)\n", name, v.Regex, v.Required, v.List)
-	}
-	fmt.Printf("[TextFSM] 状态数量: %d\n", len(fsm.States))
-	for name, state := range fsm.States {
-		fmt.Printf("[TextFSM]   状态: %s, 规则数: %d\n", name, len(state.Rules))
-		for i, rule := range state.Rules {
-			fmt.Printf("[TextFSM]     规则%d: %s -> %s\n", i, rule.RegexPattern, rule.NextState)
-			fmt.Printf("[TextFSM]       编译后正则: %s\n", rule.Regex.String())
+	if debugTextFSM {
+		fmt.Printf("[TextFSM] 模板解析成功: %s\n", filename)
+		fmt.Printf("[TextFSM] 变量数量: %d\n", len(fsm.Variables))
+		for name, v := range fsm.Variables {
+			fmt.Printf("[TextFSM]   变量: %s = %s (Required=%v, List=%v)\n", name, v.Regex, v.Required, v.List)
+		}
+		fmt.Printf("[TextFSM] 状态数量: %d\n", len(fsm.States))
+		for name, state := range fsm.States {
+			fmt.Printf("[TextFSM]   状态: %s, 规则数: %d\n", name, len(state.Rules))
+			for i, rule := range state.Rules {
+				fmt.Printf("[TextFSM]     规则%d: %s -> %s\n", i, rule.RegexPattern, rule.NextState)
+				fmt.Printf("[TextFSM]       编译后正则: %s\n", rule.Regex.String())
+			}
 		}
 	}
 
@@ -192,10 +197,12 @@ func parseRule(line string, fsm *FSM) (*Rule, error) {
 	regexPattern, varNames := buildRegexWithVariables(line, fsm)
 
 	// 调试输出
-	fmt.Printf("[TextFSM] parseRule: 原始规则=%s\n", originalLine)
-	fmt.Printf("[TextFSM] parseRule: 处理后模式=%s\n", line)
-	fmt.Printf("[TextFSM] parseRule: 编译后正则=%s\n", regexPattern)
-	fmt.Printf("[TextFSM] parseRule: 变量列表=%v\n", varNames)
+	if debugTextFSM {
+		fmt.Printf("[TextFSM] parseRule: 原始规则=%s\n", originalLine)
+		fmt.Printf("[TextFSM] parseRule: 处理后模式=%s\n", line)
+		fmt.Printf("[TextFSM] parseRule: 编译后正则=%s\n", regexPattern)
+		fmt.Printf("[TextFSM] parseRule: 变量列表=%v\n", varNames)
+	}
 
 	// 编译正则
 	compiled, err := regexp.Compile(regexPattern)
@@ -256,11 +263,15 @@ func buildRegexWithVariables(pattern string, fsm *FSM) (string, []string) {
 		if variable, ok := fsm.Variables[varName]; ok {
 			// 使用变量的正则表达式作为捕获组
 			result += fmt.Sprintf("(%s)", variable.Regex)
-			fmt.Printf("[TextFSM] buildRegex: 变量 %s = (%s)\n", varName, variable.Regex)
+			if debugTextFSM {
+				fmt.Printf("[TextFSM] buildRegex: 变量 %s = (%s)\n", varName, variable.Regex)
+			}
 		} else {
 			// 未知变量，使用通用捕获组
 			result += "(.+)"
-			fmt.Printf("[TextFSM] buildRegex: 未知变量 %s，使用通用捕获组\n", varName)
+			if debugTextFSM {
+				fmt.Printf("[TextFSM] buildRegex: 未知变量 %s，使用通用捕获组\n", varName)
+			}
 		}
 
 		lastEnd = match[1]
@@ -362,7 +373,9 @@ func (f *FSM) ParseText(text string) ([]map[string]string, error) {
 	f.CurrentRecord = make(map[string]string)
 	f.CurrentState = "Start"
 
-	fmt.Printf("[TextFSM] 开始解析文本，共 %d 行\n", len(strings.Split(text, "\n")))
+	if debugTextFSM {
+		fmt.Printf("[TextFSM] 开始解析文本，共 %d 行\n", len(strings.Split(text, "\n")))
+	}
 
 	lines := strings.Split(text, "\n")
 	for lineNum, line := range lines {
@@ -385,15 +398,25 @@ func (f *FSM) ParseText(text string) ([]map[string]string, error) {
 
 			if rule.Regex.MatchString(line) {
 				matched = true
-				fmt.Printf("[TextFSM] 行%d匹配: %s\n", lineNum, rule.RegexPattern)
+				if debugTextFSM {
+					fmt.Printf("[TextFSM] 行%d匹配: %s\n", lineNum, rule.RegexPattern)
 
-				// 提取捕获组并赋值给变量
-				matches := rule.Regex.FindStringSubmatch(line)
-				fmt.Printf("[TextFSM]   捕获组: %v\n", matches)
-				for i, varName := range rule.VarNames {
-					if i+1 < len(matches) {
-						f.CurrentRecord[varName] = matches[i+1]
-						fmt.Printf("[TextFSM]   %s = %s\n", varName, matches[i+1])
+					// 提取捕获组并赋值给变量
+					matches := rule.Regex.FindStringSubmatch(line)
+					fmt.Printf("[TextFSM]   捕获组: %v\n", matches)
+					for i, varName := range rule.VarNames {
+						if i+1 < len(matches) {
+							f.CurrentRecord[varName] = matches[i+1]
+							fmt.Printf("[TextFSM]   %s = %s\n", varName, matches[i+1])
+						}
+					}
+				} else {
+					// 提取捕获组并赋值给变量（不输出日志）
+					matches := rule.Regex.FindStringSubmatch(line)
+					for i, varName := range rule.VarNames {
+						if i+1 < len(matches) {
+							f.CurrentRecord[varName] = matches[i+1]
+						}
 					}
 				}
 
@@ -406,11 +429,13 @@ func (f *FSM) ParseText(text string) ([]map[string]string, error) {
 
 		// 如果没有匹配任何规则，打印详细的调试信息
 		if !matched {
-			fmt.Printf("[TextFSM] 行%d不匹配任何规则: %s\n", lineNum, line)
-			if lineNum < 5 && len(state.Rules) > 0 {
-				rule := state.Rules[0]
-				fmt.Printf("[TextFSM]   尝试规则1: %s\n", rule.RegexPattern)
-				fmt.Printf("[TextFSM]   正则表达式: %s\n", rule.Regex.String())
+			if debugTextFSM {
+				fmt.Printf("[TextFSM] 行%d不匹配任何规则: %s\n", lineNum, line)
+				if lineNum < 5 && len(state.Rules) > 0 {
+					rule := state.Rules[0]
+					fmt.Printf("[TextFSM]   尝试规则1: %s\n", rule.RegexPattern)
+					fmt.Printf("[TextFSM]   正则表达式: %s\n", rule.Regex.String())
+				}
 			}
 			if state.Default != "" {
 				f.handleStateTransition(state.Default)
@@ -423,7 +448,9 @@ func (f *FSM) ParseText(text string) ([]map[string]string, error) {
 		f.copyCurrentRecord()
 	}
 
-	fmt.Printf("[TextFSM] 解析完成，提取 %d 条记录\n", len(f.Records))
+	if debugTextFSM {
+		fmt.Printf("[TextFSM] 解析完成，提取 %d 条记录\n", len(f.Records))
+	}
 
 	return f.Records, nil
 }

@@ -166,19 +166,14 @@ func (p *DeviceConnectionPool) IsEnabled() bool {
 
 // GetConnection 获取设备连接（线程安全）
 func (p *DeviceConnectionPool) GetConnection(ctx context.Context, deviceID string) (*PooledConnection, error) {
-	log.Printf("[连接池] GetConnection 开始: deviceID=%s", deviceID)
-
 	// 如果连接池未启用，返回错误（让调用方使用旧模式）
 	if !p.IsEnabled() {
-		log.Printf("[连接池] 连接池未启用")
 		return nil, fmt.Errorf("连接池未启用")
 	}
 
 	// 获取设备级锁
 	deviceLock := p.getDeviceLock(deviceID)
-	log.Printf("[连接池] 获取设备锁: deviceID=%s", deviceID)
 	deviceLock.Lock()
-	log.Printf("[连接池] 设备锁已获取: deviceID=%s", deviceID)
 
 	// 检查池中是否已有连接
 	p.poolLock.RLock()
@@ -186,17 +181,14 @@ func (p *DeviceConnectionPool) GetConnection(ctx context.Context, deviceID strin
 	p.poolLock.RUnlock()
 
 	if exists {
-		log.Printf("[连接池] 发现已存在的连接: deviceID=%s", deviceID)
 		// 连接存在，检查是否有效
 		if pc.wrapper != nil && pc.wrapper.IsConnected() {
-			log.Printf("[连接池] 已存在连接有效: deviceID=%s，释放设备锁后返回", deviceID)
 			// CRITICAL: 必须在返回前释放设备锁，否则会导致死锁
 			// 因为后续的 Acquire() 会尝试获取同一个锁（pc.mu 就是 deviceLock）
 			deviceLock.Unlock()
 			return pc, nil
 		}
 
-		log.Printf("[连接池] 已存在连接失效，准备移除: deviceID=%s", deviceID)
 		// 连接失效，从池中移除
 		// 释放 deviceLock 后再调用 removeConnection，避免持有 deviceLock 时获取 poolLock
 		deviceLock.Unlock()
@@ -205,14 +197,10 @@ func (p *DeviceConnectionPool) GetConnection(ctx context.Context, deviceID strin
 		deviceLock.Lock()
 	}
 
-	log.Printf("[连接池] 需要创建新连接: deviceID=%s", deviceID)
-
 	// 检查连接数限制
 	p.poolLock.RLock()
 	currentCount := len(p.connections)
 	p.poolLock.RUnlock()
-
-	log.Printf("[连接池] 当前连接数: %d/%d", currentCount, p.maxConnections)
 
 	if currentCount >= p.maxConnections {
 		deviceLock.Unlock()
@@ -220,15 +208,11 @@ func (p *DeviceConnectionPool) GetConnection(ctx context.Context, deviceID strin
 	}
 
 	// 创建新连接
-	log.Printf("[连接池] 准备创建新连接: deviceID=%s", deviceID)
 	wrapper, err := p.createConnection(ctx, deviceID)
 	if err != nil {
-		log.Printf("[连接池] 创建连接失败: deviceID=%s, error=%v", deviceID, err)
 		deviceLock.Unlock()
 		return nil, fmt.Errorf("创建连接失败: %w", err)
 	}
-
-	log.Printf("[连接池] 新连接创建成功: deviceID=%s", deviceID)
 
 	// 创建池化连接
 	pc = &PooledConnection{
@@ -247,7 +231,6 @@ func (p *DeviceConnectionPool) GetConnection(ctx context.Context, deviceID strin
 
 	// CRITICAL: 必须在返回前释放设备锁！
 	// Acquire() 方法会负责重新获取这个锁
-	log.Printf("[连接池] 连接已添加到池，释放设备锁后返回: deviceID=%s", deviceID)
 	deviceLock.Unlock()
 
 	return pc, nil
@@ -269,37 +252,26 @@ func (p *DeviceConnectionPool) getDeviceLock(deviceID string) *sync.Mutex {
 
 // createConnection 创建新连接
 func (p *DeviceConnectionPool) createConnection(ctx context.Context, deviceID string) (*ScrapliWrapper, error) {
-	log.Printf("[连接池] createConnection 开始: deviceID=%s", deviceID)
-
 	// 查询设备信息
 	var device models.NetworkDevice
 	if err := p.db.Where("id = ?", deviceID).First(&device).Error; err != nil {
 		return nil, fmt.Errorf("查询设备失败: %w", err)
 	}
 
-	log.Printf("[连接池] 设备信息: name=%s, ip=%s, port=%d, vendor=%s",
-		device.DeviceName, device.IPAddress, device.Port, device.Vendor)
-
 	// 查询凭证信息
 	var credential models.AuthCredential
 	if device.CredentialID != nil && *device.CredentialID != "" {
-		log.Printf("[连接池] 使用设备关联凭证: credentialID=%s", *device.CredentialID)
 		if err := p.db.Where("id = ?", *device.CredentialID).First(&credential).Error; err != nil {
 			return nil, fmt.Errorf("查询凭证失败: %w", err)
 		}
 	} else {
-		log.Printf("[连接池] 使用默认凭证")
 		if err := p.db.Where("is_default = ?", true).First(&credential).Error; err != nil {
 			return nil, fmt.Errorf("未找到默认凭证: %w", err)
 		}
 	}
 
-	log.Printf("[连接池] 凭证信息: username=%s", credential.Username)
-
 	// 解密密码
 	password := credential.Password
-	log.Printf("[连接池] 密码长度（加密）: %d", len(password))
-
 	if p.sm4Cipher == nil {
 		return nil, fmt.Errorf("SM4 加密器未初始化，无法解密密码")
 	}
@@ -307,19 +279,14 @@ func (p *DeviceConnectionPool) createConnection(ctx context.Context, deviceID st
 		return nil, fmt.Errorf("凭证密码为空")
 	}
 
-	log.Printf("[连接池] 开始解密密码...")
 	decrypted, err := p.sm4Cipher.Decrypt(password)
 	if err != nil {
 		return nil, fmt.Errorf("密码解密失败: %w", err)
 	}
 	password = decrypted
 
-	log.Printf("[连接池] 密码解密成功，长度: %d", len(password))
-
 	// 创建连接
 	var wrapper *ScrapliWrapper
-
-	log.Printf("[连接池] 创建 ScrapliWrapper...")
 	if device.Port > 0 && device.Port != 22 {
 		wrapper, err = NewScrapliWrapperWithPort(&device, credential.Username, password, device.Port, credential.ProtocolType)
 	} else {
@@ -330,18 +297,43 @@ func (p *DeviceConnectionPool) createConnection(ctx context.Context, deviceID st
 		return nil, fmt.Errorf("创建 ScrapliWrapper 失败: %w", err)
 	}
 
-	log.Printf("[连接池] ScrapliWrapper 创建成功，开始连接设备...")
+	// 先检查设备是否可达（避免 scrapligo 内部 panic）
+	port := device.Port
+	if port <= 0 {
+		if credential.ProtocolType == models.ProtocolTypeTelnet {
+			port = 23
+		} else {
+			port = 22
+		}
+	}
+
+	checkCtx, cancelCheck := context.WithTimeout(ctx, 5*time.Second)
+	defer cancelCheck()
+
+	// 在单独的 goroutine 中执行检查
+	reachableCh := make(chan error, 1)
+	go func() {
+		reachableCh <- checkDeviceReachable(device.IPAddress, port, 5*time.Second)
+	}()
+
+	select {
+	case <-checkCtx.Done():
+		return nil, fmt.Errorf("检查设备可达性超时 [%s:%d]", device.IPAddress, port)
+	case err := <-reachableCh:
+		if err != nil {
+			return nil, fmt.Errorf("设备不可达，请检查网络和设备状态: %w", err)
+		}
+	}
 
 	// 设置连接超时
 	connectCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	log.Printf("[连接池] 调用 wrapper.OpenContext...")
 	if err := wrapper.OpenContext(connectCtx); err != nil {
 		return nil, fmt.Errorf("连接设备失败 [%s]: %w", device.IPAddress, err)
 	}
 
-	log.Printf("[连接池] 设备连接成功! deviceID=%s", deviceID)
+	log.Printf("[连接池] 设备连接成功: %s (%s:%d)", device.DeviceName, device.IPAddress, port)
 
 	return wrapper, nil
 }
@@ -364,7 +356,6 @@ func (p *DeviceConnectionPool) removeConnection(deviceID string) {
 		}
 
 		delete(p.connections, deviceID)
-		log.Printf("[连接池] 移除连接: deviceID=%s", deviceID)
 	}
 }
 
@@ -403,14 +394,12 @@ func (p *DeviceConnectionPool) cleanupIdleConnections() {
 				}
 				delete(p.connections, deviceID)
 				cleaned++
-				log.Printf("[连接池] 清理空闲连接: deviceID=%s, 空闲时间=%v",
-					deviceID, now.Sub(pc.lastUsed))
 			}
 		}
 	}
 
 	if cleaned > 0 {
-		log.Printf("[连接池] 清理完成: 清理了 %d 个空闲连接, 当前连接数=%d",
+		log.Printf("[连接池] 清理了 %d 个空闲连接, 当前连接数=%d",
 			cleaned, len(p.connections))
 	}
 }
@@ -463,11 +452,9 @@ func (p *DeviceConnectionPool) Close() error {
 	defer p.poolLock.Unlock()
 
 	// 关闭所有连接
-	for deviceID, pc := range p.connections {
+	for _, pc := range p.connections {
 		// 等待引用计数归零
 		for !pc.IsIdle() {
-			log.Printf("[连接池] 等待连接释放: deviceID=%s, refCount=%d",
-				deviceID, atomic.LoadInt32(&pc.refCount))
 			time.Sleep(100 * time.Millisecond)
 		}
 

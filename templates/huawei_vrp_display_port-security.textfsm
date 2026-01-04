@@ -1,0 +1,5 @@
+Value INTERFACE (\S+)
+Value ENABLED (enabled|disabled)
+
+Start
+  # 华为设备不支持端口安全命令，返回空记录

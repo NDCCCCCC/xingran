@@ -49,6 +49,10 @@ type NetworkDevice struct {
 	LastSeenAt     *Time        `json:"lastSeenAt,omitempty"`
 	LastConfigAt   *Time        `json:"lastConfigAt,omitempty"`
 	Description    string       `gorm:"type:text" json:"description,omitempty"`
+	// 设备详细信息（通过自动采集更新）
+	SerialNumber    string `gorm:"size:100" json:"serialNumber,omitempty"`
+	SoftwareVersion string `gorm:"size:100" json:"softwareVersion,omitempty"`
+	Uptime          string `gorm:"size:100" json:"uptime,omitempty"`
 }
 
 // TableName 设置表名

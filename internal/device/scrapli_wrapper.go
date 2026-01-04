@@ -3,6 +3,8 @@ package device
 import (
 	"context"
 	"fmt"
+	"net"
+	"strings"
 	"time"
 
 	"github.com/scrapli/scrapligo/driver/network"
@@ -37,6 +39,16 @@ func PlatformName(vendor models.DeviceVendor) string {
 	default:
 		return "cisco_iosxe" // 使用通用的 cisco_iosxe 作为默认
 	}
+}
+
+// checkDeviceReachable 检查设备是否可达（TCP 连接测试）
+func checkDeviceReachable(host string, port int, timeout time.Duration) error {
+	conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", host, port), timeout)
+	if err != nil {
+		return fmt.Errorf("设备不可达 [%s:%d]: %w", host, port, err)
+	}
+	conn.Close()
+	return nil
 }
 
 // NewScrapliWrapper 创建scrapligo封装实例
@@ -194,8 +206,18 @@ func (w *ScrapliWrapper) OpenContext(ctx context.Context) error {
 			}
 		}()
 
+		// 调用 Open()
 		err := w.driver.Open()
-		resultCh <- result{err: err}
+		if err != nil {
+			resultCh <- result{err: err}
+			return
+		}
+
+		// Open 成功后，给一点时间让 scrapligo 内部的 goroutine（如 GetPrompt）完成初始化
+		// 这可以避免 transport.conn 尚未就绪时的空指针问题
+		time.Sleep(100 * time.Millisecond)
+
+		resultCh <- result{err: nil}
 	}()
 
 	// 等待连接完成或超时
@@ -203,9 +225,11 @@ func (w *ScrapliWrapper) OpenContext(ctx context.Context) error {
 	case <-ctx.Done():
 		// 超时或取消，尝试关闭可能正在进行的连接
 		_ = w.driver.Close()
+		w.closed = true
 		return fmt.Errorf("连接设备超时 [%s]: %w", w.device.IPAddress, ctx.Err())
 	case res := <-resultCh:
 		if res.err != nil {
+			w.closed = true
 			return fmt.Errorf("连接设备失败 [%s]: %w", w.device.IPAddress, res.err)
 		}
 		return nil
@@ -264,6 +288,11 @@ func (w *ScrapliWrapper) SendCommand(command string, stripPrompt bool) (*Respons
 
 	r, err := w.driver.SendCommand(command)
 	if err != nil {
+		// 如果是 EOF 或连接相关的错误，标记连接为已关闭
+		errStr := err.Error()
+		if containsEOF(errStr) || containsConnectionError(errStr) {
+			w.closed = true
+		}
 		return nil, fmt.Errorf("发送命令失败: %w", err)
 	}
 
@@ -495,4 +524,20 @@ func GetCommandForVendor(vendor models.DeviceVendor, commandType string) string 
 	}
 	// 默认返回通用命令
 	return "show running-config"
+}
+
+// containsEOF 检查错误是否包含 EOF
+func containsEOF(errStr string) bool {
+	return strings.Contains(errStr, "EOF") ||
+		strings.Contains(errStr, "unexpected EOF") ||
+		strings.Contains(errStr, "connection reset") ||
+		strings.Contains(errStr, "broken pipe")
+}
+
+// containsConnectionError 检查是否是连接相关错误
+func containsConnectionError(errStr string) bool {
+	return strings.Contains(errStr, "connection") ||
+		strings.Contains(errStr, "timeout") ||
+		strings.Contains(errStr, "network") ||
+		strings.Contains(errStr, "closed")
 }
