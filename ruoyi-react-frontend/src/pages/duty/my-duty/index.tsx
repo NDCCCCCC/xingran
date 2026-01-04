@@ -4,15 +4,13 @@ import {
   Row,
   Col,
   Statistic,
-  Calendar,
   Tag,
   Table,
   Form,
   Select,
   DatePicker,
-  Badge,
   Alert,
-  Collapse,
+  Empty,
   Spin,
   Typography,
   Space,
@@ -23,17 +21,15 @@ import {
   ClockCircleOutlined,
   CheckCircleOutlined,
   CoffeeOutlined,
+  UnorderedListOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
-import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import {
   getMyDutyStats,
   getDutyScheduleList,
-  getMonthlyDutySchedule,
   type MyDutyStats,
   type DutySchedule,
-  type MonthlyDutyMember,
   type DutyScheduleListRequest,
 } from '@/lib/dutyApi';
 import { useAuthStore } from '@/store/authStore';
@@ -56,11 +52,6 @@ const MyDutyPage: React.FC = () => {
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(false);
-
-  // 日历数据
-  const [calendarData, setCalendarData] = useState<Record<string, MonthlyDutyMember[]>>({});
-  const [selectedMonth, setSelectedMonth] = useState<Dayjs>(dayjs());
-  const [calendarLoading, setCalendarLoading] = useState(false);
 
   // 加载统计数据
   const loadStats = async () => {
@@ -99,40 +90,10 @@ const MyDutyPage: React.FC = () => {
     }
   };
 
-  // 加载日历数据
-  const loadCalendarData = async (month: Dayjs) => {
-    setCalendarLoading(true);
-    try {
-      const year = month.year();
-      const monthNum = month.month() + 1;
-      const result = await getMonthlyDutySchedule(year, monthNum);
-      // 只保留当前用户的值班记录
-      const filteredData: Record<string, MonthlyDutyMember[]> = {};
-      Object.entries(result.data || {}).forEach(([date, members]) => {
-        const userMembers = members.filter(m => m.userId === user?.id);
-        if (userMembers.length > 0) {
-          filteredData[date] = userMembers;
-        }
-      });
-      setCalendarData(filteredData);
-    } catch (error) {
-      console.error('加载日历数据失败', error);
-    } finally {
-      setCalendarLoading(false);
-    }
-  };
-
   useEffect(() => {
     loadStats();
     loadSchedules(1, 10);
-    loadCalendarData(selectedMonth);
   }, []);
-
-  // 月份变化
-  const handleMonthChange = (date: Dayjs) => {
-    setSelectedMonth(date);
-    loadCalendarData(date);
-  };
 
   // 搜索
   const handleSearch = () => {
@@ -178,46 +139,73 @@ const MyDutyPage: React.FC = () => {
     return <Tag>未知</Tag>;
   };
 
-  // 日历单元格渲染
-  const dateCellRender = (date: Dayjs) => {
-    const dateStr = date.format('YYYY-MM-DD');
-    const duties = calendarData[dateStr] || [];
-
-    if (duties.length === 0) return null;
-
-    return (
-      <div style={{ fontSize: '12px' }}>
-        {duties.map((duty, index) => (
-          <Badge
-            key={index}
-            color={getDutyTypeColor(duty.dutyType)}
-            text={duty.poolName}
-            style={{ marginBottom: '2px' }}
-          />
-        ))}
-      </div>
-    );
-  };
-
-  // 表格列定义
-  const columns: ColumnsType<DutySchedule> = [
+  // 待办工单表格列定义
+  const workOrderColumns: ColumnsType<any> = [
     {
-      title: '序号',
-      key: 'index',
-      width: 60,
-      render: (_: unknown, __: unknown, index: number) => (current - 1) * pageSize + index + 1,
+      title: '工单编号',
+      dataIndex: 'orderNo',
+      key: 'orderNo',
+      width: 150,
     },
+    {
+      title: '工单标题',
+      dataIndex: 'title',
+      key: 'title',
+      ellipsis: true,
+    },
+    {
+      title: '优先级',
+      dataIndex: 'priority',
+      key: 'priority',
+      width: 100,
+      render: (priority: number) => {
+        const priorityMap: Record<number, { text: string; color: string }> = {
+          1: { text: '紧急', color: 'red' },
+          2: { text: '高', color: 'orange' },
+          3: { text: '中', color: 'blue' },
+          4: { text: '低', color: 'default' },
+        };
+        const config = priorityMap[priority] || priorityMap[4];
+        return <Tag color={config.color}>{config.text}</Tag>;
+      },
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
+      width: 100,
+      render: (status: string) => {
+        const statusMap: Record<string, { text: string; color: string }> = {
+          pending: { text: '待处理', color: 'orange' },
+          processing: { text: '处理中', color: 'blue' },
+          completed: { text: '已完成', color: 'green' },
+        };
+        const config = statusMap[status] || statusMap.pending;
+        return <Tag color={config.color}>{config.text}</Tag>;
+      },
+    },
+    {
+      title: '创建时间',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      width: 180,
+      render: (date: string) => dayjs(date).format('YYYY-MM-DD HH:mm'),
+    },
+  ];
+
+  // 值班记录表格列定义
+  const scheduleColumns: ColumnsType<DutySchedule> = [
     {
       title: '值班日期',
       dataIndex: 'scheduleDate',
       key: 'scheduleDate',
-      width: 120,
-      render: (date: string) => dayjs(date).format('YYYY-MM-DD'),
+      width: 110,
+      render: (date: string) => dayjs(date).format('MM-DD'),
     },
     {
       title: '星期',
       key: 'weekday',
-      width: 80,
+      width: 70,
       render: (_: unknown, record: DutySchedule) => {
         const weekday = dayjs(record.scheduleDate).day();
         const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
@@ -228,13 +216,13 @@ const MyDutyPage: React.FC = () => {
       title: '值班池',
       dataIndex: ['pool', 'poolName'],
       key: 'poolName',
-      width: 150,
+      ellipsis: true,
     },
     {
-      title: '值班类型',
+      title: '类型',
       dataIndex: 'dutyType',
       key: 'dutyType',
-      width: 100,
+      width: 80,
       render: (type: string) => (
         <Tag color={getDutyTypeColor(type)}>{getDutyTypeText(type)}</Tag>
       ),
@@ -248,11 +236,39 @@ const MyDutyPage: React.FC = () => {
     },
   ];
 
+  // 模拟待办工单数据
+  const mockWorkOrders = [
+    {
+      id: '1',
+      orderNo: 'WO202501040001',
+      title: '服务器CPU使用率异常告警',
+      priority: 1,
+      status: 'pending',
+      createdAt: '2025-01-04 09:30',
+    },
+    {
+      id: '2',
+      orderNo: 'WO202501040002',
+      title: '数据库备份任务检查',
+      priority: 3,
+      status: 'processing',
+      createdAt: '2025-01-04 10:15',
+    },
+    {
+      id: '3',
+      orderNo: 'WO202501040003',
+      title: '网络设备固件升级',
+      priority: 2,
+      status: 'pending',
+      createdAt: '2025-01-04 11:00',
+    },
+  ];
+
   return (
     <div style={{ padding: '24px' }}>
       {/* 统计卡片区域 */}
       <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={12} sm={6} lg={6}>
           <Card loading={statsLoading}>
             <Statistic
               title="今日状态"
@@ -260,55 +276,46 @@ const MyDutyPage: React.FC = () => {
               prefix={stats?.isOnDutyToday ? <ClockCircleOutlined /> : <CoffeeOutlined />}
               valueStyle={{
                 color: stats?.isOnDutyToday ? '#3f8600' : '#8c8c8c',
-                fontSize: '24px'
+                fontSize: '20px'
               }}
             />
-            {stats?.isOnDutyToday && stats.todayDutyRecords && stats.todayDutyRecords.length > 0 && (
-              <div style={{ marginTop: '8px' }}>
-                {stats.todayDutyRecords.map((record, index) => (
-                  <Tag key={index} color={getDutyTypeColor(record.dutyType)} style={{ marginBottom: '4px' }}>
-                    {record.poolName}
-                  </Tag>
-                ))}
-              </div>
-            )}
           </Card>
         </Col>
 
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={12} sm={6} lg={6}>
           <Card loading={statsLoading}>
             <Statistic
               title="本月值班"
               value={stats?.thisMonthCount || 0}
               suffix="次"
               prefix={<CalendarOutlined />}
-              valueStyle={{ color: '#1890ff', fontSize: '24px' }}
+              valueStyle={{ color: '#1890ff', fontSize: '20px' }}
             />
           </Card>
         </Col>
 
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={12} sm={6} lg={6}>
           <Card loading={statsLoading}>
             <Statistic
               title="累计值班"
               value={stats?.totalCount || 0}
               suffix="次"
               prefix={<CheckCircleOutlined />}
-              valueStyle={{ color: '#722ed1', fontSize: '24px' }}
+              valueStyle={{ color: '#722ed1', fontSize: '20px' }}
             />
           </Card>
         </Col>
 
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={12} sm={6} lg={6}>
           <Card loading={statsLoading}>
             <div>
-              <div style={{ fontSize: '14px', color: 'rgba(0,0,0,0.45)', marginBottom: '8px' }}>下次值班</div>
-              <div>
+              <Text type="secondary" style={{ fontSize: '14px' }}>下次值班</Text>
+              <div style={{ marginTop: '8px' }}>
                 {stats?.nextDutyDate ? (
-                  <Space direction="vertical" size={0}>
-                    <div style={{ fontSize: '20px', fontWeight: 500 }}>
-                      {dayjs(stats.nextDutyDate).format('YYYY-MM-DD')}
-                    </div>
+                  <Space>
+                    <span style={{ fontSize: '18px', fontWeight: 500 }}>
+                      {dayjs(stats.nextDutyDate).format('MM-DD')}
+                    </span>
                     {stats.nextDutyPoolName && (
                       <Tag color="blue">{stats.nextDutyPoolName}</Tag>
                     )}
@@ -322,106 +329,85 @@ const MyDutyPage: React.FC = () => {
         </Col>
       </Row>
 
-      {/* 日历视图 */}
-      <Card
-        title={<Space><CalendarOutlined />值班日历</Space>}
-        style={{ marginBottom: '24px' }}
-      >
-        <div style={{ marginBottom: '16px' }}>
-          <DatePicker.MonthPicker
-            value={selectedMonth}
-            onChange={(date) => date && handleMonthChange(date)}
-            format="YYYY年MM月"
-            style={{ marginRight: '8px' }}
-          />
-          <Text type="secondary">
-            选择月份查看该月的值班安排
-          </Text>
-        </div>
-
-        <Spin spinning={calendarLoading}>
-          <Calendar
-            value={selectedMonth}
-            fullscreen={false}
-            dateCellRender={dateCellRender}
-          />
-        </Spin>
-
-        <div style={{ marginTop: '16px', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-          <Badge color="blue" text={<Text type="secondary">工作日</Text>} />
-          <Badge color="orange" text={<Text type="secondary">周末</Text>} />
-          <Badge color="red" text={<Text type="secondary">节假日</Text>} />
-        </div>
-      </Card>
-
-      {/* 值班记录列表 */}
-      <Card title={<Space><ClockCircleOutlined />值班记录</Space>}>
-        <div style={{ marginBottom: '16px' }}>
-          <Form form={form} layout="inline">
-            <Form.Item name="dateRange" label="日期范围">
-              <RangePicker />
-            </Form.Item>
-            <Form.Item name="dutyType" label="值班类型">
-              <Select placeholder="请选择" allowClear style={{ width: 120 }}>
-                <Option value="weekday">工作日</Option>
-                <Option value="weekend">周末</Option>
-                <Option value="holiday">节假日</Option>
-              </Select>
-            </Form.Item>
-            <Form.Item>
+      {/* 待办工单和值班记录 - 左右布局 */}
+      <Row gutter={[16, 16]}>
+        {/* 左侧：待办工单 - 70% */}
+        <Col xs={24} lg={16}>
+          <Card
+            title={
               <Space>
-                <Button type="primary" onClick={handleSearch}>
-                  查询
-                </Button>
-                <Button onClick={handleReset}>
-                  重置
-                </Button>
-              </Space>
-            </Form.Item>
-          </Form>
-        </div>
-
-        <Table
-          rowKey="id"
-          columns={columns}
-          dataSource={schedules}
-          loading={loading}
-          pagination={{
-            current,
-            pageSize,
-            total,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (t) => `共 ${t} 条`,
-            pageSizeOptions: ['10', '20', '50', '100'],
-          }}
-          onChange={handleTableChange}
-        />
-      </Card>
-
-      {/* 工单扩展区域（预留） */}
-      <Collapse
-        style={{ marginTop: '24px' }}
-        items={[
-          {
-            key: 'work-orders',
-            label: (
-              <Space>
-                <span>值班期间工单</span>
+                <UnorderedListOutlined />
+                <span>待办工单</span>
                 <Tag color="purple">即将推出</Tag>
               </Space>
-            ),
-            children: (
-              <Alert
-                message="工单模块即将上线"
-                description="工单功能开发中，上线后将支持查看值班期间处理的工单记录、工单统计等信息。"
-                type="info"
-                showIcon
-              />
-            ),
-          },
-        ]}
-      />
+            }
+            extra={<Tag color="orange">3 条待处理</Tag>}
+          >
+            <Alert
+              message="工单功能开发中"
+              description="工单模块即将上线，上线后将支持查看和处理值班期间的相关工单。"
+              type="info"
+              showIcon
+              style={{ marginBottom: '16px' }}
+            />
+
+            <Table
+              rowKey="id"
+              columns={workOrderColumns}
+              dataSource={mockWorkOrders}
+              pagination={false}
+              size="small"
+            />
+          </Card>
+        </Col>
+
+        {/* 右侧：值班记录 - 30% */}
+        <Col xs={24} lg={8}>
+          <Card
+            title={
+              <Space>
+                <ClockCircleOutlined />
+                <span>值班记录</span>
+              </Space>
+            }
+          >
+            <div style={{ marginBottom: '12px' }}>
+              <Form form={form} layout="inline">
+                <Form.Item name="dutyType" style={{ marginBottom: 0 }}>
+                  <Select
+                    placeholder="全部类型"
+                    allowClear
+                    style={{ width: 100 }}
+                    onChange={handleSearch}
+                  >
+                    <Option value="weekday">工作日</Option>
+                    <Option value="weekend">周末</Option>
+                    <Option value="holiday">节假日</Option>
+                  </Select>
+                </Form.Item>
+              </Form>
+            </div>
+
+            <Table
+              rowKey="id"
+              columns={scheduleColumns}
+              dataSource={schedules}
+              loading={loading}
+              pagination={{
+                current,
+                pageSize: 10,
+                total,
+                size: 'small',
+                showSizeChanger: false,
+                showTotal: (t) => `共 ${t} 条`,
+              }}
+              onChange={handleTableChange}
+              size="small"
+              scroll={{ y: 400 }}
+            />
+          </Card>
+        </Col>
+      </Row>
     </div>
   );
 };
