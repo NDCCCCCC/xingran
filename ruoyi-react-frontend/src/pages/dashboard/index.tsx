@@ -1,7 +1,9 @@
 import React from 'react';
-import { Row, Col, Card, Statistic } from 'antd';
+import { Row, Col, Card, Statistic, Typography, Space } from 'antd';
 import { UserOutlined, TeamOutlined, FileTextOutlined, MonitorOutlined } from '@ant-design/icons';
 import { useAuthStore } from '@/store/authStore';
+
+const { Text } = Typography;
 
 const Dashboard: React.FC = () => {
   const { user } = useAuthStore();
@@ -60,30 +62,30 @@ const Dashboard: React.FC = () => {
 
       <Row gutter={[16, 16]} className="mt-6">
         <Col xs={24} lg={12}>
-          <Card title="系统信息" className="h-full">
+          <Card title="系统信息">
             <div className="space-y-3">
               <div className="flex justify-between">
-                <span className="text-gray-600">系统版本</span>
-                <span>RuoYi Next v1.0.0</span>
+                <Text type="secondary">系统版本</Text>
+                <Text>RuoYi Next v1.0.0</Text>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">运行环境</span>
-                <span>Go 1.23.2 + PostgreSQL 18.1</span>
+                <Text type="secondary">运行环境</Text>
+                <Text>Go 1.23.2 + PostgreSQL 18.1</Text>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">服务器地址</span>
-                <span>localhost:8080</span>
+                <Text type="secondary">服务器地址</Text>
+                <Text>localhost:8080</Text>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">操作系统</span>
-                <span>Linux</span>
+                <Text type="secondary">操作系统</Text>
+                <Text>Linux</Text>
               </div>
             </div>
           </Card>
         </Col>
 
         <Col xs={24} lg={12}>
-          <Card title="快速操作" className="h-full">
+          <Card title="快速操作">
             <div className="grid grid-cols-2 gap-4">
               <button className="p-4 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors">
                 <div className="text-2xl mb-2">👥</div>

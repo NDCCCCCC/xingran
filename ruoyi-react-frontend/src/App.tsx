@@ -44,6 +44,12 @@ import NoticeDetailPage from '@/pages/my-notices/detail';
 // 管理端通知页面
 import SystemNoticesPage from '@/pages/system/notice';
 import AdminNoticeDetailPage from '@/pages/system/notice/detail';
+// 值班管理页面
+import DutyPoolPage from '@/pages/duty/pools';
+import DutySchedulePage from '@/pages/duty/schedules';
+import DutyHolidayPage from '@/pages/duty/holidays';
+import DutyConfigPage from '@/pages/duty/config';
+import MyDutyPage from '@/pages/duty/my-duty';
 import './App.css';
 
 // 创建React Query客户端
@@ -150,6 +156,13 @@ function App() {
                       <Route path="/network/discoveries" element={<DeviceDiscoveryPage />} />
                       <Route path="/network/mac" element={<MACAddressPage />} />
                       <Route path="/network/ports" element={<PortStatusPage />} />
+
+                      {/* 值班管理路由 */}
+                      <Route path="/duty/pools" element={<DutyPoolPage />} />
+                      <Route path="/duty/schedules" element={<DutySchedulePage />} />
+                      <Route path="/duty/holidays" element={<DutyHolidayPage />} />
+                      <Route path="/duty/config" element={<DutyConfigPage />} />
+                      <Route path="/duty/my-duty" element={<MyDutyPage />} />
 
                       <Route path="*" element={<Navigate to="/dashboard" replace />} />
                     </Routes>

@@ -311,4 +311,48 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			v1.SetupPortStatusRouter(ports, core)
 		}
 	}
+
+	// 值班管理模块（运维管理）
+	duty := r.Group("/duty")
+	duty.Use(middleware.JWTAuth(core.JWTManager))
+	{
+		// 值班池管理
+		dutyPools := duty.Group("/pools")
+		dutyPools.Use(middleware.RequirePermissions([]string{
+			"ops:duty:pool:list",
+			"ops:duty:pool:add",
+			"ops:duty:pool:edit",
+			"ops:duty:pool:delete",
+		}, core))
+		{
+			v1.SetupDutyPoolsRouter(dutyPools, core)
+		}
+
+		// 排班管理
+		dutySchedules := duty.Group("/schedules")
+		dutySchedules.Use(middleware.RequirePermissions([]string{
+			"ops:duty:schedule:list",
+			"ops:duty:schedule:add",
+			"ops:duty:schedule:edit",
+			"ops:duty:schedule:delete",
+		}, core))
+		{
+			v1.SetupDutySchedulesRouter(dutySchedules, core)
+		}
+
+		// 节假日管理（所有已登录用户可查看）
+		v1.SetupDutyHolidaysRouter(duty.Group("/holidays"), core)
+
+		// 值班配置管理（所有已登录用户可查看，管理员可修改）
+		dutyConfig := duty.Group("/config")
+		dutyConfig.Use(middleware.RequirePermissions([]string{
+			string(permission.SystemConfig),
+		}, core))
+		{
+			v1.SetupDutyConfigRouter(dutyConfig, core)
+		}
+
+		// 我的值班（所有已登录用户可访问）
+		v1.SetupMyDutyRouter(duty.Group("/my-duty"), core)
+	}
 }

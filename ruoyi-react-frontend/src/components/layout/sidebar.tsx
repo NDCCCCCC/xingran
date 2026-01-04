@@ -306,16 +306,23 @@ const Sidebar: React.FC = () => {
 
   // 根据当前路径查找父菜单的 key
   const findParentKey = (pathname: string): string | null => {
+    // 标准化路径函数，统一去掉前导斜杠进行比较
+    const normalizePath = (p: string | undefined): string | undefined => {
+      if (!p) return undefined;
+      return p.startsWith('/') ? p.slice(1) : p;
+    };
+
     const findMenuByPath = (menuList: MenuType[], path: string): { menu: MenuType | null; parentKey: string | null } => {
       for (const menu of menuList) {
-        // 检查子菜单是否匹配当前路径
+        // 首先检查直接子菜单是否匹配当前路径
         if (menu.children && menu.children.length > 0) {
           for (const child of menu.children) {
-            if (child.path === path) {
-              // 找到匹配的子菜单，返回父菜单的 key（id 或 path）
+            // 使用标准化后的路径进行比较
+            if (normalizePath(child.path) === normalizePath(path)) {
+              // 找到匹配的直接子菜单，返回父菜单的 key（id 或 path）
               return { menu, parentKey: menu.path || menu.id };
             }
-            // 递归检查更深层的子菜单
+            // 递归检查更深层的子菜单（孙节点及以下）
             const result = findMenuByPath([child], path);
             if (result.menu) {
               return { menu: result.menu, parentKey: menu.path || menu.id };
@@ -339,15 +346,19 @@ const Sidebar: React.FC = () => {
     }
 
     const parentKey = findParentKey(location.pathname);
+    console.log('路由变化:', location.pathname, '父菜单 key:', parentKey);
     if (parentKey) {
       setOpenKeys([parentKey]);
     } else {
       // 如果找不到父菜单，保持当前展开状态或清空
+      console.log('未找到父菜单，清空展开状态');
       setOpenKeys([]);
     }
   }, [location.pathname, menus]);
 
   const handleMenuClick: MenuProps['onClick'] = (e) => {
+    console.log('菜单点击:', e.key, '当前 openKeys:', openKeys);
+
     // 查找被点击的菜单
     const findMenuByPath = (menuList: MenuType[], key: string): MenuType | null => {
       for (const menu of menuList) {
@@ -363,6 +374,7 @@ const Sidebar: React.FC = () => {
     };
 
     const clickedMenu = findMenuByPath(menus, e.key);
+    console.log('点击的菜单:', clickedMenu?.menuName, '类型:', clickedMenu?.menuType);
 
     // 检查菜单是否停用
     if (clickedMenu && clickedMenu.status !== 0) {
@@ -370,17 +382,27 @@ const Sidebar: React.FC = () => {
       return;
     }
 
-    navigate(e.key);
+    // 只有菜单类型（C）才执行导航，目录类型（M）不导航
+    if (clickedMenu && clickedMenu.menuType === 'C') {
+      // 确保路径以 / 开头
+      const path = e.key.startsWith('/') ? e.key : `/${e.key}`;
+      console.log('导航到:', path);
+      navigate(path);
+    }
   };
 
   // 处理菜单展开/收起 - 手风琴效果
   const handleOpenChange: MenuProps['onOpenChange'] = (keys) => {
+    console.log('菜单展开/收起事件:', keys, '当前 openKeys:', openKeys);
+
     // 只保留最新展开的菜单
     const latestOpenKey = keys.find((key) => !openKeys.includes(key));
     if (latestOpenKey) {
+      console.log('展开菜单:', latestOpenKey);
       setOpenKeys([latestOpenKey]);
     } else {
       // 如果没有新的展开菜单，说明是收起操作
+      console.log('收起菜单，keys:', keys);
       setOpenKeys(keys);
     }
   };

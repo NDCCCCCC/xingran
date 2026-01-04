@@ -477,6 +477,11 @@ func RegisterNoticeTasks(scheduler *Scheduler) {
 	scheduler.RegisterTask("notice_publish", func(ctx context.Context, params map[string]interface{}) error {
 		return executeNoticePublishTask(ctx, params)
 	})
+
+	// 值班提醒任务 - 每天早上8点提醒今日值班人员
+	scheduler.RegisterTask("duty_reminder", func(ctx context.Context, params map[string]interface{}) error {
+		return executeDutyReminderTask(ctx, params)
+	})
 }
 
 // executeNoticePublishTask 执行通知发布任务
@@ -594,6 +599,94 @@ func getTargetUserIDs(db *gorm.DB, noticeID string, targetType int) ([]string, e
 // getNoticeJobName 获取通知定时任务的名称
 func getNoticeJobName(noticeID string) string {
 	return fmt.Sprintf("notice_publish_%s", noticeID)
+}
+
+// executeDutyReminderTask 执行值班提醒任务
+// 每天早上8点查询当日值班人员，并发送值班提醒通知
+// 支持通过 sys_duty_config 表配置是否启用提醒和提醒时间
+func executeDutyReminderTask(ctx context.Context, params map[string]interface{}) error {
+	if GlobalDB == nil {
+		return fmt.Errorf("数据库未初始化")
+	}
+
+	db := GlobalDB.GetDB()
+
+	// 查询值班配置
+	type DutyConfig struct {
+		ReminderEnabled bool
+	}
+	var config DutyConfig
+	configResult := db.Table("sys_duty_config").Select("reminder_enabled").First(&config)
+	if configResult.Error != nil && configResult.Error != gorm.ErrRecordNotFound {
+		return fmt.Errorf("查询值班配置失败: %w", configResult.Error)
+	}
+
+	// 如果配置存在且提醒未启用，则跳过
+	if configResult.Error == nil && !config.ReminderEnabled {
+		log.Printf("值班提醒已禁用，跳过执行")
+		return nil
+	}
+
+	// 查询今日日期
+	today := time.Now().Format("2006-01-02")
+
+	// 查询今日值班人员（包含用户信息）
+	type DutyMember struct {
+		UserID   string
+		Username string
+		NickName string
+		PoolName string
+	}
+
+	var members []DutyMember
+	query := db.Table("sys_duty_schedule AS ds").
+		Select("ds.user_id, u.username, u.nick_name, dp.pool_name").
+		Joins("LEFT JOIN sys_user AS u ON ds.user_id = u.id").
+		Joins("LEFT JOIN sys_duty_pool AS dp ON ds.pool_id = dp.id").
+		Where("ds.schedule_date = ? AND ds.status = 0", today) // DutyStatusNormal = 0
+
+	if err := query.Find(&members).Error; err != nil {
+		return fmt.Errorf("查询今日值班人员失败: %w", err)
+	}
+
+	// 如果没有值班人员，记录日志并返回
+	if len(members) == 0 {
+		log.Printf("今日暂无值班人员: %s", today)
+		return nil
+	}
+
+	// 通过 WebSocket 推送值班提醒通知
+	if GlobalNoticeHub != nil {
+		var userIDs []string
+		for _, m := range members {
+			userIDs = append(userIDs, m.UserID)
+		}
+
+		// 构建值班人员列表文本
+		memberList := ""
+		for i, m := range members {
+			if i > 0 {
+				memberList += "、"
+			}
+			if m.NickName != "" {
+				memberList += m.NickName
+			} else {
+				memberList += m.Username
+			}
+		}
+
+		message := websocket.NoticeMessage{
+			Type:      "duty_reminder",
+			Title:     "值班提醒",
+			Content:   fmt.Sprintf("今日值班人员：%s", memberList),
+			Priority:  1, // 普通优先级
+			Timestamp: time.Now().Unix(),
+		}
+		GlobalNoticeHub.BroadcastToUsers(userIDs, message)
+		log.Printf("值班提醒已发送给 %d 个用户: %s", len(userIDs), memberList)
+	}
+
+	return nil
 }
 
 // DeviceMonitorService 设备监控服务接口

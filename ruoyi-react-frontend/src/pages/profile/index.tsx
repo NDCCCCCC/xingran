@@ -12,17 +12,23 @@ import {
   Select,
   message,
   Upload,
+  Statistic,
+  Tag,
+  Space,
 } from 'antd';
 import {
   UserOutlined,
   EditOutlined,
   LockOutlined,
   UploadOutlined,
+  CalendarOutlined,
 } from '@ant-design/icons';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { getProfileInfo, updateProfileInfo, changePassword, uploadAvatar } from '@/lib/profileApi';
+import { getMyDutyStats, type MyDutyStats } from '@/lib/dutyApi';
 import { useAuthStore } from '@/store/authStore';
 import type { UserProfile } from '@/types';
+import dayjs from 'dayjs';
 
 const { Option } = Select;
 
@@ -34,6 +40,8 @@ const ProfilePage: React.FC = () => {
   const [editForm] = Form.useForm();
   const [passwordForm] = Form.useForm();
   const [avatarFileList, setAvatarFileList] = useState<UploadFile[]>([]);
+  const [dutyStats, setDutyStats] = useState<MyDutyStats | null>(null);
+  const [dutyStatsLoading, setDutyStatsLoading] = useState(false);
   const { updateUser } = useAuthStore();
 
   // 加载个人信息
@@ -49,8 +57,22 @@ const ProfilePage: React.FC = () => {
     }
   };
 
+  // 加载值班统计
+  const loadDutyStats = async () => {
+    setDutyStatsLoading(true);
+    try {
+      const data = await getMyDutyStats();
+      setDutyStats(data);
+    } catch (error) {
+      console.error('加载值班统计失败', error);
+    } finally {
+      setDutyStatsLoading(false);
+    }
+  };
+
   useEffect(() => {
     loadProfile();
+    loadDutyStats();
   }, []);
 
   // 更新个人信息
@@ -124,6 +146,16 @@ const ProfilePage: React.FC = () => {
     return false; // 阻止默认上传行为
   };
 
+  // 获取值班类型颜色
+  const getDutyTypeColor = (type: string) => {
+    switch (type) {
+      case 'weekday': return 'blue';
+      case 'weekend': return 'orange';
+      case 'holiday': return 'red';
+      default: return 'default';
+    }
+  };
+
   if (!profile) {
     return <div>加载中...</div>;
   }
@@ -184,6 +216,83 @@ const ProfilePage: React.FC = () => {
                 修改密码
               </Button>
             </div>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* 值班摘要卡片 */}
+      <Row gutter={[16, 16]} className="mt-4">
+        <Col span={24}>
+          <Card
+            title={
+              <Space>
+                <CalendarOutlined />
+                <span>我的值班</span>
+              </Space>
+            }
+            extra={
+              <Button type="link" href="/duty/my-duty">
+                查看详情 →
+              </Button>
+            }
+            loading={dutyStatsLoading}
+          >
+            {dutyStats && (
+              <Row gutter={[16, 16]}>
+                <Col xs={12} sm={6}>
+                  <Statistic
+                    title="今日状态"
+                    value={dutyStats.isOnDutyToday ? "值班中" : "休息"}
+                    valueStyle={{ color: dutyStats.isOnDutyToday ? '#3f8600' : '#8c8c8c' }}
+                  />
+                </Col>
+                <Col xs={12} sm={6}>
+                  <Statistic
+                    title="本月次数"
+                    value={dutyStats.thisMonthCount}
+                    suffix="次"
+                  />
+                </Col>
+                <Col xs={12} sm={6}>
+                  <Statistic
+                    title="累计值班"
+                    value={dutyStats.totalCount}
+                    suffix="次"
+                  />
+                </Col>
+                <Col xs={12} sm={6}>
+                  <div>
+                    <div style={{ fontSize: '14px', color: 'rgba(0,0,0,0.45)', marginBottom: '4px' }}>下次值班</div>
+                    <div style={{ fontSize: '20px', fontWeight: 500 }}>
+                      {dutyStats.nextDutyDate ? (
+                        <Space>
+                          <span>{dayjs(dutyStats.nextDutyDate).format('MM-DD')}</span>
+                          {dutyStats.nextDutyPoolName && (
+                            <Tag color="blue">{dutyStats.nextDutyPoolName}</Tag>
+                          )}
+                        </Space>
+                      ) : (
+                        <span style={{ color: '#8c8c8c' }}>暂无排班</span>
+                      )}
+                    </div>
+                  </div>
+                </Col>
+              </Row>
+            )}
+
+            {/* 今日值班详情 */}
+            {dutyStats?.isOnDutyToday && dutyStats.todayDutyRecords && dutyStats.todayDutyRecords.length > 0 && (
+              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded">
+                <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>今日值班任务</div>
+                <Space wrap>
+                  {dutyStats.todayDutyRecords.map((record, index) => (
+                    <Tag key={index} color={getDutyTypeColor(record.dutyType)}>
+                      {record.poolName} ({record.dutyType === 'weekday' ? '工作日' : record.dutyType === 'weekend' ? '周末' : '节假日'})
+                    </Tag>
+                  ))}
+                </Space>
+              </div>
+            )}
           </Card>
         </Col>
       </Row>
