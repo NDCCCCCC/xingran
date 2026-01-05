@@ -1081,7 +1081,7 @@ const NoticeManagement: React.FC = () => {
                 value={currentStatistics.readRate}
                 precision={1}
                 suffix="%"
-                valueStyle={{ color: currentStatistics.readRate >= 50 ? '#3f8600' : '#cf1322' }}
+                styles={{ content: { color: currentStatistics.readRate >= 50 ? '#3f8600' : '#cf1322' } }}
               />
             </Card>
           </div>

@@ -184,6 +184,17 @@ func (c *Core) Init() error {
 		scheduler.RegisterNoticeTasks(c.Scheduler)
 		log.Println("通知定时任务注册完成")
 
+		// 注册运维工单相关定时任务
+		scheduler.RegisterWorkOrderTasks(c.Scheduler)
+		log.Println("运维工单定时任务注册完成")
+
+		// 同步周期性工单模板到调度器
+		if err := scheduler.SyncPeriodicWorkOrderJobs(c.Scheduler); err != nil {
+			log.Printf("警告：同步周期性工单任务失败: %v", err)
+		} else {
+			log.Println("周期性工单任务同步完成")
+		}
+
 		// 设置全局数据库访问器，供定时任务使用
 		scheduler.SetDB(c)
 	}

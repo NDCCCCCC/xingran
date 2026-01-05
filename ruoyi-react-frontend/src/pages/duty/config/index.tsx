@@ -75,7 +75,7 @@ const DutyConfigPage: React.FC = () => {
         }
       >
         <Alert
-          message="配置说明"
+          title="配置说明"
           description="在此处配置值班提醒功能。启用后，系统将在指定时间通过选择的渠道提醒当日值班人员。"
           type="info"
           showIcon
@@ -168,7 +168,7 @@ const DutyConfigPage: React.FC = () => {
         <Divider />
 
         <Alert
-          message="注意事项"
+          title="注意事项"
           description={
             <ul className="list-disc pl-4 m-0">
               <li>修改提醒时间后，定时任务需要管理员在系统中重新配置</li>
@@ -184,7 +184,7 @@ const DutyConfigPage: React.FC = () => {
 
       <Card title="定时任务配置说明" className="mt-6">
         <Alert
-          message="管理员操作指南"
+          title="管理员操作指南"
           description={
             <div>
               <p>系统使用定时任务来发送值班提醒，如需修改提醒时间，需要管理员在数据库中更新Job配置：</p>

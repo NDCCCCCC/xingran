@@ -355,4 +355,106 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 		// 我的值班（所有已登录用户可访问）
 		v1.SetupMyDutyRouter(duty.Group("/my-duty"), core)
 	}
+
+	// 运维工单管理模块
+	workorder := r.Group("/workorder")
+	workorder.Use(middleware.JWTAuth(core.JWTManager))
+	{
+		// 工单管理
+		orders := workorder.Group("/orders")
+		orders.Use(middleware.RequirePermissions([]string{
+			"ops:workorder:list",
+			"ops:workorder:add",
+			"ops:workorder:edit",
+			"ops:workorder:delete",
+		}, core))
+		{
+			v1.SetupWorkOrdersRouter(orders, core)
+			v1.SetupWorkOrderRatingsRouter(orders, core) // 评价路由
+		}
+
+		// 工单分类管理
+		categories := workorder.Group("/categories")
+		categories.Use(middleware.RequirePermissions([]string{
+			"ops:workorder:category:list",
+			"ops:workorder:category:add",
+			"ops:workorder:category:edit",
+			"ops:workorder:category:delete",
+		}, core))
+		{
+			v1.SetupWorkOrderCategoriesRouter(categories, core)
+		}
+
+		// 周期性工单模板管理
+		periodic := workorder.Group("/periodic")
+		periodic.Use(middleware.RequirePermissions([]string{
+			"ops:workorder:periodic:list",
+			"ops:workorder:periodic:add",
+			"ops:workorder:periodic:edit",
+			"ops:workorder:periodic:delete",
+		}, core))
+		{
+			v1.SetupPeriodicWorkOrderRouter(periodic, core)
+		}
+
+		// 工单配置管理（需要系统配置权限）
+		workorderConfig := workorder.Group("/config")
+		workorderConfig.Use(middleware.RequirePermissions([]string{
+			string(permission.SystemConfig),
+		}, core))
+		{
+			v1.SetupWorkOrderConfigRouter(workorderConfig, core)
+		}
+
+		// 工单统计（所有已登录用户可查看）
+		v1.SetupWorkOrderStatisticsRouter(workorder.Group("/statistics"), core)
+	}
+
+	// 知识库管理模块
+	knowledge := r.Group("/knowledge")
+	knowledge.Use(middleware.JWTAuth(core.JWTManager))
+	{
+		// 知识库文章管理
+		articles := knowledge.Group("/articles")
+		articles.Use(middleware.RequirePermissions([]string{
+			"ops:knowledge:article:list",
+			"ops:knowledge:article:add",
+			"ops:knowledge:article:edit",
+			"ops:knowledge:article:delete",
+		}, core))
+		{
+			v1.SetupKnowledgeArticlesRouter(articles, core)
+		}
+
+		// 知识库分类管理
+		knowledgeCategories := knowledge.Group("/categories")
+		knowledgeCategories.Use(middleware.RequirePermissions([]string{
+			"ops:knowledge:category:list",
+			"ops:knowledge:category:add",
+			"ops:knowledge:category:edit",
+			"ops:knowledge:category:delete",
+		}, core))
+		{
+			v1.SetupKnowledgeCategoriesRouter(knowledgeCategories, core)
+		}
+
+		// 知识库标签管理
+		knowledgeTags := knowledge.Group("/tags")
+		knowledgeTags.Use(middleware.RequirePermissions([]string{
+			"ops:knowledge:tag:list",
+			"ops:knowledge:tag:add",
+			"ops:knowledge:tag:edit",
+			"ops:knowledge:tag:delete",
+		}, core))
+		{
+			v1.SetupKnowledgeTagsRouter(knowledgeTags, core)
+		}
+
+		// 知识库工单转换（工单转知识库）
+		v1.SetupKnowledgeArticlesRouter(knowledge.Group("/workorders"), core)
+
+		// 知识库搜索和查看（所有已登录用户可访问）
+		v1.SetupKnowledgeArticlesRouter(knowledge.Group("/view"), core)
+		v1.SetupKnowledgeCategoriesRouter(knowledge.Group("/view/categories"), core)
+	}
 }

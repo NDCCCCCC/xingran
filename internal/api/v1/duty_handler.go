@@ -197,8 +197,25 @@ func getTodayDuty(core *core.Core) gin.HandlerFunc {
 // getMonthlyDutySchedule 获取月度值班排班
 func getMonthlyDutySchedule(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// 支持从Query参数或JSON body获取参数
 		yearStr := c.Query("year")
 		monthStr := c.Query("month")
+
+		// 如果Query参数为空，尝试从JSON body获取
+		if yearStr == "" || monthStr == "" {
+			var req struct {
+				Year  int `json:"year"`
+				Month int `json:"month"`
+			}
+			if err := c.ShouldBindJSON(&req); err == nil {
+				if yearStr == "" && req.Year > 0 {
+					yearStr = fmt.Sprintf("%d", req.Year)
+				}
+				if monthStr == "" && req.Month > 0 {
+					monthStr = fmt.Sprintf("%d", req.Month)
+				}
+			}
+		}
 
 		if yearStr == "" || monthStr == "" {
 			response.Error(c, response.ErrBadRequest, "年份和月份参数不能为空")

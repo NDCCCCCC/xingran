@@ -459,7 +459,7 @@ const DutyHolidayPage: React.FC = () => {
         </div>
 
         <Alert
-          message="提示"
+          title="提示"
           description="支持通过Excel批量导入节假日数据。请先下载模板，按模板格式填写后导入。日期格式支持 YYYY-MM-DD 或 Excel日期格式。"
           type="info"
           showIcon
@@ -483,7 +483,7 @@ const DutyHolidayPage: React.FC = () => {
         open={modalVisible}
         onOk={handleModalOk}
         onCancel={() => setModalVisible(false)}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={editForm} layout="vertical" preserve={false}>
           <Form.Item
@@ -535,7 +535,7 @@ const DutyHolidayPage: React.FC = () => {
         onOk={handleBatchSubmit}
         onCancel={() => setBatchModalVisible(false)}
         width={800}
-        destroyOnClose
+        destroyOnHidden
       >
         <div className="mb-4">
           <Button type="dashed" onClick={addBatchRow} block icon={<PlusOutlined />}>

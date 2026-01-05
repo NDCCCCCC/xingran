@@ -480,7 +480,7 @@ const DutySchedulePage: React.FC = () => {
             ))}
           </Space>
         ) : (
-          <Alert message="今日暂无值班人员" type="info" showIcon />
+          <Alert title="今日暂无值班人员" type="info" showIcon />
         )}
       </Card> */}
 
@@ -525,7 +525,7 @@ const DutySchedulePage: React.FC = () => {
                     borderColor: isToday ? '#1890ff' : undefined,
                     backgroundColor: isToday ? '#e6f7ff' : undefined,
                   }}
-                  bodyStyle={{ padding: '8px', height: '100%', overflow: 'auto' }}
+                  styles={{ body: { padding: '8px', height: '100%', overflow: 'auto' } }}
                 >
                   <div style={{ marginBottom: '4px' }}>
                     <Text
@@ -542,7 +542,7 @@ const DutySchedulePage: React.FC = () => {
                       {day.format('MM-DD')}
                     </Text>
                   </div>
-                  <Space direction="vertical" size="small" style={{ width: '100%' }}>
+                  <Space orientation="vertical" size="small" style={{ width: '100%' }}>
                     {members.length > 0 ? (
                       members.map((member, index) => (
                         <Badge
@@ -679,7 +679,7 @@ const DutySchedulePage: React.FC = () => {
         open={generateModalVisible}
         onOk={handleGenerate}
         onCancel={() => setGenerateModalVisible(false)}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={generateForm} layout="vertical" preserve={false}>
           <Form.Item
@@ -727,7 +727,7 @@ const DutySchedulePage: React.FC = () => {
           </Form.Item>
 
           <Alert
-            message="提示"
+            title="提示"
             description="系统将根据值班池中的成员顺序，按轮询方式自动生成排班记录。只对符合所选值班类型的日期进行排班。"
             type="info"
             showIcon
@@ -741,7 +741,7 @@ const DutySchedulePage: React.FC = () => {
         open={swapModalVisible}
         onOk={handleSwap}
         onCancel={() => setSwapModalVisible(false)}
-        destroyOnClose
+        destroyOnHidden
         width={600}
       >
         <Form form={swapForm} layout="vertical" preserve={false}>
@@ -786,7 +786,7 @@ const DutySchedulePage: React.FC = () => {
           </Form.Item>
 
           <Alert
-            message="提示"
+            title="提示"
             description="选择两条排班记录进行互换，两位值班人员将交换各自的值班日期。"
             type="info"
             showIcon
@@ -800,7 +800,7 @@ const DutySchedulePage: React.FC = () => {
         open={manualModalVisible}
         onOk={handleManual}
         onCancel={() => setManualModalVisible(false)}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={manualForm} layout="vertical" preserve={false}>
           <Form.Item

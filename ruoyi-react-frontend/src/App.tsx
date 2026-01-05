@@ -50,6 +50,14 @@ import DutySchedulePage from '@/pages/duty/schedules';
 import DutyHolidayPage from '@/pages/duty/holidays';
 import DutyConfigPage from '@/pages/duty/config';
 import MyDutyPage from '@/pages/duty/my-duty';
+// 运维工单管理页面
+import WorkOrderPage from '@/pages/workorder/orders';
+import WorkOrderCategoryPage from '@/pages/workorder/categories';
+import WorkOrderStatisticsPage from '@/pages/workorder/statistics';
+import PeriodicTemplatePage from '@/pages/workorder/periodic/templates';
+// 知识库管理页面
+import KnowledgeArticlePage from '@/pages/knowledge/articles';
+import KnowledgeViewPage from '@/pages/knowledge/view';
 import './App.css';
 
 // 创建React Query客户端
@@ -163,6 +171,16 @@ function App() {
                       <Route path="/duty/holidays" element={<DutyHolidayPage />} />
                       <Route path="/duty/config" element={<DutyConfigPage />} />
                       <Route path="/duty/my-duty" element={<MyDutyPage />} />
+
+                      {/* 运维工单管理路由 */}
+                      <Route path="/workorder/orders" element={<WorkOrderPage />} />
+                      <Route path="/workorder/categories" element={<WorkOrderCategoryPage />} />
+                      <Route path="/workorder/statistics" element={<WorkOrderStatisticsPage />} />
+                      <Route path="/workorder/periodic/templates" element={<PeriodicTemplatePage />} />
+
+                      {/* 知识库管理路由 */}
+                      <Route path="/knowledge/articles" element={<KnowledgeArticlePage />} />
+                      <Route path="/knowledge/view" element={<KnowledgeViewPage />} />
 
                       <Route path="*" element={<Navigate to="/dashboard" replace />} />
                     </Routes>

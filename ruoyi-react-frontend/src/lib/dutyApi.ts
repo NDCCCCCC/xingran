@@ -151,7 +151,7 @@ export function createDutyPool(data: DutyPoolCreateRequest): Promise<BaseRespons
 }
 
 export function getDutyPool(id: string): Promise<BaseResponse<DutyPool>> {
-  return get(`/duty/pools/${id}`);
+  return post(`/duty/pools/${id}`, {});
 }
 
 export function updateDutyPool(id: string, data: DutyPoolUpdateRequest): Promise<BaseResponse<{ message: string }>> {
@@ -173,7 +173,7 @@ export function generateSchedule(data: GenerateScheduleRequest): Promise<BaseRes
 }
 
 export function getTodayDuty(): Promise<BaseResponse<{ date: string; members: Array<{ userId: string; username: string; nickName: string }> }>> {
-  return get('/duty/schedules/today');
+  return post('/duty/schedules/today', {});
 }
 
 export function swapDuty(data: SwapDutyRequest): Promise<BaseResponse<{ message: string }>> {
@@ -203,13 +203,13 @@ export interface MonthlyDutyMember {
 }
 
 export function getMonthlyDutySchedule(year: number, month: number): Promise<BaseResponse<Record<string, MonthlyDutyMember[]>>> {
-  return get(`/duty/schedules/monthly?year=${year}&month=${month}`);
+  return post(`/duty/schedules/monthly`, { year, month });
 }
 
 // ==================== 节假日管理 ====================
 
 export function getHolidayList(year: number): Promise<BaseResponse<Holiday[]>> {
-  return get(`/duty/holidays/list?year=${year}`);
+  return post(`/duty/holidays/list`, { year });
 }
 
 export function createHoliday(data: Omit<Holiday, 'id' | 'createdAt' | 'createdBy'>): Promise<BaseResponse<Holiday>> {
@@ -229,13 +229,13 @@ export function batchCreateHolidays(holidays: Omit<Holiday, 'id' | 'createdAt' |
 }
 
 export function getHolidayYears(): Promise<BaseResponse<number[]>> {
-  return get('/duty/holidays/years');
+  return post('/duty/holidays/years', {});
 }
 
 // ==================== 值班配置管理 ====================
 
 export function getDutyConfig(): Promise<BaseResponse<DutyConfig>> {
-  return get('/duty/config');
+  return post('/duty/config', {});
 }
 
 export function updateDutyConfig(data: Partial<DutyConfig>): Promise<BaseResponse<{ message: string }>> {
@@ -297,5 +297,5 @@ export interface MyDutyStats {
 }
 
 export function getMyDutyStats(): Promise<BaseResponse<MyDutyStats>> {
-  return get('/duty/my-duty/stats');
+  return post('/duty/my-duty/stats', {});
 }

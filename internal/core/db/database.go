@@ -222,6 +222,21 @@ func (d *Database) AutoMigrate() error {
 		&models.DutyExchange{},
 		&models.Holiday{},
 		&models.DutyConfig{},
+		// 工单管理相关模型
+		&models.WorkOrder{},
+		&models.WorkOrderCategory{},
+		&models.WorkOrderComment{},
+		&models.WorkOrderHistory{},
+		&models.WorkOrderRating{},
+		&models.WorkOrderConfig{},
+		&models.WorkOrderTemplate{},
+		&models.PeriodicWorkOrderTemplate{},
+		&models.PeriodicWorkOrderLog{},
+		// 知识库相关模型
+		&models.KnowledgeArticle{},
+		&models.KnowledgeCategory{},
+		&models.KnowledgeTag{},
+		&models.KnowledgeArticleTag{},
 	); err != nil {
 		return err
 	}
@@ -1101,39 +1116,42 @@ func createDutyManagementMenus(db *gorm.DB) error {
 		log.Printf("创建菜单 %s 成功", opsMenu.MenuName)
 	}
 
-	// 检查值班管理菜单是否已存在（检查目录菜单）
-	var count int64
-	db.Model(&models.Menu{}).Where("menu_name = ? AND menu_type = ? AND parent_id IS NOT NULL", "值班管理", "M").Count(&count)
-	if count > 0 {
-		log.Println("值班管理菜单已存在，跳过创建")
-		return nil
-	}
-
-	// 清理可能存在的旧值班管理菜单碎片数据（在创建新菜单之前）
-	db.Unscoped().Where("menu_name LIKE ? OR perms LIKE ?", "%值班%", "ops:duty%").Delete(&models.Menu{})
-
-	// 直接在运维管理下创建4个页面菜单（不创建"值班管理"中间目录）
+	// 定义需要创建的页面菜单（检查是否存在，不存在才创建）
 	pageMenus := []struct {
 		name      string
 		path      string
 		component string
 		perms     string
-	 remark    string
+		remark    string
 		orderNum  int
+		icon      string
 	}{
-		{"值班池管理", "duty/pools", "duty/pools/index", "ops:duty:pools:view", "值班池管理页面", 1},
-		{"排班管理", "duty/schedules", "duty/schedules/index", "ops:duty:schedules:view", "排班管理页面", 2},
-		{"节假日管理", "duty/holidays", "duty/holidays/index", "ops:duty:holidays:view", "节假日管理页面", 3},
-		{"值班配置", "duty/config", "duty/config/index", "ops:duty:config:view", "值班配置页面", 4},
+		{"值班池管理", "duty/pools", "duty/pools/index", "ops:duty:pools:view", "值班池管理页面", 1, "team"},
+		{"排班管理", "duty/schedules", "duty/schedules/index", "ops:duty:schedules:view", "排班管理页面", 2, "clock"},
+		{"节假日管理", "duty/holidays", "duty/holidays/index", "ops:duty:holidays:view", "节假日管理页面", 3, "home"},
+		{"值班配置", "duty/config", "duty/config/index", "ops:duty:config:view", "值班配置页面", 4, "setting"},
+		{"我的值班", "duty/my-duty", "duty/my-duty/index", "ops:duty:my:view", "我的值班页面", 5, "user"},
 	}
 
 	// 存储页面菜单的ID，用于后续创建按钮权限
 	menuIDs := make(map[string]string)
 
 	for _, pm := range pageMenus {
+		// 检查菜单是否已存在
+		var existingMenu models.Menu
+		err := db.Where("menu_name = ? AND parent_id = ?", pm.name, opsMenu.ID).First(&existingMenu).Error
+
+		if err == nil {
+			// 菜单已存在，使用现有菜单ID，跳过创建
+			menuIDs[pm.name] = existingMenu.ID
+			log.Printf("菜单 %s 已存在，跳过创建", pm.name)
+			continue
+		}
+
+		// 菜单不存在，创建新菜单
 		menu := models.Menu{
 			MenuName:  pm.name,
-			ParentID:  &opsMenu.ID, // 直接属于运维管理
+			ParentID:  &opsMenu.ID,
 			OrderNum:  pm.orderNum,
 			Path:      func() *string { s := pm.path; return &s }(),
 			Component: func() *string { s := pm.component; return &s }(),
@@ -1141,7 +1159,7 @@ func createDutyManagementMenus(db *gorm.DB) error {
 			Visible:   models.VisibleShow,
 			Status:    models.MenuStatusNormal,
 			Perms:     func() *string { s := pm.perms; return &s }(),
-			Icon:      NULL_STRING_PTR(""),
+			Icon:      func() *string { s := pm.icon; return &s }(),
 			Remark:    pm.remark,
 		}
 		if err := db.Create(&menu).Error; err != nil {
@@ -1151,7 +1169,7 @@ func createDutyManagementMenus(db *gorm.DB) error {
 		log.Printf("创建菜单 %s 成功", pm.name)
 	}
 
-	// 第二步：创建按钮权限菜单（作为各页面菜单的子菜单）
+	// 定义需要创建的按钮权限菜单
 	buttonMenus := []struct {
 		parent   string
 		name     string
@@ -1176,6 +1194,8 @@ func createDutyManagementMenus(db *gorm.DB) error {
 		{"节假日管理", "节假日删除", "ops:duty:holiday:delete", "节假日删除", 4},
 		// 值班配置的按钮
 		{"值班配置", "值班配置修改", "ops:duty:config:edit", "值班配置修改", 1},
+		// 我的值班的按钮
+		{"我的值班", "值班查询", "ops:duty:my:list", "值班查询", 1},
 	}
 
 	for _, bm := range buttonMenus {
@@ -1184,6 +1204,18 @@ func createDutyManagementMenus(db *gorm.DB) error {
 			log.Printf("警告：找不到父菜单 %s，跳过创建按钮 %s", bm.parent, bm.name)
 			continue
 		}
+
+		// 检查按钮是否已存在
+		var existingButton models.Menu
+		err := db.Where("menu_name = ? AND parent_id = ?", bm.name, parentID).First(&existingButton).Error
+
+		if err == nil {
+			// 按钮已存在，跳过创建
+			log.Printf("按钮 %s 已存在，跳过创建", bm.name)
+			continue
+		}
+
+		// 按钮不存在，创建新按钮
 		menu := models.Menu{
 			MenuName:  bm.name,
 			ParentID:  func() *string { s := parentID; return &s }(),
@@ -1204,5 +1236,43 @@ func createDutyManagementMenus(db *gorm.DB) error {
 	}
 
 	log.Println("值班管理菜单创建完成")
+
+	// 为所有启用的角色分配新创建的菜单权限
+	// 获取所有启用的角色
+	var roles []models.Role
+	if err := db.Where("status = ?", models.RoleStatusEnabled).Find(&roles).Error; err != nil {
+		log.Printf("查询角色失败: %v", err)
+		return nil // 不中断，只记录日志
+	}
+
+	// 获取运维管理菜单下的所有菜单（包括父菜单本身和所有子菜单）
+	var dutyMenus []models.Menu
+	if err := db.Where("parent_id = ? OR id = ?", opsMenu.ID, opsMenu.ID).Find(&dutyMenus).Error; err != nil {
+		log.Printf("查询值班管理菜单失败: %v", err)
+		return nil
+	}
+
+	// 为每个角色分配这些菜单权限
+	for _, role := range roles {
+		for _, menu := range dutyMenus {
+			// 检查是否已经存在该角色菜单关联
+			var count int64
+			db.Table("sys_role_menu").
+				Where("role_id = ? AND menu_id = ?", role.ID, menu.ID).
+				Count(&count)
+
+			if count == 0 {
+				// 创建角色菜单关联
+				if err := db.Exec("INSERT INTO sys_role_menu (role_id, menu_id) VALUES (?, ?)",
+					role.ID, menu.ID).Error; err != nil {
+					log.Printf("为角色 %s 分配菜单 %s 失败: %v", role.RoleName, menu.MenuName, err)
+				} else {
+					log.Printf("为角色 %s 分配菜单 %s 成功", role.RoleName, menu.MenuName)
+				}
+			}
+		}
+	}
+
+	log.Println("值班管理菜单权限分配完成")
 	return nil
 }

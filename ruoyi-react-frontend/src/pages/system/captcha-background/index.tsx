@@ -367,7 +367,7 @@ const CaptchaBackgroundManagement: React.FC = () => {
               <Statistic
                 title="启用数量"
                 value={statistics.enabledCount}
-                valueStyle={{ color: '#3f8600' }}
+                styles={{ content: { color: '#3f8600' } }}
               />
             </Card>
           </Col>
@@ -376,7 +376,7 @@ const CaptchaBackgroundManagement: React.FC = () => {
               <Statistic
                 title="禁用数量"
                 value={statistics.disabledCount}
-                valueStyle={{ color: '#cf1322' }}
+                styles={{ content: { color: '#cf1322' } }}
               />
             </Card>
           </Col>

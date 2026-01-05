@@ -41,12 +41,12 @@ type DutyPoolCreateRequest struct {
 
 // DutyPoolUpdateRequest 更新值班池请求
 type DutyPoolUpdateRequest struct {
-	ID          string   `json:"id" binding:"required"`
+	ID          string   `json:"-"` // ID从URL参数获取，不参与JSON绑定
 	PoolName    string   `json:"poolName" binding:"required,max=100"`
 	DeptID      *string  `json:"deptId,omitempty"`
 	Description string   `json:"description,omitempty"`
 	DailyCount  int      `json:"dailyCount" binding:"min=1,max=10"`
-	Status      int      `json:"status" binding:"min=0,max=1"`
+	Status      *int     `json:"status,omitempty"` // 使用指针类型，未提供时为nil
 	MemberIDs   []string `json:"memberIds" binding:"required,min=1"`
 }
 
@@ -245,8 +245,12 @@ func (s *DutyService) UpdateDutyPool(ctx context.Context, req *DutyPoolUpdateReq
 		"dept_id":     req.DeptID,
 		"description": req.Description,
 		"daily_count": req.DailyCount,
-		"status":      req.Status,
 		"updated_by":  updaterID,
+	}
+
+	// 只有当请求中明确指定status时才更新
+	if req.Status != nil {
+		updates["status"] = *req.Status
 	}
 
 	if err := tx.Model(&pool).Updates(updates).Error; err != nil {
@@ -498,13 +502,14 @@ func (s *DutyService) GetDutyScheduleList(ctx context.Context, req *DutySchedule
 
 // GetTodayDuty 获取今日值班人员
 func (s *DutyService) GetTodayDuty(ctx context.Context) ([]TodayDutyMember, error) {
-	today := time.Now().Truncate(24 * time.Hour)
+	// 使用本地时间获取今天的日期，与数据库 TimeZone=Asia/Shanghai 配置一致
+	today := time.Now().Local().Format("2006-01-02")
 
 	var schedules []models.DutySchedule
 	if err := s.db.WithContext(ctx).
 		Preload("Pool").
 		Preload("User").
-		Where("schedule_date = ? AND status = ?", today, models.DutyStatusNormal).
+		Where("DATE(schedule_date) = ? AND status = ?", today, models.DutyStatusNormal).
 		Find(&schedules).Error; err != nil {
 		return nil, fmt.Errorf("查询今日值班失败: %w", err)
 	}
@@ -523,9 +528,11 @@ func (s *DutyService) GetTodayDuty(ctx context.Context) ([]TodayDutyMember, erro
 		username := ""
 		phone := ""
 		if s.User != nil {
-			username = s.User.Username
-			if s.User.Nickname != nil && *s.User.Nickname != "" {
-				username = *s.User.Nickname
+			// 统一显示格式：昵称（用户名）
+			if s.User.Nickname != nil && *s.User.Nickname != "" && *s.User.Nickname != s.User.Username {
+				username = fmt.Sprintf("%s (%s)", *s.User.Nickname, s.User.Username)
+			} else {
+				username = s.User.Username
 			}
 			if s.User.Phone != nil {
 				phone = *s.User.Phone
@@ -567,7 +574,7 @@ func (s *DutyService) GetMonthlyDutySchedule(ctx context.Context, year int, mont
 	if err := s.db.WithContext(ctx).
 		Preload("Pool").
 		Preload("User").
-		Where("schedule_date >= ? AND schedule_date <= ? AND status = ?", startDate, endDate, models.DutyStatusNormal).
+		Where("schedule_date >= ? AND schedule_date <= ? AND status = ? AND deleted_at IS NULL", startDate, endDate, models.DutyStatusNormal).
 		Order("schedule_date ASC").
 		Find(&schedules).Error; err != nil {
 		return nil, fmt.Errorf("查询月度值班失败: %w", err)
@@ -585,9 +592,11 @@ func (s *DutyService) GetMonthlyDutySchedule(ctx context.Context, year int, mont
 		username := ""
 		phone := ""
 		if s.User != nil {
-			username = s.User.Username
-			if s.User.Nickname != nil && *s.User.Nickname != "" {
-				username = *s.User.Nickname
+			// 统一显示格式：昵称（用户名）
+			if s.User.Nickname != nil && *s.User.Nickname != "" && *s.User.Nickname != s.User.Username {
+				username = fmt.Sprintf("%s (%s)", *s.User.Nickname, s.User.Username)
+			} else {
+				username = s.User.Username
 			}
 			if s.User.Phone != nil {
 				phone = *s.User.Phone

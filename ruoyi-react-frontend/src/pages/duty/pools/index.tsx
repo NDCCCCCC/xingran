@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Form, Input, Select, Table, Modal, InputNumber, Space, Tag, message, Popconfirm, Card, Statistic, Row, Col } from 'antd';
+import { Button, Form, Input, Select, Table, Modal, InputNumber, Space, Tag, message, Popconfirm, Card, Statistic, Row, Col, TreeSelect } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, ReloadOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import dayjs from 'dayjs';
@@ -18,6 +18,16 @@ import {
 } from '@/lib/dutyApi';
 
 const { Option } = Select;
+
+// 将部门数据转换为 TreeSelect 需要的树形结构
+const buildDeptTree = (depts: SimpleDept[]): any[] => {
+  return depts.map((dept) => ({
+    title: dept.deptName,
+    value: dept.id,
+    key: dept.id,
+    children: dept.children && dept.children.length > 0 ? buildDeptTree(dept.children) : undefined,
+  }));
+};
 
 const DutyPoolPage: React.FC = () => {
   const [form] = Form.useForm();
@@ -38,6 +48,60 @@ const DutyPoolPage: React.FC = () => {
   // 用户和部门数据
   const [users, setUsers] = useState<SimpleUser[]>([]);
   const [depts, setDepts] = useState<SimpleDept[]>([]);
+  // 筛选后的用户列表（用于弹窗中的值班成员选择）
+  const [filteredUsers, setFilteredUsers] = useState<SimpleUser[]>([]);
+
+  // 获取部门及其所有子部门的ID列表
+  const getDeptAndChildrenIds = (deptId: string | undefined, deptList: SimpleDept[]): string[] => {
+    if (!deptId) return [];
+    const ids: string[] = [deptId];
+
+    const findChildren = (parentId: string) => {
+      for (const dept of deptList) {
+        if (dept.id === parentId && dept.children) {
+          for (const child of dept.children) {
+            ids.push(child.id);
+            findChildren(child.id);
+          }
+          break;
+        }
+        // 递归在子部门中查找
+        if (dept.children) {
+          findChildren(parentId);
+        }
+      }
+    };
+
+    // 更高效的递归方法
+    const collectChildrenIds = (dept: SimpleDept): string[] => {
+      const result: string[] = [];
+      if (dept.children && dept.children.length > 0) {
+        for (const child of dept.children) {
+          result.push(child.id);
+          result.push(...collectChildrenIds(child));
+        }
+      }
+      return result;
+    };
+
+    const findAndCollect = (depts: SimpleDept[], targetId: string): string[] => {
+      for (const dept of depts) {
+        if (dept.id === targetId) {
+          return collectChildrenIds(dept);
+        }
+        if (dept.children && dept.children.length > 0) {
+          const result = findAndCollect(dept.children, targetId);
+          if (result.length > 0) {
+            return result;
+          }
+        }
+      }
+      return [];
+    };
+
+    ids.push(...findAndCollect(deptList, deptId));
+    return ids;
+  };
 
   const fetchList = async (page?: number, pageSize?: number) => {
     setLoading(true);
@@ -113,12 +177,21 @@ const DutyPoolPage: React.FC = () => {
     setEditingRecord(null);
     editForm.resetFields();
     editForm.setFieldsValue({ dailyCount: 1, memberIds: [] });
+    setFilteredUsers([]); // 重置筛选后的用户列表
     setModalVisible(true);
   };
 
   const handleEdit = (record: DutyPool) => {
     setEditingRecord(record);
     setModalVisible(true);
+    // 根据记录的部门筛选用户
+    if (record.deptId) {
+      const deptIds = getDeptAndChildrenIds(record.deptId, depts);
+      const filtered = users.filter(user => user.deptId && deptIds.includes(user.deptId));
+      setFilteredUsers(filtered);
+    } else {
+      setFilteredUsers(users);
+    }
   };
 
   const handleModalOpenChange = (open: boolean) => {
@@ -131,6 +204,15 @@ const DutyPoolPage: React.FC = () => {
         dailyCount: editingRecord.dailyCount,
         memberIds: editingRecord.members?.map((m) => m.userId) || [],
       });
+      // 根据记录的部门筛选用户
+      if (editingRecord.deptId) {
+        const deptIds = getDeptAndChildrenIds(editingRecord.deptId, depts);
+        const filtered = users.filter(user => user.deptId && deptIds.includes(user.deptId));
+        setFilteredUsers(filtered);
+      }
+    } else if (open && !editingRecord) {
+      // 新增时重置筛选
+      setFilteredUsers([]);
     }
   };
 
@@ -284,10 +366,10 @@ const DutyPoolPage: React.FC = () => {
             <Statistic title="总值班池" value={stats.total} prefix={<TeamOutlined />} />
           </Col>
           <Col span={6}>
-            <Statistic title="启用中" value={stats.enabled} valueStyle={{ color: '#3f8600' }} />
+            <Statistic title="启用中" value={stats.enabled} styles={{ content: { color: '#3f8600' } }} />
           </Col>
           <Col span={6}>
-            <Statistic title="已停用" value={stats.disabled} valueStyle={{ color: '#cf1322' }} />
+            <Statistic title="已停用" value={stats.disabled} styles={{ content: { color: '#cf1322' } }} />
           </Col>
           <Col span={6}>
             <Statistic title="总成员数" value={stats.totalMembers} prefix={<UserOutlined />} />
@@ -302,13 +384,14 @@ const DutyPoolPage: React.FC = () => {
               <Input placeholder="请输入值班池名称" allowClear style={{ width: 150 }} />
             </Form.Item>
             <Form.Item name="deptId" label="所属部门">
-              <Select placeholder="请选择部门" allowClear style={{ width: 150 }}>
-                {depts.map((dept) => (
-                  <Option key={dept.id} value={dept.id}>
-                    {dept.deptName}
-                  </Option>
-                ))}
-              </Select>
+              <TreeSelect
+                placeholder="请选择部门"
+                allowClear
+                style={{ width: 200 }}
+                treeData={buildDeptTree(depts)}
+                showSearch
+                treeNodeFilterProp="title"
+              />
             </Form.Item>
             <Form.Item name="status" label="状态">
               <Select placeholder="请选择状态" allowClear style={{ width: 100 }}>
@@ -359,7 +442,7 @@ const DutyPoolPage: React.FC = () => {
         afterOpenChange={handleModalOpenChange}
         onCancel={() => setModalVisible(false)}
         width={600}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={editForm} layout="vertical" preserve={false}>
           <Form.Item
@@ -371,13 +454,25 @@ const DutyPoolPage: React.FC = () => {
           </Form.Item>
 
           <Form.Item name="deptId" label="所属部门">
-            <Select placeholder="请选择部门" allowClear>
-              {depts.map((dept) => (
-                <Option key={dept.id} value={dept.id}>
-                  {dept.deptName}
-                </Option>
-              ))}
-            </Select>
+            <TreeSelect
+              placeholder="请选择部门"
+              allowClear
+              treeData={buildDeptTree(depts)}
+              showSearch
+              treeNodeFilterProp="title"
+              onChange={(value) => {
+                // 根据选择的部门筛选用户
+                const deptIds = getDeptAndChildrenIds(value, depts);
+                if (deptIds.length > 0) {
+                  const filtered = users.filter(user => user.deptId && deptIds.includes(user.deptId));
+                  setFilteredUsers(filtered);
+                } else {
+                  setFilteredUsers(users);
+                }
+                // 清空已选择的成员（因为部门已改变）
+                editForm.setFieldValue('memberIds', []);
+              }}
+            />
           </Form.Item>
 
           <Form.Item
@@ -393,8 +488,13 @@ const DutyPoolPage: React.FC = () => {
             label="值班成员"
             rules={[{ required: true, message: '请选择值班成员' }]}
           >
-            <Select mode="multiple" placeholder="请选择值班成员" optionLabelProp="label">
-              {users.map((user) => (
+            <Select
+              mode="multiple"
+              placeholder={filteredUsers.length === 0 && users.length > 0 ? '请先选择所属部门' : '请选择值班成员'}
+              optionLabelProp="label"
+              disabled={filteredUsers.length === 0 && users.length > 0}
+            >
+              {(filteredUsers.length > 0 ? filteredUsers : users).map((user) => (
                 <Option key={user.id} value={user.id} label={user.nickName || user.username}>
                   {user.username} - {user.nickName} {user.deptName ? `(${user.deptName})` : ''}
                 </Option>

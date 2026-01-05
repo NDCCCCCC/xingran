@@ -32,6 +32,12 @@ import {
   type DutySchedule,
   type DutyScheduleListRequest,
 } from '@/lib/dutyApi';
+import {
+  getMyPendingWorkOrders,
+  type WorkOrder,
+  WorkOrderStatus,
+  WorkOrderPriority,
+} from '@/lib/workorderApi';
 import { useAuthStore } from '@/store/authStore';
 
 const { RangePicker } = DatePicker;
@@ -53,6 +59,11 @@ const MyDutyPage: React.FC = () => {
   const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(false);
 
+  // 待办工单列表
+  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
+  const [workOrdersTotal, setWorkOrdersTotal] = useState(0);
+  const [workOrdersLoading, setWorkOrdersLoading] = useState(false);
+
   // 加载统计数据
   const loadStats = async () => {
     setStatsLoading(true);
@@ -63,6 +74,23 @@ const MyDutyPage: React.FC = () => {
       console.error('加载值班统计失败', error);
     } finally {
       setStatsLoading(false);
+    }
+  };
+
+  // 加载待办工单
+  const loadWorkOrders = async () => {
+    setWorkOrdersLoading(true);
+    try {
+      const data = await getMyPendingWorkOrders({ limit: 5 });
+      setWorkOrders(data.data?.list ?? []);
+      setWorkOrdersTotal(data.data?.total ?? 0);
+    } catch (error) {
+      console.error('加载待办工单失败', error);
+      // 即使失败也设置为空数组，避免显示undefined
+      setWorkOrders([]);
+      setWorkOrdersTotal(0);
+    } finally {
+      setWorkOrdersLoading(false);
     }
   };
 
@@ -92,6 +120,7 @@ const MyDutyPage: React.FC = () => {
 
   useEffect(() => {
     loadStats();
+    loadWorkOrders();
     loadSchedules(1, 10);
   }, []);
 
@@ -140,12 +169,13 @@ const MyDutyPage: React.FC = () => {
   };
 
   // 待办工单表格列定义
-  const workOrderColumns: ColumnsType<any> = [
+  const workOrderColumns: ColumnsType<WorkOrder> = [
     {
       title: '工单编号',
-      dataIndex: 'orderNo',
-      key: 'orderNo',
+      dataIndex: 'workOrderNo',
+      key: 'workOrderNo',
       width: 150,
+      ellipsis: true,
     },
     {
       title: '工单标题',
@@ -158,14 +188,14 @@ const MyDutyPage: React.FC = () => {
       dataIndex: 'priority',
       key: 'priority',
       width: 100,
-      render: (priority: number) => {
-        const priorityMap: Record<number, { text: string; color: string }> = {
-          1: { text: '紧急', color: 'red' },
-          2: { text: '高', color: 'orange' },
-          3: { text: '中', color: 'blue' },
-          4: { text: '低', color: 'default' },
+      render: (priority: WorkOrderPriority) => {
+        const priorityMap: Record<WorkOrderPriority, { text: string; color: string }> = {
+          [WorkOrderPriority.Urgent]: { text: '紧急', color: 'red' },
+          [WorkOrderPriority.High]: { text: '高', color: 'orange' },
+          [WorkOrderPriority.Medium]: { text: '中', color: 'blue' },
+          [WorkOrderPriority.Low]: { text: '低', color: 'default' },
         };
-        const config = priorityMap[priority] || priorityMap[4];
+        const config = priorityMap[priority] || priorityMap[WorkOrderPriority.Low];
         return <Tag color={config.color}>{config.text}</Tag>;
       },
     },
@@ -174,13 +204,13 @@ const MyDutyPage: React.FC = () => {
       dataIndex: 'status',
       key: 'status',
       width: 100,
-      render: (status: string) => {
-        const statusMap: Record<string, { text: string; color: string }> = {
-          pending: { text: '待处理', color: 'orange' },
-          processing: { text: '处理中', color: 'blue' },
-          completed: { text: '已完成', color: 'green' },
+      render: (status: WorkOrderStatus) => {
+        const statusMap: Record<WorkOrderStatus, { text: string; color: string }> = {
+          [WorkOrderStatus.Pending]: { text: '待处理', color: 'orange' },
+          [WorkOrderStatus.Processing]: { text: '处理中', color: 'blue' },
+          [WorkOrderStatus.Completed]: { text: '已完成', color: 'green' },
         };
-        const config = statusMap[status] || statusMap.pending;
+        const config = statusMap[status] || statusMap[WorkOrderStatus.Pending];
         return <Tag color={config.color}>{config.text}</Tag>;
       },
     },
@@ -236,34 +266,6 @@ const MyDutyPage: React.FC = () => {
     },
   ];
 
-  // 模拟待办工单数据
-  const mockWorkOrders = [
-    {
-      id: '1',
-      orderNo: 'WO202501040001',
-      title: '服务器CPU使用率异常告警',
-      priority: 1,
-      status: 'pending',
-      createdAt: '2025-01-04 09:30',
-    },
-    {
-      id: '2',
-      orderNo: 'WO202501040002',
-      title: '数据库备份任务检查',
-      priority: 3,
-      status: 'processing',
-      createdAt: '2025-01-04 10:15',
-    },
-    {
-      id: '3',
-      orderNo: 'WO202501040003',
-      title: '网络设备固件升级',
-      priority: 2,
-      status: 'pending',
-      createdAt: '2025-01-04 11:00',
-    },
-  ];
-
   return (
     <div style={{ padding: '24px' }}>
       {/* 统计卡片区域 */}
@@ -274,10 +276,10 @@ const MyDutyPage: React.FC = () => {
               title="今日状态"
               value={stats?.isOnDutyToday ? "值班中" : "休息"}
               prefix={stats?.isOnDutyToday ? <ClockCircleOutlined /> : <CoffeeOutlined />}
-              valueStyle={{
+              styles={{ content: {
                 color: stats?.isOnDutyToday ? '#3f8600' : '#8c8c8c',
                 fontSize: '20px'
-              }}
+              } }}
             />
           </Card>
         </Col>
@@ -289,7 +291,7 @@ const MyDutyPage: React.FC = () => {
               value={stats?.thisMonthCount || 0}
               suffix="次"
               prefix={<CalendarOutlined />}
-              valueStyle={{ color: '#1890ff', fontSize: '20px' }}
+              styles={{ content: { color: '#1890ff', fontSize: '20px' } }}
             />
           </Card>
         </Col>
@@ -301,7 +303,7 @@ const MyDutyPage: React.FC = () => {
               value={stats?.totalCount || 0}
               suffix="次"
               prefix={<CheckCircleOutlined />}
-              valueStyle={{ color: '#722ed1', fontSize: '20px' }}
+              styles={{ content: { color: '#722ed1', fontSize: '20px' } }}
             />
           </Card>
         </Col>
@@ -338,26 +340,30 @@ const MyDutyPage: React.FC = () => {
               <Space>
                 <UnorderedListOutlined />
                 <span>待办工单</span>
-                <Tag color="purple">即将推出</Tag>
               </Space>
             }
-            extra={<Tag color="orange">3 条待处理</Tag>}
+            extra={
+              workOrdersTotal > 0 ? (
+                <Tag color="orange">{workOrdersTotal} 条待处理</Tag>
+              ) : null
+            }
           >
-            <Alert
-              message="工单功能开发中"
-              description="工单模块即将上线，上线后将支持查看和处理值班期间的相关工单。"
-              type="info"
-              showIcon
-              style={{ marginBottom: '16px' }}
-            />
-
-            <Table
-              rowKey="id"
-              columns={workOrderColumns}
-              dataSource={mockWorkOrders}
-              pagination={false}
-              size="small"
-            />
+            {workOrders.length === 0 && !workOrdersLoading ? (
+              <Empty
+                description="暂无待办工单"
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                style={{ margin: '40px 0' }}
+              />
+            ) : (
+              <Table
+                rowKey="id"
+                columns={workOrderColumns}
+                dataSource={workOrders}
+                loading={workOrdersLoading}
+                pagination={false}
+                size="small"
+              />
+            )}
           </Card>
         </Col>
 

@@ -683,7 +683,7 @@ const DeviceManagement: React.FC = () => {
         confirmLoading={creating}
       >
         <Alert
-          message="快速创建说明"
+          title="快速创建说明"
           description="只需输入 IP 地址和授权凭证，系统会自动使用凭证中配置的 SNMP Communities 探测获取设备信息并创建设备。"
           type="info"
           showIcon
@@ -716,7 +716,7 @@ const DeviceManagement: React.FC = () => {
             <>
               <Divider orientation="left">探测结果</Divider>
               <Alert
-                message="探测成功"
+                title="探测成功"
                 type="success"
                 style={{ marginBottom: 16 }}
               />
@@ -763,7 +763,7 @@ const DeviceManagement: React.FC = () => {
         width={700}
       >
         <Alert
-          message="手动新增说明"
+          title="手动新增说明"
           description="需要手动填写所有设备信息。如果只想输入IP地址自动获取信息，请使用「快速创建」功能。"
           type="info"
           showIcon

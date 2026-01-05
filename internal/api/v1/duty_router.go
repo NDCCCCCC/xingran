@@ -18,8 +18,8 @@ func SetupDutyPoolsRouter(r *gin.RouterGroup, core *core.Core) {
 func SetupDutySchedulesRouter(r *gin.RouterGroup, core *core.Core) {
 	r.POST("/list", listDutySchedules(core))
 	r.POST("/generate", generateDutySchedule(core))
-	r.GET("/today", getTodayDuty(core))
-	r.GET("/monthly", getMonthlyDutySchedule(core))
+	r.POST("/today", getTodayDuty(core))
+	r.POST("/monthly", getMonthlyDutySchedule(core))
 	r.POST("/swap", swapDuty(core))
 	r.POST("/manual", manualDuty(core))
 	r.POST("/:id/delete", deleteDutySchedule(core))
@@ -28,8 +28,8 @@ func SetupDutySchedulesRouter(r *gin.RouterGroup, core *core.Core) {
 
 // SetupDutyHolidaysRouter 设置节假日路由
 func SetupDutyHolidaysRouter(r *gin.RouterGroup, core *core.Core) {
-	r.GET("/list", listHolidays(core))
-	r.GET("/years", getHolidayYears(core))
+	r.POST("/list", listHolidays(core))
+	r.POST("/years", getHolidayYears(core))
 	r.POST("", createHoliday(core))
 	r.POST("/:id/update", updateHoliday(core))
 	r.POST("/:id/delete", deleteHoliday(core))
@@ -38,11 +38,11 @@ func SetupDutyHolidaysRouter(r *gin.RouterGroup, core *core.Core) {
 
 // SetupDutyConfigRouter 设置值班配置路由
 func SetupDutyConfigRouter(r *gin.RouterGroup, core *core.Core) {
-	r.GET("", getDutyConfig(core))
+	r.POST("", getDutyConfig(core))
 	r.POST("/update", updateDutyConfig(core))
 }
 
 // SetupMyDutyRouter 设置我的值班路由
 func SetupMyDutyRouter(r *gin.RouterGroup, core *core.Core) {
-	r.GET("/stats", getMyDutyStats(core))
+	r.POST("/stats", getMyDutyStats(core))
 }

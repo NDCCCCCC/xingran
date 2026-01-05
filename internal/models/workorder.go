@@ -89,17 +89,29 @@ type WorkOrder struct {
 	ClosedAt          *time.Time         `gorm:"type:datetime" json:"closedAt,omitempty"`
 	AttachmentIDs     string             `gorm:"size:1000" json:"attachmentIds,omitempty"` // 逗号分隔的附件ID列表
 
+	// 自动分配相关字段
+	IsAutoAssigned bool    `gorm:"default:false" json:"isAutoAssigned"` // 是否自动分配
+	DutyPoolID     *string `gorm:"type:uuid" json:"dutyPoolId,omitempty"` // 关联的值班池ID
+	DutyType       string  `gorm:"size:20" json:"dutyType,omitempty"` // 值班类型
+	AssignStrategy string  `gorm:"size:50" json:"assignStrategy,omitempty"` // 使用的分配策略
+
 	// 关联
-	Category  *WorkOrderCategory `gorm:"foreignKey:CategoryID" json:"category,omitempty"`
-	Submitter *User              `gorm:"foreignKey:SubmitterID" json:"submitter,omitempty"`
-	Assignee  *User              `gorm:"foreignKey:AssigneeID" json:"assignee,omitempty"`
-	Dept      *Department        `gorm:"foreignKey:DeptID" json:"department,omitempty"`
-	Comments  []WorkOrderComment `gorm:"foreignKey:WorkOrderID" json:"comments,omitempty"`
-	History   []WorkOrderHistory `gorm:"foreignKey:WorkOrderID" json:"history,omitempty"`
+	Category *WorkOrderCategory  `gorm:"foreignKey:CategoryID" json:"category,omitempty"`
+	Submitter *User               `gorm:"foreignKey:SubmitterID" json:"submitter,omitempty"`
+	Assignee  *User               `gorm:"foreignKey:AssigneeID" json:"assignee,omitempty"`
+	Dept      *Department         `gorm:"foreignKey:DeptID" json:"department,omitempty"`
+	Comments  []WorkOrderComment  `gorm:"foreignKey:WorkOrderID" json:"comments,omitempty"`
+	History   []WorkOrderHistory  `gorm:"foreignKey:WorkOrderID" json:"history,omitempty"`
+	Ratings   []WorkOrderRating   `gorm:"foreignKey:WorkOrderID" json:"ratings,omitempty"`
 }
 
 // BeforeCreate GORM钩子 - 生成工单编号
 func (wo *WorkOrder) BeforeCreate(tx *gorm.DB) error {
+	// 调用 BaseModel 的 BeforeCreate 生成 UUID
+	if wo.ID == "" {
+		wo.ID = uuid.New().String()
+	}
+	// 生成工单编号
 	if wo.WorkOrderNo == "" {
 		wo.WorkOrderNo = generateWorkOrderNo()
 	}
@@ -204,18 +216,143 @@ func (WorkOrderTemplate) TableName() string {
 	return "sys_workorder_template"
 }
 
-// WorkOrderConfig 工单配置
+// WorkOrderRating 工单评价（双向评价）
+type WorkOrderRating struct {
+	ID              string    `gorm:"primaryKey;type:uuid" json:"id"`
+	WorkOrderID     string    `gorm:"type:uuid;not null;index:idx_wo_rating_wo,priority:1" json:"workOrderId"`
+	RatingType      string    `gorm:"size:20;not null" json:"ratingType"` // user(用户评价) 或 handler(处理人员评价)
+	CompletionScore int       `gorm:"default:0" json:"completionScore"`   // 用户评价：完成度评分 (1-5)
+	CooperationScore int      `gorm:"default:0" json:"cooperationScore"`  // 处理人员评价：配合度评分 (1-5)
+	Comment         string    `gorm:"type:text" json:"comment"`          // 评价内容
+	RaterID         string    `gorm:"type:uuid;not null" json:"raterId"` // 评价人ID
+	CreatedAt       time.Time `json:"createdAt"`
+
+	// 关联
+	WorkOrder *WorkOrder `gorm:"foreignKey:WorkOrderID" json:"workOrder,omitempty"`
+	Rater     *User      `gorm:"foreignKey:RaterID" json:"rater,omitempty"`
+}
+
+// BeforeCreate GORM钩子 - WorkOrderRating
+func (wor *WorkOrderRating) BeforeCreate(tx *gorm.DB) error {
+	if wor.ID == "" {
+		wor.ID = uuid.New().String()
+	}
+	if wor.CreatedAt.IsZero() {
+		wor.CreatedAt = time.Now()
+	}
+	return nil
+}
+
+// TableName 指定表名
+func (WorkOrderRating) TableName() string {
+	return "sys_workorder_rating"
+}
+
+// WorkOrderConfig 工单配置（不需要软删除）
 type WorkOrderConfig struct {
-	BaseModel
-	AutoAssignEnabled  bool   `gorm:"default:false" json:"autoAssignEnabled"`   // 是否自动分配
-	AutoCloseDays      int    `gorm:"default:7" json:"autoCloseDays"`            // 完成后自动关闭天数（0=手动关闭）
-	AllowUserClose     bool   `gorm:"default:false" json:"allowUserClose"`       // 是否允许用户关闭工单
-	NotificationEnabled bool  `gorm:"default:true" json:"notificationEnabled"`   // 是否启用通知
-	EmailNotification   bool  `gorm:"default:false" json:"emailNotification"`    // 邮件通知
-	SmsNotification     bool  `gorm:"default:false" json:"smsNotification"`      // 短信通知
+	ID                      string    `gorm:"type:uuid;primary_key" json:"id"`
+	CreatedAt               time.Time `json:"createdAt"`
+	UpdatedAt               time.Time `json:"updatedAt"`
+	AutoAssignEnabled       bool      `gorm:"default:true" json:"autoAssignEnabled"`         // 是否自动分配
+	AutoAssignTarget        string    `gorm:"size:50;default:'duty_pool'" json:"autoAssignTarget"`   // 分配目标
+	AutoAssignStrategy      string    `gorm:"size:50;default:'assign_one'" json:"autoAssignStrategy"` // 分配策略
+	AutoCloseDays           int       `gorm:"default:7" json:"autoCloseDays"`                 // 完成后自动关闭天数（0=手动关闭）
+	AllowUserClose          bool      `gorm:"default:false" json:"allowUserClose"`            // 是否允许用户关闭工单
+	NotificationEnabled     bool      `gorm:"default:true" json:"notificationEnabled"`        // 是否启用通知
+	EmailNotification       bool      `gorm:"default:false" json:"emailNotification"`         // 邮件通知
+	SmsNotification         bool      `gorm:"default:false" json:"smsNotification"`           // 短信通知
+	RatingEnabled           bool      `gorm:"default:true" json:"ratingEnabled"`              // 评价功能开关
+	KnowledgeConvertEnabled bool      `gorm:"default:true" json:"knowledgeConvertEnabled"`    // 知识库转换开关
 }
 
 // TableName 指定表名
 func (WorkOrderConfig) TableName() string {
 	return "sys_workorder_config"
+}
+
+// BeforeCreate GORM钩子 - WorkOrderConfig
+func (c *WorkOrderConfig) BeforeCreate(tx *gorm.DB) error {
+	if c.ID == "" {
+		c.ID = uuid.New().String()
+	}
+	if c.CreatedAt.IsZero() {
+		c.CreatedAt = time.Now()
+	}
+	if c.UpdatedAt.IsZero() {
+		c.UpdatedAt = time.Now()
+	}
+	return nil
+}
+
+// ==================== 周期性工单 ====================
+
+// PeriodicWorkOrderAssignType 周期性工单分配类型枚举
+type PeriodicWorkOrderAssignType string
+
+const (
+	PeriodicAssignTypeManual PeriodicWorkOrderAssignType = "manual"   // 手动指定
+	PeriodicAssignTypeDutyPool PeriodicWorkOrderAssignType = "duty_pool" // 当天值班人员
+	PeriodicAssignTypeRotation PeriodicWorkOrderAssignType = "rotation" // 轮询
+)
+
+// PeriodicWorkOrderTemplate 周期性工单模板
+type PeriodicWorkOrderTemplate struct {
+	BaseModel
+	TemplateName   string                       `gorm:"size:100;not null" json:"templateName"`
+	WorkOrderTitle string                       `gorm:"size:200;not null" json:"workOrderTitle"`
+	Description    string                       `gorm:"type:text" json:"description"`
+	CategoryID     string                       `gorm:"type:uuid;not null" json:"categoryId"`
+	Type           WorkOrderType                `gorm:"size:20;not null" json:"type"`
+	Priority       WorkOrderPriority            `gorm:"default:1" json:"priority"`
+	CronExpression string                       `gorm:"size:100;not null" json:"cronExpression"` // Cron表达式
+	AssignType     PeriodicWorkOrderAssignType  `gorm:"size:20;default:'duty_pool'" json:"assignType"` // 分配类型
+	AssignTargetID *string                      `gorm:"type:uuid" json:"assignTargetId,omitempty"` // 分配目标ID（当assignType为manual时使用）
+	IsEnabled      bool                         `gorm:"default:true" json:"isEnabled"`
+	NextRunAt      *time.Time                   `gorm:"type:datetime" json:"nextRunAt,omitempty"` // 下次执行时间
+	JobID          *string                      `gorm:"type:varchar(50)" json:"jobId,omitempty"` // 关联的定时任务ID
+	TotalGenerated int                          `gorm:"default:0" json:"totalGenerated"` // 已生成的工单数量
+	NotifyAssignee bool                         `gorm:"default:true" json:"notifyAssignee"` // 是否通知处理人
+
+	// 关联
+	Category      *WorkOrderCategory   `gorm:"foreignKey:CategoryID" json:"category,omitempty"`
+	Job           *Job                 `gorm:"foreignKey:JobID" json:"job,omitempty"`
+	ExecutionLogs []PeriodicWorkOrderLog `gorm:"foreignKey:TemplateID" json:"executionLogs,omitempty"`
+}
+
+// TableName 指定表名
+func (PeriodicWorkOrderTemplate) TableName() string {
+	return "sys_periodic_workorder_template"
+}
+
+// PeriodicWorkOrderLog 周期性工单执行记录
+type PeriodicWorkOrderLog struct {
+	ID           string    `gorm:"primaryKey;type:uuid" json:"id"`
+	TemplateID   string    `gorm:"type:uuid;not null;index:idx_pwo_log_template,priority:1" json:"templateId"`
+	WorkOrderID  string    `gorm:"type:uuid;not null;index:idx_pwo_log_wo,priority:1" json:"workOrderId"`
+	ExecutedAt   time.Time `gorm:"not null;index:idx_pwo_log_executed" json:"executedAt"`
+	JobID        *string   `gorm:"type:varchar(50)" json:"jobId,omitempty"` // 关联的定时任务ID
+	Status       string    `gorm:"size:20;default:'success'" json:"status"` // success, failed
+	Result       string    `gorm:"type:text" json:"result,omitempty"` // 执行结果
+	ErrorMsg     string    `gorm:"type:text" json:"errorMsg,omitempty"` // 错误信息
+
+	// 关联
+	Template  *PeriodicWorkOrderTemplate `gorm:"foreignKey:TemplateID" json:"template,omitempty"`
+	WorkOrder *WorkOrder                 `gorm:"foreignKey:WorkOrderID" json:"workOrder,omitempty"`
+	Job       *Job                       `gorm:"foreignKey:JobID" json:"job,omitempty"`
+}
+
+// BeforeCreate GORM钩子 - PeriodicWorkOrderLog
+func (pwol *PeriodicWorkOrderLog) BeforeCreate(tx *gorm.DB) error {
+	if pwol.ID == "" {
+		pwol.ID = uuid.New().String()
+	}
+	if pwol.ExecutedAt.IsZero() {
+		pwol.ExecutedAt = time.Now()
+	}
+	return nil
+}
+
+// TableName 指定表名
+func (PeriodicWorkOrderLog) TableName() string {
+	return "sys_periodic_workorder_log"
 }

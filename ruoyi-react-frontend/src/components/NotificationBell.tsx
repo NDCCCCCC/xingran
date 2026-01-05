@@ -160,7 +160,7 @@ const NotificationBell: React.FC = () => {
     <Dropdown
       open={dropdownOpen}
       onOpenChange={setDropdownOpen}
-      dropdownRender={() => notificationContent}
+      popupRender={() => notificationContent}
       placement="bottomRight"
       trigger={['click']}
     >
