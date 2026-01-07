@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"time"
+	"sort"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"gorm.io/gorm"
@@ -882,6 +883,7 @@ func (s *DutyService) DeleteHoliday(ctx context.Context, holidayID string) error
 	return nil
 }
 
+
 // GetHolidayYears 获取所有有节假日数据的年份列表
 func (s *DutyService) GetHolidayYears(ctx context.Context) ([]int, error) {
 	var years []int
@@ -894,9 +896,7 @@ func (s *DutyService) GetHolidayYears(ctx context.Context) ([]int, error) {
 	}
 
 	// 降序排序（最近的年份在前）
-	for i, j := 0, len(years)-1; i < j; i, j = i+1, j-1 {
-		years[i], years[j] = years[j], years[i]
-	}
+	sort.Sort(sort.Reverse(sort.IntSlice(years)))
 
 	return years, nil
 }

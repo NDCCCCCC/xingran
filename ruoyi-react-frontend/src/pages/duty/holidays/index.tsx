@@ -48,7 +48,7 @@ const DutyHolidayPage: React.FC = () => {
 
   const [loading, setLoading] = useState(false);
   const [dataSource, setDataSource] = useState<Holiday[]>([]);
-  const [year, setYear] = useState(new Date().getFullYear());
+  const [year, setYear] = useState<number | undefined>(undefined); // 初始为undefined，等待从后端获取最新年份
   const [availableYears, setAvailableYears] = useState<number[]>([]);
 
   const [modalVisible, setModalVisible] = useState(false);
@@ -57,12 +57,16 @@ const DutyHolidayPage: React.FC = () => {
 
   const [batchHolidays, setBatchHolidays] = useState<
     Array<{ holidayDate: Dayjs; holidayName: string; isOffday: boolean; holidayType: string; year: number; remark?: string }>
-  >([{ holidayDate: dayjs(), holidayName: '', isOffday: true, holidayType: 'legal', year }]);
+  >([{ holidayDate: dayjs(), holidayName: '', isOffday: true, holidayType: 'legal', year: new Date().getFullYear() }]);
 
   const fetchList = async (y?: number) => {
     setLoading(true);
     try {
       const targetYear = y ?? year;
+      if (targetYear === undefined) {
+        setLoading(false);
+        return;
+      }
       const result = await getHolidayList(targetYear);
       const data = result as any; // API响应格式: { code: 0, data: Holiday[] }
       setDataSource(data.data);
@@ -80,10 +84,11 @@ const DutyHolidayPage: React.FC = () => {
       const years = result.data || [];
       setAvailableYears(years);
 
-      // 如果当前年份不在可用列表中，选择最新的年份
-      if (years.length > 0 && !years.includes(year)) {
-        setYear(years[0]);
-        fetchList(years[0]);
+      // 默认选择最新的年份（第一个，因为后端已按降序返回）
+      if (years.length > 0 && year === undefined) {
+        const latestYear = years[0];
+        setYear(latestYear);
+        fetchList(latestYear);
       }
     } catch (error) {
       console.error('获取年份列表失败:', error);
@@ -91,7 +96,6 @@ const DutyHolidayPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchList();
     fetchAvailableYears();
   }, []);
 
@@ -102,7 +106,7 @@ const DutyHolidayPage: React.FC = () => {
       holidayDate: dayjs(),
       isOffday: true,
       holidayType: 'legal',
-      year: year,
+      year: year ?? availableYears[0] ?? new Date().getFullYear(),
     });
     setModalVisible(true);
   };
@@ -157,14 +161,16 @@ const DutyHolidayPage: React.FC = () => {
   };
 
   const handleBatchAdd = () => {
-    setBatchHolidays([{ holidayDate: dayjs(), holidayName: '', isOffday: true, holidayType: 'legal', year }]);
+    const defaultYear = year ?? availableYears[0] ?? new Date().getFullYear();
+    setBatchHolidays([{ holidayDate: dayjs(), holidayName: '', isOffday: true, holidayType: 'legal', year: defaultYear }]);
     setBatchModalVisible(true);
   };
 
   const addBatchRow = () => {
+    const defaultYear = year ?? availableYears[0] ?? new Date().getFullYear();
     setBatchHolidays([
       ...batchHolidays,
-      { holidayDate: dayjs(), holidayName: '', isOffday: true, holidayType: 'legal', year },
+      { holidayDate: dayjs(), holidayName: '', isOffday: true, holidayType: 'legal', year: defaultYear },
     ]);
   };
 

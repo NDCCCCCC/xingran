@@ -188,6 +188,13 @@ func (c *Core) Init() error {
 		scheduler.RegisterWorkOrderTasks(c.Scheduler)
 		log.Println("运维工单定时任务注册完成")
 
+		// 注册AD域同步定时任务
+		scheduler.RegisterADSyncTasks(c.Scheduler)
+		log.Println("AD域同步定时任务注册完成")
+
+		// 启动AD域同步调度器（每5分钟检查需要同步的配置）
+		scheduler.StartADSyncScheduler(c.GetDB())
+
 		// 同步周期性工单模板到调度器
 		if err := scheduler.SyncPeriodicWorkOrderJobs(c.Scheduler); err != nil {
 			log.Printf("警告：同步周期性工单任务失败: %v", err)
@@ -246,6 +253,8 @@ func (c *Core) Close() {
 		c.DeviceEnrichmentService.Stop()
 		log.Println("设备信息补充服务已停止")
 	}
+	// 停止AD域同步调度器
+	scheduler.StopADSyncScheduler()
 	// 关闭设备监控服务
 	if c.DeviceMonitorService != nil {
 		c.DeviceMonitorService.Close()

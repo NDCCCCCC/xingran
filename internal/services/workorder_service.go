@@ -1430,7 +1430,6 @@ func (s *WorkOrderService) GetPeriodicTemplateList(ctx context.Context, req *Per
 
 	if err := query.
 		Preload("Category").
-		Preload("Assignee").
 		Order("created_at DESC").
 		Limit(pageSize).
 		Offset(offset).
@@ -1447,7 +1446,6 @@ func (s *WorkOrderService) GetPeriodicTemplate(ctx context.Context, id string) (
 
 	if err := s.db.WithContext(ctx).
 		Preload("Category").
-		Preload("Assignee").
 		Preload("ExecutionLogs", func(db *gorm.DB) *gorm.DB {
 			return db.Order("executed_at DESC").Limit(10)
 		}).

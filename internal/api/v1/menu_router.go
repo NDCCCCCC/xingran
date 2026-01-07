@@ -28,6 +28,8 @@ func SetupMenuRouter(r *gin.RouterGroup, core *core.Core) {
 	r.POST("/:id/update", updateMenu(core))
 	// 删除菜单
 	r.POST("/:id/delete", deleteMenu(core))
+	// 批量删除菜单
+	r.POST("/batch-delete", batchDeleteMenus(core))
 	// 获取菜单树选择器
 	r.POST("/tree-select", getMenuTreeSelect(core))
 	// 获取角色菜单树选择器

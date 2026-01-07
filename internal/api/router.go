@@ -457,4 +457,11 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 		v1.SetupKnowledgeArticlesRouter(knowledge.Group("/view"), core)
 		v1.SetupKnowledgeCategoriesRouter(knowledge.Group("/view/categories"), core)
 	}
+
+	// AD域管理模块
+	adDomain := r.Group("/ad-domain")
+	adDomain.Use(middleware.JWTAuth(core.JWTManager))
+	{
+		v1.SetupADDomainRouter(adDomain, core)
+	}
 }

@@ -17,6 +17,8 @@ import {
   InputNumber,
   Switch,
   TreeSelect,
+  Checkbox,
+  Alert,
 } from 'antd';
 import {
   PlusOutlined,
@@ -28,6 +30,7 @@ import {
   FolderOutlined,
   FileOutlined,
   AppstoreOutlined,
+  WarningOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { Menu } from '@/types';
@@ -44,6 +47,10 @@ const MenuManagement: React.FC = () => {
   const [editForm] = Form.useForm();
   const [editingMenu, setEditingMenu] = useState<Menu | null>(null);
   const [parentOptions, setParentOptions] = useState<any[]>([]);
+
+  // 批量删除相关状态
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [cascadeDelete, setCascadeDelete] = useState(false);
 
   // 统计数据
   const [statistics, setStatistics] = useState({
@@ -217,18 +224,141 @@ const MenuManagement: React.FC = () => {
   };
 
   // 删除菜单
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string, cascade: boolean = false) => {
     try {
-      await post(`/system/menus/${id}/delete`);
-      message.success('删除成功');
+      const url = cascade
+        ? `/system/menus/${id}/delete?cascade=true`
+        : `/system/menus/${id}/delete`;
+
+      const result = await post(url);
+
+      if (cascade && result.data?.deletedCount) {
+        message.success(`删除成功！共删除 ${result.data.deletedCount} 个菜单（包含子菜单）`);
+      } else {
+        message.success('删除成功');
+      }
+
       loadMenus();
 
       // 刷新菜单缓存，使菜单变更立即生效
       await refreshMenuCache();
       message.success('菜单已刷新，变更已生效');
-    } catch (error) {
+    } catch (error: any) {
       console.error('删除菜单失败:', error);
+      const errorMsg = error?.response?.data?.message || error?.message || '删除失败';
+      message.error(errorMsg);
     }
+  };
+
+  // 批量删除菜单
+  const handleBatchDelete = async () => {
+    if (selectedRowKeys.length === 0) {
+      message.warning('请至少选择一个菜单');
+      return;
+    }
+
+    Modal.confirm({
+      title: '批量删除菜单',
+      icon: <WarningOutlined style={{ color: 'warning' }} />,
+      content: (
+        <div>
+          <p>您已选择 <strong>{selectedRowKeys.length}</strong> 个菜单，确定要删除吗？</p>
+          <Alert
+            message="删除后将无法恢复，请谨慎操作！"
+            type="warning"
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
+          <div style={{ marginTop: 16 }}>
+            <Checkbox
+              checked={cascadeDelete}
+              onChange={(e) => setCascadeDelete(e.target.checked)}
+            >
+              级联删除（同时删除所有子菜单）
+            </Checkbox>
+            {cascadeDelete && (
+              <Alert
+                message="启用级联删除后，将同时删除所选菜单及其所有子菜单"
+                type="info"
+                showIcon
+                style={{ marginTop: 12 }}
+              />
+            )}
+          </div>
+        </div>
+      ),
+      okText: '确定删除',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          const result = await post('/system/menus/batch-delete', {
+            ids: selectedRowKeys,
+            cascade: cascadeDelete,
+          });
+
+          if (result.data?.deletedCount) {
+            message.success(`批量删除成功！共删除 ${result.data.deletedCount} 个菜单`);
+          } else {
+            message.success('批量删除成功');
+          }
+
+          setSelectedRowKeys([]);
+          loadMenus();
+
+          // 刷新菜单缓存，使菜单变更立即生效
+          await refreshMenuCache();
+          message.success('菜单已刷新，变更已生效');
+        } catch (error: any) {
+          console.error('批量删除失败:', error);
+          const errorMsg = error?.response?.data?.message || error?.message || '批量删除失败';
+          message.error(errorMsg);
+        }
+      },
+    });
+  };
+
+  // 单个删除确认（带级联删除选项）
+  const handleDeleteConfirm = (record: Menu) => {
+    const hasChildren = record.children && record.children.length > 0;
+
+    Modal.confirm({
+      title: '删除菜单',
+      icon: <WarningOutlined style={{ color: 'warning' }} />,
+      content: (
+        <div>
+          <p>确定要删除菜单 <strong>{record.menuName}</strong> 吗？</p>
+          {hasChildren && (
+            <Alert
+              message="该菜单下有子菜单，删除时请选择是否同时删除子菜单"
+              type="warning"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+          )}
+          <div style={{ marginTop: hasChildren ? 16 : 0 }}>
+            <Checkbox
+              checked={cascadeDelete}
+              onChange={(e) => setCascadeDelete(e.target.checked)}
+            >
+              级联删除子菜单
+            </Checkbox>
+            {hasChildren && !cascadeDelete && (
+              <Alert
+                message="不启用级联删除时，如果菜单下有子菜单，删除将失败"
+                type="error"
+                showIcon
+                style={{ marginTop: 12 }}
+              />
+            )}
+          </div>
+        </div>
+      ),
+      okText: '确定删除',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk: () => handleDelete(record.id, cascadeDelete),
+    });
   };
 
   // 保存菜单
@@ -345,16 +475,14 @@ const MenuManagement: React.FC = () => {
           >
             编辑
           </Button>
-          <Popconfirm
-            title="确定要删除这个菜单吗？"
-            onConfirm={() => handleDelete(record.id)}
-            okText="确定"
-            cancelText="取消"
+          <Button
+            type="link"
+            danger
+            icon={<DeleteOutlined />}
+            onClick={() => handleDeleteConfirm(record)}
           >
-            <Button type="link" danger icon={<DeleteOutlined />}>
-              删除
-            </Button>
-          </Popconfirm>
+            删除
+          </Button>
         </Space>
       ),
     },
@@ -440,11 +568,40 @@ const MenuManagement: React.FC = () => {
             </Form.Item>
           </Form>
           <Space>
+            {selectedRowKeys.length > 0 && (
+              <Button
+                danger
+                icon={<DeleteOutlined />}
+                onClick={handleBatchDelete}
+              >
+                批量删除 ({selectedRowKeys.length})
+              </Button>
+            )}
             <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
               新增菜单
             </Button>
           </Space>
         </div>
+        {selectedRowKeys.length > 0 && (
+          <Alert
+            message={
+              <span>
+                已选择 <strong>{selectedRowKeys.length}</strong> 个菜单，
+                <Button
+                  type="link"
+                  size="small"
+                  onClick={() => setSelectedRowKeys([])}
+                  style={{ padding: 0 }}
+                >
+                  取消选择
+                </Button>
+              </span>
+            }
+            type="info"
+            showIcon
+            style={{ marginTop: 12 }}
+          />
+        )}
       </Card>
 
       {/* 菜单表格 */}
@@ -455,6 +612,15 @@ const MenuManagement: React.FC = () => {
           rowKey="id"
           loading={loading}
           pagination={false}
+          rowSelection={{
+            selectedRowKeys,
+            onChange: (selectedKeys) => setSelectedRowKeys(selectedKeys),
+            selections: [
+              Table.SELECTION_ALL,
+              Table.SELECTION_INVERT,
+              Table.SELECTION_NONE,
+            ],
+          }}
           expandable={{
             defaultExpandAllRows: true,
           }}

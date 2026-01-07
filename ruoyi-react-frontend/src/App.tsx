@@ -58,6 +58,12 @@ import PeriodicTemplatePage from '@/pages/workorder/periodic/templates';
 // 知识库管理页面
 import KnowledgeArticlePage from '@/pages/knowledge/articles';
 import KnowledgeViewPage from '@/pages/knowledge/view';
+// AD域管理页面
+import ADConfigPage from '@/pages/ad-domain/configs';
+import ADOUPage from '@/pages/ad-domain/ous';
+import ADGroupPage from '@/pages/ad-domain/groups';
+import ADUserPage from '@/pages/ad-domain/users';
+import ADSyncLogsPage from '@/pages/ad-domain/logs';
 import './App.css';
 
 // 创建React Query客户端
@@ -172,15 +178,47 @@ function App() {
                       <Route path="/duty/config" element={<DutyConfigPage />} />
                       <Route path="/duty/my-duty" element={<MyDutyPage />} />
 
+                      {/* 运维管理 - 值班路由（带 ops 前缀） */}
+                      <Route path="/ops/duty/pools" element={<DutyPoolPage />} />
+                      <Route path="/ops/duty/schedules" element={<DutySchedulePage />} />
+                      <Route path="/ops/duty/holidays" element={<DutyHolidayPage />} />
+                      <Route path="/ops/duty/config" element={<DutyConfigPage />} />
+                      <Route path="/ops/duty/my-duty" element={<MyDutyPage />} />
+
                       {/* 运维工单管理路由 */}
                       <Route path="/workorder/orders" element={<WorkOrderPage />} />
                       <Route path="/workorder/categories" element={<WorkOrderCategoryPage />} />
                       <Route path="/workorder/statistics" element={<WorkOrderStatisticsPage />} />
                       <Route path="/workorder/periodic/templates" element={<PeriodicTemplatePage />} />
 
+                      {/* 运维管理 - 工单路由（带 ops 前缀） */}
+                      <Route path="/ops/workorder/orders" element={<WorkOrderPage />} />
+                      <Route path="/ops/workorder/categories" element={<WorkOrderCategoryPage />} />
+                      <Route path="/ops/workorder/statistics" element={<WorkOrderStatisticsPage />} />
+                      <Route path="/ops/workorder/periodic/templates" element={<PeriodicTemplatePage />} />
+
                       {/* 知识库管理路由 */}
                       <Route path="/knowledge/articles" element={<KnowledgeArticlePage />} />
                       <Route path="/knowledge/view" element={<KnowledgeViewPage />} />
+
+                      {/* AD域管理路由 */}
+                      <Route path="/ad-domain/configs" element={<ADConfigPage />} />
+                      <Route path="/ad-domain/ous" element={<ADOUPage />} />
+                      <Route path="/ad-domain/groups" element={<ADGroupPage />} />
+                      <Route path="/ad-domain/users" element={<ADUserPage />} />
+                      <Route path="/ad-domain/logs" element={<ADSyncLogsPage />} />
+                      {/* 运维管理路由 */}
+                      <Route path="/ops/ad-domain/configs" element={<ADConfigPage />} />
+                      <Route path="/ops/ad-domain/ous" element={<ADOUPage />} />
+                      <Route path="/ops/ad-domain/groups" element={<ADGroupPage />} />
+                      <Route path="/ops/ad-domain/users" element={<ADUserPage />} />
+                      <Route path="/ops/ad-domain/logs" element={<ADSyncLogsPage />} />
+                      {/* 运维管理三级菜单路由（注意：ad-domain 重复是数据问题） */}
+                      <Route path="/ops/ad-domain/ad-domain/configs" element={<ADConfigPage />} />
+                      <Route path="/ops/ad-domain/ad-domain/ous" element={<ADOUPage />} />
+                      <Route path="/ops/ad-domain/ad-domain/groups" element={<ADGroupPage />} />
+                      <Route path="/ops/ad-domain/ad-domain/users" element={<ADUserPage />} />
+                      <Route path="/ops/ad-domain/ad-domain/logs" element={<ADSyncLogsPage />} />
 
                       <Route path="*" element={<Navigate to="/dashboard" replace />} />
                     </Routes>

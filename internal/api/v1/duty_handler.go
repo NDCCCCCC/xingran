@@ -336,19 +336,17 @@ func batchDeleteDutySchedules(core *core.Core) gin.HandlerFunc {
 // listHolidays 查询节假日列表
 func listHolidays(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		yearStr := c.Query("year")
-		if yearStr == "" {
-			yearStr = "2025" // 默认2025年
+		var req struct {
+			Year int `json:"year"`
 		}
 
-		var year int
-		if _, err := fmt.Sscanf(yearStr, "%d", &year); err != nil {
-			response.Error(c, response.ErrBadRequest, "年份格式错误")
+		if err := c.ShouldBindJSON(&req); err != nil {
+			response.Error(c, response.ErrBadRequest, "请求参数错误")
 			return
 		}
 
 		dutySvc := services.NewDutyService(core.DB.GetDB())
-		holidays, err := dutySvc.GetHolidayList(c.Request.Context(), year)
+		holidays, err := dutySvc.GetHolidayList(c.Request.Context(), req.Year)
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return

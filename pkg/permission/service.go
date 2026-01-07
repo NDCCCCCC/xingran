@@ -867,6 +867,7 @@ func (s *service) GetUserMenus(db *gorm.DB, userID string) ([]models.Menu, error
 		WHERE ur.user_id = ?
 		AND m.visible = ?
 		AND m.menu_type IN ('M', 'C')
+		AND m.deleted_at IS NULL
 		ORDER BY m.order_num
 	`, userID, models.VisibleShow).Scan(&menus).Error
 
@@ -897,6 +898,7 @@ func (s *service) GetUserMenus(db *gorm.DB, userID string) ([]models.Menu, error
 		err := db.Table("sys_menu").
 			Where("id IN ?", ids).
 			Where("visible = ?", models.VisibleShow).
+			Where("deleted_at IS NULL").
 			Order("order_num ASC").
 			Find(&parentMenus).Error
 

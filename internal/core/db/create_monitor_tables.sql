@@ -163,7 +163,7 @@ CREATE INDEX IF NOT EXISTS idx_cache_stats_collect_time ON sys_cache_stats(colle
 
 -- 插入示例数据
 INSERT INTO sys_job (job_name, job_group, invoke_target, cron_expression, status, remark) VALUES
-('系统监控任务', 'DEFAULT', 'systemMonitor.collectMetrics', '*/5 * * * *', 0, '每5分钟收集系统指标'),
+('系统监控任务', 'DEFAULT', 'systemMonitor.collectMetrics', '0 */5 * * * *', 0, '每5分钟收集系统指标'),
 ('缓存清理任务', 'DEFAULT', 'cacheCleaner.cleanExpired', '0 0 2 * * *', 0, '每天凌晨2点清理过期缓存'),
 ('日志归档任务', 'DEFAULT', 'logArchiver.archiveOldLogs', '0 0 3 * * 0', 0, '每周日凌晨3点归档旧日志'),
 ('数据备份任务', 'DEFAULT', 'dataBackup.backupDatabase', '0 0 1 * * *', 0, '每天凌晨1点备份数据库')

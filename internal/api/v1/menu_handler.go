@@ -303,11 +303,12 @@ func updateMenu(core *core.Core) gin.HandlerFunc {
 
 // deleteMenu 删除菜单
 // @Summary 删除菜单
-// @Description 删除指定菜单（需确保没有子菜单且没有被角色关联）
+// @Description 删除指定菜单，支持级联删除子菜单（需确保没有被角色关联）
 // @Tags 菜单管理
 // @Accept json
 // @Produce json
 // @Param id path string true "菜单ID"
+// @Param cascade query bool false "是否级联删除子菜单，默认false"
 // @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
 // @Failure 404 {object} response.Response
@@ -321,6 +322,9 @@ func deleteMenu(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
+		// 获取级联删除参数
+		cascade := c.DefaultQuery("cascade", "false") == "true"
+
 		// 检查菜单是否存在
 		var menu models.Menu
 		if err := core.DB.GetDB().First(&menu, "id = ?", id).Error; err != nil {
@@ -332,19 +336,33 @@ func deleteMenu(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		// 检查是否有子菜单
-		var count int64
-		if err := core.DB.GetDB().Model(&models.Menu{}).Where("parent_id = ?", id).Count(&count).Error; err != nil {
-			response.Error(c, response.ErrServerError, "检查子菜单失败")
-			return
-		}
-		if count > 0 {
-			response.Error(c, response.ErrBadRequest, "存在子菜单，无法删除")
-			return
+		// 收集所有需要删除的菜单ID（包括子菜单）
+		menuIdsToDelete := []string{id}
+
+		if cascade {
+			// 递归获取所有子菜单ID
+			childIds, err := getAllChildMenuIDs(core.GetDB(), id)
+			if err != nil {
+				response.Error(c, response.ErrServerError, "获取子菜单列表失败")
+				return
+			}
+			menuIdsToDelete = append(menuIdsToDelete, childIds...)
+		} else {
+			// 检查是否有子菜单
+			var count int64
+			if err := core.DB.GetDB().Model(&models.Menu{}).Where("parent_id = ?", id).Count(&count).Error; err != nil {
+				response.Error(c, response.ErrServerError, "检查子菜单失败")
+				return
+			}
+			if count > 0 {
+				response.Error(c, response.ErrBadRequest, "存在子菜单，无法删除")
+				return
+			}
 		}
 
 		// 检查是否被角色关联
-		if err := core.DB.GetDB().Table("sys_role_menu").Where("menu_id = ?", id).Count(&count).Error; err != nil {
+		var count int64
+		if err := core.DB.GetDB().Table("sys_role_menu").Where("menu_id IN ?", menuIdsToDelete).Count(&count).Error; err != nil {
 			response.Error(c, response.ErrServerError, "检查菜单关联情况失败")
 			return
 		}
@@ -354,13 +372,153 @@ func deleteMenu(core *core.Core) gin.HandlerFunc {
 		}
 
 		// 删除菜单
-		if err := core.DB.GetDB().Delete(&menu).Error; err != nil {
+		if err := core.DB.GetDB().Where("id IN ?", menuIdsToDelete).Delete(&models.Menu{}).Error; err != nil {
 			response.Error(c, response.ErrServerError, "删除菜单失败")
 			return
 		}
 
-		response.Success(c, gin.H{"message": "删除成功"})
+		deletedCount := len(menuIdsToDelete)
+		if cascade && deletedCount > 1 {
+			response.Success(c, gin.H{
+				"message":     "删除成功",
+				"deletedCount": deletedCount,
+				"cascade":     true,
+			})
+		} else {
+			response.Success(c, "删除成功")
+		}
 	}
+}
+
+// BatchDeleteMenusRequest 批量删除菜单请求
+type BatchDeleteMenusRequest struct {
+	IDs      []string `json:"ids" binding:"required,min=1"`
+	Cascade   bool      `json:"cascade"`
+}
+
+// batchDeleteMenus 批量删除菜单
+// @Summary 批量删除菜单
+// @Description 批量删除菜单，支持级联删除子菜单（需确保没有被角色关联）
+// @Tags 菜单管理
+// @Accept json
+// @Produce json
+// @Param request body BatchDeleteMenusRequest true "批量删除请求"
+// @Success 200 {object} response.Response{data=object}
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /menus/batch-delete [post]
+func batchDeleteMenus(core *core.Core) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req BatchDeleteMenusRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			response.Error(c, response.ErrBadRequest, "请求参数错误")
+			return
+		}
+
+		// 去重菜单ID
+		idMap := make(map[string]bool)
+		for _, id := range req.IDs {
+			idMap[id] = true
+		}
+		uniqueIDs := make([]string, 0, len(idMap))
+		for id := range idMap {
+			uniqueIDs = append(uniqueIDs, id)
+		}
+
+		// 检查菜单是否存在
+		var menus []models.Menu
+		if err := core.DB.GetDB().Where("id IN ?", uniqueIDs).Find(&menus).Error; err != nil {
+			response.Error(c, response.ErrServerError, "查询菜单失败")
+			return
+		}
+		if len(menus) != len(uniqueIDs) {
+			response.Error(c, response.ErrRecordNotFound, "部分菜单不存在")
+			return
+		}
+
+		// 收集所有需要删除的菜单ID（包括子菜单）
+		menuIdsToDelete := uniqueIDs
+
+		if req.Cascade {
+			// 递归获取所有子菜单ID
+			for _, id := range uniqueIDs {
+				childIds, err := getAllChildMenuIDs(core.GetDB(), id)
+				if err != nil {
+					response.Error(c, response.ErrServerError, "获取子菜单列表失败")
+					return
+				}
+				menuIdsToDelete = append(menuIdsToDelete, childIds...)
+			}
+
+			// 去重
+			idMap = make(map[string]bool)
+			for _, id := range menuIdsToDelete {
+				idMap[id] = true
+			}
+			menuIdsToDelete = make([]string, 0, len(idMap))
+			for id := range idMap {
+				menuIdsToDelete = append(menuIdsToDelete, id)
+			}
+		} else {
+			// 检查是否有子菜单
+			var count int64
+			if err := core.DB.GetDB().Model(&models.Menu{}).Where("parent_id IN ?", uniqueIDs).Count(&count).Error; err != nil {
+				response.Error(c, response.ErrServerError, "检查子菜单失败")
+				return
+			}
+			if count > 0 {
+				response.Error(c, response.ErrBadRequest, "存在子菜单，无法删除")
+				return
+			}
+		}
+
+		// 检查是否被角色关联
+		var count int64
+		if err := core.DB.GetDB().Table("sys_role_menu").Where("menu_id IN ?", menuIdsToDelete).Count(&count).Error; err != nil {
+			response.Error(c, response.ErrServerError, "检查菜单关联情况失败")
+			return
+		}
+		if count > 0 {
+			response.Error(c, response.ErrBadRequest, "菜单已分配给角色，无法删除")
+			return
+		}
+
+		// 删除菜单
+		if err := core.DB.GetDB().Where("id IN ?", menuIdsToDelete).Delete(&models.Menu{}).Error; err != nil {
+			response.Error(c, response.ErrServerError, "删除菜单失败")
+			return
+		}
+
+		response.Success(c, gin.H{
+			"message":     "批量删除成功",
+			"deletedCount": len(menuIdsToDelete),
+			"cascade":     req.Cascade,
+		})
+	}
+}
+
+// getAllChildMenuIDs 递归获取所有子菜单ID
+func getAllChildMenuIDs(db *gorm.DB, parentID string) ([]string, error) {
+	var childIDs []string
+
+	// 查询直接子菜单
+	var directChildren []models.Menu
+	if err := db.Where("parent_id = ?", parentID).Find(&directChildren).Error; err != nil {
+		return nil, err
+	}
+
+	for _, child := range directChildren {
+		childIDs = append(childIDs, child.ID)
+
+		// 递归获取子菜单的子菜单
+		grandChildIDs, err := getAllChildMenuIDs(db, child.ID)
+		if err != nil {
+			return nil, err
+		}
+		childIDs = append(childIDs, grandChildIDs...)
+	}
+
+	return childIDs, nil
 }
 
 // getMenuTreeSelect 获取菜单树选择器

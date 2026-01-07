@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Layout, Menu, Spin, message } from 'antd';
 import {
   DashboardOutlined,
@@ -102,6 +102,14 @@ import type { MenuProps } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useMenuStore } from '@/store/menuStore';
 import type { Menu as MenuType } from '@/types';
+import {
+  buildMenuPathMap,
+  isSameTopLevelMenu,
+  getMenuLevel,
+  isThirdLevelMenu,
+  isSecondLevelMenu,
+  isTopLevelMenu,
+} from './sidebar-helper';
 
 const { Sider } = Layout;
 
@@ -169,17 +177,44 @@ const iconMap: Record<string, React.ReactNode> = {
   arrowRight: <ArrowRightOutlined />,
   arrowUp: <ArrowUpOutlined />,
   arrowDown: <ArrowDownOutlined />,
-  left: <LeftOutlined />,
-  right: <RightOutlined />,
   up: <UpOutlined />,
   down: <DownOutlined />,
-  appstore: <AppstoreOutlined />,
-  laptop: <LaptopOutlined />,
-  code: <CodeOutlined />,
-  bug: <BugOutlined />,
-  safety: <SafetyOutlined />,
-  tool: <ToolOutlined />,
-  folder: <FolderOutlined />,
+  left: <LeftOutlined />,
+  right: <RightOutlined />,
+  caretUp: <CaretUpOutlined />,
+  caretDown: <CaretDownOutlined />,
+  caretLeft: <CaretLeftOutlined />,
+  caretRight: <CaretRightOutlined />,
+  toTop: <ToTopOutlined />,
+  border: <BorderOutlined />,
+  areaChart: <AreaChartOutlined />,
+  pieChart: <PieChartOutlined />,
+  dotChart: <DotChartOutlined />,
+  lineChart: <LineChartOutlined />,
+  fund: <FundOutlined />,
+  sliders: <SlidersOutlined />,
+  windows: <WindowsOutlined />,
+  chrome: <ChromeOutlined />,
+  github: <GithubOutlined />,
+  weibo: <WeiboOutlined />,
+  twitter: <TwitterOutlined />,
+  wechat: <WechatOutlined />,
+  skype: <SkypeOutlined />,
+  qq: <QqOutlined />,
+  gitlab: <GitlabOutlined />,
+  linkedin: <LinkedinOutlined />,
+  dropbox: <DropboxOutlined />,
+  facebook: <FacebookOutlined />,
+  amazon: <AmazonOutlined />,
+  google: <GoogleOutlined />,
+  instagram: <InstagramOutlined />,
+  yahoo: <YahooOutlined />,
+  behance: <BehanceOutlined />,
+  'facebook-filled': <FacebookFilled />,
+  youtube: <YoutubeOutlined />,
+  zhihu: <ZhihuOutlined />,
+  dingding: <DingdingOutlined />,
+  idcard: <IdcardOutlined />,
   form: <FormOutlined />,
   areaChart: <AreaChartOutlined />,
   pieChart: <PieChartOutlined />,
@@ -193,6 +228,7 @@ const fullIconNameMap: Record<string, string> = {
   'TeamOutlined': 'users',
   'MenuOutlined': 'menu',
   'SettingOutlined': 'setting',
+  'SettingFilled': 'setting',
   'FileTextOutlined': 'file',
   'BellOutlined': 'bell',
   'MonitorOutlined': 'monitor',
@@ -237,7 +273,7 @@ function getIcon(iconName?: string | null): React.ReactNode {
 }
 
 // 将后端菜单数据转换为 Ant Design Menu 组件所需的格式
-function convertToMenuItem(menu: MenuType): MenuItem {
+function convertToMenuItem(menu: MenuType, parentPath: string = ''): MenuItem {
   const icon = getIcon(menu.icon);
 
   // 只显示目录(M)和菜单(C)类型，不显示按钮(F)类型
@@ -252,17 +288,28 @@ function convertToMenuItem(menu: MenuType): MenuItem {
 
   const isDisabled = menu.status !== 0; // 停用的菜单
 
+  // 构建完整路径（与 buildMenuPathMap 逻辑一致）
+  let menuPath = menu.path || '';
+  if (menuPath && !menuPath.startsWith('/') && parentPath) {
+    if (!menuPath.startsWith(parentPath + '/')) {
+      menuPath = `${parentPath}/${menuPath}`;
+    }
+  }
+
+  // 生成菜单key（与 buildMenuPathMap 逻辑一致）
+  const menuKey = menuPath || menu.id;
+
   // 如果有子菜单，递归转换
   if (menu.children && menu.children.length > 0) {
     const validChildren = menu.children
       .filter(child => child.menuType !== 'F' && child.visible === 1)
-      .map(convertToMenuItem)
+      .map(child => convertToMenuItem(child, menuPath))
       .filter((item): item is MenuItem => item !== null);
 
     // 如果有正常子菜单，或者是父级目录，都显示
     if (validChildren.length > 0 || menu.menuType === 'M') {
       return {
-        key: menu.path || menu.id,
+        key: menuKey,
         icon,
         label: menu.menuName,
         children: validChildren.length > 0 ? validChildren : undefined,
@@ -274,7 +321,7 @@ function convertToMenuItem(menu: MenuType): MenuItem {
 
   // 显示所有可见的菜单（包括停用的）
   return {
-    key: menu.path || menu.id,
+    key: menuKey,
     icon,
     label: menu.menuName,
     disabled: isDisabled,
@@ -285,6 +332,7 @@ function convertToMenuItem(menu: MenuType): MenuItem {
 const Sidebar: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [openKeys, setOpenKeys] = useState<string[]>([]);
+  const expectedOpenKeysRef = useRef<string[] | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const { menus, loading, fetchMenus } = useMenuStore();
@@ -300,73 +348,125 @@ const Sidebar: React.FC = () => {
   const menuItems: MenuItem[] = useMemo(() => {
     return menus
       .filter(menu => menu.menuType !== 'F' && menu.visible === 1)
-      .map(convertToMenuItem)
+      .map(menu => convertToMenuItem(menu))
       .filter((item): item is MenuItem => item !== null);
   }, [menus]);
 
-  // 根据当前路径查找父菜单的 key
-  const findParentKey = (pathname: string): string | null => {
-    // 标准化路径函数，统一去掉前导斜杠进行比较
-    const normalizePath = (p: string | undefined): string | undefined => {
-      if (!p) return undefined;
+  // ========================================
+  // 新增：构建菜单路径映射表
+  // ========================================
+  const menuPathMap = useMemo(() => {
+    return buildMenuPathMap(menus);
+  }, [JSON.stringify(menus)]);
+
+  // ========================================
+  // 辅助函数：构建完整的父级菜单链
+  // ========================================
+  /**
+   * 构建完整的父级菜单链
+   * 确保展开到当前菜单时，所有父级菜单也都展开
+   *
+   * 注意：只返回父级菜单的 key，不包含当前页面路径
+   * 因为当前页面可能是不可展开的菜单项（menuType === 'C'）
+   */
+  function buildParentKeyChain(
+    currentPath: string,
+    menuPathMap: Map<string, any>
+  ): string[] {
+    const normalizePath = (p: string): string => {
       return p.startsWith('/') ? p.slice(1) : p;
     };
 
-    const findMenuByPath = (menuList: MenuType[], path: string): { menu: MenuType | null; parentKey: string | null } => {
-      for (const menu of menuList) {
-        // 首先检查直接子菜单是否匹配当前路径
-        if (menu.children && menu.children.length > 0) {
-          for (const child of menu.children) {
-            // 使用标准化后的路径进行比较
-            if (normalizePath(child.path) === normalizePath(path)) {
-              // 找到匹配的直接子菜单，返回父菜单的 key（id 或 path）
-              return { menu, parentKey: menu.path || menu.id };
-            }
-            // 递归检查更深层的子菜单（孙节点及以下）
-            const result = findMenuByPath([child], path);
-            if (result.menu) {
-              return { menu: result.menu, parentKey: menu.path || menu.id };
-            }
-          }
-        }
-      }
-      return { menu: null, parentKey: null };
-    };
+    const normalizedPathname = normalizePath(currentPath);
+    const menuInfo = menuPathMap.get(normalizedPathname);
 
-    const result = findMenuByPath(menus, pathname);
-    return result.parentKey;
-  };
+    if (!menuInfo) {
+      console.log('[buildParentKeyChain] 未找到菜单:', normalizedPathname);
+      return [];
+    }
+
+    console.log('[buildParentKeyChain] 菜单信息:', {
+      key: normalizedPathname,
+      level: menuInfo.level,
+      topLevel: menuInfo.topLevel,
+      secondLevel: menuInfo.secondLevel
+    });
+
+    const result: string[] = [];
+
+    // 不添加当前菜单的 key，只添加父级菜单
+    // result.push(normalizedPathname);
+
+    // 如果是二级菜单，添加其父级（一级）菜单
+    if (menuInfo.level === 2 && menuInfo.topLevel) {
+      result.push(menuInfo.topLevel);
+      console.log('[buildParentKeyChain] 添加一级菜单:', menuInfo.topLevel);
+    }
+
+    // 如果是三级菜单，添加其父级（二级）菜单和祖父级（一级）菜单
+    if (menuInfo.level === 3) {
+      if (menuInfo.secondLevel) {
+        result.push(menuInfo.secondLevel); // 二级
+        console.log('[buildParentKeyChain] 添加二级菜单:', menuInfo.secondLevel);
+      }
+      if (menuInfo.topLevel) {
+        result.push(menuInfo.topLevel); // 一级
+        console.log('[buildParentKeyChain] 添加一级菜单:', menuInfo.topLevel);
+      }
+    }
+
+    console.log('[buildParentKeyChain] 最终结果:', result);
+    return result;
+  }
 
   // 当路由变化时，自动展开包含当前页面的父菜单
   useEffect(() => {
+    console.log('=== 路由变化 useEffect ===');
+    console.log('当前路径:', location.pathname);
+    console.log('当前 openKeys:', openKeys);
+
     // 不要对 dashboard 或根路径做处理
     if (location.pathname === '/' || location.pathname === '/dashboard') {
       setOpenKeys([]);
       return;
     }
 
-    const parentKey = findParentKey(location.pathname);
-    console.log('路由变化:', location.pathname, '父菜单 key:', parentKey);
-    if (parentKey) {
-      setOpenKeys([parentKey]);
+    const parentKeyChain = buildParentKeyChain(location.pathname, menuPathMap);
+    console.log('父级菜单链:', parentKeyChain);
+
+    if (parentKeyChain.length > 0) {
+      console.log('设置 openKeys 为:', parentKeyChain);
+      setOpenKeys(parentKeyChain);
     } else {
-      // 如果找不到父菜单，保持当前展开状态或清空
-      console.log('未找到父菜单，清空展开状态');
+      console.log('父级菜单链为空，清空 openKeys');
       setOpenKeys([]);
     }
-  }, [location.pathname, menus]);
+  }, [location.pathname, JSON.stringify(menus)]);
 
   const handleMenuClick: MenuProps['onClick'] = (e) => {
     console.log('菜单点击:', e.key, '当前 openKeys:', openKeys);
 
     // 查找被点击的菜单
-    const findMenuByPath = (menuList: MenuType[], key: string): MenuType | null => {
+    const findMenuByPath = (menuList: MenuType[], key: string, parentPath: string = ''): MenuType | null => {
       for (const menu of menuList) {
-        if ((menu.path === key || menu.id === key) && menu.visible === 1) {
+        // 构建完整路径（与 convertToMenuItem 逻辑一致）
+        let menuPath = menu.path || '';
+        if (menuPath && !menuPath.startsWith('/') && parentPath) {
+          if (!menuPath.startsWith(parentPath + '/')) {
+            menuPath = `${parentPath}/${menuPath}`;
+          }
+        }
+
+        const menuKey = menuPath || menu.id;
+
+        // 检查是否匹配
+        if ((menuKey === key || menu.id === key) && menu.visible === 1) {
           return menu;
         }
+
+        // 递归查找子菜单
         if (menu.children) {
-          const found = findMenuByPath(menu.children, key);
+          const found = findMenuByPath(menu.children, key, menuPath);
           if (found) return found;
         }
       }
@@ -392,18 +492,115 @@ const Sidebar: React.FC = () => {
   };
 
   // 处理菜单展开/收起 - 手风琴效果
+  // 处理菜单展开/收起 - 改进版手风琴效果（支持二级菜单手风琴）
   const handleOpenChange: MenuProps['onOpenChange'] = (keys) => {
-    console.log('菜单展开/收起事件:', keys, '当前 openKeys:', openKeys);
+    console.log('=== 菜单展开/收起事件 ===');
+    console.log('新 keys:', keys);
+    console.log('当前 openKeys:', openKeys);
+    console.log('预期 keys:', expectedOpenKeysRef.current);
 
-    // 只保留最新展开的菜单
+    // 检查是否是导航触发的预期变化
+    if (expectedOpenKeysRef.current) {
+      const expected = expectedOpenKeysRef.current;
+      const isExpectedChange =
+        keys.length === expected.length &&
+        keys.every(k => expected.includes(k));
+
+      if (isExpectedChange) {
+        console.log('这是导航触发的预期变化，直接应用，跳过手风琴逻辑');
+        setOpenKeys(keys);
+        return;
+      }
+    }
+
+    // 找出新展开的菜单（keys 中有但 openKeys 中没有的）
     const latestOpenKey = keys.find((key) => !openKeys.includes(key));
+    console.log('latestOpenKey:', latestOpenKey);
+
     if (latestOpenKey) {
-      console.log('展开菜单:', latestOpenKey);
-      setOpenKeys([latestOpenKey]);
+      const menuLevel = getMenuLevel(latestOpenKey, menuPathMap);
+      console.log('菜单层级:', menuLevel, 'menuPathMap中:', menuPathMap.get(latestOpenKey));
+
+      if (menuLevel === 1 || latestOpenKey.startsWith('top_')) {
+        // ========================================
+        // 一级菜单：应用手风琴效果
+        // ========================================
+        console.log('>>> 一级菜单手风琴效果');
+        // 1. 保留新展开的一级菜单
+        // 2. 保留所有非一级菜单（二级和三级菜单）
+        // 3. 移除其他所有一级菜单
+        const nonTopLevelKeys = keys.filter(key => !isTopLevelMenu(key, menuPathMap));
+        const result = [latestOpenKey, ...nonTopLevelKeys];
+        console.log('一级菜单手风琴最终结果:', result);
+        setOpenKeys(result);
+
+      } else if (menuLevel === 2) {
+        // ========================================
+        // 二级菜单：应用手风琴效果（仅在同一一级菜单下）
+        // ========================================
+        console.log('>>> 二级菜单手风琴效果');
+        // 1. 找出当前二级菜单所属的一级菜单
+        const currentTopLevel = menuPathMap.get(latestOpenKey)?.topLevel;
+
+        if (!currentTopLevel) {
+          console.warn('无法确定二级菜单的所属一级菜单，直接应用');
+          setOpenKeys([...keys]);
+          return;
+        }
+
+        console.log('当前二级菜单所属一级菜单:', currentTopLevel);
+
+        // 2. 保留所有一级菜单
+        const topLevelKeys = keys.filter(key => isTopLevelMenu(key, menuPathMap));
+        console.log('所有一级菜单:', topLevelKeys);
+
+        // 3. 找出所有与新展开的二级菜单属于同一一级菜单的其他已展开二级菜单
+        const sameTopLevelSecondKeys = openKeys.filter(key => {
+          if (!isSecondLevelMenu(key, menuPathMap)) return false;
+          return isSameTopLevelMenu(key, latestOpenKey, menuPathMap);
+        });
+        console.log('同属一个一级菜单的其他二级菜单:', sameTopLevelSecondKeys);
+
+        // 4. 需要收起的这些同级二级菜单
+        const keysToClose = sameTopLevelSecondKeys;
+        console.log('需要收起的同级二级菜单:', keysToClose);
+
+        // 5. 构建新的openKeys：
+        //    - 保留所有一级菜单
+        //    - 保留不属于同一一级菜单的其他二级菜单
+        //    - 保留新展开的二级菜单
+        //    - 保留所有三级菜单
+        //    - 移除需要收起的同级二级菜单
+        const result = [
+          ...topLevelKeys,
+          ...keys.filter(key =>
+            !keysToClose.includes(key) &&
+            (isSecondLevelMenu(key, menuPathMap) || key === latestOpenKey)
+          )
+        ];
+        console.log('二级菜单手风琴最终结果:', result);
+        setOpenKeys(result);
+
+      } else if (menuLevel === 3) {
+        // ========================================
+        // 三级菜单：不应用手风琴效果
+        // ========================================
+        console.log('>>> 三级菜单：不应用手风琴效果，直接应用');
+        setOpenKeys([...keys]);
+
+      } else {
+        // ========================================
+        // 未知层级：直接应用（降级处理）
+        // ========================================
+        console.warn('未知菜单层级，直接应用:', latestOpenKey);
+        setOpenKeys([...keys]);
+      }
     } else {
-      // 如果没有新的展开菜单，说明是收起操作
-      console.log('收起菜单，keys:', keys);
-      setOpenKeys(keys);
+      // ========================================
+      // 收起操作：直接应用
+      // ========================================
+      console.log('收起操作，直接应用:', keys);
+      setOpenKeys([...keys]);
     }
   };
 
