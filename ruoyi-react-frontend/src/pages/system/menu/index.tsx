@@ -36,6 +36,8 @@ import type { ColumnsType } from 'antd/es/table';
 import type { Menu } from '@/types';
 import { post } from '@/lib/api';
 import { refreshMenuCache } from '@/store/menuStore';
+import IconSelect from '@/components/IconSelect';
+import { getIconComponent } from '@/utils/iconUtils';
 
 const { Option } = Select;
 
@@ -405,8 +407,13 @@ const MenuManagement: React.FC = () => {
       key: 'menuName',
       render: (text, record) => (
         <Space>
-          {getMenuIcon(record.menuType)}
-          {text}
+          {record.icon && (
+            <span style={{ fontSize: 16 }}>
+              {getIconComponent(record.icon)}
+            </span>
+          )}
+          {!record.icon && getMenuIcon(record.menuType)}
+          <span>{text}</span>
         </Space>
       ),
     },
@@ -710,7 +717,7 @@ const MenuManagement: React.FC = () => {
             </Col>
             <Col span={12}>
               <Form.Item name="icon" label="菜单图标">
-                <Input placeholder="请输入菜单图标" />
+                <IconSelect placeholder="请选择菜单图标" />
               </Form.Item>
             </Col>
           </Row>
