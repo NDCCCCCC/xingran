@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -175,7 +176,8 @@ func (r *RedisCache) TTL(ctx context.Context, key string) (time.Duration, error)
 	if err != nil {
 		return 0, err
 	}
-	return time.Duration(duration) * time.Second, nil
+	// go-redis 的 TTL() 方法返回的已经是 time.Duration 类型，不需要再转换
+	return duration, nil
 }
 
 // Keys 模式匹配
@@ -371,6 +373,119 @@ func (r *RedisCache) HKeys(ctx context.Context, key string) ([]string, error) {
 	}
 
 	return keys, nil
+}
+
+// GetStats 获取Redis统计信息
+func (r *RedisCache) GetStats(ctx context.Context) (map[string]interface{}, error) {
+	stats := make(map[string]interface{})
+
+	// 获取服务器信息
+	serverInfo, err := r.client.Info(ctx, "server").Result()
+	if err == nil {
+		lines := strings.Split(serverInfo, "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(line, "#") || line == "" {
+				continue
+			}
+			parts := strings.SplitN(line, ":", 2)
+			if len(parts) == 2 {
+				key := strings.TrimSpace(parts[0])
+				valueStr := strings.TrimSpace(parts[1])
+				// 对于版本字符串，直接保存为字符串
+				if key == "redis_version" {
+					stats[key] = valueStr
+				} else if key == "uptime_in_seconds" || key == "uptime_in_days" {
+					if value, err := strconv.ParseInt(valueStr, 10, 64); err == nil {
+						stats[key] = value
+					} else {
+						stats[key] = valueStr
+					}
+				} else {
+					stats[key] = valueStr
+				}
+			}
+		}
+	}
+
+	// 获取内存信息
+	memInfo, err := r.client.Info(ctx, "memory").Result()
+	if err == nil {
+		lines := strings.Split(memInfo, "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(line, "#") || line == "" {
+				continue
+			}
+			parts := strings.SplitN(line, ":", 2)
+			if len(parts) == 2 {
+				key := strings.TrimSpace(parts[0])
+				valueStr := strings.TrimSpace(parts[1])
+
+				// 转换数值类型的值
+				if key == "used_memory" || key == "used_memory_rss" || key == "used_memory_peak" ||
+				   key == "maxmemory" || key == "used_memory_dataset" || key == "used_memory_overhead" ||
+				   key == "total_system_memory" {
+					if value, err := strconv.ParseInt(valueStr, 10, 64); err == nil {
+						stats[key] = value
+					}
+				} else {
+					stats[key] = valueStr
+				}
+			}
+		}
+	}
+
+	// 获取键的数量
+	keyCount, err := r.client.DBSize(ctx).Result()
+	if err == nil {
+		stats["key_count"] = keyCount
+	}
+
+	// 获取统计信息
+	statsInfo, err := r.client.Info(ctx, "stats").Result()
+	if err == nil {
+		statsLines := strings.Split(statsInfo, "\n")
+		for _, line := range statsLines {
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(line, "#") || line == "" {
+				continue
+			}
+
+			parts := strings.SplitN(line, ":", 2)
+			if len(parts) == 2 {
+				key := strings.TrimSpace(parts[0])
+				valueStr := strings.TrimSpace(parts[1])
+
+				if key == "keyspace_hits" || key == "keyspace_misses" ||
+				   key == "total_connections_received" || key == "total_commands_processed" ||
+				   key == "instantaneous_ops_per_sec" || key == "keyspace_misses" ||
+				   key == "expired_keys" || key == "evicted_keys" {
+					if value, err := strconv.ParseInt(valueStr, 10, 64); err == nil {
+						stats[key] = value
+					}
+				}
+			}
+		}
+
+		// 计算命中率
+		hits, hitOk := stats["keyspace_hits"].(int64)
+		misses, missOk := stats["keyspace_misses"].(int64)
+		if hitOk && missOk && (hits+misses) > 0 {
+			hitRate := float64(hits) / float64(hits+misses) * 100
+			stats["hit_rate"] = hitRate
+		} else {
+			stats["hit_rate"] = 0.0
+		}
+	}
+
+	// 获取数据库信息
+	dbInfo, err := r.client.Info(ctx, "keyspace").Result()
+	if err == nil {
+		stats["keyspace_info"] = dbInfo
+	}
+
+	return stats, nil
 }
 
 // MultiLevelCache 多级缓存

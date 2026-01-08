@@ -54,7 +54,7 @@ const (
 // WorkOrderCategory 工单分类
 type WorkOrderCategory struct {
 	BaseModel
-	CategoryName string                 `gorm:"size:100;not null;uniqueIndex:idx_wo_category_name" json:"categoryName"`
+	CategoryName string                 `gorm:"size:100;not null" json:"categoryName"`
 	Description  string                 `gorm:"size:500" json:"description,omitempty"`
 	Status       WorkOrderCategoryStatus `gorm:"default:0" json:"status"`
 	SortOrder    int                    `gorm:"default:0" json:"sortOrder"`
@@ -74,7 +74,7 @@ func (WorkOrderCategory) TableName() string {
 type WorkOrder struct {
 	BaseModel
 	Title             string             `gorm:"size:200;not null" json:"title"`
-	WorkOrderNo       string             `gorm:"size:50;not null;uniqueIndex:idx_wo_no" json:"workOrderNo"`
+	WorkOrderNo       string             `gorm:"size:50;not null" json:"workOrderNo"`
 	CategoryID        string             `gorm:"type:uuid;not null;index:idx_wo_category,priority:1" json:"categoryId"`
 	Type              WorkOrderType      `gorm:"size:20;not null" json:"type"`
 	Priority          WorkOrderPriority  `gorm:"default:1" json:"priority"`
@@ -84,9 +84,9 @@ type WorkOrder struct {
 	SubmitterID       string             `gorm:"type:uuid;not null;index:idx_wo_submitter,priority:1" json:"submitterId"`
 	AssigneeID        *string            `gorm:"type:uuid;index:idx_wo_assignee,priority:1" json:"assigneeId,omitempty"`
 	DeptID            *string            `gorm:"type:uuid" json:"deptId,omitempty"`
-	ExpectedResolveAt *time.Time         `gorm:"type:datetime" json:"expectedResolveAt,omitempty"`
-	ResolvedAt        *time.Time         `gorm:"type:datetime" json:"resolvedAt,omitempty"`
-	ClosedAt          *time.Time         `gorm:"type:datetime" json:"closedAt,omitempty"`
+	ExpectedResolveAt *time.Time         `gorm:"type:timestamp" json:"expectedResolveAt,omitempty"`
+	ResolvedAt        *time.Time         `gorm:"type:timestamp" json:"resolvedAt,omitempty"`
+	ClosedAt          *time.Time         `gorm:"type:timestamp" json:"closedAt,omitempty"`
 	AttachmentIDs     string             `gorm:"size:1000" json:"attachmentIds,omitempty"` // 逗号分隔的附件ID列表
 
 	// 自动分配相关字段
@@ -308,14 +308,14 @@ type PeriodicWorkOrderTemplate struct {
 	AssignType     PeriodicWorkOrderAssignType  `gorm:"size:20;default:'duty_pool'" json:"assignType"` // 分配类型
 	AssignTargetID *string                      `gorm:"type:uuid" json:"assignTargetId,omitempty"` // 分配目标ID（当assignType为manual时使用）
 	IsEnabled      bool                         `gorm:"default:true" json:"isEnabled"`
-	NextRunAt      *time.Time                   `gorm:"type:datetime" json:"nextRunAt,omitempty"` // 下次执行时间
+	NextRunAt      *time.Time                   `gorm:"type:timestamp" json:"nextRunAt,omitempty"` // 下次执行时间
 	JobID          *string                      `gorm:"type:varchar(50)" json:"jobId,omitempty"` // 关联的定时任务ID
 	TotalGenerated int                          `gorm:"default:0" json:"totalGenerated"` // 已生成的工单数量
 	NotifyAssignee bool                         `gorm:"default:true" json:"notifyAssignee"` // 是否通知处理人
 
 	// 关联
 	Category      *WorkOrderCategory   `gorm:"foreignKey:CategoryID" json:"category,omitempty"`
-	Job           *Job                 `gorm:"foreignKey:JobID" json:"job,omitempty"`
+	Job           *Job                 `gorm:"foreignKey:JobID;-:migration" json:"job,omitempty"`
 	ExecutionLogs []PeriodicWorkOrderLog `gorm:"foreignKey:TemplateID" json:"executionLogs,omitempty"`
 }
 
@@ -338,7 +338,7 @@ type PeriodicWorkOrderLog struct {
 	// 关联
 	Template  *PeriodicWorkOrderTemplate `gorm:"foreignKey:TemplateID" json:"template,omitempty"`
 	WorkOrder *WorkOrder                 `gorm:"foreignKey:WorkOrderID" json:"workOrder,omitempty"`
-	Job       *Job                       `gorm:"foreignKey:JobID" json:"job,omitempty"`
+	Job       *Job                       `gorm:"foreignKey:JobID;-:migration" json:"job,omitempty"`
 }
 
 // BeforeCreate GORM钩子 - PeriodicWorkOrderLog

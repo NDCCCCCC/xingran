@@ -18,15 +18,15 @@ CREATE TABLE IF NOT EXISTS sys_workorder_category (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by VARCHAR(64),
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_by VARCHAR(64),
-    CONSTRAINT uk_workorder_category_name UNIQUE (category_name)
+    updated_by VARCHAR(64)
 );
 
 -- 添加外键约束（父分类自关联）
 ALTER TABLE sys_workorder_category ADD CONSTRAINT fk_workorder_category_parent
     FOREIGN KEY (parent_id) REFERENCES sys_workorder_category(id) ON DELETE SET NULL;
 
--- 添加索引
+-- 添加索引（使用GORM期望的名称）
+CREATE UNIQUE INDEX IF NOT EXISTS idx_wo_category_name ON sys_workorder_category(category_name);
 CREATE INDEX IF NOT EXISTS idx_workorder_category_parent ON sys_workorder_category(parent_id);
 CREATE INDEX IF NOT EXISTS idx_workorder_category_status ON sys_workorder_category(status);
 
@@ -68,8 +68,7 @@ CREATE TABLE IF NOT EXISTS sys_workorder (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by VARCHAR(64),
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_by VARCHAR(64),
-    CONSTRAINT uk_workorder_no UNIQUE (work_order_no)
+    updated_by VARCHAR(64)
 );
 
 -- 添加外键约束
@@ -82,12 +81,12 @@ ALTER TABLE sys_workorder ADD CONSTRAINT fk_workorder_assignee
 ALTER TABLE sys_workorder ADD CONSTRAINT fk_workorder_dept
     FOREIGN KEY (dept_id) REFERENCES sys_dept(id) ON DELETE SET NULL;
 
--- 添加索引
+-- 添加索引（使用GORM期望的名称）
+CREATE UNIQUE INDEX IF NOT EXISTS idx_wo_no ON sys_workorder(work_order_no);
 CREATE INDEX IF NOT EXISTS idx_wo_category ON sys_workorder(category_id);
 CREATE INDEX IF NOT EXISTS idx_wo_status ON sys_workorder(status);
 CREATE INDEX IF NOT EXISTS idx_wo_submitter ON sys_workorder(submitter_id);
 CREATE INDEX IF NOT EXISTS idx_wo_assignee ON sys_workorder(assignee_id);
-CREATE INDEX IF NOT EXISTS idx_wo_no ON sys_workorder(work_order_no);
 CREATE INDEX IF NOT EXISTS idx_wo_created_at ON sys_workorder(created_at);
 
 -- 添加表和字段注释

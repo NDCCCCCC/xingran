@@ -76,16 +76,33 @@ func (h *NoticeHub) Run() {
 			h.mu.Unlock()
 
 		case message := <-h.broadcast:
+			// 先收集需要删除的客户端，避免在读锁中进行写操作
+			var toDelete []string
+			encodedMsg := h.encodeMessage(message)
+
 			h.mu.RLock()
-			for _, client := range h.clients {
+			for userID, client := range h.clients {
 				select {
-				case client.send <- h.encodeMessage(message):
+				case client.send <- encodedMsg:
+					// 发送成功
 				default:
-					delete(h.clients, client.userID)
-					close(client.send)
+					// 发送失败，标记为待删除
+					toDelete = append(toDelete, userID)
 				}
 			}
 			h.mu.RUnlock()
+
+			// 在读锁外执行删除操作
+			if len(toDelete) > 0 {
+				h.mu.Lock()
+				for _, userID := range toDelete {
+					if client, ok := h.clients[userID]; ok {
+						delete(h.clients, userID)
+						close(client.send)
+					}
+				}
+				h.mu.Unlock()
+			}
 		}
 	}
 }
@@ -115,19 +132,34 @@ func (h *NoticeHub) UnregisterClient(client *Client) {
 
 // BroadcastToUsers 向指定用户广播消息
 func (h *NoticeHub) BroadcastToUsers(userIDs []string, message NoticeMessage) {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-
+	// 先收集需要删除的客户端，避免在读锁中进行写操作
+	var toDelete []string
 	data := h.encodeMessage(message)
+
+	h.mu.RLock()
 	for _, userID := range userIDs {
 		if client, ok := h.clients[userID]; ok {
 			select {
 			case client.send <- data:
+				// 发送成功
 			default:
+				// 发送失败，标记为待删除
+				toDelete = append(toDelete, userID)
+			}
+		}
+	}
+	h.mu.RUnlock()
+
+	// 在读锁外执行删除操作
+	if len(toDelete) > 0 {
+		h.mu.Lock()
+		for _, userID := range toDelete {
+			if client, ok := h.clients[userID]; ok {
 				delete(h.clients, userID)
 				close(client.send)
 			}
 		}
+		h.mu.Unlock()
 	}
 }
 

@@ -125,23 +125,39 @@ func (s *DutyService) CreateDutyPool(ctx context.Context, req *DutyPoolCreateReq
 		return nil, fmt.Errorf("创建值班池失败: %w", err)
 	}
 
-	// 添加成员
+	// 添加成员 - 使用批量查询验证用户
 	if len(req.MemberIDs) > 0 {
-		var members []models.DutyPoolMember
-		for i, userID := range req.MemberIDs {
-			// 验证用户是否存在
-			var user models.User
-			if err := tx.Where("id = ?", userID).First(&user).Error; err != nil {
+		// 一次性查询所有用户是否存在
+		var existingUsers []models.User
+		if err := tx.Where("id IN ?", req.MemberIDs).Find(&existingUsers).Error; err != nil {
+			tx.Rollback()
+			return nil, fmt.Errorf("验证用户失败: %w", err)
+		}
+
+		// 构建已存在用户的ID集合
+		existingUserIDs := make(map[string]bool)
+		for _, user := range existingUsers {
+			existingUserIDs[user.ID] = true
+		}
+
+		// 验证所有用户都存在
+		for _, userID := range req.MemberIDs {
+			if !existingUserIDs[userID] {
 				tx.Rollback()
 				return nil, fmt.Errorf("用户不存在: %s", userID)
 			}
+		}
 
+		// 创建成员记录
+		var members []models.DutyPoolMember
+		for i, userID := range req.MemberIDs {
 			members = append(members, models.DutyPoolMember{
 				PoolID:      pool.ID,
 				UserID:      userID,
 				MemberOrder: i,
 			})
 		}
+
 		if err := tx.Create(&members).Error; err != nil {
 			tx.Rollback()
 			return nil, fmt.Errorf("添加值班池成员失败: %w", err)

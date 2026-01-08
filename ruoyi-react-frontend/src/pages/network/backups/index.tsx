@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Table,
   Button,
@@ -32,6 +32,23 @@ import {
 import type { NetworkDevice, ConfigBackup } from '@/types';
 import { post } from '@/lib/api';
 
+// 差异行类型
+interface DiffLine {
+  type: 'same' | 'removed' | 'added' | 'empty';
+  content: string;
+  lineNum?: number;
+}
+
+// 差异对比结果
+interface DiffResult {
+  leftContent: string;
+  rightContent: string;
+  leftLines: DiffLine[];
+  rightLines: DiffLine[];
+  oldVersion: string;
+  newVersion: string;
+}
+
 const { Option } = Select;
 const { TextArea } = Input;
 
@@ -50,8 +67,14 @@ const ConfigBackupPage: React.FC = () => {
   const [selectedBackup, setSelectedBackup] = useState<ConfigBackup | null>(null);
   const [compareBackup1, setCompareBackup1] = useState<ConfigBackup | null>(null);
   const [compareBackup2, setCompareBackup2] = useState<ConfigBackup | null>(null);
-  const [diffResult, setDiffResult] = useState('');
+  const [diffResult, setDiffResult] = useState<DiffResult | null>(null);
   const [backupContent, setBackupContent] = useState('');
+
+  // 同步滚动的 refs
+  const leftScrollRef = useRef<HTMLDivElement>(null);
+  const rightScrollRef = useRef<HTMLDivElement>(null);
+  const isLeftScrolling = useRef(false);
+  const isRightScrolling = useRef(false);
 
   // 统计数据
   const [statistics, setStatistics] = useState({
@@ -60,6 +83,86 @@ const ConfigBackupPage: React.FC = () => {
     manual: 0,
     devices: 0,
   });
+
+  // 同步滚动处理
+  const handleLeftScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (isLeftScrolling.current) return;
+    isRightScrolling.current = true;
+    const target = e.target as HTMLDivElement;
+    if (rightScrollRef.current) {
+      rightScrollRef.current.scrollTop = target.scrollTop;
+    }
+    setTimeout(() => {
+      isRightScrolling.current = false;
+    }, 0);
+  };
+
+  const handleRightScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (isRightScrolling.current) return;
+    isLeftScrolling.current = true;
+    const target = e.target as HTMLDivElement;
+    if (leftScrollRef.current) {
+      leftScrollRef.current.scrollTop = target.scrollTop;
+    }
+    setTimeout(() => {
+      isLeftScrolling.current = false;
+    }, 0);
+  };
+
+  // 计算两个文本的差异（使用简化的 LCS 算法）
+  const computeDiff = (content1: string, content2: string): DiffResult => {
+    const lines1 = content1.split('\n');
+    const lines2 = content2.split('\n');
+
+    // 使用动态规划计算最长公共子序列
+    const m = lines1.length;
+    const n = lines2.length;
+    const dp: number[][] = Array(m + 1).fill(0).map(() => Array(n + 1).fill(0));
+
+    for (let i = 1; i <= m; i++) {
+      for (let j = 1; j <= n; j++) {
+        if (lines1[i - 1] === lines2[j - 1]) {
+          dp[i][j] = dp[i - 1][j - 1] + 1;
+        } else {
+          dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+        }
+      }
+    }
+
+    // 回溯生成差异
+    const leftLines: DiffLine[] = [];
+    const rightLines: DiffLine[] = [];
+    let i = m, j = n;
+
+    while (i > 0 || j > 0) {
+      if (i > 0 && j > 0 && lines1[i - 1] === lines2[j - 1]) {
+        // 相同的行
+        leftLines.unshift({ type: 'same', content: lines1[i - 1], lineNum: i });
+        rightLines.unshift({ type: 'same', content: lines2[j - 1], lineNum: j });
+        i--;
+        j--;
+      } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+        // 新增的行
+        leftLines.unshift({ type: 'empty', content: '', lineNum: undefined });
+        rightLines.unshift({ type: 'added', content: lines2[j - 1], lineNum: j });
+        j--;
+      } else {
+        // 删除的行
+        leftLines.unshift({ type: 'removed', content: lines1[i - 1], lineNum: i });
+        rightLines.unshift({ type: 'empty', content: '', lineNum: undefined });
+        i--;
+      }
+    }
+
+    return {
+      leftContent: content1,
+      rightContent: content2,
+      leftLines,
+      rightLines,
+      oldVersion: '',
+      newVersion: '',
+    };
+  };
 
   // 加载设备列表
   const loadDevices = async () => {
@@ -188,11 +291,21 @@ const ConfigBackupPage: React.FC = () => {
       return;
     }
     try {
-      const result = await post('/network/backups/diff', {
-        backupId1: compareBackup1.id,
-        backupId2: compareBackup2.id,
-      });
-      setDiffResult(result.data.diff || '');
+      // 获取两个版本的完整内容
+      const [result1, result2] = await Promise.all([
+        post(`/network/backups/${compareBackup1.id}`, {}),
+        post(`/network/backups/${compareBackup2.id}`, {}),
+      ]);
+
+      const content1 = result1.data.content || '';
+      const content2 = result2.data.content || '';
+
+      // 计算差异
+      const diffResult = computeDiff(content1, content2);
+      diffResult.oldVersion = `${compareBackup1.deviceName} (版本 ${compareBackup1.version})`;
+      diffResult.newVersion = `${compareBackup2.deviceName} (版本 ${compareBackup2.version})`;
+
+      setDiffResult(diffResult);
     } catch (error) {
       message.error('对比失败');
     }
@@ -430,7 +543,7 @@ const ConfigBackupPage: React.FC = () => {
             执行对比
           </Button>,
         ]}
-        width={1000}
+        width={1400}
       >
         <div style={{ marginBottom: 16 }}>
           <Row gutter={16}>
@@ -479,16 +592,158 @@ const ConfigBackupPage: React.FC = () => {
         </div>
 
         {diffResult && (
-          <pre style={{
-            background: '#f5f5f5',
-            padding: 16,
-            borderRadius: 4,
-            maxHeight: 500,
-            overflow: 'auto',
-            fontSize: 12,
-          }}>
-            {diffResult}
-          </pre>
+          <div style={{ height: 600, border: '1px solid #d9d9d9', borderRadius: 4, overflow: 'hidden' }}>
+            {/* 版本信息栏 */}
+            <div style={{ display: 'flex', borderBottom: '1px solid #d9d9d9' }}>
+              <div style={{
+                flex: 1,
+                padding: '8px 16px',
+                background: '#f5f5f5',
+                borderRight: '1px solid #d9d9d9',
+                fontSize: 13,
+                fontWeight: 500,
+                color: '#262626',
+              }}>
+                {diffResult.oldVersion}
+              </div>
+              <div style={{
+                flex: 1,
+                padding: '8px 16px',
+                background: '#f5f5f5',
+                fontSize: 13,
+                fontWeight: 500,
+                color: '#262626',
+              }}>
+                {diffResult.newVersion}
+              </div>
+            </div>
+
+            {/* 差异对比内容区 */}
+            <div style={{ display: 'flex', height: 'calc(100% - 41px)' }}>
+              {/* 左侧：旧版本 */}
+              <div
+                ref={leftScrollRef}
+                onScroll={handleLeftScroll}
+                style={{
+                  flex: 1,
+                  overflow: 'auto',
+                  background: '#ffffff',
+                  borderRight: '1px solid #d9d9d9',
+                  fontFamily: 'Consolas, "Courier New", monospace',
+                  fontSize: 13,
+                  lineHeight: '22px',
+                }}
+              >
+                {diffResult.leftLines.map((line, index) => {
+                  const lineNum = line.lineNum !== undefined ? String(line.lineNum).padStart(4, ' ') : '    ';
+                  return (
+                    <div
+                      key={`left-${index}`}
+                      style={{
+                        display: 'flex',
+                        backgroundColor: (() => {
+                          if (line.type === 'removed') return '#ffced0'; // 红色背景
+                          if (line.type === 'same') {
+                            // 检查是否在变更块中
+                            const prevLine = index > 0 ? diffResult.leftLines[index - 1] : null;
+                            const nextLine = index < diffResult.leftLines.length - 1 ? diffResult.leftLines[index + 1] : null;
+                            if ((prevLine?.type === 'removed' || nextLine?.type === 'removed')) {
+                              return '#f5f5f5';
+                            }
+                          }
+                          return 'transparent';
+                        })(),
+                      }}
+                    >
+                      {/* 行号列 */}
+                      <div style={{
+                        width: 50,
+                        padding: '0 8px',
+                        textAlign: 'right',
+                        color: line.type === 'removed' ? '#c92a2a' : '#8c8c8c',
+                        userSelect: 'none',
+                        flexShrink: 0,
+                        borderRight: '1px solid #e8e8e8',
+                      }}>
+                        {lineNum}
+                      </div>
+                      {/* 内容列 */}
+                      <div style={{
+                        padding: '0 12px',
+                        whiteSpace: 'pre',
+                        overflowX: 'auto',
+                        color: line.type === 'removed' ? '#c92a2a' : '#262626',
+                        flex: 1,
+                      }}>
+                        {line.content}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* 右侧：新版本 */}
+              <div
+                ref={rightScrollRef}
+                onScroll={handleRightScroll}
+                style={{
+                  flex: 1,
+                  overflow: 'auto',
+                  background: '#ffffff',
+                  fontFamily: 'Consolas, "Courier New", monospace',
+                  fontSize: 13,
+                  lineHeight: '22px',
+                }}
+              >
+                {diffResult.rightLines.map((line, index) => {
+                  const lineNum = line.lineNum !== undefined ? String(line.lineNum).padStart(4, ' ') : '    ';
+                  return (
+                    <div
+                      key={`right-${index}`}
+                      style={{
+                        display: 'flex',
+                        backgroundColor: (() => {
+                          if (line.type === 'added') return '#d4edda'; // 绿色背景
+                          if (line.type === 'same') {
+                            // 检查是否在变更块中
+                            const prevLine = index > 0 ? diffResult.rightLines[index - 1] : null;
+                            const nextLine = index < diffResult.rightLines.length - 1 ? diffResult.rightLines[index + 1] : null;
+                            if ((prevLine?.type === 'added' || nextLine?.type === 'added')) {
+                              return '#f5f5f5';
+                            }
+                          }
+                          return 'transparent';
+                        })(),
+                      }}
+                    >
+                      {/* 行号列 */}
+                      <div style={{
+                        width: 50,
+                        padding: '0 8px',
+                        textAlign: 'right',
+                        color: line.type === 'added' ? '#2b7a41' : '#8c8c8c',
+                        userSelect: 'none',
+                        flexShrink: 0,
+                        borderRight: '1px solid #e8e8e8',
+                      }}>
+                        {lineNum}
+                      </div>
+                      {/* 内容列 */}
+                      <div style={{
+                        padding: '0 12px',
+                        whiteSpace: 'pre',
+                        overflowX: 'auto',
+                        color: line.type === 'added' ? '#2b7a41' : '#262626',
+                        flex: 1,
+                      }}>
+                        {line.content}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
         )}
       </Modal>
 

@@ -126,6 +126,10 @@ func createPostgresConnection(cfg *config.DatabaseConfig) (*gorm.DB, error) {
 		NowFunc: func() time.Time {
 			return time.Now().Local()
 		},
+		// 禁用外键约束的自动创建和管理
+		DisableForeignKeyConstraintWhenMigrating: true,
+		// 跳过默认事务以提高性能
+		SkipDefaultTransaction: true,
 	}
 
 	db, err := gorm.Open(postgres.Open(dsn), gormConfig)
@@ -177,10 +181,60 @@ func (d *Database) GetDB() *gorm.DB {
 	return d.DB
 }
 
+// cleanupOldConstraints 清理可能存在的旧约束
+func (d *Database) cleanupOldConstraints() {
+	constraints := []struct {
+		table      string
+		constraint string
+	}{
+		{"sys_knowledge_category", "uni_sys_knowledge_category_category_name"},
+		{"sys_knowledge_tag", "uni_sys_knowledge_tag_tag_name"},
+		{"sys_workorder_category", "uk_workorder_category_name"},
+		{"sys_workorder_category", "uni_sys_workorder_category_name"},
+		{"sys_workorder", "uk_workorder_no"},
+		{"sys_workorder", "uni_sys_workorder_work_order_no"},
+	}
+
+	for _, c := range constraints {
+		// 先检查约束是否存在
+		var count int64
+		checkSQL := `
+			SELECT COUNT(*)
+			FROM pg_constraint
+			WHERE conname = ? AND conrelid::regclass = ?::regclass
+		`
+
+		err := d.DB.Raw(checkSQL, c.constraint, c.table).Scan(&count).Error
+		if err != nil {
+			// 查询失败，跳过
+			continue
+		}
+
+		// 只有约束存在时才删除
+		if count > 0 {
+			sql := fmt.Sprintf("ALTER TABLE %s DROP CONSTRAINT %s", c.table, c.constraint)
+			if err := d.DB.Exec(sql).Error; err != nil {
+				log.Printf("警告：删除约束 %s.%s 失败: %v", c.table, c.constraint, err)
+			} else {
+				log.Printf("成功删除约束 %s.%s", c.table, c.constraint)
+			}
+		}
+
+		// 尝试删除可能存在的同名索引
+		d.DB.Exec(fmt.Sprintf("DROP INDEX IF EXISTS %s", c.constraint))
+	}
+}
+
 // AutoMigrate 自动迁移所有模型
 func (d *Database) AutoMigrate() error {
-	// 迁移所有表
-	if err := d.DB.AutoMigrate(
+	// 先清理可能存在的旧约束
+	if d.Type == "postgres" {
+		d.cleanupOldConstraints()
+	}
+
+	// 禁用外键约束的自动创建，避免类型不匹配的问题
+	// 外键约束已通过 SQL 脚本手动创建
+	err := d.DB.Migrator().AutoMigrate(
 		&models.User{},
 		&models.UserRole{},
 		&models.Department{},
@@ -222,9 +276,8 @@ func (d *Database) AutoMigrate() error {
 		&models.DutyExchange{},
 		&models.Holiday{},
 		&models.DutyConfig{},
-		// 工单管理相关模型
-		&models.WorkOrder{},
-		&models.WorkOrderCategory{},
+		// 工单管理相关模型（排除有约束问题的表）
+		// WorkOrder, WorkOrderCategory 已通过 SQL 迁移创建，不需要 AutoMigrate
 		&models.WorkOrderComment{},
 		&models.WorkOrderHistory{},
 		&models.WorkOrderRating{},
@@ -232,10 +285,9 @@ func (d *Database) AutoMigrate() error {
 		&models.WorkOrderTemplate{},
 		&models.PeriodicWorkOrderTemplate{},
 		&models.PeriodicWorkOrderLog{},
-		// 知识库相关模型
+		// 知识库相关模型（排除有约束问题的表）
+		// KnowledgeCategory, KnowledgeTag 已通过 SQL 迁移创建，不需要 AutoMigrate
 		&models.KnowledgeArticle{},
-		&models.KnowledgeCategory{},
-		&models.KnowledgeTag{},
 		&models.KnowledgeArticleTag{},
 		// AD域管理相关模型
 		&models.ADConfig{},
@@ -244,7 +296,8 @@ func (d *Database) AutoMigrate() error {
 		&models.ADUser{},
 		&models.ADGroupMember{},
 		&models.ADSyncLog{},
-	); err != nil {
+	)
+	if err != nil {
 		return err
 	}
 

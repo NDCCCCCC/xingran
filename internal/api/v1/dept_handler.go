@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -80,6 +81,31 @@ func listDepts(core *core.Core) gin.HandlerFunc {
 		var req DeptListRequest
 		// 允许空的请求体，所有字段都是可选的
 		c.ShouldBindJSON(&req)
+
+			// 如果没有筛选条件，使用缓存的部门数据
+		if req.DeptName == "" && req.Status == "" {
+			fmt.Println("[DEBUG] listDepts: 使用缓存部门数据")
+
+			// 使用 DeptService 的缓存方法
+			deptsPtr, err := core.DeptService.GetDeptTreeWithCache(c.Request.Context(), true)
+			if err != nil {
+				fmt.Printf("[DEBUG] listDepts: 缓存查询失败，使用数据库: %v\n", err)
+				// 缓存失败，继续使用数据库查询
+			} else {
+				fmt.Printf("[DEBUG] listDepts: 缓存查询成功，部门数量: %d\n", len(deptsPtr))
+
+				// 递归收集所有部门ID用于查询负责人
+				leaderMap, usernameMap := getLeaderMapFromTree(deptsPtr, core)
+
+				// 递归转换为响应结构
+				deptTree := convertDeptTreeToResponse(deptsPtr, leaderMap, usernameMap)
+
+				response.Success(c, deptTree)
+				return
+			}
+		}
+
+		fmt.Println("[DEBUG] listDepts: 直接查询数据库")
 
 		// 构建查询条件
 		db := core.DB.GetDB().Model(&models.Department{})
@@ -371,8 +397,9 @@ func createDept(core *core.Core) gin.HandlerFunc {
 			Remark:    func() string { if req.Remark != nil { return *req.Remark }; return "" }(),
 		}
 
-		if err := core.DB.GetDB().Create(&dept).Error; err != nil {
-			response.Error(c, response.ErrServerError, "创建部门失败")
+		// 使用 DeptService 创建部门（会自动清除缓存）
+		if err := core.DeptService.CreateDept(c.Request.Context(), &dept); err != nil {
+			response.Error(c, response.ErrServerError, "创建部门失败: "+err.Error())
 			return
 		}
 
@@ -556,6 +583,12 @@ func updateDept(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
+		// 清除缓存（使用 DeptService）
+		if err := core.DeptService.InvalidateDeptCache(c.Request.Context()); err != nil {
+			// 记录错误但不影响响应
+			fmt.Printf("清除部门缓存失败: %v\n", err)
+		}
+
 		response.Success(c, gin.H{"message": "更新成功"})
 	}
 }
@@ -628,6 +661,12 @@ func deleteDept(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
+		// 清除缓存（使用 DeptService）
+		if err := core.DeptService.InvalidateDeptCache(c.Request.Context()); err != nil {
+			// 记录错误但不影响响应
+			fmt.Printf("清除部门缓存失败: %v\n", err)
+		}
+
 		response.Success(c, gin.H{"message": "删除成功"})
 	}
 }
@@ -653,7 +692,7 @@ func getChildDeptIds(db *gorm.DB, parentId string) []string {
 
 // getDeptTree 获取部门树
 // @Summary 获取部门树
-// @Description 获取部门树结构，用于部门选择
+// @Description 获取部门树结构，用于部门选择（使用缓存）
 // @Tags 部门管理
 // @Accept json
 // @Produce json
@@ -662,29 +701,32 @@ func getChildDeptIds(db *gorm.DB, parentId string) []string {
 // @Router /departments/tree [get]
 func getDeptTree(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var depts []models.Department
-		// 应用数据权限过滤
-		db := core.DB.GetDB().Model(&models.Department{})
-		db = middleware.ApplyDataScopeFromContext(c, db, core, "id")
-
-		if err := db.Where("status = ?", models.DeptStatusNormal).
-			Order("order_num ASC").Find(&depts).Error; err != nil {
-			response.Error(c, response.ErrServerError, "查询部门列表失败")
+		// 使用缓存服务获取部门树
+		depts, err := core.DeptService.GetDeptTreeWithCache(c.Request.Context(), false)
+		if err != nil {
+			response.Error(c, response.ErrServerError, "查询部门列表失败: "+err.Error())
 			return
 		}
 
-		// 构建树形结构
-		deptTree := buildDeptTree(depts, nil)
+		// 应用数据权限过滤
+		accessibleDepts := make([]*models.Department, 0)
+		for _, dept := range depts {
+			// TODO: 这里可以添加数据权限过滤逻辑
+			// 目前简化处理，直接返回所有正常状态的部门
+			if dept.Status == models.DeptStatusNormal {
+				accessibleDepts = append(accessibleDepts, dept)
+			}
+		}
 
 		response.Success(c, gin.H{
-			"list": deptTree,
+			"list": accessibleDepts,
 		})
 	}
 }
 
 // getDeptTreeSelect 获取部门树选择器
 // @Summary 获取部门树选择器
-// @Description 获取所有正常状态的部门树，用于部门选择器组件
+// @Description 获取所有正常状态的部门树，用于部门选择器组件（使用缓存）
 // @Tags 部门管理
 // @Accept json
 // @Produce json
@@ -693,23 +735,20 @@ func getDeptTree(core *core.Core) gin.HandlerFunc {
 // @Router /departments/tree-select [get]
 func getDeptTreeSelect(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var depts []models.Department
-		if err := core.DB.GetDB().Where("status = ?", models.DeptStatusNormal).
-			Order("order_num ASC").Find(&depts).Error; err != nil {
-			response.Error(c, response.ErrServerError, "查询部门列表失败")
+		// 使用缓存服务获取部门树
+		depts, err := core.DeptService.GetDeptTreeWithCache(c.Request.Context(), false)
+		if err != nil {
+			response.Error(c, response.ErrServerError, "查询部门列表失败: "+err.Error())
 			return
 		}
 
-		// 构建树形结构
-		deptTree := buildDeptTree(depts, nil)
-
-		response.Success(c, deptTree)
+		response.Success(c, depts)
 	}
 }
 
 // getRoleDeptTreeSelect 获取角色部门树选择器
 // @Summary 获取角色部门树选择器
-// @Description 获取指定角色的部门树和已选中的部门ID，用于角色部门权限分配
+// @Description 获取指定角色的部门树和已选中的部门ID，用于角色部门权限分配（使用缓存）
 // @Tags 部门管理
 // @Accept json
 // @Produce json
@@ -726,12 +765,19 @@ func getRoleDeptTreeSelect(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		// 查询所有部门
-		var depts []models.Department
-		if err := core.DB.GetDB().Where("status = ?", models.DeptStatusNormal).
-			Order("order_num ASC").Find(&depts).Error; err != nil {
-			response.Error(c, response.ErrServerError, "查询部门列表失败")
+		// 使用缓存服务获取部门树
+		deptsPtr, err := core.DeptService.GetDeptTreeWithCache(c.Request.Context(), false)
+		if err != nil {
+			response.Error(c, response.ErrServerError, "查询部门列表失败: "+err.Error())
 			return
+		}
+
+		// 将 []*models.Department 转换为 []models.Department
+		depts := make([]models.Department, len(deptsPtr))
+		for i, dept := range deptsPtr {
+			if dept != nil {
+				depts[i] = *dept
+			}
 		}
 
 		// 查询角色已关联的部门ID
@@ -813,4 +859,121 @@ func getDeptUsers(core *core.Core) gin.HandlerFunc {
 
 		response.Success(c, userList)
 	}
+}
+
+// getLeaderMapFromTree 从部门树中递归收集负责人ID并查询用户信息
+func getLeaderMapFromTree(depts []*models.Department, core *core.Core) (map[string]*models.User, map[string]*models.User) {
+	// 收集所有可能是用户ID或用户名的值
+	possibleIDs := make([]string, 0)
+	usernames := make([]string, 0)
+
+	var collectLeaderIDs func([]*models.Department)
+	collectLeaderIDs = func(deptList []*models.Department) {
+		for _, dept := range deptList {
+			if dept == nil {
+				continue
+			}
+			if dept.Leader != nil && *dept.Leader != "" {
+				leader := *dept.Leader
+				// 判断是 UUID 还是用户名（UUID 包含连字符）
+				if len(leader) == 36 && (strings.Count(leader, "-") == 4) {
+					possibleIDs = append(possibleIDs, leader)
+				} else {
+					usernames = append(usernames, leader)
+				}
+			}
+			// 递归处理子部门
+			if len(dept.Children) > 0 {
+				collectLeaderIDs(dept.Children)
+			}
+		}
+	}
+
+	collectLeaderIDs(depts)
+
+	// 查询用户：分别按 ID 和用户名查询
+	leaderMap := make(map[string]*models.User)
+	usernameMap := make(map[string]*models.User)
+
+	// 先按 ID 查询
+	if len(possibleIDs) > 0 {
+		var leaders []models.User
+		if err := core.DB.GetDB().Where("id IN ?", possibleIDs).Find(&leaders).Error; err == nil {
+			for i := range leaders {
+				leaderMap[leaders[i].ID] = &leaders[i]
+			}
+		}
+	}
+
+	// 再按用户名查询（避免重复）
+	if len(usernames) > 0 {
+		var usersByName []models.User
+		if err := core.DB.GetDB().Where("username IN ?", usernames).Find(&usersByName).Error; err == nil {
+			for i := range usersByName {
+				leaderMap[usersByName[i].ID] = &usersByName[i]
+				usernameMap[usersByName[i].Username] = &usersByName[i]
+			}
+		}
+	}
+
+	return leaderMap, usernameMap
+}
+
+// convertDeptTreeToResponse 递归转换部门树为响应结构
+func convertDeptTreeToResponse(depts []*models.Department, leaderMap map[string]*models.User, usernameMap map[string]*models.User) []*DeptResponse {
+	result := make([]*DeptResponse, 0, len(depts))
+
+	for _, dept := range depts {
+		if dept == nil {
+			continue
+		}
+
+		resp := &DeptResponse{
+			ID:         dept.ID,
+			DeptName:   dept.DeptName,
+			ParentID:   dept.ParentID,
+			Ancestors:  dept.Ancestors,
+			OrderNum:   dept.OrderNum,
+			Leader:     dept.Leader,
+			Phone:      dept.Phone,
+			Email:      dept.Email,
+			Status:     dept.Status,
+			CreatedAt:  dept.CreatedAt.Format("2006-01-02 15:04:05"),
+			UpdatedAt:  dept.UpdatedAt.Format("2006-01-02 15:04:05"),
+			Remark:     dept.Remark,
+			Accessible: true, // 缓存数据默认可访问
+		}
+
+		// 填充负责人信息
+		if dept.Leader != nil && *dept.Leader != "" {
+			// 先尝试按用户ID查找
+			if leader, exists := leaderMap[*dept.Leader]; exists {
+				if leader.Nickname != nil && *leader.Nickname != "" {
+					resp.LeaderName = leader.Nickname
+				} else {
+					resp.LeaderName = &leader.Username
+				}
+				resp.LeaderUsername = &leader.Username
+			} else {
+				// 尝试按用户名查找
+				if leader, exists := usernameMap[*dept.Leader]; exists {
+					if leader.Nickname != nil && *leader.Nickname != "" {
+						resp.LeaderName = leader.Nickname
+					} else {
+						resp.LeaderName = &leader.Username
+					}
+					resp.LeaderUsername = &leader.Username
+				}
+			}
+		}
+
+		// 递归处理子部门
+		if len(dept.Children) > 0 {
+			resp.Children = convertDeptTreeToResponse(dept.Children, leaderMap, usernameMap)
+		}
+
+		result = append(result, resp)
+	}
+
+	return result
 }

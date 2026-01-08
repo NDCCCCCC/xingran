@@ -40,6 +40,13 @@ type Core struct {
 	NoticeHub               *websocket.NoticeHub     // WebSocket通知中心
 	CaptchaService          *CaptchaService          // 验证码服务
 	CaptchaBackgroundService *CaptchaBackgroundService // 验证码背景图服务
+
+	// 数据缓存服务（方案1：统一缓存架构）
+	DataCacheService        *services.DataCacheService    // 通用数据缓存服务
+	CacheConfigService      *services.CacheConfigService  // 缓存配置服务
+	DeptService             *services.DeptService         // 部门缓存服务
+	RoleCacheService        *services.RoleCacheService    // 角色缓存服务
+	DictCacheService        *services.DictCacheService    // 字典缓存服务
 }
 
 // GetDB 获取数据库连接
@@ -117,13 +124,33 @@ func (c *Core) Init() error {
 	if err != nil {
 		log.Printf("警告：初始化缓存系统失败: %v", err)
 		// 缓存失败不影响服务启动
+	} else {
+		log.Println("缓存系统初始化完成")
 	}
 
-	// 6. 初始化系统指标缓存服务
+	// 6. 初始化数据缓存服务（方案1：统一缓存架构）
+	// 这些服务使用 Core.Cache 进行数据缓存，提供带缓存的业务方法
+	if c.Cache != nil {
+		// 初始化缓存配置服务
+		c.CacheConfigService = services.NewCacheConfigService(c.GetDB())
+
+		// 初始化数据缓存服务
+		c.DataCacheService = services.NewDataCacheService(c.Cache)
+		c.DataCacheService.SetCacheConfig(c.CacheConfigService)
+
+		// 初始化业务服务
+		c.DeptService = services.NewDeptService(c.GetDB(), c.DataCacheService)
+		c.RoleCacheService = services.NewRoleCacheService(c.GetDB(), c.DataCacheService)
+		c.DictCacheService = services.NewDictCacheService(c.GetDB(), c.DataCacheService)
+
+		log.Println("数据缓存服务初始化完成（部门、角色、字典）")
+	}
+
+	// 7. 初始化系统指标缓存服务
 	c.MetricsCacheService = NewMetricsCacheService(c)
 	log.Println("系统指标缓存服务初始化完成")
 
-	// 7. 初始化网络设备管理器（新架构）
+	// 8. 初始化网络设备管理器（新架构）
 	// 7.1 创建简化版管理器（仅辅助方法）
 	c.DeviceManager = device.NewManager(c.GetDB())
 	// 7.2 创建连接池
@@ -195,15 +222,15 @@ func (c *Core) Init() error {
 		// 启动AD域同步调度器（每5分钟检查需要同步的配置）
 		scheduler.StartADSyncScheduler(c.GetDB())
 
+		// 设置全局数据库访问器，供定时任务使用（必须在同步周期性工单任务之前）
+		scheduler.SetDB(c)
+
 		// 同步周期性工单模板到调度器
 		if err := scheduler.SyncPeriodicWorkOrderJobs(c.Scheduler); err != nil {
 			log.Printf("警告：同步周期性工单任务失败: %v", err)
 		} else {
 			log.Println("周期性工单任务同步完成")
 		}
-
-		// 设置全局数据库访问器，供定时任务使用
-		scheduler.SetDB(c)
 	}
 
 	// 12. 初始化设备监控服务

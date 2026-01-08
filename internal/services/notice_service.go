@@ -282,7 +282,10 @@ func (s *NoticeService) GetTargetUsers(ctx context.Context, notice *models.Notic
 
 	switch notice.TargetType {
 	case models.TargetAll:
-		if err := s.db.WithContext(ctx).Model(&models.User{}).Pluck("id", &userIDs).Error; err != nil {
+		// 限制最大返回数量，避免大数据量影响性能
+		const maxUsers = 10000
+		query := s.db.WithContext(ctx).Model(&models.User{}).Limit(maxUsers)
+		if err := query.Pluck("id", &userIDs).Error; err != nil {
 			return nil, fmt.Errorf("获取用户列表失败: %w", err)
 		}
 
@@ -294,7 +297,10 @@ func (s *NoticeService) GetTargetUsers(ctx context.Context, notice *models.Notic
 			}
 		}
 		if len(deptIDs) > 0 {
-			if err := s.db.WithContext(ctx).Model(&models.User{}).Where("dept_id IN ?", deptIDs).Pluck("id", &userIDs).Error; err != nil {
+			// 添加限制避免部门用户过多
+			const maxUsers = 10000
+			query := s.db.WithContext(ctx).Model(&models.User{}).Where("dept_id IN ?", deptIDs).Limit(maxUsers)
+			if err := query.Pluck("id", &userIDs).Error; err != nil {
 				return nil, fmt.Errorf("获取部门用户失败: %w", err)
 			}
 		}
@@ -302,10 +308,14 @@ func (s *NoticeService) GetTargetUsers(ctx context.Context, notice *models.Notic
 	case models.TargetRole:
 		roleIDs := getTargetIDsByType(notice.Targets, "role")
 		if len(roleIDs) > 0 {
-			if err := s.db.WithContext(ctx).Table("sys_user_role").
+			// 添加限制避免角色用户过多
+			const maxUsers = 10000
+			query := s.db.WithContext(ctx).Table("sys_user_role").
 				Where("role_id IN ?", roleIDs).
 				Distinct("user_id").
-				Pluck("user_id", &userIDs).Error; err != nil {
+				Limit(maxUsers).
+				Pluck("user_id", &userIDs)
+			if err := query.Error; err != nil {
 				return nil, fmt.Errorf("获取角色用户失败: %w", err)
 			}
 		}
@@ -458,15 +468,18 @@ func (s *NoticeService) MarkAllNoticesRead(ctx context.Context, userID string) e
 		return nil
 	}
 
-	// 批量插入阅读记录（忽略已存在的）
+	// 批量插入阅读记录 - 使用Create批量插入提升性能
+	now := time.Now()
+	reads := make([]models.NoticeRead, 0, len(noticeIDs))
 	for _, noticeID := range noticeIDs {
-		read := &models.NoticeRead{
+		reads = append(reads, models.NoticeRead{
 			NoticeID: noticeID,
 			UserID:   userID,
-			ReadAt:   time.Now(),
-		}
-		s.db.WithContext(ctx).Create(read) // 忽略错误（已存在时会跳过）
+			ReadAt:   now,
+		})
 	}
+	// GORM会自动分批处理大数据量
+	s.db.WithContext(ctx).Create(&reads)
 
 	return nil
 }

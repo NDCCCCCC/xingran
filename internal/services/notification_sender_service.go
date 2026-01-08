@@ -7,6 +7,7 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"gorm.io/gorm"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 )
 
 // NotificationSenderService 通知发送服务（多渠道）
@@ -68,7 +69,7 @@ func (s *NotificationSenderService) SendNotification(ctx context.Context, notice
 		case models.ChannelTypeWeb:
 			// 站内信（WebSocket）
 			if err := s.sendWebNotification(ctx, notice, targetUsers); err != nil {
-				fmt.Printf("发送站内信失败: %v\n", err)
+				logger.Errorf("发送站内信失败: %v", err)
 			}
 
 		case models.ChannelTypeEmail:
@@ -78,7 +79,7 @@ func (s *NotificationSenderService) SendNotification(ctx context.Context, notice
 				if len(emails) > 0 {
 					result := s.emailSender.SendNoticeEmail(ctx, *channel.EmailConfigID, notice, emails)
 					if !result.Success {
-						fmt.Printf("发送邮件失败: %s\n", result.Message)
+						logger.Errorf("发送邮件失败: %s", result.Message)
 					}
 				}
 			}
@@ -90,7 +91,7 @@ func (s *NotificationSenderService) SendNotification(ctx context.Context, notice
 				if len(phones) > 0 {
 					result := s.apiSender.SendSMS(ctx, *channel.APIConfigID, phones, notice.NoticeContent)
 					if !result.Success {
-						fmt.Printf("发送短信失败: %s\n", result.Message)
+						logger.Errorf("发送短信失败: %s", result.Message)
 					}
 				}
 			}
@@ -100,7 +101,7 @@ func (s *NotificationSenderService) SendNotification(ctx context.Context, notice
 			if channel.APIConfigID != nil {
 				result := s.apiSender.SendNoticeAPI(ctx, *channel.APIConfigID, notice, targetUsers)
 				if !result.Success {
-					fmt.Printf("发送API通知失败: %s\n", result.Message)
+					logger.Errorf("发送API通知失败: %s", result.Message)
 				}
 			}
 		}
@@ -114,7 +115,7 @@ func (s *NotificationSenderService) sendWebNotification(ctx context.Context, not
 	// 这里应该通过WebSocket Hub发送通知
 	// 具体实现需要注入NoticeHub
 	// 暂时返回nil，实际使用时需要集成WebSocket Hub
-	fmt.Printf("[站内信] 发送通知: %s 到 %d 个用户\n", notice.NoticeTitle, len(targetUsers))
+	logger.Infof("[站内信] 发送通知: %s 到 %d 个用户", notice.NoticeTitle, len(targetUsers))
 	return nil
 }
 

@@ -213,9 +213,10 @@ func (w *ScrapliWrapper) OpenContext(ctx context.Context) error {
 			return
 		}
 
-		// Open 成功后，给一点时间让 scrapligo 内部的 goroutine（如 GetPrompt）完成初始化
+		// Open 成功后，给足够时间让 scrapligo 内部的 goroutine（如 GetPrompt）完成初始化
 		// 这可以避免 transport.conn 尚未就绪时的空指针问题
-		time.Sleep(100 * time.Millisecond)
+		// 增加到 200ms 以确保初始化完全完成
+		time.Sleep(200 * time.Millisecond)
 
 		resultCh <- result{err: nil}
 	}()

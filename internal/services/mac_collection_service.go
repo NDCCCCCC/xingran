@@ -9,9 +9,10 @@ import (
 	"sync"
 	"time"
 
-	"gorm.io/gorm"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // MACCollectionService MAC地址采集服务
@@ -156,7 +157,13 @@ func (s *MACCollectionService) collectDeviceMAC(ctx context.Context, device *mod
 			CollectedAt:   collectionTime,
 		}
 
-		if err := s.db.WithContext(ctx).Create(macRecord).Error; err == nil {
+		// 使用 OnConflict 处理重复键：如果存在则更新，否则插入
+		if err := s.db.WithContext(ctx).
+			Clauses(clause.OnConflict{
+				Columns:   []clause.Column{{Name: "device_id"}, {Name: "mac_address"}, {Name: "interface_name"}},
+				DoUpdates: clause.AssignmentColumns([]string{"vlan_id", "mac_type", "collected_at"}),
+			}).
+			Create(macRecord).Error; err == nil {
 			successCount++
 		}
 	}

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -290,7 +291,9 @@ func (s *DeviceTaskScheduler) Stop() {
 	log.Printf("[任务调度器] 正在停止调度器...")
 
 	s.schedulerLock.Lock()
-	defer s.schedulerLock.Unlock()
+
+	// 先禁用调度器，防止接收新任务
+	s.enabled = false
 
 	// 取消所有 worker
 	for deviceID, cancel := range s.workerCancel {
@@ -298,13 +301,28 @@ func (s *DeviceTaskScheduler) Stop() {
 		cancel()
 	}
 
-	// 等待所有 worker 退出
+	// 保存设备ID列表，用于后续清理
+	deviceIDs := make([]string, 0, len(s.workers))
 	for deviceID := range s.workers {
+		deviceIDs = append(deviceIDs, deviceID)
+	}
+
+	s.schedulerLock.Unlock()
+
+	// 等待所有 worker 退出（在锁外等待，避免死锁）
+	log.Printf("[任务调度器] 等待 %d 个 worker 退出...", len(deviceIDs))
+	time.Sleep(100 * time.Millisecond) // 给worker时间处理取消信号
+
+	s.schedulerLock.Lock()
+	defer s.schedulerLock.Unlock()
+
+	// 清理 worker 记录
+	for _, deviceID := range deviceIDs {
 		delete(s.workers, deviceID)
 		delete(s.workerCancel, deviceID)
 	}
 
-	// 关闭队列
+	// 关闭队列（此时worker应该已经退出，没有接收者了）
 	for deviceID, queue := range s.queues {
 		close(queue)
 		delete(s.queues, deviceID)
@@ -331,18 +349,17 @@ func (s *DeviceTaskScheduler) GetStats() map[string]interface{} {
 
 // recordSubmission 记录任务提交
 func (s *DeviceTaskScheduler) recordSubmission() {
-	// 注意：这里没有加锁，因为 atomic 操作是原子的
-	// 如果需要更精确的统计，可以考虑使用 atomic
+	atomic.AddInt64(&s.metrics.TotalSubmitted, 1)
 }
 
 // recordCompletion 记录任务完成
 func (s *DeviceTaskScheduler) recordCompletion() {
-	// 如果需要更精确的统计，可以使用 atomic
+	atomic.AddInt64(&s.metrics.TotalCompleted, 1)
 }
 
 // recordFailure 记录任务失败
 func (s *DeviceTaskScheduler) recordFailure() {
-	// 如果需要更精确的统计，可以使用 atomic
+	atomic.AddInt64(&s.metrics.TotalFailed, 1)
 }
 
 // generateTaskID 生成任务ID

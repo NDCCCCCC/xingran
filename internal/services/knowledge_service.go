@@ -92,9 +92,11 @@ type ConvertWorkOrderToArticleRequest struct {
 
 // SearchKnowledgeRequest 搜索知识库请求
 type SearchKnowledgeRequest struct {
-	Keyword  string `json:"keyword"`
+	Keyword    string `json:"keyword"`
 	CategoryID string `json:"categoryId"`
-	TagID    string `json:"tagId"`
+	TagID      string `json:"tagId"`
+	PageSize   int    `json:"pageSize"`   // 每页大小，默认100
+	PageNum    int    `json:"pageNum"`    // 页码，从0开始
 }
 
 // ==================== 知识库文章方法 ====================
@@ -446,8 +448,9 @@ func (s *KnowledgeService) ConvertWorkOrderToArticle(ctx context.Context, workOr
 }
 
 // SearchKnowledgeArticles 搜索知识库文章
-func (s *KnowledgeService) SearchKnowledgeArticles(ctx context.Context, req *SearchKnowledgeRequest) ([]models.KnowledgeArticle, error) {
+func (s *KnowledgeService) SearchKnowledgeArticles(ctx context.Context, req *SearchKnowledgeRequest) ([]models.KnowledgeArticle, int64, error) {
 	var list []models.KnowledgeArticle
+	var total int64
 
 	query := s.db.WithContext(ctx).Model(&models.KnowledgeArticle{}).
 		Where("status = ?", models.KnowledgeArticleStatusPublished)
@@ -464,15 +467,36 @@ func (s *KnowledgeService) SearchKnowledgeArticles(ctx context.Context, req *Sea
 			Where("sys_kb_article_tags.tag_id = ?", req.TagID)
 	}
 
+	// 先获取总数
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, fmt.Errorf("统计知识库文章数量失败: %w", err)
+	}
+
+	// 设置分页参数，默认100条，最大500条
+	pageSize := req.PageSize
+	if pageSize <= 0 {
+		pageSize = 100
+	} else if pageSize > 500 {
+		pageSize = 500
+	}
+
+	pageNum := req.PageNum
+	if pageNum < 0 {
+		pageNum = 0
+	}
+
+	// 应用分页和预加载
 	if err := query.
 		Preload("Category").
 		Preload("Tags").
 		Order("created_at DESC").
+		Limit(pageSize).
+		Offset(pageNum * pageSize).
 		Find(&list).Error; err != nil {
-		return nil, fmt.Errorf("搜索知识库文章失败: %w", err)
+		return nil, 0, fmt.Errorf("搜索知识库文章失败: %w", err)
 	}
 
-	return list, nil
+	return list, total, nil
 }
 
 // IncrementViewCount 增加浏览次数

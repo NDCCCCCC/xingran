@@ -10,6 +10,7 @@ import (
 
 	"gorm.io/gorm"
 	"github.com/gosnmp/gosnmp"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	devicepkg "github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 )
@@ -195,7 +196,7 @@ func (s *DeviceDiscoveryService) discoverBySNMP(ctx context.Context, task *model
 // snmpProbe SNMP探测单个IP
 // 完全按照测试脚本的逻辑：一个连接上执行多次 Get
 func (s *DeviceDiscoveryService) snmpProbe(ip, community string, port int) *DiscoveredDevice {
-	fmt.Printf("[DEBUG] snmpProbe 开始: ip=%s, community=%s, port=%d\n", ip, community, port)
+	logger.Debugf("[snmpProbe] 开始: ip=%s, community=%s, port=%d", ip, community, port)
 
 	// 创建SNMP客户端（配置与测试脚本完全一致）
 	snmpClient := &gosnmp.GoSNMP{
@@ -207,13 +208,13 @@ func (s *DeviceDiscoveryService) snmpProbe(ip, community string, port int) *Disc
 		MaxOids:   1,
 	}
 
-	fmt.Printf("[DEBUG] SNMP配置: Version=%d, Timeout=%v, MaxOids=%d\n",
+	logger.Debugf("[snmpProbe] SNMP配置: Version=%d, Timeout=%v, MaxOids=%d",
 		snmpClient.Version, snmpClient.Timeout, snmpClient.MaxOids)
 
 	// 连接
-	fmt.Printf("[DEBUG] 尝试连接 SNMP 服务器...\n")
+	logger.Debug("[snmpProbe] 尝试连接 SNMP 服务器...")
 	if err := snmpClient.Connect(); err != nil {
-		fmt.Printf("[DEBUG] SNMP 连接失败: %v\n", err)
+		logger.Debugf("[snmpProbe] SNMP 连接失败: %v", err)
 		return &DiscoveredDevice{
 			IPAddress: ip,
 			IsAlive:   false,
@@ -221,34 +222,34 @@ func (s *DeviceDiscoveryService) snmpProbe(ip, community string, port int) *Disc
 	}
 	// 使用 defer 确保连接在函数结束时关闭（与测试脚本一致）
 	defer snmpClient.Conn.Close()
-	fmt.Printf("[DEBUG] SNMP 连接成功\n")
+	logger.Debug("[snmpProbe] SNMP 连接成功")
 
 	// 在同一个连接上获取 sysName（与测试脚本一致）
-	fmt.Printf("[DEBUG] 获取 sysName (OID: .1.3.6.1.2.1.1.5.0)...\n")
+	logger.Debug("[snmpProbe] 获取 sysName (OID: .1.3.6.1.2.1.1.5.0)...")
 	startTime := time.Now()
 	sysName, err := snmpClient.Get([]string{".1.3.6.1.2.1.1.5.0"})
 	elapsed := time.Since(startTime)
 
 	if err != nil {
-		fmt.Printf("[DEBUG] 获取 sysName 失败: %v (耗时: %v)\n", err, elapsed)
+		logger.Debugf("[snmpProbe] 获取 sysName 失败: %v (耗时: %v)", err, elapsed)
 		return &DiscoveredDevice{
 			IPAddress: ip,
 			IsAlive:   false,
 		}
 	}
-	fmt.Printf("[DEBUG] sysName 获取成功, 耗时: %v, 变量数量: %d\n", elapsed, len(sysName.Variables))
+	logger.Debugf("[snmpProbe] sysName 获取成功, 耗时: %v, 变量数量: %d", elapsed, len(sysName.Variables))
 
 	// 在同一个连接上获取 sysDescr（与测试脚本一致）
-	fmt.Printf("[DEBUG] 获取 sysDescr (OID: .1.3.6.1.2.1.1.1.0)...\n")
+	logger.Debug("[snmpProbe] 获取 sysDescr (OID: .1.3.6.1.2.1.1.1.0)...")
 	startTime = time.Now()
 	sysDescr, err := snmpClient.Get([]string{".1.3.6.1.2.1.1.1.0"})
 	elapsed = time.Since(startTime)
 
 	if err != nil {
-		fmt.Printf("[DEBUG] sysDescr 获取失败: %v (耗时: %v)\n", err, elapsed)
+		logger.Debugf("[snmpProbe] sysDescr 获取失败: %v (耗时: %v)", err, elapsed)
 		// sysDescr 失败不算致命错误，继续处理 sysName
 	} else {
-		fmt.Printf("[DEBUG] sysDescr 获取成功, 耗时: %v, 变量数量: %d\n", elapsed, len(sysDescr.Variables))
+		logger.Debugf("[snmpProbe] sysDescr 获取成功, 耗时: %v, 变量数量: %d", elapsed, len(sysDescr.Variables))
 	}
 
 	// 解析结果
@@ -265,7 +266,7 @@ func (s *DeviceDiscoveryService) snmpProbe(ip, community string, port int) *Disc
 		case []byte:
 			device.SysName = string(v)
 		}
-		fmt.Printf("[DEBUG] sysName=%s\n", device.SysName)
+		logger.Debugf("[snmpProbe] sysName=%s", device.SysName)
 	}
 
 	if len(sysDescr.Variables) > 0 {
@@ -282,7 +283,7 @@ func (s *DeviceDiscoveryService) snmpProbe(ip, community string, port int) *Disc
 	device.Vendor = string(devicepkg.IdentifyVendor(device.SysDescr))
 	device.DeviceType = string(devicepkg.IdentifyDeviceType(device.SysDescr))
 
-	fmt.Printf("[DEBUG] snmpProbe 完成: IsAlive=%v, Vendor=%s, DeviceType=%s\n", device.IsAlive, device.Vendor, device.DeviceType)
+	logger.Debugf("[snmpProbe] 完成: IsAlive=%v, Vendor=%s, DeviceType=%s", device.IsAlive, device.Vendor, device.DeviceType)
 	return device
 }
 
@@ -470,14 +471,14 @@ func (s *DeviceDiscoveryService) ProbeSingleDevice(ctx context.Context, req *Dev
 		}
 
 		communities = credential.SNMPCommunities
-		fmt.Printf("[DEBUG] 从凭证 %s 获取到 %d 个 SNMP communities: %v\n", credential.CredentialName, len(communities), communities)
+		logger.Debugf("[ProbeSingleDevice] 从凭证 %s 获取到 %d 个 SNMP communities: %v", credential.CredentialName, len(communities), communities)
 	}
 
 	// 2. 只使用第一个 community（避免触发设备的防暴力破解机制）
 	// 注意：测试表明华为设备会检测短时间内多个不同community的请求，并屏蔽源IP
-	fmt.Printf("[DEBUG] 使用第 1 个 community 进行探测: %s (共%d个)\n", communities[0], len(communities))
+	logger.Debugf("[ProbeSingleDevice] 使用第 1 个 community 进行探测: %s (共%d个)", communities[0], len(communities))
 	if len(communities) > 1 {
-		fmt.Printf("[DEBUG] 注意: 凭证中配置了多个community，但只会尝试第一个。如需尝试其他，请手动调整顺序。\n")
+		logger.Debug("[ProbeSingleDevice] 注意: 凭证中配置了多个community，但只会尝试第一个。如需尝试其他，请手动调整顺序。")
 	}
 
 	community := communities[0]
@@ -493,18 +494,19 @@ func (s *DeviceDiscoveryService) ProbeSingleDevice(ctx context.Context, req *Dev
 
 	err := snmpClient.Connect()
 	if err != nil {
-		fmt.Printf("[DEBUG] SNMP 连接失败: %v\n", err)
+		logger.Debugf("[ProbeSingleDevice] SNMP 连接失败: %v", err)
 		return &DeviceProbeResult{
 			Success: false,
 			Message: fmt.Sprintf("SNMP连接失败: %v", err),
 			IPAddress: req.IPAddress,
 		}, nil
 	}
+	// 使用defer确保连接总是被关闭，避免资源泄漏
+	defer snmpClient.Conn.Close()
 
 	sysName, err := snmpClient.Get([]string{".1.3.6.1.2.1.1.5.0"})
 	if err != nil {
-		snmpClient.Conn.Close()
-		fmt.Printf("[DEBUG] 获取 sysName 失败: %v\n", err)
+		logger.Debugf("[ProbeSingleDevice] 获取 sysName 失败: %v", err)
 		return &DeviceProbeResult{
 			Success: false,
 			Message: fmt.Sprintf("SNMP request failed: %v, current community: %s", err, community),
@@ -513,7 +515,6 @@ func (s *DeviceDiscoveryService) ProbeSingleDevice(ctx context.Context, req *Dev
 	}
 
 	sysDescr, _ := snmpClient.Get([]string{".1.3.6.1.2.1.1.1.0"})
-	snmpClient.Conn.Close()
 
 	discoveredDevice := &DiscoveredDevice{
 		IPAddress: req.IPAddress,
@@ -543,7 +544,7 @@ func (s *DeviceDiscoveryService) ProbeSingleDevice(ctx context.Context, req *Dev
 	discoveredDevice.Vendor = string(devicepkg.IdentifyVendor(discoveredDevice.SysDescr))
 	discoveredDevice.DeviceType = string(devicepkg.IdentifyDeviceType(discoveredDevice.SysDescr))
 
-	fmt.Printf("[DEBUG] 探测成功: SysName=%s, Vendor=%s\n", discoveredDevice.SysName, discoveredDevice.Vendor)
+	logger.Debugf("[ProbeSingleDevice] 探测成功: SysName=%s, Vendor=%s", discoveredDevice.SysName, discoveredDevice.Vendor)
 
 	// 3. 处理探测结果
 	if discoveredDevice != nil && discoveredDevice.IsAlive {

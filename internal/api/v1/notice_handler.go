@@ -8,6 +8,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
@@ -231,10 +232,10 @@ func createNotice(core *core.Core) gin.HandlerFunc {
 			var err error
 
 			// 调试日志
-			fmt.Printf("[DEBUG] executionType=%s, RecurrenceConfig=%v\n", executionType, req.RecurrenceConfig != nil)
+			logger.Debugf("[NOTICE] executionType=%s, RecurrenceConfig=%v", executionType, req.RecurrenceConfig != nil)
 
 			if executionType == "recurring" && req.RecurrenceConfig != nil {
-				fmt.Printf("[DEBUG] 创建周期性任务: type=%s, executeTime=%s\n", req.RecurrenceConfig.Type, req.RecurrenceConfig.ExecuteTime)
+				logger.Debugf("[NOTICE] 创建周期性任务: type=%s, executeTime=%s", req.RecurrenceConfig.Type, req.RecurrenceConfig.ExecuteTime)
 				// 周期性执行
 				cronExpr, err = services.GenerateCronExpression(
 					req.RecurrenceConfig.Type,
@@ -282,7 +283,7 @@ func createNotice(core *core.Core) gin.HandlerFunc {
 				if err := core.DB.GetDB().Model(&models.Notice{}).
 					Where("id = ?", notice.ID).
 					Update("publish_status", models.PublishStatusScheduled).Error; err != nil {
-					fmt.Printf("[WARNING] 更新发布状态失败: %v\n", err)
+					logger.Warnf("[NOTICE] 更新发布状态失败: %v", err)
 					// 不中断流程，因为定时任务已创建成功
 				}
 			}

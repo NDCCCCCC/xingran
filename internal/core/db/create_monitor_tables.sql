@@ -162,12 +162,13 @@ CREATE INDEX IF NOT EXISTS idx_cache_stats_cache_type ON sys_cache_stats(cache_t
 CREATE INDEX IF NOT EXISTS idx_cache_stats_collect_time ON sys_cache_stats(collect_time);
 
 -- 插入示例数据
-INSERT INTO sys_job (job_name, job_group, invoke_target, cron_expression, status, remark) VALUES
-('系统监控任务', 'DEFAULT', 'systemMonitor.collectMetrics', '0 */5 * * * *', 0, '每5分钟收集系统指标'),
-('缓存清理任务', 'DEFAULT', 'cacheCleaner.cleanExpired', '0 0 2 * * *', 0, '每天凌晨2点清理过期缓存'),
-('日志归档任务', 'DEFAULT', 'logArchiver.archiveOldLogs', '0 0 3 * * 0', 0, '每周日凌晨3点归档旧日志'),
-('数据备份任务', 'DEFAULT', 'dataBackup.backupDatabase', '0 0 1 * * *', 0, '每天凌晨1点备份数据库')
-ON CONFLICT DO NOTHING;
+-- 注意：以下任务处理器需要先实现才能启用，暂时注释掉
+-- INSERT INTO sys_job (job_name, job_group, invoke_target, cron_expression, status, remark) VALUES
+-- ('系统监控任务', 'DEFAULT', 'systemMonitor.collectMetrics', '0 */5 * * * *', 0, '每5分钟收集系统指标'),
+-- ('缓存清理任务', 'DEFAULT', 'cacheCleaner.cleanExpired', '0 0 2 * * *', 0, '每天凌晨2点清理过期缓存'),
+-- ('日志归档任务', 'DEFAULT', 'logArchiver.archiveOldLogs', '0 0 3 * * 0', 0, '每周日凌晨3点归档旧日志'),
+-- ('数据备份任务', 'DEFAULT', 'dataBackup.backupDatabase', '0 0 1 * * *', 0, '每天凌晨1点备份数据库')
+-- ON CONFLICT DO NOTHING;
 
 INSERT INTO sys_server_info (host_name, os, arch, cpu_count, total_memory, disk_total, status) VALUES
 ('localhost', 'Windows 10', 'x86_64', 8, 17179869184, 107374182400, 0)

@@ -590,3 +590,38 @@ func (m *MemoryCache) SetBool(ctx context.Context, key string, value bool, expir
 	}
 	return m.Set(ctx, key, strValue, expiration)
 }
+
+// GetStats 获取内存缓存统计信息
+func (m *MemoryCache) GetStats(ctx context.Context) (map[string]interface{}, error) {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
+	stats := make(map[string]interface{})
+
+	// 统计键的数量
+	stats["cache_type"] = "memory"
+	stats["key_count"] = int64(len(m.items))
+
+	// 估算内存使用
+	totalSize := 0
+	for key, item := range m.items {
+		totalSize += len(key)
+		if str, ok := item.Value.(string); ok {
+			totalSize += len(str)
+		}
+	}
+	stats["used_memory"] = int64(totalSize)
+	stats["used_memory_rss"] = int64(totalSize)
+	stats["maxmemory"] = int64(m.maxSize * 1024) // 估算最大内存
+	stats["total_system_memory"] = int64(m.maxSize * 1024)
+
+	// 命中率和未命中率（简化为0）
+	stats["keyspace_hits"] = int64(0)
+	stats["keyspace_misses"] = int64(0)
+	stats["hit_rate"] = 0.0
+
+	// Redis版本（内存缓存没有版本）
+	stats["redis_version"] = "memory"
+
+	return stats, nil
+}

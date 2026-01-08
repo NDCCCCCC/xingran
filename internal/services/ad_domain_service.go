@@ -386,8 +386,33 @@ func (s *ADDomainService) SyncADData(ctx context.Context, configID string, syncT
 	return result, nil
 }
 
-// syncOUs 同步OU数据
+// syncOUs 同步OU数据（优化批量操作）
 func (s *ADDomainService) syncOUs(ctx context.Context, config *models.ADConfig, entries []*ldap.Entry) error {
+	if len(entries) == 0 {
+		return nil
+	}
+
+	// 批量获取所有 OU DN
+	ouDNs := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		ouDNs = append(ouDNs, entry.DN)
+	}
+
+	// 批量查询已存在的 OU
+	var existingOUs []models.ADOU
+	s.db.WithContext(ctx).Where("ad_config_id = ? AND ou_dn IN ?", config.ID, ouDNs).Find(&existingOUs)
+
+	// 创建 DN -> OU 的映射
+	existingOUMap := make(map[string]*models.ADOU)
+	for i := range existingOUs {
+		existingOUMap[existingOUs[i].OUN] = &existingOUs[i]
+	}
+
+	// 准备批量操作的数据
+	var ousToCreate []models.ADOU
+	ousToUpdate := make(map[string]*models.ADOU)
+	now := time.Now()
+
 	for _, entry := range entries {
 		ouDN := entry.DN
 		ouName := entry.GetAttributeValue("ou")
@@ -399,31 +424,73 @@ func (s *ADDomainService) syncOUs(ctx context.Context, config *models.ADConfig, 
 		// 构建OU路径
 		ouPath := s.buildOUPath(ouDN, config.BaseDN)
 
-		var ou models.ADOU
-		err := s.db.WithContext(ctx).Where("ad_config_id = ? AND ou_dn = ?", config.ID, ouDN).
-			FirstOrCreate(&ou).Error
-		if err != nil {
-			return fmt.Errorf("同步OU失败: %w", err)
-		}
-
-		ou.ADConfigID = config.ID
-		ou.OUN = ouDN
-		ou.OUName = ouName
-		ou.Description = description
-		ou.ParentDN = parentDN
-		ou.OUPath = ouPath
-		now := time.Now()
-		ou.LastSyncAt = &now
-
-		if err := s.db.WithContext(ctx).Save(&ou).Error; err != nil {
-			return fmt.Errorf("保存OU失败: %w", err)
+		if existingOU, exists := existingOUMap[ouDN]; exists {
+			// 已存在，标记为需要更新
+			existingOU.OUName = ouName
+			existingOU.Description = description
+			existingOU.ParentDN = parentDN
+			existingOU.OUPath = ouPath
+			existingOU.LastSyncAt = &now
+			ousToUpdate[ouDN] = existingOU
+		} else {
+			// 不存在，准备创建
+			ousToCreate = append(ousToCreate, models.ADOU{
+				ADConfigID: config.ID,
+				OUN:        ouDN,
+				OUName:     ouName,
+				Description: description,
+				ParentDN:   parentDN,
+				OUPath:     ouPath,
+				LastSyncAt: &now,
+			})
 		}
 	}
+
+	// 批量创建新的 OU
+	if len(ousToCreate) > 0 {
+		if err := s.db.WithContext(ctx).Create(&ousToCreate).Error; err != nil {
+			return fmt.Errorf("批量创建OU失败: %w", err)
+		}
+	}
+
+	// 批量更新已存在的 OU（使用 Save 逐个更新，因为需要更新特定字段）
+	for _, ou := range ousToUpdate {
+		if err := s.db.WithContext(ctx).Save(ou).Error; err != nil {
+			return fmt.Errorf("更新OU失败: %w", err)
+		}
+	}
+
 	return nil
 }
 
-// syncGroups 同步用户组数据
+// syncGroups 同步用户组数据（优化批量操作）
 func (s *ADDomainService) syncGroups(ctx context.Context, config *models.ADConfig, entries []*ldap.Entry) error {
+	if len(entries) == 0 {
+		return nil
+	}
+
+	// 批量获取所有 Group DN
+	groupDNs := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		groupDNs = append(groupDNs, entry.DN)
+	}
+
+	// 批量查询已存在的 Group
+	var existingGroups []models.ADGroup
+	s.db.WithContext(ctx).Where("ad_config_id = ? AND group_dn IN ?", config.ID, groupDNs).Find(&existingGroups)
+
+	// 创建 DN -> Group 的映射
+	existingGroupMap := make(map[string]*models.ADGroup)
+	for i := range existingGroups {
+		existingGroupMap[existingGroups[i].GroupDN] = &existingGroups[i]
+	}
+
+	// 准备批量操作的数据
+	var groupsToCreate []models.ADGroup
+	groupsToUpdate := make(map[string]*models.ADGroup)
+	groupMembersMap := make(map[string][]string) // groupDN -> members
+	now := time.Now()
+
 	for _, entry := range entries {
 		groupDN := entry.DN
 		groupName := entry.GetAttributeValue("cn")
@@ -433,36 +500,89 @@ func (s *ADDomainService) syncGroups(ctx context.Context, config *models.ADConfi
 		// 提取所属OU DN
 		ouDN := s.extractParentDN(groupDN)
 
-		var group models.ADGroup
-		err := s.db.WithContext(ctx).Where("ad_config_id = ? AND group_dn = ?", config.ID, groupDN).
-			FirstOrCreate(&group).Error
-		if err != nil {
-			return fmt.Errorf("同步用户组失败: %w", err)
+		// 保存成员信息供后续同步
+		groupMembersMap[groupDN] = members
+
+		if existingGroup, exists := existingGroupMap[groupDN]; exists {
+			// 已存在，标记为需要更新
+			existingGroup.GroupName = groupName
+			existingGroup.Description = description
+			existingGroup.MemberCount = len(members)
+			existingGroup.OUN = ouDN
+			existingGroup.LastSyncAt = &now
+			groupsToUpdate[groupDN] = existingGroup
+		} else {
+			// 不存在，准备创建
+			groupsToCreate = append(groupsToCreate, models.ADGroup{
+				ADConfigID: config.ID,
+				GroupDN:    groupDN,
+				GroupName:  groupName,
+				Description: description,
+				MemberCount: len(members),
+				OUN:        ouDN,
+				LastSyncAt: &now,
+			})
 		}
+	}
 
-		group.ADConfigID = config.ID
-		group.GroupDN = groupDN
-		group.GroupName = groupName
-		group.Description = description
-		group.MemberCount = len(members)
-		group.OUN = ouDN
-		now := time.Now()
-		group.LastSyncAt = &now
-
-		if err := s.db.WithContext(ctx).Save(&group).Error; err != nil {
-			return fmt.Errorf("保存用户组失败: %w", err)
+	// 批量创建新的 Group
+	if len(groupsToCreate) > 0 {
+		if err := s.db.WithContext(ctx).Create(&groupsToCreate).Error; err != nil {
+			return fmt.Errorf("批量创建用户组失败: %w", err)
 		}
+	}
 
-		// 同步成员关系
+	// 批量更新已存在的 Group
+	for _, group := range groupsToUpdate {
+		if err := s.db.WithContext(ctx).Save(group).Error; err != nil {
+			return fmt.Errorf("更新用户组失败: %w", err)
+		}
+	}
+
+	// 批量同步成员关系
+	for groupDN, members := range groupMembersMap {
 		if err := s.syncGroupMembers(ctx, config, groupDN, members); err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 
-// syncUsers 同步用户数据
+// syncUsers 同步用户数据（优化批量操作）
 func (s *ADDomainService) syncUsers(ctx context.Context, config *models.ADConfig, entries []*ldap.Entry) error {
+	if len(entries) == 0 {
+		return nil
+	}
+
+	// 批量获取所有 User DN
+	userDNs := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		username := entry.GetAttributeValue("sAMAccountName")
+		if username != "" {
+			userDNs = append(userDNs, entry.DN)
+		}
+	}
+
+	if len(userDNs) == 0 {
+		return nil
+	}
+
+	// 批量查询已存在的 User
+	var existingUsers []models.ADUser
+	s.db.WithContext(ctx).Where("ad_config_id = ? AND user_dn IN ?", config.ID, userDNs).Find(&existingUsers)
+
+	// 创建 DN -> User 的映射
+	existingUserMap := make(map[string]*models.ADUser)
+	for i := range existingUsers {
+		existingUserMap[existingUsers[i].UserDN] = &existingUsers[i]
+	}
+
+	// 准备批量操作的数据
+	var usersToCreate []models.ADUser
+	usersToUpdate := make(map[string]*models.ADUser)
+	now := time.Now()
+
 	for _, entry := range entries {
 		userDN := entry.DN
 		username := entry.GetAttributeValue("sAMAccountName")
@@ -473,52 +593,95 @@ func (s *ADDomainService) syncUsers(ctx context.Context, config *models.ADConfig
 		// 提取所属OU DN
 		ouDN := s.extractParentDN(userDN)
 
-		var user models.ADUser
-		err := s.db.WithContext(ctx).Where("ad_config_id = ? AND user_dn = ?", config.ID, userDN).
-			FirstOrCreate(&user).Error
-		if err != nil {
-			return fmt.Errorf("同步用户失败: %w", err)
-		}
-
-		user.ADConfigID = config.ID
-		user.UserDN = userDN
-		user.Username = username
-		user.DisplayName = entry.GetAttributeValue("displayName")
-		user.Email = entry.GetAttributeValue("mail")
-		user.Phone = entry.GetAttributeValue("telephoneNumber")
-		user.Mobile = entry.GetAttributeValue("mobile")
-		user.Title = entry.GetAttributeValue("title")
-		user.Department = entry.GetAttributeValue("department")
-		user.Company = entry.GetAttributeValue("company")
-		user.Description = entry.GetAttributeValue("description")
-		user.OUN = ouDN
-
 		// 解析用户账户控制标志
 		uacStr := entry.GetAttributeValue("userAccountControl")
-		user.UserAccountControl = s.parseIntOrDefault(uacStr, 512)
-		user.IsEnabled = !user.IsDisabledByUAC()
-		user.IsLocked = user.IsLockedByUAC()
-		user.PasswordExpired = user.IsPasswordExpiredByUAC()
+		userAccountControl := s.parseIntOrDefault(uacStr, 512)
 
 		// 解析memberOf（第一个）
 		memberOf := entry.GetAttributeValue("memberOf")
-		user.MemberOf = memberOf
 
 		// 解析时间字段（AD使用FileTime格式）
-		if lastLogon := entry.GetAttributeValue("lastLogon"); lastLogon != "" {
-			user.LastLogon = s.parseFileTime(lastLogon)
+		var lastLogon, pwdLastSet *time.Time
+		if lastLogonStr := entry.GetAttributeValue("lastLogon"); lastLogonStr != "" {
+			lastLogon = s.parseFileTime(lastLogonStr)
 		}
-		if pwdLastSet := entry.GetAttributeValue("pwdLastSet"); pwdLastSet != "" {
-			user.PasswordLastSet = s.parseFileTime(pwdLastSet)
+		if pwdLastSetStr := entry.GetAttributeValue("pwdLastSet"); pwdLastSetStr != "" {
+			pwdLastSet = s.parseFileTime(pwdLastSetStr)
 		}
 
-		now := time.Now()
-		user.LastSyncAt = &now
+		if existingUser, exists := existingUserMap[userDN]; exists {
+			// 已存在，标记为需要更新
+			existingUser.Username = username
+			existingUser.DisplayName = entry.GetAttributeValue("displayName")
+			existingUser.Email = entry.GetAttributeValue("mail")
+			existingUser.Phone = entry.GetAttributeValue("telephoneNumber")
+			existingUser.Mobile = entry.GetAttributeValue("mobile")
+			existingUser.Title = entry.GetAttributeValue("title")
+			existingUser.Department = entry.GetAttributeValue("department")
+			existingUser.Company = entry.GetAttributeValue("company")
+			existingUser.Description = entry.GetAttributeValue("description")
+			existingUser.OUN = ouDN
+			existingUser.UserAccountControl = userAccountControl
+			existingUser.IsEnabled = !existingUser.IsDisabledByUAC()
+			existingUser.IsLocked = existingUser.IsLockedByUAC()
+			existingUser.PasswordExpired = existingUser.IsPasswordExpiredByUAC()
+			existingUser.MemberOf = memberOf
+			existingUser.LastLogon = lastLogon
+			existingUser.PasswordLastSet = pwdLastSet
+			existingUser.LastSyncAt = &now
+			usersToUpdate[userDN] = existingUser
+		} else {
+			// 不存在，准备创建
+			newUser := models.ADUser{
+				ADConfigID:       config.ID,
+				UserDN:          userDN,
+				Username:        username,
+				DisplayName:     entry.GetAttributeValue("displayName"),
+				Email:           entry.GetAttributeValue("mail"),
+				Phone:           entry.GetAttributeValue("telephoneNumber"),
+				Mobile:          entry.GetAttributeValue("mobile"),
+				Title:           entry.GetAttributeValue("title"),
+				Department:      entry.GetAttributeValue("department"),
+				Company:         entry.GetAttributeValue("company"),
+				Description:     entry.GetAttributeValue("description"),
+				OUN:             ouDN,
+				UserAccountControl: userAccountControl,
+				MemberOf:        memberOf,
+				LastLogon:       lastLogon,
+				PasswordLastSet: pwdLastSet,
+				LastSyncAt:      &now,
+			}
+			// 设置从UAC派生的字段
+			newUser.IsEnabled = !newUser.IsDisabledByUAC()
+			newUser.IsLocked = newUser.IsLockedByUAC()
+			newUser.PasswordExpired = newUser.IsPasswordExpiredByUAC()
 
-		if err := s.db.WithContext(ctx).Save(&user).Error; err != nil {
-			return fmt.Errorf("保存用户失败: %w", err)
+			usersToCreate = append(usersToCreate, newUser)
 		}
 	}
+
+	// 批量创建新的 User
+	if len(usersToCreate) > 0 {
+		// 分批插入，避免单次插入过多数据
+		batchSize := 100
+		for i := 0; i < len(usersToCreate); i += batchSize {
+			end := i + batchSize
+			if end > len(usersToCreate) {
+				end = len(usersToCreate)
+			}
+			if err := s.db.WithContext(ctx).Create(usersToCreate[i:end]).Error; err != nil {
+				return fmt.Errorf("批量创建用户失败: %w", err)
+			}
+		}
+	}
+
+	// 批量更新已存在的 User
+	for _, user := range usersToUpdate {
+		if err := s.db.WithContext(ctx).Save(user).Error; err != nil {
+			return fmt.Errorf("更新用户失败: %w", err)
+		}
+	}
+
 	return nil
 }
 
@@ -528,18 +691,28 @@ func (s *ADDomainService) syncGroupMembers(ctx context.Context, config *models.A
 	s.db.WithContext(ctx).Where("ad_config_id = ? AND group_dn = ?", config.ID, groupDN).
 		Delete(&models.ADGroupMember{})
 
-	// 添加新的成员关系
+	// 批量添加新的成员关系，避免N+1查询
+	if len(memberDNs) == 0 {
+		return nil
+	}
+
+	// 准备批量数据
+	var members []models.ADGroupMember
+	members = make([]models.ADGroupMember, 0, len(memberDNs))
 	for _, userDN := range memberDNs {
-		member := &models.ADGroupMember{
+		members = append(members, models.ADGroupMember{
 			ADConfigID: config.ID,
 			GroupDN:    groupDN,
 			UserDN:     userDN,
-		}
-		if err := s.db.WithContext(ctx).Create(member).Error; err != nil {
-			// 忽略错误，继续处理其他成员
-			continue
-		}
+		})
 	}
+
+	// 使用批量插入，GORM会自动分批处理
+	if err := s.db.WithContext(ctx).Create(&members).Error; err != nil {
+		// 记录错误但继续执行
+		return fmt.Errorf("批量添加组成员失败: %w", err)
+	}
+
 	return nil
 }
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -328,7 +329,7 @@ func (s *NetworkDeviceService) QuickCreateDevice(ctx context.Context, req *Quick
 	if s.enrichmentService != nil {
 		if err := s.enrichmentService.Enqueue(device.ID); err != nil {
 			// 记录错误但不影响设备创建
-			fmt.Printf("加入补充任务队列失败: %v\n", err)
+			logger.Warnf("加入补充任务队列失败: %v", err)
 		}
 	}
 

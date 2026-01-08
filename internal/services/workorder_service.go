@@ -11,6 +11,7 @@ import (
 	"github.com/robfig/cron/v3"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"gorm.io/gorm"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 )
 
 // ==================== 工单服务 ====================
@@ -330,7 +331,7 @@ func (s *WorkOrderService) CreateWorkOrder(ctx context.Context, req *WorkOrderCr
 		dutyMembers, err := s.getTodayDutyMembers(ctx, nil)
 		if err != nil {
 			// 获取值班人员失败，记录警告但不阻止工单创建
-			fmt.Printf("获取当天值班人员失败: %v，工单将不自动分配\n", err)
+			logger.Warnf("获取当天值班人员失败: %v，工单将不自动分配", err)
 		} else if len(dutyMembers) > 0 {
 			// 根据分配策略选择处理人
 			var assigneeID string
@@ -599,20 +600,18 @@ func (s *WorkOrderService) BatchDeleteWorkOrders(ctx context.Context, ids []stri
 		return fmt.Errorf("只有待处理状态的工单可以删除")
 	}
 
-	// 删除关联数据
-	for _, id := range ids {
-		if err := tx.Where("work_order_id = ?", id).Delete(&models.WorkOrderComment{}).Error; err != nil {
-			tx.Rollback()
-			return fmt.Errorf("删除工单评论失败: %w", err)
-		}
-		if err := tx.Where("work_order_id = ?", id).Delete(&models.WorkOrderHistory{}).Error; err != nil {
-			tx.Rollback()
-			return fmt.Errorf("删除工单历史失败: %w", err)
-		}
-		if err := tx.Where("work_order_id = ?", id).Delete(&models.WorkOrderRating{}).Error; err != nil {
-			tx.Rollback()
-			return fmt.Errorf("删除工单评价失败: %w", err)
-		}
+	// 删除关联数据 - 使用IN批量删除提升性能
+	if err := tx.Where("work_order_id IN ?", ids).Delete(&models.WorkOrderComment{}).Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("删除工单评论失败: %w", err)
+	}
+	if err := tx.Where("work_order_id IN ?", ids).Delete(&models.WorkOrderHistory{}).Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("删除工单历史失败: %w", err)
+	}
+	if err := tx.Where("work_order_id IN ?", ids).Delete(&models.WorkOrderRating{}).Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("删除工单评价失败: %w", err)
 	}
 
 	// 删除工单
@@ -1171,78 +1170,82 @@ func (s *WorkOrderService) GetWorkOrderStatistics(ctx context.Context) (*WorkOrd
 		stats.ByPriority[name] = r.Count
 	}
 
-	// 按分类统计
-	var categoryResults []struct {
-		CategoryID string
-		Count      int
+	// 按分类统计 - 使用JOIN避免N+1查询
+	type CategoryStat struct {
+		CategoryID   string
+		CategoryName string
+		Count        int
 	}
+	var categoryResults []CategoryStat
 	if err := s.db.WithContext(ctx).Model(&models.WorkOrder{}).
-		Select("category_id, count(*) as count").
-		Group("category_id").
+		Select("sys_work_order_category.id as category_id, "+
+			"sys_work_order_category.category_name, "+
+			"count(*) as count").
+		Joins("INNER JOIN sys_work_order_category ON "+
+			"sys_work_order_category.id = sys_work_orders.category_id").
+		Group("sys_work_order_category.id, sys_work_order_category.category_name").
 		Scan(&categoryResults).Error; err != nil {
 		return nil, fmt.Errorf("按分类统计失败: %w", err)
 	}
 
-	// 加载分类名称
+	// 直接使用JOIN后的结果
 	for _, r := range categoryResults {
-		var category models.WorkOrderCategory
-		if err := s.db.WithContext(ctx).Where("id = ?", r.CategoryID).First(&category).Error; err == nil {
-			stats.ByCategory[category.CategoryName] = r.Count
-		}
+		stats.ByCategory[r.CategoryName] = r.Count
 	}
 
-	// 按处理人统计
-	var assigneeResults []struct {
-		AssigneeID string
-		Count      int
+	// 按处理人统计 - 使用JOIN避免N+1查询
+	type AssigneeStat struct {
+		AssigneeID   string
+		AssigneeName string
+		Count        int
 	}
+	var assigneeResults []AssigneeStat
 	if err := s.db.WithContext(ctx).Model(&models.WorkOrder{}).
-		Select("assignee_id, count(*) as count").
-		Where("assignee_id IS NOT NULL").
-		Group("assignee_id").
+		Select("sys_user.id as assignee_id, "+
+			"COALESCE(sys_user.nickname, sys_user.username, '') as assignee_name, "+
+			"count(*) as count").
+		Joins("INNER JOIN sys_user ON sys_user.id = sys_work_orders.assignee_id").
+		Where("sys_work_orders.assignee_id IS NOT NULL").
+		Group("sys_user.id, sys_user.nickname, sys_user.username").
 		Scan(&assigneeResults).Error; err != nil {
 		return nil, fmt.Errorf("按处理人统计失败: %w", err)
 	}
 
+	// 直接使用JOIN后的结果
 	for _, r := range assigneeResults {
-		var user models.User
-		if err := s.db.WithContext(ctx).Where("id = ?", r.AssigneeID).First(&user).Error; err == nil {
-			assigneeName := ""
-			if user.Nickname != nil {
-				assigneeName = *user.Nickname
-			} else if user.Username != "" {
-				assigneeName = user.Username
-			}
-			stats.ByAssignee = append(stats.ByAssignee, AssigneeStatistics{
-				AssigneeID:   r.AssigneeID,
-				AssigneeName: assigneeName,
-				TotalCount:   r.Count,
-			})
-		}
+		stats.ByAssignee = append(stats.ByAssignee, AssigneeStatistics{
+			AssigneeID:   r.AssigneeID,
+			AssigneeName: r.AssigneeName,
+			TotalCount:   r.Count,
+		})
 	}
 
-	// 按部门统计
-	var deptResults []struct {
-		DeptID string
-		Count  int
+	// 按部门统计 - 使用JOIN避免N+1查询
+	type DeptStat struct {
+		DeptID   string
+		DeptName string
+		Count    int
 	}
+	var deptResults []DeptStat
 	if err := s.db.WithContext(ctx).Model(&models.WorkOrder{}).
-		Select("dept_id, count(*) as count").
-		Where("dept_id IS NOT NULL").
-		Group("dept_id").
+		Select("sys_department.id as dept_id, "+
+			"sys_department.dept_name, "+
+			"count(*) as count").
+		Joins("INNER JOIN sys_department ON "+
+			"sys_department.id = sys_work_orders.dept_id").
+		Where("sys_work_orders.dept_id IS NOT NULL").
+		Group("sys_department.id, sys_department.dept_name").
 		Scan(&deptResults).Error; err != nil {
 		return nil, fmt.Errorf("按部门统计失败: %w", err)
 	}
 
+	// 直接使用JOIN后的结果
 	for _, r := range deptResults {
-		var dept models.Department
-		if err := s.db.WithContext(ctx).Where("id = ?", r.DeptID).First(&dept).Error; err == nil {
-			stats.ByDepartment = append(stats.ByDepartment, DepartmentStatistics{
-				DeptID:     r.DeptID,
-				DeptName:   dept.DeptName,
-				TotalCount: r.Count,
-			})
-		}
+		stats.ByDepartment = append(stats.ByDepartment, DepartmentStatistics{
+			DeptID:     r.DeptID,
+			DeptName:   r.DeptName,
+			TotalCount: r.Count,
+		})
 	}
 
 	// 趋势统计（最近30天）

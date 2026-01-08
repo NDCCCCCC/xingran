@@ -243,7 +243,7 @@ const CacheManager: React.FC = () => {
             </pre>
             <p><strong>类型：</strong>{result.data.type}</p>
             <p><strong>大小：</strong>{(result.data.size || 0).toLocaleString()} 字节</p>
-            <p><strong>TTL：</strong>{result.data.ttl || '永久'}</p>
+            <p><strong>TTL：</strong>{formatTTL(result.data.ttl || -1)}</p>
             <p><strong>创建时间：</strong>{result.data.createdAt ? new Date(result.data.createdAt).toLocaleString() : '-'}</p>
           </div>
         )
@@ -308,6 +308,39 @@ const CacheManager: React.FC = () => {
     return `${size.toFixed(2)} ${units[unitIndex]}`;
   };
 
+  // 格式化TTL时间
+  const formatTTL = (seconds: number): string => {
+    if (seconds <= 0) {
+      return '永久';
+    }
+
+    const units = [
+      { name: '秒', value: 60 },
+      { name: '分钟', value: 60 },
+      { name: '小时', value: 24 },
+      { name: '天', value: Infinity }
+    ];
+
+    let value = seconds;
+    let unitIndex = 0;
+
+    while (unitIndex < units.length - 1 && value >= units[unitIndex].value) {
+      value /= units[unitIndex].value;
+      unitIndex++;
+    }
+
+    // 如果小于1，显示为更小的单位
+    if (value < 1 && unitIndex > 0) {
+      value *= units[unitIndex - 1].value;
+      unitIndex--;
+    }
+
+    // 格式化：如果整数就不显示小数，否则最多显示2位小数
+    const formatted = Number.isInteger(value) ? value.toString() : value.toFixed(2);
+
+    return `${formatted}${units[unitIndex].name}`;
+  };
+
   // 缓存类型选项
   const typeOptions = [
     { label: '字符串', value: 'string' },
@@ -352,8 +385,12 @@ const CacheManager: React.FC = () => {
       title: 'TTL',
       dataIndex: 'ttl',
       key: 'ttl',
-      width: 100,
-      render: (ttl: number) => ttl > 0 ? `${ttl}秒` : '永久',
+      width: 120,
+      render: (ttl: number) => (
+        <Tag color={ttl > 0 ? 'green' : 'default'}>
+          {formatTTL(ttl)}
+        </Tag>
+      ),
     },
     {
       title: '大小',

@@ -9,7 +9,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/cache"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	"gorm.io/gorm"
@@ -499,12 +498,24 @@ func getCacheStats(core *core.Core) gin.HandlerFunc {
 		usedMemory, _ := stats["used_memory"].(int64)
 		keyCount, _ := stats["key_count"].(int64)
 
+		// 计算totalMemory（与getRealCacheStats中的逻辑一致）
+		var totalMemory int64
+		if totalMem, ok := stats["total_system_memory"].(int64); ok && totalMem > 0 {
+			totalMemory = totalMem
+		} else if maxMem, ok := stats["maxmemory"].(int64); ok && maxMem > 0 {
+			totalMemory = maxMem
+		} else if usedMemoryRss, ok := stats["used_memory_rss"].(int64); ok && usedMemoryRss > 0 {
+			totalMemory = usedMemoryRss * 2
+		} else {
+			totalMemory = 1024 * 1024 * 1024 // 默认1GB
+		}
+
 		currentStats := models.CacheStats{
 			CacheType:   "redis",
 			HitCount:    hitCount,
 			MissCount:   missCount,
 			HitRate:     hitRate,
-			TotalMemory: usedMemory,
+			TotalMemory: totalMemory,
 			UsedMemory:  usedMemory,
 			KeyCount:    keyCount,
 			CollectTime: time.Now(),
@@ -748,164 +759,52 @@ func getCachesFromCache(cacheInterface interface {
 	return caches, nil
 }
 
-// getRedisCaches 获取Redis缓存列表
-func getRedisCaches(redisClient *cache.Redis, req CacheListRequest) ([]models.CacheInfo, error) {
-	ctx := context.Background()
-	var caches []models.CacheInfo
-
-	// 使用SCAN命令遍历所有键（内存友好）
-	cursor := uint64(0)
-	pattern := "*"
-	if req.Key != "" {
-		pattern = "*" + req.Key + "*"
-	}
-
-	for {
-		nextCursor, keys, err := redisClient.Scan(ctx, cursor, pattern, 100)
-		if err != nil {
-			return nil, fmt.Errorf("扫描Redis键失败: %w", err)
-		}
-
-		for _, key := range keys {
-			// 获取键的类型
-			keyType, err := redisClient.GetType(ctx, key)
-			if err != nil {
-				continue // 跳过获取失败的键
-			}
-
-			// 获取键的大小
-			size, err := redisClient.GetSize(ctx, key)
-			if err != nil {
-				size = 0 // 获取失败时设为0
-			}
-
-			// 获取键的TTL
-			ttl, err := redisClient.TTL(ctx, key)
-			ttlSeconds := int64(-1)
-			if err == nil && ttl > 0 {
-				ttlSeconds = int64(ttl.Seconds())
-			}
-
-			// 获取键的值（仅对字符串类型获取完整值，其他类型获取摘要）
-			var value string
-			if keyType == "string" {
-				if val, err := redisClient.GetRaw(ctx, key); err == nil {
-					// 限制值长度，避免过大的值影响性能
-					if len(val) > 1000 {
-						value = val[:1000] + "..."
-					} else {
-						value = val
-					}
-				}
-			} else {
-				// 对于非字符串类型，显示类型信息
-				if keyType == "list" {
-					value = fmt.Sprintf("List[%d]", getRedisListLength(ctx, redisClient, key))
-				} else if keyType == "hash" {
-					value = fmt.Sprintf("Hash[%d]", getRedisHashLength(ctx, redisClient, key))
-				} else if keyType == "set" {
-					value = fmt.Sprintf("Set[%d]", getRedisSetLength(ctx, redisClient, key))
-				} else if keyType == "zset" {
-					value = fmt.Sprintf("ZSet[%d]", getRedisZSetLength(ctx, redisClient, key))
-				} else {
-					value = keyType
-				}
-			}
-
-			// 如果指定了类型过滤，只返回匹配的缓存
-			if req.Type != "" && !strings.Contains(strings.ToLower(keyType), strings.ToLower(req.Type)) {
-				continue
-			}
-
-			cacheInfo := models.CacheInfo{
-				Key:       key,
-				Value:     value,
-				Type:      keyType,
-				Size:      size,
-				TTL:       ttlSeconds,
-				CreatedAt: time.Now(), // Redis不记录创建时间，使用当前时间
-				UpdatedAt: time.Now(),
-			}
-
-			caches = append(caches, cacheInfo)
-		}
-
-		// 检查是否扫描完成
-		cursor = nextCursor
-		if cursor == 0 {
-			break
-		}
-	}
-
-	return caches, nil
-}
-
-// getRedisListLength 获取Redis列表长度
-func getRedisListLength(ctx context.Context, redisClient *cache.Redis, key string) int64 {
-	length, err := redisClient.Client.LLen(ctx, key).Result()
-	if err != nil {
-		return 0
-	}
-	return length
-}
-
-// getRedisHashLength 获取Redis哈希长度
-func getRedisHashLength(ctx context.Context, redisClient *cache.Redis, key string) int64 {
-	length, err := redisClient.Client.HLen(ctx, key).Result()
-	if err != nil {
-		return 0
-	}
-	return length
-}
-
-// getRedisSetLength 获取Redis集合长度
-func getRedisSetLength(ctx context.Context, redisClient *cache.Redis, key string) int64 {
-	length, err := redisClient.Client.SCard(ctx, key).Result()
-	if err != nil {
-		return 0
-	}
-	return length
-}
-
-// getRedisZSetLength 获取Redis有序集合长度
-func getRedisZSetLength(ctx context.Context, redisClient *cache.Redis, key string) int64 {
-	length, err := redisClient.Client.ZCard(ctx, key).Result()
-	if err != nil {
-		return 0
-	}
-	return length
-}
-
 // getCacheStatistics 获取缓存统计信息
 func getCacheStatistics(cacheInterface interface {
 	Keys(ctx context.Context, pattern string) ([]string, error)
 }) (map[string]interface{}, error) {
 	ctx := context.Background()
 
+	// 尝试调用GetStats方法获取详细统计信息
+	if cacheWithStats, ok := cacheInterface.(interface {
+		GetStats(ctx context.Context) (map[string]interface{}, error)
+	}); ok {
+		stats, err := cacheWithStats.GetStats(ctx)
+		if err == nil {
+			// 成功获取到详细统计信息，直接返回
+			return stats, nil
+		}
+	}
+
+	// 如果无法获取详细统计信息，使用基本方法
 	// 获取所有键的数量，如果出错则返回默认值
 	keys, err := cacheInterface.Keys(ctx, "*")
 	if err != nil {
 		// 如果获取键失败，返回默认统计信息
 		return map[string]interface{}{
-			"cacheType":    "redis",
-			"keyspace_hits": 0,
-			"keyspace_misses": 0,
-			"hit_rate":     0.0,
-			"used_memory":  0,
-			"total_memory": 1024 * 1024 * 100, // 100MB默认总内存
-			"key_count":    0,
+			"cacheType":         "redis",
+			"keyspace_hits":     0,
+			"keyspace_misses":   0,
+			"hit_rate":          0.0,
+			"used_memory":       0,
+			"used_memory_rss":   0,
+			"maxmemory":         0,
+			"total_system_memory": 0,
+			"key_count":         0,
 		}, nil
 	}
 
-	// 构建统计信息
+	// 构建基本统计信息
 	stats := map[string]interface{}{
-		"cacheType":    "redis",
-		"keyspace_hits": 0,    // 简化处理，使用默认值
-		"keyspace_misses": 0,  // 简化处理，使用默认值
-		"hit_rate":     0.0,   // 简化处理，使用默认值
-		"used_memory":  int64(len(keys)) * 100, // 估算内存使用
-		"total_memory": 1024 * 1024 * 100,     // 100MB默认总内存
-		"key_count":    int64(len(keys)),
+		"cacheType":         "redis",
+		"keyspace_hits":     int64(0),
+		"keyspace_misses":   int64(0),
+		"hit_rate":          0.0,
+		"used_memory":       int64(len(keys)) * 100, // 估算内存使用
+		"used_memory_rss":   int64(len(keys)) * 100,
+		"maxmemory":         int64(0),
+		"total_system_memory": int64(0),
+		"key_count":         int64(len(keys)),
 	}
 
 	return stats, nil
@@ -957,8 +856,18 @@ func getRealCacheStats(cacheInterface interface {
 			if usedMemory, ok := detailedStats["used_memory"].(int64); ok {
 				stats["usedMemory"] = usedMemory
 			}
-			if totalMemory, ok := detailedStats["maxmemory"].(int64); ok {
-				stats["totalMemory"] = totalMemory
+			// 尝试获取总内存：优先使用total_system_memory，其次是maxmemory配置值
+			// 如果maxmemory为0（表示不限制），则使用used_memory_rss * 2作为估算值
+			if totalMem, ok := detailedStats["total_system_memory"].(int64); ok && totalMem > 0 {
+				stats["totalMemory"] = totalMem
+			} else if maxMem, ok := detailedStats["maxmemory"].(int64); ok && maxMem > 0 {
+				stats["totalMemory"] = maxMem
+			} else if usedMemory, ok := detailedStats["used_memory_rss"].(int64); ok {
+				// 使用RSS内存的2倍作为估算的总可用内存
+				stats["totalMemory"] = usedMemory * 2
+			} else {
+				// 默认使用1GB
+				stats["totalMemory"] = int64(1024 * 1024 * 1024)
 			}
 		}
 	}

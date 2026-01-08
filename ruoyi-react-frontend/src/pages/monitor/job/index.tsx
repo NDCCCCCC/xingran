@@ -96,14 +96,27 @@ const JobManager: React.FC = () => {
   const [form] = Form.useForm();
 
   // 获取任务列表
-  const fetchJobs = async () => {
+  // overrideParams: 可选参数，用于临时覆盖 searchForm（如重置时）
+  const fetchJobs = async (overrideParams?: Partial<typeof searchForm>) => {
     setLoading(true);
     try {
-      const result = await post<PageData>('/monitor/jobs/list', {
-        ...searchForm,
+      // 使用 overrideParams（如果提供）或 searchForm
+      const formData = overrideParams !== undefined ? { ...searchForm, ...overrideParams } : searchForm;
+
+      // 清理 undefined 字段，避免发送到后端
+      const cleanedParams = {
+        ...(formData.jobName !== undefined && formData.jobName !== '' ? { jobName: formData.jobName } : {}),
+        ...(formData.jobGroup !== undefined && formData.jobGroup !== '' ? { jobGroup: formData.jobGroup } : {}),
+        ...(formData.status !== undefined ? { status: formData.status } : {}),
         current,
         pageSize
-      });
+      };
+
+      console.log('[fetchJobs] 请求参数:', cleanedParams);
+
+      const result = await post<PageData>('/monitor/jobs/list', cleanedParams);
+
+      console.log('[fetchJobs] 返回结果:', result.data?.list?.length, '条任务');
 
       setJobs(result.data?.list || []);
       setTotal(result.data?.total || 0);
@@ -250,12 +263,19 @@ const JobManager: React.FC = () => {
 
   // 重置
   const handleReset = () => {
+    // 先更新状态
     setSearchForm({
       jobName: '',
       jobGroup: '',
       status: undefined
     });
     setCurrent(1);
+    // 使用 overrideParams 立即应用空筛选条件（绕过 setState 的异步问题）
+    fetchJobs({
+      jobName: '',
+      jobGroup: '',
+      status: undefined
+    });
   };
 
   // 刷新
@@ -275,8 +295,10 @@ const JobManager: React.FC = () => {
     validateCronAndGetNextTime(value);
   };
 
+  // 组件挂载时获取任务列表
   useEffect(() => {
     fetchJobs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current, pageSize]);
 
   // 状态选项

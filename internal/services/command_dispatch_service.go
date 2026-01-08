@@ -137,17 +137,13 @@ func (s *CommandDispatchService) executeCommand(ctx context.Context, executionID
 
 	if req.ExecutionStrategy == models.ExecutionStrategyParallel {
 		// 并行执行
-		semaphore := make(chan struct{}, req.Concurrency)
-		var wg sync.WaitGroup
-		var g errgroup.Group
+		// 使用errgroup进行并发控制
+		g, ctx := errgroup.WithContext(ctx)
+		g.SetLimit(req.Concurrency)
 
 		for _, dev := range devices {
 			dev := dev // 创建局部变量
 			g.Go(func() error {
-				semaphore <- struct{}{}        // 获取信号量
-				defer func() { <-semaphore }() // 释放信号量
-				defer wg.Done()
-
 				result := s.executeOnDevice(ctx, executionID, &dev, req.CommandContent, req.Timeout)
 
 				mu.Lock()
@@ -161,11 +157,12 @@ func (s *CommandDispatchService) executeCommand(ctx context.Context, executionID
 
 				return nil
 			})
-			wg.Add(1)
 		}
 
-		wg.Wait()
-		g.Wait()
+		if err := g.Wait(); err != nil {
+			// 记录错误但不中断
+			_ = err
+		}
 
 	} else {
 		// 串行执行

@@ -369,7 +369,18 @@ func (s *Scheduler) StartJob(jobID string) error {
 	}
 
 	// 添加到调度器
-	return s.addJob(&job)
+	if err := s.addJob(&job); err != nil {
+		return err
+	}
+
+	// 更新数据库中的状态为正常
+	if err := s.db.Model(&models.Job{}).Where("id = ?", jobID).Update("status", 0).Error; err != nil {
+		s.logger.Errorf("更新任务状态失败: %v", err)
+		return err
+	}
+
+	s.logger.Infof("任务已启动 [%s]", jobID)
+	return nil
 }
 
 // StopJob 停止指定任务
@@ -381,7 +392,23 @@ func (s *Scheduler) StopJob(jobID string) error {
 		return fmt.Errorf("任务未在运行")
 	}
 
-	return s.removeJob(jobID)
+	// 从调度器中移除
+	if cronID, exists := s.executors[jobID]; exists {
+		s.cron.Remove(cronID)
+		delete(s.executors, jobID)
+	}
+
+	// 从内存中移除（保留 jobs 中的引用，以便后续可以启动）
+	delete(s.executors, jobID)
+
+	// 更新数据库中的状态为暂停（不删除任务记录）
+	if err := s.db.Model(&models.Job{}).Where("id = ?", jobID).Update("status", 1).Error; err != nil {
+		s.logger.Errorf("更新任务状态失败: %v", err)
+		return err
+	}
+
+	s.logger.Infof("任务已暂停 [%s]", jobID)
+	return nil
 }
 
 // ExecuteJob 立即执行任务

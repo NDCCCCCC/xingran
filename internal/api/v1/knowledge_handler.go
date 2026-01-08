@@ -160,13 +160,16 @@ func searchKnowledgeArticles(core *core.Core) gin.HandlerFunc {
 		}
 
 		knowledgeSvc := services.NewKnowledgeService(core.DB.GetDB())
-		articles, err := knowledgeSvc.SearchKnowledgeArticles(c.Request.Context(), &req)
+		articles, total, err := knowledgeSvc.SearchKnowledgeArticles(c.Request.Context(), &req)
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
 		}
 
-		response.Success(c, articles)
+		response.Success(c, gin.H{
+			"list":  articles,
+			"total": total,
+		})
 	}
 }
 

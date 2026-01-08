@@ -9,6 +9,7 @@ import (
 	"github.com/robfig/cron/v3"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	"gorm.io/gorm"
 )
@@ -97,6 +98,10 @@ func listJobs(core *core.Core) gin.HandlerFunc {
 		// 构建查询条件
 		db := core.DB.GetDB().Model(&models.Job{})
 
+		// 调试日志
+		logger.Debugf("[JobList] 请求参数: jobName=%s, jobGroup=%s, status=%v, current=%d, pageSize=%d",
+			req.JobName, req.JobGroup, req.Status, req.Current, req.PageSize)
+
 		if req.JobName != "" {
 			db = db.Where("job_name LIKE ?", "%"+req.JobName+"%")
 		}
@@ -105,6 +110,9 @@ func listJobs(core *core.Core) gin.HandlerFunc {
 		}
 		if req.Status != nil {
 			db = db.Where("status = ?", *req.Status)
+			logger.Debugf("[JobList] 添加状态筛选: status = %d", *req.Status)
+		} else {
+			logger.Debugf("[JobList] 无状态筛选，将返回所有状态的任务")
 		}
 
 		// 统计总数
@@ -407,32 +415,22 @@ func deleteJob(core *core.Core) gin.HandlerFunc {
 func updateJobStatus(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
-		fmt.Printf("=== updateJobStatus 开始 ===\n")
-		fmt.Printf("URL参数 ID: %s\n", id)
+		logger.Debugf("[JOB] updateJobStatus 开始, ID=%s", id)
 
 		if id == "" {
-			fmt.Println("错误: ID为空")
+			logger.Warnf("[JOB] ID为空")
 			response.Error(c, response.ErrBadRequest, "任务ID不能为空")
 			return
 		}
 
 		var req JobStatusRequest
-		fmt.Println("开始绑定JSON...")
 		if err := c.ShouldBindJSON(&req); err != nil {
-			// 记录详细的绑定错误
-			fmt.Printf("=== updateJobStatus 绑定错误 ===\n")
-			fmt.Printf("URL参数 ID: %s\n", id)
-			fmt.Printf("绑定错误类型: %T\n", err)
-			fmt.Printf("绑定错误信息: %v\n", err)
+			logger.Debugf("[JOB] 绑定错误: ID=%s, error=%v", id, err)
 			response.Error(c, response.ErrBadRequest, "请求参数错误: "+err.Error())
 			return
 		}
 
-		// 记录绑定成功的数据
-		fmt.Printf("=== updateJobStatus 绑定成功 ===\n")
-		fmt.Printf("URL参数 ID: %s\n", id)
-		fmt.Printf("请求体 ID: %s\n", req.ID)
-		fmt.Printf("请求体 Status: %d\n", req.Status)
+		logger.Debugf("[JOB] 绑定成功: URL ID=%s, Body ID=%s, Status=%d", id, req.ID, req.Status)
 
 		// 检查任务是否存在
 		var job models.Job

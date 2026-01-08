@@ -56,4 +56,12 @@ func RegisterCacheRoutes(router *gin.RouterGroup, core *core.Core) {
 
 	// 缓存导出
 	router.POST("/cache/export", exportCache(core))
+
+	// 缓存配置管理
+	router.GET("/cache/config", getCacheConfigs(core))
+	router.PUT("/cache/config", updateCacheConfig(core))
+	router.POST("/cache/config/reload", reloadCacheConfigs(core))
+
+	// 测试端点
+	router.GET("/cache/test", testCacheEndpoint(core))
 }

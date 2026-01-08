@@ -65,7 +65,7 @@ func (KnowledgeArticle) TableName() string {
 // KnowledgeTag 知识库标签
 type KnowledgeTag struct {
 	ID        string    `gorm:"primaryKey;type:uuid" json:"id"`
-	TagName   string    `gorm:"size:50;not null;uniqueIndex:idx_kb_tag_name" json:"tagName"`
+	TagName   string    `gorm:"size:50;not null" json:"tagName"`
 	UseCount  int       `gorm:"default:0" json:"useCount"`
 	CreatedAt time.Time `json:"createdAt"`
 

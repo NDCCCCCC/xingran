@@ -151,18 +151,13 @@ func (s *ConfigExecutionService) executeConfig(ctx context.Context, executionID 
 	summary.StartedAt = &startTime
 
 	if req.ExecutionStrategy == models.ExecutionStrategyParallel {
-		// 并行执行
-		semaphore := make(chan struct{}, req.Concurrency)
-		var wg sync.WaitGroup
-		var g errgroup.Group
+		// 并行执行 - 使用errgroup进行并发控制
+		g, ctx := errgroup.WithContext(ctx)
+		g.SetLimit(req.Concurrency)
 
 		for _, dev := range devices {
 			dev := dev // 创建局部变量
 			g.Go(func() error {
-				semaphore <- struct{}{}        // 获取信号量
-				defer func() { <-semaphore }() // 释放信号量
-				defer wg.Done()
-
 				result := s.executeConfigOnDevice(ctx, executionID, &dev, config, req.Timeout)
 
 				mu.Lock()
@@ -176,11 +171,13 @@ func (s *ConfigExecutionService) executeConfig(ctx context.Context, executionID 
 
 				return nil
 			})
-			wg.Add(1)
 		}
 
-		wg.Wait()
-		g.Wait()
+		if err := g.Wait(); err != nil {
+			// 如果有任务返回错误，记录日志但不中断其他任务
+			// 这里所有任务都会执行完成，因为上面都返回nil
+			_ = err
+		}
 
 	} else {
 		// 串行执行
