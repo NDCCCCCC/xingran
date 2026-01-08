@@ -543,9 +543,9 @@ func (s *service) createMenuIfNotExists(db *gorm.DB, menu *models.Menu) {
 	if menu.ParentID != nil && *menu.ParentID != "" {
 		query = query.Where("parent_id = ?", *menu.ParentID)
 	} else {
-		// 对于顶级父菜单，parent_id IS NULL 或 parent_id = '0'
-		// PostgreSQL 和 MySQL 对 NULL 的处理不同，所以使用 OR 条件
-		query = query.Where("parent_id IS NULL OR parent_id = ''")
+		// 对于顶级父菜单，parent_id IS NULL
+		// 注意：不能使用 parent_id = '' 因为 parent_id 是 UUID 类型
+		query = query.Where("parent_id IS NULL")
 	}
 
 	// 检查 path

@@ -22,7 +22,7 @@ const (
 // KnowledgeCategory 知识库分类
 type KnowledgeCategory struct {
 	BaseModel
-	CategoryName string                 `gorm:"size:100;not null" json:"categoryName"`
+	CategoryName string                 `gorm:"size:100;not null;uniqueIndex:idx_kb_category_name" json:"categoryName"`
 	Description  string                 `gorm:"size:500" json:"description,omitempty"`
 	ParentID     *string                `gorm:"type:uuid" json:"parentId,omitempty"`
 	SortOrder    int                    `gorm:"default:0" json:"sortOrder"`
@@ -65,7 +65,7 @@ func (KnowledgeArticle) TableName() string {
 // KnowledgeTag 知识库标签
 type KnowledgeTag struct {
 	ID        string    `gorm:"primaryKey;type:uuid" json:"id"`
-	TagName   string    `gorm:"size:50;not null" json:"tagName"`
+	TagName   string    `gorm:"size:50;not null;uniqueIndex:idx_kb_tag_name" json:"tagName"`
 	UseCount  int       `gorm:"default:0" json:"useCount"`
 	CreatedAt time.Time `json:"createdAt"`
 

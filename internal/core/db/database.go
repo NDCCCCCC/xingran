@@ -187,10 +187,15 @@ func (d *Database) cleanupOldConstraints() {
 		table      string
 		constraint string
 	}{
-		{"sys_knowledge_category", "uni_sys_knowledge_category_category_name"},
+		// 知识库分类表：清理旧的唯一约束（保留 idx_kb_category_name）
+		{"sys_knowledge_category", "uk_knowledge_category_name"},
+		// 知识库标签表：清理旧的唯一约束（如果存在）
+		{"sys_knowledge_tag", "uk_knowledge_tag_name"},
 		{"sys_knowledge_tag", "uni_sys_knowledge_tag_tag_name"},
+		// 工单分类表：清理旧的唯一约束（保留 idx_wo_category_name）
 		{"sys_workorder_category", "uk_workorder_category_name"},
 		{"sys_workorder_category", "uni_sys_workorder_category_name"},
+		// 工单表：清理旧的唯一约束（保留 idx_wo_no）
 		{"sys_workorder", "uk_workorder_no"},
 		{"sys_workorder", "uni_sys_workorder_work_order_no"},
 	}
