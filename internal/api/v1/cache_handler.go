@@ -18,6 +18,7 @@ import (
 type CacheListRequest struct {
 	Key      string `json:"key,omitempty"`
 	Type     string `json:"type,omitempty"`
+	Level    string `json:"level,omitempty"` // 新增: "l1", "l2", "all"
 	Current  int    `json:"current"`
 	PageSize int    `json:"pageSize"`
 }
@@ -71,10 +72,13 @@ func getCacheList(core *core.Core) gin.HandlerFunc {
 		if req.PageSize <= 0 {
 			req.PageSize = 10
 		}
+		if req.Level == "" {
+			req.Level = "all" // 默认显示两级缓存
+		}
 
 		// 如果有Redis实例，从Redis获取实时数据
 		if core.Cache != nil {
-			caches, err := getCachesFromCache(core.Cache, req)
+			caches, err := getCachesFromCacheWithLevel(core.Cache, req)
 			if err != nil {
 				response.Error(c, response.ErrServerError, "从Redis获取缓存列表失败: "+err.Error())
 				return
@@ -458,85 +462,37 @@ func getCacheStats(core *core.Core) gin.HandlerFunc {
 		}
 
 		// 尝试获取缓存统计信息
-		var stats map[string]interface{}
-		var err error
-
 		if core.Cache != nil {
-			// 获取缓存统计信息
-			stats, err = getCacheStatistics(core.Cache)
-		} else {
-			// 如果缓存实例为空，使用默认统计信息
-			stats = map[string]interface{}{
-				"cacheType":    "redis",
-				"keyspace_hits": 0,
-				"keyspace_misses": 0,
-				"hit_rate":     0.0,
-				"used_memory":  0,
-				"total_memory": 1024 * 1024 * 100, // 100MB默认总内存
-				"key_count":    0,
+			// 类型断言为支持 GetStats 的缓存
+			cacheWithStats, ok := core.Cache.(interface {
+				GetStats(ctx context.Context) (map[string]interface{}, error)
+			})
+			if !ok {
+				response.Error(c, response.ErrServerError, "缓存不支持统计信息")
+				return
 			}
-			err = nil
-		}
 
-		if err != nil {
-			// 如果获取统计信息失败，仍然返回默认数据而不是错误
-			stats = map[string]interface{}{
-				"cacheType":    "redis",
-				"keyspace_hits": 0,
-				"keyspace_misses": 0,
-				"hit_rate":     0.0,
-				"used_memory":  0,
-				"total_memory": 1024 * 1024 * 100,
-				"key_count":    0,
+			// 获取多级缓存统计信息
+			stats, err := cacheWithStats.GetStats(context.Background())
+			if err != nil {
+				response.Error(c, response.ErrServerError, "获取缓存统计失败")
+				return
 			}
+
+			// 格式化为前端需要的格式
+			result := make(map[string]interface{})
+
+			if l1Stats, ok := stats["l1"].(map[string]interface{}); ok {
+				result["l1"] = formatCacheStats(l1Stats, "L1(内存)")
+			}
+
+			if l2Stats, ok := stats["l2"].(map[string]interface{}); ok {
+				result["l2"] = formatCacheStats(l2Stats, "L2(Redis)")
+			}
+
+			response.Success(c, result)
+			return
 		}
-
-		// 安全地构建统计对象，避免类型断言panic
-		hitCount, _ := stats["keyspace_hits"].(int64)
-		missCount, _ := stats["keyspace_misses"].(int64)
-		hitRate, _ := stats["hit_rate"].(float64)
-		usedMemory, _ := stats["used_memory"].(int64)
-		keyCount, _ := stats["key_count"].(int64)
-
-		// 计算totalMemory（与getRealCacheStats中的逻辑一致）
-		var totalMemory int64
-		if totalMem, ok := stats["total_system_memory"].(int64); ok && totalMem > 0 {
-			totalMemory = totalMem
-		} else if maxMem, ok := stats["maxmemory"].(int64); ok && maxMem > 0 {
-			totalMemory = maxMem
-		} else if usedMemoryRss, ok := stats["used_memory_rss"].(int64); ok && usedMemoryRss > 0 {
-			totalMemory = usedMemoryRss * 2
-		} else {
-			totalMemory = 1024 * 1024 * 1024 // 默认1GB
-		}
-
-		currentStats := models.CacheStats{
-			CacheType:   "redis",
-			HitCount:    hitCount,
-			MissCount:   missCount,
-			HitRate:     hitRate,
-			TotalMemory: totalMemory,
-			UsedMemory:  usedMemory,
-			KeyCount:    keyCount,
-			CollectTime: time.Now(),
-		}
-
-		// 保存统计信息到数据库
-		go func() {
-			core.DB.GetDB().Create(&currentStats)
-		}()
-
-		// 转换为字符串以便JSON序列化
-		response.Success(c, map[string]interface{}{
-			"cacheType":   currentStats.CacheType,
-			"hitCount":    currentStats.HitCount,
-			"missCount":   currentStats.MissCount,
-			"hitRate":     currentStats.HitRate,
-			"totalMemory": currentStats.TotalMemory,
-			"usedMemory":  currentStats.UsedMemory,
-			"keyCount":    currentStats.KeyCount,
-			"collectTime": currentStats.CollectTime,
-		})
 		return
 
 		// 从数据库获取历史统计
@@ -573,7 +529,7 @@ func getCacheStats(core *core.Core) gin.HandlerFunc {
 
 // getCacheMonitor 获取缓存监控数据
 // @Summary 获取缓存监控数据
-// @Description 获取缓存实时监控数据，包括内存使用、键分布等
+// @Description 获取缓存实时监控数据，包括L1和L2的统计信息
 // @Tags 缓存管理
 // @Accept json
 // @Produce json
@@ -587,60 +543,86 @@ func getCacheMonitor(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		ctx := context.Background()
+		// 类型断言为支持 GetStats 的缓存
+		cacheWithStats, ok := core.Cache.(interface {
+			GetStats(ctx context.Context) (map[string]interface{}, error)
+		})
+		if !ok {
+			response.Error(c, response.ErrServerError, "缓存不支持统计信息")
+			return
+		}
 
-		// 获取真实的Redis统计信息
-		stats, err := getRealCacheStats(core.Cache, ctx)
+		// 获取多级缓存统计信息
+		stats, err := cacheWithStats.GetStats(context.Background())
 		if err != nil {
-			// 如果获取失败，返回零值而不是错误
-			stats = map[string]interface{}{
-				"hitCount":    int64(0),
-				"missCount":   int64(0),
-				"hitRate":     0.0,
-				"usedMemory":  int64(0),
-				"totalMemory": int64(0),
-				"keyCount":    int64(0),
+			response.Error(c, response.ErrServerError, "获取监控数据失败")
+			return
+		}
+
+		monitor := make(map[string]interface{})
+
+		// L1 监控数据
+		if l1Stats, ok := stats["l1"].(map[string]interface{}); ok {
+			formattedL1Stats := formatCacheStatsForMonitor(l1Stats)
+			monitor["l1"] = map[string]interface{}{
+				"status": map[string]interface{}{
+					"connected": true,
+					"type":      "memory",
+				},
+				"stats": formattedL1Stats,
 			}
 		}
 
-		// 获取真实的键分布信息
-		keyDistribution, err := getRealKeyDistribution(core.Cache, ctx)
-		if err != nil {
-			keyDistribution = map[string]int64{}
-		}
+		// L2 监控数据
+		if l2Stats, ok := stats["l2"].(map[string]interface{}); ok {
+			formattedL2Stats := formatCacheStatsForMonitor(l2Stats)
 
-		// 获取真实的内存使用趋势
-		memoryTrend, err := getRealMemoryTrend(core.Cache, ctx)
-		if err != nil {
-			memoryTrend = []map[string]interface{}{}
-		}
-
-		// 获取真实的命中率趋势
-		hitRateTrend, err := getRealHitRateTrend(core.Cache, ctx)
-		if err != nil {
-			hitRateTrend = []map[string]interface{}{}
-		}
-
-		// 获取Redis服务器信息
-		serverInfo, err := getRedisServerInfo(core.Cache, ctx)
-		if err != nil {
-			serverInfo = map[string]interface{}{
-				"connected": false,
+			// 获取Redis服务器信息
+			serverInfo := map[string]interface{}{
+				"connected": true,
 				"type":      "redis",
-				"version":   "unknown",
-				"uptime":    "unknown",
 			}
-		}
+			if version, ok := l2Stats["redis_version"].(string); ok {
+				serverInfo["version"] = version
+			}
+			if uptime, ok := l2Stats["uptime_in_seconds"].(int64); ok {
+				serverInfo["uptime"] = fmt.Sprintf("%ds", uptime)
+			}
 
-		monitor := map[string]interface{}{
-			"status":        serverInfo,
-			"stats":         stats,
-			"distribution":  keyDistribution,
-			"memoryTrend":   memoryTrend,
-			"hitRateTrend":  hitRateTrend,
+			monitor["l2"] = map[string]interface{}{
+				"status": serverInfo,
+				"stats":  formattedL2Stats,
+			}
 		}
 
 		response.Success(c, monitor)
+	}
+}
+
+// formatCacheStatsForMonitor 格式化缓存统计信息（用于监控接口）
+func formatCacheStatsForMonitor(stats map[string]interface{}) map[string]interface{} {
+	hitCount, _ := stats["keyspace_hits"].(int64)
+	missCount, _ := stats["keyspace_misses"].(int64)
+	hitRate, _ := stats["hit_rate"].(float64)
+	usedMemory, _ := stats["used_memory"].(int64)
+	keyCount, _ := stats["key_count"].(int64)
+
+	var totalMemory int64
+	if totalMem, ok := stats["total_system_memory"].(int64); ok && totalMem > 0 {
+		totalMemory = totalMem
+	} else if maxMem, ok := stats["maxmemory"].(int64); ok && maxMem > 0 {
+		totalMemory = maxMem
+	} else {
+		totalMemory = usedMemory * 2
+	}
+
+	return map[string]interface{}{
+		"hitCount":    hitCount,
+		"missCount":   missCount,
+		"hitRate":     hitRate,
+		"totalMemory": totalMemory,
+		"usedMemory":  usedMemory,
+		"keyCount":    keyCount,
 	}
 }
 
@@ -751,6 +733,97 @@ func getCachesFromCache(cacheInterface interface {
 		// 如果键不存在，跳过
 		if !exists {
 			continue
+		}
+
+		caches = append(caches, cacheInfo)
+	}
+
+	return caches, nil
+}
+
+// getCachesFromCacheWithLevel 使用缓存接口获取指定层级的缓存列表
+func getCachesFromCacheWithLevel(cacheInterface interface{}, req CacheListRequest) ([]models.CacheInfo, error) {
+	ctx := context.Background()
+
+	pattern := "*"
+	if req.Key != "" {
+		pattern = "*" + req.Key + "*"
+	}
+
+	// 类型断言为 MultiLevelCache
+	type MultiLevelCacheInterface interface {
+		KeysByLevel(ctx context.Context, pattern string, level string) ([]string, error)
+		GetKeyLocations(ctx context.Context, pattern string) (map[string]string, error)
+		Get(ctx context.Context, key string) (string, error)
+		TTL(ctx context.Context, key string) (time.Duration, error)
+		Exists(ctx context.Context, key string) (bool, error)
+	}
+
+	mlCache, ok := cacheInterface.(MultiLevelCacheInterface)
+	if !ok {
+		// 如果不是 MultiLevelCache，返回空结果
+		return []models.CacheInfo{}, nil
+	}
+
+	var keys []string
+	var locations map[string]string
+	var err error
+
+	// 根据 level 获取 keys
+	switch req.Level {
+	case "l1", "L1":
+		keys, err = mlCache.KeysByLevel(ctx, pattern, "l1")
+		locations = make(map[string]string)
+		for _, k := range keys {
+			locations[k] = "l1"
+		}
+	case "l2", "L2":
+		keys, err = mlCache.KeysByLevel(ctx, pattern, "l2")
+		locations = make(map[string]string)
+		for _, k := range keys {
+			locations[k] = "l2"
+		}
+	default: // "all" 或其他
+		keys, err = mlCache.KeysByLevel(ctx, pattern, "all")
+		locations, _ = mlCache.GetKeyLocations(ctx, pattern)
+	}
+
+	if err != nil {
+		return []models.CacheInfo{}, nil
+	}
+
+	var caches []models.CacheInfo
+	for _, key := range keys {
+		value, err := mlCache.Get(ctx, key)
+		if err != nil {
+			continue
+		}
+
+		ttl, _ := mlCache.TTL(ctx, key)
+		ttlSeconds := int64(-1)
+		if ttl > 0 {
+			ttlSeconds = int64(ttl.Seconds())
+		}
+
+		exists, _ := mlCache.Exists(ctx, key)
+		if !exists {
+			continue
+		}
+
+		location := "unknown"
+		if loc, ok := locations[key]; ok {
+			location = loc
+		}
+
+		cacheInfo := models.CacheInfo{
+			Key:       key,
+			Value:     value,
+			Type:      "string",
+			Size:      int64(len(value)),
+			TTL:       ttlSeconds,
+			Location:  location,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
 		}
 
 		caches = append(caches, cacheInfo)
@@ -998,4 +1071,34 @@ func getRedisServerInfo(cacheInterface interface {
 		"version":   "unknown",
 		"uptime":    "unknown",
 	}, nil
+}
+
+// formatCacheStats 格式化缓存统计信息
+func formatCacheStats(stats map[string]interface{}, cacheName string) map[string]interface{} {
+	hitCount, _ := stats["keyspace_hits"].(int64)
+	missCount, _ := stats["keyspace_misses"].(int64)
+	hitRate, _ := stats["hit_rate"].(float64)
+	usedMemory, _ := stats["used_memory"].(int64)
+	keyCount, _ := stats["key_count"].(int64)
+
+	var totalMemory int64
+	if totalMem, ok := stats["total_system_memory"].(int64); ok && totalMem > 0 {
+		totalMemory = totalMem
+	} else if maxMem, ok := stats["maxmemory"].(int64); ok && maxMem > 0 {
+		totalMemory = maxMem
+	} else {
+		totalMemory = usedMemory * 2
+	}
+
+	return map[string]interface{}{
+		"cacheName":   cacheName,
+		"cacheType":   "memory",
+		"hitCount":    hitCount,
+		"missCount":   missCount,
+		"hitRate":     hitRate,
+		"totalMemory": totalMemory,
+		"usedMemory":  usedMemory,
+		"keyCount":    keyCount,
+		"collectTime": time.Now(),
+	}
 }

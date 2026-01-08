@@ -357,6 +357,11 @@ func createUser(core *core.Core) gin.HandlerFunc {
 			}
 		}
 
+		// 清除用户缓存
+		if err := core.UserCacheService.InvalidateUserCache(c.Request.Context(), user.ID); err != nil {
+			// 记录错误但不影响响应
+		}
+
 		response.Success(c, gin.H{
 			"id": user.ID,
 		})
@@ -380,20 +385,11 @@ func getUser(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		var user models.User
-		if err := core.DB.GetDB().Where("id = ?", userID).First(&user).Error; err != nil {
+		// 使用 UserCacheService 获取用户（带缓存）
+		user, err := core.UserCacheService.GetUserByIDWithCache(c.Request.Context(), userID)
+		if err != nil {
 			response.Error(c, response.ErrNotFound, "用户不存在")
 			return
-		}
-
-		// 查询用户的角色信息
-		var userRoles []models.UserRole
-		if err := core.DB.GetDB().Where("user_id = ?", userID).Find(&userRoles).Error; err == nil {
-			var roleIds []string
-			for _, ur := range userRoles {
-				roleIds = append(roleIds, ur.RoleID)
-			}
-			user.Roles = roleIds
 		}
 
 		response.Success(c, user)
@@ -522,6 +518,11 @@ func updateUser(core *core.Core) gin.HandlerFunc {
 			core.DB.GetDB().Where("user_id = ?", userID).Delete(&models.UserRole{})
 		}
 
+		// 清除用户缓存
+		if err := core.UserCacheService.InvalidateUserCache(c.Request.Context(), userID); err != nil {
+			// 记录错误但不影响响应
+		}
+
 		response.Success(c, nil)
 	}
 }
@@ -556,6 +557,11 @@ func deleteUser(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
+		// 清除用户缓存
+		if err := core.UserCacheService.InvalidateUserCache(c.Request.Context(), userID); err != nil {
+			// 记录错误但不影响响应
+		}
+
 		// TODO: 删除用户角色和岗位关联
 
 		response.Success(c, nil)
@@ -583,6 +589,11 @@ func batchDeleteUsers(core *core.Core) gin.HandlerFunc {
 		if err := core.DB.GetDB().Where("id IN ?", req.Ids).Delete(&models.User{}).Error; err != nil {
 			response.Error(c, response.ErrServerError, "批量删除用户失败")
 			return
+		}
+
+		// 清除所有用户缓存
+		if err := core.UserCacheService.InvalidateAllUserCache(c.Request.Context()); err != nil {
+			// 记录错误但不影响响应
 		}
 
 		// TODO: 删除用户角色和岗位关联
@@ -659,6 +670,11 @@ func updateUserStatus(core *core.Core) gin.HandlerFunc {
 		if err := core.DB.GetDB().Model(&user).Update("status", models.UserStatus(req.Status)).Error; err != nil {
 			response.Error(c, response.ErrServerError, "更新用户状态失败")
 			return
+		}
+
+		// 清除用户缓存
+		if err := core.UserCacheService.InvalidateUserCache(c.Request.Context(), userID); err != nil {
+			// 记录错误但不影响响应
 		}
 
 		response.Success(c, gin.H{"message": "更新状态成功"})

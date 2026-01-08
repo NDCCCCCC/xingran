@@ -604,34 +604,101 @@ func (m *MultiLevelCache) Keys(ctx context.Context, pattern string) ([]string, e
 	return m.l2Cache.Keys(ctx, pattern)
 }
 
+// KeysByLevel 根据层级获取缓存键
+func (m *MultiLevelCache) KeysByLevel(ctx context.Context, pattern string, level string) ([]string, error) {
+	switch level {
+	case "l1", "L1":
+		return m.l1Cache.Keys(ctx, pattern)
+	case "l2", "L2":
+		return m.l2Cache.Keys(ctx, pattern)
+	case "all":
+		l1Keys, _ := m.l1Cache.Keys(ctx, pattern)
+		l2Keys, _ := m.l2Cache.Keys(ctx, pattern)
+		return m.mergeKeys(l1Keys, l2Keys), nil
+	default:
+		return m.l2Cache.Keys(ctx, pattern)
+	}
+}
+
+// GetKeyLocations 获取每个键所在的层级
+func (m *MultiLevelCache) GetKeyLocations(ctx context.Context, pattern string) (map[string]string, error) {
+	locations := make(map[string]string)
+
+	l1Keys, _ := m.l1Cache.Keys(ctx, pattern)
+	for _, key := range l1Keys {
+		locations[key] = "l1"
+	}
+
+	l2Keys, _ := m.l2Cache.Keys(ctx, pattern)
+	for _, key := range l2Keys {
+		if _, exists := locations[key]; exists {
+			locations[key] = "both"
+		} else {
+			locations[key] = "l2"
+		}
+	}
+
+	return locations, nil
+}
+
+// mergeKeys 合并并去重两个键列表
+func (m *MultiLevelCache) mergeKeys(l1, l2 []string) []string {
+	keySet := make(map[string]bool)
+	for _, k := range l1 {
+		keySet[k] = true
+	}
+	for _, k := range l2 {
+		keySet[k] = true
+	}
+	result := make([]string, 0, len(keySet))
+	for k := range keySet {
+		result = append(result, k)
+	}
+	return result
+}
+
 func (m *MultiLevelCache) FlushDB(ctx context.Context) error {
 	m.l1Cache.FlushDB(ctx)
 	return m.l2Cache.FlushDB(ctx)
 }
 
-// GetStats 获取多级缓存统计信息（主要返回L2缓存的统计信息）
+// GetStats 获取多级缓存统计信息（返回L1和L2的分离统计）
 func (m *MultiLevelCache) GetStats(ctx context.Context) (map[string]interface{}, error) {
-	// 尝试从L2缓存（Redis）获取统计信息
-	if cacheWithStats, ok := m.l2Cache.(interface {
-		GetStats(ctx context.Context) (map[string]interface{}, error)
-	}); ok {
-		return cacheWithStats.GetStats(ctx)
+	stats := make(map[string]interface{})
+
+	// 获取L1统计
+	if l1Stats, ok := m.getL1Stats(ctx); ok {
+		stats["l1"] = l1Stats
 	}
 
-	// 如果L2缓存不支持统计信息，返回基本信息
-	stats := map[string]interface{}{
-		"cache_type": "multi_level",
-		"l1_cache":   "memory",
-		"l2_cache":   "redis",
-	}
-
-	// 获取键的总数
-	keys, err := m.Keys(ctx, "*")
-	if err == nil {
-		stats["key_count"] = int64(len(keys))
+	// 获取L2统计
+	if l2Stats, ok := m.getL2Stats(ctx); ok {
+		stats["l2"] = l2Stats
 	}
 
 	return stats, nil
+}
+
+// getL1Stats 获取L1缓存统计
+func (m *MultiLevelCache) getL1Stats(ctx context.Context) (map[string]interface{}, bool) {
+	if cacheWithStats, ok := m.l1Cache.(interface {
+		GetStats(ctx context.Context) (map[string]interface{}, error)
+	}); ok {
+		stats, err := cacheWithStats.GetStats(ctx)
+		return stats, err == nil
+	}
+	return nil, false
+}
+
+// getL2Stats 获取L2缓存统计
+func (m *MultiLevelCache) getL2Stats(ctx context.Context) (map[string]interface{}, bool) {
+	if cacheWithStats, ok := m.l2Cache.(interface {
+		GetStats(ctx context.Context) (map[string]interface{}, error)
+	}); ok {
+		stats, err := cacheWithStats.GetStats(ctx)
+		return stats, err == nil
+	}
+	return nil, false
 }
 
 // MGetJSON 批量获取JSON对象

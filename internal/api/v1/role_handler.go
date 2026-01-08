@@ -140,8 +140,9 @@ func listRoles(core *core.Core) gin.HandlerFunc {
 // @Router /roles/all [post]
 func getAllRoles(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var roles []models.Role
-		if err := core.DB.GetDB().Where("status = ?", models.RoleStatusEnabled).Order("role_sort ASC, created_at DESC").Find(&roles).Error; err != nil {
+		// 使用 RoleCacheService 获取所有启用的角色（带缓存）
+		roles, err := core.RoleCacheService.GetAllRolesWithCache(c.Request.Context())
+		if err != nil {
 			response.Error(c, response.ErrServerError, "查询角色列表失败")
 			return
 		}

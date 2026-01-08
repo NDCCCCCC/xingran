@@ -49,6 +49,7 @@ type CacheInfo struct {
 	TTL        int64     `json:"ttl" gorm:"comment:过期时间(秒)"`
 	Size       int64     `json:"size" gorm:"comment:缓存大小(字节)"`
 	Type       string    `json:"type" gorm:"size:32;comment:缓存类型"`
+	Location   string    `json:"location" gorm:"size:16;comment:缓存位置:l1/l2/both"` // 新增
 	CreatedAt  time.Time `json:"createdAt" gorm:"comment:创建时间"`
 	UpdatedAt  time.Time `json:"updatedAt" gorm:"comment:更新时间"`
 }

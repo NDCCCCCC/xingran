@@ -47,6 +47,9 @@ type Core struct {
 	DeptService             *services.DeptService         // 部门缓存服务
 	RoleCacheService        *services.RoleCacheService    // 角色缓存服务
 	DictCacheService        *services.DictCacheService    // 字典缓存服务
+	MenuCacheService        *services.MenuCacheService    // 菜单缓存服务
+	UserCacheService        *services.UserCacheService    // 用户缓存服务
+	PostCacheService        *services.PostCacheService    // 岗位缓存服务
 }
 
 // GetDB 获取数据库连接
@@ -143,7 +146,12 @@ func (c *Core) Init() error {
 		c.RoleCacheService = services.NewRoleCacheService(c.GetDB(), c.DataCacheService)
 		c.DictCacheService = services.NewDictCacheService(c.GetDB(), c.DataCacheService)
 
-		log.Println("数据缓存服务初始化完成（部门、角色、字典）")
+		// 初始化新的缓存服务
+		c.MenuCacheService = services.NewMenuCacheService(c.GetDB(), c.DataCacheService)
+		c.UserCacheService = services.NewUserCacheService(c.GetDB(), c.DataCacheService)
+		c.PostCacheService = services.NewPostCacheService(c.GetDB(), c.DataCacheService)
+
+		log.Println("数据缓存服务初始化完成（部门、角色、字典、菜单、用户、岗位）")
 	}
 
 	// 7. 初始化系统指标缓存服务

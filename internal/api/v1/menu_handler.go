@@ -67,6 +67,25 @@ func listMenus(core *core.Core) gin.HandlerFunc {
 		// 允许空的请求体，所有字段都是可选的
 		c.ShouldBindJSON(&req)
 
+		// 如果没有筛选条件，使用缓存的菜单数据
+		if req.MenuName == "" && req.Status == "" {
+			// 使用 MenuCacheService 获取所有菜单（带缓存）
+			menuPtrs, err := core.MenuCacheService.GetAllMenusWithCache(c.Request.Context())
+			if err != nil {
+				// 缓存失败，继续使用数据库查询
+			} else {
+				// 转换为值类型数组
+				menus := make([]models.Menu, len(menuPtrs))
+				for i, menu := range menuPtrs {
+					menus[i] = *menu
+				}
+				// 构建树形结构
+				menuTree := buildMenuTreeFromPtrs(menuPtrs, nil)
+				response.Success(c, menuTree)
+				return
+			}
+		}
+
 		// 构建查询条件
 		db := core.DB.GetDB().Model(&models.Menu{})
 
@@ -95,6 +114,22 @@ func listMenus(core *core.Core) gin.HandlerFunc {
 
 		response.Success(c, menuTree)
 	}
+}
+
+// buildMenuTreeFromPtrs 从指针数组构建菜单树
+func buildMenuTreeFromPtrs(menus []*models.Menu, parentID *string) []models.Menu {
+	var tree []models.Menu
+	for _, menu := range menus {
+		if (parentID == nil && menu.ParentID == nil) || (parentID != nil && menu.ParentID != nil && *menu.ParentID == *parentID) {
+			children := buildMenuTreeFromPtrs(menus, &menu.ID)
+			menuCopy := *menu
+			if len(children) > 0 {
+				menuCopy.Children = children
+			}
+			tree = append(tree, menuCopy)
+		}
+	}
+	return tree
 }
 
 // buildMenuTree 构建菜单树
@@ -168,7 +203,8 @@ func createMenu(core *core.Core) gin.HandlerFunc {
 			Remark:    func() string { if req.Remark != nil { return *req.Remark }; return "" }(),
 		}
 
-		if err := core.DB.GetDB().Create(&menu).Error; err != nil {
+		// 使用 MenuCacheService 创建菜单（会自动清除缓存）
+		if err := core.MenuCacheService.CreateMenu(c.Request.Context(), &menu); err != nil {
 			response.Error(c, response.ErrServerError, "创建菜单失败")
 			return
 		}
@@ -278,21 +314,20 @@ func updateMenu(core *core.Core) gin.HandlerFunc {
 		}
 
 		// 更新菜单信息
-		updates := map[string]interface{}{
-			"menu_name":  req.MenuName,
-			"parent_id":  req.ParentID,
-			"order_num":  req.OrderNum,
-			"path":       req.Path,
-			"component":  req.Component,
-			"menu_type":  req.MenuType,
-			"visible":    req.Visible,
-			"status":     req.Status,
-			"perms":      req.Perms,
-			"icon":       req.Icon,
-			"remark":     func() string { if req.Remark != nil { return *req.Remark }; return "" }(),
-		}
+		menu.MenuName = req.MenuName
+		menu.ParentID = req.ParentID
+		menu.OrderNum = req.OrderNum
+		menu.Path = req.Path
+		menu.Component = req.Component
+		menu.MenuType = req.MenuType
+		menu.Visible = req.Visible
+		menu.Status = req.Status
+		menu.Perms = req.Perms
+		menu.Icon = req.Icon
+		menu.Remark = func() string { if req.Remark != nil { return *req.Remark }; return "" }()
 
-		if err := core.DB.GetDB().Model(&menu).Updates(updates).Error; err != nil {
+		// 使用 MenuCacheService 更新菜单（会自动清除缓存）
+		if err := core.MenuCacheService.UpdateMenu(c.Request.Context(), &menu); err != nil {
 			response.Error(c, response.ErrServerError, "更新菜单失败")
 			return
 		}
@@ -375,6 +410,11 @@ func deleteMenu(core *core.Core) gin.HandlerFunc {
 		if err := core.DB.GetDB().Where("id IN ?", menuIdsToDelete).Delete(&models.Menu{}).Error; err != nil {
 			response.Error(c, response.ErrServerError, "删除菜单失败")
 			return
+		}
+
+		// 清除缓存
+		if err := core.MenuCacheService.InvalidateMenuCache(c.Request.Context()); err != nil {
+			// 记录错误但不影响响应
 		}
 
 		deletedCount := len(menuIdsToDelete)
@@ -489,6 +529,11 @@ func batchDeleteMenus(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
+		// 清除缓存
+		if err := core.MenuCacheService.InvalidateMenuCache(c.Request.Context()); err != nil {
+			// 记录错误但不影响响应
+		}
+
 		response.Success(c, gin.H{
 			"message":     "批量删除成功",
 			"deletedCount": len(menuIdsToDelete),
@@ -523,7 +568,7 @@ func getAllChildMenuIDs(db *gorm.DB, parentID string) ([]string, error) {
 
 // getMenuTreeSelect 获取菜单树选择器
 // @Summary 获取菜单树选择器
-// @Description 获取所有正常状态的菜单树，用于菜单选择器组件
+// @Description 获取所有正常状态的菜单树，用于菜单选择器组件（使用缓存）
 // @Tags 菜单管理
 // @Accept json
 // @Produce json
@@ -532,15 +577,12 @@ func getAllChildMenuIDs(db *gorm.DB, parentID string) ([]string, error) {
 // @Router /menus/tree-select [get]
 func getMenuTreeSelect(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var menus []models.Menu
-		if err := core.DB.GetDB().Where("status = ?", models.MenuStatusNormal).
-			Order("order_num ASC").Find(&menus).Error; err != nil {
+		// 使用缓存服务获取菜单树
+		menuTree, err := core.MenuCacheService.GetMenuTreeWithCache(c.Request.Context())
+		if err != nil {
 			response.Error(c, response.ErrServerError, "查询菜单列表失败")
 			return
 		}
-
-		// 构建树形结构
-		menuTree := buildMenuTree(menus, nil)
 
 		response.Success(c, menuTree)
 	}
@@ -548,7 +590,7 @@ func getMenuTreeSelect(core *core.Core) gin.HandlerFunc {
 
 // getRoleMenuTreeSelect 获取角色菜单树选择器
 // @Summary 获取角色菜单树选择器
-// @Description 获取指定角色的菜单树和已选中的菜单ID，用于角色菜单权限分配
+// @Description 获取指定角色的菜单树和已选中的菜单ID，用于角色菜单权限分配（使用缓存）
 // @Tags 菜单管理
 // @Accept json
 // @Produce json
@@ -565,10 +607,9 @@ func getRoleMenuTreeSelect(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		// 查询所有菜单
-		var menus []models.Menu
-		if err := core.DB.GetDB().Where("status = ?", models.MenuStatusNormal).
-			Order("order_num ASC").Find(&menus).Error; err != nil {
+		// 使用缓存服务获取菜单树
+		menuPtrs, err := core.MenuCacheService.GetAllMenusWithCache(c.Request.Context())
+		if err != nil {
 			response.Error(c, response.ErrServerError, "查询菜单列表失败")
 			return
 		}
@@ -581,7 +622,11 @@ func getRoleMenuTreeSelect(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		// 构建树形结构
+		// 转换为值类型数组并构建树形结构
+		menus := make([]models.Menu, len(menuPtrs))
+		for i, menu := range menuPtrs {
+			menus[i] = *menu
+		}
 		menuTree := buildMenuTreeSelect(menus, nil)
 
 		response.Success(c, gin.H{

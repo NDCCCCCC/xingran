@@ -47,6 +47,7 @@ interface CacheInfo {
   ttl: number;
   size: number;
   type: string;
+  location: string;  // 新增: "l1", "l2", "both"
   createdAt: string;
   updatedAt: string;
 }
@@ -64,23 +65,34 @@ interface CacheStats {
 }
 
 interface CacheMonitor {
-  status: {
-    connected: boolean;
-    type: string;
-    version: string;
-    uptime: string;
+  l1: {
+    status: {
+      connected: boolean;
+      type: string;
+    };
+    stats: {
+      keyCount: number;
+      usedMemory: number;
+      hitRate: number;
+      hitCount: number;
+      missCount: number;
+    };
   };
-  stats: {
-    hitCount: number;
-    missCount: number;
-    hitRate: number;
-    totalMemory: number;
-    usedMemory: number;
-    keyCount: number;
+  l2: {
+    status: {
+      connected: boolean;
+      type: string;
+      version?: string;
+      uptime?: string;
+    };
+    stats: {
+      keyCount: number;
+      usedMemory: number;
+      hitRate: number;
+      hitCount: number;
+      missCount: number;
+    };
   };
-  distribution: { [key: string]: number };
-  memoryTrend: Array<{ time: string; memory: number }>;
-  hitRateTrend: Array<{ time: string; hitRate: number }>;
 }
 
 const CacheManager: React.FC = () => {
@@ -93,7 +105,8 @@ const CacheManager: React.FC = () => {
   const [pageSize, setPageSize] = useState(10);
   const [searchForm, setSearchForm] = useState({
     key: '',
-    type: ''
+    type: '',
+    level: 'all'  // 新增: 缓存层级筛选 "all", "l1", "l2"
   });
   const [operateModalVisible, setOperateModalVisible] = useState(false);
     const [statsModalVisible, setStatsModalVisible] = useState(false);
@@ -264,7 +277,8 @@ const CacheManager: React.FC = () => {
   const handleReset = () => {
     setSearchForm({
       key: '',
-      type: ''
+      type: '',
+      level: 'all'
     });
     setCurrent(1);
   };
@@ -382,6 +396,22 @@ const CacheManager: React.FC = () => {
       ),
     },
     {
+      title: '层级',
+      dataIndex: 'location',
+      key: 'location',
+      width: 120,
+      render: (location: string) => {
+        if (location === 'l1') {
+          return <Tag color="blue">L1(内存)</Tag>;
+        } else if (location === 'l2') {
+          return <Tag color="green">L2(Redis)</Tag>;
+        } else if (location === 'both') {
+          return <Tag color="purple">L1+L2</Tag>;
+        }
+        return <Tag>{location}</Tag>;
+      },
+    },
+    {
       title: 'TTL',
       dataIndex: 'ttl',
       key: 'ttl',
@@ -450,66 +480,81 @@ const CacheManager: React.FC = () => {
 
         {/* 监控概览 */}
         <Row gutter={16} className="mb-6">
+          {/* L1 内存缓存 */}
           <Col xs={24} sm={12} md={6}>
-            <Card>
+            <Card size="small" title="L1 内存缓存" extra={<Tag color="blue">L1</Tag>}>
               <Statistic
-                title="总键值对"
-                value={monitor?.stats?.keyCount || 0}
+                title="键数量"
+                value={monitor?.l1?.stats?.keyCount || 0}
                 prefix={<DatabaseOutlined />}
+                valueStyle={{ fontSize: '20px' }}
               />
+              <div className="mt-2">
+                <small className="text-gray-500">
+                  内存: {formatMemorySize(monitor?.l1?.stats?.usedMemory || 0)}
+                </small>
+              </div>
             </Card>
           </Col>
+
+          {/* L2 Redis缓存 */}
           <Col xs={24} sm={12} md={6}>
-            <Card>
+            <Card size="small" title="L2 Redis缓存" extra={<Tag color="green">L2</Tag>}>
               <Statistic
-                title="命中率"
-                value={monitor?.stats?.hitRate || 0}
+                title="键数量"
+                value={monitor?.l2?.stats?.keyCount || 0}
+                prefix={<DatabaseOutlined />}
+                valueStyle={{ fontSize: '20px' }}
+              />
+              <div className="mt-2">
+                <small className="text-gray-500">
+                  内存: {formatMemorySize(monitor?.l2?.stats?.usedMemory || 0)}
+                </small>
+              </div>
+            </Card>
+          </Col>
+
+          {/* 综合命中率 */}
+          <Col xs={24} sm={12} md={6}>
+            <Card size="small" title="综合命中率">
+              <Statistic
+                title="L1命中率"
+                value={monitor?.l1?.stats?.hitRate || 0}
                 precision={1}
                 suffix="%"
-                styles={{ content: { color: '#3f8600' } }}
+                valueStyle={{ fontSize: '20px', color: '#3f8600' }}
+              />
+              <Divider className="my-2" />
+              <Statistic
+                title="L2命中率"
+                value={monitor?.l2?.stats?.hitRate || 0}
+                precision={1}
+                suffix="%"
+                valueStyle={{ fontSize: '16px', color: '#1890ff' }}
               />
             </Card>
           </Col>
+
+          {/* 状态指示 */}
           <Col xs={24} sm={12} md={6}>
-            <Card>
-              <Statistic
-                title="内存使用"
-                value={monitor?.stats?.usedMemory || 0}
-                formatter={(value) => formatMemorySize(Number(value))}
-                suffix={`/ ${formatMemorySize(monitor?.stats?.totalMemory || 0)}`}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} md={6}>
-            <Card>
-              <Statistic
-                title="命中次数"
-                value={monitor?.stats?.hitCount || 0}
-                prefix={<ThunderboltOutlined />}
-              />
+            <Card size="small" title="缓存状态">
+              <Space direction="vertical" className="w-full">
+                <div className="flex justify-between items-center">
+                  <span>L1状态:</span>
+                  <Tag color={monitor?.l1?.status?.connected ? 'success' : 'error'}>
+                    {monitor?.l1?.status?.connected ? '正常' : '异常'}
+                  </Tag>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span>L2状态:</span>
+                  <Tag color={monitor?.l2?.status?.connected ? 'success' : 'error'}>
+                    {monitor?.l2?.status?.connected ? '正常' : '异常'}
+                  </Tag>
+                </div>
+              </Space>
             </Card>
           </Col>
         </Row>
-
-        {/* 连接状态 */}
-        <Alert
-          title={
-            <span>
-              缓存服务状态：{' '}
-              <Tag color={monitor?.status?.connected ? 'success' : 'error'}>
-                {monitor?.status?.connected ? '已连接' : '未连接'}
-              </Tag>
-              {monitor?.status?.type && (
-                <span className="ml-2">
-                  类型：{monitor?.status?.type} | 版本：{monitor?.status?.version}
-                </span>
-              )}
-            </span>
-          }
-          type={monitor?.status?.connected ? 'success' : 'error'}
-          showIcon
-          className="mb-4"
-        />
 
         {/* 搜索表单 */}
         <Card className="mb-4">
@@ -533,7 +578,21 @@ const CacheManager: React.FC = () => {
                 options={typeOptions}
               />
             </Col>
-            <Col xs={24} sm={8} md={12}>
+            <Col xs={24} sm={8} md={4}>
+              <Select
+                placeholder="缓存层级"
+                value={searchForm.level}
+                onChange={(value) => setSearchForm({ ...searchForm, level: value })}
+                allowClear
+                style={{ width: '100%' }}
+                options={[
+                  { label: '全部', value: 'all' },
+                  { label: 'L1(内存)', value: 'l1' },
+                  { label: 'L2(Redis)', value: 'l2' },
+                ]}
+              />
+            </Col>
+            <Col xs={24} sm={8} md={8}>
               <Space>
                 <Button
                   type="primary"
@@ -604,12 +663,27 @@ const CacheManager: React.FC = () => {
             children: (
               <div>
                 <Row gutter={16} className="mb-4">
-                  <Col span={24}>
-                    <Card title="内存使用情况">
+                  <Col xs={24} md={12}>
+                    <Card title={<><Tag color="blue">L1</Tag> 内存使用情况</>}>
                       <Progress
-                        percent={monitor ? Math.round((monitor.stats.usedMemory / monitor.stats.totalMemory) * 100) : 0}
-                        status={monitor?.stats?.usedMemory && monitor.stats.usedMemory / monitor.stats.totalMemory > 0.8 ? 'exception' : 'normal'}
-                        format={() => `${formatMemorySize(monitor?.stats?.usedMemory || 0)}`}
+                        percent={monitor?.l1?.stats?.usedMemory && monitor?.l1?.stats?.totalMemory
+                          ? Math.round((monitor.l1.stats.usedMemory / monitor.l1.stats.totalMemory) * 100)
+                          : 0}
+                        status={monitor?.l1?.stats?.usedMemory && monitor?.l1?.stats?.totalMemory &&
+                          monitor.l1.stats.usedMemory / monitor.l1.stats.totalMemory > 0.8 ? 'exception' : 'normal'}
+                        format={() => formatMemorySize(monitor?.l1?.stats?.usedMemory || 0)}
+                      />
+                    </Card>
+                  </Col>
+                  <Col xs={24} md={12}>
+                    <Card title={<><Tag color="green">L2</Tag> Redis内存使用</>}>
+                      <Progress
+                        percent={monitor?.l2?.stats?.usedMemory && monitor?.l2?.stats?.totalMemory
+                          ? Math.round((monitor.l2.stats.usedMemory / monitor.l2.stats.totalMemory) * 100)
+                          : 0}
+                        status={monitor?.l2?.stats?.usedMemory && monitor?.l2?.stats?.totalMemory &&
+                          monitor.l2.stats.usedMemory / monitor.l2.stats.totalMemory > 0.8 ? 'exception' : 'normal'}
+                        format={() => formatMemorySize(monitor?.l2?.stats?.usedMemory || 0)}
                       />
                     </Card>
                   </Col>
@@ -617,29 +691,57 @@ const CacheManager: React.FC = () => {
 
                 <Row gutter={16}>
                   <Col xs={24} md={12}>
-                    <Card title="命中率趋势">
-                      <List
-                        dataSource={monitor?.hitRateTrend || []}
-                        renderItem={(item) => (
-                          <List.Item>
-                            <span>{item.time}</span>
-                            <Tag color="blue">{item.hitRate}%</Tag>
-                          </List.Item>
-                        )}
+                    <Card title={<><Tag color="blue">L1</Tag> 命中率</>}>
+                      <Statistic
+                        value={monitor?.l1?.stats?.hitRate || 0}
+                        precision={2}
+                        suffix="%"
+                        valueStyle={{ color: '#3f8600' }}
                       />
+                      <Divider className="my-2" />
+                      <Row gutter={8}>
+                        <Col span={12}>
+                          <Statistic
+                            title="命中"
+                            value={monitor?.l1?.stats?.hitCount || 0}
+                            valueStyle={{ fontSize: '16px', color: '#3f8600' }}
+                          />
+                        </Col>
+                        <Col span={12}>
+                          <Statistic
+                            title="未命中"
+                            value={monitor?.l1?.stats?.missCount || 0}
+                            valueStyle={{ fontSize: '16px', color: '#cf1322' }}
+                          />
+                        </Col>
+                      </Row>
                     </Card>
                   </Col>
                   <Col xs={24} md={12}>
-                    <Card title="内存使用趋势">
-                      <List
-                        dataSource={monitor?.memoryTrend || []}
-                        renderItem={(item) => (
-                          <List.Item>
-                            <span>{item.time}</span>
-                            <Tag color="green">{formatMemorySize(item.memory)}</Tag>
-                          </List.Item>
-                        )}
+                    <Card title={<><Tag color="green">L2</Tag> 命中率</>}>
+                      <Statistic
+                        value={monitor?.l2?.stats?.hitRate || 0}
+                        precision={2}
+                        suffix="%"
+                        valueStyle={{ color: '#1890ff' }}
                       />
+                      <Divider className="my-2" />
+                      <Row gutter={8}>
+                        <Col span={12}>
+                          <Statistic
+                            title="命中"
+                            value={monitor?.l2?.stats?.hitCount || 0}
+                            valueStyle={{ fontSize: '16px', color: '#3f8600' }}
+                          />
+                        </Col>
+                        <Col span={12}>
+                          <Statistic
+                            title="未命中"
+                            value={monitor?.l2?.stats?.missCount || 0}
+                            valueStyle={{ fontSize: '16px', color: '#cf1322' }}
+                          />
+                        </Col>
+                      </Row>
                     </Card>
                   </Col>
                 </Row>
@@ -716,59 +818,118 @@ const CacheManager: React.FC = () => {
         open={statsModalVisible}
         onCancel={() => setStatsModalVisible(false)}
         footer={null}
-        width={800}
+        width={900}
       >
         <Row gutter={16}>
-          {stats.map((stat, index) => (
-            <Col key={index} span={8}>
-              <Card size="small" title={stat.cacheType}>
-                <Statistic
-                  title="命中次数"
-                  value={stat.hitCount}
-                  styles={{ content: { color: '#3f8600' } }}
-                />
-                <Divider />
-                <Statistic
-                  title="未命中次数"
-                  value={stat.missCount}
-                  styles={{ content: { color: '#cf1322' } }}
-                />
-                <Divider />
-                <Statistic
-                  title="命中率"
-                  value={stat.hitRate}
-                  precision={1}
-                  suffix="%"
-                  styles={{ content: { color: '#1890ff' } }}
-                />
-                <Divider />
-                <Statistic
-                  title="总内存"
-                  value={formatMemorySize(stat.totalMemory)}
-                />
-                <Divider />
-                <Statistic
-                  title="已用内存"
-                  value={formatMemorySize(stat.usedMemory)}
-                />
-                <Divider />
-                <Statistic
-                  title="键值对数量"
-                  value={stat.keyCount}
-                />
-                <Divider />
-                <Statistic
-                  title="过期键数量"
-                  value={stat.expiredCount}
-                />
-                <Divider />
-                <div className="text-sm text-gray-500">
-                  采集时间：{new Date(stat.collectTime).toLocaleString()}
-                </div>
-              </Card>
-            </Col>
-          ))}
+          {/* L1统计 */}
+          <Col span={12}>
+            <Card size="small" title={<><Tag color="blue">L1</Tag> 内存缓存统计</>}>
+              <Statistic
+                title="键数量"
+                value={monitor?.l1?.stats?.keyCount || 0}
+                valueStyle={{ fontSize: '24px' }}
+              />
+              <Divider className="my-2" />
+              <Row gutter={8}>
+                <Col span={12}>
+                  <Statistic
+                    title="命中次数"
+                    value={monitor?.l1?.stats?.hitCount || 0}
+                    valueStyle={{ fontSize: '18px', color: '#3f8600' }}
+                  />
+                </Col>
+                <Col span={12}>
+                  <Statistic
+                    title="未命中次数"
+                    value={monitor?.l1?.stats?.missCount || 0}
+                    valueStyle={{ fontSize: '18px', color: '#cf1322' }}
+                  />
+                </Col>
+              </Row>
+              <Divider className="my-2" />
+              <Statistic
+                title="命中率"
+                value={monitor?.l1?.stats?.hitRate || 0}
+                precision={2}
+                suffix="%"
+                valueStyle={{ fontSize: '20px', color: '#1890ff' }}
+              />
+              <Divider className="my-2" />
+              <Statistic
+                title="内存使用"
+                value={formatMemorySize(monitor?.l1?.stats?.usedMemory || 0)}
+              />
+            </Card>
+          </Col>
+
+          {/* L2统计 */}
+          <Col span={12}>
+            <Card size="small" title={<><Tag color="green">L2</Tag> Redis缓存统计</>}>
+              <Statistic
+                title="键数量"
+                value={monitor?.l2?.stats?.keyCount || 0}
+                valueStyle={{ fontSize: '24px' }}
+              />
+              <Divider className="my-2" />
+              <Row gutter={8}>
+                <Col span={12}>
+                  <Statistic
+                    title="命中次数"
+                    value={monitor?.l2?.stats?.hitCount || 0}
+                    valueStyle={{ fontSize: '18px', color: '#3f8600' }}
+                  />
+                </Col>
+                <Col span={12}>
+                  <Statistic
+                    title="未命中次数"
+                    value={monitor?.l2?.stats?.missCount || 0}
+                    valueStyle={{ fontSize: '18px', color: '#cf1322' }}
+                  />
+                </Col>
+              </Row>
+              <Divider className="my-2" />
+              <Statistic
+                title="命中率"
+                value={monitor?.l2?.stats?.hitRate || 0}
+                precision={2}
+                suffix="%"
+                valueStyle={{ fontSize: '20px', color: '#1890ff' }}
+              />
+              <Divider className="my-2" />
+              <Statistic
+                title="内存使用"
+                value={formatMemorySize(monitor?.l2?.stats?.usedMemory || 0)}
+              />
+            </Card>
+          </Col>
         </Row>
+
+        {/* 综合对比 */}
+        <Divider />
+        <Card size="small" title="综合对比">
+          <Row gutter={16}>
+            <Col span={8}>
+              <Statistic
+                title="总键数(L1+L2)"
+                value={(monitor?.l1?.stats?.keyCount || 0) + (monitor?.l2?.stats?.keyCount || 0)}
+              />
+            </Col>
+            <Col span={8}>
+              <Statistic
+                title="总内存使用"
+                value={formatMemorySize((monitor?.l1?.stats?.usedMemory || 0) + (monitor?.l2?.stats?.usedMemory || 0))}
+              />
+            </Col>
+            <Col span={8}>
+              <Statistic
+                title="L1缓存命中率"
+                value={monitor?.l1?.stats?.hitRate || 0}
+                precision={2}
+                suffix="%"
+              />
+            </Col>
+          </Row>
+        </Card>
       </Modal>
     </div>
   );

@@ -78,6 +78,45 @@ func listPosts(core *core.Core) gin.HandlerFunc {
 			req.Status = &status
 		}
 
+		// 检查是否有筛选条件
+		hasFilters := (req.PostCode != nil && *req.PostCode != "") ||
+			(req.PostName != nil && *req.PostName != "") ||
+			req.Status != nil
+
+		// 如果没有筛选条件，使用缓存的岗位数据
+		if !hasFilters {
+			allPosts, err := core.PostCacheService.GetEnabledPostsWithCache(c.Request.Context())
+			if err == nil && len(allPosts) > 0 {
+				total := int64(len(allPosts))
+				// 内存分页
+				start := (req.Current - 1) * req.PageSize
+				end := start + req.PageSize
+				if start > len(allPosts) {
+					start = len(allPosts)
+				}
+				if end > len(allPosts) {
+					end = len(allPosts)
+				}
+
+				var pagedPosts []models.Post
+				for _, postPtr := range allPosts[start:end] {
+					pagedPosts = append(pagedPosts, *postPtr)
+				}
+
+				pageResp := response.PageResponse{
+					List:     pagedPosts,
+					Total:    total,
+					Current:  req.Current,
+					PageSize: req.PageSize,
+				}
+
+				response.Success(c, pageResp)
+				return
+			}
+			// 缓存失败，继续使用数据库查询
+		}
+
+		// 有筛选条件或缓存失败时，使用数据库查询
 		db := core.DB.GetDB().Model(&models.Post{})
 
 		if req.PostCode != nil && *req.PostCode != "" {
@@ -146,7 +185,8 @@ func createPost(core *core.Core) gin.HandlerFunc {
 			Remark:   func() string { if req.Remark != nil { return *req.Remark }; return "" }(),
 		}
 
-		if err := core.DB.GetDB().Create(&post).Error; err != nil {
+		// 使用 PostCacheService 创建岗位（会自动清除缓存）
+		if err := core.PostCacheService.CreatePost(c.Request.Context(), &post); err != nil {
 			response.Error(c, response.ErrServerError, "创建岗位失败")
 			return
 		}
@@ -172,8 +212,9 @@ func getPost(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		var post models.Post
-		if err := core.DB.GetDB().Where("id = ?", id).First(&post).Error; err != nil {
+		// 使用 PostCacheService 获取岗位（带缓存）
+		post, err := core.PostCacheService.GetPostByIDWithCache(c.Request.Context(), id)
+		if err != nil {
 			response.Error(c, response.ErrNotFound, "岗位不存在")
 			return
 		}
@@ -212,16 +253,16 @@ func updatePost(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		updates := map[string]interface{}{
-			"post_name": req.PostName,
-			"post_sort": req.PostSort,
-			"status":    models.PostStatus(req.Status),
-		}
+		// 更新岗位信息
+		post.PostName = req.PostName
+		post.PostSort = req.PostSort
+		post.Status = models.PostStatus(req.Status)
 		if req.Remark != nil {
-			updates["remark"] = req.Remark
+			post.Remark = *req.Remark
 		}
 
-		if err := core.DB.GetDB().Model(&post).Updates(updates).Error; err != nil {
+		// 使用 PostCacheService 更新岗位（会自动清除缓存）
+		if err := core.PostCacheService.UpdatePost(c.Request.Context(), &post); err != nil {
 			response.Error(c, response.ErrServerError, "更新岗位失败")
 			return
 		}
@@ -255,7 +296,8 @@ func deletePost(core *core.Core) gin.HandlerFunc {
 
 		// TODO: 检查是否有关联用户
 
-		if err := core.DB.GetDB().Delete(&post).Error; err != nil {
+		// 使用 PostCacheService 删除岗位（会自动清除缓存）
+		if err := core.PostCacheService.DeletePost(c.Request.Context(), id); err != nil {
 			response.Error(c, response.ErrServerError, "删除岗位失败")
 			return
 		}
@@ -288,6 +330,11 @@ func batchDeletePosts(core *core.Core) gin.HandlerFunc {
 		if err := core.DB.GetDB().Where("id IN ?", req.Ids).Delete(&models.Post{}).Error; err != nil {
 			response.Error(c, response.ErrServerError, "批量删除岗位失败")
 			return
+		}
+
+		// 清除缓存
+		if err := core.PostCacheService.InvalidatePostCache(c.Request.Context()); err != nil {
+			// 记录错误但不影响响应
 		}
 
 		response.Success(c, nil)

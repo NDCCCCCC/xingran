@@ -100,9 +100,7 @@ func (s *service) createDefaultMenus(db *gorm.DB) error {
 	}
 
 	s.createMenuIfNotExists(db, &systemMenu)
-	if systemMenu.ID == "" {
-		db.Where("menu_name = ? AND path IS NULL", systemMenu.MenuName).First(&systemMenu)
-	}
+	// FirstOrCreate 已经自动回填 ID，不需要再次查询
 
 	// 系统管理子菜单
 	systemChildMenus := []models.Menu{
@@ -271,9 +269,7 @@ func (s *service) createDefaultMenus(db *gorm.DB) error {
 	}
 
 	s.createMenuIfNotExists(db, &monitorMenu)
-	if monitorMenu.ID == "" {
-		db.Where("menu_name = ? AND path IS NULL", monitorMenu.MenuName).First(&monitorMenu)
-	}
+	// FirstOrCreate 已经自动回填 ID，不需要再次查询
 
 	// 系统监控子菜单
 	monitorChildMenus := []models.Menu{
@@ -357,9 +353,7 @@ func (s *service) createDefaultMenus(db *gorm.DB) error {
 	}
 
 	s.createMenuIfNotExists(db, &networkMenu)
-	if networkMenu.ID == "" {
-		db.Where("menu_name = ? AND path = ?", networkMenu.MenuName, networkMenuPath).First(&networkMenu)
-	}
+	// FirstOrCreate 已经自动回填 ID，不需要再次查询
 
 	// 网络设备管理子菜单
 	networkChildMenus := []models.Menu{
@@ -539,13 +533,31 @@ func (s *service) createDefaultMenus(db *gorm.DB) error {
 }
 
 // createMenuIfNotExists 如果菜单不存在则创建
+// 使用 FirstOrCreate 确保原子性操作，避免并发创建重复菜单
 func (s *service) createMenuIfNotExists(db *gorm.DB, menu *models.Menu) {
-	var count int64
-	db.Model(&models.Menu{}).Where("menu_name = ? AND COALESCE(path, '') = COALESCE(?, '')", menu.MenuName, menu.Path).Count(&count)
+	// 构建查询条件：menu_name + parent_id + path
+	// 这样可以确保在不同父菜单下可以有同名的子菜单
+	query := db.Model(&models.Menu{}).Where("menu_name = ?", menu.MenuName)
 
-	if count == 0 {
-		db.Create(menu)
+	// 检查 parent_id
+	if menu.ParentID != nil && *menu.ParentID != "" {
+		query = query.Where("parent_id = ?", *menu.ParentID)
+	} else {
+		// 对于顶级父菜单，parent_id IS NULL 或 parent_id = '0'
+		// PostgreSQL 和 MySQL 对 NULL 的处理不同，所以使用 OR 条件
+		query = query.Where("parent_id IS NULL OR parent_id = ''")
 	}
+
+	// 检查 path
+	if menu.Path != nil && *menu.Path != "" {
+		query = query.Where("path = ?", *menu.Path)
+	} else {
+		query = query.Where("path IS NULL OR path = ''")
+	}
+
+	// 使用 FirstOrCreate，如果存在则返回已存在的记录，否则创建新记录
+	// FirstOrCreate 会将查询到的记录或新创建的记录回填到 menu 对象中
+	query.FirstOrCreate(menu)
 }
 
 // createButtonMenus 为指定的父菜单创建按钮权限

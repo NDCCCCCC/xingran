@@ -24,6 +24,45 @@ func NewRoleCacheService(db *gorm.DB, dataCache *DataCacheService) *RoleCacheSer
 	}
 }
 
+// GetAllRolesWithCache 获取所有启用的角色（带缓存）
+func (s *RoleCacheService) GetAllRolesWithCache(ctx context.Context) ([]*models.Role, error) {
+	cacheKey := "role:all:enabled"
+	var roles []*models.Role
+
+	// 使用动态配置的缓存时间
+	expiration := s.dataCache.GetExpiration(CacheConfigRoleMenus, 30*time.Minute)
+
+	// 尝试从缓存获取
+	err := s.dataCache.GetOrSet(ctx, cacheKey, &roles, expiration, func() (interface{}, error) {
+		return s.queryAllRoles()
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("获取角色列表失败: %w", err)
+	}
+
+	return roles, nil
+}
+
+// queryAllRoles 从数据库查询所有启用的角色
+func (s *RoleCacheService) queryAllRoles() ([]*models.Role, error) {
+	var roles []models.Role
+
+	if err := s.db.Where("status = ?", models.RoleStatusEnabled).
+		Order("role_sort ASC, created_at DESC").
+		Find(&roles).Error; err != nil {
+		return nil, fmt.Errorf("查询角色列表失败: %w", err)
+	}
+
+	// 转换为指针数组
+	rolePtrs := make([]*models.Role, len(roles))
+	for i := range roles {
+		rolePtrs[i] = &roles[i]
+	}
+
+	return rolePtrs, nil
+}
+
 // GetRoleMenusWithCache 获取角色菜单权限（带缓存）
 func (s *RoleCacheService) GetRoleMenusWithCache(ctx context.Context, roleID string) ([]*models.Menu, error) {
 	if roleID == "" {
@@ -192,9 +231,10 @@ func (s *RoleCacheService) InvalidateRoleCache(ctx context.Context, roleID strin
 // InvalidateAllRoleCache 清除所有角色相关缓存
 func (s *RoleCacheService) InvalidateAllRoleCache(ctx context.Context) error {
 	patterns := []string{
-		CacheKeyRoleMenus + "*",
-		CacheKeyRoleMenuTree + "*",
-		CacheKeyRoleDepts + "*",
+		"role:all:enabled",         // 角色列表缓存
+		CacheKeyRoleMenus + "*",     // 角色菜单缓存
+		CacheKeyRoleMenuTree + "*",  // 角色菜单树缓存
+		CacheKeyRoleDepts + "*",     // 角色部门缓存
 	}
 
 	for _, pattern := range patterns {
