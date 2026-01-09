@@ -316,14 +316,14 @@ const JobManager: React.FC = () => {
 
   // 常用Cron表达式
   const commonCronExpressions = [
-    { label: '每分钟', value: '0 * * * * ?' },
-    { label: '每小时', value: '0 0 * * * ?' },
-    { label: '每天0点', value: '0 0 0 * * ?' },
-    { label: '每周一0点', value: '0 0 0 * * MON ?' },
-    { label: '每月1号0点', value: '0 0 0 1 * ?' },
-    { label: '每5分钟', value: '0 */5 * * * ?' },
-    { label: '每10分钟', value: '0 */10 * * * ?' },
-    { label: '每30分钟', value: '0 */30 * * * ?' }
+    { label: '每分钟', value: '* * * * *' },
+    { label: '每小时', value: '0 * * * *' },
+    { label: '每天0点', value: '0 0 * * *' },
+    { label: '每周一0点', value: '0 0 * * 1' },
+    { label: '每月1号0点', value: '0 0 1 * *' },
+    { label: '每5分钟', value: '*/5 * * * *' },
+    { label: '每10分钟', value: '*/10 * * * *' },
+    { label: '每30分钟', value: '*/30 * * * *' }
   ];
 
   const columns: ColumnsType<JobInfo> = [

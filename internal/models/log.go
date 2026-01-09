@@ -5,35 +5,35 @@ import "time"
 // OperLog 操作日志模型
 type OperLog struct {
 	BaseTimeLine
-	Title         string     `gorm:"size:50" json:"title,omitempty"`
-	BusinessType  int        `json:"businessType"`
-	Method        string     `gorm:"size:100" json:"method,omitempty"`
-	RequestMethod string     `gorm:"size:10" json:"requestMethod,omitempty"`
-	OperatorType  int        `json:"operatorType"`
-	OperatorName  *string    `gorm:"size:50" json:"operatorName,omitempty"`
-	DeptName      *string    `gorm:"size:50" json:"deptName,omitempty"`
-	OperUrl       *string    `gorm:"size:255" json:"operUrl,omitempty"`
-	OperIP        *string    `gorm:"size:128" json:"operIp,omitempty"`
-	OperLocation  *string    `gorm:"size:255" json:"operLocation,omitempty"`
-	OperParam     *string    `gorm:"type:text" json:"operParam,omitempty"`
-	JsonResult    *string    `gorm:"type:text" json:"jsonResult,omitempty"`
-	Status        int        `json:"status"`
-	ErrorMsg      *string    `gorm:"size:2000" json:"errorMsg,omitempty"`
-	OperTime      time.Time  `json:"operTime"`
-	CostTime      int64      `json:"costTime"`
+	Title         string     `gorm:"size:50;column:title" json:"title,omitempty"`
+	BusinessType  int        `gorm:"column:business_type" json:"businessType"`
+	Method        string     `gorm:"size:100;column:method" json:"method,omitempty"`
+	RequestMethod string     `gorm:"size:10;column:request_method" json:"requestMethod,omitempty"`
+	OperatorType  int        `gorm:"column:operator_type" json:"operatorType"`
+	OperatorName  *string    `gorm:"size:50;column:oper_name" json:"operName,omitempty"`
+	DeptName      *string    `gorm:"size:50;column:dept_name" json:"deptName,omitempty"`
+	OperUrl       *string    `gorm:"size:255;column:oper_url" json:"operUrl,omitempty"`
+	OperIP        *string    `gorm:"size:128;column:oper_ip" json:"operIp,omitempty"`
+	OperLocation  *string    `gorm:"size:255;column:oper_location" json:"operLocation,omitempty"`
+	OperParam     *string    `gorm:"type:text;column:oper_param" json:"operParam,omitempty"`
+	JsonResult    *string    `gorm:"type:text;column:json_result" json:"jsonResult,omitempty"`
+	Status        int        `gorm:"column:status" json:"status"`
+	ErrorMsg      *string    `gorm:"size:2000;column:error_msg" json:"errorMessage,omitempty"`
+	OperTime      time.Time  `gorm:"column:oper_time" json:"operTime"`
+	CostTime      int64      `gorm:"column:cost_time" json:"costTime"`
 }
 
 // LoginLog 登录日志模型
 type LoginLog struct {
 	BaseTimeLine
-	Username      string     `gorm:"size:50" json:"username,omitempty"`
-	IPAddr        string     `gorm:"size:128" json:"ipaddr,omitempty"`
-	LoginLocation *string    `gorm:"size:255" json:"loginLocation,omitempty"`
-	Browser       *string    `gorm:"size:50" json:"browser,omitempty"`
-	OS            *string    `gorm:"size:50" json:"os,omitempty"`
-	Status        int        `json:"status"`
-	Msg           *string    `gorm:"size:255" json:"msg,omitempty"`
-	LoginTime     time.Time  `json:"loginTime"`
+	Username      string     `gorm:"size:50;column:user_name" json:"userName,omitempty"`
+	IPAddr        string     `gorm:"size:128;column:ipaddr" json:"ipAddr,omitempty"`
+	LoginLocation *string    `gorm:"size:255;column:login_location" json:"loginLocation,omitempty"`
+	Browser       *string    `gorm:"size:50;column:browser" json:"browser,omitempty"`
+	OS            *string    `gorm:"size:50;column:os" json:"os,omitempty"`
+	Status        int        `gorm:"column:status" json:"status"`
+	Msg           *string    `gorm:"size:255;column:msg" json:"message,omitempty"`
+	LoginTime     time.Time  `gorm:"column:login_time" json:"loginTime"`
 }
 
 // MisfirePolicy 错误策略枚举

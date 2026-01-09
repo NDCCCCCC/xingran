@@ -383,6 +383,26 @@ func createRole(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
+		// 记录操作日志
+		clientIP := c.ClientIP()
+		operURL := c.Request.URL.String()
+		core.OperLogService.RecordAsync(
+			core.GetDB(),
+			"角色管理",
+			1, // 1=新增
+			"",
+			c.Request.Method,
+			operURL,
+			getUsernameFromContext(c),
+			getDeptNameFromContext(c, core.GetDB()),
+			&clientIP,
+			nil,
+			nil,
+			nil,
+			0,
+			0,
+		)
+
 		response.Success(c, role)
 	}
 }
@@ -676,6 +696,26 @@ func updateRole(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
+		// 记录操作日志
+		clientIP := c.ClientIP()
+		operURL := c.Request.URL.String()
+		core.OperLogService.RecordAsync(
+			core.GetDB(),
+			"角色管理",
+			2, // 2=修改
+			"",
+			c.Request.Method,
+			operURL,
+			getUsernameFromContext(c),
+			getDeptNameFromContext(c, core.GetDB()),
+			&clientIP,
+			nil,
+			nil,
+			nil,
+			0,
+			0,
+		)
+
 		response.Success(c, gin.H{"message": "更新成功"})
 	}
 }
@@ -757,6 +797,26 @@ func deleteRole(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
+		// 记录操作日志
+		clientIP := c.ClientIP()
+		operURL := c.Request.URL.String()
+		core.OperLogService.RecordAsync(
+			core.GetDB(),
+			"角色管理",
+			3, // 3=删除
+			"",
+			c.Request.Method,
+			operURL,
+			getUsernameFromContext(c),
+			getDeptNameFromContext(c, core.GetDB()),
+			&clientIP,
+			nil,
+			nil,
+			nil,
+			0,
+			0,
+		)
+
 		response.Success(c, gin.H{"message": "删除成功"})
 	}
 }
@@ -832,6 +892,26 @@ func batchDeleteRoles(core *core.Core) gin.HandlerFunc {
 			response.Error(c, response.ErrServerError, "批量删除角色失败")
 			return
 		}
+
+		// 记录操作日志
+		clientIP := c.ClientIP()
+		operURL := c.Request.URL.String()
+		core.OperLogService.RecordAsync(
+			core.GetDB(),
+			"角色管理",
+			3, // 3=删除
+			"",
+			c.Request.Method,
+			operURL,
+			getUsernameFromContext(c),
+			getDeptNameFromContext(c, core.GetDB()),
+			&clientIP,
+			nil,
+			nil,
+			nil,
+			0,
+			0,
+		)
 
 		response.Success(c, gin.H{"message": "批量删除成功"})
 	}
@@ -919,6 +999,26 @@ func updateRoleStatus(core *core.Core) gin.HandlerFunc {
 			response.Error(c, response.ErrServerError, "更新角色状态失败")
 			return
 		}
+
+		// 记录操作日志
+		clientIP := c.ClientIP()
+		operURL := c.Request.URL.String()
+		core.OperLogService.RecordAsync(
+			core.GetDB(),
+			"角色管理",
+			2, // 2=修改
+			"",
+			c.Request.Method,
+			operURL,
+			getUsernameFromContext(c),
+			getDeptNameFromContext(c, core.GetDB()),
+			&clientIP,
+			nil,
+			nil,
+			nil,
+			0,
+			0,
+		)
 
 		response.Success(c, gin.H{"message": "更新状态成功"})
 	}
@@ -1021,6 +1121,26 @@ func updateRoleMenus(core *core.Core) gin.HandlerFunc {
 			response.Error(c, response.ErrServerError, "更新菜单权限失败")
 			return
 		}
+
+		// 记录操作日志
+		clientIP := c.ClientIP()
+		operURL := c.Request.URL.String()
+		core.OperLogService.RecordAsync(
+			core.GetDB(),
+			"角色管理",
+			4, // 4=授权
+			"",
+			c.Request.Method,
+			operURL,
+			getUsernameFromContext(c),
+			getDeptNameFromContext(c, core.GetDB()),
+			&clientIP,
+			nil,
+			nil,
+			nil,
+			0,
+			0,
+		)
 
 		response.Success(c, gin.H{"message": "菜单权限分配成功"})
 	}

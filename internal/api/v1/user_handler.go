@@ -362,6 +362,26 @@ func createUser(core *core.Core) gin.HandlerFunc {
 			// 记录错误但不影响响应
 		}
 
+		// 记录操作日志
+		clientIP := c.ClientIP()
+		operURL := c.Request.URL.String()
+		core.OperLogService.RecordAsync(
+			core.GetDB(),
+			"用户管理",
+			1, // 1=新增
+			"",
+			c.Request.Method,
+			operURL,
+			getUsernameFromContext(c),
+			getDeptNameFromContext(c, core.GetDB()),
+			&clientIP,
+			nil,
+			nil,
+			nil,
+			0,
+			0,
+		)
+
 		response.Success(c, gin.H{
 			"id": user.ID,
 		})
@@ -478,12 +498,21 @@ func updateUser(core *core.Core) gin.HandlerFunc {
 		// 状态字段保持不变：0=启用,1=禁用
 		updates["status"] = models.UserStatus(req.Status)
 
+		// 处理部门更新（包括清空部门的情况）
 		if req.DeptID != nil {
-			updates["dept_id"] = req.DeptID
-			// 同时更新部门名称
-			var dept models.Department
-			if err := core.DB.GetDB().Where("id = ?", *req.DeptID).First(&dept).Error; err == nil {
-				updates["dept_name"] = dept.DeptName
+			if *req.DeptID == "" {
+				// 清空部门
+				emptyStr := ""
+				updates["dept_id"] = nil
+				updates["dept_name"] = &emptyStr
+			} else {
+				// 设置新部门
+				updates["dept_id"] = req.DeptID
+				// 同时更新部门名称
+				var dept models.Department
+				if err := core.DB.GetDB().Where("id = ?", *req.DeptID).First(&dept).Error; err == nil {
+					updates["dept_name"] = dept.DeptName
+				}
 			}
 		}
 		if req.Remark != nil {
@@ -522,6 +551,26 @@ func updateUser(core *core.Core) gin.HandlerFunc {
 		if err := core.UserCacheService.InvalidateUserCache(c.Request.Context(), userID); err != nil {
 			// 记录错误但不影响响应
 		}
+
+		// 记录操作日志
+		clientIP := c.ClientIP()
+		operURL := c.Request.URL.String()
+		core.OperLogService.RecordAsync(
+			core.GetDB(),
+			"用户管理",
+			2, // 2=修改
+			"",
+			c.Request.Method,
+			operURL,
+			getUsernameFromContext(c),
+			getDeptNameFromContext(c, core.GetDB()),
+			&clientIP,
+			nil,
+			nil,
+			nil,
+			0,
+			0,
+		)
 
 		response.Success(c, nil)
 	}
@@ -562,6 +611,26 @@ func deleteUser(core *core.Core) gin.HandlerFunc {
 			// 记录错误但不影响响应
 		}
 
+		// 记录操作日志
+		clientIP := c.ClientIP()
+		operURL := c.Request.URL.String()
+		core.OperLogService.RecordAsync(
+			core.GetDB(),
+			"用户管理",
+			3, // 3=删除
+			"",
+			c.Request.Method,
+			operURL,
+			getUsernameFromContext(c),
+			getDeptNameFromContext(c, core.GetDB()),
+			&clientIP,
+			nil,
+			nil,
+			nil,
+			0,
+			0,
+		)
+
 		// TODO: 删除用户角色和岗位关联
 
 		response.Success(c, nil)
@@ -595,6 +664,26 @@ func batchDeleteUsers(core *core.Core) gin.HandlerFunc {
 		if err := core.UserCacheService.InvalidateAllUserCache(c.Request.Context()); err != nil {
 			// 记录错误但不影响响应
 		}
+
+		// 记录操作日志
+		clientIP := c.ClientIP()
+		operURL := c.Request.URL.String()
+		core.OperLogService.RecordAsync(
+			core.GetDB(),
+			"用户管理",
+			3, // 3=删除
+			"",
+			c.Request.Method,
+			operURL,
+			getUsernameFromContext(c),
+			getDeptNameFromContext(c, core.GetDB()),
+			&clientIP,
+			nil,
+			nil,
+			nil,
+			0,
+			0,
+		)
 
 		// TODO: 删除用户角色和岗位关联
 
@@ -677,6 +766,26 @@ func updateUserStatus(core *core.Core) gin.HandlerFunc {
 			// 记录错误但不影响响应
 		}
 
+		// 记录操作日志
+		clientIP := c.ClientIP()
+		operURL := c.Request.URL.String()
+		core.OperLogService.RecordAsync(
+			core.GetDB(),
+			"用户管理",
+			2, // 2=修改
+			"",
+			c.Request.Method,
+			operURL,
+			getUsernameFromContext(c),
+			getDeptNameFromContext(c, core.GetDB()),
+			&clientIP,
+			nil,
+			nil,
+			nil,
+			0,
+			0,
+		)
+
 		response.Success(c, gin.H{"message": "更新状态成功"})
 	}
 }
@@ -743,6 +852,26 @@ func resetPassword(core *core.Core) gin.HandlerFunc {
 			response.Error(c, response.ErrServerError, "重置密码失败")
 			return
 		}
+
+		// 记录操作日志
+		clientIP := c.ClientIP()
+		operURL := c.Request.URL.String()
+		core.OperLogService.RecordAsync(
+			core.GetDB(),
+			"用户管理",
+			2, // 2=修改
+			"",
+			c.Request.Method,
+			operURL,
+			getUsernameFromContext(c),
+			getDeptNameFromContext(c, core.GetDB()),
+			&clientIP,
+			nil,
+			nil,
+			nil,
+			0,
+			0,
+		)
 
 		response.Success(c, gin.H{
 			"message": "密码重置成功",

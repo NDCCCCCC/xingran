@@ -1682,6 +1682,26 @@ func (s *WorkOrderService) GenerateWorkOrderFromTemplate(ctx context.Context, te
 		isAutoAssigned = false
 	}
 
+	// 使用模板的创建者作为自动生成工单的提交者
+	// 注意：CreatedBy 存储的是用户名，需要转换为用户ID（UUID）
+	submitterID := ""
+	if template.CreatedBy != "" {
+		var submitter models.User
+		if err := s.db.WithContext(ctx).Where("username = ?", template.CreatedBy).First(&submitter).Error; err == nil {
+			submitterID = submitter.ID
+		}
+	}
+
+	// 如果没有找到提交者，使用系统管理员用户
+	if submitterID == "" {
+		var adminUser models.User
+		if err := s.db.WithContext(ctx).Where("username = ?", "admin").First(&adminUser).Error; err == nil {
+			submitterID = adminUser.ID
+		} else {
+			return nil, fmt.Errorf("无法确定工单提交者：未找到模板创建者或系统管理员")
+		}
+	}
+
 	// 创建工单
 	workOrder := &models.WorkOrder{
 		Title:          title,
@@ -1690,12 +1710,17 @@ func (s *WorkOrderService) GenerateWorkOrderFromTemplate(ctx context.Context, te
 		Priority:       template.Priority,
 		Status:         models.WorkOrderStatusPending,
 		Description:    description,
+		SubmitterID:    submitterID,
 		AssigneeID:     assigneeID,
 		IsAutoAssigned: isAutoAssigned,
 		DutyPoolID:     dutyPoolID,
 		DutyType:       dutyType,
 		AssignStrategy: string(template.AssignType),
 	}
+
+	// 设置审计字段
+	workOrder.CreatedBy = template.CreatedBy
+	workOrder.UpdatedBy = template.CreatedBy
 
 	if err := s.db.WithContext(ctx).Create(workOrder).Error; err != nil {
 		return nil, fmt.Errorf("创建工单失败: %w", err)

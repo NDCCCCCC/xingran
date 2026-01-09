@@ -209,6 +209,26 @@ func createMenu(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
+		// 记录操作日志
+		clientIP := c.ClientIP()
+		operURL := c.Request.URL.String()
+		core.OperLogService.RecordAsync(
+			core.GetDB(),
+			"菜单管理",
+			1, // 1=新增
+			"",
+			c.Request.Method,
+			operURL,
+			getUsernameFromContext(c),
+			getDeptNameFromContext(c, core.GetDB()),
+			&clientIP,
+			nil,
+			nil,
+			nil,
+			0,
+			0,
+		)
+
 		response.Success(c, menu)
 	}
 }
@@ -332,6 +352,26 @@ func updateMenu(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
+		// 记录操作日志
+		clientIP := c.ClientIP()
+		operURL := c.Request.URL.String()
+		core.OperLogService.RecordAsync(
+			core.GetDB(),
+			"菜单管理",
+			2, // 2=修改
+			"",
+			c.Request.Method,
+			operURL,
+			getUsernameFromContext(c),
+			getDeptNameFromContext(c, core.GetDB()),
+			&clientIP,
+			nil,
+			nil,
+			nil,
+			0,
+			0,
+		)
+
 		response.Success(c, gin.H{"message": "更新成功"})
 	}
 }
@@ -416,6 +456,26 @@ func deleteMenu(core *core.Core) gin.HandlerFunc {
 		if err := core.MenuCacheService.InvalidateMenuCache(c.Request.Context()); err != nil {
 			// 记录错误但不影响响应
 		}
+
+		// 记录操作日志
+		clientIP := c.ClientIP()
+		operURL := c.Request.URL.String()
+		core.OperLogService.RecordAsync(
+			core.GetDB(),
+			"菜单管理",
+			3, // 3=删除
+			"",
+			c.Request.Method,
+			operURL,
+			getUsernameFromContext(c),
+			getDeptNameFromContext(c, core.GetDB()),
+			&clientIP,
+			nil,
+			nil,
+			nil,
+			0,
+			0,
+		)
 
 		deletedCount := len(menuIdsToDelete)
 		if cascade && deletedCount > 1 {
@@ -533,6 +593,26 @@ func batchDeleteMenus(core *core.Core) gin.HandlerFunc {
 		if err := core.MenuCacheService.InvalidateMenuCache(c.Request.Context()); err != nil {
 			// 记录错误但不影响响应
 		}
+
+		// 记录操作日志
+		clientIP := c.ClientIP()
+		operURL := c.Request.URL.String()
+		core.OperLogService.RecordAsync(
+			core.GetDB(),
+			"菜单管理",
+			3, // 3=删除
+			"",
+			c.Request.Method,
+			operURL,
+			getUsernameFromContext(c),
+			getDeptNameFromContext(c, core.GetDB()),
+			&clientIP,
+			nil,
+			nil,
+			nil,
+			0,
+			0,
+		)
 
 		response.Success(c, gin.H{
 			"message":     "批量删除成功",

@@ -191,6 +191,26 @@ func createPost(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
+		// 记录操作日志
+		clientIP := c.ClientIP()
+		operURL := c.Request.URL.String()
+		core.OperLogService.RecordAsync(
+			core.GetDB(),
+			"岗位管理",
+			1, // 1=新增
+			"",
+			c.Request.Method,
+			operURL,
+			getUsernameFromContext(c),
+			getDeptNameFromContext(c, core.GetDB()),
+			&clientIP,
+			nil,
+			nil,
+			nil,
+			0,
+			0,
+		)
+
 		response.Success(c, gin.H{"id": post.ID})
 	}
 }
@@ -267,6 +287,26 @@ func updatePost(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
+		// 记录操作日志
+		clientIP := c.ClientIP()
+		operURL := c.Request.URL.String()
+		core.OperLogService.RecordAsync(
+			core.GetDB(),
+			"岗位管理",
+			2, // 2=修改
+			"",
+			c.Request.Method,
+			operURL,
+			getUsernameFromContext(c),
+			getDeptNameFromContext(c, core.GetDB()),
+			&clientIP,
+			nil,
+			nil,
+			nil,
+			0,
+			0,
+		)
+
 		response.Success(c, nil)
 	}
 }
@@ -302,6 +342,26 @@ func deletePost(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
+		// 记录操作日志
+		clientIP := c.ClientIP()
+		operURL := c.Request.URL.String()
+		core.OperLogService.RecordAsync(
+			core.GetDB(),
+			"岗位管理",
+			3, // 3=删除
+			"",
+			c.Request.Method,
+			operURL,
+			getUsernameFromContext(c),
+			getDeptNameFromContext(c, core.GetDB()),
+			&clientIP,
+			nil,
+			nil,
+			nil,
+			0,
+			0,
+		)
+
 		response.Success(c, nil)
 	}
 }
@@ -336,6 +396,26 @@ func batchDeletePosts(core *core.Core) gin.HandlerFunc {
 		if err := core.PostCacheService.InvalidatePostCache(c.Request.Context()); err != nil {
 			// 记录错误但不影响响应
 		}
+
+		// 记录操作日志
+		clientIP := c.ClientIP()
+		operURL := c.Request.URL.String()
+		core.OperLogService.RecordAsync(
+			core.GetDB(),
+			"岗位管理",
+			3, // 3=删除
+			"",
+			c.Request.Method,
+			operURL,
+			getUsernameFromContext(c),
+			getDeptNameFromContext(c, core.GetDB()),
+			&clientIP,
+			nil,
+			nil,
+			nil,
+			0,
+			0,
+		)
 
 		response.Success(c, nil)
 	}

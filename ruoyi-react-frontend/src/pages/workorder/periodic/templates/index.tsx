@@ -448,19 +448,19 @@ const PeriodicTemplatePage: React.FC = () => {
     },
   ];
 
-  // Cron 表达式说明
+  // Cron 表达式说明（5段式：分 时 日 月 周）
   const cronHelp = (
     <div className="text-sm text-gray-500">
-      <p className="font-semibold mb-2">Cron 表达式格式：秒 分 时 日 月 周</p>
+      <p className="font-semibold mb-2">Cron 表达式格式：分 时 日 月 周</p>
       <div className="grid grid-cols-2 gap-2">
-        <div><code>* * * * * *</code> - 每秒执行</div>
-        <div><code>0 * * * * *</code> - 每分钟执行</div>
-        <div><code>0 0 * * * *</code> - 每小时执行</div>
-        <div><code>0 0 0 * * *</code> - 每天零点执行</div>
-        <div><code>0 0 9 * * *</code> - 每天早上9点执行</div>
+        <div><code>* * * * *</code> - 每分钟执行</div>
+        <div><code>0 * * * *</code> - 每小时执行</div>
+        <div><code>0 0 * * *</code> - 每天零点执行</div>
+        <div><code>0 0 9 * *</code> - 每天早上9点执行</div>
         <div><code>0 0 9 * * 1-5</code> - 周一到周五早上9点</div>
-        <div><code>0 0 0 1 * *</code> - 每月1号零点执行</div>
-        <div><code>0 0 0 1 1 *</code> - 每年1月1号零点执行</div>
+        <div><code>0 0 0 1 *</code> - 每月1号零点执行</div>
+        <div><code>0 0 * * 1</code> - 每周一零点执行</div>
+        <div><code>0 0 0 1 1</code> - 每年1月1号零点执行</div>
       </div>
     </div>
   );
@@ -556,9 +556,8 @@ const PeriodicTemplatePage: React.FC = () => {
         onOk={handleModalOk}
         onCancel={() => setModalVisible(false)}
         width={700}
-        destroyOnHidden
       >
-        <Form form={editForm} layout="vertical" preserve={false}>
+        <Form form={editForm} layout="vertical">
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item

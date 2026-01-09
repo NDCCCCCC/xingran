@@ -142,17 +142,21 @@ func login(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		// 记录登录失败
+		// 记录登录失败日志
 		if failErr := core.CaptchaService.RecordLoginFailure(c.Request.Context(), req.Username); failErr != nil {
 			response.Error(c, response.ErrCredentialInvalid, failErr.Error())
 		} else {
 			response.Error(c, response.ErrCredentialInvalid)
 		}
+		recordLoginLog(c, core, req.Username, 1, "用户或密码错误")
 		return
 	}
 
 	// 登录成功，清除失败记录
 	core.CaptchaService.ClearLoginFailure(c.Request.Context(), req.Username)
+
+	// 记录登录成功日志
+	recordLoginLog(c, core, req.Username, 0, "登录成功")
 
 	// 查询用户角色
 	var userRoles []models.UserRole
@@ -320,4 +324,94 @@ func getPublicKey(core *core.Core) gin.HandlerFunc {
 			"publicKey": publicKey,
 		})
 	}
+}
+
+// recordLoginLog 记录登录日志
+func recordLoginLog(c *gin.Context, core *core.Core, username string, status int, msg string) {
+	// 获取客户端信息
+	clientIP := c.ClientIP()
+	userAgent := c.Request.UserAgent()
+
+	// 解析 User-Agent 获取浏览器和操作系统信息
+	browser, os := parseUserAgent(userAgent)
+
+	// 获取 IP 地理位置信息（可选，这里暂时留空）
+	var loginLocation *string
+
+	loginLog := models.LoginLog{
+		Username:      username,
+		IPAddr:        clientIP,
+		LoginLocation: loginLocation,
+		Browser:       &browser,
+		OS:            &os,
+		Status:        status,
+		Msg:           &msg,
+		LoginTime:     time.Now(),
+	}
+
+	// 异步写入数据库，不影响登录响应速度
+	go func() {
+		if err := core.DB.GetDB().Create(&loginLog).Error; err != nil {
+			fmt.Printf("记录登录日志失败: %v\n", err)
+		}
+	}()
+}
+
+// parseUserAgent 解析 User-Agent 获取浏览器和操作系统信息
+func parseUserAgent(userAgent string) (browser, os string) {
+	// 简单的 User-Agent 解析
+	if userAgent == "" {
+		return "Unknown", "Unknown"
+	}
+
+	// 检测浏览器
+	if contains(userAgent, "Edg") {
+		browser = "Edge"
+	} else if contains(userAgent, "Chrome") {
+		browser = "Chrome"
+	} else if contains(userAgent, "Firefox") {
+		browser = "Firefox"
+	} else if contains(userAgent, "Safari") && !contains(userAgent, "Chrome") {
+		browser = "Safari"
+	} else if contains(userAgent, "Opera") || contains(userAgent, "OPR") {
+		browser = "Opera"
+	} else {
+		browser = "Other"
+	}
+
+	// 检测操作系统
+	if contains(userAgent, "Windows") {
+		os = "Windows"
+	} else if contains(userAgent, "Mac OS X") || contains(userAgent, "Macintosh") {
+		os = "Mac OS X"
+	} else if contains(userAgent, "Linux") {
+		os = "Linux"
+	} else if contains(userAgent, "Android") {
+		os = "Android"
+	} else if contains(userAgent, "iOS") || contains(userAgent, "iPhone") || contains(userAgent, "iPad") {
+		os = "iOS"
+	} else {
+		os = "Other"
+	}
+
+	return browser, os
+}
+
+// contains 检查字符串是否包含子串（不区分大小写）
+func contains(str, substr string) bool {
+	return len(str) >= len(substr) && (str == substr ||
+		len(str) > len(substr) && (
+			str[:len(substr)] == substr ||
+			str[len(str)-len(substr):] == substr ||
+			findSubstring(str, substr)))
+}
+
+// findSubstring 在字符串中查找子串
+func findSubstring(str, substr string) bool {
+	for i := 0; i <= len(str)-len(substr); i++ {
+		if str[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
 }

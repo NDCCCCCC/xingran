@@ -40,6 +40,7 @@ type Core struct {
 	NoticeHub               *websocket.NoticeHub     // WebSocket通知中心
 	CaptchaService          *CaptchaService          // 验证码服务
 	CaptchaBackgroundService *CaptchaBackgroundService // 验证码背景图服务
+	OperLogService          services.OperLogService // 操作日志服务
 
 	// 数据缓存服务（方案1：统一缓存架构）
 	DataCacheService        *services.DataCacheService    // 通用数据缓存服务
@@ -271,6 +272,10 @@ func (c *Core) Init() error {
 	}
 
 	log.Println("验证码背景图服务初始化完成")
+
+	// 15. 初始化操作日志服务
+	c.OperLogService = services.NewOperLogService()
+	log.Println("操作日志服务初始化完成")
 
 	return nil
 }
