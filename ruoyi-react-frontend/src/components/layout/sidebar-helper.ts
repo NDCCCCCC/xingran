@@ -60,6 +60,9 @@ export function buildMenuPathMap(
       if (menuPath) {
         const normalizedPath = menuPath.startsWith('/') ? menuPath.slice(1) : menuPath;
         pathMap.set(normalizedPath, menuInfo);
+
+        // 同时存储带前导斜杠的路径（用于匹配 Ant Design Menu 的 key）
+        pathMap.set(menuPath, menuInfo);
       }
 
       // 2. 存储菜单 ID（用于通过 ID 查找）

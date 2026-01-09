@@ -27,6 +27,22 @@ const DeptTree: React.FC<DeptTreeProps> = ({
   const [searchValue, setSearchValue] = useState('');
   const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([]);
   const [autoExpandParent, setAutoExpandParent] = useState(true);
+  const [prevExpandedKeys, setPrevExpandedKeys] = useState<React.Key[]>([]);
+
+  // 获取所有父节点（有子节点的节点）的 key
+  const getParentKeys = (data: DataNode[]): React.Key[] => {
+    const parentKeys: React.Key[] = [];
+    const traverse = (nodes: DataNode[]) => {
+      nodes.forEach(node => {
+        if (node.children && node.children.length > 0) {
+          parentKeys.push(node.key);
+          traverse(node.children);
+        }
+      });
+    };
+    traverse(data);
+    return parentKeys;
+  };
 
   // 加载部门树数据
   const loadDeptTree = async () => {
@@ -37,9 +53,11 @@ const DeptTree: React.FC<DeptTreeProps> = ({
       const treeData = transformToTreeData(deptData);
       setTreeData(treeData);
 
-      // 默认展开所有节点
-      const allKeys = getAllKeys(treeData);
-      setExpandedKeys(allKeys);
+      // 默认只展开第一个父节点（手风琴模式）
+      const parentKeys = getParentKeys(treeData);
+      const firstParentKey = parentKeys.length > 0 ? [parentKeys[0]] : [];
+      setExpandedKeys(firstParentKey);
+      setPrevExpandedKeys(firstParentKey);
     } catch (error) {
       console.error('加载部门树失败:', error);
       setTreeData([]);
@@ -81,9 +99,11 @@ const DeptTree: React.FC<DeptTreeProps> = ({
   const onSearch = (value: string) => {
     setSearchValue(value);
     if (!value) {
-      // 如果搜索为空，展开所有节点
-      const allKeys = getAllKeys(treeData);
-      setExpandedKeys(allKeys);
+      // 如果搜索为空，只展开第一个父节点（手风琴模式）
+      const parentKeys = getParentKeys(treeData);
+      const firstParentKey = parentKeys.length > 0 ? [parentKeys[0]] : [];
+      setExpandedKeys(firstParentKey);
+      setPrevExpandedKeys(firstParentKey);
       setAutoExpandParent(true);
       return;
     }
@@ -91,6 +111,7 @@ const DeptTree: React.FC<DeptTreeProps> = ({
     // 搜索匹配的节点
     const expandedKeys = getExpandedKeys(treeData, value);
     setExpandedKeys(expandedKeys);
+    setPrevExpandedKeys(expandedKeys);
     setAutoExpandParent(true);
   };
 
@@ -112,9 +133,31 @@ const DeptTree: React.FC<DeptTreeProps> = ({
     return expandedKeys;
   };
 
-  // 树节点展开处理
+  // 树节点展开处理 - 实现手风琴效果（同一时间只展开一个节点）
   const onExpand = (expandedKeys: React.Key[]) => {
-    setExpandedKeys(expandedKeys);
+    // 获取所有父节点的 key（排除叶子节点）
+    const parentKeys = getParentKeys(treeData);
+
+    // 找出当前展开的父节点
+    const currentlyExpanded = expandedKeys.filter(key => parentKeys.includes(key));
+    const previouslyExpanded = prevExpandedKeys.filter(key => parentKeys.includes(key));
+
+    // 判断是展开还是折叠操作
+    if (currentlyExpanded.length > previouslyExpanded.length) {
+      // 展开操作：找出新展开的节点，只保留它（手风琴效果）
+      const newExpandedKey = currentlyExpanded.find(key => !previouslyExpanded.includes(key));
+      if (newExpandedKey) {
+        setExpandedKeys([newExpandedKey]);
+        setPrevExpandedKeys([newExpandedKey]);
+      } else {
+        setExpandedKeys(expandedKeys);
+        setPrevExpandedKeys(expandedKeys);
+      }
+    } else {
+      // 折叠操作：使用新的展开键列表
+      setExpandedKeys(expandedKeys);
+      setPrevExpandedKeys(expandedKeys);
+    }
     setAutoExpandParent(false);
   };
 

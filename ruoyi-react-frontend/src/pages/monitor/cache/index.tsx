@@ -186,7 +186,6 @@ const CacheManager: React.FC = () => {
       });
 
       message.success('批量操作成功');
-      setBatchModalVisible(false);
       fetchCaches();
     } catch (error) {
       console.error('批量操作失败:', error);

@@ -145,7 +145,7 @@ export function deleteKnowledgeArticle(id: string): Promise<BaseResponse<{ messa
   return post(`/knowledge/articles/${id}/delete`);
 }
 
-export function searchKnowledgeArticles(data: SearchKnowledgeRequest): Promise<BaseResponse<KnowledgeArticle[]>> {
+export function searchKnowledgeArticles(data: SearchKnowledgeRequest): Promise<BaseResponse<{ list: KnowledgeArticle[]; total: number }>> {
   return post('/knowledge/articles/search', data);
 }
 

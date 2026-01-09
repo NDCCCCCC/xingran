@@ -189,9 +189,11 @@ func (r *RedisCache) Keys(ctx context.Context, pattern string) ([]string, error)
 
 	// 移除前缀
 	if r.prefix != "" {
-		prefixLen := len(r.prefix) + 1
+		prefixWithColon := r.prefix + ":"
+		prefixLen := len(prefixWithColon)
 		for i, key := range keys {
-			if len(key) > prefixLen {
+			// 只有当键以前缀开头时才移除前缀
+			if strings.HasPrefix(key, prefixWithColon) && len(key) > prefixLen {
 				keys[i] = key[prefixLen:]
 			}
 		}
@@ -573,6 +575,13 @@ func (m *MultiLevelCache) MSet(ctx context.Context, pairs ...interface{}) error 
 }
 
 func (m *MultiLevelCache) MDelete(ctx context.Context, keys ...string) error {
+	// 同时删除 L1 和 L2 的缓存
+	// L1 删除失败不影响 L2 删除，记录错误但不中断
+	if err := m.l1Cache.MDelete(ctx, keys...); err != nil {
+		// 记录 L1 删除失败，但继续删除 L2
+		_ = err
+	}
+	// L2 删除失败则返回错误
 	return m.l2Cache.MDelete(ctx, keys...)
 }
 
@@ -601,7 +610,10 @@ func (m *MultiLevelCache) TTL(ctx context.Context, key string) (time.Duration, e
 }
 
 func (m *MultiLevelCache) Keys(ctx context.Context, pattern string) ([]string, error) {
-	return m.l2Cache.Keys(ctx, pattern)
+	// 返回 L1 和 L2 的所有键（去重）
+	l1Keys, _ := m.l1Cache.Keys(ctx, pattern)
+	l2Keys, _ := m.l2Cache.Keys(ctx, pattern)
+	return m.mergeKeys(l1Keys, l2Keys), nil
 }
 
 // KeysByLevel 根据层级获取缓存键

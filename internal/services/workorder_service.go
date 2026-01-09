@@ -1178,12 +1178,12 @@ func (s *WorkOrderService) GetWorkOrderStatistics(ctx context.Context) (*WorkOrd
 	}
 	var categoryResults []CategoryStat
 	if err := s.db.WithContext(ctx).Model(&models.WorkOrder{}).
-		Select("sys_work_order_category.id as category_id, "+
-			"sys_work_order_category.category_name, "+
+		Select("sys_workorder_category.id as category_id, "+
+			"sys_workorder_category.category_name, "+
 			"count(*) as count").
-		Joins("INNER JOIN sys_work_order_category ON "+
-			"sys_work_order_category.id = sys_work_orders.category_id").
-		Group("sys_work_order_category.id, sys_work_order_category.category_name").
+		Joins("INNER JOIN sys_workorder_category ON "+
+			"sys_workorder_category.id = sys_work_orders.category_id").
+		Group("sys_workorder_category.id, sys_workorder_category.category_name").
 		Scan(&categoryResults).Error; err != nil {
 		return nil, fmt.Errorf("按分类统计失败: %w", err)
 	}

@@ -61,7 +61,7 @@ const KnowledgeViewPage: React.FC = () => {
         categoryId: selectedCategory,
         tagId: selectedTag,
       });
-      setArticles(result.data || []);
+      setArticles(result.data?.list || []);
     } catch (error) {
       message.error('搜索失败');
     } finally {
