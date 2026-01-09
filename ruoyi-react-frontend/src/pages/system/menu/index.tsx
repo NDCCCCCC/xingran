@@ -556,10 +556,10 @@ const MenuManagement: React.FC = () => {
             <Form.Item name="menuName" label="菜单名称">
               <Input placeholder="请输入菜单名称" />
             </Form.Item>
-            <Form.Item name="status" label="状态">
+            <Form.Item name="status" label="菜单状态">
               <Select placeholder="请选择状态" style={{ width: 120 }} allowClear>
-                <Option value="0">显示</Option>
-                <Option value="1">隐藏</Option>
+                <Option value="0">正常</Option>
+                <Option value="1">停用</Option>
               </Select>
             </Form.Item>
             <Form.Item>

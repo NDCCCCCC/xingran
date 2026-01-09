@@ -44,13 +44,12 @@ func (s *MenuCacheService) GetAllMenusWithCache(ctx context.Context) ([]*models.
 	return menus, nil
 }
 
-// queryAllMenus 从数据库查询所有菜单
+// queryAllMenus 从数据库查询所有菜单（包括停用的菜单，用于管理界面）
 func (s *MenuCacheService) queryAllMenus() ([]*models.Menu, error) {
 	var menus []models.Menu
 
-	if err := s.db.Where("status = ?", models.MenuStatusNormal).
-		Order("order_num ASC").
-		Find(&menus).Error; err != nil {
+	// 注意：不添加 status 过滤条件，确保管理界面能看到所有菜单（包括停用的）
+	if err := s.db.Order("order_num ASC").Find(&menus).Error; err != nil {
 		return nil, fmt.Errorf("查询菜单列表失败: %w", err)
 	}
 

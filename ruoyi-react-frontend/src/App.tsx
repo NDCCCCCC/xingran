@@ -46,6 +46,7 @@ import SystemNoticesPage from '@/pages/system/notice';
 import AdminNoticeDetailPage from '@/pages/system/notice/detail';
 // 值班管理页面
 import DutyPoolPage from '@/pages/duty/pools';
+import DutyManagementPage from '@/pages/duty/management';
 import DutySchedulePage from '@/pages/duty/schedules';
 import DutyHolidayPage from '@/pages/duty/holidays';
 import DutyConfigPage from '@/pages/duty/config';
@@ -173,16 +174,18 @@ function App() {
 
                       {/* 值班管理路由 */}
                       <Route path="/duty/pools" element={<DutyPoolPage />} />
-                      <Route path="/duty/schedules" element={<DutySchedulePage />} />
-                      <Route path="/duty/holidays" element={<DutyHolidayPage />} />
-                      <Route path="/duty/config" element={<DutyConfigPage />} />
+                      <Route path="/duty/management" element={<DutyManagementPage />} />
+                      <Route path="/duty/schedules" element={<Navigate to="/duty/management" replace />} />
+                      <Route path="/duty/holidays" element={<Navigate to="/duty/management" replace />} />
+                      <Route path="/duty/config" element={<Navigate to="/duty/management" replace />} />
                       <Route path="/duty/my-duty" element={<MyDutyPage />} />
 
                       {/* 运维管理 - 值班路由（带 ops 前缀） */}
                       <Route path="/ops/duty/pools" element={<DutyPoolPage />} />
-                      <Route path="/ops/duty/schedules" element={<DutySchedulePage />} />
-                      <Route path="/ops/duty/holidays" element={<DutyHolidayPage />} />
-                      <Route path="/ops/duty/config" element={<DutyConfigPage />} />
+                      <Route path="/ops/duty/management" element={<DutyManagementPage />} />
+                      <Route path="/ops/duty/schedules" element={<Navigate to="/ops/duty/management" replace />} />
+                      <Route path="/ops/duty/holidays" element={<Navigate to="/ops/duty/management" replace />} />
+                      <Route path="/ops/duty/config" element={<Navigate to="/ops/duty/management" replace />} />
                       <Route path="/ops/duty/my-duty" element={<MyDutyPage />} />
 
                       {/* 运维工单管理路由 */}
