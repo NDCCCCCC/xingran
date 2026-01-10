@@ -8,6 +8,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/scheduler"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/websocket"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/permission"
 )
@@ -27,6 +28,44 @@ func (a *noticeHubAdapter) BroadcastToUsers(userIDs []string, message interface{
 func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 	// 添加请求ID中间件
 	r.Use(middleware.RequestID())
+
+	// 创建请求加密器（使用 SM2+SM4 混合加密）
+	// SM4-CBC 加密请求体，SM2 加密 SM4 密钥
+	var encryptor *crypto.RequestEncryptor
+	if core.Config.Security.RequestEncryption.Enabled {
+		sm2PrivateKey, sm2PublicKey := core.JWTManager.GetSM2KeyPair()
+		if sm2PrivateKey != nil && sm2PublicKey != nil {
+			encryptor = crypto.NewRequestEncryptor(sm2PrivateKey, sm2PublicKey)
+			log.Println("请求体加密器已初始化（SM2+SM4 混合加密）")
+		} else {
+			log.Println("警告: SM2 密钥对未配置，无法启用请求体加密")
+		}
+	}
+
+	// 解密配置
+	decryptionConfig := &middleware.RequestDecryptionConfig{
+		Enabled:           core.Config.Security.RequestEncryption.Enabled,
+		ExcludePaths:      core.Config.Security.RequestEncryption.ExcludePaths,
+		RequireEncryption: core.Config.Security.RequestEncryption.RequireEncryption,
+	}
+
+	// 响应加密配置
+	encryptionConfig := &middleware.ResponseEncryptionConfig{
+		Enabled:      core.Config.Security.RequestEncryption.Enabled,
+		ExcludePaths: core.Config.Security.RequestEncryption.ExcludePaths,
+	}
+
+	// 添加请求解密中间件（在认证之前）
+	if encryptor != nil && core.Config.Security.RequestEncryption.Enabled {
+		r.Use(middleware.RequestDecryption(encryptor, decryptionConfig))
+		log.Println("请求体解密中间件已启用")
+	}
+
+	// 添加响应加密中间件（在所有路由之后执行）
+	if encryptor != nil && core.Config.Security.RequestEncryption.Enabled {
+		r.Use(middleware.ResponseEncryption(encryptor, encryptionConfig))
+		log.Println("响应体加密中间件已启用")
+	}
 
 	// 创建并启动通知中心
 	noticeHub := websocket.NewNoticeHub()

@@ -34,15 +34,10 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       login: async (credentials: LoginRequest) => {
         set({ loading: true });
         try {
-          // 使用 SM2 加密密码
-          const encryptedRequest = await getEncryptedLoginRequest(
-            credentials.username,
-            credentials.password
-          );
-
-          // 添加验证码参数
+          // TODO: SM2 密码加密与后端 tjfoc/gmsm 不兼容，暂时使用明文传输（通过 HTTPS）
           const loginRequest = {
-            ...encryptedRequest,
+            username: credentials.username,
+            password: credentials.password,
             captcha: credentials.captcha,
             captchaId: credentials.captchaId,
           };

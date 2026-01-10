@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"strings"
 	"time"
 
@@ -136,31 +137,75 @@ func GenerateKeyPair() (*sm2.PrivateKey, *sm2.PublicKey, error) {
 }
 
 // ParsePrivateKeyFromHex 从十六进制字符串解析私钥
+// 支持两种格式：
+// 1. DER/ASN.1 格式（x509.ParseSm2PrivateKey）
+// 2. 原始 D 值格式（32字节，64个十六进制字符）
 func ParsePrivateKeyFromHex(hexKey string) (*sm2.PrivateKey, error) {
 	keyBytes, err := hex.DecodeString(hexKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode hex key: %w", err)
 	}
 
+	// 先尝试 DER 格式
 	privateKey, err := x509.ParseSm2PrivateKey(keyBytes)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse private key from hex: %w", err)
+	if err == nil {
+		return privateKey, nil
 	}
-	return privateKey, nil
+
+	// 如果 DER 解析失败，尝试原始 D 值格式（32字节）
+	if len(keyBytes) == 32 {
+		// 使用 sm2 生成密钥的方式来创建私钥
+		d := new(big.Int).SetBytes(keyBytes)
+
+		// 计算公钥点: Q = d * G
+		// SM2 使用的是 sm2p256v1 曲线（类似 P-256）
+		curve := sm2.P256Sm2()
+		x, y := curve.ScalarBaseMult(d.Bytes())
+
+		privateKey = &sm2.PrivateKey{
+			PublicKey: sm2.PublicKey{
+				Curve: curve,
+				X:     x,
+				Y:     y,
+			},
+			D: d,
+		}
+		return privateKey, nil
+	}
+
+	return nil, fmt.Errorf("failed to parse private key from hex (tried DER and raw D format): %w", err)
 }
 
 // ParsePublicKeyFromHex 从十六进制字符串解析公钥
+// 支持两种格式：
+// 1. DER/ASN.1 格式（x509.ParseSm2PublicKey）
+// 2. 原始格式 04 + X + Y（65字节，130个十六进制字符）
 func ParsePublicKeyFromHex(hexKey string) (*sm2.PublicKey, error) {
 	keyBytes, err := hex.DecodeString(hexKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode hex key: %w", err)
 	}
 
+	// 先尝试 DER 格式
 	publicKey, err := x509.ParseSm2PublicKey(keyBytes)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse public key from hex: %w", err)
+	if err == nil {
+		return publicKey, nil
 	}
-	return publicKey, nil
+
+	// 如果 DER 解析失败，尝试原始格式 04 + X + Y（65字节）
+	if len(keyBytes) == 65 && keyBytes[0] == 0x04 {
+		curve := sm2.P256Sm2()
+		x := new(big.Int).SetBytes(keyBytes[1:33])
+		y := new(big.Int).SetBytes(keyBytes[33:65])
+		publicKey = &sm2.PublicKey{
+			Curve: curve,
+			X:     x,
+			Y:     y,
+		}
+		return publicKey, nil
+	}
+
+	return nil, fmt.Errorf("failed to parse public key from hex (tried DER and raw 04+X+Y format): %w", err)
 }
 
 // Claims JWT声明结构体
@@ -279,20 +324,76 @@ func ValidateRefreshTokenWithSM2(tokenString string, publicKey *sm2.PublicKey) (
 }
 
 // EncryptWithSM2 使用 SM2 公钥加密数据（用于密码传输）
+// plaintext: 可以是明文字符串或十六进制字符串
+// 如果 plaintext 是偶数长度的十六进制字符串（如 SM4 密钥），会先解码为二进制再加密
 // 返回 Base64 编码的密文
 func EncryptWithSM2(plaintext string, publicKey *sm2.PublicKey) (string, error) {
 	if plaintext == "" {
 		return "", nil
 	}
 
+	// 检查是否为十六进制格式的二进制数据（如 SM4 密钥）
+	var dataToEncrypt []byte
+	if len(plaintext)%2 == 0 && isHexString(plaintext) {
+		// 将十六进制字符串解码为二进制数据
+		decoded, err := hex.DecodeString(plaintext)
+		if err == nil && len(decoded) <= 128 {
+			// 十六进制解码成功，使用二进制数据
+			dataToEncrypt = decoded
+		} else {
+			// 解码失败，使用原始字符串
+			dataToEncrypt = []byte(plaintext)
+		}
+	} else {
+		// 不是标准十六进制格式，使用原始字符串
+		dataToEncrypt = []byte(plaintext)
+	}
+
 	// SM2 加密（使用 C1C3C2 模式，mode = 1）
-	ciphertext, err := sm2.Encrypt(publicKey, []byte(plaintext), rand.Reader, 1)
+	ciphertext, err := sm2.Encrypt(publicKey, dataToEncrypt, rand.Reader, 1)
 	if err != nil {
 		return "", fmt.Errorf("SM2 加密失败: %w", err)
 	}
 
 	// 转换为 Base64 编码
 	return base64.StdEncoding.EncodeToString(ciphertext), nil
+}
+
+// isHexString 检查字符串是否为有效的十六进制格式
+func isHexString(s string) bool {
+	for _, c := range s {
+		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+			return false
+		}
+	}
+	return true
+}
+
+// decodeHexEncodedResult 处理 SM2 解密后的结果
+// 检测解密结果是否为十六进制编码的字符串（如 SM4 密钥）
+// 如果是 32 字节且可解码为十六进制，则解码为原始字节数组（16 字节）
+// 返回十六进制格式的字符串供后续使用
+func decodeHexEncodedResult(plaintext []byte, mode string) (string, error) {
+	hexStr := fmt.Sprintf("%x", plaintext)
+
+	// 检测模式：解密结果是否为十六进制字符串的 ASCII 表示
+	if len(plaintext) == 32 || len(plaintext) == 64 {
+		asciiStr := string(plaintext)
+
+		// 检查是否为有效的十六进制字符串
+		if isHexString(asciiStr) {
+			// 尝试解码十六进制字符串为原始字节数组
+			decoded, err := hex.DecodeString(asciiStr)
+			if err == nil && len(decoded) == 16 {
+				// 对于 SM4 密钥，期望得到 16 字节
+				decodedHex := fmt.Sprintf("%x", decoded)
+				return decodedHex, nil
+			}
+		}
+	}
+
+	// 默认返回原始十六进制编码
+	return hexStr, nil
 }
 
 // DecryptWithSM2 使用 SM2 私钥解密数据
@@ -308,13 +409,44 @@ func DecryptWithSM2(ciphertext string, privateKey *sm2.PrivateKey) (string, erro
 		return "", fmt.Errorf("Base64 解码失败: %w", err)
 	}
 
-	// SM2 解密（使用 C1C3C2 模式，mode = 1）
-	plaintext, err := sm2.Decrypt(privateKey, data, 1)
-	if err != nil {
-		return "", fmt.Errorf("SM2 解密失败: %w", err)
+	// 兼容 sm-crypto 格式：尝试多种解密方式
+	var plaintext []byte
+
+	// 尝试方式 1: 直接使用原始数据 mode 1
+	plaintext, err = sm2.Decrypt(privateKey, data, 1)
+	if err == nil {
+		return decodeHexEncodedResult(plaintext, "mode1 原始格式")
 	}
 
-	return string(plaintext), nil
+	// 尝试方式 2: 添加 04 前缀后 mode 1
+	if len(data) > 0 && data[0] != 0x04 {
+		decryptData := make([]byte, len(data)+1)
+		decryptData[0] = 0x04
+		copy(decryptData[1:], data)
+		plaintext, err = sm2.Decrypt(privateKey, decryptData, 1)
+		if err == nil {
+			return decodeHexEncodedResult(plaintext, "mode1 添加04前缀")
+		}
+	}
+
+	// 尝试方式 3: 直接使用原始数据 mode 0
+	plaintext, err = sm2.Decrypt(privateKey, data, 0)
+	if err == nil {
+		return decodeHexEncodedResult(plaintext, "mode0 原始格式")
+	}
+
+	// 尝试方式 4: 添加 04 前缀后 mode 0
+	if len(data) > 0 && data[0] != 0x04 {
+		decryptData := make([]byte, len(data)+1)
+		decryptData[0] = 0x04
+		copy(decryptData[1:], data)
+		plaintext, err = sm2.Decrypt(privateKey, decryptData, 0)
+		if err == nil {
+			return decodeHexEncodedResult(plaintext, "mode0 添加04前缀")
+		}
+	}
+
+	return "", fmt.Errorf("SM2 解密失败: 尝试了所有模式均失败")
 }
 
 // ExportPublicKeyToPEM 导出公钥为 PEM 格式

@@ -6,18 +6,38 @@
  * 文档: https://www.npmjs.com/package/sm-crypto
  */
 
-import { sm2 } from 'sm-crypto';
-
 // SM2 公钥缓存（十六进制格式）
 let cachedPublicKeyHex: string = '';
+
+// sm2 模块缓存
+let sm2Module: any = null;
+
+// 获取 sm2 对象（使用动态导入）
+async function getSM2() {
+  if (sm2Module) {
+    return sm2Module;
+  }
+
+  try {
+    // 动态导入 sm-crypto 包
+    const smCrypto = await import('sm-crypto');
+    sm2Module = smCrypto.sm2;
+    console.log('[SM2] sm-crypto 包加载成功');
+    return sm2Module;
+  } catch (error) {
+    console.error('[SM2] 加载 sm-crypto 失败:', error);
+    throw new Error('无法加载 sm-crypto 包，请确保已安装: npm install sm-crypto');
+  }
+}
 
 /**
  * 从后端获取 SM2 公钥
  * 后端直接返回十六进制格式的公钥，供 sm-crypto 使用
+ * @param forceRefresh 是否强制刷新缓存
  */
-export async function fetchPublicKey(): Promise<string> {
-  // 如果已经缓存，直接返回
-  if (cachedPublicKeyHex) {
+export async function fetchPublicKey(forceRefresh = false): Promise<string> {
+  // 如果已经缓存且不强制刷新，直接返回
+  if (!forceRefresh && cachedPublicKeyHex) {
     return cachedPublicKeyHex;
   }
 
@@ -27,6 +47,7 @@ export async function fetchPublicKey(): Promise<string> {
 
     if (result.code === 0 && result.data?.publicKey) {
       cachedPublicKeyHex = result.data.publicKey;
+      console.log('[SM2] 公钥已更新:', cachedPublicKeyHex.substring(0, 20) + '...');
       return cachedPublicKeyHex;
     } else {
       throw new Error('获取公钥失败: ' + (result.message || '未知错误'));
@@ -49,23 +70,24 @@ export async function fetchPublicKey(): Promise<string> {
  * - C2: 密文
  * - C3: 摘要值（32字节）
  */
-export function encryptWithSM2(password: string, publicKeyRaw: string): string {
+export async function encryptWithSM2(password: string, publicKeyRaw: string): Promise<string> {
   if (!password) {
     return '';
   }
 
   try {
+    const sm2 = await getSM2();
+
     // 使用 sm-crypto 进行 SM2 加密
-    // sm-crypto 和 tjfoc/gmsm 的 mode 定义可能相反
-    // 尝试使用 mode 0 (sm-crypto 可能是 C1C3C2)
-    let cipherText = sm2.doEncrypt(password, publicKeyRaw, 0);
+    // mode 1 = C1C3C2
+    // 注意：sm-crypto 生成的密文不带 04 前缀（原始格式）
+    // 后端 tjfoc/gmsm 期望带 04 前缀，由后端负责添加
+    let cipherText = sm2.doEncrypt(password, publicKeyRaw, 1);
 
-    // sm-crypto 生成的密文缺少 "04" 前缀（未压缩椭圆曲线点标识符）
-    if (!cipherText.startsWith('04')) {
-      cipherText = '04' + cipherText;
-    }
+    console.log('[SM2] 加密完成，密文长度（十六进制字符）:', cipherText.length);
 
-    // sm-crypto 返回的是十六进制字符串，转为 Base64
+    // sm-crypto 返回的是十六进制字符串，直接转为 Base64
+    // 后端会添加 04 前缀以兼容 tjfoc/gmsm 格式
     return hexToBase64(cipherText);
   } catch (error) {
     console.error('SM2 加密失败:', error);
@@ -79,12 +101,14 @@ export function encryptWithSM2(password: string, publicKeyRaw: string): string {
  * @param privateKeyRaw SM2 私钥（十六进制字符串）
  * @returns 明文
  */
-export function decryptWithSM2(cipherText: string, privateKeyRaw: string): string {
+export async function decryptWithSM2(cipherText: string, privateKeyRaw: string): Promise<string> {
   if (!cipherText) {
     return '';
   }
 
   try {
+    const sm2 = await getSM2();
+
     // Base64 转十六进制
     const cipherTextHex = base64ToHex(cipherText);
 
@@ -136,8 +160,7 @@ function base64ToHex(base64String: string): string {
  * 清除公钥缓存
  */
 export function clearPublicKeyCache(): void {
-  cachedPublicKey = '';
-  cachedPublicKeyRaw = '';
+  cachedPublicKeyHex = '';
 }
 
 /**
@@ -150,7 +173,7 @@ export async function getEncryptedLoginRequest(
 ): Promise<{ username: string; password: string; encryptedPassword: boolean }> {
   try {
     const publicKeyHex = await fetchPublicKey();
-    const encryptedPassword = encryptWithSM2(password, publicKeyHex);
+    const encryptedPassword = await encryptWithSM2(password, publicKeyHex);
 
     return {
       username,
@@ -171,16 +194,21 @@ export async function getEncryptedLoginRequest(
 /**
  * 检查是否支持 SM2 加密
  */
-export function isSM2Available(): boolean {
-  // sm-crypto 是纯 JavaScript 实现，始终可用
-  return true;
+export async function isSM2Available(): Promise<boolean> {
+  try {
+    await getSM2();
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
  * 生成 SM2 密钥对（用于测试）
  * 返回 { privateKey, publicKey }，都是十六进制字符串
  */
-export function generateSM2KeyPair(): { privateKey: string; publicKey: string } {
+export async function generateSM2KeyPair(): Promise<{ privateKey: string; publicKey: string }> {
+  const sm2 = await getSM2();
   const keyPair = sm2.generateKeyPairHex();
   return {
     privateKey: keyPair.privateKey, // 私钥（十六进制）
@@ -200,7 +228,7 @@ export function publicKeyToPEM(publicKeyHex: string): string {
   for (let i = 0; i < base64.length; i += 64) {
     pem += base64.substring(i, i + 64) + '\n';
   }
-  pem += '-----END PUBLIC KEY-----';
+  pem += '-----END OF PUBLIC KEY-----';
 
   return pem;
 }

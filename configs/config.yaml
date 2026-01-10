@@ -35,10 +35,9 @@ jwt:
   refresh_key_expire: 604800  # 刷新令牌过期时间（秒）
   issuer: "RuoYi-Next"
   use_sm2: true  # 是否使用SM2国密算法
-  # SM2密钥对（生产环境请使用安全的密钥管理方式）
-  # 以下为示例密钥，生产环境请替换为实际密钥
-  sm2_private_key: ""  # SM2私钥(十六进制格式)，留空则自动生成
-  sm2_public_key: ""   # SM2公钥(十六进制格式)，留空则自动生成
+  # SM2密钥对（固定密钥，请妥善保管私钥，不要提交到公开仓库）
+  sm2_private_key: "d8d9a3e6b356cf7538cb0fd6a486055c2a621a63a8a095e60a6362874b26508b"
+  sm2_public_key: "04519c8e8a00307a10034816429fe80a50dc1d0437e84aa3f3215e69280e582f650b49b989eef6acd592fc72b3af4b984f3acac78a0a3f563e430230abb0801f3b"
 
 # 日志配置
 log:
@@ -55,3 +54,14 @@ security:
   # 默认值: dGVzdC1zZWNyZXQxNiEhIQ== 解码后为 "test-secret16!!!" (16字节)
   # 生产环境请使用: export SM4_KEY="$(openssl rand -base64 16)"
   sm4_key: "dGVzdC1zZWNyZXQxNiEhIQ=="
+  # 请求体加密配置
+  request_encryption:
+    enabled: true  # 是否启用请求体加密
+    # 排除的路径（支持通配符）
+    exclude_paths:
+      - "/api/v1/system/auth/public-key"  # 公钥接口必须排除
+      - "/api/v1/system/auth/test-sm2"   # SM2 测试接口
+      - "/api/v1/system/auth/login"       # 登录接口已有密码加密
+      - "/api/v1/upload/*"                # 文件上传
+      - "/api/v1/captcha/*"               # 验证码
+    require_encryption: false  # 是否强制要求加密（渐进式启用：先设为 false，验证后设为 true）

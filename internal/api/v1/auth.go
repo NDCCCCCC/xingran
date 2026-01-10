@@ -8,6 +8,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
@@ -47,6 +48,9 @@ type UserInfo struct {
 func SetupAuthRouter(r *gin.RouterGroup, core *core.Core) {
 	// GET /api/v1/system/auth/public-key - 获取 SM2 公钥（用于密码加密）
 	r.GET("/public-key", getPublicKey(core))
+
+	// GET /api/v1/system/auth/test-sm2 - 测试 SM2 加密解密（调试用）
+	r.GET("/test-sm2", testSM2(core))
 
 	// POST /api/v1/system/auth/login - 用户登录
 	r.POST("/login", login(core))
@@ -322,6 +326,46 @@ func getPublicKey(core *core.Core) gin.HandlerFunc {
 
 		response.Success(c, gin.H{
 			"publicKey": publicKey,
+		})
+	}
+}
+
+// testSM2 测试 SM2 加密解密（调试用）
+func testSM2(core *core.Core) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// 获取 SM2 密钥对
+		sm2PrivateKey, sm2PublicKey := core.JWTManager.GetSM2KeyPair()
+		if sm2PrivateKey == nil || sm2PublicKey == nil {
+			response.Error(c, response.ErrServerError, "SM2 未启用")
+			return
+		}
+
+		// 测试数据：32字符十六进制字符串（模拟 SM4 密钥）
+		testData := "0123456789abcdef0123456789abcdef"
+
+		// 使用后端公钥加密
+		encrypted, err := crypto.EncryptWithSM2(testData, sm2PublicKey)
+		if err != nil {
+			response.Error(c, response.ErrServerError, fmt.Sprintf("加密失败: %v", err))
+			return
+		}
+
+		// 使用后端私钥解密
+		decrypted, err := crypto.DecryptWithSM2(encrypted, sm2PrivateKey)
+		if err != nil {
+			response.Error(c, response.ErrServerError, fmt.Sprintf("解密失败: %v", err))
+			return
+		}
+
+		// 验证结果
+		success := decrypted == testData
+
+		response.Success(c, gin.H{
+			"testData":  testData,
+			"encrypted": encrypted,
+			"decrypted": decrypted,
+			"success":   success,
+			"message":   map[bool]string{true: "SM2 加密解密测试通过", false: "SM2 加密解密测试失败"}[success],
 		})
 	}
 }

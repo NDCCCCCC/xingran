@@ -279,3 +279,12 @@ func (j *JWTManager) DecryptPassword(ciphertext string) (string, error) {
 
 	return plaintext, nil
 }
+
+// GetSM2KeyPair 获取 SM2 密钥对（用于请求体加密）
+// 返回私钥和公钥，如果 SM2 未启用则返回 nil
+func (j *JWTManager) GetSM2KeyPair() (*sm2.PrivateKey, *sm2.PublicKey) {
+	if !j.useSM2 {
+		return nil, nil
+	}
+	return j.sm2PrivateKey, j.sm2PublicKey
+}
