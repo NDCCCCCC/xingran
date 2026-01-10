@@ -101,7 +101,6 @@ const IconSelect: React.FC<IconSelectProps> = ({
     <>
       {/* 输入框 */}
       <Input
-        placeholder={placeholder}
         value={value ? `${value} (${iconDescriptionMap[value] || value})` : ''}
         readOnly
         disabled={disabled}

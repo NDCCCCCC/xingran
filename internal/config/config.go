@@ -198,7 +198,9 @@ func setDefaults() {
 
 // GetDSN 获取数据库连接字符串
 func (c *DatabaseConfig) GetDSN() string {
-	return fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=%s TimeZone=Asia/Shanghai",
+	// 使用 Asia/Shanghai 时区
+	// Cron 计算时使用本地时区（CST），直接存储，不做时区转换
+	return fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=%s timezone=Asia/Shanghai",
 		c.Host, c.User, c.Password, c.DBName, c.Port, c.SSLMode)
 }
 

@@ -657,9 +657,9 @@ func quickCreateNetworkDevice(core *core.Core) gin.HandlerFunc {
 	}
 }
 
-// getEnrichmentStatus 获取设备补充任务状态
-// @Summary 获取设备补充任务状态
-// @Description 查询设备信息补充任务的执行状态
+// getEnrichmentStatus 获取设备信息采集任务状态
+// @Summary 获取设备信息采集任务状态
+// @Description 查询设备信息采集任务的执行状态
 // @Tags 网络设备管理
 // @Accept json
 // @Produce json
@@ -674,8 +674,8 @@ func getEnrichmentStatus(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		// 获取补充任务状态
-		task, err := core.DeviceEnrichmentService.GetTaskStatus(c.Request.Context(), id)
+		// 获取采集任务状态
+		task, err := core.DeviceInfoCollectionService.GetTaskStatus(c.Request.Context(), id)
 		if err != nil {
 			response.Error(c, response.ErrServerError, "查询任务状态失败: "+err.Error())
 			return
@@ -690,12 +690,15 @@ func getEnrichmentStatus(core *core.Core) gin.HandlerFunc {
 		}
 
 		response.Success(c, gin.H{
-			"hasTask":       true,
-			"status":        task.Status,
-			"startedAt":     task.StartedAt,
-			"completedAt":   task.CompletedAt,
-			"errorMessage":  task.ErrorMessage,
-			"enrichedModel": task.EnrichedModel,
+			"hasTask":              true,
+			"status":               task.Status,
+			"startedAt":            task.StartedAt,
+			"completedAt":          task.CompletedAt,
+			"errorMessage":         task.ErrorMessage,
+			"enrichedModel":        task.EnrichedModel,
+			"enrichedSerialNumber": task.EnrichedSerialNumber,
+			"enrichedSoftwareVer":  task.EnrichedSoftwareVer,
+			"enrichedUptime":       task.EnrichedUptime,
 		})
 	}
 }

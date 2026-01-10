@@ -32,6 +32,15 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(utc);
+
+const formatTime = (date: string | Date, format: string = 'YYYY-MM-DD HH:mm') => {
+  if (!date) return '-';
+  const dateStr = typeof date === 'string' ? date.replace('Z', '').replace('z', '') : date;
+  return dayjs(dateStr).format(format);
+};
 import {
   getPeriodicTemplateList,
   createPeriodicTemplate,
@@ -61,6 +70,7 @@ import {
   getDutyPoolList,
   type DutyPool,
 } from '@/lib/dutyApi';
+import CronSelector from '@/components/CronSelector';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -382,7 +392,7 @@ const PeriodicTemplatePage: React.FC = () => {
       dataIndex: 'nextRunAt',
       key: 'nextRunAt',
       width: 160,
-      render: (date: string) => (date ? dayjs(date).format('YYYY-MM-DD HH:mm') : '-'),
+      render: (date: string) => formatTime(date),
     },
     {
       title: '已生成',
@@ -447,23 +457,6 @@ const PeriodicTemplatePage: React.FC = () => {
       ),
     },
   ];
-
-  // Cron 表达式说明（5段式：分 时 日 月 周）
-  const cronHelp = (
-    <div className="text-sm text-gray-500">
-      <p className="font-semibold mb-2">Cron 表达式格式：分 时 日 月 周</p>
-      <div className="grid grid-cols-2 gap-2">
-        <div><code>* * * * *</code> - 每分钟执行</div>
-        <div><code>0 * * * *</code> - 每小时执行</div>
-        <div><code>0 0 * * *</code> - 每天零点执行</div>
-        <div><code>0 0 9 * *</code> - 每天早上9点执行</div>
-        <div><code>0 0 9 * * 1-5</code> - 周一到周五早上9点</div>
-        <div><code>0 0 0 1 *</code> - 每月1号零点执行</div>
-        <div><code>0 0 * * 1</code> - 每周一零点执行</div>
-        <div><code>0 0 0 1 1</code> - 每年1月1号零点执行</div>
-      </div>
-    </div>
-  );
 
   // 变量说明
   const variableHelp = (
@@ -631,9 +624,8 @@ const PeriodicTemplatePage: React.FC = () => {
             name="cronExpression"
             label="Cron表达式"
             rules={[{ required: true, message: '请输入Cron表达式' }]}
-            extra={cronHelp}
           >
-            <Input placeholder="例如：0 0 9 * * *" />
+            <CronSelector />
           </Form.Item>
 
           <Row gutter={16}>
@@ -720,7 +712,7 @@ const PeriodicTemplatePage: React.FC = () => {
                     color={log.status === 'success' ? 'green' : 'red'}
                   >
                     <div>
-                      <strong>{dayjs(log.executedAt).format('YYYY-MM-DD HH:mm:ss')}</strong>
+                      <strong>{formatTime(log.executedAt, 'YYYY-MM-DD HH:mm:ss')}</strong>
                       <Tag color={log.status === 'success' ? 'green' : 'red'} className="ml-2">
                         {log.status === 'success' ? '成功' : '失败'}
                       </Tag>

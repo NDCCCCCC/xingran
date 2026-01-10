@@ -11,17 +11,17 @@ import (
 
 // NetworkDeviceService 网络设备管理服务
 type NetworkDeviceService struct {
-	db                *gorm.DB
-	discoveryService  *DeviceDiscoveryService
-	enrichmentService *DeviceEnrichmentService
+	db                      *gorm.DB
+	discoveryService        *DeviceDiscoveryService
+	deviceInfoCollectionSvc *DeviceInfoCollectionService
 }
 
 // NewNetworkDeviceService 创建网络设备管理服务
-func NewNetworkDeviceService(db *gorm.DB, discoveryService *DeviceDiscoveryService, enrichmentService *DeviceEnrichmentService) *NetworkDeviceService {
+func NewNetworkDeviceService(db *gorm.DB, discoveryService *DeviceDiscoveryService, deviceInfoCollectionSvc *DeviceInfoCollectionService) *NetworkDeviceService {
 	return &NetworkDeviceService{
-		db:                db,
-		discoveryService:  discoveryService,
-		enrichmentService: enrichmentService,
+		db:                      db,
+		discoveryService:        discoveryService,
+		deviceInfoCollectionSvc: deviceInfoCollectionSvc,
 	}
 }
 
@@ -325,11 +325,11 @@ func (s *NetworkDeviceService) QuickCreateDevice(ctx context.Context, req *Quick
 		return nil, fmt.Errorf("创建设备失败: %w", err)
 	}
 
-	// 异步补充设备详细信息（通过 SSH 获取型号、版本等）
-	if s.enrichmentService != nil {
-		if err := s.enrichmentService.Enqueue(device.ID); err != nil {
+	// 异步采集设备详细信息（通过 SSH 获取型号、序列号、版本等）
+	if s.deviceInfoCollectionSvc != nil {
+		if err := s.deviceInfoCollectionSvc.Enqueue(device.ID); err != nil {
 			// 记录错误但不影响设备创建
-			logger.Warnf("加入补充任务队列失败: %v", err)
+			logger.Warnf("加入信息采集队列失败: %v", err)
 		}
 	}
 

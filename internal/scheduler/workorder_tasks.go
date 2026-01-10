@@ -341,13 +341,18 @@ func getPeriodicWorkOrderJobName(templateID string) string {
 
 // calculateNextRunTimeCron 计算下次执行时间
 func calculateNextRunTimeCron(cronExpression string) (time.Time, error) {
-	// 使用 robfig/cron 的解析器
-	parser := cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
-	schedule, err := parser.Parse(cronExpression)
+	// 使用 cron 实例计算下次执行时间（带时区支持）
+	// time.Local 已在 main.go 中设置为 Asia/Shanghai
+	c := cron.New(cron.WithSeconds(), cron.WithLocation(time.Local))
+	entryID, err := c.AddFunc(cronExpression, func() {})
 	if err != nil {
 		return time.Time{}, fmt.Errorf("解析Cron表达式失败: %w", err)
 	}
-	return schedule.Next(time.Now()), nil
+	// 必须启动 cron 才能获取正确的 Next 时间
+	c.Start()
+	defer c.Stop()
+	entry := c.Entry(entryID)
+	return entry.Next, nil
 }
 
 // DisablePeriodicWorkOrderJob 禁用周期性工单任务

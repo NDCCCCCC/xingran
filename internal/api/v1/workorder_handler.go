@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/scheduler"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
@@ -894,6 +895,9 @@ func deletePeriodicTemplate(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
+		// 删除关联的定时任务
+		scheduler.DisablePeriodicWorkOrderJob(core.Scheduler, id)
+
 		// 记录操作日志
 		clientIP := c.ClientIP()
 		operURL := c.Request.URL.String()
@@ -930,6 +934,12 @@ func enablePeriodicTemplate(core *core.Core) gin.HandlerFunc {
 		userID, _ := c.Get("user_id")
 		workorderSvc := services.NewWorkOrderService(core.DB.GetDB())
 		if err := workorderSvc.EnablePeriodicTemplate(c.Request.Context(), id, userID.(string)); err != nil {
+			response.Error(c, response.ErrServerError, err.Error())
+			return
+		}
+
+		// 创建/启用关联的定时任务
+		if err := scheduler.EnablePeriodicWorkOrderJob(core.Scheduler, id); err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
 		}
@@ -973,6 +983,9 @@ func disablePeriodicTemplate(core *core.Core) gin.HandlerFunc {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
 		}
+
+		// 停用关联的定时任务
+		scheduler.DisablePeriodicWorkOrderJob(core.Scheduler, id)
 
 		// 记录操作日志
 		clientIP := c.ClientIP()

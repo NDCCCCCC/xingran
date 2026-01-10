@@ -114,14 +114,16 @@ func (e *JobExecutor) calculateNextRunTime() *time.Time {
 		return nil
 	}
 
-	// 使用支持秒的解析器 - 与 cron.WithSeconds() 保持一致
-	parser := cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
-	schedule, err := parser.Parse(e.job.CronExpression)
+	// 使用调度器的时区配置创建临时 cron 来获取正确的下次执行时间
+	c := cron.New(cron.WithSeconds(), cron.WithLocation(e.scheduler.cron.Location()))
+	entryID, err := c.AddFunc(e.job.CronExpression, func() {})
 	if err != nil {
 		return nil
 	}
-
-	nextTime := schedule.Next(time.Now())
+	// 必须启动 cron 才能获取正确的 Next 时间
+	c.Start()
+	nextTime := c.Entry(entryID).Next
+	c.Stop()
 	return &nextTime
 }
 
@@ -161,8 +163,15 @@ type Scheduler struct {
 
 // NewScheduler 创建新的调度器
 func NewScheduler(db *gorm.DB) *Scheduler {
+	// 使用系统配置的时区 (Asia/Shanghai)
+	loc, err := time.LoadLocation("Asia/Shanghai")
+	if err != nil {
+		// 如果加载失败，使用本地时区
+		loc = time.Local
+	}
+
 	return &Scheduler{
-		cron: cron.New(cron.WithSeconds()),
+		cron: cron.New(cron.WithSeconds(), cron.WithLocation(loc)),
 		db:   db,
 		jobs: make(map[string]*models.Job),
 		executors: make(map[string]cron.EntryID),
@@ -720,7 +729,6 @@ func executeDutyReminderTask(ctx context.Context, params map[string]interface{})
 // 使用接口避免循环依赖
 type DeviceMonitorService interface {
 	CheckAllDevicesStatus(ctx context.Context) (int, int, error)
-	UpdateAllDeviceInfo(ctx context.Context) error
 	CollectAllPortStatus(ctx context.Context) error
 	CollectAllMACAddresses(ctx context.Context) error
 	BackupAllConfigurations(ctx context.Context) error
@@ -729,6 +737,12 @@ type DeviceMonitorService interface {
 // GlobalDeviceMonitorService 全局设备监控服务
 // 在Core初始化时设置
 var GlobalDeviceMonitorService DeviceMonitorService
+
+// GlobalDeviceInfoCollectionService 全局设备信息采集服务
+// 在Core初始化时设置
+var GlobalDeviceInfoCollectionService interface {
+	EnqueueAllOnlineDevices(ctx context.Context) error
+}
 
 // RegisterNetworkDeviceTasks 注册网络设备相关定时任务
 func RegisterNetworkDeviceTasks(scheduler *Scheduler, db *gorm.DB) {
@@ -775,17 +789,17 @@ func executeDeviceStatusCheckTask(ctx context.Context) error {
 }
 
 // executeDeviceInfoUpdateTask 执行设备信息更新任务
-// 通过SSH采集设备的详细信息（型号、版本、序列号等）
+// 通过SSH异步采集设备的详细信息（型号、序列号、版本、运行时间等）
 func executeDeviceInfoUpdateTask(ctx context.Context) error {
-	if GlobalDeviceMonitorService == nil {
-		return fmt.Errorf("设备监控服务未初始化")
+	if GlobalDeviceInfoCollectionService == nil {
+		return fmt.Errorf("设备信息采集服务未初始化")
 	}
 
-	if err := GlobalDeviceMonitorService.UpdateAllDeviceInfo(ctx); err != nil {
+	if err := GlobalDeviceInfoCollectionService.EnqueueAllOnlineDevices(ctx); err != nil {
 		return fmt.Errorf("设备信息更新失败: %w", err)
 	}
 
-	log.Printf("设备信息更新完成")
+	log.Printf("设备信息更新任务已提交")
 	return nil
 }
 
@@ -837,4 +851,11 @@ func executeConfigBackupTask(ctx context.Context) error {
 // SetDeviceMonitorService 设置设备监控服务
 func SetDeviceMonitorService(service DeviceMonitorService) {
 	GlobalDeviceMonitorService = service
+}
+
+// SetDeviceInfoCollectionService 设置设备信息采集服务
+func SetDeviceInfoCollectionService(service interface {
+	EnqueueAllOnlineDevices(ctx context.Context) error
+}) {
+	GlobalDeviceInfoCollectionService = service
 }

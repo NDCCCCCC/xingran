@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -1440,6 +1441,18 @@ func (s *WorkOrderService) GetPeriodicTemplateList(ctx context.Context, req *Per
 		return nil, 0, fmt.Errorf("查询周期性工单模板列表失败: %w", err)
 	}
 
+	// DEBUG: 打印从数据库读取的时间值
+	for i := range list {
+		if list[i].NextRunAt != nil {
+			zoneName, offset := list[i].NextRunAt.Zone()
+			log.Printf("[DEBUG] 读取模板: ID=%s, Cron=%s, NextRunAt=%s (Zone=%s, Offset=%d)",
+				list[i].ID,
+				list[i].CronExpression,
+				list[i].NextRunAt.Format("2006-01-02 15:04:05 -07:00"),
+				zoneName, offset)
+		}
+	}
+
 	return list, total, nil
 }
 
@@ -1466,7 +1479,8 @@ func (s *WorkOrderService) GetPeriodicTemplate(ctx context.Context, id string) (
 // CreatePeriodicTemplate 创建周期性工单模板
 func (s *WorkOrderService) CreatePeriodicTemplate(ctx context.Context, req *CreatePeriodicTemplateRequest, creatorID string) (*models.PeriodicWorkOrderTemplate, error) {
 	// 验证Cron表达式
-	if _, err := cron.ParseStandard(req.CronExpression); err != nil {
+	// 验证Cron表达式（使用6字段格式：秒 分 时 日 月 周）
+	if _, err := cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor).Parse(req.CronExpression); err != nil {
 		return nil, fmt.Errorf("无效的Cron表达式: %w", err)
 	}
 
@@ -1525,8 +1539,8 @@ func (s *WorkOrderService) UpdatePeriodicTemplate(ctx context.Context, id string
 		updates["priority"] = *req.Priority
 	}
 	if req.CronExpression != nil {
-		// 验证Cron表达式
-		if _, err := cron.ParseStandard(*req.CronExpression); err != nil {
+		// 验证Cron表达式（使用6字段格式：秒 分 时 日 月 周）
+		if _, err := cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor).Parse(*req.CronExpression); err != nil {
 			return fmt.Errorf("无效的Cron表达式: %w", err)
 		}
 		updates["cron_expression"] = *req.CronExpression
@@ -1589,12 +1603,23 @@ func (s *WorkOrderService) EnablePeriodicTemplate(ctx context.Context, id string
 		return fmt.Errorf("查询周期性工单模板失败: %w", err)
 	}
 
-	// 计算下次执行时间
-	schedule, err := cron.ParseStandard(template.CronExpression)
+	// 计算下次执行时间（使用6字段格式，带时区支持）
+	// time.Local 已在 main.go 中设置为 Asia/Shanghai
+	c := cron.New(cron.WithSeconds(), cron.WithLocation(time.Local))
+	entryID, err := c.AddFunc(template.CronExpression, func() {})
 	if err != nil {
 		return fmt.Errorf("解析Cron表达式失败: %w", err)
 	}
-	nextRun := schedule.Next(time.Now())
+	// 必须启动 cron 才能获取正确的 Next 时间
+	c.Start()
+	defer c.Stop()
+	nextRun := c.Entry(entryID).Next
+
+	// DEBUG: 打印计算结果
+	zoneName, offset := nextRun.Zone()
+	log.Printf("[DEBUG] 计算下次执行时间: Cron=%s, Next=%s (Zone=%s, Offset=%d)",
+		template.CronExpression, nextRun.Format("2006-01-02 15:04:05 -07:00"),
+		zoneName, offset)
 
 	// 更新模板
 	updates := map[string]interface{}{
@@ -1729,9 +1754,13 @@ func (s *WorkOrderService) GenerateWorkOrderFromTemplate(ctx context.Context, te
 	// 更新模板的生成计数
 	s.db.WithContext(ctx).Model(&template).UpdateColumn("total_generated", gorm.Expr("total_generated + 1"))
 
-	// 计算下次执行时间
-	schedule, _ := cron.ParseStandard(template.CronExpression)
-	nextRun := schedule.Next(time.Now())
+	// 计算下次执行时间（使用6字段格式，带时区支持）
+	// time.Local 已在 main.go 中设置为 Asia/Shanghai
+	c := cron.New(cron.WithSeconds(), cron.WithLocation(time.Local))
+	entryID, _ := c.AddFunc(template.CronExpression, func() {})
+	c.Start()
+	defer c.Stop()
+	nextRun := c.Entry(entryID).Next
 	s.db.WithContext(ctx).Model(&template).UpdateColumn("next_run_at", nextRun)
 
 	// 记录执行日志

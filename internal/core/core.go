@@ -31,12 +31,12 @@ type Core struct {
 	SM4Cipher               *security.SM4Cipher      // SM4加密器（用于凭证密码加密）
 	MetricsCacheService     *MetricsCacheService      // 系统指标缓存服务
 	Scheduler               *scheduler.Scheduler      // 定时任务调度器
-	DeviceManager           *device.Manager           // 网络设备管理器（简化版，仅辅助方法）
-	DeviceExecutor          *device.DeviceExecutor    // 设备执行器（新架构，统一入口）
-	DeviceDiscoveryService  *services.DeviceDiscoveryService  // 设备发现服务
-	DeviceEnrichmentService *services.DeviceEnrichmentService // 设备信息补充服务
-	NetworkDeviceService    *services.NetworkDeviceService    // 网络设备服务
-	DeviceMonitorService    *services.DeviceMonitorService    // 设备监控服务
+	DeviceManager              *device.Manager                      // 网络设备管理器（简化版，仅辅助方法）
+	DeviceExecutor             *device.DeviceExecutor               // 设备执行器（新架构，统一入口）
+	DeviceDiscoveryService     *services.DeviceDiscoveryService     // 设备发现服务
+	DeviceInfoCollectionService *services.DeviceInfoCollectionService // 设备信息采集服务
+	NetworkDeviceService       *services.NetworkDeviceService       // 网络设备服务
+	DeviceMonitorService       *services.DeviceMonitorService       // 设备监控服务
 	NoticeHub               *websocket.NoticeHub     // WebSocket通知中心
 	CaptchaService          *CaptchaService          // 验证码服务
 	CaptchaBackgroundService *CaptchaBackgroundService // 验证码背景图服务
@@ -190,16 +190,16 @@ func (c *Core) Init() error {
 	c.DeviceDiscoveryService = services.NewDeviceDiscoveryService(c.GetDB())
 	log.Println("设备发现服务初始化完成")
 
-	// 9. 初始化设备信息补充服务（后台异步）
-	c.DeviceEnrichmentService = services.NewDeviceEnrichmentService(c.GetDB(), c.DeviceManager, 5)
-	if err := c.DeviceEnrichmentService.Start(context.Background()); err != nil {
-		log.Printf("警告：启动设备信息补充服务失败: %v", err)
+	// 9. 初始化设备信息采集服务（后台异步，统一处理设备创建和定时任务）
+	c.DeviceInfoCollectionService = services.NewDeviceInfoCollectionService(c.GetDB(), c.DeviceExecutor)
+	if err := c.DeviceInfoCollectionService.Start(context.Background()); err != nil {
+		log.Printf("警告：启动设备信息采集服务失败: %v", err)
 	} else {
-		log.Println("设备信息补充服务启动成功")
+		log.Println("设备信息采集服务启动成功")
 	}
 
 	// 10. 初始化网络设备服务
-	c.NetworkDeviceService = services.NewNetworkDeviceService(c.GetDB(), c.DeviceDiscoveryService, c.DeviceEnrichmentService)
+	c.NetworkDeviceService = services.NewNetworkDeviceService(c.GetDB(), c.DeviceDiscoveryService, c.DeviceInfoCollectionService)
 	log.Println("网络设备服务初始化完成")
 
 	// 11. 初始化定时任务调度器
@@ -248,6 +248,8 @@ func (c *Core) Init() error {
 	c.DeviceMonitorService.SetExecutor(c.DeviceExecutor)
 	// 设置设备监控服务到调度器，供定时任务调用
 	scheduler.SetDeviceMonitorService(c.DeviceMonitorService)
+	// 设置设备信息采集服务到调度器，供定时任务调用
+	scheduler.SetDeviceInfoCollectionService(c.DeviceInfoCollectionService)
 	log.Println("设备监控服务初始化完成")
 
 	// 13. 初始化验证码服务
@@ -288,10 +290,10 @@ func (c *Core) Close() {
 		c.NoticeHub.Stop()
 		log.Println("通知中心已停止")
 	}
-	// 停止设备信息补充服务
-	if c.DeviceEnrichmentService != nil {
-		c.DeviceEnrichmentService.Stop()
-		log.Println("设备信息补充服务已停止")
+	// 停止设备信息采集服务
+	if c.DeviceInfoCollectionService != nil {
+		c.DeviceInfoCollectionService.Stop()
+		log.Println("设备信息采集服务已停止")
 	}
 	// 停止AD域同步调度器
 	scheduler.StopADSyncScheduler()

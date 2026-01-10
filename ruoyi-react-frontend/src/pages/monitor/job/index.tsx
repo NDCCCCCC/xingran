@@ -32,6 +32,7 @@ import {
 } from '@ant-design/icons';
 import { post, put, del, get, postLongRequest } from '@/lib/api';
 import type { ColumnsType } from 'antd/es/table';
+import CronSelector from '@/components/CronSelector';
 
 const { TextArea } = Input;
 
@@ -91,7 +92,6 @@ const JobManager: React.FC = () => {
   const [isEdit, setIsEdit] = useState(false);
   const [logDrawerVisible, setLogDrawerVisible] = useState(false);
   const [selectedJob, setSelectedJob] = useState<JobInfo | null>(null);
-  const [cronNextTime, setCronNextTime] = useState<string>('');
 
   const [form] = Form.useForm();
 
@@ -143,22 +143,6 @@ const JobManager: React.FC = () => {
     }
   };
 
-  // 验证Cron表达式并获取下次执行时间
-  const validateCronAndGetNextTime = async (cronExpr: string) => {
-    if (!cronExpr) {
-      setCronNextTime('');
-      return;
-    }
-    // 简单计算下次执行时间（前端模拟）
-    try {
-      const now = new Date();
-      const nextTime = new Date(now.getTime() + 5 * 60 * 1000); // 假设5分钟后
-      setCronNextTime(`下次执行: ${nextTime.toLocaleString()}`);
-    } catch (error) {
-      setCronNextTime('无效的Cron表达式');
-    }
-  };
-
   // 打开新增/编辑模态框
   const openModal = (record?: JobInfo) => {
     if (record) {
@@ -175,7 +159,6 @@ const JobManager: React.FC = () => {
         status: record.status,
         remark: record.remark || ''
       });
-      validateCronAndGetNextTime(record.cronExpression);
     } else {
       setIsEdit(false);
       setModalTitle('新增定时任务');
@@ -185,7 +168,6 @@ const JobManager: React.FC = () => {
         concurrent: 0,
         status: 0
       });
-      setCronNextTime('');
     }
     setModalVisible(true);
   };
@@ -312,18 +294,6 @@ const JobManager: React.FC = () => {
     { label: '立即执行', value: 1 },
     { label: '执行一次', value: 2 },
     { label: '放弃执行', value: 3 }
-  ];
-
-  // 常用Cron表达式
-  const commonCronExpressions = [
-    { label: '每分钟', value: '* * * * *' },
-    { label: '每小时', value: '0 * * * *' },
-    { label: '每天0点', value: '0 0 * * *' },
-    { label: '每周一0点', value: '0 0 * * 1' },
-    { label: '每月1号0点', value: '0 0 1 * *' },
-    { label: '每5分钟', value: '*/5 * * * *' },
-    { label: '每10分钟', value: '*/10 * * * *' },
-    { label: '每30分钟', value: '*/30 * * * *' }
   ];
 
   const columns: ColumnsType<JobInfo> = [
@@ -629,25 +599,8 @@ const JobManager: React.FC = () => {
             name="cronExpression"
             rules={[{ required: true, message: '请输入Cron表达式' }]}
           >
-            <Space.Compact style={{ width: '100%' }}>
-              <Input
-                placeholder="请输入Cron表达式，如：0 0 0 * * ?"
-                onChange={handleCronChange}
-              />
-              <Select
-                placeholder="常用"
-                style={{ width: 120 }}
-                onChange={(value) => {
-                  form.setFieldValue('cronExpression', value);
-                  validateCronAndGetNextTime(value);
-                }}
-                options={commonCronExpressions}
-              />
-            </Space.Compact>
+            <CronSelector />
           </Form.Item>
-          {cronNextTime && (
-            <div className="text-sm text-gray-500 -mt-4 mb-4">{cronNextTime}</div>
-          )}
           <Form.Item
             label="执行策略"
             name="misfirePolicy"

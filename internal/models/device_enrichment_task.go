@@ -13,7 +13,7 @@ const (
 	EnrichmentStatusCancelled EnrichmentStatus = "cancelled" // 已取消
 )
 
-// DeviceEnrichmentTask 设备补充任务
+// DeviceEnrichmentTask 设备信息采集任务
 // 用于跟踪通过 SSH 后台异步获取设备详细信息的任务
 type DeviceEnrichmentTask struct {
 	BaseModel
@@ -22,8 +22,11 @@ type DeviceEnrichmentTask struct {
 	StartedAt    *time.Time       `gorm:"type:timestamp" json:"startedAt,omitempty"`                             // 开始时间
 	CompletedAt  *time.Time       `gorm:"type:timestamp" json:"completedAt,omitempty"`                          // 完成时间
 	ErrorMessage string           `gorm:"type:text" json:"errorMessage,omitempty"`                              // 错误信息
-	// 补充获取的信息
-	EnrichedModel *string `gorm:"size:100" json:"enrichedModel,omitempty"` // 补充获取的设备型号
+	// 采集获取的信息
+	EnrichedModel         *string `gorm:"size:100" json:"enrichedModel,omitempty"`         // 采集获取的设备型号
+	EnrichedSerialNumber  *string `gorm:"size:100" json:"enrichedSerialNumber,omitempty"`  // 采集获取的序列号
+	EnrichedSoftwareVer   *string `gorm:"size:100" json:"enrichedSoftwareVersion,omitempty"` // 采集获取的软件版本
+	EnrichedUptime        *string `gorm:"size:100" json:"enrichedUptime,omitempty"`        // 采集获取的运行时间
 }
 
 // TableName 设置表名

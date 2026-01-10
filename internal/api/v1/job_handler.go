@@ -709,11 +709,17 @@ func validateCronExpression(expr string) bool {
 
 // calculateNextRunTime 计算下次执行时间
 func calculateNextRunTime(expr string) time.Time {
-	schedule, err := cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor).Parse(expr)
+	// 使用 cron 实例计算下次执行时间（带时区支持）
+	// time.Local 已在 main.go 中设置为 Asia/Shanghai
+	c := cron.New(cron.WithSeconds(), cron.WithLocation(time.Local))
+	entryID, err := c.AddFunc(expr, func() {})
 	if err != nil {
 		return time.Time{}
 	}
-	return schedule.Next(time.Now())
+	// 必须启动 cron 才能获取正确的 Next 时间
+	c.Start()
+	defer c.Stop()
+	return c.Entry(entryID).Next
 }
 
 // GetCronDescription 获取Cron表达式描述
@@ -895,7 +901,9 @@ func GetCommonCronExpressions() []map[string]string {
 
 // ParseNextRunTimes 解析并返回接下来几次的执行时间
 func ParseNextRunTimes(expr string, count int) ([]string, error) {
-	schedule, err := cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor).Parse(expr)
+	// 使用6字段格式解析器
+	parser := cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
+	schedule, err := parser.Parse(expr)
 	if err != nil {
 		return nil, err
 	}
