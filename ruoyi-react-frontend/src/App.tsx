@@ -4,6 +4,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ConfigProvider } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import { useAuthStore } from '@/store/authStore';
+import { ThemeProvider } from '@/design-system/components/ThemeProvider';
+import { LayoutProvider } from '@/design-system/components/LayoutProvider';
 import Layout from '@/components/layout';
 import Login from '@/pages/login';
 import Dashboard from '@/pages/dashboard';
@@ -109,128 +111,132 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ConfigProvider locale={zhCN}>
-        <Router>
-          <Routes>
-            {/* 登录页面 - 未登录才能访问 */}
-            <Route
-              path="/login"
-              element={
-                <PublicRoute>
-                  <Login />
-                </PublicRoute>
-              }
-            />
+        <ThemeProvider>
+          <LayoutProvider>
+            <Router>
+              <Routes>
+                {/* 登录页面 - 未登录才能访问 */}
+                <Route
+                  path="/login"
+                  element={
+                    <PublicRoute>
+                      <Login />
+                    </PublicRoute>
+                  }
+                />
 
-            {/* 需要认证的路由 */}
-            <Route
-              path="/*"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Routes>
-                      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                      <Route path="/dashboard" element={<Dashboard />} />
+                {/* 需要认证的路由 */}
+                <Route
+                  path="/*"
+                  element={
+                    <ProtectedRoute>
+                      <Layout>
+                        <Routes>
+                          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                          <Route path="/dashboard" element={<Dashboard />} />
 
-                      {/* 个人中心和系统设置路由 */}
-                      <Route path="/profile" element={<ProfilePage />} />
-                      <Route path="/settings" element={<SettingsPage />} />
+                          {/* 个人中心和系统设置路由 */}
+                          <Route path="/profile" element={<ProfilePage />} />
+                          <Route path="/settings" element={<SettingsPage />} />
 
-                      {/* 用户通知中心路由 */}
-                      <Route path="/my-notices" element={<MyNoticesPage />} />
-                      <Route path="/my-notices/:id" element={<NoticeDetailPage />} />
+                          {/* 用户通知中心路由 */}
+                          <Route path="/my-notices" element={<MyNoticesPage />} />
+                          <Route path="/my-notices/:id" element={<NoticeDetailPage />} />
 
-                      {/* 系统管理路由 */}
-                      <Route path="/system" element={<Navigate to="/system/user" replace />} />
-                      <Route path="/system/user" element={<UserManagement />} />
-                      <Route path="/system/role" element={<RoleManagement />} />
-                      <Route path="/system/menu" element={<MenuManagement />} />
-                      <Route path="/system/dept" element={<DepartmentManagement />} />
-                      <Route path="/system/post" element={<PostManagement />} />
-                      <Route path="/system/dict" element={<DictManagement />} />
-                      <Route path="/system/config" element={<ConfigManagement />} />
-                      <Route path="/system/notice" element={<NoticeManagement />} />
-                      <Route path="/system/notice/:id" element={<AdminNoticeDetailPage />} />
-                      <Route path="/system/workstation" element={<WorkstationManagement />} />
-                      <Route path="/system/settings-page" element={<SystemSettingsPage />} />
+                          {/* 系统管理路由 */}
+                          <Route path="/system" element={<Navigate to="/system/user" replace />} />
+                          <Route path="/system/user" element={<UserManagement />} />
+                          <Route path="/system/role" element={<RoleManagement />} />
+                          <Route path="/system/menu" element={<MenuManagement />} />
+                          <Route path="/system/dept" element={<DepartmentManagement />} />
+                          <Route path="/system/post" element={<PostManagement />} />
+                          <Route path="/system/dict" element={<DictManagement />} />
+                          <Route path="/system/config" element={<ConfigManagement />} />
+                          <Route path="/system/notice" element={<NoticeManagement />} />
+                          <Route path="/system/notice/:id" element={<AdminNoticeDetailPage />} />
+                          <Route path="/system/workstation" element={<WorkstationManagement />} />
+                          <Route path="/system/settings-page" element={<SystemSettingsPage />} />
 
-                      {/* 系统监控路由 */}
-                      <Route path="/monitor" element={<Navigate to="/monitor/dashboard" replace />} />
-                      <Route path="/monitor/dashboard" element={<MonitorDashboard />} />
-                      <Route path="/monitor/server" element={<ServerMonitor />} />
-                      <Route path="/monitor/logs" element={<LogMonitor />} />
-                      <Route path="/monitor/job" element={<JobManager />} />
-                      <Route path="/monitor/cache" element={<CacheManager />} />
+                          {/* 系统监控路由 */}
+                          <Route path="/monitor" element={<Navigate to="/monitor/dashboard" replace />} />
+                          <Route path="/monitor/dashboard" element={<MonitorDashboard />} />
+                          <Route path="/monitor/server" element={<ServerMonitor />} />
+                          <Route path="/monitor/logs" element={<LogMonitor />} />
+                          <Route path="/monitor/job" element={<JobManager />} />
+                          <Route path="/monitor/cache" element={<CacheManager />} />
 
-                      {/* 网络设备管理路由 - 注意：不要为 /network 添加重定向，它应该作为父菜单展开 */}
-                      <Route path="/network/devices" element={<DeviceManagement />} />
-                      <Route path="/network/credentials" element={<CredentialManagement />} />
-                      <Route path="/network/templates" element={<TemplateManagement />} />
-                      <Route path="/network/command" element={<CommandDispatch />} />
-                      <Route path="/network/executions" element={<ConfigExecutionPage />} />
-                      <Route path="/network/backups" element={<ConfigBackupPage />} />
-                      <Route path="/network/discoveries" element={<DeviceDiscoveryPage />} />
-                      <Route path="/network/mac" element={<MACAddressPage />} />
-                      <Route path="/network/ports" element={<PortStatusPage />} />
+                          {/* 网络设备管理路由 - 注意：不要为 /network 添加重定向，它应该作为父菜单展开 */}
+                          <Route path="/network/devices" element={<DeviceManagement />} />
+                          <Route path="/network/credentials" element={<CredentialManagement />} />
+                          <Route path="/network/templates" element={<TemplateManagement />} />
+                          <Route path="/network/command" element={<CommandDispatch />} />
+                          <Route path="/network/executions" element={<ConfigExecutionPage />} />
+                          <Route path="/network/backups" element={<ConfigBackupPage />} />
+                          <Route path="/network/discoveries" element={<DeviceDiscoveryPage />} />
+                          <Route path="/network/mac" element={<MACAddressPage />} />
+                          <Route path="/network/ports" element={<PortStatusPage />} />
 
-                      {/* 值班管理路由 */}
-                      <Route path="/duty/pools" element={<DutyPoolPage />} />
-                      <Route path="/duty/management" element={<DutyManagementPage />} />
-                      <Route path="/duty/schedules" element={<Navigate to="/duty/management" replace />} />
-                      <Route path="/duty/holidays" element={<Navigate to="/duty/management" replace />} />
-                      <Route path="/duty/config" element={<Navigate to="/duty/management" replace />} />
-                      <Route path="/duty/my-duty" element={<MyDutyPage />} />
+                          {/* 值班管理路由 */}
+                          <Route path="/duty/pools" element={<DutyPoolPage />} />
+                          <Route path="/duty/management" element={<DutyManagementPage />} />
+                          <Route path="/duty/schedules" element={<Navigate to="/duty/management" replace />} />
+                          <Route path="/duty/holidays" element={<Navigate to="/duty/management" replace />} />
+                          <Route path="/duty/config" element={<Navigate to="/duty/management" replace />} />
+                          <Route path="/duty/my-duty" element={<MyDutyPage />} />
 
-                      {/* 运维管理 - 值班路由（带 ops 前缀） */}
-                      <Route path="/ops/duty/pools" element={<DutyPoolPage />} />
-                      <Route path="/ops/duty/management" element={<DutyManagementPage />} />
-                      <Route path="/ops/duty/schedules" element={<Navigate to="/ops/duty/management" replace />} />
-                      <Route path="/ops/duty/holidays" element={<Navigate to="/ops/duty/management" replace />} />
-                      <Route path="/ops/duty/config" element={<Navigate to="/ops/duty/management" replace />} />
-                      <Route path="/ops/duty/my-duty" element={<MyDutyPage />} />
+                          {/* 运维管理 - 值班路由（带 ops 前缀） */}
+                          <Route path="/ops/duty/pools" element={<DutyPoolPage />} />
+                          <Route path="/ops/duty/management" element={<DutyManagementPage />} />
+                          <Route path="/ops/duty/schedules" element={<Navigate to="/ops/duty/management" replace />} />
+                          <Route path="/ops/duty/holidays" element={<Navigate to="/ops/duty/management" replace />} />
+                          <Route path="/ops/duty/config" element={<Navigate to="/ops/duty/management" replace />} />
+                          <Route path="/ops/duty/my-duty" element={<MyDutyPage />} />
 
-                      {/* 运维工单管理路由 */}
-                      <Route path="/workorder/orders" element={<WorkOrderPage />} />
-                      <Route path="/workorder/categories" element={<WorkOrderCategoryPage />} />
-                      <Route path="/workorder/statistics" element={<WorkOrderStatisticsPage />} />
-                      <Route path="/workorder/periodic/templates" element={<PeriodicTemplatePage />} />
+                          {/* 运维工单管理路由 */}
+                          <Route path="/workorder/orders" element={<WorkOrderPage />} />
+                          <Route path="/workorder/categories" element={<WorkOrderCategoryPage />} />
+                          <Route path="/workorder/statistics" element={<WorkOrderStatisticsPage />} />
+                          <Route path="/workorder/periodic/templates" element={<PeriodicTemplatePage />} />
 
-                      {/* 运维管理 - 工单路由（带 ops 前缀） */}
-                      <Route path="/ops/workorder/orders" element={<WorkOrderPage />} />
-                      <Route path="/ops/workorder/categories" element={<WorkOrderCategoryPage />} />
-                      <Route path="/ops/workorder/statistics" element={<WorkOrderStatisticsPage />} />
-                      <Route path="/ops/workorder/periodic/templates" element={<PeriodicTemplatePage />} />
+                          {/* 运维管理 - 工单路由（带 ops 前缀） */}
+                          <Route path="/ops/workorder/orders" element={<WorkOrderPage />} />
+                          <Route path="/ops/workorder/categories" element={<WorkOrderCategoryPage />} />
+                          <Route path="/ops/workorder/statistics" element={<WorkOrderStatisticsPage />} />
+                          <Route path="/ops/workorder/periodic/templates" element={<PeriodicTemplatePage />} />
 
-                      {/* 知识库管理路由 */}
-                      <Route path="/knowledge/articles" element={<KnowledgeArticlePage />} />
-                      <Route path="/knowledge/view" element={<KnowledgeViewPage />} />
+                          {/* 知识库管理路由 */}
+                          <Route path="/knowledge/articles" element={<KnowledgeArticlePage />} />
+                          <Route path="/knowledge/view" element={<KnowledgeViewPage />} />
 
-                      {/* AD域管理路由 */}
-                      <Route path="/ad-domain/configs" element={<ADConfigPage />} />
-                      <Route path="/ad-domain/ous" element={<ADOUPage />} />
-                      <Route path="/ad-domain/groups" element={<ADGroupPage />} />
-                      <Route path="/ad-domain/users" element={<ADUserPage />} />
-                      <Route path="/ad-domain/logs" element={<ADSyncLogsPage />} />
-                      {/* 运维管理路由 */}
-                      <Route path="/ops/ad-domain/configs" element={<ADConfigPage />} />
-                      <Route path="/ops/ad-domain/ous" element={<ADOUPage />} />
-                      <Route path="/ops/ad-domain/groups" element={<ADGroupPage />} />
-                      <Route path="/ops/ad-domain/users" element={<ADUserPage />} />
-                      <Route path="/ops/ad-domain/logs" element={<ADSyncLogsPage />} />
-                      {/* 运维管理三级菜单路由（注意：ad-domain 重复是数据问题） */}
-                      <Route path="/ops/ad-domain/ad-domain/configs" element={<ADConfigPage />} />
-                      <Route path="/ops/ad-domain/ad-domain/ous" element={<ADOUPage />} />
-                      <Route path="/ops/ad-domain/ad-domain/groups" element={<ADGroupPage />} />
-                      <Route path="/ops/ad-domain/ad-domain/users" element={<ADUserPage />} />
-                      <Route path="/ops/ad-domain/ad-domain/logs" element={<ADSyncLogsPage />} />
+                          {/* AD域管理路由 */}
+                          <Route path="/ad-domain/configs" element={<ADConfigPage />} />
+                          <Route path="/ad-domain/ous" element={<ADOUPage />} />
+                          <Route path="/ad-domain/groups" element={<ADGroupPage />} />
+                          <Route path="/ad-domain/users" element={<ADUserPage />} />
+                          <Route path="/ad-domain/logs" element={<ADSyncLogsPage />} />
+                          {/* 运维管理路由 */}
+                          <Route path="/ops/ad-domain/configs" element={<ADConfigPage />} />
+                          <Route path="/ops/ad-domain/ous" element={<ADOUPage />} />
+                          <Route path="/ops/ad-domain/groups" element={<ADGroupPage />} />
+                          <Route path="/ops/ad-domain/users" element={<ADUserPage />} />
+                          <Route path="/ops/ad-domain/logs" element={<ADSyncLogsPage />} />
+                          {/* 运维管理三级菜单路由（注意：ad-domain 重复是数据问题） */}
+                          <Route path="/ops/ad-domain/ad-domain/configs" element={<ADConfigPage />} />
+                          <Route path="/ops/ad-domain/ad-domain/ous" element={<ADOUPage />} />
+                          <Route path="/ops/ad-domain/ad-domain/groups" element={<ADGroupPage />} />
+                          <Route path="/ops/ad-domain/ad-domain/users" element={<ADUserPage />} />
+                          <Route path="/ops/ad-domain/ad-domain/logs" element={<ADSyncLogsPage />} />
 
-                      <Route path="*" element={<Navigate to="/dashboard" replace />} />
-                    </Routes>
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
-        </Router>
+                          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                        </Routes>
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+              </Routes>
+            </Router>
+          </LayoutProvider>
+        </ThemeProvider>
       </ConfigProvider>
     </QueryClientProvider>
   );

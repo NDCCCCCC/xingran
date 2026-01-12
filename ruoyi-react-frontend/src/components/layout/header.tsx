@@ -1,12 +1,15 @@
 import React, { useEffect } from 'react';
-import { Layout, Avatar, Dropdown, Space } from 'antd';
+import { Layout, Avatar, Dropdown, Space, Divider } from 'antd';
 import { UserOutlined, LogoutOutlined, SettingOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { useNoticeStore } from '@/store/noticeStore';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { getUnreadCount } from '@/lib/noticeApi';
+import { useLayout } from '@/store/layoutStore';
 import NotificationBell from '@/components/NotificationBell';
+import ColorSwitcher from '@/design-system/components/ColorSwitcher';
+import GlobalSearch from '@/components/shared/GlobalSearch';
 import type { MenuProps } from 'antd';
 
 const { Header: AntHeader } = Layout;
@@ -14,6 +17,7 @@ const { Header: AntHeader } = Layout;
 const Header: React.FC = () => {
   const { user, logout } = useAuthStore();
   const { setUnreadCount } = useNoticeStore();
+  const { sidebarCollapsed, toggleSidebar, layout } = useLayout();
   const navigate = useNavigate();
 
   // 初始化 WebSocket 连接
@@ -63,16 +67,62 @@ const Header: React.FC = () => {
   ];
 
   return (
-    <AntHeader className="flex items-center justify-between px-6 bg-gradient-to-r from-blue-600 to-blue-700 shadow-lg">
-      <div className="text-xl font-bold text-white">
-        {/* <span className="text-yellow-300">数智化</span>平台 */}
+    <AntHeader
+      className="flex items-center justify-between px-6 shadow-lg"
+      style={{
+        background: 'var(--theme-bg-surface)',
+        color: 'var(--theme-text-primary)',
+        borderBottom: '1px solid var(--theme-border-primary)',
+        transition: 'var(--theme-transition-base)',
+      }}
+    >
+      <div className="flex items-center gap-4">
+        {/* 侧边栏切换按钮（仅经典布局和混合布局显示） */}
+        {(layout === 'classic' || layout === 'hybrid') && (
+          <button
+            onClick={toggleSidebar}
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            style={{
+              color: 'var(--theme-text-secondary)',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 20 20"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M3 5h14M3 10h10M3 15h6"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
+        )}
+        <h1
+          className="text-xl font-bold"
+          style={{ color: 'var(--theme-text-primary)' }}
+        >
+          产险湖北数智化平台
+        </h1>
       </div>
 
       <Space size="middle">
+        {/* 颜色选择器 */}
+        <ColorSwitcher />
+
+        <Divider orientation="vertical" style={{ height: 24 }} />
+
         {/* 通知铃铛 */}
         <NotificationBell />
 
-        <span className="text-white font-medium">
+        <span className="font-medium" style={{ color: 'var(--theme-text-secondary)' }}>
           欢迎，{user?.nickname || user?.username}
         </span>
 
@@ -81,10 +131,19 @@ const Header: React.FC = () => {
             size="large"
             icon={<UserOutlined />}
             src={user?.avatar}
-            className="cursor-pointer bg-gradient-to-br from-blue-400 to-blue-500 hover:from-blue-500 hover:to-blue-600 transition-all duration-300 shadow-md border-2 border-white/30"
+            className="cursor-pointer shadow-md border-2"
+            style={{
+              background: 'linear-gradient(135deg, var(--theme-primary-500, #3b82f6) 0%, var(--theme-primary-600, #2563eb) 100%)',
+              color: 'var(--theme-text-inverse)',
+              borderColor: 'rgba(255, 255, 255, 0.3)',
+              transition: 'var(--theme-transition-base)',
+            }}
           />
         </Dropdown>
       </Space>
+
+      {/* 全局搜索组件 */}
+      <GlobalSearch />
     </AntHeader>
   );
 };

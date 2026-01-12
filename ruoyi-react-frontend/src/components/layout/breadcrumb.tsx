@@ -88,10 +88,19 @@ const BreadcrumbComponent: React.FC = () => {
   }
 
   return (
-    <div className="px-6 py-3 bg-white border-b border-gray-100">
+    <div
+      className="px-6 py-3 border-b"
+      style={{
+        background: 'var(--theme-bg-surface)',
+        borderColor: 'var(--theme-border-primary)',
+      }}
+    >
       <Breadcrumb
         items={breadcrumbItems}
         className="text-sm"
+        style={{
+          color: 'var(--theme-text-secondary)',
+        }}
       />
     </div>
   );

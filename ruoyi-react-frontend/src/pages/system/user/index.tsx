@@ -479,7 +479,7 @@ const UserManagement: React.FC = () => {
   return (
     <Layout style={{ background: '#f0f2f5', minHeight: 'calc(100vh - 64px)' }}>
       {/* 左侧部门树 */}
-      <Sider width={280} style={{ background: '#fff', padding: '16px', borderRight: '1px solid #f0f0f0' }}>
+      <Sider width={360} className="dept-list-sider" style={{ background: '#fff', padding: '16px', borderRight: '1px solid #f0f0f0' }}>
         <DeptTree
           onSelect={(selectedKeys) => handleDeptSelect(selectedKeys)}
           selectedKeys={selectedDeptId ? [selectedDeptId] : []}

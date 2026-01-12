@@ -374,20 +374,45 @@ const Sidebar: React.FC = () => {
       collapsible
       collapsed={collapsed}
       onCollapse={(value) => setCollapsed(value)}
-      className="bg-gradient-to-b from-gray-900 to-gray-800 border-r border-gray-700 shadow-xl"
       width={256}
       trigger={null}
+      style={{
+        background: 'var(--theme-bg-secondary)',
+        borderRight: '1px solid var(--theme-border-primary)',
+        transition: 'all var(--theme-transition-base)',
+      }}
     >
-      <div className="h-16 flex items-center justify-center border-b border-gray-700">
+      <div
+        className="h-16 flex items-center justify-center"
+        style={{
+          borderBottom: '1px solid var(--theme-border-primary)',
+        }}
+      >
         <h1
-          className={`text-xl font-bold bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent ${
+          className={`text-xl font-bold ${
             collapsed ? 'hidden' : 'block'
           }`}
+          style={{
+            background: 'linear-gradient(135deg, var(--theme-primary-500, #3b82f6) 0%, var(--theme-primary-600, #2563eb) 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+          }}
         >
           产险湖北数智化平台
         </h1>
         {collapsed && (
-          <span className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">R</span>
+          <span
+            className="text-2xl font-bold"
+            style={{
+              background: 'linear-gradient(135deg, var(--theme-primary-500, #3b82f6) 0%, var(--theme-primary-600, #2563eb) 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}
+          >
+            R
+          </span>
         )}
       </div>
 
@@ -397,7 +422,6 @@ const Sidebar: React.FC = () => {
         </div>
       ) : (
         <Menu
-          theme="dark"
           mode="inline"
           selectedKeys={getSelectedKeys()}
           openKeys={openKeys}
@@ -407,7 +431,8 @@ const Sidebar: React.FC = () => {
           className="border-r-0 px-2 py-4"
           style={{
             background: 'transparent',
-            fontSize: '14px'
+            fontSize: '14px',
+            color: 'var(--theme-text-primary)',
           }}
         />
       )}

@@ -104,11 +104,40 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="login-container">
-      <Card className="login-card">
+    <div
+      className="login-container"
+      style={{
+        background: 'var(--theme-bg-secondary)',
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        transition: 'background var(--theme-transition-slow)',
+      }}
+    >
+      <Card
+        className="login-card"
+        style={{
+          background: 'var(--theme-bg-surface)',
+          border: '1px solid var(--theme-border-primary)',
+          boxShadow: 'var(--theme-shadow-xl)',
+          borderRadius: 'var(--theme-radius-xl)',
+          transition: 'all var(--theme-transition-base)',
+        }}
+      >
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">RuoYi Next</h1>
-          <p className="text-gray-600 mt-2">企业级权限管理系统</p>
+          <h1
+            className="text-3xl font-bold"
+            style={{ color: 'var(--theme-text-primary)' }}
+          >
+            产险湖北数智化平台
+          </h1>
+          <p
+            className="mt-2"
+            style={{ color: 'var(--theme-text-secondary)' }}
+          >
+            企业级权限管理系统
+          </p>
         </div>
 
         <Form
