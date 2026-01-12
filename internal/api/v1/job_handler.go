@@ -201,24 +201,7 @@ func createJob(core *core.Core) gin.HandlerFunc {
 		}
 
 		// 记录操作日志
-		clientIP := c.ClientIP()
-		operURL := c.Request.URL.String()
-		core.OperLogService.RecordAsync(
-			core.GetDB(),
-			"定时任务",
-			1, // 1=新增
-			"",
-			c.Request.Method,
-			operURL,
-			getUsernameFromContext(c),
-			getDeptNameFromContext(c, core.GetDB()),
-			&clientIP,
-			nil,
-			nil,
-			nil,
-			0,
-			0,
-		)
+		recordOperLog(c, core, "定时任务", OperTypeCreate)
 
 		response.Success(c, job)
 	}
@@ -345,24 +328,7 @@ func updateJob(core *core.Core) gin.HandlerFunc {
 		}
 
 		// 记录操作日志
-		clientIP := c.ClientIP()
-		operURL := c.Request.URL.String()
-		core.OperLogService.RecordAsync(
-			core.GetDB(),
-			"定时任务",
-			2, // 2=修改
-			"",
-			c.Request.Method,
-			operURL,
-			getUsernameFromContext(c),
-			getDeptNameFromContext(c, core.GetDB()),
-			&clientIP,
-			nil,
-			nil,
-			nil,
-			0,
-			0,
-		)
+		recordOperLog(c, core, "定时任务", OperTypeUpdate)
 
 		response.Success(c, gin.H{"message": "更新成功"})
 	}
@@ -399,61 +365,34 @@ func deleteJob(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		// 开始事务
-		tx := core.DB.GetDB().Begin()
-		defer func() {
-			if r := recover(); r != nil {
-				tx.Rollback()
-			}
-		}()
-
-		// 从调度器中移除任务
+		// 从调度器中移除任务（事务外操作）
 		if core.Scheduler != nil {
 			if err := core.Scheduler.RemoveJob(id); err != nil {
 				// 忽略错误，继续删除数据库记录
 			}
 		}
 
-		// 删除任务
-		if err := tx.Delete(&job).Error; err != nil {
-			tx.Rollback()
-			response.Error(c, response.ErrServerError, "删除定时任务失败")
-			return
-		}
+		// 使用事务删除数据库记录
+		if err := core.DB.GetDB().Transaction(func(tx *gorm.DB) error {
+			// 删除任务
+			if err := tx.Delete(&job).Error; err != nil {
+				return fmt.Errorf("删除定时任务失败: %w", err)
+			}
 
-		// 删除任务执行日志
-		if err := tx.Where("job_name = ? AND job_group = ?", job.JobName, job.JobGroup).
-			Delete(&models.JobLog{}).Error; err != nil {
-			tx.Rollback()
-			response.Error(c, response.ErrServerError, "删除任务日志失败")
-			return
-		}
+			// 删除任务执行日志
+			if err := tx.Where("job_name = ? AND job_group = ?", job.JobName, job.JobGroup).
+				Delete(&models.JobLog{}).Error; err != nil {
+				return fmt.Errorf("删除任务日志失败: %w", err)
+			}
 
-		// 提交事务
-		if err := tx.Commit().Error; err != nil {
-			response.Error(c, response.ErrServerError, "删除定时任务失败")
+			return nil
+		}); err != nil {
+			response.Error(c, response.ErrServerError, err.Error())
 			return
 		}
 
 		// 记录操作日志
-		clientIP := c.ClientIP()
-		operURL := c.Request.URL.String()
-		core.OperLogService.RecordAsync(
-			core.GetDB(),
-			"定时任务",
-			3, // 3=删除
-			"",
-			c.Request.Method,
-			operURL,
-			getUsernameFromContext(c),
-			getDeptNameFromContext(c, core.GetDB()),
-			&clientIP,
-			nil,
-			nil,
-			nil,
-			0,
-			0,
-		)
+		recordOperLog(c, core, "定时任务", OperTypeDelete)
 
 		response.Success(c, gin.H{"message": "删除成功"})
 	}
@@ -532,24 +471,7 @@ func updateJobStatus(core *core.Core) gin.HandlerFunc {
 		}
 
 		// 记录操作日志
-		clientIP := c.ClientIP()
-		operURL := c.Request.URL.String()
-		core.OperLogService.RecordAsync(
-			core.GetDB(),
-			"定时任务",
-			2, // 2=修改
-			"",
-			c.Request.Method,
-			operURL,
-			getUsernameFromContext(c),
-			getDeptNameFromContext(c, core.GetDB()),
-			&clientIP,
-			nil,
-			nil,
-			nil,
-			0,
-			0,
-		)
+		recordOperLog(c, core, "定时任务", OperTypeUpdate)
 
 		response.Success(c, gin.H{
 			"message": fmt.Sprintf("%s成功", statusText),

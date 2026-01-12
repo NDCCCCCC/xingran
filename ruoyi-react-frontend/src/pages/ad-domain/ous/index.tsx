@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Tree,
   Card,
@@ -28,13 +28,14 @@ import {
   type ADConfig
 } from '@/lib/adDomainApi';
 
-const ADOUPage: React.FC = () => {
+import type { FC } from 'react';
+
+const ADOUPage: FC = () => {
   const [configs, setConfigs] = useState<ADConfig[]>([]);
   const [selectedConfig, setSelectedConfig] = useState<string>('');
   const [ouTree, setOUTree] = useState<ADOUNode[]>([]);
   const [selectedOU, setSelectedOU] = useState<string>('');
   const [users, setUsers] = useState<ADUser[]>([]);
-  const [loading, setLoading] = useState(false);
   const [treeLoading, setTreeLoading] = useState(false);
   const [usersLoading, setUsersLoading] = useState(false);
 
@@ -45,14 +46,14 @@ const ADOUPage: React.FC = () => {
   const fetchConfigs = async () => {
     try {
       const res = await getADConfigList({ current: 1, pageSize: 100, status: 0 });
-      if (res.code === 0 && res.data?.list?.length > 0) {
+      if (res.code === 0 && res.data && res.data.list && res.data.list.length > 0) {
         setConfigs(res.data.list);
         // 默认选择第一个配置
         if (!selectedConfig) {
           setSelectedConfig(res.data.list[0].id);
         }
       }
-    } catch (error) {
+    } catch {
       message.error('获取AD配置失败');
     }
   };
@@ -66,7 +67,7 @@ const ADOUPage: React.FC = () => {
       if (res.code === 0) {
         setOUTree(res.data ?? []);
       }
-    } catch (error) {
+    } catch {
       message.error('获取OU树失败');
     } finally {
       setTreeLoading(false);
@@ -93,7 +94,7 @@ const ADOUPage: React.FC = () => {
       if (res.code === 0) {
         setUsers(res.data?.list ?? []);
       }
-    } catch (error) {
+    } catch {
       message.error('获取用户列表失败');
     } finally {
       setUsersLoading(false);
@@ -176,7 +177,7 @@ const ADOUPage: React.FC = () => {
       title: '状态',
       key: 'status',
       width: 180,
-      render: (_: any, user: ADUser) => (
+      render: (_: unknown, user: ADUser) => (
         <Space size="small">
           {user.isEnabled && <Tag color="success">启用</Tag>}
           {!user.isEnabled && <Tag color="default">禁用</Tag>}

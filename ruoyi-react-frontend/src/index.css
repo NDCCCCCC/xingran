@@ -109,7 +109,7 @@
   /* ===== 布局变量 ===== */
   --sidebar-width: 200px;
   --sidebar-collapsed-width: 56px;
-  --header-height: 56px;
+  --header-height: 64px;
 }
 
 /* ========================================
@@ -554,14 +554,14 @@ body {
 .ant-input:hover,
 .ant-input-number:hover,
 .ant-select:hover .ant-select-selector {
-  border-color: var(--theme-neutral-300) !important;
+  border-color: var(--theme-primary) !important;
 }
 
 .ant-input:focus,
 .ant-input-number:focus,
 .ant-select-focused .ant-select-selector {
   border-color: var(--theme-primary) !important;
-  box-shadow: 0 0 0 3px var(--theme-primary-lighter) !important;
+  box-shadow: 0 0 0 2px var(--theme-primary-lighter) !important;
 }
 
 .ant-input::placeholder {
@@ -592,17 +592,24 @@ body {
   letter-spacing: 0;
 }
 
-/* 表格单元格 - 统一内边距 */
+/* 表格单元格 - 统一内边距和行高 */
 .ant-table-tbody > tr > td {
   border-bottom: 1px solid var(--theme-border-secondary) !important;
   color: var(--theme-text-primary) !important;
   padding: 14px 16px !important;
   font-size: 14px !important;
+  height: 48px !important;
+  min-height: 48px !important;
 }
 
-/* 表格行高优化 */
-.ant-table-tbody > tr > td {
-  height: 48px !important;
+/* 确保表格行不会出现高度为0的情况 */
+.ant-table-tbody > tr > td[style*="height: 0px"] {
+  display: none !important;
+}
+
+/* 确保表格行不会出现内边距为0的情况 */
+.ant-table-tbody > tr > td[style*="padding-top: 0px"] {
+  display: none !important;
 }
 
 /* 斑马纹 - 奇数行浅灰 */
@@ -803,6 +810,42 @@ body {
 
 .ant-tabs-ink-bar {
   background: var(--theme-primary) !important;
+}
+
+/* ========================================
+   TabBar 布局标签栏 - 确保高度不被遮挡
+   ======================================== */
+.layout-tab-bar {
+  height: 40px !important;
+}
+
+.layout-tab-bar .ant-tabs-nav {
+  height: 40px !important;
+  margin: 0 !important;
+}
+
+.layout-tab-bar .ant-tabs-nav-wrap {
+  height: 40px !important;
+}
+
+.layout-tab-bar .ant-tabs-tab {
+  height: 40px !important;
+  line-height: 40px !important;
+  padding: 0 12px !important;
+  margin: 0 4px 0 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+}
+
+.layout-tab-bar .ant-tabs-tab-btn {
+  height: 40px !important;
+  line-height: 40px !important;
+  outline: none !important;
+}
+
+.layout-tab-bar .ant-tabs-content,
+.layout-tab-bar .ant-tabs-content-holder {
+  display: none !important;
 }
 
 /* ========================================
@@ -1233,13 +1276,13 @@ body {
 [data-layout="classic"] {
   --sidebar-width: 200px;
   --sidebar-collapsed-width: 56px;
-  --header-height: 56px;
+  --header-height: 64px;
 }
 
 [data-layout="hybrid"] {
   --sidebar-width: 200px;
   --sidebar-collapsed-width: 56px;
-  --header-height: 56px;
+  --header-height: 64px;
 }
 
 [data-layout="innovative"] {
@@ -1346,4 +1389,66 @@ html, body {
   max-width: 360px !important;
   min-width: 360px !important;
   flex: 0 0 360px !important;
+}
+
+/* ========================================
+   CronSelector 周历组件 - 防止滚动条
+   ======================================== */
+/* CronSelector Tab 整体样式 */
+.cron-selector-tabs {
+  overflow: visible !important;
+}
+
+.cron-selector-tabs .ant-tabs-nav {
+  overflow: visible !important;
+}
+
+.cron-selector-tabs .ant-tabs-content {
+  overflow: visible !important;
+}
+
+.cron-selector-tabs .ant-tabs-content-holder {
+  overflow: visible !important;
+}
+
+.cron-selector-tabs .ant-tabs-tabpane {
+  overflow: visible !important;
+  height: auto !important;
+}
+
+/* CronSelector Tab 内容滚动条隐藏 */
+.cron-selector-tabs .ant-tabs-tabpane::-webkit-scrollbar {
+  display: none !important;
+}
+
+.cron-selector-tabs .ant-tabs-content-holder::-webkit-scrollbar {
+  display: none !important;
+}
+
+/* 周字段复选框组 */
+.cron-selector-week-field .ant-checkbox-group {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+  width: 100% !important;
+}
+
+.cron-selector-week-field .ant-checkbox-wrapper {
+  margin: 0 !important;
+  white-space: nowrap !important;
+}
+
+.cron-selector-week-field .ant-space {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+}
+
+/* CronSelector 其他字段也防止滚动 */
+.cron-selector-tabs .ant-space {
+  max-width: 100%;
+}
+
+.cron-selector-tabs .ant-select {
+  max-width: 100%;
 }

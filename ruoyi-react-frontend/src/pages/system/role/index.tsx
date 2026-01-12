@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import type { FC } from 'react';
 import {
   Table,
   Button,
@@ -24,14 +25,16 @@ import {
   ReloadOutlined,
   SafetyCertificateOutlined,
 } from '@ant-design/icons';
-import type { ColumnsType, TreeDataNode } from 'antd/es/table';
+import type { ColumnsType } from 'antd/es/table';
+import type { TreeDataNode } from 'antd';
 import type { Role } from '@/types';
 import type { Key } from 'antd/es/table/interface';
 import { post } from '@/lib/api';
+import ActionButtons from '@/components/shared/ActionButtons';
 
 const { Option } = Select;
 
-const RoleManagement: React.FC = () => {
+const RoleManagement: FC = () => {
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
@@ -41,7 +44,7 @@ const RoleManagement: React.FC = () => {
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editForm] = Form.useForm();
   const [editingRole, setEditingRole] = useState<Role | null>(null);
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
 
   // 新增状态：菜单树、部门树、数据范围
   const [menuTree, setMenuTree] = useState<TreeDataNode[]>([]);
@@ -362,34 +365,42 @@ const RoleManagement: React.FC = () => {
     {
       title: '操作',
       key: 'action',
-      render: (_, record) => (
-        <Space size="middle">
-          <Button
-            type="link"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-          >
-            编辑
-          </Button>
-          <Button
-            type="link"
-            icon={record.status === 0 ? <DeleteOutlined /> : <SafetyCertificateOutlined />}
-            onClick={() => handleUpdateStatus(record.id, record.status === 0 ? 1 : 0)}
-          >
-            {record.status === 0 ? '停用' : '启用'}
-          </Button>
-          <Popconfirm
-            title="确定要删除这个角色吗？"
-            onConfirm={() => handleDelete(record.id)}
-            okText="确定"
-            cancelText="取消"
-          >
-            <Button type="link" danger icon={<DeleteOutlined />}>
-              删除
-            </Button>
-          </Popconfirm>
-        </Space>
-      ),
+      render: (_, record) => {
+        const actions = [
+          {
+            key: 'edit',
+            label: '编辑',
+            icon: <EditOutlined />,
+            onClick: () => handleEdit(record),
+          },
+          {
+            key: 'toggle-status',
+            label: record.status === 0 ? '停用' : '启用',
+            icon: record.status === 0 ? <DeleteOutlined /> : <SafetyCertificateOutlined />,
+            onClick: () => handleUpdateStatus(record.id, record.status === 0 ? 1 : 0),
+          },
+          {
+            key: 'delete',
+            label: '删除',
+            icon: <DeleteOutlined />,
+            danger: true,
+            render: () => (
+              <Popconfirm
+                title="确定要删除这个角色吗？"
+                onConfirm={() => handleDelete(record.id)}
+                okText="确定"
+                cancelText="取消"
+              >
+                <Button type="link" danger icon={<DeleteOutlined />} size="small">
+                  删除
+                </Button>
+              </Popconfirm>
+            ),
+          },
+        ];
+
+        return <ActionButtons actions={actions} />;
+      },
     },
   ];
 
@@ -583,7 +594,7 @@ const RoleManagement: React.FC = () => {
                     checkable
                     checkedKeys={checkedMenuKeys}
                     onCheck={(keys) => {
-                      const keyArray = keys as Key[];
+                      const keyArray = (keys as unknown) as Key[];
                       setCheckedMenuKeys(keyArray);
                       editForm.setFieldsValue({ menuIds: keyArray });
                     }}
@@ -620,7 +631,7 @@ const RoleManagement: React.FC = () => {
                       checkable
                       checkedKeys={checkedDeptKeys}
                       onCheck={(keys) => {
-                        const keyArray = keys as Key[];
+                        const keyArray = (keys as unknown) as Key[];
                         setCheckedDeptKeys(keyArray);
                         editForm.setFieldsValue({ deptIds: keyArray });
                       }}

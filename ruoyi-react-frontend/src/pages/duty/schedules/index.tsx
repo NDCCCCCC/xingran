@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Button,
   Form,
@@ -13,9 +13,7 @@ import {
   Tag,
   DatePicker,
   Alert,
-  Avatar,
   Switch,
-  Typography,
   Badge,
   Row,
   Col,
@@ -27,12 +25,14 @@ import {
   SwapOutlined,
   EditOutlined,
   DeleteOutlined,
-  UserOutlined,
   SearchOutlined,
   LeftOutlined,
   RightOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
+import {
+  Typography,
+} from 'antd';
 import dayjs from 'dayjs';
 import {
   getDutyScheduleList,
@@ -52,11 +52,14 @@ import {
 } from '@/lib/dutyApi';
 import type { Dayjs } from 'dayjs';
 
-const { RangePicker } = DatePicker;
-const { Option } = Select;
 const { Text } = Typography;
 
-const DutySchedulePage: React.FC = () => {
+const { RangePicker } = DatePicker;
+const { Option } = Select;
+
+import type { FC } from 'react';
+
+const DutySchedulePage: FC = () => {
   const [form] = Form.useForm();
   const [generateForm] = Form.useForm();
   const [swapForm] = Form.useForm();
@@ -67,7 +70,7 @@ const DutySchedulePage: React.FC = () => {
   const [total, setTotal] = useState(0);
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
 
   const [generateModalVisible, setGenerateModalVisible] = useState(false);
   const [swapModalVisible, setSwapModalVisible] = useState(false);
@@ -107,9 +110,8 @@ const DutySchedulePage: React.FC = () => {
 
   const fetchTodayDuty = async () => {
     try {
-      const result = await getTodayDuty();
+      await getTodayDuty();
       // 暂时不使用今日值班数据
-      // setTodayDuty(result.data?.members ?? []);
     } catch (error) {
       console.error('获取今日值班失败', error);
     }
@@ -658,7 +660,7 @@ const DutySchedulePage: React.FC = () => {
           scroll={{ x: 1200 }}
           rowSelection={{
             selectedRowKeys,
-            onChange: (selectedKeys) => setSelectedRowKeys(selectedKeys),
+            onChange: (selectedKeys) => setSelectedRowKeys(selectedKeys as string[]),
           }}
           pagination={{
             current,

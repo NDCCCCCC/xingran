@@ -1,8 +1,6 @@
 package middleware
 
 import (
-	"fmt"
-
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
@@ -11,19 +9,43 @@ import (
 	"gorm.io/gorm"
 )
 
+// 允许的数据权限字段白名单
+var allowedDataScopeFields = map[string]bool{
+	"dept_id": true,
+	"id":      true,
+}
+
+// isValidDataScopeField 验证字段名是否在白名单中
+func isValidDataScopeField(field string) bool {
+	return allowedDataScopeFields[field]
+}
+
+// getUserIDAsString 安全地从context获取user_id
+func getUserIDAsString(c *gin.Context) (string, bool) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		return "", false
+	}
+	userIDStr, ok := userID.(string)
+	if !ok {
+		return "", false
+	}
+	return userIDStr, true
+}
+
 // Permission 权限中间件
 func Permission(permission string, core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 获取用户信息
-		userID, exists := c.Get("user_id")
-		if !exists {
+		userID, ok := getUserIDAsString(c)
+		if !ok {
 			response.Error(c, response.ErrUnauthorized, "用户未认证")
 			c.Abort()
 			return
 		}
 
 		// 检查用户权限
-		if !checkUserPermission(core, userID.(string), permission) {
+		if !checkUserPermission(core, userID, permission) {
 			response.Error(c, response.ErrForbidden, "没有访问权限")
 			c.Abort()
 			return
@@ -126,22 +148,22 @@ func GetCurrentUserPermissions(core *core.Core, userID string) ([]string, error)
 // RequirePermissions 需要多个权限中的任意一个
 func RequirePermissions(permissions []string, core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userID, exists := c.Get("user_id")
-		if !exists {
+		userID, ok := getUserIDAsString(c)
+		if !ok {
 			response.Error(c, response.ErrUnauthorized, "用户未认证")
 			c.Abort()
 			return
 		}
 
 		// 超级管理员直接通过
-		if isSuperAdmin(core, userID.(string)) {
+		if isSuperAdmin(core, userID) {
 			c.Next()
 			return
 		}
 
 		// 检查是否有任意一个权限
 		for _, permission := range permissions {
-			if checkUserPermission(core, userID.(string), permission) {
+			if checkUserPermission(core, userID, permission) {
 				c.Next()
 				return
 			}
@@ -155,22 +177,22 @@ func RequirePermissions(permissions []string, core *core.Core) gin.HandlerFunc {
 // RequireAllPermissions 需要所有权限
 func RequireAllPermissions(permissions []string, core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userID, exists := c.Get("user_id")
-		if !exists {
+		userID, ok := getUserIDAsString(c)
+		if !ok {
 			response.Error(c, response.ErrUnauthorized, "用户未认证")
 			c.Abort()
 			return
 		}
 
 		// 超级管理员直接通过
-		if isSuperAdmin(core, userID.(string)) {
+		if isSuperAdmin(core, userID) {
 			c.Next()
 			return
 		}
 
 		// 检查是否拥有所有权限
 		for _, permission := range permissions {
-			if !checkUserPermission(core, userID.(string), permission) {
+			if !checkUserPermission(core, userID, permission) {
 				response.Error(c, response.ErrForbidden, "没有访问权限")
 				c.Abort()
 				return
@@ -184,21 +206,21 @@ func RequireAllPermissions(permissions []string, core *core.Core) gin.HandlerFun
 // DataScopePermission 数据权限中间件
 func DataScopePermission(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userID, exists := c.Get("user_id")
-		if !exists {
+		userID, ok := getUserIDAsString(c)
+		if !ok {
 			response.Error(c, response.ErrUnauthorized, "用户未认证")
 			c.Abort()
 			return
 		}
 
 		// 超级管理员直接通过
-		if isSuperAdmin(core, userID.(string)) {
+		if isSuperAdmin(core, userID) {
 			c.Next()
 			return
 		}
 
 		// 获取用户最大数据权限范围
-		dataScope, err := getUserMaxDataScope(core, userID.(string))
+		dataScope, err := getUserMaxDataScope(core, userID)
 		if err != nil {
 			response.Error(c, response.ErrServerError, "获取数据权限失败")
 			c.Abort()
@@ -229,6 +251,11 @@ func getUserMaxDataScope(core *core.Core, userID string) (models.DataScope, erro
 
 // ApplyDataScope 应用数据权限过滤
 func ApplyDataScope(db *gorm.DB, userID string, dataScope models.DataScope, core *core.Core, deptField string) *gorm.DB {
+	// 验证字段名安全性，防止SQL注入
+	if !isValidDataScopeField(deptField) {
+		return db.Where("1=0") // 无效字段名，返回空结果
+	}
+
 	switch dataScope {
 	case models.DataScopeAll:
 		// 全部数据权限，不做过滤
@@ -244,7 +271,7 @@ func ApplyDataScope(db *gorm.DB, userID string, dataScope models.DataScope, core
 		`, userID).Scan(&deptIds)
 
 		if len(deptIds) > 0 {
-			return db.Where(fmt.Sprintf("%s IN ?", deptField), deptIds)
+			return db.Where(deptField+" IN ?", deptIds)
 		}
 		return db.Where("1=0") // 没有权限访问任何数据
 	case models.DataScopeDept:
@@ -252,7 +279,7 @@ func ApplyDataScope(db *gorm.DB, userID string, dataScope models.DataScope, core
 		var deptId string
 		core.DB.GetDB().Raw("SELECT dept_id FROM sys_user WHERE id = ?", userID).Scan(&deptId)
 		if deptId != "" {
-			return db.Where(fmt.Sprintf("%s = ?", deptField), deptId)
+			return db.Where(deptField+" = ?", deptId)
 		}
 		return db.Where("1=0")
 	case models.DataScopeDeptChild:
@@ -265,12 +292,12 @@ func ApplyDataScope(db *gorm.DB, userID string, dataScope models.DataScope, core
 			childDeptIds = append(childDeptIds, deptId)
 			getChildDepts(core, deptId, &childDeptIds)
 
-			return db.Where(fmt.Sprintf("%s IN ?", deptField), childDeptIds)
+			return db.Where(deptField+" IN ?", childDeptIds)
 		}
 		return db.Where("1=0")
 	case models.DataScopeSelf:
 		// 仅本人数据权限
-		return db.Where(fmt.Sprintf("%s = ?", deptField), userID)
+		return db.Where(deptField+" = ?", userID)
 	default:
 		return db.Where("1=0") // 默认无权限
 	}

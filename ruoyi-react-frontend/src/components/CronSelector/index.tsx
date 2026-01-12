@@ -6,8 +6,8 @@
  * - 下方: 可视化配置(Tab切换秒/分/时/日/月/周)
  */
 
-import React, { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
-import { Input, Select, Tabs, Alert, Space, Row, Col, List, Typography } from 'antd';
+import { useState, useLayoutEffect, useImperativeHandle, forwardRef } from 'react';
+import { Input, Select, Tabs, Alert, Space, Row, Col, List } from 'antd';
 import { InfoCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import type { CronConfig, CronFieldType } from './constants';
 import {
@@ -61,13 +61,14 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
     const [activeField, setActiveField] = useState<CronFieldType>('minute');
 
     // 同步外部value变化
-    useEffect(() => {
+    useLayoutEffect(() => {
       if (value !== cronExpression) {
         setCronExpression(value || DEFAULT_CRON_EXPRESSION);
         if (validateCronExpression(value)) {
           setCronConfig(expressionToCronConfig(value));
         }
       }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [value]);
 
     // 暴露给父组件的方法
@@ -189,6 +190,13 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
             label: FIELD_LABELS[fieldType],
             children: renderField(fieldType),
           }))}
+          className="cron-selector-tabs"
+          style={{
+            overflow: 'hidden',
+          }}
+          tabBarStyle={{
+            marginBottom: 12,
+          }}
         />
 
         {/* 最近五次执行时间 */}
@@ -239,7 +247,9 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
 CronSelector.displayName = 'CronSelector';
 
 export default CronSelector;
+ 
 export type { CronConfig, CronFieldConfig, CronPreset } from './constants';
+ 
 export {
   cronConfigToExpression,
   expressionToCronConfig,
@@ -248,4 +258,5 @@ export {
   cronToChinese,
   getDefaultCronConfig,
 } from './utils';
+ 
 export { CRON_PRESETS, FIELD_RANGES, WEEK_DAY_NAMES, MONTH_NAMES, DEFAULT_CRON_EXPRESSION } from './constants';

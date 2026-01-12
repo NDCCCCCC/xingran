@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Button,
   Form,
@@ -17,7 +17,6 @@ import {
   Drawer,
   Timeline,
   Radio,
-  Rate,
   TreeSelect,
 } from 'antd';
 import {
@@ -27,7 +26,6 @@ import {
   SearchOutlined,
   ReloadOutlined,
   FileTextOutlined,
-  UserOutlined,
   ClockCircleOutlined,
   CheckCircleOutlined,
   EyeOutlined,
@@ -70,6 +68,7 @@ import {
   type SimpleUser,
   type SimpleDept,
 } from '@/lib/workorderApi';
+import ActionButtons from '@/components/shared/ActionButtons';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -108,7 +107,9 @@ const TYPE_CONFIG = {
   [WorkOrderType.Question]: { text: '咨询' },
 };
 
-const WorkOrderPage: React.FC = () => {
+import type { FC } from 'react';
+
+const WorkOrderPage: FC = () => {
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
   const [commentForm] = Form.useForm();
@@ -481,32 +482,50 @@ const WorkOrderPage: React.FC = () => {
     {
       title: '操作',
       key: 'action',
-      width: 240,
+      width: 100,
       fixed: 'right',
-      render: (_: unknown, record: WorkOrder) => (
-        <Space size="small">
-          <Button type="link" size="small" icon={<EyeOutlined />} onClick={() => handleViewDetail(record)}>
-            详情
-          </Button>
-          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
-            编辑
-          </Button>
-          {record.status === WorkOrderStatus.Pending && (
-            <Button
-              type="link"
-              size="small"
-              onClick={() => handleAssignToTodayDuty(record.id)}
-            >
-              分配值班
-            </Button>
-          )}
-          <Popconfirm title="确定要删除吗？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消">
-            <Button type="link" size="small" danger icon={<DeleteOutlined />}>
-              删除
-            </Button>
-          </Popconfirm>
-        </Space>
-      ),
+      render: (_: unknown, record: WorkOrder) => {
+        const actions = [
+          {
+            key: 'view',
+            label: '详情',
+            icon: <EyeOutlined />,
+            onClick: () => handleViewDetail(record),
+          },
+          {
+            key: 'edit',
+            label: '编辑',
+            icon: <EditOutlined />,
+            onClick: () => handleEdit(record),
+          },
+          ...(record.status === WorkOrderStatus.Pending ? [{
+            key: 'assign',
+            label: '分配值班',
+            icon: <CheckCircleOutlined />,
+            onClick: () => handleAssignToTodayDuty(record.id),
+          }] : []),
+          {
+            key: 'delete',
+            label: '删除',
+            icon: <DeleteOutlined />,
+            danger: true,
+            render: () => (
+              <Popconfirm
+                title="确定要删除吗？"
+                onConfirm={() => handleDelete(record.id)}
+                okText="确定"
+                cancelText="取消"
+              >
+                <Button type="link" danger icon={<DeleteOutlined />} size="small">
+                  删除
+                </Button>
+              </Popconfirm>
+            ),
+          },
+        ];
+
+        return <ActionButtons actions={actions} />;
+      },
     },
   ];
 

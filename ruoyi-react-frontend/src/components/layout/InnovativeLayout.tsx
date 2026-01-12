@@ -3,8 +3,8 @@
  * 创新导航方式 + 模块化面板 + 沉浸式体验
  */
 
-import React, { useState } from 'react';
-import { Layout as AntLayout, Card, Row, Col, Button, Tooltip, Space, Divider } from 'antd';
+import { useState } from 'react';
+import { Card, Button, Tooltip, Space, Divider } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import ThemeSwitcher from '@/design-system/components/ThemeSwitcher';
 import LayoutSwitcher from '@/design-system/components/LayoutSwitcher';
@@ -20,21 +20,19 @@ import {
   CalendarOutlined,
   FileTextOutlined,
   ApiOutlined,
-  AppstoreOutlined,
   LogoutOutlined,
 } from '@ant-design/icons';
 import QuickNav from './shared/QuickNav';
-
-const { Content } = AntLayout;
+import type { FC, ReactNode } from 'react';
 
 interface InnovativeLayoutProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 interface SpaceNav {
   key: string;
   title: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
   path: string;
   color: string;
   description: string;
@@ -115,7 +113,7 @@ const spaceNavs: SpaceNav[] = [
   },
 ];
 
-const InnovativeLayout: React.FC<InnovativeLayoutProps> = ({ children }) => {
+const InnovativeLayout: FC<InnovativeLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const [activeSpace, setActiveSpace] = useState<string>('dashboard');
@@ -147,7 +145,8 @@ const InnovativeLayout: React.FC<InnovativeLayoutProps> = ({ children }) => {
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          paddingY: '16px',
+          paddingTop: '16px',
+          paddingBottom: '16px',
           gap: '12px',
           transition: 'all var(--theme-transition-base)',
         }}

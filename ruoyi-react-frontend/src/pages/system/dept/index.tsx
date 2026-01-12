@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import type { FC, ReactNode } from 'react';
 import {
   Table,
   Button,
@@ -44,7 +45,7 @@ interface DeptUser {
   email?: string;
 }
 
-const DepartmentManagement: React.FC = () => {
+const DepartmentManagement: FC = () => {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchForm] = Form.useForm();
@@ -80,9 +81,7 @@ const DepartmentManagement: React.FC = () => {
       setDepartments(deptData);
 
       // 调试日志：查看后端返回的数据格式
-      console.log('部门数据:', deptData);
       const flatList = flattenTreeToList(deptData);
-      console.log('扁平化后的部门数据:', flatList);
 
       // 组建父级选项（树形结构）
       const options = transformToParentTreeOptions(deptData);

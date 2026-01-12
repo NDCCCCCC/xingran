@@ -3,7 +3,6 @@ package v1
 import (
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
@@ -174,235 +173,58 @@ func getAllRoles(core *core.Core) gin.HandlerFunc {
 // @Router /roles [post]
 func createRole(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var req struct {
-			RoleName        string   `json:"roleName"`
-			RoleKey         string   `json:"roleKey"`
-			RoleSort        int      `json:"roleSort"`
-			DataScope       int      `json:"dataScope"`
-			MenuCheckStrictly *bool  `json:"menuCheckStrictly"`
-			DeptCheckStrictly *bool  `json:"deptCheckStrictly"`
-			Status          int      `json:"status"`
-			Remark          *string  `json:"remark"`
-			MenuIds         []string `json:"menuIds"`
-			DeptIds         []string `json:"deptIds"`
-		}
-		if err := c.ShouldBindJSON(&req); err != nil {
-			// 尝试从原始请求中读取
-			var rawReq map[string]interface{}
-			if err2 := c.ShouldBindJSON(&rawReq); err2 != nil {
-				response.Error(c, response.ErrBadRequest, "请求参数错误: "+err.Error())
-				return
-			}
-			// 手动转换各个字段
-			if name, ok := rawReq["roleName"]; ok {
-				req.RoleName = fmt.Sprintf("%v", name)
-			}
-			if key, ok := rawReq["roleKey"]; ok {
-				req.RoleKey = fmt.Sprintf("%v", key)
-			}
-			if sort, ok := rawReq["roleSort"]; ok {
-				switch v := sort.(type) {
-				case float64:
-					req.RoleSort = int(v)
-				case int:
-					req.RoleSort = v
-				case string:
-					if s, err := strconv.Atoi(v); err == nil {
-						req.RoleSort = s
-					}
-				}
-			}
-			if dataScope, ok := rawReq["dataScope"]; ok {
-				switch v := dataScope.(type) {
-				case float64:
-					req.DataScope = int(v)
-				case int:
-					req.DataScope = v
-				case string:
-					if s, err := strconv.Atoi(v); err == nil {
-						req.DataScope = s
-					}
-				}
-			}
-			if menuStrictly, ok := rawReq["menuCheckStrictly"]; ok {
-				switch v := menuStrictly.(type) {
-				case bool:
-					req.MenuCheckStrictly = &v
-				case string:
-					if s, err := strconv.ParseBool(v); err == nil {
-						req.MenuCheckStrictly = &s
-					}
-				}
-			}
-			if deptStrictly, ok := rawReq["deptCheckStrictly"]; ok {
-				switch v := deptStrictly.(type) {
-				case bool:
-					req.DeptCheckStrictly = &v
-				case string:
-					if s, err := strconv.ParseBool(v); err == nil {
-						req.DeptCheckStrictly = &s
-					}
-				}
-			}
-			if status, ok := rawReq["status"]; ok {
-				switch v := status.(type) {
-				case float64:
-					req.Status = int(v)
-				case string:
-					if s, err := strconv.Atoi(v); err == nil {
-						req.Status = s
-					}
-				case int:
-					req.Status = v
-				case bool:
-					if v {
-						req.Status = 0
-					} else {
-						req.Status = 1
-					}
-				}
-			}
-			if remark, ok := rawReq["remark"]; ok {
-				s := fmt.Sprintf("%v", remark)
-				req.Remark = &s
-			}
-			if menuIds, ok := rawReq["menuIds"]; ok {
-				if ids, ok := menuIds.([]interface{}); ok {
-					for _, id := range ids {
-						req.MenuIds = append(req.MenuIds, fmt.Sprintf("%v", id))
-					}
-				}
-			}
-			if deptIds, ok := rawReq["deptIds"]; ok {
-				if ids, ok := deptIds.([]interface{}); ok {
-					for _, id := range ids {
-						req.DeptIds = append(req.DeptIds, fmt.Sprintf("%v", id))
-					}
-				}
-			}
-		}
-
-		// 验证必填字段
-		if req.RoleName == "" {
-			response.Error(c, response.ErrBadRequest, "角色名称不能为空")
-			return
-		}
-		if req.RoleKey == "" {
-			response.Error(c, response.ErrBadRequest, "权限字符不能为空")
-			return
-		}
-
-		// 验证状态值
-		if req.Status != 0 && req.Status != 1 {
-			response.Error(c, response.ErrBadRequest, "状态值无效，必须是0(启用)或1(禁用)")
+		req, ok := bindAndParseRoleRequest(c)
+		if !ok {
 			return
 		}
 
 		// 检查角色名称是否已存在
-		var count int64
-		if err := core.DB.GetDB().Model(&models.Role{}).Where("role_name = ?", req.RoleName).Count(&count).Error; err != nil {
+		if exists, err := checkRoleNameExists(core.DB.GetDB(), req.RoleName, ""); err != nil {
 			response.Error(c, response.ErrServerError, "检查角色名称失败")
 			return
-		}
-		if count > 0 {
+		} else if exists {
 			response.Error(c, response.ErrRecordExists, "角色名称已存在")
 			return
 		}
 
 		// 检查权限字符是否已存在
-		if err := core.DB.GetDB().Model(&models.Role{}).Where("role_key = ?", req.RoleKey).Count(&count).Error; err != nil {
+		if exists, err := checkRoleKeyExists(core.DB.GetDB(), req.RoleKey, ""); err != nil {
 			response.Error(c, response.ErrServerError, "检查权限字符失败")
 			return
-		}
-		if count > 0 {
+		} else if exists {
 			response.Error(c, response.ErrRecordExists, "权限字符已存在")
 			return
 		}
 
-		// 设置默认值（固定为关联模式）
-		menuCheckStrictly := true
-		deptCheckStrictly := true
-
-		// 开始事务
-		tx := core.DB.GetDB().Begin()
-		defer func() {
-			if r := recover(); r != nil {
-				tx.Rollback()
+		var role models.Role
+		if err := core.DB.GetDB().Transaction(func(tx *gorm.DB) error {
+			newRole := models.Role{
+				RoleName:          req.RoleName,
+				RoleKey:           req.RoleKey,
+				RoleSort:          req.RoleSort,
+				DataScope:         models.DataScope(req.DataScope),
+				MenuCheckStrictly: true,
+				DeptCheckStrictly: true,
+				Status:            models.RoleStatus(req.Status),
+				Remark:            derefString(req.Remark),
 			}
-		}()
 
-		// 创建角色
-		role := models.Role{
-			RoleName:         req.RoleName,
-			RoleKey:          req.RoleKey,
-			RoleSort:         req.RoleSort,
-			DataScope:        models.DataScope(req.DataScope),
-			MenuCheckStrictly: menuCheckStrictly,
-			DeptCheckStrictly: deptCheckStrictly,
-			Status:           models.RoleStatus(req.Status),
-			Remark:           func() string { if req.Remark != nil { return *req.Remark }; return "" }(),
-		}
+			if err := tx.Create(&newRole).Error; err != nil {
+				return fmt.Errorf("创建角色失败: %w", err)
+			}
 
-		if err := tx.Create(&role).Error; err != nil {
-			tx.Rollback()
-			response.Error(c, response.ErrServerError, "创建角色失败")
+			if err := assignRoleMenusAndDepts(tx, newRole.ID, req.MenuIds, req.DeptIds); err != nil {
+				return err
+			}
+
+			role = newRole
+			return nil
+		}); err != nil {
+			response.Error(c, response.ErrServerError, err.Error())
 			return
 		}
 
-		// 关联菜单权限
-		if len(req.MenuIds) > 0 {
-			for _, menuId := range req.MenuIds {
-				if err := tx.Create(&models.RoleMenu{
-					RoleID: role.ID,
-					MenuID: menuId,
-				}).Error; err != nil {
-					tx.Rollback()
-					response.Error(c, response.ErrServerError, "关联菜单权限失败")
-					return
-				}
-			}
-		}
-
-		// 关联部门权限
-		if len(req.DeptIds) > 0 {
-			for _, deptId := range req.DeptIds {
-				if err := tx.Create(&models.RoleDept{
-					RoleID: role.ID,
-					DeptID: deptId,
-				}).Error; err != nil {
-					tx.Rollback()
-					response.Error(c, response.ErrServerError, "关联部门权限失败")
-					return
-				}
-			}
-		}
-
-		// 提交事务
-		if err := tx.Commit().Error; err != nil {
-			response.Error(c, response.ErrServerError, "创建角色失败")
-			return
-		}
-
-		// 记录操作日志
-		clientIP := c.ClientIP()
-		operURL := c.Request.URL.String()
-		core.OperLogService.RecordAsync(
-			core.GetDB(),
-			"角色管理",
-			1, // 1=新增
-			"",
-			c.Request.Method,
-			operURL,
-			getUsernameFromContext(c),
-			getDeptNameFromContext(c, core.GetDB()),
-			&clientIP,
-			nil,
-			nil,
-			nil,
-			0,
-			0,
-		)
-
+		recordOperLog(c, core, "角色管理", OperTypeCreate)
 		response.Success(c, role)
 	}
 }
@@ -456,133 +278,13 @@ func getRole(core *core.Core) gin.HandlerFunc {
 // @Router /roles/{id} [put]
 func updateRole(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		id := c.Param("id")
-		if id == "" {
-			response.Error(c, response.ErrBadRequest, "角色ID不能为空")
+		id, ok := getRequiredParam(c, "id", "角色ID")
+		if !ok {
 			return
 		}
 
-		var req struct {
-			RoleName          string  `json:"roleName"`
-			RoleKey           string  `json:"roleKey"`
-			RoleSort          int     `json:"roleSort"`
-			DataScope         int     `json:"dataScope"`
-			MenuCheckStrictly *bool   `json:"menuCheckStrictly"`
-			DeptCheckStrictly *bool   `json:"deptCheckStrictly"`
-			Status            int     `json:"status"`
-			Remark            *string `json:"remark"`
-			MenuIds           []string `json:"menuIds"`
-			DeptIds           []string `json:"deptIds"`
-		}
-		if err := c.ShouldBindJSON(&req); err != nil {
-			// 尝试从原始请求中读取
-			var rawReq map[string]interface{}
-			if err2 := c.ShouldBindJSON(&rawReq); err2 != nil {
-				response.Error(c, response.ErrBadRequest, "请求参数错误: "+err.Error())
-				return
-			}
-			// 手动转换各个字段
-			if name, ok := rawReq["roleName"]; ok {
-				req.RoleName = fmt.Sprintf("%v", name)
-			}
-			if key, ok := rawReq["roleKey"]; ok {
-				req.RoleKey = fmt.Sprintf("%v", key)
-			}
-			if sort, ok := rawReq["roleSort"]; ok {
-				switch v := sort.(type) {
-				case float64:
-					req.RoleSort = int(v)
-				case int:
-					req.RoleSort = v
-				case string:
-					if s, err := strconv.Atoi(v); err == nil {
-						req.RoleSort = s
-					}
-				}
-			}
-			if dataScope, ok := rawReq["dataScope"]; ok {
-				switch v := dataScope.(type) {
-				case float64:
-					req.DataScope = int(v)
-				case int:
-					req.DataScope = v
-				case string:
-					if s, err := strconv.Atoi(v); err == nil {
-						req.DataScope = s
-					}
-				}
-			}
-			if menuStrictly, ok := rawReq["menuCheckStrictly"]; ok {
-				switch v := menuStrictly.(type) {
-				case bool:
-					req.MenuCheckStrictly = &v
-				case string:
-					if s, err := strconv.ParseBool(v); err == nil {
-						req.MenuCheckStrictly = &s
-					}
-				}
-			}
-			if deptStrictly, ok := rawReq["deptCheckStrictly"]; ok {
-				switch v := deptStrictly.(type) {
-				case bool:
-					req.DeptCheckStrictly = &v
-				case string:
-					if s, err := strconv.ParseBool(v); err == nil {
-						req.DeptCheckStrictly = &s
-					}
-				}
-			}
-			if status, ok := rawReq["status"]; ok {
-				switch v := status.(type) {
-				case float64:
-					req.Status = int(v)
-				case string:
-					if s, err := strconv.Atoi(v); err == nil {
-						req.Status = s
-					}
-				case int:
-					req.Status = v
-				case bool:
-					if v {
-						req.Status = 0
-					} else {
-						req.Status = 1
-					}
-				}
-			}
-			if remark, ok := rawReq["remark"]; ok {
-				s := fmt.Sprintf("%v", remark)
-				req.Remark = &s
-			}
-			if menuIds, ok := rawReq["menuIds"]; ok {
-				if ids, ok := menuIds.([]interface{}); ok {
-					for _, id := range ids {
-						req.MenuIds = append(req.MenuIds, fmt.Sprintf("%v", id))
-					}
-				}
-			}
-			if deptIds, ok := rawReq["deptIds"]; ok {
-				if ids, ok := deptIds.([]interface{}); ok {
-					for _, id := range ids {
-						req.DeptIds = append(req.DeptIds, fmt.Sprintf("%v", id))
-					}
-				}
-			}
-		}
-
-		// 验证必填字段
-		if req.RoleName == "" {
-			response.Error(c, response.ErrBadRequest, "角色名称不能为空")
-			return
-		}
-		if req.RoleKey == "" {
-			response.Error(c, response.ErrBadRequest, "权限字符不能为空")
-			return
-		}
-
-		// 验证状态值
-		if req.Status != 0 && req.Status != 1 {
-			response.Error(c, response.ErrBadRequest, "状态值无效，必须是0(启用)或1(禁用)")
+		req, ok := bindAndParseRoleRequest(c)
+		if !ok {
 			return
 		}
 
@@ -598,124 +300,46 @@ func updateRole(core *core.Core) gin.HandlerFunc {
 		}
 
 		// 检查角色名称是否与其他角色重复
-		var count int64
-		if err := core.DB.GetDB().Model(&models.Role{}).Where("role_name = ? AND id != ?", req.RoleName, id).Count(&count).Error; err != nil {
+		if exists, err := checkRoleNameExists(core.DB.GetDB(), req.RoleName, id); err != nil {
 			response.Error(c, response.ErrServerError, "检查角色名称失败")
 			return
-		}
-		if count > 0 {
+		} else if exists {
 			response.Error(c, response.ErrRecordExists, "角色名称已存在")
 			return
 		}
 
 		// 检查权限字符是否与其他角色重复
-		if err := core.DB.GetDB().Model(&models.Role{}).Where("role_key = ? AND id != ?", req.RoleKey, id).Count(&count).Error; err != nil {
+		if exists, err := checkRoleKeyExists(core.DB.GetDB(), req.RoleKey, id); err != nil {
 			response.Error(c, response.ErrServerError, "检查权限字符失败")
 			return
-		}
-		if count > 0 {
+		} else if exists {
 			response.Error(c, response.ErrRecordExists, "权限字符已存在")
 			return
 		}
 
-		// 设置默认值（固定为关联模式）
-		menuCheckStrictly := true
-		deptCheckStrictly := true
-
-		// 开始事务
-		tx := core.DB.GetDB().Begin()
-		defer func() {
-			if r := recover(); r != nil {
-				tx.Rollback()
+		if err := core.DB.GetDB().Transaction(func(tx *gorm.DB) error {
+			updates := map[string]interface{}{
+				"role_name":           req.RoleName,
+				"role_key":            req.RoleKey,
+				"role_sort":           req.RoleSort,
+				"data_scope":          models.DataScope(req.DataScope),
+				"menu_check_strictly": true,
+				"dept_check_strictly": true,
+				"status":              models.RoleStatus(req.Status),
+				"remark":              derefString(req.Remark),
 			}
-		}()
 
-		// 更新角色信息
-		updates := map[string]interface{}{
-			"role_name":          req.RoleName,
-			"role_key":           req.RoleKey,
-			"role_sort":          req.RoleSort,
-			"data_scope":         models.DataScope(req.DataScope),
-			"menu_check_strictly": menuCheckStrictly,
-			"dept_check_strictly": deptCheckStrictly,
-			"status":             models.RoleStatus(req.Status),
-			"remark":             func() string { if req.Remark != nil { return *req.Remark }; return "" }(),
-		}
-
-		if err := tx.Model(&role).Updates(updates).Error; err != nil {
-			tx.Rollback()
-			response.Error(c, response.ErrServerError, "更新角色失败")
-			return
-		}
-
-		// 删除原有的菜单权限关联
-		if err := tx.Where("role_id = ?", id).Delete(&models.RoleMenu{}).Error; err != nil {
-			tx.Rollback()
-			response.Error(c, response.ErrServerError, "删除原菜单权限关联失败")
-			return
-		}
-
-		// 重新关联菜单权限
-		if len(req.MenuIds) > 0 {
-			for _, menuId := range req.MenuIds {
-				if err := tx.Create(&models.RoleMenu{
-					RoleID: id,
-					MenuID: menuId,
-				}).Error; err != nil {
-					tx.Rollback()
-					response.Error(c, response.ErrServerError, "关联菜单权限失败")
-					return
-				}
+			if err := tx.Model(&role).Updates(updates).Error; err != nil {
+				return fmt.Errorf("更新角色失败: %w", err)
 			}
-		}
 
-		// 删除原有的部门权限关联
-		if err := tx.Where("role_id = ?", id).Delete(&models.RoleDept{}).Error; err != nil {
-			tx.Rollback()
-			response.Error(c, response.ErrServerError, "删除原部门权限关联失败")
+			return updateRoleMenusAndDepts(tx, id, req.MenuIds, req.DeptIds)
+		}); err != nil {
+			response.Error(c, response.ErrServerError, err.Error())
 			return
 		}
 
-		// 重新关联部门权限
-		if len(req.DeptIds) > 0 {
-			for _, deptId := range req.DeptIds {
-				if err := tx.Create(&models.RoleDept{
-					RoleID: id,
-					DeptID: deptId,
-				}).Error; err != nil {
-					tx.Rollback()
-					response.Error(c, response.ErrServerError, "关联部门权限失败")
-					return
-				}
-			}
-		}
-
-		// 提交事务
-		if err := tx.Commit().Error; err != nil {
-			response.Error(c, response.ErrServerError, "更新角色失败")
-			return
-		}
-
-		// 记录操作日志
-		clientIP := c.ClientIP()
-		operURL := c.Request.URL.String()
-		core.OperLogService.RecordAsync(
-			core.GetDB(),
-			"角色管理",
-			2, // 2=修改
-			"",
-			c.Request.Method,
-			operURL,
-			getUsernameFromContext(c),
-			getDeptNameFromContext(c, core.GetDB()),
-			&clientIP,
-			nil,
-			nil,
-			nil,
-			0,
-			0,
-		)
-
+		recordOperLog(c, core, "角色管理", OperTypeUpdate)
 		response.Success(c, gin.H{"message": "更新成功"})
 	}
 }
@@ -762,60 +386,31 @@ func deleteRole(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		// 开始事务
-		tx := core.DB.GetDB().Begin()
-		defer func() {
-			if r := recover(); r != nil {
-				tx.Rollback()
+		// 使用事务
+		if err := core.DB.GetDB().Transaction(func(tx *gorm.DB) error {
+			// 删除角色菜单关联
+			if err := tx.Where("role_id = ?", id).Delete(&models.RoleMenu{}).Error; err != nil {
+				return fmt.Errorf("删除角色菜单关联失败: %w", err)
 			}
-		}()
 
-		// 删除角色菜单关联
-		if err := tx.Where("role_id = ?", id).Delete(&models.RoleMenu{}).Error; err != nil {
-			tx.Rollback()
-			response.Error(c, response.ErrServerError, "删除角色菜单关联失败")
-			return
-		}
+			// 删除角色部门关联
+			if err := tx.Where("role_id = ?", id).Delete(&models.RoleDept{}).Error; err != nil {
+				return fmt.Errorf("删除角色部门关联失败: %w", err)
+			}
 
-		// 删除角色部门关联
-		if err := tx.Where("role_id = ?", id).Delete(&models.RoleDept{}).Error; err != nil {
-			tx.Rollback()
-			response.Error(c, response.ErrServerError, "删除角色部门关联失败")
-			return
-		}
+			// 删除角色
+			if err := tx.Delete(&role).Error; err != nil {
+				return fmt.Errorf("删除角色失败: %w", err)
+			}
 
-		// 删除角色
-		if err := tx.Delete(&role).Error; err != nil {
-			tx.Rollback()
-			response.Error(c, response.ErrServerError, "删除角色失败")
-			return
-		}
-
-		// 提交事务
-		if err := tx.Commit().Error; err != nil {
-			response.Error(c, response.ErrServerError, "删除角色失败")
+			return nil
+		}); err != nil {
+			response.Error(c, response.ErrServerError, err.Error())
 			return
 		}
 
 		// 记录操作日志
-		clientIP := c.ClientIP()
-		operURL := c.Request.URL.String()
-		core.OperLogService.RecordAsync(
-			core.GetDB(),
-			"角色管理",
-			3, // 3=删除
-			"",
-			c.Request.Method,
-			operURL,
-			getUsernameFromContext(c),
-			getDeptNameFromContext(c, core.GetDB()),
-			&clientIP,
-			nil,
-			nil,
-			nil,
-			0,
-			0,
-		)
+		recordOperLog(c, core, "角色管理", OperTypeDelete)
 
 		response.Success(c, gin.H{"message": "删除成功"})
 	}
@@ -858,60 +453,31 @@ func batchDeleteRoles(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		// 开始事务
-		tx := core.DB.GetDB().Begin()
-		defer func() {
-			if r := recover(); r != nil {
-				tx.Rollback()
+		// 使用事务
+		if err := core.DB.GetDB().Transaction(func(tx *gorm.DB) error {
+			// 删除角色菜单关联
+			if err := tx.Where("role_id IN ?", req.IDs).Delete(&models.RoleMenu{}).Error; err != nil {
+				return fmt.Errorf("删除角色菜单关联失败: %w", err)
 			}
-		}()
 
-		// 删除角色菜单关联
-		if err := tx.Where("role_id IN ?", req.IDs).Delete(&models.RoleMenu{}).Error; err != nil {
-			tx.Rollback()
-			response.Error(c, response.ErrServerError, "删除角色菜单关联失败")
-			return
-		}
+			// 删除角色部门关联
+			if err := tx.Where("role_id IN ?", req.IDs).Delete(&models.RoleDept{}).Error; err != nil {
+				return fmt.Errorf("删除角色部门关联失败: %w", err)
+			}
 
-		// 删除角色部门关联
-		if err := tx.Where("role_id IN ?", req.IDs).Delete(&models.RoleDept{}).Error; err != nil {
-			tx.Rollback()
-			response.Error(c, response.ErrServerError, "删除角色部门关联失败")
-			return
-		}
+			// 删除角色
+			if err := tx.Where("id IN ?", req.IDs).Delete(&models.Role{}).Error; err != nil {
+				return fmt.Errorf("删除角色失败: %w", err)
+			}
 
-		// 删除角色
-		if err := tx.Where("id IN ?", req.IDs).Delete(&models.Role{}).Error; err != nil {
-			tx.Rollback()
-			response.Error(c, response.ErrServerError, "删除角色失败")
-			return
-		}
-
-		// 提交事务
-		if err := tx.Commit().Error; err != nil {
-			response.Error(c, response.ErrServerError, "批量删除角色失败")
+			return nil
+		}); err != nil {
+			response.Error(c, response.ErrServerError, err.Error())
 			return
 		}
 
 		// 记录操作日志
-		clientIP := c.ClientIP()
-		operURL := c.Request.URL.String()
-		core.OperLogService.RecordAsync(
-			core.GetDB(),
-			"角色管理",
-			3, // 3=删除
-			"",
-			c.Request.Method,
-			operURL,
-			getUsernameFromContext(c),
-			getDeptNameFromContext(c, core.GetDB()),
-			&clientIP,
-			nil,
-			nil,
-			nil,
-			0,
-			0,
-		)
+		recordOperLog(c, core, "角色管理", OperTypeDelete)
 
 		response.Success(c, gin.H{"message": "批量删除成功"})
 	}
@@ -948,29 +514,9 @@ func updateRoleStatus(core *core.Core) gin.HandlerFunc {
 				response.Error(c, response.ErrBadRequest, "请求参数错误: "+err.Error())
 				return
 			}
-			// 尝试转换status值
+			// 使用辅助函数转换status值
 			if statusVal, ok := rawReq["status"]; ok {
-				switch v := statusVal.(type) {
-				case float64:
-					req.Status = int(v)
-				case string:
-					if v == "0" || v == "1" {
-						req.Status = 0
-					} else {
-						req.Status = 1
-					}
-				case int:
-					req.Status = v
-				case bool:
-					if v {
-						req.Status = 0
-					} else {
-						req.Status = 1
-					}
-				default:
-					response.Error(c, response.ErrBadRequest, "status字段格式错误")
-					return
-				}
+				req.Status = parseStatusToInt(statusVal)
 			} else {
 				response.Error(c, response.ErrBadRequest, "缺少status字段")
 				return
@@ -1001,24 +547,7 @@ func updateRoleStatus(core *core.Core) gin.HandlerFunc {
 		}
 
 		// 记录操作日志
-		clientIP := c.ClientIP()
-		operURL := c.Request.URL.String()
-		core.OperLogService.RecordAsync(
-			core.GetDB(),
-			"角色管理",
-			2, // 2=修改
-			"",
-			c.Request.Method,
-			operURL,
-			getUsernameFromContext(c),
-			getDeptNameFromContext(c, core.GetDB()),
-			&clientIP,
-			nil,
-			nil,
-			nil,
-			0,
-			0,
-		)
+		recordOperLog(c, core, "角色管理", OperTypeUpdate)
 
 		response.Success(c, gin.H{"message": "更新状态成功"})
 	}
@@ -1039,41 +568,9 @@ func updateRoleStatus(core *core.Core) gin.HandlerFunc {
 // @Router /roles/{id}/menus [put]
 func updateRoleMenus(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		id := c.Param("id")
-		if id == "" {
-			response.Error(c, response.ErrBadRequest, "角色ID不能为空")
+		id, ok := getRequiredParam(c, "id", "角色ID")
+		if !ok {
 			return
-		}
-
-		var req struct {
-			MenuIds []string `json:"menuIds"`
-		}
-		if err := c.ShouldBindJSON(&req); err != nil {
-			// 尝试从原始请求中读取
-			var rawReq map[string]interface{}
-			if err2 := c.ShouldBindJSON(&rawReq); err2 != nil {
-				response.Error(c, response.ErrBadRequest, "请求参数错误: "+err.Error())
-				return
-			}
-			// 尝试转换menuIds
-			if menuIds, ok := rawReq["menuIds"]; ok {
-				switch v := menuIds.(type) {
-				case []interface{}:
-					for _, id := range v {
-						req.MenuIds = append(req.MenuIds, fmt.Sprintf("%v", id))
-					}
-				case []string:
-					req.MenuIds = v
-				case string:
-					// 如果是字符串，可能是逗号分隔的ID
-					if v != "" {
-						ids := strings.Split(v, ",")
-						for _, id := range ids {
-							req.MenuIds = append(req.MenuIds, strings.TrimSpace(id))
-						}
-					}
-				}
-			}
 		}
 
 		// 检查角色是否存在
@@ -1087,61 +584,29 @@ func updateRoleMenus(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		// 开始事务
-		tx := core.DB.GetDB().Begin()
-		defer func() {
-			if r := recover(); r != nil {
-				tx.Rollback()
-			}
-		}()
-
-		// 删除原有的菜单权限关联
-		if err := tx.Where("role_id = ?", id).Delete(&models.RoleMenu{}).Error; err != nil {
-			tx.Rollback()
-			response.Error(c, response.ErrServerError, "删除原菜单权限关联失败")
-			return
+		// 绑定菜单ID列表
+		var req struct {
+			MenuIds []string `json:"menuIds"`
 		}
-
-		// 重新关联菜单权限
-		if len(req.MenuIds) > 0 {
-			for _, menuId := range req.MenuIds {
-				if err := tx.Create(&models.RoleMenu{
-					RoleID: id,
-					MenuID: menuId,
-				}).Error; err != nil {
-					tx.Rollback()
-					response.Error(c, response.ErrServerError, "关联菜单权限失败")
-					return
-				}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			var rawReq map[string]interface{}
+			if err2 := c.ShouldBindJSON(&rawReq); err2 != nil {
+				response.Error(c, response.ErrBadRequest, "请求参数错误: "+err.Error())
+				return
+			}
+			if menuIds, ok := rawReq["menuIds"]; ok {
+				req.MenuIds = toStringSlice(menuIds)
 			}
 		}
 
-		// 提交事务
-		if err := tx.Commit().Error; err != nil {
-			response.Error(c, response.ErrServerError, "更新菜单权限失败")
+		if err := core.DB.GetDB().Transaction(func(tx *gorm.DB) error {
+			return updateRoleMenusAndDepts(tx, id, req.MenuIds, nil)
+		}); err != nil {
+			response.Error(c, response.ErrServerError, err.Error())
 			return
 		}
 
-		// 记录操作日志
-		clientIP := c.ClientIP()
-		operURL := c.Request.URL.String()
-		core.OperLogService.RecordAsync(
-			core.GetDB(),
-			"角色管理",
-			4, // 4=授权
-			"",
-			c.Request.Method,
-			operURL,
-			getUsernameFromContext(c),
-			getDeptNameFromContext(c, core.GetDB()),
-			&clientIP,
-			nil,
-			nil,
-			nil,
-			0,
-			0,
-		)
-
+		recordOperLog(c, core, "角色管理", OperTypeGrant)
 		response.Success(c, gin.H{"message": "菜单权限分配成功"})
 	}
 }

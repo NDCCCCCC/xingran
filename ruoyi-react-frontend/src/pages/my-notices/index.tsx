@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import type { FC } from 'react';
 import {
   Card,
   Table,
@@ -27,7 +28,7 @@ dayjs.locale('zh-cn');
  * 用户通知中心页面
  * 显示用户可见的所有通知，支持按已读/未读筛选
  */
-const MyNoticesPage: React.FC = () => {
+const MyNoticesPage: FC = () => {
   const navigate = useNavigate();
   const { unreadCount, setUnreadCount, markAsRead, markAllAsRead } = useNoticeStore();
 
@@ -40,7 +41,7 @@ const MyNoticesPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'all' | 'unread' | 'read'>('all');
 
   // 加载通知列表
-  const loadNotices = async () => {
+  const loadNotices = useCallback(async () => {
     setLoading(true);
     try {
       const status = activeTab === 'all' ? undefined : activeTab;
@@ -65,7 +66,7 @@ const MyNoticesPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab, current, pageSize, setUnreadCount]);
 
   // 初始化时获取全部通知总数
   useEffect(() => {
@@ -219,7 +220,7 @@ const MyNoticesPage: React.FC = () => {
 
   useEffect(() => {
     loadNotices();
-  }, [activeTab, current, pageSize]);
+  }, [activeTab, current, pageSize, loadNotices]);
 
   const tabItems = [
     { key: 'all', label: `全部通知 (${allTotal})` },

@@ -1,18 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, Row, Col, Statistic, Table, Tag } from 'antd';
 import {
   FileTextOutlined,
   ClockCircleOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
-  UserOutlined,
-  TeamOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { getWorkOrderStatistics, type WorkOrderStatistics } from '@/lib/workorderApi';
-import { WorkOrderStatus, WorkOrderPriority } from '@/lib/workorderApi';
+import { WorkOrderPriority } from '@/lib/workorderApi';
 
-const WorkOrderStatisticsPage: React.FC = () => {
+import type { FC } from 'react';
+
+const WorkOrderStatisticsPage: FC = () => {
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<WorkOrderStatistics | null>(null);
 
@@ -131,18 +131,21 @@ const WorkOrderStatisticsPage: React.FC = () => {
         {/* 按优先级统计 */}
         <Col span={12}>
           <Card title="按优先级统计" loading={loading}>
-            {stats && Object.entries(stats.byPriority).map(([key, value]) => (
-              <div key={key} className="mb-4">
-                <div className="flex justify-between items-center">
-                  <span>
-                    <Tag color={priorityConfig[key as WorkOrderPriority]?.color}>
-                      {priorityConfig[key as WorkOrderPriority]?.text}
-                    </Tag>
-                  </span>
-                  <Statistic value={value as number} />
+            {stats && Object.entries(stats.byPriority).map(([key, value]) => {
+              const priority = key as unknown as WorkOrderPriority;
+              return (
+                <div key={key} className="mb-4">
+                  <div className="flex justify-between items-center">
+                    <span>
+                      <Tag color={priorityConfig[priority]?.color}>
+                        {priorityConfig[priority]?.text}
+                      </Tag>
+                    </span>
+                    <Statistic value={Number(value)} />
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </Card>
         </Col>
 
@@ -153,7 +156,7 @@ const WorkOrderStatisticsPage: React.FC = () => {
               <div key={key} className="mb-4">
                 <div className="flex justify-between items-center">
                   <span>{key}</span>
-                  <Statistic value={value as number} />
+                  <Statistic value={Number(value)} />
                 </div>
               </div>
             ))}

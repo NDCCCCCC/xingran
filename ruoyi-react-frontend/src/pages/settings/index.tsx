@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
+import type { FC } from 'react';
 import {
   Card,
   Form,
@@ -12,7 +13,7 @@ import { useSettingsStore } from '@/store/settingsStore';
 
 const { Option } = Select;
 
-const SettingsPage: React.FC = () => {
+const SettingsPage: FC = () => {
   const { preferences, loading, loadPreferences, updatePreferences } = useSettingsStore();
   const [form] = Form.useForm();
 
@@ -53,7 +54,7 @@ const SettingsPage: React.FC = () => {
           initialValues={preferences}
           onValuesChange={handleFormChange}
         >
-          <Divider orientation="left">界面设置</Divider>
+          <Divider orientationMargin="0">界面设置</Divider>
 
           <Form.Item
             label="主题"
@@ -86,7 +87,7 @@ const SettingsPage: React.FC = () => {
             <Switch />
           </Form.Item>
 
-          <Divider orientation="left">数据设置</Divider>
+          <Divider orientationMargin="0">数据设置</Divider>
 
           <Form.Item
             label="默认分页大小"

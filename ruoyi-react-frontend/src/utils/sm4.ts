@@ -19,7 +19,6 @@ async function getSM4() {
     // 动态导入 sm-crypto 包
     const smCrypto = await import('sm-crypto');
     sm4Module = smCrypto.sm4;
-    console.log('[SM4] sm-crypto 包加载成功');
     return sm4Module;
   } catch (error) {
     console.error('[SM4] 加载 sm-crypto 失败:', error);

@@ -1,10 +1,5 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Layout, Menu, Spin, message } from 'antd';
-import {
-  HomeOutlined,
-  MenuOutlined,
-  SettingOutlined,
-} from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useMenuStore } from '@/store/menuStore';
@@ -13,7 +8,6 @@ import {
   buildMenuPathMap,
   isSameTopLevelMenu,
   getMenuLevel,
-  isThirdLevelMenu,
   isSecondLevelMenu,
   isTopLevelMenu,
 } from './sidebar-helper';
@@ -21,7 +15,7 @@ import { getIconComponent } from '@/utils/iconUtils';
 
 const { Sider } = Layout;
 
-type MenuItem = Required<MenuProps>['items'][number];
+type MenuItem = NonNullable<MenuProps['items']>[number];
 
 // ========================================
 // 获取图标组件 - 使用 iconUtils 中的函数
@@ -89,7 +83,7 @@ function convertToMenuItem(menu: MenuType, parentPath: string = ''): MenuItem {
   };
 }
 
-const Sidebar: React.FC = () => {
+const Sidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [openKeys, setOpenKeys] = useState<string[]>([]);
   const expectedOpenKeysRef = useRef<string[] | null>(null);
@@ -179,37 +173,39 @@ const Sidebar: React.FC = () => {
     return result;
   }
 
-  // 当路由变化时，自动展开包含当前页面的父菜单
+  // ========================================
+  // 路由变化时更新展开的菜单（防止循环刷新的关键）
+  // ========================================
   useEffect(() => {
-    console.log('=== 路由变化 useEffect ===');
+    if (!menuPathMap.size || !location.pathname) return;
+
+    console.log('=== 路由变化 ===');
     console.log('当前路径:', location.pathname);
-    console.log('当前 openKeys:', openKeys);
 
-    // 不要对 dashboard 或根路径做处理
-    if (location.pathname === '/' || location.pathname === '/dashboard') {
-      setOpenKeys([]);
-      return;
-    }
+    // 构建应该展开的父级菜单链
+    const parentKeys = buildParentKeyChain(location.pathname, menuPathMap);
+    console.log('应该展开的父级菜单:', parentKeys);
 
-    const parentKeyChain = buildParentKeyChain(location.pathname, menuPathMap);
-    console.log('父级菜单链:', parentKeyChain);
+    // 设置预期值，标记这是导航触发的变化
+    expectedOpenKeysRef.current = parentKeys;
+    setOpenKeys(parentKeys);
 
-    if (parentKeyChain.length > 0) {
-      console.log('设置 openKeys 为:', parentKeyChain);
-      setOpenKeys(parentKeyChain);
-    } else {
-      console.log('父级菜单链为空，清空 openKeys');
-      setOpenKeys([]);
-    }
-  }, [location.pathname, JSON.stringify(menus)]);
+    // 清除预期值标记（给足够的时间让状态更新完成）
+    setTimeout(() => {
+      expectedOpenKeysRef.current = null;
+    }, 100);
+  }, [location.pathname, menuPathMap]);
 
+  // ========================================
+  // 菜单点击处理
+  // ========================================
   const handleMenuClick: MenuProps['onClick'] = (e) => {
-    console.log('菜单点击:', e.key, '当前 openKeys:', openKeys);
+    console.log('=== 菜单点击事件 ===');
+    console.log('点击的 key:', e.key);
 
-    // 查找被点击的菜单
+    // 在菜单数据中查找对应的菜单
     const findMenuByPath = (menuList: MenuType[], key: string, parentPath: string = ''): MenuType | null => {
       for (const menu of menuList) {
-        // 构建完整路径（与 convertToMenuItem 逻辑一致）
         let menuPath = menu.path || '';
         if (menuPath && !menuPath.startsWith('/') && parentPath) {
           if (!menuPath.startsWith(parentPath + '/')) {
@@ -251,15 +247,16 @@ const Sidebar: React.FC = () => {
     }
   };
 
-  // 处理菜单展开/收起 - 手风琴效果
-  // 处理菜单展开/收起 - 改进版手风琴效果（支持二级菜单手风琴）
+  // ========================================
+  // 处理菜单展开/收起 - 手风琴效果（支持一级和二级菜单）
+  // ========================================
   const handleOpenChange: MenuProps['onOpenChange'] = (keys) => {
     console.log('=== 菜单展开/收起事件 ===');
     console.log('新 keys:', keys);
     console.log('当前 openKeys:', openKeys);
     console.log('预期 keys:', expectedOpenKeysRef.current);
 
-    // 检查是否是导航触发的预期变化
+    // 检查是否是导航触发的预期变化（防止循环刷新）
     if (expectedOpenKeysRef.current) {
       const expected = expectedOpenKeysRef.current;
       const isExpectedChange =
@@ -374,7 +371,7 @@ const Sidebar: React.FC = () => {
       collapsible
       collapsed={collapsed}
       onCollapse={(value) => setCollapsed(value)}
-      width={256}
+      width={280}
       trigger={null}
       style={{
         background: 'var(--theme-bg-secondary)',
@@ -383,11 +380,45 @@ const Sidebar: React.FC = () => {
       }}
     >
       <div
-        className="h-16 flex items-center justify-center"
+        className="h-16 flex items-center relative"
         style={{
           borderBottom: '1px solid var(--theme-border-primary)',
+          paddingLeft: collapsed ? '0' : '56px',
+          transition: 'padding-left var(--theme-transition-base)',
         }}
       >
+        {/* 收缩按钮 */}
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors absolute"
+          style={{
+            color: 'var(--theme-text-secondary)',
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            left: '16px',
+          }}
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 20 20"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            style={{
+              transition: 'transform var(--theme-transition-base)',
+              transform: collapsed ? 'rotate(180deg)' : 'rotate(0deg)',
+            }}
+          >
+            <path
+              d="M3 5h14M3 10h10M3 15h6"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
+          </svg>
+        </button>
+
         <h1
           className={`text-xl font-bold ${
             collapsed ? 'hidden' : 'block'
@@ -399,21 +430,8 @@ const Sidebar: React.FC = () => {
             backgroundClip: 'text',
           }}
         >
-          产险湖北数智化平台
+          数字化平台
         </h1>
-        {collapsed && (
-          <span
-            className="text-2xl font-bold"
-            style={{
-              background: 'linear-gradient(135deg, var(--theme-primary-500, #3b82f6) 0%, var(--theme-primary-600, #2563eb) 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-            }}
-          >
-            R
-          </span>
-        )}
       </div>
 
       {loading ? (

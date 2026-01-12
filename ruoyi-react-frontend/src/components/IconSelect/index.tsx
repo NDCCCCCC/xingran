@@ -3,7 +3,8 @@
  * 弹窗式图标选择，支持搜索和预览
  */
 
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import type { FC } from 'react';
 import { Input, Modal, Tabs, message } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import { getIconComponent, iconCategories, iconDescriptionMap } from '@/utils/iconUtils';
@@ -15,7 +16,7 @@ interface IconSelectProps {
   disabled?: boolean;
 }
 
-const IconSelect: React.FC<IconSelectProps> = ({
+const IconSelect: FC<IconSelectProps> = ({
   value,
   onChange,
   placeholder = '请选择图标',
@@ -26,7 +27,7 @@ const IconSelect: React.FC<IconSelectProps> = ({
   const [selectedIcon, setSelectedIcon] = useState<string | undefined>(value);
 
   // 当外部 value 变化时同步内部状态
-  React.useEffect(() => {
+  useEffect(() => {
     setSelectedIcon(value);
   }, [value]);
 
@@ -37,7 +38,7 @@ const IconSelect: React.FC<IconSelectProps> = ({
     }
 
     const lowerSearch = searchText.toLowerCase();
-    const result: typeof iconCategories = {};
+    const result: Record<string, string[]> = {};
 
     for (const [category, icons] of Object.entries(iconCategories)) {
       const filtered = icons.filter(icon => {

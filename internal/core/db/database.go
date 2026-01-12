@@ -366,82 +366,68 @@ func (d *Database) migrateCredentialModel() error {
 
 	log.Println("开始执行凭证模型迁移...")
 
-	// 开始事务
-	tx := d.DB.Begin()
-	if tx.Error != nil {
-		return fmt.Errorf("开启事务失败: %w", tx.Error)
-	}
+	// 使用事务
+	if err := d.DB.Transaction(func(tx *gorm.DB) error {
+		// 步骤1：添加新列
+		if err := tx.Exec("ALTER TABLE sys_auth_credential ADD COLUMN IF NOT EXISTS protocol_type VARCHAR(10)").Error; err != nil {
+			return fmt.Errorf("添加 protocol_type 列失败: %w", err)
+		}
 
-	// 步骤1：添加新列
-	if err := tx.Exec("ALTER TABLE sys_auth_credential ADD COLUMN IF NOT EXISTS protocol_type VARCHAR(10)").Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("添加 protocol_type 列失败: %w", err)
-	}
+		if err := tx.Exec("ALTER TABLE sys_auth_credential ADD COLUMN IF NOT EXISTS snmp_communities TEXT[]").Error; err != nil {
+			return fmt.Errorf("添加 snmp_communities 列失败: %w", err)
+		}
 
-	if err := tx.Exec("ALTER TABLE sys_auth_credential ADD COLUMN IF NOT EXISTS snmp_communities TEXT[]").Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("添加 snmp_communities 列失败: %w", err)
-	}
+		// 步骤2：根据旧的 credential_type 设置 protocol_type
+		if err := tx.Exec("UPDATE sys_auth_credential SET protocol_type = 'ssh' WHERE credential_type = 'ssh'").Error; err != nil {
+			return fmt.Errorf("迁移 SSH 凭证失败: %w", err)
+		}
 
-	// 步骤2：根据旧的 credential_type 设置 protocol_type
-	if err := tx.Exec("UPDATE sys_auth_credential SET protocol_type = 'ssh' WHERE credential_type = 'ssh'").Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("迁移 SSH 凭证失败: %w", err)
-	}
+		if err := tx.Exec("UPDATE sys_auth_credential SET protocol_type = 'telnet' WHERE credential_type = 'telnet'").Error; err != nil {
+			return fmt.Errorf("迁移 Telnet 凭证失败: %w", err)
+		}
 
-	if err := tx.Exec("UPDATE sys_auth_credential SET protocol_type = 'telnet' WHERE credential_type = 'telnet'").Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("迁移 Telnet 凭证失败: %w", err)
-	}
+		if err := tx.Exec("UPDATE sys_auth_credential SET protocol_type = 'ssh' WHERE credential_type = 'snmp' AND protocol_type IS NULL").Error; err != nil {
+			return fmt.Errorf("迁移 SNMP 凭证失败: %w", err)
+		}
 
-	if err := tx.Exec("UPDATE sys_auth_credential SET protocol_type = 'ssh' WHERE credential_type = 'snmp' AND protocol_type IS NULL").Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("迁移 SNMP 凭证失败: %w", err)
-	}
+		// 步骤3：将旧的 snmp_community 转换为数组
+		if err := tx.Exec("UPDATE sys_auth_credential SET snmp_communities = ARRAY[snmp_community] WHERE snmp_community IS NOT NULL AND snmp_community != '' AND snmp_community != ' '").Error; err != nil {
+			return fmt.Errorf("转换 SNMP community 失败: %w", err)
+		}
 
-	// 步骤3：将旧的 snmp_community 转换为数组
-	if err := tx.Exec("UPDATE sys_auth_credential SET snmp_communities = ARRAY[snmp_community] WHERE snmp_community IS NOT NULL AND snmp_community != '' AND snmp_community != ' '").Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("转换 SNMP community 失败: %w", err)
-	}
+		// 步骤4：初始化空数组
+		if err := tx.Exec("UPDATE sys_auth_credential SET snmp_communities = ARRAY[]::TEXT[] WHERE snmp_communities IS NULL").Error; err != nil {
+			return fmt.Errorf("初始化 SNMP communities 数组失败: %w", err)
+		}
 
-	// 步骤4：初始化空数组
-	if err := tx.Exec("UPDATE sys_auth_credential SET snmp_communities = ARRAY[]::TEXT[] WHERE snmp_communities IS NULL").Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("初始化 SNMP communities 数组失败: %w", err)
-	}
+		// 步骤5：设置默认 protocol_type
+		if err := tx.Exec("UPDATE sys_auth_credential SET protocol_type = 'ssh' WHERE protocol_type IS NULL").Error; err != nil {
+			return fmt.Errorf("设置默认 protocol_type 失败: %w", err)
+		}
 
-	// 步骤5：设置默认 protocol_type
-	if err := tx.Exec("UPDATE sys_auth_credential SET protocol_type = 'ssh' WHERE protocol_type IS NULL").Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("设置默认 protocol_type 失败: %w", err)
-	}
+		// 步骤6：删除旧列
+		if err := tx.Exec("ALTER TABLE sys_auth_credential DROP COLUMN IF EXISTS credential_type").Error; err != nil {
+			return fmt.Errorf("删除 credential_type 列失败: %w", err)
+		}
 
-	// 步骤6：删除旧列
-	if err := tx.Exec("ALTER TABLE sys_auth_credential DROP COLUMN IF EXISTS credential_type").Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("删除 credential_type 列失败: %w", err)
-	}
+		if err := tx.Exec("ALTER TABLE sys_auth_credential DROP COLUMN IF EXISTS snmp_community").Error; err != nil {
+			return fmt.Errorf("删除 snmp_community 列失败: %w", err)
+		}
 
-	if err := tx.Exec("ALTER TABLE sys_auth_credential DROP COLUMN IF EXISTS snmp_community").Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("删除 snmp_community 列失败: %w", err)
-	}
+		// 步骤7：添加约束
+		if err := tx.Exec("ALTER TABLE sys_auth_credential ADD CONSTRAINT chk_protocol_type CHECK (protocol_type IN ('ssh', 'telnet'))").Error; err != nil {
+			// 约束可能已存在，忽略错误
+			log.Printf("添加 protocol_type 约束失败（可能已存在）: %v", err)
+		}
 
-	// 步骤7：添加约束
-	if err := tx.Exec("ALTER TABLE sys_auth_credential ADD CONSTRAINT chk_protocol_type CHECK (protocol_type IN ('ssh', 'telnet'))").Error; err != nil {
-		// 约束可能已存在，忽略错误
-		log.Printf("添加 protocol_type 约束失败（可能已存在）: %v", err)
-	}
+		if err := tx.Exec("ALTER TABLE sys_auth_credential ADD CONSTRAINT chk_snmp_version CHECK (snmp_version IN ('v1', 'v2c', 'v3'))").Error; err != nil {
+			// 约束可能已存在，忽略错误
+			log.Printf("添加 snmp_version 约束失败（可能已存在）: %v", err)
+		}
 
-	if err := tx.Exec("ALTER TABLE sys_auth_credential ADD CONSTRAINT chk_snmp_version CHECK (snmp_version IN ('v1', 'v2c', 'v3'))").Error; err != nil {
-		// 约束可能已存在，忽略错误
-		log.Printf("添加 snmp_version 约束失败（可能已存在）: %v", err)
-	}
-
-	// 提交事务
-	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("提交迁移事务失败: %w", err)
+		return nil
+	}); err != nil {
+		return fmt.Errorf("凭证模型迁移失败: %w", err)
 	}
 
 	log.Println("凭证模型迁移完成")
@@ -451,30 +437,19 @@ func (d *Database) migrateCredentialModel() error {
 
 // dropOldCredentialColumns 删除旧的凭证列（credential_type 和 snmp_community）
 func (d *Database) dropOldCredentialColumns() error {
-	tx := d.DB.Begin()
-	if tx.Error != nil {
-		return fmt.Errorf("开启事务失败: %w", tx.Error)
-	}
+	return d.DB.Transaction(func(tx *gorm.DB) error {
+		// 删除旧的 credential_type 列
+		if err := tx.Exec("ALTER TABLE sys_auth_credential DROP COLUMN IF EXISTS credential_type").Error; err != nil {
+			return fmt.Errorf("删除 credential_type 列失败: %w", err)
+		}
 
-	// 删除旧的 credential_type 列
-	if err := tx.Exec("ALTER TABLE sys_auth_credential DROP COLUMN IF EXISTS credential_type").Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("删除 credential_type 列失败: %w", err)
-	}
+		// 删除旧的 snmp_community 列
+		if err := tx.Exec("ALTER TABLE sys_auth_credential DROP COLUMN IF EXISTS snmp_community").Error; err != nil {
+			return fmt.Errorf("删除 snmp_community 列失败: %w", err)
+		}
 
-	// 删除旧的 snmp_community 列
-	if err := tx.Exec("ALTER TABLE sys_auth_credential DROP COLUMN IF EXISTS snmp_community").Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("删除 snmp_community 列失败: %w", err)
-	}
-
-	// 提交事务
-	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("提交删除事务失败: %w", err)
-	}
-
-	log.Println("旧列清理完成")
-	return nil
+		return nil
+	})
 }
 
 // InitData 初始化基础数据

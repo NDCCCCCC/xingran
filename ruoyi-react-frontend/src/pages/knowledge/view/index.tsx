@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Input,
-  Select,
   Card,
   Row,
   Col,
@@ -14,11 +13,11 @@ import {
   Button,
 } from 'antd';
 import {
-  SearchOutlined,
   EyeOutlined,
   LikeOutlined,
   FolderOutlined,
   TagOutlined,
+  SearchOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import {
@@ -37,9 +36,10 @@ import {
 } from '@/lib/knowledgeApi';
 
 const { Search } = Input;
-const { Option } = Select;
 
-const KnowledgeViewPage: React.FC = () => {
+import type { FC } from 'react';
+
+const KnowledgeViewPage: FC = () => {
   const [loading, setLoading] = useState(false);
   const [articles, setArticles] = useState<KnowledgeArticle[]>([]);
   const [categories, setCategories] = useState<KnowledgeCategory[]>([]);

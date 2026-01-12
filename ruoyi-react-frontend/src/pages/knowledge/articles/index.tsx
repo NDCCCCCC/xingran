@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Button,
   Form,
@@ -32,13 +32,13 @@ import {
   createKnowledgeArticle,
   updateKnowledgeArticle,
   deleteKnowledgeArticle,
-  searchKnowledgeArticles,
   likeKnowledgeArticle,
   type KnowledgeArticle,
   type KnowledgeArticleCreateRequest,
   type KnowledgeArticleUpdateRequest,
   KnowledgeArticleStatus,
 } from '@/lib/knowledgeApi';
+import ActionButtons from '@/components/shared/ActionButtons';
 import {
   getKnowledgeCategoryList,
   type KnowledgeCategory,
@@ -57,7 +57,9 @@ const STATUS_CONFIG = {
   [KnowledgeArticleStatus.Published]: { text: '已发布', color: 'green' },
 };
 
-const KnowledgeArticlePage: React.FC = () => {
+import type { FC } from 'react';
+
+const KnowledgeArticlePage: FC = () => {
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
 
@@ -339,40 +341,50 @@ const KnowledgeArticlePage: React.FC = () => {
     {
       title: '操作',
       key: 'action',
-      width: 240,
+      width: 100,
       fixed: 'right',
-      render: (_: unknown, record: KnowledgeArticle) => (
-        <Space size="small">
-          <Button type="link" size="small" onClick={() => handlePreview(record)}>
-            预览
-          </Button>
-          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
-            编辑
-          </Button>
-          {record.status === KnowledgeArticleStatus.Draft && (
-            <Button
-              type="link"
-              size="small"
-              onClick={() => handlePublish(record)}
-            >
-              发布
-            </Button>
-          )}
-          <Button
-            type="link"
-            size="small"
-            icon={<LikeOutlined />}
-            onClick={() => handleLike(record.id)}
-          >
-            点赞
-          </Button>
-          <Popconfirm title="确定要删除吗？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消">
-            <Button type="link" size="small" danger icon={<DeleteOutlined />}>
-              删除
-            </Button>
-          </Popconfirm>
-        </Space>
-      ),
+      render: (_: unknown, record: KnowledgeArticle) => {
+        const actions = [
+          {
+            key: 'preview',
+            label: '预览',
+            icon: <EyeOutlined />,
+            onClick: () => handlePreview(record),
+          },
+          {
+            key: 'edit',
+            label: '编辑',
+            icon: <EditOutlined />,
+            onClick: () => handleEdit(record),
+          },
+          ...(record.status === KnowledgeArticleStatus.Draft ? [{
+            key: 'publish',
+            label: '发布',
+            onClick: () => handlePublish(record),
+          }] : []),
+          {
+            key: 'like',
+            label: '点赞',
+            icon: <LikeOutlined />,
+            onClick: () => handleLike(record.id),
+          },
+          {
+            key: 'delete',
+            label: '删除',
+            icon: <DeleteOutlined />,
+            danger: true,
+            render: () => (
+              <Popconfirm title="确定要删除吗？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消">
+                <Button type="link" danger icon={<DeleteOutlined />} size="small">
+                  删除
+                </Button>
+              </Popconfirm>
+            ),
+          },
+        ];
+
+        return <ActionButtons actions={actions} />;
+      },
     },
   ];
 

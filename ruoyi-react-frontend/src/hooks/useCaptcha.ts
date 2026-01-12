@@ -33,7 +33,7 @@ export function useCaptcha() {
   }, []);
 
   // 验证验证码（用于滑动验证码）
-  const verifyCaptcha = useCallback(async (input: string) => {
+  const verifyCaptcha = useCallback(async (_input: string) => {
     // 对于滑动验证码，验证在组件内部完成
     // 这里只是占位，实际验证逻辑在组件中
     return true;

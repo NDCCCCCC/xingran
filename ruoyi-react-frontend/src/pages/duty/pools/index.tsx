@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import type { FC } from 'react';
 import { Button, Form, Input, Select, Table, Modal, InputNumber, Space, Tag, message, Popconfirm, Card, Statistic, Row, Col, TreeSelect } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, ReloadOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
@@ -29,7 +30,7 @@ const buildDeptTree = (depts: SimpleDept[]): any[] => {
   }));
 };
 
-const DutyPoolPage: React.FC = () => {
+const DutyPoolPage: FC = () => {
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
 
@@ -44,6 +45,19 @@ const DutyPoolPage: React.FC = () => {
 
   // 统计数据
   const [stats, setStats] = useState({ total: 0, enabled: 0, disabled: 0, totalMembers: 0 });
+
+  // 统一错误处理
+  const handleApiError = (error: unknown, defaultMessage: string) => {
+    if (error && typeof error === 'object' && 'message' in error) {
+      message.error(error.message as string);
+    } else {
+      message.error(defaultMessage);
+    }
+  };
+
+  const handleSuccess = (msg: string) => {
+    message.success(msg);
+  };
 
   // 用户和部门数据
   const [users, setUsers] = useState<SimpleUser[]>([]);
@@ -128,7 +142,7 @@ const DutyPoolPage: React.FC = () => {
         totalMembers: list.reduce((sum, p) => sum + (p.members?.length || 0), 0),
       });
     } catch (error) {
-      message.error('获取值班池列表失败');
+      handleApiError(error, '获取值班池列表失败');
     } finally {
       setLoading(false);
     }
@@ -192,25 +206,17 @@ const DutyPoolPage: React.FC = () => {
     } else {
       setFilteredUsers(users);
     }
+    editForm.setFieldsValue({
+      poolName: record.poolName,
+      deptId: record.deptId,
+      description: record.description,
+      dailyCount: record.dailyCount,
+      memberIds: record.members?.map((m) => m.userId) || [],
+    });
   };
 
   const handleModalOpenChange = (open: boolean) => {
-    if (open && editingRecord) {
-      // Modal 打开时设置表单值
-      editForm.setFieldsValue({
-        poolName: editingRecord.poolName,
-        deptId: editingRecord.deptId,
-        description: editingRecord.description,
-        dailyCount: editingRecord.dailyCount,
-        memberIds: editingRecord.members?.map((m) => m.userId) || [],
-      });
-      // 根据记录的部门筛选用户
-      if (editingRecord.deptId) {
-        const deptIds = getDeptAndChildrenIds(editingRecord.deptId, depts);
-        const filtered = users.filter(user => user.deptId && deptIds.includes(user.deptId));
-        setFilteredUsers(filtered);
-      }
-    } else if (open && !editingRecord) {
+    if (open && !editingRecord) {
       // 新增时重置筛选
       setFilteredUsers([]);
     }
@@ -219,10 +225,10 @@ const DutyPoolPage: React.FC = () => {
   const handleDelete = async (id: string) => {
     try {
       await deleteDutyPool(id);
-      message.success('删除成功');
+      handleSuccess('删除成功');
       fetchList();
     } catch (error) {
-      message.error('删除失败');
+      handleApiError(error, '删除失败');
     }
   };
 
@@ -238,7 +244,7 @@ const DutyPoolPage: React.FC = () => {
           memberIds: values.memberIds,
         };
         await updateDutyPool(editingRecord.id, updateData);
-        message.success('更新成功');
+        handleSuccess('更新成功');
       } else {
         const createData: DutyPoolCreateRequest = {
           poolName: values.poolName,
@@ -248,7 +254,7 @@ const DutyPoolPage: React.FC = () => {
           memberIds: values.memberIds,
         };
         await createDutyPool(createData);
-        message.success('创建成功');
+        handleSuccess('创建成功');
       }
       setModalVisible(false);
       fetchList();
@@ -257,7 +263,7 @@ const DutyPoolPage: React.FC = () => {
         // 表单验证错误
         return;
       }
-      message.error(editingRecord ? '更新失败' : '创建失败');
+      handleApiError(error, editingRecord ? '更新失败' : '创建失败');
     }
   };
 
@@ -279,9 +285,8 @@ const DutyPoolPage: React.FC = () => {
       dataIndex: 'deptId',
       key: 'deptId',
       width: 120,
-      render: (deptId: string, record: DutyPool) => {
-        // TODO: 从后端API获取部门信息，这里暂用记录中的数据
-        return record.dept?.deptName || '-';
+      render: (_: string, record: DutyPool) => {
+        return record.department?.deptName || '-';
       },
     },
     {

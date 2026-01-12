@@ -47,94 +47,67 @@ func executePeriodicWorkOrderCreateTask(ctx context.Context, params map[string]i
 		return fmt.Errorf("查询周期性工单模板失败: %w", err)
 	}
 
+	// 在事务外声明变量，以便后续使用
+	var workOrderNo string
+	var title string
+	var workOrder *models.WorkOrder
+
 	// 开始事务
-	tx := db.Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		// 生成工单编号
+		workOrderNo = generateWorkOrderNo()
+
+		// 替换标题中的变量
+		title = replaceVariables(template.WorkOrderTitle, time.Now())
+
+		// 创建工单
+		workOrder = &models.WorkOrder{
+			Title:           title,
+			WorkOrderNo:     workOrderNo,
+			CategoryID:      template.CategoryID,
+			Type:            template.Type,
+			Priority:        template.Priority,
+			Status:          models.WorkOrderStatusPending, // 待处理
+			Description:     template.Description,
+			SubmitterID:     "system", // 系统创建
+			IsAutoAssigned:  true,     // 标记为自动分配
+			AssignStrategy:  "assign_one", // 默认分配策略
 		}
-	}()
 
-	// 生成工单编号
-	workOrderNo := generateWorkOrderNo()
-
-	// 替换标题中的变量
-	title := replaceVariables(template.WorkOrderTitle, time.Now())
-
-	// 创建工单
-	workOrder := &models.WorkOrder{
-		Title:         title,
-		WorkOrderNo:   workOrderNo,
-		CategoryID:    template.CategoryID,
-		Type:          template.Type,
-		Priority:      template.Priority,
-		Status:        models.WorkOrderStatusPending, // 待处理
-		Description:   template.Description,
-		SubmitterID:   "system", // 系统创建
-		IsAutoAssigned: true,     // 标记为自动分配
-	}
-
-	// 设置自动分配相关字段
-	workOrder.AssignStrategy = "assign_one" // 默认分配策略
-
-	// 根据分配类型获取处理人
-	var assigneeID *string
-	var err error
-
-	switch template.AssignType {
-	case models.PeriodicAssignTypeManual:
-		// 手动指定处理人
-		if template.AssignTargetID != nil && *template.AssignTargetID != "" {
-			assigneeID = template.AssignTargetID
-			workOrder.IsAutoAssigned = false // 手动指定不算自动分配
-		}
-	case models.PeriodicAssignTypeDutyPool:
-		// 分配给当天值班人员
-		assigneeID, err = getTodayDutyPerson(tx)
+			// 根据分配类型获取处理人
+		assigneeID, err := assignWorkOrderHandler(tx, &template, workOrder)
 		if err != nil {
-			log.Printf("获取当天值班人员失败: %v，将创建工单但不分配", err)
-			// 不中断流程，继续创建工单
+			log.Printf("分配处理人失败: %v，将创建工单但不分配", err)
 		}
-		if assigneeID != nil {
-			workOrder.DutyType = "duty_pool"
-			workOrder.AssignStrategy = "assign_one"
+		workOrder.AssigneeID = assigneeID
+
+		// 保存工单
+		if err := tx.Create(workOrder).Error; err != nil {
+			return fmt.Errorf("创建工单失败: %w", err)
 		}
-	case models.PeriodicAssignTypeRotation:
-		// 按轮询分配（可根据需要实现）
-		log.Printf("轮询分配暂未实现，将创建工单但不分配")
-	}
 
-	workOrder.AssigneeID = assigneeID
+		// 记录执行日志
+		execLog := &models.PeriodicWorkOrderLog{
+			TemplateID: template.ID,
+			WorkOrderID: workOrder.ID,
+			ExecutedAt:  time.Now(),
+			JobID:       template.JobID,
+			Status:      "success",
+			Result:      fmt.Sprintf("成功创建工单: %s (%s)", workOrderNo, title),
+		}
 
-	// 保存工单
-	if err := tx.Create(workOrder).Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("创建工单失败: %w", err)
-	}
+		if err := tx.Create(execLog).Error; err != nil {
+			return fmt.Errorf("记录执行日志失败: %w", err)
+		}
 
-	// 记录执行日志
-	execLog := &models.PeriodicWorkOrderLog{
-		TemplateID: template.ID,
-		WorkOrderID: workOrder.ID,
-		ExecutedAt:  time.Now(),
-		JobID:       template.JobID,
-		Status:      "success",
-		Result:      fmt.Sprintf("成功创建工单: %s (%s)", workOrderNo, title),
-	}
+		// 更新模板的已生成工单数量
+		if err := tx.Model(&template).UpdateColumn("total_generated", gorm.Expr("total_generated + 1")).Error; err != nil {
+			log.Printf("更新模板生成数量失败: %v", err)
+		}
 
-	if err := tx.Create(execLog).Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("记录执行日志失败: %w", err)
-	}
-
-	// 更新模板的已生成工单数量
-	if err := tx.Model(&template).UpdateColumn("total_generated", gorm.Expr("total_generated + 1")).Error; err != nil {
-		log.Printf("更新模板生成数量失败: %v", err)
-	}
-
-	// 提交事务
-	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("提交事务失败: %w", err)
+		return nil
+	}); err != nil {
+		return err
 	}
 
 	// 如果启用了通知且分配了处理人，发送通知
@@ -227,6 +200,39 @@ func getTodayDutyPerson(db *gorm.DB) (*string, error) {
 	return &dutyPerson.UserID, nil
 }
 
+// assignWorkOrderHandler 根据分配类型分配工单处理人
+func assignWorkOrderHandler(db *gorm.DB, template *models.PeriodicWorkOrderTemplate, workOrder *models.WorkOrder) (*string, error) {
+	switch template.AssignType {
+	case models.PeriodicAssignTypeManual:
+		// 手动指定处理人
+		if template.AssignTargetID != nil && *template.AssignTargetID != "" {
+			workOrder.IsAutoAssigned = false
+			return template.AssignTargetID, nil
+		}
+		return nil, nil
+
+	case models.PeriodicAssignTypeDutyPool:
+		// 分配给当天值班人员
+		assigneeID, err := getTodayDutyPerson(db)
+		if err != nil {
+			return nil, err
+		}
+		if assigneeID != nil {
+			workOrder.DutyType = "duty_pool"
+			workOrder.AssignStrategy = "assign_one"
+		}
+		return assigneeID, nil
+
+	case models.PeriodicAssignTypeRotation:
+		// 按轮询分配（暂未实现）
+		log.Printf("轮询分配暂未实现")
+		return nil, nil
+
+	default:
+		return nil, nil
+	}
+}
+
 // sendWorkOrderNotification 发送工单通知
 func sendWorkOrderNotification(workOrderID, assigneeID, title string) {
 	if GlobalNoticeHub == nil {
@@ -268,69 +274,84 @@ func SyncPeriodicWorkOrderJobs(scheduler *Scheduler) error {
 	failCount := 0
 
 	for _, template := range templates {
-		// 检查是否已有关联的定时任务
-		var job models.Job
-		jobName := getPeriodicWorkOrderJobName(template.ID)
-
-		// 计算下次执行时间
-		nextRunTime, err := calculateNextRunTimeCron(template.CronExpression)
-		if err != nil {
-			log.Printf("解析Cron表达式失败 [%s]: %v", template.TemplateName, err)
+		if err := syncWorkOrderJob(db, scheduler, &template); err != nil {
+			log.Printf("同步工单任务失败 [%s]: %v", template.TemplateName, err)
 			failCount++
-			continue
-		}
-
-		if err := db.Where("job_name = ?", jobName).First(&job).Error; err != nil {
-			if err == gorm.ErrRecordNotFound {
-				// 任务不存在，创建新任务
-				remark := fmt.Sprintf("周期性工单模板: %s", template.TemplateName)
-				newJob := &models.Job{
-					JobName:        jobName,
-					JobGroup:       "PERIODIC_WORKORDER",
-					InvokeTarget:   "periodic_workorder_create:" + template.ID,
-					CronExpression: template.CronExpression,
-					MisfirePolicy:  models.MisfirePolicyExecuteOnce,
-					Status:         0, // 启用
-					NextRunTime:    &nextRunTime,
-					Remark:         &remark,
-				}
-
-				if err := scheduler.AddJob(newJob); err != nil {
-					log.Printf("创建周期性工单任务失败 [%s]: %v", template.TemplateName, err)
-					failCount++
-					continue
-				}
-
-				// 更新模板的 JobID
-				if err := db.Model(&template).Update("job_id", newJob.ID).Error; err != nil {
-					log.Printf("更新模板JobID失败 [%s]: %v", template.TemplateName, err)
-				}
-
-				successCount++
-				log.Printf("周期性工单任务已创建: %s (下次执行: %v)", template.TemplateName, nextRunTime)
-			} else {
-				log.Printf("查询定时任务失败 [%s]: %v", template.TemplateName, err)
-				failCount++
-			}
 		} else {
-			// 任务已存在，更新模板的 JobID
-			if template.JobID == nil || *template.JobID != job.ID {
-				if err := db.Model(&template).Update("job_id", job.ID).Error; err != nil {
-					log.Printf("更新模板JobID失败 [%s]: %v", template.TemplateName, err)
-				}
-			}
-
-			// 更新下次执行时间
-			if err := db.Model(&job).Update("next_run_time", nextRunTime).Error; err != nil {
-				log.Printf("更新下次执行时间失败 [%s]: %v", template.TemplateName, err)
-			}
-
 			successCount++
-			log.Printf("周期性工单任务已同步: %s (下次执行: %v)", template.TemplateName, nextRunTime)
 		}
 	}
 
 	log.Printf("周期性工单任务同步完成: 成功=%d, 失败=%d", successCount, failCount)
+	return nil
+}
+
+// syncWorkOrderJob 同步单个工单任务
+func syncWorkOrderJob(db *gorm.DB, scheduler *Scheduler, template *models.PeriodicWorkOrderTemplate) error {
+	// 计算下次执行时间
+	nextRunTime, err := calculateNextRunTimeCron(template.CronExpression)
+	if err != nil {
+		return fmt.Errorf("解析Cron表达式失败: %w", err)
+	}
+
+	jobName := getPeriodicWorkOrderJobName(template.ID)
+
+	// 查找已存在的任务
+	var job models.Job
+	err = db.Where("job_name = ?", jobName).First(&job).Error
+
+	if err == gorm.ErrRecordNotFound {
+		return createWorkOrderJob(db, scheduler, template, jobName, nextRunTime)
+	}
+
+	if err != nil {
+		return fmt.Errorf("查询定时任务失败: %w", err)
+	}
+
+	return updateExistingWorkOrderJob(db, template, &job, nextRunTime)
+}
+
+// createWorkOrderJob 创建新的工单任务
+func createWorkOrderJob(db *gorm.DB, scheduler *Scheduler, template *models.PeriodicWorkOrderTemplate, jobName string, nextRunTime time.Time) error {
+	remark := fmt.Sprintf("周期性工单模板: %s", template.TemplateName)
+	newJob := &models.Job{
+		JobName:        jobName,
+		JobGroup:       "PERIODIC_WORKORDER",
+		InvokeTarget:   "periodic_workorder_create:" + template.ID,
+		CronExpression: template.CronExpression,
+		MisfirePolicy:  models.MisfirePolicyExecuteOnce,
+		Status:         0,
+		NextRunTime:    &nextRunTime,
+		Remark:         &remark,
+	}
+
+	if err := scheduler.AddJob(newJob); err != nil {
+		return fmt.Errorf("创建定时任务失败: %w", err)
+	}
+
+	if err := db.Model(&models.PeriodicWorkOrderTemplate{}).Where("id = ?", template.ID).Update("job_id", newJob.ID).Error; err != nil {
+		log.Printf("更新模板JobID失败 [%s]: %v", template.TemplateName, err)
+	}
+
+	log.Printf("周期性工单任务已创建: %s (下次执行: %v)", template.TemplateName, nextRunTime)
+	return nil
+}
+
+// updateExistingWorkOrderJob 更新已存在的工单任务
+func updateExistingWorkOrderJob(db *gorm.DB, template *models.PeriodicWorkOrderTemplate, job *models.Job, nextRunTime time.Time) error {
+	// 更新模板的 JobID
+	if template.JobID == nil || *template.JobID != job.ID {
+		if err := db.Model(&models.PeriodicWorkOrderTemplate{}).Where("id = ?", template.ID).Update("job_id", job.ID).Error; err != nil {
+			log.Printf("更新模板JobID失败 [%s]: %v", template.TemplateName, err)
+		}
+	}
+
+	// 更新下次执行时间
+	if err := db.Model(job).Update("next_run_time", nextRunTime).Error; err != nil {
+		return fmt.Errorf("更新下次执行时间失败: %w", err)
+	}
+
+	log.Printf("周期性工单任务已同步: %s (下次执行: %v)", template.TemplateName, nextRunTime)
 	return nil
 }
 

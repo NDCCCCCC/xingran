@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import type { FC } from 'react';
 import {
   Card,
   Table,
@@ -53,7 +54,7 @@ interface ServerMetrics {
   timestamp: string;
 }
 
-const ServerMonitor: React.FC = () => {
+const ServerMonitor: FC = () => {
   const [servers, setServers] = useState<ServerInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);

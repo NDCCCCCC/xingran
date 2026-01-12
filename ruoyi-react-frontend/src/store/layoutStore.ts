@@ -5,7 +5,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import React from 'react';
+import { useEffect } from 'react';
 import type { LayoutType, LayoutConfig, DensityMode } from '@/types/layout';
 
 interface LayoutState {
@@ -221,10 +221,10 @@ export const useLayoutStore = create<LayoutStore>()(
  * 提供更方便的布局访问和操作
  */
 export function useLayout() {
-  const { currentLayout, sidebarCollapsed, density, setLayout, toggleSidebar, setDensity } = useLayoutStore();
+  const { currentLayout, sidebarCollapsed, density, setLayout, toggleSidebar, setDensity, setSidebarCollapsed } = useLayoutStore();
 
   // 同步data-layout和data-density属性
-  React.useEffect(() => {
+  useEffect(() => {
     document.documentElement.setAttribute('data-layout', currentLayout);
     document.documentElement.setAttribute('data-density', density);
   }, [currentLayout, density]);
@@ -239,6 +239,7 @@ export function useLayout() {
     setLayout,
     toggleSidebar,
     setDensity,
+    setSidebarCollapsed,
     isClassic: currentLayout === 'classic',
     isHybrid: currentLayout === 'hybrid',
     isInnovative: currentLayout === 'innovative',

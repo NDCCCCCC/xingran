@@ -3,7 +3,8 @@
  * 在应用根部包裹，提供主题功能
  */
 
-import React, { useEffect, createContext, useContext, useRef } from 'react';
+import { useEffect, createContext, useContext, useRef } from 'react';
+import type { FC, ReactNode } from 'react';
 import { useThemeStore } from '@/store/themeStore';
 
 interface ThemeContextValue {
@@ -16,7 +17,7 @@ const ThemeContext = createContext<ThemeContextValue>({
 
 export const useThemeContext = () => useContext(ThemeContext);
 
-export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const ThemeProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const { currentTheme, themeConfig } = useThemeStore();
   const previousThemeRef = useRef<string>(currentTheme);
 
@@ -118,3 +119,6 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     </ThemeContext.Provider>
   );
 };
+
+export { ThemeProvider };
+export default ThemeProvider;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button, message } from 'antd';
 import { ReloadOutlined } from '@ant-design/icons';
 import { getCaptcha, verifySliderCaptcha } from '@/services/captcha';
@@ -10,7 +10,9 @@ interface SliderCaptchaProps {
   onError?: (error: string) => void;
 }
 
-const SliderCaptcha: React.FC<SliderCaptchaProps> = ({ onVerified, onError }) => {
+import type { FC } from 'react';
+
+const SliderCaptcha: FC<SliderCaptchaProps> = ({ onVerified, onError }) => {
   const [captchaData, setCaptchaData] = useState<CaptchaResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -36,7 +38,7 @@ const SliderCaptcha: React.FC<SliderCaptchaProps> = ({ onVerified, onError }) =>
       } else {
         onError?.('CAPTCHA_TYPE_MISMATCH');
       }
-    } catch (error) {
+    } catch {
       message.error('加载验证码失败');
     } finally {
       setLoading(false);
@@ -49,15 +51,12 @@ const SliderCaptcha: React.FC<SliderCaptchaProps> = ({ onVerified, onError }) =>
 
   const handleMouseDown = () => {
     if (verified) return;
-    console.log('[SliderCaptcha] handleMouseDown - 开始拖动');
     setDragging(true);
   };
 
   const handleMouseUp = async () => {
     setDragging(false);
     const x = dragStateRef.current.currentX;
-
-    console.log('[SliderCaptcha] 验证 - currentX:', x, 'state.currentX:', currentX, 'captchaId:', captchaData?.captchaId);
 
     if (!captchaData || !captchaData.token) {
       console.error('[SliderCaptcha] 验证数据不完整');
@@ -97,8 +96,6 @@ const SliderCaptcha: React.FC<SliderCaptchaProps> = ({ onVerified, onError }) =>
 
     dragStateRef.current.currentX = x;
     setCurrentX(x); // 更新 UI
-
-    console.log('[SliderCaptcha] handleMouseMove - x:', x, 'clientX:', e.clientX, 'rect.left:', rect.left);
   };
 
   // 手动管理全局事件监听

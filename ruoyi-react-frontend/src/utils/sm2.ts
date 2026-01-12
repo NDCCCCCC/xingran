@@ -22,7 +22,6 @@ async function getSM2() {
     // 动态导入 sm-crypto 包
     const smCrypto = await import('sm-crypto');
     sm2Module = smCrypto.sm2;
-    console.log('[SM2] sm-crypto 包加载成功');
     return sm2Module;
   } catch (error) {
     console.error('[SM2] 加载 sm-crypto 失败:', error);
@@ -47,7 +46,6 @@ export async function fetchPublicKey(forceRefresh = false): Promise<string> {
 
     if (result.code === 0 && result.data?.publicKey) {
       cachedPublicKeyHex = result.data.publicKey;
-      console.log('[SM2] 公钥已更新:', cachedPublicKeyHex.substring(0, 20) + '...');
       return cachedPublicKeyHex;
     } else {
       throw new Error('获取公钥失败: ' + (result.message || '未知错误'));
@@ -82,9 +80,7 @@ export async function encryptWithSM2(password: string, publicKeyRaw: string): Pr
     // mode 1 = C1C3C2
     // 注意：sm-crypto 生成的密文不带 04 前缀（原始格式）
     // 后端 tjfoc/gmsm 期望带 04 前缀，由后端负责添加
-    let cipherText = sm2.doEncrypt(password, publicKeyRaw, 1);
-
-    console.log('[SM2] 加密完成，密文长度（十六进制字符）:', cipherText.length);
+    const cipherText = sm2.doEncrypt(password, publicKeyRaw, 1);
 
     // sm-crypto 返回的是十六进制字符串，直接转为 Base64
     // 后端会添加 04 前缀以兼容 tjfoc/gmsm 格式

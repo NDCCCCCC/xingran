@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import type { FC } from 'react';
 import { Card, Row, Col, Statistic, Progress, Table, Tag, Button } from 'antd';
 import {
   ClusterOutlined,
@@ -40,24 +41,24 @@ interface LoginLog {
   loginTime: string;
 }
 
-const Dashboard: React.FC = () => {
+const Dashboard: FC = () => {
   const [metrics, setMetrics] = useState<ServerMetrics | null>(null);
   const [servers, setServers] = useState<SystemInfo[]>([]);
   const [recentLogs, setRecentLogs] = useState<LoginLog[]>([]);
   const [loading, setLoading] = useState(false);
 
   // 获取服务器指标
-  const fetchServerMetrics = async () => {
+  const fetchServerMetrics = useCallback(async () => {
     try {
       const result = await post('/monitor/server-metrics/current', {});
       setMetrics(result.data);
     } catch (error) {
       console.error('获取服务器指标失败:', error);
     }
-  };
+  }, []);
 
   // 获取服务器列表
-  const fetchServerList = async () => {
+  const fetchServerList = useCallback(async () => {
     try {
       const result = await post('/monitor/server-info/list', {
         current: 1,
@@ -67,10 +68,10 @@ const Dashboard: React.FC = () => {
     } catch (error) {
       console.error('获取服务器列表失败:', error);
     }
-  };
+  }, []);
 
   // 获取最近登录日志
-  const fetchRecentLogs = async () => {
+  const fetchRecentLogs = useCallback(async () => {
     try {
       const result = await post('/monitor/login-logs/list', {
         current: 1,
@@ -80,10 +81,10 @@ const Dashboard: React.FC = () => {
     } catch (error) {
       console.error('获取登录日志失败:', error);
     }
-  };
+  }, []);
 
   // 刷新数据
-  const refreshData = () => {
+  const refreshData = useCallback(() => {
     setLoading(true);
     Promise.all([
       fetchServerMetrics(),
@@ -92,7 +93,7 @@ const Dashboard: React.FC = () => {
     ]).finally(() => {
       setLoading(false);
     });
-  };
+  }, [fetchServerMetrics, fetchServerList, fetchRecentLogs]);
 
   useEffect(() => {
     refreshData();
@@ -101,7 +102,8 @@ const Dashboard: React.FC = () => {
     const interval = setInterval(refreshData, 30000);
 
     return () => clearInterval(interval);
-  }, []);
+     
+  }, [refreshData]);
 
   // 格式化内存大小
   const formatMemorySize = (bytes: number): string => {

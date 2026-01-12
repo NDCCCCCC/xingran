@@ -1,11 +1,9 @@
-import React, { useEffect } from 'react';
 import { Layout, Avatar, Dropdown, Space, Divider } from 'antd';
 import { UserOutlined, LogoutOutlined, SettingOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { useNoticeStore } from '@/store/noticeStore';
 import { useWebSocket } from '@/hooks/useWebSocket';
-import { getUnreadCount } from '@/lib/noticeApi';
 import { useLayout } from '@/store/layoutStore';
 import NotificationBell from '@/components/NotificationBell';
 import ColorSwitcher from '@/design-system/components/ColorSwitcher';
@@ -14,28 +12,18 @@ import type { MenuProps } from 'antd';
 
 const { Header: AntHeader } = Layout;
 
-const Header: React.FC = () => {
+import type { FC } from 'react';
+
+const Header: FC = () => {
   const { user, logout } = useAuthStore();
-  const { setUnreadCount } = useNoticeStore();
-  const { sidebarCollapsed, toggleSidebar, layout } = useLayout();
+  const unreadCount = useNoticeStore(state => state.unreadCount);
+  const { toggleSidebar, layout } = useLayout();
   const navigate = useNavigate();
 
   // 初始化 WebSocket 连接
+  // useWebSocket 内部已处理只连接一次的逻辑（通过模块级单例 + useEffect + subscribe）
+  // WebSocket 连接成功后会自动获取未读数量
   useWebSocket();
-
-  // 获取未读数量
-  useEffect(() => {
-    const fetchUnreadCount = async () => {
-      try {
-        const response = await getUnreadCount();
-        setUnreadCount(response.data?.count || 0);
-      } catch (error) {
-        console.error('获取未读数量失败:', error);
-      }
-    };
-
-    fetchUnreadCount();
-  }, [setUnreadCount]);
 
   const handleLogout = () => {
     logout();
@@ -74,43 +62,12 @@ const Header: React.FC = () => {
         color: 'var(--theme-text-primary)',
         borderBottom: '1px solid var(--theme-border-primary)',
         transition: 'var(--theme-transition-base)',
+        position: 'relative',
+        zIndex: 10,
       }}
     >
+      {/* 左侧留空，保持布局平衡 */}
       <div className="flex items-center gap-4">
-        {/* 侧边栏切换按钮（仅经典布局和混合布局显示） */}
-        {(layout === 'classic' || layout === 'hybrid') && (
-          <button
-            onClick={toggleSidebar}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-            style={{
-              color: 'var(--theme-text-secondary)',
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-            }}
-          >
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 20 20"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M3 5h14M3 10h10M3 15h6"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            </svg>
-          </button>
-        )}
-        <h1
-          className="text-xl font-bold"
-          style={{ color: 'var(--theme-text-primary)' }}
-        >
-          产险湖北数智化平台
-        </h1>
       </div>
 
       <Space size="middle">

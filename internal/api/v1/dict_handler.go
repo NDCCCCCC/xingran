@@ -149,24 +149,7 @@ func createDictType(core *core.Core) gin.HandlerFunc {
 		}
 
 		// 记录操作日志
-		clientIP := c.ClientIP()
-		operURL := c.Request.URL.String()
-		core.OperLogService.RecordAsync(
-			core.GetDB(),
-			"字典管理",
-			1, // 1=新增
-			"",
-			c.Request.Method,
-			operURL,
-			getUsernameFromContext(c),
-			getDeptNameFromContext(c, core.GetDB()),
-			&clientIP,
-			nil,
-			nil,
-			nil,
-			0,
-			0,
-		)
+		recordOperLog(c, core, "字典管理", OperTypeCreate)
 
 		response.Success(c, gin.H{"id": dictType.ID})
 	}
@@ -243,24 +226,7 @@ func updateDictType(core *core.Core) gin.HandlerFunc {
 		}
 
 		// 记录操作日志
-		clientIP := c.ClientIP()
-		operURL := c.Request.URL.String()
-		core.OperLogService.RecordAsync(
-			core.GetDB(),
-			"字典管理",
-			2, // 2=修改
-			"",
-			c.Request.Method,
-			operURL,
-			getUsernameFromContext(c),
-			getDeptNameFromContext(c, core.GetDB()),
-			&clientIP,
-			nil,
-			nil,
-			nil,
-			0,
-			0,
-		)
+		recordOperLog(c, core, "字典管理", OperTypeUpdate)
 
 		response.Success(c, nil)
 	}
@@ -302,24 +268,7 @@ func deleteDictType(core *core.Core) gin.HandlerFunc {
 		}
 
 		// 记录操作日志
-		clientIP := c.ClientIP()
-		operURL := c.Request.URL.String()
-		core.OperLogService.RecordAsync(
-			core.GetDB(),
-			"字典管理",
-			3, // 3=删除
-			"",
-			c.Request.Method,
-			operURL,
-			getUsernameFromContext(c),
-			getDeptNameFromContext(c, core.GetDB()),
-			&clientIP,
-			nil,
-			nil,
-			nil,
-			0,
-			0,
-		)
+		recordOperLog(c, core, "字典管理", OperTypeDelete)
 
 		response.Success(c, nil)
 	}
@@ -550,24 +499,7 @@ func createDictData(core *core.Core) gin.HandlerFunc {
 		}
 
 		// 记录操作日志
-		clientIP := c.ClientIP()
-		operURL := c.Request.URL.String()
-		core.OperLogService.RecordAsync(
-			core.GetDB(),
-			"字典管理",
-			1, // 1=新增
-			"",
-			c.Request.Method,
-			operURL,
-			getUsernameFromContext(c),
-			getDeptNameFromContext(c, core.GetDB()),
-			&clientIP,
-			nil,
-			nil,
-			nil,
-			0,
-			0,
-		)
+		recordOperLog(c, core, "字典管理", OperTypeCreate)
 
 		response.Success(c, gin.H{"id": dictData.ID})
 	}
@@ -653,24 +585,7 @@ func updateDictData(core *core.Core) gin.HandlerFunc {
 		}
 
 		// 记录操作日志
-		clientIP := c.ClientIP()
-		operURL := c.Request.URL.String()
-		core.OperLogService.RecordAsync(
-			core.GetDB(),
-			"字典管理",
-			2, // 2=修改
-			"",
-			c.Request.Method,
-			operURL,
-			getUsernameFromContext(c),
-			getDeptNameFromContext(c, core.GetDB()),
-			&clientIP,
-			nil,
-			nil,
-			nil,
-			0,
-			0,
-		)
+		recordOperLog(c, core, "字典管理", OperTypeUpdate)
 
 		response.Success(c, nil)
 	}
@@ -705,24 +620,7 @@ func deleteDictData(core *core.Core) gin.HandlerFunc {
 		}
 
 		// 记录操作日志
-		clientIP := c.ClientIP()
-		operURL := c.Request.URL.String()
-		core.OperLogService.RecordAsync(
-			core.GetDB(),
-			"字典管理",
-			3, // 3=删除
-			"",
-			c.Request.Method,
-			operURL,
-			getUsernameFromContext(c),
-			getDeptNameFromContext(c, core.GetDB()),
-			&clientIP,
-			nil,
-			nil,
-			nil,
-			0,
-			0,
-		)
+		recordOperLog(c, core, "字典管理", OperTypeDelete)
 
 		response.Success(c, nil)
 	}

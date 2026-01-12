@@ -3,7 +3,8 @@
  * 在应用根部包裹，提供布局功能
  */
 
-import React, { useEffect, createContext, useContext } from 'react';
+import { useEffect, createContext, useContext } from 'react';
+import type { FC, ReactNode } from 'react';
 import { useLayoutStore } from '@/store/layoutStore';
 
 interface LayoutContextValue {
@@ -18,7 +19,7 @@ const LayoutContext = createContext<LayoutContextValue>({
 
 export const useLayoutContext = () => useContext(LayoutContext);
 
-export const LayoutProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const LayoutProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const { currentLayout, sidebarCollapsed, density } = useLayoutStore();
 
   useEffect(() => {
@@ -42,3 +43,5 @@ export const LayoutProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     </LayoutContext.Provider>
   );
 };
+
+export default LayoutProvider;

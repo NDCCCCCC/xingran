@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import type { FC } from 'react';
 import {
   Card,
   Table,
@@ -14,14 +15,10 @@ import {
   Row,
   Col,
   Statistic,
-  Progress,
   Tabs,
   message,
-  Alert,
-  List,
   Divider,
-  Popconfirm,
-  Typography
+  Popconfirm
 } from 'antd';
 import {
   SearchOutlined,
@@ -33,8 +30,7 @@ import {
   BarChartOutlined,
   ExportOutlined,
   ExclamationCircleOutlined,
-  DatabaseOutlined,
-  ThunderboltOutlined
+  DatabaseOutlined
 } from '@ant-design/icons';
 import { post, get } from '@/lib/api';
 import type { ColumnsType } from 'antd/es/table';
@@ -50,18 +46,6 @@ interface CacheInfo {
   location: string;  // 新增: "l1", "l2", "both"
   createdAt: string;
   updatedAt: string;
-}
-
-interface CacheStats {
-  cacheType: string;
-  hitCount: number;
-  missCount: number;
-  hitRate: number;
-  totalMemory: number;
-  usedMemory: number;
-  keyCount: number;
-  expiredCount: number;
-  collectTime: string;
 }
 
 interface CacheMonitor {
@@ -95,9 +79,8 @@ interface CacheMonitor {
   };
 }
 
-const CacheManager: React.FC = () => {
+const CacheManager: FC = () => {
   const [caches, setCaches] = useState<CacheInfo[]>([]);
-  const [stats, setStats] = useState<CacheStats[]>([]);
   const [monitor, setMonitor] = useState<CacheMonitor | null>(null);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
@@ -132,21 +115,6 @@ const CacheManager: React.FC = () => {
     }
   };
 
-  // 获取缓存统计
-  const fetchStats = async () => {
-    try {
-      const result = await post('/monitor/cache/stats/list', {
-        current: 1,
-        pageSize: 10
-      });
-
-      setStats(result.data.list || []);
-    } catch (error) {
-      console.error('获取缓存统计失败:', error);
-      message.error('获取缓存统计失败');
-    }
-  };
-
   // 获取监控数据
   const fetchMonitor = async () => {
     try {
@@ -162,7 +130,7 @@ const CacheManager: React.FC = () => {
   const handleOperate = async () => {
     try {
       const values = await form.validateFields();
-      const result = await post('/monitor/cache/operate', {
+      await post('/monitor/cache/operate', {
         ...values,
         ttl: values.ttl || undefined
       });
@@ -296,7 +264,6 @@ const CacheManager: React.FC = () => {
 
   useEffect(() => {
     fetchCaches();
-    fetchStats();
     fetchMonitor();
 
     // 设置定时刷新（每30秒）
@@ -664,25 +631,19 @@ const CacheManager: React.FC = () => {
                 <Row gutter={16} className="mb-4">
                   <Col xs={24} md={12}>
                     <Card title={<><Tag color="blue">L1</Tag> 内存使用情况</>}>
-                      <Progress
-                        percent={monitor?.l1?.stats?.usedMemory && monitor?.l1?.stats?.totalMemory
-                          ? Math.round((monitor.l1.stats.usedMemory / monitor.l1.stats.totalMemory) * 100)
-                          : 0}
-                        status={monitor?.l1?.stats?.usedMemory && monitor?.l1?.stats?.totalMemory &&
-                          monitor.l1.stats.usedMemory / monitor.l1.stats.totalMemory > 0.8 ? 'exception' : 'normal'}
-                        format={() => formatMemorySize(monitor?.l1?.stats?.usedMemory || 0)}
+                      <Statistic
+                        title="内存使用"
+                        value={formatMemorySize(monitor?.l1?.stats?.usedMemory || 0)}
+                        valueStyle={{ fontSize: '18px' }}
                       />
                     </Card>
                   </Col>
                   <Col xs={24} md={12}>
                     <Card title={<><Tag color="green">L2</Tag> Redis内存使用</>}>
-                      <Progress
-                        percent={monitor?.l2?.stats?.usedMemory && monitor?.l2?.stats?.totalMemory
-                          ? Math.round((monitor.l2.stats.usedMemory / monitor.l2.stats.totalMemory) * 100)
-                          : 0}
-                        status={monitor?.l2?.stats?.usedMemory && monitor?.l2?.stats?.totalMemory &&
-                          monitor.l2.stats.usedMemory / monitor.l2.stats.totalMemory > 0.8 ? 'exception' : 'normal'}
-                        format={() => formatMemorySize(monitor?.l2?.stats?.usedMemory || 0)}
+                      <Statistic
+                        title="内存使用"
+                        value={formatMemorySize(monitor?.l2?.stats?.usedMemory || 0)}
+                        valueStyle={{ fontSize: '18px' }}
                       />
                     </Card>
                   </Col>

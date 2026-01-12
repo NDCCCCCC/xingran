@@ -2,7 +2,7 @@
  * 分字段配置组件
  */
 
-import React from 'react';
+import type { FC } from 'react';
 import { Radio, Select, Space } from 'antd';
 import type { CronFieldConfig } from '../constants';
 import { FIELD_RANGES } from '../constants';
@@ -12,7 +12,7 @@ interface MinuteFieldProps {
   onChange: (value: CronFieldConfig) => void;
 }
 
-const MinuteField: React.FC<MinuteFieldProps> = ({ value, onChange }) => {
+const MinuteField: FC<MinuteFieldProps> = ({ value, onChange }) => {
   const { periodType } = value;
   const range = FIELD_RANGES.minute;
 

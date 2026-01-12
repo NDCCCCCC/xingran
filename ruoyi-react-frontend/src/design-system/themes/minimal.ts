@@ -5,8 +5,7 @@
 
 import type { ThemeConfig } from '@/types/theme';
 import { spacing } from '../tokens/spacing';
-import { typography, fontFamily } from '../tokens/typography';
-import { shadows, radius } from '../tokens/shadows';
+import { fontFamily } from '../tokens/typography';
 
 export const minimalTheme: ThemeConfig = {
   id: 'minimal',
@@ -59,6 +58,7 @@ export const minimalTheme: ThemeConfig = {
     lg: spacing.xl,    // 更大的间距
     xl: spacing['2xl'], // 更大的间距
     '2xl': spacing['3xl'],
+    '3xl': spacing['4xl'],
   },
 
   typography: {

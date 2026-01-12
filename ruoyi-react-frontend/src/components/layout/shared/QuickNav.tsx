@@ -3,13 +3,13 @@
  * 提供常用功能的快速入口
  */
 
-import React from 'react';
+import type { FC, ReactNode } from 'react';
 import { Card, Row, Col } from 'antd';
 import { useNavigate } from 'react-router-dom';
 
 interface QuickNavItem {
   title: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
   path: string;
   color: string;
 }
@@ -23,7 +23,7 @@ const quickNavItems: QuickNavItem[] = [
   { title: '我的值班', icon: '📅', path: '/duty/my-duty', color: '#ec4899' },
 ];
 
-const QuickNav: React.FC = () => {
+const QuickNav: FC = () => {
   const navigate = useNavigate();
 
   return (

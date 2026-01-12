@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import type { FC } from 'react';
 import {
   Table,
   Button,
@@ -8,9 +8,9 @@ import {
   Input,
   Select,
   InputNumber,
-  message,
   Popconfirm,
   Tag,
+  message,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -24,45 +24,54 @@ import {
 } from '@ant-design/icons';
 import type { Workstation, Department, User } from '@/types';
 import { post } from '@/lib/api';
+import { useTableManager } from '@/hooks/useTableManager';
+import { withErrorHandling } from '@/utils/errorHandler';
+import { useState, useEffect } from 'react';
+import ActionButtons from '@/components/shared/ActionButtons';
 
 const { Option } = Select;
 const { TextArea } = Input;
 
-const WorkstationManagement: React.FC = () => {
-  const [workstations, setWorkstations] = useState<Workstation[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [total, setTotal] = useState(0);
-  const [current, setCurrent] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [searchForm] = Form.useForm();
-  const [modalVisible, setModalVisible] = useState(false);
-  const [assignModalVisible, setAssignModalVisible] = useState(false);
-  const [editForm] = Form.useForm();
-  const [assignForm] = Form.useForm();
-  const [editingWorkstation, setEditingWorkstation] = useState<Workstation | null>(null);
-  const [assigningWorkstation, setAssigningWorkstation] = useState<Workstation | null>(null);
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+const WorkstationManagement: FC = () => {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
+  const [assignModalVisible, setAssignModalVisible] = useState(false);
+  const [assignForm] = Form.useForm();
+  const [assigningWorkstation, setAssigningWorkstation] = useState<Workstation | null>(null);
 
-  // 加载工位列表
-  const loadWorkstations = async (params: any = {}) => {
-    setLoading(true);
-    try {
+  const {
+    loading,
+    data: workstations,
+    total,
+    current,
+    pageSize,
+    selectedRowKeys,
+    setSelectedRowKeys,
+    searchForm,
+    editForm,
+    editModalVisible,
+    editingItem: editingWorkstation,
+    setEditModalVisible,
+    setEditingItem,
+    loadData: loadWorkstations,
+    handleSearch,
+    handleReset,
+    handleAdd,
+    handleEdit,
+    handleModalClose,
+    setCurrent,
+    setPageSize,
+  } = useTableManager<Workstation>(
+    async (params) => {
       const values = searchForm.getFieldsValue();
       const result = await post('/system/workstations/list', {
         current: params.current || current,
         pageSize: params.pageSize || pageSize,
         ...values,
       });
-      setWorkstations(result.data.list);
-      setTotal(result.data.total);
-    } catch (error) {
-      console.error('加载工位列表失败:', error);
-    } finally {
-      setLoading(false);
+      return result.data;
     }
-  };
+  );
 
   // 加载部门列表
   const loadDepartments = async () => {
@@ -84,38 +93,59 @@ const WorkstationManagement: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    loadDepartments();
+  }, []);
+
+  // 打开编辑模态框
+  const openModal = (record?: Workstation) => {
+    if (record) {
+      setEditingItem(record);
+      editForm.setFieldsValue({
+        ...record,
+        deptId: record.deptId || undefined,
+      });
+    } else {
+      setEditingItem(null);
+      editForm.resetFields();
+      editForm.setFieldsValue({ workstationType: 0, status: 0, capacity: 1 });
+    }
+    setEditModalVisible(true);
+  };
+
   // 创建工位
   const handleCreate = async () => {
-    try {
-      const values = await editForm.validateFields();
-      if (editingWorkstation) {
-        await post(`/system/workstations/${editingWorkstation.id}/update`, values);
-        message.success('更新成功');
-      } else {
-        await post('/system/workstations', values);
-        message.success('创建成功');
+    await withErrorHandling(
+      async () => {
+        const values = await editForm.validateFields();
+        if (editingWorkstation) {
+          await post(`/system/workstations/${editingWorkstation.id}/update`, values);
+          return '更新成功';
+        } else {
+          await post('/system/workstations', values);
+          return '创建成功';
+        }
+      },
+      {
+        onSuccess: () => {
+          handleModalClose();
+          loadWorkstations();
+        },
       }
-      setModalVisible(false);
-      editForm.resetFields();
-      setEditingWorkstation(null);
-      loadWorkstations();
-    } catch (error: any) {
-      if (error.errorFields) {
-        return;
-      }
-      message.error('操作失败');
-    }
+    );
   };
 
   // 删除工位
   const handleDelete = async (id: string) => {
-    try {
-      await post(`/system/workstations/${id}/delete`, {});
-      message.success('删除成功');
-      loadWorkstations();
-    } catch (error) {
-      message.error('删除失败');
-    }
+    await withErrorHandling(
+      async () => {
+        await post(`/system/workstations/${id}/delete`, {});
+        return '删除成功';
+      },
+      {
+        onSuccess: () => loadWorkstations(),
+      }
+    );
   };
 
   // 批量删除工位
@@ -124,31 +154,18 @@ const WorkstationManagement: React.FC = () => {
       message.warning('请选择要删除的数据');
       return;
     }
-    try {
-      await post('/system/workstations/batch-delete', { ids: selectedRowKeys });
-      message.success('批量删除成功');
-      setSelectedRowKeys([]);
-      loadWorkstations();
-    } catch (error) {
-      message.error('批量删除失败');
-    }
-  };
-
-  // 打开编辑模态框
-  const openModal = (record?: Workstation) => {
-    if (record) {
-      setEditingWorkstation(record);
-      editForm.setFieldsValue({
-        ...record,
-        deptId: record.deptId || undefined,
-      });
-    } else {
-      setEditingWorkstation(null);
-      editForm.resetFields();
-      editForm.setFieldsValue({ workstationType: 0, status: 0, capacity: 1 });
-    }
-    setModalVisible(true);
-    loadDepartments();
+    await withErrorHandling(
+      async () => {
+        await post('/system/workstations/batch-delete', { ids: selectedRowKeys });
+        return '批量删除成功';
+      },
+      {
+        onSuccess: () => {
+          setSelectedRowKeys([]);
+          loadWorkstations();
+        },
+      }
+    );
   };
 
   // 打开分配用户模态框
@@ -165,18 +182,19 @@ const WorkstationManagement: React.FC = () => {
 
   // 分配用户
   const handleAssignUser = async () => {
-    try {
-      const values = await assignForm.validateFields();
-      await post(`/system/workstations/${assigningWorkstation?.id}/assign`, { userId: values.userId });
-      message.success('分配成功');
-      setAssignModalVisible(false);
-      loadWorkstations();
-    } catch (error: any) {
-      if (error.errorFields) {
-        return;
+    await withErrorHandling(
+      async () => {
+        const values = await assignForm.validateFields();
+        await post(`/system/workstations/${assigningWorkstation?.id}/assign`, { userId: values.userId });
+        return '分配成功';
+      },
+      {
+        onSuccess: () => {
+          setAssignModalVisible(false);
+          loadWorkstations();
+        },
       }
-      message.error('分配失败');
-    }
+    );
   };
 
   // 取消分配用户
@@ -184,13 +202,15 @@ const WorkstationManagement: React.FC = () => {
     if (!record.userId) {
       return;
     }
-    try {
-      await post(`/system/workstations/${record.id}/unassign`, {});
-      message.success('取消分配成功');
-      loadWorkstations();
-    } catch (error) {
-      message.error('取消分配失败');
-    }
+    await withErrorHandling(
+      async () => {
+        await post(`/system/workstations/${record.id}/unassign`, {});
+        return '取消分配成功';
+      },
+      {
+        onSuccess: () => loadWorkstations(),
+      }
+    );
   };
 
   // 工位类型选项
@@ -249,24 +269,40 @@ const WorkstationManagement: React.FC = () => {
       title: '操作',
       key: 'action',
       fixed: 'right',
-      width: 200,
-      render: (_, record) => (
-        <Space size="small">
-          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => openModal(record)}>编辑</Button>
-          {!record.userId && (
-            <Button type="link" size="small" icon={<UserOutlined />} onClick={() => openAssignModal(record)}>分配</Button>
-          )}
-          <Popconfirm title="确认删除?" onConfirm={() => handleDelete(record.id)}>
-            <Button type="link" size="small" danger icon={<DeleteOutlined />}>删除</Button>
-          </Popconfirm>
-        </Space>
-      ),
+      width: 100,
+      render: (_, record) => {
+        const actions = [
+          {
+            key: 'edit',
+            label: '编辑',
+            icon: <EditOutlined />,
+            onClick: () => handleEdit(record),
+          },
+          ...(!record.userId ? [{
+            key: 'assign',
+            label: '分配',
+            icon: <UserOutlined />,
+            onClick: () => openAssignModal(record),
+          }] : []),
+          {
+            key: 'delete',
+            label: '删除',
+            icon: <DeleteOutlined />,
+            danger: true,
+            render: () => (
+              <Popconfirm title="确认删除?" onConfirm={() => handleDelete(record.id)}>
+                <Button type="link" danger icon={<DeleteOutlined />} size="small">
+                  删除
+                </Button>
+              </Popconfirm>
+            ),
+          },
+        ];
+
+        return <ActionButtons actions={actions} />;
+      },
     },
   ];
-
-  useEffect(() => {
-    loadWorkstations();
-  }, [current, pageSize]);
 
   return (
     <div>
@@ -299,15 +335,15 @@ const WorkstationManagement: React.FC = () => {
         </Form.Item>
         <Form.Item>
           <Space>
-            <Button type="primary" icon={<SearchOutlined />} onClick={() => { loadWorkstations(); loadDepartments(); }}>查询</Button>
-            <Button icon={<ReloadOutlined />} onClick={() => { searchForm.resetFields(); loadWorkstations(); }}>重置</Button>
+            <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>查询</Button>
+            <Button icon={<ReloadOutlined />} onClick={handleReset}>重置</Button>
           </Space>
         </Form.Item>
       </Form>
 
       <div style={{ marginBottom: 16 }}>
         <Space>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>新增</Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新增</Button>
           <Button danger icon={<DeleteOutlined />} onClick={handleBatchDelete} disabled={selectedRowKeys.length === 0}>批量删除</Button>
         </Space>
       </div>
@@ -336,9 +372,9 @@ const WorkstationManagement: React.FC = () => {
       {/* 编辑模态框 */}
       <Modal
         title={editingWorkstation ? '编辑工位' : '新增工位'}
-        open={modalVisible}
+        open={editModalVisible}
         onOk={handleCreate}
-        onCancel={() => { setModalVisible(false); editForm.resetFields(); setEditingWorkstation(null); }}
+        onCancel={handleModalClose}
         width={600}
       >
         <Form form={editForm} labelCol={{ span: 6 }} wrapperCol={{ span: 16 }}>

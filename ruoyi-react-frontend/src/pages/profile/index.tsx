@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import type { FC } from 'react';
 import {
   Card,
   Row,
@@ -32,14 +33,13 @@ import dayjs from 'dayjs';
 
 const { Option } = Select;
 
-const ProfilePage: React.FC = () => {
+const ProfilePage: FC = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
   const [editForm] = Form.useForm();
   const [passwordForm] = Form.useForm();
-  const [avatarFileList, setAvatarFileList] = useState<UploadFile[]>([]);
   const [dutyStats, setDutyStats] = useState<MyDutyStats | null>(null);
   const [dutyStatsLoading, setDutyStatsLoading] = useState(false);
   const { updateUser } = useAuthStore();

@@ -1,22 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import type { FC, ChangeEvent } from 'react';
 import { Button, message } from 'antd';
 import { ReloadOutlined } from '@ant-design/icons';
 import { getCaptcha } from '@/services/captcha';
 import type { CaptchaResponse, CaptchaProps } from '@/types/captcha';
 import './TextCaptcha.css';
 
-const TextCaptcha: React.FC<CaptchaProps> = ({ value, onChange, onError }) => {
+const TextCaptcha: FC<CaptchaProps> = ({ value, onChange, onError }) => {
   const [captchaData, setCaptchaData] = useState<CaptchaResponse | null>(null);
   const [inputValue, setInputValue] = useState(value || '');
   const [loading, setLoading] = useState(false);
 
   // 加载验证码
-  const loadCaptcha = async () => {
+  const loadCaptcha = useCallback(async () => {
     setLoading(true);
     try {
       const data = await getCaptcha();
-      console.log('[TextCaptcha] 获取到的验证码数据:', data);
-      console.log('[TextCaptcha] captchaImg:', data?.captchaImg);
       // 如果返回空对象或没有 captchaType，说明验证码未启用
       if (!data || !data.captchaType) {
         return; // 静默返回，不显示验证码
@@ -36,13 +35,13 @@ const TextCaptcha: React.FC<CaptchaProps> = ({ value, onChange, onError }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [onChange, onError]);
 
   useEffect(() => {
     loadCaptcha();
-  }, []);
+  }, [loadCaptcha]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setInputValue(val);
     onChange?.(val, captchaData?.captchaId || '');

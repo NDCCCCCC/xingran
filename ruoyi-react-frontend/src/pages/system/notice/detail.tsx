@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import type { FC } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Card,
@@ -19,7 +20,7 @@ import dayjs from 'dayjs';
 /**
  * 管理端通知详情页面
  */
-const AdminNoticeDetailPage: React.FC = () => {
+const AdminNoticeDetailPage: FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
@@ -27,7 +28,7 @@ const AdminNoticeDetailPage: React.FC = () => {
   const [notice, setNotice] = useState<Notice | null>(null);
 
   // 加载通知详情
-  const loadNoticeDetail = async () => {
+  const loadNoticeDetail = useCallback(async () => {
     if (!id) return;
 
     setLoading(true);
@@ -44,11 +45,11 @@ const AdminNoticeDetailPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, navigate]);
 
   useEffect(() => {
     loadNoticeDetail();
-  }, [id]);
+  }, [loadNoticeDetail]);
 
   if (loading) {
     return (

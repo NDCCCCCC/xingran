@@ -220,24 +220,7 @@ func createNetworkDevice(core *core.Core) gin.HandlerFunc {
 		}
 
 		// 记录操作日志
-		clientIP := c.ClientIP()
-		operURL := c.Request.URL.String()
-		core.OperLogService.RecordAsync(
-			core.GetDB(),
-			"网络设备",
-			1, // 1=新增
-			"",
-			c.Request.Method,
-			operURL,
-			getUsernameFromContext(c),
-			getDeptNameFromContext(c, core.GetDB()),
-			&clientIP,
-			nil,
-			nil,
-			nil,
-			0,
-			0,
-		)
+		recordOperLog(c, core, "网络设备", OperTypeCreate)
 
 		response.Success(c, gin.H{"id": device.ID})
 	}
@@ -350,24 +333,7 @@ func updateNetworkDevice(core *core.Core) gin.HandlerFunc {
 		}
 
 		// 记录操作日志
-		clientIP := c.ClientIP()
-		operURL := c.Request.URL.String()
-		core.OperLogService.RecordAsync(
-			core.GetDB(),
-			"网络设备",
-			2, // 2=修改
-			"",
-			c.Request.Method,
-			operURL,
-			getUsernameFromContext(c),
-			getDeptNameFromContext(c, core.GetDB()),
-			&clientIP,
-			nil,
-			nil,
-			nil,
-			0,
-			0,
-		)
+		recordOperLog(c, core, "网络设备", OperTypeUpdate)
 
 		response.Success(c, nil)
 	}
@@ -402,24 +368,7 @@ func deleteNetworkDevice(core *core.Core) gin.HandlerFunc {
 		}
 
 		// 记录操作日志
-		clientIP := c.ClientIP()
-		operURL := c.Request.URL.String()
-		core.OperLogService.RecordAsync(
-			core.GetDB(),
-			"网络设备",
-			3, // 3=删除
-			"",
-			c.Request.Method,
-			operURL,
-			getUsernameFromContext(c),
-			getDeptNameFromContext(c, core.GetDB()),
-			&clientIP,
-			nil,
-			nil,
-			nil,
-			0,
-			0,
-		)
+		recordOperLog(c, core, "网络设备", OperTypeDelete)
 
 		response.Success(c, nil)
 	}
@@ -450,24 +399,7 @@ func batchDeleteNetworkDevices(core *core.Core) gin.HandlerFunc {
 		}
 
 		// 记录操作日志
-		clientIP := c.ClientIP()
-		operURL := c.Request.URL.String()
-		core.OperLogService.RecordAsync(
-			core.GetDB(),
-			"网络设备",
-			3, // 3=删除
-			"",
-			c.Request.Method,
-			operURL,
-			getUsernameFromContext(c),
-			getDeptNameFromContext(c, core.GetDB()),
-			&clientIP,
-			nil,
-			nil,
-			nil,
-			0,
-			0,
-		)
+		recordOperLog(c, core, "网络设备", OperTypeDelete)
 
 		response.Success(c, nil)
 	}
@@ -634,24 +566,7 @@ func quickCreateNetworkDevice(core *core.Core) gin.HandlerFunc {
 		}
 
 		// 记录操作日志
-		clientIP := c.ClientIP()
-		operURL := c.Request.URL.String()
-		core.OperLogService.RecordAsync(
-			core.GetDB(),
-			"网络设备",
-			1, // 1=新增
-			"",
-			c.Request.Method,
-			operURL,
-			getUsernameFromContext(c),
-			getDeptNameFromContext(c, core.GetDB()),
-			&clientIP,
-			nil,
-			nil,
-			nil,
-			0,
-			0,
-		)
+		recordOperLog(c, core, "网络设备", OperTypeCreate)
 
 		response.Success(c, gin.H{"id": device.ID})
 	}

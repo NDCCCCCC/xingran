@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import type { FC } from 'react';
 import { Button, Form, Input, Modal, InputNumber, Select, Space, Tag, message, Popconfirm, Card, Tree, Radio } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined, FolderOutlined } from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
-import dayjs from 'dayjs';
 import {
   getWorkOrderCategoryList,
   createWorkOrderCategory,
@@ -13,20 +12,32 @@ import {
   type WorkOrderCategoryUpdateRequest,
 } from '@/lib/workorderApi';
 
-const WorkOrderCategoryPage: React.FC = () => {
-  const [form] = Form.useForm();
+const { Option } = Select;
+
+const WorkOrderCategoryPage: FC = () => {
   const [editForm] = Form.useForm();
 
-  const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<WorkOrderCategory[]>([]);
   const [treeData, setTreeData] = useState<any[]>([]);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState<WorkOrderCategory | null>(null);
 
+  // 统一错误处理
+  const handleApiError = (error: unknown, defaultMessage: string) => {
+    if (error && typeof error === 'object' && 'message' in error) {
+      message.error(error.message as string);
+    } else {
+      message.error(defaultMessage);
+    }
+  };
+
+  const handleSuccess = (msg: string) => {
+    message.success(msg);
+  };
+
   // 获取分类列表
   const fetchList = async () => {
-    setLoading(true);
     try {
       const result = await getWorkOrderCategoryList();
       setCategories(result.data || []);
@@ -53,9 +64,7 @@ const WorkOrderCategoryPage: React.FC = () => {
 
       setTreeData(buildTree(result.data || []));
     } catch (error) {
-      message.error('获取分类列表失败');
-    } finally {
-      setLoading(false);
+      handleApiError(error, '获取分类列表失败');
     }
   };
 
@@ -91,10 +100,10 @@ const WorkOrderCategoryPage: React.FC = () => {
   const handleDelete = async (id: string) => {
     try {
       await deleteWorkOrderCategory(id);
-      message.success('删除成功');
+      handleSuccess('删除成功');
       fetchList();
-    } catch (error: any) {
-      message.error(error.message || '删除失败');
+    } catch (error) {
+      handleApiError(error, '删除失败');
     }
   };
 
@@ -111,7 +120,7 @@ const WorkOrderCategoryPage: React.FC = () => {
           status: values.status,
         };
         await updateWorkOrderCategory(editingRecord.id, updateData);
-        message.success('更新成功');
+        handleSuccess('更新成功');
       } else {
         const createData: WorkOrderCategoryCreateRequest = {
           categoryName: values.categoryName,
@@ -121,7 +130,7 @@ const WorkOrderCategoryPage: React.FC = () => {
           status: values.status,
         };
         await createWorkOrderCategory(createData);
-        message.success('创建成功');
+        handleSuccess('创建成功');
       }
       setModalVisible(false);
       fetchList();
@@ -129,7 +138,7 @@ const WorkOrderCategoryPage: React.FC = () => {
       if (error.errorFields) {
         return;
       }
-      message.error(editingRecord ? '更新失败' : '创建失败');
+      handleApiError(error, editingRecord ? '更新失败' : '创建失败');
     }
   };
 
@@ -163,7 +172,6 @@ const WorkOrderCategoryPage: React.FC = () => {
           showLine
           switcherIcon={<FolderOutlined />}
           treeData={treeData}
-          loading={loading}
           defaultExpandAll
           titleRender={(node: any) => {
             return (

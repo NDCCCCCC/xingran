@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Button,
   Table,
@@ -12,8 +12,7 @@ import {
   Popconfirm,
   Card,
   Tag,
-  Tooltip,
-  Progress
+  Tooltip
 } from 'antd';
 import {
   PlusOutlined,
@@ -21,7 +20,6 @@ import {
   DeleteOutlined,
   SyncOutlined,
   CheckCircleOutlined,
-  CloseCircleOutlined,
   ReloadOutlined
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -35,9 +33,11 @@ import {
   type ADConfig,
   type ADSyncResult
 } from '@/lib/adDomainApi';
+import ActionButtons from '@/components/shared/ActionButtons';
 
-const ADConfigPage: React.FC = () => {
-  const [form] = Form.useForm();
+import type { FC } from 'react';
+
+const ADConfigPage: FC = () => {
   const [editForm] = Form.useForm();
 
   const [configs, setConfigs] = useState<ADConfig[]>([]);
@@ -48,6 +48,19 @@ const ADConfigPage: React.FC = () => {
   const [testingConfig, setTestingConfig] = useState<string | null>(null);
   const [syncingConfig, setSyncingConfig] = useState<string | null>(null);
   const [syncProgress, setSyncProgress] = useState<{ [key: string]: ADSyncResult }>({});
+
+  // 统一错误处理
+  const handleApiError = (error: unknown, defaultMessage: string) => {
+    if (error && typeof error === 'object' && 'message' in error) {
+      message.error(error.message as string);
+    } else {
+      message.error(defaultMessage);
+    }
+  };
+
+  const handleSuccess = (msg: string) => {
+    message.success(msg);
+  };
 
   useEffect(() => {
     fetchConfigs();
@@ -61,7 +74,7 @@ const ADConfigPage: React.FC = () => {
         setConfigs(res.data?.list ?? []);
       }
     } catch (error) {
-      message.error('获取AD配置失败');
+      handleApiError(error, '获取AD配置失败');
     } finally {
       setLoading(false);
     }
@@ -99,16 +112,16 @@ const ADConfigPage: React.FC = () => {
           adminPassword: values.adminPassword || undefined, // 如果没有输入密码则不更新
         };
         await updateADConfig(editingConfig.id, updateData);
-        message.success('更新成功');
+        handleSuccess('更新成功');
       } else {
         await createADConfig(values);
-        message.success('创建成功');
+        handleSuccess('创建成功');
       }
 
       setModalVisible(false);
       fetchConfigs();
-    } catch (error: any) {
-      message.error(error.message || '操作失败');
+    } catch (error) {
+      handleApiError(error, '操作失败');
     }
   };
 
@@ -116,9 +129,9 @@ const ADConfigPage: React.FC = () => {
     setTestingConfig(configId);
     try {
       await testADConnection(configId);
-      message.success('连接测试成功');
-    } catch (error: any) {
-      message.error('连接测试失败: ' + error.message);
+      handleSuccess('连接测试成功');
+    } catch (error) {
+      handleApiError(error, '连接测试失败');
     } finally {
       setTestingConfig(null);
     }
@@ -130,12 +143,12 @@ const ADConfigPage: React.FC = () => {
       const res = await syncADData(configId, 'full');
       if (res.code === 0 && res.data?.result) {
         const result = res.data.result;
-        message.success(`同步成功: OU=${result.ouCount}, 用户组=${result.groupCount}, 用户=${result.userCount}`);
+        handleSuccess(`同步成功: OU=${result.ouCount}, 用户组=${result.groupCount}, 用户=${result.userCount}`);
         setSyncProgress(prev => ({ ...prev, [configId]: result }));
         fetchConfigs();
       }
-    } catch (error: any) {
-      message.error('同步失败: ' + error.message);
+    } catch (error) {
+      handleApiError(error, '同步失败');
     } finally {
       setSyncingConfig(null);
     }
@@ -144,10 +157,10 @@ const ADConfigPage: React.FC = () => {
   const handleDelete = async (configId: string) => {
     try {
       await deleteADConfig(configId);
-      message.success('删除成功');
+      handleSuccess('删除成功');
       fetchConfigs();
-    } catch (error: any) {
-      message.error('删除失败: ' + error.message);
+    } catch (error) {
+      handleApiError(error, '删除失败');
     }
   };
 
@@ -228,38 +241,51 @@ const ADConfigPage: React.FC = () => {
     {
       title: '操作',
       key: 'action',
-      width: 250,
-      render: (_: any, record: ADConfig) => (
-        <Space size="small">
-          <Tooltip title="测试连接">
-            <Button
-              type="link"
-              size="small"
-              icon={<CheckCircleOutlined />}
-              loading={testingConfig === record.id}
-              onClick={() => handleTest(record.id)}
-            />
-          </Tooltip>
-          <Tooltip title="同步数据">
-            <Button
-              type="link"
-              size="small"
-              icon={<SyncOutlined />}
-              loading={syncingConfig === record.id}
-              onClick={() => handleSync(record.id)}
-            />
-          </Tooltip>
-          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
-          <Popconfirm
-            title="确定删除此配置吗？"
-            onConfirm={() => handleDelete(record.id)}
-            okText="确定"
-            cancelText="取消"
-          >
-            <Button type="link" size="small" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
-        </Space>
-      ),
+      width: 100,
+      render: (_: any, record: ADConfig) => {
+        const actions = [
+          {
+            key: 'test',
+            label: '测试连接',
+            icon: <CheckCircleOutlined />,
+            onClick: () => handleTest(record.id),
+            loading: testingConfig === record.id,
+          },
+          {
+            key: 'sync',
+            label: '同步数据',
+            icon: <SyncOutlined />,
+            onClick: () => handleSync(record.id),
+            loading: syncingConfig === record.id,
+          },
+          {
+            key: 'edit',
+            label: '编辑',
+            icon: <EditOutlined />,
+            onClick: () => handleEdit(record),
+          },
+          {
+            key: 'delete',
+            label: '删除',
+            icon: <DeleteOutlined />,
+            danger: true,
+            render: () => (
+              <Popconfirm
+                title="确定删除此配置吗？"
+                onConfirm={() => handleDelete(record.id)}
+                okText="确定"
+                cancelText="取消"
+              >
+                <Button type="link" danger icon={<DeleteOutlined />} size="small">
+                  删除
+                </Button>
+              </Popconfirm>
+            ),
+          },
+        ];
+
+        return <ActionButtons actions={actions} />;
+      },
     },
   ];
 

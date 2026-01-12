@@ -2,7 +2,7 @@
  * 月字段配置组件
  */
 
-import React from 'react';
+import type { FC } from 'react';
 import { Radio, Select, Space } from 'antd';
 import type { CronFieldConfig } from '../constants';
 
@@ -13,7 +13,7 @@ interface MonthFieldProps {
   onChange: (value: CronFieldConfig) => void;
 }
 
-const MonthField: React.FC<MonthFieldProps> = ({ value, onChange }) => {
+const MonthField: FC<MonthFieldProps> = ({ value, onChange }) => {
   const { periodType } = value;
   const range = FIELD_RANGES.month;
 

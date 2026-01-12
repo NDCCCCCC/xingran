@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Card,
   Table,
@@ -10,8 +10,6 @@ import {
   Form,
   Modal,
   message,
-  Switch,
-  Popconfirm
 } from 'antd';
 import {
   ReloadOutlined,
@@ -33,8 +31,11 @@ import {
   type ADConfig,
   type ADOUNode
 } from '@/lib/adDomainApi';
+import ActionButtons from '@/components/shared/ActionButtons';
 
-const ADUserPage: React.FC = () => {
+import type { FC } from 'react';
+
+const ADUserPage: FC = () => {
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
 
@@ -62,13 +63,13 @@ const ADUserPage: React.FC = () => {
   const fetchConfigs = async () => {
     try {
       const res = await getADConfigList({ current: 1, pageSize: 100, status: 0 });
-      if (res.code === 0 && res.data?.list?.length > 0) {
+      if (res.code === 0 && res.data && res.data.list && res.data.list.length > 0) {
         setConfigs(res.data.list);
         if (!selectedConfig) {
           setSelectedConfig(res.data.list[0].id);
         }
       }
-    } catch (error) {
+    } catch {
       message.error('获取AD配置失败');
     }
   };
@@ -109,7 +110,7 @@ const ADUserPage: React.FC = () => {
         setUsers(res.data?.list ?? []);
         setTotal(res.data?.total ?? 0);
       }
-    } catch (error) {
+    } catch {
       message.error('获取用户列表失败');
     } finally {
       setLoading(false);
@@ -264,35 +265,31 @@ const ADUserPage: React.FC = () => {
       title: '操作',
       key: 'action',
       fixed: 'right',
-      width: 250,
-      render: (_: any, user: ADUser) => (
-        <Space size="small">
-          <Button
-            type="link"
-            size="small"
-            icon={user.isEnabled ? <StopOutlined /> : <CheckCircleOutlined />}
-            onClick={() => handleEnable(user)}
-          >
-            {user.isEnabled ? '禁用' : '启用'}
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            icon={<SwapOutlined />}
-            onClick={() => handleMove(user)}
-          >
-            移动
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(user)}
-          >
-            编辑
-          </Button>
-        </Space>
-      ),
+      width: 100,
+      render: (_: any, user: ADUser) => {
+        const actions = [
+          {
+            key: 'toggle-status',
+            label: user.isEnabled ? '禁用' : '启用',
+            icon: user.isEnabled ? <StopOutlined /> : <CheckCircleOutlined />,
+            onClick: () => handleEnable(user),
+          },
+          {
+            key: 'move',
+            label: '移动',
+            icon: <SwapOutlined />,
+            onClick: () => handleMove(user),
+          },
+          {
+            key: 'edit',
+            label: '编辑',
+            icon: <EditOutlined />,
+            onClick: () => handleEdit(user),
+          },
+        ];
+
+        return <ActionButtons actions={actions} />;
+      },
     },
   ];
 

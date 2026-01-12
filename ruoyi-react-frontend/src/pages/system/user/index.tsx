@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import type { FC, Key, ReactElement } from 'react';
 import {
   Table,
   Button,
@@ -7,7 +8,6 @@ import {
   Form,
   Input,
   Select,
-  message,
   Popconfirm,
   Tag,
   Avatar,
@@ -16,6 +16,7 @@ import {
   Col,
   Statistic,
   Layout,
+  Alert,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -33,104 +34,92 @@ import {
 import type { User } from '@/types';
 import { post } from '@/lib/api';
 import DeptTree from '@/components/DeptTree';
+import { useTableManager } from '@/hooks/useTableManager';
+import { handleApiError, handleSuccess } from '@/utils/errorHandler';
+import ActionButtons from '@/components/shared/ActionButtons';
 
 const { Option } = Select;
 const { Sider, Content } = Layout;
 
-const UserManagement: React.FC = () => {
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [total, setTotal] = useState(0);
-  const [current, setCurrent] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [searchForm] = Form.useForm();
-  const [editModalVisible, setEditModalVisible] = useState(false);
-  const [editForm] = Form.useForm();
-  const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+const UserManagement: FC = () => {
+  // 自定义状态（不能迁移到 useTableManager）
   const [resetPasswordModalVisible, setResetPasswordModalVisible] = useState(false);
   const [resetPasswordForm] = Form.useForm();
   const [resettingUser, setResettingUser] = useState<User | null>(null);
   const [selectedDeptId, setSelectedDeptId] = useState<string>('');
-
-  // 统计数据
   const [statistics, setStatistics] = useState({
     total: 0,
     active: 0,
     inactive: 0,
   });
-
-  // 角色数据
   const [roles, setRoles] = useState<any[]>([]);
-
-  // 部门数据
   const [departments, setDepartments] = useState<any[]>([]);
 
-  // 加载用户列表
-  const loadUsers = async (params: any = {}) => {
-    setLoading(true);
-    try {
-      const result = await post('/system/users/list', {
-        current: params.current || current,
-        pageSize: params.pageSize || pageSize,
-        ...params,
-      });
-      setUsers(result.data.list);
-      setTotal(result.data.total);
-    } catch (error) {
-      console.error('加载用户列表失败:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // 数据加载函数（使用 useCallback 保持引用稳定）
+  const fetchUsers = useCallback(async (params: any) => {
+    const result = await post('/system/users/list', params);
+    return { list: result.data.list, total: result.data.total };
+  }, []);
+
+  // 使用 useTableManager 管理表格状态
+  const {
+    loading,
+    data: users,
+    total,
+    current,
+    pageSize,
+    selectedRowKeys,
+    searchForm,
+    editForm,
+    editModalVisible,
+    editingItem: editingUser,
+    setCurrent,
+    setPageSize,
+    setSelectedRowKeys,
+    setEditModalVisible,
+    loadData: loadUsers,
+    handleAdd,
+    handleEdit,
+    resetSelection,
+  } = useTableManager<User>(fetchUsers, { pageSize: 10 });
 
   // 加载统计数据
-  const loadStatistics = async () => {
+  const loadStatistics = useCallback(async () => {
     try {
-      // 从服务器获取统计数据
       const result = await post('/system/users/list', { current: 1, pageSize: 1000 });
       const allUsers = result.data.list || [];
-      const activeCount = allUsers.filter(u => u.status === 0).length;
-      const inactiveCount = allUsers.filter(u => u.status === 1).length;
+      const activeCount = allUsers.filter((u: any) => u.status === 0).length;
+      const inactiveCount = allUsers.filter((u: any) => u.status === 1).length;
       setStatistics({
         total: allUsers.length,
         active: activeCount,
         inactive: inactiveCount,
       });
     } catch (error) {
-      console.error('加载统计数据失败', error);
-      // 如果接口失败，使用当前用户数据统计
-      const activeCount = users.filter(u => u.status === 0).length;
-      const inactiveCount = users.filter(u => u.status === 1).length;
-      setStatistics({
-        total: users.length,
-        active: activeCount,
-        inactive: inactiveCount,
-      });
+      handleApiError(error, '加载统计数据', false);
     }
-  };
+  }, []);
 
   // 加载角色列表
-  const loadRoles = async () => {
+  const loadRoles = useCallback(async () => {
     try {
       const result = await post('/system/roles/all');
       setRoles(result.data || []);
     } catch (error) {
-      console.error('加载角色列表失败', error);
+      handleApiError(error, '加载角色列表', false);
     }
-  };
+  }, []);
 
   // 加载部门列表
-  const loadDepartments = async () => {
+  const loadDepartments = useCallback(async () => {
     try {
       const result = await post('/system/departments/list');
-      // 直接存储树形结构数据
       setDepartments(result.data || []);
     } catch (error) {
-      console.error('加载部门列表失败', error);
+      handleApiError(error, '加载部门列表', false);
       setDepartments([]);
     }
-  };
+  }, []);
 
   // 渲染树形部门选项
   const renderDeptTreeOptions = (departments: any[]) => {
@@ -139,8 +128,8 @@ const UserManagement: React.FC = () => {
     }
 
     // 递归渲染树形选项
-    const renderOptions = (nodes: any[], level = 0): React.ReactElement[] => {
-      const options: React.ReactElement[] = [];
+    const renderOptions = (nodes: any[], level = 0): ReactElement[] => {
+      const options: ReactElement[] = [];
 
       nodes.forEach(node => {
         options.push(
@@ -161,11 +150,13 @@ const UserManagement: React.FC = () => {
     return renderOptions(departments);
   };
 
+  // 初始化加载（只在组件挂载时执行一次）
   useEffect(() => {
     loadUsers();
     loadStatistics();
     loadRoles();
     loadDepartments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 搜索
@@ -207,10 +198,9 @@ const UserManagement: React.FC = () => {
     loadStatistics();
   };
 
-  // 新增用户
-  const handleAdd = () => {
-    setEditingUser(null);
-    editForm.resetFields();
+  // 新增用户（覆盖 useTableManager 的 handleAdd）
+  const handleAddUser = () => {
+    handleAdd();
     // 设置默认值
     const defaultValues: any = {
       gender: 0,
@@ -225,13 +215,6 @@ const UserManagement: React.FC = () => {
       defaultValues.roleIds = [roles[0].id];
     }
     editForm.setFieldsValue(defaultValues);
-    setEditModalVisible(true);
-  };
-
-  // 编辑用户
-  const handleEdit = (record: User) => {
-    setEditingUser(record);
-    setEditModalVisible(true);
   };
 
   // Modal 打开后的回调
@@ -246,29 +229,28 @@ const UserManagement: React.FC = () => {
   const handleDelete = async (id: string) => {
     try {
       await post(`/system/users/${id}/delete`);
-      message.success('删除成功');
+      handleSuccess('删除');
       loadUsers();
       loadStatistics();
     } catch (error) {
-      console.error('删除失败:', error);
+      handleApiError(error, '删除');
     }
   };
 
   // 批量删除
   const handleBatchDelete = async () => {
     if (selectedRowKeys.length === 0) {
-      message.warning('请选择要删除的用户');
       return;
     }
 
     try {
       await post('/system/users/batch-delete', { ids: selectedRowKeys });
-      message.success('批量删除成功');
-      setSelectedRowKeys([]);
+      handleSuccess('批量删除');
+      resetSelection();
       loadUsers();
       loadStatistics();
     } catch (error) {
-      console.error('批量删除失败:', error);
+      handleApiError(error, '批量删除');
     }
   };
 
@@ -276,11 +258,11 @@ const UserManagement: React.FC = () => {
   const handleUpdateStatus = async (id: string, status: number) => {
     try {
       await post(`/system/users/${id}/status`, { status });
-      message.success(status === 0 ? '启用成功' : '禁用成功');
+      handleSuccess(status === 0 ? '启用' : '禁用');
       loadUsers();
       loadStatistics();
     } catch (error) {
-      console.error('操作失败:', error);
+      handleApiError(error, '操作');
     }
   };
 
@@ -302,12 +284,12 @@ const UserManagement: React.FC = () => {
         : '/system/users';
 
       await post(url, values);
-      message.success(editingUser ? '更新成功' : '创建成功');
+      handleSuccess(editingUser ? '更新' : '创建');
       setEditModalVisible(false);
       loadUsers();
       loadStatistics();
     } catch (error) {
-      console.error('操作失败:', error);
+      handleApiError(error, '操作');
     }
   };
 
@@ -327,15 +309,15 @@ const UserManagement: React.FC = () => {
         password: values.password,
       });
 
-      message.success('密码重置成功');
+      handleSuccess('密码重置');
       setResetPasswordModalVisible(false);
     } catch (error) {
-      console.error('重置密码失败:', error);
+      handleApiError(error, '重置密码');
     }
   };
 
   // 部门树选择处理
-  const handleDeptSelect = (selectedKeys: React.Key[]) => {
+  const handleDeptSelect = (selectedKeys: Key[]) => {
     if (selectedKeys.length > 0) {
       setSelectedDeptId(selectedKeys[0] as string);
       // 重新加载用户列表，筛选该部门的用户
@@ -438,48 +420,55 @@ const UserManagement: React.FC = () => {
     {
       title: '操作',
       key: 'action',
-      render: (_, record) => (
-        <Space size="middle">
-          <Button
-            type="link"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-          >
-            编辑
-          </Button>
-          <Button
-            type="link"
-            icon={record.status === 1 ? <LockOutlined /> : <UnlockOutlined />}
-            onClick={() => handleUpdateStatus(record.id, record.status === 1 ? 0 : 1)}
-          >
-            {record.status === 0 ? '禁用' : '启用'}
-          </Button>
-          <Button
-            type="link"
-            icon={<KeyOutlined />}
-            onClick={() => handleResetPassword(record)}
-          >
-            重置密码
-          </Button>
-          <Popconfirm
-            title="确定要删除这个用户吗？"
-            onConfirm={() => handleDelete(record.id)}
-            okText="确定"
-            cancelText="取消"
-          >
-            <Button type="link" danger icon={<DeleteOutlined />}>
-              删除
-            </Button>
-          </Popconfirm>
-        </Space>
-      ),
+      render: (_, record) => {
+        const actions = [
+          {
+            key: 'edit',
+            label: '编辑',
+            icon: <EditOutlined />,
+            onClick: () => handleEdit(record),
+          },
+          {
+            key: 'status',
+            label: record.status === 0 ? '禁用' : '启用',
+            icon: record.status === 1 ? <LockOutlined /> : <UnlockOutlined />,
+            onClick: () => handleUpdateStatus(record.id, record.status === 1 ? 0 : 1),
+          },
+          {
+            key: 'reset-password',
+            label: '重置密码',
+            icon: <KeyOutlined />,
+            onClick: () => handleResetPassword(record),
+          },
+          {
+            key: 'delete',
+            label: '删除',
+            icon: <DeleteOutlined />,
+            danger: true,
+            render: () => (
+              <Popconfirm
+                title="确定要删除这个用户吗？"
+                onConfirm={() => handleDelete(record.id)}
+                okText="确定"
+                cancelText="取消"
+              >
+                <Button type="link" danger icon={<DeleteOutlined />} size="small">
+                  删除
+                </Button>
+              </Popconfirm>
+            ),
+          },
+        ];
+
+        return <ActionButtons actions={actions} />;
+      },
     },
   ];
 
   return (
-    <Layout style={{ background: '#f0f2f5', minHeight: 'calc(100vh - 64px)' }}>
+    <Layout style={{ minHeight: 'calc(100vh - 64px)' }}>
       {/* 左侧部门树 */}
-      <Sider width={360} className="dept-list-sider" style={{ background: '#fff', padding: '16px', borderRight: '1px solid #f0f0f0' }}>
+      <Sider width={360} className="dept-list-sider" style={{ background: '#fff', padding: '0 16px 16px 0', borderRight: '1px solid #f0f0f0' }}>
         <DeptTree
           onSelect={(selectedKeys) => handleDeptSelect(selectedKeys)}
           selectedKeys={selectedDeptId ? [selectedDeptId] : []}
@@ -487,7 +476,7 @@ const UserManagement: React.FC = () => {
       </Sider>
 
       {/* 右侧内容区 */}
-      <Content style={{ padding: '16px', background: '#f0f2f5' }}>
+      <Content style={{ padding: '16px' }}>
         <div>
           {/* 统计卡片 */}
           <Row gutter={16} style={{ marginBottom: 16 }}>
@@ -551,18 +540,40 @@ const UserManagement: React.FC = () => {
                 </Form.Item>
               </Form>
               <Space>
-                <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+                {selectedRowKeys.length > 0 && (
+                  <Button
+                    danger
+                    icon={<DeleteOutlined />}
+                    onClick={handleBatchDelete}
+                  >
+                    批量删除 ({selectedRowKeys.length})
+                  </Button>
+                )}
+                <Button type="primary" icon={<PlusOutlined />} onClick={handleAddUser}>
                   新增用户
-                </Button>
-                <Button
-                  danger
-                  onClick={handleBatchDelete}
-                  disabled={selectedRowKeys.length === 0}
-                >
-                  批量删除
                 </Button>
               </Space>
             </div>
+            {selectedRowKeys.length > 0 && (
+              <Alert
+                message={
+                  <span>
+                    已选择 <strong>{selectedRowKeys.length}</strong> 个用户，
+                    <Button
+                      type="link"
+                      size="small"
+                      onClick={() => setSelectedRowKeys([])}
+                      style={{ padding: 0 }}
+                    >
+                      取消选择
+                    </Button>
+                  </span>
+                }
+                type="info"
+                showIcon
+                style={{ marginTop: 12 }}
+              />
+            )}
           </Card>
 
           {/* 用户表格 */}

@@ -3,7 +3,7 @@
  * 支持Cmd+K / Ctrl+K快捷键打开
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Modal, Input, List, Typography, Tag, Divider } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -26,7 +26,7 @@ interface SearchResult {
   id: string;
   title: string;
   description: string;
-  icon: React.ReactNode;
+  icon: import('react').ReactNode;
   path: string;
   category: string;
   keywords: string[];
@@ -108,7 +108,9 @@ const searchResults: SearchResult[] = [
   },
 ];
 
-const GlobalSearch: React.FC = () => {
+import type { FC } from 'react';
+
+const GlobalSearch: FC = () => {
   const [visible, setVisible] = useState(false);
   const [searchValue, setSearchValue] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -128,6 +130,13 @@ const GlobalSearch: React.FC = () => {
         result.keywords.some((keyword) => keyword.toLowerCase().includes(query))
     );
   }, [searchValue]);
+
+  // 处理结果点击
+  const handleResultClick = useCallback((result: SearchResult) => {
+    navigate(result.path);
+    setVisible(false);
+    setSearchValue('');
+  }, [navigate]);
 
   // 处理键盘事件
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -159,7 +168,7 @@ const GlobalSearch: React.FC = () => {
         setVisible(false);
       }
     }
-  }, [visible, filteredResults.length, selectedIndex]);
+  }, [visible, filteredResults.length, selectedIndex, handleResultClick, filteredResults]);
 
   // 注册键盘事件监听
   useEffect(() => {
@@ -168,26 +177,6 @@ const GlobalSearch: React.FC = () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [handleKeyDown]);
-
-  // 处理结果点击
-  const handleResultClick = (result: SearchResult) => {
-    navigate(result.path);
-    setVisible(false);
-    setSearchValue('');
-  };
-
-  // 获取类别名称
-  const getCategoryName = (category: string): string => {
-    const categoryMap: Record<string, string> = {
-      '页面': 'pages',
-      '系统管理': 'system',
-      '监控': 'monitor',
-      '网络': 'network',
-      '值班': 'duty',
-      '工单': 'workorder',
-    };
-    return categoryMap[category] || category;
-  };
 
   return (
     <>
@@ -249,7 +238,7 @@ const GlobalSearch: React.FC = () => {
             borderRadius: 'var(--theme-radius-xl)',
             border: '1px solid var(--theme-border-primary)',
           },
-        }}
+        } as any}
         closeIcon={null}
         style={{ top: 100 }}
       >

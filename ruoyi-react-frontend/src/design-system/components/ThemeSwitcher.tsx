@@ -3,13 +3,14 @@
  * 提供用户界面来切换主题
  */
 
-import React, { useState } from 'react';
-import { Dropdown, Button, Avatar, Space, Tooltip } from 'antd';
+import { useState } from 'react';
+import type { FC } from 'react';
+import { Dropdown, Button, Space, Tooltip } from 'antd';
 import { useTheme } from '@/store/themeStore';
-import { themePresets, type ThemeType } from '@/design-system/themes';
+import { themePresets } from '@/design-system/themes';
 import type { MenuProps } from 'antd';
 
-export const ThemeSwitcher: React.FC = () => {
+const ThemeSwitcher: FC = () => {
   const { theme, setTheme } = useTheme();
   const [open, setOpen] = useState(false);
 

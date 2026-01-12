@@ -1,11 +1,11 @@
-import React from 'react';
-import { Row, Col, Card, Statistic, Typography, Space } from 'antd';
+import type { FC } from 'react';
+import { Row, Col, Card, Statistic, Typography } from 'antd';
 import { UserOutlined, TeamOutlined, FileTextOutlined, MonitorOutlined } from '@ant-design/icons';
 import { useAuthStore } from '@/store/authStore';
 
 const { Text } = Typography;
 
-const Dashboard: React.FC = () => {
+const Dashboard: FC = () => {
   const { user } = useAuthStore();
 
   return (

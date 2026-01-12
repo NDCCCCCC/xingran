@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import type { FC } from 'react';
 import {
   Table,
   Button,
@@ -7,9 +7,9 @@ import {
   Form,
   Input,
   Select,
-  message,
   Popconfirm,
   Tag,
+  message,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -21,62 +21,81 @@ import {
 } from '@ant-design/icons';
 import type { Config } from '@/types';
 import { post } from '@/lib/api';
+import { useTableManager } from '@/hooks/useTableManager';
+import { withErrorHandling } from '@/utils/errorHandler';
 
 const { Option } = Select;
 const { TextArea } = Input;
 
-const ConfigManagement: React.FC = () => {
-  const [configs, setConfigs] = useState<Config[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [total, setTotal] = useState(0);
-  const [current, setCurrent] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [searchForm] = Form.useForm();
-  const [modalVisible, setModalVisible] = useState(false);
-  const [editForm] = Form.useForm();
-  const [editingConfig, setEditingConfig] = useState<Config | null>(null);
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-
-  // 加载参数配置列表
-  const loadConfigs = async (params: any = {}) => {
-    setLoading(true);
-    try {
+const ConfigManagement: FC = () => {
+  const {
+    loading,
+    data: configs,
+    total,
+    current,
+    pageSize,
+    selectedRowKeys,
+    setSelectedRowKeys,
+    searchForm,
+    editForm,
+    editModalVisible,
+    editingItem: editingConfig,
+    setEditModalVisible,
+    setEditingItem,
+    loadData: loadConfigs,
+    handleSearch,
+    handleReset,
+    handleRefresh,
+    handleAdd,
+    handleEdit,
+    handleModalClose,
+    setCurrent,
+    setPageSize,
+  } = useTableManager<Config>(
+    async (params) => {
       const values = searchForm.getFieldsValue();
       const result = await post('/system/configs/list', {
         current: params.current || current,
         pageSize: params.pageSize || pageSize,
         ...values,
       });
-      setConfigs(result.data.list);
-      setTotal(result.data.total);
-    } catch (error) {
-      console.error('加载参数配置失败:', error);
-    } finally {
-      setLoading(false);
+      return result.data;
     }
+  );
+
+  // 打开编辑模态框
+  const openModal = (record?: Config) => {
+    if (record) {
+      setEditingItem(record);
+      editForm.setFieldsValue(record);
+    } else {
+      setEditingItem(null);
+      editForm.resetFields();
+      editForm.setFieldsValue({ configType: 'N', isSystem: 0 });
+    }
+    setEditModalVisible(true);
   };
 
   // 创建参数配置
   const handleCreate = async () => {
-    try {
-      const values = await editForm.validateFields();
-      if (editingConfig) {
-        await post(`/system/configs/${editingConfig.id}/update`, values);
-        message.success('更新成功');
-      } else {
-        await post('/system/configs', values);
-        message.success('创建成功');
+    await withErrorHandling(
+      async () => {
+        const values = await editForm.validateFields();
+        if (editingConfig) {
+          await post(`/system/configs/${editingConfig.id}/update`, values);
+          return '更新成功';
+        } else {
+          await post('/system/configs', values);
+          return '创建成功';
+        }
+      },
+      {
+        onSuccess: () => {
+          handleModalClose();
+          loadConfigs();
+        },
       }
-      setModalVisible(false);
-      editForm.resetFields();
-      setEditingConfig(null);
-      loadConfigs();
-    } catch (error: any) {
-      if (error.errorFields) {
-        return;
-      }
-      message.error('操作失败');
-    }
+    );
   };
 
   // 删除参数配置
@@ -85,13 +104,15 @@ const ConfigManagement: React.FC = () => {
       message.warning('系统内置参数不能删除');
       return;
     }
-    try {
-      await post(`/system/configs/${id}/delete`, {});
-      message.success('删除成功');
-      loadConfigs();
-    } catch (error) {
-      message.error('删除失败');
-    }
+    await withErrorHandling(
+      async () => {
+        await post(`/system/configs/${id}/delete`, {});
+        return '删除成功';
+      },
+      {
+        onSuccess: () => loadConfigs(),
+      }
+    );
   };
 
   // 批量删除参数配置
@@ -100,37 +121,29 @@ const ConfigManagement: React.FC = () => {
       message.warning('请选择要删除的数据');
       return;
     }
-    try {
-      await post('/system/configs/batch-delete', { ids: selectedRowKeys });
-      message.success('批量删除成功');
-      setSelectedRowKeys([]);
-      loadConfigs();
-    } catch (error) {
-      message.error('批量删除失败');
-    }
+    await withErrorHandling(
+      async () => {
+        await post('/system/configs/batch-delete', { ids: selectedRowKeys });
+        return '批量删除成功';
+      },
+      {
+        onSuccess: () => {
+          setSelectedRowKeys([]);
+          loadConfigs();
+        },
+      }
+    );
   };
 
   // 刷新缓存
   const handleRefreshCache = async () => {
-    try {
-      await post('/system/configs/refresh-cache', {});
-      message.success('刷新缓存成功');
-    } catch (error) {
-      message.error('刷新缓存失败');
-    }
-  };
-
-  // 打开编辑模态框
-  const openModal = (record?: Config) => {
-    if (record) {
-      setEditingConfig(record);
-      editForm.setFieldsValue(record);
-    } else {
-      setEditingConfig(null);
-      editForm.resetFields();
-      editForm.setFieldsValue({ configType: 'N', isSystem: 0 });
-    }
-    setModalVisible(true);
+    await withErrorHandling(
+      async () => {
+        await post('/system/configs/refresh-cache', {});
+        return '刷新缓存成功';
+      },
+      {}
+    );
   };
 
   // 表格列
@@ -163,7 +176,7 @@ const ConfigManagement: React.FC = () => {
       width: 200,
       render: (_, record) => (
         <Space size="small">
-          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => openModal(record)}>编辑</Button>
+          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}>编辑</Button>
           <Popconfirm
             title="确认删除?"
             onConfirm={() => handleDelete(record.id, record.isSystem)}
@@ -175,10 +188,6 @@ const ConfigManagement: React.FC = () => {
       ),
     },
   ];
-
-  useEffect(() => {
-    loadConfigs();
-  }, [current, pageSize]);
 
   return (
     <div>
@@ -197,15 +206,15 @@ const ConfigManagement: React.FC = () => {
         </Form.Item>
         <Form.Item>
           <Space>
-            <Button type="primary" icon={<SearchOutlined />} onClick={() => loadConfigs()}>查询</Button>
-            <Button icon={<ReloadOutlined />} onClick={() => { searchForm.resetFields(); loadConfigs(); }}>重置</Button>
+            <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>查询</Button>
+            <Button icon={<ReloadOutlined />} onClick={handleReset}>重置</Button>
           </Space>
         </Form.Item>
       </Form>
 
       <div style={{ marginBottom: 16 }}>
         <Space>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>新增</Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新增</Button>
           <Button danger icon={<DeleteOutlined />} onClick={handleBatchDelete} disabled={selectedRowKeys.length === 0}>批量删除</Button>
           <Button icon={<ReloadOutlined />} onClick={handleRefreshCache}>刷新缓存</Button>
         </Space>
@@ -237,9 +246,9 @@ const ConfigManagement: React.FC = () => {
       {/* 编辑模态框 */}
       <Modal
         title={editingConfig ? '编辑参数配置' : '新增参数配置'}
-        open={modalVisible}
+        open={editModalVisible}
         onOk={handleCreate}
-        onCancel={() => { setModalVisible(false); editForm.resetFields(); setEditingConfig(null); }}
+        onCancel={handleModalClose}
         width={600}
       >
         <Form form={editForm} labelCol={{ span: 6 }} wrapperCol={{ span: 16 }}>

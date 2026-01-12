@@ -2,20 +2,18 @@
  * 周字段配置组件
  */
 
-import React from 'react';
+import type { FC } from 'react';
 import { Radio, Select, Space, Checkbox } from 'antd';
 import type { CronFieldConfig } from '../constants';
 
-import { FIELD_RANGES, WEEK_DAY_NAMES } from '../constants';
 
 interface WeekFieldProps {
   value: CronFieldConfig;
   onChange: (value: CronFieldConfig) => void;
 }
 
-const WeekField: React.FC<WeekFieldProps> = ({ value, onChange }) => {
+const WeekField: FC<WeekFieldProps> = ({ value, onChange }) => {
   const { periodType } = value;
-  const range = FIELD_RANGES.week;
 
   // 生成星期选项数组 (1=周日, 2=周一, ..., 7=周六)
   const weekOptions = [
@@ -29,7 +27,7 @@ const WeekField: React.FC<WeekFieldProps> = ({ value, onChange }) => {
   ];
 
   return (
-    <div>
+    <div className="cron-selector-week-field">
       <Radio.Group value={periodType} onChange={(e) => onChange({ ...value, periodType: e.target.value })}>
         <Space orientation="vertical" style={{ width: '100%' }}>
           <Radio value="every">每周</Radio>
@@ -40,19 +38,17 @@ const WeekField: React.FC<WeekFieldProps> = ({ value, onChange }) => {
               <Checkbox.Group
                 value={value.specific || []}
                 onChange={(values) => onChange({ ...value, periodType: 'specific', specific: values as number[] })}
-                style={{ marginLeft: 24 }}
+                style={{ marginLeft: 24, display: 'flex', flexWrap: 'wrap', gap: '8px' }}
               >
-                <Space wrap>
-                  {weekOptions.map(opt => (
-                    <Checkbox key={opt.value} value={opt.value}>{opt.label}</Checkbox>
-                  ))}
-                </Space>
+                {weekOptions.map(opt => (
+                  <Checkbox key={opt.value} value={opt.value}>{opt.label}</Checkbox>
+                ))}
               </Checkbox.Group>
             </Space>
           </Radio>
 
           <Radio value="cycle">
-            <Space align="center">
+            <Space align="center" wrap>
               <span>周期:</span>
               <span>从</span>
               <Select
@@ -79,7 +75,7 @@ const WeekField: React.FC<WeekFieldProps> = ({ value, onChange }) => {
           </Radio>
 
           <Radio value="range">
-            <Space align="center">
+            <Space align="center" wrap>
               <span>范围:</span>
               <span>从</span>
               <Select

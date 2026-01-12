@@ -19,6 +19,8 @@ interface TabsActions {
   setActiveTab: (key: string) => void;
   closeOtherTabs: (keepKey: string) => void;
   closeAllTabs: () => void;
+  closeLeftTabs: (keepKey: string) => void;
+  closeRightTabs: (keepKey: string) => void;
   updateTab: (key: string, updates: Partial<TabItem>) => void;
   pinTab: (key: string) => void;
   unpinTab: (key: string) => void;
@@ -38,7 +40,7 @@ export const useTabsStore = create<TabsStore>()(
 
       // 添加标签
       addTab: (tab: TabItem) => {
-        const { tabs, activeTab, history } = get();
+        const { tabs, history } = get();
 
         // 检查是否已存在
         const existingTab = tabs.find((t) => t.key === tab.key);
@@ -131,6 +133,48 @@ export const useTabsStore = create<TabsStore>()(
         });
       },
 
+      // 关闭左侧标签
+      closeLeftTabs: (keepKey: string) => {
+        const { tabs, history } = get();
+        const keepIndex = tabs.findIndex((t) => t.key === keepKey);
+        if (keepIndex === -1) return;
+
+        const newTabs = tabs.filter((t, index) => {
+          return index >= keepIndex || t.pinned;
+        });
+        const newHistory = history.filter((key) => {
+          const tab = tabs.find((t) => t.key === key);
+          return tab?.pinned || tabs.findIndex((t) => t.key === key) >= keepIndex;
+        });
+
+        set({
+          tabs: newTabs,
+          activeTab: keepKey,
+          history: newHistory,
+        });
+      },
+
+      // 关闭右侧标签
+      closeRightTabs: (keepKey: string) => {
+        const { tabs, history } = get();
+        const keepIndex = tabs.findIndex((t) => t.key === keepKey);
+        if (keepIndex === -1) return;
+
+        const newTabs = tabs.filter((t, index) => {
+          return index <= keepIndex || t.pinned;
+        });
+        const newHistory = history.filter((key) => {
+          const tab = tabs.find((t) => t.key === key);
+          return tab?.pinned || tabs.findIndex((t) => t.key === key) <= keepIndex;
+        });
+
+        set({
+          tabs: newTabs,
+          activeTab: keepKey,
+          history: newHistory,
+        });
+      },
+
       // 更新标签
       updateTab: (key: string, updates: Partial<TabItem>) => {
         const { tabs } = get();
@@ -175,6 +219,8 @@ export function useTabs() {
     setActiveTab,
     closeOtherTabs,
     closeAllTabs,
+    closeLeftTabs,
+    closeRightTabs,
     updateTab,
     pinTab,
     unpinTab,
@@ -189,6 +235,8 @@ export function useTabs() {
     setActiveTab,
     closeOtherTabs,
     closeAllTabs,
+    closeLeftTabs,
+    closeRightTabs,
     updateTab,
     pinTab,
     unpinTab,

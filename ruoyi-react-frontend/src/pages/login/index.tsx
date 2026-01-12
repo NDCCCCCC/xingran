@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import type { FC } from 'react';
 import { Form, Input, Button, Card, message } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
@@ -10,7 +11,7 @@ import type { LoginRequest } from '@/types';
 import type { CaptchaEnabled } from '@/types/captcha';
 import './login.css';
 
-const Login: React.FC = () => {
+const Login: FC = () => {
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
   const navigate = useNavigate();
@@ -26,7 +27,6 @@ const Login: React.FC = () => {
     const loadCaptchaConfig = async () => {
       try {
         const config = await getCaptchaConfig();
-        console.log('[DEBUG] 获取到的验证码配置:', config);
         setCaptchaEnabled(config.enabled);
       } catch (error) {
         // 配置加载失败，默认不显示验证码
@@ -37,9 +37,6 @@ const Login: React.FC = () => {
   }, []);
 
   const handleFinish = async (values: LoginRequest) => {
-    console.log('[DEBUG] 登录提交 - captchaEnabled:', captchaEnabled);
-    console.log('[DEBUG] 验证码值:', captchaValue, 'ID:', captchaId, 'sliderVerified:', sliderVerified);
-
     setLoading(true);
     try {
       const loginData: LoginRequest = {
@@ -69,7 +66,6 @@ const Login: React.FC = () => {
         }
       }
 
-      console.log('[DEBUG] 准备登录，数据:', loginData);
       await login(loginData);
       // 登录成功后获取用户菜单
       await fetchMenus();

@@ -294,24 +294,7 @@ func createNotice(core *core.Core) gin.HandlerFunc {
 		}
 
 		// 记录操作日志
-		clientIP := c.ClientIP()
-		operURL := c.Request.URL.String()
-		core.OperLogService.RecordAsync(
-			core.GetDB(),
-			"通知公告",
-			1, // 1=新增
-			"",
-			c.Request.Method,
-			operURL,
-			getUsernameFromContext(c),
-			getDeptNameFromContext(c, core.GetDB()),
-			&clientIP,
-			nil,
-			nil,
-			nil,
-			0,
-			0,
-		)
+		recordOperLog(c, core, "通知公告", OperTypeCreate)
 
 		response.Success(c, gin.H{"id": notice.ID, "message": "创建成功"})
 	}
@@ -432,24 +415,7 @@ func updateNotice(core *core.Core) gin.HandlerFunc {
 		}
 
 		// 记录操作日志
-		clientIP := c.ClientIP()
-		operURL := c.Request.URL.String()
-		core.OperLogService.RecordAsync(
-			core.GetDB(),
-			"通知公告",
-			2, // 2=修改
-			"",
-			c.Request.Method,
-			operURL,
-			getUsernameFromContext(c),
-			getDeptNameFromContext(c, core.GetDB()),
-			&clientIP,
-			nil,
-			nil,
-			nil,
-			0,
-			0,
-		)
+		recordOperLog(c, core, "通知公告", OperTypeUpdate)
 
 		response.Success(c, gin.H{"message": "更新成功"})
 	}
@@ -496,24 +462,7 @@ func deleteNotice(core *core.Core) gin.HandlerFunc {
 		}
 
 		// 记录操作日志
-		clientIP := c.ClientIP()
-		operURL := c.Request.URL.String()
-		core.OperLogService.RecordAsync(
-			core.GetDB(),
-			"通知公告",
-			3, // 3=删除
-			"",
-			c.Request.Method,
-			operURL,
-			getUsernameFromContext(c),
-			getDeptNameFromContext(c, core.GetDB()),
-			&clientIP,
-			nil,
-			nil,
-			nil,
-			0,
-			0,
-		)
+		recordOperLog(c, core, "通知公告", OperTypeDelete)
 
 		response.Success(c, gin.H{"message": "删除成功"})
 	}
@@ -560,24 +509,7 @@ func batchDeleteNotices(core *core.Core) gin.HandlerFunc {
 		}
 
 		// 记录操作日志
-		clientIP := c.ClientIP()
-		operURL := c.Request.URL.String()
-		core.OperLogService.RecordAsync(
-			core.GetDB(),
-			"通知公告",
-			3, // 3=删除
-			"",
-			c.Request.Method,
-			operURL,
-			getUsernameFromContext(c),
-			getDeptNameFromContext(c, core.GetDB()),
-			&clientIP,
-			nil,
-			nil,
-			nil,
-			0,
-			0,
-		)
+		recordOperLog(c, core, "通知公告", OperTypeDelete)
 
 		response.Success(c, gin.H{"message": "批量删除成功"})
 	}

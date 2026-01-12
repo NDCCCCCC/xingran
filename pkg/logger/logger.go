@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -9,33 +10,50 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
+const (
+	// 默认日志配置
+	defaultLevel         = "info"
+	defaultLogDir        = "logs"
+	defaultMaxSize       = 100  // MB
+	defaultMaxBackups    = 30   // 保留30个备份
+	defaultMaxAge        = 90   // 保留90天
+	defaultCompress      = true // 压缩旧日志
+	defaultConsoleOutput = true // 同时输出到控制台
+
+	// 日志文件名
+	logFileName = "app.log"
+
+	// 日志时间格式
+	timestampFormat = "2006-01-02 15:04:05"
+)
+
 var (
-	log            *logrus.Logger
-	fileLogger     *logrus.Logger
-	consoleLogger   *logrus.Logger
+	log          *logrus.Logger
+	fileLogger   *logrus.Logger
+	fileWriter   io.WriteCloser
 )
 
 // Config 日志配置
 type Config struct {
-	Level         string  // 日志级别: debug, info, warn, error
-	LogDir        string  // 日志目录
-	MaxSize       int     // 单个日志文件最大大小(MB)
-	MaxBackups    int     // 保留的旧日志文件最大数量
-	MaxAge        int     // 保留旧日志文件的最大天数
-	Compress      bool    // 是否压缩旧日志文件
-	ConsoleOutput bool    // 是否同时输出到控制台
+	Level         string // 日志级别: debug, info, warn, error
+	LogDir        string // 日志目录
+	MaxSize       int    // 单个日志文件最大大小(MB)
+	MaxBackups    int    // 保留的旧日志文件最大数量
+	MaxAge        int    // 保留旧日志文件的最大天数
+	Compress      bool   // 是否压缩旧日志文件
+	ConsoleOutput bool   // 是否同时输出到控制台
 }
 
-// DefaultConfig 默认日志配置
+// DefaultConfig 返回默认日志配置
 func DefaultConfig() *Config {
 	return &Config{
-		Level:         "info",
-		LogDir:        "logs",
-		MaxSize:       100,    // 100MB
-		MaxBackups:    30,     // 保留30个备份
-		MaxAge:        90,     // 保留90天
-		Compress:      true,   // 压缩旧日志
-		ConsoleOutput: true,   // 同时输出到控制台
+		Level:         defaultLevel,
+		LogDir:        defaultLogDir,
+		MaxSize:       defaultMaxSize,
+		MaxBackups:    defaultMaxBackups,
+		MaxAge:        defaultMaxAge,
+		Compress:      defaultCompress,
+		ConsoleOutput: defaultConsoleOutput,
 	}
 }
 
@@ -45,50 +63,17 @@ func Init(cfg *Config) error {
 		cfg = DefaultConfig()
 	}
 
-	// 确保日志目录存在
-	if err := os.MkdirAll(cfg.LogDir, 0755); err != nil {
+	if err := ensureLogDirectory(cfg.LogDir); err != nil {
 		return err
 	}
 
-	// 初始化日志级别
-	level, err := logrus.ParseLevel(cfg.Level)
-	if err != nil {
-		level = logrus.InfoLevel
-	}
+	level := parseLogLevel(cfg.Level)
+	fileWriter = createFileWriter(cfg)
 
-	// 创建文件日志写入器
-	fileWriter := &lumberjack.Logger{
-		Filename:   filepath.Join(cfg.LogDir, "app.log"),
-		MaxSize:    cfg.MaxSize,
-		MaxBackups: cfg.MaxBackups,
-		MaxAge:     cfg.MaxAge,
-		Compress:   cfg.Compress,
-		LocalTime:  true,
-	}
+	fileLogger = createFileLogger(level, fileWriter)
 
-	// 创建文件日志记录器
-	fileLogger = logrus.New()
-	fileLogger.SetLevel(level)
-	fileLogger.SetFormatter(&logrus.JSONFormatter{
-		TimestampFormat: "2006-01-02 15:04:05",
-	})
-	fileLogger.SetOutput(fileWriter)
-
-	// 如果需要同时输出到控制台
 	if cfg.ConsoleOutput {
-		// 创建多重写入器
-		multiWriter := io.MultiWriter(os.Stdout, fileWriter)
-
-		consoleLogger = logrus.New()
-		consoleLogger.SetLevel(level)
-		consoleLogger.SetFormatter(&logrus.TextFormatter{
-			TimestampFormat: "2006-01-02 15:04:05",
-			FullTimestamp:   true,
-			ForceColors:     true,
-		})
-		consoleLogger.SetOutput(multiWriter)
-
-		log = consoleLogger
+		log = createConsoleLogger(level, fileWriter)
 	} else {
 		log = fileLogger
 	}
@@ -96,18 +81,76 @@ func Init(cfg *Config) error {
 	return nil
 }
 
+// ensureLogDirectory 确保日志目录存在
+func ensureLogDirectory(logDir string) error {
+	return os.MkdirAll(logDir, 0755)
+}
+
+// parseLogLevel 解析日志级别
+func parseLogLevel(level string) logrus.Level {
+	parsed, err := logrus.ParseLevel(level)
+	if err != nil {
+		return logrus.InfoLevel
+	}
+	return parsed
+}
+
+// createFileWriter 创建文件写入器
+func createFileWriter(cfg *Config) io.WriteCloser {
+	return &lumberjack.Logger{
+		Filename:   filepath.Join(cfg.LogDir, logFileName),
+		MaxSize:    cfg.MaxSize,
+		MaxBackups: cfg.MaxBackups,
+		MaxAge:     cfg.MaxAge,
+		Compress:   cfg.Compress,
+		LocalTime:  true,
+	}
+}
+
+// createFileLogger 创建文件日志记录器
+func createFileLogger(level logrus.Level, writer io.Writer) *logrus.Logger {
+	logger := logrus.New()
+	logger.SetLevel(level)
+	logger.SetFormatter(&logrus.JSONFormatter{
+		TimestampFormat: timestampFormat,
+	})
+	logger.SetOutput(writer)
+	return logger
+}
+
+// createConsoleLogger 创建控制台日志记录器
+func createConsoleLogger(level logrus.Level, fileWriter io.Writer) *logrus.Logger {
+	multiWriter := io.MultiWriter(os.Stdout, fileWriter)
+
+	logger := logrus.New()
+	logger.SetLevel(level)
+	logger.SetFormatter(&logrus.TextFormatter{
+		TimestampFormat: timestampFormat,
+		FullTimestamp:   true,
+		ForceColors:     true,
+	})
+	logger.SetOutput(multiWriter)
+
+	return logger
+}
+
 // GetLogger 获取日志记录器
 func GetLogger() *logrus.Logger {
 	if log == nil {
-		// 如果未初始化，使用默认配置初始化
 		if err := Init(DefaultConfig()); err != nil {
-			// 如果初始化失败，返回标准日志
-			logrus.SetOutput(os.Stdout)
-			logrus.SetLevel(logrus.InfoLevel)
+			// 记录到stderr，因为日志系统尚未初始化
+			fmt.Fprintf(os.Stderr, "日志初始化失败，使用标准日志: %v\n", err)
+			fallbackToStdLogger()
 			return logrus.StandardLogger()
 		}
 	}
 	return log
+}
+
+// fallbackToStdLogger 回退到标准日志
+func fallbackToStdLogger() {
+	logrus.SetOutput(os.Stdout)
+	logrus.SetLevel(logrus.InfoLevel)
 }
 
 // WithFields 创建带有字段的新日志记录器
@@ -182,11 +225,11 @@ func Panicf(format string, args ...interface{}) {
 
 // SetLevel 设置日志级别
 func SetLevel(level string) error {
-	l, err := logrus.ParseLevel(level)
+	parsed, err := logrus.ParseLevel(level)
 	if err != nil {
 		return err
 	}
-	GetLogger().SetLevel(l)
+	GetLogger().SetLevel(parsed)
 	return nil
 }
 
@@ -197,9 +240,7 @@ func GetFileLogger() *logrus.Logger {
 
 // Close 关闭日志系统
 func Close() {
-	if fileLogger != nil && fileLogger.Out != nil {
-		if closer, ok := fileLogger.Out.(io.Closer); ok {
-			closer.Close()
-		}
+	if fileWriter != nil {
+		fileWriter.Close()
 	}
 }

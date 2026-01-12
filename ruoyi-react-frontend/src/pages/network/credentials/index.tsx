@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import type { FC } from 'react';
 import {
   Table,
   Button,
@@ -7,7 +7,6 @@ import {
   Form,
   Input,
   Select,
-  message,
   Popconfirm,
   Tag,
   Card,
@@ -15,6 +14,7 @@ import {
   Col,
   Statistic,
   Alert,
+  message,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -30,21 +30,14 @@ import {
 } from '@ant-design/icons';
 import type { AuthCredential } from '@/types';
 import { post } from '@/lib/api';
+import { useTableManager } from '@/hooks/useTableManager';
+import { withErrorHandling } from '@/utils/errorHandler';
+import { useState, useEffect } from 'react';
 
 const { Option } = Select;
 const { TextArea } = Input;
 
-const CredentialManagement: React.FC = () => {
-  const [credentials, setCredentials] = useState<AuthCredential[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [total, setTotal] = useState(0);
-  const [current, setCurrent] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [searchForm] = Form.useForm();
-  const [modalVisible, setModalVisible] = useState(false);
-  const [editForm] = Form.useForm();
-  const [editingCredential, setEditingCredential] = useState<AuthCredential | null>(null);
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+const CredentialManagement: FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showEnablePassword, setShowEnablePassword] = useState(false);
 
@@ -55,10 +48,31 @@ const CredentialManagement: React.FC = () => {
     telnet: 0,
   });
 
-  // 加载凭证列表
-  const loadCredentials = async (params: any = {}) => {
-    setLoading(true);
-    try {
+  const {
+    loading,
+    data: credentials,
+    total,
+    current,
+    pageSize,
+    selectedRowKeys,
+    setSelectedRowKeys,
+    searchForm,
+    editForm,
+    editModalVisible,
+    editingItem: editingCredential,
+    setEditModalVisible,
+    setEditingItem,
+    loadData: loadCredentials,
+    handleSearch,
+    handleReset,
+    handleRefresh,
+    handleAdd,
+    handleEdit,
+    handleModalClose,
+    setCurrent,
+    setPageSize,
+  } = useTableManager<AuthCredential>(
+    async (params) => {
       const values = searchForm.getFieldsValue();
       // 映射搜索字段名到API字段名
       const searchParams: any = {
@@ -72,16 +86,11 @@ const CredentialManagement: React.FC = () => {
         searchParams.protocolType = values.searchProtocolType;
       }
       const result = await post('/network/credentials/list', searchParams);
-      setCredentials(result.data.list);
-      setTotal(result.data.total);
       // 更新统计数据
       updateStatistics(result.data.list || []);
-    } catch (error) {
-      console.error('加载凭证列表失败:', error);
-    } finally {
-      setLoading(false);
+      return result.data;
     }
-  };
+  );
 
   // 加载统计数据
   const loadStatistics = async () => {
@@ -105,44 +114,51 @@ const CredentialManagement: React.FC = () => {
     });
   };
 
+  useEffect(() => {
+    loadStatistics();
+  }, []);
+
   // 创建/更新凭证
   const handleCreate = async () => {
-    try {
-      const values = await editForm.validateFields();
-      // 移除确认密码字段
-      const { confirmPassword, ...data } = values as any;
-      if (editingCredential) {
-        await post(`/network/credentials/${editingCredential.id}/update`, data);
-        message.success('更新成功');
-      } else {
-        await post('/network/credentials', data);
-        message.success('创建成功');
+    await withErrorHandling(
+      async () => {
+        const values = await editForm.validateFields();
+        // 移除确认密码字段
+        const { confirmPassword, ...data } = values as any;
+        if (editingCredential) {
+          await post(`/network/credentials/${editingCredential.id}/update`, data);
+          return '更新成功';
+        } else {
+          await post('/network/credentials', data);
+          return '创建成功';
+        }
+      },
+      {
+        onSuccess: () => {
+          handleModalClose();
+          setShowPassword(false);
+          setShowEnablePassword(false);
+          loadCredentials();
+          loadStatistics();
+        },
       }
-      setModalVisible(false);
-      editForm.resetFields();
-      setEditingCredential(null);
-      setShowPassword(false);
-      setShowEnablePassword(false);
-      loadCredentials();
-      loadStatistics();
-    } catch (error: any) {
-      if (error.errorFields) {
-        return;
-      }
-      message.error('操作失败');
-    }
+    );
   };
 
   // 删除凭证
   const handleDelete = async (id: string) => {
-    try {
-      await post(`/network/credentials/${id}/delete`, {});
-      message.success('删除成功');
-      loadCredentials();
-      loadStatistics();
-    } catch (error) {
-      message.error('删除失败');
-    }
+    await withErrorHandling(
+      async () => {
+        await post(`/network/credentials/${id}/delete`, {});
+        return '删除成功';
+      },
+      {
+        onSuccess: () => {
+          loadCredentials();
+          loadStatistics();
+        },
+      }
+    );
   };
 
   // 批量删除凭证
@@ -151,66 +167,57 @@ const CredentialManagement: React.FC = () => {
       message.warning('请选择要删除的数据');
       return;
     }
-    try {
-      await post('/network/credentials/batch-delete', { ids: selectedRowKeys });
-      message.success('批量删除成功');
-      setSelectedRowKeys([]);
-      loadCredentials();
-      loadStatistics();
-    } catch (error) {
-      message.error('批量删除失败');
-    }
+    await withErrorHandling(
+      async () => {
+        await post('/network/credentials/batch-delete', { ids: selectedRowKeys });
+        return '批量删除成功';
+      },
+      {
+        onSuccess: () => {
+          setSelectedRowKeys([]);
+          loadCredentials();
+          loadStatistics();
+        },
+      }
+    );
   };
 
   // 设置为默认凭证
   const handleSetDefault = async (id: string) => {
-    try {
-      await post(`/network/credentials/${id}/set-default`, {});
-      message.success('设置成功');
-      loadCredentials();
-      loadStatistics();
-    } catch (error) {
-      message.error('设置失败');
-    }
+    await withErrorHandling(
+      async () => {
+        await post(`/network/credentials/${id}/set-default`, {});
+        return '设置成功';
+      },
+      {
+        onSuccess: () => {
+          loadCredentials();
+          loadStatistics();
+        },
+      }
+    );
   };
 
   // 打开编辑模态框
   const openModal = (record?: AuthCredential) => {
     if (record) {
-      setEditingCredential(record);
+      setEditingItem(record);
       editForm.setFieldsValue({
         ...record,
         // 确保 snmpVersion 有默认值
         snmpVersion: record.snmpVersion || 'v2c',
       });
     } else {
-      setEditingCredential(null);
+      setEditingItem(null);
       editForm.resetFields();
       editForm.setFieldsValue({
         protocolType: 'ssh',
         snmpVersion: 'v2c',
       });
     }
-    setModalVisible(true);
+    setEditModalVisible(true);
     setShowPassword(false);
     setShowEnablePassword(false);
-  };
-
-  // 搜索
-  const handleSearch = () => {
-    loadCredentials();
-  };
-
-  // 重置
-  const handleReset = () => {
-    searchForm.resetFields();
-    loadCredentials();
-  };
-
-  // 刷新
-  const handleRefresh = () => {
-    loadCredentials();
-    loadStatistics();
   };
 
   // 协议类型选项
@@ -285,7 +292,7 @@ const CredentialManagement: React.FC = () => {
           {!record.isDefault && (
             <Button type="link" size="small" onClick={() => handleSetDefault(record.id)}>设为默认</Button>
           )}
-          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => openModal(record)}>编辑</Button>
+          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}>编辑</Button>
           <Popconfirm title="确认删除?" onConfirm={() => handleDelete(record.id)}>
             <Button type="link" size="small" danger icon={<DeleteOutlined />}>删除</Button>
           </Popconfirm>
@@ -293,11 +300,6 @@ const CredentialManagement: React.FC = () => {
       ),
     },
   ];
-
-  useEffect(() => {
-    loadCredentials();
-    loadStatistics();
-  }, [current, pageSize]);
 
   // 监听协议类型变化，动态显示特权密码字段
   const protocolType = Form.useWatch('protocolType', editForm);
@@ -360,7 +362,7 @@ const CredentialManagement: React.FC = () => {
             </Form.Item>
           </Form>
           <Space>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>新增</Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新增</Button>
             <Button danger icon={<DeleteOutlined />} onClick={handleBatchDelete} disabled={selectedRowKeys.length === 0}>批量删除</Button>
           </Space>
         </div>
@@ -393,13 +395,13 @@ const CredentialManagement: React.FC = () => {
       {/* 编辑模态框 */}
       <Modal
         title={editingCredential ? '编辑授权凭证' : '新增授权凭证'}
-        open={modalVisible}
+        open={editModalVisible}
         onOk={handleCreate}
-        onCancel={() => { setModalVisible(false); editForm.resetFields(); setEditingCredential(null); setShowPassword(false); setShowEnablePassword(false); }}
+        onCancel={() => { handleModalClose(); setShowPassword(false); setShowEnablePassword(false); }}
         width={600}
       >
         <Alert
-          title="提示"
+          message="提示"
           description="请选择协议类型（SSH 或 Telnet），并填写对应的配置信息。一个凭证可以同时包含 SSH/Telnet 配置和 SNMP 配置。"
           type="info"
           showIcon

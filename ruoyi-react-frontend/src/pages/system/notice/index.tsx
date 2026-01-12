@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import type { FC, Key } from 'react';
 import {
   Table,
   Button,
@@ -71,6 +72,7 @@ import dayjs from 'dayjs';
 import { get, post } from '@/lib/api';
 import { getAPINotificationConfigList } from '@/lib/notificationConfigApi';
 import type { APINotificationConfig } from '@/lib/notificationConfigApi';
+import ActionButtons from '@/components/shared/ActionButtons';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -79,7 +81,7 @@ const { TextArea } = Input;
  * 管理端通知公告页面（增强版）
  * 支持：Markdown编辑、定向推送、定时发布、优先级、阅读统计
  */
-const NoticeManagement: React.FC = () => {
+const NoticeManagement: FC = () => {
   const navigate = useNavigate();
 
   // 列表相关状态
@@ -89,7 +91,7 @@ const NoticeManagement: React.FC = () => {
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [searchForm] = Form.useForm();
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
 
   // 编辑模态框相关状态
   const [modalVisible, setModalVisible] = useState(false);
@@ -391,11 +393,11 @@ const NoticeManagement: React.FC = () => {
       editForm.resetFields();
       setEditingNotice(null);
       loadNotices();
-    } catch (error: any) {
-      if (error.errorFields) {
+    } catch (error) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
         return;
       }
-      message.error('操作失败: ' + (error.message || '未知错误'));
+      message.error('操作失败: ' + ((error as Error).message || '未知错误'));
     }
   };
 
@@ -533,39 +535,61 @@ const NoticeManagement: React.FC = () => {
       title: '操作',
       key: 'action',
       fixed: 'right',
-      width: 280,
-      render: (_, record: Notice) => (
-        <Space size="small" wrap>
-          <Button type="link" size="small" icon={<EyeOutlined />} onClick={() => navigate(`/system/notice/${record.id}`)}>
-            查看
-          </Button>
-          <Button type="link" size="small" icon={<BarChartOutlined />} onClick={() => handleViewStatistics(record)}>
-            统计
-          </Button>
-          {/* 草稿或定时发布状态：显示发布按钮 */}
-          {(record.publishStatus === 0 || record.publishStatus === 2) && (
-            <Button type="link" size="small" onClick={() => handlePublish(record.id)}>
-              发布
-            </Button>
-          )}
-          {/* 已发布状态：显示撤回按钮 */}
-          {record.publishStatus === 1 && (
-            <Popconfirm title="确认撤回该通知? 撤回后通知将退回到草稿状态" onConfirm={() => handleWithdraw(record.id)}>
-              <Button type="link" size="small" danger>
-                撤回
-              </Button>
-            </Popconfirm>
-          )}
-          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => openModal(record)}>
-            编辑
-          </Button>
-          <Popconfirm title="确认删除?" onConfirm={() => handleDelete(record.id)}>
-            <Button type="link" size="small" danger icon={<DeleteOutlined />}>
-              删除
-            </Button>
-          </Popconfirm>
-        </Space>
-      ),
+      width: 100,
+      render: (_, record: Notice) => {
+        const actions = [
+          {
+            key: 'view',
+            label: '查看',
+            icon: <EyeOutlined />,
+            onClick: () => navigate(`/system/notice/${record.id}`),
+          },
+          {
+            key: 'statistics',
+            label: '统计',
+            icon: <BarChartOutlined />,
+            onClick: () => handleViewStatistics(record),
+          },
+          ...(record.publishStatus === 0 || record.publishStatus === 2 ? [{
+            key: 'publish',
+            label: '发布',
+            onClick: () => handlePublish(record.id),
+          }] : []),
+          ...(record.publishStatus === 1 ? [{
+            key: 'withdraw',
+            label: '撤回',
+            danger: true,
+            render: () => (
+              <Popconfirm title="确认撤回该通知? 撤回后通知将退回到草稿状态" onConfirm={() => handleWithdraw(record.id)}>
+                <Button type="link" danger size="small">
+                  撤回
+                </Button>
+              </Popconfirm>
+            ),
+          }] : []),
+          {
+            key: 'edit',
+            label: '编辑',
+            icon: <EditOutlined />,
+            onClick: () => openModal(record),
+          },
+          {
+            key: 'delete',
+            label: '删除',
+            icon: <DeleteOutlined />,
+            danger: true,
+            render: () => (
+              <Popconfirm title="确认删除?" onConfirm={() => handleDelete(record.id)}>
+                <Button type="link" danger icon={<DeleteOutlined />} size="small">
+                  删除
+                </Button>
+              </Popconfirm>
+            ),
+          },
+        ];
+
+        return <ActionButtons actions={actions} />;
+      },
     },
   ];
 

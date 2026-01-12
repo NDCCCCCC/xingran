@@ -267,7 +267,7 @@ func ValidateTokenWithSM2(tokenString string, publicKey *sm2.PublicKey) (*Claims
 	}
 
 	// 构建签名字符串
-	signingString := parts[0] + "." + parts[1]
+	signingString := strings.Join(parts[:2], ".")
 
 	// 使用SM2验证签名
 	err = sm2Method.Verify(signingString, signature, publicKey)

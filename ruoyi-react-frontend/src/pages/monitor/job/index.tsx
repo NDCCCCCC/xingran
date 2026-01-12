@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import type { FC } from 'react';
 import {
   Card,
   Table,
@@ -14,7 +15,6 @@ import {
   Tooltip,
   Popconfirm,
   Drawer,
-  Typography,
   Row,
   Col,
   Statistic
@@ -30,9 +30,10 @@ import {
   HistoryOutlined,
   ClockCircleOutlined
 } from '@ant-design/icons';
-import { post, put, del, get, postLongRequest } from '@/lib/api';
+import { post, put, del, postLongRequest } from '@/lib/api';
 import type { ColumnsType } from 'antd/es/table';
 import CronSelector from '@/components/CronSelector';
+import ActionButtons from '@/components/shared/ActionButtons';
 
 const { TextArea } = Input;
 
@@ -73,9 +74,13 @@ interface PageData {
   total: number;
   current: number;
   pageSize: number;
+  data?: {
+    list: JobInfo[];
+    total: number;
+  };
 }
 
-const JobManager: React.FC = () => {
+const JobManager: FC = () => {
   const [jobs, setJobs] = useState<JobInfo[]>([]);
   const [jobLogs, setJobLogs] = useState<JobLog[]>([]);
   const [loading, setLoading] = useState(false);
@@ -112,14 +117,10 @@ const JobManager: React.FC = () => {
         pageSize
       };
 
-      console.log('[fetchJobs] 请求参数:', cleanedParams);
-
       const result = await post<PageData>('/monitor/jobs/list', cleanedParams);
 
-      console.log('[fetchJobs] 返回结果:', result.data?.list?.length, '条任务');
-
-      setJobs(result.data?.list || []);
-      setTotal(result.data?.total || 0);
+      setJobs(result.data?.list || result.list || []);
+      setTotal(result.data?.total || result.total || 0);
     } catch (error) {
       console.error('获取任务列表失败:', error);
     } finally {
@@ -137,7 +138,7 @@ const JobManager: React.FC = () => {
         pageSize: 50
       });
 
-      setJobLogs(result.data?.list || []);
+      setJobLogs(result.data || []);
     } catch (error) {
       console.error('获取任务日志失败:', error);
     }
@@ -271,12 +272,6 @@ const JobManager: React.FC = () => {
     setPageSize(pagination.pageSize);
   };
 
-  // Cron表达式变化时验证
-  const handleCronChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    validateCronAndGetNextTime(value);
-  };
-
   // 组件挂载时获取任务列表
   useEffect(() => {
     fetchJobs();
@@ -383,46 +378,49 @@ const JobManager: React.FC = () => {
     {
       title: '操作',
       key: 'action',
-      width: 200,
+      width: 100,
       fixed: 'right',
-      render: (_, record: JobInfo) => (
-        <Space size="small">
-          <Tooltip title="立即执行">
-            <Button
-              type="text"
-              icon={<PlayCircleOutlined />}
-              onClick={() => handleExecute(record)}
-            />
-          </Tooltip>
-          <Tooltip title="查看日志">
-            <Button
-              type="text"
-              icon={<HistoryOutlined />}
-              onClick={() => handleViewLogs(record)}
-            />
-          </Tooltip>
-          <Tooltip title="编辑">
-            <Button
-              type="text"
-              icon={<EditOutlined />}
-              onClick={() => openModal(record)}
-            />
-          </Tooltip>
-          <Tooltip title="删除">
-            <Popconfirm
-              title="确定要删除这个任务吗？"
-              description="删除后将无法恢复"
-              onConfirm={() => handleDelete(record)}
-            >
-              <Button
-                type="text"
-                danger
-                icon={<DeleteOutlined />}
-              />
-            </Popconfirm>
-          </Tooltip>
-        </Space>
-      ),
+      render: (_, record: JobInfo) => {
+        const actions = [
+          {
+            key: 'execute',
+            label: '立即执行',
+            icon: <PlayCircleOutlined />,
+            onClick: () => handleExecute(record),
+          },
+          {
+            key: 'logs',
+            label: '查看日志',
+            icon: <HistoryOutlined />,
+            onClick: () => handleViewLogs(record),
+          },
+          {
+            key: 'edit',
+            label: '编辑',
+            icon: <EditOutlined />,
+            onClick: () => openModal(record),
+          },
+          {
+            key: 'delete',
+            label: '删除',
+            icon: <DeleteOutlined />,
+            danger: true,
+            render: () => (
+              <Popconfirm
+                title="确定要删除这个任务吗？"
+                description="删除后将无法恢复"
+                onConfirm={() => handleDelete(record)}
+              >
+                <Button type="link" danger icon={<DeleteOutlined />} size="small">
+                  删除
+                </Button>
+              </Popconfirm>
+            ),
+          },
+        ];
+
+        return <ActionButtons actions={actions} />;
+      },
     },
   ];
 

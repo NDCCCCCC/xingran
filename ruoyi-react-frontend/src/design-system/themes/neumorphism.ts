@@ -5,8 +5,7 @@
 
 import type { ThemeConfig } from '@/types/theme';
 import { spacing } from '../tokens/spacing';
-import { typography, fontFamily } from '../tokens/typography';
-import { shadows, radius } from '../tokens/shadows';
+import { fontFamily } from '../tokens/typography';
 
 // 新拟态专用背景色
 const NEU_BG = '#e0e5ec';
@@ -64,6 +63,7 @@ export const neumorphismTheme: ThemeConfig = {
     lg: spacing.lg,
     xl: spacing.xl,
     '2xl': spacing['2xl'],
+    '3xl': spacing['3xl'],
   },
 
   typography: {

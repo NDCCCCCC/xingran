@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Card,
   Table,
@@ -15,8 +15,6 @@ import {
 } from 'antd';
 import {
   ReloadOutlined,
-  TeamOutlined,
-  UserOutlined,
   PlusOutlined,
   MinusCircleOutlined
 } from '@ant-design/icons';
@@ -34,7 +32,9 @@ import {
   type ADConfig
 } from '@/lib/adDomainApi';
 
-const ADGroupPage: React.FC = () => {
+import type { FC } from 'react';
+
+const ADGroupPage: FC = () => {
   const [form] = Form.useForm();
 
   const [configs, setConfigs] = useState<ADConfig[]>([]);
@@ -65,13 +65,13 @@ const ADGroupPage: React.FC = () => {
   const fetchConfigs = async () => {
     try {
       const res = await getADConfigList({ current: 1, pageSize: 100, status: 0 });
-      if (res.code === 0 && res.data?.list?.length > 0) {
+      if (res.code === 0 && res.data && res.data.list && res.data.list.length > 0) {
         setConfigs(res.data.list);
         if (!selectedConfig) {
           setSelectedConfig(res.data.list[0].id);
         }
       }
-    } catch (error) {
+    } catch {
       message.error('获取AD配置失败');
     }
   };
@@ -90,7 +90,7 @@ const ADGroupPage: React.FC = () => {
         setGroups(res.data?.list ?? []);
         setGroupTotal(res.data?.total ?? 0);
       }
-    } catch (error) {
+    } catch {
       message.error('获取用户组列表失败');
     } finally {
       setGroupLoading(false);
@@ -127,7 +127,7 @@ const ADGroupPage: React.FC = () => {
         setMembers(res.data?.list ?? []);
         setMemberTotal(res.data?.total ?? 0);
       }
-    } catch (error) {
+    } catch {
       message.error('获取组成员失败');
     } finally {
       setMemberLoading(false);
@@ -136,7 +136,7 @@ const ADGroupPage: React.FC = () => {
 
   const handleEditGroup = (group: ADGroup) => {
     setEditingGroup(group);
-    Form.useForm().setFieldsValue({
+    form.setFieldsValue({
       groupName: group.groupName,
       description: group.description,
     });
@@ -147,13 +147,13 @@ const ADGroupPage: React.FC = () => {
     if (!editingGroup || !selectedConfig) return;
 
     try {
-      const values = await Form.useForm().validateFields();
+      const values = await form.validateFields();
       await updateADGroup(editingGroup.id, selectedConfig, values);
       message.success('更新成功');
       setEditModalVisible(false);
       fetchGroups();
-    } catch (error: any) {
-      message.error(error.message || '更新失败');
+    } catch (error) {
+      message.error((error as Error).message || '更新失败');
     }
   };
 
@@ -166,7 +166,7 @@ const ADGroupPage: React.FC = () => {
         setAvailableUsers(res.data?.list ?? []);
       }
       setAddMemberVisible(true);
-    } catch (error) {
+    } catch {
       message.error('获取用户列表失败');
     }
   };
@@ -179,8 +179,8 @@ const ADGroupPage: React.FC = () => {
       message.success('添加成员成功');
       setAddMemberVisible(false);
       fetchMembers(selectedGroup.groupDn);
-    } catch (error: any) {
-      message.error(error.message || '添加成员失败');
+    } catch (error) {
+      message.error((error as Error).message || '添加成员失败');
     }
   };
 
@@ -191,8 +191,8 @@ const ADGroupPage: React.FC = () => {
       await removeADGroupMember(selectedGroup.id, selectedConfig, userDn);
       message.success('移除成员成功');
       fetchMembers(selectedGroup.groupDn);
-    } catch (error: any) {
-      message.error(error.message || '移除成员失败');
+    } catch (error) {
+      message.error((error as Error).message || '移除成员失败');
     }
   };
 
@@ -226,7 +226,7 @@ const ADGroupPage: React.FC = () => {
       title: '操作',
       key: 'action',
       width: 180,
-      render: (_: any, record: ADGroup) => (
+      render: (_: unknown, record: ADGroup) => (
         <Space>
           <Button type="link" size="small" onClick={() => handleViewMembers(record)}>
             查看成员
@@ -263,7 +263,7 @@ const ADGroupPage: React.FC = () => {
     {
       title: '操作',
       key: 'action',
-      render: (_: any, record: ADUser) => (
+      render: (_: unknown, record: ADUser) => (
         <Popconfirm
           title="确定移除该成员吗？"
           onConfirm={() => handleRemoveMember(record.userDn)}
@@ -386,7 +386,7 @@ const ADGroupPage: React.FC = () => {
             {
               title: '操作',
               key: 'action',
-              render: (_: any, record: ADUser) => (
+              render: (_: unknown, record: ADUser) => (
                 <Button
                   type="link"
                   icon={<PlusOutlined />}

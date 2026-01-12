@@ -2,7 +2,7 @@
  * 日字段配置组件
  */
 
-import React from 'react';
+import type { FC } from 'react';
 import { Radio, Select, Space } from 'antd';
 import type { CronFieldConfig } from '../constants';
 import { FIELD_RANGES } from '../constants';
@@ -12,7 +12,7 @@ interface DayFieldProps {
   onChange: (value: CronFieldConfig) => void;
 }
 
-const DayField: React.FC<DayFieldProps> = ({ value, onChange }) => {
+const DayField: FC<DayFieldProps> = ({ value, onChange }) => {
   const { periodType } = value;
   const range = FIELD_RANGES.day;
 

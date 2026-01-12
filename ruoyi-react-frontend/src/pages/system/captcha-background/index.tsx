@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import type { FC } from 'react';
 import {
   Table,
   Button,
@@ -18,7 +19,8 @@ import {
   Col,
   Progress,
 } from 'antd';
-import type { ColumnsType, UploadFile } from 'antd/es/table';
+import type { ColumnsType } from 'antd/es/table';
+import type { UploadFile } from 'antd';
 import type { UploadProps } from 'antd';
 import {
   PlusOutlined,
@@ -65,7 +67,7 @@ const SHAPE_OPTIONS = [
   { label: '心形', value: 'heart' },
 ];
 
-const CaptchaBackgroundManagement: React.FC = () => {
+const CaptchaBackgroundManagement: FC = () => {
   const [backgrounds, setBackgrounds] = useState<CaptchaBackground[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);

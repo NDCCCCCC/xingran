@@ -3,7 +3,6 @@ import { persist } from 'zustand/middleware';
 import { post } from '@/lib/api';
 import type { User, LoginRequest } from '@/types';
 import { useMenuStore } from './menuStore';
-import { getEncryptedLoginRequest } from '@/utils/sm2';
 
 interface AuthState {
   user: User | null;
@@ -34,7 +33,8 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       login: async (credentials: LoginRequest) => {
         set({ loading: true });
         try {
-          // TODO: SM2 密码加密与后端 tjfoc/gmsm 不兼容，暂时使用明文传输（通过 HTTPS）
+          // 注意：SM2密码加密与后端 tjfoc/gmsm 存在兼容性问题
+          // 目前使用明文传输（通过HTTPS保护），后续需要解决加密库兼容性
           const loginRequest = {
             username: credentials.username,
             password: credentials.password,

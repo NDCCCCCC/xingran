@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import type { FC, ReactElement } from 'react';
 import {
   Table,
   Button,
@@ -8,7 +9,6 @@ import {
   Input,
   Select,
   InputNumber,
-  message,
   Popconfirm,
   Tag,
   Card,
@@ -18,7 +18,6 @@ import {
   Layout,
   Divider,
   Alert,
-  Spin,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -41,6 +40,9 @@ import { post } from '@/lib/api';
 import DeptTree from '@/components/DeptTree';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
+import { useTableManager } from '@/hooks/useTableManager';
+import { handleApiError, handleSuccess } from '@/utils/errorHandler';
+import ActionButtons from '@/components/shared/ActionButtons';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -52,35 +54,21 @@ const formatDateTime = (dateTime: string | undefined) => {
   return dayjs(dateTime).format('YYYY-MM-DD HH:mm:ss');
 };
 
-const DeviceManagement: React.FC = () => {
+const DeviceManagement: FC = () => {
   const navigate = useNavigate();
-  const [devices, setDevices] = useState<NetworkDevice[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [total, setTotal] = useState(0);
-  const [current, setCurrent] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [searchForm] = Form.useForm();
-  const [modalVisible, setModalVisible] = useState(false);
+
+  // 自定义状态（不能迁移到 useTableManager）
   const [quickCreateModalVisible, setQuickCreateModalVisible] = useState(false);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
-  const [editForm] = Form.useForm();
   const [quickCreateForm] = Form.useForm();
-  const [editingDevice, setEditingDevice] = useState<NetworkDevice | null>(null);
   const [viewingDevice, setViewingDevice] = useState<NetworkDevice | null>(null);
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [credentials, setCredentials] = useState<AuthCredential[]>([]);
   const [selectedDeptId, setSelectedDeptId] = useState<string>('');
-
-  // 快速创建相关状态
   const [probing, setProbing] = useState(false);
-  const [probeResult, setProbeResult] = useState<any>(null);
+  const [probeResult, setProbeResult] = useState<Record<string, unknown> | null>(null);
   const [creating, setCreating] = useState(false);
-
-  // 采集端口相关状态
   const [collectingDeviceId, setCollectingDeviceId] = useState<string | null>(null);
-
-  // 统计数据
   const [statistics, setStatistics] = useState({
     total: 0,
     online: 0,
@@ -88,26 +76,38 @@ const DeviceManagement: React.FC = () => {
     unknown: 0,
   });
 
-  // 加载设备列表
-  const loadDevices = async (params: any = {}) => {
-    setLoading(true);
-    try {
+  // 使用 useTableManager 管理表格状态
+  const {
+    loading,
+    data: devices,
+    total,
+    current,
+    pageSize,
+    selectedRowKeys,
+    searchForm,
+    editForm,
+    editModalVisible: modalVisible,
+    editingItem: editingDevice,
+    setCurrent,
+    setPageSize,
+    setSelectedRowKeys,
+    setEditModalVisible,
+    loadData: loadDevices,
+    handleAdd,
+    handleEdit,
+    resetSelection,
+  } = useTableManager<NetworkDevice>(
+    async (params) => {
       const values = searchForm.getFieldsValue();
       const result = await post('/network/devices/list', {
-        current: params.current || current,
-        pageSize: params.pageSize || pageSize,
         ...values,
         ...params,
       });
-      setDevices(result.data.list);
-      setTotal(result.data.total);
       updateStatistics(result.data.list || []);
-    } catch (error) {
-      console.error('加载设备列表失败:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      return { list: result.data.list, total: result.data.total };
+    },
+    { pageSize: 10 }
+  );
 
   // 部门树选择处理
   const handleDeptSelect = (selectedKeys: React.Key[]) => {
@@ -120,19 +120,8 @@ const DeviceManagement: React.FC = () => {
     }
   };
 
-  // 加载统计数据
-  const loadStatistics = async () => {
-    try {
-      const result = await post('/network/devices/list', { current: 1, pageSize: 10000 });
-      const allDevices = result.data.list || [];
-      updateStatistics(allDevices);
-    } catch (error) {
-      console.error('加载统计数据失败:', error);
-    }
-  };
-
   // 更新统计数据
-  const updateStatistics = (deviceList: NetworkDevice[]) => {
+  const updateStatistics = useCallback((deviceList: NetworkDevice[]) => {
     const onlineCount = deviceList.filter(d => d.status === 0).length;
     const offlineCount = deviceList.filter(d => d.status === 1).length;
     const unknownCount = deviceList.filter(d => d.status === 2).length;
@@ -142,27 +131,37 @@ const DeviceManagement: React.FC = () => {
       offline: offlineCount,
       unknown: unknownCount,
     });
-  };
+  }, []);
+
+  // 加载统计数据
+  const loadStatistics = useCallback(async () => {
+    try {
+      const result = await post('/network/devices/list', { current: 1, pageSize: 10000 });
+      updateStatistics(result.data.list || []);
+    } catch (error) {
+      handleApiError(error, '加载统计数据', false);
+    }
+  }, [updateStatistics]);
 
   // 加载部门列表
-  const loadDepartments = async () => {
+  const loadDepartments = useCallback(async () => {
     try {
       const result = await post('/system/departments/list');
       setDepartments(result.data || []);
     } catch (error) {
-      console.error('加载部门列表失败:', error);
+      handleApiError(error, '加载部门列表', false);
       setDepartments([]);
     }
-  };
+  }, []);
 
   // 渲染树形部门选项
-  const renderDeptTreeOptions = (departments: any[]) => {
+  const renderDeptTreeOptions = useCallback((departments: Department[]) => {
     if (!departments || departments.length === 0) {
       return [<Option key="" value="">暂无部门数据</Option>];
     }
 
-    const renderOptions = (nodes: any[], level = 0): React.ReactElement[] => {
-      const options: React.ReactElement[] = [];
+    const renderOptions = (nodes: Department[], level = 0): ReactElement[] => {
+      const options: ReactElement[] = [];
 
       nodes.forEach(node => {
         options.push(
@@ -180,17 +179,17 @@ const DeviceManagement: React.FC = () => {
     };
 
     return renderOptions(departments);
-  };
+  }, []);
 
   // 加载授权凭证列表
-  const loadCredentials = async () => {
+  const loadCredentials = useCallback(async () => {
     try {
       const result = await post('/network/credentials/list', { current: 1, pageSize: 1000 });
       setCredentials(result.data.list || []);
     } catch (error) {
-      console.error('加载授权凭证列表失败:', error);
+      handleApiError(error, '加载授权凭证列表', false);
     }
-  };
+  }, []);
 
   // 探测设备
   const handleProbe = async () => {
@@ -199,7 +198,6 @@ const DeviceManagement: React.FC = () => {
       setProbing(true);
       setProbeResult(null);
 
-      // 只传递 IP 地址和凭证 ID，SNMP 配置从凭证中自动获取
       const result = await post('/network/devices/discover', {
         ipAddress: values.ipAddress,
         credentialId: values.credentialId,
@@ -207,15 +205,15 @@ const DeviceManagement: React.FC = () => {
 
       if (result.data?.success) {
         setProbeResult(result.data);
-        message.success('设备探测成功');
+        handleSuccess('设备探测');
       } else {
-        message.error(result.data?.message || '探测失败');
+        handleApiError(result.data?.message || '探测失败', '探测');
       }
-    } catch (error: any) {
-      if (error.errorFields) {
-        message.warning('请先填写 IP 地址和授权凭证');
+    } catch (error) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
+        handleApiError(error, '请先填写 IP 地址和授权凭证', false);
       } else {
-        message.error('探测失败');
+        handleApiError(error, '探测');
       }
     } finally {
       setProbing(false);
@@ -238,7 +236,7 @@ const DeviceManagement: React.FC = () => {
         description: values.description || '',
       });
 
-      message.success('设备创建成功');
+      handleSuccess('设备创建');
       setQuickCreateModalVisible(false);
       quickCreateForm.resetFields();
       setProbeResult(null);
@@ -249,11 +247,11 @@ const DeviceManagement: React.FC = () => {
         loadDevices();
       }
       loadStatistics();
-    } catch (error: any) {
-      if (error.errorFields) {
+    } catch (error) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
         return;
       }
-      message.error(error?.data?.message || '创建失败');
+      handleApiError(error, '创建');
     } finally {
       setCreating(false);
     }
@@ -265,25 +263,24 @@ const DeviceManagement: React.FC = () => {
       const values = await editForm.validateFields();
       if (editingDevice) {
         await post(`/network/devices/${editingDevice.id}/update`, values);
-        message.success('更新成功');
+        handleSuccess('更新');
       } else {
         await post('/network/devices', values);
-        message.success('创建成功');
+        handleSuccess('创建');
       }
-      setModalVisible(false);
+      setEditModalVisible(false);
       editForm.resetFields();
-      setEditingDevice(null);
       if (selectedDeptId) {
         loadDevices({ deptId: selectedDeptId });
       } else {
         loadDevices();
       }
       loadStatistics();
-    } catch (error: any) {
-      if (error.errorFields) {
+    } catch (error) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
         return;
       }
-      message.error('操作失败');
+      handleApiError(error, '操作');
     }
   };
 
@@ -291,7 +288,7 @@ const DeviceManagement: React.FC = () => {
   const handleDelete = async (id: string) => {
     try {
       await post(`/network/devices/${id}/delete`, {});
-      message.success('删除成功');
+      handleSuccess('删除');
       if (selectedDeptId) {
         loadDevices({ deptId: selectedDeptId });
       } else {
@@ -299,20 +296,19 @@ const DeviceManagement: React.FC = () => {
       }
       loadStatistics();
     } catch (error) {
-      message.error('删除失败');
+      handleApiError(error, '删除');
     }
   };
 
   // 批量删除设备
   const handleBatchDelete = async () => {
     if (selectedRowKeys.length === 0) {
-      message.warning('请选择要删除的数据');
       return;
     }
     try {
       await post('/network/devices/batch-delete', { ids: selectedRowKeys });
-      message.success('批量删除成功');
-      setSelectedRowKeys([]);
+      handleSuccess('批量删除');
+      resetSelection();
       if (selectedDeptId) {
         loadDevices({ deptId: selectedDeptId });
       } else {
@@ -320,7 +316,7 @@ const DeviceManagement: React.FC = () => {
       }
       loadStatistics();
     } catch (error) {
-      message.error('批量删除失败');
+      handleApiError(error, '批量删除');
     }
   };
 
@@ -332,14 +328,14 @@ const DeviceManagement: React.FC = () => {
 
       const data = result.data;
       if (data.errorMessage) {
-        message.warning(`采集完成但有错误: ${data.errorMessage}`);
+        handleApiError(data.errorMessage, '采集', false);
       } else if (data.successCount > 0) {
-        message.success(`采集成功: 成功 ${data.successCount} 个端口${data.failedCount > 0 ? `，失败 ${data.failedCount} 个` : ''}`);
+        handleSuccess(`采集成功: 成功 ${data.successCount} 个端口${data.failedCount > 0 ? `，失败 ${data.failedCount} 个` : ''}`);
       } else {
-        message.error('采集失败: 未获取到端口数据');
+        handleApiError('采集失败: 未获取到端口数据', '采集');
       }
-    } catch (error: any) {
-      message.error(error?.data?.message || '采集失败');
+    } catch (error) {
+      handleApiError(error, '采集');
     } finally {
       setCollectingDeviceId(null);
     }
@@ -348,18 +344,16 @@ const DeviceManagement: React.FC = () => {
   // 打开编辑模态框
   const openModal = (record?: NetworkDevice) => {
     if (record) {
-      setEditingDevice(record);
+      handleEdit(record);
       editForm.setFieldsValue({
         ...record,
         deptId: record.deptId || undefined,
         credentialId: record.credentialId || undefined,
       });
     } else {
-      setEditingDevice(null);
-      editForm.resetFields();
+      handleAdd();
       editForm.setFieldsValue({ port: 22, snmpPort: 161, status: 0 });
     }
-    setModalVisible(true);
     loadDepartments();
     loadCredentials();
   };
@@ -382,7 +376,7 @@ const DeviceManagement: React.FC = () => {
   // 搜索
   const handleSearch = () => {
     const values = searchForm.getFieldsValue();
-    const searchParams: any = {};
+    const searchParams: Record<string, any> = {};
     Object.keys(values).forEach(key => {
       const value = values[key];
       if (value !== undefined && value !== null && value !== '') {
@@ -508,37 +502,57 @@ const DeviceManagement: React.FC = () => {
       title: '操作',
       key: 'action',
       fixed: 'right',
-      width: 240,
-      render: (_, record) => (
-        <Space size="small">
-          <Button
-            type="link"
-            size="small"
-            icon={<CloudUploadOutlined />}
-            onClick={() => handleCollectPorts(record)}
-            loading={collectingDeviceId === record.id}
-          >
-            采集端口
-          </Button>
-          <Button type="link" size="small" icon={<EyeOutlined />} onClick={() => openDetailModal(record)}>详情</Button>
-          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => openModal(record)}>编辑</Button>
-          <Popconfirm title="确认删除?" onConfirm={() => handleDelete(record.id)}>
-            <Button type="link" size="small" danger icon={<DeleteOutlined />}>删除</Button>
-          </Popconfirm>
-        </Space>
-      ),
+      width: 100,
+      render: (_, record) => {
+        const actions = [
+          {
+            key: 'collect-ports',
+            label: '采集端口',
+            icon: <CloudUploadOutlined />,
+            onClick: () => handleCollectPorts(record),
+            loading: collectingDeviceId === record.id,
+          },
+          {
+            key: 'detail',
+            label: '详情',
+            icon: <EyeOutlined />,
+            onClick: () => openDetailModal(record),
+          },
+          {
+            key: 'edit',
+            label: '编辑',
+            icon: <EditOutlined />,
+            onClick: () => openModal(record),
+          },
+          {
+            key: 'delete',
+            label: '删除',
+            icon: <DeleteOutlined />,
+            danger: true,
+            render: () => (
+              <Popconfirm title="确认删除?" onConfirm={() => handleDelete(record.id)}>
+                <Button type="link" danger icon={<DeleteOutlined />} size="small">
+                  删除
+                </Button>
+              </Popconfirm>
+            ),
+          },
+        ];
+
+        return <ActionButtons actions={actions} />;
+      },
     },
   ];
 
   useEffect(() => {
     loadDevices();
     loadStatistics();
-  }, [current, pageSize]);
+  }, [current, pageSize, loadDevices, loadStatistics]);
 
   return (
     <Layout style={{ background: '#f0f2f5', minHeight: 'calc(100vh - 64px)' }}>
       {/* 左侧部门树 */}
-      <Sider width={360} className="dept-list-sider" style={{ background: '#fff', padding: '16px', borderRight: '1px solid #f0f0f0' }}>
+      <Sider width={360} className="dept-list-sider" style={{ background: '#fff', padding: '0 16px 16px 0', borderRight: '1px solid #f0f0f0' }}>
         <DeptTree
           onSelect={(selectedKeys) => handleDeptSelect(selectedKeys)}
           selectedKeys={selectedDeptId ? [selectedDeptId] : []}
@@ -660,7 +674,7 @@ const DeviceManagement: React.FC = () => {
                 onChange: (page, size) => {
                   setCurrent(page);
                   setPageSize(size || 10);
-                  const params: any = { current: page, pageSize: size };
+                  const params: Record<string, number | string> = { current: page, pageSize: size || 10 };
                   if (selectedDeptId) {
                     params.deptId = selectedDeptId;
                   }
@@ -714,7 +728,7 @@ const DeviceManagement: React.FC = () => {
 
           {probeResult && (
             <>
-              <Divider orientation="left">探测结果</Divider>
+              <Divider orientation="left" orientationMargin="0">探测结果</Divider>
               <Alert
                 title="探测成功"
                 type="success"
@@ -723,23 +737,23 @@ const DeviceManagement: React.FC = () => {
               <Row gutter={16}>
                 <Col span={12}>
                   <Card size="small" title="设备信息">
-                    <p><strong>设备名称:</strong> {probeResult.deviceName || '-'}</p>
-                    <p><strong>设备类型:</strong> {probeResult.deviceType || '-'}</p>
-                    <p><strong>厂商:</strong> {probeResult.vendor || '-'}</p>
-                    <p><strong>型号:</strong> {probeResult.model || '-'}</p>
+                    <p><strong>设备名称:</strong> {(probeResult.deviceName as string) || '-'}</p>
+                    <p><strong>设备类型:</strong> {(probeResult.deviceType as string) || '-'}</p>
+                    <p><strong>厂商:</strong> {(probeResult.vendor as string) || '-'}</p>
+                    <p><strong>型号:</strong> {(probeResult.model as string) || '-'}</p>
                   </Card>
                 </Col>
                 <Col span={12}>
                   <Card size="small" title="系统信息">
-                    <p><strong>SysName:</strong> {probeResult.sysName || '-'}</p>
-                    <p><strong>SysDescr:</strong> {probeResult.sysDescr?.substring(0, 50) || '-'}{probeResult.sysDescr?.length > 50 ? '...' : ''}</p>
+                    <p><strong>SysName:</strong> {(probeResult.sysName as string) || '-'}</p>
+                    <p><strong>SysDescr:</strong> {(probeResult.sysDescr as string)?.substring(0, 50) || '-'}{(probeResult.sysDescr as string)?.length > 50 ? '...' : ''}</p>
                   </Card>
                 </Col>
               </Row>
             </>
           )}
 
-          <Divider orientation="left">其他信息（可选）</Divider>
+          <Divider orientation="left" orientationMargin="0">其他信息（可选）</Divider>
           <Form.Item name="deptId" label="所属部门">
             <Select placeholder="请选择部门" allowClear>
               {renderDeptTreeOptions(departments)}
@@ -759,7 +773,7 @@ const DeviceManagement: React.FC = () => {
         title={editingDevice ? '编辑设备' : '手动新增设备'}
         open={modalVisible}
         onOk={handleCreate}
-        onCancel={() => { setModalVisible(false); editForm.resetFields(); setEditingDevice(null); }}
+        onCancel={() => { setEditModalVisible(false); editForm.resetFields(); handleAdd(); }}
         width={700}
       >
         <Alert
@@ -840,7 +854,7 @@ const DeviceManagement: React.FC = () => {
       >
         {viewingDevice && (
           <div>
-            <Divider orientation="left">基本信息</Divider>
+            <Divider orientation="left" orientationMargin="0">基本信息</Divider>
             <Row gutter={16}>
               <Col span={12}>
                 <p><strong>设备名称:</strong> {viewingDevice.deviceName}</p>
@@ -867,7 +881,7 @@ const DeviceManagement: React.FC = () => {
               </Col>
             </Row>
 
-            <Divider orientation="left">设备详细信息（SSH采集）</Divider>
+            <Divider orientation="left" orientationMargin="0">设备详细信息（SSH采集）</Divider>
             <Row gutter={16}>
               <Col span={12}>
                 <p><strong>型号:</strong> {viewingDevice.model || '-'}</p>
@@ -881,7 +895,7 @@ const DeviceManagement: React.FC = () => {
 
             {viewingDevice.description && (
               <>
-                <Divider orientation="left">备注</Divider>
+                <Divider orientation="left" orientationMargin="0">备注</Divider>
                 <p>{viewingDevice.description}</p>
               </>
             )}

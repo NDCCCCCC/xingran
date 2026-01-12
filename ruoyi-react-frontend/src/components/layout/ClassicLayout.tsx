@@ -3,19 +3,19 @@
  * 左侧导航 + 顶部栏 + 内容区
  */
 
-import React from 'react';
+import type { FC, ReactNode } from 'react';
 import { Layout as AntLayout } from 'antd';
 import Header from './header';
-import Sidebar from './Sidebar';
+import Sidebar from './sidebar';
 import Breadcrumb from './breadcrumb';
 
 const { Content } = AntLayout;
 
 interface ClassicLayoutProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
-const ClassicLayout: React.FC<ClassicLayoutProps> = ({ children }) => {
+const ClassicLayout: FC<ClassicLayoutProps> = ({ children }) => {
   return (
     <AntLayout className="h-screen" style={{ background: 'var(--theme-bg-secondary)' }}>
       <Sidebar />

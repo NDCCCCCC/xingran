@@ -288,104 +288,101 @@ func (s *WorkOrderService) GetWorkOrderByID(ctx context.Context, id string) (*mo
 
 // CreateWorkOrder 创建工单
 func (s *WorkOrderService) CreateWorkOrder(ctx context.Context, req *WorkOrderCreateRequest, submitterID string) (*models.WorkOrder, error) {
-	// 开启事务
-	tx := s.db.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}()
+	var workOrder *models.WorkOrder
 
-	// 获取工单配置
-	var config models.WorkOrderConfig
-	if err := tx.Where("id = ?", "default").First(&config).Error; err != nil {
-		// 如果配置不存在，使用默认配置
-		config = models.WorkOrderConfig{
-			AutoAssignEnabled:  true,
-			AutoAssignStrategy: "assign_one",
-		}
-	}
-
-	workOrder := &models.WorkOrder{
-		Title:         req.Title,
-		CategoryID:    req.CategoryID,
-		Type:          req.Type,
-		Priority:      req.Priority,
-		Status:        models.WorkOrderStatusPending,
-		Description:   req.Description,
-		SubmitterID:   submitterID,
-		DeptID:        req.DeptID,
-		AttachmentIDs: req.AttachmentIDs,
-	}
-
-	// 处理期望解决时间
-	if req.ExpectedResolveAt != nil && *req.ExpectedResolveAt != "" {
-		if t, err := time.Parse("2006-01-02 15:04:05", *req.ExpectedResolveAt); err == nil {
-			workOrder.ExpectedResolveAt = &t
-		}
-	}
-
-	// 自动分配逻辑
-	shouldAutoAssign := req.IsAutoAssigned && config.AutoAssignEnabled
-	if shouldAutoAssign {
-		// 调用值班管理服务获取当天值班人员
-		dutyMembers, err := s.getTodayDutyMembers(ctx, nil)
-		if err != nil {
-			// 获取值班人员失败，记录警告但不阻止工单创建
-			logger.Warnf("获取当天值班人员失败: %v，工单将不自动分配", err)
-		} else if len(dutyMembers) > 0 {
-			// 根据分配策略选择处理人
-			var assigneeID string
-			var dutyPoolID string
-			var dutyType string
-
-			switch config.AutoAssignStrategy {
-			case "assign_all":
-				// 分配给所有值班人员（创建多个工单）
-				// 这里简化处理，只分配给第一个
-				assigneeID = dutyMembers[0].UserID
-				dutyPoolID = dutyMembers[0].PoolID
-				dutyType = string(dutyMembers[0].DutyType)
-			case "assign_order":
-				// 按顺序分配（这里简化，使用第一个）
-				assigneeID = dutyMembers[0].UserID
-				dutyPoolID = dutyMembers[0].PoolID
-				dutyType = string(dutyMembers[0].DutyType)
-			default: // assign_one
-				// 随机分配一个（这里使用第一个）
-				assigneeID = dutyMembers[0].UserID
-				dutyPoolID = dutyMembers[0].PoolID
-				dutyType = string(dutyMembers[0].DutyType)
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 获取工单配置
+		var config models.WorkOrderConfig
+		if err := tx.Where("id = ?", "default").First(&config).Error; err != nil {
+			// 如果配置不存在，使用默认配置
+			config = models.WorkOrderConfig{
+				AutoAssignEnabled:  true,
+				AutoAssignStrategy: "assign_one",
 			}
-
-			workOrder.AssigneeID = &assigneeID
-			workOrder.IsAutoAssigned = true
-			workOrder.DutyPoolID = &dutyPoolID
-			workOrder.DutyType = dutyType
-			workOrder.AssignStrategy = config.AutoAssignStrategy
 		}
-	} else if req.AssigneeID != nil {
-		// 手动指定处理人
-		workOrder.AssigneeID = req.AssigneeID
-	}
 
-	// 创建工单
-	if err := tx.Create(workOrder).Error; err != nil {
-		tx.Rollback()
-		return nil, fmt.Errorf("创建工单失败: %w", err)
-	}
+		newWorkOrder := &models.WorkOrder{
+			Title:         req.Title,
+			CategoryID:    req.CategoryID,
+			Type:          req.Type,
+			Priority:      req.Priority,
+			Status:        models.WorkOrderStatusPending,
+			Description:   req.Description,
+			SubmitterID:   submitterID,
+			DeptID:        req.DeptID,
+			AttachmentIDs: req.AttachmentIDs,
+		}
 
-	// 记录操作历史
-	s.recordWorkOrderHistory(tx, workOrder.ID, "create", "", "", "", "创建工单", submitterID)
+		// 处理期望解决时间
+		if req.ExpectedResolveAt != nil && *req.ExpectedResolveAt != "" {
+			if t, err := time.Parse("2006-01-02 15:04:05", *req.ExpectedResolveAt); err == nil {
+				newWorkOrder.ExpectedResolveAt = &t
+			}
+		}
 
-	// 如果自动分配了，记录分配历史
-	if workOrder.IsAutoAssigned && workOrder.AssigneeID != nil {
-		s.recordWorkOrderHistory(tx, workOrder.ID, "auto_assign", "assignee_id", "", *workOrder.AssigneeID, "自动分配给值班人员", submitterID)
-	}
+		// 自动分配逻辑
+		shouldAutoAssign := req.IsAutoAssigned && config.AutoAssignEnabled
+		if shouldAutoAssign {
+			// 调用值班管理服务获取当天值班人员
+			dutyMembers, err := s.getTodayDutyMembers(ctx, nil)
+			if err != nil {
+				// 获取值班人员失败，记录警告但不阻止工单创建
+				logger.Warnf("获取当天值班人员失败: %v，工单将不自动分配", err)
+			} else if len(dutyMembers) > 0 {
+				// 根据分配策略选择处理人
+				var assigneeID string
+				var dutyPoolID string
+				var dutyType string
 
-	// 提交事务
-	if err := tx.Commit().Error; err != nil {
-		return nil, fmt.Errorf("创建工单失败: %w", err)
+				switch config.AutoAssignStrategy {
+				case "assign_all":
+					// 分配给所有值班人员（创建多个工单）
+					// 这里简化处理，只分配给第一个
+					assigneeID = dutyMembers[0].UserID
+					dutyPoolID = dutyMembers[0].PoolID
+					dutyType = string(dutyMembers[0].DutyType)
+				case "assign_order":
+					// 按顺序分配（这里简化，使用第一个）
+					assigneeID = dutyMembers[0].UserID
+					dutyPoolID = dutyMembers[0].PoolID
+					dutyType = string(dutyMembers[0].DutyType)
+				default: // assign_one
+					// 随机分配一个（这里使用第一个）
+					assigneeID = dutyMembers[0].UserID
+					dutyPoolID = dutyMembers[0].PoolID
+					dutyType = string(dutyMembers[0].DutyType)
+				}
+
+				newWorkOrder.AssigneeID = &assigneeID
+				newWorkOrder.IsAutoAssigned = true
+				newWorkOrder.DutyPoolID = &dutyPoolID
+				newWorkOrder.DutyType = dutyType
+				newWorkOrder.AssignStrategy = config.AutoAssignStrategy
+			}
+		} else if req.AssigneeID != nil {
+			// 手动指定处理人
+			newWorkOrder.AssigneeID = req.AssigneeID
+		}
+
+		// 创建工单
+		if err := tx.Create(newWorkOrder).Error; err != nil {
+			return fmt.Errorf("创建工单失败: %w", err)
+		}
+
+		// 记录操作历史
+		s.recordWorkOrderHistory(tx, newWorkOrder.ID, "create", "", "", "", "创建工单", submitterID)
+
+		// 如果自动分配了，记录分配历史
+		if newWorkOrder.IsAutoAssigned && newWorkOrder.AssigneeID != nil {
+			s.recordWorkOrderHistory(tx, newWorkOrder.ID, "auto_assign", "assignee_id", "", *newWorkOrder.AssigneeID, "自动分配给值班人员", submitterID)
+		}
+
+		workOrder = newWorkOrder
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
 	}
 
 	// 重新加载关联数据
@@ -394,134 +391,121 @@ func (s *WorkOrderService) CreateWorkOrder(ctx context.Context, req *WorkOrderCr
 
 // UpdateWorkOrder 更新工单
 func (s *WorkOrderService) UpdateWorkOrder(ctx context.Context, req *WorkOrderUpdateRequest, operatorID string) error {
-	// 开启事务
-	tx := s.db.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}()
-
-	var workOrder models.WorkOrder
-	if err := tx.Where("id = ?", req.ID).First(&workOrder).Error; err != nil {
-		tx.Rollback()
-		if err == gorm.ErrRecordNotFound {
-			return fmt.Errorf("工单不存在")
-		}
-		return fmt.Errorf("查询工单失败: %w", err)
-	}
-
-	// 记录变更
-	changes := make(map[string]string)
-
-	if req.Title != nil && *req.Title != workOrder.Title {
-		changes["title"] = fmt.Sprintf("%s -> %s", workOrder.Title, *req.Title)
-		workOrder.Title = *req.Title
-	}
-	if req.CategoryID != nil && *req.CategoryID != workOrder.CategoryID {
-		changes["category_id"] = fmt.Sprintf("%s -> %s", workOrder.CategoryID, *req.CategoryID)
-		workOrder.CategoryID = *req.CategoryID
-	}
-	if req.Type != nil && *req.Type != workOrder.Type {
-		changes["type"] = fmt.Sprintf("%s -> %s", workOrder.Type, *req.Type)
-		workOrder.Type = *req.Type
-	}
-	if req.Priority != nil && *req.Priority != workOrder.Priority {
-		changes["priority"] = fmt.Sprintf("%d -> %d", workOrder.Priority, *req.Priority)
-		workOrder.Priority = *req.Priority
-	}
-	if req.Status != nil && *req.Status != workOrder.Status {
-		changes["status"] = fmt.Sprintf("%d -> %d", workOrder.Status, *req.Status)
-		workOrder.Status = *req.Status
-
-		// 更新状态时间
-		if *req.Status == models.WorkOrderStatusCompleted && workOrder.ResolvedAt == nil {
-			now := time.Now()
-			workOrder.ResolvedAt = &now
-		}
-		if *req.Status == models.WorkOrderStatusClosed && workOrder.ClosedAt == nil {
-			now := time.Now()
-			workOrder.ClosedAt = &now
-		}
-	}
-	if req.Description != nil && *req.Description != workOrder.Description {
-		changes["description"] = "描述已更新"
-		workOrder.Description = *req.Description
-	}
-	if req.Solution != nil && (*req.Solution != "" || workOrder.Solution != "") {
-		changes["solution"] = "解决方案已更新"
-		workOrder.Solution = *req.Solution
-	}
-	if req.AssigneeID != nil {
-		oldAssignee := ""
-		if workOrder.AssigneeID != nil {
-			oldAssignee = *workOrder.AssigneeID
-		}
-		if *req.AssigneeID != oldAssignee {
-			changes["assignee_id"] = fmt.Sprintf("%s -> %s", oldAssignee, *req.AssigneeID)
-			workOrder.AssigneeID = req.AssigneeID
-		}
-	}
-	if req.DeptID != nil {
-		oldDept := ""
-		if workOrder.DeptID != nil {
-			oldDept = *workOrder.DeptID
-		}
-		if *req.DeptID != oldDept {
-			changes["dept_id"] = fmt.Sprintf("%s -> %s", oldDept, *req.DeptID)
-			workOrder.DeptID = req.DeptID
-		}
-	}
-	if req.AttachmentIDs != nil && *req.AttachmentIDs != workOrder.AttachmentIDs {
-		changes["attachment_ids"] = "附件已更新"
-		workOrder.AttachmentIDs = *req.AttachmentIDs
-	}
-	if req.ExpectedResolveAt != nil {
-		var newTime time.Time
-		if t, err := time.Parse("2006-01-02 15:04:05", *req.ExpectedResolveAt); err == nil {
-			newTime = t
-			oldTime := ""
-			if workOrder.ExpectedResolveAt != nil {
-				oldTime = workOrder.ExpectedResolveAt.Format("2006-01-02 15:04:05")
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var workOrder models.WorkOrder
+		if err := tx.Where("id = ?", req.ID).First(&workOrder).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return fmt.Errorf("工单不存在")
 			}
-			if newTime.String() != oldTime {
-				changes["expected_resolve_at"] = fmt.Sprintf("%s -> %s", oldTime, newTime.Format("2006-01-02 15:04:05"))
-				workOrder.ExpectedResolveAt = &newTime
+			return fmt.Errorf("查询工单失败: %w", err)
+		}
+
+		// 记录变更
+		changes := make(map[string]string)
+
+		if req.Title != nil && *req.Title != workOrder.Title {
+			changes["title"] = fmt.Sprintf("%s -> %s", workOrder.Title, *req.Title)
+			workOrder.Title = *req.Title
+		}
+		if req.CategoryID != nil && *req.CategoryID != workOrder.CategoryID {
+			changes["category_id"] = fmt.Sprintf("%s -> %s", workOrder.CategoryID, *req.CategoryID)
+			workOrder.CategoryID = *req.CategoryID
+		}
+		if req.Type != nil && *req.Type != workOrder.Type {
+			changes["type"] = fmt.Sprintf("%s -> %s", workOrder.Type, *req.Type)
+			workOrder.Type = *req.Type
+		}
+		if req.Priority != nil && *req.Priority != workOrder.Priority {
+			changes["priority"] = fmt.Sprintf("%d -> %d", workOrder.Priority, *req.Priority)
+			workOrder.Priority = *req.Priority
+		}
+		if req.Status != nil && *req.Status != workOrder.Status {
+			changes["status"] = fmt.Sprintf("%d -> %d", workOrder.Status, *req.Status)
+			workOrder.Status = *req.Status
+
+			// 更新状态时间
+			if *req.Status == models.WorkOrderStatusCompleted && workOrder.ResolvedAt == nil {
+				now := time.Now()
+				workOrder.ResolvedAt = &now
+			}
+			if *req.Status == models.WorkOrderStatusClosed && workOrder.ClosedAt == nil {
+				now := time.Now()
+				workOrder.ClosedAt = &now
 			}
 		}
-	}
-	if req.ResolvedAt != nil {
-		if t, err := time.Parse("2006-01-02 15:04:05", *req.ResolvedAt); err == nil {
-			workOrder.ResolvedAt = &t
+		if req.Description != nil && *req.Description != workOrder.Description {
+			changes["description"] = "描述已更新"
+			workOrder.Description = *req.Description
 		}
-	}
-	if req.ClosedAt != nil {
-		if t, err := time.Parse("2006-01-02 15:04:05", *req.ClosedAt); err == nil {
-			workOrder.ClosedAt = &t
+		if req.Solution != nil && (*req.Solution != "" || workOrder.Solution != "") {
+			changes["solution"] = "解决方案已更新"
+			workOrder.Solution = *req.Solution
 		}
-	}
+		if req.AssigneeID != nil {
+			oldAssignee := ""
+			if workOrder.AssigneeID != nil {
+				oldAssignee = *workOrder.AssigneeID
+			}
+			if *req.AssigneeID != oldAssignee {
+				changes["assignee_id"] = fmt.Sprintf("%s -> %s", oldAssignee, *req.AssigneeID)
+				workOrder.AssigneeID = req.AssigneeID
+			}
+		}
+		if req.DeptID != nil {
+			oldDept := ""
+			if workOrder.DeptID != nil {
+				oldDept = *workOrder.DeptID
+			}
+			if *req.DeptID != oldDept {
+				changes["dept_id"] = fmt.Sprintf("%s -> %s", oldDept, *req.DeptID)
+				workOrder.DeptID = req.DeptID
+			}
+		}
+		if req.AttachmentIDs != nil && *req.AttachmentIDs != workOrder.AttachmentIDs {
+			changes["attachment_ids"] = "附件已更新"
+			workOrder.AttachmentIDs = *req.AttachmentIDs
+		}
+		if req.ExpectedResolveAt != nil {
+			var newTime time.Time
+			if t, err := time.Parse("2006-01-02 15:04:05", *req.ExpectedResolveAt); err == nil {
+				newTime = t
+				oldTime := ""
+				if workOrder.ExpectedResolveAt != nil {
+					oldTime = workOrder.ExpectedResolveAt.Format("2006-01-02 15:04:05")
+				}
+				if newTime.String() != oldTime {
+					changes["expected_resolve_at"] = fmt.Sprintf("%s -> %s", oldTime, newTime.Format("2006-01-02 15:04:05"))
+					workOrder.ExpectedResolveAt = &newTime
+				}
+			}
+		}
+		if req.ResolvedAt != nil {
+			if t, err := time.Parse("2006-01-02 15:04:05", *req.ResolvedAt); err == nil {
+				workOrder.ResolvedAt = &t
+			}
+		}
+		if req.ClosedAt != nil {
+			if t, err := time.Parse("2006-01-02 15:04:05", *req.ClosedAt); err == nil {
+				workOrder.ClosedAt = &t
+			}
+		}
 
-	// 更新工单
-	if err := tx.Save(&workOrder).Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("更新工单失败: %w", err)
-	}
+		// 更新工单
+		if err := tx.Save(&workOrder).Error; err != nil {
+			return fmt.Errorf("更新工单失败: %w", err)
+		}
 
-	// 记录变更历史
-	for field, change := range changes {
-		s.recordWorkOrderHistory(tx, workOrder.ID, "update", field, "", change, "", operatorID)
-	}
+		// 记录变更历史
+		for field, change := range changes {
+			s.recordWorkOrderHistory(tx, workOrder.ID, "update", field, "", change, "", operatorID)
+		}
 
-	if len(changes) > 0 {
-		s.recordWorkOrderHistory(tx, workOrder.ID, "update", "", "", "", "更新工单", operatorID)
-	}
+		if len(changes) > 0 {
+			s.recordWorkOrderHistory(tx, workOrder.ID, "update", "", "", "", "更新工单", operatorID)
+		}
 
-	// 提交事务
-	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("更新工单失败: %w", err)
-	}
-
-	return nil
+		return nil
+	})
 }
 
 // DeleteWorkOrder 删除工单
@@ -540,40 +524,25 @@ func (s *WorkOrderService) DeleteWorkOrder(ctx context.Context, id string) error
 		return fmt.Errorf("只有待处理状态的工单可以删除")
 	}
 
-	// 开启事务
-	tx := s.db.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 删除关联数据（评论、历史、评价）
+		if err := tx.Where("work_order_id = ?", id).Delete(&models.WorkOrderComment{}).Error; err != nil {
+			return fmt.Errorf("删除工单评论失败: %w", err)
 		}
-	}()
+		if err := tx.Where("work_order_id = ?", id).Delete(&models.WorkOrderHistory{}).Error; err != nil {
+			return fmt.Errorf("删除工单历史失败: %w", err)
+		}
+		if err := tx.Where("work_order_id = ?", id).Delete(&models.WorkOrderRating{}).Error; err != nil {
+			return fmt.Errorf("删除工单评价失败: %w", err)
+		}
 
-	// 删除关联数据（评论、历史、评价）
-	if err := tx.Where("work_order_id = ?", id).Delete(&models.WorkOrderComment{}).Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("删除工单评论失败: %w", err)
-	}
-	if err := tx.Where("work_order_id = ?", id).Delete(&models.WorkOrderHistory{}).Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("删除工单历史失败: %w", err)
-	}
-	if err := tx.Where("work_order_id = ?", id).Delete(&models.WorkOrderRating{}).Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("删除工单评价失败: %w", err)
-	}
+		// 删除工单
+		if err := tx.Delete(&workOrder).Error; err != nil {
+			return fmt.Errorf("删除工单失败: %w", err)
+		}
 
-	// 删除工单
-	if err := tx.Delete(&workOrder).Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("删除工单失败: %w", err)
-	}
-
-	// 提交事务
-	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("删除工单失败: %w", err)
-	}
-
-	return nil
+		return nil
+	})
 }
 
 // BatchDeleteWorkOrders 批量删除工单
@@ -582,51 +551,34 @@ func (s *WorkOrderService) BatchDeleteWorkOrders(ctx context.Context, ids []stri
 		return fmt.Errorf("工单ID列表不能为空")
 	}
 
-	// 开启事务
-	tx := s.db.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 检查是否所有工单都是待处理状态
+		var count int64
+		if err := tx.Model(&models.WorkOrder{}).Where("id IN ? AND status != ?", ids, models.WorkOrderStatusPending).Count(&count).Error; err != nil {
+			return fmt.Errorf("检查工单状态失败: %w", err)
 		}
-	}()
+		if count > 0 {
+			return fmt.Errorf("只有待处理状态的工单可以删除")
+		}
 
-	// 检查是否所有工单都是待处理状态
-	var count int64
-	if err := tx.Model(&models.WorkOrder{}).Where("id IN ? AND status != ?", ids, models.WorkOrderStatusPending).Count(&count).Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("检查工单状态失败: %w", err)
-	}
-	if count > 0 {
-		tx.Rollback()
-		return fmt.Errorf("只有待处理状态的工单可以删除")
-	}
+		// 删除关联数据 - 使用IN批量删除提升性能
+		if err := tx.Where("work_order_id IN ?", ids).Delete(&models.WorkOrderComment{}).Error; err != nil {
+			return fmt.Errorf("删除工单评论失败: %w", err)
+		}
+		if err := tx.Where("work_order_id IN ?", ids).Delete(&models.WorkOrderHistory{}).Error; err != nil {
+			return fmt.Errorf("删除工单历史失败: %w", err)
+		}
+		if err := tx.Where("work_order_id IN ?", ids).Delete(&models.WorkOrderRating{}).Error; err != nil {
+			return fmt.Errorf("删除工单评价失败: %w", err)
+		}
 
-	// 删除关联数据 - 使用IN批量删除提升性能
-	if err := tx.Where("work_order_id IN ?", ids).Delete(&models.WorkOrderComment{}).Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("删除工单评论失败: %w", err)
-	}
-	if err := tx.Where("work_order_id IN ?", ids).Delete(&models.WorkOrderHistory{}).Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("删除工单历史失败: %w", err)
-	}
-	if err := tx.Where("work_order_id IN ?", ids).Delete(&models.WorkOrderRating{}).Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("删除工单评价失败: %w", err)
-	}
+		// 删除工单
+		if err := tx.Where("id IN ?", ids).Delete(&models.WorkOrder{}).Error; err != nil {
+			return fmt.Errorf("批量删除工单失败: %w", err)
+		}
 
-	// 删除工单
-	if err := tx.Where("id IN ?", ids).Delete(&models.WorkOrder{}).Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("批量删除工单失败: %w", err)
-	}
-
-	// 提交事务
-	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("批量删除工单失败: %w", err)
-	}
-
-	return nil
+		return nil
+	})
 }
 
 // AssignWorkOrder 分配工单
@@ -644,34 +596,22 @@ func (s *WorkOrderService) AssignWorkOrder(ctx context.Context, id string, req *
 		oldAssignee = *workOrder.AssigneeID
 	}
 
-	// 开启事务
-	tx := s.db.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 更新工单
+		updates := map[string]interface{}{
+			"assignee_id": req.AssigneeID,
+			"updated_by":  operatorID,
 		}
-	}()
 
-	// 更新工单
-	updates := map[string]interface{}{
-		"assignee_id": req.AssigneeID,
-		"updated_by":  operatorID,
-	}
+		if err := tx.Model(&workOrder).Updates(updates).Error; err != nil {
+			return fmt.Errorf("分配工单失败: %w", err)
+		}
 
-	if err := tx.Model(&workOrder).Updates(updates).Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("分配工单失败: %w", err)
-	}
+		// 记录历史
+		s.recordWorkOrderHistory(tx, workOrder.ID, "assign", "assignee_id", oldAssignee, req.AssigneeID, req.Remark, operatorID)
 
-	// 记录历史
-	s.recordWorkOrderHistory(tx, workOrder.ID, "assign", "assignee_id", oldAssignee, req.AssigneeID, req.Remark, operatorID)
-
-	// 提交事务
-	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("分配工单失败: %w", err)
-	}
-
-	return nil
+		return nil
+	})
 }
 
 // AssignToTodayDuty 分配给当天值班人员
@@ -728,53 +668,41 @@ func (s *WorkOrderService) UpdateWorkOrderStatus(ctx context.Context, id string,
 		return fmt.Errorf("无效的状态流转: %d -> %d", workOrder.Status, req.Status)
 	}
 
-	// 开启事务
-	tx := s.db.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		updates := map[string]interface{}{
+			"status":    req.Status,
+			"updated_by": operatorID,
 		}
-	}()
 
-	updates := map[string]interface{}{
-		"status":    req.Status,
-		"updated_by": operatorID,
-	}
+		// 更新解决方案
+		if req.Solution != "" {
+			updates["solution"] = req.Solution
+		}
 
-	// 更新解决方案
-	if req.Solution != "" {
-		updates["solution"] = req.Solution
-	}
+		// 更新状态时间
+		if req.Status == models.WorkOrderStatusCompleted && workOrder.ResolvedAt == nil {
+			now := time.Now()
+			updates["resolved_at"] = &now
+		}
+		if req.Status == models.WorkOrderStatusClosed && workOrder.ClosedAt == nil {
+			now := time.Now()
+			updates["closed_at"] = &now
+		}
 
-	// 更新状态时间
-	if req.Status == models.WorkOrderStatusCompleted && workOrder.ResolvedAt == nil {
-		now := time.Now()
-		updates["resolved_at"] = &now
-	}
-	if req.Status == models.WorkOrderStatusClosed && workOrder.ClosedAt == nil {
-		now := time.Now()
-		updates["closed_at"] = &now
-	}
+		if err := tx.Model(&workOrder).Updates(updates).Error; err != nil {
+			return fmt.Errorf("更新工单状态失败: %w", err)
+		}
 
-	if err := tx.Model(&workOrder).Updates(updates).Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("更新工单状态失败: %w", err)
-	}
+		// 记录历史
+		remark := req.Remark
+		if remark == "" {
+			remark = getStatusName(req.Status)
+		}
+		s.recordWorkOrderHistory(tx, workOrder.ID, "update_status", "status",
+			string(workOrder.Status), string(req.Status), remark, operatorID)
 
-	// 记录历史
-	remark := req.Remark
-	if remark == "" {
-		remark = getStatusName(req.Status)
-	}
-	s.recordWorkOrderHistory(tx, workOrder.ID, "update_status", "status",
-		string(workOrder.Status), string(req.Status), remark, operatorID)
-
-	// 提交事务
-	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("更新工单状态失败: %w", err)
-	}
-
-	return nil
+		return nil
+	})
 }
 
 // ==================== 工单评论方法 ====================

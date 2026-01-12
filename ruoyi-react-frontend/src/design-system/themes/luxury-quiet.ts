@@ -5,8 +5,8 @@
 
 import type { ThemeConfig } from '@/types/theme';
 import { spacing } from '../tokens/spacing';
-import { typography } from '../tokens/typography';
-import { shadows, radius } from '../tokens/shadows';
+import { fontFamily } from '../tokens/typography';
+import { radius } from '../tokens/shadows';
 
 export const luxuryQuietTheme: ThemeConfig = {
   id: 'luxury-quiet',
@@ -67,13 +67,31 @@ export const luxuryQuietTheme: ThemeConfig = {
     lg: spacing.lg,
     xl: spacing.xl,
     '2xl': spacing['2xl'],
+    '3xl': spacing['3xl'],
   },
 
   typography: {
-    fontFamily: typography.fontFamily,
-    fontSize: typography.fontSize,
-    fontWeight: typography.fontWeight,
-    lineHeight: typography.lineHeight,
+    fontFamily: fontFamily.sans,
+    fontSize: {
+      xs: '12px',
+      sm: '14px',
+      base: '16px',
+      lg: '18px',
+      xl: '20px',
+      '2xl': '24px',
+      '3xl': '30px',
+    },
+    fontWeight: {
+      normal: '400',
+      medium: '500',
+      semibold: '600',
+      bold: '700',
+    },
+    lineHeight: {
+      tight: '1.25',
+      normal: '1.5',
+      relaxed: '1.625',
+    },
   },
 
   shadows: {

@@ -20,13 +20,60 @@ type EncryptedRequest struct {
 	Data      string `json:"data"`      // SM4-CBC 加密的数据 (Base64)
 	SM4Key    string `json:"sm4Key"`    // SM2 加密后的 SM4 密钥 (Base64)
 	IV        string `json:"iv"`        // SM4-CBC 的初始化向量 (Base64)
-	Timestamp int64  `json:"timestamp"` // 请求时间戳（防重放）
+	Timestamp int64  `json:"timestamp"` // 请求时间戳（防重放，必填）
+	Nonce     string `json:"nonce"`     // 随机数（防重放，必填）
+}
+
+const (
+	// maxTimeDiff 允许的最大时间差（秒）
+	maxTimeDiff = 300
+	// minTimestamp 最小有效时间戳（2020-01-01）
+	minTimestamp = 1577836800
+)
+
+// NonceStorage nonce存储接口（防止重放攻击）
+type NonceStorage interface {
+	// CheckAndStore 检查nonce是否存在，如果不存在则存储
+	// 返回 true 表示nonce是新的（可以接受），false 表示nonce已存在（拒绝请求）
+	CheckAndStore(nonce string, timestamp int64) bool
+}
+
+// defaultNonceStorage 默认的内存nonce存储实现
+type defaultNonceStorage struct {
+	nonces map[string]int64 // nonce -> timestamp
+}
+
+// NewDefaultNonceStorage 创建默认的nonce存储
+func NewDefaultNonceStorage() NonceStorage {
+	return &defaultNonceStorage{
+		nonces: make(map[string]int64),
+	}
+}
+
+// CheckAndStore 检查并存储nonce
+func (d *defaultNonceStorage) CheckAndStore(nonce string, timestamp int64) bool {
+	if _, exists := d.nonces[nonce]; exists {
+		return false // nonce已存在，拒绝
+	}
+	d.nonces[nonce] = timestamp
+	return true
+}
+
+// cleanupExpiredNonces 清理过期的nonce（应该定期调用）
+func (d *defaultNonceStorage) cleanupExpiredNonces() {
+	now := time.Now().Unix()
+	for nonce, ts := range d.nonces {
+		if now-ts > maxTimeDiff*2 { // 清理超过2倍时间窗口的nonce
+			delete(d.nonces, nonce)
+		}
+	}
 }
 
 // RequestEncryptor 请求加密器
 type RequestEncryptor struct {
 	sm2PrivateKey *sm2.PrivateKey // SM2 私钥（用于解密 SM4 密钥）
 	sm2PublicKey  *sm2.PublicKey  // SM2 公钥（用于加密响应，可选）
+	nonceStorage  NonceStorage    // nonce存储（防止重放攻击）
 }
 
 // NewRequestEncryptor 创建请求加密器
@@ -35,73 +82,111 @@ func NewRequestEncryptor(privateKey *sm2.PrivateKey, publicKey *sm2.PublicKey) *
 	return &RequestEncryptor{
 		sm2PrivateKey: privateKey,
 		sm2PublicKey:  publicKey,
+		nonceStorage:  NewDefaultNonceStorage(),
 	}
+}
+
+// SetNonceStorage 设置nonce存储（可选，用于自定义存储实现）
+func (re *RequestEncryptor) SetNonceStorage(storage NonceStorage) {
+	re.nonceStorage = storage
+}
+
+// validateTimestamp 验证时间戳
+func validateTimestamp(timestamp int64) error {
+	// 强制要求时间戳
+	if timestamp <= 0 {
+		return errors.New("时间戳不能为空")
+	}
+	// 检查时间戳是否合理（不能是太早的日期）
+	if timestamp < minTimestamp {
+		return fmt.Errorf("时间戳无效: 过早的日期")
+	}
+	// 检查时间差
+	timeDiff := time.Now().Unix() - timestamp
+	if timeDiff < -maxTimeDiff || timeDiff > maxTimeDiff {
+		return fmt.Errorf("请求时间戳无效: 时间差 %d 秒", timeDiff)
+	}
+	return nil
+}
+
+// validateNonce 验证nonce
+func (re *RequestEncryptor) validateNonce(nonce string, timestamp int64) error {
+	if nonce == "" {
+		return errors.New("nonce不能为空")
+	}
+	if !re.nonceStorage.CheckAndStore(nonce, timestamp) {
+		return errors.New("请求重复，拒绝处理")
+	}
+	return nil
 }
 
 // DecryptRequest 解密请求体
 // 步骤：
-// 1. 验证时间戳
-// 2. 使用 SM2 私钥解密 SM4 密钥（十六进制字符串）
-// 3. 将十六进制转换为字节数组
-// 4. Base64 解码 IV 和密文
-// 5. SM4-CBC 解密
-// 6. 去除 PKCS#7 填充
+// 1. 验证时间戳（强制要求）
+// 2. 验证nonce（防重放）
+// 3. 使用 SM2 私钥解密 SM4 密钥（十六进制字符串）
+// 4. 将十六进制转换为字节数组
+// 5. Base64 解码 IV 和密文
+// 6. SM4-CBC 解密
+// 7. 去除 PKCS#7 填充
 func (re *RequestEncryptor) DecryptRequest(encReq *EncryptedRequest) ([]byte, error) {
-	// 1. 验证时间戳（防重放攻击，5分钟内有效）
-	if encReq.Timestamp > 0 {
-		timeDiff := time.Now().Unix() - encReq.Timestamp
-		if timeDiff < -300 || timeDiff > 300 {
-			return nil, fmt.Errorf("请求时间戳无效: 时间差 %d 秒", timeDiff)
-		}
+	// 1. 验证时间戳（防重放攻击，强制要求）
+	if err := validateTimestamp(encReq.Timestamp); err != nil {
+		return nil, err
 	}
 
-	// 2. 使用 SM2 私钥解密 SM4 密钥（前端发送十六进制字符串，32字符）
+	// 2. 验证nonce（防重放）
+	if err := re.validateNonce(encReq.Nonce, encReq.Timestamp); err != nil {
+		return nil, err
+	}
+
+	// 3. 使用 SM2 私钥解密 SM4 密钥（前端发送十六进制字符串，32字符）
 	sm4KeyHex, err := DecryptWithSM2(encReq.SM4Key, re.sm2PrivateKey)
 	if err != nil {
-		return nil, fmt.Errorf("SM2 解密 SM4 密钥失败: %w", err)
+		return nil, fmt.Errorf("解密失败")
 	}
 
-	// 3. 将十六进制字符串转换为字节数组（使用标准库）
+	// 4. 将十六进制字符串转换为字节数组（使用标准库）
 	keyBytes, err := hex.DecodeString(sm4KeyHex)
 	if err != nil {
-		return nil, fmt.Errorf("SM4 密钥十六进制解码失败: %w", err)
+		return nil, fmt.Errorf("密钥解码失败")
 	}
 	if len(keyBytes) != sm4.BlockSize {
-		return nil, fmt.Errorf("SM4 密钥长度无效: 期望 %d, 实际 %d", sm4.BlockSize, len(keyBytes))
+		return nil, fmt.Errorf("密钥长度无效")
 	}
 
-	// 4. Base64 解码 IV 和密文
+	// 5. Base64 解码 IV 和密文
 	iv, err := base64.StdEncoding.DecodeString(encReq.IV)
 	if err != nil {
-		return nil, fmt.Errorf("IV Base64 解码失败: %w", err)
+		return nil, fmt.Errorf("IV解码失败")
 	}
 	if len(iv) != sm4.BlockSize {
-		return nil, fmt.Errorf("IV 长度无效: 期望 %d, 实际 %d", sm4.BlockSize, len(iv))
+		return nil, fmt.Errorf("IV长度无效")
 	}
 
 	ciphertext, err := base64.StdEncoding.DecodeString(encReq.Data)
 	if err != nil {
-		return nil, fmt.Errorf("密文 Base64 解码失败: %w", err)
+		return nil, fmt.Errorf("数据解码失败")
 	}
 
-	// 5. SM4-CBC 解密
+	// 6. SM4-CBC 解密
 	block, err := sm4.NewCipher(keyBytes)
 	if err != nil {
-		return nil, fmt.Errorf("创建 SM4 加密器失败: %w", err)
+		return nil, fmt.Errorf("加密器创建失败")
 	}
 
 	if len(ciphertext)%sm4.BlockSize != 0 {
-		return nil, fmt.Errorf("密文长度不是块大小的倍数")
+		return nil, fmt.Errorf("密文格式错误")
 	}
 
 	mode := cipher.NewCBCDecrypter(block, iv)
 	decrypted := make([]byte, len(ciphertext))
 	mode.CryptBlocks(decrypted, ciphertext)
 
-	// 6. 去除 PKCS#7 填充
+	// 7. 去除 PKCS#7 填充
 	plaintext, err := pkcs7Unpad(decrypted)
 	if err != nil {
-		return nil, fmt.Errorf("去除填充失败: %w", err)
+		return nil, fmt.Errorf("解密失败")
 	}
 
 	return plaintext, nil
@@ -110,61 +195,63 @@ func (re *RequestEncryptor) DecryptRequest(encReq *EncryptedRequest) ([]byte, er
 // DecryptRequestWithKeyInfo 解密请求体并返回密钥信息
 // 用于响应加密时重用相同的 SM4 密钥和 IV
 func (re *RequestEncryptor) DecryptRequestWithKeyInfo(encReq *EncryptedRequest) (plaintext []byte, sm4Key []byte, iv []byte, err error) {
-	// 1. 验证时间戳（防重放攻击，5分钟内有效）
-	if encReq.Timestamp > 0 {
-		timeDiff := time.Now().Unix() - encReq.Timestamp
-		if timeDiff < -300 || timeDiff > 300 {
-			return nil, nil, nil, fmt.Errorf("请求时间戳无效: 时间差 %d 秒", timeDiff)
-		}
+	// 1. 验证时间戳（防重放攻击，强制要求）
+	if err := validateTimestamp(encReq.Timestamp); err != nil {
+		return nil, nil, nil, err
 	}
 
-	// 2. 使用 SM2 私钥解密 SM4 密钥
+	// 2. 验证nonce（防重放）
+	if err := re.validateNonce(encReq.Nonce, encReq.Timestamp); err != nil {
+		return nil, nil, nil, err
+	}
+
+	// 3. 使用 SM2 私钥解密 SM4 密钥
 	sm4KeyHex, err := DecryptWithSM2(encReq.SM4Key, re.sm2PrivateKey)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("SM2 解密 SM4 密钥失败: %w", err)
+		return nil, nil, nil, fmt.Errorf("解密失败")
 	}
 
-	// 3. 将十六进制字符串转换为字节数组
+	// 4. 将十六进制字符串转换为字节数组
 	sm4Key, err = hex.DecodeString(sm4KeyHex)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("SM4 密钥十六进制解码失败: %w", err)
+		return nil, nil, nil, fmt.Errorf("密钥解码失败")
 	}
 	if len(sm4Key) != sm4.BlockSize {
-		return nil, nil, nil, fmt.Errorf("SM4 密钥长度无效: 期望 %d, 实际 %d", sm4.BlockSize, len(sm4Key))
+		return nil, nil, nil, fmt.Errorf("密钥长度无效")
 	}
 
-	// 4. Base64 解码 IV 和密文
+	// 5. Base64 解码 IV 和密文
 	iv, err = base64.StdEncoding.DecodeString(encReq.IV)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("IV Base64 解码失败: %w", err)
+		return nil, nil, nil, fmt.Errorf("IV解码失败")
 	}
 	if len(iv) != sm4.BlockSize {
-		return nil, nil, nil, fmt.Errorf("IV 长度无效: 期望 %d, 实际 %d", sm4.BlockSize, len(iv))
+		return nil, nil, nil, fmt.Errorf("IV长度无效")
 	}
 
 	ciphertext, err := base64.StdEncoding.DecodeString(encReq.Data)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("密文 Base64 解码失败: %w", err)
+		return nil, nil, nil, fmt.Errorf("数据解码失败")
 	}
 
-	// 5. SM4-CBC 解密
+	// 6. SM4-CBC 解密
 	block, err := sm4.NewCipher(sm4Key)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("创建 SM4 加密器失败: %w", err)
+		return nil, nil, nil, fmt.Errorf("加密器创建失败")
 	}
 
 	if len(ciphertext)%sm4.BlockSize != 0 {
-		return nil, nil, nil, fmt.Errorf("密文长度不是块大小的倍数")
+		return nil, nil, nil, fmt.Errorf("密文格式错误")
 	}
 
 	mode := cipher.NewCBCDecrypter(block, iv)
 	decrypted := make([]byte, len(ciphertext))
 	mode.CryptBlocks(decrypted, ciphertext)
 
-	// 6. 去除 PKCS#7 填充
+	// 7. 去除 PKCS#7 填充
 	plaintext, err = pkcs7Unpad(decrypted)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("去除填充失败: %w", err)
+		return nil, nil, nil, fmt.Errorf("解密失败")
 	}
 
 	return plaintext, sm4Key, iv, nil

@@ -6,7 +6,7 @@
 import cronValidate from 'cron-validate';
 import later from '@breejs/later';
 import type { CronConfig, CronFieldConfig, CronFieldType } from './constants';
-import { FIELD_RANGES, WEEK_DAY_NAMES, MONTH_NAMES } from './constants';
+import { WEEK_DAY_NAMES, MONTH_NAMES } from './constants';
 
 // ============ Cron配置转表达式 ============
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Table,
   Button,
@@ -29,17 +29,16 @@ import {
   ClockCircleOutlined,
   EyeOutlined,
   StopOutlined,
-  CodeOutlined,
   ApiOutlined,
 } from '@ant-design/icons';
 import type { NetworkDevice, ConfigTemplate, ConfigExecution, ConfigExecutionDetail } from '@/types';
 import { post } from '@/lib/api';
 
 const { Option } = Select;
-const { TextArea } = Input;
-const { Step } = Steps;
 
-const ConfigExecutionPage: React.FC = () => {
+import type { FC } from 'react';
+
+const ConfigExecutionPage: FC = () => {
   const [devices, setDevices] = useState<NetworkDevice[]>([]);
   const [templates, setTemplates] = useState<ConfigTemplate[]>([]);
   const [executions, setExecutions] = useState<ConfigExecution[]>([]);
@@ -53,11 +52,10 @@ const ConfigExecutionPage: React.FC = () => {
   const [executeModalVisible, setExecuteModalVisible] = useState(false);
   const [detailDrawerVisible, setDetailDrawerVisible] = useState(false);
   const [executeForm] = Form.useForm();
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
   const [currentExecution, setCurrentExecution] = useState<ConfigExecution | null>(null);
   const [executionDetails, setExecutionDetails] = useState<ConfigExecutionDetail[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<ConfigTemplate | null>(null);
-  const [renderedContent, setRenderedContent] = useState('');
   const [variableModalVisible, setVariableModalVisible] = useState(false);
 
   // 统计数据
@@ -498,7 +496,7 @@ const ConfigExecutionPage: React.FC = () => {
             <Table
               rowSelection={{
                 selectedRowKeys,
-                onChange: setSelectedRowKeys,
+                onChange: (keys) => setSelectedRowKeys(keys as string[]),
                 type: 'checkbox',
               }}
               columns={deviceColumns}
@@ -561,17 +559,17 @@ const ConfigExecutionPage: React.FC = () => {
                 current={currentExecution.status === 'pending' ? 0 : currentExecution.status === 'running' ? 1 : 2}
                 status={currentExecution.status === 'failed' ? 'error' : undefined}
                 size="small"
-              >
-                <Step title="待执行" />
-                <Step title="执行中" />
-                <Step title="已完成" />
-              </Steps>
+                items={[
+                  { title: '待执行' },
+                  { title: '执行中' },
+                  { title: '已完成' },
+                ]}
+              />
               <div style={{ marginTop: 16 }}>
                 <Progress
                   percent={currentExecution.totalDevices > 0
                     ? Math.round(((currentExecution.successCount + currentExecution.failureCount) / currentExecution.totalDevices) * 100)
                     : 0}
-                  success={{ successCount: currentExecution.successCount }}
                   status={currentExecution.status === 'failed' ? 'exception' : undefined}
                 />
                 <div style={{ marginTop: 8, display: 'flex', gap: 24 }}>

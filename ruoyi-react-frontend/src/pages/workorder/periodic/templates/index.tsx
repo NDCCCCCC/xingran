@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Button,
   Form,
@@ -27,8 +27,8 @@ import {
   ReloadOutlined,
   PlayCircleOutlined,
   PauseCircleOutlined,
-  ThunderboltOutlined,
   HistoryOutlined,
+  ThunderboltOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import dayjs from 'dayjs';
@@ -66,6 +66,7 @@ import {
   getUserList,
   type SimpleUser,
 } from '@/lib/workorderApi';
+import ActionButtons from '@/components/shared/ActionButtons';
 import {
   getDutyPoolList,
   type DutyPool,
@@ -109,7 +110,9 @@ const ASSIGN_TYPE_CONFIG = {
   [PeriodicAssignType.Rotation]: { text: '轮询' },
 };
 
-const PeriodicTemplatePage: React.FC = () => {
+import type { FC } from 'react';
+
+const PeriodicTemplatePage: FC = () => {
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
 
@@ -158,7 +161,7 @@ const PeriodicTemplatePage: React.FC = () => {
         disabled: list.filter((t) => !t.isEnabled).length,
         totalGenerated: list.reduce((sum, t) => sum + (t.totalGenerated || 0), 0),
       });
-    } catch (error) {
+    } catch {
       message.error('获取模板列表失败');
     } finally {
       setLoading(false);
@@ -412,49 +415,51 @@ const PeriodicTemplatePage: React.FC = () => {
     {
       title: '操作',
       key: 'action',
-      width: 280,
+      width: 100,
       fixed: 'right',
-      render: (_: unknown, record: PeriodicWorkOrderTemplate) => (
-        <Space size="small">
-          <Button
-            type="link"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-          >
-            编辑
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            icon={record.isEnabled ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
-            onClick={() => handleToggleEnabled(record)}
-          >
-            {record.isEnabled ? '禁用' : '启用'}
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            icon={<ThunderboltOutlined />}
-            onClick={() => handleGenerateNow(record.id)}
-          >
-            立即生成
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            icon={<HistoryOutlined />}
-            onClick={() => handleViewLogs(record)}
-          >
-            执行记录
-          </Button>
-          <Popconfirm title="确定要删除吗？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消">
-            <Button type="link" size="small" danger icon={<DeleteOutlined />}>
-              删除
-            </Button>
-          </Popconfirm>
-        </Space>
-      ),
+      render: (_: unknown, record: PeriodicWorkOrderTemplate) => {
+        const actions = [
+          {
+            key: 'edit',
+            label: '编辑',
+            icon: <EditOutlined />,
+            onClick: () => handleEdit(record),
+          },
+          {
+            key: 'toggle',
+            label: record.isEnabled ? '禁用' : '启用',
+            icon: record.isEnabled ? <PauseCircleOutlined /> : <PlayCircleOutlined />,
+            onClick: () => handleToggleEnabled(record),
+          },
+          {
+            key: 'generate',
+            label: '立即生成',
+            icon: <ThunderboltOutlined />,
+            onClick: () => handleGenerateNow(record.id),
+          },
+          {
+            key: 'logs',
+            label: '执行记录',
+            icon: <HistoryOutlined />,
+            onClick: () => handleViewLogs(record),
+          },
+          {
+            key: 'delete',
+            label: '删除',
+            icon: <DeleteOutlined />,
+            danger: true,
+            render: () => (
+              <Popconfirm title="确定要删除吗？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消">
+                <Button type="link" danger icon={<DeleteOutlined />} size="small">
+                  删除
+                </Button>
+              </Popconfirm>
+            ),
+          },
+        ];
+
+        return <ActionButtons actions={actions} />;
+      },
     },
   ];
 

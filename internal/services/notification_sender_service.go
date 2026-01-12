@@ -214,32 +214,24 @@ func (s *NotificationSenderService) ScheduleNoticePublish(ctx context.Context, n
 
 // SetNotificationChannels 设置通知的发送渠道
 func (s *NotificationSenderService) SetNotificationChannels(ctx context.Context, noticeID string, channels []models.NotificationChannel) error {
-	tx := s.db.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 删除旧的渠道配置
+		if err := tx.Where("notice_id = ?", noticeID).Delete(&models.NotificationChannel{}).Error; err != nil {
+			return fmt.Errorf("删除旧渠道配置失败: %w", err)
 		}
-	}()
 
-	// 删除旧的渠道配置
-	if err := tx.Where("notice_id = ?", noticeID).Delete(&models.NotificationChannel{}).Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("删除旧渠道配置失败: %w", err)
-	}
-
-	// 创建新的渠道配置
-	for i := range channels {
-		channels[i].NoticeID = noticeID
-	}
-	if len(channels) > 0 {
-		if err := tx.Create(&channels).Error; err != nil {
-			tx.Rollback()
-			return fmt.Errorf("创建渠道配置失败: %w", err)
+		// 创建新的渠道配置
+		for i := range channels {
+			channels[i].NoticeID = noticeID
 		}
-	}
+		if len(channels) > 0 {
+			if err := tx.Create(&channels).Error; err != nil {
+				return fmt.Errorf("创建渠道配置失败: %w", err)
+			}
+		}
 
-	tx.Commit()
-	return nil
+		return nil
+	})
 }
 
 // GetNotificationChannels 获取通知的发送渠道

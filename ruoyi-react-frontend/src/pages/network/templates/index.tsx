@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import type { FC, Key } from 'react';
 import {
   Table,
   Button,
@@ -31,11 +32,12 @@ import {
 } from '@ant-design/icons';
 import type { ConfigTemplate } from '@/types';
 import { post } from '@/lib/api';
+import ActionButtons from '@/components/shared/ActionButtons';
 
 const { Option } = Select;
 const { TextArea } = Input;
 
-const TemplateManagement: React.FC = () => {
+const TemplateManagement: FC = () => {
   const [templates, setTemplates] = useState<ConfigTemplate[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
@@ -47,7 +49,7 @@ const TemplateManagement: React.FC = () => {
   const [variablesModalVisible, setVariablesModalVisible] = useState(false);
   const [editForm] = Form.useForm();
   const [editingTemplate, setEditingTemplate] = useState<ConfigTemplate | null>(null);
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
   const [previewContent, setPreviewContent] = useState('');
   const [templateVariables, setTemplateVariables] = useState<Record<string, any>>({});
 
@@ -58,6 +60,19 @@ const TemplateManagement: React.FC = () => {
     custom: 0,
     init: 0,
   });
+
+  // 统一错误处理
+  const handleApiError = (error: unknown, defaultMessage: string) => {
+    if (error && typeof error === 'object' && 'message' in error) {
+      message.error(error.message as string);
+    } else {
+      message.error(defaultMessage);
+    }
+  };
+
+  const handleSuccess = (msg: string) => {
+    message.success(msg);
+  };
 
   // 加载模板列表
   const loadTemplates = async (params: any = {}) => {
@@ -114,21 +129,21 @@ const TemplateManagement: React.FC = () => {
       };
       if (editingTemplate) {
         await post(`/network/templates/${editingTemplate.id}/update`, data);
-        message.success('更新成功');
+        handleSuccess('更新成功');
       } else {
         await post('/network/templates', data);
-        message.success('创建成功');
+        handleSuccess('创建成功');
       }
       setModalVisible(false);
       editForm.resetFields();
       setEditingTemplate(null);
       loadTemplates();
       loadStatistics();
-    } catch (error: any) {
-      if (error.errorFields) {
+    } catch (error) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
         return;
       }
-      message.error('操作失败');
+      handleApiError(error, '操作失败');
     }
   };
 
@@ -136,11 +151,11 @@ const TemplateManagement: React.FC = () => {
   const handleDelete = async (id: string) => {
     try {
       await post(`/network/templates/${id}/delete`, {});
-      message.success('删除成功');
+      handleSuccess('删除成功');
       loadTemplates();
       loadStatistics();
     } catch (error) {
-      message.error('删除失败');
+      handleApiError(error, '删除失败');
     }
   };
 
@@ -152,12 +167,12 @@ const TemplateManagement: React.FC = () => {
     }
     try {
       await post('/network/templates/batch-delete', { ids: selectedRowKeys });
-      message.success('批量删除成功');
+      handleSuccess('批量删除成功');
       setSelectedRowKeys([]);
       loadTemplates();
       loadStatistics();
     } catch (error) {
-      message.error('批量删除失败');
+      handleApiError(error, '批量删除失败');
     }
   };
 
@@ -168,7 +183,7 @@ const TemplateManagement: React.FC = () => {
       setPreviewContent(result.data.content || '');
       setPreviewVisible(true);
     } catch (error) {
-      message.error('预览失败');
+      handleApiError(error, '预览失败');
     }
   };
 
@@ -176,11 +191,11 @@ const TemplateManagement: React.FC = () => {
   const handleClone = async (id: string) => {
     try {
       await post(`/network/templates/${id}/clone`, {});
-      message.success('克隆成功');
+      handleSuccess('克隆成功');
       loadTemplates();
       loadStatistics();
     } catch (error) {
-      message.error('克隆失败');
+      handleApiError(error, '克隆失败');
     }
   };
 
@@ -191,7 +206,7 @@ const TemplateManagement: React.FC = () => {
       setTemplateVariables(result.data.variables || {});
       setVariablesModalVisible(true);
     } catch (error) {
-      message.error('获取变量失败');
+      handleApiError(error, '获取变量失败');
     }
   };
 
@@ -304,19 +319,44 @@ const TemplateManagement: React.FC = () => {
       title: '操作',
       key: 'action',
       fixed: 'right',
-      width: 250,
-      render: (_, record) => (
-        <Space size="small">
-          <Button type="link" size="small" icon={<EyeOutlined />} onClick={() => handlePreview(record.id)}>预览</Button>
-          <Button type="link" size="small" icon={<CopyOutlined />} onClick={() => handleClone(record.id)}>克隆</Button>
-          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => openModal(record)}>编辑</Button>
-          {!record.isSystem && (
-            <Popconfirm title="确认删除?" onConfirm={() => handleDelete(record.id)}>
-              <Button type="link" size="small" danger icon={<DeleteOutlined />}>删除</Button>
-            </Popconfirm>
-          )}
-        </Space>
-      ),
+      width: 100,
+      render: (_, record) => {
+        const actions = [
+          {
+            key: 'preview',
+            label: '预览',
+            icon: <EyeOutlined />,
+            onClick: () => handlePreview(record.id),
+          },
+          {
+            key: 'clone',
+            label: '克隆',
+            icon: <CopyOutlined />,
+            onClick: () => handleClone(record.id),
+          },
+          {
+            key: 'edit',
+            label: '编辑',
+            icon: <EditOutlined />,
+            onClick: () => openModal(record),
+          },
+          ...(!record.isSystem ? [{
+            key: 'delete',
+            label: '删除',
+            icon: <DeleteOutlined />,
+            danger: true,
+            render: () => (
+              <Popconfirm title="确认删除?" onConfirm={() => handleDelete(record.id)}>
+                <Button type="link" danger icon={<DeleteOutlined />} size="small">
+                  删除
+                </Button>
+              </Popconfirm>
+            ),
+          }] : []),
+        ];
+
+        return <ActionButtons actions={actions} />;
+      },
     },
   ];
 

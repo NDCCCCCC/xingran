@@ -14,6 +14,11 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
 )
 
+const (
+	// maxBodySize 最大请求体大小（10MB）
+	maxBodySize = 10 << 20
+)
+
 // RequestDecryptionConfig 解密配置
 type RequestDecryptionConfig struct {
 	Enabled          bool     // 是否启用
@@ -50,10 +55,24 @@ func RequestDecryption(encryptor *crypto.RequestEncryptor, config *RequestDecryp
 			return
 		}
 
-		// 读取请求体
-		bodyBytes, err := io.ReadAll(c.Request.Body)
+		// 检查请求体大小
+		if c.Request.ContentLength > maxBodySize {
+			response.Error(c, response.ErrBadRequest, "请求体过大")
+			c.Abort()
+			return
+		}
+
+		// 读取请求体（带大小限制）
+		bodyBytes, err := io.ReadAll(io.LimitReader(c.Request.Body, maxBodySize+1))
 		if err != nil {
 			response.Error(c, response.ErrBadRequest, "读取请求体失败")
+			c.Abort()
+			return
+		}
+
+		// 检查是否超过限制
+		if len(bodyBytes) > maxBodySize {
+			response.Error(c, response.ErrBadRequest, "请求体过大")
 			c.Abort()
 			return
 		}
@@ -103,10 +122,10 @@ func RequestDecryption(encryptor *crypto.RequestEncryptor, config *RequestDecryp
 		decryptedData, sm4Key, iv, err := encryptor.DecryptRequestWithKeyInfo(&encReq)
 		if err != nil {
 			applogger.WithFields(map[string]interface{}{
-				"path": c.Request.URL.Path,
-				"method": c.Request.Method,
+				"path":        c.Request.URL.Path,
+				"method":      c.Request.Method,
 			}).WithError(err).Warn("解密请求体失败")
-			response.Error(c, response.ErrBadRequest, "解密失败: "+err.Error())
+			response.Error(c, response.ErrBadRequest, "解密失败")
 			c.Abort()
 			return
 		}
@@ -114,7 +133,7 @@ func RequestDecryption(encryptor *crypto.RequestEncryptor, config *RequestDecryp
 		// 验证解密后的数据是否为有效 JSON
 		if !json.Valid(decryptedData) {
 			applogger.WithField("path", c.Request.URL.Path).
-				Warn("解密数据不是有效的 JSON")
+				Warn("解密数据格式无效")
 			response.Error(c, response.ErrBadRequest, "解密数据格式无效")
 			c.Abort()
 			return
@@ -127,12 +146,12 @@ func RequestDecryption(encryptor *crypto.RequestEncryptor, config *RequestDecryp
 		c.Set("sm4_key", sm4Key)
 		c.Set("sm4_iv", iv)
 
-		// 记录解密日志
+		// 记录解密日志（不包含敏感数据）
 		applogger.WithFields(map[string]interface{}{
-			"path": c.Request.URL.Path,
-			"method": c.Request.Method,
-			"request_decrypted": true,
-			"decryption_success": true,
+			"path":                 c.Request.URL.Path,
+			"method":               c.Request.Method,
+			"request_decrypted":    true,
+			"decrypted_data_size":  len(decryptedData),
 		}).Info("请求解密成功")
 
 		c.Next()

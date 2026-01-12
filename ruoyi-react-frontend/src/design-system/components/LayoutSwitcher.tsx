@@ -3,18 +3,18 @@
  * 提供用户界面来切换布局
  */
 
-import React from 'react';
+import type { FC, ReactNode } from 'react';
 import { Segmented, Tooltip } from 'antd';
 import { ApartmentOutlined, AppstoreOutlined, RocketOutlined } from '@ant-design/icons';
 import { useLayout } from '@/store/layoutStore';
 import type { LayoutType } from '@/types/layout';
 
-export const LayoutSwitcher: React.FC = () => {
+const LayoutSwitcher: FC = () => {
   const { layout, setLayout } = useLayout();
 
   const layouts: Array<{
     value: LayoutType;
-    icon: React.ReactNode;
+    icon: ReactNode;
     label: string;
     tooltip: string;
   }> = [

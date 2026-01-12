@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Table,
   Button,
@@ -8,7 +8,6 @@ import {
   Input,
   Select,
   message,
-  Popconfirm,
   Tag,
   Card,
   Row,
@@ -41,7 +40,9 @@ import { getIconComponent } from '@/utils/iconUtils';
 
 const { Option } = Select;
 
-const MenuManagement: React.FC = () => {
+import type { FC } from 'react';
+
+const MenuManagement: FC = () => {
   const [menus, setMenus] = useState<Menu[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchForm] = Form.useForm();
@@ -51,7 +52,7 @@ const MenuManagement: React.FC = () => {
   const [parentOptions, setParentOptions] = useState<any[]>([]);
 
   // 批量删除相关状态
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
   const [cascadeDelete, setCascadeDelete] = useState(false);
 
   // 统计数据

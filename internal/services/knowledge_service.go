@@ -170,80 +170,72 @@ func (s *KnowledgeService) GetKnowledgeArticle(ctx context.Context, id string) (
 
 // CreateKnowledgeArticle 创建知识库文章
 func (s *KnowledgeService) CreateKnowledgeArticle(ctx context.Context, req *KnowledgeArticleCreateRequest, creatorID string) (*models.KnowledgeArticle, error) {
-	// 开启事务
-	tx := s.db.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
+	var article *models.KnowledgeArticle
+
+	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		newArticle := &models.KnowledgeArticle{
+			Title:             req.Title,
+			Content:           req.Content,
+			Summary:           req.Summary,
+			CategoryID:        req.CategoryID,
+			Status:            models.KnowledgeArticleStatus(req.Status),
+			ViewCount:         0,
+			LikeCount:         0,
+			SourceWorkOrderID: req.SourceWorkOrderID,
+			BaseModel:         models.BaseModel{CreatedBy: creatorID, UpdatedBy: creatorID},
 		}
-	}()
 
-	article := &models.KnowledgeArticle{
-		Title:             req.Title,
-		Content:           req.Content,
-		Summary:           req.Summary,
-		CategoryID:        req.CategoryID,
-		Status:            models.KnowledgeArticleStatus(req.Status),
-		ViewCount:         0,
-		LikeCount:         0,
-		SourceWorkOrderID: req.SourceWorkOrderID,
-		BaseModel:         models.BaseModel{CreatedBy: creatorID, UpdatedBy: creatorID},
-	}
+		if err := tx.Create(newArticle).Error; err != nil {
+			return fmt.Errorf("创建知识库文章失败: %w", err)
+		}
 
-	if err := tx.Create(article).Error; err != nil {
-		tx.Rollback()
-		return nil, fmt.Errorf("创建知识库文章失败: %w", err)
-	}
+		// 关联标签（支持标签名称或UUID）
+		if len(req.TagIDs) > 0 {
+			for _, tagInput := range req.TagIDs {
+				// 判断是UUID还是标签名称
+				var tagID string
 
-	// 关联标签（支持标签名称或UUID）
-	if len(req.TagIDs) > 0 {
-		for _, tagInput := range req.TagIDs {
-			// 判断是UUID还是标签名称
-			var tagID string
-
-			if _, err := uuid.Parse(tagInput); err == nil {
-				// 是有效的UUID，直接使用
-				tagID = tagInput
-			} else {
-				// 不是UUID，当作标签名称处理，获取或创建标签
-				tag, err := s.GetOrCreateTag(ctx, tagInput)
-				if err != nil {
-					tx.Rollback()
-					return nil, fmt.Errorf("获取或创建标签失败: %w", err)
-				}
-				tagID = tag.ID
-			}
-
-			// 检查是否已经关联
-			var count int64
-			if err := tx.Model(&models.KnowledgeArticleTag{}).
-				Where("article_id = ? AND tag_id = ?", article.ID, tagID).
-				Count(&count).Error; err != nil {
-				tx.Rollback()
-				return nil, fmt.Errorf("检查标签关联失败: %w", err)
-			}
-
-			// 如果未关联，则创建关联
-			if count == 0 {
-				articleTag := &models.KnowledgeArticleTag{
-					ArticleID: article.ID,
-					TagID:     tagID,
-					CreatedAt: article.CreatedAt,
-				}
-				if err := tx.Create(articleTag).Error; err != nil {
-					tx.Rollback()
-					return nil, fmt.Errorf("关联标签失败: %w", err)
+				if _, err := uuid.Parse(tagInput); err == nil {
+					// 是有效的UUID，直接使用
+					tagID = tagInput
+				} else {
+					// 不是UUID，当作标签名称处理，获取或创建标签
+					tag, err := s.GetOrCreateTag(ctx, tagInput)
+					if err != nil {
+						return fmt.Errorf("获取或创建标签失败: %w", err)
+					}
+					tagID = tag.ID
 				}
 
-				// 更新标签使用次数
-				tx.Model(&models.KnowledgeTag{}).Where("id = ?", tagID).UpdateColumn("use_count", gorm.Expr("use_count + 1"))
+				// 检查是否已经关联
+				var count int64
+				if err := tx.Model(&models.KnowledgeArticleTag{}).
+					Where("article_id = ? AND tag_id = ?", newArticle.ID, tagID).
+					Count(&count).Error; err != nil {
+					return fmt.Errorf("检查标签关联失败: %w", err)
+				}
+
+				// 如果未关联，则创建关联
+				if count == 0 {
+					articleTag := &models.KnowledgeArticleTag{
+						ArticleID: newArticle.ID,
+						TagID:     tagID,
+						CreatedAt: newArticle.CreatedAt,
+					}
+					if err := tx.Create(articleTag).Error; err != nil {
+						return fmt.Errorf("关联标签失败: %w", err)
+					}
+
+					// 更新标签使用次数
+					tx.Model(&models.KnowledgeTag{}).Where("id = ?", tagID).UpdateColumn("use_count", gorm.Expr("use_count + 1"))
+				}
 			}
 		}
-	}
 
-	// 提交事务
-	if err := tx.Commit().Error; err != nil {
-		return nil, fmt.Errorf("创建知识库文章失败: %w", err)
+		article = newArticle
+		return nil
+	}); err != nil {
+		return nil, err
 	}
 
 	return s.GetKnowledgeArticle(ctx, article.ID)
@@ -259,101 +251,86 @@ func (s *KnowledgeService) UpdateKnowledgeArticle(ctx context.Context, id string
 		return fmt.Errorf("查询知识库文章失败: %w", err)
 	}
 
-	// 开启事务
-	tx := s.db.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}()
-
-	updates := map[string]interface{}{
-		"updated_by": operatorID,
-	}
-
-	if req.Title != nil {
-		updates["title"] = *req.Title
-	}
-	if req.Content != nil {
-		updates["content"] = *req.Content
-	}
-	if req.Summary != nil {
-		updates["summary"] = *req.Summary
-	}
-	if req.CategoryID != nil {
-		updates["category_id"] = *req.CategoryID
-	}
-	if req.Status != nil {
-		updates["status"] = *req.Status
-	}
-
-	if err := tx.Model(&article).Updates(updates).Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("更新知识库文章失败: %w", err)
-	}
-
-	// 更新标签关联
-	if req.TagIDs != nil {
-		// 删除旧的关联
-		var oldTags []models.KnowledgeArticleTag
-		tx.Where("article_id = ?", id).Find(&oldTags)
-		for _, oldTag := range oldTags {
-			tx.Delete(&oldTag)
-			// 减少标签使用次数
-			tx.Model(&models.KnowledgeTag{}).Where("id = ?", oldTag.TagID).UpdateColumn("use_count", gorm.Expr("use_count - 1"))
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		updates := map[string]interface{}{
+			"updated_by": operatorID,
 		}
 
-		// 添加新的关联（支持标签名称或UUID）
-		for _, tagInput := range req.TagIDs {
-			// 判断是UUID还是标签名称
-			var tagID string
+		if req.Title != nil {
+			updates["title"] = *req.Title
+		}
+		if req.Content != nil {
+			updates["content"] = *req.Content
+		}
+		if req.Summary != nil {
+			updates["summary"] = *req.Summary
+		}
+		if req.CategoryID != nil {
+			updates["category_id"] = *req.CategoryID
+		}
+		if req.Status != nil {
+			updates["status"] = *req.Status
+		}
 
-			if _, err := uuid.Parse(tagInput); err == nil {
-				// 是有效的UUID，直接使用
-				tagID = tagInput
-			} else {
-				// 不是UUID，当作标签名称处理，获取或创建标签
-				tag, err := s.GetOrCreateTag(ctx, tagInput)
-				if err != nil {
-					tx.Rollback()
-					return fmt.Errorf("获取或创建标签失败: %w", err)
-				}
-				tagID = tag.ID
+		if err := tx.Model(&article).Updates(updates).Error; err != nil {
+			return fmt.Errorf("更新知识库文章失败: %w", err)
+		}
+
+		// 更新标签关联
+		if req.TagIDs != nil {
+			// 删除旧的关联
+			var oldTags []models.KnowledgeArticleTag
+			tx.Where("article_id = ?", id).Find(&oldTags)
+			for _, oldTag := range oldTags {
+				tx.Delete(&oldTag)
+				// 减少标签使用次数
+				tx.Model(&models.KnowledgeTag{}).Where("id = ?", oldTag.TagID).UpdateColumn("use_count", gorm.Expr("use_count - 1"))
 			}
 
-			// 检查是否已经关联
-			var count int64
-			if err := tx.Model(&models.KnowledgeArticleTag{}).
-				Where("article_id = ? AND tag_id = ?", id, tagID).
-				Count(&count).Error; err != nil {
-				tx.Rollback()
-				return fmt.Errorf("检查标签关联失败: %w", err)
-			}
+			// 添加新的关联（支持标签名称或UUID）
+			for _, tagInput := range req.TagIDs {
+				// 判断是UUID还是标签名称
+				var tagID string
 
-			// 如果未关联，则创建关联
-			if count == 0 {
-				articleTag := &models.KnowledgeArticleTag{
-					ArticleID: id,
-					TagID:     tagID,
-					CreatedAt: article.UpdatedAt,
-				}
-				if err := tx.Create(articleTag).Error; err != nil {
-					tx.Rollback()
-					return fmt.Errorf("关联标签失败: %w", err)
+				if _, err := uuid.Parse(tagInput); err == nil {
+					// 是有效的UUID，直接使用
+					tagID = tagInput
+				} else {
+					// 不是UUID，当作标签名称处理，获取或创建标签
+					tag, err := s.GetOrCreateTag(ctx, tagInput)
+					if err != nil {
+						return fmt.Errorf("获取或创建标签失败: %w", err)
+					}
+					tagID = tag.ID
 				}
 
-				// 更新标签使用次数
-				tx.Model(&models.KnowledgeTag{}).Where("id = ?", tagID).UpdateColumn("use_count", gorm.Expr("use_count + 1"))
+				// 检查是否已经关联
+				var count int64
+				if err := tx.Model(&models.KnowledgeArticleTag{}).
+					Where("article_id = ? AND tag_id = ?", id, tagID).
+					Count(&count).Error; err != nil {
+					return fmt.Errorf("检查标签关联失败: %w", err)
+				}
+
+				// 如果未关联，则创建关联
+				if count == 0 {
+					articleTag := &models.KnowledgeArticleTag{
+						ArticleID: id,
+						TagID:     tagID,
+						CreatedAt: article.UpdatedAt,
+					}
+					if err := tx.Create(articleTag).Error; err != nil {
+						return fmt.Errorf("关联标签失败: %w", err)
+					}
+
+					// 更新标签使用次数
+					tx.Model(&models.KnowledgeTag{}).Where("id = ?", tagID).UpdateColumn("use_count", gorm.Expr("use_count + 1"))
+				}
 			}
 		}
-	}
 
-	// 提交事务
-	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("更新知识库文章失败: %w", err)
-	}
-
-	return nil
+		return nil
+	})
 }
 
 // DeleteKnowledgeArticle 删除知识库文章
@@ -366,39 +343,26 @@ func (s *KnowledgeService) DeleteKnowledgeArticle(ctx context.Context, id string
 		return fmt.Errorf("查询知识库文章失败: %w", err)
 	}
 
-	// 开启事务
-	tx := s.db.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 删除标签关联
+		var articleTags []models.KnowledgeArticleTag
+		if err := tx.Where("article_id = ?", id).Find(&articleTags).Error; err != nil {
+			return fmt.Errorf("查询标签关联失败: %w", err)
 		}
-	}()
 
-	// 删除标签关联
-	var articleTags []models.KnowledgeArticleTag
-	if err := tx.Where("article_id = ?", id).Find(&articleTags).Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("查询标签关联失败: %w", err)
-	}
+		for _, tag := range articleTags {
+			tx.Delete(&tag)
+			// 减少标签使用次数
+			tx.Model(&models.KnowledgeTag{}).Where("id = ?", tag.TagID).UpdateColumn("use_count", gorm.Expr("use_count - 1"))
+		}
 
-	for _, tag := range articleTags {
-		tx.Delete(&tag)
-		// 减少标签使用次数
-		tx.Model(&models.KnowledgeTag{}).Where("id = ?", tag.TagID).UpdateColumn("use_count", gorm.Expr("use_count - 1"))
-	}
+		// 删除文章
+		if err := tx.Delete(&article).Error; err != nil {
+			return fmt.Errorf("删除知识库文章失败: %w", err)
+		}
 
-	// 删除文章
-	if err := tx.Delete(&article).Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("删除知识库文章失败: %w", err)
-	}
-
-	// 提交事务
-	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("删除知识库文章失败: %w", err)
-	}
-
-	return nil
+		return nil
+	})
 }
 
 // ConvertWorkOrderToArticle 将工单转换为知识库文章
@@ -749,32 +713,19 @@ func (s *KnowledgeService) UpdateTag(ctx context.Context, id string, name string
 
 // DeleteTag 删除标签
 func (s *KnowledgeService) DeleteTag(ctx context.Context, id string) error {
-	// 开启事务
-	tx := s.db.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 删除文章标签关联
+		if err := tx.Where("tag_id = ?", id).Delete(&models.KnowledgeArticleTag{}).Error; err != nil {
+			return fmt.Errorf("删除文章标签关联失败: %w", err)
 		}
-	}()
 
-	// 删除文章标签关联
-	if err := tx.Where("tag_id = ?", id).Delete(&models.KnowledgeArticleTag{}).Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("删除文章标签关联失败: %w", err)
-	}
+		// 删除标签
+		if err := tx.Delete(&models.KnowledgeTag{}, id).Error; err != nil {
+			return fmt.Errorf("删除标签失败: %w", err)
+		}
 
-	// 删除标签
-	if err := tx.Delete(&models.KnowledgeTag{}, id).Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("删除标签失败: %w", err)
-	}
-
-	// 提交事务
-	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("删除标签失败: %w", err)
-	}
-
-	return nil
+		return nil
+	})
 }
 
 // ParseTagsFromContent 从内容中解析标签（#标签）
@@ -808,57 +759,42 @@ func (s *KnowledgeService) AutoCreateTagsFromContent(ctx context.Context, articl
 		return nil
 	}
 
-	// 开启事务
-	tx := s.db.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}()
-
-	for _, tagName := range tagNames {
-		// 获取或创建标签
-		tag, err := s.GetOrCreateTag(ctx, tagName)
-		if err != nil {
-			tx.Rollback()
-			return fmt.Errorf("获取或创建标签失败: %w", err)
-		}
-
-		// 检查是否已经关联
-		var count int64
-		if err := tx.Model(&models.KnowledgeArticleTag{}).
-			Where("article_id = ? AND tag_id = ?", articleID, tag.ID).
-			Count(&count).Error; err != nil {
-			tx.Rollback()
-			return fmt.Errorf("检查标签关联失败: %w", err)
-		}
-
-		if count == 0 {
-			// 创建关联
-			articleTag := &models.KnowledgeArticleTag{
-				ArticleID: articleID,
-				TagID:     tag.ID,
-				CreatedAt: tx.NowFunc(),
-			}
-			if err := tx.Create(articleTag).Error; err != nil {
-				tx.Rollback()
-				return fmt.Errorf("关联标签失败: %w", err)
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		for _, tagName := range tagNames {
+			// 获取或创建标签
+			tag, err := s.GetOrCreateTag(ctx, tagName)
+			if err != nil {
+				return fmt.Errorf("获取或创建标签失败: %w", err)
 			}
 
-			// 更新标签使用次数
-			if err := tx.Model(&models.KnowledgeTag{}).
-				Where("id = ?", tag.ID).
-				UpdateColumn("use_count", gorm.Expr("use_count + 1")).Error; err != nil {
-				tx.Rollback()
-				return fmt.Errorf("更新标签使用次数失败: %w", err)
+			// 检查是否已经关联
+			var count int64
+			if err := tx.Model(&models.KnowledgeArticleTag{}).
+				Where("article_id = ? AND tag_id = ?", articleID, tag.ID).
+				Count(&count).Error; err != nil {
+				return fmt.Errorf("检查标签关联失败: %w", err)
+			}
+
+			if count == 0 {
+				// 创建关联
+				articleTag := &models.KnowledgeArticleTag{
+					ArticleID: articleID,
+					TagID:     tag.ID,
+					CreatedAt: tx.NowFunc(),
+				}
+				if err := tx.Create(articleTag).Error; err != nil {
+					return fmt.Errorf("关联标签失败: %w", err)
+				}
+
+				// 更新标签使用次数
+				if err := tx.Model(&models.KnowledgeTag{}).
+					Where("id = ?", tag.ID).
+					UpdateColumn("use_count", gorm.Expr("use_count + 1")).Error; err != nil {
+					return fmt.Errorf("更新标签使用次数失败: %w", err)
+				}
 			}
 		}
-	}
 
-	// 提交事务
-	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("自动创建标签失败: %w", err)
-	}
-
-	return nil
+		return nil
+	})
 }

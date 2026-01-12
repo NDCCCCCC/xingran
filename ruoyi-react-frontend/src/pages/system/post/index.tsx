@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect } from 'react';
+import type { FC } from 'react';
 import {
   Table,
   Button,
@@ -8,7 +9,6 @@ import {
   Input,
   InputNumber,
   Select,
-  message,
   Popconfirm,
   Tag,
 } from 'antd';
@@ -22,40 +22,44 @@ import {
 } from '@ant-design/icons';
 import type { Post } from '@/types';
 import { post } from '@/lib/api';
+import { useTableManager } from '@/hooks/useTableManager';
+import { handleApiError, handleSuccess } from '@/utils/errorHandler';
+import { createStatusColumn, createDateTimeColumn, createActionColumn } from '@/utils/tableHelpers';
 
 const { Option } = Select;
 const { TextArea } = Input;
 
-const PostManagement: React.FC = () => {
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [total, setTotal] = useState(0);
-  const [current, setCurrent] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [searchForm] = Form.useForm();
-  const [modalVisible, setModalVisible] = useState(false);
-  const [postForm] = Form.useForm();
-  const [editingPost, setEditingPost] = useState<Post | null>(null);
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-
-  // 加载岗位列表
-  const loadPosts = async (params: any = {}) => {
-    setLoading(true);
-    try {
-      const values = searchForm.getFieldsValue();
-      const result = await post('/system/posts/list', {
-        current: params.current || current,
-        pageSize: params.pageSize || pageSize,
-        ...values,
-      });
-      setPosts(result.data.list || []);
-      setTotal(result.data.total || 0);
-    } catch (error) {
-      console.error('加载岗位列表失败:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+const PostManagement: FC = () => {
+  const {
+    loading,
+    data: posts,
+    total,
+    current,
+    pageSize,
+    selectedRowKeys,
+    searchForm,
+    editForm: postForm,
+    editModalVisible: modalVisible,
+    editingItem: editingPost,
+    setSelectedRowKeys,
+    setEditModalVisible: setModalVisible,
+    setEditingItem: setEditingPost,
+    setCurrent,
+    setPageSize,
+    handleSearch,
+    handleReset,
+    handleAdd,
+    handleEdit,
+    handleModalClose,
+    loadData: loadPosts,
+    resetSelection,
+  } = useTableManager<Post>(
+    async (params) => {
+      const result = await post('/system/posts/list', params);
+      return { list: result.data.list || [], total: result.data.total || 0 };
+    },
+    { pageSize: 10 }
+  );
 
   // 创建岗位
   const handleCreate = async () => {
@@ -63,20 +67,18 @@ const PostManagement: React.FC = () => {
       const values = await postForm.validateFields();
       if (editingPost) {
         await post(`/system/posts/${editingPost.id}/update`, values);
-        message.success('更新成功');
+        handleSuccess('更新');
       } else {
         await post('/system/posts', values);
-        message.success('创建成功');
+        handleSuccess('创建');
       }
-      setModalVisible(false);
-      postForm.resetFields();
-      setEditingPost(null);
+      handleModalClose();
       loadPosts();
     } catch (error: any) {
       if (error.errorFields) {
         return; // 表单验证错误
       }
-      message.error('操作失败');
+      handleApiError(error, '操作');
     }
   };
 
@@ -84,40 +86,37 @@ const PostManagement: React.FC = () => {
   const handleDelete = async (id: string) => {
     try {
       await post(`/system/posts/${id}/delete`, {});
-      message.success('删除成功');
+      handleSuccess('删除');
       loadPosts();
     } catch (error) {
-      message.error('删除失败');
+      handleApiError(error, '删除');
     }
   };
 
   // 批量删除岗位
   const handleBatchDelete = async () => {
     if (selectedRowKeys.length === 0) {
-      message.warning('请选择要删除的数据');
       return;
     }
     try {
       await post('/system/posts/batch-delete', { ids: selectedRowKeys });
-      message.success('批量删除成功');
-      setSelectedRowKeys([]);
+      handleSuccess('批量删除');
+      resetSelection();
       loadPosts();
     } catch (error) {
-      message.error('批量删除失败');
+      handleApiError(error, '批量删除');
     }
   };
 
   // 打开编辑模态框
   const openModal = (record?: Post) => {
     if (record) {
-      setEditingPost(record);
+      handleEdit(record);
       postForm.setFieldsValue(record);
     } else {
-      setEditingPost(null);
-      postForm.resetFields();
+      handleAdd();
       postForm.setFieldsValue({ postSort: 0, status: 0 });
     }
-    setModalVisible(true);
   };
 
   // 表格列定义
@@ -125,42 +124,18 @@ const PostManagement: React.FC = () => {
     { title: '岗位编码', dataIndex: 'postCode', key: 'postCode', width: 150 },
     { title: '岗位名称', dataIndex: 'postName', key: 'postName', width: 150 },
     { title: '显示排序', dataIndex: 'postSort', key: 'postSort', width: 100 },
-    {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
-      width: 100,
-      render: (status: number) => (
-        <Tag color={status === 0 ? 'success' : 'error'}>
-          {status === 0 ? '正常' : '停用'}
-        </Tag>
-      ),
-    },
+    createStatusColumn('status', { width: 100 }),
     { title: '备注', dataIndex: 'remark', key: 'remark', ellipsis: true },
-    { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 180 },
-    {
-      title: '操作',
-      key: 'action',
-      fixed: 'right',
-      width: 200,
-      render: (_, record) => (
-        <Space size="small">
-          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => openModal(record)}>
-            编辑
-          </Button>
-          <Popconfirm title="确认删除?" onConfirm={() => handleDelete(record.id)}>
-            <Button type="link" size="small" danger icon={<DeleteOutlined />}>
-              删除
-            </Button>
-          </Popconfirm>
-        </Space>
-      ),
-    },
+    createDateTimeColumn('createdAt', { width: 180 }),
+    createActionColumn(
+      (record) => openModal(record),
+      (record) => handleDelete(record.id)
+    ),
   ];
 
   useEffect(() => {
     loadPosts();
-  }, [current, pageSize]);
+  }, [current, pageSize, loadPosts]);
 
   return (
     <div>
@@ -180,10 +155,10 @@ const PostManagement: React.FC = () => {
         </Form.Item>
         <Form.Item>
           <Space>
-            <Button type="primary" icon={<SearchOutlined />} onClick={() => loadPosts()}>
+            <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
               查询
             </Button>
-            <Button icon={<ReloadOutlined />} onClick={() => { searchForm.resetFields(); loadPosts(); }}>
+            <Button icon={<ReloadOutlined />} onClick={handleReset}>
               重置
             </Button>
           </Space>
@@ -225,7 +200,10 @@ const PostManagement: React.FC = () => {
           showSizeChanger: true,
           showQuickJumper: true,
           showTotal: (total) => `共 ${total} 条`,
-          onChange: (page, size) => { setCurrent(page); setPageSize(size || 10); },
+          onChange: (page, size) => {
+            setCurrent(page);
+            setPageSize(size || 10);
+          },
         }}
       />
 

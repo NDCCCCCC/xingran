@@ -11,11 +11,10 @@
  * - 自动对比度计算（深色背景配浅色字体，浅色背景配深色字体）
  */
 
-import React, { useState, useEffect } from 'react';
-import { Button, Tooltip, Dropdown, ColorPicker, Space, Divider, Typography } from 'antd';
+import { useState, useLayoutEffect } from 'react';
+import { Button, Tooltip, Dropdown, ColorPicker, Space, Typography } from 'antd';
 import { BgColorsOutlined, MenuOutlined, CheckOutlined } from '@ant-design/icons';
 import type { MenuProps, ColorPickerProps } from 'antd';
-import type { Color } from 'antd/es/color-picker';
 
 const { Text } = Typography;
 
@@ -273,18 +272,18 @@ interface ColorSwitcherProps {
 /**
  * 颜色选择器组件
  */
-export const ColorSwitcher: React.FC<ColorSwitcherProps> = ({
+import type { FC } from 'react';
+
+const ColorSwitcher: FC<ColorSwitcherProps> = ({
   size = 'middle',
   type = 'dropdown',
-  showPresetName = true,
 }) => {
   const [primaryColor, setPrimaryColor] = useState<string>('#4F46E5');
   const [sidebarColor, setSidebarColor] = useState<string>('#1E293B');
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'primary' | 'sidebar'>('primary');
 
   // 初始化：从 localStorage 读取保存的颜色
-  useEffect(() => {
+  useLayoutEffect(() => {
     const savedPrimary = localStorage.getItem('theme-primary-color');
     const savedSidebar = localStorage.getItem('theme-sidebar-color');
 
@@ -296,6 +295,7 @@ export const ColorSwitcher: React.FC<ColorSwitcherProps> = ({
       setSidebarColor(savedSidebar);
       applySidebarBackgroundColor(savedSidebar);
     }
+     
   }, []);
 
   /**
@@ -578,41 +578,6 @@ export const ColorSwitcher: React.FC<ColorSwitcherProps> = ({
         />
       </Tooltip>
     </Dropdown>
-  );
-};
-
-/**
- * 快速颜色切换按钮（点击循环切换预设）
- */
-export const QuickColorSwitcher: React.FC<{
-  size?: 'small' | 'middle' | 'large';
-}> = ({ size = 'middle' }) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  const handleNext = () => {
-    const nextIndex = (currentIndex + 1) % primaryColorPresets.length;
-    setCurrentIndex(nextIndex);
-    const preset = primaryColorPresets[nextIndex];
-    localStorage.setItem('theme-primary-color', preset.primary);
-    localStorage.setItem('theme-primary-name', preset.name);
-    applyPrimaryColor(preset.primary);
-  };
-
-  const currentPreset = primaryColorPresets[currentIndex];
-
-  return (
-    <Tooltip title={`切换颜色：${currentPreset.name}`}>
-      <Button
-        type="text"
-        size={size}
-        icon={<BgColorsOutlined />}
-        onClick={handleNext}
-        style={{
-          color: currentPreset.primary,
-          transition: 'color 0.2s ease',
-        }}
-      />
-    </Tooltip>
   );
 };
 

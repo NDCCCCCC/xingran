@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import type { FC } from 'react';
 import {
   Table,
   Button,
@@ -43,7 +44,7 @@ interface IPRange {
   endIP: string;
 }
 
-const DeviceDiscoveryPage: React.FC = () => {
+const DeviceDiscoveryPage: FC = () => {
   const [discoveries, setDiscoveries] = useState<DeviceDiscovery[]>([]);
   const [discoveredDevices, setDiscoveredDevices] = useState<NetworkDevice[]>([]);
   const [loading, setLoading] = useState(false);

@@ -67,31 +67,27 @@ func (s *NoticeService) CreateNoticeWithTargets(ctx context.Context, req *Create
 		notice.PublishStatus = models.PublishStatusDraft
 	}
 
-	tx := s.db.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
+	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 设置创建者
+		if err := tx.Create(&notice).Error; err != nil {
+			return fmt.Errorf("创建通知失败: %w", err)
 		}
-	}()
 
-	// 设置创建者
-	if err := tx.Create(&notice).Error; err != nil {
-		tx.Rollback()
-		return nil, fmt.Errorf("创建通知失败: %w", err)
-	}
-
-	// 创建接收范围（非全部用户时）
-	if req.TargetType != models.TargetAll {
-		targets := s.buildTargets(notice.ID, req)
-		if len(targets) > 0 {
-			if err := tx.Create(&targets).Error; err != nil {
-				tx.Rollback()
-				return nil, fmt.Errorf("创建接收范围失败: %w", err)
+		// 创建接收范围（非全部用户时）
+		if req.TargetType != models.TargetAll {
+			targets := s.buildTargets(notice.ID, req)
+			if len(targets) > 0 {
+				if err := tx.Create(&targets).Error; err != nil {
+					return fmt.Errorf("创建接收范围失败: %w", err)
+				}
 			}
 		}
+
+		return nil
+	}); err != nil {
+		return nil, err
 	}
 
-	tx.Commit()
 	return notice, nil
 }
 

@@ -115,6 +115,7 @@ api.interceptors.request.use(
           sm4Key: encryptedSM4Key,             // SM2 加密后的 SM4 密钥 (Base64)
           iv: hexToBase64(ivHex),              // SM4-CBC 的 IV (Base64)
           timestamp: Math.floor(Date.now() / 1000), // 转换为秒级时间戳
+          nonce: generateNonce(),                       // 随机数（防重放）
         };
 
         // 添加加密标识头
@@ -140,16 +141,6 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   async (response: AxiosResponse) => {
     let { data } = response;
-
-    // 调试：记录原始响应
-    console.log('[Response Raw]', {
-      url: response.config.url,
-      method: response.config.method,
-      status: response.status,
-      dataType: typeof data,
-      isObject: typeof data === 'object',
-      hasEncrypted: data?.encrypted,
-    });
 
     // 检查响应是否加密（只需要 encrypted: true 和 data, iv 字段）
     const isEncrypted = data && data.encrypted === true && data.data && data.iv;
@@ -270,6 +261,14 @@ api.interceptors.response.use(
 // 生成请求ID
 function generateRequestId(): string {
   return Date.now().toString(36) + Math.random().toString(36).substr(2);
+}
+
+// 生成随机 nonce（防重放）
+function generateNonce(): string {
+  // 生成 16 字节（32 个十六进制字符）的随机数
+  const array = new Uint8Array(16);
+  crypto.getRandomValues(array);
+  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
 // 封装GET请求

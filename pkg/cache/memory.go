@@ -310,11 +310,16 @@ func (m *MemoryCache) MGetJSON(ctx context.Context, keys ...string) (map[string]
 	result := make(map[string]interface{})
 	for _, key := range keys {
 		if item, exists := m.items[key]; exists && !item.IsExpired() {
+			strValue, ok := item.Value.(string)
+			if !ok {
+				result[key] = item.Value
+				continue
+			}
 			var value interface{}
-			if err := json.Unmarshal([]byte(item.Value.(string)), &value); err == nil {
+			if err := json.Unmarshal([]byte(strValue), &value); err == nil {
 				result[key] = value
 			} else {
-				result[key] = item.Value
+				result[key] = strValue
 			}
 		}
 	}
@@ -359,14 +364,22 @@ func (m *MemoryCache) HGet(ctx context.Context, key, field string) (string, erro
 	defer m.mutex.RUnlock()
 
 	if item, exists := m.items[key]; exists && !item.IsExpired() {
+		// 安全地获取值
+		strValue, ok := item.Value.(string)
+		if !ok {
+			return "", fmt.Errorf("key or field not found")
+		}
+
 		// 简化实现：将Hash存储为JSON对象
 		var hashMap map[string]string
-		if err := json.Unmarshal([]byte(item.Value.(string)), &hashMap); err == nil {
-			return hashMap[field], nil
+		if err := json.Unmarshal([]byte(strValue), &hashMap); err == nil {
+			if val, exists := hashMap[field]; exists {
+				return val, nil
+			}
 		}
 	}
 
-	return "", fmt.Errorf("key or field not found")
+	return "", ErrNotFound
 }
 
 // HSet 设置Hash字段（内存缓存简化实现）
@@ -375,10 +388,16 @@ func (m *MemoryCache) HSet(ctx context.Context, key, field string, value interfa
 	defer m.mutex.Unlock()
 
 	var hashMap map[string]string
+	var expirationTime int64
 
 	// 获取现有Hash
 	if item, exists := m.items[key]; exists && !item.IsExpired() {
-		json.Unmarshal([]byte(item.Value.(string)), &hashMap)
+		if strValue, ok := item.Value.(string); ok {
+			json.Unmarshal([]byte(strValue), &hashMap)
+			expirationTime = item.Expiration
+		} else {
+			hashMap = make(map[string]string)
+		}
 	} else {
 		hashMap = make(map[string]string)
 	}
@@ -397,11 +416,6 @@ func (m *MemoryCache) HSet(ctx context.Context, key, field string, value interfa
 		return err
 	}
 
-	var expirationTime int64
-	if item, exists := m.items[key]; exists {
-		expirationTime = item.Expiration
-	}
-
 	m.items[key] = &CacheItem{
 		Value:      string(jsonValue),
 		Expiration: expirationTime,
@@ -417,8 +431,12 @@ func (m *MemoryCache) HGetAll(ctx context.Context, key string) (map[string]strin
 	defer m.mutex.RUnlock()
 
 	if item, exists := m.items[key]; exists && !item.IsExpired() {
+		strValue, ok := item.Value.(string)
+		if !ok {
+			return make(map[string]string), nil
+		}
 		var hashMap map[string]string
-		if err := json.Unmarshal([]byte(item.Value.(string)), &hashMap); err == nil {
+		if err := json.Unmarshal([]byte(strValue), &hashMap); err == nil {
 			return hashMap, nil
 		}
 	}
@@ -432,8 +450,12 @@ func (m *MemoryCache) HDel(ctx context.Context, key string, fields ...string) er
 	defer m.mutex.Unlock()
 
 	if item, exists := m.items[key]; exists && !item.IsExpired() {
+		strValue, ok := item.Value.(string)
+		if !ok {
+			return nil
+		}
 		var hashMap map[string]string
-		if err := json.Unmarshal([]byte(item.Value.(string)), &hashMap); err == nil {
+		if err := json.Unmarshal([]byte(strValue), &hashMap); err == nil {
 			for _, field := range fields {
 				delete(hashMap, field)
 			}

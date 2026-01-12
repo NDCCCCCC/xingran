@@ -278,38 +278,29 @@ func (s *PostCacheService) DeletePost(ctx context.Context, postID string) error 
 
 // AssignUserPosts 分配用户岗位
 func (s *PostCacheService) AssignUserPosts(ctx context.Context, userID string, postIDs []string) error {
-	// 使用事务
-	tx := s.db.Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
+	if err := s.db.Transaction(func(tx *gorm.DB) error {
+		// 删除旧的岗位关联
+		if err := tx.Table("sys_user_post").Where("user_id = ?", userID).Delete(&models.UserPost{}).Error; err != nil {
+			return fmt.Errorf("删除旧岗位关联失败: %w", err)
 		}
-	}()
 
-	// 删除旧的岗位关联
-	if err := tx.Table("sys_user_post").Where("user_id = ?", userID).Delete(&models.UserPost{}).Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("删除旧岗位关联失败: %w", err)
-	}
-
-	// 添加新的岗位关联
-	if len(postIDs) > 0 {
-		var userPosts []models.UserPost
-		for _, postID := range postIDs {
-			userPosts = append(userPosts, models.UserPost{
-				UserID: userID,
-				PostID: postID,
-			})
+		// 添加新的岗位关联
+		if len(postIDs) > 0 {
+			var userPosts []models.UserPost
+			for _, postID := range postIDs {
+				userPosts = append(userPosts, models.UserPost{
+					UserID: userID,
+					PostID: postID,
+				})
+			}
+			if err := tx.Create(&userPosts).Error; err != nil {
+				return fmt.Errorf("添加岗位关联失败: %w", err)
+			}
 		}
-		if err := tx.Create(&userPosts).Error; err != nil {
-			tx.Rollback()
-			return fmt.Errorf("添加岗位关联失败: %w", err)
-		}
-	}
 
-	// 提交事务
-	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("提交事务失败: %w", err)
+		return nil
+	}); err != nil {
+		return err
 	}
 
 	// 清除用户岗位缓存

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Card,
   Row,
@@ -8,13 +8,9 @@ import {
   Table,
   Form,
   Select,
-  DatePicker,
-  Alert,
   Empty,
-  Spin,
   Typography,
   Space,
-  Button,
 } from 'antd';
 import {
   CalendarOutlined,
@@ -30,7 +26,6 @@ import {
   getDutyScheduleList,
   type MyDutyStats,
   type DutySchedule,
-  type DutyScheduleListRequest,
 } from '@/lib/dutyApi';
 import {
   getMyPendingWorkOrders,
@@ -40,11 +35,12 @@ import {
 } from '@/lib/workorderApi';
 import { useAuthStore } from '@/store/authStore';
 
-const { RangePicker } = DatePicker;
 const { Text } = Typography;
 const { Option } = Select;
 
-const MyDutyPage: React.FC = () => {
+import type { FC } from 'react';
+
+const MyDutyPage: FC = () => {
   const [form] = Form.useForm();
   const { user } = useAuthStore();
 
@@ -69,7 +65,7 @@ const MyDutyPage: React.FC = () => {
     setStatsLoading(true);
     try {
       const data = await getMyDutyStats();
-      setStats(data.data);
+      setStats(data.data || null);
     } catch (error) {
       console.error('加载值班统计失败', error);
     } finally {
@@ -126,12 +122,6 @@ const MyDutyPage: React.FC = () => {
 
   // 搜索
   const handleSearch = () => {
-    loadSchedules(1, 10);
-  };
-
-  // 重置
-  const handleReset = () => {
-    form.resetFields();
     loadSchedules(1, 10);
   };
 
@@ -209,6 +199,8 @@ const MyDutyPage: React.FC = () => {
           [WorkOrderStatus.Pending]: { text: '待处理', color: 'orange' },
           [WorkOrderStatus.Processing]: { text: '处理中', color: 'blue' },
           [WorkOrderStatus.Completed]: { text: '已完成', color: 'green' },
+          [WorkOrderStatus.Rejected]: { text: '已拒绝', color: 'red' },
+          [WorkOrderStatus.Cancelled]: { text: '已取消', color: 'default' },
         };
         const config = statusMap[status] || statusMap[WorkOrderStatus.Pending];
         return <Tag color={config.color}>{config.text}</Tag>;

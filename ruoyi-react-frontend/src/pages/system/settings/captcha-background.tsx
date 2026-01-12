@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import type { FC } from 'react';
 import {
   Table,
   Button,
@@ -63,7 +64,7 @@ const SHAPE_OPTIONS = [
   { label: '心形', value: 'heart' },
 ];
 
-const CaptchaBackgroundSettingsPage: React.FC = () => {
+const CaptchaBackgroundSettingsPage: FC = () => {
   const [backgrounds, setBackgrounds] = useState<CaptchaBackground[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);

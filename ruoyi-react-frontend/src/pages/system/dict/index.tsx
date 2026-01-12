@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import type { FC, Key } from 'react';
 import {
   Table,
   Button,
@@ -29,7 +30,7 @@ const { Option } = Select;
 const { TabPane } = Tabs;
 const { TextArea } = Input;
 
-const DictManagement: React.FC = () => {
+const DictManagement: FC = () => {
   const [dictTypes, setDictTypes] = useState<DictType[]>([]);
   const [dictDataList, setDictDataList] = useState<DictData[]>([]);
   const [loading, setLoading] = useState(false);
@@ -45,7 +46,7 @@ const DictManagement: React.FC = () => {
   const [editingType, setEditingType] = useState<DictType | null>(null);
   const [editingData, setEditingData] = useState<DictData | null>(null);
   const [selectedType, setSelectedType] = useState<string>('');
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
   const [activeTab, setActiveTab] = useState('type');
 
   // 加载字典类型列表

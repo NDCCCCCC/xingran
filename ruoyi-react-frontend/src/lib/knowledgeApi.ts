@@ -1,6 +1,5 @@
-import { get, post } from './api';
+import { post } from './api';
 import type { BaseResponse, PageResponse } from '@/types';
-import type { SimpleUser } from './workorderApi';
 
 // ==================== 类型定义 ====================
 

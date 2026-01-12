@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import type { FC } from 'react';
 import {
   Button,
   Table,
@@ -28,7 +29,8 @@ import {
   CalendarOutlined,
   FileExcelOutlined,
 } from '@ant-design/icons';
-import dayjs, { Dayjs } from 'dayjs';
+import type { Dayjs } from 'dayjs';
+import dayjs from 'dayjs';
 import * as XLSX from 'xlsx';
 import {
   getHolidayList,
@@ -43,7 +45,7 @@ import {
 const { Option } = Select;
 const { TextArea } = Input;
 
-const DutyHolidayPage: React.FC = () => {
+const DutyHolidayPage: FC = () => {
   const [editForm] = Form.useForm();
 
   const [loading, setLoading] = useState(false);

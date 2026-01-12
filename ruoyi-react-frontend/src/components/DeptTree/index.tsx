@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import type { FC, Key, CSSProperties } from 'react';
 import { Tree, Card, Spin, Input } from 'antd';
 import type { DataNode, EventDataNode } from 'antd/es/tree';
 import { ApartmentOutlined, SearchOutlined } from '@ant-design/icons';
@@ -7,17 +8,17 @@ import { post } from '@/lib/api';
 const { Search } = Input;
 
 interface DeptTreeProps {
-  onSelect?: (selectedKeys: React.Key[], info: {
+  onSelect?: (selectedKeys: Key[], info: {
     event: 'select';
     selected: boolean;
     node: EventDataNode<DataNode>;
     selectedNodes: DataNode[];
   }) => void;
-  selectedKeys?: React.Key[];
-  style?: React.CSSProperties;
+  selectedKeys?: Key[];
+  style?: CSSProperties;
 }
 
-const DeptTree: React.FC<DeptTreeProps> = ({
+const DeptTree: FC<DeptTreeProps> = ({
   onSelect: onDeptSelect,
   selectedKeys = [],
   style
@@ -25,13 +26,13 @@ const DeptTree: React.FC<DeptTreeProps> = ({
   const [treeData, setTreeData] = useState<DataNode[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchValue, setSearchValue] = useState('');
-  const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([]);
+  const [expandedKeys, setExpandedKeys] = useState<Key[]>([]);
   const [autoExpandParent, setAutoExpandParent] = useState(true);
-  const [prevExpandedKeys, setPrevExpandedKeys] = useState<React.Key[]>([]);
+  const [prevExpandedKeys, setPrevExpandedKeys] = useState<Key[]>([]);
 
   // 获取所有父节点（有子节点的节点）的 key
-  const getParentKeys = (data: DataNode[]): React.Key[] => {
-    const parentKeys: React.Key[] = [];
+  const getParentKeys = (data: DataNode[]): Key[] => {
+    const parentKeys: Key[] = [];
     const traverse = (nodes: DataNode[]) => {
       nodes.forEach(node => {
         if (node.children && node.children.length > 0) {
@@ -80,21 +81,6 @@ const DeptTree: React.FC<DeptTreeProps> = ({
     }));
   };
 
-  // 获取所有节点的key
-  const getAllKeys = (data: DataNode[]): React.Key[] => {
-    const keys: React.Key[] = [];
-    const traverse = (nodes: DataNode[]) => {
-      nodes.forEach(node => {
-        keys.push(node.key);
-        if (node.children) {
-          traverse(node.children);
-        }
-      });
-    };
-    traverse(data);
-    return keys;
-  };
-
   // 搜索处理
   const onSearch = (value: string) => {
     setSearchValue(value);
@@ -116,8 +102,8 @@ const DeptTree: React.FC<DeptTreeProps> = ({
   };
 
   // 获取需要展开的节点key
-  const getExpandedKeys = (data: DataNode[], searchValue: string): React.Key[] => {
-    const expandedKeys: React.Key[] = [];
+  const getExpandedKeys = (data: DataNode[], searchValue: string): Key[] => {
+    const expandedKeys: Key[] = [];
     const traverse = (nodes: DataNode[]) => {
       nodes.forEach(node => {
         if (node.title && node.title.toString().toLowerCase().includes(searchValue.toLowerCase())) {
@@ -134,36 +120,15 @@ const DeptTree: React.FC<DeptTreeProps> = ({
   };
 
   // 树节点展开处理 - 实现手风琴效果（同一时间只展开一个节点）
-  const onExpand = (expandedKeys: React.Key[]) => {
-    // 获取所有父节点的 key（排除叶子节点）
-    const parentKeys = getParentKeys(treeData);
-
-    // 找出当前展开的父节点
-    const currentlyExpanded = expandedKeys.filter(key => parentKeys.includes(key));
-    const previouslyExpanded = prevExpandedKeys.filter(key => parentKeys.includes(key));
-
-    // 判断是展开还是折叠操作
-    if (currentlyExpanded.length > previouslyExpanded.length) {
-      // 展开操作：找出新展开的节点，只保留它（手风琴效果）
-      const newExpandedKey = currentlyExpanded.find(key => !previouslyExpanded.includes(key));
-      if (newExpandedKey) {
-        setExpandedKeys([newExpandedKey]);
-        setPrevExpandedKeys([newExpandedKey]);
-      } else {
-        setExpandedKeys(expandedKeys);
-        setPrevExpandedKeys(expandedKeys);
-      }
-    } else {
-      // 折叠操作：使用新的展开键列表
-      setExpandedKeys(expandedKeys);
-      setPrevExpandedKeys(expandedKeys);
-    }
+  const onExpand = (expandedKeys: Key[]) => {
+    setExpandedKeys(expandedKeys);
+    setPrevExpandedKeys(expandedKeys);
     setAutoExpandParent(false);
   };
 
   // 树节点选择处理
   const handleTreeSelect = (
-    selectedKeys: React.Key[],
+    selectedKeys: Key[],
     info: {
       event: 'select';
       selected: boolean;

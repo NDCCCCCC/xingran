@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import type { FC } from 'react';
 import {
   Card,
   Table,
@@ -37,7 +38,7 @@ import {
 const { Option } = Select;
 const { TextArea } = Input;
 
-const EmailConfigPage: React.FC = () => {
+const EmailConfigPage: FC = () => {
   // 列表相关状态
   const [configs, setConfigs] = useState<EmailConfig[]>([]);
   const [loading, setLoading] = useState(false);

@@ -1,4 +1,4 @@
-import { get, post } from './api';
+import { post } from './api';
 import type { BaseResponse, PageResponse } from '@/types';
 
 // ==================== 类型定义 ====================

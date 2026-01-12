@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
+import type { FC } from 'react';
 import { Breadcrumb } from 'antd';
 import { useLocation, Link } from 'react-router-dom';
 import { useMenuStore } from '@/store/menuStore';
@@ -64,7 +65,7 @@ const buildBreadcrumbPath = (menus: Menu[], pathSnippets: string[]): Array<{ pat
   return result;
 };
 
-const BreadcrumbComponent: React.FC = () => {
+const BreadcrumbComponent: FC = () => {
   const location = useLocation();
   const { menus } = useMenuStore();
   const pathSnippets = location.pathname.split('/').filter((i) => i);

@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import type { FC, UIEvent } from 'react';
 import {
   Table,
   Button,
@@ -15,6 +16,7 @@ import {
   Row,
   Col,
   Statistic,
+  Descriptions,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -28,9 +30,12 @@ import {
   EyeOutlined,
   DatabaseOutlined,
   ClockCircleOutlined,
+  FolderOpenOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons';
 import type { NetworkDevice, ConfigBackup } from '@/types';
 import { post } from '@/lib/api';
+import ActionButtons from '@/components/shared/ActionButtons';
 
 // 差异行类型
 interface DiffLine {
@@ -49,22 +54,38 @@ interface DiffResult {
   newVersion: string;
 }
 
+// 设备备份分组
+interface DeviceBackupGroup {
+  deviceId: string;
+  deviceName: string;
+  ipAddress: string;
+  backups: ConfigBackup[];
+  latestBackup: ConfigBackup;
+  backupCount: number;
+  autoCount: number;
+  manualCount: number;
+}
+
 const { Option } = Select;
 const { TextArea } = Input;
 
-const ConfigBackupPage: React.FC = () => {
+const ConfigBackupPage: FC = () => {
   const [devices, setDevices] = useState<NetworkDevice[]>([]);
-  const [backups, setBackups] = useState<ConfigBackup[]>([]);
+  const [deviceGroups, setDeviceGroups] = useState<DeviceBackupGroup[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [backupModalVisible, setBackupModalVisible] = useState(false);
   const [diffModalVisible, setDiffModalVisible] = useState(false);
+  const [versionListDrawerVisible, setVersionListDrawerVisible] = useState(false);
+  const [restoreModalVisible, setRestoreModalVisible] = useState(false);
   const [contentDrawerVisible, setContentDrawerVisible] = useState(false);
   const [backupForm] = Form.useForm();
   const [searchForm] = Form.useForm();
   const [selectedBackup, setSelectedBackup] = useState<ConfigBackup | null>(null);
+  const [selectedRestoreBackup, setSelectedRestoreBackup] = useState<ConfigBackup | null>(null);
+  const [selectedDeviceGroup, setSelectedDeviceGroup] = useState<DeviceBackupGroup | null>(null);
   const [compareBackup1, setCompareBackup1] = useState<ConfigBackup | null>(null);
   const [compareBackup2, setCompareBackup2] = useState<ConfigBackup | null>(null);
   const [diffResult, setDiffResult] = useState<DiffResult | null>(null);
@@ -85,7 +106,7 @@ const ConfigBackupPage: React.FC = () => {
   });
 
   // 同步滚动处理
-  const handleLeftScroll = (e: React.UIEvent<HTMLDivElement>) => {
+  const handleLeftScroll = (e: UIEvent<HTMLDivElement>) => {
     if (isLeftScrolling.current) return;
     isRightScrolling.current = true;
     const target = e.target as HTMLDivElement;
@@ -97,7 +118,7 @@ const ConfigBackupPage: React.FC = () => {
     }, 0);
   };
 
-  const handleRightScroll = (e: React.UIEvent<HTMLDivElement>) => {
+  const handleRightScroll = (e: UIEvent<HTMLDivElement>) => {
     if (isRightScrolling.current) return;
     isLeftScrolling.current = true;
     const target = e.target as HTMLDivElement;
@@ -177,6 +198,43 @@ const ConfigBackupPage: React.FC = () => {
     }
   };
 
+  // 将备份列表按设备分组
+  const groupBackupsByDevice = (backups: ConfigBackup[]): DeviceBackupGroup[] => {
+    const groupMap = new Map<string, ConfigBackup[]>();
+
+    // 按设备ID分组
+    backups.forEach(backup => {
+      if (!groupMap.has(backup.deviceId)) {
+        groupMap.set(backup.deviceId, []);
+      }
+      groupMap.get(backup.deviceId)!.push(backup);
+    });
+
+    // 转换为分组数组
+    const groups: DeviceBackupGroup[] = [];
+    groupMap.forEach((deviceBackups, deviceId) => {
+      // 按创建时间倒序排序
+      deviceBackups.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+      const latestBackup = deviceBackups[0];
+      const autoCount = deviceBackups.filter(b => b.backupType === 'auto').length;
+      const manualCount = deviceBackups.filter(b => b.backupType === 'manual').length;
+
+      groups.push({
+        deviceId,
+        deviceName: latestBackup.deviceName,
+        ipAddress: latestBackup.ipAddress,
+        backups: deviceBackups,
+        latestBackup,
+        backupCount: deviceBackups.length,
+        autoCount,
+        manualCount,
+      });
+    });
+
+    return groups;
+  };
+
   // 加载备份列表
   const loadBackups = async (params: any = {}) => {
     setLoading(true);
@@ -187,10 +245,14 @@ const ConfigBackupPage: React.FC = () => {
         pageSize: params.pageSize || pageSize,
         ...values,
       });
-      setBackups(result.data.list || []);
+      const backups = result.data.list || [];
+      const groups = groupBackupsByDevice(backups);
+
+      setDeviceGroups(groups);
       setTotal(result.data.total || 0);
+
       // 更新统计数据
-      updateStatistics(result.data.list || []);
+      updateStatistics(backups);
     } catch (error) {
       console.error('加载备份列表失败:', error);
     } finally {
@@ -253,34 +315,56 @@ const ConfigBackupPage: React.FC = () => {
 
   // 恢复配置
   const handleRestore = async (backup: ConfigBackup) => {
+    try {
+      await post(`/network/backups/${backup.id}/restore`, {});
+      message.success('恢复成功');
+      setRestoreModalVisible(false);
+      setSelectedRestoreBackup(null);
+      loadBackups();
+    } catch (error) {
+      message.error('恢复失败');
+    }
+  };
+
+  // 打开还原选择模态框
+  const handleOpenRestoreModal = (group: DeviceBackupGroup) => {
+    setSelectedDeviceGroup(group);
+    setSelectedRestoreBackup(group.latestBackup);
+    setRestoreModalVisible(true);
+  };
+
+  // 确认还原
+  const handleConfirmRestore = () => {
+    if (!selectedRestoreBackup) {
+      message.warning('请选择要还原的版本');
+      return;
+    }
     Modal.confirm({
       title: '确认恢复配置',
-      content: `确定要恢复到版本 ${backup.version} 吗？此操作将会覆盖设备当前配置！`,
+      content: `确定要将 ${selectedDeviceGroup?.deviceName} 恢复到版本 ${selectedRestoreBackup.version} 吗？此操作将会覆盖设备当前配置！`,
       okText: '确认',
       cancelText: '取消',
       okType: 'danger',
-      onOk: async () => {
-        try {
-          await post(`/network/backups/${backup.id}/restore`, {});
-          message.success('恢复成功');
-        } catch (error) {
-          message.error('恢复失败');
-        }
-      },
+      onOk: () => handleRestore(selectedRestoreBackup),
     });
   };
 
-  // 查看差异
-  const handleViewDiff = async (backup: ConfigBackup) => {
-    setSelectedBackup(backup);
-    // 获取该设备的其他备份版本用于对比
-    const deviceBackups = backups.filter(b => b.deviceId === backup.deviceId);
-    if (deviceBackups.length < 2) {
+  // 打开版本列表抽屉
+  const handleOpenVersionList = (group: DeviceBackupGroup) => {
+    setSelectedDeviceGroup(group);
+    setVersionListDrawerVisible(true);
+  };
+
+  // 打开对比对话框
+  const handleOpenDiffModal = (group: DeviceBackupGroup, backup1?: ConfigBackup, backup2?: ConfigBackup) => {
+    setSelectedDeviceGroup(group);
+    if (group.backups.length < 2) {
       message.info('该设备只有一份备份，无法对比');
       return;
     }
-    setCompareBackup1(backup);
-    setCompareBackup2(null);
+    // 默认：左边是次新版，右边是最新版
+    setCompareBackup1(backup1 || group.backups[1]);
+    setCompareBackup2(backup2 || group.backups[0]);
     setDiffModalVisible(true);
   };
 
@@ -288,6 +372,10 @@ const ConfigBackupPage: React.FC = () => {
   const executeDiff = async () => {
     if (!compareBackup1 || !compareBackup2) {
       message.warning('请选择两个备份版本进行对比');
+      return;
+    }
+    if (compareBackup1.id === compareBackup2.id) {
+      message.warning('请选择不同的版本进行对比');
       return;
     }
     try {
@@ -302,8 +390,8 @@ const ConfigBackupPage: React.FC = () => {
 
       // 计算差异
       const diffResult = computeDiff(content1, content2);
-      diffResult.oldVersion = `${compareBackup1.deviceName} (版本 ${compareBackup1.version})`;
-      diffResult.newVersion = `${compareBackup2.deviceName} (版本 ${compareBackup2.version})`;
+      diffResult.oldVersion = `版本 ${compareBackup1.version} (${compareBackup1.createdAt})`;
+      diffResult.newVersion = `版本 ${compareBackup2.version} (${compareBackup2.createdAt})`;
 
       setDiffResult(diffResult);
     } catch (error) {
@@ -324,10 +412,110 @@ const ConfigBackupPage: React.FC = () => {
     { label: '手动备份', value: 'manual' },
   ];
 
-  // 备份列表表格列
-  const backupColumns: ColumnsType<ConfigBackup> = [
-    { title: '设备名称', dataIndex: 'deviceName', key: 'deviceName', width: 200 },
-    { title: 'IP地址', dataIndex: 'ipAddress', key: 'ipAddress', width: 140 },
+  // 格式化日期时间
+  const formatDateTime = (dateStr: string) => {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  };
+
+  // 设备列表表格列（按设备分组）
+  const deviceColumns: ColumnsType<DeviceBackupGroup> = [
+    {
+      title: '设备名称',
+      dataIndex: 'deviceName',
+      key: 'deviceName',
+      width: 200,
+    },
+    {
+      title: 'IP地址',
+      dataIndex: 'ipAddress',
+      key: 'ipAddress',
+      width: 140,
+    },
+    {
+      title: '备份总数',
+      dataIndex: 'backupCount',
+      key: 'backupCount',
+      width: 100,
+      render: (count: number) => (
+        <Tag color="blue" icon={<DatabaseOutlined />}>{count} 份</Tag>
+      ),
+    },
+    {
+      title: '自动/手动',
+      key: 'backupTypeCount',
+      width: 120,
+      render: (_, record) => (
+        <Space size="small">
+          <Tag color="blue" icon={<ClockCircleOutlined />}>{record.autoCount}</Tag>
+          <Tag color="green" icon={<SaveOutlined />}>{record.manualCount}</Tag>
+        </Space>
+      ),
+    },
+    {
+      title: '最新版本',
+      dataIndex: 'latestBackup',
+      key: 'latestVersion',
+      width: 80,
+      render: (backup: ConfigBackup) => <Tag>{backup.version}</Tag>,
+    },
+    {
+      title: '最新备份时间',
+      dataIndex: 'latestBackup',
+      key: 'latestBackupTime',
+      width: 150,
+      render: (backup: ConfigBackup) => formatDateTime(backup.createdAt),
+    },
+    {
+      title: '最新备份原因',
+      dataIndex: 'latestBackup',
+      key: 'latestReason',
+      width: 150,
+      ellipsis: true,
+      render: (backup: ConfigBackup) => backup.changeReason || '-',
+    },
+    {
+      title: '操作',
+      key: 'action',
+      fixed: 'right',
+      width: 100,
+      render: (_, record) => {
+        const actions = [
+          {
+            key: 'restore',
+            label: '还原',
+            icon: <DownloadOutlined />,
+            onClick: () => handleOpenRestoreModal(record),
+          },
+          {
+            key: 'versions',
+            label: '版本列表',
+            icon: <HistoryOutlined />,
+            onClick: () => handleOpenVersionList(record),
+          },
+          {
+            key: 'diff',
+            label: '版本对比',
+            icon: <DiffOutlined />,
+            onClick: () => handleOpenDiffModal(record),
+          },
+        ];
+
+        return <ActionButtons actions={actions} />;
+      },
+    },
+  ];
+
+  // 版本列表表格列
+  const versionColumns: ColumnsType<ConfigBackup> = [
+    { title: '版本号', dataIndex: 'version', key: 'version', width: 80 },
     {
       title: '备份类型',
       dataIndex: 'backupType',
@@ -338,7 +526,6 @@ const ConfigBackupPage: React.FC = () => {
         return <Tag color={backupType === 'auto' ? 'blue' : 'green'}>{option?.label}</Tag>;
       },
     },
-    { title: '版本号', dataIndex: 'version', key: 'version', width: 80 },
     {
       title: '文件大小',
       dataIndex: 'backupSize',
@@ -349,58 +536,44 @@ const ConfigBackupPage: React.FC = () => {
         return `${kb} KB`;
       },
     },
-    { title: '变更原因', dataIndex: 'changeReason', key: 'changeReason', width: 150, ellipsis: true },
+    { title: '变更原因', dataIndex: 'changeReason', key: 'changeReason', ellipsis: true },
     { title: '创建人', dataIndex: 'createdBy', key: 'createdBy', width: 100 },
     {
       title: '创建时间',
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 180,
-      render: (dateStr: string) => {
-        if (!dateStr) return '-';
-        // 格式化为 yyyy-mm-dd hh:mm:ss
-        const date = new Date(dateStr);
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        const seconds = String(date.getSeconds()).padStart(2, '0');
-        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-      },
-    },
-    {
-      title: '更新时间',
-      dataIndex: 'updatedAt',
-      key: 'updatedAt',
-      width: 180,
-      render: (dateStr: string) => {
-        if (!dateStr) return '-';
-        // 格式化为 yyyy-mm-dd hh:mm:ss
-        const date = new Date(dateStr);
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        const seconds = String(date.getSeconds()).padStart(2, '0');
-        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-      },
+      render: formatDateTime,
     },
     {
       title: '操作',
       key: 'action',
+      width: 100,
       fixed: 'right',
-      width: 250,
-      render: (_, record) => (
-        <Space size="small">
-          <Button type="link" size="small" icon={<EyeOutlined />} onClick={() => handleViewContent(record)}>查看</Button>
-          <Button type="link" size="small" icon={<DiffOutlined />} onClick={() => handleViewDiff(record)}>对比</Button>
-          <Popconfirm title="确认恢复到此版本?" onConfirm={() => handleRestore(record)}>
-            <Button type="link" size="small" icon={<DownloadOutlined />}>恢复</Button>
-          </Popconfirm>
-        </Space>
-      ),
+      render: (_, record) => {
+        const actions = [
+          {
+            key: 'view',
+            label: '查看',
+            icon: <EyeOutlined />,
+            onClick: () => handleViewContent(record),
+          },
+          {
+            key: 'restore',
+            label: '恢复',
+            icon: <DownloadOutlined />,
+            render: () => (
+              <Popconfirm title="确认恢复到此版本?" onConfirm={() => handleRestore(record)}>
+                <Button type="link" icon={<DownloadOutlined />} size="small">
+                  恢复
+                </Button>
+              </Popconfirm>
+            ),
+          },
+        ];
+
+        return <ActionButtons actions={actions} />;
+      },
     },
   ];
 
@@ -482,21 +655,21 @@ const ConfigBackupPage: React.FC = () => {
         </div>
       </Card>
 
-      {/* 备份列表表格 */}
+      {/* 设备列表表格 */}
       <Card>
         <Table
-          columns={backupColumns}
-          dataSource={backups}
+          columns={deviceColumns}
+          dataSource={deviceGroups}
           loading={loading}
-          rowKey="id"
-          scroll={{ x: 1600 }}
+          rowKey="deviceId"
+          scroll={{ x: 1200 }}
           pagination={{
             current,
             pageSize,
             total,
             showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条`,
+            showTotal: (total) => `共 ${total} 个设备`,
             onChange: (page, size) => { setCurrent(page); setPageSize(size || 10); },
           }}
         />
@@ -532,6 +705,144 @@ const ConfigBackupPage: React.FC = () => {
         </Form>
       </Modal>
 
+      {/* 还原选择模态框 */}
+      <Modal
+        title={
+          <Space>
+            <DownloadOutlined />
+            <span>选择还原版本 - {selectedDeviceGroup?.deviceName}</span>
+          </Space>
+        }
+        open={restoreModalVisible}
+        onCancel={() => {
+          setRestoreModalVisible(false);
+          setSelectedRestoreBackup(null);
+          setSelectedDeviceGroup(null);
+        }}
+        footer={[
+          <Button key="cancel" onClick={() => {
+            setRestoreModalVisible(false);
+            setSelectedRestoreBackup(null);
+            setSelectedDeviceGroup(null);
+          }}>
+            取消
+          </Button>,
+          <Button key="confirm" type="primary" danger onClick={handleConfirmRestore}>
+            确认还原
+          </Button>,
+        ]}
+        width={800}
+      >
+        {selectedDeviceGroup && (
+          <div>
+            <Descriptions column={2} style={{ marginBottom: 16 }} bordered size="small">
+              <Descriptions.Item label="设备名称">{selectedDeviceGroup.deviceName}</Descriptions.Item>
+              <Descriptions.Item label="IP地址">{selectedDeviceGroup.ipAddress}</Descriptions.Item>
+              <Descriptions.Item label="备份总数">{selectedDeviceGroup.backupCount} 份</Descriptions.Item>
+              <Descriptions.Item label="已选版本">
+                <Tag color="blue">版本 {selectedRestoreBackup?.version}</Tag>
+              </Descriptions.Item>
+            </Descriptions>
+
+            <div style={{ marginBottom: 16 }}>
+              <Space>
+                <span>选择要还原的版本：</span>
+                <Select
+                  style={{ width: 400 }}
+                  value={selectedRestoreBackup?.id}
+                  onChange={(value) => {
+                    const backup = selectedDeviceGroup.backups.find(b => b.id === value);
+                    setSelectedRestoreBackup(backup || null);
+                  }}
+                  placeholder="请选择要还原的版本"
+                >
+                  {selectedDeviceGroup.backups.map(backup => (
+                    <Option key={backup.id} value={backup.id}>
+                      <Space>
+                        <span>版本 {backup.version}</span>
+                        <Tag color={backup.backupType === 'auto' ? 'blue' : 'green'} size="small">
+                          {backup.backupType === 'auto' ? '自动' : '手动'}
+                        </Tag>
+                        <span style={{ color: '#999' }}>{formatDateTime(backup.createdAt)}</span>
+                      </Space>
+                    </Option>
+                  ))}
+                </Select>
+              </Space>
+            </div>
+
+            {selectedRestoreBackup && (
+              <Card size="small" title="选定版本详情">
+                <Descriptions column={2} size="small">
+                  <Descriptions.Item label="版本号">{selectedRestoreBackup.version}</Descriptions.Item>
+                  <Descriptions.Item label="备份类型">
+                    <Tag color={selectedRestoreBackup.backupType === 'auto' ? 'blue' : 'green'}>
+                      {selectedRestoreBackup.backupType === 'auto' ? '自动备份' : '手动备份'}
+                    </Tag>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="文件大小">
+                    {(selectedRestoreBackup.backupSize / 1024).toFixed(2)} KB
+                  </Descriptions.Item>
+                  <Descriptions.Item label="创建时间">{formatDateTime(selectedRestoreBackup.createdAt)}</Descriptions.Item>
+                  <Descriptions.Item label="创建人">{selectedRestoreBackup.createdBy}</Descriptions.Item>
+                  <Descriptions.Item label="变更原因" span={2}>
+                    {selectedRestoreBackup.changeReason || '-'}
+                  </Descriptions.Item>
+                </Descriptions>
+              </Card>
+            )}
+          </div>
+        )}
+      </Modal>
+
+      {/* 版本列表抽屉 */}
+      <Drawer
+        title={
+          <Space>
+            <FolderOpenOutlined />
+            <span>{selectedDeviceGroup?.deviceName} - 配置版本列表</span>
+            <Tag color="blue">{selectedDeviceGroup?.backupCount} 个版本</Tag>
+          </Space>
+        }
+        placement="right"
+        width={1000}
+        open={versionListDrawerVisible}
+        onClose={() => setVersionListDrawerVisible(false)}
+        extra={
+          selectedDeviceGroup && selectedDeviceGroup.backups.length >= 2 && (
+            <Button
+              type="primary"
+              icon={<DiffOutlined />}
+              onClick={() => {
+                setVersionListDrawerVisible(false);
+                handleOpenDiffModal(selectedDeviceGroup);
+              }}
+            >
+              版本对比
+            </Button>
+          )
+        }
+      >
+        {selectedDeviceGroup && (
+          <div>
+            <Descriptions column={3} style={{ marginBottom: 16 }} bordered size="small">
+              <Descriptions.Item label="设备名称">{selectedDeviceGroup.deviceName}</Descriptions.Item>
+              <Descriptions.Item label="IP地址">{selectedDeviceGroup.ipAddress}</Descriptions.Item>
+              <Descriptions.Item label="备份总数">{selectedDeviceGroup.backupCount} 份</Descriptions.Item>
+            </Descriptions>
+
+            <Table
+              columns={versionColumns}
+              dataSource={selectedDeviceGroup.backups}
+              rowKey="id"
+              pagination={false}
+              size="small"
+              scroll={{ x: 1000 }}
+            />
+          </div>
+        )}
+      </Drawer>
+
       {/* 差异对比模态框 */}
       <Modal
         title="配置差异对比"
@@ -553,17 +864,17 @@ const ConfigBackupPage: React.FC = () => {
                 style={{ width: '100%' }}
                 value={compareBackup1?.id}
                 onChange={(value) => {
-                  const backup = backups.find(b => b.id === value);
-                  setCompareBackup1(backup || null);
+                  if (selectedDeviceGroup) {
+                    const backup = selectedDeviceGroup.backups.find(b => b.id === value);
+                    setCompareBackup1(backup || null);
+                  }
                 }}
               >
-                {backups
-                  .filter(b => selectedBackup && b.deviceId === selectedBackup.deviceId)
-                  .map(backup => (
-                    <Option key={backup.id} value={backup.id}>
-                      版本 {backup.version} - {backup.createdAt}
-                    </Option>
-                  ))}
+                {selectedDeviceGroup?.backups.map(backup => (
+                  <Option key={backup.id} value={backup.id}>
+                    版本 {backup.version} - {formatDateTime(backup.createdAt)}
+                  </Option>
+                ))}
               </Select>
             </Col>
             <Col span={4} style={{ textAlign: 'center', lineHeight: '32px' }}>
@@ -575,17 +886,17 @@ const ConfigBackupPage: React.FC = () => {
                 style={{ width: '100%' }}
                 value={compareBackup2?.id}
                 onChange={(value) => {
-                  const backup = backups.find(b => b.id === value);
-                  setCompareBackup2(backup || null);
+                  if (selectedDeviceGroup) {
+                    const backup = selectedDeviceGroup.backups.find(b => b.id === value);
+                    setCompareBackup2(backup || null);
+                  }
                 }}
               >
-                {backups
-                  .filter(b => selectedBackup && b.deviceId === selectedBackup.deviceId)
-                  .map(backup => (
-                    <Option key={backup.id} value={backup.id}>
-                      版本 {backup.version} - {backup.createdAt}
-                    </Option>
-                  ))}
+                {selectedDeviceGroup?.backups.map(backup => (
+                  <Option key={backup.id} value={backup.id}>
+                    版本 {backup.version} - {formatDateTime(backup.createdAt)}
+                  </Option>
+                ))}
               </Select>
             </Col>
           </Row>
@@ -642,9 +953,8 @@ const ConfigBackupPage: React.FC = () => {
                       style={{
                         display: 'flex',
                         backgroundColor: (() => {
-                          if (line.type === 'removed') return '#ffced0'; // 红色背景
+                          if (line.type === 'removed') return '#ffced0';
                           if (line.type === 'same') {
-                            // 检查是否在变更块中
                             const prevLine = index > 0 ? diffResult.leftLines[index - 1] : null;
                             const nextLine = index < diffResult.leftLines.length - 1 ? diffResult.leftLines[index + 1] : null;
                             if ((prevLine?.type === 'removed' || nextLine?.type === 'removed')) {
@@ -655,7 +965,6 @@ const ConfigBackupPage: React.FC = () => {
                         })(),
                       }}
                     >
-                      {/* 行号列 */}
                       <div style={{
                         width: 50,
                         padding: '0 8px',
@@ -667,7 +976,6 @@ const ConfigBackupPage: React.FC = () => {
                       }}>
                         {lineNum}
                       </div>
-                      {/* 内容列 */}
                       <div style={{
                         padding: '0 12px',
                         whiteSpace: 'pre',
@@ -703,9 +1011,8 @@ const ConfigBackupPage: React.FC = () => {
                       style={{
                         display: 'flex',
                         backgroundColor: (() => {
-                          if (line.type === 'added') return '#d4edda'; // 绿色背景
+                          if (line.type === 'added') return '#d4edda';
                           if (line.type === 'same') {
-                            // 检查是否在变更块中
                             const prevLine = index > 0 ? diffResult.rightLines[index - 1] : null;
                             const nextLine = index < diffResult.rightLines.length - 1 ? diffResult.rightLines[index + 1] : null;
                             if ((prevLine?.type === 'added' || nextLine?.type === 'added')) {
@@ -716,7 +1023,6 @@ const ConfigBackupPage: React.FC = () => {
                         })(),
                       }}
                     >
-                      {/* 行号列 */}
                       <div style={{
                         width: 50,
                         padding: '0 8px',
@@ -728,7 +1034,6 @@ const ConfigBackupPage: React.FC = () => {
                       }}>
                         {lineNum}
                       </div>
-                      {/* 内容列 */}
                       <div style={{
                         padding: '0 12px',
                         whiteSpace: 'pre',
@@ -749,7 +1054,12 @@ const ConfigBackupPage: React.FC = () => {
 
       {/* 配置内容抽屉 */}
       <Drawer
-        title={`配置内容 - ${selectedBackup?.deviceName || ''} (版本 ${selectedBackup?.version || '-'})`}
+        title={
+          <Space>
+            <FileTextOutlined />
+            <span>配置内容 - {selectedBackup?.deviceName || ''} (版本 {selectedBackup?.version || '-'})</span>
+          </Space>
+        }
         placement="right"
         width={800}
         open={contentDrawerVisible}

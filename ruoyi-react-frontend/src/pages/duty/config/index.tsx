@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import type { FC } from 'react';
 import { Card, Form, Switch, Input, TimePicker, Select, Button, message, Space, Alert, Divider, Descriptions } from 'antd';
 import { SaveOutlined, ReloadOutlined, BellOutlined, SettingOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { getDutyConfig, updateDutyConfig, type DutyConfig } from '@/lib/dutyApi';
 
-const DutyConfigPage: React.FC = () => {
+const DutyConfigPage: FC = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);

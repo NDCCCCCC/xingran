@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Card,
   Row,
@@ -24,7 +24,8 @@ import {
   Upload,
   Spin,
 } from 'antd';
-import type { ColumnsType, TablePaginationConfig, UploadProps } from 'antd';
+import type { UploadProps } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
 import {
   PlusOutlined,
   ReloadOutlined,
@@ -32,7 +33,6 @@ import {
   SwapOutlined,
   EditOutlined,
   DeleteOutlined,
-  UserOutlined,
   SearchOutlined,
   LeftOutlined,
   RightOutlined,
@@ -81,7 +81,9 @@ const { Text } = Typography;
 // ============================================
 // 值班管理统一页面组件
 // ============================================
-const DutyManagementPage: React.FC = () => {
+import type { FC } from 'react';
+
+const DutyManagementPage: FC = () => {
   // ==================== 表单实例 ====================
   const [scheduleForm] = Form.useForm();
   const [generateForm] = Form.useForm();
@@ -96,7 +98,7 @@ const DutyManagementPage: React.FC = () => {
   const [scheduleTotal, setScheduleTotal] = useState(0);
   const [scheduleCurrent, setScheduleCurrent] = useState(1);
   const [schedulePageSize, setSchedulePageSize] = useState(10);
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
 
   const [allSchedules, setAllSchedules] = useState<DutySchedule[]>([]);
   const [currentWeekStart, setCurrentWeekStart] = useState(dayjs().startOf('week'));
@@ -789,7 +791,6 @@ const DutyManagementPage: React.FC = () => {
     <div style={{ padding: '16px' }}>
       <Collapse
         defaultActiveKey={['weekly', 'schedules']}
-        variant="borderless"
         style={{ background: 'transparent' }}
       >
         {/* ==================== 值班周视图 ==================== */}
@@ -815,7 +816,7 @@ const DutyManagementPage: React.FC = () => {
             </Space>
           }
         >
-          <Card variant="borderless" style={{ marginBottom: 0 }}>
+          <Card bordered={false} style={{ marginBottom: 0 }}>
             <div style={{ marginBottom: '16px' }}>
               <Text strong style={{ fontSize: '14px' }}>{getWeekRangeText()}</Text>
             </div>
@@ -925,7 +926,7 @@ const DutyManagementPage: React.FC = () => {
             </Space>
           }
         >
-          <Card variant="borderless" style={{ marginBottom: 0 }}>
+          <Card bordered={false} style={{ marginBottom: 0 }}>
             {/* 搜索表单 */}
             <Form form={scheduleForm} layout="inline" style={{ marginBottom: 16 }}>
               <Form.Item name="poolId">
@@ -972,7 +973,7 @@ const DutyManagementPage: React.FC = () => {
               scroll={{ x: 1100 }}
               rowSelection={{
                 selectedRowKeys,
-                onChange: (selectedKeys) => setSelectedRowKeys(selectedKeys),
+                onChange: (selectedKeys) => setSelectedRowKeys(selectedKeys as string[]),
               }}
               pagination={{
                 current: scheduleCurrent,
@@ -982,8 +983,8 @@ const DutyManagementPage: React.FC = () => {
                 showQuickJumper: true,
                 showTotal: (t) => `共 ${t} 条`,
                 pageSizeOptions: ['10', '20', '50', '100'],
-                onChange: (pagination) => {
-                  fetchScheduleList(pagination.current, pagination.pageSize);
+                onChange: (page, pageSize) => {
+                  fetchScheduleList(page, pageSize);
                 },
               }}
             />
@@ -1000,7 +1001,7 @@ const DutyManagementPage: React.FC = () => {
           }
           key="holidays"
         >
-          <Card variant="borderless" style={{ marginBottom: 0 }}>
+          <Card bordered={false} style={{ marginBottom: 0 }}>
             {/* 年份选择和操作按钮 */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <Space>
@@ -1134,7 +1135,7 @@ const DutyManagementPage: React.FC = () => {
           }
           key="config"
         >
-          <Card variant="borderless" style={{ marginBottom: 0 }}>
+          <Card bordered={false} style={{ marginBottom: 0 }}>
             <Row gutter={24}>
               <Col span={12}>
                 <Card title="当前配置" size="small" style={{ height: '100%' }}>

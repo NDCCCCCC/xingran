@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Table,
   Button,
@@ -36,25 +36,22 @@ import { post } from '@/lib/api';
 
 const { Option } = Select;
 const { TextArea } = Input;
-const { Step } = Steps;
 
-const CommandDispatch: React.FC = () => {
+import type { FC } from 'react';
+
+const CommandDispatch: FC = () => {
   const [devices, setDevices] = useState<NetworkDevice[]>([]);
   const [executions, setExecutions] = useState<ConfigExecution[]>([]);
-  const [loading, setLoading] = useState(false);
   const [execLoading, setExecLoading] = useState(false);
-  const [total, setTotal] = useState(0);
   const [execTotal, setExecTotal] = useState(0);
-  const [current, setCurrent] = useState(1);
   const [execCurrent, setExecCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [dispatchModalVisible, setDispatchModalVisible] = useState(false);
   const [detailDrawerVisible, setDetailDrawerVisible] = useState(false);
   const [dispatchForm] = Form.useForm();
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
   const [currentExecution, setCurrentExecution] = useState<ConfigExecution | null>(null);
   const [executionDetails, setExecutionDetails] = useState<ConfigExecutionDetail[]>([]);
-  const [activeTab, setActiveTab] = useState<'list' | 'dispatch'>('list');
 
   // 统计数据
   const [statistics, setStatistics] = useState({
@@ -144,7 +141,6 @@ const CommandDispatch: React.FC = () => {
       setDispatchModalVisible(false);
       dispatchForm.resetFields();
       setSelectedRowKeys([]);
-      setActiveTab('list');
       loadExecutions();
       loadStatistics();
     } catch (error: any) {
@@ -431,7 +427,7 @@ const CommandDispatch: React.FC = () => {
             <Table
               rowSelection={{
                 selectedRowKeys,
-                onChange: setSelectedRowKeys,
+                onChange: (keys) => setSelectedRowKeys(keys as string[]),
                 type: 'checkbox',
               }}
               columns={deviceColumns}
@@ -487,17 +483,17 @@ show running-config
                 current={currentExecution.status === 'pending' ? 0 : currentExecution.status === 'running' ? 1 : 2}
                 status={currentExecution.status === 'failed' ? 'error' : undefined}
                 size="small"
-              >
-                <Step title="待执行" />
-                <Step title="执行中" />
-                <Step title="已完成" />
-              </Steps>
+                items={[
+                  { title: '待执行' },
+                  { title: '执行中' },
+                  { title: '已完成' },
+                ]}
+              />
               <div style={{ marginTop: 16 }}>
                 <Progress
                   percent={currentExecution.totalDevices > 0
                     ? Math.round(((currentExecution.successCount + currentExecution.failureCount) / currentExecution.totalDevices) * 100)
                     : 0}
-                  success={{ successCount: currentExecution.successCount }}
                   status={currentExecution.status === 'failed' ? 'exception' : undefined}
                 />
                 <div style={{ marginTop: 8, display: 'flex', gap: 24 }}>

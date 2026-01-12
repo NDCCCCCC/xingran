@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import type { FC, MouseEvent } from 'react';
 import { Badge, Dropdown, List, Empty, Spin, Tag, Avatar, message } from 'antd';
 import { BellOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useNoticeStore } from '@/store/noticeStore';
-import { useWebSocket } from '@/hooks/useWebSocket';
 import { getNotificationList, markNoticeAsRead, markAllNoticesAsRead, ignoreNotice } from '@/lib/noticeApi';
 import type { NoticeListItem } from '@/types/notice';
 import { PRIORITY_COLORS, PRIORITY_LABELS, NOTICE_TYPE_COLORS, NOTICE_TYPE_LABELS } from '@/types/notice';
@@ -18,27 +18,35 @@ dayjs.locale('zh-cn');
  * 通知铃铛组件
  * 显示未读数量，点击展开通知列表
  */
-const NotificationBell: React.FC = () => {
+const NotificationBell: FC = () => {
   const navigate = useNavigate();
   const { unreadCount, notifications, loading, markAsRead, markAllAsRead, removeNotification, setNotifications } =
     useNoticeStore();
-  const { wsConnected } = useWebSocket();
-  const [dropdownOpen, setDropdownOpen] = useState(false);
 
-  // 加载通知列表
-  const loadNotifications = async () => {
+  // WebSocket 连接已在 Header 组件中初始化，此处无需重复调用
+
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const hasLoadedRef = useRef(false);
+
+  // 加载通知列表（移除 setNotifications 依赖，避免循环）
+  const loadNotifications = useCallback(async () => {
     try {
       const response = await getNotificationList({ current: 1, pageSize: 10 });
       setNotifications(response.data?.list || []);
     } catch (error) {
       console.error('加载通知列表失败:', error);
     }
-  };
+  }, []); // 空依赖数组
 
-  // 下拉框打开时加载通知列表
+  // 下拉框打开时加载通知列表（只加载一次）
   useEffect(() => {
-    if (dropdownOpen && notifications.length === 0) {
+    if (dropdownOpen && notifications.length === 0 && !hasLoadedRef.current) {
       loadNotifications();
+      hasLoadedRef.current = true;
+    }
+    // 当下拉框关闭时，重置加载标记，以便下次打开时可以重新加载
+    if (!dropdownOpen) {
+      hasLoadedRef.current = false;
     }
   }, [dropdownOpen, notifications.length]);
 
@@ -72,7 +80,7 @@ const NotificationBell: React.FC = () => {
   };
 
   // 删除通知（调用忽略API）
-  const handleDelete = async (e: React.MouseEvent, noticeId: string) => {
+  const handleDelete = async (e: MouseEvent, noticeId: string) => {
     e.stopPropagation();
     try {
       await ignoreNotice(noticeId);

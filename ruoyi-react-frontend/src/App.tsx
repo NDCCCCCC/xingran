@@ -1,11 +1,11 @@
-import React from 'react';
+import type { FC, ReactNode } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ConfigProvider } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import { useAuthStore } from '@/store/authStore';
 import { ThemeProvider } from '@/design-system/components/ThemeProvider';
-import { LayoutProvider } from '@/design-system/components/LayoutProvider';
+import LayoutProvider from '@/design-system/components/LayoutProvider';
 import Layout from '@/components/layout';
 import Login from '@/pages/login';
 import Dashboard from '@/pages/dashboard';
@@ -44,14 +44,10 @@ import SettingsPage from '@/pages/settings';
 import MyNoticesPage from '@/pages/my-notices';
 import NoticeDetailPage from '@/pages/my-notices/detail';
 // 管理端通知页面
-import SystemNoticesPage from '@/pages/system/notice';
 import AdminNoticeDetailPage from '@/pages/system/notice/detail';
 // 值班管理页面
 import DutyPoolPage from '@/pages/duty/pools';
 import DutyManagementPage from '@/pages/duty/management';
-import DutySchedulePage from '@/pages/duty/schedules';
-import DutyHolidayPage from '@/pages/duty/holidays';
-import DutyConfigPage from '@/pages/duty/config';
 import MyDutyPage from '@/pages/duty/my-duty';
 // 运维工单管理页面
 import WorkOrderPage from '@/pages/workorder/orders';
@@ -80,7 +76,7 @@ const queryClient = new QueryClient({
 });
 
 // 受保护的路由组件
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const ProtectedRoute: FC<{ children: ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useAuthStore();
 
   // 检查 Zustand store 和 localStorage 中的认证状态
@@ -95,7 +91,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 };
 
 // 公共路由组件（已登录用户不能访问）
-const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const PublicRoute: FC<{ children: ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useAuthStore();
   const token = localStorage.getItem('accessToken');
 

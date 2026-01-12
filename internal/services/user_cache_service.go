@@ -291,38 +291,29 @@ func (s *UserCacheService) DeleteUser(ctx context.Context, userID string) error 
 
 // AssignUserRoles 分配用户角色
 func (s *UserCacheService) AssignUserRoles(ctx context.Context, userID string, roleIDs []string) error {
-	// 使用事务
-	tx := s.db.Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
+	if err := s.db.Transaction(func(tx *gorm.DB) error {
+		// 删除旧的角色关联
+		if err := tx.Table("sys_user_role").Where("user_id = ?", userID).Delete(&models.UserRole{}).Error; err != nil {
+			return fmt.Errorf("删除旧角色关联失败: %w", err)
 		}
-	}()
 
-	// 删除旧的角色关联
-	if err := tx.Table("sys_user_role").Where("user_id = ?", userID).Delete(&models.UserRole{}).Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("删除旧角色关联失败: %w", err)
-	}
-
-	// 添加新的角色关联
-	if len(roleIDs) > 0 {
-		var userRoles []models.UserRole
-		for _, roleID := range roleIDs {
-			userRoles = append(userRoles, models.UserRole{
-				UserID: userID,
-				RoleID: roleID,
-			})
+		// 添加新的角色关联
+		if len(roleIDs) > 0 {
+			var userRoles []models.UserRole
+			for _, roleID := range roleIDs {
+				userRoles = append(userRoles, models.UserRole{
+					UserID: userID,
+					RoleID: roleID,
+				})
+			}
+			if err := tx.Create(&userRoles).Error; err != nil {
+				return fmt.Errorf("添加角色关联失败: %w", err)
+			}
 		}
-		if err := tx.Create(&userRoles).Error; err != nil {
-			tx.Rollback()
-			return fmt.Errorf("添加角色关联失败: %w", err)
-		}
-	}
 
-	// 提交事务
-	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("提交事务失败: %w", err)
+		return nil
+	}); err != nil {
+		return err
 	}
 
 	// 清除缓存

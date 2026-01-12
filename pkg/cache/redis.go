@@ -17,24 +17,35 @@ type RedisCache struct {
 	prefix string
 }
 
+const (
+	// dialTimeout 连接超时时间
+	dialTimeout = 10 * time.Second
+	// readTimeout 读取超时时间
+	readTimeout = 5 * time.Second
+	// writeTimeout 写入超时时间
+	writeTimeout = 5 * time.Second
+	// poolTimeout 连接池超时时间
+	poolTimeout = 10 * time.Second
+)
+
 // NewRedisCache 创建Redis缓存实例
 func NewRedisCache(config *CacheConfig, keyPrefix string) (*RedisCache, error) {
 	rdb := redis.NewClient(&redis.Options{
-		Addr:         fmt.Sprintf("%s:%d", config.Host, config.Port),
-		Password:     config.Password,
-		DB:           config.DB,
-		PoolSize:     config.PoolSize,
-		MaxRetries:   3,                // 最大重试次数
-		MinRetryBackoff: 8 * time.Millisecond,  // 最小重试等待时间
-		MaxRetryBackoff: 512 * time.Millisecond, // 最大重试等待时间
-		DialTimeout:  10 * time.Second,  // 连接超时
-		ReadTimeout:  5 * time.Second,   // 读取超时
-		WriteTimeout: 5 * time.Second,  // 写入超时
-		PoolTimeout:  10 * time.Second,  // 连接池超时
+		Addr:           fmt.Sprintf("%s:%d", config.Host, config.Port),
+		Password:       config.Password,
+		DB:             config.DB,
+		PoolSize:       config.PoolSize,
+		MaxRetries:     3,                         // 最大重试次数
+		MinRetryBackoff: 8 * time.Millisecond,     // 最小重试等待时间
+		MaxRetryBackoff: 512 * time.Millisecond,   // 最大重试等待时间
+		DialTimeout:    dialTimeout,               // 连接超时
+		ReadTimeout:    readTimeout,               // 读取超时
+		WriteTimeout:   writeTimeout,              // 写入超时
+		PoolTimeout:    poolTimeout,               // 连接池超时
 	})
 
 	// 测试连接 - 使用更长的超时时间
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
 	defer cancel()
 
 	if err := rdb.Ping(ctx).Err(); err != nil {

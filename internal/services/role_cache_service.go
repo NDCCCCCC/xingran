@@ -55,12 +55,7 @@ func (s *RoleCacheService) queryAllRoles() ([]*models.Role, error) {
 	}
 
 	// 转换为指针数组
-	rolePtrs := make([]*models.Role, len(roles))
-	for i := range roles {
-		rolePtrs[i] = &roles[i]
-	}
-
-	return rolePtrs, nil
+	return toSlicePtr(roles), nil
 }
 
 // GetRoleMenusWithCache 获取角色菜单权限（带缓存）
@@ -108,12 +103,7 @@ func (s *RoleCacheService) queryRoleMenus(roleID string) ([]*models.Menu, error)
 	}
 
 	// 转换为指针数组
-	menuPtrs := make([]*models.Menu, len(menus))
-	for i := range menus {
-		menuPtrs[i] = &menus[i]
-	}
-
-	return menuPtrs, nil
+	return toSlicePtr(menus), nil
 }
 
 // GetRoleMenuTreeWithCache 获取角色菜单树（带缓存）
@@ -202,12 +192,7 @@ func (s *RoleCacheService) queryRoleDepts(roleID string) ([]*models.Department, 
 	}
 
 	// 转换为指针数组
-	deptPtrs := make([]*models.Department, len(depts))
-	for i := range depts {
-		deptPtrs[i] = &depts[i]
-	}
-
-	return deptPtrs, nil
+	return toSlicePtr(depts), nil
 }
 
 // InvalidateRoleCache 清除角色相关缓存
@@ -248,38 +233,10 @@ func (s *RoleCacheService) InvalidateAllRoleCache(ctx context.Context) error {
 
 // AssignRoleMenus 分配角色菜单权限
 func (s *RoleCacheService) AssignRoleMenus(ctx context.Context, roleID string, menuIDs []string) error {
-	// 使用事务
-	tx := s.db.Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}()
-
-	// 删除旧的菜单关联
-	if err := tx.Table("sys_role_menu").Where("role_id = ?", roleID).Delete(&models.RoleMenu{}).Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("删除旧菜单关联失败: %w", err)
-	}
-
-	// 添加新的菜单关联
-	if len(menuIDs) > 0 {
-		var roleMenus []models.RoleMenu
-		for _, menuID := range menuIDs {
-			roleMenus = append(roleMenus, models.RoleMenu{
-				RoleID: roleID,
-				MenuID: menuID,
-			})
-		}
-		if err := tx.Create(&roleMenus).Error; err != nil {
-			tx.Rollback()
-			return fmt.Errorf("添加菜单关联失败: %w", err)
-		}
-	}
-
-	// 提交事务
-	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("提交事务失败: %w", err)
+	if err := s.assignRoleRelations(ctx, roleID, menuIDs, "sys_role_menu", &models.RoleMenu{}, func(id string) interface{} {
+		return &models.RoleMenu{RoleID: roleID, MenuID: id}
+	}); err != nil {
+		return err
 	}
 
 	// 清除缓存
@@ -292,38 +249,10 @@ func (s *RoleCacheService) AssignRoleMenus(ctx context.Context, roleID string, m
 
 // AssignRoleDepts 分配角色部门权限
 func (s *RoleCacheService) AssignRoleDepts(ctx context.Context, roleID string, deptIDs []string) error {
-	// 使用事务
-	tx := s.db.Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}()
-
-	// 删除旧的部门关联
-	if err := tx.Table("sys_role_dept").Where("role_id = ?", roleID).Delete(&models.RoleDept{}).Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("删除旧部门关联失败: %w", err)
-	}
-
-	// 添加新的部门关联
-	if len(deptIDs) > 0 {
-		var roleDepts []models.RoleDept
-		for _, deptID := range deptIDs {
-			roleDepts = append(roleDepts, models.RoleDept{
-				RoleID: roleID,
-				DeptID: deptID,
-			})
-		}
-		if err := tx.Create(&roleDepts).Error; err != nil {
-			tx.Rollback()
-			return fmt.Errorf("添加部门关联失败: %w", err)
-		}
-	}
-
-	// 提交事务
-	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("提交事务失败: %w", err)
+	if err := s.assignRoleRelations(ctx, roleID, deptIDs, "sys_role_dept", &models.RoleDept{}, func(id string) interface{} {
+		return &models.RoleDept{RoleID: roleID, DeptID: id}
+	}); err != nil {
+		return err
 	}
 
 	// 清除缓存
@@ -332,4 +261,37 @@ func (s *RoleCacheService) AssignRoleDepts(ctx context.Context, roleID string, d
 	}
 
 	return nil
+}
+
+// assignRoleRelations 通用的角色关联分配函数
+func (s *RoleCacheService) assignRoleRelations(ctx context.Context, roleID string, ids []string, tableName string, model interface{}, relationFactory func(string) interface{}) error {
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		// 删除旧关联
+		if err := tx.Table(tableName).Where("role_id = ?", roleID).Delete(model).Error; err != nil {
+			return fmt.Errorf("删除旧关联失败: %w", err)
+		}
+
+		// 添加新关联
+		if len(ids) > 0 {
+			relations := make([]interface{}, len(ids))
+			for i, id := range ids {
+				relations[i] = relationFactory(id)
+			}
+			if err := tx.Table(tableName).Create(&relations).Error; err != nil {
+				return fmt.Errorf("添加关联失败: %w", err)
+			}
+		}
+
+		return nil
+	})
+}
+
+// toSlicePtr 将值切片转换为指针切片（泛型版本）
+// 示例: toSlicePtr([]models.Role{...}) => []*models.Role{...}
+func toSlicePtr[T any](slice []T) []*T {
+	result := make([]*T, len(slice))
+	for i := range slice {
+		result[i] = &slice[i]
+	}
+	return result
 }

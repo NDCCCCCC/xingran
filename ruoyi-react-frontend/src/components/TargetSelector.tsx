@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import type { FC, Key } from 'react';
 import { Form, Select, Tree, Checkbox, message, Spin } from 'antd';
 import { get, post } from '@/lib/api';
 import type { TargetType, DeptTreeNode, RoleOption, UserOption } from '@/types/notice';
@@ -18,7 +19,7 @@ interface TargetSelectorProps {
  * 目标选择器组件
  * 支持按部门、角色、用户选择通知接收范围
  */
-const TargetSelector: React.FC<TargetSelectorProps> = ({
+const TargetSelector: FC<TargetSelectorProps> = ({
   targetType,
   onTargetTypeChange,
   targetDepts = [],
@@ -32,8 +33,8 @@ const TargetSelector: React.FC<TargetSelectorProps> = ({
   const [deptTree, setDeptTree] = useState<DeptTreeNode[]>([]);
   const [roles, setRoles] = useState<RoleOption[]>([]);
   const [users, setUsers] = useState<UserOption[]>([]);
-  const [checkedDeptKeys, setCheckedDeptKeys] = useState<React.Key[]>(targetDepts);
-  const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([]);
+  const [checkedDeptKeys, setCheckedDeptKeys] = useState<Key[]>(targetDepts);
+  const [expandedKeys, setExpandedKeys] = useState<Key[]>([]);
 
   // 加载部门树
   const loadDeptTree = async () => {
@@ -96,7 +97,7 @@ const TargetSelector: React.FC<TargetSelectorProps> = ({
   }, [targetType]);
 
   // 部门树选中变化
-  const handleDeptCheck = (checkedKeysValue: React.Key[] | { checked: React.Key[]; halfChecked: React.Key[] }) => {
+  const handleDeptCheck = (checkedKeysValue: Key[] | { checked: Key[]; halfChecked: Key[] }) => {
     const keys = Array.isArray(checkedKeysValue) ? checkedKeysValue : checkedKeysValue.checked;
     setCheckedDeptKeys(keys);
     onTargetDeptsChange(keys as string[]);

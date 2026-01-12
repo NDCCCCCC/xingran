@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import type { FC } from 'react';
 import {
   Table,
   Button,
@@ -7,12 +7,12 @@ import {
   Input,
   InputNumber,
   Select,
-  message,
   Card,
   Row,
   Col,
   Statistic,
   Tag,
+  message,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -24,18 +24,14 @@ import {
 } from '@ant-design/icons';
 import type { DeviceMACAddress, NetworkDevice } from '@/types';
 import { post } from '@/lib/api';
+import { useTableManager } from '@/hooks/useTableManager';
+import { withErrorHandling } from '@/utils/errorHandler';
+import { useState, useEffect } from 'react';
 
 const { Option } = Select;
 
-const MACAddressPage: React.FC = () => {
-  const [macAddresses, setMacAddresses] = useState<DeviceMACAddress[]>([]);
+const MACAddressPage: FC = () => {
   const [devices, setDevices] = useState<NetworkDevice[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [total, setTotal] = useState(0);
-  const [current, setCurrent] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [searchForm] = Form.useForm();
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
   // 统计数据
   const [statistics, setStatistics] = useState({
@@ -45,37 +41,34 @@ const MACAddressPage: React.FC = () => {
     secure: 0,
   });
 
-  // 加载MAC地址列表
-  const loadMACAddresses = async (params: any = {}) => {
-    setLoading(true);
-    try {
+  const {
+    loading,
+    data: macAddresses,
+    total,
+    current,
+    pageSize,
+    selectedRowKeys,
+    setSelectedRowKeys,
+    searchForm,
+    loadData: loadMACAddresses,
+    handleSearch,
+    handleReset,
+    handleRefresh,
+    setCurrent,
+    setPageSize,
+  } = useTableManager<DeviceMACAddress>(
+    async (params) => {
       const values = searchForm.getFieldsValue();
       const result = await post('/network/mac/list', {
         current: params.current || current,
         pageSize: params.pageSize || pageSize,
         ...values,
       });
-      setMacAddresses(result.data.list);
-      setTotal(result.data.total);
       // 更新统计数据
       updateStatistics(result.data.list || []);
-    } catch (error) {
-      console.error('加载MAC地址列表失败:', error);
-    } finally {
-      setLoading(false);
+      return result.data;
     }
-  };
-
-  // 加载统计数据
-  const loadStatistics = async () => {
-    try {
-      const result = await post('/network/mac/list', { current: 1, pageSize: 10000 });
-      const allMACs = result.data.list || [];
-      updateStatistics(allMACs);
-    } catch (error) {
-      console.error('加载统计数据失败:', error);
-    }
-  };
+  );
 
   // 更新统计数据
   const updateStatistics = (macList: DeviceMACAddress[]) => {
@@ -103,38 +96,28 @@ const MACAddressPage: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    loadDevices();
+  }, []);
+
   // 批量删除
   const handleBatchDelete = async () => {
     if (selectedRowKeys.length === 0) {
       message.warning('请选择要删除的数据');
       return;
     }
-    try {
-      await post('/network/mac/batch-delete', { ids: selectedRowKeys });
-      message.success('批量删除成功');
-      setSelectedRowKeys([]);
-      loadMACAddresses();
-      loadStatistics();
-    } catch (error) {
-      message.error('批量删除失败');
-    }
-  };
-
-  // 搜索
-  const handleSearch = () => {
-    loadMACAddresses();
-  };
-
-  // 重置
-  const handleReset = () => {
-    searchForm.resetFields();
-    loadMACAddresses();
-  };
-
-  // 刷新
-  const handleRefresh = () => {
-    loadMACAddresses();
-    loadStatistics();
+    await withErrorHandling(
+      async () => {
+        await post('/network/mac/batch-delete', { ids: selectedRowKeys });
+        return '批量删除成功';
+      },
+      {
+        onSuccess: () => {
+          setSelectedRowKeys([]);
+          loadMACAddresses();
+        },
+      }
+    );
   };
 
   // MAC类型选项
@@ -169,12 +152,6 @@ const MACAddressPage: React.FC = () => {
     },
     { title: '采集时间', dataIndex: 'collectedAt', key: 'collectedAt', width: 180 },
   ];
-
-  useEffect(() => {
-    loadMACAddresses();
-    loadStatistics();
-    loadDevices();
-  }, [current, pageSize]);
 
   return (
     <div>

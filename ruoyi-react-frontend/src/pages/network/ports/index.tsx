@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import type { FC } from 'react';
 import {
   Table,
   Button,
@@ -7,11 +7,11 @@ import {
   Input,
   Select,
   Tag,
-  message,
   Card,
   Row,
   Col,
   Statistic,
+  message,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -27,24 +27,21 @@ import {
 import type { DevicePortStatus, NetworkDevice } from '@/types';
 import { post, get } from '@/lib/api';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useTableManager } from '@/hooks/useTableManager';
+import { withErrorHandling } from '@/utils/errorHandler';
+import { useState } from 'react';
 import dayjs from 'dayjs';
 
 const { Option } = Select;
 
-const PortStatusPage: React.FC = () => {
+const PortStatusPage: FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const deviceIdFromUrl = searchParams.get('deviceId') || '';
   const isFromDevice = !!deviceIdFromUrl;
 
-  const [portStatus, setPortStatus] = useState<DevicePortStatus[]>([]);
   const [devices, setDevices] = useState<NetworkDevice[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [total, setTotal] = useState(0);
-  const [current, setCurrent] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [searchForm] = Form.useForm();
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [collecting, setCollecting] = useState(false);
 
   // 统计数据
@@ -55,10 +52,23 @@ const PortStatusPage: React.FC = () => {
     dot1xEnabled: 0,
   });
 
-  // 加载端口状态列表
-  const loadPortStatus = async (params: any = {}) => {
-    setLoading(true);
-    try {
+  const {
+    loading,
+    data: portStatus,
+    total,
+    current,
+    pageSize,
+    selectedRowKeys,
+    setSelectedRowKeys,
+    searchForm,
+    loadData: loadPortStatus,
+    handleSearch,
+    handleReset,
+    handleRefresh,
+    setCurrent,
+    setPageSize,
+  } = useTableManager<DevicePortStatus>(
+    async (params) => {
       const values = searchForm.getFieldsValue();
       const result = await post('/network/ports/list', {
         current: params.current || current,
@@ -67,16 +77,11 @@ const PortStatusPage: React.FC = () => {
         // 如果从设备页面跳转过来，强制使用 URL 中的 deviceId
         ...(isFromDevice ? { deviceId: deviceIdFromUrl } : {}),
       });
-      setPortStatus(result.data.list);
-      setTotal(result.data.total);
       // 更新统计数据
       updateStatistics(result.data.list || []);
-    } catch (error) {
-      console.error('加载端口状态失败:', error);
-    } finally {
-      setLoading(false);
+      return result.data;
     }
-  };
+  );
 
   // 加载统计数据
   const loadStatistics = async () => {
@@ -120,19 +125,34 @@ const PortStatusPage: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    // 如果从设备页面跳转过来，初始化表单的 deviceId
+    if (isFromDevice && deviceIdFromUrl) {
+      searchForm.setFieldsValue({ deviceId: deviceIdFromUrl });
+    }
+    loadStatistics();
+    loadDevices();
+  }, []);
+
   // 采集所有设备端口状态
   const handleCollectAll = async () => {
     setCollecting(true);
-    try {
-      await post('/network/ports/collect-all', {});
-      message.success('采集任务已创建');
-      loadPortStatus();
-      loadStatistics();
-    } catch (error) {
-      message.error('创建采集任务失败');
-    } finally {
-      setCollecting(false);
-    }
+    await withErrorHandling(
+      async () => {
+        await post('/network/ports/collect-all', {});
+        return '采集任务已创建';
+      },
+      {
+        onSuccess: () => {
+          loadPortStatus();
+          loadStatistics();
+        },
+        onError: () => {
+          setCollecting(false);
+        },
+      }
+    );
+    setCollecting(false);
   };
 
   // 批量删除
@@ -141,32 +161,19 @@ const PortStatusPage: React.FC = () => {
       message.warning('请选择要删除的数据');
       return;
     }
-    try {
-      await post('/network/ports/batch-delete', { ids: selectedRowKeys });
-      message.success('批量删除成功');
-      setSelectedRowKeys([]);
-      loadPortStatus();
-      loadStatistics();
-    } catch (error) {
-      message.error('批量删除失败');
-    }
-  };
-
-  // 搜索
-  const handleSearch = () => {
-    loadPortStatus();
-  };
-
-  // 重置
-  const handleReset = () => {
-    searchForm.resetFields();
-    loadPortStatus();
-  };
-
-  // 刷新
-  const handleRefresh = () => {
-    loadPortStatus();
-    loadStatistics();
+    await withErrorHandling(
+      async () => {
+        await post('/network/ports/batch-delete', { ids: selectedRowKeys });
+        return '批量删除成功';
+      },
+      {
+        onSuccess: () => {
+          setSelectedRowKeys([]);
+          loadPortStatus();
+          loadStatistics();
+        },
+      }
+    );
   };
 
   // 表格列
@@ -278,16 +285,6 @@ const PortStatusPage: React.FC = () => {
       render: (date: string) => date ? dayjs(date).format('YYYY-MM-DD HH:mm:ss') : '-',
     },
   ];
-
-  useEffect(() => {
-    // 如果从设备页面跳转过来，初始化表单的 deviceId
-    if (isFromDevice && deviceIdFromUrl) {
-      searchForm.setFieldsValue({ deviceId: deviceIdFromUrl });
-    }
-    loadPortStatus();
-    loadStatistics();
-    loadDevices();
-  }, [current, pageSize]);
 
   return (
     <div>

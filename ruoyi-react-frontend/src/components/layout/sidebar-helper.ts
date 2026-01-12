@@ -70,19 +70,6 @@ export function buildMenuPathMap(
         pathMap.set(menu.id, menuInfo);
       }
 
-      // 调试：记录所有菜单的 key
-      console.log('[buildMenuPathMap] 存储菜单:', {
-        key: menuKey,
-        id: menu.id,
-        originalPath: menu.path,
-        builtPath: menuPath,
-        normalizedPath: menuPath ? (menuPath.startsWith('/') ? menuPath.slice(1) : menuPath) : null,
-        level,
-        parentPath,
-        isTopLevel,
-        menuName: menu.menuName
-      });
-
       // 递归处理子菜单
       if (menu.children && menu.children.length > 0) {
         const newSecondLevelKey = level === 2 ? menuKey : secondLevelKey;

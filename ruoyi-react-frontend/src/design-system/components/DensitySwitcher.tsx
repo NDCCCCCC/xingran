@@ -3,7 +3,7 @@
  * 支持紧凑/舒适/宽松三种模式
  */
 
-import React from 'react';
+import type { FC, ReactNode } from 'react';
 import { Segmented } from 'antd';
 import { ColumnHeightOutlined, BorderOutlined, AppstoreOutlined } from '@ant-design/icons';
 import { useLayout } from '@/store/layoutStore';
@@ -12,7 +12,7 @@ import type { DensityMode } from '@/types/layout';
 interface DensityOption {
   label: string;
   value: DensityMode;
-  icon: React.ReactNode;
+  icon: ReactNode;
   description: string;
 }
 
@@ -37,7 +37,7 @@ const densityOptions: DensityOption[] = [
   },
 ];
 
-const DensitySwitcher: React.FC = () => {
+const DensitySwitcher: FC = () => {
   const { density, setDensity } = useLayout();
 
   return (
