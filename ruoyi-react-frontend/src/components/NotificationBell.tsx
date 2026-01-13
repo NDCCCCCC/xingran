@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { FC, MouseEvent } from 'react';
-import { Badge, Dropdown, List, Empty, Spin, Tag, Avatar, message } from 'antd';
+import { Badge, Dropdown, Empty, Spin, Tag, Avatar, message } from 'antd';
 import { BellOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useNoticeStore } from '@/store/noticeStore';
@@ -123,12 +123,11 @@ const NotificationBell: FC = () => {
         {notifications.length === 0 ? (
           <Empty description="暂无通知" className="py-8" image={Empty.PRESENTED_IMAGE_SIMPLE} />
         ) : (
-          <List
-            dataSource={notifications}
-            renderItem={(notice) => (
-              <List.Item
+          <div className="flex flex-col">
+            {notifications.map((notice) => (
+              <div
                 key={notice.id}
-                className={`cursor-pointer hover:bg-gray-50 px-4 py-3 ${!notice.isRead ? 'bg-blue-50' : ''}`}
+                className={`cursor-pointer hover:bg-gray-50 px-4 py-3 border-b last:border-b-0 ${!notice.isRead ? 'bg-blue-50' : ''}`}
                 onClick={() => handleClickNotification(notice)}
               >
                 <div className="flex-1">
@@ -139,11 +138,11 @@ const NotificationBell: FC = () => {
                         <span className="font-medium text-sm truncate">{notice.noticeTitle}</span>
                       </div>
                       <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <Tag color={NOTICE_TYPE_COLORS[notice.noticeType]} bordered={false}>
+                        <Tag color={NOTICE_TYPE_COLORS[notice.noticeType]} variant="filled">
                           {NOTICE_TYPE_LABELS[notice.noticeType]}
                         </Tag>
                         {notice.priority > 0 && (
-                          <Tag color={PRIORITY_COLORS[notice.priority]} bordered={false}>
+                          <Tag color={PRIORITY_COLORS[notice.priority]} variant="filled">
                             {PRIORITY_LABELS[notice.priority]}
                           </Tag>
                         )}
@@ -156,9 +155,9 @@ const NotificationBell: FC = () => {
                     />
                   </div>
                 </div>
-              </List.Item>
-            )}
-          />
+              </div>
+            ))}
+          </div>
         )}
       </Spin>
     </div>
