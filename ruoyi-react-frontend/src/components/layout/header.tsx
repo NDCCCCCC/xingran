@@ -2,9 +2,7 @@ import { Layout, Avatar, Dropdown, Space, Divider } from 'antd';
 import { UserOutlined, LogoutOutlined, SettingOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
-import { useNoticeStore } from '@/store/noticeStore';
 import { useWebSocket } from '@/hooks/useWebSocket';
-import { useLayout } from '@/store/layoutStore';
 import NotificationBell from '@/components/NotificationBell';
 import ColorSwitcher from '@/design-system/components/ColorSwitcher';
 import GlobalSearch from '@/components/shared/GlobalSearch';
@@ -16,8 +14,6 @@ import type { FC } from 'react';
 
 const Header: FC = () => {
   const { user, logout } = useAuthStore();
-  const unreadCount = useNoticeStore(state => state.unreadCount);
-  const { toggleSidebar, layout } = useLayout();
   const navigate = useNavigate();
 
   // 初始化 WebSocket 连接
