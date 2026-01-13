@@ -591,8 +591,27 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			serverRooms.POST("/batch", serverRoomHandler.BatchOperation)
 		}
 
+		// 专线管理
+		dedicatedLines := ops.Group("/dedicated-lines")
+		dedicatedLines.Use(middleware.RequirePermissions([]string{
+			"ops:line:list",
+			"ops:line:add",
+			"ops:line:edit",
+			"ops:line:delete",
+		}, core))
+		{
+			dedicatedLineService := opsServices.NewDedicatedLineService(core.DB)
+			dedicatedLineHandler := operations.NewDedicatedLineHandler(dedicatedLineService)
+
+			dedicatedLines.POST("", dedicatedLineHandler.Create)
+			dedicatedLines.POST("/list", dedicatedLineHandler.List)
+			dedicatedLines.POST("/:id", dedicatedLineHandler.GetByID)
+			dedicatedLines.POST("/:id/update", dedicatedLineHandler.Update)
+			dedicatedLines.POST("/:id/delete", dedicatedLineHandler.Delete)
+			dedicatedLines.POST("/batch", dedicatedLineHandler.BatchOperation)
+		}
+
 		// 其他运维管理模块路由将在后续添加
-		// dedicated-lines - 专线管理
 		// room-devices - 机房设备管理
 	}
 }
