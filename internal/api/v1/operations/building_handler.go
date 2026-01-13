@@ -5,15 +5,15 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
+	opsServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
 type BuildingHandler struct {
-	service operations.BuildingService
+	service opsServices.BuildingService
 }
 
-func NewBuildingHandler(service operations.BuildingService) *BuildingHandler {
+func NewBuildingHandler(service opsServices.BuildingService) *BuildingHandler {
 	return &BuildingHandler{service: service}
 }
 
