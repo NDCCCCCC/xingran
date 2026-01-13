@@ -56,3 +56,6 @@ coverage.html
 
 # 生产配置文件
 configs/config.prod.yamlnul
+
+# Git Worktree 目录
+.worktrees/
