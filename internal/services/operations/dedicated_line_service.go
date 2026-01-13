@@ -1,0 +1,144 @@
+package operations
+
+import (
+	"context"
+	"errors"
+
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
+	"gorm.io/gorm"
+)
+
+// DedicatedLineService 专线服务接口
+type DedicatedLineService interface {
+	Create(ctx context.Context, line *operations.OpsDedicatedLine) error
+	Update(ctx context.Context, line *operations.OpsDedicatedLine) error
+	Delete(ctx context.Context, id string) error
+	GetByID(ctx context.Context, id string) (*operations.OpsDedicatedLine, error)
+	List(ctx context.Context, params map[string]interface{}) (*PageResult, error)
+	BatchDelete(ctx context.Context, ids []string) error
+}
+
+type dedicatedLineService struct {
+	db *gorm.DB
+}
+
+// NewDedicatedLineService 创建专线服务实例
+func NewDedicatedLineService(db *gorm.DB) DedicatedLineService {
+	return &dedicatedLineService{db: db}
+}
+
+// Create 创建专线
+func (s *dedicatedLineService) Create(ctx context.Context, line *operations.OpsDedicatedLine) error {
+	// 检查编码唯一性
+	if err := s.checkCodeUnique(ctx, line.LineCode, ""); err != nil {
+		return err
+	}
+
+	return s.db.WithContext(ctx).Create(line).Error
+}
+
+// Update 更新专线
+func (s *dedicatedLineService) Update(ctx context.Context, line *operations.OpsDedicatedLine) error {
+	// 检查编码唯一性
+	if err := s.checkCodeUnique(ctx, line.LineCode, line.ID); err != nil {
+		return err
+	}
+
+	return s.db.WithContext(ctx).Save(line).Error
+}
+
+// Delete 删除专线
+func (s *dedicatedLineService) Delete(ctx context.Context, id string) error {
+	return s.db.WithContext(ctx).Delete(&operations.OpsDedicatedLine{}, "id = ?", id).Error
+}
+
+// GetByID 根据ID获取专线
+func (s *dedicatedLineService) GetByID(ctx context.Context, id string) (*operations.OpsDedicatedLine, error) {
+	var line operations.OpsDedicatedLine
+	err := s.db.WithContext(ctx).Where("id = ?", id).First(&line).Error
+	if err != nil {
+		return nil, err
+	}
+	return &line, nil
+}
+
+// List 查询专线列表
+func (s *dedicatedLineService) List(ctx context.Context, params map[string]interface{}) (*PageResult, error) {
+	var total int64
+	var list []operations.OpsDedicatedLine
+
+	query := s.db.WithContext(ctx).Model(&operations.OpsDedicatedLine{})
+
+	// 添加筛选条件
+	if name, ok := params["name"].(string); ok && name != "" {
+		query = query.Where("name LIKE ?", "%"+name+"%")
+	}
+	if code, ok := params["lineCode"].(string); ok && code != "" {
+		query = query.Where("line_code LIKE ?", "%"+code+"%")
+	}
+	if lineType, ok := params["lineType"].(string); ok && lineType != "" {
+		query = query.Where("line_type = ?", lineType)
+	}
+	if isp, ok := params["isp"].(string); ok && isp != "" {
+		query = query.Where("isp LIKE ?", "%"+isp+"%")
+	}
+	if status, ok := params["status"].(int); ok {
+		query = query.Where("status = ?", status)
+	}
+	if status, ok := params["status"].(float64); ok {
+		query = query.Where("status = ?", int(status))
+	}
+
+	// 分页
+	current := 1
+	pageSize := 10
+	if c, ok := params["current"].(int); ok {
+		current = c
+	}
+	if c, ok := params["current"].(float64); ok {
+		current = int(c)
+	}
+	if ps, ok := params["pageSize"].(int); ok {
+		pageSize = ps
+	}
+	if ps, ok := params["pageSize"].(float64); ok {
+		pageSize = int(ps)
+	}
+
+	if err := query.Count(&total).Error; err != nil {
+		return nil, err
+	}
+
+	offset := (current - 1) * pageSize
+	if err := query.Offset(offset).Limit(pageSize).Order("created_at DESC").Find(&list).Error; err != nil {
+		return nil, err
+	}
+
+	return &PageResult{
+		List:     list,
+		Total:    total,
+		Current:  current,
+		PageSize: pageSize,
+	}, nil
+}
+
+// BatchDelete 批量删除专线
+func (s *dedicatedLineService) BatchDelete(ctx context.Context, ids []string) error {
+	return s.db.WithContext(ctx).Delete(&operations.OpsDedicatedLine{}, "id IN ?", ids).Error
+}
+
+// checkCodeUnique 检查编码唯一性
+func (s *dedicatedLineService) checkCodeUnique(ctx context.Context, code string, excludeID string) error {
+	var count int64
+	query := s.db.WithContext(ctx).Model(&operations.OpsDedicatedLine{}).Where("line_code = ?", code)
+	if excludeID != "" {
+		query = query.Where("id != ?", excludeID)
+	}
+	if err := query.Count(&count).Error; err != nil {
+		return err
+	}
+	if count > 0 {
+		return errors.New("专线编码已存在")
+	}
+	return nil
+}
