@@ -66,6 +66,7 @@ import ADUserPage from '@/pages/ad-domain/users';
 import ADSyncLogsPage from '@/pages/ad-domain/logs';
 // 运维管理页面
 import BuildingManagement from '@/pages/operations/buildings';
+import FloorManagement from '@/pages/operations/floors';
 import './App.css';
 
 // 创建React Query客户端
@@ -228,6 +229,7 @@ function App() {
 
                           {/* 运维管理 - 物理资源管理路由 */}
                           <Route path="/ops/buildings" element={<BuildingManagement />} />
+                          <Route path="/ops/floors" element={<FloorManagement />} />
 
                           <Route path="*" element={<Navigate to="/dashboard" replace />} />
                         </Routes>
