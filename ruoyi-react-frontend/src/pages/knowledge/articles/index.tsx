@@ -390,34 +390,38 @@ const KnowledgeArticlePage: FC = () => {
 
   return (
     <div className="p-6">
-      <Card title={null} className="mb-4">
-        <Row gutter={16}>
-          <Col span={5}>
-            <Statistic title="总文章" value={stats.total} prefix={<FileTextOutlined />} />
-          </Col>
-          <Col span={5}>
-            <Statistic title="草稿" value={stats.draft} styles={{ content: { color: '#faad14' } }} />
-          </Col>
-          <Col span={5}>
-            <Statistic title="已发布" value={stats.published} styles={{ content: { color: '#52c41a' } }} />
-          </Col>
-          <Col span={4}>
-            <Statistic title="总浏览" value={stats.totalViews} />
-          </Col>
-          <Col span={5}>
-            <Statistic title="总点赞" value={stats.totalLikes} />
-          </Col>
-        </Row>
-      </Card>
+      {/* 统计卡片 - 只在数据大于10时显示 */}
+      {stats.total > 10 && (
+        <Card title={null} className="mb-4">
+          <Row gutter={16}>
+            <Col span={5}>
+              <Statistic title="总文章" value={stats.total} prefix={<FileTextOutlined />} />
+            </Col>
+            <Col span={5}>
+              <Statistic title="草稿" value={stats.draft} styles={{ content: { color: '#faad14' } }} />
+            </Col>
+            <Col span={5}>
+              <Statistic title="已发布" value={stats.published} styles={{ content: { color: '#52c41a' } }} />
+            </Col>
+            <Col span={4}>
+              <Statistic title="总浏览" value={stats.totalViews} />
+            </Col>
+            <Col span={5}>
+              <Statistic title="总点赞" value={stats.totalLikes} />
+            </Col>
+          </Row>
+        </Card>
+      )}
 
-      <Card title="知识库文章管理">
+      {/* 筛选表单和操作按钮 */}
+      <Card style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
           <Form form={form} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="title" label="标题">
-              <Input placeholder="请输入标题" allowClear style={{ width: 150 }} />
+              <Input placeholder="请输入标题" allowClear className="user-form-input" style={{ width: 150 }} />
             </Form.Item>
             <Form.Item name="categoryId" label="分类">
-              <Select placeholder="请选择分类" allowClear style={{ width: 120 }}>
+              <Select placeholder="请选择分类" allowClear className="user-form-input" style={{ width: 120 }}>
                 {flatCategories.map((cat) => (
                   <Option key={cat.id} value={cat.id}>
                     {cat.categoryName}
@@ -426,7 +430,7 @@ const KnowledgeArticlePage: FC = () => {
               </Select>
             </Form.Item>
             <Form.Item name="tagId" label="标签">
-              <Select placeholder="请选择标签" allowClear style={{ width: 120 }}>
+              <Select placeholder="请选择标签" allowClear className="user-form-input" style={{ width: 120 }}>
                 {tags.map((tag) => (
                   <Option key={tag.id} value={tag.id}>
                     {tag.tagName}
@@ -435,7 +439,7 @@ const KnowledgeArticlePage: FC = () => {
               </Select>
             </Form.Item>
             <Form.Item name="status" label="状态">
-              <Select placeholder="请选择状态" allowClear style={{ width: 100 }}>
+              <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 100 }}>
                 <Option value={KnowledgeArticleStatus.Draft}>草稿</Option>
                 <Option value={KnowledgeArticleStatus.Published}>已发布</Option>
               </Select>
@@ -457,7 +461,10 @@ const KnowledgeArticlePage: FC = () => {
             </Button>
           </Space>
         </div>
+      </Card>
 
+      {/* 知识库文章表格 */}
+      <Card>
         <Table
           rowKey="id"
           columns={columns}
@@ -485,13 +492,13 @@ const KnowledgeArticlePage: FC = () => {
         width={800}
         destroyOnHidden
       >
-        <Form form={editForm} layout="vertical" preserve={false}>
+        <Form form={editForm} layout="horizontal" labelCol={{ span: 4 }} wrapperCol={{ span: 20 }} preserve={false}>
           <Form.Item
             name="title"
             label="文章标题"
             rules={[{ required: true, message: '请输入文章标题' }]}
           >
-            <Input placeholder="请输入文章标题" />
+            <Input placeholder="请输入文章标题" className="user-form-input" />
           </Form.Item>
 
           <Row gutter={16}>
@@ -501,7 +508,7 @@ const KnowledgeArticlePage: FC = () => {
                 label="文章分类"
                 rules={[{ required: true, message: '请选择文章分类' }]}
               >
-                <Select placeholder="请选择文章分类">
+                <Select placeholder="请选择文章分类" className="user-form-input">
                   {flatCategories.map((cat) => (
                     <Option key={cat.id} value={cat.id}>
                       {cat.categoryName}
@@ -516,7 +523,7 @@ const KnowledgeArticlePage: FC = () => {
                 label="状态"
                 rules={[{ required: true, message: '请选择状态' }]}
               >
-                <Select placeholder="请选择状态">
+                <Select placeholder="请选择状态" className="user-form-input">
                   <Option value={KnowledgeArticleStatus.Draft}>草稿</Option>
                   <Option value={KnowledgeArticleStatus.Published}>已发布</Option>
                 </Select>
@@ -528,7 +535,7 @@ const KnowledgeArticlePage: FC = () => {
             name="tagIds"
             label="标签"
           >
-            <Select mode="tags" placeholder="请选择标签" style={{ width: '100%' }}>
+            <Select mode="tags" placeholder="请选择标签" style={{ width: '100%' }} className="user-form-input">
               {tags.map((tag) => (
                 <Option key={tag.id} value={tag.id}>
                   {tag.tagName}

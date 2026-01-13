@@ -5,22 +5,20 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/scheduler"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/workorder"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
-
-// ==================== 工单管理 Handler ====================
 
 // listWorkOrders 查询工单列表
 func listWorkOrders(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var req services.WorkOrderListRequest
+		var req workorder.ListRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			// 允许空请求体
 		}
 
-		workorderSvc := services.NewWorkOrderService(core.DB.GetDB())
-		list, total, err := workorderSvc.GetWorkOrderList(c.Request.Context(), &req)
+		svc := workorder.NewWorkOrderService(core.DB.GetDB())
+		list, total, err := svc.Base.GetList(c.Request.Context(), &req)
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
@@ -39,7 +37,7 @@ func listWorkOrders(core *core.Core) gin.HandlerFunc {
 // getMyPendingWorkOrders 获取当前用户的待办工单
 func getMyPendingWorkOrders(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var req services.GetMyPendingWorkOrdersRequest
+		var req workorder.GetMyPendingRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			// 允许空请求体，使用默认值
 			req.Limit = 5
@@ -51,8 +49,8 @@ func getMyPendingWorkOrders(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		workorderSvc := services.NewWorkOrderService(core.DB.GetDB())
-		list, total, err := workorderSvc.GetMyPendingWorkOrders(c.Request.Context(), &req, userID.(string))
+		svc := workorder.NewWorkOrderService(core.DB.GetDB())
+		list, total, err := svc.Base.GetMyPending(c.Request.Context(), &req, userID.(string))
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
@@ -74,8 +72,8 @@ func getWorkOrder(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		workorderSvc := services.NewWorkOrderService(core.DB.GetDB())
-		workOrder, err := workorderSvc.GetWorkOrderByID(c.Request.Context(), id)
+		svc := workorder.NewWorkOrderService(core.DB.GetDB())
+		workOrder, err := svc.Base.GetByID(c.Request.Context(), id)
 		if err != nil {
 			response.Error(c, response.ErrNotFound, err.Error())
 			return
@@ -88,15 +86,15 @@ func getWorkOrder(core *core.Core) gin.HandlerFunc {
 // createWorkOrder 创建工单
 func createWorkOrder(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var req services.WorkOrderCreateRequest
+		var req workorder.CreateRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			response.Error(c, response.ErrBadRequest, "请求参数错误")
 			return
 		}
 
 		userID, _ := c.Get("user_id")
-		workorderSvc := services.NewWorkOrderService(core.DB.GetDB())
-		workOrder, err := workorderSvc.CreateWorkOrder(c.Request.Context(), &req, userID.(string))
+		svc := workorder.NewWorkOrderService(core.DB.GetDB())
+		workOrder, err := svc.Base.Create(c.Request.Context(), &req, userID.(string))
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
@@ -118,7 +116,7 @@ func updateWorkOrder(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		var req services.WorkOrderUpdateRequest
+		var req workorder.UpdateRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			response.Error(c, response.ErrBadRequest, "请求参数错误")
 			return
@@ -127,8 +125,8 @@ func updateWorkOrder(core *core.Core) gin.HandlerFunc {
 		req.ID = id
 		userID, _ := c.Get("user_id")
 
-		workorderSvc := services.NewWorkOrderService(core.DB.GetDB())
-		if err := workorderSvc.UpdateWorkOrder(c.Request.Context(), &req, userID.(string)); err != nil {
+		svc := workorder.NewWorkOrderService(core.DB.GetDB())
+		if err := svc.Base.Update(c.Request.Context(), &req, userID.(string)); err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
 		}
@@ -149,8 +147,8 @@ func deleteWorkOrder(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		workorderSvc := services.NewWorkOrderService(core.DB.GetDB())
-		if err := workorderSvc.DeleteWorkOrder(c.Request.Context(), id); err != nil {
+		svc := workorder.NewWorkOrderService(core.DB.GetDB())
+		if err := svc.Base.Delete(c.Request.Context(), id); err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
 		}
@@ -173,8 +171,8 @@ func batchDeleteWorkOrders(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		workorderSvc := services.NewWorkOrderService(core.DB.GetDB())
-		if err := workorderSvc.BatchDeleteWorkOrders(c.Request.Context(), req.IDs); err != nil {
+		svc := workorder.NewWorkOrderService(core.DB.GetDB())
+		if err := svc.Base.BatchDelete(c.Request.Context(), req.IDs); err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
 		}
@@ -198,15 +196,15 @@ func assignWorkOrder(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		var req services.AssignWorkOrderRequest
+		var req workorder.AssignRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			response.Error(c, response.ErrBadRequest, "请求参数错误")
 			return
 		}
 
 		userID, _ := c.Get("user_id")
-		workorderSvc := services.NewWorkOrderService(core.DB.GetDB())
-		if err := workorderSvc.AssignWorkOrder(c.Request.Context(), id, &req, userID.(string)); err != nil {
+		svc := workorder.NewWorkOrderService(core.DB.GetDB())
+		if err := svc.Assignment.Assign(c.Request.Context(), id, &req, userID.(string)); err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
 		}
@@ -228,8 +226,8 @@ func assignToTodayDuty(core *core.Core) gin.HandlerFunc {
 		}
 
 		userID, _ := c.Get("user_id")
-		workorderSvc := services.NewWorkOrderService(core.DB.GetDB())
-		if err := workorderSvc.AssignToTodayDuty(c.Request.Context(), id, userID.(string)); err != nil {
+		svc := workorder.NewWorkOrderService(core.DB.GetDB())
+		if err := svc.Assignment.AssignToTodayDuty(c.Request.Context(), id, userID.(string)); err != nil {
 			// 当没有值班人员时，静默处理，不显示错误
 			if err.Error() == "今天没有值班人员" {
 				response.Success(c, gin.H{"message": "今天没有值班人员，工单未分配"})
@@ -255,15 +253,15 @@ func updateWorkOrderStatus(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		var req services.UpdateStatusRequest
+		var req workorder.UpdateStatusRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			response.Error(c, response.ErrBadRequest, "请求参数错误")
 			return
 		}
 
 		userID, _ := c.Get("user_id")
-		workorderSvc := services.NewWorkOrderService(core.DB.GetDB())
-		if err := workorderSvc.UpdateWorkOrderStatus(c.Request.Context(), id, &req, userID.(string)); err != nil {
+		svc := workorder.NewWorkOrderService(core.DB.GetDB())
+		if err := svc.Assignment.UpdateStatus(c.Request.Context(), id, &req, userID.(string)); err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
 		}
@@ -275,8 +273,6 @@ func updateWorkOrderStatus(core *core.Core) gin.HandlerFunc {
 	}
 }
 
-// ==================== 工单评论 Handler ====================
-
 // getWorkOrderComments 获取工单评论列表
 func getWorkOrderComments(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -286,8 +282,8 @@ func getWorkOrderComments(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		workorderSvc := services.NewWorkOrderService(core.DB.GetDB())
-		comments, err := workorderSvc.GetWorkOrderComments(c.Request.Context(), id)
+		svc := workorder.NewWorkOrderService(core.DB.GetDB())
+		comments, err := svc.Comment.GetList(c.Request.Context(), id)
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
@@ -306,15 +302,15 @@ func addWorkOrderComment(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		var req services.AddCommentRequest
+		var req workorder.AddRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			response.Error(c, response.ErrBadRequest, "请求参数错误")
 			return
 		}
 
 		userID, _ := c.Get("user_id")
-		workorderSvc := services.NewWorkOrderService(core.DB.GetDB())
-		if err := workorderSvc.AddWorkOrderComment(c.Request.Context(), id, &req, userID.(string)); err != nil {
+		svc := workorder.NewWorkOrderService(core.DB.GetDB())
+		if err := svc.Comment.Add(c.Request.Context(), id, &req, userID.(string)); err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
 		}
@@ -335,24 +331,22 @@ func getWorkOrderHistory(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		workorderSvc := services.NewWorkOrderService(core.DB.GetDB())
-		history, err := workorderSvc.GetWorkOrderHistory(c.Request.Context(), id)
+		svc := workorder.NewWorkOrderService(core.DB.GetDB())
+		history, err := svc.Base.GetByID(c.Request.Context(), id)
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
 		}
 
-		response.Success(c, history)
+		response.Success(c, history.History)
 	}
 }
-
-// ==================== 工单统计 Handler ====================
 
 // getWorkOrderStatistics 获取工单统计数据
 func getWorkOrderStatistics(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		workorderSvc := services.NewWorkOrderService(core.DB.GetDB())
-		stats, err := workorderSvc.GetWorkOrderStatistics(c.Request.Context())
+		svc := workorder.NewWorkOrderService(core.DB.GetDB())
+		stats, err := svc.Statistics.Get(c.Request.Context())
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
@@ -362,13 +356,11 @@ func getWorkOrderStatistics(core *core.Core) gin.HandlerFunc {
 	}
 }
 
-// ==================== 工单分类 Handler ====================
-
 // listWorkOrderCategories 查询工单分类列表
 func listWorkOrderCategories(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		workorderSvc := services.NewWorkOrderService(core.DB.GetDB())
-		categories, err := workorderSvc.GetWorkOrderCategoryList(c.Request.Context())
+		svc := workorder.NewWorkOrderService(core.DB.GetDB())
+		categories, err := svc.Category.GetTree(c.Request.Context())
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
@@ -381,8 +373,8 @@ func listWorkOrderCategories(core *core.Core) gin.HandlerFunc {
 // getEnabledCategories 获取启用的工单分类（用于下拉选择）
 func getEnabledCategories(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		workorderSvc := services.NewWorkOrderService(core.DB.GetDB())
-		categories, err := workorderSvc.GetEnabledCategories(c.Request.Context())
+		svc := workorder.NewWorkOrderService(core.DB.GetDB())
+		categories, err := svc.Category.GetEnabled(c.Request.Context())
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
@@ -401,8 +393,8 @@ func getWorkOrderCategory(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		workorderSvc := services.NewWorkOrderService(core.DB.GetDB())
-		category, err := workorderSvc.GetWorkOrderCategoryByID(c.Request.Context(), id)
+		svc := workorder.NewWorkOrderService(core.DB.GetDB())
+		category, err := svc.Category.GetByID(c.Request.Context(), id)
 		if err != nil {
 			response.Error(c, response.ErrNotFound, err.Error())
 			return
@@ -422,8 +414,8 @@ func createWorkOrderCategory(core *core.Core) gin.HandlerFunc {
 		}
 
 		userID, _ := c.Get("user_id")
-		workorderSvc := services.NewWorkOrderService(core.DB.GetDB())
-		if err := workorderSvc.CreateWorkOrderCategory(c.Request.Context(), &req, userID.(string)); err != nil {
+		svc := workorder.NewWorkOrderService(core.DB.GetDB())
+		if err := svc.Category.Create(c.Request.Context(), &req, userID.(string)); err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
 		}
@@ -451,8 +443,8 @@ func updateWorkOrderCategory(core *core.Core) gin.HandlerFunc {
 		}
 
 		userID, _ := c.Get("user_id")
-		workorderSvc := services.NewWorkOrderService(core.DB.GetDB())
-		if err := workorderSvc.UpdateWorkOrderCategory(c.Request.Context(), &req, userID.(string)); err != nil {
+		svc := workorder.NewWorkOrderService(core.DB.GetDB())
+		if err := svc.Category.Update(c.Request.Context(), &req, userID.(string)); err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
 		}
@@ -473,8 +465,8 @@ func deleteWorkOrderCategory(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		workorderSvc := services.NewWorkOrderService(core.DB.GetDB())
-		if err := workorderSvc.DeleteWorkOrderCategory(c.Request.Context(), id); err != nil {
+		svc := workorder.NewWorkOrderService(core.DB.GetDB())
+		if err := svc.Category.Delete(c.Request.Context(), id); err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
 		}
@@ -486,8 +478,6 @@ func deleteWorkOrderCategory(core *core.Core) gin.HandlerFunc {
 	}
 }
 
-// ==================== 工单评价 Handler ====================
-
 // createWorkOrderRating 创建工单评价
 func createWorkOrderRating(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -497,20 +487,15 @@ func createWorkOrderRating(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		var req struct {
-			RatingType        string `json:"ratingType" binding:"required"` // user 或 handler
-			CompletionScore   int    `json:"completionScore"`              // 用户评价：完成度评分
-			CooperationScore  int    `json:"cooperationScore"`            // 处理人员评价：配合度评分
-			Comment           string `json:"comment"`
-		}
+		var req workorder.RatingCreateRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			response.Error(c, response.ErrBadRequest, "请求参数错误")
 			return
 		}
 
 		userID, _ := c.Get("user_id")
-		workorderSvc := services.NewWorkOrderService(core.DB.GetDB())
-		if err := workorderSvc.CreateWorkOrderRating(c.Request.Context(), id, req.RatingType, req.CompletionScore, req.CooperationScore, req.Comment, userID.(string)); err != nil {
+		svc := workorder.NewWorkOrderService(core.DB.GetDB())
+		if err := svc.Rating.Create(c.Request.Context(), &req, userID.(string)); err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
 		}
@@ -528,8 +513,8 @@ func getWorkOrderRatings(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		workorderSvc := services.NewWorkOrderService(core.DB.GetDB())
-		ratings, err := workorderSvc.GetWorkOrderRatings(c.Request.Context(), id)
+		svc := workorder.NewWorkOrderService(core.DB.GetDB())
+		ratings, err := svc.Rating.GetList(c.Request.Context(), id)
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
@@ -548,8 +533,8 @@ func getRatingStatistics(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		workorderSvc := services.NewWorkOrderService(core.DB.GetDB())
-		stats, err := workorderSvc.GetRatingStatistics(c.Request.Context(), id)
+		svc := workorder.NewWorkOrderService(core.DB.GetDB())
+		stats, err := svc.Rating.GetStatistics(c.Request.Context(), id)
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
@@ -559,18 +544,16 @@ func getRatingStatistics(core *core.Core) gin.HandlerFunc {
 	}
 }
 
-// ==================== 周期性工单 Handler ====================
-
 // listPeriodicTemplates 查询周期性工单模板列表
 func listPeriodicTemplates(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var req services.PeriodicTemplateListRequest
+		var req workorder.PeriodicTemplateListRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			// 允许空请求体
 		}
 
-		workorderSvc := services.NewWorkOrderService(core.DB.GetDB())
-		list, total, err := workorderSvc.GetPeriodicTemplateList(c.Request.Context(), &req)
+		svc := workorder.NewWorkOrderService(core.DB.GetDB())
+		list, total, err := svc.Periodic.GetTemplateList(c.Request.Context(), &req)
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
@@ -595,8 +578,8 @@ func getPeriodicTemplate(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		workorderSvc := services.NewWorkOrderService(core.DB.GetDB())
-		template, err := workorderSvc.GetPeriodicTemplate(c.Request.Context(), id)
+		svc := workorder.NewWorkOrderService(core.DB.GetDB())
+		template, err := svc.Periodic.GetTemplate(c.Request.Context(), id)
 		if err != nil {
 			response.Error(c, response.ErrNotFound, err.Error())
 			return
@@ -609,15 +592,15 @@ func getPeriodicTemplate(core *core.Core) gin.HandlerFunc {
 // createPeriodicTemplate 创建周期性工单模板
 func createPeriodicTemplate(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var req services.CreatePeriodicTemplateRequest
+		var req workorder.CreateTemplateRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			response.Error(c, response.ErrBadRequest, "请求参数错误")
 			return
 		}
 
 		userID, _ := c.Get("user_id")
-		workorderSvc := services.NewWorkOrderService(core.DB.GetDB())
-		template, err := workorderSvc.CreatePeriodicTemplate(c.Request.Context(), &req, userID.(string))
+		svc := workorder.NewWorkOrderService(core.DB.GetDB())
+		template, err := svc.Periodic.CreateTemplate(c.Request.Context(), &req, userID.(string))
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
@@ -639,15 +622,15 @@ func updatePeriodicTemplate(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		var req services.UpdatePeriodicTemplateRequest
+		var req workorder.UpdateTemplateRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			response.Error(c, response.ErrBadRequest, "请求参数错误")
 			return
 		}
 
 		userID, _ := c.Get("user_id")
-		workorderSvc := services.NewWorkOrderService(core.DB.GetDB())
-		if err := workorderSvc.UpdatePeriodicTemplate(c.Request.Context(), id, &req, userID.(string)); err != nil {
+		svc := workorder.NewWorkOrderService(core.DB.GetDB())
+		if err := svc.Periodic.UpdateTemplate(c.Request.Context(), id, &req, userID.(string)); err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
 		}
@@ -668,8 +651,8 @@ func deletePeriodicTemplate(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		workorderSvc := services.NewWorkOrderService(core.DB.GetDB())
-		if err := workorderSvc.DeletePeriodicTemplate(c.Request.Context(), id); err != nil {
+		svc := workorder.NewWorkOrderService(core.DB.GetDB())
+		if err := svc.Periodic.DeleteTemplate(c.Request.Context(), id); err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
 		}
@@ -694,8 +677,8 @@ func enablePeriodicTemplate(core *core.Core) gin.HandlerFunc {
 		}
 
 		userID, _ := c.Get("user_id")
-		workorderSvc := services.NewWorkOrderService(core.DB.GetDB())
-		if err := workorderSvc.EnablePeriodicTemplate(c.Request.Context(), id, userID.(string)); err != nil {
+		svc := workorder.NewWorkOrderService(core.DB.GetDB())
+		if err := svc.Periodic.EnableTemplate(c.Request.Context(), id, userID.(string)); err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
 		}
@@ -723,8 +706,8 @@ func disablePeriodicTemplate(core *core.Core) gin.HandlerFunc {
 		}
 
 		userID, _ := c.Get("user_id")
-		workorderSvc := services.NewWorkOrderService(core.DB.GetDB())
-		if err := workorderSvc.DisablePeriodicTemplate(c.Request.Context(), id, userID.(string)); err != nil {
+		svc := workorder.NewWorkOrderService(core.DB.GetDB())
+		if err := svc.Periodic.DisableTemplate(c.Request.Context(), id, userID.(string)); err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
 		}
@@ -748,8 +731,8 @@ func generateWorkOrderNow(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		workorderSvc := services.NewWorkOrderService(core.DB.GetDB())
-		workOrder, err := workorderSvc.GenerateWorkOrderFromTemplate(c.Request.Context(), id)
+		svc := workorder.NewWorkOrderService(core.DB.GetDB())
+		workOrder, err := svc.Periodic.GenerateWorkOrder(c.Request.Context(), id)
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
@@ -768,8 +751,8 @@ func getPeriodicLogs(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		workorderSvc := services.NewWorkOrderService(core.DB.GetDB())
-		logs, err := workorderSvc.GetPeriodicLogs(c.Request.Context(), id)
+		svc := workorder.NewWorkOrderService(core.DB.GetDB())
+		logs, err := svc.Periodic.GetLogs(c.Request.Context(), id)
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
@@ -779,13 +762,11 @@ func getPeriodicLogs(core *core.Core) gin.HandlerFunc {
 	}
 }
 
-// ==================== 工单配置 Handler ====================
-
 // getWorkOrderConfig 获取工单配置
 func getWorkOrderConfig(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		workorderSvc := services.NewWorkOrderService(core.DB.GetDB())
-		config, err := workorderSvc.GetWorkOrderConfig(c.Request.Context())
+		svc := workorder.NewWorkOrderService(core.DB.GetDB())
+		config, err := svc.Config.Get(c.Request.Context())
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
@@ -804,9 +785,8 @@ func updateWorkOrderConfig(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		userID, _ := c.Get("user_id")
-		workorderSvc := services.NewWorkOrderService(core.DB.GetDB())
-		if err := workorderSvc.UpdateWorkOrderConfig(c.Request.Context(), &req, userID.(string)); err != nil {
+		svc := workorder.NewWorkOrderService(core.DB.GetDB())
+		if err := svc.Config.Update(c.Request.Context(), &req); err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
 		}

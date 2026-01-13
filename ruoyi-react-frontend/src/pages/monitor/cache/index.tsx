@@ -34,6 +34,7 @@ import {
 } from '@ant-design/icons';
 import { post, get } from '@/lib/api';
 import type { ColumnsType } from 'antd/es/table';
+import ActionButtons from '@/components/shared/ActionButtons';
 
 const { TextArea } = Input;
 
@@ -413,29 +414,33 @@ const CacheManager: FC = () => {
       title: '操作',
       key: 'action',
       width: 200,
-      render: (_, record: CacheInfo) => (
-        <Space size="middle">
-          <Tooltip title="查看详情">
-            <Button
-              type="link"
-              icon={<EyeOutlined />}
-              onClick={() => handleViewDetail(record.key)}
-            />
-          </Tooltip>
-          <Tooltip title="删除">
-            <Popconfirm
-              title="确定要删除这个缓存吗？"
-              onConfirm={() => handleBatchOperate('del', [record.key])}
-            >
-              <Button
-                type="link"
-                danger
-                icon={<DeleteOutlined />}
-              />
-            </Popconfirm>
-          </Tooltip>
-        </Space>
-      ),
+      render: (_, record: CacheInfo) => {
+        const actions = [
+          {
+            key: 'view',
+            label: '查看详情',
+            icon: <EyeOutlined />,
+            onClick: () => handleViewDetail(record.key),
+          },
+          {
+            key: 'delete',
+            label: '删除',
+            icon: <DeleteOutlined />,
+            danger: true,
+            render: () => (
+              <Popconfirm
+                title="确定要删除这个缓存吗？"
+                onConfirm={() => handleBatchOperate('del', [record.key])}
+              >
+                <Button type="link" danger icon={<DeleteOutlined />} size="small">
+                  删除
+                </Button>
+              </Popconfirm>
+            ),
+          },
+        ];
+        return <ActionButtons actions={actions} />;
+      },
     },
   ];
 
@@ -532,6 +537,7 @@ const CacheManager: FC = () => {
                 onChange={(e) => setSearchForm({ ...searchForm, key: e.target.value })}
                 allowClear
                 prefix={<SearchOutlined />}
+                className="user-form-input"
               />
             </Col>
             <Col xs={24} sm={8} md={6}>
@@ -540,6 +546,7 @@ const CacheManager: FC = () => {
                 value={searchForm.type}
                 onChange={(value) => setSearchForm({ ...searchForm, type: value })}
                 allowClear
+                className="user-form-input"
                 style={{ width: '100%' }}
                 options={typeOptions}
               />
@@ -550,6 +557,7 @@ const CacheManager: FC = () => {
                 value={searchForm.level}
                 onChange={(value) => setSearchForm({ ...searchForm, level: value })}
                 allowClear
+                className="user-form-input"
                 style={{ width: '100%' }}
                 options={[
                   { label: '全部', value: 'all' },

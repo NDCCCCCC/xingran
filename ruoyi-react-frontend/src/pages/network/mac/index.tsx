@@ -98,6 +98,8 @@ const MACAddressPage: FC = () => {
 
   useEffect(() => {
     loadDevices();
+    loadMACAddresses();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 批量删除
@@ -200,23 +202,23 @@ const MACAddressPage: FC = () => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="deviceId" label="设备">
-              <Select placeholder="请选择设备" allowClear style={{ width: 200 }} showSearch optionFilterProp="deviceName">
+              <Select placeholder="请选择设备" allowClear className="user-form-input" style={{ width: 200 }} showSearch optionFilterProp="deviceName">
                 {devices.map(device => (
                   <Option key={device.id} value={device.id}>{device.deviceName}</Option>
                 ))}
               </Select>
             </Form.Item>
             <Form.Item name="macAddress" label="MAC地址">
-              <Input placeholder="请输入MAC地址" allowClear style={{ width: 180 }} />
+              <Input placeholder="请输入MAC地址" allowClear className="user-form-input" style={{ width: 180 }} />
             </Form.Item>
             <Form.Item name="interfaceName" label="接口">
-              <Input placeholder="请输入接口名称" allowClear style={{ width: 150 }} />
+              <Input placeholder="请输入接口名称" allowClear className="user-form-input" style={{ width: 150 }} />
             </Form.Item>
             <Form.Item name="vlanId" label="VLAN ID">
               <InputNumber placeholder="VLAN ID" style={{ width: 120 }} />
             </Form.Item>
             <Form.Item name="macType" label="MAC类型">
-              <Select placeholder="请选择类型" allowClear style={{ width: 120 }}>
+              <Select placeholder="请选择类型" allowClear className="user-form-input" style={{ width: 120 }}>
                 {macTypeOptions.map(opt => (
                   <Option key={opt.value} value={opt.value}>{opt.label}</Option>
                 ))}

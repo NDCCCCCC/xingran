@@ -172,6 +172,7 @@ const KnowledgeViewPage: FC = () => {
           <Search
             placeholder="搜索知识库文章..."
             allowClear
+            className="user-form-input"
             enterButton={<Button type="primary" icon={<SearchOutlined />}>搜索</Button>}
             size="large"
             onSearch={handleSearch}

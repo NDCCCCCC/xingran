@@ -26,6 +26,7 @@ import {
 } from '@ant-design/icons';
 import { post } from '@/lib/api';
 import type { ColumnsType } from 'antd/es/table';
+import ActionButtons from '@/components/shared/ActionButtons';
 
 interface ServerInfo {
   id: string;
@@ -260,17 +261,17 @@ const ServerMonitor: FC = () => {
     {
       title: '操作',
       key: 'action',
-      render: (_, record: ServerInfo) => (
-        <Space size="middle">
-          <Button
-            type="link"
-            icon={<EyeOutlined />}
-            onClick={() => handleViewDetail(record)}
-          >
-            详情
-          </Button>
-        </Space>
-      ),
+      render: (_, record: ServerInfo) => {
+        const actions = [
+          {
+            key: 'detail',
+            label: '详情',
+            icon: <EyeOutlined />,
+            onClick: () => handleViewDetail(record),
+          },
+        ];
+        return <ActionButtons actions={actions} />;
+      },
     },
   ];
 
@@ -288,6 +289,7 @@ const ServerMonitor: FC = () => {
                 value={searchForm.hostName}
                 onChange={(e) => setSearchForm({ ...searchForm, hostName: e.target.value })}
                 allowClear
+                className="user-form-input"
               />
             </Col>
             <Col xs={24} sm={8} md={6}>
@@ -296,6 +298,7 @@ const ServerMonitor: FC = () => {
                 value={searchForm.status}
                 onChange={(value) => setSearchForm({ ...searchForm, status: value })}
                 allowClear
+                className="user-form-input"
                 style={{ width: '100%' }}
                 options={[
                   { label: '正常', value: 0 },

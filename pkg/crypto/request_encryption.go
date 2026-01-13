@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/tjfoc/gmsm/sm2"
@@ -41,17 +42,19 @@ type NonceStorage interface {
 // defaultNonceStorage 默认的内存nonce存储实现
 type defaultNonceStorage struct {
 	nonces map[string]int64 // nonce -> timestamp
+	mu     sync.RWMutex     // 保护 nonces map 的并发访问
 }
 
-// NewDefaultNonceStorage 创建默认的nonce存储
+// NewDefaultNonceStorage 创建默认的nonce存储（使用分段锁实现，支持高并发）
 func NewDefaultNonceStorage() NonceStorage {
-	return &defaultNonceStorage{
-		nonces: make(map[string]int64),
-	}
+	return NewShardedNonceStorage()
 }
 
 // CheckAndStore 检查并存储nonce
 func (d *defaultNonceStorage) CheckAndStore(nonce string, timestamp int64) bool {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
 	if _, exists := d.nonces[nonce]; exists {
 		return false // nonce已存在，拒绝
 	}
@@ -61,6 +64,9 @@ func (d *defaultNonceStorage) CheckAndStore(nonce string, timestamp int64) bool 
 
 // cleanupExpiredNonces 清理过期的nonce（应该定期调用）
 func (d *defaultNonceStorage) cleanupExpiredNonces() {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
 	now := time.Now().Unix()
 	for nonce, ts := range d.nonces {
 		if now-ts > maxTimeDiff*2 { // 清理超过2倍时间窗口的nonce

@@ -33,6 +33,7 @@ import {
 } from '@ant-design/icons';
 import type { NetworkDevice, ConfigTemplate, ConfigExecution, ConfigExecutionDetail } from '@/types';
 import { post } from '@/lib/api';
+import ActionButtons from '@/components/shared/ActionButtons';
 
 const { Option } = Select;
 
@@ -275,16 +276,32 @@ const ConfigExecutionPage: FC = () => {
       key: 'action',
       fixed: 'right',
       width: 180,
-      render: (_, record) => (
-        <Space size="small">
-          <Button type="link" size="small" icon={<EyeOutlined />} onClick={() => handleViewDetail(record)}>查看</Button>
-          {(record.status === 'pending' || record.status === 'running') && (
-            <Popconfirm title="确认取消执行?" onConfirm={() => handleCancelExecution(record.id)}>
-              <Button type="link" size="small" danger icon={<StopOutlined />}>取消</Button>
-            </Popconfirm>
-          )}
-        </Space>
-      ),
+      render: (_, record) => {
+        const actions = [
+          {
+            key: 'view',
+            label: '查看',
+            icon: <EyeOutlined />,
+            onClick: () => handleViewDetail(record),
+          },
+          ...(record.status === 'pending' || record.status === 'running' ? [
+            {
+              key: 'cancel',
+              label: '取消',
+              icon: <StopOutlined />,
+              danger: true,
+              render: () => (
+                <Popconfirm title="确认取消执行?" onConfirm={() => handleCancelExecution(record.id)}>
+                  <Button type="link" danger icon={<StopOutlined />} size="small">
+                    取消
+                  </Button>
+                </Popconfirm>
+              ),
+            },
+          ] : []),
+        ];
+        return <ActionButtons actions={actions} />;
+      },
     },
   ];
 
@@ -409,7 +426,7 @@ const ConfigExecutionPage: FC = () => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
           <Form layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item label="状态">
-              <Select placeholder="请选择状态" allowClear style={{ width: 120 }} onChange={() => { loadExecutions(); loadStatistics(); }}>
+              <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 120 }} onChange={() => { loadExecutions(); loadStatistics(); }}>
                 {statusOptions.map(opt => (
                   <Option key={opt.value} value={opt.value}>{opt.label}</Option>
                 ))}

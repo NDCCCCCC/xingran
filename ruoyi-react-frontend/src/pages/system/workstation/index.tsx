@@ -10,9 +10,12 @@ import {
   InputNumber,
   Popconfirm,
   Tag,
-  message,
+  Card,
+  Row,
+  Col,
+  Statistic,
+  Alert,
 } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
 import {
   PlusOutlined,
   EditOutlined,
@@ -21,12 +24,14 @@ import {
   ReloadOutlined,
   UserOutlined,
   UserDeleteOutlined,
+  CheckCircleOutlined,
+  StopOutlined,
 } from '@ant-design/icons';
 import type { Workstation, Department, User } from '@/types';
 import { post } from '@/lib/api';
 import { useTableManager } from '@/hooks/useTableManager';
-import { withErrorHandling } from '@/utils/errorHandler';
-import { useState, useEffect } from 'react';
+import { handleApiError, handleSuccess } from '@/utils/errorHandler';
+import { useState, useEffect, useCallback } from 'react';
 import ActionButtons from '@/components/shared/ActionButtons';
 
 const { Option } = Select;
@@ -38,6 +43,11 @@ const WorkstationManagement: FC = () => {
   const [assignModalVisible, setAssignModalVisible] = useState(false);
   const [assignForm] = Form.useForm();
   const [assigningWorkstation, setAssigningWorkstation] = useState<Workstation | null>(null);
+  const [statistics, setStatistics] = useState({
+    total: 0,
+    active: 0,
+    inactive: 0,
+  });
 
   const {
     loading,
@@ -93,8 +103,27 @@ const WorkstationManagement: FC = () => {
     }
   };
 
+  // 加载统计数据
+  const loadStatistics = useCallback(async () => {
+    try {
+      const result = await post('/system/workstations/list', { current: 1, pageSize: 1000 });
+      const allWorkstations = result.data.list || [];
+      const activeCount = allWorkstations.filter((w: any) => w.status === 0).length;
+      const inactiveCount = allWorkstations.filter((w: any) => w.status === 1).length;
+      setStatistics({
+        total: allWorkstations.length,
+        active: activeCount,
+        inactive: inactiveCount,
+      });
+    } catch (error) {
+      handleApiError(error, '加载统计数据', false);
+    }
+  }, []);
+
   useEffect(() => {
     loadDepartments();
+    loadStatistics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 打开编辑模态框
@@ -115,37 +144,36 @@ const WorkstationManagement: FC = () => {
 
   // 创建工位
   const handleCreate = async () => {
-    await withErrorHandling(
-      async () => {
-        const values = await editForm.validateFields();
-        if (editingWorkstation) {
-          await post(`/system/workstations/${editingWorkstation.id}/update`, values);
-          return '更新成功';
-        } else {
-          await post('/system/workstations', values);
-          return '创建成功';
-        }
-      },
-      {
-        onSuccess: () => {
-          handleModalClose();
-          loadWorkstations();
-        },
+    try {
+      const values = await editForm.validateFields();
+      if (editingWorkstation) {
+        await post(`/system/workstations/${editingWorkstation.id}/update`, values);
+        handleSuccess('更新');
+      } else {
+        await post('/system/workstations', values);
+        handleSuccess('创建');
       }
-    );
+      handleModalClose();
+      loadWorkstations();
+      loadStatistics();
+    } catch (error: any) {
+      if (error.errorFields) {
+        return;
+      }
+      handleApiError(error, '操作');
+    }
   };
 
   // 删除工位
   const handleDelete = async (id: string) => {
-    await withErrorHandling(
-      async () => {
-        await post(`/system/workstations/${id}/delete`, {});
-        return '删除成功';
-      },
-      {
-        onSuccess: () => loadWorkstations(),
-      }
-    );
+    try {
+      await post(`/system/workstations/${id}/delete`, {});
+      handleSuccess('删除');
+      loadWorkstations();
+      loadStatistics();
+    } catch (error) {
+      handleApiError(error, '删除');
+    }
   };
 
   // 批量删除工位
@@ -154,18 +182,15 @@ const WorkstationManagement: FC = () => {
       message.warning('请选择要删除的数据');
       return;
     }
-    await withErrorHandling(
-      async () => {
-        await post('/system/workstations/batch-delete', { ids: selectedRowKeys });
-        return '批量删除成功';
-      },
-      {
-        onSuccess: () => {
-          setSelectedRowKeys([]);
-          loadWorkstations();
-        },
-      }
-    );
+    try {
+      await post('/system/workstations/batch-delete', { ids: selectedRowKeys });
+      handleSuccess('批量删除');
+      setSelectedRowKeys([]);
+      loadWorkstations();
+      loadStatistics();
+    } catch (error) {
+      handleApiError(error, '批量删除');
+    }
   };
 
   // 打开分配用户模态框
@@ -306,68 +331,146 @@ const WorkstationManagement: FC = () => {
 
   return (
     <div>
-      <Form form={searchForm} layout="inline" style={{ marginBottom: 16 }}>
-        <Form.Item name="workstationCode" label="工位编码">
-          <Input placeholder="请输入工位编码" allowClear style={{ width: 150 }} />
-        </Form.Item>
-        <Form.Item name="workstationName" label="工位名称">
-          <Input placeholder="请输入工位名称" allowClear style={{ width: 150 }} />
-        </Form.Item>
-        <Form.Item name="deptId" label="部门">
-          <Select placeholder="请选择部门" allowClear style={{ width: 150 }}>
-            {departments.map(dept => (
-              <Option key={dept.id} value={dept.id}>{dept.deptName}</Option>
-            ))}
-          </Select>
-        </Form.Item>
-        <Form.Item name="workstationType" label="工位类型">
-          <Select placeholder="请选择工位类型" allowClear style={{ width: 130 }}>
-            {workstationTypeOptions.map(opt => (
-              <Option key={opt.value} value={opt.value}>{opt.label}</Option>
-            ))}
-          </Select>
-        </Form.Item>
-        <Form.Item name="status" label="状态">
-          <Select placeholder="请选择状态" allowClear style={{ width: 100 }}>
-            <Option value={0}>启用</Option>
-            <Option value={1}>禁用</Option>
-          </Select>
-        </Form.Item>
-        <Form.Item>
+      {/* 统计卡片 - 只在总数大于10时显示 */}
+      {statistics.total > 10 && (
+        <Row gutter={16} style={{ marginBottom: 16 }}>
+          <Col span={8}>
+            <Card>
+              <Statistic
+                title="总工位数"
+                value={statistics.total}
+                prefix={<CheckCircleOutlined />}
+              />
+            </Card>
+          </Col>
+          <Col span={8}>
+            <Card>
+              <Statistic
+                title="启用工位"
+                value={statistics.active}
+                styles={{ content: { color: '#3f8600' } }}
+                prefix={<CheckCircleOutlined />}
+              />
+            </Card>
+          </Col>
+          <Col span={8}>
+            <Card>
+              <Statistic
+                title="禁用工位"
+                value={statistics.inactive}
+                styles={{ content: { color: '#cf1322' } }}
+                prefix={<StopOutlined />}
+              />
+            </Card>
+          </Col>
+        </Row>
+      )}
+
+      {/* 搜索表单和操作按钮 */}
+      <Card style={{ marginBottom: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+          <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
+            <Form.Item name="workstationCode" label="工位编码">
+              <Input placeholder="请输入工位编码" allowClear className="user-form-input" style={{ width: 150 }} />
+            </Form.Item>
+            <Form.Item name="workstationName" label="工位名称">
+              <Input placeholder="请输入工位名称" allowClear className="user-form-input" style={{ width: 150 }} />
+            </Form.Item>
+            <Form.Item name="deptId" label="部门">
+              <Select placeholder="请选择部门" allowClear className="user-form-input" style={{ width: 150 }}>
+                {departments.map(dept => (
+                  <Option key={dept.id} value={dept.id}>{dept.deptName}</Option>
+                ))}
+              </Select>
+            </Form.Item>
+            <Form.Item name="workstationType" label="工位类型">
+              <Select placeholder="请选择工位类型" allowClear className="user-form-input" style={{ width: 130 }}>
+                {workstationTypeOptions.map(opt => (
+                  <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+                ))}
+              </Select>
+            </Form.Item>
+            <Form.Item name="status" label="状态">
+              <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 100 }}>
+                <Option value={0}>启用</Option>
+                <Option value={1}>禁用</Option>
+              </Select>
+            </Form.Item>
+            <Form.Item>
+              <Space>
+                <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+                  搜索
+                </Button>
+                <Button icon={<ReloadOutlined />} onClick={() => { handleReset(); loadWorkstations(); loadStatistics(); }}>
+                  刷新
+                </Button>
+              </Space>
+            </Form.Item>
+          </Form>
           <Space>
-            <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>查询</Button>
-            <Button icon={<ReloadOutlined />} onClick={handleReset}>重置</Button>
+            {selectedRowKeys.length > 0 && (
+              <Button
+                danger
+                icon={<DeleteOutlined />}
+                onClick={handleBatchDelete}
+              >
+                批量删除 ({selectedRowKeys.length})
+              </Button>
+            )}
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+              新增工位
+            </Button>
           </Space>
-        </Form.Item>
-      </Form>
+        </div>
+        {selectedRowKeys.length > 0 && (
+          <Alert
+            message={
+              <span>
+                已选择 <strong>{selectedRowKeys.length}</strong> 个工位，
+                <Button
+                  type="link"
+                  size="small"
+                  onClick={() => setSelectedRowKeys([])}
+                  style={{ padding: 0 }}
+                >
+                  取消选择
+                </Button>
+              </span>
+            }
+            type="info"
+            showIcon
+            style={{ marginTop: 12 }}
+          />
+        )}
+      </Card>
 
-      <div style={{ marginBottom: 16 }}>
-        <Space>
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新增</Button>
-          <Button danger icon={<DeleteOutlined />} onClick={handleBatchDelete} disabled={selectedRowKeys.length === 0}>批量删除</Button>
-        </Space>
-      </div>
-
-      <Table
-        rowSelection={{
-          selectedRowKeys,
-          onChange: setSelectedRowKeys,
-        }}
-        columns={columns}
-        dataSource={workstations}
-        loading={loading}
-        rowKey="id"
-        scroll={{ x: 1400 }}
-        pagination={{
-          current,
-          pageSize,
-          total,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total) => `共 ${total} 条`,
-          onChange: (page, size) => { setCurrent(page); setPageSize(size || 10); },
-        }}
-      />
+      {/* 数据表格 */}
+      <Card>
+        <Table
+          rowSelection={{
+            selectedRowKeys,
+            onChange: setSelectedRowKeys,
+          }}
+          columns={columns}
+          dataSource={workstations}
+          loading={loading}
+          rowKey="id"
+          scroll={{ x: 1400 }}
+          pagination={{
+            current,
+            pageSize,
+            total,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total) => `共 ${total} 条`,
+            onChange: (page, size) => {
+              setCurrent(page);
+              setPageSize(size || 10);
+              loadWorkstations({ current: page, pageSize: size || 10 });
+            },
+          }}
+        />
+      </Card>
 
       {/* 编辑模态框 */}
       <Modal
@@ -377,41 +480,41 @@ const WorkstationManagement: FC = () => {
         onCancel={handleModalClose}
         width={600}
       >
-        <Form form={editForm} labelCol={{ span: 6 }} wrapperCol={{ span: 16 }}>
+        <Form form={editForm} layout="horizontal" labelCol={{ span: 4 }} wrapperCol={{ span: 20 }}>
           <Form.Item name="workstationCode" label="工位编码" rules={[{ required: true, message: '请输入工位编码' }]}>
-            <Input placeholder="请输入工位编码" disabled={!!editingWorkstation} />
+            <Input placeholder="请输入工位编码" disabled={!!editingWorkstation} className="user-form-input" />
           </Form.Item>
           <Form.Item name="workstationName" label="工位名称" rules={[{ required: true, message: '请输入工位名称' }]}>
-            <Input placeholder="请输入工位名称" />
+            <Input placeholder="请输入工位名称" className="user-form-input" />
           </Form.Item>
           <Form.Item name="deptId" label="所属部门">
-            <Select placeholder="请选择部门" allowClear>
+            <Select placeholder="请选择部门" allowClear className="user-form-input">
               {departments.map(dept => (
                 <Option key={dept.id} value={dept.id}>{dept.deptName}</Option>
               ))}
             </Select>
           </Form.Item>
           <Form.Item name="location" label="位置">
-            <Input placeholder="请输入位置" />
+            <Input placeholder="请输入位置" className="user-form-input" />
           </Form.Item>
           <Form.Item name="floor" label="楼层">
-            <Input placeholder="请输入楼层" />
+            <Input placeholder="请输入楼层" className="user-form-input" />
           </Form.Item>
           <Form.Item name="workstationType" label="工位类型" rules={[{ required: true }]}>
-            <Select>
+            <Select className="user-form-input">
               {workstationTypeOptions.map(opt => (
                 <Option key={opt.value} value={opt.value}>{opt.label}</Option>
               ))}
             </Select>
           </Form.Item>
           <Form.Item name="status" label="状态" rules={[{ required: true }]}>
-            <Select>
+            <Select className="user-form-input">
               <Option value={0}>启用</Option>
               <Option value={1}>禁用</Option>
             </Select>
           </Form.Item>
           <Form.Item name="capacity" label="容量" rules={[{ required: true, message: '请输入容量' }]}>
-            <InputNumber min={1} max={100} style={{ width: '100%' }} />
+            <InputNumber min={1} max={100} style={{ width: '100%' }} placeholder="请输入容量" />
           </Form.Item>
           <Form.Item name="description" label="备注">
             <TextArea rows={3} placeholder="请输入备注" />
@@ -427,12 +530,12 @@ const WorkstationManagement: FC = () => {
         onCancel={() => setAssignModalVisible(false)}
         width={500}
       >
-        <Form form={assignForm} labelCol={{ span: 6 }} wrapperCol={{ span: 16 }}>
+        <Form form={assignForm} layout="horizontal" labelCol={{ span: 4 }} wrapperCol={{ span: 20 }}>
           <Form.Item label="工位名称">
-            <Input value={assigningWorkstation?.workstationName} disabled />
+            <Input value={assigningWorkstation?.workstationName} disabled className="user-form-input" />
           </Form.Item>
           <Form.Item name="userId" label="选择用户" rules={[{ required: true, message: '请选择用户' }]}>
-            <Select placeholder="请选择用户" showSearch optionFilterProp="nickname">
+            <Select placeholder="请选择用户" showSearch optionFilterProp="nickname" className="user-form-input">
               {availableUsers.map(user => (
                 <Option key={user.id} value={user.id}>
                   {user.nickname || user.username} ({user.deptName || '无部门'})

@@ -1389,6 +1389,11 @@ html, body {
   max-width: 360px !important;
   min-width: 360px !important;
   flex: 0 0 360px !important;
+  border-right: none !important;
+}
+
+.dept-list-sider .ant-layout-sider-children {
+  border-right: none !important;
 }
 
 /* ========================================
@@ -1451,4 +1456,44 @@ html, body {
 
 .cron-selector-tabs .ant-select {
   max-width: 100%;
+}
+
+/* 部门树搜索框样式 - 完全去除边框 */
+.dept-tree-search .ant-input-affix-wrapper {
+  border: none !important;
+  background: transparent !important;
+}
+
+.dept-tree-search .ant-input-affix-wrapper .ant-input {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.dept-tree-search .ant-input-affix-wrapper:focus,
+.dept-tree-search .ant-input-affix-wrapper-focused {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.dept-tree-search .ant-input-affix-wrapper:focus .ant-input,
+.dept-tree-search .ant-input-affix-wrapper-focused .ant-input {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* 用户表单输入框样式 - 去除密码输入框内部边框 */
+.user-form-input.ant-input-affix-wrapper .ant-input {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.user-form-input.ant-input-affix-wrapper:focus .ant-input,
+.user-form-input.ant-input-affix-wrapper-focused .ant-input {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
 }

@@ -4,7 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/portcollection"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
@@ -47,8 +47,17 @@ func listPortStatus(core *core.Core) gin.HandlerFunc {
 		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
 		// defer manager.Close()
 
-		svc := services.NewPortCollectionService(core.DB.GetDB(), core.DeviceExecutor)
-		portStatuses, total, err := svc.GetPortStatusList(c.Request.Context(), current, pageSize, req.DeviceID, req.InterfaceName, req.AdminStatus, req.OperStatus, req.Dot1xEnabled, req.PortSecurityEnabled)
+		svc := portcollection.NewPortCollectionService(core.DB.GetDB(), core.DeviceExecutor)
+		portStatuses, total, err := svc.Query.GetList(c.Request.Context(), &portcollection.ListRequest{
+			Current:             current,
+			PageSize:            pageSize,
+			DeviceID:            req.DeviceID,
+			InterfaceName:       req.InterfaceName,
+			AdminStatus:         req.AdminStatus,
+			OperStatus:          req.OperStatus,
+			Dot1xEnabled:        req.Dot1xEnabled,
+			PortSecurityEnabled: req.PortSecurityEnabled,
+		})
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
@@ -78,8 +87,8 @@ func collectPortStatus(core *core.Core) gin.HandlerFunc {
 		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
 		// defer manager.Close()
 
-		svc := services.NewPortCollectionService(core.DB.GetDB(), core.DeviceExecutor)
-		result, err := svc.CollectDevice(c.Request.Context(), req.DeviceID)
+		svc := portcollection.NewPortCollectionService(core.DB.GetDB(), core.DeviceExecutor)
+		result, err := svc.Collection.CollectDevice(c.Request.Context(), req.DeviceID)
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
@@ -96,8 +105,8 @@ func collectAllPortStatus(core *core.Core) gin.HandlerFunc {
 		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
 		// defer manager.Close()
 
-		svc := services.NewPortCollectionService(core.DB.GetDB(), core.DeviceExecutor)
-		results, err := svc.CollectAllDevices(c.Request.Context())
+		svc := portcollection.NewPortCollectionService(core.DB.GetDB(), core.DeviceExecutor)
+		results, err := svc.Collection.CollectAllDevices(c.Request.Context())
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
@@ -114,8 +123,8 @@ func getPortStatusStats(core *core.Core) gin.HandlerFunc {
 		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
 		// defer manager.Close()
 
-		svc := services.NewPortCollectionService(core.DB.GetDB(), core.DeviceExecutor)
-		stats, err := svc.GetPortStatusStats(c.Request.Context())
+		svc := portcollection.NewPortCollectionService(core.DB.GetDB(), core.DeviceExecutor)
+		stats, err := svc.Query.GetStats(c.Request.Context())
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
@@ -174,8 +183,8 @@ func cleanOldPortRecords(core *core.Core) gin.HandlerFunc {
 		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
 		// defer manager.Close()
 
-		svc := services.NewPortCollectionService(core.DB.GetDB(), core.DeviceExecutor)
-		count, err := svc.CleanOldRecords(c.Request.Context(), req.Days)
+		svc := portcollection.NewPortCollectionService(core.DB.GetDB(), core.DeviceExecutor)
+		count, err := svc.Query.CleanOldRecords(c.Request.Context(), req.Days)
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return

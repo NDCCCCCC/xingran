@@ -4,6 +4,18 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Content Security Policy (CSP) -->
+    <!-- 开发环境：宽松策略，支持 Vite HMR 和本地网络访问 -->
+    <!-- 注意: frame-ancestors 需要通过 HTTP 头设置，meta 标签不支持 -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http://10.62.10.33:*; font-src 'self' data:; connect-src 'self' http://localhost:* http://127.0.0.1:* http://10.62.10.33:* https: ws://localhost:* ws://127.0.0.1:* ws://10.62.10.33:* blob:; worker-src 'self' blob:;" />
+
+    <!-- 其他安全相关 Meta 标签 -->
+    <!-- 注意: X-Frame-Options 需要通过 HTTP 头设置，meta 标签无效 -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+
     <title>ruoyi-react-frontend</title>
   </head>
   <body>

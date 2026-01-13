@@ -562,75 +562,77 @@ const DeviceManagement: FC = () => {
       {/* 右侧内容区 */}
       <Content style={{ padding: '16px', background: '#f0f2f5' }}>
         <div>
-          {/* 统计卡片 */}
-          <Row gutter={16} style={{ marginBottom: 16 }}>
-            <Col span={6}>
-              <Card>
-                <Statistic
-                  title="设备总数"
-                  value={statistics.total}
-                  prefix={<CloudServerOutlined />}
-                />
-              </Card>
-            </Col>
-            <Col span={6}>
-              <Card>
-                <Statistic
-                  title="在线设备"
-                  value={statistics.online}
-                  styles={{ content: { color: '#3f8600' } }}
-                  prefix={<CheckCircleOutlined />}
-                />
-              </Card>
-            </Col>
-            <Col span={6}>
-              <Card>
-                <Statistic
-                  title="离线设备"
-                  value={statistics.offline}
-                  styles={{ content: { color: '#cf1322' } }}
-                  prefix={<CloseCircleOutlined />}
-                />
-              </Card>
-            </Col>
-            <Col span={6}>
-              <Card>
-                <Statistic
-                  title="未知状态"
-                  value={statistics.unknown}
-                  styles={{ content: { color: '#faad14' } }}
-                  prefix={<WarningOutlined />}
-                />
-              </Card>
-            </Col>
-          </Row>
+          {/* 统计卡片 - 只在数据大于10时显示 */}
+          {statistics.total > 10 && (
+            <Row gutter={16} style={{ marginBottom: 16 }}>
+              <Col span={6}>
+                <Card>
+                  <Statistic
+                    title="设备总数"
+                    value={statistics.total}
+                    prefix={<CloudServerOutlined />}
+                  />
+                </Card>
+              </Col>
+              <Col span={6}>
+                <Card>
+                  <Statistic
+                    title="在线设备"
+                    value={statistics.online}
+                    styles={{ content: { color: '#3f8600' } }}
+                    prefix={<CheckCircleOutlined />}
+                  />
+                </Card>
+              </Col>
+              <Col span={6}>
+                <Card>
+                  <Statistic
+                    title="离线设备"
+                    value={statistics.offline}
+                    styles={{ content: { color: '#cf1322' } }}
+                    prefix={<CloseCircleOutlined />}
+                  />
+                </Card>
+              </Col>
+              <Col span={6}>
+                <Card>
+                  <Statistic
+                    title="未知状态"
+                    value={statistics.unknown}
+                    styles={{ content: { color: '#faad14' } }}
+                    prefix={<WarningOutlined />}
+                  />
+                </Card>
+              </Col>
+            </Row>
+          )}
 
           {/* 搜索表单和操作按钮 */}
           <Card style={{ marginBottom: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
               <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
                 <Form.Item name="deviceName" label="设备名称">
-                  <Input placeholder="请输入设备名称" allowClear style={{ width: 150 }} />
+                  <Input placeholder="请输入设备名称" allowClear className="user-form-input" style={{ width: 150 }} />
                 </Form.Item>
                 <Form.Item name="ipAddress" label="IP地址">
-                  <Input placeholder="请输入IP地址" allowClear style={{ width: 150 }} />
+                  <Input placeholder="请输入IP地址" allowClear className="user-form-input" style={{ width: 150 }} />
                 </Form.Item>
                 <Form.Item name="vendor" label="厂商">
-                  <Select placeholder="请选择厂商" allowClear style={{ width: 120 }}>
+                  <Select placeholder="请选择厂商" allowClear className="user-form-input" style={{ width: 120 }}>
                     {vendorOptions.map(opt => (
                       <Option key={opt.value} value={opt.value}>{opt.label}</Option>
                     ))}
                   </Select>
                 </Form.Item>
                 <Form.Item name="deviceType" label="设备类型">
-                  <Select placeholder="请选择设备类型" allowClear style={{ width: 130 }}>
+                  <Select placeholder="请选择设备类型" allowClear className="user-form-input" style={{ width: 130 }}>
                     {deviceTypeOptions.map(opt => (
                       <Option key={opt.value} value={opt.value}>{opt.label}</Option>
                     ))}
                   </Select>
                 </Form.Item>
                 <Form.Item name="status" label="状态">
-                  <Select placeholder="请选择状态" allowClear style={{ width: 100 }}>
+                  <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 100 }}>
                     {statusOptions.map(opt => (
                       <Option key={opt.value} value={opt.value}>{opt.label}</Option>
                     ))}
@@ -647,9 +649,29 @@ const DeviceManagement: FC = () => {
               <Space>
                 <Button type="primary" icon={<ThunderboltOutlined />} onClick={openQuickCreateModal}>快速创建</Button>
                 <Button type="default" icon={<PlusOutlined />} onClick={() => openModal()}>手动新增</Button>
-                <Button danger icon={<DeleteOutlined />} onClick={handleBatchDelete} disabled={selectedRowKeys.length === 0}>批量删除</Button>
+                <Button danger icon={<DeleteOutlined />} onClick={handleBatchDelete} disabled={selectedRowKeys.length === 0}>批量删除 ({selectedRowKeys.length})</Button>
               </Space>
             </div>
+            {selectedRowKeys.length > 0 && (
+              <Alert
+                message={
+                  <span>
+                    已选择 <strong>{selectedRowKeys.length}</strong> 个设备，
+                    <Button
+                      type="link"
+                      size="small"
+                      onClick={() => setSelectedRowKeys([])}
+                      style={{ padding: 0 }}
+                    >
+                      取消选择
+                    </Button>
+                  </span>
+                }
+                type="info"
+                showIcon
+                style={{ marginTop: 12 }}
+              />
+            )}
           </Card>
 
           {/* 设备表格 */}

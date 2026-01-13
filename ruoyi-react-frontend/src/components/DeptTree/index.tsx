@@ -5,8 +5,6 @@ import type { DataNode, EventDataNode } from 'antd/es/tree';
 import { ApartmentOutlined, SearchOutlined } from '@ant-design/icons';
 import { post } from '@/lib/api';
 
-const { Search } = Input;
-
 interface DeptTreeProps {
   onSelect?: (selectedKeys: Key[], info: {
     event: 'select';
@@ -173,15 +171,19 @@ const DeptTree: FC<DeptTreeProps> = ({
       }
       size="small"
       style={style}
+      styles={{ body: { padding: '16px' } }}
     >
-      <Search
+      <Input
         placeholder="搜索部门"
         value={searchValue}
-        onChange={(e) => setSearchValue(e.target.value)}
-        onSearch={onSearch}
-        style={{ marginBottom: 8 }}
+        onChange={(e) => {
+          setSearchValue(e.target.value);
+          onSearch(e.target.value);
+        }}
         allowClear
         prefix={<SearchOutlined />}
+        className="dept-tree-search user-form-input"
+        style={{ marginBottom: 8 }}
       />
 
       <Spin spinning={loading}>
@@ -193,7 +195,7 @@ const DeptTree: FC<DeptTreeProps> = ({
           expandedKeys={expandedKeys}
           onExpand={onExpand}
           autoExpandParent={autoExpandParent}
-          style={{ minHeight: 300, maxHeight: 500, overflowY: 'auto' }}
+          style={{ minHeight: 300, maxHeight: 'calc(100vh - 250px)', overflowY: 'auto' }}
         />
       </Spin>
     </Card>

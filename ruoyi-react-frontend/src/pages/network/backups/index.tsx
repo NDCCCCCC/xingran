@@ -631,10 +631,10 @@ const ConfigBackupPage: FC = () => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="deviceName" label="设备名称">
-              <Input placeholder="请输入设备名称" allowClear style={{ width: 150 }} />
+              <Input placeholder="请输入设备名称" allowClear className="user-form-input" style={{ width: 150 }} />
             </Form.Item>
             <Form.Item name="backupType" label="备份类型">
-              <Select placeholder="请选择备份类型" allowClear style={{ width: 120 }}>
+              <Select placeholder="请选择备份类型" allowClear className="user-form-input" style={{ width: 120 }}>
                 {backupTypeOptions.map(opt => (
                   <Option key={opt.value} value={opt.value}>{opt.label}</Option>
                 ))}

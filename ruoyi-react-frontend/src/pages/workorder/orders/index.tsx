@@ -18,6 +18,7 @@ import {
   Timeline,
   Radio,
   TreeSelect,
+  Alert,
 } from 'antd';
 import {
   PlusOutlined,
@@ -531,49 +532,54 @@ const WorkOrderPage: FC = () => {
 
   return (
     <div className="p-6">
-      <Card title={null} className="mb-4">
-        <Row gutter={16}>
-          <Col span={4}>
-            <Statistic title="总工单" value={stats.total} prefix={<FileTextOutlined />} />
-          </Col>
-          <Col span={4}>
-            <Statistic title="待处理" value={stats.pending} styles={{ content: { color: '#faad14' } }} />
-          </Col>
-          <Col span={4}>
-            <Statistic title="处理中" value={stats.processing} styles={{ content: { color: '#1890ff' } }} />
-          </Col>
-          <Col span={4}>
-            <Statistic title="已完成" value={stats.completed} styles={{ content: { color: '#52c41a' } }} />
-          </Col>
-          <Col span={4}>
-            <Statistic title="已关闭" value={stats.closed} styles={{ content: { color: '#8c8c8c' } }} />
-          </Col>
-          <Col span={4}>
-            <Button
-              type="primary"
-              danger
-              disabled={selectedRowKeys.length === 0}
-              onClick={handleBatchDelete}
-            >
-              批量删除 ({selectedRowKeys.length})
-            </Button>
-          </Col>
-        </Row>
-      </Card>
+      {/* 统计卡片 - 只在数据大于10时显示 */}
+      {stats.total > 10 && (
+        <Card title={null} className="mb-4">
+          <Row gutter={16}>
+            <Col span={4}>
+              <Statistic title="总工单" value={stats.total} prefix={<FileTextOutlined />} />
+            </Col>
+            <Col span={4}>
+              <Statistic title="待处理" value={stats.pending} styles={{ content: { color: '#faad14' } }} />
+            </Col>
+            <Col span={4}>
+              <Statistic title="处理中" value={stats.processing} styles={{ content: { color: '#1890ff' } }} />
+            </Col>
+            <Col span={4}>
+              <Statistic title="已完成" value={stats.completed} styles={{ content: { color: '#52c41a' } }} />
+            </Col>
+            <Col span={4}>
+              <Statistic title="已关闭" value={stats.closed} styles={{ content: { color: '#8c8c8c' } }} />
+            </Col>
+            <Col span={4}>
+              <Button
+                type="primary"
+                danger
+                disabled={selectedRowKeys.length === 0}
+                onClick={handleBatchDelete}
+              >
+                批量删除 ({selectedRowKeys.length})
+              </Button>
+            </Col>
+          </Row>
+        </Card>
+      )}
 
-      <Card title="工单管理">
+      {/* 筛选表单和操作按钮 */}
+      <Card style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
           <Form form={form} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="workOrderNo" label="工单编号">
-              <Input placeholder="请输入工单编号" allowClear style={{ width: 150 }} />
+              <Input placeholder="请输入工单编号" allowClear className="user-form-input" style={{ width: 150 }} />
             </Form.Item>
             <Form.Item name="title" label="标题">
-              <Input placeholder="请输入标题" allowClear style={{ width: 150 }} />
+              <Input placeholder="请输入标题" allowClear className="user-form-input" style={{ width: 150 }} />
             </Form.Item>
             <Form.Item name="categoryId" label="分类">
               <TreeSelect
                 placeholder="请选择分类"
                 allowClear
+                className="user-form-input"
                 style={{ width: 150 }}
                 treeData={buildCategoryTree(categories)}
                 showSearch
@@ -581,7 +587,7 @@ const WorkOrderPage: FC = () => {
               />
             </Form.Item>
             <Form.Item name="type" label="类型">
-              <Select placeholder="请选择类型" allowClear style={{ width: 100 }}>
+              <Select placeholder="请选择类型" allowClear className="user-form-input" style={{ width: 100 }}>
                 {Object.entries(TYPE_CONFIG).map(([key, { text }]) => (
                   <Option key={key} value={key}>
                     {text}
@@ -590,7 +596,7 @@ const WorkOrderPage: FC = () => {
               </Select>
             </Form.Item>
             <Form.Item name="priority" label="优先级">
-              <Select placeholder="请选择优先级" allowClear style={{ width: 100 }}>
+              <Select placeholder="请选择优先级" allowClear className="user-form-input" style={{ width: 100 }}>
                 {Object.entries(PRIORITY_CONFIG).map(([key, { text }]) => (
                   <Option key={key} value={Number(key)}>
                     {text}
@@ -599,7 +605,7 @@ const WorkOrderPage: FC = () => {
               </Select>
             </Form.Item>
             <Form.Item name="status" label="状态">
-              <Select placeholder="请选择状态" allowClear style={{ width: 100 }}>
+              <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 100 }}>
                 {Object.entries(STATUS_CONFIG).map(([key, { text }]) => (
                   <Option key={key} value={Number(key)}>
                     {text}
@@ -608,7 +614,7 @@ const WorkOrderPage: FC = () => {
               </Select>
             </Form.Item>
             <Form.Item name="assigneeId" label="处理人">
-              <Select placeholder="请选择处理人" allowClear showSearch style={{ width: 120 }} optionFilterProp="children">
+              <Select placeholder="请选择处理人" allowClear className="user-form-input" showSearch style={{ width: 120 }} optionFilterProp="children">
                 {users.map((user) => (
                   <Option key={user.id} value={user.id}>
                     {user.nickName || user.username}
@@ -628,12 +634,44 @@ const WorkOrderPage: FC = () => {
             </Form.Item>
           </Form>
           <Space>
+            {selectedRowKeys.length > 0 && (
+              <Button
+                type="primary"
+                danger
+                onClick={handleBatchDelete}
+              >
+                批量删除 ({selectedRowKeys.length})
+              </Button>
+            )}
             <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
               新增工单
             </Button>
           </Space>
         </div>
+        {selectedRowKeys.length > 0 && (
+          <Alert
+            message={
+              <span>
+                已选择 <strong>{selectedRowKeys.length}</strong> 个工单，
+                <Button
+                  type="link"
+                  size="small"
+                  onClick={() => setSelectedRowKeys([])}
+                  style={{ padding: 0 }}
+                >
+                  取消选择
+                </Button>
+              </span>
+            }
+            type="info"
+            showIcon
+            style={{ marginTop: 12 }}
+          />
+        )}
+      </Card>
 
+      {/* 工单表格 */}
+      <Card>
         <Table
           rowKey="id"
           columns={columns}
@@ -665,7 +703,7 @@ const WorkOrderPage: FC = () => {
         width={700}
         destroyOnHidden
       >
-        <Form form={editForm} layout="vertical" preserve={false}>
+        <Form form={editForm} layout="horizontal" labelCol={{ span: 4 }} wrapperCol={{ span: 20 }} preserve={false}>
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
@@ -673,7 +711,7 @@ const WorkOrderPage: FC = () => {
                 label="工单标题"
                 rules={[{ required: true, message: '请输入工单标题' }]}
               >
-                <Input placeholder="请输入工单标题" />
+                <Input placeholder="请输入工单标题" className="user-form-input" />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -687,6 +725,7 @@ const WorkOrderPage: FC = () => {
                   treeData={buildCategoryTree(categories)}
                   showSearch
                   treeNodeFilterProp="title"
+                  className="user-form-input"
                 />
               </Form.Item>
             </Col>
@@ -699,7 +738,7 @@ const WorkOrderPage: FC = () => {
                 label="工单类型"
                 rules={[{ required: true, message: '请选择工单类型' }]}
               >
-                <Select placeholder="请选择工单类型">
+                <Select placeholder="请选择工单类型" className="user-form-input">
                   {Object.entries(TYPE_CONFIG).map(([key, { text }]) => (
                     <Option key={key} value={key}>
                       {text}
@@ -714,7 +753,7 @@ const WorkOrderPage: FC = () => {
                 label="优先级"
                 rules={[{ required: true, message: '请选择优先级' }]}
               >
-                <Select placeholder="请选择优先级">
+                <Select placeholder="请选择优先级" className="user-form-input">
                   {Object.entries(PRIORITY_CONFIG).map(([key, { text }]) => (
                     <Option key={key} value={Number(key)}>
                       {text}
@@ -728,7 +767,7 @@ const WorkOrderPage: FC = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="deptId" label="所属部门">
-                <Select placeholder="请选择部门" allowClear>
+                <Select placeholder="请选择部门" allowClear className="user-form-input">
                   {depts.map((dept) => (
                     <Option key={dept.id} value={dept.id}>
                       {dept.deptName}
@@ -739,7 +778,7 @@ const WorkOrderPage: FC = () => {
             </Col>
             <Col span={12}>
               <Form.Item name="assigneeId" label="处理人">
-                <Select placeholder="请选择处理人" allowClear showSearch optionFilterProp="children">
+                <Select placeholder="请选择处理人" allowClear showSearch optionFilterProp="children" className="user-form-input">
                   {users.map((user) => (
                     <Option key={user.id} value={user.id}>
                       {user.nickName || user.username}
@@ -751,7 +790,7 @@ const WorkOrderPage: FC = () => {
           </Row>
 
           <Form.Item name="expectedResolveAt" label="期望解决时间">
-            <Input type="datetime-local" />
+            <Input type="datetime-local" className="user-form-input" />
           </Form.Item>
 
           <Form.Item name="description" label="工单描述">

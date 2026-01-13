@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { FC } from 'react';
 import {
   Table,
@@ -11,6 +11,11 @@ import {
   Select,
   Popconfirm,
   Tag,
+  Card,
+  Row,
+  Col,
+  Statistic,
+  Alert,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -19,17 +24,26 @@ import {
   DeleteOutlined,
   SearchOutlined,
   ReloadOutlined,
+  CheckCircleOutlined,
+  StopOutlined,
 } from '@ant-design/icons';
 import type { Post } from '@/types';
 import { post } from '@/lib/api';
 import { useTableManager } from '@/hooks/useTableManager';
 import { handleApiError, handleSuccess } from '@/utils/errorHandler';
 import { createStatusColumn, createDateTimeColumn, createActionColumn } from '@/utils/tableHelpers';
+import ActionButtons from '@/components/shared/ActionButtons';
 
 const { Option } = Select;
 const { TextArea } = Input;
 
 const PostManagement: FC = () => {
+  const [statistics, setStatistics] = useState({
+    total: 0,
+    active: 0,
+    inactive: 0,
+  });
+
   const {
     loading,
     data: posts,
@@ -61,6 +75,29 @@ const PostManagement: FC = () => {
     { pageSize: 10 }
   );
 
+  // 加载统计数据
+  const loadStatistics = useCallback(async () => {
+    try {
+      const result = await post('/system/posts/list', { current: 1, pageSize: 1000 });
+      const allPosts = result.data.list || [];
+      const activeCount = allPosts.filter((p: any) => p.status === 0).length;
+      const inactiveCount = allPosts.filter((p: any) => p.status === 1).length;
+      setStatistics({
+        total: allPosts.length,
+        active: activeCount,
+        inactive: inactiveCount,
+      });
+    } catch (error) {
+      handleApiError(error, '加载统计数据', false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadPosts();
+    loadStatistics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // 创建岗位
   const handleCreate = async () => {
     try {
@@ -74,6 +111,7 @@ const PostManagement: FC = () => {
       }
       handleModalClose();
       loadPosts();
+      loadStatistics();
     } catch (error: any) {
       if (error.errorFields) {
         return; // 表单验证错误
@@ -88,6 +126,7 @@ const PostManagement: FC = () => {
       await post(`/system/posts/${id}/delete`, {});
       handleSuccess('删除');
       loadPosts();
+      loadStatistics();
     } catch (error) {
       handleApiError(error, '删除');
     }
@@ -103,6 +142,7 @@ const PostManagement: FC = () => {
       handleSuccess('批量删除');
       resetSelection();
       loadPosts();
+      loadStatistics();
     } catch (error) {
       handleApiError(error, '批量删除');
     }
@@ -127,85 +167,170 @@ const PostManagement: FC = () => {
     createStatusColumn('status', { width: 100 }),
     { title: '备注', dataIndex: 'remark', key: 'remark', ellipsis: true },
     createDateTimeColumn('createdAt', { width: 180 }),
-    createActionColumn(
-      (record) => openModal(record),
-      (record) => handleDelete(record.id)
-    ),
-  ];
+    {
+      title: '操作',
+      key: 'action',
+      render: (_, record) => {
+        const actions = [
+          {
+            key: 'edit',
+            label: '编辑',
+            icon: <EditOutlined />,
+            onClick: () => openModal(record),
+          },
+          {
+            key: 'delete',
+            label: '删除',
+            icon: <DeleteOutlined />,
+            danger: true,
+            render: () => (
+              <Popconfirm
+                title="确定要删除这个岗位吗？"
+                onConfirm={() => handleDelete(record.id)}
+                okText="确定"
+                cancelText="取消"
+              >
+                <Button type="link" danger icon={<DeleteOutlined />} size="small">
+                  删除
+                </Button>
+              </Popconfirm>
+            ),
+          },
+        ];
 
-  useEffect(() => {
-    loadPosts();
-  }, [current, pageSize, loadPosts]);
+        return <ActionButtons actions={actions} />;
+      },
+    },
+  ];
 
   return (
     <div>
-      {/* 搜索表单 */}
-      <Form form={searchForm} layout="inline" style={{ marginBottom: 16 }}>
-        <Form.Item name="postCode" label="岗位编码">
-          <Input placeholder="请输入岗位编码" allowClear style={{ width: 150 }} />
-        </Form.Item>
-        <Form.Item name="postName" label="岗位名称">
-          <Input placeholder="请输入岗位名称" allowClear style={{ width: 150 }} />
-        </Form.Item>
-        <Form.Item name="status" label="状态">
-          <Select placeholder="请选择状态" allowClear style={{ width: 120 }}>
-            <Option value={0}>正常</Option>
-            <Option value={1}>停用</Option>
-          </Select>
-        </Form.Item>
-        <Form.Item>
+      {/* 统计卡片 - 只在总数大于10时显示 */}
+      {total > 10 && (
+        <Row gutter={16} style={{ marginBottom: 16 }}>
+          <Col span={8}>
+            <Card>
+              <Statistic
+                title="总岗位数"
+                value={statistics.total}
+                prefix={<CheckCircleOutlined />}
+              />
+            </Card>
+          </Col>
+          <Col span={8}>
+            <Card>
+              <Statistic
+                title="正常岗位"
+                value={statistics.active}
+                styles={{ content: { color: '#3f8600' } }}
+                prefix={<CheckCircleOutlined />}
+              />
+            </Card>
+          </Col>
+          <Col span={8}>
+            <Card>
+              <Statistic
+                title="停用岗位"
+                value={statistics.inactive}
+                styles={{ content: { color: '#cf1322' } }}
+                prefix={<StopOutlined />}
+              />
+            </Card>
+          </Col>
+        </Row>
+      )}
+
+      {/* 搜索表单和操作按钮 */}
+      <Card style={{ marginBottom: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+          <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
+            <Form.Item name="postCode" label="岗位编码">
+              <Input placeholder="请输入岗位编码" allowClear className="user-form-input" style={{ width: 150 }} />
+            </Form.Item>
+            <Form.Item name="postName" label="岗位名称">
+              <Input placeholder="请输入岗位名称" allowClear className="user-form-input" style={{ width: 150 }} />
+            </Form.Item>
+            <Form.Item name="status" label="状态">
+              <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 120 }}>
+                <Option value={0}>正常</Option>
+                <Option value={1}>停用</Option>
+              </Select>
+            </Form.Item>
+            <Form.Item>
+              <Space>
+                <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+                  搜索
+                </Button>
+                <Button onClick={handleReset}>重置</Button>
+                <Button icon={<ReloadOutlined />} onClick={() => { loadPosts(); loadStatistics(); }}>
+                  刷新
+                </Button>
+              </Space>
+            </Form.Item>
+          </Form>
           <Space>
-            <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
-              查询
-            </Button>
-            <Button icon={<ReloadOutlined />} onClick={handleReset}>
-              重置
+            {selectedRowKeys.length > 0 && (
+              <Button
+                danger
+                icon={<DeleteOutlined />}
+                onClick={handleBatchDelete}
+              >
+                批量删除 ({selectedRowKeys.length})
+              </Button>
+            )}
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>
+              新增岗位
             </Button>
           </Space>
-        </Form.Item>
-      </Form>
-
-      {/* 操作按钮 */}
-      <div style={{ marginBottom: 16 }}>
-        <Space>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>
-            新增
-          </Button>
-          <Button
-            danger
-            icon={<DeleteOutlined />}
-            onClick={handleBatchDelete}
-            disabled={selectedRowKeys.length === 0}
-          >
-            批量删除
-          </Button>
-        </Space>
-      </div>
+        </div>
+        {selectedRowKeys.length > 0 && (
+          <Alert
+            message={
+              <span>
+                已选择 <strong>{selectedRowKeys.length}</strong> 个岗位，
+                <Button
+                  type="link"
+                  size="small"
+                  onClick={() => setSelectedRowKeys([])}
+                  style={{ padding: 0 }}
+                >
+                  取消选择
+                </Button>
+              </span>
+            }
+            type="info"
+            showIcon
+            style={{ marginTop: 12 }}
+          />
+        )}
+      </Card>
 
       {/* 数据表格 */}
-      <Table
-        rowSelection={{
-          selectedRowKeys,
-          onChange: setSelectedRowKeys,
-        }}
-        columns={columns}
-        dataSource={posts}
-        loading={loading}
-        rowKey="id"
-        scroll={{ x: 1200 }}
-        pagination={{
-          current,
-          pageSize,
-          total,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total) => `共 ${total} 条`,
-          onChange: (page, size) => {
-            setCurrent(page);
-            setPageSize(size || 10);
-          },
-        }}
-      />
+      <Card>
+        <Table
+          rowSelection={{
+            selectedRowKeys,
+            onChange: setSelectedRowKeys,
+          }}
+          columns={columns}
+          dataSource={posts}
+          loading={loading}
+          rowKey="id"
+          pagination={{
+            current,
+            pageSize,
+            total,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total) => `共 ${total} 条`,
+            onChange: (page, size) => {
+              setCurrent(page);
+              setPageSize(size || 10);
+              loadPosts({ current: page, pageSize: size || 10 });
+            },
+          }}
+        />
+      </Card>
 
       {/* 编辑模态框 */}
       <Modal
@@ -215,18 +340,18 @@ const PostManagement: FC = () => {
         onCancel={() => { setModalVisible(false); postForm.resetFields(); setEditingPost(null); }}
         width={600}
       >
-        <Form form={postForm} labelCol={{ span: 6 }} wrapperCol={{ span: 16 }}>
+        <Form form={postForm} layout="horizontal" labelCol={{ span: 4 }} wrapperCol={{ span: 20 }}>
           <Form.Item name="postCode" label="岗位编码" rules={[{ required: true, message: '请输入岗位编码' }]}>
-            <Input placeholder="请输入岗位编码" disabled={!!editingPost} />
+            <Input placeholder="请输入岗位编码" disabled={!!editingPost} className="user-form-input" />
           </Form.Item>
           <Form.Item name="postName" label="岗位名称" rules={[{ required: true, message: '请输入岗位名称' }]}>
-            <Input placeholder="请输入岗位名称" />
+            <Input placeholder="请输入岗位名称" className="user-form-input" />
           </Form.Item>
           <Form.Item name="postSort" label="显示排序" rules={[{ required: true, message: '请输入显示排序' }]}>
             <InputNumber min={0} style={{ width: '100%' }} placeholder="请输入显示排序" />
           </Form.Item>
           <Form.Item name="status" label="状态" rules={[{ required: true, message: '请选择状态' }]}>
-            <Select placeholder="请选择状态">
+            <Select placeholder="请选择状态" className="user-form-input">
               <Option value={0}>正常</Option>
               <Option value={1}>停用</Option>
             </Select>

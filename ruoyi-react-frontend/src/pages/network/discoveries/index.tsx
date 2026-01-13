@@ -34,6 +34,7 @@ import {
 } from '@ant-design/icons';
 import type { DeviceDiscovery, Department, NetworkDevice } from '@/types';
 import { post } from '@/lib/api';
+import ActionButtons from '@/components/shared/ActionButtons';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -340,16 +341,31 @@ const DeviceDiscoveryPage: FC = () => {
       key: 'action',
       fixed: 'right',
       width: 180,
-      render: (_, record) => (
-        <Space size="small">
-          <Button type="link" size="small" icon={<EyeOutlined />} onClick={() => handleViewResult(record)} disabled={record.status === 'pending'}>
-            查看结果
-          </Button>
-          <Popconfirm title="确认删除?" onConfirm={() => handleDelete(record.id)}>
-            <Button type="link" size="small" danger icon={<DeleteOutlined />}>删除</Button>
-          </Popconfirm>
-        </Space>
-      ),
+      render: (_, record) => {
+        const actions = [
+          {
+            key: 'view-result',
+            label: '查看结果',
+            icon: <EyeOutlined />,
+            onClick: () => handleViewResult(record),
+            disabled: record.status === 'pending',
+          },
+          {
+            key: 'delete',
+            label: '删除',
+            icon: <DeleteOutlined />,
+            danger: true,
+            render: () => (
+              <Popconfirm title="确认删除?" onConfirm={() => handleDelete(record.id)}>
+                <Button type="link" danger icon={<DeleteOutlined />} size="small">
+                  删除
+                </Button>
+              </Popconfirm>
+            ),
+          },
+        ];
+        return <ActionButtons actions={actions} />;
+      },
     },
   ];
 
@@ -447,7 +463,7 @@ const DeviceDiscoveryPage: FC = () => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
           <Form layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item label="状态">
-              <Select placeholder="请选择状态" allowClear style={{ width: 120 }} onChange={() => { loadDiscoveries(); loadStatistics(); }}>
+              <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 120 }} onChange={() => { loadDiscoveries(); loadStatistics(); }}>
                 {statusOptions.map(opt => (
                   <Option key={opt.value} value={opt.value}>{opt.label}</Option>
                 ))}

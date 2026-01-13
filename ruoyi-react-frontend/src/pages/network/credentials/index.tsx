@@ -33,6 +33,7 @@ import { post } from '@/lib/api';
 import { useTableManager } from '@/hooks/useTableManager';
 import { withErrorHandling } from '@/utils/errorHandler';
 import { useState, useEffect } from 'react';
+import ActionButtons from '@/components/shared/ActionButtons';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -115,6 +116,7 @@ const CredentialManagement: FC = () => {
   };
 
   useEffect(() => {
+    loadCredentials();
     loadStatistics();
   }, []);
 
@@ -287,17 +289,36 @@ const CredentialManagement: FC = () => {
       key: 'action',
       fixed: 'right',
       width: 200,
-      render: (_, record) => (
-        <Space size="small">
-          {!record.isDefault && (
-            <Button type="link" size="small" onClick={() => handleSetDefault(record.id)}>设为默认</Button>
-          )}
-          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}>编辑</Button>
-          <Popconfirm title="确认删除?" onConfirm={() => handleDelete(record.id)}>
-            <Button type="link" size="small" danger icon={<DeleteOutlined />}>删除</Button>
-          </Popconfirm>
-        </Space>
-      ),
+      render: (_, record) => {
+        const actions = [
+          {
+            key: 'set-default',
+            label: '设为默认',
+            onClick: () => handleSetDefault(record.id),
+            hidden: record.isDefault,
+          },
+          {
+            key: 'edit',
+            label: '编辑',
+            icon: <EditOutlined />,
+            onClick: () => handleEdit(record),
+          },
+          {
+            key: 'delete',
+            label: '删除',
+            icon: <DeleteOutlined />,
+            danger: true,
+            render: () => (
+              <Popconfirm title="确认删除?" onConfirm={() => handleDelete(record.id)}>
+                <Button type="link" danger icon={<DeleteOutlined />} size="small">
+                  删除
+                </Button>
+              </Popconfirm>
+            ),
+          },
+        ];
+        return <ActionButtons actions={actions} />;
+      },
     },
   ];
 
@@ -344,10 +365,10 @@ const CredentialManagement: FC = () => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="searchCredentialName" label="凭证名称">
-              <Input placeholder="请输入凭证名称" allowClear style={{ width: 150 }} />
+              <Input placeholder="请输入凭证名称" allowClear className="user-form-input" style={{ width: 150 }} />
             </Form.Item>
             <Form.Item name="searchProtocolType" label="协议类型">
-              <Select placeholder="请选择协议类型" allowClear style={{ width: 120 }}>
+              <Select placeholder="请选择协议类型" allowClear className="user-form-input" style={{ width: 120 }}>
                 {protocolTypeOptions.map(opt => (
                   <Option key={opt.value} value={opt.value}>{opt.label}</Option>
                 ))}

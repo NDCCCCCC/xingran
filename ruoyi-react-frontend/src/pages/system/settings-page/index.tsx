@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import type { FC } from 'react';
-import { Card, Tabs } from 'antd';
+import { Tabs } from 'antd';
 import { MailOutlined, ApiOutlined, PictureOutlined } from '@ant-design/icons';
 import { EmailConfigPage, APIConfigPage, CaptchaBackgroundSettingsPage } from '../settings';
+
+const { TabPane } = Tabs;
 
 /**
  * 系统设置页面
@@ -11,48 +13,19 @@ import { EmailConfigPage, APIConfigPage, CaptchaBackgroundSettingsPage } from '.
 const SystemSettingsPage: FC = () => {
   const [activeTab, setActiveTab] = useState('email');
 
-  const tabItems = [
-    {
-      key: 'email',
-      label: (
-        <span>
-          <MailOutlined />
-          邮箱配置
-        </span>
-      ),
-      children: <EmailConfigPage />,
-    },
-    {
-      key: 'api',
-      label: (
-        <span>
-          <ApiOutlined />
-          API配置
-        </span>
-      ),
-      children: <APIConfigPage />,
-    },
-    {
-      key: 'captcha-background',
-      label: (
-        <span>
-          <PictureOutlined />
-          验证码背景图
-        </span>
-      ),
-      children: <CaptchaBackgroundSettingsPage />,
-    },
-  ];
-
   return (
-    <div className="p-6">
-      <Card>
-        <Tabs
-          activeKey={activeTab}
-          onChange={setActiveTab}
-          items={tabItems}
-        />
-      </Card>
+    <div>
+      <Tabs activeKey={activeTab} onChange={setActiveTab}>
+        <TabPane tab={<span><MailOutlined />邮箱配置</span>} key="email">
+          <EmailConfigPage />
+        </TabPane>
+        <TabPane tab={<span><ApiOutlined />API配置</span>} key="api">
+          <APIConfigPage />
+        </TabPane>
+        <TabPane tab={<span><PictureOutlined />验证码背景图</span>} key="captcha-background">
+          <CaptchaBackgroundSettingsPage />
+        </TabPane>
+      </Tabs>
     </div>
   );
 };

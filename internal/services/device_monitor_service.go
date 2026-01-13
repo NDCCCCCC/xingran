@@ -13,6 +13,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/portcollection"
 )
 
 // DeviceMonitorService 设备监控服务
@@ -21,7 +22,7 @@ type DeviceMonitorService struct {
 	db                   *gorm.DB
 	deviceManager        *device.Manager
 	deviceExecutor       *device.DeviceExecutor
-	portCollectionSvc    *PortCollectionService
+	portCollectionSvc    *portcollection.PortCollectionService
 	macCollectionSvc     *MACCollectionService
 	configBackupSvc      *ConfigBackupService
 	maxConcurrent        int
@@ -71,13 +72,13 @@ func NewDeviceMonitorService(db *gorm.DB, sm4Cipher *security.SM4Cipher, config 
 func (s *DeviceMonitorService) SetExecutor(executor *device.DeviceExecutor) {
 	s.deviceExecutor = executor
 	// 初始化子服务
-	s.portCollectionSvc = NewPortCollectionService(s.db, executor)
+	s.portCollectionSvc = portcollection.NewPortCollectionService(s.db, executor)
 	s.macCollectionSvc = NewMACCollectionService(s.db, executor)
 	s.configBackupSvc = NewConfigBackupService(s.db, executor)
 }
 
 // SetPortCollectionService 设置端口采集服务
-func (s *DeviceMonitorService) SetPortCollectionService(svc *PortCollectionService) {
+func (s *DeviceMonitorService) SetPortCollectionService(svc *portcollection.PortCollectionService) {
 	s.portCollectionSvc = svc
 }
 
@@ -118,8 +119,8 @@ func (s *DeviceMonitorService) loadConfigFromDB() {
 func (s *DeviceMonitorService) ReloadConfig() {
 	s.loadConfigFromDB()
 	// 同时刷新子服务的配置
-	if s.portCollectionSvc != nil {
-		s.portCollectionSvc.ReloadConfig()
+	if s.portCollectionSvc != nil && s.portCollectionSvc.Collection != nil {
+		s.portCollectionSvc.Collection.ReloadConfig()
 	}
 	if s.macCollectionSvc != nil {
 		s.macCollectionSvc.ReloadConfig()
@@ -302,7 +303,7 @@ func (s *DeviceMonitorService) CollectAllPortStatus(ctx context.Context) error {
 		return fmt.Errorf("端口采集服务未初始化")
 	}
 
-	results, err := s.portCollectionSvc.CollectAllDevices(ctx)
+	results, err := s.portCollectionSvc.Collection.CollectAllDevices(ctx)
 	if err != nil {
 		return fmt.Errorf("端口状态采集失败: %w", err)
 	}
@@ -327,7 +328,7 @@ func (s *DeviceMonitorService) CollectPortStatus(ctx context.Context, deviceID s
 		return fmt.Errorf("端口采集服务未初始化")
 	}
 
-	_, err := s.portCollectionSvc.CollectDevice(ctx, deviceID)
+	_, err := s.portCollectionSvc.Collection.CollectDevice(ctx, deviceID)
 	return err
 }
 

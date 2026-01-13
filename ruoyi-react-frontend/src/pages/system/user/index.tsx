@@ -466,9 +466,9 @@ const UserManagement: FC = () => {
   ];
 
   return (
-    <Layout style={{ minHeight: 'calc(100vh - 64px)' }}>
+    <Layout style={{ display: 'flex', alignItems: 'stretch' }}>
       {/* 左侧部门树 */}
-      <Sider width={360} className="dept-list-sider" style={{ background: '#fff', padding: '0 16px 16px 0', borderRight: '1px solid #f0f0f0' }}>
+      <Sider width={360} className="dept-list-sider" style={{ background: '#fff', padding: '0 16px 16px 0' }}>
         <DeptTree
           onSelect={(selectedKeys) => handleDeptSelect(selectedKeys)}
           selectedKeys={selectedDeptId ? [selectedDeptId] : []}
@@ -476,7 +476,7 @@ const UserManagement: FC = () => {
       </Sider>
 
       {/* 右侧内容区 */}
-      <Content style={{ padding: '16px' }}>
+      <Content style={{ padding: 0, background: '#fff' }}>
         <div>
           {/* 统计卡片 */}
           <Row gutter={16} style={{ marginBottom: 16 }}>
@@ -618,13 +618,13 @@ const UserManagement: FC = () => {
         onCancel={() => setEditModalVisible(false)}
         width={600}
       >
-        <Form form={editForm} layout="vertical">
+        <Form form={editForm} layout="horizontal" labelCol={{ span: 4 }} wrapperCol={{ span: 20 }}>
           <Form.Item
             name="username"
             label="用户名"
             rules={[{ required: true, message: '请输入用户名' }]}
           >
-            <Input disabled={!!editingUser} />
+            <Input disabled={!!editingUser} className="user-form-input" />
           </Form.Item>
           {!editingUser && (
             <Form.Item
@@ -632,7 +632,7 @@ const UserManagement: FC = () => {
               label="密码"
               rules={[{ required: true, message: '请输入密码' }]}
             >
-              <Input.Password />
+              <Input.Password className="user-form-input" />
             </Form.Item>
           )}
           <Form.Item
@@ -640,26 +640,26 @@ const UserManagement: FC = () => {
             label="昵称"
             rules={[{ required: true, message: '请输入昵称' }]}
           >
-            <Input />
+            <Input className="user-form-input" />
           </Form.Item>
-          <Form.Item name="employeeNo" label="工号（企业微信代码）">
-            <Input placeholder="请输入工号" />
+          <Form.Item name="employeeNo" label="工号">
+            <Input placeholder="请输入工号" className="user-form-input" />
           </Form.Item>
           <Form.Item name="email" label="邮箱">
-            <Input />
+            <Input className="user-form-input" />
           </Form.Item>
           <Form.Item name="phone" label="手机号">
-            <Input />
+            <Input className="user-form-input" />
           </Form.Item>
           <Form.Item name="gender" label="性别" initialValue={0}>
-            <Select>
+            <Select className="user-form-input">
               <Option value={0}>男</Option>
               <Option value={1}>女</Option>
               <Option value={2}>保密</Option>
             </Select>
           </Form.Item>
           <Form.Item name="deptId" label="部门">
-            <Select placeholder="请选择部门" allowClear>
+            <Select placeholder="请选择部门" allowClear className="user-form-input">
               {renderDeptTreeOptions(departments)}
             </Select>
           </Form.Item>
@@ -673,6 +673,7 @@ const UserManagement: FC = () => {
               filterOption={(input, option) =>
                 (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
               }
+              className="user-form-input"
             >
               {roles.map(role => (
                 <Option key={role.id} value={role.id}>
@@ -682,7 +683,7 @@ const UserManagement: FC = () => {
             </Select>
           </Form.Item>
           <Form.Item name="status" label="状态" initialValue={0}>
-            <Select>
+            <Select className="user-form-input">
               <Option value={0}>启用</Option>
               <Option value={1}>禁用</Option>
             </Select>

@@ -415,20 +415,20 @@ const TemplateManagement: FC = () => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="templateName" label="模板名称">
-              <Input placeholder="请输入模板名称" allowClear style={{ width: 150 }} />
+              <Input placeholder="请输入模板名称" allowClear className="user-form-input" style={{ width: 150 }} />
             </Form.Item>
             <Form.Item name="templateCode" label="模板编码">
-              <Input placeholder="请输入模板编码" allowClear style={{ width: 150 }} />
+              <Input placeholder="请输入模板编码" allowClear className="user-form-input" style={{ width: 150 }} />
             </Form.Item>
             <Form.Item name="templateType" label="模板类型">
-              <Select placeholder="请选择模板类型" allowClear style={{ width: 130 }}>
+              <Select placeholder="请选择模板类型" allowClear className="user-form-input" style={{ width: 130 }}>
                 {templateTypeOptions.map(opt => (
                   <Option key={opt.value} value={opt.value}>{opt.label}</Option>
                 ))}
               </Select>
             </Form.Item>
             <Form.Item name="vendor" label="厂商">
-              <Select placeholder="请选择厂商" allowClear style={{ width: 120 }}>
+              <Select placeholder="请选择厂商" allowClear className="user-form-input" style={{ width: 120 }}>
                 {vendorOptions.map(opt => (
                   <Option key={opt.value} value={opt.value}>{opt.label}</Option>
                 ))}

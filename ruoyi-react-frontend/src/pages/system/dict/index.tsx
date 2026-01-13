@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { FC, Key } from 'react';
 import {
   Table,
@@ -14,6 +14,11 @@ import {
   Tabs,
   InputNumber,
   Switch,
+  Card,
+  Row,
+  Col,
+  Statistic,
+  Alert,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -22,9 +27,13 @@ import {
   DeleteOutlined,
   SearchOutlined,
   ReloadOutlined,
+  CheckCircleOutlined,
+  StopOutlined,
 } from '@ant-design/icons';
 import type { DictType, DictData } from '@/types';
 import { post } from '@/lib/api';
+import ActionButtons from '@/components/shared/ActionButtons';
+import { handleApiError, handleSuccess } from '@/utils/errorHandler';
 
 const { Option } = Select;
 const { TabPane } = Tabs;
@@ -48,6 +57,16 @@ const DictManagement: FC = () => {
   const [selectedType, setSelectedType] = useState<string>('');
   const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
   const [activeTab, setActiveTab] = useState('type');
+  const [typeStatistics, setTypeStatistics] = useState({
+    total: 0,
+    active: 0,
+    inactive: 0,
+  });
+  const [dataStatistics, setDataStatistics] = useState({
+    total: 0,
+    active: 0,
+    inactive: 0,
+  });
 
   // 加载字典类型列表
   const loadDictTypes = async (params: any = {}) => {
@@ -92,26 +111,65 @@ const DictManagement: FC = () => {
     }
   };
 
+  // 加载字典类型统计数据
+  const loadTypeStatistics = useCallback(async () => {
+    try {
+      const result = await post('/system/dicts/types/list', { current: 1, pageSize: 1000 });
+      const allTypes = result.data.list || [];
+      const activeCount = allTypes.filter((t: any) => t.status === 0).length;
+      const inactiveCount = allTypes.filter((t: any) => t.status === 1).length;
+      setTypeStatistics({
+        total: allTypes.length,
+        active: activeCount,
+        inactive: inactiveCount,
+      });
+    } catch (error) {
+      handleApiError(error, '加载统计数据', false);
+    }
+  }, []);
+
+  // 加载字典数据统计数据
+  const loadDataStatistics = useCallback(async () => {
+    if (!selectedType) {
+      setDataStatistics({ total: 0, active: 0, inactive: 0 });
+      return;
+    }
+    try {
+      const result = await post('/system/dicts/data/list', { current: 1, pageSize: 1000, dictType: selectedType });
+      const allData = result.data.list || [];
+      const activeCount = allData.filter((d: any) => d.status === 0).length;
+      const inactiveCount = allData.filter((d: any) => d.status === 1).length;
+      setDataStatistics({
+        total: allData.length,
+        active: activeCount,
+        inactive: inactiveCount,
+      });
+    } catch (error) {
+      handleApiError(error, '加载统计数据', false);
+    }
+  }, [selectedType]);
+
   // 创建字典类型
   const handleCreateType = async () => {
     try {
       const values = await typeForm.validateFields();
       if (editingType) {
         await post(`/system/dicts/types/${editingType.id}/update`, values);
-        message.success('更新成功');
+        handleSuccess('更新');
       } else {
         await post('/system/dicts/types', values);
-        message.success('创建成功');
+        handleSuccess('创建');
       }
       setTypeModalVisible(false);
       typeForm.resetFields();
       setEditingType(null);
       loadDictTypes();
+      loadTypeStatistics();
     } catch (error: any) {
       if (error.errorFields) {
         return; // 表单验证错误
       }
-      message.error('操作失败');
+      handleApiError(error, '操作');
     }
   };
 
@@ -119,10 +177,11 @@ const DictManagement: FC = () => {
   const handleDeleteType = async (id: string) => {
     try {
       await post(`/system/dicts/types/${id}/delete`, {});
-      message.success('删除成功');
+      handleSuccess('删除');
       loadDictTypes();
+      loadTypeStatistics();
     } catch (error) {
-      message.error('删除失败');
+      handleApiError(error, '删除');
     }
   };
 
@@ -134,11 +193,12 @@ const DictManagement: FC = () => {
     }
     try {
       await post('/system/dicts/types/batch-delete', { ids: selectedRowKeys });
-      message.success('批量删除成功');
+      handleSuccess('批量删除');
       setSelectedRowKeys([]);
       loadDictTypes();
+      loadTypeStatistics();
     } catch (error) {
-      message.error('批量删除失败');
+      handleApiError(error, '批量删除');
     }
   };
 
@@ -148,20 +208,21 @@ const DictManagement: FC = () => {
       const values = await dataForm.validateFields();
       if (editingData) {
         await post(`/system/dicts/data/${editingData.id}/update`, values);
-        message.success('更新成功');
+        handleSuccess('更新');
       } else {
         await post('/system/dicts/data', { ...values, dictType: selectedType });
-        message.success('创建成功');
+        handleSuccess('创建');
       }
       setDataModalVisible(false);
       dataForm.resetFields();
       setEditingData(null);
       loadDictData();
+      loadDataStatistics();
     } catch (error: any) {
       if (error.errorFields) {
         return;
       }
-      message.error('操作失败');
+      handleApiError(error, '操作');
     }
   };
 
@@ -169,10 +230,11 @@ const DictManagement: FC = () => {
   const handleDeleteData = async (id: string) => {
     try {
       await post(`/system/dicts/data/${id}/delete`, {});
-      message.success('删除成功');
+      handleSuccess('删除');
       loadDictData();
+      loadDataStatistics();
     } catch (error) {
-      message.error('删除失败');
+      handleApiError(error, '删除');
     }
   };
 
@@ -184,11 +246,12 @@ const DictManagement: FC = () => {
     }
     try {
       await post('/system/dicts/data/batch-delete', { ids: selectedRowKeys });
-      message.success('批量删除成功');
+      handleSuccess('批量删除');
       setSelectedRowKeys([]);
       loadDictData();
+      loadDataStatistics();
     } catch (error) {
-      message.error('批量删除失败');
+      handleApiError(error, '批量删除');
     }
   };
 
@@ -244,16 +307,31 @@ const DictManagement: FC = () => {
     {
       title: '操作',
       key: 'action',
-      fixed: 'right',
-      width: 200,
-      render: (_, record) => (
-        <Space size="small">
-          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => openTypeModal(record)}>编辑</Button>
-          <Popconfirm title="确认删除?" onConfirm={() => handleDeleteType(record.id)}>
-            <Button type="link" size="small" danger icon={<DeleteOutlined />}>删除</Button>
-          </Popconfirm>
-        </Space>
-      ),
+      render: (_, record) => {
+        const actions = [
+          {
+            key: 'edit',
+            label: '编辑',
+            icon: <EditOutlined />,
+            onClick: () => openTypeModal(record),
+          },
+          {
+            key: 'delete',
+            label: '删除',
+            icon: <DeleteOutlined />,
+            danger: true,
+            render: () => (
+              <Popconfirm title="确认删除?" onConfirm={() => handleDeleteType(record.id)}>
+                <Button type="link" danger icon={<DeleteOutlined />} size="small">
+                  删除
+                </Button>
+              </Popconfirm>
+            ),
+          },
+        ];
+
+        return <ActionButtons actions={actions} />;
+      },
     },
   ];
 
@@ -270,137 +348,312 @@ const DictManagement: FC = () => {
     {
       title: '操作',
       key: 'action',
-      fixed: 'right',
-      width: 200,
-      render: (_, record) => (
-        <Space size="small">
-          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => openDataModal(record)}>编辑</Button>
-          <Popconfirm title="确认删除?" onConfirm={() => handleDeleteData(record.id)}>
-            <Button type="link" size="small" danger icon={<DeleteOutlined />}>删除</Button>
-          </Popconfirm>
-        </Space>
-      ),
+      render: (_, record) => {
+        const actions = [
+          {
+            key: 'edit',
+            label: '编辑',
+            icon: <EditOutlined />,
+            onClick: () => openDataModal(record),
+          },
+          {
+            key: 'delete',
+            label: '删除',
+            icon: <DeleteOutlined />,
+            danger: true,
+            render: () => (
+              <Popconfirm title="确认删除?" onConfirm={() => handleDeleteData(record.id)}>
+                <Button type="link" danger icon={<DeleteOutlined />} size="small">
+                  删除
+                </Button>
+              </Popconfirm>
+            ),
+          },
+        ];
+
+        return <ActionButtons actions={actions} />;
+      },
     },
   ];
 
   useEffect(() => {
     if (activeTab === 'type') {
       loadDictTypes();
+      loadTypeStatistics();
     }
-  }, [activeTab, current, pageSize]);
+  }, [activeTab, current, pageSize, loadTypeStatistics]);
 
   useEffect(() => {
     if (activeTab === 'data' && selectedType) {
       loadDictData();
+      loadDataStatistics();
     }
-  }, [activeTab, selectedType, current, pageSize]);
+  }, [activeTab, selectedType, current, pageSize, loadDataStatistics]);
 
   return (
     <div>
       <Tabs activeKey={activeTab} onChange={setActiveTab}>
         <TabPane tab="字典类型" key="type">
-          <Form form={searchForm} layout="inline" style={{ marginBottom: 16 }}>
-            <Form.Item name="dictName" label="字典名称">
-              <Input placeholder="请输入字典名称" allowClear />
-            </Form.Item>
-            <Form.Item name="dictType" label="字典类型">
-              <Input placeholder="请输入字典类型" allowClear />
-            </Form.Item>
-            <Form.Item name="status" label="状态">
-              <Select placeholder="请选择状态" allowClear style={{ width: 120 }}>
-                <Option value={0}>启用</Option>
-                <Option value={1}>禁用</Option>
-              </Select>
-            </Form.Item>
-            <Form.Item>
+          {/* 统计卡片 - 只在总数大于10时显示 */}
+          {typeStatistics.total > 10 && (
+            <Row gutter={16} style={{ marginBottom: 16 }}>
+              <Col span={8}>
+                <Card>
+                  <Statistic
+                    title="总类型数"
+                    value={typeStatistics.total}
+                    prefix={<CheckCircleOutlined />}
+                  />
+                </Card>
+              </Col>
+              <Col span={8}>
+                <Card>
+                  <Statistic
+                    title="正常类型"
+                    value={typeStatistics.active}
+                    styles={{ content: { color: '#3f8600' } }}
+                    prefix={<CheckCircleOutlined />}
+                  />
+                </Card>
+              </Col>
+              <Col span={8}>
+                <Card>
+                  <Statistic
+                    title="停用类型"
+                    value={typeStatistics.inactive}
+                    styles={{ content: { color: '#cf1322' } }}
+                    prefix={<StopOutlined />}
+                  />
+                </Card>
+              </Col>
+            </Row>
+          )}
+
+          {/* 搜索表单和操作按钮 */}
+          <Card style={{ marginBottom: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+              <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
+                <Form.Item name="dictName" label="字典名称">
+                  <Input placeholder="请输入字典名称" allowClear className="user-form-input" style={{ width: 150 }} />
+                </Form.Item>
+                <Form.Item name="dictType" label="字典类型">
+                  <Input placeholder="请输入字典类型" allowClear className="user-form-input" style={{ width: 150 }} />
+                </Form.Item>
+                <Form.Item name="status" label="状态">
+                  <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 120 }}>
+                    <Option value={0}>启用</Option>
+                    <Option value={1}>禁用</Option>
+                  </Select>
+                </Form.Item>
+                <Form.Item>
+                  <Space>
+                    <Button type="primary" icon={<SearchOutlined />} onClick={() => loadDictTypes()}>
+                      搜索
+                    </Button>
+                    <Button icon={<ReloadOutlined />} onClick={() => { searchForm.resetFields(); loadDictTypes(); loadTypeStatistics(); }}>
+                      刷新
+                    </Button>
+                  </Space>
+                </Form.Item>
+              </Form>
               <Space>
-                <Button type="primary" icon={<SearchOutlined />} onClick={() => loadDictTypes()}>查询</Button>
-                <Button icon={<ReloadOutlined />} onClick={() => { searchForm.resetFields(); loadDictTypes(); }}>重置</Button>
+                {selectedRowKeys.length > 0 && (
+                  <Button
+                    danger
+                    icon={<DeleteOutlined />}
+                    onClick={handleBatchDeleteType}
+                  >
+                    批量删除 ({selectedRowKeys.length})
+                  </Button>
+                )}
+                <Button type="primary" icon={<PlusOutlined />} onClick={() => openTypeModal()}>
+                  新增类型
+                </Button>
+                <Button icon={<ReloadOutlined />} onClick={handleRefreshCache}>
+                  刷新缓存
+                </Button>
               </Space>
-            </Form.Item>
-          </Form>
+            </div>
+            {selectedRowKeys.length > 0 && (
+              <Alert
+                message={
+                  <span>
+                    已选择 <strong>{selectedRowKeys.length}</strong> 个字典类型，
+                    <Button
+                      type="link"
+                      size="small"
+                      onClick={() => setSelectedRowKeys([])}
+                      style={{ padding: 0 }}
+                    >
+                      取消选择
+                    </Button>
+                  </span>
+                }
+                type="info"
+                showIcon
+                style={{ marginTop: 12 }}
+              />
+            )}
+          </Card>
 
-          <div style={{ marginBottom: 16 }}>
-            <Space>
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => openTypeModal()}>新增</Button>
-              <Button danger icon={<DeleteOutlined />} onClick={handleBatchDeleteType} disabled={selectedRowKeys.length === 0}>批量删除</Button>
-              <Button icon={<ReloadOutlined />} onClick={handleRefreshCache}>刷新缓存</Button>
-            </Space>
-          </div>
-
-          <Table
-            rowSelection={{
-              selectedRowKeys,
-              onChange: setSelectedRowKeys,
-            }}
-            columns={typeColumns}
-            dataSource={dictTypes}
-            loading={loading}
-            rowKey="id"
-            pagination={{
-              current,
-              pageSize,
-              total,
-              showSizeChanger: true,
-              showQuickJumper: true,
-              showTotal: (total) => `共 ${total} 条`,
-              onChange: (page, size) => { setCurrent(page); setPageSize(size || 10); },
-            }}
-          />
+          {/* 数据表格 */}
+          <Card>
+            <Table
+              rowSelection={{
+                selectedRowKeys,
+                onChange: setSelectedRowKeys,
+              }}
+              columns={typeColumns}
+              dataSource={dictTypes}
+              loading={loading}
+              rowKey="id"
+              pagination={{
+                current,
+                pageSize,
+                total,
+                showSizeChanger: true,
+                showQuickJumper: true,
+                showTotal: (total) => `共 ${total} 条`,
+                onChange: (page, size) => {
+                  setCurrent(page);
+                  setPageSize(size || 10);
+                  loadDictTypes({ current: page, pageSize: size || 10 });
+                },
+              }}
+            />
+          </Card>
         </TabPane>
 
         <TabPane tab="字典数据" key="data">
-          <Form form={dataSearchForm} layout="inline" style={{ marginBottom: 16 }}>
-            <Form.Item label="字典类型">
-              <Select placeholder="请选择字典类型" value={selectedType} onChange={setSelectedType} style={{ width: 200 }}>
-                {dictTypes.filter(t => t.status === 0).map(t => (
-                  <Option key={t.id} value={t.dictType}>{t.dictName}</Option>
-                ))}
-              </Select>
-            </Form.Item>
-            <Form.Item name="dictLabel" label="字典标签">
-              <Input placeholder="请输入字典标签" allowClear />
-            </Form.Item>
-            <Form.Item name="status" label="状态">
-              <Select placeholder="请选择状态" allowClear style={{ width: 120 }}>
-                <Option value={0}>启用</Option>
-                <Option value={1}>禁用</Option>
-              </Select>
-            </Form.Item>
-            <Form.Item>
+          {/* 统计卡片 - 只在总数大于10时显示 */}
+          {dataStatistics.total > 10 && (
+            <Row gutter={16} style={{ marginBottom: 16 }}>
+              <Col span={8}>
+                <Card>
+                  <Statistic
+                    title="总数据数"
+                    value={dataStatistics.total}
+                    prefix={<CheckCircleOutlined />}
+                  />
+                </Card>
+              </Col>
+              <Col span={8}>
+                <Card>
+                  <Statistic
+                    title="正常数据"
+                    value={dataStatistics.active}
+                    styles={{ content: { color: '#3f8600' } }}
+                    prefix={<CheckCircleOutlined />}
+                  />
+                </Card>
+              </Col>
+              <Col span={8}>
+                <Card>
+                  <Statistic
+                    title="停用数据"
+                    value={dataStatistics.inactive}
+                    styles={{ content: { color: '#cf1322' } }}
+                    prefix={<StopOutlined />}
+                  />
+                </Card>
+              </Col>
+            </Row>
+          )}
+
+          {/* 搜索表单和操作按钮 */}
+          <Card style={{ marginBottom: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+              <Form form={dataSearchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
+                <Form.Item label="字典类型">
+                  <Select placeholder="请选择字典类型" value={selectedType} onChange={setSelectedType} style={{ width: 200 }}>
+                    {dictTypes.filter(t => t.status === 0).map(t => (
+                      <Option key={t.id} value={t.dictType}>{t.dictName}</Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+                <Form.Item name="dictLabel" label="字典标签">
+                  <Input placeholder="请输入字典标签" allowClear className="user-form-input" style={{ width: 150 }} />
+                </Form.Item>
+                <Form.Item name="status" label="状态">
+                  <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 120 }}>
+                    <Option value={0}>启用</Option>
+                    <Option value={1}>禁用</Option>
+                  </Select>
+                </Form.Item>
+                <Form.Item>
+                  <Space>
+                    <Button type="primary" icon={<SearchOutlined />} onClick={() => loadDictData()}>
+                      搜索
+                    </Button>
+                    <Button icon={<ReloadOutlined />} onClick={() => { dataSearchForm.resetFields(); loadDictData(); loadDataStatistics(); }}>
+                      刷新
+                    </Button>
+                  </Space>
+                </Form.Item>
+              </Form>
               <Space>
-                <Button type="primary" icon={<SearchOutlined />} onClick={() => loadDictData()}>查询</Button>
-                <Button icon={<ReloadOutlined />} onClick={() => { dataSearchForm.resetFields(); loadDictData(); }}>重置</Button>
+                {selectedRowKeys.length > 0 && (
+                  <Button
+                    danger
+                    icon={<DeleteOutlined />}
+                    onClick={handleBatchDeleteData}
+                  >
+                    批量删除 ({selectedRowKeys.length})
+                  </Button>
+                )}
+                <Button type="primary" icon={<PlusOutlined />} onClick={() => openDataModal()} disabled={!selectedType}>
+                  新增数据
+                </Button>
               </Space>
-            </Form.Item>
-          </Form>
+            </div>
+            {selectedRowKeys.length > 0 && (
+              <Alert
+                message={
+                  <span>
+                    已选择 <strong>{selectedRowKeys.length}</strong> 个字典数据，
+                    <Button
+                      type="link"
+                      size="small"
+                      onClick={() => setSelectedRowKeys([])}
+                      style={{ padding: 0 }}
+                    >
+                      取消选择
+                    </Button>
+                  </span>
+                }
+                type="info"
+                showIcon
+                style={{ marginTop: 12 }}
+              />
+            )}
+          </Card>
 
-          <div style={{ marginBottom: 16 }}>
-            <Space>
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => openDataModal()} disabled={!selectedType}>新增</Button>
-              <Button danger icon={<DeleteOutlined />} onClick={handleBatchDeleteData} disabled={selectedRowKeys.length === 0}>批量删除</Button>
-            </Space>
-          </div>
-
-          <Table
-            rowSelection={{
-              selectedRowKeys,
-              onChange: setSelectedRowKeys,
-            }}
-            columns={dataColumns}
-            dataSource={dictDataList}
-            loading={loading}
-            rowKey="id"
-            pagination={{
-              current,
-              pageSize,
-              total,
-              showSizeChanger: true,
-              showQuickJumper: true,
-              showTotal: (total) => `共 ${total} 条`,
-              onChange: (page, size) => { setCurrent(page); setPageSize(size || 10); },
-            }}
-          />
+          {/* 数据表格 */}
+          <Card>
+            <Table
+              rowSelection={{
+                selectedRowKeys,
+                onChange: setSelectedRowKeys,
+              }}
+              columns={dataColumns}
+              dataSource={dictDataList}
+              loading={loading}
+              rowKey="id"
+              pagination={{
+                current,
+                pageSize,
+                total,
+                showSizeChanger: true,
+                showQuickJumper: true,
+                showTotal: (total) => `共 ${total} 条`,
+                onChange: (page, size) => {
+                  setCurrent(page);
+                  setPageSize(size || 10);
+                  loadDictData({ current: page, pageSize: size || 10 });
+                },
+              }}
+            />
+          </Card>
         </TabPane>
       </Tabs>
 
@@ -412,15 +665,15 @@ const DictManagement: FC = () => {
         onCancel={() => { setTypeModalVisible(false); typeForm.resetFields(); setEditingType(null); }}
         width={600}
       >
-        <Form form={typeForm} labelCol={{ span: 6 }} wrapperCol={{ span: 16 }}>
+        <Form form={typeForm} layout="horizontal" labelCol={{ span: 4 }} wrapperCol={{ span: 20 }}>
           <Form.Item name="dictName" label="字典名称" rules={[{ required: true, message: '请输入字典名称' }]}>
-            <Input placeholder="请输入字典名称" />
+            <Input placeholder="请输入字典名称" className="user-form-input" />
           </Form.Item>
           <Form.Item name="dictType" label="字典类型" rules={[{ required: true, message: '请输入字典类型' }]}>
-            <Input placeholder="请输入字典类型" disabled={!!editingType} />
+            <Input placeholder="请输入字典类型" disabled={!!editingType} className="user-form-input" />
           </Form.Item>
           <Form.Item name="status" label="状态" rules={[{ required: true }]}>
-            <Select>
+            <Select className="user-form-input">
               <Option value={0}>启用</Option>
               <Option value={1}>禁用</Option>
             </Select>
@@ -439,27 +692,27 @@ const DictManagement: FC = () => {
         onCancel={() => { setDataModalVisible(false); dataForm.resetFields(); setEditingData(null); }}
         width={600}
       >
-        <Form form={dataForm} labelCol={{ span: 6 }} wrapperCol={{ span: 16 }}>
+        <Form form={dataForm} layout="horizontal" labelCol={{ span: 4 }} wrapperCol={{ span: 20 }}>
           <Form.Item name="dictSort" label="字典排序" rules={[{ required: true, message: '请输入字典排序' }]}>
-            <InputNumber min={0} style={{ width: '100%' }} />
+            <InputNumber min={0} style={{ width: '100%' }} placeholder="请输入字典排序" />
           </Form.Item>
           <Form.Item name="dictLabel" label="字典标签" rules={[{ required: true, message: '请输入字典标签' }]}>
-            <Input placeholder="请输入字典标签" />
+            <Input placeholder="请输入字典标签" className="user-form-input" />
           </Form.Item>
           <Form.Item name="dictValue" label="字典键值" rules={[{ required: true, message: '请输入字典键值' }]}>
-            <Input placeholder="请输入字典键值" />
+            <Input placeholder="请输入字典键值" className="user-form-input" />
           </Form.Item>
           <Form.Item name="cssClass" label="CSS类名">
-            <Input placeholder="请输入CSS类名" />
+            <Input placeholder="请输入CSS类名" className="user-form-input" />
           </Form.Item>
           <Form.Item name="listClass" label="列表类名">
-            <Input placeholder="请输入列表类名" />
+            <Input placeholder="请输入列表类名" className="user-form-input" />
           </Form.Item>
           <Form.Item name="isDefault" label="是否默认" valuePropName="checked">
             <Switch checkedChildren="是" unCheckedChildren="否" />
           </Form.Item>
           <Form.Item name="status" label="状态" rules={[{ required: true }]}>
-            <Select>
+            <Select className="user-form-input">
               <Option value={0}>启用</Option>
               <Option value={1}>禁用</Option>
             </Select>

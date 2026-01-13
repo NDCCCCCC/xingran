@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { getUserMenus } from '@/lib/menuApi';
+import { getUserMenus, getUserPermissions } from '@/lib/menuApi';
 import type { Menu } from '@/types';
 
 interface MenuState {
@@ -11,6 +11,7 @@ interface MenuState {
 
 interface MenuActions {
   fetchMenus: () => Promise<void>;
+  fetchPermissions: () => Promise<void>; // 新增：获取权限（不从localStorage读取）
   setMenus: (menus: Menu[]) => void;
   clearMenus: () => void;
   setPermissions: (permissions: string[]) => void;
@@ -22,7 +23,7 @@ export const useMenuStore = create<MenuState & MenuActions>()(
     (set) => ({
       // 初始状态
       menus: [],
-      permissions: [],
+      permissions: [], // 权限列表不再持久化，每次从服务端获取
       loading: false,
 
       // 获取用户菜单
@@ -33,6 +34,18 @@ export const useMenuStore = create<MenuState & MenuActions>()(
           set({ menus, loading: false });
         } catch (error) {
           set({ loading: false });
+          throw error;
+        }
+      },
+
+      // 获取用户权限（不从localStorage读取，每次从服务端获取）
+      fetchPermissions: async () => {
+        try {
+          const permissions = await getUserPermissions();
+          set({ permissions });
+        } catch (error) {
+          // 权限获取失败时清空权限列表
+          set({ permissions: [] });
           throw error;
         }
       },
@@ -68,9 +81,11 @@ export const useMenuStore = create<MenuState & MenuActions>()(
     }),
     {
       name: 'menu-storage',
+      version: 1, // 版本号，用于数据迁移
       partialize: (state) => ({
         menus: state.menus,
-        permissions: state.permissions,
+        // permissions 不再持久化到 localStorage，避免权限信息泄露
+        // permissions: state.permissions,
       }),
     }
   )

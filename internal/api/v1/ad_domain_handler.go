@@ -3,7 +3,7 @@ package v1
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
@@ -93,7 +93,7 @@ func listADConfigs(core *core.Core) gin.HandlerFunc {
 			req.PageSize = 10
 		}
 
-		service := services.NewADDomainService(core.GetDB())
+		service := addomain.NewADDomainService(core.GetDB())
 		list, total, err := service.GetADConfigList(c.Request.Context(), req.Status, req.Current, req.PageSize)
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
@@ -110,7 +110,7 @@ func listADConfigs(core *core.Core) gin.HandlerFunc {
 // createADConfig 创建AD配置
 func createADConfig(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var req services.ADConfigCreateRequest
+		var req addomain.ADConfigCreateRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			response.Error(c, response.ErrBadRequest, "请求参数错误: "+err.Error())
 			return
@@ -119,7 +119,7 @@ func createADConfig(core *core.Core) gin.HandlerFunc {
 		// 获取当前用户ID
 		creatorID := c.GetString("user_id")
 
-		service := services.NewADDomainService(core.GetDB())
+		service := addomain.NewADDomainService(core.GetDB())
 		config, err := service.CreateADConfig(c.Request.Context(), &req, creatorID)
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
@@ -141,7 +141,7 @@ func getADConfig(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
 
-		service := services.NewADDomainService(core.GetDB())
+		service := addomain.NewADDomainService(core.GetDB())
 		config, err := service.GetADConfigByID(c.Request.Context(), id)
 		if err != nil {
 			response.Error(c, response.ErrNotFound, "AD配置不存在")
@@ -160,7 +160,7 @@ func updateADConfig(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
 
-		var req services.ADConfigUpdateRequest
+		var req addomain.ADConfigUpdateRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			response.Error(c, response.ErrBadRequest, "请求参数错误: "+err.Error())
 			return
@@ -171,7 +171,7 @@ func updateADConfig(core *core.Core) gin.HandlerFunc {
 		// 获取当前用户ID
 		updaterID := c.GetString("user_id")
 
-		service := services.NewADDomainService(core.GetDB())
+		service := addomain.NewADDomainService(core.GetDB())
 		if err := service.UpdateADConfig(c.Request.Context(), &req, updaterID); err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
@@ -189,7 +189,7 @@ func deleteADConfig(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
 
-		service := services.NewADDomainService(core.GetDB())
+		service := addomain.NewADDomainService(core.GetDB())
 		if err := service.DeleteADConfig(c.Request.Context(), id); err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
@@ -207,7 +207,7 @@ func testADConnection(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
 
-		service := services.NewADDomainService(core.GetDB())
+		service := addomain.NewADDomainService(core.GetDB())
 		err := service.TestADConnection(c.Request.Context(), id)
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
@@ -235,7 +235,7 @@ func syncADData(core *core.Core) gin.HandlerFunc {
 			req.SyncType = "full"
 		}
 
-		service := services.NewADDomainService(core.GetDB())
+		service := addomain.NewADDomainService(core.GetDB())
 		result, err := service.SyncADData(c.Request.Context(), id, req.SyncType)
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
@@ -263,7 +263,7 @@ func getADOUTree(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		service := services.NewADDomainService(core.GetDB())
+		service := addomain.NewADDomainService(core.GetDB())
 		tree, err := service.GetOUTree(c.Request.Context(), req.ConfigID)
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
@@ -279,7 +279,7 @@ func getADOUTree(core *core.Core) gin.HandlerFunc {
 // listADGroups 查询AD用户组列表
 func listADGroups(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var req services.ADGroupListRequest
+		var req addomain.ADGroupListRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			// 允许空请求体，设置默认值
 			if req.Current == 0 {
@@ -290,7 +290,7 @@ func listADGroups(core *core.Core) gin.HandlerFunc {
 			}
 		}
 
-		service := services.NewADDomainService(core.GetDB())
+		service := addomain.NewADDomainService(core.GetDB())
 		list, total, err := service.GetADGroupList(c.Request.Context(), &req)
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
@@ -309,7 +309,7 @@ func getADGroupDetail(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
 
-		service := services.NewADDomainService(core.GetDB())
+		service := addomain.NewADDomainService(core.GetDB())
 		// 先获取配置列表找到对应的configID，然后使用DN查询
 		// 简化实现：直接返回ID
 		response.Success(c, gin.H{
@@ -335,7 +335,7 @@ func updateADGroup(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		service := services.NewADDomainService(core.GetDB())
+		service := addomain.NewADDomainService(core.GetDB())
 		// 这个方法可能需要在 service 中实现
 		response.Error(c, response.ErrNotImplemented, "功能暂未实现")
 		_ = id
@@ -350,12 +350,12 @@ func updateADGroup(core *core.Core) gin.HandlerFunc {
 // listADUsers 查询AD用户列表
 func listADUsers(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var req services.ADUserListRequest
+		var req addomain.ADUserListRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			// 允许空请求体，设置默认值
 		}
 
-		service := services.NewADDomainService(core.GetDB())
+		service := addomain.NewADDomainService(core.GetDB())
 		list, total, err := service.GetADUserList(c.Request.Context(), &req)
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
@@ -374,7 +374,7 @@ func getADUserDetail(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
 
-		service := services.NewADDomainService(core.GetDB())
+		service := addomain.NewADDomainService(core.GetDB())
 		// 简化实现：直接返回ID
 		response.Success(c, gin.H{
 			"id": id,
@@ -406,7 +406,7 @@ func listADSyncLogs(core *core.Core) gin.HandlerFunc {
 			req.PageSize = 10
 		}
 
-		service := services.NewADDomainService(core.GetDB())
+		service := addomain.NewADDomainService(core.GetDB())
 		list, total, err := service.GetADSyncLogList(c.Request.Context(), req.ConfigID, req.Current, req.PageSize)
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())

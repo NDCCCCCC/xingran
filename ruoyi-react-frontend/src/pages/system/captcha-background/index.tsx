@@ -393,24 +393,24 @@ const CaptchaBackgroundManagement: FC = () => {
       {/* 搜索表单 */}
       <Form form={searchForm} layout="inline" style={{ marginBottom: 16 }}>
         <Form.Item name="fileName" label="文件名">
-          <Input placeholder="请输入文件名" allowClear />
+          <Input placeholder="请输入文件名" allowClear className="user-form-input" />
         </Form.Item>
         <Form.Item name="pieceShape" label="拼图形状">
-          <Select placeholder="请选择" allowClear style={{ width: 120 }}>
+          <Select placeholder="请选择" allowClear className="user-form-input" style={{ width: 120 }}>
             {SHAPE_OPTIONS.map(opt => (
               <Option key={opt.value} value={opt.value}>{opt.label}</Option>
             ))}
           </Select>
         </Form.Item>
         <Form.Item name="difficultyLevel" label="难度">
-          <Select placeholder="请选择" allowClear style={{ width: 100 }}>
+          <Select placeholder="请选择" allowClear className="user-form-input" style={{ width: 100 }}>
             <Option value={1}>简单</Option>
             <Option value={2}>中等</Option>
             <Option value={3}>困难</Option>
           </Select>
         </Form.Item>
         <Form.Item name="status" label="状态">
-          <Select placeholder="请选择" allowClear style={{ width: 100 }}>
+          <Select placeholder="请选择" allowClear className="user-form-input" style={{ width: 100 }}>
             <Option value={1}>启用</Option>
             <Option value={0}>禁用</Option>
           </Select>

@@ -386,12 +386,13 @@ const DutyPoolPage: FC = () => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
           <Form form={form} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="poolName" label="值班池名称">
-              <Input placeholder="请输入值班池名称" allowClear style={{ width: 150 }} />
+              <Input placeholder="请输入值班池名称" allowClear className="user-form-input" style={{ width: 150 }} />
             </Form.Item>
             <Form.Item name="deptId" label="所属部门">
               <TreeSelect
                 placeholder="请选择部门"
                 allowClear
+                className="user-form-input"
                 style={{ width: 200 }}
                 treeData={buildDeptTree(depts)}
                 showSearch
@@ -399,7 +400,7 @@ const DutyPoolPage: FC = () => {
               />
             </Form.Item>
             <Form.Item name="status" label="状态">
-              <Select placeholder="请选择状态" allowClear style={{ width: 100 }}>
+              <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 100 }}>
                 <Option value={0}>启用</Option>
                 <Option value={1}>停用</Option>
               </Select>

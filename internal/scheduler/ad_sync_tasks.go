@@ -8,7 +8,7 @@ import (
 
 	"github.com/robfig/cron/v3"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
 	"gorm.io/gorm"
 )
 
@@ -124,8 +124,8 @@ func syncADConfig(configID string) {
 	}
 
 	// 创建Service并执行同步
-	adService := services.NewADDomainService(db)
-	result, err := adService.SyncADData(ctx, configID, "full")
+	adService := addomain.NewADDomainService(db)
+	result, err := adService.Sync.SyncDataByID(ctx, configID, "full")
 
 	// 更新同步日志
 	endTime := time.Now()
@@ -174,9 +174,9 @@ func executeADDataSyncTask(ctx context.Context, params map[string]interface{}) e
 	}
 
 	db := GlobalDB.GetDB()
-	adService := services.NewADDomainService(db)
+	adService := addomain.NewADDomainService(db)
 
-	_, err := adService.SyncADData(ctx, configID, syncType)
+	_, err := adService.Sync.SyncDataByID(ctx, configID, syncType)
 	return err
 }
 

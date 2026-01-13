@@ -16,7 +16,7 @@ const Login: FC = () => {
   const [form] = Form.useForm();
   const navigate = useNavigate();
   const { login } = useAuthStore();
-  const { fetchMenus } = useMenuStore();
+  const { fetchMenus, fetchPermissions } = useMenuStore();
   const [captchaEnabled, setCaptchaEnabled] = useState<CaptchaEnabled>('disabled');
   const [captchaValue, setCaptchaValue] = useState('');
   const [captchaId, setCaptchaId] = useState('');
@@ -67,8 +67,11 @@ const Login: FC = () => {
       }
 
       await login(loginData);
-      // 登录成功后获取用户菜单
-      await fetchMenus();
+      // 登录成功后获取用户菜单和权限
+      await Promise.all([
+        fetchMenus(),
+        fetchPermissions(), // 获取权限（不从localStorage读取）
+      ]);
       message.success('登录成功');
       navigate('/dashboard');
     } catch (error) {

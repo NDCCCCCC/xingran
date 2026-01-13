@@ -494,7 +494,7 @@ const DutySchedulePage: FC = () => {
             <span>值班周历</span>
           </Space>
         }
-        className="mb-4"
+        style={{ marginBottom: 16 }}
         extra={
           <Space>
             <Button icon={<LeftOutlined />} onClick={handlePrevWeek}>
@@ -512,7 +512,7 @@ const DutySchedulePage: FC = () => {
         <div className="mb-3">
           <Text strong style={{ fontSize: '16px' }}>{getWeekRangeText()}</Text>
         </div>
-        <Row gutter={[8, 8]}>
+        <Row gutter={16}>
           {getWeekDays().map((day) => {
             const dateStr = day.format('YYYY-MM-DD');
             const members = weeklyDutyData[dateStr] || [];
@@ -523,53 +523,57 @@ const DutySchedulePage: FC = () => {
                 <Card
                   size="small"
                   style={{
-                    height: '120px',
                     borderColor: isToday ? '#1890ff' : undefined,
                     backgroundColor: isToday ? '#e6f7ff' : undefined,
+                    borderRadius: '4px',
+                    minHeight: '80px',
                   }}
-                  styles={{ body: { padding: '8px', height: '100%', overflow: 'auto' } }}
+                  styles={{ body: { padding: '12px' } }}
                 >
-                  <div style={{ marginBottom: '4px' }}>
-                    <Text
-                      strong
-                      style={{
-                        fontSize: '12px',
-                        color: isToday ? '#1890ff' : undefined,
-                      }}
-                    >
-                      {getWeekdayText(day)}
-                    </Text>
-                    <br />
-                    <Text style={{ fontSize: '11px', color: '#999' }}>
-                      {day.format('MM-DD')}
-                    </Text>
-                  </div>
-                  <Space orientation="vertical" size="small" style={{ width: '100%' }}>
-                    {members.length > 0 ? (
-                      members.map((member, index) => (
-                        <Badge
-                          key={index}
-                          color={getDutyTypeBadgeColor(member.dutyType)}
-                          text={
-                            <span
+                  <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+                    {/* 左侧：日期 */}
+                    <div style={{ minWidth: '50px', flexShrink: 0 }}>
+                      <div>
+                        <Text
+                          strong
+                          style={{
+                            fontSize: '12px',
+                            color: isToday ? '#1890ff' : undefined,
+                          }}
+                        >
+                          {getWeekdayText(day)}
+                        </Text>
+                      </div>
+                      <div>
+                        <Text style={{ fontSize: '11px', color: '#999' }}>
+                          {day.format('MM-DD')}
+                        </Text>
+                      </div>
+                    </div>
+
+                    {/* 右侧：值班人员 */}
+                    <div style={{ flex: 1, marginLeft: '8px' }}>
+                      <Space size={[4, 4]} wrap>
+                        {members.length > 0 ? (
+                          members.map((member, index) => (
+                            <Tag
+                              key={index}
+                              color={getDutyTypeBadgeColor(member.dutyType)}
                               style={{
                                 fontSize: '11px',
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                display: 'block',
-                                maxWidth: '80px',
+                                borderRadius: '4px',
+                                margin: 0,
                               }}
                             >
                               {member.username}
-                            </span>
-                          }
-                        />
-                      ))
-                    ) : (
-                      <Text style={{ fontSize: '11px', color: '#ccc' }}>无值班</Text>
-                    )}
-                  </Space>
+                            </Tag>
+                          ))
+                        ) : (
+                          <Text style={{ fontSize: '11px', color: '#ccc' }}>无值班</Text>
+                        )}
+                      </Space>
+                    </div>
+                  </div>
                 </Card>
               </Col>
             );
@@ -589,7 +593,7 @@ const DutySchedulePage: FC = () => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
           <Form form={form} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="poolId" label="值班池">
-              <Select placeholder="请选择值班池" allowClear style={{ width: 150 }}>
+              <Select placeholder="请选择值班池" allowClear className="user-form-input" style={{ width: 150 }}>
                 {pools.map((pool) => (
                   <Option key={pool.id} value={pool.id}>
                     {pool.poolName}
@@ -598,7 +602,7 @@ const DutySchedulePage: FC = () => {
               </Select>
             </Form.Item>
             <Form.Item name="userId" label="值班人员">
-              <Select placeholder="请选择值班人员" allowClear style={{ width: 120 }}>
+              <Select placeholder="请选择值班人员" allowClear className="user-form-input" style={{ width: 120 }}>
                 {users.map((user) => (
                   <Option key={user.id} value={user.id}>
                     {user.nickName || user.username}
@@ -607,7 +611,7 @@ const DutySchedulePage: FC = () => {
               </Select>
             </Form.Item>
             <Form.Item name="dutyType" label="值班类型">
-              <Select placeholder="请选择值班类型" allowClear style={{ width: 120 }}>
+              <Select placeholder="请选择值班类型" allowClear className="user-form-input" style={{ width: 120 }}>
                 <Option value="weekday">工作日</Option>
                 <Option value="weekend">周末</Option>
                 <Option value="holiday">节假日</Option>

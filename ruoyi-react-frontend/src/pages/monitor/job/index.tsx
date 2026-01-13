@@ -492,6 +492,7 @@ const JobManager: FC = () => {
                 value={searchForm.jobName}
                 onChange={(e) => setSearchForm({ ...searchForm, jobName: e.target.value })}
                 allowClear
+                className="user-form-input"
               />
             </Col>
             <Col xs={24} sm={8} md={6}>
@@ -500,6 +501,7 @@ const JobManager: FC = () => {
                 value={searchForm.jobGroup}
                 onChange={(e) => setSearchForm({ ...searchForm, jobGroup: e.target.value })}
                 allowClear
+                className="user-form-input"
               />
             </Col>
             <Col xs={24} sm={8} md={6}>
@@ -508,6 +510,7 @@ const JobManager: FC = () => {
                 value={searchForm.status}
                 onChange={(value) => setSearchForm({ ...searchForm, status: value })}
                 allowClear
+                className="user-form-input"
                 style={{ width: '100%' }}
                 options={statusOptions}
               />

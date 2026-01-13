@@ -482,31 +482,35 @@ const PeriodicTemplatePage: FC = () => {
 
   return (
     <div className="p-6">
-      <Card title={null} className="mb-4">
-        <Row gutter={16}>
-          <Col span={6}>
-            <Statistic title="总模板" value={stats.total} />
-          </Col>
-          <Col span={6}>
-            <Statistic title="已启用" value={stats.enabled} styles={{ content: { color: '#3f8600' } }} />
-          </Col>
-          <Col span={6}>
-            <Statistic title="已禁用" value={stats.disabled} styles={{ content: { color: '#cf1322' } }} />
-          </Col>
-          <Col span={6}>
-            <Statistic title="已生成工单" value={stats.totalGenerated} />
-          </Col>
-        </Row>
-      </Card>
+      {/* 统计卡片 - 只在数据大于10时显示 */}
+      {stats.total > 10 && (
+        <Card title={null} className="mb-4">
+          <Row gutter={16}>
+            <Col span={6}>
+              <Statistic title="总模板" value={stats.total} />
+            </Col>
+            <Col span={6}>
+              <Statistic title="已启用" value={stats.enabled} styles={{ content: { color: '#3f8600' } }} />
+            </Col>
+            <Col span={6}>
+              <Statistic title="已禁用" value={stats.disabled} styles={{ content: { color: '#cf1322' } }} />
+            </Col>
+            <Col span={6}>
+              <Statistic title="已生成工单" value={stats.totalGenerated} />
+            </Col>
+          </Row>
+        </Card>
+      )}
 
-      <Card title="周期性工单模板">
+      {/* 筛选表单和操作按钮 */}
+      <Card style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
           <Form form={form} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="title" label="模板名称">
-              <Input placeholder="请输入模板名称" allowClear style={{ width: 150 }} />
+              <Input placeholder="请输入模板名称" allowClear className="user-form-input" style={{ width: 150 }} />
             </Form.Item>
             <Form.Item name="isEnabled" label="状态">
-              <Select placeholder="请选择状态" allowClear style={{ width: 100 }}>
+              <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 100 }}>
                 <Option value={true}>已启用</Option>
                 <Option value={false}>已禁用</Option>
               </Select>
@@ -528,7 +532,10 @@ const PeriodicTemplatePage: FC = () => {
             </Button>
           </Space>
         </div>
+      </Card>
 
+      {/* 周期性工单模板表格 */}
+      <Card>
         <Table
           rowKey="id"
           columns={columns}
@@ -555,7 +562,7 @@ const PeriodicTemplatePage: FC = () => {
         onCancel={() => setModalVisible(false)}
         width={700}
       >
-        <Form form={editForm} layout="vertical">
+        <Form form={editForm} layout="horizontal" labelCol={{ span: 4 }} wrapperCol={{ span: 20 }}>
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
@@ -563,7 +570,7 @@ const PeriodicTemplatePage: FC = () => {
                 label="模板名称"
                 rules={[{ required: true, message: '请输入模板名称' }]}
               >
-                <Input placeholder="请输入模板名称" />
+                <Input placeholder="请输入模板名称" className="user-form-input" />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -578,6 +585,7 @@ const PeriodicTemplatePage: FC = () => {
                   showSearch
                   treeNodeFilterProp="title"
                   style={{ width: '100%' }}
+                  className="user-form-input"
                 />
               </Form.Item>
             </Col>
@@ -589,7 +597,7 @@ const PeriodicTemplatePage: FC = () => {
             rules={[{ required: true, message: '请输入工单标题' }]}
             extra={variableHelp}
           >
-            <Input placeholder="例如：{date} 日例行检" />
+            <Input placeholder="例如：{date} 日例行检" className="user-form-input" />
           </Form.Item>
 
           <Row gutter={16}>
@@ -599,7 +607,7 @@ const PeriodicTemplatePage: FC = () => {
                 label="工单类型"
                 rules={[{ required: true, message: '请选择工单类型' }]}
               >
-                <Select placeholder="请选择工单类型">
+                <Select placeholder="请选择工单类型" className="user-form-input">
                   {Object.entries(TYPE_CONFIG).map(([key, { text }]) => (
                     <Option key={key} value={key}>
                       {text}
@@ -614,7 +622,7 @@ const PeriodicTemplatePage: FC = () => {
                 label="优先级"
                 rules={[{ required: true, message: '请选择优先级' }]}
               >
-                <Select placeholder="请选择优先级">
+                <Select placeholder="请选择优先级" className="user-form-input">
                   {Object.entries(PRIORITY_CONFIG).map(([key, { text }]) => (
                     <Option key={key} value={Number(key)}>
                       {text}
@@ -640,7 +648,7 @@ const PeriodicTemplatePage: FC = () => {
                 label="分配类型"
                 rules={[{ required: true, message: '请选择分配类型' }]}
               >
-                <Select placeholder="请选择分配类型">
+                <Select placeholder="请选择分配类型" className="user-form-input">
                   {Object.entries(ASSIGN_TYPE_CONFIG).map(([key, { text }]) => (
                     <Option key={key} value={key}>
                       {text}
@@ -656,7 +664,7 @@ const PeriodicTemplatePage: FC = () => {
                   if (assignType === PeriodicAssignType.Manual) {
                     return (
                       <Form.Item name="assignTargetId" label="指定处理人">
-                        <Select placeholder="请选择处理人" allowClear showSearch optionFilterProp="children">
+                        <Select placeholder="请选择处理人" allowClear showSearch optionFilterProp="children" className="user-form-input">
                           {users.map((user) => (
                             <Option key={user.id} value={user.id}>
                               {user.nickName || user.username}
@@ -668,7 +676,7 @@ const PeriodicTemplatePage: FC = () => {
                   } else if (assignType === PeriodicAssignType.DutyPool) {
                     return (
                       <Form.Item name="assignTargetId" label="选择值班池" rules={[{ required: true, message: '请选择值班池' }]}>
-                        <Select placeholder="请选择值班池" allowClear showSearch optionFilterProp="children">
+                        <Select placeholder="请选择值班池" allowClear showSearch optionFilterProp="children" className="user-form-input">
                           {dutyPools.filter((p) => p.status === 0).map((pool) => (
                             <Option key={pool.id} value={pool.id}>
                               {pool.poolName} ({pool.members?.length || 0}人)
