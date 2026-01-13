@@ -530,8 +530,28 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			buildings.POST("/batch", buildingHandler.BatchOperation)
 		}
 
+		// 楼层管理
+		floors := ops.Group("/floors")
+		floors.Use(middleware.RequirePermissions([]string{
+			"ops:floor:list",
+			"ops:floor:add",
+			"ops:floor:edit",
+			"ops:floor:delete",
+		}, core))
+		{
+			floorService := opsServices.NewFloorService(core.DB)
+			floorHandler := operations.NewFloorHandler(floorService)
+
+			floors.POST("", floorHandler.Create)
+			floors.POST("/list", floorHandler.List)
+			floors.POST("/tree", floorHandler.GetTree)
+			floors.POST("/:id", floorHandler.GetByID)
+			floors.POST("/:id/update", floorHandler.Update)
+			floors.POST("/:id/delete", floorHandler.Delete)
+			floors.POST("/batch", floorHandler.BatchOperation)
+		}
+
 		// 其他运维管理模块路由将在后续添加
-		// floors - 楼层管理
 		// workstations - 工位管理
 		// server-rooms - 机房管理
 		// dedicated-lines - 专线管理
