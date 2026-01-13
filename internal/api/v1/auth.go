@@ -1,12 +1,14 @@
 package v1
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/db"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
@@ -14,6 +16,8 @@ import (
 type LoginRequest struct {
 	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"`
+	// EncryptedPassword 表示密码是否已加密（SM2）
+	EncryptedPassword bool `json:"encryptedPassword,omitempty"`
 	Captcha  string `json:"captcha,omitempty"`
 	CaptchaID string `json:"captchaId,omitempty"`
 }
@@ -42,6 +46,12 @@ type UserInfo struct {
 
 // SetupAuthRouter 设置认证路由
 func SetupAuthRouter(r *gin.RouterGroup, core *core.Core) {
+	// GET /api/v1/system/auth/public-key - 获取 SM2 公钥（用于密码加密）
+	r.GET("/public-key", getPublicKey(core))
+
+	// GET /api/v1/system/auth/test-sm2 - 测试 SM2 加密解密（调试用）
+	r.GET("/test-sm2", testSM2(core))
+
 	// POST /api/v1/system/auth/login - 用户登录
 	r.POST("/login", login(core))
 
@@ -51,8 +61,8 @@ func SetupAuthRouter(r *gin.RouterGroup, core *core.Core) {
 	// POST /api/v1/system/auth/refresh - 刷新令牌
 	r.POST("/refresh", refreshToken(core))
 
-	// GET /api/v1/system/auth/captcha - 获取验证码
-	r.GET("/captcha", getCaptcha(core))
+	// 设置验证码路由
+	SetupCaptchaRouter(r, core)
 }
 
 // login 用户登录
@@ -73,10 +83,41 @@ func login(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
+		// 检查验证码（如果启用）
+		// 添加调试日志
+		config := core.CaptchaService.GetConfig()
+		fmt.Printf("[DEBUG] Captcha Enabled: %s (IsEnabled: %v)\n", config.Enabled, core.CaptchaService.IsEnabled())
+
+		if core.CaptchaService.IsEnabled() {
+			// 获取客户端IP
+			clientIP := c.ClientIP()
+
+			// 验证验证码
+			if req.Captcha == "" || req.CaptchaID == "" {
+				response.Error(c, response.ErrCaptchaError, "请输入验证码")
+				return
+			}
+
+			if err := core.CaptchaService.VerifyCaptcha(c.Request.Context(), req.CaptchaID, req.Captcha, clientIP); err != nil {
+				response.Error(c, response.ErrCaptchaError, err.Error())
+				return
+			}
+		}
+
+		// 检查账号是否被锁定
+		if err := core.CaptchaService.CheckLoginLock(c.Request.Context(), req.Username); err != nil {
+			response.Error(c, response.ErrForbidden, err.Error())
+			return
+		}
+
 		// 查找用户
 		var user models.User
 		if err := core.DB.GetDB().Where("username = ?", req.Username).First(&user).Error; err != nil {
-			response.Error(c, response.ErrUnauthorized, "用户名或密码错误")
+			if err.Error() == "record not found" {
+				response.Error(c, response.ErrUserNotFound)
+			} else {
+				response.Error(c, response.ErrDatabaseError, "查询用户失败: "+err.Error())
+			}
 			return
 		}
 
@@ -86,15 +127,52 @@ func login(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-	// 验证密码
-	pwdManager := db.NewSimplePasswordManager()
-	if ok, err := pwdManager.VerifyPassword(req.Password, user.Password); err != nil || !ok {
-		response.Error(c, response.ErrUnauthorized, "用户名或密码错误")
+	// 解密密码（如果使用 SM2 加密）
+	passwordToVerify := req.Password
+	if req.EncryptedPassword {
+		decrypted, err := core.JWTManager.DecryptPassword(req.Password)
+		if err != nil {
+			response.Error(c, response.ErrBadRequest, "密码解密失败: "+err.Error())
+			return
+		}
+		passwordToVerify = decrypted
+	}
+
+	// 验证密码 - 使用SM3算法
+	pwdManager := security.NewPasswordManager(nil)
+	if ok, err := pwdManager.VerifyPassword(passwordToVerify, user.Password); err != nil || !ok {
+		if err != nil {
+			response.Error(c, response.ErrPasswordDecrypt, "密码验证失败: "+err.Error())
+			return
+		}
+
+		// 记录登录失败日志
+		if failErr := core.CaptchaService.RecordLoginFailure(c.Request.Context(), req.Username); failErr != nil {
+			response.Error(c, response.ErrCredentialInvalid, failErr.Error())
+		} else {
+			response.Error(c, response.ErrCredentialInvalid)
+		}
+		recordLoginLog(c, core, req.Username, 1, "用户或密码错误")
 		return
 	}
 
+	// 登录成功，清除失败记录
+	core.CaptchaService.ClearLoginFailure(c.Request.Context(), req.Username)
+
+	// 记录登录成功日志
+	recordLoginLog(c, core, req.Username, 0, "登录成功")
+
+	// 查询用户角色
+	var userRoles []models.UserRole
+	var roleIds []string
+	if err := core.DB.GetDB().Where("user_id = ?", user.ID).Find(&userRoles).Error; err == nil {
+		for _, ur := range userRoles {
+			roleIds = append(roleIds, ur.RoleID)
+		}
+	}
+
 		// 生成JWT令牌
-		tokenPair, err := core.JWTManager.GenerateTokenPair(user.ID, user.Username, user.Roles)
+		tokenPair, err := core.JWTManager.GenerateTokenPair(user.ID, user.Username, roleIds)
 		if err != nil {
 			response.Error(c, response.ErrServerError, "生成令牌失败")
 			return
@@ -109,7 +187,7 @@ func login(core *core.Core) gin.HandlerFunc {
 			Gender:      user.Gender,
 			Status:      user.Status,
 			DeptName:    user.DeptName,
-			Roles:       user.Roles,
+			Roles:       roleIds, // 使用数据库中的角色ID
 			CreateTime:  user.CreatedAt,
 		}
 
@@ -168,31 +246,216 @@ func refreshToken(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		// 刷新令牌
-		tokenPair, err := core.JWTManager.RefreshToken(req.RefreshToken)
+		// 验证刷新令牌并获取用户ID
+		claims, err := core.JWTManager.ValidateToken(req.RefreshToken)
 		if err != nil {
 			response.Error(c, err)
 			return
 		}
 
-		response.Success(c, tokenPair)
+		// 检查是否为刷新令牌
+		if len(claims.Roles) != 1 || claims.Roles[0] != "refresh" {
+			response.Error(c, response.ErrTokenInvalid)
+			return
+		}
+
+		// 从数据库获取用户及其角色信息
+		var user models.User
+		if err := core.DB.GetDB().Where("id = ?", claims.UserID).First(&user).Error; err != nil {
+			response.Error(c, response.ErrUserNotFound)
+			return
+		}
+
+		// 查询用户角色
+		var userRoles []models.UserRole
+		var roleIds []string
+		if err := core.DB.GetDB().Where("user_id = ?", user.ID).Find(&userRoles).Error; err == nil {
+			for _, ur := range userRoles {
+				roleIds = append(roleIds, ur.RoleID)
+			}
+		}
+
+		// 生成新的令牌对
+		tokenPair, err := core.JWTManager.GenerateTokenPair(user.ID, user.Username, roleIds)
+		if err != nil {
+			response.Error(c, response.ErrServerError, "生成令牌失败")
+			return
+		}
+
+		// 构建用户信息
+		userInfo := &UserInfo{
+			ID:          user.ID,
+			Username:    user.Username,
+			Nickname:    user.Nickname,
+			Email:       user.Email,
+			Gender:      user.Gender,
+			Status:      user.Status,
+			DeptName:    user.DeptName,
+			Roles:       roleIds, // 使用实际的角色ID
+			CreateTime:  user.CreatedAt,
+		}
+
+		// 构建响应
+		loginResp := &LoginResponse{
+			User:         userInfo,
+			AccessToken:  tokenPair.AccessToken,
+			RefreshToken: tokenPair.RefreshToken,
+			ExpiresIn:    7200, // 2小时
+			TokenType:    "Bearer",
+		}
+
+		response.Success(c, loginResp)
 	}
 }
 
-// getCaptcha 获取验证码
-// @Summary 获取验证码
-// @Description 获取图形验证码
+// getPublicKey 获取 SM2 公钥
+// @Summary 获取 SM2 公钥
+// @Description 获取 SM2 公钥用于前端加密密码
 // @Tags 认证
 // @Accept json
 // @Produce json
-// @Success 200 {object} response.Response
-// @Router /system/auth/captcha [get]
-func getCaptcha(core *core.Core) gin.HandlerFunc {
+// @Success 200 {object} response.Response{data=map[string]string}
+// @Router /system/auth/public-key [get]
+func getPublicKey(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// TODO: 实现验证码生成
+		publicKey := core.JWTManager.GetPublicKey()
+		if publicKey == "" {
+			response.Error(c, response.ErrServerError, "SM2 未启用或公钥不可用")
+			return
+		}
+
 		response.Success(c, gin.H{
-			"captchaId": "temp-id",
-			"captchaImg": "data:image/png;base64,temp-image",
+			"publicKey": publicKey,
 		})
 	}
+}
+
+// testSM2 测试 SM2 加密解密（调试用）
+func testSM2(core *core.Core) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// 获取 SM2 密钥对
+		sm2PrivateKey, sm2PublicKey := core.JWTManager.GetSM2KeyPair()
+		if sm2PrivateKey == nil || sm2PublicKey == nil {
+			response.Error(c, response.ErrServerError, "SM2 未启用")
+			return
+		}
+
+		// 测试数据：32字符十六进制字符串（模拟 SM4 密钥）
+		testData := "0123456789abcdef0123456789abcdef"
+
+		// 使用后端公钥加密
+		encrypted, err := crypto.EncryptWithSM2(testData, sm2PublicKey)
+		if err != nil {
+			response.Error(c, response.ErrServerError, fmt.Sprintf("加密失败: %v", err))
+			return
+		}
+
+		// 使用后端私钥解密
+		decrypted, err := crypto.DecryptWithSM2(encrypted, sm2PrivateKey)
+		if err != nil {
+			response.Error(c, response.ErrServerError, fmt.Sprintf("解密失败: %v", err))
+			return
+		}
+
+		// 验证结果
+		success := decrypted == testData
+
+		response.Success(c, gin.H{
+			"testData":  testData,
+			"encrypted": encrypted,
+			"decrypted": decrypted,
+			"success":   success,
+			"message":   map[bool]string{true: "SM2 加密解密测试通过", false: "SM2 加密解密测试失败"}[success],
+		})
+	}
+}
+
+// recordLoginLog 记录登录日志
+func recordLoginLog(c *gin.Context, core *core.Core, username string, status int, msg string) {
+	// 获取客户端信息
+	clientIP := c.ClientIP()
+	userAgent := c.Request.UserAgent()
+
+	// 解析 User-Agent 获取浏览器和操作系统信息
+	browser, os := parseUserAgent(userAgent)
+
+	// 获取 IP 地理位置信息（可选，这里暂时留空）
+	var loginLocation *string
+
+	loginLog := models.LoginLog{
+		Username:      username,
+		IPAddr:        clientIP,
+		LoginLocation: loginLocation,
+		Browser:       &browser,
+		OS:            &os,
+		Status:        status,
+		Msg:           &msg,
+		LoginTime:     time.Now(),
+	}
+
+	// 异步写入数据库，不影响登录响应速度
+	go func() {
+		if err := core.DB.GetDB().Create(&loginLog).Error; err != nil {
+			fmt.Printf("记录登录日志失败: %v\n", err)
+		}
+	}()
+}
+
+// parseUserAgent 解析 User-Agent 获取浏览器和操作系统信息
+func parseUserAgent(userAgent string) (browser, os string) {
+	// 简单的 User-Agent 解析
+	if userAgent == "" {
+		return "Unknown", "Unknown"
+	}
+
+	// 检测浏览器
+	if contains(userAgent, "Edg") {
+		browser = "Edge"
+	} else if contains(userAgent, "Chrome") {
+		browser = "Chrome"
+	} else if contains(userAgent, "Firefox") {
+		browser = "Firefox"
+	} else if contains(userAgent, "Safari") && !contains(userAgent, "Chrome") {
+		browser = "Safari"
+	} else if contains(userAgent, "Opera") || contains(userAgent, "OPR") {
+		browser = "Opera"
+	} else {
+		browser = "Other"
+	}
+
+	// 检测操作系统
+	if contains(userAgent, "Windows") {
+		os = "Windows"
+	} else if contains(userAgent, "Mac OS X") || contains(userAgent, "Macintosh") {
+		os = "Mac OS X"
+	} else if contains(userAgent, "Linux") {
+		os = "Linux"
+	} else if contains(userAgent, "Android") {
+		os = "Android"
+	} else if contains(userAgent, "iOS") || contains(userAgent, "iPhone") || contains(userAgent, "iPad") {
+		os = "iOS"
+	} else {
+		os = "Other"
+	}
+
+	return browser, os
+}
+
+// contains 检查字符串是否包含子串（不区分大小写）
+func contains(str, substr string) bool {
+	return len(str) >= len(substr) && (str == substr ||
+		len(str) > len(substr) && (
+			str[:len(substr)] == substr ||
+			str[len(str)-len(substr):] == substr ||
+			findSubstring(str, substr)))
+}
+
+// findSubstring 在字符串中查找子串
+func findSubstring(str, substr string) bool {
+	for i := 0; i <= len(str)-len(substr); i++ {
+		if str[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
 }

@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SM2 加密对比测试 - npm vs CDN</title>
+    <style>
+        body {
+            font-family: 'Consolas', 'Monaco', monospace;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+        h1, h2 { color: #4ec9b0; }
+        .test-section {
+            background: #252526;
+            border: 1px solid #3e3e42;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .test-result {
+            background: #1e1e1e;
+            border-left: 3px solid #4ec9b0;
+            padding: 10px 15px;
+            margin: 10px 0;
+            font-size: 13px;
+        }
+        .success { border-left-color: #4ec9b0; }
+        .error { border-left-color: #f48771; }
+        .warning { border-left-color: #dcdcaa; }
+        button {
+            background: #0e639c;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-family: inherit;
+        }
+        button:hover { background: #1177bb; }
+        input, textarea {
+            background: #3c3c3c;
+            border: 1px solid #555;
+            color: #d4d4d4;
+            padding: 8px;
+            border-radius: 4px;
+            font-family: inherit;
+            width: 100%;
+            box-sizing: border-box;
+            margin: 5px 0;
+        }
+        .label {
+            color: #9cdcfe;
+            font-size: 12px;
+            margin-top: 10px;
+            display: block;
+        }
+        pre {
+            background: #1e1e1e;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .hex-dump {
+            word-break: break-all;
+            font-size: 11px;
+            color: #ce9178;
+        }
+        @media (max-width: 900px) {
+            .comparison { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <h1>🔐 SM2 加密对比测试 - npm vs CDN 版本</h1>
+    <p>测试 npm 版本的 sm-crypto（经 Vite 打包）与 CDN 版本是否产生相同的密文</p>
+
+    <div class="test-section">
+        <h2>测试配置</h2>
+        <label class="label">测试数据（32字符十六进制 = 16字节）:</label>
+        <input type="text" id="testData" value="0123456789abcdef0123456789abcdef" readonly>
+
+        <label class="label">公钥（130字符十六进制）:</label>
+        <textarea id="publicKey" rows="3" readonly>04519c8e8a00307a10034816429fe80a50dc1d0437e84aa3f3215e69280e582f650b49b989eef6acd592fc72b3af4b984f3acac78a0a3f563e430230abb0801f3b</textarea>
+
+        <button onclick="runAllTests()">🚀 运行所有测试</button>
+        <button onclick="clearResults()">🗑️ 清除结果</button>
+    </div>
+
+    <div class="comparison">
+        <div class="test-section">
+            <h2>📦 CDN 版本 (sm-crypto@0.3.13)</h2>
+            <div id="cdn-results"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>📦 npm 版本 (经 Vite 打包)</h2>
+            <div id="npm-results"></div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🔍 密文对比分析</h2>
+        <div id="comparison-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>📋 详细日志</h2>
+        <div id="detailed-log"></div>
+    </div>
+
+    <!-- CDN 版本的 sm-crypto -->
+    <script src="https://cdn.jsdelivr.net/npm/sm-crypto@0.3.13/dist/sm2.min.js"></script>
+
+    <script>
+        const CDN_SM2 = window.sm2;
+        let NPM_SM2 = null;
+
+        const testData = '0123456789abcdef0123456789abcdef';
+        const publicKey = '04519c8e8a00307a10034816429fe80a50dc1d0437e84aa3f3215e69280e582f650b49b989eef6acd592fc72b3af4b984f3acac78a0a3f563e430230abb0801f3b';
+
+        // 日志工具
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const colors = {
+                info: '#9cdcfe',
+                success: '#4ec9b0',
+                error: '#f48771',
+                warning: '#dcdcaa'
+            };
+            const logDiv = document.getElementById('detailed-log');
+            const entry = document.createElement('div');
+            entry.className = 'test-result ' + type;
+            entry.style.color = colors[type] || colors.info;
+            entry.textContent = `[${timestamp}] ${message}`;
+            logDiv.appendChild(entry);
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        function clearResults() {
+            document.getElementById('cdn-results').innerHTML = '';
+            document.getElementById('npm-results').innerHTML = '';
+            document.getElementById('comparison-results').innerHTML = '';
+            document.getElementById('detailed-log').innerHTML = '';
+        }
+
+        // 十六进制转 Base64
+        function hexToBase64(hexString) {
+            const paddedHex = hexString.length % 2 === 0 ? hexString : '0' + hexString;
+            const bytes = [];
+            for (let i = 0; i < paddedHex.length; i += 2) {
+                bytes.push(parseInt(paddedHex.substr(i, 2), 16));
+            }
+            return btoa(String.fromCharCode.apply(null, bytes));
+        }
+
+        // Base64 转十六进制
+        function base64ToHex(base64String) {
+            const binaryString = atob(base64String);
+            let hex = '';
+            for (let i = 0; i < binaryString.length; i++) {
+                hex += binaryString.charCodeAt(i).toString(16).padStart(2, '0');
+            }
+            return hex;
+        }
+
+        // 解析 C1C3C2 格式
+        function parseC1C3C2(hexCipher) {
+            // C1: 65字节 (04 + X(32) + Y(32))
+            // C3: 32字节 (SM3 哈希)
+            // C2: 密文 (剩余部分)
+            if (hexCipher.length < (65 + 32) * 2) {
+                return null;
+            }
+
+            const c1 = hexCipher.substring(0, 65 * 2);
+            const c3 = hexCipher.substring(65 * 2, (65 + 32) * 2);
+            const c2 = hexCipher.substring((65 + 32) * 2);
+
+            return { c1, c2, c3 };
+        }
+
+        // 格式化十六进制显示
+        function formatHex(hex, label) {
+            const bytes = [];
+            for (let i = 0; i < hex.length; i += 2) {
+                bytes.push(hex.substr(i, 2));
+            }
+
+            let result = `<strong>${label}:</strong><br>`;
+            result += `<span class="hex-dump">`;
+            result += `长度: ${bytes.length} 字节 (${hex.length} 十六进制字符)<br>`;
+            result += `数据: ${hex}<br>`;
+            result += `</span>`;
+            return result;
+        }
+
+        // 测试 CDN 版本
+        function testCDNVersion() {
+            log('开始测试 CDN 版本...', 'info');
+            const resultsDiv = document.getElementById('cdn-results');
+
+            try {
+                const cipherHex = CDN_SM2.doEncrypt(testData, publicKey, 1);
+                const cipherBase64 = hexToBase64(cipherHex);
+
+                log(`CDN 版本加密成功，密文长度: ${cipherHex.length} 字符`, 'success');
+
+                const parsed = parseC1C3C2(cipherHex);
+                if (!parsed) {
+                    log('CDN 版本: 无法解析 C1C3C2 格式', 'error');
+                    return null;
+                }
+
+                const html = `
+                    <div class="test-result success">
+                        <strong>✅ CDN 版本加密成功</strong><br>
+                        ${formatHex(cipherHex, '完整密文（十六进制）')}
+                        <strong>Base64 编码:</strong><br>
+                        ${cipherBase64}<br><br>
+                        ${formatHex(parsed.c1, 'C1 (椭圆曲线点 65字节)')}
+                        ${formatHex(parsed.c3, 'C3 (SM3 摘要 32字节)')}
+                        ${formatHex(parsed.c2, 'C2 (密文 ' + (parsed.c2.length / 2) + '字节)')}
+                    </div>
+                `;
+                resultsDiv.innerHTML = html;
+
+                return { hex: cipherHex, base64: cipherBase64, parsed };
+            } catch (error) {
+                log(`CDN 版本加密失败: ${error.message}`, 'error');
+                resultsDiv.innerHTML = `<div class="test-result error">❌ CDN 版本加密失败: ${error.message}</div>`;
+                return null;
+            }
+        }
+
+        // 测试 npm 版本（从实际应用导入）
+        function testNPMVersion() {
+            log('开始测试 npm 版本...', 'info');
+            const resultsDiv = document.getElementById('npm-results');
+
+            if (typeof NPM_SM2 === 'undefined' || NPM_SM2 === null) {
+                const msg = 'npm 版本未加载。这个测试页面需要从 Vite 开发服务器加载 sm-crypto。';
+                log(msg, 'warning');
+                resultsDiv.innerHTML = `
+                    <div class="test-result warning">
+                        <strong>⚠️ 无法测试 npm 版本</strong><br><br>
+                        ${msg}<br><br>
+                        <strong>解决方案:</strong><br>
+                        1. 确保已安装 npm 包: <code>npm install sm-crypto</code><br>
+                        2. 在 main.tsx 或其他入口文件中添加:<br>
+                        <pre>import smCrypto from 'sm-crypto';
+window.NPM_SM2 = smCrypto.sm2;</pre><br>
+                        3. 刷新此页面
+                    </div>
+                `;
+                return null;
+            }
+
+            try {
+                const cipherHex = NPM_SM2.doEncrypt(testData, publicKey, 1);
+                const cipherBase64 = hexToBase64(cipherHex);
+
+                log(`npm 版本加密成功，密文长度: ${cipherHex.length} 字符`, 'success');
+
+                const parsed = parseC1C3C2(cipherHex);
+                if (!parsed) {
+                    log('npm 版本: 无法解析 C1C3C2 格式', 'error');
+                    return null;
+                }
+
+                const html = `
+                    <div class="test-result success">
+                        <strong>✅ npm 版本加密成功</strong><br>
+                        ${formatHex(cipherHex, '完整密文（十六进制）')}
+                        <strong>Base64 编码:</strong><br>
+                        ${cipherBase64}<br><br>
+                        ${formatHex(parsed.c1, 'C1 (椭圆曲线点 65字节)')}
+                        ${formatHex(parsed.c3, 'C3 (SM3 摘要 32字节)')}
+                        ${formatHex(parsed.c2, 'C2 (密文 ' + (parsed.c2.length / 2) + '字节)')}
+                    </div>
+                `;
+                resultsDiv.innerHTML = html;
+
+                return { hex: cipherHex, base64: cipherBase64, parsed };
+            } catch (error) {
+                log(`npm 版本加密失败: ${error.message}`, 'error');
+                resultsDiv.innerHTML = `<div class="test-result error">❌ npm 版本加密失败: ${error.message}</div>`;
+                return null;
+            }
+        }
+
+        // 对比分析
+        function compareResults(cdnResult, npmResult) {
+            const compDiv = document.getElementById('comparison-results');
+
+            if (!cdnResult || !npmResult) {
+                compDiv.innerHTML = `<div class="test-result warning">⚠️ 无法对比：缺少测试结果</div>`;
+                return;
+            }
+
+            let html = '<h3>对比结果</h3>';
+
+            // 检查密文是否相同
+            const isIdentical = cdnResult.hex === npmResult.hex;
+            const isSameLength = cdnResult.hex.length === npmResult.hex.length;
+
+            html += `<div class="test-result ${isIdentical ? 'success' : 'error'}">`;
+            html += `<strong>密文对比:</strong> ${isIdentical ? '✅ 完全相同' : '❌ 不同'}<br>`;
+            html += `<strong>长度对比:</strong> CDN=${cdnResult.hex.length}, npm=${npmResult.hex.length} ${isSameLength ? '✅ 相同' : '❌ 不同'}`;
+            html += `</div>`;
+
+            // C1 对比
+            const c1Same = cdnResult.parsed.c1 === npmResult.parsed.c1;
+            html += `<div class="test-result ${c1Same ? 'success' : 'error'}">`;
+            html += `<strong>C1 (椭圆曲线点) 对比:</strong> ${c1Same ? '✅ 相同' : '❌ 不同'}`;
+            if (!c1Same) {
+                html += `<br>CDN C1: ${cdnResult.parsed.c1.substring(0, 40)}...<br>`;
+                html += `npm C1: ${npmResult.parsed.c1.substring(0, 40)}...`;
+            }
+            html += `</div>`;
+
+            // C3 对比
+            const c3Same = cdnResult.parsed.c3 === npmResult.parsed.c3;
+            html += `<div class="test-result ${c3Same ? 'success' : 'error'}">`;
+            html += `<strong>C3 (SM3 摘要) 对比:</strong> ${c3Same ? '✅ 相同' : '❌ 不同'}`;
+            html += `</div>`;
+
+            // C2 对比
+            const c2Same = cdnResult.parsed.c2 === npmResult.parsed.c2;
+            html += `<div class="test-result ${c2Same ? 'success' : 'error'}">`;
+            html += `<strong>C2 (密文) 对比:</strong> ${c2Same ? '✅ 相同' : '❌ 不同'}`;
+            if (!c2Same) {
+                html += `<br>CDN C2 长度: ${cdnResult.parsed.c2.length / 2} 字节<br>`;
+                html += `npm C2 长度: ${npmResult.parsed.c2.length / 2} 字节`;
+            }
+            html += `</div>`;
+
+            // 字节级对比
+            html += `<div class="test-result warning">`;
+            html += `<strong>前20字节对比:</strong><br>`;
+            html += `<span class="hex-dump">`;
+            html += `CDN: ${cdnResult.hex.substring(0, 40)}<br>`;
+            html += `npm: ${npmResult.hex.substring(0, 40)}`;
+            html += `</span>`;
+            html += `</div>`;
+
+            compDiv.innerHTML = html;
+
+            if (isIdentical) {
+                log('✅ 对比成功：CDN 和 npm 版本产生相同的密文！', 'success');
+            } else {
+                log('❌ 对比失败：CDN 和 npm 版本产生不同的密文！', 'error');
+            }
+        }
+
+        // 运行所有测试
+        async function runAllTests() {
+            clearResults();
+            log('='.repeat(50), 'info');
+            log('开始 SM2 加密对比测试', 'info');
+            log(`测试数据: ${testData}`, 'info');
+            log(`公钥: ${publicKey.substring(0, 30)}...`, 'info');
+            log('='.repeat(50), 'info');
+
+            // 测试 CDN 版本
+            const cdnResult = testCDNVersion();
+
+            // 延迟一下再测试 npm 版本
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            // 测试 npm 版本
+            const npmResult = testNPMVersion();
+
+            // 对比结果
+            await new Promise(resolve => setTimeout(resolve, 100));
+            compareResults(cdnResult, npmResult);
+
+            log('测试完成', 'info');
+        }
+
+        // 页面加载时检查 npm 版本是否可用
+        window.addEventListener('DOMContentLoaded', () => {
+            if (typeof window.NPM_SM2 !== 'undefined') {
+                log('检测到 npm 版本的 sm-crypto', 'success');
+            } else {
+                log('未检测到 npm 版本的 sm-crypto，请在应用入口中导出', 'warning');
+            }
+        });
+    </script>
+</body>
+</html>

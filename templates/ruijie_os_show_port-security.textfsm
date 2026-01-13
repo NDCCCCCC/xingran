@@ -1,0 +1,12 @@
+Value Required PORT (Gi\d+/\d+|FastEthernet\d+/\d+)
+Value NO (\d+)
+Value VLAN (\d+)
+Value MAC_ADDRESS ([0-9a-fA-F]{4}\.[0-9a-fA-F]{4}\.[0-9a-fA-F]{4})
+Value IP_ADDRESS (\S+)
+Value TYPE (Dynamic|Static)
+Value REMAINING_AGE (\d+|-)
+
+Start
+  ^NO\.\s+VLAN\s+MacAddress.*RemainingAge -> Continue
+  ^-+\s+-+\s+-+
+  ^${NO}\s+${VLAN}\s+${MAC_ADDRESS}\s+${IP_ADDRESS}\s+${TYPE}\s+${PORT}\s+${REMAINING_AGE} -> Record

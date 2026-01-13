@@ -1,0 +1,76 @@
+package addomain
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"gorm.io/gorm"
+)
+
+// OUService OU管理服务
+type OUService struct {
+	db *gorm.DB
+}
+
+// NewOUService 创建OU服务
+func NewOUService(db *gorm.DB) *OUService {
+	return &OUService{db: db}
+}
+
+// OUNode OU树节点
+type OUNode struct {
+	ID       string    `json:"id"`
+	Name     string    `json:"name"`
+	DN       string    `json:"dn"`
+	Path     string    `json:"path,omitempty"`
+	Children []OUNode `json:"children,omitempty"`
+}
+
+// GetTree 获取OU树形结构
+func (s *OUService) GetTree(ctx context.Context, configID string) ([]OUNode, error) {
+	var ous []models.ADOU
+	if err := s.db.WithContext(ctx).
+		Where("ad_config_id = ? AND deleted_at IS NULL", configID).
+		Find(&ous).Error; err != nil {
+		return nil, fmt.Errorf("查询OU失败: %w", err)
+	}
+
+	return s.buildTree(ous, ""), nil
+}
+
+// buildTree 构建OU树
+func (s *OUService) buildTree(ous []models.ADOU, parentDN string) []OUNode {
+	var tree []OUNode
+
+	// 构建树
+	for _, ou := range ous {
+		if ou.ParentDN == parentDN {
+			node := OUNode{
+				ID:   ou.ID,
+				Name: ou.OUName,
+				DN:   ou.OUN,
+				Path: ou.OUPath,
+			}
+			node.Children = s.buildTree(ous, ou.OUN)
+			tree = append(tree, node)
+		}
+	}
+
+	return tree
+}
+
+// GetByDN 根据DN获取OU
+func (s *OUService) GetByDN(ctx context.Context, configID, ouDN string) (*models.ADOU, error) {
+	var ou models.ADOU
+	err := s.db.WithContext(ctx).
+		Where("ad_config_id = ? AND ou_dn = ? AND deleted_at IS NULL", configID, ouDN).
+		First(&ou).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, fmt.Errorf("OU不存在")
+		}
+		return nil, fmt.Errorf("查询OU失败: %w", err)
+	}
+	return &ou, nil
+}

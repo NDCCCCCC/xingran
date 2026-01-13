@@ -9,7 +9,7 @@ type Role struct {
 	DataScope       DataScope   `gorm:"default:1" json:"dataScope"`
 	MenuCheckStrictly bool      `gorm:"default:true" json:"menuCheckStrictly"`
 	DeptCheckStrictly bool      `gorm:"default:true" json:"deptCheckStrictly"`
-	Status          RoleStatus  `gorm:"default:1" json:"status"`
+	Status          RoleStatus  `gorm:"default:0" json:"status"`
 	Remark          string      `gorm:"size:500" json:"remark,omitempty"`
 
 	// 关联

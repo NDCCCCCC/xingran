@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { post } from '@/lib/api';
 import type { User, LoginRequest } from '@/types';
+import { useMenuStore } from './menuStore';
 
 interface AuthState {
   user: User | null;
@@ -32,7 +33,16 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       login: async (credentials: LoginRequest) => {
         set({ loading: true });
         try {
-          const response = await post('/system/auth/login', credentials);
+          // 注意：SM2密码加密与后端 tjfoc/gmsm 存在兼容性问题
+          // 目前使用明文传输（通过HTTPS保护），后续需要解决加密库兼容性
+          const loginRequest = {
+            username: credentials.username,
+            password: credentials.password,
+            captcha: credentials.captcha,
+            captchaId: credentials.captchaId,
+          };
+
+          const response = await post('/system/auth/login', loginRequest);
           const { user, accessToken, refreshToken } = response.data;
 
           // 保存到localStorage
@@ -57,6 +67,9 @@ export const useAuthStore = create<AuthState & AuthActions>()(
         // 清除localStorage
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
+
+        // 清除菜单数据
+        useMenuStore.getState().clearMenus();
 
         // 清除状态
         set({

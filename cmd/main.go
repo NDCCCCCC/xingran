@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -14,10 +13,31 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/api"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
+
+const (
+	// DefaultTimeZone 默认时区：东八区（中国标准时间）
+	DefaultTimeZone = "Asia/Shanghai"
+	// ShutdownTimeout 服务器关闭超时时间
+	ShutdownTimeout = 10 * time.Second
+)
+
+func init() {
+	setTimeZone()
+}
+
+// setTimeZone 设置全局时区
+func setTimeZone() {
+	tz, err := time.LoadLocation(DefaultTimeZone)
+	if err != nil {
+		panic(fmt.Sprintf("加载时区失败: %v", err))
+	}
+	time.Local = tz
+}
 
 // @title RuoYi Next API
 // @version 1.0
@@ -39,84 +59,142 @@ import (
 // @name Authorization
 // @description Bearer token
 func main() {
-	// 加载配置
 	cfg := config.Load()
 
-	// 初始化核心模块
-	coreModule := core.New(cfg)
-	if err := coreModule.Init(); err != nil {
-		log.Fatalf("初始化核心模块失败: %v", err)
+	initializeLogger(cfg)
+	logStartupInfo(cfg)
+
+	coreModule := initializeCoreModule(cfg)
+	engine := setupGinEngine(cfg)
+	setupRoutes(engine, cfg, coreModule)
+
+	server := startServer(cfg, engine)
+	waitForShutdown(server, coreModule)
+}
+
+// initializeLogger 初始化日志系统
+func initializeLogger(cfg *config.Config) {
+	logConfig := &applogger.Config{
+		Level:         cfg.Log.Level,
+		LogDir:        cfg.Log.LogDir,
+		MaxSize:       cfg.Log.MaxSize,
+		MaxBackups:    cfg.Log.MaxBackups,
+		MaxAge:        cfg.Log.MaxAge,
+		Compress:      cfg.Log.Compress,
+		ConsoleOutput: true,
 	}
 
-	// 设置 Gin 模式
-	if cfg.Server.Mode == "release" {
+	if err := applogger.Init(logConfig); err != nil {
+		fmt.Printf("初始化日志系统失败: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+// logStartupInfo 记录启动信息
+func logStartupInfo(cfg *config.Config) {
+	applogger.Info("========== 应用启动 ==========")
+	applogger.Infof("日志级别: %s", cfg.Log.Level)
+	applogger.Infof("日志目录: %s", cfg.Log.LogDir)
+}
+
+// initializeCoreModule 初始化核心模块
+func initializeCoreModule(cfg *config.Config) *core.Core {
+	coreModule := core.New(cfg)
+	if err := coreModule.Init(); err != nil {
+		applogger.Fatalf("初始化核心模块失败: %v", err)
+	}
+	return coreModule
+}
+
+// setupGinEngine 设置 Gin 引擎
+func setupGinEngine(cfg *config.Config) *gin.Engine {
+	setGinMode(cfg.Server.Mode)
+
+	engine := gin.New()
+	engine.Use(middleware.Logger())
+	engine.Use(middleware.Recovery())
+
+	// CORS配置：生产环境应该配置具体的域名列表
+	// 开发环境使用 "*" 允许所有来源
+	allowedOrigins := []string{"*"}
+	engine.Use(middleware.Cors(allowedOrigins))
+
+	engine.Use(middleware.Gzip())
+
+	return engine
+}
+
+// setGinMode 设置 Gin 运行模式
+func setGinMode(mode string) {
+	if mode == "release" {
 		gin.SetMode(gin.ReleaseMode)
 	} else {
 		gin.SetMode(gin.DebugMode)
 	}
+}
 
-	// 创建 Gin 引擎
-	r := gin.New()
-
-	// 添加中间件
-	r.Use(middleware.Logger())
-	r.Use(middleware.Recovery())
-	r.Use(middleware.Cors())
-	r.Use(middleware.Gzip())
-
+// setupRoutes 设置路由
+func setupRoutes(engine *gin.Engine, cfg *config.Config, coreModule *core.Core) {
 	// 健康检查
-	r.GET("/health", func(c *gin.Context) {
+	engine.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"status": "ok",
-			"time": time.Now().Format(time.RFC3339),
+			"time":   time.Now().Format(time.RFC3339),
 		})
 	})
 
-	// Swagger 文档
+	// Swagger 文档（仅非生产环境）
 	if cfg.Server.Mode != "release" {
-		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+		engine.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}
+
+	// 静态文件服务
+	engine.Static("/uploads/captcha/backgrounds", "./uploads/captcha/backgrounds")
 
 	// API 路由
-	apiRouter := r.Group("/api/v1")
-	{
-		api.SetupRouter(apiRouter, coreModule)
-	}
+	apiRouter := engine.Group("/api/v1")
+	api.SetupRouter(apiRouter, coreModule)
+}
 
-	// 创建 HTTP 服务器
-	srv := &http.Server{
+// startServer 启动 HTTP 服务器
+func startServer(cfg *config.Config, engine *gin.Engine) *http.Server {
+	server := &http.Server{
 		Addr:    fmt.Sprintf(":%d", cfg.Server.Port),
-		Handler: r,
+		Handler: engine,
 	}
 
-	// 启动服务器
 	go func() {
-		log.Printf("服务器启动在端口: %d", cfg.Server.Port)
-		log.Printf("环境: %s", cfg.Server.Mode)
+		applogger.Infof("服务器启动在端口: %d", cfg.Server.Port)
+		applogger.Infof("环境: %s", cfg.Server.Mode)
 		if cfg.Server.Mode != "release" {
-			log.Printf("Swagger 文档: http://localhost:%d/swagger/index.html", cfg.Server.Port)
+			applogger.Infof("Swagger 文档: http://localhost:%d/swagger/index.html", cfg.Server.Port)
 		}
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("服务器启动失败: %v", err)
+
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			applogger.Fatalf("服务器启动失败: %v", err)
 		}
 	}()
 
-	// 等待中断信号以优雅地关闭服务器
+	return server
+}
+
+// waitForShutdown 等待关闭信号并优雅关闭
+func waitForShutdown(server *http.Server, coreModule *core.Core) {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	log.Println("正在关闭服务器...")
 
-	// 设置关闭超时时间
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	applogger.Info("正在关闭服务器...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), ShutdownTimeout)
 	defer cancel()
 
-	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatal("服务器强制关闭:", err)
+	if err := server.Shutdown(ctx); err != nil {
+		applogger.Errorf("服务器强制关闭: %v", err)
 	}
 
-	// 清理资源
 	coreModule.Close()
+	applogger.Close()
 
-	log.Println("服务器已退出")
+	applogger.Info("服务器已退出")
 }

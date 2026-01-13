@@ -45,25 +45,25 @@ func (b *BaseTimeLine) BeforeCreate(tx *gorm.DB) error {
 type Gender int
 
 const (
-	GenderUnknown Gender = 0 // 未知
-	GenderMale    Gender = 1 // 男
-	GenderFemale  Gender = 2 // 女
+	GenderMale   Gender = 0 // 男
+	GenderFemale Gender = 1 // 女
+	GenderSecret Gender = 2 // 保密
 )
 
 // UserStatus 用户状态枚举
 type UserStatus int
 
 const (
-	UserStatusDisabled UserStatus = 0 // 禁用
-	UserStatusEnabled  UserStatus = 1 // 启用
+	UserStatusEnabled  UserStatus = 0 // 启用
+	UserStatusDisabled UserStatus = 1 // 禁用
 )
 
 // RoleStatus 角色状态枚举
 type RoleStatus int
 
 const (
-	RoleStatusDisabled RoleStatus = 0 // 停用
-	RoleStatusEnabled  RoleStatus = 1 // 正常
+	RoleStatusEnabled  RoleStatus = 0 // 正常
+	RoleStatusDisabled RoleStatus = 1 // 停用
 )
 
 // DataScope 数据范围枚举

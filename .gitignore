@@ -55,4 +55,4 @@ coverage.html
 *.backup
 
 # 生产配置文件
-configs/config.prod.yaml
+configs/config.prod.yamlnul

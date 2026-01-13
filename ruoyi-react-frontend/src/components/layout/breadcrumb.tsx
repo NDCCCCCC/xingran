@@ -1,47 +1,107 @@
-import React from 'react';
+import { useMemo } from 'react';
+import type { FC } from 'react';
 import { Breadcrumb } from 'antd';
 import { useLocation, Link } from 'react-router-dom';
+import { useMenuStore } from '@/store/menuStore';
+import type { Menu } from '@/types';
 
-const BreadcrumbComponent: React.FC = () => {
+// 递归查找菜单路径对应的菜单项
+const findMenuByPath = (menus: Menu[], path: string): Menu | null => {
+  for (const menu of menus) {
+    // 匹配路径
+    if (menu.path === path || menu.path === `/${path}`) {
+      return menu;
+    }
+    // 递归查找子菜单
+    if (menu.children && menu.children.length > 0) {
+      const found = findMenuByPath(menu.children, path);
+      if (found) return found;
+    }
+  }
+  return null;
+};
+
+// 构建面包屑路径
+const buildBreadcrumbPath = (menus: Menu[], pathSnippets: string[]): Array<{ path: string; name: string }> => {
+  const result: Array<{ path: string; name: string }> = [];
+  const dashboardMenu = menus.find(m => m.path === '/dashboard');
+
+  // 处理仪表盘
+  if (pathSnippets[0] === 'dashboard') {
+    result.push({ path: '/dashboard', name: dashboardMenu?.menuName || '仪表盘' });
+    return result;
+  }
+
+  // 处理系统管理模块
+  if (pathSnippets[0] === 'system') {
+    const systemMenu = menus.find(m => m.path === '/system');
+    result.push({ path: '/system', name: systemMenu?.menuName || '系统管理' });
+
+    // 查找子菜单
+    if (pathSnippets[1]) {
+      const childPath = `/system/${pathSnippets[1]}`;
+      const childMenu = findMenuByPath(menus, childPath);
+      if (childMenu) {
+        result.push({ path: childPath, name: childMenu.menuName });
+      }
+    }
+  }
+
+  // 处理系统监控模块
+  if (pathSnippets[0] === 'monitor') {
+    const monitorMenu = menus.find(m => m.path === '/monitor');
+    result.push({ path: '/monitor', name: monitorMenu?.menuName || '系统监控' });
+
+    // 查找子菜单
+    if (pathSnippets[1]) {
+      const childPath = `/monitor/${pathSnippets[1]}`;
+      const childMenu = findMenuByPath(menus, childPath);
+      if (childMenu) {
+        result.push({ path: childPath, name: childMenu.menuName });
+      }
+    }
+  }
+
+  return result;
+};
+
+const BreadcrumbComponent: FC = () => {
   const location = useLocation();
+  const { menus } = useMenuStore();
   const pathSnippets = location.pathname.split('/').filter((i) => i);
 
-  const breadcrumbNameMap: Record<string, string> = {
-    dashboard: '仪表盘',
-    system: '系统管理',
-    users: '用户管理',
-    roles: '角色管理',
-    menus: '菜单管理',
-    depts: '部门管理',
-    posts: '岗位管理',
-    dicts: '字典管理',
-    configs: '参数配置',
-    notices: '通知公告',
-    monitor: '系统监控',
-    online: '在线用户',
-    operlog: '操作日志',
-    loginlog: '登录日志',
-  };
+  const breadcrumbItems = useMemo(() => {
+    const breadcrumbPath = buildBreadcrumbPath(menus, pathSnippets);
 
-  const items = pathSnippets.map((snippet, index) => {
-    const url = `/${pathSnippets.slice(0, index + 1).join('/')}`;
-    const name = breadcrumbNameMap[snippet] || snippet;
-
-    return {
-      key: url,
-      title: index === pathSnippets.length - 1 ? (
-        <span>{name}</span>
+    return breadcrumbPath.map((item, index) => ({
+      key: item.path,
+      title: index === breadcrumbPath.length - 1 ? (
+        <span>{item.name}</span>
       ) : (
-        <Link to={url}>{name}</Link>
+        <Link to={item.path}>{item.name}</Link>
       ),
-    };
-  });
+    }));
+  }, [menus, pathSnippets]);
+
+  // 如果没有面包屑项，不显示
+  if (breadcrumbItems.length === 0) {
+    return null;
+  }
 
   return (
-    <div className="px-6 py-3 bg-white border-b border-gray-100">
+    <div
+      className="px-6 py-3 border-b"
+      style={{
+        background: 'var(--theme-bg-surface)',
+        borderColor: 'var(--theme-border-primary)',
+      }}
+    >
       <Breadcrumb
-        items={items}
+        items={breadcrumbItems}
         className="text-sm"
+        style={{
+          color: 'var(--theme-text-secondary)',
+        }}
       />
     </div>
   );

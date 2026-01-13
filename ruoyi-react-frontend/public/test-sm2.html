@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SM2 加密解密兼容性测试</title>
+    <script src="https://cdn.jsdelivr.net/npm/sm-crypto@0.3.13/dist/sm2.min.js"></script>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .section {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        .success { color: #4CAF50; font-weight: bold; }
+        .error { color: #f44336; font-weight: bold; }
+        .info { color: #2196F3; }
+        textarea {
+            width: 100%;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f9f9f9;
+            border-left: 4px solid #4CAF50;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔐 SM2 加密解密兼容性测试</h1>
+
+    <div class="section">
+        <h2>1. 生成 SM2 密钥对</h2>
+        <button onclick="generateKeyPair()">生成密钥对</button>
+        <div class="result" id="keyResult"></div>
+    </div>
+
+    <div class="section">
+        <h2>2. 测试加密解密</h2>
+        <label>测试数据: <input type="text" id="testData" value="test-password-123" /></label>
+        <button onclick="testEncryption()">测试加密解密</button>
+        <div class="result" id="encryptResult"></div>
+    </div>
+
+    <div class="section">
+        <h2>3. 与后端兼容性测试</h2>
+        <p class="info">将后端生成的公钥粘贴到下方进行测试</p>
+        <label>后端公钥 (十六进制): <textarea id="backendPublicKey" rows="3" placeholder="粘贴后端 API 返回的 publicKey"></textarea></label>
+        <br>
+        <label>测试数据: <input type="text" id="testData2" value="hello-sm2" /></label>
+        <button onclick="testBackendCompatibility()">测试后端兼容性</button>
+        <div class="result" id="backendResult"></div>
+    </div>
+
+    <div class="section">
+        <h2>4. 加密结果详情</h2>
+        <div id="details"></div>
+    </div>
+
+    <script>
+        let keyPair = null;
+
+        // 十六进制转 Base64
+        function hexToBase64(hexString) {
+            const paddedHex = hexString.length % 2 === 0 ? hexString : '0' + hexString;
+            const bytes = [];
+            for (let i = 0; i < paddedHex.length; i += 2) {
+                bytes.push(parseInt(paddedHex.substr(i, 2), 16));
+            }
+            return btoa(String.fromCharCode.apply(null, bytes));
+        }
+
+        // Base64 转十六进制
+        function base64ToHex(base64String) {
+            const binaryString = atob(base64String);
+            let hex = '';
+            for (let i = 0; i < binaryString.length; i++) {
+                const byte = binaryString.charCodeAt(i);
+                hex += byte.toString(16).padStart(2, '0');
+            }
+            return hex;
+        }
+
+        // 生成密钥对
+        function generateKeyPair() {
+            try {
+                keyPair = sm2.generateKeyPairHex();
+                document.getElementById('keyResult').innerHTML = `
+                    <p class="success">✅ 密钥对生成成功!</p>
+                    <p><strong>公钥 (前64字符):</strong><br>${keyPair.publicKey.substring(0, 64)}...</p>
+                    <p><strong>公钥长度:</strong> ${keyPair.publicKey.length} 字符 (${keyPair.publicKey.length/2} 字节)</p>
+                    <p><strong>私钥 (前64字符):</strong><br>${keyPair.privateKey.substring(0, 64)}...</p>
+                `;
+                // 清空之前的测试结果
+                document.getElementById('encryptResult').innerHTML = '';
+                document.getElementById('backendResult').innerHTML = '';
+                document.getElementById('details').innerHTML = '';
+            } catch (error) {
+                document.getElementById('keyResult').innerHTML = `<p class="error">❌ 生成密钥对失败: ${error}</p>`;
+            }
+        }
+
+        // 测试加密解密
+        function testEncryption() {
+            if (!keyPair) {
+                alert('请先生成密钥对!');
+                return;
+            }
+
+            const plaintext = document.getElementById('testData').value;
+            if (!plaintext) {
+                alert('请输入测试数据!');
+                return;
+            }
+
+            try {
+                // 使用 sm-crypto 加密 (mode 1 = C1C3C2)
+                const cipherHex = sm2.doEncrypt(plaintext, keyPair.publicKey, 1);
+                const cipherBase64 = hexToBase64(cipherHex);
+
+                // 使用 sm-crypto 解密
+                const decryptedHex = sm2.doDecrypt(cipherHex, keyPair.privateKey, 1);
+
+                const success = decryptedHex === plaintext;
+                document.getElementById('encryptResult').innerHTML = `
+                    <p class="${success ? 'success' : 'error'}">${success ? '✅' : '❌'} ${success ? '加密解密测试通过!' : '加密解密测试失败!'}</p>
+                    <p><strong>原始数据:</strong> ${plaintext}</p>
+                    <p><strong>加密结果 (十六进制):</strong><br>${cipherHex.substring(0, 128)}...</p>
+                    <p><strong>加密结果 (Base64):</strong><br>${cipherBase64.substring(0, 128)}...</p>
+                    <p><strong>解密结果:</strong> ${decryptedHex}</p>
+                    <p><strong>验证:</strong> ${decryptedHex === plaintext ? '✅ 匹配' : '❌ 不匹配'}</p>
+                `;
+
+                document.getElementById('details').innerHTML = `
+                    <h3>加密详情:</h3>
+                    <p><strong>算法:</strong> SM2-C1C3C2 (mode = 1)</p>
+                    <p><strong>密文格式:</strong> C1 || C2 || C3</p>
+                    <p><strong>C1 (椭圆曲线点):</strong> 65 字节 (130 个十六进制字符)</p>
+                    <p><strong>C2 (密文):</strong> 变长</p>
+                    <p><strong>C3 (摘要值):</strong> 32 字节 (64 个十六进制字符)</p>
+                `;
+            } catch (error) {
+                document.getElementById('encryptResult').innerHTML = `<p class="error">❌ 加密解密测试失败: ${error}</p>`;
+            }
+        }
+
+        // 测试后端兼容性
+        function testBackendCompatibility() {
+            const backendPublicKey = document.getElementById('backendPublicKey').value.trim();
+            const plaintext = document.getElementById('testData2').value;
+
+            if (!backendPublicKey) {
+                alert('请输入后端公钥!');
+                return;
+            }
+
+            if (!plaintext) {
+                alert('请输入测试数据!');
+                return;
+            }
+
+            try {
+                // 使用后端公钥加密
+                const cipherHex = sm2.doEncrypt(plaintext, backendPublicKey, 1);
+                const cipherBase64 = hexToBase64(cipherHex);
+
+                document.getElementById('backendResult').innerHTML = `
+                    <p class="success">✅ 使用后端公钥加密成功!</p>
+                    <p><strong>原始数据:</strong> ${plaintext}</p>
+                    <p><strong>加密结果 (Base64):</strong><br>${cipherBase64}</p>
+                    <p class="info">ℹ️ 请将此 Base64 字符串发送到后端进行解密测试</p>
+                    <p><strong>十六进制格式:</strong><br>${cipherHex}</p>
+                    <p><strong>提示:</strong> 可以使用 Postman 发送请求到后端 API:</p>
+                    <pre>
+POST /api/v1/system/auth/login
+Content-Type: application/json
+
+{
+  "username": "test",
+  "password": "${cipherBase64}",
+  "captcha": "xxx",
+  "captchaId": "xxx"
+}
+                    </pre>
+                `;
+            } catch (error) {
+                document.getElementById('backendResult').innerHTML = `<p class="error">❌ 后端兼容性测试失败: ${error}</p>`;
+            }
+        }
+
+        // 页面加载时自动生成密钥对
+        window.onload = function() {
+            generateKeyPair();
+        };
+    </script>
+</body>
+</html>

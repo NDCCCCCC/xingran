@@ -14,8 +14,9 @@ import (
 type Config struct {
 	Server   ServerConfig   `mapstructure:"server"`
 	Database DatabaseConfig `mapstructure:"database"`
-	Redis    RedisConfig    `mapstructure:"redis"`
+	Cache    CacheConfig    `mapstructure:"cache"`
 	JWT      JWTConfig      `mapstructure:"jwt"`
+	Security SecurityConfig `mapstructure:"security"`
 	Log      LogConfig      `mapstructure:"log"`
 }
 
@@ -40,13 +41,16 @@ type DatabaseConfig struct {
 	MaxLifetime  int    `mapstructure:"max_lifetime"`
 }
 
-// RedisConfig Redis配置
-type RedisConfig struct {
-	Host     string `mapstructure:"host"`
-	Port     int    `mapstructure:"port"`
-	Password string `mapstructure:"password"`
-	DB       int    `mapstructure:"db"`
-	PoolSize int    `mapstructure:"pool_size"`
+// CacheConfig 缓存配置
+type CacheConfig struct {
+	Type        string `mapstructure:"type"`        // redis, memory
+	Host        string `mapstructure:"host"`
+	Port        int    `mapstructure:"port"`
+	Password    string `mapstructure:"password"`
+	DB          int    `mapstructure:"db"`
+	PoolSize    int    `mapstructure:"pool_size"`
+	MaxSize     int    `mapstructure:"max_size"`
+	CleanupTime int    `mapstructure:"cleanup_time"`
 }
 
 // JWTConfig JWT配置
@@ -55,13 +59,32 @@ type JWTConfig struct {
 	AccessKeyExpire  int    `mapstructure:"access_key_expire"`
 	RefreshKeyExpire int    `mapstructure:"refresh_key_expire"`
 	Issuer           string `mapstructure:"issuer"`
+	UseSM2           bool   `mapstructure:"use_sm2"`           // 是否使用SM2算法
+	SM2PrivateKey    string `mapstructure:"sm2_private_key"`  // SM2私钥(十六进制)
+	SM2PublicKey     string `mapstructure:"sm2_public_key"`   // SM2公钥(十六进制)
 }
 
 // LogConfig 日志配置
 type LogConfig struct {
-	Level  string `mapstructure:"level"`
-	Format string `mapstructure:"format"`
-	Output string `mapstructure:"output"`
+	Level      string `mapstructure:"level"`       // 日志级别: debug, info, warn, error
+	LogDir     string `mapstructure:"log_dir"`     // 日志目录
+	MaxSize    int    `mapstructure:"max_size"`    // 单个日志文件最大大小(MB)
+	MaxBackups int    `mapstructure:"max_backups"` // 保留的旧日志文件最大数量
+	MaxAge     int    `mapstructure:"max_age"`     // 保留旧日志文件的最大天数
+	Compress   bool   `mapstructure:"compress"`    // 是否压缩旧日志文件
+}
+
+// SecurityConfig 安全配置
+type SecurityConfig struct {
+	SM4Key            string                  `mapstructure:"sm4_key"`             // SM4 加密密钥（16字节，Base64编码）
+	RequestEncryption RequestEncryptionConfig `mapstructure:"request_encryption"`  // 请求体加密配置
+}
+
+// RequestEncryptionConfig 请求体加密配置
+type RequestEncryptionConfig struct {
+	Enabled           bool     `mapstructure:"enabled"`            // 是否启用
+	ExcludePaths      []string `mapstructure:"exclude_paths"`      // 排除路径
+	RequireEncryption bool     `mapstructure:"require_encryption"` // 是否强制加密
 }
 
 // Load 加载配置
@@ -124,6 +147,10 @@ func Load() *Config {
 			config.Server.Port = p
 		}
 	}
+	// SM4 密钥从环境变量读取
+	if sm4Key := os.Getenv("SM4_KEY"); sm4Key != "" {
+		config.Security.SM4Key = sm4Key
+	}
 
 	return &config
 }
@@ -147,12 +174,15 @@ func setDefaults() {
 	viper.SetDefault("database.max_idle_conns", 10)
 	viper.SetDefault("database.max_lifetime", 3600)
 
-	// Redis默认配置
-	viper.SetDefault("redis.host", "localhost")
-	viper.SetDefault("redis.port", 6379)
-	viper.SetDefault("redis.password", "")
-	viper.SetDefault("redis.db", 0)
-	viper.SetDefault("redis.pool_size", 10)
+	// 缓存默认配置
+	viper.SetDefault("cache.type", "memory")
+	viper.SetDefault("cache.host", "localhost")
+	viper.SetDefault("cache.port", 6379)
+	viper.SetDefault("cache.password", "")
+	viper.SetDefault("cache.db", 0)
+	viper.SetDefault("cache.pool_size", 10)
+	viper.SetDefault("cache.max_size", 1000)
+	viper.SetDefault("cache.cleanup_time", 600)
 
 	// JWT默认配置
 	viper.SetDefault("jwt.secret_key", "ruoyi-next-secret-key")
@@ -162,17 +192,27 @@ func setDefaults() {
 
 	// 日志默认配置
 	viper.SetDefault("log.level", "info")
-	viper.SetDefault("log.format", "json")
-	viper.SetDefault("log.output", "stdout")
+	viper.SetDefault("log.log_dir", "logs")
+	viper.SetDefault("log.max_size", 100)      // 100MB
+	viper.SetDefault("log.max_backups", 30)    // 保留30个备份
+	viper.SetDefault("log.max_age", 90)        // 保留90天
+	viper.SetDefault("log.compress", true)     // 压缩旧日志
+
+	// 安全默认配置（注意：生产环境必须从环境变量设置）
+	// SM4 密钥必须是 16 字节（Base64 编码）
+	// 默认值 "dGVzdC1zZWNyZXQxNiEhIQ==" 解码后是 "test-secret16!!!" （16字节）
+	viper.SetDefault("security.sm4_key", "dGVzdC1zZWNyZXQxNiEhIQ==")
 }
 
 // GetDSN 获取数据库连接字符串
 func (c *DatabaseConfig) GetDSN() string {
-	return fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=%s TimeZone=Asia/Shanghai",
+	// 使用 Asia/Shanghai 时区
+	// Cron 计算时使用本地时区（CST），直接存储，不做时区转换
+	return fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=%s timezone=Asia/Shanghai",
 		c.Host, c.User, c.Password, c.DBName, c.Port, c.SSLMode)
 }
 
 // GetRedisAddr 获取Redis地址
-func (c *RedisConfig) GetRedisAddr() string {
+func (c *CacheConfig) GetRedisAddr() string {
 	return fmt.Sprintf("%s:%d", c.Host, c.Port)
 }

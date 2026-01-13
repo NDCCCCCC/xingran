@@ -11,11 +11,12 @@ type User struct {
 	Password      string     `gorm:"size:128;not null" json:"-"`
 	Salt          string     `gorm:"size:64;not null" json:"-"`
 	Nickname      *string    `gorm:"size:64" json:"nickname,omitempty"`
+	EmployeeNo    *string    `gorm:"size:64" json:"employeeNo,omitempty"` // 工号（企业微信代码）
 	Email         *string    `gorm:"size:128" json:"email,omitempty"`
 	Phone         *string    `gorm:"size:32" json:"phone,omitempty"`
 	Avatar        *string    `gorm:"size:255" json:"avatar,omitempty"`
 	Gender        Gender     `gorm:"default:0" json:"gender"`
-	Status        UserStatus `gorm:"default:1" json:"status"`
+	Status        UserStatus `gorm:"default:0" json:"status"`
 	DeptID        *string    `gorm:"size:64" json:"deptId,omitempty"`
 	DeptName      *string    `gorm:"size:64" json:"deptName,omitempty"`
 	LoginIP       *string    `gorm:"size:128" json:"loginIp,omitempty"`

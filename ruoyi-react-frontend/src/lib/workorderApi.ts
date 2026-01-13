@@ -1,0 +1,529 @@
+import { post } from './api';
+import type { BaseResponse, PageResponse } from '@/types';
+
+// ==================== 类型定义 ====================
+
+// 工单状态枚举
+export enum WorkOrderStatus {
+  Pending = 0,      // 待处理
+  Processing = 1,   // 处理中
+  Completed = 2,    // 已完成
+  Closed = 3,       // 已关闭
+  Rejected = 4,     // 已拒绝
+}
+
+// 工单优先级枚举
+export enum WorkOrderPriority {
+  Low = 0,      // 低
+  Medium = 1,   // 中
+  High = 2,     // 高
+  Urgent = 3,   // 紧急
+}
+
+// 工单类型枚举
+export enum WorkOrderType {
+  Fault = 'fault',       // 故障
+  Request = 'request',   // 请求
+  Change = 'change',     // 变更
+  Incident = 'incident', // 事件
+  Question = 'question', // 咨询
+}
+
+// 周期性工单分配类型枚举
+export enum PeriodicAssignType {
+  Manual = 'manual',       // 手动指定
+  DutyPool = 'duty_pool',  // 当天值班人员
+  Rotation = 'rotation',   // 轮询
+}
+
+// ==================== 工单相关类型 ====================
+
+export interface WorkOrder {
+  id: string;
+  title: string;
+  workOrderNo: string;
+  categoryId: string;
+  type: WorkOrderType;
+  priority: WorkOrderPriority;
+  status: WorkOrderStatus;
+  description: string;
+  solution?: string;
+  submitterId: string;
+  assigneeId?: string;
+  deptId?: string;
+  expectedResolveAt?: string;
+  resolvedAt?: string;
+  closedAt?: string;
+  attachmentIds?: string;
+  // 自动分配相关
+  isAutoAssigned: boolean;
+  dutyPoolId?: string;
+  dutyType?: string;
+  assignStrategy?: string;
+  // 关联
+  category?: WorkOrderCategory;
+  submitter?: SimpleUser;
+  assignee?: SimpleUser;
+  department?: SimpleDept;
+  comments?: WorkOrderComment[];
+  history?: WorkOrderHistory[];
+  ratings?: WorkOrderRating[];
+  createdAt: string;
+  createdBy: string;
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
+export interface WorkOrderCategory {
+  id: string;
+  categoryName: string;
+  description?: string;
+  status: number; // 0=启用 1=停用
+  sortOrder: number;
+  parentId?: string;
+  parent?: WorkOrderCategory;
+  children?: WorkOrderCategory[];
+  createdAt: string;
+  createdBy: string;
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
+export interface WorkOrderComment {
+  id: string;
+  workOrderId: string;
+  userId: string;
+  content: string;
+  isInternal: boolean;
+  createdAt: string;
+  user?: SimpleUser;
+}
+
+export interface WorkOrderHistory {
+  id: string;
+  workOrderId: string;
+  action: string;
+  field?: string;
+  oldValue?: string;
+  newValue?: string;
+  remark?: string;
+  operatorId: string;
+  createdAt: string;
+  operator?: SimpleUser;
+}
+
+export interface WorkOrderRating {
+  id: string;
+  workOrderId: string;
+  ratingType: string; // user 或 handler
+  completionScore: number; // 用户评价：完成度评分 (1-5)
+  cooperationScore: number; // 处理人员评价：配合度评分 (1-5)
+  comment?: string;
+  raterId: string;
+  createdAt: string;
+  rater?: SimpleUser;
+}
+
+export interface WorkOrderConfig {
+  id: string;
+  autoAssignEnabled: boolean;
+  autoAssignTarget: string;
+  autoAssignStrategy: string;
+  autoCloseDays: number;
+  allowUserClose: boolean;
+  notificationEnabled: boolean;
+  emailNotification: boolean;
+  smsNotification: boolean;
+  ratingEnabled: boolean;
+  knowledgeConvertEnabled: boolean;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+// ==================== 周期性工单相关类型 ====================
+
+export interface PeriodicWorkOrderTemplate {
+  id: string;
+  templateName: string;
+  workOrderTitle: string;
+  description?: string;
+  categoryId: string;
+  type: WorkOrderType;
+  priority: WorkOrderPriority;
+  cronExpression: string;
+  assignType: PeriodicAssignType;
+  assignTargetId?: string;
+  isEnabled: boolean;
+  nextRunAt?: string;
+  jobId?: string;
+  totalGenerated: number;
+  notifyAssignee: boolean;
+  // 关联
+  category?: WorkOrderCategory;
+  assignee?: SimpleUser;
+  job?: any;
+  executionLogs?: PeriodicWorkOrderLog[];
+  createdAt: string;
+  createdBy: string;
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
+export interface PeriodicWorkOrderLog {
+  id: string;
+  templateId: string;
+  workOrderId: string;
+  executedAt: string;
+  jobId?: string;
+  status: string; // success, failed
+  result?: string;
+  errorMsg?: string;
+  // 关联
+  template?: PeriodicWorkOrderTemplate;
+  workOrder?: WorkOrder;
+  job?: any;
+}
+
+// ==================== 工单统计相关类型 ====================
+
+export interface WorkOrderStatistics {
+  total: number;
+  pending: number;
+  processing: number;
+  completed: number;
+  closed: number;
+  rejected: number;
+  byPriority: Record<string, number>;
+  byCategory: Record<string, number>;
+  byAssignee: AssigneeStatistics[];
+  byDepartment: DepartmentStatistics[];
+  trend: TrendData[];
+  avgProcessTime: number;
+}
+
+export interface AssigneeStatistics {
+  assigneeId: string;
+  assigneeName: string;
+  totalCount: number;
+  pendingCount: number;
+  doneCount: number;
+  avgProcessTime: number;
+}
+
+export interface DepartmentStatistics {
+  deptId: string;
+  deptName: string;
+  totalCount: number;
+  doneCount: number;
+}
+
+export interface TrendData {
+  date: string;
+  count: number;
+}
+
+// ==================== 通用类型 ====================
+
+export interface SimpleUser {
+  id: string;
+  username: string;
+  nickName: string;
+  deptId?: string;
+  deptName?: string;
+  status: number;
+}
+
+export interface SimpleDept {
+  id: string;
+  deptName: string;
+  parentId?: string;
+  children?: SimpleDept[];
+}
+
+// ==================== 请求参数类型 ====================
+
+export interface WorkOrderListRequest {
+  current?: number;
+  pageSize?: number;
+  workOrderNo?: string;
+  title?: string;
+  categoryId?: string;
+  type?: string;
+  priority?: number;
+  status?: number;
+  submitterId?: string;
+  assigneeId?: string;
+  deptId?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface WorkOrderCreateRequest {
+  title: string;
+  categoryId: string;
+  type: WorkOrderType;
+  priority?: number;
+  description?: string;
+  deptId?: string;
+  expectedResolveAt?: string;
+  attachmentIds?: string;
+  isAutoAssigned?: boolean;
+  assigneeId?: string;
+}
+
+export interface WorkOrderUpdateRequest {
+  title?: string;
+  categoryId?: string;
+  type?: WorkOrderType;
+  priority?: number;
+  status?: number;
+  description?: string;
+  solution?: string;
+  assigneeId?: string;
+  deptId?: string;
+  expectedResolveAt?: string;
+  attachmentIds?: string;
+  resolvedAt?: string;
+  closedAt?: string;
+}
+
+export interface AssignWorkOrderRequest {
+  assigneeId: string;
+  remark?: string;
+}
+
+export interface UpdateStatusRequest {
+  status: number;
+  solution?: string;
+  remark?: string;
+}
+
+export interface AddCommentRequest {
+  content: string;
+  isInternal?: boolean;
+}
+
+export interface WorkOrderCategoryCreateRequest {
+  categoryName: string;
+  description?: string;
+  parentId?: string;
+  sortOrder?: number;
+  status?: number;
+}
+
+export interface WorkOrderCategoryUpdateRequest {
+  categoryName?: string;
+  description?: string;
+  parentId?: string;
+  sortOrder?: number;
+  status?: number;
+}
+
+export interface PeriodicTemplateListRequest {
+  current?: number;
+  pageSize?: number;
+  title?: string;
+  isEnabled?: boolean;
+}
+
+export interface CreatePeriodicTemplateRequest {
+  templateName: string;
+  workOrderTitle: string;
+  description?: string;
+  categoryId: string;
+  type: WorkOrderType;
+  priority?: number;
+  cronExpression: string;
+  assignType?: PeriodicAssignType;
+  assignTargetId?: string;
+  notifyAssignee?: boolean;
+}
+
+export interface UpdatePeriodicTemplateRequest {
+  templateName?: string;
+  workOrderTitle?: string;
+  description?: string;
+  categoryId?: string;
+  type?: WorkOrderType;
+  priority?: number;
+  cronExpression?: string;
+  assignType?: PeriodicAssignType;
+  assignTargetId?: string;
+  isEnabled?: boolean;
+  notifyAssignee?: boolean;
+}
+
+export interface CreateWorkOrderRatingRequest {
+  ratingType: string; // user 或 handler
+  completionScore?: number; // 用户评价：完成度评分
+  cooperationScore?: number; // 处理人员评价：配合度评分
+  comment?: string;
+}
+
+// ==================== 工单管理 API ====================
+
+export function getWorkOrderList(params: WorkOrderListRequest): Promise<BaseResponse<PageResponse<WorkOrder>>> {
+  return post('/workorder/orders/list', params);
+}
+
+export function getMyPendingWorkOrders(params?: { limit?: number }): Promise<BaseResponse<{ list: WorkOrder[]; total: number }>> {
+  return post('/workorder/orders/my-pending', params ?? {});
+}
+
+export function getWorkOrder(id: string): Promise<BaseResponse<WorkOrder>> {
+  return post(`/workorder/orders/${id}`, {});
+}
+
+export function createWorkOrder(data: WorkOrderCreateRequest): Promise<BaseResponse<WorkOrder>> {
+  return post('/workorder/orders', data);
+}
+
+export function updateWorkOrder(id: string, data: WorkOrderUpdateRequest): Promise<BaseResponse<{ message: string }>> {
+  return post(`/workorder/orders/${id}/update`, data);
+}
+
+export function deleteWorkOrder(id: string): Promise<BaseResponse<{ message: string }>> {
+  return post(`/workorder/orders/${id}/delete`);
+}
+
+export function batchDeleteWorkOrders(ids: string[]): Promise<BaseResponse<{ message: string; count: number }>> {
+  return post('/workorder/orders/batch-delete', { ids });
+}
+
+export function assignWorkOrder(id: string, data: AssignWorkOrderRequest): Promise<BaseResponse<{ message: string }>> {
+  return post(`/workorder/orders/${id}/assign`, data);
+}
+
+export function assignToTodayDuty(id: string): Promise<BaseResponse<{ message: string }>> {
+  return post(`/workorder/orders/${id}/assign-duty`);
+}
+
+export function updateWorkOrderStatus(id: string, data: UpdateStatusRequest): Promise<BaseResponse<{ message: string }>> {
+  return post(`/workorder/orders/${id}/status`, data);
+}
+
+// ==================== 工单评论 API ====================
+
+export function getWorkOrderComments(id: string): Promise<BaseResponse<WorkOrderComment[]>> {
+  return post(`/workorder/orders/${id}/comments/list`, {});
+}
+
+export function addWorkOrderComment(id: string, data: AddCommentRequest): Promise<BaseResponse<{ message: string }>> {
+  return post(`/workorder/orders/${id}/comments`, data);
+}
+
+export function getWorkOrderHistory(id: string): Promise<BaseResponse<WorkOrderHistory[]>> {
+  return post(`/workorder/orders/${id}/history`, {});
+}
+
+// ==================== 工单评价 API ====================
+
+export function createWorkOrderRating(id: string, data: CreateWorkOrderRatingRequest): Promise<BaseResponse<{ message: string }>> {
+  return post(`/workorder/orders/${id}/rating`, data);
+}
+
+export function getWorkOrderRatings(id: string): Promise<BaseResponse<WorkOrderRating[]>> {
+  return post(`/workorder/orders/${id}/ratings`, {});
+}
+
+export function getRatingStatistics(id: string): Promise<BaseResponse<any>> {
+  return post(`/workorder/orders/${id}/rating-statistics`, {});
+}
+
+// ==================== 工单分类 API ====================
+
+export function getWorkOrderCategoryList(): Promise<BaseResponse<WorkOrderCategory[]>> {
+  return post('/workorder/categories/list', {});
+}
+
+export function getEnabledWorkOrderCategories(): Promise<BaseResponse<WorkOrderCategory[]>> {
+  return post('/workorder/categories/enabled', {});
+}
+
+export function getWorkOrderCategory(id: string): Promise<BaseResponse<WorkOrderCategory>> {
+  return post(`/workorder/categories/${id}`, {});
+}
+
+export function createWorkOrderCategory(data: WorkOrderCategoryCreateRequest): Promise<BaseResponse<WorkOrderCategory>> {
+  return post('/workorder/categories', data);
+}
+
+export function updateWorkOrderCategory(id: string, data: WorkOrderCategoryUpdateRequest): Promise<BaseResponse<{ message: string }>> {
+  return post(`/workorder/categories/${id}/update`, data);
+}
+
+export function deleteWorkOrderCategory(id: string): Promise<BaseResponse<{ message: string }>> {
+  return post(`/workorder/categories/${id}/delete`);
+}
+
+// ==================== 工单统计 API ====================
+
+export function getWorkOrderStatistics(): Promise<BaseResponse<WorkOrderStatistics>> {
+  return post('/workorder/statistics', {});
+}
+
+// ==================== 周期性工单 API ====================
+
+export function getPeriodicTemplateList(params: PeriodicTemplateListRequest): Promise<BaseResponse<PageResponse<PeriodicWorkOrderTemplate>>> {
+  return post('/workorder/periodic/templates/list', params);
+}
+
+export function getPeriodicTemplate(id: string): Promise<BaseResponse<PeriodicWorkOrderTemplate>> {
+  return post(`/workorder/periodic/templates/${id}`, {});
+}
+
+export function createPeriodicTemplate(data: CreatePeriodicTemplateRequest): Promise<BaseResponse<PeriodicWorkOrderTemplate>> {
+  return post('/workorder/periodic/templates', data);
+}
+
+export function updatePeriodicTemplate(id: string, data: UpdatePeriodicTemplateRequest): Promise<BaseResponse<{ message: string }>> {
+  return post(`/workorder/periodic/templates/${id}/update`, data);
+}
+
+export function deletePeriodicTemplate(id: string): Promise<BaseResponse<{ message: string }>> {
+  return post(`/workorder/periodic/templates/${id}/delete`);
+}
+
+export function enablePeriodicTemplate(id: string): Promise<BaseResponse<{ message: string }>> {
+  return post(`/workorder/periodic/templates/${id}/enable`);
+}
+
+export function disablePeriodicTemplate(id: string): Promise<BaseResponse<{ message: string }>> {
+  return post(`/workorder/periodic/templates/${id}/disable`);
+}
+
+export function generateWorkOrderNow(id: string): Promise<BaseResponse<WorkOrder>> {
+  return post(`/workorder/periodic/templates/${id}/generate`);
+}
+
+export function getPeriodicLogs(id: string): Promise<BaseResponse<PeriodicWorkOrderLog[]>> {
+  return post(`/workorder/periodic/templates/${id}/logs`, {});
+}
+
+// ==================== 工单配置 API ====================
+
+export function getWorkOrderConfig(): Promise<BaseResponse<WorkOrderConfig>> {
+  return post('/workorder/config', {});
+}
+
+export function updateWorkOrderConfig(data: Partial<WorkOrderConfig>): Promise<BaseResponse<{ message: string }>> {
+  return post('/workorder/config/update', data);
+}
+
+// ==================== 用户和部门（复用dutyApi中的）====================
+
+export function getUserList(params?: { current?: number; pageSize?: number; deptId?: string; status?: number }): Promise<BaseResponse<PageResponse<SimpleUser>>> {
+  return post('/system/users/list', {
+    current: 1,
+    pageSize: 1000,
+    ...params,
+  });
+}
+
+export function getDeptList(): Promise<BaseResponse<SimpleDept[]>> {
+  return post('/system/departments/list');
+}
+
+export function getDeptTree(): Promise<BaseResponse<SimpleDept[]>> {
+  return post('/system/departments/list');
+}
