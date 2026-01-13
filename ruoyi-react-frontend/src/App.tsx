@@ -64,6 +64,8 @@ import ADOUPage from '@/pages/ad-domain/ous';
 import ADGroupPage from '@/pages/ad-domain/groups';
 import ADUserPage from '@/pages/ad-domain/users';
 import ADSyncLogsPage from '@/pages/ad-domain/logs';
+// 运维管理页面
+import BuildingManagement from '@/pages/operations/buildings';
 import './App.css';
 
 // 创建React Query客户端
@@ -223,6 +225,9 @@ function App() {
                           <Route path="/ops/ad-domain/ad-domain/groups" element={<ADGroupPage />} />
                           <Route path="/ops/ad-domain/ad-domain/users" element={<ADUserPage />} />
                           <Route path="/ops/ad-domain/ad-domain/logs" element={<ADSyncLogsPage />} />
+
+                          {/* 运维管理 - 物理资源管理路由 */}
+                          <Route path="/ops/buildings" element={<BuildingManagement />} />
 
                           <Route path="*" element={<Navigate to="/dashboard" replace />} />
                         </Routes>
