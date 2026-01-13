@@ -5,8 +5,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/scheduler"
+	opsServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/websocket"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
@@ -502,5 +504,37 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 	adDomain.Use(middleware.JWTAuth(core.JWTManager))
 	{
 		v1.SetupADDomainRouter(adDomain, core)
+	}
+
+	// 运维管理模块（物理资源管理）
+	ops := r.Group("/ops")
+	ops.Use(middleware.JWTAuth(core.JWTManager))
+	{
+		// 楼宇管理
+		buildings := ops.Group("/buildings")
+		buildings.Use(middleware.RequirePermissions([]string{
+			"ops:building:list",
+			"ops:building:add",
+			"ops:building:edit",
+			"ops:building:delete",
+		}, core))
+		{
+			buildingService := opsServices.NewBuildingService(core.DB)
+			buildingHandler := operations.NewBuildingHandler(buildingService)
+
+			buildings.POST("", buildingHandler.Create)
+			buildings.POST("/list", buildingHandler.List)
+			buildings.POST("/:id", buildingHandler.GetByID)
+			buildings.POST("/:id/update", buildingHandler.Update)
+			buildings.POST("/:id/delete", buildingHandler.Delete)
+			buildings.POST("/batch", buildingHandler.BatchOperation)
+		}
+
+		// 其他运维管理模块路由将在后续添加
+		// floors - 楼层管理
+		// workstations - 工位管理
+		// server-rooms - 机房管理
+		// dedicated-lines - 专线管理
+		// room-devices - 机房设备管理
 	}
 }
