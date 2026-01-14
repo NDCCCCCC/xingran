@@ -67,7 +67,7 @@ import ADSyncLogsPage from '@/pages/ad-domain/logs';
 // 运维管理页面
 import BuildingManagement from '@/pages/operations/buildings';
 import FloorManagement from '@/pages/operations/floors';
-import WorkstationManagement from '@/pages/operations/workstations';
+import OperationsWorkstationManagement from '@/pages/operations/workstations';
 import ServerRoomManagement from '@/pages/operations/server-rooms';
 import DedicatedLineManagement from '@/pages/operations/dedicated-lines';
 import RoomDeviceManagement from '@/pages/operations/room-devices';
@@ -234,7 +234,7 @@ function App() {
                           {/* 运维管理 - 物理资源管理路由 */}
                           <Route path="/ops/buildings" element={<BuildingManagement />} />
                           <Route path="/ops/floors" element={<FloorManagement />} />
-                          <Route path="/ops/workstations" element={<WorkstationManagement />} />
+                          <Route path="/ops/workstations" element={<OperationsWorkstationManagement />} />
                           <Route path="/ops/server-rooms" element={<ServerRoomManagement />} />
                           <Route path="/ops/dedicated-lines" element={<DedicatedLineManagement />} />
                           <Route path="/ops/room-devices" element={<RoomDeviceManagement />} />
