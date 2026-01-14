@@ -70,6 +70,7 @@ import FloorManagement from '@/pages/operations/floors';
 import WorkstationManagement from '@/pages/operations/workstations';
 import ServerRoomManagement from '@/pages/operations/server-rooms';
 import DedicatedLineManagement from '@/pages/operations/dedicated-lines';
+import RoomDeviceManagement from '@/pages/operations/room-devices';
 import './App.css';
 
 // 创建React Query客户端
@@ -236,6 +237,7 @@ function App() {
                           <Route path="/ops/workstations" element={<WorkstationManagement />} />
                           <Route path="/ops/server-rooms" element={<ServerRoomManagement />} />
                           <Route path="/ops/dedicated-lines" element={<DedicatedLineManagement />} />
+                          <Route path="/ops/room-devices" element={<RoomDeviceManagement />} />
 
                           <Route path="*" element={<Navigate to="/dashboard" replace />} />
                         </Routes>

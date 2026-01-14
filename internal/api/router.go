@@ -519,7 +519,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			"ops:building:delete",
 		}, core))
 		{
-			buildingService := opsServices.NewBuildingService(core.DB)
+			buildingService := opsServices.NewBuildingService(core.DB.GetDB())
 			buildingHandler := operations.NewBuildingHandler(buildingService)
 
 			buildings.POST("", buildingHandler.Create)
@@ -539,7 +539,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			"ops:floor:delete",
 		}, core))
 		{
-			floorService := opsServices.NewFloorService(core.DB)
+			floorService := opsServices.NewFloorService(core.DB.GetDB())
 			floorHandler := operations.NewFloorHandler(floorService)
 
 			floors.POST("", floorHandler.Create)
@@ -560,7 +560,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			"ops:workstation:delete",
 		}, core))
 		{
-			workstationService := opsServices.NewWorkstationService(core.DB)
+			workstationService := opsServices.NewWorkstationService(core.DB.GetDB())
 			workstationHandler := operations.NewWorkstationHandler(workstationService)
 
 			workstations.POST("", workstationHandler.Create)
@@ -580,7 +580,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			"ops:serverroom:delete",
 		}, core))
 		{
-			serverRoomService := opsServices.NewServerRoomService(core.DB)
+			serverRoomService := opsServices.NewServerRoomService(core.DB.GetDB())
 			serverRoomHandler := operations.NewServerRoomHandler(serverRoomService)
 
 			serverRooms.POST("", serverRoomHandler.Create)
@@ -600,7 +600,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			"ops:line:delete",
 		}, core))
 		{
-			dedicatedLineService := opsServices.NewDedicatedLineService(core.DB)
+			dedicatedLineService := opsServices.NewDedicatedLineService(core.DB.GetDB())
 			dedicatedLineHandler := operations.NewDedicatedLineHandler(dedicatedLineService)
 
 			dedicatedLines.POST("", dedicatedLineHandler.Create)
@@ -611,7 +611,24 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			dedicatedLines.POST("/batch", dedicatedLineHandler.BatchOperation)
 		}
 
-		// 其他运维管理模块路由将在后续添加
 		// room-devices - 机房设备管理
+		roomDevices := ops.Group("/room-devices")
+		roomDevices.Use(middleware.RequirePermissions([]string{
+			"ops:roomdevice:list",
+			"ops:roomdevice:add",
+			"ops:roomdevice:edit",
+			"ops:roomdevice:delete",
+		}, core))
+		{
+			roomDeviceService := opsServices.NewRoomDeviceService(core.DB.GetDB())
+			roomDeviceHandler := operations.NewRoomDeviceHandler(roomDeviceService)
+
+			roomDevices.POST("", roomDeviceHandler.Create)
+			roomDevices.POST("/list", roomDeviceHandler.List)
+			roomDevices.POST("/:id", roomDeviceHandler.GetByID)
+			roomDevices.POST("/:id/update", roomDeviceHandler.Update)
+			roomDevices.POST("/:id/delete", roomDeviceHandler.Delete)
+			roomDevices.POST("/batch", roomDeviceHandler.BatchOperation)
+		}
 	}
 }

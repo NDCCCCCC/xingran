@@ -1,9 +1,27 @@
 import { post } from '@/lib/api';
+
+// API响应包装类型
+interface ApiResponse<T> {
+  code: number;
+  message: string;
+  data: T;
+  timestamp: number;
+  request_id: string;
+}
 import type { PageData, PageParams, Floor } from '@/types/operations';
+
+// API响应包装类型
+interface ApiResponse<T> {
+  code: number;
+  message: string;
+  data: T;
+  timestamp: number;
+  request_id: string;
+}
 
 export const floorApi = {
   // 列表查询
-  list: (params: PageParams) => post<PageData<Floor>>('/ops/floors/list', params),
+  list: (params: PageParams) => post<ApiResponse<PageData<Floor>>>('/ops/floors/list', params),
 
   // 获取楼宇-楼层树
   getTree: () => post<any[]>('/ops/floors/tree'),

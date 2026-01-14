@@ -1,9 +1,27 @@
 import { post } from '@/lib/api';
+
+// API响应包装类型
+interface ApiResponse<T> {
+  code: number;
+  message: string;
+  data: T;
+  timestamp: number;
+  request_id: string;
+}
 import type { PageData, PageParams, ServerRoom } from '@/types/operations';
+
+// API响应包装类型
+interface ApiResponse<T> {
+  code: number;
+  message: string;
+  data: T;
+  timestamp: number;
+  request_id: string;
+}
 
 export const serverRoomApi = {
   // 列表查询
-  list: (params: PageParams) => post<PageData<ServerRoom>>('/ops/server-rooms/list', params),
+  list: (params: PageParams) => post<ApiResponse<PageData<ServerRoom>>>('/ops/server-rooms/list', params),
 
   // 创建
   create: (data: Omit<ServerRoom, 'id' | 'createdAt' | 'updatedAt'>) =>

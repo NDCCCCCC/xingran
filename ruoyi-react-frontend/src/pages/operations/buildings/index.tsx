@@ -15,7 +15,6 @@ import {
   Col,
   Statistic,
   Radio,
-  Grid,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -24,9 +23,8 @@ import {
   DeleteOutlined,
   SearchOutlined,
   ReloadOutlined,
-  BuildingOutlined,
+  BuildOutlined,
 } from '@ant-design/icons';
-import type { Key } from 'antd/es/table/interface';
 import { post } from '@/lib/api';
 import { buildingApi } from '@/services/operations/buildings';
 import { useTableManager } from '@/hooks/useTableManager';
@@ -234,7 +232,7 @@ const BuildingManagement: FC = () => {
             <Statistic
               title="总楼宇数"
               value={buildings.length}
-              prefix={<BuildingOutlined />}
+              prefix={<BuildOutlined />}
             />
           </Card>
         </Col>
@@ -341,7 +339,7 @@ const BuildingManagement: FC = () => {
           />
         </Card>
       ) : (
-        <Grid gutter={16}>
+        <Row gutter={16}>
           {buildings.map((building) => (
             <Col span={8} key={building.id}>
               <Card
@@ -385,7 +383,7 @@ const BuildingManagement: FC = () => {
               </Card>
             </Col>
           ))}
-        </Grid>
+        </Row>
       )}
 
       {/* 编辑弹窗 */}

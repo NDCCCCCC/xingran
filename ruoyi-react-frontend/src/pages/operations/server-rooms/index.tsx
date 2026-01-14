@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { FC } from 'react';
+import { post } from '@/lib/api';
 import {
   Table,
   Button,
@@ -22,7 +23,7 @@ import {
   DeleteOutlined,
   SearchOutlined,
   ReloadOutlined,
-  ServerOutlined,
+  CloudServerOutlined,
 } from '@ant-design/icons';
 import { serverRoomApi } from '@/services/operations/server-rooms';
 import { floorApi } from '@/services/operations/floors';
@@ -221,7 +222,7 @@ const ServerRoomManagement: FC = () => {
             <Statistic
               title="总机房数"
               value={serverRooms.length}
-              prefix={<ServerOutlined />}
+              prefix={<CloudServerOutlined />}
             />
           </Card>
         </Col>
