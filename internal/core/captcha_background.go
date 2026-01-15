@@ -211,7 +211,8 @@ func (s *CaptchaBackgroundService) PreGeneratePool(ctx context.Context) error {
 	for _, shape := range shapes {
 		for _, diff := range difficulties {
 			if err := s.preGenerateForConfig(ctx, string(shape), diff); err != nil {
-				fmt.Printf("预生成失败 [shape=%s, diff=%d]: %v\n", shape, diff, err)
+				// 静默处理预生成失败
+				_ = err
 			}
 		}
 	}

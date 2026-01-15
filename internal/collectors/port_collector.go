@@ -357,9 +357,6 @@ func (c *PortCollector) SaveToDatabase(deviceID string, entries []PortStatusEntr
 
 	collectedAt := time.Now()
 
-	// 删除该设备的旧数据（可选：保留历史数据则不删除）
-	// c.db.Where("device_id = ?", deviceID).Delete(&models.DevicePortStatus{})
-
 	// 批量插入新数据
 	for _, entry := range entries {
 		portStatus := models.DevicePortStatus{

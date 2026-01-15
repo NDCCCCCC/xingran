@@ -11,8 +11,7 @@ import {
   message,
   Popconfirm,
   Card,
-  Tag,
-  Tooltip
+  Tag
 } from 'antd';
 import {
   PlusOutlined,

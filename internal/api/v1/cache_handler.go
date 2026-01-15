@@ -426,8 +426,8 @@ func clearCache(core *core.Core) gin.HandlerFunc {
 
 		// 清空数据库记录
 		if err := core.DB.GetDB().Exec("DELETE FROM sys_cache_info").Error; err != nil {
-			// 记录错误但不影响响应
-			fmt.Printf("清空缓存数据库记录失败: %v\n", err)
+			// 静默处理错误，不影响响应
+			_ = err
 		}
 
 		response.Success(c, gin.H{"message": "清空成功"})

@@ -1,7 +1,6 @@
 package v1
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -82,18 +81,11 @@ func listDepts(core *core.Core) gin.HandlerFunc {
 		// 允许空的请求体，所有字段都是可选的
 		c.ShouldBindJSON(&req)
 
-			// 如果没有筛选条件，使用缓存的部门数据
+		// 如果没有筛选条件，使用缓存的部门数据
 		if req.DeptName == "" && req.Status == "" {
-			fmt.Println("[DEBUG] listDepts: 使用缓存部门数据")
-
 			// 使用 DeptService 的缓存方法
 			deptsPtr, err := core.DeptService.GetDeptTreeWithCache(c.Request.Context(), true)
-			if err != nil {
-				fmt.Printf("[DEBUG] listDepts: 缓存查询失败，使用数据库: %v\n", err)
-				// 缓存失败，继续使用数据库查询
-			} else {
-				fmt.Printf("[DEBUG] listDepts: 缓存查询成功，部门数量: %d\n", len(deptsPtr))
-
+			if err == nil {
 				// 递归收集所有部门ID用于查询负责人
 				leaderMap, usernameMap := getLeaderMapFromTree(deptsPtr, core)
 
@@ -103,9 +95,8 @@ func listDepts(core *core.Core) gin.HandlerFunc {
 				response.Success(c, deptTree)
 				return
 			}
+			// 缓存失败，继续使用数据库查询
 		}
-
-		fmt.Println("[DEBUG] listDepts: 直接查询数据库")
 
 		// 构建查询条件
 		db := core.DB.GetDB().Model(&models.Department{})
@@ -587,10 +578,7 @@ func updateDept(core *core.Core) gin.HandlerFunc {
 		}
 
 		// 清除缓存（使用 DeptService）
-		if err := core.DeptService.InvalidateDeptCache(c.Request.Context()); err != nil {
-			// 记录错误但不影响响应
-			fmt.Printf("清除部门缓存失败: %v\n", err)
-		}
+		_ = core.DeptService.InvalidateDeptCache(c.Request.Context())
 
 		// 记录操作日志
 		recordOperLog(c, core, "部门管理", OperTypeUpdate)
@@ -668,10 +656,7 @@ func deleteDept(core *core.Core) gin.HandlerFunc {
 		}
 
 		// 清除缓存（使用 DeptService）
-		if err := core.DeptService.InvalidateDeptCache(c.Request.Context()); err != nil {
-			// 记录错误但不影响响应
-			fmt.Printf("清除部门缓存失败: %v\n", err)
-		}
+		_ = core.DeptService.InvalidateDeptCache(c.Request.Context())
 
 		// 记录操作日志
 		recordOperLog(c, core, "部门管理", OperTypeDelete)

@@ -86,8 +86,8 @@ const RoleManagement: FC = () => {
     try {
       const result = await post('/system/roles/list', { current: 1, pageSize: 1000 });
       const allRoles = result.data.list || [];
-      const activeCount = allRoles.filter(r => r.status === 0).length;
-      const inactiveCount = allRoles.filter(r => r.status === 1).length;
+      const activeCount = allRoles.filter((r: any) => r.status === 0).length;
+      const inactiveCount = allRoles.filter((r: any) => r.status === 1).length;
       setStatistics({
         total: allRoles.length,
         active: activeCount,
@@ -95,8 +95,8 @@ const RoleManagement: FC = () => {
       });
     } catch (error) {
       console.error('加载统计数据失败', error);
-      const activeCount = roles.filter(r => r.status === 0).length;
-      const inactiveCount = roles.filter(r => r.status === 1).length;
+      const activeCount = roles.filter((r: any) => r.status === 0).length;
+      const inactiveCount = roles.filter((r: any) => r.status === 1).length;
       setStatistics({
         total: roles.length,
         active: activeCount,
@@ -599,7 +599,6 @@ const RoleManagement: FC = () => {
                       editForm.setFieldsValue({ menuIds: keyArray });
                     }}
                     treeData={menuTree}
-                    placeholder="请选择菜单"
                     style={{ background: '#f5f5f5', padding: '8px', borderRadius: '4px', maxHeight: '400px', overflowY: 'auto' }}
                   />
                 </Form.Item>
@@ -636,7 +635,6 @@ const RoleManagement: FC = () => {
                         editForm.setFieldsValue({ deptIds: keyArray });
                       }}
                       treeData={deptTree}
-                      placeholder="请选择部门"
                       style={{ background: '#f5f5f5', padding: '8px', borderRadius: '4px', maxHeight: '400px', overflowY: 'auto' }}
                     />
                   </Form.Item>

@@ -86,9 +86,6 @@ func (c *MACCollector) SaveToDatabase(deviceID string, entries []MACAddressEntry
 
 	collectedAt := time.Now()
 
-	// 删除该设备的旧数据（可选：保留历史数据则不删除）
-	// c.db.Where("device_id = ?", deviceID).Delete(&models.DeviceMACAddress{})
-
 	// 批量插入新数据
 	for _, entry := range entries {
 		mac := models.DeviceMACAddress{

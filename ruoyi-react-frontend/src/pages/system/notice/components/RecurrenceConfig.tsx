@@ -65,7 +65,7 @@ export const RecurrenceConfig: React.FC<RecurrenceConfigProps> = ({
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name={['recurrenceConfig', 'monthDay']} label="每月几号" required>
-              <Select placeholder="请选择日期" min={1} max={31}>
+              <Select placeholder="请选择日期">
                 {Array.from({ length: 31 }, (_, i) => (
                   <Option key={i + 1} value={i + 1}>{i + 1}号</Option>
                 ))}

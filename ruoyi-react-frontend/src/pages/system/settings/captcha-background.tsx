@@ -17,10 +17,9 @@ import {
   Card,
   Row,
   Col,
-  Progress,
 } from 'antd';
-import type { ColumnsType, UploadFile } from 'antd/es/table';
-import type { UploadProps } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
+import type { UploadFile, UploadProps } from 'antd/es/upload';
 import {
   PlusOutlined,
   EditOutlined,
@@ -74,7 +73,7 @@ const CaptchaBackgroundSettingsPage: FC = () => {
   const [uploadModalVisible, setUploadModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [previewVisible, setPreviewVisible] = useState(false);
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [previewImage, _setPreviewImage] = useState<string | null>(null);
   const [editForm] = Form.useForm();
   const [uploadForm] = Form.useForm();
   const [editingBg, setEditingBg] = useState<CaptchaBackground | null>(null);
@@ -219,12 +218,6 @@ const CaptchaBackgroundSettingsPage: FC = () => {
       remark: record.remark,
     });
     setEditModalVisible(true);
-  };
-
-  // 预览图片
-  const handlePreviewImage = (filePath: string) => {
-    setPreviewImage(filePath);
-    setPreviewVisible(true);
   };
 
   // 上传配置

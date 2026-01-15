@@ -138,7 +138,7 @@ const JobManager: FC = () => {
         pageSize: 50
       });
 
-      setJobLogs(result.data || []);
+      setJobLogs(result.data?.list || result.list || []);
     } catch (error) {
       console.error('获取任务日志失败:', error);
     }

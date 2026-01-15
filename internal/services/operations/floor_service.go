@@ -42,7 +42,11 @@ func (s *floorService) Create(ctx context.Context, floor *operations.OpsFloor) e
 	if err := s.validateBuilding(ctx, floor.BuildingID); err != nil {
 		return err
 	}
-	return s.db.WithContext(ctx).Create(floor).Error
+	if err := s.db.WithContext(ctx).Create(floor).Error; err != nil {
+		return err
+	}
+	// 更新楼宇的楼层数
+	return s.updateBuildingFloorCount(ctx, floor.BuildingID)
 }
 
 // Update 更新楼层
@@ -57,7 +61,16 @@ func (s *floorService) Update(ctx context.Context, floor *operations.OpsFloor) e
 
 // Delete 删除楼层
 func (s *floorService) Delete(ctx context.Context, id string) error {
-	return s.db.WithContext(ctx).Delete(&operations.OpsFloor{}, "id = ?", id).Error
+	// 先获取楼层信息以获取buildingID
+	var floor operations.OpsFloor
+	if err := s.db.WithContext(ctx).Where("id = ?", id).First(&floor).Error; err != nil {
+		return err
+	}
+	if err := s.db.WithContext(ctx).Delete(&operations.OpsFloor{}, "id = ?", id).Error; err != nil {
+		return err
+	}
+	// 更新楼宇的楼层数
+	return s.updateBuildingFloorCount(ctx, floor.BuildingID)
 }
 
 // GetByID 根据ID获取楼层
@@ -79,10 +92,10 @@ func (s *floorService) List(ctx context.Context, params map[string]interface{}) 
 
 	// 添加筛选条件
 	if name, ok := params["name"].(string); ok && name != "" {
-		query = query.Where("name LIKE ?", "%"+name+"%")
+		query = query.Where("ops_floors.name LIKE ?", "%"+name+"%")
 	}
 	if buildingId, ok := params["buildingId"].(string); ok && buildingId != "" {
-		query = query.Where("building_id = ?", buildingId)
+		query = query.Where("ops_floors.building_id = ?", buildingId)
 	}
 
 	// 分页
@@ -106,7 +119,14 @@ func (s *floorService) List(ctx context.Context, params map[string]interface{}) 
 	}
 
 	offset := (current - 1) * pageSize
-	if err := query.Offset(offset).Limit(pageSize).Order("order_num ASC").Find(&list).Error; err != nil {
+	// JOIN ops_buildings 表获取 building_name（类型转换：varchar -> uuid）
+	if err := query.
+		Select("ops_floors.*, ops_buildings.name as building_name").
+		Joins("LEFT JOIN ops_buildings ON ops_buildings.id = ops_floors.building_id::uuid").
+		Offset(offset).
+		Limit(pageSize).
+		Order("ops_floors.order_num ASC").
+		Find(&list).Error; err != nil {
 		return nil, err
 	}
 
@@ -179,11 +199,34 @@ func (s *floorService) GetTree(ctx context.Context) ([]FloorTreeNode, error) {
 
 // BatchDelete 批量删除楼层
 func (s *floorService) BatchDelete(ctx context.Context, ids []string) error {
-	return s.db.WithContext(ctx).Delete(&operations.OpsFloor{}, "id IN ?", ids).Error
+	// 先获取所有楼层信息以收集buildingID
+	var floors []operations.OpsFloor
+	if err := s.db.WithContext(ctx).Where("id IN ?", ids).Find(&floors).Error; err != nil {
+		return err
+	}
+	if err := s.db.WithContext(ctx).Delete(&operations.OpsFloor{}, "id IN ?", ids).Error; err != nil {
+		return err
+	}
+	// 收集所有受影响的楼宇ID并更新楼层数
+	buildingIDMap := make(map[string]bool)
+	for _, floor := range floors {
+		buildingIDMap[floor.BuildingID] = true
+	}
+	for buildingID := range buildingIDMap {
+		if err := s.updateBuildingFloorCount(ctx, buildingID); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // validateBuilding 验证楼宇存在性
 func (s *floorService) validateBuilding(ctx context.Context, buildingID string) error {
+	// 验证buildingID不为空
+	if buildingID == "" {
+		return errors.New("所属楼宇ID不能为空")
+	}
+
 	var count int64
 	if err := s.db.WithContext(ctx).Model(&operations.OpsBuilding{}).Where("id = ?", buildingID).Count(&count).Error; err != nil {
 		return err
@@ -192,4 +235,15 @@ func (s *floorService) validateBuilding(ctx context.Context, buildingID string) 
 		return errors.New("所属楼宇不存在")
 	}
 	return nil
+}
+
+// updateBuildingFloorCount 更新楼宇的楼层数
+func (s *floorService) updateBuildingFloorCount(ctx context.Context, buildingID string) error {
+	// 统计该楼宇的楼层总数
+	var count int64
+	if err := s.db.WithContext(ctx).Model(&operations.OpsFloor{}).Where("building_id = ?", buildingID).Count(&count).Error; err != nil {
+		return err
+	}
+	// 更新楼宇的totalFloors字段
+	return s.db.WithContext(ctx).Model(&operations.OpsBuilding{}).Where("id = ?", buildingID).Update("total_floors", count).Error
 }

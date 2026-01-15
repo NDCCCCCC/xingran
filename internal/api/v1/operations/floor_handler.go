@@ -37,6 +37,7 @@ func (h *FloorHandler) Create(c *gin.Context) {
 func (h *FloorHandler) List(c *gin.Context) {
 	var params map[string]interface{}
 	if err := c.ShouldBindJSON(&params); err != nil {
+		// 如果JSON解析失败，使用空参数
 		params = make(map[string]interface{})
 	}
 

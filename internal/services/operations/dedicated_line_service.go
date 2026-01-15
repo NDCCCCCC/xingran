@@ -8,6 +8,27 @@ import (
 	"gorm.io/gorm"
 )
 
+// populateRoomNames 填充冗余的机房名称字段
+func (s *dedicatedLineService) populateRoomNames(ctx context.Context, line *operations.OpsDedicatedLine) error {
+	// 填充源机房名称
+	if line.SourceRoomID != nil && *line.SourceRoomID != "" && line.SourceRoomName == nil {
+		var room operations.OpsServerRoom
+		if err := s.db.WithContext(ctx).Select("name").Where("id = ?", *line.SourceRoomID).First(&room).Error; err == nil {
+			line.SourceRoomName = &room.Name
+		}
+	}
+
+	// 填充目的机房名称
+	if line.DestRoomID != nil && *line.DestRoomID != "" && line.DestRoomName == nil {
+		var room operations.OpsServerRoom
+		if err := s.db.WithContext(ctx).Select("name").Where("id = ?", *line.DestRoomID).First(&room).Error; err == nil {
+			line.DestRoomName = &room.Name
+		}
+	}
+
+	return nil
+}
+
 // DedicatedLineService 专线服务接口
 type DedicatedLineService interface {
 	Create(ctx context.Context, line *operations.OpsDedicatedLine) error
@@ -34,6 +55,11 @@ func (s *dedicatedLineService) Create(ctx context.Context, line *operations.OpsD
 		return err
 	}
 
+	// 填充冗余的机房名称字段
+	if err := s.populateRoomNames(ctx, line); err != nil {
+		return err
+	}
+
 	return s.db.WithContext(ctx).Create(line).Error
 }
 
@@ -41,6 +67,11 @@ func (s *dedicatedLineService) Create(ctx context.Context, line *operations.OpsD
 func (s *dedicatedLineService) Update(ctx context.Context, line *operations.OpsDedicatedLine) error {
 	// 检查编码唯一性
 	if err := s.checkCodeUnique(ctx, line.LineCode, line.ID); err != nil {
+		return err
+	}
+
+	// 填充冗余的机房名称字段
+	if err := s.populateRoomNames(ctx, line); err != nil {
 		return err
 	}
 

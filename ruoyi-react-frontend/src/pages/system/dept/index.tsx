@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { FC, ReactNode } from 'react';
+import type { FC } from 'react';
 import {
   Table,
   Button,
@@ -80,7 +80,6 @@ const DepartmentManagement: FC = () => {
       const deptData = result.data || [];
       setDepartments(deptData);
 
-      // 调试日志：查看后端返回的数据格式
       const flatList = flattenTreeToList(deptData);
 
       // 组建父级选项（树形结构）
@@ -346,6 +345,16 @@ const DepartmentManagement: FC = () => {
       key: 'orderNum',
     },
     {
+      title: '外部机构',
+      dataIndex: 'isExternalOrg',
+      key: 'isExternalOrg',
+      render: (isExternalOrg: number) => (
+        <Tag color={isExternalOrg === 1 ? 'blue' : 'default'}>
+          {isExternalOrg === 1 ? '是' : '否'}
+        </Tag>
+      ),
+    },
+    {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
@@ -554,6 +563,17 @@ const DepartmentManagement: FC = () => {
           </Form.Item>
           <Form.Item name="email" hidden>
             <Input />
+          </Form.Item>
+          <Form.Item
+            name="isExternalOrg"
+            label="外部机构"
+            initialValue={0}
+            tooltip="标记为外部机构的部门可以作为楼宇的所属机构"
+          >
+            <Select>
+              <Option value={0}>否</Option>
+              <Option value={1}>是</Option>
+            </Select>
           </Form.Item>
           <Form.Item name="status" label="状态" initialValue={0}>
             <Select>

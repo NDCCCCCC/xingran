@@ -23,7 +23,6 @@ import {
   DeleteOutlined,
   ReloadOutlined,
   ApiOutlined,
-  SendOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import {

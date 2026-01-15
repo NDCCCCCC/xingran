@@ -15,6 +15,7 @@ import {
   Col,
   Statistic,
   Alert,
+  message,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -54,21 +55,18 @@ const ConfigManagement: FC = () => {
     editForm,
     editModalVisible,
     editingItem: editingConfig,
-    setEditModalVisible,
-    setEditingItem,
     loadData: loadConfigs,
     handleSearch,
     handleReset,
-    handleRefresh,
     handleAdd,
     handleEdit,
     handleModalClose,
     setCurrent,
     setPageSize,
   } = useTableManager<Config>(
-    async (params) => {
+    async (params): Promise<{ list: Config[]; total: number }> => {
       const values = searchForm.getFieldsValue();
-      const result = await post('/system/configs/list', {
+      const result: any = await post('/system/configs/list', {
         current: params.current || current,
         pageSize: params.pageSize || pageSize,
         ...values,
@@ -99,19 +97,6 @@ const ConfigManagement: FC = () => {
     loadStatistics();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // 打开编辑模态框
-  const openModal = (record?: Config) => {
-    if (record) {
-      setEditingItem(record);
-      editForm.setFieldsValue(record);
-    } else {
-      setEditingItem(null);
-      editForm.resetFields();
-      editForm.setFieldsValue({ configType: 'N', isSystem: 0 });
-    }
-    setEditModalVisible(true);
-  };
 
   // 创建参数配置
   const handleCreate = async () => {

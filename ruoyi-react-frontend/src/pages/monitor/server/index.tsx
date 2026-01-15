@@ -21,7 +21,6 @@ import {
   ReloadOutlined,
   EyeOutlined,
   ClusterOutlined,
-  DatabaseOutlined,
   CloudServerOutlined
 } from '@ant-design/icons';
 import { post } from '@/lib/api';
@@ -67,7 +66,6 @@ const ServerMonitor: FC = () => {
   });
   const [detailDrawerVisible, setDetailDrawerVisible] = useState(false);
   const [selectedServer, setSelectedServer] = useState<ServerInfo | null>(null);
-  const [metricsHistory, setMetricsHistory] = useState<ServerMetrics[]>([]);
   
   // 获取服务器列表
   const fetchServers = async () => {
@@ -101,7 +99,8 @@ const ServerMonitor: FC = () => {
         pageSize: 100
       });
 
-      setMetricsHistory(result.data.list || []);
+      // 历史指标数据已获取但暂未使用
+      console.log('服务器指标历史:', result.data?.list);
     } catch (error) {
       console.error('获取服务器指标历史失败:', error);
     }

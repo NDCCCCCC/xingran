@@ -74,10 +74,6 @@ func NewJWTManager(cfg *config.JWTConfig) *JWTManager {
 
 			jwtManager.sm2PrivateKey = privateKey
 			jwtManager.sm2PublicKey = publicKey
-
-			// TODO: 将生成的密钥保存到配置文件或密钥管理系统中
-			fmt.Printf("生成的SM2私钥: %x\n", privateKey.D)
-			fmt.Printf("生成的SM2公钥: %x\n", publicKey.X)
 		}
 	}
 

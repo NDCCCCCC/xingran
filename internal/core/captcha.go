@@ -214,16 +214,11 @@ func (s *CaptchaService) LoadConfig(ctx context.Context) error {
 
 		if err != nil || configValue == "" {
 			// 使用默认值
-			fmt.Printf("[CAPTCHA CONFIG] %s: 使用默认值 %v\n", cfg.key, cfg.def)
 			_ = cfg.parse(fmt.Sprintf("%v", cfg.def), cfg.ptr)
 		} else {
-			fmt.Printf("[CAPTCHA CONFIG] %s: 从数据库加载值 '%s'\n", cfg.key, configValue)
 			_ = cfg.parse(configValue, cfg.ptr)
 		}
 	}
-
-	// 打印最终配置
-	fmt.Printf("[CAPTCHA CONFIG] 最终配置 - Enabled: %s, IsEnabled: %v\n", s.config.Enabled, s.IsEnabled())
 
 	return nil
 }
@@ -500,44 +495,32 @@ func (s *CaptchaService) generateSliderWithBackground(ctx context.Context) (map[
 	shape := s.config.PieceShape
 	difficulty := s.config.Difficulty
 
-	fmt.Printf("[CAPTCHA] 生成滑动验证码 - BackgroundMode: %s, Shape: %s, Difficulty: %d\n",
-		s.config.BackgroundMode, shape, difficulty)
-
 	// 检查是否使用自定义背景图
 	useCustom := false
 	switch s.config.BackgroundMode {
 	case "custom":
 		useCustom = true
-		fmt.Println("[CAPTCHA] 使用自定义背景模式 (custom)")
 	case "mixed":
 		// 混合模式：50%概率使用自定义背景
 		useCustom = rand.Intn(2) == 0
-		fmt.Printf("[CAPTCHA] 混合模式，使用自定义背景: %v\n", useCustom)
 	case "auto":
 		useCustom = false
-		fmt.Println("[CAPTCHA] 使用自动生成背景模式 (auto)")
 	default:
-		fmt.Printf("[CAPTCHA] 未知的背景模式: %s，使用自动生成\n", s.config.BackgroundMode)
+		// 未知模式，使用自动生成
+		useCustom = false
 	}
 
 	// 尝试使用自定义背景图
 	if useCustom && s.backgroundService != nil {
-		fmt.Println("[CAPTCHA] 尝试使用自定义背景图服务...")
-
 		// 先尝试从缓存池获取
 		cached, err := s.backgroundService.GetFromCachePool(ctx, shape, difficulty)
 		if err == nil && cached != nil {
-			fmt.Println("[CAPTCHA] 从缓存池获取到自定义背景图")
 			return cached, nil
 		}
-		fmt.Printf("[CAPTCHA] 缓存池未命中: %v\n", err)
 
 		// 缓存未命中，从数据库获取随机背景图并生成
 		bg, err := s.backgroundService.GetRandomEnabled(ctx, models.PieceShape(shape), difficulty)
 		if err == nil && bg != nil {
-			fmt.Printf("[CAPTCHA] 从数据库获取到背景图: ID=%s, File=%s, Shape=%s, Difficulty=%d\n",
-				bg.ID, bg.FileName, bg.PieceShape, bg.DifficultyLevel)
-
 			generator, _ := captcha.NewSliderCaptchaWithShape(shape)
 			bgImg, err := generator.LoadBackgroundFromFile(bg.FilePath)
 			if err == nil {
@@ -545,7 +528,6 @@ func (s *CaptchaService) generateSliderWithBackground(ctx context.Context) (map[
 				if err == nil {
 					// 更新使用次数
 					s.backgroundService.IncrementUseCount(bg.ID)
-					fmt.Println("[CAPTCHA] 自定义背景图验证码生成成功")
 					return map[string]interface{}{
 						"backgroundId": bg.ID,
 						"sliderImg":    "data:image/png;base64," + base64.StdEncoding.EncodeToString(bgBytes),
@@ -558,24 +540,17 @@ func (s *CaptchaService) generateSliderWithBackground(ctx context.Context) (map[
 						"createdAt":    time.Now().Unix(),
 					}, nil
 				}
-				fmt.Printf("[CAPTCHA] 生成验证码失败: %v\n", err)
-			} else {
-				fmt.Printf("[CAPTCHA] 加载背景图失败: %v\n", err)
 			}
-		} else {
-			fmt.Printf("[CAPTCHA] 从数据库获取背景图失败: %v\n", err)
 		}
 	}
 
 	// 使用自动生成的背景图（降级方案）
-	fmt.Println("[CAPTCHA] 使用自动生成的背景图")
 	generator, _ := captcha.NewSliderCaptchaWithShape(shape)
 	bgBase64, pieceBase64, xPos, yPos, token, err := generator.GenerateSliderBase64()
 	if err != nil {
 		return nil, err
 	}
 
-	fmt.Println("[CAPTCHA] 自动生成背景图验证码生成完成")
 	return map[string]interface{}{
 		"sliderImg":  "data:image/png;base64," + bgBase64,
 		"pieceImg":   "data:image/png;base64," + pieceBase64,

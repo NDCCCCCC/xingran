@@ -17,7 +17,6 @@ import {
   Card,
   Row,
   Col,
-  Progress,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { UploadFile } from 'antd';
@@ -29,7 +28,6 @@ import {
   SearchOutlined,
   ReloadOutlined,
   UploadOutlined,
-  EyeOutlined,
   ReloadOutlined as ReloadIcon,
 } from '@ant-design/icons';
 import type {
@@ -76,8 +74,6 @@ const CaptchaBackgroundManagement: FC = () => {
   const [searchForm] = Form.useForm();
   const [uploadModalVisible, setUploadModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
-  const [previewVisible, setPreviewVisible] = useState(false);
-  const [previewImage, setPreviewImage] = useState('');
   const [editForm] = Form.useForm();
   const [uploadForm] = Form.useForm();
   const [editingBg, setEditingBg] = useState<CaptchaBackground | null>(null);
@@ -222,13 +218,6 @@ const CaptchaBackgroundManagement: FC = () => {
       remark: record.remark,
     });
     setEditModalVisible(true);
-  };
-
-  // 预览图片
-  const handlePreviewImage = (filePath: string) => {
-    // 这里需要后端提供图片访问接口，暂时使用本地路径
-    setPreviewImage(filePath);
-    setPreviewVisible(true);
   };
 
   // 上传配置

@@ -4,10 +4,16 @@
 export interface Building {
   id: string;
   name: string;
-  code: string;
-  address: string;
+  cityCode: string;        // 城市代码（如：wuhan, xiangyang）
+  cityName: string;        // 城市名称（如：武汉市, 襄阳市）
+  address: string;         // 详细地址
+  longitude?: number;      // 经度
+  latitude?: number;       // 纬度
+  parentId?: string;       // 父级楼宇ID
+  level: 1 | 2;            // 层级：1=城市级汇总，2=具体楼宇
   orgId: string;
   orgName?: string;
+  totalFloors?: number;    // 楼层数（根据创建的楼层自动计算）
   status: BuildingStatus;
   remark?: string;
   orderNum: number;
@@ -36,7 +42,6 @@ export type FloorStatus = 0 | 1; // 0: 正常, 1: 停用
 // 工位
 export interface Workstation {
   id: string;
-  code: string;
   name: string;
   floorId: string;
   floorName?: string;
@@ -63,7 +68,8 @@ export type WorkstationType = 0 | 1; // 0: 固定, 1: 共享
 export interface ServerRoom {
   id: string;
   name: string;
-  code: string;
+  buildingId: string;
+  buildingName?: string;
   floorId: string;
   floorName?: string;
   status: RoomStatus;
@@ -88,26 +94,27 @@ export interface RoomPhoto {
 // 专线
 export interface DedicatedLine {
   id: string;
-  name: string;
   lineCode: string;
   lineType: DedicatedLineType;
-  bandwidth: string;
+  bandwidth?: string;
   isp: string;
-  sourceDeviceId: string;
+  sourceDeviceId?: string;
   sourceDeviceName?: string;
-  sourcePort: string;
-  destDeviceId: string;
+  sourcePort?: string;
+  sourceRoomId?: string;       // 源机房ID
+  sourceRoomName?: string;     // 源机房名称
+  destDeviceId?: string;
   destDeviceName?: string;
-  destPort: string;
+  destPort?: string;
+  destRoomId?: string;         // 目的机房ID
+  destRoomName?: string;       // 目的机房名称
   ipAddress?: string;
   subnetMask?: string;
-  gateway?: string;
   vlan?: string;
   status: LineStatus;
-  activationDate?: string;
-  expiryDate?: string;
-  responsibleId?: string;
-  responsibleName?: string;
+  carrierContactId?: string;
+  carrierContactName?: string;
+  carrierContactPhone?: string;
   contractNo?: string;
   monthlyFee: number;
   remark?: string;
@@ -152,6 +159,27 @@ export interface NetworkDevice {
   name: string;
   ipAddress: string;
 }
+
+// 信息点
+export interface InfoPoint {
+  id: string;
+  name: string;
+  infoPointType: InfoPointType;
+  workstationId: string;
+  workstationName?: string;
+  deviceId?: string;
+  deviceName?: string;
+  portId?: string;
+  portName?: string;
+  status: InfoPointStatus;
+  description?: string;
+  remark?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type InfoPointType = 'network' | 'power' | 'other';
+export type InfoPointStatus = 0 | 1 | 2; // 0: 正常, 1: 故障, 2: 停用
 
 // 分页数据
 export interface PageData<T> {

@@ -15,11 +15,13 @@ const (
 // OpsServerRoom 机房模型
 type OpsServerRoom struct {
 	models.BaseModel
-	Name    string     // 机房名称
-	Code    string     // 机房编号（唯一）
-	FloorID string     // 所在楼层ID
-	Status  RoomStatus // 状态: 0=正常, 1=停用
-	Remark  string     // 备注
+	Name        string     `gorm:"size:100;not null" json:"name"`                 // 机房名称
+	BuildingID  string     `gorm:"size:64;not null" json:"buildingId"`             // 所属楼宇ID
+	BuildingName *string    `gorm:"size:100" json:"buildingName,omitempty"`        // 所属楼宇名称
+	FloorID     string     `gorm:"size:64;not null" json:"floorId"`                // 所在楼层ID
+	FloorName   *string    `gorm:"size:100" json:"floorName,omitempty"`           // 所在楼层名称
+	Status      RoomStatus `gorm:"default:0" json:"status"`                        // 状态: 0=正常, 1=停用
+	Remark      *string    `gorm:"size:500" json:"remark,omitempty"`               // 备注
 }
 
 // TableName 指定表名

@@ -84,10 +84,6 @@ func login(core *core.Core) gin.HandlerFunc {
 		}
 
 		// 检查验证码（如果启用）
-		// 添加调试日志
-		config := core.CaptchaService.GetConfig()
-		fmt.Printf("[DEBUG] Captcha Enabled: %s (IsEnabled: %v)\n", config.Enabled, core.CaptchaService.IsEnabled())
-
 		if core.CaptchaService.IsEnabled() {
 			// 获取客户端IP
 			clientIP := c.ClientIP()
@@ -395,9 +391,7 @@ func recordLoginLog(c *gin.Context, core *core.Core, username string, status int
 
 	// 异步写入数据库，不影响登录响应速度
 	go func() {
-		if err := core.DB.GetDB().Create(&loginLog).Error; err != nil {
-			fmt.Printf("记录登录日志失败: %v\n", err)
-		}
+		_ = core.DB.GetDB().Create(&loginLog)
 	}()
 }
 

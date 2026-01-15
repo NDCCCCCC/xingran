@@ -199,8 +199,8 @@ const MyDutyPage: FC = () => {
           [WorkOrderStatus.Pending]: { text: '待处理', color: 'orange' },
           [WorkOrderStatus.Processing]: { text: '处理中', color: 'blue' },
           [WorkOrderStatus.Completed]: { text: '已完成', color: 'green' },
+          [WorkOrderStatus.Closed]: { text: '已关闭', color: 'default' },
           [WorkOrderStatus.Rejected]: { text: '已拒绝', color: 'red' },
-          [WorkOrderStatus.Cancelled]: { text: '已取消', color: 'default' },
         };
         const config = statusMap[status] || statusMap[WorkOrderStatus.Pending];
         return <Tag color={config.color}>{config.text}</Tag>;

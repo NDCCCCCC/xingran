@@ -27,7 +27,6 @@ import {
   SearchOutlined,
   ReloadOutlined,
   FileTextOutlined,
-  ClockCircleOutlined,
   CheckCircleOutlined,
   EyeOutlined,
 } from '@ant-design/icons';
@@ -46,7 +45,6 @@ import {
   updateWorkOrder,
   deleteWorkOrder,
   batchDeleteWorkOrders,
-  assignWorkOrder,
   assignToTodayDuty,
   updateWorkOrderStatus,
   addWorkOrderComment,
@@ -901,7 +899,7 @@ const WorkOrderPage: FC = () => {
                     <Timeline.Item key={comment.id}>
                       <div>
                         <strong>{comment.user?.nickName || comment.user?.username}</strong>
-                        {comment.isInternal && <Tag color="orange" size="small" className="ml-2">内部</Tag>}
+                        {comment.isInternal && <Tag color="orange" className="ml-2">内部</Tag>}
                         <span className="text-gray-400 text-sm ml-2">
                           {formatTime(comment.createdAt, 'YYYY-MM-DD HH:mm')}
                         </span>

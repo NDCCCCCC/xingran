@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { getNoticeList } from '@/lib/noticeApi';
 
-interface NoticeStatistics {
+export interface NoticeStatistics {
   total: number;
   published: number;
   draft: number;
@@ -29,7 +29,7 @@ export function useNoticeStatistics(): UseNoticeStatisticsResult {
   const loadStatistics = useCallback(async () => {
     try {
       const result = await getNoticeList({ current: 1, pageSize: 1000 });
-      const allNotices = result.data.list || [];
+      const allNotices = result.data?.list || [];
       const publishedCount = allNotices.filter((n: any) => n.publishStatus === 1).length;
       const draftCount = allNotices.filter((n: any) => n.publishStatus === 0 || n.publishStatus === 2).length;
       const scheduledCount = allNotices.filter((n: any) => n.publishStatus === 3).length;

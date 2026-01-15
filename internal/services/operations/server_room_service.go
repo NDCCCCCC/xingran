@@ -24,16 +24,13 @@ type serverRoomService struct {
 
 // NewServerRoomService 创建机房服务实例
 func NewServerRoomService(db *gorm.DB) ServerRoomService {
-	return &serverRoomService{db: db}
+	return &serverRoomService{
+		db: db,
+	}
 }
 
 // Create 创建机房
 func (s *serverRoomService) Create(ctx context.Context, room *operations.OpsServerRoom) error {
-	// 检查编码唯一性
-	if err := s.checkCodeUnique(ctx, room.Code, ""); err != nil {
-		return err
-	}
-
 	// 验证楼层存在性
 	if err := s.validateFloor(ctx, room.FloorID); err != nil {
 		return err
@@ -44,11 +41,6 @@ func (s *serverRoomService) Create(ctx context.Context, room *operations.OpsServ
 
 // Update 更新机房
 func (s *serverRoomService) Update(ctx context.Context, room *operations.OpsServerRoom) error {
-	// 检查编码唯一性
-	if err := s.checkCodeUnique(ctx, room.Code, room.ID); err != nil {
-		return err
-	}
-
 	// 验证楼层存在性
 	if err := s.validateFloor(ctx, room.FloorID); err != nil {
 		return err
@@ -83,9 +75,6 @@ func (s *serverRoomService) List(ctx context.Context, params map[string]interfac
 	if name, ok := params["name"].(string); ok && name != "" {
 		query = query.Where("name LIKE ?", "%"+name+"%")
 	}
-	if code, ok := params["code"].(string); ok && code != "" {
-		query = query.Where("code LIKE ?", "%"+code+"%")
-	}
 	if floorId, ok := params["floorId"].(string); ok && floorId != "" {
 		query = query.Where("floor_id = ?", floorId)
 	}
@@ -117,7 +106,7 @@ func (s *serverRoomService) List(ctx context.Context, params map[string]interfac
 	}
 
 	offset := (current - 1) * pageSize
-	if err := query.Offset(offset).Limit(pageSize).Order("code ASC").Find(&list).Error; err != nil {
+	if err := query.Offset(offset).Limit(pageSize).Order("created_at DESC").Find(&list).Error; err != nil {
 		return nil, err
 	}
 
@@ -132,22 +121,6 @@ func (s *serverRoomService) List(ctx context.Context, params map[string]interfac
 // BatchDelete 批量删除机房
 func (s *serverRoomService) BatchDelete(ctx context.Context, ids []string) error {
 	return s.db.WithContext(ctx).Delete(&operations.OpsServerRoom{}, "id IN ?", ids).Error
-}
-
-// checkCodeUnique 检查编码唯一性
-func (s *serverRoomService) checkCodeUnique(ctx context.Context, code string, excludeID string) error {
-	var count int64
-	query := s.db.WithContext(ctx).Model(&operations.OpsServerRoom{}).Where("code = ?", code)
-	if excludeID != "" {
-		query = query.Where("id != ?", excludeID)
-	}
-	if err := query.Count(&count).Error; err != nil {
-		return err
-	}
-	if count > 0 {
-		return errors.New("机房编码已存在")
-	}
-	return nil
 }
 
 // validateFloor 验证楼层存在性

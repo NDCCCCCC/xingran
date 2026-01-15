@@ -124,8 +124,11 @@ func RequestDecryption(encryptor *crypto.RequestEncryptor, config *RequestDecryp
 			applogger.WithFields(map[string]interface{}{
 				"path":        c.Request.URL.Path,
 				"method":      c.Request.Method,
+				"timestamp":   encReq.Timestamp,
+				"nonce":       encReq.Nonce,
+				"data_length": len(encReq.Data),
 			}).WithError(err).Warn("解密请求体失败")
-			response.Error(c, response.ErrBadRequest, "解密失败")
+			response.Error(c, response.ErrBadRequest, "解密失败: "+err.Error())
 			c.Abort()
 			return
 		}

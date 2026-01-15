@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	opsServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
@@ -19,7 +19,7 @@ func NewWorkstationHandler(service opsServices.WorkstationService) *WorkstationH
 
 // Create 创建工位
 func (h *WorkstationHandler) Create(c *gin.Context) {
-	var workstation operations.OpsWorkstation
+	var workstation models.Workstation
 	if err := c.ShouldBindJSON(&workstation); err != nil {
 		response.Error(c, http.StatusBadRequest, "参数错误: "+err.Error())
 		return
@@ -64,7 +64,7 @@ func (h *WorkstationHandler) GetByID(c *gin.Context) {
 // Update 更新工位
 func (h *WorkstationHandler) Update(c *gin.Context) {
 	id := c.Param("id")
-	var workstation operations.OpsWorkstation
+	var workstation models.Workstation
 	if err := c.ShouldBindJSON(&workstation); err != nil {
 		response.Error(c, http.StatusBadRequest, "参数错误: "+err.Error())
 		return
@@ -110,6 +110,25 @@ func (h *WorkstationHandler) BatchOperation(c *gin.Context) {
 		}
 	default:
 		response.Error(c, http.StatusBadRequest, "不支持的操作")
+		return
+	}
+
+	response.Success(c, nil)
+}
+
+// BatchUpdatePositions 批量更新工位位置
+func (h *WorkstationHandler) BatchUpdatePositions(c *gin.Context) {
+	var req struct {
+		Items []opsServices.PositionUpdateItem `json:"items" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "参数错误: "+err.Error())
+		return
+	}
+
+	if err := h.service.BatchUpdatePositions(c.Request.Context(), req.Items); err != nil {
+		response.Error(c, http.StatusInternalServerError, "批量更新位置失败: "+err.Error())
 		return
 	}
 

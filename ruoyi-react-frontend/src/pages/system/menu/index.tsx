@@ -622,7 +622,7 @@ const MenuManagement: FC = () => {
           pagination={false}
           rowSelection={{
             selectedRowKeys,
-            onChange: (selectedKeys) => setSelectedRowKeys(selectedKeys),
+            onChange: (selectedKeys) => setSelectedRowKeys(selectedKeys as string[]),
             selections: [
               Table.SELECTION_ALL,
               Table.SELECTION_INVERT,

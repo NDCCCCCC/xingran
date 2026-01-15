@@ -102,6 +102,12 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 				v1.SetupProfileRouter(profile, core)
 			}
 
+			// 文件管理相关接口（所有已登录用户可访问）
+			files := authorized.Group("/files")
+			{
+				v1.SetupFileRouter(files, core)
+			}
+
 			// 系统设置相关接口（所有已登录用户可访问）
 			settings := authorized.Group("/settings")
 			{
@@ -179,18 +185,6 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			}, core))
 			{
 				v1.SetupPostRouter(posts, core)
-			}
-
-			// 工位管理
-			workstations := authorized.Group("/workstations")
-			workstations.Use(middleware.RequirePermissions([]string{
-				string(permission.WorkstationList),
-				string(permission.WorkstationAdd),
-				string(permission.WorkstationEdit),
-				string(permission.WorkstationView),
-			}, core))
-			{
-				v1.SetupWorkstationRouter(workstations, core)
 			}
 
 			// 字典管理
@@ -528,6 +522,9 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			buildings.POST("/:id/update", buildingHandler.Update)
 			buildings.POST("/:id/delete", buildingHandler.Delete)
 			buildings.POST("/batch", buildingHandler.BatchOperation)
+
+			// Excel导入导出
+			operations.SetupExcelRouter(buildings, "building", core)
 		}
 
 		// 楼层管理
@@ -542,13 +539,17 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			floorService := opsServices.NewFloorService(core.DB.GetDB())
 			floorHandler := operations.NewFloorHandler(floorService)
 
-			floors.POST("", floorHandler.Create)
+			// 注意：更具体的路由要放在前面，避免被通用路由匹配
 			floors.POST("/list", floorHandler.List)
 			floors.POST("/tree", floorHandler.GetTree)
+			floors.POST("/batch", floorHandler.BatchOperation)
 			floors.POST("/:id", floorHandler.GetByID)
 			floors.POST("/:id/update", floorHandler.Update)
 			floors.POST("/:id/delete", floorHandler.Delete)
-			floors.POST("/batch", floorHandler.BatchOperation)
+			floors.POST("", floorHandler.Create) // 放在最后，作为兜底路由
+
+			// Excel导入导出
+			operations.SetupExcelRouter(floors, "floor", core)
 		}
 
 		// 工位管理
@@ -563,12 +564,41 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			workstationService := opsServices.NewWorkstationService(core.DB.GetDB())
 			workstationHandler := operations.NewWorkstationHandler(workstationService)
 
-			workstations.POST("", workstationHandler.Create)
+			// 注意：更具体的路由要放在前面，避免被通用路由匹配
 			workstations.POST("/list", workstationHandler.List)
+			workstations.POST("/batch", workstationHandler.BatchOperation)
+			workstations.POST("/positions", workstationHandler.BatchUpdatePositions)
 			workstations.POST("/:id", workstationHandler.GetByID)
 			workstations.POST("/:id/update", workstationHandler.Update)
 			workstations.POST("/:id/delete", workstationHandler.Delete)
-			workstations.POST("/batch", workstationHandler.BatchOperation)
+			workstations.POST("", workstationHandler.Create) // 放在最后
+
+			// Excel导入导出
+			operations.SetupExcelRouter(workstations, "workstation", core)
+		}
+
+		// 信息点管理
+		infoPoints := ops.Group("/info-points")
+		infoPoints.Use(middleware.RequirePermissions([]string{
+			"ops:infopoint:list",
+			"ops:infopoint:add",
+			"ops:infopoint:edit",
+			"ops:infopoint:delete",
+		}, core))
+		{
+			infoPointService := opsServices.NewInfoPointService(core.DB.GetDB())
+			infoPointHandler := operations.NewInfoPointHandler(infoPointService)
+
+			// 注意：更具体的路由要放在前面
+			infoPoints.POST("/list", infoPointHandler.List)
+			infoPoints.POST("/batch", infoPointHandler.BatchOperation)
+			infoPoints.POST("/:id", infoPointHandler.GetByID)
+			infoPoints.POST("/:id/update", infoPointHandler.Update)
+			infoPoints.POST("/:id/delete", infoPointHandler.Delete)
+			infoPoints.POST("", infoPointHandler.Create) // 放在最后
+
+			// Excel导入导出
+			operations.SetupExcelRouter(infoPoints, "infoPoint", core)
 		}
 
 		// 机房管理
@@ -583,12 +613,22 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			serverRoomService := opsServices.NewServerRoomService(core.DB.GetDB())
 			serverRoomHandler := operations.NewServerRoomHandler(serverRoomService)
 
-			serverRooms.POST("", serverRoomHandler.Create)
+			// 注意：更具体的路由要放在前面
 			serverRooms.POST("/list", serverRoomHandler.List)
+			serverRooms.POST("/batch", serverRoomHandler.BatchOperation)
 			serverRooms.POST("/:id", serverRoomHandler.GetByID)
 			serverRooms.POST("/:id/update", serverRoomHandler.Update)
 			serverRooms.POST("/:id/delete", serverRoomHandler.Delete)
-			serverRooms.POST("/batch", serverRoomHandler.BatchOperation)
+			serverRooms.POST("", serverRoomHandler.Create) // 放在最后
+
+			// Excel导入导出
+			operations.SetupExcelRouter(serverRooms, "serverRoom", core)
+		}
+
+		// 机房照片管理
+		roomPhotos := ops.Group("/rooms/photos")
+		{
+			operations.SetupRoomPhotoRouter(roomPhotos, core)
 		}
 
 		// 专线管理
@@ -603,12 +643,16 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			dedicatedLineService := opsServices.NewDedicatedLineService(core.DB.GetDB())
 			dedicatedLineHandler := operations.NewDedicatedLineHandler(dedicatedLineService)
 
-			dedicatedLines.POST("", dedicatedLineHandler.Create)
+			// 注意：更具体的路由要放在前面
 			dedicatedLines.POST("/list", dedicatedLineHandler.List)
+			dedicatedLines.POST("/batch", dedicatedLineHandler.BatchOperation)
 			dedicatedLines.POST("/:id", dedicatedLineHandler.GetByID)
 			dedicatedLines.POST("/:id/update", dedicatedLineHandler.Update)
 			dedicatedLines.POST("/:id/delete", dedicatedLineHandler.Delete)
-			dedicatedLines.POST("/batch", dedicatedLineHandler.BatchOperation)
+			dedicatedLines.POST("", dedicatedLineHandler.Create) // 放在最后
+
+			// Excel导入导出
+			operations.SetupExcelRouter(dedicatedLines, "dedicatedLine", core)
 		}
 
 		// room-devices - 机房设备管理
@@ -623,12 +667,16 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			roomDeviceService := opsServices.NewRoomDeviceService(core.DB.GetDB())
 			roomDeviceHandler := operations.NewRoomDeviceHandler(roomDeviceService)
 
-			roomDevices.POST("", roomDeviceHandler.Create)
+			// 注意：更具体的路由要放在前面
 			roomDevices.POST("/list", roomDeviceHandler.List)
+			roomDevices.POST("/batch", roomDeviceHandler.BatchOperation)
 			roomDevices.POST("/:id", roomDeviceHandler.GetByID)
 			roomDevices.POST("/:id/update", roomDeviceHandler.Update)
 			roomDevices.POST("/:id/delete", roomDeviceHandler.Delete)
-			roomDevices.POST("/batch", roomDeviceHandler.BatchOperation)
+			roomDevices.POST("", roomDeviceHandler.Create) // 放在最后
+
+			// Excel导入导出
+			operations.SetupExcelRouter(roomDevices, "roomDevice", core)
 		}
 	}
 }

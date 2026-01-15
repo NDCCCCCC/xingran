@@ -19,21 +19,20 @@ type BuildingService interface {
 }
 
 type buildingService struct {
-	db *gorm.DB
+	db            *gorm.DB
+	codeGenerator *CodeGenerator
 }
 
 // NewBuildingService 创建楼宇服务实例
 func NewBuildingService(db *gorm.DB) BuildingService {
-	return &buildingService{db: db}
+	return &buildingService{
+		db:            db,
+		codeGenerator: NewCodeGenerator(db),
+	}
 }
 
 // Create 创建楼宇
 func (s *buildingService) Create(ctx context.Context, building *operations.OpsBuilding) error {
-	// 检查编码唯一性
-	if err := s.checkCodeUnique(ctx, building.Code, ""); err != nil {
-		return err
-	}
-
 	// 验证机构存在性
 	if err := s.validateOrg(ctx, building.OrgID); err != nil {
 		return err
@@ -44,11 +43,6 @@ func (s *buildingService) Create(ctx context.Context, building *operations.OpsBu
 
 // Update 更新楼宇
 func (s *buildingService) Update(ctx context.Context, building *operations.OpsBuilding) error {
-	// 检查编码唯一性
-	if err := s.checkCodeUnique(ctx, building.Code, building.ID); err != nil {
-		return err
-	}
-
 	// 验证机构存在性
 	if err := s.validateOrg(ctx, building.OrgID); err != nil {
 		return err
@@ -82,9 +76,6 @@ func (s *buildingService) List(ctx context.Context, params map[string]interface{
 	// 添加筛选条件
 	if name, ok := params["name"].(string); ok && name != "" {
 		query = query.Where("name LIKE ?", "%"+name+"%")
-	}
-	if code, ok := params["code"].(string); ok && code != "" {
-		query = query.Where("code LIKE ?", "%"+code+"%")
 	}
 	if orgId, ok := params["orgId"].(string); ok && orgId != "" {
 		query = query.Where("org_id = ?", orgId)
@@ -133,22 +124,6 @@ func (s *buildingService) List(ctx context.Context, params map[string]interface{
 // BatchDelete 批量删除楼宇
 func (s *buildingService) BatchDelete(ctx context.Context, ids []string) error {
 	return s.db.WithContext(ctx).Delete(&operations.OpsBuilding{}, "id IN ?", ids).Error
-}
-
-// checkCodeUnique 检查编码唯一性
-func (s *buildingService) checkCodeUnique(ctx context.Context, code string, excludeID string) error {
-	var count int64
-	query := s.db.WithContext(ctx).Model(&operations.OpsBuilding{}).Where("code = ?", code)
-	if excludeID != "" {
-		query = query.Where("id != ?", excludeID)
-	}
-	if err := query.Count(&count).Error; err != nil {
-		return err
-	}
-	if count > 0 {
-		return errors.New("楼宇编码已存在")
-	}
-	return nil
 }
 
 // validateOrg 验证机构存在性

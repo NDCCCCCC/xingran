@@ -19,7 +19,7 @@ require (
 	github.com/scrapli/scrapligo v1.3.3
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/viper v1.19.0
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.11.1
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.0
 	github.com/tjfoc/gmsm v1.4.1
@@ -33,12 +33,18 @@ require (
 require (
 	github.com/Azure/go-ntlmssp v0.0.0-20221128193559-754e69321358 // indirect
 	github.com/go-asn1-ber/asn1-ber v1.5.8-0.20250403174932-29230038a667 // indirect
+	github.com/richardlehane/mscfb v1.0.4 // indirect
+	github.com/richardlehane/msoleps v1.0.4 // indirect
+	github.com/tiendc/go-deepcopy v1.7.1 // indirect
+	github.com/xuri/efp v0.0.1 // indirect
+	github.com/xuri/excelize/v2 v2.10.0 // indirect
+	github.com/xuri/nfp v0.0.2-0.20250530014748-2ddeb826f9a9 // indirect
 )
 
 require (
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/gorilla/websocket v1.5.3
-	golang.org/x/image v0.13.0 // indirect
+	golang.org/x/image v0.25.0 // indirect
 )
 
 require (

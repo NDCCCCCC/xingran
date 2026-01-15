@@ -2,7 +2,7 @@ import { Card, Row, Col, Statistic } from 'antd';
 import { CheckCircleOutlined, StopOutlined, SearchOutlined } from '@ant-design/icons';
 import type { NoticeStatistics } from '../hooks/useNoticeStatistics';
 
-interface NoticeStatisticsProps {
+interface NoticeStatisticsCardProps {
   statistics: NoticeStatistics;
 }
 
@@ -10,7 +10,7 @@ interface NoticeStatisticsProps {
  * 通知统计卡片组件
  * 显示总公告数、已发布、草稿/撤回、定时发布数量
  */
-export const NoticeStatistics: React.FC<NoticeStatisticsProps> = ({ statistics }) => {
+export const NoticeStatisticsCard: React.FC<NoticeStatisticsCardProps> = ({ statistics }) => {
   // 只在总数大于10时显示
   if (statistics.total <= 10) {
     return null;
