@@ -77,7 +77,14 @@ const DedicatedLineManagement: FC = () => {
     } catch (error) { handleApiError(error, '加载统计数据', false); }
   }, []);
 
-  useEffect(() => { loadLines(); loadStatistics(); loadServerRooms(); }, [loadServerRooms]);
+  useEffect(() => {
+    // 使用 setTimeout 避免同步 setState
+    setTimeout(() => {
+      loadLines();
+      loadStatistics();
+      loadServerRooms();
+    }, 0);
+  }, [loadServerRooms]);
 
   const handleSave = async () => {
     try {

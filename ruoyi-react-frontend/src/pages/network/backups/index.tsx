@@ -1,5 +1,13 @@
-import { useState, useEffect, useRef } from 'react';
-import type { FC, UIEvent } from 'react';
+/**
+ * 配置备份管理页面 - 重构版本
+ *
+ * 通过提取 Hooks 和工具函数，将 1084 行的组件拆分为更小的模块：
+ * - types.ts: 类型定义
+ * - utils.ts: 工具函数 (diff 计算、分组逻辑)
+ * - hooks/: 自定义 Hooks (数据管理、差异对比、弹窗管理)
+ */
+
+import { useState, useEffect, type FC } from 'react';
 import {
   Table,
   Button,
@@ -8,7 +16,6 @@ import {
   Form,
   Input,
   Select,
-  message,
   Card,
   Tag,
   Drawer,
@@ -17,6 +24,7 @@ import {
   Col,
   Statistic,
   Descriptions,
+  message,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -33,304 +41,110 @@ import {
   FolderOpenOutlined,
   FileTextOutlined,
 } from '@ant-design/icons';
-import type { NetworkDevice, ConfigBackup } from '@/types';
+import type { ConfigBackup } from '@/types';
+import type { DeviceBackupGroup, DiffLine } from './types';
+import { useBackupData, useBackupDiff, useBackupModals } from './hooks';
 import { post } from '@/lib/api';
 import ActionButtons from '@/components/shared/ActionButtons';
-
-// 差异行类型
-interface DiffLine {
-  type: 'same' | 'removed' | 'added' | 'empty';
-  content: string;
-  lineNum?: number;
-}
-
-// 差异对比结果
-interface DiffResult {
-  leftContent: string;
-  rightContent: string;
-  leftLines: DiffLine[];
-  rightLines: DiffLine[];
-  oldVersion: string;
-  newVersion: string;
-}
-
-// 设备备份分组
-interface DeviceBackupGroup {
-  deviceId: string;
-  deviceName: string;
-  ipAddress: string;
-  backups: ConfigBackup[];
-  latestBackup: ConfigBackup;
-  backupCount: number;
-  autoCount: number;
-  manualCount: number;
-}
 
 const { Option } = Select;
 const { TextArea } = Input;
 
+// 格式化日期时间
+const formatDateTime = (dateStr: string): string => {
+  if (!dateStr) return '-';
+  const date = new Date(dateStr);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+};
+
+// 备份类型选项
+const BACKUP_TYPE_OPTIONS = [
+  { label: '自动备份', value: 'auto' },
+  { label: '手动备份', value: 'manual' },
+];
+
 const ConfigBackupPage: FC = () => {
-  const [devices, setDevices] = useState<NetworkDevice[]>([]);
-  const [deviceGroups, setDeviceGroups] = useState<DeviceBackupGroup[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [total, setTotal] = useState(0);
+  // 表单和状态
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [backupModalVisible, setBackupModalVisible] = useState(false);
-  const [diffModalVisible, setDiffModalVisible] = useState(false);
-  const [versionListDrawerVisible, setVersionListDrawerVisible] = useState(false);
-  const [restoreModalVisible, setRestoreModalVisible] = useState(false);
-  const [contentDrawerVisible, setContentDrawerVisible] = useState(false);
   const [backupForm] = Form.useForm();
   const [searchForm] = Form.useForm();
-  const [selectedBackup, setSelectedBackup] = useState<ConfigBackup | null>(null);
-  const [selectedRestoreBackup, setSelectedRestoreBackup] = useState<ConfigBackup | null>(null);
   const [selectedDeviceGroup, setSelectedDeviceGroup] = useState<DeviceBackupGroup | null>(null);
-  const [compareBackup1, setCompareBackup1] = useState<ConfigBackup | null>(null);
-  const [compareBackup2, setCompareBackup2] = useState<ConfigBackup | null>(null);
-  const [diffResult, setDiffResult] = useState<DiffResult | null>(null);
-  const [backupContent, setBackupContent] = useState('');
 
-  // 同步滚动的 refs
-  const leftScrollRef = useRef<HTMLDivElement>(null);
-  const rightScrollRef = useRef<HTMLDivElement>(null);
-  const isLeftScrolling = useRef(false);
-  const isRightScrolling = useRef(false);
+  // 使用自定义 Hooks
+  const {
+    devices,
+    deviceGroups,
+    statistics,
+    loading,
+    total,
+    loadDevices,
+    loadBackups,
+    loadStatistics,
+  } = useBackupData({ current, pageSize, searchForm });
 
-  // 统计数据
-  const [statistics, setStatistics] = useState({
-    total: 0,
-    auto: 0,
-    manual: 0,
-    devices: 0,
+  const {
+    diffModalVisible,
+    diffResult,
+    compareBackup1,
+    compareBackup2,
+    leftScrollRef,
+    rightScrollRef,
+    openDiffModal,
+    closeDiffModal,
+    handleLeftScroll,
+    handleRightScroll,
+  } = useBackupDiff();
+
+  const {
+    backupModalVisible,
+    restoreModalVisible,
+    contentDrawerVisible,
+    versionListDrawerVisible,
+    selectedBackup,
+    selectedRestoreBackup,
+    selectedDeviceGroup: modalDeviceGroup,
+    backupContent,
+    openBackupModal,
+    closeBackupModal,
+    openRestoreModal,
+    closeRestoreModal,
+    openContentDrawer,
+    closeContentDrawer,
+    openVersionListDrawer,
+    closeVersionListDrawer,
+    handleBackup,
+    handleRestore: confirmRestore,
+  } = useBackupModals({
+    onLoad: () => {
+      loadBackups();
+      loadStatistics();
+    },
   });
 
-  // 同步滚动处理
-  const handleLeftScroll = (e: UIEvent<HTMLDivElement>) => {
-    if (isLeftScrolling.current) return;
-    isRightScrolling.current = true;
-    const target = e.target as HTMLDivElement;
-    if (rightScrollRef.current) {
-      rightScrollRef.current.scrollTop = target.scrollTop;
-    }
-    setTimeout(() => {
-      isRightScrolling.current = false;
-    }, 0);
-  };
+  // 初始化加载
+  useEffect(() => {
+    loadBackups();
+    loadStatistics();
+  }, [current, pageSize]);
 
-  const handleRightScroll = (e: UIEvent<HTMLDivElement>) => {
-    if (isRightScrolling.current) return;
-    isLeftScrolling.current = true;
-    const target = e.target as HTMLDivElement;
-    if (leftScrollRef.current) {
-      leftScrollRef.current.scrollTop = target.scrollTop;
-    }
-    setTimeout(() => {
-      isLeftScrolling.current = false;
-    }, 0);
-  };
-
-  // 计算两个文本的差异（使用简化的 LCS 算法）
-  const computeDiff = (content1: string, content2: string): DiffResult => {
-    const lines1 = content1.split('\n');
-    const lines2 = content2.split('\n');
-
-    // 使用动态规划计算最长公共子序列
-    const m = lines1.length;
-    const n = lines2.length;
-    const dp: number[][] = Array(m + 1).fill(0).map(() => Array(n + 1).fill(0));
-
-    for (let i = 1; i <= m; i++) {
-      for (let j = 1; j <= n; j++) {
-        if (lines1[i - 1] === lines2[j - 1]) {
-          dp[i][j] = dp[i - 1][j - 1] + 1;
-        } else {
-          dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
-        }
-      }
-    }
-
-    // 回溯生成差异
-    const leftLines: DiffLine[] = [];
-    const rightLines: DiffLine[] = [];
-    let i = m, j = n;
-
-    while (i > 0 || j > 0) {
-      if (i > 0 && j > 0 && lines1[i - 1] === lines2[j - 1]) {
-        // 相同的行
-        leftLines.unshift({ type: 'same', content: lines1[i - 1], lineNum: i });
-        rightLines.unshift({ type: 'same', content: lines2[j - 1], lineNum: j });
-        i--;
-        j--;
-      } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
-        // 新增的行
-        leftLines.unshift({ type: 'empty', content: '', lineNum: undefined });
-        rightLines.unshift({ type: 'added', content: lines2[j - 1], lineNum: j });
-        j--;
-      } else {
-        // 删除的行
-        leftLines.unshift({ type: 'removed', content: lines1[i - 1], lineNum: i });
-        rightLines.unshift({ type: 'empty', content: '', lineNum: undefined });
-        i--;
-      }
-    }
-
-    return {
-      leftContent: content1,
-      rightContent: content2,
-      leftLines,
-      rightLines,
-      oldVersion: '',
-      newVersion: '',
-    };
-  };
-
-  // 加载设备列表
-  const loadDevices = async () => {
-    try {
-      const result = await post('/network/devices/list', {
-        current: 1,
-        pageSize: 1000,
-      });
-      setDevices(result.data.list || []);
-    } catch (error) {
-      console.error('加载设备列表失败:', error);
-    }
-  };
-
-  // 将备份列表按设备分组
-  const groupBackupsByDevice = (backups: ConfigBackup[]): DeviceBackupGroup[] => {
-    const groupMap = new Map<string, ConfigBackup[]>();
-
-    // 按设备ID分组
-    backups.forEach(backup => {
-      if (!groupMap.has(backup.deviceId)) {
-        groupMap.set(backup.deviceId, []);
-      }
-      groupMap.get(backup.deviceId)!.push(backup);
-    });
-
-    // 转换为分组数组
-    const groups: DeviceBackupGroup[] = [];
-    groupMap.forEach((deviceBackups, deviceId) => {
-      // 按创建时间倒序排序
-      deviceBackups.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
-      const latestBackup = deviceBackups[0];
-      const autoCount = deviceBackups.filter(b => b.backupType === 'auto').length;
-      const manualCount = deviceBackups.filter(b => b.backupType === 'manual').length;
-
-      groups.push({
-        deviceId,
-        deviceName: latestBackup.deviceName,
-        ipAddress: latestBackup.ipAddress,
-        backups: deviceBackups,
-        latestBackup,
-        backupCount: deviceBackups.length,
-        autoCount,
-        manualCount,
-      });
-    });
-
-    return groups;
-  };
-
-  // 加载备份列表
-  const loadBackups = async (params: any = {}) => {
-    setLoading(true);
-    try {
-      const values = searchForm.getFieldsValue();
-      const result = await post('/network/backups/list', {
-        current: params.current || current,
-        pageSize: params.pageSize || pageSize,
-        ...values,
-      });
-      const backups = result.data.list || [];
-      const groups = groupBackupsByDevice(backups);
-
-      setDeviceGroups(groups);
-      setTotal(result.data.total || 0);
-
-      // 更新统计数据
-      updateStatistics(backups);
-    } catch (error) {
-      console.error('加载备份列表失败:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 加载统计数据
-  const loadStatistics = async () => {
-    try {
-      const result = await post('/network/backups/list', { current: 1, pageSize: 10000 });
-      const allBackups = result.data.list || [];
-      updateStatistics(allBackups);
-    } catch (error) {
-      console.error('加载统计数据失败:', error);
-    }
-  };
-
-  // 更新统计数据
-  const updateStatistics = (backupList: ConfigBackup[]) => {
-    const autoCount = backupList.filter(b => b.backupType === 'auto').length;
-    const manualCount = backupList.filter(b => b.backupType === 'manual').length;
-    const uniqueDevices = new Set(backupList.map(b => b.deviceId)).size;
-    setStatistics({
-      total: backupList.length,
-      auto: autoCount,
-      manual: manualCount,
-      devices: uniqueDevices,
-    });
-  };
-
-  // 创建备份
-  const handleBackup = async () => {
-    try {
-      const values = await backupForm.validateFields();
-      await post('/network/backups', values);
-      message.success('备份任务已创建');
-      setBackupModalVisible(false);
-      backupForm.resetFields();
-      loadBackups();
-    } catch (error: any) {
-      if (error.errorFields) {
-        return;
-      }
-      message.error('创建备份失败');
-    }
-  };
-
-  // 查看配置内容
-  const handleViewContent = async (backup: ConfigBackup) => {
-    try {
-      const result = await post(`/network/backups/${backup.id}`, {});
-      setBackupContent(result.data.content || '');
-      setSelectedBackup(backup);
-      setContentDrawerVisible(true);
-    } catch (error) {
-      message.error('加载配置内容失败');
-    }
-  };
-
-  // 恢复配置
-  const handleRestore = async (backup: ConfigBackup) => {
-    try {
-      await post(`/network/backups/${backup.id}/restore`, {});
-      message.success('恢复成功');
-      setRestoreModalVisible(false);
-      setSelectedRestoreBackup(null);
-      loadBackups();
-    } catch (error) {
-      message.error('恢复失败');
-    }
+  // 打开备份弹窗
+  const handleOpenBackupModal = () => {
+    loadDevices();
+    backupForm.resetFields();
+    openBackupModal();
   };
 
   // 打开还原选择模态框
   const handleOpenRestoreModal = (group: DeviceBackupGroup) => {
     setSelectedDeviceGroup(group);
-    setSelectedRestoreBackup(group.latestBackup);
-    setRestoreModalVisible(true);
+    openRestoreModal(group.latestBackup);
   };
 
   // 确认还原
@@ -345,14 +159,14 @@ const ConfigBackupPage: FC = () => {
       okText: '确认',
       cancelText: '取消',
       okType: 'danger',
-      onOk: () => handleRestore(selectedRestoreBackup),
+      onOk: () => confirmRestore(),
     });
   };
 
   // 打开版本列表抽屉
   const handleOpenVersionList = (group: DeviceBackupGroup) => {
     setSelectedDeviceGroup(group);
-    setVersionListDrawerVisible(true);
+    openVersionListDrawer(group);
   };
 
   // 打开对比对话框
@@ -363,66 +177,109 @@ const ConfigBackupPage: FC = () => {
       return;
     }
     // 默认：左边是次新版，右边是最新版
-    setCompareBackup1(backup1 || group.backups[1]);
-    setCompareBackup2(backup2 || group.backups[0]);
-    setDiffModalVisible(true);
+    const b1 = backup1 || group.backups[1];
+    const b2 = backup2 || group.backups[0];
+    openDiffModal(b1, b2);
   };
 
-  // 执行差异对比
-  const executeDiff = async () => {
-    if (!compareBackup1 || !compareBackup2) {
-      message.warning('请选择两个备份版本进行对比');
-      return;
-    }
-    if (compareBackup1.id === compareBackup2.id) {
-      message.warning('请选择不同的版本进行对比');
-      return;
-    }
-    try {
-      // 获取两个版本的完整内容
-      const [result1, result2] = await Promise.all([
-        post(`/network/backups/${compareBackup1.id}`, {}),
-        post(`/network/backups/${compareBackup2.id}`, {}),
-      ]);
-
-      const content1 = result1.data.content || '';
-      const content2 = result2.data.content || '';
-
-      // 计算差异
-      const diffResult = computeDiff(content1, content2);
-      diffResult.oldVersion = `版本 ${compareBackup1.version} (${compareBackup1.createdAt})`;
-      diffResult.newVersion = `版本 ${compareBackup2.version} (${compareBackup2.createdAt})`;
-
-      setDiffResult(diffResult);
-    } catch (error) {
-      message.error('对比失败');
-    }
+  // 查看配置内容
+  const handleViewContent = async (backup: ConfigBackup) => {
+    openContentDrawer(backup);
   };
 
-  // 打开创建备份模态框
-  const openBackupModal = () => {
-    loadDevices();
-    backupForm.resetFields();
-    setBackupModalVisible(true);
+  // 恢复配置
+  const handleRestore = (backup: ConfigBackup) => {
+    Modal.confirm({
+      title: '确认恢复配置',
+      content: `确定要恢复到版本 ${backup.version} 吗？`,
+      okText: '确认',
+      cancelText: '取消',
+      okType: 'danger',
+      onOk: async () => {
+        try {
+          await post(`/network/backups/${backup.id}/restore`, {});
+          message.success('恢复成功');
+          loadBackups();
+        } catch (error) {
+          message.error('恢复失败');
+        }
+      },
+    });
   };
 
-  // 备份类型选项
-  const backupTypeOptions = [
-    { label: '自动备份', value: 'auto' },
-    { label: '手动备份', value: 'manual' },
-  ];
+  // 渲染差异行
+  const renderDiffLine = (line: DiffLine, side: 'left' | 'right', index: number) => {
+    const lineNum = line.lineNum !== undefined ? String(line.lineNum).padStart(4, ' ') : '    ';
+    const isRemoved = line.type === 'removed';
+    const isAdded = line.type === 'added';
+    const isSame = line.type === 'same';
+    const isEmpty = line.type === 'empty';
 
-  // 格式化日期时间
-  const formatDateTime = (dateStr: string) => {
-    if (!dateStr) return '-';
-    const date = new Date(dateStr);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const seconds = String(date.getSeconds()).padStart(2, '0');
-    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    // 计算背景色
+    let backgroundColor = 'transparent';
+    if (isRemoved) backgroundColor = '#ffced0';
+    else if (isAdded) backgroundColor = '#d4edda';
+    else if (isSame) {
+      const lines = side === 'left' ? diffResult?.leftLines : diffResult?.rightLines;
+      const prevLine = index > 0 ? lines![index - 1] : null;
+      const nextLine = index < (lines!.length - 1) ? lines![index + 1] : null;
+      if ((prevLine?.type === 'removed' || prevLine?.type === 'added' ||
+           nextLine?.type === 'removed' || nextLine?.type === 'added')) {
+        backgroundColor = '#f5f5f5';
+      }
+    }
+
+    const textColor = isRemoved ? '#c92a2a' : isAdded ? '#2b7a41' : '#8c8c8c';
+    const contentColor = isRemoved ? '#c92a2a' : isAdded ? '#2b7a41' : '#262626';
+
+    if (isEmpty) {
+      return (
+        <div key={`${side}-${index}`} style={{ display: 'flex', backgroundColor }}>
+          <div style={{
+            width: 50,
+            padding: '0 8px',
+            textAlign: 'right',
+            color: '#8c8c8c',
+            userSelect: 'none',
+            flexShrink: 0,
+            borderRight: '1px solid #e8e8e8',
+          }}>
+            {lineNum}
+          </div>
+          <div style={{
+            padding: '0 12px',
+            whiteSpace: 'pre',
+            overflowX: 'auto',
+            flex: 1,
+          }} />
+        </div>
+      );
+    }
+
+    return (
+      <div key={`${side}-${index}`} style={{ display: 'flex', backgroundColor }}>
+        <div style={{
+          width: 50,
+          padding: '0 8px',
+          textAlign: 'right',
+          color: textColor,
+          userSelect: 'none',
+          flexShrink: 0,
+          borderRight: '1px solid #e8e8e8',
+        }}>
+          {lineNum}
+        </div>
+        <div style={{
+          padding: '0 12px',
+          whiteSpace: 'pre',
+          overflowX: 'auto',
+          color: contentColor,
+          flex: 1,
+        }}>
+          {line.content}
+        </div>
+      </div>
+    );
   };
 
   // 设备列表表格列（按设备分组）
@@ -522,7 +379,7 @@ const ConfigBackupPage: FC = () => {
       key: 'backupType',
       width: 100,
       render: (backupType: string) => {
-        const option = backupTypeOptions.find(o => o.value === backupType);
+        const option = BACKUP_TYPE_OPTIONS.find(o => o.value === backupType);
         return <Tag color={backupType === 'auto' ? 'blue' : 'green'}>{option?.label}</Tag>;
       },
     },
@@ -577,11 +434,6 @@ const ConfigBackupPage: FC = () => {
     },
   ];
 
-  useEffect(() => {
-    loadBackups();
-    loadStatistics();
-  }, [current, pageSize]);
-
   return (
     <div>
       {/* 统计卡片 */}
@@ -635,7 +487,7 @@ const ConfigBackupPage: FC = () => {
             </Form.Item>
             <Form.Item name="backupType" label="备份类型">
               <Select placeholder="请选择备份类型" allowClear className="user-form-input" style={{ width: 120 }}>
-                {backupTypeOptions.map(opt => (
+                {BACKUP_TYPE_OPTIONS.map(opt => (
                   <Option key={opt.value} value={opt.value}>{opt.label}</Option>
                 ))}
               </Select>
@@ -648,7 +500,7 @@ const ConfigBackupPage: FC = () => {
             </Form.Item>
           </Form>
           <Space>
-            <Button type="primary" icon={<CloudUploadOutlined />} onClick={openBackupModal}>
+            <Button type="primary" icon={<CloudUploadOutlined />} onClick={handleOpenBackupModal}>
               创建备份
             </Button>
           </Space>
@@ -679,8 +531,8 @@ const ConfigBackupPage: FC = () => {
       <Modal
         title="创建配置备份"
         open={backupModalVisible}
-        onOk={handleBackup}
-        onCancel={() => setBackupModalVisible(false)}
+        onOk={() => handleBackup(backupForm)}
+        onCancel={() => closeBackupModal(backupForm)}
         width={600}
       >
         <Form form={backupForm} labelCol={{ span: 6 }} wrapperCol={{ span: 16 }}>
@@ -715,16 +567,11 @@ const ConfigBackupPage: FC = () => {
         }
         open={restoreModalVisible}
         onCancel={() => {
-          setRestoreModalVisible(false);
-          setSelectedRestoreBackup(null);
+          closeRestoreModal();
           setSelectedDeviceGroup(null);
         }}
         footer={[
-          <Button key="cancel" onClick={() => {
-            setRestoreModalVisible(false);
-            setSelectedRestoreBackup(null);
-            setSelectedDeviceGroup(null);
-          }}>
+          <Button key="cancel" onClick={() => { closeRestoreModal(); setSelectedDeviceGroup(null); }}>
             取消
           </Button>,
           <Button key="confirm" type="primary" danger onClick={handleConfirmRestore}>
@@ -752,7 +599,10 @@ const ConfigBackupPage: FC = () => {
                   value={selectedRestoreBackup?.id}
                   onChange={(value) => {
                     const backup = selectedDeviceGroup.backups.find(b => b.id === value);
-                    setSelectedRestoreBackup(backup || null);
+                    if (backup) {
+                      setSelectedDeviceGroup(selectedDeviceGroup);
+                      openRestoreModal(backup);
+                    }
                   }}
                   placeholder="请选择要还原的版本"
                 >
@@ -807,14 +657,14 @@ const ConfigBackupPage: FC = () => {
         placement="right"
         width={1000}
         open={versionListDrawerVisible}
-        onClose={() => setVersionListDrawerVisible(false)}
+        onClose={() => { closeVersionListDrawer(); setSelectedDeviceGroup(null); }}
         extra={
           selectedDeviceGroup && selectedDeviceGroup.backups.length >= 2 && (
             <Button
               type="primary"
               icon={<DiffOutlined />}
               onClick={() => {
-                setVersionListDrawerVisible(false);
+                closeVersionListDrawer();
                 handleOpenDiffModal(selectedDeviceGroup);
               }}
             >
@@ -847,12 +697,9 @@ const ConfigBackupPage: FC = () => {
       <Modal
         title="配置差异对比"
         open={diffModalVisible}
-        onCancel={() => setDiffModalVisible(false)}
+        onCancel={closeDiffModal}
         footer={[
-          <Button key="close" onClick={() => setDiffModalVisible(false)}>关闭</Button>,
-          <Button key="diff" type="primary" onClick={executeDiff} disabled={!compareBackup1 || !compareBackup2}>
-            执行对比
-          </Button>,
+          <Button key="close" onClick={closeDiffModal}>关闭</Button>,
         ]}
         width={1400}
       >
@@ -866,7 +713,9 @@ const ConfigBackupPage: FC = () => {
                 onChange={(value) => {
                   if (selectedDeviceGroup) {
                     const backup = selectedDeviceGroup.backups.find(b => b.id === value);
-                    setCompareBackup1(backup || null);
+                    if (backup && compareBackup2) {
+                      openDiffModal(backup, compareBackup2);
+                    }
                   }
                 }}
               >
@@ -888,7 +737,9 @@ const ConfigBackupPage: FC = () => {
                 onChange={(value) => {
                   if (selectedDeviceGroup) {
                     const backup = selectedDeviceGroup.backups.find(b => b.id === value);
-                    setCompareBackup2(backup || null);
+                    if (backup && compareBackup1) {
+                      openDiffModal(compareBackup1, backup);
+                    }
                   }
                 }}
               >
@@ -945,49 +796,7 @@ const ConfigBackupPage: FC = () => {
                   lineHeight: '22px',
                 }}
               >
-                {diffResult.leftLines.map((line, index) => {
-                  const lineNum = line.lineNum !== undefined ? String(line.lineNum).padStart(4, ' ') : '    ';
-                  return (
-                    <div
-                      key={`left-${index}`}
-                      style={{
-                        display: 'flex',
-                        backgroundColor: (() => {
-                          if (line.type === 'removed') return '#ffced0';
-                          if (line.type === 'same') {
-                            const prevLine = index > 0 ? diffResult.leftLines[index - 1] : null;
-                            const nextLine = index < diffResult.leftLines.length - 1 ? diffResult.leftLines[index + 1] : null;
-                            if ((prevLine?.type === 'removed' || nextLine?.type === 'removed')) {
-                              return '#f5f5f5';
-                            }
-                          }
-                          return 'transparent';
-                        })(),
-                      }}
-                    >
-                      <div style={{
-                        width: 50,
-                        padding: '0 8px',
-                        textAlign: 'right',
-                        color: line.type === 'removed' ? '#c92a2a' : '#8c8c8c',
-                        userSelect: 'none',
-                        flexShrink: 0,
-                        borderRight: '1px solid #e8e8e8',
-                      }}>
-                        {lineNum}
-                      </div>
-                      <div style={{
-                        padding: '0 12px',
-                        whiteSpace: 'pre',
-                        overflowX: 'auto',
-                        color: line.type === 'removed' ? '#c92a2a' : '#262626',
-                        flex: 1,
-                      }}>
-                        {line.content}
-                      </div>
-                    </div>
-                  );
-                })}
+                {diffResult.leftLines.map((line, index) => renderDiffLine(line, 'left', index))}
               </div>
 
               {/* 右侧：新版本 */}
@@ -1003,49 +812,7 @@ const ConfigBackupPage: FC = () => {
                   lineHeight: '22px',
                 }}
               >
-                {diffResult.rightLines.map((line, index) => {
-                  const lineNum = line.lineNum !== undefined ? String(line.lineNum).padStart(4, ' ') : '    ';
-                  return (
-                    <div
-                      key={`right-${index}`}
-                      style={{
-                        display: 'flex',
-                        backgroundColor: (() => {
-                          if (line.type === 'added') return '#d4edda';
-                          if (line.type === 'same') {
-                            const prevLine = index > 0 ? diffResult.rightLines[index - 1] : null;
-                            const nextLine = index < diffResult.rightLines.length - 1 ? diffResult.rightLines[index + 1] : null;
-                            if ((prevLine?.type === 'added' || nextLine?.type === 'added')) {
-                              return '#f5f5f5';
-                            }
-                          }
-                          return 'transparent';
-                        })(),
-                      }}
-                    >
-                      <div style={{
-                        width: 50,
-                        padding: '0 8px',
-                        textAlign: 'right',
-                        color: line.type === 'added' ? '#2b7a41' : '#8c8c8c',
-                        userSelect: 'none',
-                        flexShrink: 0,
-                        borderRight: '1px solid #e8e8e8',
-                      }}>
-                        {lineNum}
-                      </div>
-                      <div style={{
-                        padding: '0 12px',
-                        whiteSpace: 'pre',
-                        overflowX: 'auto',
-                        color: line.type === 'added' ? '#2b7a41' : '#262626',
-                        flex: 1,
-                      }}>
-                        {line.content}
-                      </div>
-                    </div>
-                  );
-                })}
+                {diffResult.rightLines.map((line, index) => renderDiffLine(line, 'right', index))}
               </div>
             </div>
           </div>
@@ -1063,20 +830,19 @@ const ConfigBackupPage: FC = () => {
         placement="right"
         width={800}
         open={contentDrawerVisible}
-        onClose={() => setContentDrawerVisible(false)}
-      >
-        <pre style={{
-          whiteSpace: 'pre-wrap',
-          wordBreak: 'break-all',
-          background: '#f5f5f5',
-          padding: 16,
-          borderRadius: 4,
-          maxHeight: 'calc(100vh - 100px)',
-          overflow: 'auto',
-        }}>
-          {backupContent}
-        </pre>
-      </Drawer>
+        onClose={() => { closeContentDrawer(); }}>
+          <pre style={{
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-all',
+            background: '#f5f5f5',
+            padding: 16,
+            borderRadius: 4,
+            maxHeight: 'calc(100vh - 100px)',
+            overflow: 'auto',
+          }}>
+            {backupContent}
+          </pre>
+        </Drawer>
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { FC } from 'react';
 import { Card, Row, Col, Statistic, Progress, Table, Tag, Button } from 'antd';
 import {
@@ -8,6 +8,7 @@ import {
   DatabaseOutlined
 } from '@ant-design/icons';
 import { post } from '@/lib/api';
+import type { BaseResponse, PageResponse } from '@/types';
 
 interface ServerMetrics {
   cpuUsage: number;
@@ -46,12 +47,13 @@ const Dashboard: FC = () => {
   const [servers, setServers] = useState<SystemInfo[]>([]);
   const [recentLogs, setRecentLogs] = useState<LoginLog[]>([]);
   const [loading, setLoading] = useState(false);
+  const isInitialMount = useRef(true);
 
   // 获取服务器指标
   const fetchServerMetrics = useCallback(async () => {
     try {
-      const result = await post('/monitor/server-metrics/current', {});
-      setMetrics(result.data);
+      const result = await post<BaseResponse<ServerMetrics>>('/monitor/server-metrics/current', {});
+      setMetrics(result.data || null);
     } catch (error) {
       console.error('获取服务器指标失败:', error);
     }
@@ -60,11 +62,11 @@ const Dashboard: FC = () => {
   // 获取服务器列表
   const fetchServerList = useCallback(async () => {
     try {
-      const result = await post('/monitor/server-info/list', {
+      const result = await post<BaseResponse<PageResponse<SystemInfo>>>('/monitor/server-info/list', {
         current: 1,
         pageSize: 10
       });
-      setServers(result.data.list || []);
+      setServers(result.data?.list || []);
     } catch (error) {
       console.error('获取服务器列表失败:', error);
     }
@@ -73,37 +75,48 @@ const Dashboard: FC = () => {
   // 获取最近登录日志
   const fetchRecentLogs = useCallback(async () => {
     try {
-      const result = await post('/monitor/login-logs/list', {
+      const result = await post<BaseResponse<PageResponse<LoginLog>>>('/monitor/login-logs/list', {
         current: 1,
         pageSize: 5
       });
-      setRecentLogs(result.data.list || []);
+      setRecentLogs(result.data?.list || []);
     } catch (error) {
       console.error('获取登录日志失败:', error);
     }
   }, []);
 
   // 刷新数据
-  const refreshData = useCallback(() => {
-    setLoading(true);
-    Promise.all([
+  const refreshData = useCallback(async () => {
+    // 不是初始加载时才显示 loading
+    if (!isInitialMount.current) {
+      setLoading(true);
+    }
+    await Promise.all([
       fetchServerMetrics(),
       fetchServerList(),
       fetchRecentLogs()
-    ]).finally(() => {
-      setLoading(false);
-    });
+    ]);
+    setLoading(false);
   }, [fetchServerMetrics, fetchServerList, fetchRecentLogs]);
 
   useEffect(() => {
-    refreshData();
+    // 初始加载 - 使用 setTimeout 避免同步 setState
+    setTimeout(() => {
+      Promise.all([
+        fetchServerMetrics(),
+        fetchServerList(),
+        fetchRecentLogs()
+      ]).finally(() => {
+        isInitialMount.current = false;
+      });
+    }, 0);
 
     // 设置定时刷新（每30秒）
     const interval = setInterval(refreshData, 30000);
 
     return () => clearInterval(interval);
-     
-  }, [refreshData]);
+
+  }, [fetchServerMetrics, fetchServerList, fetchRecentLogs, refreshData]);
 
   // 格式化内存大小
   const formatMemorySize = (bytes: number): string => {
@@ -138,21 +151,30 @@ const Dashboard: FC = () => {
       title: '用户名',
       dataIndex: 'userName',
       key: 'userName',
+      width: 120,
+      minWidth: 100,
     },
     {
       title: '登录IP',
       dataIndex: 'ipAddr',
       key: 'ipAddr',
+      width: 140,
+      minWidth: 120,
     },
     {
       title: '登录地点',
       dataIndex: 'loginLocation',
       key: 'loginLocation',
+      width: 150,
+      minWidth: 120,
     },
     {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
+      width: 80,
+      minWidth: 70,
+      align: 'center' as const,
       render: (status: number) => (
         <Tag color={status === 0 ? 'success' : 'error'}>
           {status === 0 ? '成功' : '失败'}
@@ -163,6 +185,8 @@ const Dashboard: FC = () => {
       title: '登录时间',
       dataIndex: 'loginTime',
       key: 'loginTime',
+      width: 170,
+      minWidth: 160,
     },
   ];
 

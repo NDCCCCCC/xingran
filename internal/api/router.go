@@ -4,7 +4,7 @@ import (
 	"log"
 
 	"github.com/gin-gonic/gin"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1"
+	v1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/scheduler"
@@ -135,6 +135,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			users.Use(middleware.DataScopePermission(core))
 			{
 				v1.SetupUserRouter(users, core)
+				// Excel导入导出
+				operations.SetupExcelRouter(users, "user", core)
 			}
 
 			// 角色管理

@@ -24,24 +24,24 @@ func NewTemplateEngine() *TemplateEngine {
 func defaultFuncMap() template.FuncMap {
 	return template.FuncMap{
 		// 字符串操作
-		"toUpper":    strings.ToUpper,
-		"toLower":    strings.ToLower,
-		"title":      strings.Title,
-		"trim":       strings.TrimSpace,
-		"replace":    strings.ReplaceAll,
-		"contains":   strings.Contains,
-		"hasPrefix":  strings.HasPrefix,
-		"hasSuffix":  strings.HasSuffix,
-		"split":      strings.Split,
-		"join":       strings.Join,
-		"repeat":     strings.Repeat,
+		"toUpper":   strings.ToUpper,
+		"toLower":   strings.ToLower,
+		"title":     strings.Title,
+		"trim":      strings.TrimSpace,
+		"replace":   strings.ReplaceAll,
+		"contains":  strings.Contains,
+		"hasPrefix": strings.HasPrefix,
+		"hasSuffix": strings.HasSuffix,
+		"split":     strings.Split,
+		"join":      strings.Join,
+		"repeat":    strings.Repeat,
 
 		// 网络相关
-		"ipToHex":        ipToHex,
-		"macToHex":       macToHex,
-		"formatVLAN":     formatVLAN,
+		"ipToHex":         ipToHex,
+		"macToHex":        macToHex,
+		"formatVLAN":      formatVLAN,
 		"formatInterface": formatInterface,
-		"formatIP":       formatIP,
+		"formatIP":        formatIP,
 
 		// 条件判断
 		"eq": func(a, b interface{}) bool {

@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	kernel32        = syscall.NewLazyDLL("kernel32.dll")
+	kernel32           = syscall.NewLazyDLL("kernel32.dll")
 	procGetSystemTimes = kernel32.NewProc("GetSystemTimes")
 )
 
@@ -56,7 +56,7 @@ func GetCPUUsage() (float64, error) {
 		lastUserTime = currentUser
 		firstCall = false
 		time.Sleep(500 * time.Millisecond) // 等待500ms确保有足够的时间差
-		return GetCPUUsage() // 递归调用获取真实使用率
+		return GetCPUUsage()               // 递归调用获取真实使用率
 	}
 
 	// 计算差值

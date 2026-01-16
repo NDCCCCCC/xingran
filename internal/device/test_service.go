@@ -6,9 +6,9 @@ import (
 	"log"
 	"time"
 
-	"gorm.io/gorm"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"gorm.io/gorm"
 )
 
 // TestService 新架构测试服务

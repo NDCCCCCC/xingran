@@ -158,13 +158,13 @@ func (s *SyncService) syncOUs(ctx context.Context, config *models.ADConfig, entr
 		} else {
 			// 不存在，准备创建
 			ousToCreate = append(ousToCreate, models.ADOU{
-				ADConfigID: config.ID,
-				OUN:        ouDN,
-				OUName:     ouName,
+				ADConfigID:  config.ID,
+				OUN:         ouDN,
+				OUName:      ouName,
 				Description: description,
-				ParentDN:   parentDN,
-				OUPath:     ouPath,
-				LastSyncAt: &now,
+				ParentDN:    parentDN,
+				OUPath:      ouPath,
+				LastSyncAt:  &now,
 			})
 		}
 	}
@@ -237,13 +237,13 @@ func (s *SyncService) syncGroups(ctx context.Context, config *models.ADConfig, e
 		} else {
 			// 不存在，准备创建
 			groupsToCreate = append(groupsToCreate, models.ADGroup{
-				ADConfigID: config.ID,
-				GroupDN:    groupDN,
-				GroupName:  groupName,
+				ADConfigID:  config.ID,
+				GroupDN:     groupDN,
+				GroupName:   groupName,
 				Description: description,
 				MemberCount: len(members),
-				OUN:        ouDN,
-				LastSyncAt: &now,
+				OUN:         ouDN,
+				LastSyncAt:  &now,
 			})
 		}
 	}
@@ -356,23 +356,23 @@ func (s *SyncService) syncUsers(ctx context.Context, config *models.ADConfig, en
 		} else {
 			// 不存在，准备创建
 			newUser := models.ADUser{
-				ADConfigID:       config.ID,
-				UserDN:          userDN,
-				Username:        username,
-				DisplayName:     entry.GetAttributeValue("displayName"),
-				Email:           entry.GetAttributeValue("mail"),
-				Phone:           entry.GetAttributeValue("telephoneNumber"),
-				Mobile:          entry.GetAttributeValue("mobile"),
-				Title:           entry.GetAttributeValue("title"),
-				Department:      entry.GetAttributeValue("department"),
-				Company:         entry.GetAttributeValue("company"),
-				Description:     entry.GetAttributeValue("description"),
-				OUN:             ouDN,
+				ADConfigID:         config.ID,
+				UserDN:             userDN,
+				Username:           username,
+				DisplayName:        entry.GetAttributeValue("displayName"),
+				Email:              entry.GetAttributeValue("mail"),
+				Phone:              entry.GetAttributeValue("telephoneNumber"),
+				Mobile:             entry.GetAttributeValue("mobile"),
+				Title:              entry.GetAttributeValue("title"),
+				Department:         entry.GetAttributeValue("department"),
+				Company:            entry.GetAttributeValue("company"),
+				Description:        entry.GetAttributeValue("description"),
+				OUN:                ouDN,
 				UserAccountControl: userAccountControl,
-				MemberOf:        memberOf,
-				LastLogon:       lastLogon,
-				PasswordLastSet: pwdLastSet,
-				LastSyncAt:      &now,
+				MemberOf:           memberOf,
+				LastLogon:          lastLogon,
+				PasswordLastSet:    pwdLastSet,
+				LastSyncAt:         &now,
 			}
 			// 设置从UAC派生的字段
 			newUser.IsEnabled = !newUser.IsDisabledByUAC()
@@ -441,10 +441,10 @@ func (s *SyncService) syncGroupMembers(ctx context.Context, config *models.ADCon
 func (s *SyncService) updateSyncLog(ctx context.Context, logID string, status models.ADSyncStatus, ouCount, groupCount, userCount, errorCount int, errorMsg string) {
 	updates := map[string]interface{}{
 		"sync_status": status,
-		"ou_count":     ouCount,
-		"group_count":  groupCount,
-		"user_count":   userCount,
-		"error_count":  errorCount,
+		"ou_count":    ouCount,
+		"group_count": groupCount,
+		"user_count":  userCount,
+		"error_count": errorCount,
 	}
 
 	if status != models.ADSyncStatusRunning {

@@ -18,7 +18,7 @@ type JWTManager struct {
 	accessKeyExpire  time.Duration
 	refreshKeyExpire time.Duration
 	issuer           string
-	useSM2           bool          // 是否使用SM2算法
+	useSM2           bool            // 是否使用SM2算法
 	sm2PrivateKey    *sm2.PrivateKey // SM2私钥
 	sm2PublicKey     *sm2.PublicKey  // SM2公钥
 }
@@ -105,12 +105,12 @@ func (j *JWTManager) GenerateTokenPair(userID, username string, roles []string) 
 	if j.useSM2 {
 		// 使用SM2算法签名
 		claims := &crypto.Claims{
-			UserID:    accessClaims.UserID,
-			Username:  accessClaims.Username,
-			Roles:     accessClaims.Roles,
-			Issuer:    accessClaims.Issuer,
-			Subject:   accessClaims.Subject,
-			Audience:  accessClaims.Audience,
+			UserID:   accessClaims.UserID,
+			Username: accessClaims.Username,
+			Roles:    accessClaims.Roles,
+			Issuer:   accessClaims.Issuer,
+			Subject:  accessClaims.Subject,
+			Audience: accessClaims.Audience,
 			RegisteredClaims: jwt.RegisteredClaims{
 				ID:        accessClaims.ID,
 				ExpiresAt: accessClaims.ExpiresAt,
@@ -190,9 +190,9 @@ func (j *JWTManager) ValidateToken(tokenString string) (*CustomClaims, error) {
 
 		// 转换为CustomClaims格式
 		customClaims := &CustomClaims{
-			UserID:   claims.UserID,
-			Username: claims.Username,
-			Roles:    claims.Roles,
+			UserID:           claims.UserID,
+			Username:         claims.Username,
+			Roles:            claims.Roles,
 			RegisteredClaims: claims.RegisteredClaims,
 		}
 

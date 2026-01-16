@@ -10,19 +10,19 @@ import (
 
 // DiscoveryCreateRequest 创建发现任务请求
 type DiscoveryCreateRequest struct {
-	TaskName      string              `json:"taskName" binding:"required,min=2,max=200"`
+	TaskName      string               `json:"taskName" binding:"required,min=2,max=200"`
 	DiscoveryType models.DiscoveryType `json:"discoveryType" binding:"required,oneof=snmp scan"`
-	IPRanges      []models.IPRange    `json:"ipRanges" binding:"required,min=1"`
-	SNMPCommunity string              `json:"snmpCommunity"`
-	SNMPPort      int                 `json:"snmpPort" binding:"omitempty,min=1,max=65535"`
-	AutoImport    bool                `json:"autoImport"`
-	GroupID       *string             `json:"groupId"`
+	IPRanges      []models.IPRange     `json:"ipRanges" binding:"required,min=1"`
+	SNMPCommunity string               `json:"snmpCommunity"`
+	SNMPPort      int                  `json:"snmpPort" binding:"omitempty,min=1,max=65535"`
+	AutoImport    bool                 `json:"autoImport"`
+	GroupID       *string              `json:"groupId"`
 }
 
 // DiscoveryListRequest 发现任务列表请求
 type DiscoveryListRequest struct {
-	Current  int    `json:"current"`
-	PageSize int    `json:"pageSize"`
+	Current  int `json:"current"`
+	PageSize int `json:"pageSize"`
 }
 
 // ExecuteDiscoveryRequest 执行发现任务请求

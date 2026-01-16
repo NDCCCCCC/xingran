@@ -13,8 +13,8 @@ import (
 // DataCacheService 数据缓存服务
 // 提供通用的缓存操作方法，支持序列化、反序列化和常见的缓存模式
 type DataCacheService struct {
-	cache            cache.Cache
-	cacheConfig      *CacheConfigService // 缓存配置服务（可选）
+	cache       cache.Cache
+	cacheConfig *CacheConfigService // 缓存配置服务（可选）
 }
 
 // NewDataCacheService 创建数据缓存服务
@@ -181,23 +181,23 @@ func (b *CacheKeyBuilder) Build(params ...interface{}) string {
 
 const (
 	// 部门相关缓存键
-	CacheKeyDeptTree         = "dept:tree"
-	CacheKeyDeptList         = "dept:list"
-	CacheKeyDeptTreeSelect   = "dept:tree:select"
+	CacheKeyDeptTree       = "dept:tree"
+	CacheKeyDeptList       = "dept:list"
+	CacheKeyDeptTreeSelect = "dept:tree:select"
 
 	// 角色相关缓存键
-	CacheKeyRoleMenus        = "role:menus"      // 角色菜单权限
-	CacheKeyRoleMenuTree     = "role:menu:tree"  // 角色菜单树
-	CacheKeyRoleDepts        = "role:depts"      // 角色部门权限
+	CacheKeyRoleMenus    = "role:menus"     // 角色菜单权限
+	CacheKeyRoleMenuTree = "role:menu:tree" // 角色菜单树
+	CacheKeyRoleDepts    = "role:depts"     // 角色部门权限
 
 	// 字典相关缓存键
-	CacheKeyDictType         = "dict:type"       // 字典类型
-	CacheKeyDictDataByType   = "dict:data:type"  // 按类型查询字典数据
+	CacheKeyDictType       = "dict:type"      // 字典类型
+	CacheKeyDictDataByType = "dict:data:type" // 按类型查询字典数据
 
 	// 用户相关缓存键
-	CacheKeyUserInfo         = "user:info"
-	CacheKeyUserRoles        = "user:roles"
-	CacheKeyUserPermissions  = "user:permissions"
+	CacheKeyUserInfo        = "user:info"
+	CacheKeyUserRoles       = "user:roles"
+	CacheKeyUserPermissions = "user:permissions"
 )
 
 // GetDeptTreeKey 获取部门树缓存键

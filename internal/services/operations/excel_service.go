@@ -8,18 +8,21 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/xuri/excelize/v2"
 	"gorm.io/gorm"
 )
 
 // ExcelService Excel导入导出服务
 type ExcelService struct {
-	db *gorm.DB
+	db         *gorm.DB
+	pwdManager *security.PasswordManager
 }
 
 // NewExcelService 创建Excel服务
-func NewExcelService(db *gorm.DB) *ExcelService {
-	return &ExcelService{db: db}
+func NewExcelService(db *gorm.DB, pwdManager *security.PasswordManager) *ExcelService {
+	return &ExcelService{db: db, pwdManager: pwdManager}
 }
 
 // ImportError 导入错误
@@ -177,7 +180,7 @@ func isEmptyRow(row []string) bool {
 }
 
 // validateAndParseRow 验证并解析行数据
-func (s *ExcelService) validateAndParseRow(ctx context.Context, row []string, rowNum int, config ExcelConfig, userID string) (map[string]interface{}, []ImportError) {
+func (s *ExcelService) validateAndParseRow(ctx context.Context, row []string, rowNum int, config ExcelConfig, _ string) (map[string]interface{}, []ImportError) {
 	data := make(map[string]interface{})
 	errors := make([]ImportError, 0)
 
@@ -300,9 +303,90 @@ func (s *ExcelService) validateUniqueness(ctx context.Context, config ExcelConfi
 
 // saveData 保存数据到数据库
 func (s *ExcelService) saveData(ctx context.Context, entityType string, data map[string]interface{}) error {
-	// 这里需要根据不同的实体类型调用相应的service
-	// 由于这是通用服务，暂时返回nil，实际使用时应该在handler中处理
-	return nil
+	switch entityType {
+	case "user":
+		return s.saveUser(ctx, data)
+	// 其他实体类型的处理可以在这里添加
+	// case "building":
+	//     return s.saveBuilding(ctx, data)
+	default:
+		return fmt.Errorf("不支持的实体类型: %s", entityType)
+	}
+}
+
+// saveUser 保存用户数据
+func (s *ExcelService) saveUser(ctx context.Context, data map[string]interface{}) error {
+	// 提取用户名
+	username, ok := data["username"].(string)
+	if !ok || username == "" {
+		return fmt.Errorf("用户名不能为空")
+	}
+
+	// 检查用户名是否已存在
+	var count int64
+	if err := s.db.WithContext(ctx).Table("sys_user").Where("username = ?", username).Count(&count).Error; err != nil {
+		return fmt.Errorf("检查用户名失败: %w", err)
+	}
+	if count > 0 {
+		return fmt.Errorf("用户名 %s 已存在", username)
+	}
+
+	// 创建用户（使用事务）
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 使用默认密码 "123456" 进行哈希（使用SM3）
+		hashedPassword, err := s.pwdManager.HashPassword("123456")
+		if err != nil {
+			return fmt.Errorf("密码加密失败: %w", err)
+		}
+
+		// 提取字段值
+		nickname, _ := data["nickname"].(string)
+		employeeNo, _ := data["employeeNo"].(string)
+		email, _ := data["email"].(string)
+		phone, _ := data["phone"].(string)
+		remark, _ := data["remark"].(string)
+
+		// 处理性别（默认为保密）
+		gender := models.GenderSecret
+		if g, ok := data["gender"].(int); ok {
+			gender = models.Gender(g)
+		}
+
+		// 处理状态（默认为正常）
+		status := models.UserStatusEnabled
+		if st, ok := data["status"].(int); ok {
+			status = models.UserStatus(st)
+		}
+
+		// 处理部门编码
+		var deptID *string
+		if deptCode, ok := data["deptCode"].(string); ok && deptCode != "" {
+			var dept models.Department
+			if err := tx.Where("dept_code = ?", deptCode).First(&dept).Error; err != nil {
+				return fmt.Errorf("部门编码 %s 不存在", deptCode)
+			}
+			deptID = &dept.ID
+		}
+
+		// 创建用户记录
+		user := &models.User{
+			Username:   username,
+			Password:   hashedPassword,
+			Nickname:   &nickname,
+			EmployeeNo: &employeeNo,
+			Email:      &email,
+			Phone:      &phone,
+			Gender:     gender,
+			Status:     status,
+			DeptID:     deptID,
+			Remark:     remark,
+		}
+		if err := tx.Create(user).Error; err != nil {
+			return fmt.Errorf("创建用户失败: %w", err)
+		}
+
+		return nil
+	})
 }
 
 // ExportData 导出数据到Excel
@@ -345,7 +429,7 @@ func (s *ExcelService) ExportData(ctx context.Context, entityType string, params
 }
 
 // queryData 查询数据
-func (s *ExcelService) queryData(ctx context.Context, config ExcelConfig, params map[string]interface{}) ([]map[string]interface{}, error) {
+func (s *ExcelService) queryData(_ context.Context, config ExcelConfig, params map[string]interface{}) ([]map[string]interface{}, error) {
 	// 构建查询
 	query := s.db.Table(config.TableName).Where("deleted_at IS NULL")
 

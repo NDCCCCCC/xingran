@@ -1,5 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
-import type { FC, Key, ReactElement } from 'react';
+/**
+ * System User 用户管理页面
+ */
+
+import { useState, useEffect, useCallback, type FC, type Key } from 'react';
 import {
   Table,
   Button,
@@ -33,308 +36,40 @@ import {
 } from '@ant-design/icons';
 import type { User } from '@/types';
 import { post } from '@/lib/api';
+import type { BaseResponse, PageResponse } from '@/types';
 import DeptTree from '@/components/DeptTree';
 import { useTableManager } from '@/hooks/useTableManager';
 import { handleApiError, handleSuccess } from '@/utils/errorHandler';
 import ActionButtons from '@/components/shared/ActionButtons';
 
+// 导入提取的文件
+import { GENDER_OPTIONS, STATUS_OPTIONS } from './constants';
+import { renderDeptTreeOptions, formatGender, formatStatus } from './utils.tsx';
+import { useUserData } from './hooks/useUserData';
+import { useUserModals } from './hooks/useUserModals';
+
 const { Option } = Select;
 const { Sider, Content } = Layout;
 
-const UserManagement: FC = () => {
-  // 自定义状态（不能迁移到 useTableManager）
-  const [resetPasswordModalVisible, setResetPasswordModalVisible] = useState(false);
-  const [resetPasswordForm] = Form.useForm();
-  const [resettingUser, setResettingUser] = useState<User | null>(null);
-  const [selectedDeptId, setSelectedDeptId] = useState<string>('');
-  const [statistics, setStatistics] = useState({
-    total: 0,
-    active: 0,
-    inactive: 0,
-  });
-  const [roles, setRoles] = useState<any[]>([]);
-  const [departments, setDepartments] = useState<any[]>([]);
+// ==================== 表格列定义 ====================
 
-  // 数据加载函数（使用 useCallback 保持引用稳定）
-  const fetchUsers = useCallback(async (params: any) => {
-    const result = await post('/system/users/list', params);
-    return { list: result.data.list, total: result.data.total };
-  }, []);
+interface UserTableColumnsProps {
+  handleEdit: (record: User) => void;
+  handleUpdateStatus: (id: string, status: number) => void;
+  handleResetPassword: (user: User) => void;
+  handleDelete: (id: string) => void;
+}
 
-  // 使用 useTableManager 管理表格状态
-  const {
-    loading,
-    data: users,
-    total,
-    current,
-    pageSize,
-    selectedRowKeys,
-    searchForm,
-    editForm,
-    editModalVisible,
-    editingItem: editingUser,
-    setCurrent,
-    setPageSize,
-    setSelectedRowKeys,
-    setEditModalVisible,
-    loadData: loadUsers,
-    handleAdd,
-    handleEdit,
-    resetSelection,
-  } = useTableManager<User>(fetchUsers, { pageSize: 10 });
+function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
+  const { handleEdit, handleUpdateStatus, handleResetPassword, handleDelete } = props;
 
-  // 加载统计数据
-  const loadStatistics = useCallback(async () => {
-    try {
-      const result = await post('/system/users/list', { current: 1, pageSize: 1000 });
-      const allUsers = result.data.list || [];
-      const activeCount = allUsers.filter((u: any) => u.status === 0).length;
-      const inactiveCount = allUsers.filter((u: any) => u.status === 1).length;
-      setStatistics({
-        total: allUsers.length,
-        active: activeCount,
-        inactive: inactiveCount,
-      });
-    } catch (error) {
-      handleApiError(error, '加载统计数据', false);
-    }
-  }, []);
-
-  // 加载角色列表
-  const loadRoles = useCallback(async () => {
-    try {
-      const result = await post('/system/roles/all');
-      setRoles(result.data || []);
-    } catch (error) {
-      handleApiError(error, '加载角色列表', false);
-    }
-  }, []);
-
-  // 加载部门列表
-  const loadDepartments = useCallback(async () => {
-    try {
-      const result = await post('/system/departments/list');
-      setDepartments(result.data || []);
-    } catch (error) {
-      handleApiError(error, '加载部门列表', false);
-      setDepartments([]);
-    }
-  }, []);
-
-  // 渲染树形部门选项
-  const renderDeptTreeOptions = (departments: any[]) => {
-    if (!departments || departments.length === 0) {
-      return [<Option key="" value="">暂无部门数据</Option>];
-    }
-
-    // 递归渲染树形选项
-    const renderOptions = (nodes: any[], level = 0): ReactElement[] => {
-      const options: ReactElement[] = [];
-
-      nodes.forEach(node => {
-        options.push(
-          <Option key={node.id} value={node.id}>
-            {'　'.repeat(level * 2)}{node.deptName}
-          </Option>
-        );
-
-        // 递归渲染子部门
-        if (node.children && node.children.length > 0) {
-          options.push(...renderOptions(node.children, level + 1));
-        }
-      });
-
-      return options;
-    };
-
-    return renderOptions(departments);
-  };
-
-  // 初始化加载（只在组件挂载时执行一次）
-  useEffect(() => {
-    loadUsers();
-    loadStatistics();
-    loadRoles();
-    loadDepartments();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // 搜索
-  const handleSearch = () => {
-    const values = searchForm.getFieldsValue();
-
-    // 确保状态值是数字类型
-    const searchParams: any = {};
-    Object.keys(values).forEach(key => {
-      const value = values[key];
-      if (value !== undefined && value !== null && value !== '') {
-        if (key === 'status') {
-          // 将状态值转换为数字
-          searchParams[key] = Number(value);
-        } else {
-          searchParams[key] = value;
-        }
-      }
-    });
-
-    // 如果有选中的部门，添加部门ID到搜索参数
-    if (selectedDeptId) {
-      searchParams.deptId = selectedDeptId;
-    }
-
-    loadUsers(searchParams);
-  };
-
-  // 重置搜索
-  const handleReset = () => {
-    searchForm.resetFields();
-    setSelectedDeptId('');
-    loadUsers();
-  };
-
-  // 刷新
-  const handleRefresh = () => {
-    loadUsers();
-    loadStatistics();
-  };
-
-  // 新增用户（覆盖 useTableManager 的 handleAdd）
-  const handleAddUser = () => {
-    handleAdd();
-    // 设置默认值
-    const defaultValues: any = {
-      gender: 0,
-      status: 0,
-    };
-    // 设置第一个部门为默认值
-    if (departments.length > 0) {
-      defaultValues.deptId = departments[0].id;
-    }
-    // 设置第一个角色为默认值
-    if (roles.length > 0) {
-      defaultValues.roleIds = [roles[0].id];
-    }
-    editForm.setFieldsValue(defaultValues);
-  };
-
-  // Modal 打开后的回调
-  const handleModalOpenChange = (open: boolean) => {
-    if (open && editingUser) {
-      // Modal 打开时设置表单值
-      editForm.setFieldsValue(editingUser);
-    }
-  };
-
-  // 删除用户
-  const handleDelete = async (id: string) => {
-    try {
-      await post(`/system/users/${id}/delete`);
-      handleSuccess('删除');
-      loadUsers();
-      loadStatistics();
-    } catch (error) {
-      handleApiError(error, '删除');
-    }
-  };
-
-  // 批量删除
-  const handleBatchDelete = async () => {
-    if (selectedRowKeys.length === 0) {
-      return;
-    }
-
-    try {
-      await post('/system/users/batch-delete', { ids: selectedRowKeys });
-      handleSuccess('批量删除');
-      resetSelection();
-      loadUsers();
-      loadStatistics();
-    } catch (error) {
-      handleApiError(error, '批量删除');
-    }
-  };
-
-  // 更新用户状态
-  const handleUpdateStatus = async (id: string, status: number) => {
-    try {
-      await post(`/system/users/${id}/status`, { status });
-      handleSuccess(status === 0 ? '启用' : '禁用');
-      loadUsers();
-      loadStatistics();
-    } catch (error) {
-      handleApiError(error, '操作');
-    }
-  };
-
-  // 保存用户
-  const handleSave = async () => {
-    try {
-      const values = await editForm.validateFields();
-
-      // 确保 gender 和 status 是数字类型
-      if (values.gender !== undefined) {
-        values.gender = Number(values.gender);
-      }
-      if (values.status !== undefined) {
-        values.status = Number(values.status);
-      }
-
-      const url = editingUser
-        ? `/system/users/${editingUser.id}/update`
-        : '/system/users';
-
-      await post(url, values);
-      handleSuccess(editingUser ? '更新' : '创建');
-      setEditModalVisible(false);
-      loadUsers();
-      loadStatistics();
-    } catch (error) {
-      handleApiError(error, '操作');
-    }
-  };
-
-  // 重置密码
-  const handleResetPassword = (user: User) => {
-    setResettingUser(user);
-    resetPasswordForm.resetFields();
-    setResetPasswordModalVisible(true);
-  };
-
-  // 保存重置密码
-  const handleSaveResetPassword = async () => {
-    try {
-      const values = await resetPasswordForm.validateFields();
-
-      await post(`/system/users/${resettingUser!.id}/reset-password`, {
-        password: values.password,
-      });
-
-      handleSuccess('密码重置');
-      setResetPasswordModalVisible(false);
-    } catch (error) {
-      handleApiError(error, '重置密码');
-    }
-  };
-
-  // 部门树选择处理
-  const handleDeptSelect = (selectedKeys: Key[]) => {
-    if (selectedKeys.length > 0) {
-      setSelectedDeptId(selectedKeys[0] as string);
-      // 重新加载用户列表，筛选该部门的用户
-      loadUsers({ deptId: selectedKeys[0] });
-    } else {
-      setSelectedDeptId('');
-      // 清空部门筛选，重新加载所有用户
-      loadUsers();
-    }
-  };
-
-  // 表格列定义
-  const columns: ColumnsType<User> = [
+  return [
     {
       title: '用户名',
       dataIndex: 'username',
       key: 'username',
+      width: 140,
+      minWidth: 120,
       render: (text, record) => (
         <Space>
           <Avatar src={record.avatar} icon={<UserOutlined />} />
@@ -346,47 +81,56 @@ const UserManagement: FC = () => {
       title: '昵称',
       dataIndex: 'nickname',
       key: 'nickname',
+      width: 100,
+      minWidth: 80,
     },
     {
       title: '工号',
       dataIndex: 'employeeNo',
       key: 'employeeNo',
+      width: 100,
+      minWidth: 80,
       render: (text) => text || '-',
     },
     {
       title: '邮箱',
       dataIndex: 'email',
       key: 'email',
+      width: 180,
+      minWidth: 150,
+      ellipsis: true,
     },
     {
       title: '手机号',
       dataIndex: 'phone',
       key: 'phone',
+      width: 130,
+      minWidth: 120,
     },
     {
       title: '性别',
       dataIndex: 'gender',
       key: 'gender',
-      render: (gender) => {
-        switch (gender) {
-          case 0: return '男';
-          case 1: return '女';
-          case 2: return '保密';
-          default: return '保密';
-        }
-      },
+      width: 70,
+      minWidth: 60,
+      align: 'center' as const,
+      render: (gender) => formatGender(gender),
     },
     {
       title: '部门',
       dataIndex: 'deptName',
       key: 'deptName',
+      width: 140,
+      minWidth: 120,
+      ellipsis: true,
     },
     {
       title: '角色',
       dataIndex: 'roles',
       key: 'roles',
+      width: 160,
+      minWidth: 120,
       render: (roles: string[]) => {
-        // 如果用户有角色，显示角色名称，否则显示无角色
         if (!roles || roles.length === 0) {
           return <span style={{ color: '#999' }}>无角色</span>;
         }
@@ -405,21 +149,28 @@ const UserManagement: FC = () => {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
-      render: (status) => (
-        <Tag color={status === 0 ? 'success' : 'error'}>
-          {status === 0 ? '启用' : '禁用'}
-        </Tag>
-      ),
+      width: 80,
+      minWidth: 70,
+      align: 'center' as const,
+      render: (status) => {
+        const config = formatStatus(status);
+        return <Tag color={config.color}>{config.text}</Tag>;
+      },
     },
     {
       title: '创建时间',
       dataIndex: 'createdAt',
       key: 'createdAt',
+      width: 170,
+      minWidth: 160,
       render: (text) => new Date(text).toLocaleString(),
     },
     {
       title: '操作',
       key: 'action',
+      width: 220,
+      minWidth: 200,
+      fixed: 'right' as const,
       render: (_, record) => {
         const actions = [
           {
@@ -464,6 +215,212 @@ const UserManagement: FC = () => {
       },
     },
   ];
+}
+
+// ==================== 主组件 ====================
+
+const UserManagement: FC = () => {
+  // 自定义状态
+  const [selectedDeptId, setSelectedDeptId] = useState<string>('');
+
+  // 使用自定义 Hooks
+  const { statistics, roles, departments, loadStatistics, loadRoles, loadDepartments } = useUserData();
+  const {
+    resetPasswordModalVisible,
+    resettingUser,
+    resetPasswordForm,
+    openResetPasswordModal,
+    closeResetPasswordModal,
+  } = useUserModals();
+
+  // 数据加载函数
+  const fetchUsers = useCallback(async (params: any) => {
+    const result = await post<BaseResponse<PageResponse<User>>>('/system/users/list', params);
+    return { list: result.data.list, total: result.data.total };
+  }, []);
+
+  // 使用 useTableManager 管理表格状态
+  const {
+    loading,
+    data: users,
+    total,
+    current,
+    pageSize,
+    selectedRowKeys,
+    searchForm,
+    editForm,
+    editModalVisible,
+    editingItem: editingUser,
+    setCurrent,
+    setPageSize,
+    setSelectedRowKeys,
+    setEditModalVisible,
+    loadData: loadUsers,
+    handleAdd,
+    handleEdit,
+    resetSelection,
+  } = useTableManager<User>(fetchUsers, { pageSize: 10 });
+
+  // ==================== 初始化 ====================
+
+  useEffect(() => {
+    loadUsers();
+    loadStatistics();
+    loadRoles();
+    loadDepartments();
+  }, [loadUsers, loadStatistics, loadRoles, loadDepartments]);
+
+  // ==================== 事件处理 ====================
+
+  const handleSearch = useCallback(() => {
+    const values = searchForm.getFieldsValue();
+
+    const searchParams: any = {};
+    Object.keys(values).forEach(key => {
+      const value = values[key];
+      if (value !== undefined && value !== null && value !== '') {
+        if (key === 'status') {
+          searchParams[key] = Number(value);
+        } else {
+          searchParams[key] = value;
+        }
+      }
+    });
+
+    if (selectedDeptId) {
+      searchParams.deptId = selectedDeptId;
+    }
+
+    loadUsers(searchParams);
+  }, [searchForm, selectedDeptId, loadUsers]);
+
+  const handleReset = useCallback(() => {
+    searchForm.resetFields();
+    setSelectedDeptId('');
+    loadUsers();
+  }, [searchForm, loadUsers]);
+
+  const handleRefresh = useCallback(() => {
+    loadUsers();
+    loadStatistics();
+  }, [loadUsers, loadStatistics]);
+
+  const handleAddUser = useCallback(() => {
+    handleAdd();
+    const defaultValues: any = {
+      gender: 0,
+      status: 0,
+    };
+    if (departments.length > 0) {
+      defaultValues.deptId = departments[0].id;
+    }
+    if (roles.length > 0) {
+      defaultValues.roleIds = [roles[0].id];
+    }
+    editForm.setFieldsValue(defaultValues);
+  }, [handleAdd, departments, roles, editForm]);
+
+  const handleModalOpenChange = useCallback((open: boolean) => {
+    if (open && editingUser) {
+      editForm.setFieldsValue(editingUser);
+    }
+  }, [editingUser, editForm]);
+
+  const handleDelete = useCallback(async (id: string) => {
+    try {
+      await post(`/system/users/${id}/delete`);
+      handleSuccess('删除');
+      loadUsers();
+      loadStatistics();
+    } catch (error) {
+      handleApiError(error, '删除');
+    }
+  }, [loadUsers, loadStatistics]);
+
+  const handleBatchDelete = useCallback(async () => {
+    if (selectedRowKeys.length === 0) {
+      return;
+    }
+
+    try {
+      await post('/system/users/batch-delete', { ids: selectedRowKeys });
+      handleSuccess('批量删除');
+      resetSelection();
+      loadUsers();
+      loadStatistics();
+    } catch (error) {
+      handleApiError(error, '批量删除');
+    }
+  }, [selectedRowKeys, resetSelection, loadUsers, loadStatistics]);
+
+  const handleUpdateStatus = useCallback(async (id: string, status: number) => {
+    try {
+      await post(`/system/users/${id}/status`, { status });
+      handleSuccess(status === 0 ? '启用' : '禁用');
+      loadUsers();
+      loadStatistics();
+    } catch (error) {
+      handleApiError(error, '操作');
+    }
+  }, [loadUsers, loadStatistics]);
+
+  const handleSave = useCallback(async () => {
+    try {
+      const values = await editForm.validateFields();
+
+      if (values.gender !== undefined) {
+        values.gender = Number(values.gender);
+      }
+      if (values.status !== undefined) {
+        values.status = Number(values.status);
+      }
+
+      const url = editingUser
+        ? `/system/users/${editingUser.id}/update`
+        : '/system/users';
+
+      await post(url, values);
+      handleSuccess(editingUser ? '更新' : '创建');
+      setEditModalVisible(false);
+      loadUsers();
+      loadStatistics();
+    } catch (error) {
+      handleApiError(error, '操作');
+    }
+  }, [editingUser, editForm, loadUsers, loadStatistics, setEditModalVisible]);
+
+  const handleSaveResetPassword = useCallback(async () => {
+    try {
+      const values = await resetPasswordForm.validateFields();
+
+      await post(`/system/users/${resettingUser!.id}/reset-password`, {
+        password: values.password,
+      });
+
+      handleSuccess('密码重置');
+      closeResetPasswordModal();
+    } catch (error) {
+      handleApiError(error, '重置密码');
+    }
+  }, [resetPasswordForm, resettingUser, closeResetPasswordModal]);
+
+  const handleDeptSelect = useCallback((selectedKeys: Key[]) => {
+    if (selectedKeys.length > 0) {
+      setSelectedDeptId(selectedKeys[0] as string);
+      loadUsers({ deptId: selectedKeys[0] });
+    } else {
+      setSelectedDeptId('');
+      loadUsers();
+    }
+  }, [loadUsers]);
+
+  // 表格列
+  const columns = getUserTableColumns({
+    handleEdit,
+    handleUpdateStatus,
+    handleResetPassword: openResetPasswordModal,
+    handleDelete,
+  });
 
   return (
     <Layout style={{ display: 'flex', alignItems: 'stretch' }}>
@@ -523,8 +480,9 @@ const UserManagement: FC = () => {
                 </Form.Item>
                 <Form.Item name="status" label="状态">
                   <Select placeholder="请选择状态" style={{ width: 120 }} allowClear>
-                    <Option value="0">启用</Option>
-                    <Option value="1">禁用</Option>
+                    {STATUS_OPTIONS.map(opt => (
+                      <Option key={opt.value} value={String(opt.value)}>{opt.label}</Option>
+                    ))}
                   </Select>
                 </Form.Item>
                 <Form.Item>
@@ -592,8 +550,8 @@ const UserManagement: FC = () => {
                 showTotal: (total) => `共 ${total} 条`,
                 onChange: (page, size) => {
                   setCurrent(page);
-                  setPageSize(size);
-                  const params: any = { current: page, pageSize: size };
+                  setPageSize(size || 10);
+                  const params: any = { current: page, pageSize: size || 10 };
                   if (selectedDeptId) {
                     params.deptId = selectedDeptId;
                   }
@@ -653,9 +611,9 @@ const UserManagement: FC = () => {
           </Form.Item>
           <Form.Item name="gender" label="性别" initialValue={0}>
             <Select className="user-form-input">
-              <Option value={0}>男</Option>
-              <Option value={1}>女</Option>
-              <Option value={2}>保密</Option>
+              {GENDER_OPTIONS.map(opt => (
+                <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+              ))}
             </Select>
           </Form.Item>
           <Form.Item name="deptId" label="部门">
@@ -684,8 +642,9 @@ const UserManagement: FC = () => {
           </Form.Item>
           <Form.Item name="status" label="状态" initialValue={0}>
             <Select className="user-form-input">
-              <Option value={0}>启用</Option>
-              <Option value={1}>禁用</Option>
+              {STATUS_OPTIONS.map(opt => (
+                <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+              ))}
             </Select>
           </Form.Item>
         </Form>
@@ -696,7 +655,7 @@ const UserManagement: FC = () => {
         title={`重置密码 - ${resettingUser?.username || ''}`}
         open={resetPasswordModalVisible}
         onOk={handleSaveResetPassword}
-        onCancel={() => setResetPasswordModalVisible(false)}
+        onCancel={closeResetPasswordModal}
         width={400}
       >
         <Form form={resetPasswordForm} layout="vertical">

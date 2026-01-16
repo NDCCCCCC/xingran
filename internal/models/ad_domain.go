@@ -180,19 +180,19 @@ const (
 
 // ADSyncLog 同步日志
 type ADSyncLog struct {
-	ID          string      `gorm:"primaryKey;type:uuid" json:"id"`
-	ADConfigID  string      `gorm:"type:uuid;not null;index:idx_ad_sync_log_config,priority:1" json:"adConfigId"`
-	SyncType    ADSyncType  `gorm:"size:50;not null" json:"syncType"`
-	SyncStatus  ADSyncStatus `gorm:"size:20;not null" json:"syncStatus"`
-	StartTime   time.Time   `gorm:"not null;index:idx_ad_sync_log_time,priority:2" json:"startTime"`
-	EndTime     *time.Time  `json:"endTime,omitempty"`
-	Duration    int         `json:"duration,omitempty"` // 秒
-	OUCount     int         `gorm:"default:0" json:"ouCount"`
-	GroupCount  int         `gorm:"default:0" json:"groupCount"`
-	UserCount   int         `gorm:"default:0" json:"userCount"`
-	ErrorCount  int         `gorm:"default:0" json:"errorCount"`
-	ErrorMsg    string      `gorm:"type:text" json:"errorMsg,omitempty"`
-	CreatedAt   time.Time   `json:"createdAt"`
+	ID         string       `gorm:"primaryKey;type:uuid" json:"id"`
+	ADConfigID string       `gorm:"type:uuid;not null;index:idx_ad_sync_log_config,priority:1" json:"adConfigId"`
+	SyncType   ADSyncType   `gorm:"size:50;not null" json:"syncType"`
+	SyncStatus ADSyncStatus `gorm:"size:20;not null" json:"syncStatus"`
+	StartTime  time.Time    `gorm:"not null;index:idx_ad_sync_log_time,priority:2" json:"startTime"`
+	EndTime    *time.Time   `json:"endTime,omitempty"`
+	Duration   int          `json:"duration,omitempty"` // 秒
+	OUCount    int          `gorm:"default:0" json:"ouCount"`
+	GroupCount int          `gorm:"default:0" json:"groupCount"`
+	UserCount  int          `gorm:"default:0" json:"userCount"`
+	ErrorCount int          `gorm:"default:0" json:"errorCount"`
+	ErrorMsg   string       `gorm:"type:text" json:"errorMsg,omitempty"`
+	CreatedAt  time.Time    `json:"createdAt"`
 }
 
 // BeforeCreate GORM钩子
@@ -235,20 +235,20 @@ const (
 
 // IsDisabled 检查账户是否禁用
 func (u *ADUser) IsDisabledByUAC() bool {
-	return u.UserAccountControl & ADAccountDisable != 0
+	return u.UserAccountControl&ADAccountDisable != 0
 }
 
 // IsLocked 检查账户是否锁定
 func (u *ADUser) IsLockedByUAC() bool {
-	return u.UserAccountControl & ADLockout != 0
+	return u.UserAccountControl&ADLockout != 0
 }
 
 // IsPasswordExpired 检查密码是否过期
 func (u *ADUser) IsPasswordExpiredByUAC() bool {
-	return u.UserAccountControl & ADPasswordExpired != 0
+	return u.UserAccountControl&ADPasswordExpired != 0
 }
 
 // IsDontExpirePassword 检查密码是否永不过期
 func (u *ADUser) IsDontExpirePassword() bool {
-	return u.UserAccountControl & ADDontExpirePassword != 0
+	return u.UserAccountControl&ADDontExpirePassword != 0
 }

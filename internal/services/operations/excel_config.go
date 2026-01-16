@@ -7,29 +7,47 @@ import (
 
 // ExcelColumn Excel列配置
 type ExcelColumn struct {
-	Field      string                  // 字段名
-	Header     string                  // 表头名称
-	Required   bool                    // 是否必填
-	Unique     bool                    // 是否唯一
-	MinLength  int                     // 最小长度
-	MaxLength  int                     // 最大长度
-	Pattern    string                  // 正则表达式
-	Options    map[interface{}]string // 枚举值映射（值 -> 显示文本）
-	Reference  string                  // 关联表
+	Field     string                 // 字段名
+	Header    string                 // 表头名称
+	Required  bool                   // 是否必填
+	Unique    bool                   // 是否唯一
+	MinLength int                    // 最小长度
+	MaxLength int                    // 最大长度
+	Pattern   string                 // 正则表达式
+	Options   map[interface{}]string // 枚举值映射（值 -> 显示文本）
+	Reference string                 // 关联表
 }
 
 // ExcelConfig Excel配置
 type ExcelConfig struct {
-	SheetName   string        // 工作表名称
-	TableName   string        // 数据表名
-	EntityName  string        // 实体名称
-	Columns     []ExcelColumn // 列配置
-	HasHeader   bool          // 是否有表头
-	StartRow    int           // 数据起始行（从1开始）
+	SheetName  string        // 工作表名称
+	TableName  string        // 数据表名
+	EntityName string        // 实体名称
+	Columns    []ExcelColumn // 列配置
+	HasHeader  bool          // 是否有表头
+	StartRow   int           // 数据起始行（从1开始）
 }
 
 // ExcelConfigs 所有Excel配置映射
 var ExcelConfigs = map[string]ExcelConfig{
+	"user": {
+		SheetName:  "用户列表",
+		TableName:  "sys_user",
+		EntityName: "用户",
+		HasHeader:  true,
+		StartRow:   2,
+		Columns: []ExcelColumn{
+			{Field: "username", Header: "用户名", Required: true, Unique: true, MaxLength: 64},
+			{Field: "nickname", Header: "用户昵称", MaxLength: 64},
+			{Field: "employeeNo", Header: "工号", MaxLength: 64},
+			{Field: "email", Header: "邮箱", MaxLength: 128},
+			{Field: "phone", Header: "手机号", MaxLength: 32},
+			{Field: "gender", Header: "性别", Options: map[interface{}]string{int(0): "男", int(1): "女", int(2): "未知"}},
+			{Field: "deptCode", Header: "部门编码", Reference: "sys_dept.dept_code"},
+			{Field: "status", Header: "状态", Options: map[interface{}]string{int(0): "正常", int(1): "停用"}},
+			{Field: "remark", Header: "备注", MaxLength: 500},
+		},
+	},
 	"building": {
 		SheetName:  "楼宇列表",
 		TableName:  "ops_buildings",

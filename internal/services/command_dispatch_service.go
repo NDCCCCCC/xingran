@@ -6,10 +6,10 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/sync/errgroup"
-	"gorm.io/gorm"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"golang.org/x/sync/errgroup"
+	"gorm.io/gorm"
 )
 
 // CommandDispatchService 命令分发服务
@@ -28,9 +28,9 @@ func NewCommandDispatchService(db *gorm.DB, executor *device.DeviceExecutor) *Co
 
 // DispatchRequest 分发请求
 type DispatchRequest struct {
-	ExecutionName    string
-	DeviceIDs        []string
-	CommandContent   string
+	ExecutionName     string
+	DeviceIDs         []string
+	CommandContent    string
 	ExecutionStrategy models.ExecutionStrategy
 	Concurrency       int
 	Timeout           int
@@ -46,16 +46,16 @@ type DispatchResult struct {
 
 // DeviceCommandResult 设备命令执行结果
 type DeviceCommandResult struct {
-	DeviceID      string
-	DeviceName    string
-	IPAddress     string
-	Status        models.ExecutionStatus
-	CommandSent   string
+	DeviceID       string
+	DeviceName     string
+	IPAddress      string
+	Status         models.ExecutionStatus
+	CommandSent    string
 	OutputReceived string
-	ErrorMessage  string
-	StartedAt     *time.Time
-	CompletedAt   *time.Time
-	Duration      int
+	ErrorMessage   string
+	StartedAt      *time.Time
+	CompletedAt    *time.Time
+	Duration       int
 }
 
 // CommandExecutionSummary 命令执行汇总
@@ -200,7 +200,7 @@ func (s *CommandDispatchService) executeOnDevice(ctx context.Context, executionI
 		DeviceID:    device.ID,
 		DeviceName:  device.DeviceName,
 		IPAddress:   device.IPAddress,
-		Status:     models.ExecutionStatusPending,
+		Status:      models.ExecutionStatusPending,
 		CommandSent: command,
 		StartedAt:   &startTime,
 	}
@@ -259,16 +259,16 @@ func (s *CommandDispatchService) GetExecutionResult(ctx context.Context, executi
 	results := make(map[string]*DeviceCommandResult)
 	for _, detail := range details {
 		results[detail.DeviceID] = &DeviceCommandResult{
-			DeviceID:      detail.DeviceID,
-			DeviceName:    detail.DeviceName,
-			IPAddress:     detail.IPAddress,
-			Status:        detail.Status,
-			CommandSent:   detail.CommandSent,
+			DeviceID:       detail.DeviceID,
+			DeviceName:     detail.DeviceName,
+			IPAddress:      detail.IPAddress,
+			Status:         detail.Status,
+			CommandSent:    detail.CommandSent,
 			OutputReceived: detail.OutputReceived,
-			ErrorMessage:  detail.ErrorMessage,
-			StartedAt:     detail.StartedAt,
-			CompletedAt:   detail.CompletedAt,
-			Duration:      detail.Duration,
+			ErrorMessage:   detail.ErrorMessage,
+			StartedAt:      detail.StartedAt,
+			CompletedAt:    detail.CompletedAt,
+			Duration:       detail.Duration,
 		}
 	}
 
@@ -296,12 +296,12 @@ func (s *CommandDispatchService) QuickCommand(ctx context.Context, deviceID, com
 	}
 
 	req := &DispatchRequest{
-		ExecutionName:    fmt.Sprintf("快速命令: %s", device.DeviceName),
-		DeviceIDs:        []string{deviceID},
-		CommandContent:   command,
+		ExecutionName:     fmt.Sprintf("快速命令: %s", device.DeviceName),
+		DeviceIDs:         []string{deviceID},
+		CommandContent:    command,
 		ExecutionStrategy: models.ExecutionStrategySerial,
-		Concurrency:      1,
-		Timeout:          timeout,
+		Concurrency:       1,
+		Timeout:           timeout,
 	}
 
 	result := s.executeOnDevice(ctx, "", &device, command, req.Timeout)

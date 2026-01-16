@@ -18,11 +18,11 @@ import (
 
 // SliderCaptcha 滑动拼图验证码生成器
 type SliderCaptcha struct {
-	Width       int        // 背景图宽度
-	Height      int        // 背景图高度
-	PieceWidth  int        // 拼图块宽度
-	PieceHeight int        // 拼图块高度
-	Shape       Shape      // 拼图形状（新增）
+	Width        int          // 背景图宽度
+	Height       int          // 背景图高度
+	PieceWidth   int          // 拼图块宽度
+	PieceHeight  int          // 拼图块高度
+	Shape        Shape        // 拼图形状（新增）
 	ShapeFactory ShapeFactory // 形状工厂（新增）
 }
 
@@ -30,11 +30,11 @@ type SliderCaptcha struct {
 func NewSliderCaptcha() *SliderCaptcha {
 	factory := NewBaseShapeFactory()
 	return &SliderCaptcha{
-		Width:        400,  // 背景图宽度（增大以提高清晰度）
-		Height:       200,  // 背景图高度（增大以提高清晰度）
-		PieceWidth:   80,   // 拼图块宽度（相应增大）
-		PieceHeight:  80,   // 拼图块高度（相应增大）
-		Shape:        nil,  // 延迟初始化
+		Width:        400, // 背景图宽度（增大以提高清晰度）
+		Height:       200, // 背景图高度（增大以提高清晰度）
+		PieceWidth:   80,  // 拼图块宽度（相应增大）
+		PieceHeight:  80,  // 拼图块高度（相应增大）
+		Shape:        nil, // 延迟初始化
 		ShapeFactory: factory,
 	}
 }
@@ -47,10 +47,10 @@ func NewSliderCaptchaWithShape(shapeType string) (*SliderCaptcha, error) {
 		return nil, err
 	}
 	return &SliderCaptcha{
-		Width:        400,  // 背景图宽度（增大以提高清晰度）
-		Height:       200,  // 背景图高度（增大以提高清晰度）
-		PieceWidth:   80,   // 拼图块宽度（相应增大）
-		PieceHeight:  80,   // 拼图块高度（相应增大）
+		Width:        400, // 背景图宽度（增大以提高清晰度）
+		Height:       200, // 背景图高度（增大以提高清晰度）
+		PieceWidth:   80,  // 拼图块宽度（相应增大）
+		PieceHeight:  80,  // 拼图块高度（相应增大）
 		Shape:        shape,
 		ShapeFactory: factory,
 	}, nil
@@ -163,7 +163,7 @@ func (s *SliderCaptcha) resizeImage(img *image.RGBA, width, height int) *image.R
 	// 简单的缩放实现（生产环境可使用更好的缩放算法）
 	resized := image.NewRGBA(image.Rect(0, 0, width, height))
 
- scaleX := float64(img.Bounds().Dx()) / float64(width)
+	scaleX := float64(img.Bounds().Dx()) / float64(width)
 	scaleY := float64(img.Bounds().Dy()) / float64(height)
 
 	for y := 0; y < height; y++ {
@@ -197,8 +197,8 @@ func (s *SliderCaptcha) GenerateSlider() ([]byte, []byte, int, int, string, erro
 
 	// 2. 随机生成拼图块的 X 和 Y 坐标
 	// X 坐标范围：从 pieceWidth 到 Width - pieceWidth，确保拼图块可以完全放入
-	minX := s.PieceWidth + 20  // 最小 X 位置，给拼图块留出初始移动空间
-	maxX := s.Width - s.PieceWidth*2  // 最大 X 位置
+	minX := s.PieceWidth + 20        // 最小 X 位置，给拼图块留出初始移动空间
+	maxX := s.Width - s.PieceWidth*2 // 最大 X 位置
 	xPos := r.Intn(maxX-minX+1) + minX
 
 	// Y 坐标范围
@@ -352,7 +352,7 @@ func (s *SliderCaptcha) generatePieceFromBackground(bgImg *image.RGBA, xPos, yPo
 // addPieceBorderWhite 添加白色边框到拼图块
 func (s *SliderCaptcha) addPieceBorderWhite(img *image.RGBA) {
 	borderColor := color.RGBA{R: 255, G: 255, B: 255, A: 255} // 白色边框
-	borderThickness := 2 // 边框厚度
+	borderThickness := 2                                      // 边框厚度
 
 	for y := 0; y < s.PieceHeight; y++ {
 		for x := 0; x < s.PieceWidth; x++ {
@@ -566,7 +566,7 @@ func (s *SliderCaptcha) addPieceText(img *image.RGBA, r *rand.Rand) {
 	arrowColor := color.RGBA{R: 255, G: 255, B: 255, A: 200}
 
 	// 箭头主干
-	for x := centerX - 10; x < centerX + 10; x++ {
+	for x := centerX - 10; x < centerX+10; x++ {
 		if x >= 0 && x < s.PieceWidth {
 			img.Set(x, centerY, arrowColor)
 		}

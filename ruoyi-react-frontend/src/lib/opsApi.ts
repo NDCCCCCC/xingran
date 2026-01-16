@@ -52,7 +52,7 @@ export const buildingApi = {
   },
 
   // 批量操作
-  batch: async (action: string, data: any) => {
+  batch: async (action: string, data: Record<string, unknown>) => {
     return await post('/ops/buildings/batch', { action, ...data });
   },
 };
@@ -92,7 +92,7 @@ export const floorApi = {
     return await post<BaseResponse<Floor[]>>('/ops/floors/tree', {});
   },
 
-  batch: async (action: string, data: any) => {
+  batch: async (action: string, data: Record<string, unknown>) => {
     return await post('/ops/floors/batch', { action, ...data });
   },
 };
@@ -132,7 +132,7 @@ export const workstationApi = {
     return await post('/ops/workstations/positions', { items });
   },
 
-  batch: async (action: string, data: any) => {
+  batch: async (action: string, data: Record<string, unknown>) => {
     return await post('/ops/workstations/batch', { action, ...data });
   },
 };
@@ -167,7 +167,7 @@ export const serverRoomApi = {
     return await post('/ops/server-rooms/' + id + '/delete', {});
   },
 
-  batch: async (action: string, data: any) => {
+  batch: async (action: string, data: Record<string, unknown>) => {
     return await post('/ops/server-rooms/batch', { action, ...data });
   },
 };
@@ -272,7 +272,7 @@ export const roomDeviceApi = {
     return await post('/ops/room-devices/' + id + '/delete', {});
   },
 
-  batch: async (action: string, data: any) => {
+  batch: async (action: string, data: Record<string, unknown>) => {
     return await post('/ops/room-devices/batch', { action, ...data });
   },
 };
@@ -307,7 +307,7 @@ export const dedicatedLineApi = {
     return await post('/ops/dedicated-lines/' + id + '/delete', {});
   },
 
-  batch: async (action: string, data: any) => {
+  batch: async (action: string, data: Record<string, unknown>) => {
     return await post('/ops/dedicated-lines/batch', { action, ...data });
   },
 };
@@ -343,7 +343,7 @@ export const infoPointApi = {
     return await post('/ops/info-points/' + id + '/delete', {});
   },
 
-  batch: async (action: string, data: any) => {
+  batch: async (action: string, data: Record<string, unknown>) => {
     return await post('/ops/info-points/batch', { action, ...data });
   },
 };
@@ -397,7 +397,7 @@ export const excelApi = {
   },
 
   // 导出数据
-  export: async (entityType: string, params: any = {}) => {
+  export: async (entityType: string, params: Record<string, unknown> = {}) => {
     const token = localStorage.getItem('token');
     const response = await fetch(`/api/v1/ops/${entityType}/export`, {
       method: 'POST',
@@ -436,6 +436,6 @@ export const excelApi = {
 
   // 获取状态选项
   getStatusOptions: async (entityType: string) => {
-    return await post<BaseResponse<any[]>>(`/ops/${entityType}/status-options`, {});
+    return await post<BaseResponse<Array<{ label: string; value: number }>>>(`/ops/${entityType}/status-options`, {});
   },
 };

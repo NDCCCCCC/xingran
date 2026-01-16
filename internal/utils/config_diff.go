@@ -17,25 +17,25 @@ func DiffConfig(oldConfig, newConfig string) *ConfigDiff {
 	}
 
 	return &ConfigDiff{
-		HasChanges:  true,
-		OldConfig:   oldConfig,
-		NewConfig:   newConfig,
-		OldHash:     CalculateHash(oldConfig),
-		NewHash:     CalculateHash(newConfig),
-		LinesAdded:  calculateLinesAdded(oldConfig, newConfig),
+		HasChanges:   true,
+		OldConfig:    oldConfig,
+		NewConfig:    newConfig,
+		OldHash:      CalculateHash(oldConfig),
+		NewHash:      CalculateHash(newConfig),
+		LinesAdded:   calculateLinesAdded(oldConfig, newConfig),
 		LinesRemoved: calculateLinesRemoved(oldConfig, newConfig),
 	}
 }
 
 // ConfigDiff 配置差异结果
 type ConfigDiff struct {
-	HasChanges    bool
-	OldConfig     string
-	NewConfig     string
-	OldHash       string
-	NewHash       string
-	LinesAdded    int
-	LinesRemoved  int
+	HasChanges   bool
+	OldConfig    string
+	NewConfig    string
+	OldHash      string
+	NewHash      string
+	LinesAdded   int
+	LinesRemoved int
 }
 
 // CalculateHash 计算配置文件哈希值
@@ -136,11 +136,11 @@ type UnifiedDiff struct {
 
 // DiffHunk 差异块
 type DiffHunk struct {
-	OldStart    int
-	OldCount    int
-	NewStart    int
-	NewCount    int
-	Lines       []*DiffLine
+	OldStart int
+	OldCount int
+	NewStart int
+	NewCount int
+	Lines    []*DiffLine
 }
 
 // calculateUnifiedDiff 计算统一差异

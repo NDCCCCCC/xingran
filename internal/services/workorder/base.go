@@ -238,20 +238,20 @@ func (s *BaseService) Create(ctx context.Context, req *CreateRequest, submitterI
 
 // UpdateRequest 更新工单请求
 type UpdateRequest struct {
-	ID                string                      `json:"id" binding:"required,uuid"`
-	Title             *string                     `json:"title"`
-	CategoryID        *string                     `json:"categoryId"`
-	Type              *models.WorkOrderType       `json:"type"`
-	Priority          *models.WorkOrderPriority   `json:"priority"`
-	Status            *models.WorkOrderStatus     `json:"status"`
-	Description       *string                     `json:"description"`
-	Solution          *string                     `json:"solution"`
-	AssigneeID        *string                     `json:"assigneeId"`
-	DeptID            *string                     `json:"deptId"`
-	ExpectedResolveAt *string                     `json:"expectedResolveAt"`
-	AttachmentIDs     *string                     `json:"attachmentIds"`
-	ResolvedAt        *string                     `json:"resolvedAt"`
-	ClosedAt          *string                     `json:"closedAt"`
+	ID                string                    `json:"id" binding:"required,uuid"`
+	Title             *string                   `json:"title"`
+	CategoryID        *string                   `json:"categoryId"`
+	Type              *models.WorkOrderType     `json:"type"`
+	Priority          *models.WorkOrderPriority `json:"priority"`
+	Status            *models.WorkOrderStatus   `json:"status"`
+	Description       *string                   `json:"description"`
+	Solution          *string                   `json:"solution"`
+	AssigneeID        *string                   `json:"assigneeId"`
+	DeptID            *string                   `json:"deptId"`
+	ExpectedResolveAt *string                   `json:"expectedResolveAt"`
+	AttachmentIDs     *string                   `json:"attachmentIds"`
+	ResolvedAt        *string                   `json:"resolvedAt"`
+	ClosedAt          *string                   `json:"closedAt"`
 }
 
 // Update 更新工单

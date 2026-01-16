@@ -75,7 +75,14 @@ const RoomDeviceManagement: FC = () => {
     } catch (error) { handleApiError(error, '加载机房选项', false); }
   }, []);
 
-  useEffect(() => { loadDevices(); loadStatistics(); loadRoomOptions(); }, []);
+  useEffect(() => {
+    // 使用 setTimeout 避免同步 setState
+    setTimeout(() => {
+      loadDevices();
+      loadStatistics();
+      loadRoomOptions();
+    }, 0);
+  }, []);
 
   const handleSave = async () => {
     try {

@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"gorm.io/gorm"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"gorm.io/gorm"
 )
 
 // InterfaceCollector 接口信息采集器
@@ -132,9 +132,9 @@ func (c *InterfaceCollector) CollectAllDevices(ctx context.Context) ([]*Interfac
 func (c *InterfaceCollector) getInterfaceCommand(vendor models.DeviceVendor) string {
 	commands := map[models.DeviceVendor]string{
 		models.VendorHuawei: "display interface",
-		models.VendorH3C:     "display interface",
-		models.VendorRuijie:  "show interface",
-		models.VendorMaipu:   "show interface",
+		models.VendorH3C:    "display interface",
+		models.VendorRuijie: "show interface",
+		models.VendorMaipu:  "show interface",
 	}
 	if cmd, ok := commands[vendor]; ok {
 		return cmd

@@ -1,22 +1,84 @@
 package addomain
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 )
 
-// encryptPassword 加密密码（简化实现，实际应使用AES）
+// encryptPassword 加密密码（使用AES-GCM）
 func encryptPassword(password string) string {
-	// TODO: 实际应使用AES等加密算法
-	// 这里为了演示，简单进行base64编码
-	return password
+	// AD域加密密钥，实际应从配置文件读取
+	const encryptionKey = "ruoyi-ad-domain-key-16"
+
+	// 确保密钥长度为16字节（AES-128）
+	key := []byte(encryptionKey[:16])
+
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		// 加密失败时返回原始密码（向后兼容）
+		return password
+	}
+
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return password
+	}
+
+	// 生成随机nonce
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		return password
+	}
+
+	// 加密并编码为Base64
+	ciphertext := gcm.Seal(nonce, nonce, []byte(password), nil)
+	return base64.StdEncoding.EncodeToString(ciphertext)
 }
 
-// decryptPassword 解密密码
+// decryptPassword 解密密码（使用AES-GCM）
 func decryptPassword(encrypted string) string {
-	// TODO: 实际应使用AES等解密算法
-	return encrypted
+	// AD域加密密钥，实际应从配置文件读取
+	const encryptionKey = "ruoyi-ad-domain-key-16"
+
+	// 确保密钥长度为16字节（AES-128）
+	key := []byte(encryptionKey[:16])
+
+	data, err := base64.StdEncoding.DecodeString(encrypted)
+	if err != nil {
+		// 解码失败，可能未加密，返回原始值
+		return encrypted
+	}
+
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return encrypted
+	}
+
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return encrypted
+	}
+
+	nonceSize := gcm.NonceSize()
+	if len(data) < nonceSize {
+		// 数据长度不足，可能未加密
+		return encrypted
+	}
+
+	nonce, cipherData := data[:nonceSize], data[nonceSize:]
+	plaintext, err := gcm.Open(nil, nonce, cipherData, nil)
+	if err != nil {
+		// 解密失败，返回原始值
+		return encrypted
+	}
+
+	return string(plaintext)
 }
 
 // extractParentDN 提取父DN

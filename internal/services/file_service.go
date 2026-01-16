@@ -33,9 +33,9 @@ func NewFileService(db *gorm.DB) *FileService {
 
 // FileValidation 文件验证规则
 type FileValidation struct {
-	MaxSize      int64              // 最大文件大小（字节）
-	AllowedExts  map[string]bool    // 允许的扩展名
-	AllowedMimes map[string]bool    // 允许的MIME类型
+	MaxSize      int64           // 最大文件大小（字节）
+	AllowedExts  map[string]bool // 允许的扩展名
+	AllowedMimes map[string]bool // 允许的MIME类型
 }
 
 // 默认验证规则
@@ -56,12 +56,12 @@ var (
 	DocumentValidation = &FileValidation{
 		MaxSize: 10 * 1024 * 1024,
 		AllowedExts: map[string]bool{
-			".pdf":   true,
-			".doc":   true,
+			".pdf":  true,
+			".doc":  true,
 			".docx": true,
-			".xls":   true,
+			".xls":  true,
 			".xlsx": true,
-			".txt":   true,
+			".txt":  true,
 		},
 	}
 )
@@ -129,15 +129,15 @@ func (s *FileService) UploadFile(ctx context.Context, file *multipart.FileHeader
 
 	// 10. 创建数据库记录
 	sysFile := &system.SysFile{
-		FileName:    file.Filename,
-		FileSize:    file.Size,
-		FileType:    file.Header.Get("Content-Type"),
-		Extension:   ext,
-		StoragePath: filepath.Join(category, filename),
-		FileHash:    fileHash,
-		UploaderID:  userID,
+		FileName:     file.Filename,
+		FileSize:     file.Size,
+		FileType:     file.Header.Get("Content-Type"),
+		Extension:    ext,
+		StoragePath:  filepath.Join(category, filename),
+		FileHash:     fileHash,
+		UploaderID:   userID,
 		BusinessType: category,
-		IsDeleted:   false,
+		IsDeleted:    false,
 	}
 
 	if err := s.db.WithContext(ctx).Create(sysFile).Error; err != nil {

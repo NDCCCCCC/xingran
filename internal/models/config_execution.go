@@ -60,26 +60,26 @@ func (d DeviceIDList) Value() (driver.Value, error) {
 
 // ConfigExecution 配置执行记录模型
 type ConfigExecution struct {
-	ID               string            `gorm:"type:uuid;primary_key" json:"id"`
-	ExecutionName    string            `gorm:"size:200;not null" json:"executionName"`
-	ExecutionType    ExecutionType     `gorm:"size:50;not null" json:"executionType"`
-	TemplateID       *string           `gorm:"type:uuid" json:"templateId,omitempty"`
-	DeviceIDs        DeviceIDList      `gorm:"type:jsonb;not null" json:"deviceIds"`
-	Status           ExecutionStatus   `gorm:"default:0" json:"status"`
-	TotalDevices     int               `gorm:"default:0" json:"totalDevices"`
-	SuccessCount     int               `gorm:"default:0" json:"successCount"`
-	FailureCount     int               `gorm:"default:0" json:"failureCount"`
-	CommandContent   string            `gorm:"type:text" json:"commandContent,omitempty"`
+	ID                string            `gorm:"type:uuid;primary_key" json:"id"`
+	ExecutionName     string            `gorm:"size:200;not null" json:"executionName"`
+	ExecutionType     ExecutionType     `gorm:"size:50;not null" json:"executionType"`
+	TemplateID        *string           `gorm:"type:uuid" json:"templateId,omitempty"`
+	DeviceIDs         DeviceIDList      `gorm:"type:jsonb;not null" json:"deviceIds"`
+	Status            ExecutionStatus   `gorm:"default:0" json:"status"`
+	TotalDevices      int               `gorm:"default:0" json:"totalDevices"`
+	SuccessCount      int               `gorm:"default:0" json:"successCount"`
+	FailureCount      int               `gorm:"default:0" json:"failureCount"`
+	CommandContent    string            `gorm:"type:text" json:"commandContent,omitempty"`
 	ExecutionStrategy ExecutionStrategy `gorm:"size:50;default:parallel" json:"executionStrategy"`
-	Concurrency      int               `gorm:"default:10" json:"concurrency"`
-	Timeout          int               `gorm:"default:300" json:"timeout"`
-	StartedAt        *Time             `json:"startedAt,omitempty"`
-	CompletedAt      *Time             `json:"completedAt,omitempty"`
-	ErrorMessage     string            `gorm:"type:text" json:"errorMessage,omitempty"`
-	CreatedBy        string            `gorm:"size:64" json:"createdBy"`
-	CreatedAt        Time              `json:"createdAt"`
-	UpdatedAt        Time              `json:"updatedAt"`
-	DeletedAt        *Time             `gorm:"index" json:"deletedAt,omitempty"`
+	Concurrency       int               `gorm:"default:10" json:"concurrency"`
+	Timeout           int               `gorm:"default:300" json:"timeout"`
+	StartedAt         *Time             `json:"startedAt,omitempty"`
+	CompletedAt       *Time             `json:"completedAt,omitempty"`
+	ErrorMessage      string            `gorm:"type:text" json:"errorMessage,omitempty"`
+	CreatedBy         string            `gorm:"size:64" json:"createdBy"`
+	CreatedAt         Time              `json:"createdAt"`
+	UpdatedAt         Time              `json:"updatedAt"`
+	DeletedAt         *Time             `gorm:"index" json:"deletedAt,omitempty"`
 }
 
 // TableName 设置表名
@@ -89,20 +89,20 @@ func (ConfigExecution) TableName() string {
 
 // ConfigExecutionDetail 配置执行明细模型
 type ConfigExecutionDetail struct {
-	ID              string           `gorm:"type:uuid;primary_key" json:"id"`
-	ExecutionID     string           `gorm:"type:uuid;not null" json:"executionId"`
-	DeviceID        string           `gorm:"type:uuid;not null" json:"deviceId"`
-	DeviceName      string           `gorm:"size:100" json:"deviceName,omitempty"`
-	IPAddress       string           `gorm:"size:45" json:"ipAddress,omitempty"`
-	Status          ExecutionStatus  `gorm:"default:0" json:"status"`
-	CommandSent     string           `gorm:"type:text" json:"commandSent,omitempty"`
-	OutputReceived  string           `gorm:"type:text" json:"outputReceived,omitempty"`
-	ErrorMessage    string           `gorm:"type:text" json:"errorMessage,omitempty"`
-	StartedAt       *Time            `json:"startedAt,omitempty"`
-	CompletedAt     *Time            `json:"completedAt,omitempty"`
-	Duration        int              `json:"duration,omitempty"` // 执行时长（毫秒）
-	CreatedAt       Time             `json:"createdAt"`
-	UpdatedAt       Time             `json:"updatedAt"`
+	ID             string          `gorm:"type:uuid;primary_key" json:"id"`
+	ExecutionID    string          `gorm:"type:uuid;not null" json:"executionId"`
+	DeviceID       string          `gorm:"type:uuid;not null" json:"deviceId"`
+	DeviceName     string          `gorm:"size:100" json:"deviceName,omitempty"`
+	IPAddress      string          `gorm:"size:45" json:"ipAddress,omitempty"`
+	Status         ExecutionStatus `gorm:"default:0" json:"status"`
+	CommandSent    string          `gorm:"type:text" json:"commandSent,omitempty"`
+	OutputReceived string          `gorm:"type:text" json:"outputReceived,omitempty"`
+	ErrorMessage   string          `gorm:"type:text" json:"errorMessage,omitempty"`
+	StartedAt      *Time           `json:"startedAt,omitempty"`
+	CompletedAt    *Time           `json:"completedAt,omitempty"`
+	Duration       int             `json:"duration,omitempty"` // 执行时长（毫秒）
+	CreatedAt      Time            `json:"createdAt"`
+	UpdatedAt      Time            `json:"updatedAt"`
 }
 
 // TableName 设置表名

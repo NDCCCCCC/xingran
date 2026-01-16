@@ -23,34 +23,34 @@ type ServerInfoRequest struct {
 
 // SystemMetricsRequest 系统指标请求
 type SystemMetricsRequest struct {
-	ServerID  string    `json:"serverId,omitempty"`
-	StartTime *string   `json:"startTime,omitempty"`
-	EndTime   *string   `json:"endTime,omitempty"`
-	Current   int       `json:"current"`
-	PageSize  int       `json:"pageSize"`
+	ServerID  string  `json:"serverId,omitempty"`
+	StartTime *string `json:"startTime,omitempty"`
+	EndTime   *string `json:"endTime,omitempty"`
+	Current   int     `json:"current"`
+	PageSize  int     `json:"pageSize"`
 }
 
 // OperLogRequest 操作日志请求
 type OperLogRequest struct {
-	Title       string `json:"title,omitempty"`
-	BusinessType *int  `json:"businessType,omitempty"`
-	Status      *int   `json:"status,omitempty"`
-	OperName    string `json:"operName,omitempty"`
-	StartTime   *string `json:"startTime,omitempty"`
-	EndTime     *string `json:"endTime,omitempty"`
-	Current     int    `json:"current"`
-	PageSize    int    `json:"pageSize"`
+	Title        string  `json:"title,omitempty"`
+	BusinessType *int    `json:"businessType,omitempty"`
+	Status       *int    `json:"status,omitempty"`
+	OperName     string  `json:"operName,omitempty"`
+	StartTime    *string `json:"startTime,omitempty"`
+	EndTime      *string `json:"endTime,omitempty"`
+	Current      int     `json:"current"`
+	PageSize     int     `json:"pageSize"`
 }
 
 // LoginLogRequest 登录日志请求
 type LoginLogRequest struct {
-	UserName string `json:"userName,omitempty"`
-	IPAddr   string `json:"ipAddr,omitempty"`
-	Status   *int   `json:"status,omitempty"`
+	UserName  string  `json:"userName,omitempty"`
+	IPAddr    string  `json:"ipAddr,omitempty"`
+	Status    *int    `json:"status,omitempty"`
 	StartTime *string `json:"startTime,omitempty"`
 	EndTime   *string `json:"endTime,omitempty"`
-	Current  int    `json:"current"`
-	PageSize int    `json:"pageSize"`
+	Current   int     `json:"current"`
+	PageSize  int     `json:"pageSize"`
 }
 
 // getServerInfo 获取服务器信息
@@ -90,14 +90,14 @@ func getServerInfo(core *core.Core) gin.HandlerFunc {
 			if cacheErr == nil && info != nil {
 				// 将缓存信息转换为 ServerInfo 结构
 				currentServer = &models.ServerInfo{
-					HostName:     info["hostname"].(string),
-					OS:           info["os"].(string),
-					Arch:         info["arch"].(string),
-					CPUCount:     int(info["cpu_count"].(float64)),
-					TotalMemory:  uint64(info["total_memory"].(float64)),
-					DiskTotal:    uint64(info["disk_total"].(float64)),
+					HostName:      info["hostname"].(string),
+					OS:            info["os"].(string),
+					Arch:          info["arch"].(string),
+					CPUCount:      int(info["cpu_count"].(float64)),
+					TotalMemory:   uint64(info["total_memory"].(float64)),
+					DiskTotal:     uint64(info["disk_total"].(float64)),
 					DiskAvailable: uint64(info["disk_available"].(float64)),
-					Status:       0,
+					Status:        0,
 				}
 				// 设置可用内存（如果有的话）
 				if availMem, ok := info["available_memory"].(float64); ok {
@@ -202,14 +202,14 @@ func getCurrentServerMetrics(core *core.Core) gin.HandlerFunc {
 func saveSystemMetrics(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req struct {
-			ServerID string  `json:"serverId"`
-			CPUUsage float64 `json:"cpuUsage"`
-			MemoryUsage float64 `json:"memoryUsage"`
-			DiskUsage float64 `json:"diskUsage"`
-			NetworkRx uint64 `json:"networkRx"`
-			NetworkTx uint64 `json:"networkTx"`
-			ProcessCount int `json:"processCount"`
-			LoadAverage float64 `json:"loadAverage"`
+			ServerID     string  `json:"serverId"`
+			CPUUsage     float64 `json:"cpuUsage"`
+			MemoryUsage  float64 `json:"memoryUsage"`
+			DiskUsage    float64 `json:"diskUsage"`
+			NetworkRx    uint64  `json:"networkRx"`
+			NetworkTx    uint64  `json:"networkTx"`
+			ProcessCount int     `json:"processCount"`
+			LoadAverage  float64 `json:"loadAverage"`
 		}
 
 		if err := c.ShouldBindJSON(&req); err != nil {
@@ -361,7 +361,6 @@ func getOperLogs(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		
 		response.Page(c, logs, total, req.Current, req.PageSize)
 	}
 }
@@ -426,7 +425,6 @@ func getLoginLogs(core *core.Core) gin.HandlerFunc {
 			response.Error(c, response.ErrServerError, "查询登录日志失败")
 			return
 		}
-
 
 		response.Page(c, logs, total, req.Current, req.PageSize)
 	}
@@ -522,11 +520,11 @@ func getCurrentServerInfo() (*models.ServerInfo, error) {
 		OS:              os,
 		Arch:            arch,
 		CPUCount:        runtime.NumCPU(),
-		TotalMemory:     metrics.TotalMemory,   // 总内存
-		AvailableMemory: availableMemory,       // 可用内存
-		DiskTotal:       totalDiskSize,         // 总磁盘容量
-		DiskAvailable:   availableDiskSize,     // 可用磁盘容量
-		Status:          0, // 正常状态
+		TotalMemory:     metrics.TotalMemory, // 总内存
+		AvailableMemory: availableMemory,     // 可用内存
+		DiskTotal:       totalDiskSize,       // 总磁盘容量
+		DiskAvailable:   availableDiskSize,   // 可用磁盘容量
+		Status:          0,                   // 正常状态
 		LastActiveAt:    &metrics.Timestamp,
 	}
 

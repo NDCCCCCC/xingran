@@ -10,19 +10,19 @@ import (
 
 // TemplateExecutionRequest 模板执行请求
 type TemplateExecutionRequest struct {
-	ExecutionName    string                 `json:"executionName" binding:"required,min=2,max=200"`
-	TemplateID       string                 `json:"templateId" binding:"required"`
-	DeviceIDs        []string               `json:"deviceIds" binding:"required,min=1"`
-	TemplateVariables map[string]string     `json:"templateVariables"`
+	ExecutionName     string                   `json:"executionName" binding:"required,min=2,max=200"`
+	TemplateID        string                   `json:"templateId" binding:"required"`
+	DeviceIDs         []string                 `json:"deviceIds" binding:"required,min=1"`
+	TemplateVariables map[string]string        `json:"templateVariables"`
 	ExecutionStrategy models.ExecutionStrategy `json:"executionStrategy" binding:"required,oneof=serial parallel"`
-	Concurrency       int                    `json:"concurrency" binding:"min=1,max=50"`
-	Timeout           int                    `json:"timeout" binding:"min=1,max=3600"`
+	Concurrency       int                      `json:"concurrency" binding:"min=1,max=50"`
+	Timeout           int                      `json:"timeout" binding:"min=1,max=3600"`
 }
 
 // ExecutionListRequest 执行列表请求
 type ExecutionListRequest struct {
-	Current  int    `json:"current" binding:"min=1"`
-	PageSize int    `json:"pageSize" binding:"min=1,max=100"`
+	Current  int `json:"current" binding:"min=1"`
+	PageSize int `json:"pageSize" binding:"min=1,max=100"`
 }
 
 // listConfigExecutions 查询配置执行列表
@@ -43,7 +43,7 @@ func listConfigExecutions(core *core.Core) gin.HandlerFunc {
 			pageSize = 10
 		}
 
-			// 使用核心设备管理器（新架构）
+		// 使用核心设备管理器（新架构）
 		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
 		// defer manager.Close()
 
@@ -84,7 +84,7 @@ func executeTemplateByDevices(core *core.Core) gin.HandlerFunc {
 			req.Timeout = 300
 		}
 
-			// 使用核心设备管理器（新架构）
+		// 使用核心设备管理器（新架构）
 		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
 		// defer manager.Close()
 
@@ -117,7 +117,7 @@ func getConfigExecution(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-			// 使用核心设备管理器（新架构）
+		// 使用核心设备管理器（新架构）
 		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
 		// defer manager.Close()
 
@@ -141,7 +141,7 @@ func cancelConfigExecution(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-			// 使用核心设备管理器（新架构）
+		// 使用核心设备管理器（新架构）
 		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
 		// defer manager.Close()
 
@@ -164,7 +164,7 @@ func deleteConfigExecution(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-			// 使用核心设备管理器（新架构）
+		// 使用核心设备管理器（新架构）
 		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
 		// defer manager.Close()
 
@@ -192,7 +192,7 @@ func batchDeleteConfigExecutions(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-			// 使用核心设备管理器（新架构）
+		// 使用核心设备管理器（新架构）
 		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
 		// defer manager.Close()
 

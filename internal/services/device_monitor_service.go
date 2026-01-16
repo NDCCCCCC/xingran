@@ -8,26 +8,26 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/sync/semaphore"
-	"gorm.io/gorm"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/portcollection"
+	"golang.org/x/sync/semaphore"
+	"gorm.io/gorm"
 )
 
 // DeviceMonitorService 设备监控服务
 // 用于定时检查设备状态、更新设备信息、采集端口状态
 type DeviceMonitorService struct {
-	db                   *gorm.DB
-	deviceManager        *device.Manager
-	deviceExecutor       *device.DeviceExecutor
-	portCollectionSvc    *portcollection.PortCollectionService
-	macCollectionSvc     *MACCollectionService
-	configBackupSvc      *ConfigBackupService
-	maxConcurrent        int
-	timeout              time.Duration
-	useDynamicConfig     bool // 是否使用动态配置（从数据库读取）
+	db                *gorm.DB
+	deviceManager     *device.Manager
+	deviceExecutor    *device.DeviceExecutor
+	portCollectionSvc *portcollection.PortCollectionService
+	macCollectionSvc  *MACCollectionService
+	configBackupSvc   *ConfigBackupService
+	maxConcurrent     int
+	timeout           time.Duration
+	useDynamicConfig  bool // 是否使用动态配置（从数据库读取）
 }
 
 // DeviceMonitorConfig 监控服务配置

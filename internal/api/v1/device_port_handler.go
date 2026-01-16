@@ -10,14 +10,14 @@ import (
 
 // PortStatusListRequest 端口状态列表请求
 type PortStatusListRequest struct {
-	Current               int    `json:"current" binding:"min=1"`
-	PageSize              int    `json:"pageSize" binding:"min=1,max=1000"`
-	DeviceID              string `json:"deviceId,omitempty"`
-	InterfaceName         string `json:"interfaceName,omitempty"`
-	AdminStatus           string `json:"adminStatus,omitempty"`
-	OperStatus            string `json:"operStatus,omitempty"`
-	Dot1xEnabled          *bool  `json:"dot1xEnabled,omitempty"`
-	PortSecurityEnabled   *bool  `json:"portSecurityEnabled,omitempty"`
+	Current             int    `json:"current" binding:"min=1"`
+	PageSize            int    `json:"pageSize" binding:"min=1,max=1000"`
+	DeviceID            string `json:"deviceId,omitempty"`
+	InterfaceName       string `json:"interfaceName,omitempty"`
+	AdminStatus         string `json:"adminStatus,omitempty"`
+	OperStatus          string `json:"operStatus,omitempty"`
+	Dot1xEnabled        *bool  `json:"dot1xEnabled,omitempty"`
+	PortSecurityEnabled *bool  `json:"portSecurityEnabled,omitempty"`
 }
 
 // PortCollectionRequest 端口采集请求

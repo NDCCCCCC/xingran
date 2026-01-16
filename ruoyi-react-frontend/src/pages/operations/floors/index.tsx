@@ -75,7 +75,14 @@ const FloorManagement: FC = () => {
     } catch (error) { handleApiError(error, '加载楼宇选项', false); }
   }, []);
 
-  useEffect(() => { loadFloors(); loadStatistics(); loadBuildingOptions(); }, []);
+  useEffect(() => {
+    // 使用 setTimeout 避免同步 setState
+    setTimeout(() => {
+      loadFloors();
+      loadStatistics();
+      loadBuildingOptions();
+    }, 0);
+  }, []);
 
   const handleSave = async () => {
     try {
@@ -110,6 +117,8 @@ const FloorManagement: FC = () => {
   };
 
   const handleImportSuccess = () => { loadFloors(); loadStatistics(); setImportVisible(false); };
+
+  const handleRefresh = () => { loadFloors(); loadStatistics(); };
 
   const columns: ColumnsType<Floor> = [
     { title: '楼层名称', dataIndex: 'name', key: 'name', width: 150 },
@@ -204,7 +213,7 @@ const FloorManagement: FC = () => {
               <Select placeholder="请选择状态" allowClear style={{ width: 120 }}><Option value={0}>正常</Option><Option value={1}>停用</Option></Select>
             </Form.Item>
             <Form.Item>
-              <Space><Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>搜索</Button><Button onClick={handleReset}>重置</Button><Button icon={<ReloadOutlined />} onClick={() => { loadFloors(); loadStatistics(); }}>刷新</Button></Space>
+              <Space><Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>搜索</Button><Button onClick={handleReset}>重置</Button><Button icon={<ReloadOutlined />} onClick={handleRefresh}>刷新</Button></Space>
             </Form.Item>
           </Form>
           <Space>

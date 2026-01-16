@@ -37,7 +37,11 @@ const AddressInput: React.FC<AddressInputProps> = ({ value, onChange, disabled }
 
   useEffect(() => {
     if (value) {
-      setLocalValue(value);
+      // 使用 setTimeout 避免同步 setState
+      const timer = setTimeout(() => {
+        setLocalValue(value);
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [value]);
 

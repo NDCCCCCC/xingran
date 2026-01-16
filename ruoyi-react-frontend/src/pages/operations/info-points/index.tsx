@@ -210,7 +210,16 @@ const InfoPointManagement: FC = () => {
     } catch (error) { handleApiError(error, '加载设备端口列表', false); }
   }, []);
 
-  useEffect(() => { loadInfoPoints(); loadStatistics(); loadWorkstationOptions(); loadInfoPointTypeDict(); loadNetworkDevices(); }, []);
+  useEffect(() => {
+    // 使用 setTimeout 避免同步 setState
+    setTimeout(() => {
+      loadInfoPoints();
+      loadStatistics();
+      loadWorkstationOptions();
+      loadInfoPointTypeDict();
+      loadNetworkDevices();
+    }, 0);
+  }, []);
 
   const handleSave = async () => {
     try {

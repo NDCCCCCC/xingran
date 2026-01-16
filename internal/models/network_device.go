@@ -25,9 +25,9 @@ const (
 type DeviceStatus int
 
 const (
-	DeviceStatusOnline   DeviceStatus = 0 // 在线
-	DeviceStatusOffline  DeviceStatus = 1 // 离线
-	DeviceStatusUnknown  DeviceStatus = 2 // 未知
+	DeviceStatusOnline  DeviceStatus = 0 // 在线
+	DeviceStatusOffline DeviceStatus = 1 // 离线
+	DeviceStatusUnknown DeviceStatus = 2 // 未知
 )
 
 // NetworkDevice 网络设备模型

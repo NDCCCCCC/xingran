@@ -146,7 +146,12 @@ func createConfig(core *core.Core) gin.HandlerFunc {
 			ConfigValue: req.ConfigValue,
 			ConfigType:  req.ConfigType,
 			IsSystem:    models.ConfigIsSystem(req.IsSystem),
-			Remark:      func() string { if req.Remark != nil { return *req.Remark }; return "" }(),
+			Remark: func() string {
+				if req.Remark != nil {
+					return *req.Remark
+				}
+				return ""
+			}(),
 		}
 
 		if err := core.DB.GetDB().Create(&config).Error; err != nil {

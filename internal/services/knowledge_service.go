@@ -37,13 +37,13 @@ type KnowledgeArticleListRequest struct {
 
 // KnowledgeArticleCreateRequest 创建知识库文章请求
 type KnowledgeArticleCreateRequest struct {
-	Title      string `json:"title" binding:"required,max=200"`
-	Content    string `json:"content" binding:"required"`
-	Summary    string `json:"summary"`
-	CategoryID string `json:"categoryId" binding:"required,uuid"`
-	Status     int    `json:"status"`
-	TagIDs     []string `json:"tagIds"`
-	SourceWorkOrderID *string `json:"sourceWorkOrderId"` // 来源工单ID（用于工单转知识库）
+	Title             string   `json:"title" binding:"required,max=200"`
+	Content           string   `json:"content" binding:"required"`
+	Summary           string   `json:"summary"`
+	CategoryID        string   `json:"categoryId" binding:"required,uuid"`
+	Status            int      `json:"status"`
+	TagIDs            []string `json:"tagIds"`
+	SourceWorkOrderID *string  `json:"sourceWorkOrderId"` // 来源工单ID（用于工单转知识库）
 }
 
 // KnowledgeArticleUpdateRequest 更新知识库文章请求
@@ -95,8 +95,8 @@ type SearchKnowledgeRequest struct {
 	Keyword    string `json:"keyword"`
 	CategoryID string `json:"categoryId"`
 	TagID      string `json:"tagId"`
-	PageSize   int    `json:"pageSize"`   // 每页大小，默认100
-	PageNum    int    `json:"pageNum"`    // 页码，从0开始
+	PageSize   int    `json:"pageSize"` // 每页大小，默认100
+	PageNum    int    `json:"pageNum"`  // 页码，从0开始
 }
 
 // ==================== 知识库文章方法 ====================
@@ -394,12 +394,12 @@ func (s *KnowledgeService) ConvertWorkOrderToArticle(ctx context.Context, workOr
 
 	// 创建知识库文章
 	createReq := &KnowledgeArticleCreateRequest{
-		Title:            req.Title,
-		Content:          req.Content,
-		Summary:          req.Summary,
-		CategoryID:       req.CategoryID,
-		Status:           req.Status,
-		TagIDs:           req.TagIDs,
+		Title:             req.Title,
+		Content:           req.Content,
+		Summary:           req.Summary,
+		CategoryID:        req.CategoryID,
+		Status:            req.Status,
+		TagIDs:            req.TagIDs,
 		SourceWorkOrderID: &workOrderID,
 	}
 

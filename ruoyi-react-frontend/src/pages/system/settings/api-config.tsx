@@ -41,7 +41,6 @@ import {
 
 const { Option } = Select;
 const { TextArea } = Input;
-const { TabPane } = Tabs;
 
 const APIConfigPage: FC = () => {
   // 列表相关状态
@@ -343,72 +342,88 @@ const APIConfigPage: FC = () => {
             </Radio.Group>
           </Form.Item>
 
-          <Tabs defaultActiveKey="headers">
-            <TabPane tab="请求头" key="headers">
-              <Form.Item name="headers" label="请求头配置">
-                <TextArea
-                  rows={4}
-                  placeholder='JSON格式，如：{"Content-Type": "application/json"}'
-                />
-              </Form.Item>
-            </TabPane>
-            <TabPane tab="模板内容" key="template">
-              <Form.Item name="templateBody" label="模板内容">
-                <TextArea
-                  rows={6}
-                  placeholder='支持变量：{{title}}、{{content}}、{{recipients}}等
+          <Tabs defaultActiveKey="headers"
+            items={[
+              {
+                key: 'headers',
+                label: '请求头',
+                children: (
+                  <Form.Item name="headers" label="请求头配置">
+                    <TextArea
+                      rows={4}
+                      placeholder='JSON格式，如：{"Content-Type": "application/json"}'
+                    />
+                  </Form.Item>
+                )
+              },
+              {
+                key: 'template',
+                label: '模板内容',
+                children: (
+                  <Form.Item name="templateBody" label="模板内容">
+                    <TextArea
+                      rows={6}
+                      placeholder='支持变量：{{title}}、{{content}}、{{recipients}}等
 示例：{"title": "{{title}}", "content": "{{content}}"}'
-                />
-              </Form.Item>
-            </TabPane>
-            <TabPane tab="认证配置" key="auth">
-              <Form.Item name="authType" label="认证方式" rules={[{ required: true }]}>
-                <Select>
-                  <Option value={AuthTypes.NONE}>无需认证</Option>
-                  <Option value={AuthTypes.BASIC}>Basic Auth</Option>
-                  <Option value={AuthTypes.BEARER}>Bearer Token</Option>
-                  <Option value={AuthTypes.APIKEY}>API Key</Option>
-                </Select>
-              </Form.Item>
-              <Form.Item noStyle shouldUpdate={(prev, curr) => prev.authType !== curr.authType}>
-                {({ getFieldValue }) => {
-                  const authType = getFieldValue('authType');
-                  if (authType === AuthTypes.BASIC) {
-                    return (
-                      <>
-                        <Form.Item name={['authConfig', 'username']} label="用户名">
-                          <Input placeholder="请输入用户名" />
-                        </Form.Item>
-                        <Form.Item name={['authConfig', 'password']} label="密码">
-                          <Input.Password placeholder="请输入密码" />
-                        </Form.Item>
-                      </>
-                    );
-                  }
-                  if (authType === AuthTypes.BEARER) {
-                    return (
-                      <Form.Item name={['authConfig', 'token']} label="Token">
-                        <Input placeholder="请输入Bearer Token" />
-                      </Form.Item>
-                    );
-                  }
-                  if (authType === AuthTypes.APIKEY) {
-                    return (
-                      <>
-                        <Form.Item name={['authConfig', 'key']} label="Key名称">
-                          <Input placeholder="如：X-API-Key" />
-                        </Form.Item>
-                        <Form.Item name={['authConfig', 'value']} label="Key值">
-                          <Input placeholder="请输入API Key的值" />
-                        </Form.Item>
-                      </>
-                    );
-                  }
-                  return null;
-                }}
-              </Form.Item>
-            </TabPane>
-          </Tabs>
+                    />
+                  </Form.Item>
+                )
+              },
+              {
+                key: 'auth',
+                label: '认证配置',
+                children: (
+                  <>
+                    <Form.Item name="authType" label="认证方式" rules={[{ required: true }]}>
+                      <Select>
+                        <Option value={AuthTypes.NONE}>无需认证</Option>
+                        <Option value={AuthTypes.BASIC}>Basic Auth</Option>
+                        <Option value={AuthTypes.BEARER}>Bearer Token</Option>
+                        <Option value={AuthTypes.APIKEY}>API Key</Option>
+                      </Select>
+                    </Form.Item>
+                    <Form.Item noStyle shouldUpdate={(prev, curr) => prev.authType !== curr.authType}>
+                      {({ getFieldValue }) => {
+                        const authType = getFieldValue('authType');
+                        if (authType === AuthTypes.BASIC) {
+                          return (
+                            <>
+                              <Form.Item name={['authConfig', 'username']} label="用户名">
+                                <Input placeholder="请输入用户名" />
+                              </Form.Item>
+                              <Form.Item name={['authConfig', 'password']} label="密码">
+                                <Input.Password placeholder="请输入密码" />
+                              </Form.Item>
+                            </>
+                          );
+                        }
+                        if (authType === AuthTypes.BEARER) {
+                          return (
+                            <Form.Item name={['authConfig', 'token']} label="Token">
+                              <Input placeholder="请输入Bearer Token" />
+                            </Form.Item>
+                          );
+                        }
+                        if (authType === AuthTypes.APIKEY) {
+                          return (
+                            <>
+                              <Form.Item name={['authConfig', 'key']} label="Key名称">
+                                <Input placeholder="如：X-API-Key" />
+                              </Form.Item>
+                              <Form.Item name={['authConfig', 'value']} label="Key值">
+                                <Input placeholder="请输入API Key的值" />
+                              </Form.Item>
+                            </>
+                          );
+                        }
+                        return null;
+                      }}
+                    </Form.Item>
+                  </>
+                )
+              }
+            ]}
+          />
 
           <Form.Item name="retryCount" label="重试次数" initialValue={3}>
             <InputNumber min={0} max={10} className="w-full" />

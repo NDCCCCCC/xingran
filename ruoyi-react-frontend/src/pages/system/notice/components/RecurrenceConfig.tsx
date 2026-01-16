@@ -1,4 +1,4 @@
-import { Row, Col, Select, DatePicker, TimePicker, Input } from 'antd';
+import { Row, Col, Select, DatePicker, TimePicker, Input, Form } from 'antd';
 import type { RecurrenceType } from '@/types/notice';
 
 const { Option } = Select;
@@ -101,6 +101,3 @@ export const RecurrenceConfig: React.FC<RecurrenceConfigProps> = ({
     </>
   );
 };
-
-// Import Form at the top level
-import { Form } from 'antd';

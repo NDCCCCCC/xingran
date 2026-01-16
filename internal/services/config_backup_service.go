@@ -13,9 +13,9 @@ import (
 	"sync"
 	"time"
 
-	"gorm.io/gorm"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"gorm.io/gorm"
 )
 
 // ConfigBackupService 配置备份服务
@@ -527,12 +527,12 @@ func (s *ConfigBackupService) RestoreBackup(ctx context.Context, backupID string
 // GetBackupStatistics 获取备份统计信息
 func (s *ConfigBackupService) GetBackupStatistics(ctx context.Context) (map[string]interface{}, error) {
 	var stats struct {
-		TotalBackups    int64
-		AutoBackups     int64
-		ManualBackups   int64
-		DBStorageCount  int64
+		TotalBackups     int64
+		AutoBackups      int64
+		ManualBackups    int64
+		DBStorageCount   int64
 		FileStorageCount int64
-		TotalSize       int64
+		TotalSize        int64
 	}
 
 	s.db.WithContext(ctx).Model(&models.ConfigBackup{}).Count(&stats.TotalBackups)

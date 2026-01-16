@@ -92,16 +92,16 @@ func (s *PeriodicService) GetTemplate(ctx context.Context, id string) (*models.P
 
 // CreateTemplateRequest 创建周期性工单模板请求
 type CreateTemplateRequest struct {
-	TemplateName   string                                `json:"templateName" binding:"required,max=100"`
-	WorkOrderTitle string                                `json:"workOrderTitle" binding:"required,max=200"`
-	Description    string                                `json:"description"`
-	CategoryID     string                                `json:"categoryId" binding:"required,uuid"`
-	Type           models.WorkOrderType                  `json:"type" binding:"required"`
-	Priority       models.WorkOrderPriority              `json:"priority"`
-	CronExpression string                                `json:"cronExpression" binding:"required"`
-	AssignType     models.PeriodicWorkOrderAssignType    `json:"assignType"`
-	AssignTargetID *string                               `json:"assignTargetId"`
-	NotifyAssignee bool                                  `json:"notifyAssignee"`
+	TemplateName   string                             `json:"templateName" binding:"required,max=100"`
+	WorkOrderTitle string                             `json:"workOrderTitle" binding:"required,max=200"`
+	Description    string                             `json:"description"`
+	CategoryID     string                             `json:"categoryId" binding:"required,uuid"`
+	Type           models.WorkOrderType               `json:"type" binding:"required"`
+	Priority       models.WorkOrderPriority           `json:"priority"`
+	CronExpression string                             `json:"cronExpression" binding:"required"`
+	AssignType     models.PeriodicWorkOrderAssignType `json:"assignType"`
+	AssignTargetID *string                            `json:"assignTargetId"`
+	NotifyAssignee bool                               `json:"notifyAssignee"`
 }
 
 // CreateTemplate 创建周期性工单模板
@@ -139,17 +139,17 @@ func (s *PeriodicService) CreateTemplate(ctx context.Context, req *CreateTemplat
 
 // UpdateTemplateRequest 更新周期性工单模板请求
 type UpdateTemplateRequest struct {
-	TemplateName   *string                               `json:"templateName"`
-	WorkOrderTitle *string                               `json:"workOrderTitle"`
-	Description    *string                               `json:"description"`
-	CategoryID     *string                               `json:"categoryId"`
-	Type           *models.WorkOrderType                 `json:"type"`
-	Priority       *models.WorkOrderPriority             `json:"priority"`
-	CronExpression *string                               `json:"cronExpression"`
-	AssignType     *models.PeriodicWorkOrderAssignType   `json:"assignType"`
-	AssignTargetID *string                               `json:"assignTargetId"`
-	IsEnabled      *bool                                 `json:"isEnabled"`
-	NotifyAssignee *bool                                 `json:"notifyAssignee"`
+	TemplateName   *string                             `json:"templateName"`
+	WorkOrderTitle *string                             `json:"workOrderTitle"`
+	Description    *string                             `json:"description"`
+	CategoryID     *string                             `json:"categoryId"`
+	Type           *models.WorkOrderType               `json:"type"`
+	Priority       *models.WorkOrderPriority           `json:"priority"`
+	CronExpression *string                             `json:"cronExpression"`
+	AssignType     *models.PeriodicWorkOrderAssignType `json:"assignType"`
+	AssignTargetID *string                             `json:"assignTargetId"`
+	IsEnabled      *bool                               `json:"isEnabled"`
+	NotifyAssignee *bool                               `json:"notifyAssignee"`
 }
 
 // UpdateTemplate 更新周期性工单模板
@@ -260,7 +260,7 @@ func (s *PeriodicService) EnableTemplate(ctx context.Context, id string, operato
 
 	// 更新模板
 	updates := map[string]interface{}{
-		"is_enabled": true,
+		"is_enabled":  true,
 		"next_run_at": nextRun,
 		"updated_by":  operatorID,
 	}
@@ -373,12 +373,12 @@ func (s *PeriodicService) GenerateWorkOrder(ctx context.Context, templateID stri
 
 	// 记录执行日志
 	execLog := &models.PeriodicWorkOrderLog{
-		ID:         uuid.New().String(),
-		TemplateID: templateID,
+		ID:          uuid.New().String(),
+		TemplateID:  templateID,
 		WorkOrderID: workOrder.ID,
-		ExecutedAt: time.Now(),
-		Status:     "success",
-		Result:     fmt.Sprintf("成功创建工单: %s", workOrder.WorkOrderNo),
+		ExecutedAt:  time.Now(),
+		Status:      "success",
+		Result:      fmt.Sprintf("成功创建工单: %s", workOrder.WorkOrderNo),
 	}
 	s.db.WithContext(ctx).Create(execLog)
 

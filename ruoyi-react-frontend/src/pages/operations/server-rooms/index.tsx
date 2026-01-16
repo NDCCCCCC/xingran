@@ -74,7 +74,14 @@ const ServerRoomManagement: FC = () => {
     } catch (error) { handleApiError(error, '加载楼宇选项', false); }
   }, []);
 
-  useEffect(() => { loadServerRooms(); loadStatistics(); loadBuildingOptions(); }, []);
+  useEffect(() => {
+    // 使用 setTimeout 避免同步 setState
+    setTimeout(() => {
+      loadServerRooms();
+      loadStatistics();
+      loadBuildingOptions();
+    }, 0);
+  }, []);
 
   const handleSave = async () => {
     try {

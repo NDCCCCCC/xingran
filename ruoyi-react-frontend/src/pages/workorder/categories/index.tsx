@@ -69,7 +69,8 @@ const WorkOrderCategoryPage: FC = () => {
   };
 
   useEffect(() => {
-    fetchList();
+    // 使用 setTimeout 避免同步 setState
+    setTimeout(() => fetchList(), 0);
   }, []);
 
   const handleAdd = (parentId?: string) => {

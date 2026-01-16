@@ -244,12 +244,11 @@ func (s *roomPhotoService) GetPrimaryPhoto(ctx context.Context, roomID string) (
 		First(&photo).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			// 如果没有主图，返回第一张照片
-			err := s.db.WithContext(ctx).
+			if err2 := s.db.WithContext(ctx).
 				Where("room_id = ?", roomID).
 				Order("sort_order ASC").
-				First(&photo).Error
-			if err != nil {
-				return nil, fmt.Errorf("查询主图失败: %w", err)
+				First(&photo).Error; err2 != nil {
+				return nil, fmt.Errorf("查询主图失败: %w", err2)
 			}
 			return &photo, nil
 		}

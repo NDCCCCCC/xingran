@@ -217,9 +217,9 @@ func (s *RoleCacheService) InvalidateRoleCache(ctx context.Context, roleID strin
 func (s *RoleCacheService) InvalidateAllRoleCache(ctx context.Context) error {
 	patterns := []string{
 		"role:all:enabled",         // 角色列表缓存
-		CacheKeyRoleMenus + "*",     // 角色菜单缓存
-		CacheKeyRoleMenuTree + "*",  // 角色菜单树缓存
-		CacheKeyRoleDepts + "*",     // 角色部门缓存
+		CacheKeyRoleMenus + "*",    // 角色菜单缓存
+		CacheKeyRoleMenuTree + "*", // 角色菜单树缓存
+		CacheKeyRoleDepts + "*",    // 角色部门缓存
 	}
 
 	for _, pattern := range patterns {

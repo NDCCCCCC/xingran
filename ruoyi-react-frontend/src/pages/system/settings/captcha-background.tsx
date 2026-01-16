@@ -253,9 +253,9 @@ const CaptchaBackgroundSettingsPage: FC = () => {
         <Image
           width={50}
           height={30}
-          src={record.filePath}
+          src={record.previewUrl}
           preview={{
-            src: record.filePath,
+            src: record.previewUrl,
           }}
           style={{ objectFit: 'cover', cursor: 'pointer' }}
         />

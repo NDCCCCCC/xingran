@@ -62,12 +62,12 @@ type CacheStrategy interface {
 
 // CacheConfig 缓存配置
 type CacheConfig struct {
-	Type     string        `yaml:"type"`     // redis, memory
-	Host     string        `yaml:"host"`
-	Port     int           `yaml:"port"`
-	Password string        `yaml:"password"`
-	DB       int           `yaml:"db"`
-	PoolSize int           `yaml:"pool_size"`
+	Type     string `yaml:"type"` // redis, memory
+	Host     string `yaml:"host"`
+	Port     int    `yaml:"port"`
+	Password string `yaml:"password"`
+	DB       int    `yaml:"db"`
+	PoolSize int    `yaml:"pool_size"`
 
 	// 内存缓存配置
 	MaxSize     int           `yaml:"max_size"`

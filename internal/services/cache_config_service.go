@@ -15,38 +15,38 @@ import (
 // 缓存配置键常量
 const (
 	// 部门缓存时间配置
-	CacheConfigDeptTree      = "cache.dept.tree"       // 部门树缓存时间（分钟）
-	CacheConfigDeptList      = "cache.dept.list"       // 部门列表缓存时间（分钟）
-	CacheConfigDeptSelect    = "cache.dept.select"     // 部门选择器缓存时间（分钟）
+	CacheConfigDeptTree   = "cache.dept.tree"   // 部门树缓存时间（分钟）
+	CacheConfigDeptList   = "cache.dept.list"   // 部门列表缓存时间（分钟）
+	CacheConfigDeptSelect = "cache.dept.select" // 部门选择器缓存时间（分钟）
 
 	// 角色缓存时间配置
-	CacheConfigRoleMenus     = "cache.role.menus"      // 角色菜单缓存时间（分钟）
-	CacheConfigRoleDepts     = "cache.role.depts"      // 角色部门缓存时间（分钟）
+	CacheConfigRoleMenus = "cache.role.menus" // 角色菜单缓存时间（分钟）
+	CacheConfigRoleDepts = "cache.role.depts" // 角色部门缓存时间（分钟）
 
 	// 字典缓存时间配置
-	CacheConfigDictType      = "cache.dict.type"       // 字典类型缓存时间（分钟）
-	CacheConfigDictData      = "cache.dict.data"       // 字典数据缓存时间（分钟）
+	CacheConfigDictType = "cache.dict.type" // 字典类型缓存时间（分钟）
+	CacheConfigDictData = "cache.dict.data" // 字典数据缓存时间（分钟）
 
 	// 用户缓存时间配置
-	CacheConfigUserList      = "cache.user.list"       // 用户列表缓存时间（分钟）
-	CacheConfigUserByID      = "cache.user.byid"       // 用户详情缓存时间（分钟）
+	CacheConfigUserList = "cache.user.list" // 用户列表缓存时间（分钟）
+	CacheConfigUserByID = "cache.user.byid" // 用户详情缓存时间（分钟）
 
 	// 菜单缓存时间配置
-	CacheConfigMenuTree      = "cache.menu.tree"       // 菜单树缓存时间（分钟）
-	CacheConfigMenuRouter    = "cache.menu.router"     // 菜单路由缓存时间（分钟）
-	CacheConfigMenuAll       = "cache.menu.all"        // 所有菜单缓存时间（分钟）
+	CacheConfigMenuTree   = "cache.menu.tree"   // 菜单树缓存时间（分钟）
+	CacheConfigMenuRouter = "cache.menu.router" // 菜单路由缓存时间（分钟）
+	CacheConfigMenuAll    = "cache.menu.all"    // 所有菜单缓存时间（分钟）
 
 	// 岗位缓存时间配置
-	CacheConfigPostAll       = "cache.post.all"        // 所有岗位缓存时间（分钟）
-	CacheConfigPostEnabled   = "cache.post.enabled"    // 启用岗位缓存时间（分钟）
+	CacheConfigPostAll     = "cache.post.all"     // 所有岗位缓存时间（分钟）
+	CacheConfigPostEnabled = "cache.post.enabled" // 启用岗位缓存时间（分钟）
 )
 
 // CacheConfigService 缓存配置服务
 // 从数据库读取缓存时间配置，支持动态调整缓存时间
 type CacheConfigService struct {
-	db        *gorm.DB
-	configs   map[string]time.Duration
-	mu        sync.RWMutex
+	db      *gorm.DB
+	configs map[string]time.Duration
+	mu      sync.RWMutex
 }
 
 // NewCacheConfigService 创建缓存配置服务
@@ -340,13 +340,13 @@ func (s *CacheConfigService) GetConfigInfo() map[string]ConfigInfo {
 
 // ConfigInfo 配置信息
 type ConfigInfo struct {
-	Key         string        // 配置键
-	Name        string        // 配置名称
-	Description string        // 配置说明
-	Category    string        // 配置分类
-	Min         int           // 最小值（分钟）
-	Max         int           // 最大值（分钟）
-	Default     int           // 默认值（分钟）
+	Key         string // 配置键
+	Name        string // 配置名称
+	Description string // 配置说明
+	Category    string // 配置分类
+	Min         int    // 最小值（分钟）
+	Max         int    // 最大值（分钟）
+	Default     int    // 默认值（分钟）
 }
 
 // getConfigName 根据配置键获取配置名称

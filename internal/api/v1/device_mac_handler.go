@@ -9,10 +9,10 @@ import (
 
 // MACAddressListRequest MAC地址列表请求
 type MACAddressListRequest struct {
-	Current      int    `json:"current" binding:"min=1"`
-	PageSize     int    `json:"pageSize" binding:"min=1,max=100"`
-	DeviceID     string `json:"deviceId,omitempty"`
-	MACAddress   string `json:"macAddress,omitempty"`
+	Current       int    `json:"current" binding:"min=1"`
+	PageSize      int    `json:"pageSize" binding:"min=1,max=100"`
+	DeviceID      string `json:"deviceId,omitempty"`
+	MACAddress    string `json:"macAddress,omitempty"`
 	InterfaceName string `json:"interfaceName,omitempty"`
 }
 

@@ -25,17 +25,17 @@ type Workstation struct {
 	DeptID          *string           `gorm:"size:64" json:"deptId,omitempty"`
 	DeptName        *string           `gorm:"size:100" json:"deptName,omitempty"`
 	Location        *string           `gorm:"size:200" json:"location,omitempty"`
-	Floor           *string           `gorm:"size:50" json:"floor,omitempty"`          // 旧字段：楼层字符串
-	FloorID         *string           `gorm:"size:64" json:"floorId,omitempty"`       // 新增：楼层ID（关联ops_floors）
-	FloorName       *string           `gorm:"size:100" json:"floorName,omitempty"`    // 新增：楼层名称
+	Floor           *string           `gorm:"size:50" json:"floor,omitempty"`      // 旧字段：楼层字符串
+	FloorID         *string           `gorm:"size:64" json:"floorId,omitempty"`    // 新增：楼层ID（关联ops_floors）
+	FloorName       *string           `gorm:"size:100" json:"floorName,omitempty"` // 新增：楼层名称
 	WorkstationType WorkstationType   `gorm:"default:0" json:"type"`
 	Status          WorkstationStatus `gorm:"default:0" json:"status"`
-	Description     *string           `gorm:"size:500" json:"remark,omitempty"`      // remark 兼容前端
-	UserID          *string           `gorm:"size:64" json:"userId,omitempty"`       // 所属人员ID
-	UserName        *string           `gorm:"size:100" json:"userName,omitempty"`    // 所属人员名称
-	PositionX       *int              `json:"positionX,omitempty"`                   // 平面图X坐标
-	PositionY       *int              `json:"positionY,omitempty"`                   // 平面图Y坐标
-	Rotation        *int              `gorm:"default:0" json:"rotation,omitempty"`    // 平面图旋转角度（度），0-360
+	Description     *string           `gorm:"size:500" json:"remark,omitempty"`    // remark 兼容前端
+	UserID          *string           `gorm:"size:64" json:"userId,omitempty"`     // 所属人员ID
+	UserName        *string           `gorm:"size:100" json:"userName,omitempty"`  // 所属人员名称
+	PositionX       *int              `json:"positionX,omitempty"`                 // 平面图X坐标
+	PositionY       *int              `json:"positionY,omitempty"`                 // 平面图Y坐标
+	Rotation        *int              `gorm:"default:0" json:"rotation,omitempty"` // 平面图旋转角度（度），0-360
 }
 
 // TableName 设置表名

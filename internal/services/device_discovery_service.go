@@ -8,11 +8,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"gorm.io/gorm"
 	"github.com/gosnmp/gosnmp"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	devicepkg "github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	"gorm.io/gorm"
 )
 
 // DeviceDiscoveryService 设备发现服务
@@ -30,8 +30,8 @@ type DiscoveryRequest struct {
 	TaskName        string
 	DiscoveryType   models.DiscoveryType
 	IPRanges        []models.IPRange
-	SNMPCommunity   string                 // 保留兼容性
-	SNMPCommunities  []string               // 多个 SNMP Community（推荐使用）
+	SNMPCommunity   string   // 保留兼容性
+	SNMPCommunities []string // 多个 SNMP Community（推荐使用）
 	SNMPPort        int
 	AutoImport      bool
 	GroupID         *string
@@ -51,19 +51,19 @@ type DiscoveredDevice struct {
 
 // DiscoveryResult 发现结果
 type DiscoveryResult struct {
-	DiscoveryID      string
-	Status           models.DiscoveryStatus
-	TotalIPs         int
-	DiscoveredCount  int
+	DiscoveryID       string
+	Status            models.DiscoveryStatus
+	TotalIPs          int
+	DiscoveredCount   int
 	DiscoveredDevices []*DiscoveredDevice
-	ErrorMessage     string
+	ErrorMessage      string
 }
 
 // DeviceProbeRequest 单设备探测请求
 type DeviceProbeRequest struct {
-	IPAddress    string   `json:"ipAddress" binding:"required,ip"`
-	CredentialID string   `json:"credentialId" binding:"required,uuid"`
-	SNMPPort     int      `json:"snmpPort,omitempty"`
+	IPAddress    string `json:"ipAddress" binding:"required,ip"`
+	CredentialID string `json:"credentialId" binding:"required,uuid"`
+	SNMPPort     int    `json:"snmpPort,omitempty"`
 	// Communities 用户输入的多个 SNMP community 进行尝试
 	// 如果为空，则使用凭证中的 SNMPCommunity
 	Communities []string `json:"communities,omitempty"`
@@ -71,15 +71,15 @@ type DeviceProbeRequest struct {
 
 // DeviceProbeResult 单设备探测结果
 type DeviceProbeResult struct {
-	Success    bool                   `json:"success"`
-	Message    string                 `json:"message"`
-	IPAddress  string                 `json:"ipAddress"`
-	DeviceName string                 `json:"deviceName,omitempty"`
-	DeviceType models.DeviceType      `json:"deviceType,omitempty"`
-	Vendor     models.DeviceVendor    `json:"vendor,omitempty"`
-	Model      string                 `json:"model,omitempty"`
-	SysDescr   string                 `json:"sysDescr,omitempty"`
-	SysName    string                 `json:"sysName,omitempty"`
+	Success    bool                `json:"success"`
+	Message    string              `json:"message"`
+	IPAddress  string              `json:"ipAddress"`
+	DeviceName string              `json:"deviceName,omitempty"`
+	DeviceType models.DeviceType   `json:"deviceType,omitempty"`
+	Vendor     models.DeviceVendor `json:"vendor,omitempty"`
+	Model      string              `json:"model,omitempty"`
+	SysDescr   string              `json:"sysDescr,omitempty"`
+	SysName    string              `json:"sysName,omitempty"`
 }
 
 // CreateDiscoveryTask 创建发现任务
@@ -92,16 +92,16 @@ func (s *DeviceDiscoveryService) CreateDiscoveryTask(ctx context.Context, req *D
 
 	// 创建发现任务
 	task := &models.DeviceDiscovery{
-		TaskName:       req.TaskName,
-		DiscoveryType:  req.DiscoveryType,
-		IPRanges:       models.IPRangeList(req.IPRanges),
-		SNMPCommunity:  req.SNMPCommunity,
-		SNMPPort:       req.SNMPPort,
-		Status:         models.DiscoveryStatusPending,
-		TotalIPs:       totalIPs,
-		AutoImport:     req.AutoImport,
-		GroupID:        req.GroupID,
-		CreatedBy:      req.CreatedBy,
+		TaskName:      req.TaskName,
+		DiscoveryType: req.DiscoveryType,
+		IPRanges:      models.IPRangeList(req.IPRanges),
+		SNMPCommunity: req.SNMPCommunity,
+		SNMPPort:      req.SNMPPort,
+		Status:        models.DiscoveryStatusPending,
+		TotalIPs:      totalIPs,
+		AutoImport:    req.AutoImport,
+		GroupID:       req.GroupID,
+		CreatedBy:     req.CreatedBy,
 	}
 
 	if err := s.db.WithContext(ctx).Create(task).Error; err != nil {
@@ -151,10 +151,10 @@ func (s *DeviceDiscoveryService) ExecuteDiscovery(ctx context.Context, discovery
 	s.db.WithContext(ctx).Save(&task)
 
 	return &DiscoveryResult{
-		DiscoveryID:      discoveryID,
-		Status:           task.Status,
-		TotalIPs:         task.TotalIPs,
-		DiscoveredCount:  len(discoveredDevices),
+		DiscoveryID:       discoveryID,
+		Status:            task.Status,
+		TotalIPs:          task.TotalIPs,
+		DiscoveredCount:   len(discoveredDevices),
 		DiscoveredDevices: discoveredDevices,
 	}, nil
 }
@@ -496,8 +496,8 @@ func (s *DeviceDiscoveryService) ProbeSingleDevice(ctx context.Context, req *Dev
 	if err != nil {
 		logger.Debugf("[ProbeSingleDevice] SNMP 连接失败: %v", err)
 		return &DeviceProbeResult{
-			Success: false,
-			Message: fmt.Sprintf("SNMP连接失败: %v", err),
+			Success:   false,
+			Message:   fmt.Sprintf("SNMP连接失败: %v", err),
 			IPAddress: req.IPAddress,
 		}, nil
 	}
@@ -508,8 +508,8 @@ func (s *DeviceDiscoveryService) ProbeSingleDevice(ctx context.Context, req *Dev
 	if err != nil {
 		logger.Debugf("[ProbeSingleDevice] 获取 sysName 失败: %v", err)
 		return &DeviceProbeResult{
-			Success: false,
-			Message: fmt.Sprintf("SNMP request failed: %v, current community: %s", err, community),
+			Success:   false,
+			Message:   fmt.Sprintf("SNMP request failed: %v, current community: %s", err, community),
 			IPAddress: req.IPAddress,
 		}, nil
 	}
@@ -595,8 +595,8 @@ func (s *DeviceDiscoveryService) ProbeSingleDevice(ctx context.Context, req *Dev
 
 	// 不应该到达这里，因为前面成功时已经返回
 	return &DeviceProbeResult{
-		Success: false,
-		Message: "设备不可达",
+		Success:   false,
+		Message:   "设备不可达",
 		IPAddress: req.IPAddress,
 	}, nil
 }
@@ -777,8 +777,7 @@ func identifyDeviceType(sysDescr string) string {
 
 // contains 字符串包含检查
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && (
-		s[:len(substr)] == substr ||
+	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && (s[:len(substr)] == substr ||
 		s[len(s)-len(substr):] == substr ||
 		containsMiddle(s, substr)))
 }

@@ -21,11 +21,11 @@ func NewRatingService(db *gorm.DB) *RatingService {
 
 // RatingCreateRequest 创建评价请求
 type RatingCreateRequest struct {
-	WorkOrderID     string `json:"workOrderId" binding:"required,uuid"`
-	RatingType      string `json:"ratingType" binding:"required"` // user 或 handler
-	CompletionScore int    `json:"completionScore"`               // 完成度评分 (1-5)
-	CooperationScore int   `json:"cooperationScore"`             // 配合度评分 (1-5)
-	Comment         string `json:"comment"`
+	WorkOrderID      string `json:"workOrderId" binding:"required,uuid"`
+	RatingType       string `json:"ratingType" binding:"required"` // user 或 handler
+	CompletionScore  int    `json:"completionScore"`               // 完成度评分 (1-5)
+	CooperationScore int    `json:"cooperationScore"`              // 配合度评分 (1-5)
+	Comment          string `json:"comment"`
 }
 
 // Create 创建评价
@@ -66,13 +66,13 @@ func (s *RatingService) Create(ctx context.Context, req *RatingCreateRequest, ra
 	}
 
 	rating := &models.WorkOrderRating{
-		ID:              uuid.New().String(),
-		WorkOrderID:     req.WorkOrderID,
-		RatingType:      req.RatingType,
-		CompletionScore: req.CompletionScore,
+		ID:               uuid.New().String(),
+		WorkOrderID:      req.WorkOrderID,
+		RatingType:       req.RatingType,
+		CompletionScore:  req.CompletionScore,
 		CooperationScore: req.CooperationScore,
-		Comment:         req.Comment,
-		RaterID:         raterID,
+		Comment:          req.Comment,
+		RaterID:          raterID,
 	}
 
 	if err := s.db.WithContext(ctx).Create(rating).Error; err != nil {
@@ -108,8 +108,8 @@ func (s *RatingService) GetStatistics(ctx context.Context, workOrderID string) (
 	}
 
 	stats := map[string]interface{}{
-		"total_count": len(ratings),
-		"user_rating":   nil,
+		"total_count":    len(ratings),
+		"user_rating":    nil,
 		"handler_rating": nil,
 	}
 

@@ -70,13 +70,13 @@ func uploadFile(core *core.Core) gin.HandlerFunc {
 		_ = fileService.LogAccess(c.Request.Context(), sysFile.ID, "upload", userID.(string), userName.(string), ip)
 
 		response.Success(c, gin.H{
-			"id":         sysFile.ID,
-			"fileName":   sysFile.FileName,
-			"fileSize":   sysFile.FileSize,
-			"fileType":   sysFile.FileType,
-			"extension":  sysFile.Extension,
-			"url":        fileService.GetFileURL(sysFile),
-			"createdAt":  sysFile.CreatedAt,
+			"id":        sysFile.ID,
+			"fileName":  sysFile.FileName,
+			"fileSize":  sysFile.FileSize,
+			"fileType":  sysFile.FileType,
+			"extension": sysFile.Extension,
+			"url":       fileService.GetFileURL(sysFile),
+			"createdAt": sysFile.CreatedAt,
 		})
 	}
 }

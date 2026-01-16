@@ -225,12 +225,6 @@ function App() {
                           <Route path="/ops/ad-domain/groups" element={<ADGroupPage />} />
                           <Route path="/ops/ad-domain/users" element={<ADUserPage />} />
                           <Route path="/ops/ad-domain/logs" element={<ADSyncLogsPage />} />
-                          {/* 运维管理三级菜单路由（注意：ad-domain 重复是数据问题） */}
-                          <Route path="/ops/ad-domain/ad-domain/configs" element={<ADConfigPage />} />
-                          <Route path="/ops/ad-domain/ad-domain/ous" element={<ADOUPage />} />
-                          <Route path="/ops/ad-domain/ad-domain/groups" element={<ADGroupPage />} />
-                          <Route path="/ops/ad-domain/ad-domain/users" element={<ADUserPage />} />
-                          <Route path="/ops/ad-domain/ad-domain/logs" element={<ADSyncLogsPage />} />
 
                           {/* 运维管理 - 物理资源管理路由 */}
                           <Route path="/ops/buildings" element={<BuildingManagement />} />

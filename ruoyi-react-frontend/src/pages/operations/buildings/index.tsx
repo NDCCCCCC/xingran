@@ -23,6 +23,7 @@ import ActionButtons from '@/components/shared/ActionButtons';
 import ExcelImport from '@/components/shared/ExcelImport';
 import ExcelExport from '@/components/shared/ExcelExport';
 import { post } from '@/lib/api';
+import type { BaseResponse, PageResponse } from '@/types';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -46,7 +47,7 @@ const BuildingManagement: FC = () => {
   const loadDepartments = useCallback(async () => {
     setLoadingDepts(true);
     try {
-      const result = await post('/system/departments/list', { current: 1, pageSize: 1000 });
+      const result = await post<BaseResponse<PageResponse<DepartmentOption>>>('/system/departments/list', { current: 1, pageSize: 1000 });
       // 扁平化树形数据
       const flattenDepts = (data: any[]): DepartmentOption[] => {
         const result: DepartmentOption[] = [];

@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"gorm.io/gorm"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"gorm.io/gorm"
 )
 
 // AssetCollector 资产信息采集器
@@ -118,7 +118,7 @@ func (c *AssetCollector) CollectDevice(ctx context.Context, deviceID string) (*A
 		TotalMemory:       assetInfo.TotalMemory,
 		FreeMemory:        assetInfo.FreeMemory,
 		CPUUsage:          assetInfo.CPUUsage,
-		CollectedAt:        time.Now(),
+		CollectedAt:       time.Now(),
 	}
 	c.db.WithContext(ctx).Create(assetRecord)
 
@@ -150,9 +150,9 @@ func (c *AssetCollector) CollectAllDevices(ctx context.Context) ([]*AssetCollect
 func (c *AssetCollector) getVersionCommand(vendor models.DeviceVendor) string {
 	commands := map[models.DeviceVendor]string{
 		models.VendorHuawei: "display version",
-		models.VendorH3C:     "display version",
-		models.VendorRuijie:  "show version",
-		models.VendorMaipu:   "show version",
+		models.VendorH3C:    "display version",
+		models.VendorRuijie: "show version",
+		models.VendorMaipu:  "show version",
 	}
 	if cmd, ok := commands[vendor]; ok {
 		return cmd
@@ -164,9 +164,9 @@ func (c *AssetCollector) getVersionCommand(vendor models.DeviceVendor) string {
 func (c *AssetCollector) getDeviceCommand(vendor models.DeviceVendor) string {
 	commands := map[models.DeviceVendor]string{
 		models.VendorHuawei: "display device",
-		models.VendorH3C:     "display device",
-		models.VendorRuijie:  "show system",
-		models.VendorMaipu:   "show system",
+		models.VendorH3C:    "display device",
+		models.VendorRuijie: "show system",
+		models.VendorMaipu:  "show system",
 	}
 	if cmd, ok := commands[vendor]; ok {
 		return cmd
@@ -459,11 +459,11 @@ func (c *AssetCollector) GetAssetStats(ctx context.Context) (map[string]interfac
 	stats.AvgMemoryUsage = avgMem
 
 	return map[string]interface{}{
-		"totalDevices":    stats.TotalDevices,
+		"totalDevices":      stats.TotalDevices,
 		"bySoftwareVersion": stats.BySoftwareVersion,
-		"byProduct":       stats.ByProduct,
-		"avgCPUUsage":     stats.AvgCPUUsage,
-		"avgMemoryUsage":  stats.AvgMemoryUsage,
+		"byProduct":         stats.ByProduct,
+		"avgCPUUsage":       stats.AvgCPUUsage,
+		"avgMemoryUsage":    stats.AvgMemoryUsage,
 	}, nil
 }
 

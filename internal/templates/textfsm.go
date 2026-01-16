@@ -37,7 +37,7 @@ type State struct {
 
 // Rule 表示状态转换规则
 type Rule struct {
-	RegexPattern string  // 原始正则模式（包含 ${VAR} 引用）
+	RegexPattern string // 原始正则模式（包含 ${VAR} 引用）
 	Regex        *regexp.Regexp
 	VarNames     []string // 按顺序的变量名
 	NextState    string
@@ -112,8 +112,8 @@ func ParseTemplateString(content string) (*FSM, error) {
 		// 解析变量定义
 		if matches := valueListRegex.FindStringSubmatch(trimmed); matches != nil {
 			fsm.Variables[matches[1]] = &Variable{
-				Name: matches[1],
-				List: true,
+				Name:  matches[1],
+				List:  true,
 				Regex: matches[2],
 			}
 			continue

@@ -31,17 +31,17 @@ const (
 // NewRedisCache 创建Redis缓存实例
 func NewRedisCache(config *CacheConfig, keyPrefix string) (*RedisCache, error) {
 	rdb := redis.NewClient(&redis.Options{
-		Addr:           fmt.Sprintf("%s:%d", config.Host, config.Port),
-		Password:       config.Password,
-		DB:             config.DB,
-		PoolSize:       config.PoolSize,
-		MaxRetries:     3,                         // 最大重试次数
-		MinRetryBackoff: 8 * time.Millisecond,     // 最小重试等待时间
-		MaxRetryBackoff: 512 * time.Millisecond,   // 最大重试等待时间
-		DialTimeout:    dialTimeout,               // 连接超时
-		ReadTimeout:    readTimeout,               // 读取超时
-		WriteTimeout:   writeTimeout,              // 写入超时
-		PoolTimeout:    poolTimeout,               // 连接池超时
+		Addr:            fmt.Sprintf("%s:%d", config.Host, config.Port),
+		Password:        config.Password,
+		DB:              config.DB,
+		PoolSize:        config.PoolSize,
+		MaxRetries:      3,                      // 最大重试次数
+		MinRetryBackoff: 8 * time.Millisecond,   // 最小重试等待时间
+		MaxRetryBackoff: 512 * time.Millisecond, // 最大重试等待时间
+		DialTimeout:     dialTimeout,            // 连接超时
+		ReadTimeout:     readTimeout,            // 读取超时
+		WriteTimeout:    writeTimeout,           // 写入超时
+		PoolTimeout:     poolTimeout,            // 连接池超时
 	})
 
 	// 测试连接 - 使用更长的超时时间
@@ -437,8 +437,8 @@ func (r *RedisCache) GetStats(ctx context.Context) (map[string]interface{}, erro
 
 				// 转换数值类型的值
 				if key == "used_memory" || key == "used_memory_rss" || key == "used_memory_peak" ||
-				   key == "maxmemory" || key == "used_memory_dataset" || key == "used_memory_overhead" ||
-				   key == "total_system_memory" {
+					key == "maxmemory" || key == "used_memory_dataset" || key == "used_memory_overhead" ||
+					key == "total_system_memory" {
 					if value, err := strconv.ParseInt(valueStr, 10, 64); err == nil {
 						stats[key] = value
 					}
@@ -471,9 +471,9 @@ func (r *RedisCache) GetStats(ctx context.Context) (map[string]interface{}, erro
 				valueStr := strings.TrimSpace(parts[1])
 
 				if key == "keyspace_hits" || key == "keyspace_misses" ||
-				   key == "total_connections_received" || key == "total_commands_processed" ||
-				   key == "instantaneous_ops_per_sec" || key == "keyspace_misses" ||
-				   key == "expired_keys" || key == "evicted_keys" {
+					key == "total_connections_received" || key == "total_commands_processed" ||
+					key == "instantaneous_ops_per_sec" || key == "keyspace_misses" ||
+					key == "expired_keys" || key == "evicted_keys" {
 					if value, err := strconv.ParseInt(valueStr, 10, 64); err == nil {
 						stats[key] = value
 					}

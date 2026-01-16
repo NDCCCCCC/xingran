@@ -12,37 +12,37 @@ import (
 
 // AuthCredentialListRequest 授权凭证列表请求
 type AuthCredentialListRequest struct {
-	CredentialName *string                `json:"credentialName,omitempty"`
-	ProtocolType   *models.ProtocolType   `json:"protocolType,omitempty"` // 改为协议类型过滤
-	Current        int                    `json:"current" binding:"min=1"`
-	PageSize       int                    `json:"pageSize" binding:"min=1,max=100"`
+	CredentialName *string              `json:"credentialName,omitempty"`
+	ProtocolType   *models.ProtocolType `json:"protocolType,omitempty"` // 改为协议类型过滤
+	Current        int                  `json:"current" binding:"min=1"`
+	PageSize       int                  `json:"pageSize" binding:"min=1,max=100"`
 }
 
 // AuthCredentialCreateRequest 创建授权凭证请求
 type AuthCredentialCreateRequest struct {
-	CredentialName  string               `json:"credentialName" binding:"required,min=2,max=100"`
-	ProtocolType    models.ProtocolType  `json:"protocolType" binding:"required,oneof=ssh telnet"` // 改为协议类型
-	Username        string               `json:"username,omitempty" binding:"max=100"`
-	Password        string               `json:"password,omitempty" binding:"max=255"`
-	EnablePassword  string               `json:"enablePassword,omitempty" binding:"max=255"`
-	SNMPCommunities []string             `json:"snmpCommunities,omitempty"` // 改为数组
-	SNMPVersion     models.SNMPVersion   `json:"snmpVersion,omitempty" binding:"omitempty,oneof=v1 v2c v3"`
-	Description     string               `json:"description,omitempty"`
-	IsDefault       bool                 `json:"isDefault"`
+	CredentialName  string              `json:"credentialName" binding:"required,min=2,max=100"`
+	ProtocolType    models.ProtocolType `json:"protocolType" binding:"required,oneof=ssh telnet"` // 改为协议类型
+	Username        string              `json:"username,omitempty" binding:"max=100"`
+	Password        string              `json:"password,omitempty" binding:"max=255"`
+	EnablePassword  string              `json:"enablePassword,omitempty" binding:"max=255"`
+	SNMPCommunities []string            `json:"snmpCommunities,omitempty"` // 改为数组
+	SNMPVersion     models.SNMPVersion  `json:"snmpVersion,omitempty" binding:"omitempty,oneof=v1 v2c v3"`
+	Description     string              `json:"description,omitempty"`
+	IsDefault       bool                `json:"isDefault"`
 }
 
 // AuthCredentialUpdateRequest 更新授权凭证请求
 type AuthCredentialUpdateRequest struct {
-	ID              string               `json:"id"` // ID 从 URL 参数获取，不需要验证
-	CredentialName  string               `json:"credentialName" binding:"required,min=2,max=100"`
-	ProtocolType    models.ProtocolType  `json:"protocolType" binding:"required,oneof=ssh telnet"` // 改为协议类型
-	Username        string               `json:"username,omitempty" binding:"max=100"`
-	Password        string               `json:"password,omitempty" binding:"max=255"`
-	EnablePassword  string               `json:"enablePassword,omitempty" binding:"max=255"`
-	SNMPCommunities []string             `json:"snmpCommunities,omitempty"` // 改为数组
-	SNMPVersion     models.SNMPVersion   `json:"snmpVersion,omitempty" binding:"omitempty,oneof=v1 v2c v3"`
-	Description     string               `json:"description,omitempty"`
-	IsDefault       bool                 `json:"isDefault"`
+	ID              string              `json:"id"` // ID 从 URL 参数获取，不需要验证
+	CredentialName  string              `json:"credentialName" binding:"required,min=2,max=100"`
+	ProtocolType    models.ProtocolType `json:"protocolType" binding:"required,oneof=ssh telnet"` // 改为协议类型
+	Username        string              `json:"username,omitempty" binding:"max=100"`
+	Password        string              `json:"password,omitempty" binding:"max=255"`
+	EnablePassword  string              `json:"enablePassword,omitempty" binding:"max=255"`
+	SNMPCommunities []string            `json:"snmpCommunities,omitempty"` // 改为数组
+	SNMPVersion     models.SNMPVersion  `json:"snmpVersion,omitempty" binding:"omitempty,oneof=v1 v2c v3"`
+	Description     string              `json:"description,omitempty"`
+	IsDefault       bool                `json:"isDefault"`
 }
 
 // listAuthCredentials 查询授权凭证列表

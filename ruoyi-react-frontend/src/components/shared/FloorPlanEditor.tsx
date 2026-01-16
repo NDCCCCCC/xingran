@@ -1,3 +1,7 @@
+/**
+ * FloorPlanEditor 平面图编辑器主组件
+ */
+
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Card, Button, Dropdown, Tooltip, message } from 'antd';
 import {
@@ -11,69 +15,17 @@ import {
 import { getWorkstationStatusColor, getWorkstationTypeColor } from '@/utils/three/colors';
 import './FloorPlanEditor.less';
 
-/**
- * 工位节点接口
- */
-export interface WorkstationNode {
-  id: string;
-  code: string;
-  name: string;
-  x: number;  // positionX
-  y: number;  // positionY
-  width: number;   // 默认 80
-  height: number;  // 默认 60
-  status: number;
-  type: number;  // workstationType
-  rotation?: number;  // 旋转角度（度），默认0
-}
-
-/**
- * FloorPlanEditor 组件属性
- */
-export interface FloorPlanEditorProps {
-  floorId: string;
-  workstations: WorkstationNode[];
-  onUpdatePosition: (items: {id: string; positionX: number; positionY: number; rotation?: number}[]) => Promise<void>;
-  onEdit: (workstation: WorkstationNode) => void;
-}
-
-/**
- * 视图状态接口
- */
-interface ViewState {
-  scale: number;
-  offsetX: number;
-  offsetY: number;
-  isDragging: boolean;
-  dragStartX: number;
-  dragStartY: number;
-}
-
-/**
- * 拖拽状态接口
- */
-interface DragState {
-  isDragging: boolean;
-  workstationId: string | null;
-  startX: number;
-  startY: number;
-  originalX: number;
-  originalY: number;
-}
-
-const GRID_SIZE = 20;
-const DEFAULT_SCALE = 1;
-const MIN_SCALE = 0.25;
-const MAX_SCALE = 3;
+// 导入提取的类型、常量和 Hooks
+import type { WorkstationNode, FloorPlanEditorProps } from './FloorPlanEditor.types';
+import { GRID_SIZE, TOOLBAR_HEIGHT, ZOOM_LEVELS } from './FloorPlanEditor.constants';
+import { usePanZoom } from './FloorPlanEditor.panZoom';
+import { useWorkstationDrag } from './FloorPlanEditor.hooks';
 
 /**
  * 获取工位颜色
- * 优先显示状态颜色（空闲/占用），次要显示类型颜色
  */
 const getWorkstationColor = (status: number): { main: string; border: string; bg: string } => {
-  // status: 0=空闲, 1=占用, 2=维护
   const statusColor = getWorkstationStatusColor(status);
-
   return {
     main: statusColor.main,
     border: statusColor.border,
@@ -94,55 +46,29 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
   const cardRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState({ width: 800, height: 600 });
 
-  // 监听容器尺寸变化
-  useEffect(() => {
-    const cardElement = cardRef.current;
-    if (!cardElement) return;
+  // 使用 PanZoom Hook
+  const {
+    viewState,
+    zoomIn,
+    zoomOut,
+    resetView,
+    fitToScreen,
+    handlePanStart,
+    handlePanMove,
+    handlePanEnd,
+    handleWheel,
+    screenToSvg,
+  } = usePanZoom({ containerRef });
 
-    const updateSize = () => {
-      const rect = cardElement.getBoundingClientRect();
-      const toolbarHeight = 48; // 工具栏高度
-      setContainerSize({
-        width: rect.width,
-        height: rect.height - toolbarHeight
-      });
-    };
-
-    // 初始尺寸
-    updateSize();
-
-    // 使用 ResizeObserver 监听尺寸变化
-    const resizeObserver = new ResizeObserver(updateSize);
-    resizeObserver.observe(cardElement);
-
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, []);
-
-  const width = containerSize.width;
-  const height = containerSize.height;
-  const [viewState, setViewState] = useState<ViewState>({
-    scale: DEFAULT_SCALE,
-    offsetX: 0,
-    offsetY: 0,
-    isDragging: false,
-    dragStartX: 0,
-    dragStartY: 0
-  });
-
-  // 拖拽状态
-  const [dragState, setDragState] = useState<DragState>({
-    isDragging: false,
-    workstationId: null,
-    startX: 0,
-    startY: 0,
-    originalX: 0,
-    originalY: 0
-  });
-
-  // 当前拖拽的工位临时位置
-  const [draggedNodePos, setDraggedNodePos] = useState<{x: number; y: number} | null>(null);
+  // 使用 WorkstationDrag Hook
+  const {
+    dragState,
+    draggedNodePos,
+    handleStartDrag,
+    handleDragMove,
+    handleEndDrag,
+    clearDraggedPos,
+  } = useWorkstationDrag({ workstations, onUpdatePosition });
 
   // 选中状态
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -160,162 +86,27 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
     workstation: null
   });
 
-  /**
-   * 屏幕坐标转换为 SVG 坐标
-   */
-  const screenToSvg = useCallback((x: number, y: number) => {
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return { x: 0, y: 0 };
+  // 监听容器尺寸变化
+  useEffect(() => {
+    const cardElement = cardRef.current;
+    if (!cardElement) return;
 
-    return {
-      x: (x - rect.left - viewState.offsetX) / viewState.scale,
-      y: (y - rect.top - viewState.offsetY) / viewState.scale
-    };
-  }, [viewState.offsetX, viewState.offsetY, viewState.scale]);
-
-  /**
-   * 处理鼠标按下 - 开始拖拽工位或平移画布
-   */
-  const handleMouseDown = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
-    // 检查是否点击了工位
-    const target = e.target as SVGElement;
-    const workstationEl = target.closest('[data-workstation-id]');
-    const spacePressed = (e.nativeEvent as any).code === 'Space';
-
-    if (workstationEl && !spacePressed) {
-      // 点击了工位
-      const workstationId = workstationEl.getAttribute('data-workstation-id');
-      const workstation = workstations.find(w => w.id === workstationId);
-
-      if (workstation && workstation.status === 0) {
-        setDragState({
-          isDragging: true,
-          workstationId: workstationId,
-          startX: e.clientX,
-          startY: e.clientY,
-          originalX: workstation.x,
-          originalY: workstation.y
-        });
-
-        setSelectedId(workstationId);
-      }
-    } else if (spacePressed || !workstationEl) {
-      // 点击背景或按住空格 - 平移画布
-      setViewState(prev => ({
-        ...prev,
-        isDragging: true,
-        dragStartX: e.clientX - prev.offsetX,
-        dragStartY: e.clientY - prev.offsetY
-      }));
-
-      if (!workstationEl) {
-        setSelectedId(null);
-      }
-    }
-
-    // 隐藏右键菜单
-    setContextMenu(prev => ({ ...prev, visible: false }));
-  }, [workstations, screenToSvg]);
-
-  /**
-   * 处理鼠标移动 - 拖拽工位或平移画布
-   */
-  const handleMouseMove = useCallback((e: globalThis.MouseEvent) => {
-    if (dragState.isDragging && dragState.workstationId) {
-      // 拖拽工位 - 更新临时位置，不修改props
-      const dx = (e.clientX - dragState.startX) / viewState.scale;
-      const dy = (e.clientY - dragState.startY) / viewState.scale;
-
-      setDraggedNodePos({
-        x: dragState.originalX + dx,
-        y: dragState.originalY + dy
+    const updateSize = () => {
+      const rect = cardElement.getBoundingClientRect();
+      setContainerSize({
+        width: rect.width,
+        height: rect.height - TOOLBAR_HEIGHT
       });
-    } else if (viewState.isDragging) {
-      // 平移画布
-      setViewState(prev => ({
-        ...prev,
-        offsetX: e.clientX - prev.dragStartX,
-        offsetY: e.clientY - prev.dragStartY
-      }));
-    }
-  }, [dragState, viewState.scale, viewState.isDragging, viewState.dragStartX, viewState.dragStartY]);
+    };
 
-  /**
-   * 处理鼠标松开 - 结束拖拽
-   */
-  const handleMouseUp = useCallback(async () => {
-    if (dragState.isDragging && dragState.workstationId && draggedNodePos) {
-      // 拖拽结束，保存位置
-      const workstation = workstations.find(w => w.id === dragState.workstationId);
-      if (workstation) {
-        // 网格吸附 - 使用临时位置
-        const snappedX = Math.round(draggedNodePos.x / GRID_SIZE) * GRID_SIZE;
-        const snappedY = Math.round(draggedNodePos.y / GRID_SIZE) * GRID_SIZE;
+    updateSize();
+    const resizeObserver = new ResizeObserver(updateSize);
+    resizeObserver.observe(cardElement);
 
-        await onUpdatePosition([{
-          id: workstation.id,
-          positionX: snappedX,
-          positionY: snappedY
-        }]);
-
-        message.success('工位位置已更新');
-      }
-
-      // 清除临时拖拽位置
-      setDraggedNodePos(null);
-    }
-
-    setDragState({
-      isDragging: false,
-      workstationId: null,
-      startX: 0,
-      startY: 0,
-      originalX: 0,
-      originalY: 0
-    });
-
-    setViewState(prev => ({ ...prev, isDragging: false }));
-  }, [dragState, draggedNodePos, workstations, onUpdatePosition]);
-
-  /**
-   * 处理滚轮 - 缩放画布（使用原生事件以避免 passive 警告）
-   */
-  const handleWheel = useCallback((e: WheelEvent) => {
-    // Ctrl + 滚轮缩放
-    const isCtrlPressed = e.ctrlKey || e.metaKey;
-
-    if (isCtrlPressed) {
-      e.preventDefault();
-      const delta = e.deltaY > 0 ? -0.1 : 0.1;
-      const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, viewState.scale + delta));
-
-      // 以鼠标位置为中心缩放
-      const rect = containerRef.current?.getBoundingClientRect();
-      if (!rect) return;
-
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
-
-      const scaleChange = newScale / viewState.scale;
-      const newOffsetX = mouseX - (mouseX - viewState.offsetX) * scaleChange;
-      const newOffsetY = mouseY - (mouseY - viewState.offsetY) * scaleChange;
-
-      setViewState(prev => ({
-        ...prev,
-        scale: newScale,
-        offsetX: newOffsetX,
-        offsetY: newOffsetY
-      }));
-    } else {
-      // 普通滚轮 - 平移
-      e.preventDefault();
-      setViewState(prev => ({
-        ...prev,
-        offsetX: prev.offsetX - e.deltaX,
-        offsetY: prev.offsetY - e.deltaY
-      }));
-    }
-  }, [viewState.scale, viewState.offsetX, viewState.offsetY]);
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
 
   // 添加非 passive 的 wheel 事件监听器
   useEffect(() => {
@@ -329,39 +120,84 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
     };
   }, [handleWheel]);
 
-  /**
-   * 缩放画布
-   */
-  const zoom = useCallback((delta: number) => {
-    const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, viewState.scale + delta));
-    const centerX = width / 2;
-    const centerY = height / 2;
+  // 注册全局鼠标事件
+  useEffect(() => {
+    if (dragState.isDragging || viewState.isDragging) {
+      const handleMouseMove = (e: globalThis.MouseEvent) => {
+        if (dragState.isDragging && dragState.workstationId) {
+          handleDragMove(e.clientX, e.clientY, viewState.scale);
+        } else if (viewState.isDragging) {
+          handlePanMove(e.clientX, e.clientY);
+        }
+      };
 
-    const scaleChange = newScale / viewState.scale;
-    const newOffsetX = centerX - (centerX - viewState.offsetX) * scaleChange;
-    const newOffsetY = centerY - (centerY - viewState.offsetY) * scaleChange;
+      const handleMouseUp = async () => {
+        if (dragState.isDragging && dragState.workstationId && draggedNodePos) {
+          await handleEndDrag();
+        }
+        handlePanEnd();
+        clearDraggedPos();
+      };
 
-    setViewState(prev => ({
-      ...prev,
-      scale: newScale,
-      offsetX: newOffsetX,
-      offsetY: newOffsetY
-    }));
-  }, [viewState.scale, viewState.offsetX, viewState.offsetY, width, height]);
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
 
-  /**
-   * 重置视图
-   */
-  const resetView = useCallback(() => {
-    setViewState({
-      scale: DEFAULT_SCALE,
-      offsetX: 0,
-      offsetY: 0,
-      isDragging: false,
-      dragStartX: 0,
-      dragStartY: 0
-    });
+      return () => {
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [dragState, draggedNodePos, viewState, handleDragMove, handleEndDrag, handlePanEnd, clearDraggedPos]);
+
+  // 键盘事件
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === ' ') {
+        e.preventDefault();
+        (containerRef.current?.style as any).cursor = 'grab';
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === ' ') {
+        (containerRef.current?.style as any).cursor = 'default';
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
   }, []);
+
+  /**
+   * 处理鼠标按下 - 开始拖拽工位或平移画布
+   */
+  const handleMouseDown = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
+    const target = e.target as SVGElement;
+    const workstationEl = target.closest('[data-workstation-id]');
+    const spacePressed = (e.nativeEvent as any).code === 'Space';
+
+    if (workstationEl && !spacePressed) {
+      const workstationId = workstationEl.getAttribute('data-workstation-id');
+      const workstation = workstations.find(w => w.id === workstationId);
+
+      if (workstation && workstation.status === 0) {
+        handleStartDrag(workstationId, e.clientX, e.clientY, workstation.x, workstation.y);
+        setSelectedId(workstationId);
+      }
+    } else if (spacePressed || !workstationEl) {
+      handlePanStart(e.clientX, e.clientY);
+      if (!workstationEl) {
+        setSelectedId(null);
+      }
+    }
+
+    setContextMenu(prev => ({ ...prev, visible: false }));
+  }, [workstations, handleStartDrag, handlePanStart]);
 
   /**
    * 适应视图
@@ -369,7 +205,6 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
   const fitToView = useCallback(() => {
     if (workstations.length === 0) return;
 
-    // 计算边界
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
 
     workstations.forEach(w => {
@@ -381,26 +216,22 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
 
     const contentWidth = maxX - minX + 100;
     const contentHeight = maxY - minY + 100;
+    const width = containerSize.width;
+    const height = containerSize.height;
 
     const scaleX = (width - 100) / contentWidth;
     const scaleY = (height - 100) / contentHeight;
-    const newScale = Math.min(scaleX, scaleY, MAX_SCALE);
+    const newScale = Math.min(scaleX, scaleY, 3);
 
     const centerX = (minX + maxX) / 2;
     const centerY = (minY + maxY) / 2;
 
-    const offsetX = width / 2 - centerX * newScale;
-    const offsetY = height / 2 - centerY * newScale;
+    viewState.scale = newScale;
+    viewState.offsetX = width / 2 - centerX * newScale;
+    viewState.offsetY = height / 2 - centerY * newScale;
 
-    setViewState({
-      scale: newScale,
-      offsetX,
-      offsetY,
-      isDragging: false,
-      dragStartX: 0,
-      dragStartY: 0
-    });
-  }, [workstations, width, height]);
+    fitToScreen();
+  }, [workstations, containerSize, viewState, fitToScreen]);
 
   /**
    * 处理工位点击
@@ -490,43 +321,6 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
     setContextMenu(prev => ({ ...prev, visible: false }));
   }, [contextMenu.workstation, onEdit, onUpdatePosition]);
 
-  // 注册全局鼠标事件
-  useEffect(() => {
-    if (dragState.isDragging || viewState.isDragging) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
-
-      return () => {
-        window.removeEventListener('mousemove', handleMouseMove);
-        window.removeEventListener('mouseup', handleMouseUp);
-      };
-    }
-  }, [dragState.isDragging, viewState.isDragging, handleMouseMove, handleMouseUp]);
-
-  // 键盘事件
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === ' ') {
-        e.preventDefault();
-        (containerRef.current?.style as any).cursor = 'grab';
-      }
-    };
-
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === ' ') {
-        (containerRef.current?.style as any).cursor = 'default';
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-    };
-  }, []);
-
   /**
    * 渲染网格
    */
@@ -536,6 +330,8 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
     const gridSize = GRID_SIZE * viewState.scale;
     const offsetX = viewState.offsetX % gridSize;
     const offsetY = viewState.offsetY % gridSize;
+    const width = containerSize.width;
+    const height = containerSize.height;
 
     const verticalLines = [];
     const horizontalLines = [];
@@ -568,11 +364,8 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
       const isHovered = hoveredId === workstation.id;
       const isDragging = dragState.workstationId === workstation.id;
 
-      // 位置和尺寸 - 拖拽时使用临时位置
       const posX = isDragging && draggedNodePos ? draggedNodePos.x : workstation.x;
       const posY = isDragging && draggedNodePos ? draggedNodePos.y : workstation.y;
-
-      // 旋转角度（默认0）
       const rotation = workstation.rotation || 0;
 
       const x = posX * viewState.scale + viewState.offsetX;
@@ -580,23 +373,19 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
       const w = workstation.width * viewState.scale;
       const h = workstation.height * viewState.scale;
 
-      // 样式 - 只使用 filter，不使用 transform
       const style: React.CSSProperties = {
         cursor: workstation.status === 0 ? 'move' : 'not-allowed',
         filter: isHovered && workstation.status === 0 ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))' : undefined
       };
 
-      // 悬浮时的缩放效果（SVG transform，不影响位置）
       const hoverTransform = isHovered && workstation.status === 0
         ? `translate(${w / 2}, ${h / 2}) scale(1.05) translate(${-w / 2}, ${-h / 2})`
         : '';
 
-      // 应用旋转：围绕工位中心旋转
       const rotationTransform = rotation !== 0
         ? `rotate(${rotation}, ${w / 2}, ${h / 2})`
         : '';
 
-      // 组合变换：先悬浮效果，再旋转
       const combinedTransform = rotationTransform
         ? `${rotationTransform} ${hoverTransform}`.trim()
         : hoverTransform;
@@ -613,7 +402,6 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
             onContextMenu={(e) => handleContextMenu(workstation, e)}
             style={style}
           >
-            {/* 工位桌面 - 带圆角的矩形 */}
             <rect
               width={w}
               height={h}
@@ -624,8 +412,6 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
               ry={6}
               opacity={isDragging ? 0.8 : 1}
             />
-
-            {/* 桌面高光效果 - 增加立体感 */}
             <rect
               x={2}
               y={2}
@@ -637,8 +423,6 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
               opacity={0.3}
               pointerEvents="none"
             />
-
-            {/* 显示器 - 位于桌面上方 */}
             <rect
               x={w * 0.25}
               y={h * 0.1}
@@ -652,7 +436,6 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
               opacity={0.9}
               pointerEvents="none"
             />
-            {/* 显示器屏幕 - 选中或悬停时发光 */}
             <rect
               x={w * 0.27}
               y={h * 0.12}
@@ -664,7 +447,6 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
               ry={1}
               pointerEvents="none"
             />
-            {/* 显示器支架 */}
             <rect
               x={w * 0.48}
               y={h * 0.45}
@@ -674,7 +456,6 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
               opacity={0.8}
               pointerEvents="none"
             />
-            {/* 显示器底座 */}
             <rect
               x={w * 0.43}
               y={h * 0.52}
@@ -684,8 +465,6 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
               opacity={0.8}
               pointerEvents="none"
             />
-
-            {/* 键盘 */}
             <rect
               x={w * 0.15}
               y={h * 0.58}
@@ -699,7 +478,6 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
               opacity={0.85}
               pointerEvents="none"
             />
-            {/* 键盘按键细节 */}
             <g opacity={0.3} pointerEvents="none">
               <rect x={w * 0.16} y={h * 0.59} width={w * 0.08} height={h * 0.03} fill="#1a1a1a" rx={0.5} />
               <rect x={w * 0.25} y={h * 0.59} width={w * 0.08} height={h * 0.03} fill="#1a1a1a" rx={0.5} />
@@ -708,8 +486,6 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
               <rect x={w * 0.25} y={h * 0.63} width={w * 0.08} height={h * 0.03} fill="#1a1a1a" rx={0.5} />
               <rect x={w * 0.34} y={h * 0.63} width={w * 0.08} height={h * 0.03} fill="#1a1a1a" rx={0.5} />
             </g>
-
-            {/* 鼠标垫 */}
             <ellipse
               cx={w * 0.7}
               cy={h * 0.62}
@@ -719,10 +495,7 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
               opacity={0.7}
               pointerEvents="none"
             />
-
-            {/* 椅子 - 在桌面前方 */}
             <g opacity={0.85} pointerEvents="none">
-              {/* 椅子靠背 */}
               <rect
                 x={w * 0.35}
                 y={h * 0.75}
@@ -734,7 +507,6 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
                 rx={2}
                 ry={2}
               />
-              {/* 椅子座位 */}
               <rect
                 x={w * 0.35}
                 y={h * 0.87}
@@ -746,7 +518,6 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
                 rx={2}
                 ry={2}
               />
-              {/* 椅子扶手 */}
               <rect
                 x={w * 0.28}
                 y={h * 0.82}
@@ -766,8 +537,6 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
                 ry={1}
               />
             </g>
-
-            {/* 工位编号 */}
             <text
               x={w / 2}
               y={h * 0.3}
@@ -780,8 +549,6 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
             >
               {workstation.code}
             </text>
-
-            {/* 工位状态标签 */}
             <text
               x={w / 2}
               y={h * 0.42}
@@ -793,8 +560,6 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
             >
               {statusColor.label}
             </text>
-
-            {/* 工位类型小点 - 右上角 */}
             <circle
               cx={w - 8}
               cy={8}
@@ -851,8 +616,9 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
     );
   };
 
-  // 获取选中的工位
   const selectedWorkstation = workstations.find(w => w.id === selectedId);
+  const width = containerSize.width;
+  const height = containerSize.height;
 
   return (
     <Card
@@ -868,16 +634,16 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
             <Button
               type="text"
               icon={<ZoomInOutlined />}
-              onClick={() => zoom(0.1)}
-              disabled={viewState.scale >= MAX_SCALE}
+              onClick={zoomIn}
+              disabled={viewState.scale >= 3}
             />
           </Tooltip>
           <Tooltip title="缩小 (Ctrl+滚轮)">
             <Button
               type="text"
               icon={<ZoomOutOutlined />}
-              onClick={() => zoom(-0.1)}
-              disabled={viewState.scale <= MIN_SCALE}
+              onClick={zoomOut}
+              disabled={viewState.scale <= 0.25}
             />
           </Tooltip>
           <span className="zoom-level">{Math.round(viewState.scale * 100)}%</span>
@@ -918,7 +684,7 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
         ref={containerRef}
         className="floor-plan-canvas"
         width={width}
-        height={height - 48}
+        height={height}
         onMouseDown={handleMouseDown}
         style={{
           cursor: viewState.isDragging ? 'grabbing' : 'default',
@@ -926,25 +692,17 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
           display: 'block'
         }}
       >
-        {/* SVG 定义 - 渐变和滤镜 */}
         <defs>
-          {/* 桌面高光渐变 */}
           <linearGradient id="deskHighlight" x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" stopColor="#ffffff" stopOpacity={0.4} />
             <stop offset="100%" stopColor="#ffffff" stopOpacity={0} />
           </linearGradient>
         </defs>
 
-        {/* 背景填充 */}
         <rect width={width} height={height} fill="#fafafa" />
-
-        {/* 网格 */}
         {renderGrid()}
-
-        {/* 工位 */}
         {renderWorkstations()}
 
-        {/* 拖拽时的坐标提示 */}
         {dragState.isDragging && dragState.workstationId && (
           <g>
             <rect
@@ -968,7 +726,6 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
         )}
       </svg>
 
-      {/* 右键菜单 */}
       {renderContextMenu()}
     </Card>
   );

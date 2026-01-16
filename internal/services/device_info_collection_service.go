@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
-	"gorm.io/gorm"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"gorm.io/gorm"
 )
 
 // DeviceInfoCollectionService 设备信息采集服务
@@ -19,12 +19,12 @@ import (
 type DeviceInfoCollectionService struct {
 	db             *gorm.DB
 	deviceExecutor *device.DeviceExecutor
-	taskQueue      chan string     // 统一任务队列
-	workerCount    int             // 工作协程数
-	stopChan       chan struct{}   // 停止信号
-	wg             sync.WaitGroup  // 等待组
-	isRunning      bool            // 是否正在运行
-	mu             sync.RWMutex    // 读写锁
+	taskQueue      chan string    // 统一任务队列
+	workerCount    int            // 工作协程数
+	stopChan       chan struct{}  // 停止信号
+	wg             sync.WaitGroup // 等待组
+	isRunning      bool           // 是否正在运行
+	mu             sync.RWMutex   // 读写锁
 }
 
 // NewDeviceInfoCollectionService 创建设备信息采集服务
@@ -33,7 +33,7 @@ func NewDeviceInfoCollectionService(db *gorm.DB, deviceExecutor *device.DeviceEx
 		db:             db,
 		deviceExecutor: deviceExecutor,
 		taskQueue:      make(chan string, 1000), // 缓冲队列，最多1000个任务
-		workerCount:    5,                        // 默认5个工作协程
+		workerCount:    5,                       // 默认5个工作协程
 		stopChan:       make(chan struct{}),
 	}
 	// 从数据库加载配置

@@ -140,7 +140,12 @@ func createDictType(core *core.Core) gin.HandlerFunc {
 			DictName: req.DictName,
 			DictType: req.DictType,
 			Status:   req.Status,
-			Remark:   func() string { if req.Remark != nil { return *req.Remark }; return "" }(),
+			Remark: func() string {
+				if req.Remark != nil {
+					return *req.Remark
+				}
+				return ""
+			}(),
 		}
 
 		if err := core.DB.GetDB().Create(&dictType).Error; err != nil {
@@ -330,28 +335,28 @@ type DictDataListRequest struct {
 
 // DictDataCreateRequest 创建字典数据请求
 type DictDataCreateRequest struct {
-	DictSort   int     `json:"dictSort" binding:"min=0"`
-	DictLabel  string  `json:"dictLabel" binding:"required,min=1,max=100"`
-	DictValue  string  `json:"dictValue" binding:"required,min=1,max=100"`
-	DictType   string  `json:"dictType" binding:"required,min=1,max=100"`
-	CssClass   *string `json:"cssClass,omitempty"`
-	ListClass  *string `json:"listClass,omitempty"`
-	IsDefault  bool    `json:"isDefault"`
-	Status     int     `json:"status" binding:"min=0,max=1,oneof=0 1"`
-	Remark     *string `json:"remark,omitempty"`
+	DictSort  int     `json:"dictSort" binding:"min=0"`
+	DictLabel string  `json:"dictLabel" binding:"required,min=1,max=100"`
+	DictValue string  `json:"dictValue" binding:"required,min=1,max=100"`
+	DictType  string  `json:"dictType" binding:"required,min=1,max=100"`
+	CssClass  *string `json:"cssClass,omitempty"`
+	ListClass *string `json:"listClass,omitempty"`
+	IsDefault bool    `json:"isDefault"`
+	Status    int     `json:"status" binding:"min=0,max=1,oneof=0 1"`
+	Remark    *string `json:"remark,omitempty"`
 }
 
 // DictDataUpdateRequest 更新字典数据请求
 type DictDataUpdateRequest struct {
-	ID         string  `json:"id,omitempty"`
-	DictSort   int     `json:"dictSort" binding:"min=0"`
-	DictLabel  string  `json:"dictLabel" binding:"required,min=1,max=100"`
-	DictValue  string  `json:"dictValue" binding:"required,min=1,max=100"`
-	CssClass   *string `json:"cssClass,omitempty"`
-	ListClass  *string `json:"listClass,omitempty"`
-	IsDefault  bool    `json:"isDefault"`
-	Status     int     `json:"status" binding:"min=0,max=1,oneof=0 1"`
-	Remark     *string `json:"remark,omitempty"`
+	ID        string  `json:"id,omitempty"`
+	DictSort  int     `json:"dictSort" binding:"min=0"`
+	DictLabel string  `json:"dictLabel" binding:"required,min=1,max=100"`
+	DictValue string  `json:"dictValue" binding:"required,min=1,max=100"`
+	CssClass  *string `json:"cssClass,omitempty"`
+	ListClass *string `json:"listClass,omitempty"`
+	IsDefault bool    `json:"isDefault"`
+	Status    int     `json:"status" binding:"min=0,max=1,oneof=0 1"`
+	Remark    *string `json:"remark,omitempty"`
 }
 
 // listDictData 查询字典数据列表
@@ -482,15 +487,20 @@ func createDictData(core *core.Core) gin.HandlerFunc {
 		}
 
 		dictData := models.DictData{
-			DictSort:   req.DictSort,
-			DictLabel:  req.DictLabel,
-			DictValue:  req.DictValue,
-			DictType:   req.DictType,
-			CssClass:   req.CssClass,
-			ListClass:  req.ListClass,
-			IsDefault:  req.IsDefault,
-			Status:     req.Status,
-			Remark:     func() string { if req.Remark != nil { return *req.Remark }; return "" }(),
+			DictSort:  req.DictSort,
+			DictLabel: req.DictLabel,
+			DictValue: req.DictValue,
+			DictType:  req.DictType,
+			CssClass:  req.CssClass,
+			ListClass: req.ListClass,
+			IsDefault: req.IsDefault,
+			Status:    req.Status,
+			Remark: func() string {
+				if req.Remark != nil {
+					return *req.Remark
+				}
+				return ""
+			}(),
 		}
 
 		if err := core.DB.GetDB().Create(&dictData).Error; err != nil {

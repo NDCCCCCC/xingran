@@ -18,24 +18,24 @@ import (
 
 // CaptchaService 验证码服务
 type CaptchaService struct {
-	db              *db.Database
-	cache           cache.Cache
-	config          *CaptchaConfig
+	db                *db.Database
+	cache             cache.Cache
+	config            *CaptchaConfig
 	backgroundService *CaptchaBackgroundService // 背景图服务
 }
 
 // CaptchaConfig 验证码配置
 type CaptchaConfig struct {
-	Enabled         captcha.CaptchaType // 验证码开关: disabled, normal, slider
-	Type            int                  // 数字验证码长度 4-6
-	ExpireTime      int                  // 有效期(分钟)
-	MaxAttempts     int                  // 最大验证次数
-	IPRateLimit     int                  // IP限流(次/分钟)
-	LoginMaxRetry   int                  // 登录最大重试次数
-	LoginLockTime   int                  // 账号锁定时间(分钟)
-	BackgroundMode  string               // 背景图模式: auto=自动生成 custom=仅自定义 mixed=混合模式
-	PieceShape      string               // 默认拼图形状: circle=圆形 square=方形 star=星形 heart=心形
-	Difficulty      int                  // 默认难度级别: 1=简单 2=中等 3=困难
+	Enabled        captcha.CaptchaType // 验证码开关: disabled, normal, slider
+	Type           int                 // 数字验证码长度 4-6
+	ExpireTime     int                 // 有效期(分钟)
+	MaxAttempts    int                 // 最大验证次数
+	IPRateLimit    int                 // IP限流(次/分钟)
+	LoginMaxRetry  int                 // 登录最大重试次数
+	LoginLockTime  int                 // 账号锁定时间(分钟)
+	BackgroundMode string              // 背景图模式: auto=自动生成 custom=仅自定义 mixed=混合模式
+	PieceShape     string              // 默认拼图形状: circle=圆形 square=方形 star=星形 heart=心形
+	Difficulty     int                 // 默认难度级别: 1=简单 2=中等 3=困难
 }
 
 // SliderVerifyData 滑动验证码验证数据
@@ -402,7 +402,7 @@ func (s *CaptchaService) VerifySliderCaptcha(ctx context.Context, captchaID stri
 	}
 
 	// 验证X坐标（允许一定误差）
-	tolerance := 8 // 允许8像素误差
+	tolerance := 8               // 允许8像素误差
 	expectedX := verifyData.XPos // 使用存储的正确 X 位置
 
 	// 验证滑动位置是否在容差范围内

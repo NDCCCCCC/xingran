@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
+import type { Building, Floor, Workstation } from '@/types/operations';
 
 // 视图层级类型
 export type ViewLevel = 'map' | 'building' | 'floor' | 'workstation';
@@ -30,9 +31,9 @@ interface VisualizationState {
 
   // 选中的实体
   selectedCity: string | null;
-  selectedBuilding: any | null;
-  selectedFloor: any | null;
-  selectedWorkstation: any | null;
+  selectedBuilding: Building | null;
+  selectedFloor: Floor | null;
+  selectedWorkstation: Workstation | null;
 
   // 相机状态（3D 视图）
   cameraPosition: [number, number, number];
@@ -49,9 +50,9 @@ interface VisualizationState {
   setShowLevel: (level: 1 | 2) => void;
 
   selectCity: (cityCode: string) => void;
-  selectBuilding: (building: any) => void;
-  selectFloor: (floor: any) => void;
-  selectWorkstation: (workstation: any) => void;
+  selectBuilding: (building: Building) => void;
+  selectFloor: (floor: Floor) => void;
+  selectWorkstation: (workstation: Workstation) => void;
   clearSelection: () => void;
 
   setCameraPosition: (position: [number, number, number]) => void;
@@ -62,9 +63,9 @@ interface VisualizationState {
   resetFilters: () => void;
 
   // 导航方法
-  navigateToBuilding: (building: any) => void;
-  navigateToFloor: (floor: any) => void;
-  navigateToWorkstation: (workstation: any) => void;
+  navigateToBuilding: (building: Building) => void;
+  navigateToFloor: (floor: Floor) => void;
+  navigateToWorkstation: (workstation: Workstation) => void;
   navigateToMap: () => void;
 }
 

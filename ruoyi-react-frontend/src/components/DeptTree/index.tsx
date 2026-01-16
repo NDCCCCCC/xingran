@@ -4,6 +4,7 @@ import { Tree, Card, Spin, Input } from 'antd';
 import type { DataNode, EventDataNode } from 'antd/es/tree';
 import { ApartmentOutlined, SearchOutlined } from '@ant-design/icons';
 import { post } from '@/lib/api';
+import type { BaseResponse } from '@/types';
 
 interface DeptTreeProps {
   onSelect?: (selectedKeys: Key[], info: {
@@ -46,7 +47,7 @@ const DeptTree: FC<DeptTreeProps> = ({
   const loadDeptTree = async () => {
     setLoading(true);
     try {
-      const result = await post('/system/departments/list');
+      const result = await post<BaseResponse<any>>('/system/departments/list');
       const deptData = result.data || [];
       const treeData = transformToTreeData(deptData);
       setTreeData(treeData);

@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"gorm.io/gorm"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"gorm.io/gorm"
 )
 
 // MACCollector MAC地址采集器
@@ -131,7 +131,9 @@ func (c *MACCollector) parseMACAddressTable(vendor models.DeviceVendor, output s
 // MAC address table of slot 0:
 // --------------------------------------------------------------------------
 // MAC Address    VLAN /       Learned/        QoS/   Matched   Port
-//                Port        Aging time      Type           packet
+//
+//	Port        Aging time      Type           packet
+//
 // --------------------------------------------------------------------------
 // 00e0-fc12-3456 100/-        Dynamic/No      No             GE0/0/1
 func (c *MACCollector) parseHuaweiMACAddress(output string) ([]MACAddressEntry, error) {
@@ -181,7 +183,8 @@ func (c *MACCollector) parseHuaweiMACAddress(output string) ([]MACAddressEntry, 
 // 示例输出:
 // Vlan    Mac Address       Type        Ports
 // ----    -----------       --------    -----
-//  100    00e0.fc12.3456     DYNAMIC     Gi0/0/1
+//
+//	100    00e0.fc12.3456     DYNAMIC     Gi0/0/1
 func (c *MACCollector) parseCiscoLikeMACAddress(output string) ([]MACAddressEntry, error) {
 	var entries []MACAddressEntry
 
@@ -306,9 +309,9 @@ func isValidMACAddress(mac string) bool {
 func (c *MACCollector) getMACCommand(vendor models.DeviceVendor) string {
 	commands := map[models.DeviceVendor]string{
 		models.VendorHuawei: "display mac-address",
-		models.VendorH3C:     "display mac-address",
-		models.VendorRuijie:  "show mac-address-table",
-		models.VendorMaipu:   "show mac-address-table",
+		models.VendorH3C:    "display mac-address",
+		models.VendorRuijie: "show mac-address-table",
+		models.VendorMaipu:  "show mac-address-table",
 	}
 	if cmd, ok := commands[vendor]; ok {
 		return cmd

@@ -159,7 +159,7 @@ func createPostgresConnection(cfg *config.DatabaseConfig) (*gorm.DB, error) {
 }
 
 // configureGORM 配置GORM
-func configureGORM(db *gorm.DB) error {
+func configureGORM(_ *gorm.DB) error {
 	// 配置表名前缀
 	// 对于SQLite，不需要额外配置
 	return nil
@@ -303,12 +303,12 @@ func (d *Database) AutoMigrate() error {
 		&models.ADGroupMember{},
 		&models.ADSyncLog{},
 		// 运维管理相关模型（Workstation 复用系统已有的 sys_workstation）
-	&operations.OpsBuilding{},
-	&operations.OpsFloor{},
-	&operations.OpsServerRoom{},
-	&operations.OpsDedicatedLine{},
-	&operations.OpsRoomDevice{},
-	&operations.OpsInfoPoint{},
+		&operations.OpsBuilding{},
+		&operations.OpsFloor{},
+		&operations.OpsServerRoom{},
+		&operations.OpsDedicatedLine{},
+		&operations.OpsRoomDevice{},
+		&operations.OpsInfoPoint{},
 	)
 	if err != nil {
 		return err
@@ -1022,6 +1022,8 @@ func createCaptchaBackgroundSystemParams(db *gorm.DB) error {
 }
 
 // createCaptchaBackgroundMenus 创建验证码背景图管理菜单
+// TODO: 此函数未使用，如需要启用验证码背景图功能，请取消注释并调用此函数
+/*
 func createCaptchaBackgroundMenus(db *gorm.DB) error {
 	// 先查找系统管理菜单的ID
 	var systemMenu models.Menu
@@ -1125,6 +1127,7 @@ func createCaptchaBackgroundMenus(db *gorm.DB) error {
 	log.Println("验证码背景图管理菜单创建完成")
 	return nil
 }
+*/
 
 // NULL_STRING_PTR 返回字符串指针的辅助函数
 func NULL_STRING_PTR(s string) *string {

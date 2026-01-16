@@ -9,9 +9,9 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
 )
 
 const (
@@ -21,9 +21,9 @@ const (
 
 // RequestDecryptionConfig 解密配置
 type RequestDecryptionConfig struct {
-	Enabled          bool     // 是否启用
-	ExcludePaths     []string // 排除路径（支持通配符）
-	RequireEncryption bool    // 是否强制加密
+	Enabled           bool     // 是否启用
+	ExcludePaths      []string // 排除路径（支持通配符）
+	RequireEncryption bool     // 是否强制加密
 }
 
 // RequestDecryption 创建请求解密中间件
@@ -151,10 +151,10 @@ func RequestDecryption(encryptor *crypto.RequestEncryptor, config *RequestDecryp
 
 		// 记录解密日志（不包含敏感数据）
 		applogger.WithFields(map[string]interface{}{
-			"path":                 c.Request.URL.Path,
-			"method":               c.Request.Method,
-			"request_decrypted":    true,
-			"decrypted_data_size":  len(decryptedData),
+			"path":                c.Request.URL.Path,
+			"method":              c.Request.Method,
+			"request_decrypted":   true,
+			"decrypted_data_size": len(decryptedData),
 		}).Info("请求解密成功")
 
 		c.Next()

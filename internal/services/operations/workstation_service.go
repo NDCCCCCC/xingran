@@ -24,10 +24,10 @@ type workstationService struct {
 
 // PositionUpdateItem 位置更新项
 type PositionUpdateItem struct {
-	ID         string  `json:"id"`
-	PositionX  int     `json:"positionX"`
-	PositionY  int     `json:"positionY"`
-	Rotation   *int    `json:"rotation,omitempty"`   // 旋转角度（可选）
+	ID        string `json:"id"`
+	PositionX int    `json:"positionX"`
+	PositionY int    `json:"positionY"`
+	Rotation  *int   `json:"rotation,omitempty"` // 旋转角度（可选）
 }
 
 // NewWorkstationService 创建工位服务实例

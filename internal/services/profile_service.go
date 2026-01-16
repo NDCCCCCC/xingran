@@ -25,8 +25,8 @@ type ProfileService struct {
 // NewProfileService 创建个人信息 service
 func NewProfileService(db *gorm.DB) *ProfileService {
 	return &ProfileService{
-		db:          db,
-		passwordMgr: security.NewPasswordManager(nil),
+		db:            db,
+		passwordMgr:   security.NewPasswordManager(nil),
 		uploadBaseDir: "./uploads/avatar",
 	}
 }

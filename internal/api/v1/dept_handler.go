@@ -22,47 +22,47 @@ type DeptListRequest struct {
 
 // DeptCreateRequest 部门创建请求
 type DeptCreateRequest struct {
-	DeptName string          `json:"deptName" binding:"required,max=50"`
-	ParentID *string         `json:"parentId,omitempty"`
-	OrderNum int             `json:"orderNum"`
-	Leader   *string         `json:"leader,omitempty"`
-	Phone    *string         `json:"phone,omitempty"`
-	Email    *string         `json:"email,omitempty"`
+	DeptName string            `json:"deptName" binding:"required,max=50"`
+	ParentID *string           `json:"parentId,omitempty"`
+	OrderNum int               `json:"orderNum"`
+	Leader   *string           `json:"leader,omitempty"`
+	Phone    *string           `json:"phone,omitempty"`
+	Email    *string           `json:"email,omitempty"`
 	Status   models.DeptStatus `json:"status"`
-	Remark   *string         `json:"remark,omitempty"`
+	Remark   *string           `json:"remark,omitempty"`
 }
 
 // DeptUpdateRequest 部门更新请求
 type DeptUpdateRequest struct {
-	ID       string          `json:"id" binding:"required"`
-	DeptName string          `json:"deptName" binding:"required,max=50"`
-	ParentID *string         `json:"parentId,omitempty"`
-	OrderNum int             `json:"orderNum"`
-	Leader   *string         `json:"leader,omitempty"`
-	Phone    *string         `json:"phone,omitempty"`
-	Email    *string         `json:"email,omitempty"`
+	ID       string            `json:"id" binding:"required"`
+	DeptName string            `json:"deptName" binding:"required,max=50"`
+	ParentID *string           `json:"parentId,omitempty"`
+	OrderNum int               `json:"orderNum"`
+	Leader   *string           `json:"leader,omitempty"`
+	Phone    *string           `json:"phone,omitempty"`
+	Email    *string           `json:"email,omitempty"`
 	Status   models.DeptStatus `json:"status"`
-	Remark   *string         `json:"remark,omitempty"`
+	Remark   *string           `json:"remark,omitempty"`
 }
 
 // DeptResponse 部门响应结构（包含负责人信息）
 type DeptResponse struct {
-	ID             string         `json:"id"`
-	DeptName       string         `json:"deptName"`
-	ParentID       *string        `json:"parentId,omitempty"`
-	Ancestors      string         `json:"ancestors"`
-	OrderNum       int            `json:"orderNum"`
-	Leader         *string        `json:"leader,omitempty"`
-	LeaderName     *string        `json:"leaderName,omitempty"`
-	LeaderUsername *string        `json:"leaderUsername,omitempty"`
-	Phone          *string        `json:"phone,omitempty"`
-	Email          *string        `json:"email,omitempty"`
+	ID             string            `json:"id"`
+	DeptName       string            `json:"deptName"`
+	ParentID       *string           `json:"parentId,omitempty"`
+	Ancestors      string            `json:"ancestors"`
+	OrderNum       int               `json:"orderNum"`
+	Leader         *string           `json:"leader,omitempty"`
+	LeaderName     *string           `json:"leaderName,omitempty"`
+	LeaderUsername *string           `json:"leaderUsername,omitempty"`
+	Phone          *string           `json:"phone,omitempty"`
+	Email          *string           `json:"email,omitempty"`
 	Status         models.DeptStatus `json:"status"`
-	Remark         string         `json:"remark,omitempty"`
-	Children       []*DeptResponse `json:"children,omitempty"`
-	CreatedAt      string         `json:"createdAt"`
-	UpdatedAt      string         `json:"updatedAt"`
-	Accessible     bool           `json:"accessible"` // 用户是否真正有权限访问该部门
+	Remark         string            `json:"remark,omitempty"`
+	Children       []*DeptResponse   `json:"children,omitempty"`
+	CreatedAt      string            `json:"createdAt"`
+	UpdatedAt      string            `json:"updatedAt"`
+	Accessible     bool              `json:"accessible"` // 用户是否真正有权限访问该部门
 }
 
 // listDepts 查询部门列表
@@ -283,38 +283,6 @@ func listDepts(core *core.Core) gin.HandlerFunc {
 	}
 }
 
-// buildDeptTreeResponse 构建部门树（响应结构）
-func buildDeptTreeResponse(depts []DeptResponse, parentID *string) []*DeptResponse {
-	var tree []*DeptResponse
-	for i := range depts {
-		if (parentID == nil && depts[i].ParentID == nil) || (parentID != nil && depts[i].ParentID != nil && *depts[i].ParentID == *parentID) {
-			children := buildDeptTreeResponse(depts, &depts[i].ID)
-			if len(children) > 0 {
-				depts[i].Children = children
-			}
-			tree = append(tree, &depts[i])
-		}
-	}
-	return tree
-}
-
-// buildDeptTree 构建部门树（模型结构）
-func buildDeptTree(depts []models.Department, parentID *string) []*models.Department {
-	var tree []*models.Department
-	for _, dept := range depts {
-		if (parentID == nil && dept.ParentID == nil) || (parentID != nil && dept.ParentID != nil && *dept.ParentID == *parentID) {
-			children := buildDeptTree(depts, &dept.ID)
-			if len(children) > 0 {
-				dept.Children = children
-			}
-			// 复制部门对象到指针
-			deptCopy := dept
-			tree = append(tree, &deptCopy)
-		}
-	}
-	return tree
-}
-
 // createDept 创建部门
 // @Summary 创建部门
 // @Description 创建新的部门，支持设置部门名称、父部门、负责人、联系电话、邮箱等
@@ -385,7 +353,12 @@ func createDept(core *core.Core) gin.HandlerFunc {
 			Phone:     req.Phone,
 			Email:     req.Email,
 			Status:    req.Status,
-			Remark:    func() string { if req.Remark != nil { return *req.Remark }; return "" }(),
+			Remark: func() string {
+				if req.Remark != nil {
+					return *req.Remark
+				}
+				return ""
+			}(),
 		}
 
 		// 使用 DeptService 创建部门（会自动清除缓存）
@@ -549,7 +522,12 @@ func updateDept(core *core.Core) gin.HandlerFunc {
 			"phone":     req.Phone,
 			"email":     req.Email,
 			"status":    req.Status,
-			"remark":    func() string { if req.Remark != nil { return *req.Remark }; return "" }(),
+			"remark": func() string {
+				if req.Remark != nil {
+					return *req.Remark
+				}
+				return ""
+			}(),
 		}
 
 		if err := tx.Model(&dept).Updates(updates).Error; err != nil {
@@ -684,114 +662,6 @@ func getChildDeptIds(db *gorm.DB, parentId string) []string {
 	return childIds
 }
 
-// getDeptTree 获取部门树
-// @Summary 获取部门树
-// @Description 获取部门树结构，用于部门选择（使用缓存）
-// @Tags 部门管理
-// @Accept json
-// @Produce json
-// @Success 200 {object} response.Response{data=object}
-// @Failure 500 {object} response.Response
-// @Router /departments/tree [get]
-func getDeptTree(core *core.Core) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// 使用缓存服务获取部门树
-		depts, err := core.DeptService.GetDeptTreeWithCache(c.Request.Context(), false)
-		if err != nil {
-			response.Error(c, response.ErrServerError, "查询部门列表失败: "+err.Error())
-			return
-		}
-
-		// 应用数据权限过滤
-		accessibleDepts := make([]*models.Department, 0)
-		for _, dept := range depts {
-			// TODO: 这里可以添加数据权限过滤逻辑
-			// 目前简化处理，直接返回所有正常状态的部门
-			if dept.Status == models.DeptStatusNormal {
-				accessibleDepts = append(accessibleDepts, dept)
-			}
-		}
-
-		response.Success(c, gin.H{
-			"list": accessibleDepts,
-		})
-	}
-}
-
-// getDeptTreeSelect 获取部门树选择器
-// @Summary 获取部门树选择器
-// @Description 获取所有正常状态的部门树，用于部门选择器组件（使用缓存）
-// @Tags 部门管理
-// @Accept json
-// @Produce json
-// @Success 200 {object} response.Response{data=[]models.Department}
-// @Failure 500 {object} response.Response
-// @Router /departments/tree-select [get]
-func getDeptTreeSelect(core *core.Core) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// 使用缓存服务获取部门树
-		depts, err := core.DeptService.GetDeptTreeWithCache(c.Request.Context(), false)
-		if err != nil {
-			response.Error(c, response.ErrServerError, "查询部门列表失败: "+err.Error())
-			return
-		}
-
-		response.Success(c, depts)
-	}
-}
-
-// getRoleDeptTreeSelect 获取角色部门树选择器
-// @Summary 获取角色部门树选择器
-// @Description 获取指定角色的部门树和已选中的部门ID，用于角色部门权限分配（使用缓存）
-// @Tags 部门管理
-// @Accept json
-// @Produce json
-// @Param roleId path string true "角色ID"
-// @Success 200 {object} response.Response{data=object}
-// @Failure 400 {object} response.Response
-// @Failure 500 {object} response.Response
-// @Router /departments/role-dept-tree-select/{roleId} [get]
-func getRoleDeptTreeSelect(core *core.Core) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		roleId := c.Param("roleId")
-		if roleId == "" {
-			response.Error(c, response.ErrBadRequest, "角色ID不能为空")
-			return
-		}
-
-		// 使用缓存服务获取部门树
-		deptsPtr, err := core.DeptService.GetDeptTreeWithCache(c.Request.Context(), false)
-		if err != nil {
-			response.Error(c, response.ErrServerError, "查询部门列表失败: "+err.Error())
-			return
-		}
-
-		// 将 []*models.Department 转换为 []models.Department
-		depts := make([]models.Department, len(deptsPtr))
-		for i, dept := range deptsPtr {
-			if dept != nil {
-				depts[i] = *dept
-			}
-		}
-
-		// 查询角色已关联的部门ID
-		var deptIds []string
-		if err := core.DB.GetDB().Table("sys_role_dept").
-			Where("role_id = ?", roleId).Pluck("dept_id", &deptIds).Error; err != nil {
-			response.Error(c, response.ErrServerError, "查询角色部门关联失败")
-			return
-		}
-
-		// 构建树形结构
-		deptTree := buildDeptTree(depts, nil)
-
-		response.Success(c, gin.H{
-			"depts":       deptTree,
-			"checkedKeys": deptIds,
-		})
-	}
-}
-
 // DeptUserListResponse 部门用户列表响应
 type DeptUserListResponse struct {
 	ID       string  `json:"id"`
@@ -853,121 +723,4 @@ func getDeptUsers(core *core.Core) gin.HandlerFunc {
 
 		response.Success(c, userList)
 	}
-}
-
-// getLeaderMapFromTree 从部门树中递归收集负责人ID并查询用户信息
-func getLeaderMapFromTree(depts []*models.Department, core *core.Core) (map[string]*models.User, map[string]*models.User) {
-	// 收集所有可能是用户ID或用户名的值
-	possibleIDs := make([]string, 0)
-	usernames := make([]string, 0)
-
-	var collectLeaderIDs func([]*models.Department)
-	collectLeaderIDs = func(deptList []*models.Department) {
-		for _, dept := range deptList {
-			if dept == nil {
-				continue
-			}
-			if dept.Leader != nil && *dept.Leader != "" {
-				leader := *dept.Leader
-				// 判断是 UUID 还是用户名（UUID 包含连字符）
-				if len(leader) == 36 && (strings.Count(leader, "-") == 4) {
-					possibleIDs = append(possibleIDs, leader)
-				} else {
-					usernames = append(usernames, leader)
-				}
-			}
-			// 递归处理子部门
-			if len(dept.Children) > 0 {
-				collectLeaderIDs(dept.Children)
-			}
-		}
-	}
-
-	collectLeaderIDs(depts)
-
-	// 查询用户：分别按 ID 和用户名查询
-	leaderMap := make(map[string]*models.User)
-	usernameMap := make(map[string]*models.User)
-
-	// 先按 ID 查询
-	if len(possibleIDs) > 0 {
-		var leaders []models.User
-		if err := core.DB.GetDB().Where("id IN ?", possibleIDs).Find(&leaders).Error; err == nil {
-			for i := range leaders {
-				leaderMap[leaders[i].ID] = &leaders[i]
-			}
-		}
-	}
-
-	// 再按用户名查询（避免重复）
-	if len(usernames) > 0 {
-		var usersByName []models.User
-		if err := core.DB.GetDB().Where("username IN ?", usernames).Find(&usersByName).Error; err == nil {
-			for i := range usersByName {
-				leaderMap[usersByName[i].ID] = &usersByName[i]
-				usernameMap[usersByName[i].Username] = &usersByName[i]
-			}
-		}
-	}
-
-	return leaderMap, usernameMap
-}
-
-// convertDeptTreeToResponse 递归转换部门树为响应结构
-func convertDeptTreeToResponse(depts []*models.Department, leaderMap map[string]*models.User, usernameMap map[string]*models.User) []*DeptResponse {
-	result := make([]*DeptResponse, 0, len(depts))
-
-	for _, dept := range depts {
-		if dept == nil {
-			continue
-		}
-
-		resp := &DeptResponse{
-			ID:         dept.ID,
-			DeptName:   dept.DeptName,
-			ParentID:   dept.ParentID,
-			Ancestors:  dept.Ancestors,
-			OrderNum:   dept.OrderNum,
-			Leader:     dept.Leader,
-			Phone:      dept.Phone,
-			Email:      dept.Email,
-			Status:     dept.Status,
-			CreatedAt:  dept.CreatedAt.Format("2006-01-02 15:04:05"),
-			UpdatedAt:  dept.UpdatedAt.Format("2006-01-02 15:04:05"),
-			Remark:     dept.Remark,
-			Accessible: true, // 缓存数据默认可访问
-		}
-
-		// 填充负责人信息
-		if dept.Leader != nil && *dept.Leader != "" {
-			// 先尝试按用户ID查找
-			if leader, exists := leaderMap[*dept.Leader]; exists {
-				if leader.Nickname != nil && *leader.Nickname != "" {
-					resp.LeaderName = leader.Nickname
-				} else {
-					resp.LeaderName = &leader.Username
-				}
-				resp.LeaderUsername = &leader.Username
-			} else {
-				// 尝试按用户名查找
-				if leader, exists := usernameMap[*dept.Leader]; exists {
-					if leader.Nickname != nil && *leader.Nickname != "" {
-						resp.LeaderName = leader.Nickname
-					} else {
-						resp.LeaderName = &leader.Username
-					}
-					resp.LeaderUsername = &leader.Username
-				}
-			}
-		}
-
-		// 递归处理子部门
-		if len(dept.Children) > 0 {
-			resp.Children = convertDeptTreeToResponse(dept.Children, leaderMap, usernameMap)
-		}
-
-		result = append(result, resp)
-	}
-
-	return result
 }

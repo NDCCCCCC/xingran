@@ -9,8 +9,8 @@ import (
 
 // UploadPhotosRequest 上传照片请求
 type UploadPhotosRequest struct {
-	RoomID        string `form:"roomId" binding:"required"`
-	PrimaryIndex  int    `form:"primaryIndex"` // 设置为主图的索引，默认0
+	RoomID       string `form:"roomId" binding:"required"`
+	PrimaryIndex int    `form:"primaryIndex"` // 设置为主图的索引，默认0
 }
 
 // UpdateDescriptionRequest 更新描述请求

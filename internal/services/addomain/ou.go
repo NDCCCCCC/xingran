@@ -20,10 +20,10 @@ func NewOUService(db *gorm.DB) *OUService {
 
 // OUNode OU树节点
 type OUNode struct {
-	ID       string    `json:"id"`
-	Name     string    `json:"name"`
-	DN       string    `json:"dn"`
-	Path     string    `json:"path,omitempty"`
+	ID       string   `json:"id"`
+	Name     string   `json:"name"`
+	DN       string   `json:"dn"`
+	Path     string   `json:"path,omitempty"`
 	Children []OUNode `json:"children,omitempty"`
 }
 

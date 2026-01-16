@@ -25,27 +25,27 @@ const (
 
 // ConfigBackup 配置备份模型
 type ConfigBackup struct {
-	ID            string      `gorm:"type:uuid;primary_key" json:"id"`
-	DeviceID      string      `gorm:"type:uuid;not null" json:"deviceId"`
-	DeviceName    string      `gorm:"size:100" json:"deviceName,omitempty"`
-	BackupType    BackupType  `gorm:"size:50;not null" json:"backupType"`
-	StorageType   StorageType `gorm:"size:50;not null;default:database" json:"storageType"`
-	ConfigHash    string      `gorm:"size:64" json:"configHash,omitempty"`    // 用于差异对比
-	Version       int         `gorm:"default:1" json:"version"`
-	ChangeReason  string      `gorm:"type:text" json:"changeReason,omitempty"`
+	ID           string      `gorm:"type:uuid;primary_key" json:"id"`
+	DeviceID     string      `gorm:"type:uuid;not null" json:"deviceId"`
+	DeviceName   string      `gorm:"size:100" json:"deviceName,omitempty"`
+	BackupType   BackupType  `gorm:"size:50;not null" json:"backupType"`
+	StorageType  StorageType `gorm:"size:50;not null;default:database" json:"storageType"`
+	ConfigHash   string      `gorm:"size:64" json:"configHash,omitempty"` // 用于差异对比
+	Version      int         `gorm:"default:1" json:"version"`
+	ChangeReason string      `gorm:"type:text" json:"changeReason,omitempty"`
 
 	// 配置内容（数据库存储）
-	ConfigContent string      `gorm:"type:text" json:"configContent,omitempty"`
+	ConfigContent string `gorm:"type:text" json:"configContent,omitempty"`
 
 	// 文件信息（文件系统存储）
-	FilePath      string      `gorm:"size:500" json:"filePath,omitempty"`
-	BackupSize    int         `json:"backupSize,omitempty"` // 实际配置大小（字节）
-	Compressed    bool        `gorm:"default:false" json:"compressed"` // 是否压缩
+	FilePath   string `gorm:"size:500" json:"filePath,omitempty"`
+	BackupSize int    `json:"backupSize,omitempty"`            // 实际配置大小（字节）
+	Compressed bool   `gorm:"default:false" json:"compressed"` // 是否压缩
 
-	CreatedAt     time.Time   `json:"createdAt"`
-	UpdatedAt     time.Time   `json:"updatedAt"`
-	CreatedBy     string      `gorm:"size:64" json:"createdBy"`
-	DeletedAt     *time.Time  `gorm:"index" json:"deletedAt,omitempty"`
+	CreatedAt time.Time  `json:"createdAt"`
+	UpdatedAt time.Time  `json:"updatedAt"`
+	CreatedBy string     `gorm:"size:64" json:"createdBy"`
+	DeletedAt *time.Time `gorm:"index" json:"deletedAt,omitempty"`
 }
 
 // BeforeCreate GORM 钩子：在创建记录前生成 UUID 和设置创建时间

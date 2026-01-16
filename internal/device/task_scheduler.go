@@ -15,21 +15,21 @@ type DeviceTask struct {
 	DeviceID string // 设备ID
 	Priority int    // 优先级（0=最高，数字越大优先级越低）
 	// Execute 执行函数（在持有设备锁的情况下调用）
-	Execute func(ctx context.Context, conn *PooledConnection) error
-	Timeout  time.Duration // 超时时间
-	CreatedAt time.Time    // 创建时间
-	Callback  func(error)  // 完成回调
+	Execute   func(ctx context.Context, conn *PooledConnection) error
+	Timeout   time.Duration // 超时时间
+	CreatedAt time.Time     // 创建时间
+	Callback  func(error)   // 完成回调
 }
 
 // DeviceTaskScheduler 设备任务调度器
 // 为每个设备维护一个独立的任务队列，确保同一设备的任务串行执行
 type DeviceTaskScheduler struct {
-	queues         map[string]chan *DeviceTask // deviceID -> 任务队列
-	workers        map[string]context.Context  // deviceID -> worker 上下文
+	queues         map[string]chan *DeviceTask   // deviceID -> 任务队列
+	workers        map[string]context.Context    // deviceID -> worker 上下文
 	workerCancel   map[string]context.CancelFunc // deviceID -> worker 取消函数
-	schedulerLock  sync.RWMutex                 // 保护 queues, workers, workerCancel
-	connectionPool *DeviceConnectionPool        // 连接池
-	taskTimeout    time.Duration                // 默认任务超时
+	schedulerLock  sync.RWMutex                  // 保护 queues, workers, workerCancel
+	connectionPool *DeviceConnectionPool         // 连接池
+	taskTimeout    time.Duration                 // 默认任务超时
 	done           chan struct{}                 // 停止信号
 	enabled        bool                          // 是否启用调度器
 	metrics        *SchedulerMetrics             // 统计指标
@@ -45,8 +45,8 @@ type SchedulerMetrics struct {
 
 // SchedulerConfig 调度器配置
 type SchedulerConfig struct {
-	TaskTimeout    time.Duration // 默认任务超时，默认 5 分钟
-	QueueSize      int           // 每个设备的任务队列大小，默认 100
+	TaskTimeout time.Duration // 默认任务超时，默认 5 分钟
+	QueueSize   int           // 每个设备的任务队列大小，默认 100
 }
 
 // DefaultSchedulerConfig 默认调度器配置
@@ -69,9 +69,9 @@ func NewDeviceTaskScheduler(pool *DeviceConnectionPool, config *SchedulerConfig)
 		workerCancel:   make(map[string]context.CancelFunc),
 		connectionPool: pool,
 		taskTimeout:    config.TaskTimeout,
-		done:          make(chan struct{}),
-		enabled:       true,
-		metrics:       &SchedulerMetrics{},
+		done:           make(chan struct{}),
+		enabled:        true,
+		metrics:        &SchedulerMetrics{},
 	}
 
 	log.Printf("[任务调度器] 已创建调度器: 队列大小=%d, 超时=%v", config.QueueSize, config.TaskTimeout)
@@ -339,11 +339,11 @@ func (s *DeviceTaskScheduler) GetStats() map[string]interface{} {
 	defer s.schedulerLock.RUnlock()
 
 	return map[string]interface{}{
-		"total_submitted":  s.metrics.TotalSubmitted,
-		"total_completed":  s.metrics.TotalCompleted,
-		"total_failed":     s.metrics.TotalFailed,
-		"active_devices":   len(s.workers),
-		"enabled":          s.enabled,
+		"total_submitted": s.metrics.TotalSubmitted,
+		"total_completed": s.metrics.TotalCompleted,
+		"total_failed":    s.metrics.TotalFailed,
+		"active_devices":  len(s.workers),
+		"enabled":         s.enabled,
 	}
 }
 

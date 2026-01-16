@@ -29,9 +29,9 @@ type KnowledgeCategory struct {
 	Status       KnowledgeArticleStatus `gorm:"default:1" json:"status"`
 
 	// 关联
-	Parent   *KnowledgeCategory   `gorm:"foreignKey:ParentID" json:"parent,omitempty"`
-	Children []KnowledgeCategory  `gorm:"foreignKey:ParentID" json:"children,omitempty"`
-	Articles []KnowledgeArticle   `gorm:"foreignKey:CategoryID" json:"articles,omitempty"`
+	Parent   *KnowledgeCategory  `gorm:"foreignKey:ParentID" json:"parent,omitempty"`
+	Children []KnowledgeCategory `gorm:"foreignKey:ParentID" json:"children,omitempty"`
+	Articles []KnowledgeArticle  `gorm:"foreignKey:CategoryID" json:"articles,omitempty"`
 }
 
 // TableName 指定表名
@@ -42,19 +42,19 @@ func (KnowledgeCategory) TableName() string {
 // KnowledgeArticle 知识库文章
 type KnowledgeArticle struct {
 	BaseModel
-	Title        string                 `gorm:"size:200;not null" json:"title"`
-	Content      string                 `gorm:"type:text;not null" json:"content"`
-	Summary      string                 `gorm:"type:text" json:"summary,omitempty"`
-	CategoryID   string                 `gorm:"type:uuid;not null;index:idx_kb_article_category,priority:1" json:"categoryId"`
-	Status       KnowledgeArticleStatus `gorm:"default:0" json:"status"`
-	ViewCount    int                    `gorm:"default:0" json:"viewCount"`
-	LikeCount    int                    `gorm:"default:0" json:"likeCount"`
-	SourceWorkOrderID *string           `gorm:"type:uuid" json:"sourceWorkOrderId,omitempty"` // 来源工单ID
+	Title             string                 `gorm:"size:200;not null" json:"title"`
+	Content           string                 `gorm:"type:text;not null" json:"content"`
+	Summary           string                 `gorm:"type:text" json:"summary,omitempty"`
+	CategoryID        string                 `gorm:"type:uuid;not null;index:idx_kb_article_category,priority:1" json:"categoryId"`
+	Status            KnowledgeArticleStatus `gorm:"default:0" json:"status"`
+	ViewCount         int                    `gorm:"default:0" json:"viewCount"`
+	LikeCount         int                    `gorm:"default:0" json:"likeCount"`
+	SourceWorkOrderID *string                `gorm:"type:uuid" json:"sourceWorkOrderId,omitempty"` // 来源工单ID
 
 	// 关联
-	Category     *KnowledgeCategory `gorm:"foreignKey:CategoryID" json:"category,omitempty"`
-	SourceWorkOrder *WorkOrder      `gorm:"foreignKey:SourceWorkOrderID" json:"sourceWorkOrder,omitempty"`
-	Tags         []KnowledgeTag     `gorm:"many2many:sys_kb_article_tags;joinForeignKey:ArticleID;joinReferences:TagID" json:"tags,omitempty"`
+	Category        *KnowledgeCategory `gorm:"foreignKey:CategoryID" json:"category,omitempty"`
+	SourceWorkOrder *WorkOrder         `gorm:"foreignKey:SourceWorkOrderID" json:"sourceWorkOrder,omitempty"`
+	Tags            []KnowledgeTag     `gorm:"many2many:sys_kb_article_tags;joinForeignKey:ArticleID;joinReferences:TagID" json:"tags,omitempty"`
 }
 
 // TableName 指定表名
@@ -91,8 +91,8 @@ func (KnowledgeTag) TableName() string {
 
 // KnowledgeArticleTag 文章标签关联表（用于many2many）
 type KnowledgeArticleTag struct {
-	ArticleID string `gorm:"type:uuid;not null;index:idx_kb_article_tag_article,priority:1" json:"articleId"`
-	TagID     string `gorm:"type:uuid;not null;index:idx_kb_article_tag_tag,priority:1" json:"tagId"`
+	ArticleID string    `gorm:"type:uuid;not null;index:idx_kb_article_tag_article,priority:1" json:"articleId"`
+	TagID     string    `gorm:"type:uuid;not null;index:idx_kb_article_tag_tag,priority:1" json:"tagId"`
 	CreatedAt time.Time `json:"createdAt"`
 }
 
