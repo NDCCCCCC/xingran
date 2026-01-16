@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	"gorm.io/gorm"
 )
@@ -206,7 +207,7 @@ func createRole(core *core.Core) gin.HandlerFunc {
 				MenuCheckStrictly: true,
 				DeptCheckStrictly: true,
 				Status:            models.RoleStatus(req.Status),
-				Remark:            derefString(req.Remark),
+				Remark:            utils.DerefString(req.Remark),
 			}
 
 			if err := tx.Create(&newRole).Error; err != nil {
@@ -326,7 +327,7 @@ func updateRole(core *core.Core) gin.HandlerFunc {
 				"menu_check_strictly": true,
 				"dept_check_strictly": true,
 				"status":              models.RoleStatus(req.Status),
-				"remark":              derefString(req.Remark),
+				"remark":              utils.DerefString(req.Remark),
 			}
 
 			if err := tx.Model(&role).Updates(updates).Error; err != nil {
@@ -516,7 +517,7 @@ func updateRoleStatus(core *core.Core) gin.HandlerFunc {
 			}
 			// 使用辅助函数转换status值
 			if statusVal, ok := rawReq["status"]; ok {
-				req.Status = parseStatusToInt(statusVal)
+				req.Status = utils.ParseStatusToInt(statusVal)
 			} else {
 				response.Error(c, response.ErrBadRequest, "缺少status字段")
 				return
@@ -595,7 +596,7 @@ func updateRoleMenus(core *core.Core) gin.HandlerFunc {
 				return
 			}
 			if menuIds, ok := rawReq["menuIds"]; ok {
-				req.MenuIds = toStringSlice(menuIds)
+				req.MenuIds = utils.ToStringSlice(menuIds)
 			}
 		}
 

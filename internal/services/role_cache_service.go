@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
@@ -48,14 +49,15 @@ func (s *RoleCacheService) GetAllRolesWithCache(ctx context.Context) ([]*models.
 func (s *RoleCacheService) queryAllRoles() ([]*models.Role, error) {
 	var roles []models.Role
 
-	if err := s.db.Where("status = ?", models.RoleStatusEnabled).
+	err := s.db.Where("status = ?", models.RoleStatusEnabled).
 		Order("role_sort ASC, created_at DESC").
-		Find(&roles).Error; err != nil {
+		Find(&roles).Error
+
+	if err != nil {
 		return nil, fmt.Errorf("查询角色列表失败: %w", err)
 	}
 
-	// 转换为指针数组
-	return toSlicePtr(roles), nil
+	return utils.ToSlicePtr(roles), nil
 }
 
 // GetRoleMenusWithCache 获取角色菜单权限（带缓存）
@@ -83,10 +85,10 @@ func (s *RoleCacheService) GetRoleMenusWithCache(ctx context.Context, roleID str
 func (s *RoleCacheService) queryRoleMenus(roleID string) ([]*models.Menu, error) {
 	var menuIDs []string
 
-	// 查询角色关联的菜单ID
-	if err := s.db.Table("sys_role_menu").
+	err := s.db.Table("sys_role_menu").
 		Where("role_id = ?", roleID).
-		Pluck("menu_id", &menuIDs).Error; err != nil {
+		Pluck("menu_id", &menuIDs).Error
+	if err != nil {
 		return nil, fmt.Errorf("查询角色菜单关联失败: %w", err)
 	}
 
@@ -94,16 +96,15 @@ func (s *RoleCacheService) queryRoleMenus(roleID string) ([]*models.Menu, error)
 		return []*models.Menu{}, nil
 	}
 
-	// 查询菜单详情
 	var menus []models.Menu
-	if err := s.db.Where("id IN ? AND status = ?", menuIDs, models.MenuStatusNormal).
+	err = s.db.Where("id IN ? AND status = ?", menuIDs, models.MenuStatusNormal).
 		Order("order_num ASC").
-		Find(&menus).Error; err != nil {
+		Find(&menus).Error
+	if err != nil {
 		return nil, fmt.Errorf("查询菜单详情失败: %w", err)
 	}
 
-	// 转换为指针数组
-	return toSlicePtr(menus), nil
+	return utils.ToSlicePtr(menus), nil
 }
 
 // GetRoleMenuTreeWithCache 获取角色菜单树（带缓存）
@@ -172,10 +173,10 @@ func (s *RoleCacheService) GetRoleDeptsWithCache(ctx context.Context, roleID str
 func (s *RoleCacheService) queryRoleDepts(roleID string) ([]*models.Department, error) {
 	var deptIDs []string
 
-	// 查询角色关联的部门ID
-	if err := s.db.Table("sys_role_dept").
+	err := s.db.Table("sys_role_dept").
 		Where("role_id = ?", roleID).
-		Pluck("dept_id", &deptIDs).Error; err != nil {
+		Pluck("dept_id", &deptIDs).Error
+	if err != nil {
 		return nil, fmt.Errorf("查询角色部门关联失败: %w", err)
 	}
 
@@ -183,16 +184,15 @@ func (s *RoleCacheService) queryRoleDepts(roleID string) ([]*models.Department, 
 		return []*models.Department{}, nil
 	}
 
-	// 查询部门详情
 	var depts []models.Department
-	if err := s.db.Where("id IN ? AND status = ?", deptIDs, models.DeptStatusNormal).
+	err = s.db.Where("id IN ? AND status = ?", deptIDs, models.DeptStatusNormal).
 		Order("order_num ASC").
-		Find(&depts).Error; err != nil {
+		Find(&depts).Error
+	if err != nil {
 		return nil, fmt.Errorf("查询部门详情失败: %w", err)
 	}
 
-	// 转换为指针数组
-	return toSlicePtr(depts), nil
+	return utils.ToSlicePtr(depts), nil
 }
 
 // InvalidateRoleCache 清除角色相关缓存
@@ -286,12 +286,3 @@ func (s *RoleCacheService) assignRoleRelations(ctx context.Context, roleID strin
 	})
 }
 
-// toSlicePtr 将值切片转换为指针切片（泛型版本）
-// 示例: toSlicePtr([]models.Role{...}) => []*models.Role{...}
-func toSlicePtr[T any](slice []T) []*T {
-	result := make([]*T, len(slice))
-	for i := range slice {
-		result[i] = &slice[i]
-	}
-	return result
-}

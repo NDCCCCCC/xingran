@@ -8,6 +8,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
@@ -368,20 +369,15 @@ func testSM2(core *core.Core) gin.HandlerFunc {
 
 // recordLoginLog 记录登录日志
 func recordLoginLog(c *gin.Context, core *core.Core, username string, status int, msg string) {
-	// 获取客户端信息
-	clientIP := c.ClientIP()
+	clientIP := utils.GetClientIP(c)
 	userAgent := c.Request.UserAgent()
 
-	// 解析 User-Agent 获取浏览器和操作系统信息
 	browser, os := parseUserAgent(userAgent)
-
-	// 获取 IP 地理位置信息（可选，这里暂时留空）
-	var loginLocation *string
 
 	loginLog := models.LoginLog{
 		Username:      username,
 		IPAddr:        clientIP,
-		LoginLocation: loginLocation,
+		LoginLocation: nil,
 		Browser:       &browser,
 		OS:            &os,
 		Status:        status,
@@ -389,7 +385,6 @@ func recordLoginLog(c *gin.Context, core *core.Core, username string, status int
 		LoginTime:     time.Now(),
 	}
 
-	// 异步写入数据库，不影响登录响应速度
 	go func() {
 		_ = core.DB.GetDB().Create(&loginLog)
 	}()
@@ -397,58 +392,39 @@ func recordLoginLog(c *gin.Context, core *core.Core, username string, status int
 
 // parseUserAgent 解析 User-Agent 获取浏览器和操作系统信息
 func parseUserAgent(userAgent string) (browser, os string) {
-	// 简单的 User-Agent 解析
 	if userAgent == "" {
 		return "Unknown", "Unknown"
 	}
 
-	// 检测浏览器
-	if contains(userAgent, "Edg") {
+	switch {
+	case utils.Contains(userAgent, "Edg"):
 		browser = "Edge"
-	} else if contains(userAgent, "Chrome") {
+	case utils.Contains(userAgent, "Chrome"):
 		browser = "Chrome"
-	} else if contains(userAgent, "Firefox") {
+	case utils.Contains(userAgent, "Firefox"):
 		browser = "Firefox"
-	} else if contains(userAgent, "Safari") && !contains(userAgent, "Chrome") {
+	case utils.Contains(userAgent, "Safari") && !utils.Contains(userAgent, "Chrome"):
 		browser = "Safari"
-	} else if contains(userAgent, "Opera") || contains(userAgent, "OPR") {
+	case utils.Contains(userAgent, "Opera") || utils.Contains(userAgent, "OPR"):
 		browser = "Opera"
-	} else {
+	default:
 		browser = "Other"
 	}
 
-	// 检测操作系统
-	if contains(userAgent, "Windows") {
+	switch {
+	case utils.Contains(userAgent, "Windows"):
 		os = "Windows"
-	} else if contains(userAgent, "Mac OS X") || contains(userAgent, "Macintosh") {
+	case utils.Contains(userAgent, "Mac OS X") || utils.Contains(userAgent, "Macintosh"):
 		os = "Mac OS X"
-	} else if contains(userAgent, "Linux") {
+	case utils.Contains(userAgent, "Linux"):
 		os = "Linux"
-	} else if contains(userAgent, "Android") {
+	case utils.Contains(userAgent, "Android"):
 		os = "Android"
-	} else if contains(userAgent, "iOS") || contains(userAgent, "iPhone") || contains(userAgent, "iPad") {
+	case utils.Contains(userAgent, "iOS") || utils.Contains(userAgent, "iPhone") || utils.Contains(userAgent, "iPad"):
 		os = "iOS"
-	} else {
+	default:
 		os = "Other"
 	}
 
 	return browser, os
-}
-
-// contains 检查字符串是否包含子串（不区分大小写）
-func contains(str, substr string) bool {
-	return len(str) >= len(substr) && (str == substr ||
-		len(str) > len(substr) && (str[:len(substr)] == substr ||
-			str[len(str)-len(substr):] == substr ||
-			findSubstring(str, substr)))
-}
-
-// findSubstring 在字符串中查找子串
-func findSubstring(str, substr string) bool {
-	for i := 0; i <= len(str)-len(substr); i++ {
-		if str[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }

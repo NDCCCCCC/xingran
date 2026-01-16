@@ -3,13 +3,12 @@
  * 支持单文件/多文件上传、图片预览、上传进度显示
  */
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import type { FC } from 'react';
 import { Upload, message, Image, Progress, Button, Space } from 'antd';
 import { PlusOutlined, LoadingOutlined } from '@ant-design/icons';
 import type { UploadFile, UploadProps } from 'antd';
 
-// 文件上传响应数据类型
 export interface FileUploadResponse {
   id: string;
   fileName: string;
@@ -17,31 +16,33 @@ export interface FileUploadResponse {
   fileType: string;
   extension: string;
   url: string;
-  width?: number;      // 图片宽度（像素）
-  height?: number;     // 图片高度（像素）
-  metadata?: string;   // 扩展元数据（JSON格式）
+  width?: number;
+  height?: number;
+  metadata?: string;
   createdAt: string;
 }
 
 export interface FileUploadProps {
   value?: UploadFile[];
   onChange?: (files: UploadFile[]) => void;
-  accept?: string; // 接受的文件类型，如 'image/*,.pdf'
-  maxCount?: number; // 最大文件数量
-  maxSize?: number; // 最大文件大小（字节）
+  accept?: string;
+  maxCount?: number;
+  maxSize?: number;
   listType?: 'text' | 'picture' | 'picture-card' | 'picture-circle';
   disabled?: boolean;
-  category?: string; // 文件分类，如 'avatar', 'room-photo', 'document'
+  category?: string;
   onUploadSuccess?: (file: UploadFile, response: FileUploadResponse) => void;
-  onUploadError?: (file: UploadFile, error: any) => void;
+  onUploadError?: (file: UploadFile, error: unknown) => void;
 }
+
+const DEFAULT_MAX_SIZE = 5 * 1024 * 1024;
 
 const FileUpload: FC<FileUploadProps> = ({
   value = [],
   onChange,
   accept = 'image/*',
   maxCount = 1,
-  maxSize = 5 * 1024 * 1024, // 默认5MB
+  maxSize = DEFAULT_MAX_SIZE,
   listType = 'picture-card',
   disabled = false,
   category = 'document',
@@ -52,45 +53,64 @@ const FileUpload: FC<FileUploadProps> = ({
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
-  // 处理文件变化
-  const handleChange: UploadProps['onChange'] = ({ fileList: newFileList }) => {
+  const handleChange: UploadProps['onChange'] = useCallback(({ fileList: newFileList }) => {
     setFileList(newFileList);
     onChange?.(newFileList);
-  };
+  }, [onChange]);
 
-  // 上传前验证
-  const beforeUpload = (file: File) => {
-    // 验证文件大小
+  const isFileTypeAccepted = useCallback((file: File): boolean => {
+    if (!accept) return true;
+
+    const acceptTypes = accept.split(',').map(t => t.trim());
+    return acceptTypes.some(type => {
+      if (type.startsWith('.')) {
+        return file.name.toLowerCase().endsWith(type.toLowerCase());
+      }
+      if (type.endsWith('/*')) {
+        const mimeType = type.split('/')[0];
+        return file.type.startsWith(mimeType + '/');
+      }
+      return file.type === type;
+    });
+  }, [accept]);
+
+  const beforeUpload = useCallback((file: File) => {
     if (file.size > maxSize) {
       message.error(`文件大小不能超过 ${(maxSize / 1024 / 1024).toFixed(0)}MB`);
       return Upload.LIST_IGNORE;
     }
 
-    // 验证文件类型
-    if (accept) {
-      const acceptTypes = accept.split(',').map(t => t.trim());
-      const isAccepted = acceptTypes.some(type => {
-        if (type.startsWith('.')) {
-          return file.name.toLowerCase().endsWith(type.toLowerCase());
-        }
-        if (type.endsWith('/*')) {
-          const mimeType = type.split('/')[0];
-          return file.type.startsWith(mimeType + '/');
-        }
-        return file.type === type;
-      });
-
-      if (!isAccepted) {
-        message.error('不支持的文件类型');
-        return Upload.LIST_IGNORE;
-      }
+    if (!isFileTypeAccepted(file)) {
+      message.error('不支持的文件类型');
+      return Upload.LIST_IGNORE;
     }
 
     return true;
-  };
+  }, [maxSize, isFileTypeAccepted]);
 
-  // 自定义上传请求
-  const customRequest = async (options: any) => {
+  const handleUploadProgress = useCallback((e: ProgressEvent, file: UploadFile, onProgress: (progress: { percent: number }, file: UploadFile) => void) => {
+    if (e.lengthComputable) {
+      const percent = Math.round((e.loaded / e.total) * 100);
+      setUploadProgress(percent);
+      onProgress({ percent }, file);
+    }
+  }, []);
+
+  const handleUploadSuccess = useCallback((response: unknown, file: UploadFile) => {
+    setUploading(false);
+    setUploadProgress(100);
+    onUploadSuccess?.(file, response as FileUploadResponse);
+    message.success('上传成功');
+  }, [onUploadSuccess]);
+
+  const handleUploadError = useCallback((error: Error, file: UploadFile, onError: (error: Error) => void) => {
+    setUploading(false);
+    onError(error);
+    onUploadError?.(file, error);
+    message.error('上传失败');
+  }, [onUploadError]);
+
+  const customRequest = useCallback((options: any) => {
     const { file, onProgress, onSuccess, onError } = options;
     const formData = new FormData();
     formData.append('file', file);
@@ -101,55 +121,34 @@ const FileUpload: FC<FileUploadProps> = ({
     setUploading(true);
     setUploadProgress(0);
 
-    try {
-      // 使用 XMLHttpRequest 来跟踪上传进度
-      const xhr = new XMLHttpRequest();
+    const xhr = new XMLHttpRequest();
 
-      xhr.upload.onprogress = (e) => {
-        if (e.lengthComputable) {
-          const percent = Math.round((e.loaded / e.total) * 100);
-          setUploadProgress(percent);
-          onProgress({ percent }, file);
-        }
-      };
+    xhr.upload.onprogress = (e) => handleUploadProgress(e, file, onProgress);
 
-      xhr.onload = () => {
-        if (xhr.status === 200) {
-          const response = JSON.parse(xhr.responseText);
-          setUploading(false);
-          setUploadProgress(100);
-          onSuccess(response, file);
-          onUploadSuccess?.(file, response);
-          message.success('上传成功');
-        } else {
-          throw new Error(xhr.responseText || '上传失败');
-        }
-      };
-
-      xhr.onerror = () => {
-        setUploading(false);
-        const error = new Error('网络错误');
-        onError(error);
-        onUploadError?.(file, error);
-        message.error('上传失败');
-      };
-
-      xhr.open('POST', '/system/files/upload', true);
-      // 从 localStorage 获取 token
-      const token = localStorage.getItem('token');
-      if (token) {
-        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    xhr.onload = () => {
+      if (xhr.status === 200) {
+        const response = JSON.parse(xhr.responseText);
+        handleUploadSuccess(response, file);
+        onSuccess(response, file);
+      } else {
+        const error = new Error(xhr.responseText || '上传失败');
+        handleUploadError(error, file, onError);
       }
-      xhr.send(formData);
-    } catch (error) {
-      setUploading(false);
-      onError(error);
-      onUploadError?.(file, error);
-      message.error('上传失败');
-    }
-  };
+    };
 
-  // 上传按钮
+    xhr.onerror = () => {
+      const error = new Error('网络错误');
+      handleUploadError(error, file, onError);
+    };
+
+    xhr.open('POST', '/system/files/upload', true);
+    const token = localStorage.getItem('token');
+    if (token) {
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    }
+    xhr.send(formData);
+  }, [category, handleUploadProgress, handleUploadSuccess, handleUploadError]);
+
   const uploadButton = (
     <div>
       {uploading ? <LoadingOutlined /> : <PlusOutlined />}
@@ -165,8 +164,7 @@ const FileUpload: FC<FileUploadProps> = ({
     </div>
   );
 
-  // 删除文件
-  const handleRemove = async (file: UploadFile) => {
+  const handleRemove = useCallback(async (file: UploadFile) => {
     if (file.response?.data?.id) {
       try {
         await fetch(`/system/files/${file.response.data.id}`, {
@@ -179,21 +177,23 @@ const FileUpload: FC<FileUploadProps> = ({
         console.error('删除文件失败:', error);
       }
     }
+  }, []);
+
+  const uploadProps = {
+    listType,
+    fileList,
+    onChange: handleChange,
+    beforeUpload,
+    customRequest,
+    accept,
+    maxCount,
+    disabled: disabled || uploading,
+    onRemove: handleRemove,
   };
 
   if (listType === 'picture-card' && maxCount === 1) {
     return (
-      <Upload
-        listType="picture-card"
-        fileList={fileList}
-        onChange={handleChange}
-        beforeUpload={beforeUpload}
-        customRequest={customRequest}
-        accept={accept}
-        maxCount={maxCount}
-        disabled={disabled || uploading}
-        onRemove={handleRemove}
-      >
+      <Upload {...uploadProps}>
         {fileList.length >= maxCount ? null : uploadButton}
       </Upload>
     );
@@ -201,17 +201,7 @@ const FileUpload: FC<FileUploadProps> = ({
 
   return (
     <Space direction="vertical" style={{ width: '100%' }}>
-      <Upload
-        listType={listType}
-        fileList={fileList}
-        onChange={handleChange}
-        beforeUpload={beforeUpload}
-        customRequest={customRequest}
-        accept={accept}
-        maxCount={maxCount}
-        disabled={disabled || uploading}
-        onRemove={handleRemove}
-      >
+      <Upload {...uploadProps}>
         <Button icon={<PlusOutlined />} disabled={disabled || uploading}>
           选择文件
         </Button>

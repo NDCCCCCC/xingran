@@ -5,27 +5,45 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 )
 
+// ExcelOption Excel选项值
+type ExcelOption struct {
+	Value interface{}
+	Label string
+}
+
+// ExcelOptionsMap 选项映射类型
+type ExcelOptionsMap map[interface{}]string
+
+// ToOptionMap 将 ExcelOption 列表转换为映射
+func ToOptionMap(opts []ExcelOption) ExcelOptionsMap {
+	result := make(ExcelOptionsMap, len(opts))
+	for _, opt := range opts {
+		result[opt.Value] = opt.Label
+	}
+	return result
+}
+
 // ExcelColumn Excel列配置
 type ExcelColumn struct {
-	Field     string                 // 字段名
-	Header    string                 // 表头名称
-	Required  bool                   // 是否必填
-	Unique    bool                   // 是否唯一
-	MinLength int                    // 最小长度
-	MaxLength int                    // 最大长度
-	Pattern   string                 // 正则表达式
-	Options   map[interface{}]string // 枚举值映射（值 -> 显示文本）
-	Reference string                 // 关联表
+	Field     string
+	Header    string
+	Required  bool
+	Unique    bool
+	MinLength int
+	MaxLength int
+	Pattern   string
+	Options   ExcelOptionsMap
+	Reference string
 }
 
 // ExcelConfig Excel配置
 type ExcelConfig struct {
-	SheetName  string        // 工作表名称
-	TableName  string        // 数据表名
-	EntityName string        // 实体名称
-	Columns    []ExcelColumn // 列配置
-	HasHeader  bool          // 是否有表头
-	StartRow   int           // 数据起始行（从1开始）
+	SheetName  string
+	TableName  string
+	EntityName string
+	Columns    []ExcelColumn
+	HasHeader  bool
+	StartRow   int
 }
 
 // ExcelConfigs 所有Excel配置映射

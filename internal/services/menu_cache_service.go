@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
@@ -49,17 +50,12 @@ func (s *MenuCacheService) queryAllMenus() ([]*models.Menu, error) {
 	var menus []models.Menu
 
 	// 注意：不添加 status 过滤条件，确保管理界面能看到所有菜单（包括停用的）
-	if err := s.db.Order("order_num ASC").Find(&menus).Error; err != nil {
+	err := s.db.Order("order_num ASC").Find(&menus).Error
+	if err != nil {
 		return nil, fmt.Errorf("查询菜单列表失败: %w", err)
 	}
 
-	// 转换为指针数组
-	menuPtrs := make([]*models.Menu, len(menus))
-	for i := range menus {
-		menuPtrs[i] = &menus[i]
-	}
-
-	return menuPtrs, nil
+	return utils.ToSlicePtr(menus), nil
 }
 
 // GetMenuTreeWithCache 获取菜单树（带缓存）
@@ -158,19 +154,14 @@ func (s *MenuCacheService) GetMenuChildrenWithCache(ctx context.Context, parentI
 func (s *MenuCacheService) queryMenuChildren(parentID string) ([]*models.Menu, error) {
 	var menus []models.Menu
 
-	if err := s.db.Where("parent_id = ? AND status = ?", parentID, models.MenuStatusNormal).
+	err := s.db.Where("parent_id = ? AND status = ?", parentID, models.MenuStatusNormal).
 		Order("order_num ASC").
-		Find(&menus).Error; err != nil {
+		Find(&menus).Error
+	if err != nil {
 		return nil, fmt.Errorf("查询子菜单失败: %w", err)
 	}
 
-	// 转换为指针数组
-	menuPtrs := make([]*models.Menu, len(menus))
-	for i := range menus {
-		menuPtrs[i] = &menus[i]
-	}
-
-	return menuPtrs, nil
+	return utils.ToSlicePtr(menus), nil
 }
 
 // InvalidateMenuCache 清除菜单相关缓存

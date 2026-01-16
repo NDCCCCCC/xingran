@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
@@ -48,19 +49,14 @@ func (s *PostCacheService) GetAllPostsWithCache(ctx context.Context) ([]*models.
 func (s *PostCacheService) queryAllPosts() ([]*models.Post, error) {
 	var posts []models.Post
 
-	if err := s.db.Where("status = ?", models.PostStatusEnabled).
+	err := s.db.Where("status = ?", models.PostStatusEnabled).
 		Order("post_sort ASC").
-		Find(&posts).Error; err != nil {
+		Find(&posts).Error
+	if err != nil {
 		return nil, fmt.Errorf("查询岗位列表失败: %w", err)
 	}
 
-	// 转换为指针数组
-	postPtrs := make([]*models.Post, len(posts))
-	for i := range posts {
-		postPtrs[i] = &posts[i]
-	}
-
-	return postPtrs, nil
+	return utils.ToSlicePtr(posts), nil
 }
 
 // GetPostByIDWithCache 根据ID获取岗位（带缓存）
@@ -159,9 +155,10 @@ func (s *PostCacheService) queryUserPosts(userID string) ([]*models.Post, error)
 	var postIDs []string
 
 	// 查询用户关联的岗位ID
-	if err := s.db.Table("sys_user_post").
+	err := s.db.Table("sys_user_post").
 		Where("user_id = ?", userID).
-		Pluck("post_id", &postIDs).Error; err != nil {
+		Pluck("post_id", &postIDs).Error
+	if err != nil {
 		return nil, fmt.Errorf("查询用户岗位关联失败: %w", err)
 	}
 
@@ -171,19 +168,14 @@ func (s *PostCacheService) queryUserPosts(userID string) ([]*models.Post, error)
 
 	// 查询岗位详情
 	var posts []models.Post
-	if err := s.db.Where("id IN ? AND status = ?", postIDs, models.PostStatusEnabled).
+	err = s.db.Where("id IN ? AND status = ?", postIDs, models.PostStatusEnabled).
 		Order("post_sort ASC").
-		Find(&posts).Error; err != nil {
+		Find(&posts).Error
+	if err != nil {
 		return nil, fmt.Errorf("查询岗位详情失败: %w", err)
 	}
 
-	// 转换为指针数组
-	postPtrs := make([]*models.Post, len(posts))
-	for i := range posts {
-		postPtrs[i] = &posts[i]
-	}
-
-	return postPtrs, nil
+	return utils.ToSlicePtr(posts), nil
 }
 
 // InvalidatePostCache 清除岗位相关缓存
@@ -335,17 +327,12 @@ func (s *PostCacheService) GetEnabledPostsWithCache(ctx context.Context) ([]*mod
 func (s *PostCacheService) queryEnabledPosts() ([]*models.Post, error) {
 	var posts []models.Post
 
-	if err := s.db.Where("status = ?", models.PostStatusEnabled).
+	err := s.db.Where("status = ?", models.PostStatusEnabled).
 		Order("post_sort ASC").
-		Find(&posts).Error; err != nil {
+		Find(&posts).Error
+	if err != nil {
 		return nil, fmt.Errorf("查询启用岗位失败: %w", err)
 	}
 
-	// 转换为指针数组
-	postPtrs := make([]*models.Post, len(posts))
-	for i := range posts {
-		postPtrs[i] = &posts[i]
-	}
-
-	return postPtrs, nil
+	return utils.ToSlicePtr(posts), nil
 }

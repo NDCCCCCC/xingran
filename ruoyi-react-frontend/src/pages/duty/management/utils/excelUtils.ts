@@ -8,30 +8,73 @@ import { message } from 'antd';
 import dayjs from 'dayjs';
 import type { HolidayExcelRow, ImportOptions, HolidayCreateData } from '../types';
 
-/** 验证节假日类型 */
-export function isValidHolidayType(value: string): value is 'legal' | 'workday' | 'custom' {
-  return ['legal', 'workday', 'custom'].includes(value);
+const VALID_HOLIDAY_TYPES = ['legal', 'workday', 'custom'] as const;
+type HolidayType = 'legal' | 'workday' | 'custom';
+
+function isValidHolidayType(value: string): value is HolidayType {
+  return VALID_HOLIDAY_TYPES.includes(value as HolidayType);
 }
 
-/** 下载节假日导入模板 */
+const TEMPLATE_DATA = [
+  {
+    '日期(YYYY-MM-DD)': '2024-01-01',
+    '名称': '元旦',
+    '类型(legal/workday/custom)': 'legal',
+    '是否休息(true/false)': 'true',
+    '备注': '法定节假日',
+  },
+];
+
+function getRowDate(row: HolidayExcelRow, rowNum: number): string {
+  const dateStr = row['日期(YYYY-MM-DD)'] || row['日期'];
+  if (!dateStr) {
+    throw new Error(`第 ${rowNum} 行：日期字段不能为空`);
+  }
+  if (!dayjs(dateStr).isValid()) {
+    throw new Error(`第 ${rowNum} 行：日期格式不正确 (${dateStr})`);
+  }
+  return dateStr;
+}
+
+function getRowName(row: HolidayExcelRow, rowNum: number): string {
+  const holidayName = row['名称'] || row['节假日名称'];
+  if (!holidayName) {
+    throw new Error(`第 ${rowNum} 行：名称字段不能为空`);
+  }
+  return holidayName;
+}
+
+function getRowType(row: HolidayExcelRow, rowNum: number): HolidayType {
+  const holidayTypeRaw = row['类型(legal/workday/custom)'] || row['类型'] || 'custom';
+  if (!isValidHolidayType(holidayTypeRaw)) {
+    throw new Error(`第 ${rowNum} 行：类型值不正确 (${holidayTypeRaw})，应为 legal、workday 或 custom`);
+  }
+  return holidayTypeRaw;
+}
+
+function parseHolidayRow(row: HolidayExcelRow, rowNum: number): HolidayCreateData {
+  const dateStr = getRowDate(row, rowNum);
+  const holidayName = getRowName(row, rowNum);
+  const holidayType = getRowType(row, rowNum);
+
+  return {
+    holidayDate: dateStr,
+    holidayName,
+    isOffday: row['是否休息(true/false)'] !== false,
+    holidayType: holidayType,
+    year: dayjs(dateStr).year(),
+    remark: row['备注'] || '',
+  };
+}
+
 export function downloadHolidayTemplate() {
-  const template = [
-    {
-      '日期(YYYY-MM-DD)': '2024-01-01',
-      '名称': '元旦',
-      '类型(legal/workday/custom)': 'legal',
-      '是否休息(true/false)': 'true',
-      '备注': '法定节假日',
-    },
-  ];
-  const worksheet = XLSX.utils.json_to_sheet(template);
+  const worksheet = XLSX.utils.json_to_sheet(TEMPLATE_DATA);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, '节假日模板');
   XLSX.writeFile(workbook, '节假日导入模板.xlsx');
   message.success('模板下载成功');
 }
 
-/** 处理节假日 Excel 导入 */
 export function handleHolidayImport(
   options: ImportOptions,
   batchCreate: (holidays: HolidayCreateData[]) => Promise<boolean | void>
@@ -52,6 +95,7 @@ export function handleHolidayImport(
       if (!data) {
         throw new Error('文件读取失败');
       }
+
       const workbook = XLSX.read(data, { type: 'binary' });
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
@@ -61,42 +105,7 @@ export function handleHolidayImport(
         throw new Error('Excel 文件为空');
       }
 
-      const holidays: HolidayCreateData[] = [];
-
-      for (let i = 0; i < jsonData.length; i++) {
-        const row = jsonData[i];
-        const rowNum = i + 2; // Excel 行号（从1开始，第1行是表头）
-
-        // 验证日期
-        const dateStr = row['日期(YYYY-MM-DD)'] || row['日期'];
-        if (!dateStr) {
-          throw new Error(`第 ${rowNum} 行：日期字段不能为空`);
-        }
-        if (!dayjs(dateStr).isValid()) {
-          throw new Error(`第 ${rowNum} 行：日期格式不正确 (${dateStr})`);
-        }
-
-        // 验证名称
-        const holidayName = row['名称'] || row['节假日名称'];
-        if (!holidayName) {
-          throw new Error(`第 ${rowNum} 行：名称字段不能为空`);
-        }
-
-        // 验证类型
-        const holidayTypeRaw = row['类型(legal/workday/custom)'] || row['类型'] || 'custom';
-        if (!isValidHolidayType(holidayTypeRaw)) {
-          throw new Error(`第 ${rowNum} 行：类型值不正确 (${holidayTypeRaw})，应为 legal、workday 或 custom`);
-        }
-
-        holidays.push({
-          holidayDate: dateStr,
-          holidayName,
-          isOffday: row['是否休息(true/false)'] !== false,
-          holidayType: holidayTypeRaw,
-          year: dayjs(dateStr).year(),
-          remark: row['备注'] || '',
-        });
-      }
+      const holidays = jsonData.map((row, index) => parseHolidayRow(row, index + 2));
 
       await batchCreate(holidays);
       onSuccess?.(undefined);

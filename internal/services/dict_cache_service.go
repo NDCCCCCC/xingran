@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
@@ -49,19 +50,14 @@ func (s *DictCacheService) GetDictDataByTypeWithCache(ctx context.Context, dictT
 func (s *DictCacheService) queryDictDataByType(dictType string) ([]*models.DictData, error) {
 	var dictData []models.DictData
 
-	if err := s.db.Where("dict_type = ? AND status = ?", dictType, 0).
+	err := s.db.Where("dict_type = ? AND status = ?", dictType, 0).
 		Order("dict_sort ASC, dict_value ASC").
-		Find(&dictData).Error; err != nil {
+		Find(&dictData).Error
+	if err != nil {
 		return nil, fmt.Errorf("查询字典数据失败: %w", err)
 	}
 
-	// 转换为指针数组
-	dictDataPtrs := make([]*models.DictData, len(dictData))
-	for i := range dictData {
-		dictDataPtrs[i] = &dictData[i]
-	}
-
-	return dictDataPtrs, nil
+	return utils.ToSlicePtr(dictData), nil
 }
 
 // GetDictTypesWithCache 获取所有字典类型（带缓存）
@@ -85,19 +81,14 @@ func (s *DictCacheService) GetDictTypesWithCache(ctx context.Context) ([]*models
 func (s *DictCacheService) queryDictTypes() ([]*models.DictType, error) {
 	var dictTypes []models.DictType
 
-	if err := s.db.Where("status = ?", 0).
+	err := s.db.Where("status = ?", 0).
 		Order("dict_sort ASC").
-		Find(&dictTypes).Error; err != nil {
+		Find(&dictTypes).Error
+	if err != nil {
 		return nil, fmt.Errorf("查询字典类型失败: %w", err)
 	}
 
-	// 转换为指针数组
-	dictTypePtrs := make([]*models.DictType, len(dictTypes))
-	for i := range dictTypes {
-		dictTypePtrs[i] = &dictTypes[i]
-	}
-
-	return dictTypePtrs, nil
+	return utils.ToSlicePtr(dictTypes), nil
 }
 
 // InvalidateDictCache 清除字典相关缓存

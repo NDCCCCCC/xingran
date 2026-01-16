@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	"gorm.io/gorm"
@@ -256,7 +257,7 @@ func createUser(core *core.Core) gin.HandlerFunc {
 			Gender:     models.Gender(req.Gender),
 			Status:     models.UserStatus(req.Status),
 			DeptID:     req.DeptID,
-			Remark:     derefString(req.Remark),
+			Remark:     utils.DerefString(req.Remark),
 		}
 
 		// 使用事务创建用户及其关联
@@ -386,7 +387,7 @@ func updateUser(core *core.Core) gin.HandlerFunc {
 			user.Gender = models.Gender(req.Gender)
 			user.Status = models.UserStatus(req.Status)
 			user.DeptID = req.DeptID
-			user.Remark = derefString(req.Remark)
+			user.Remark = utils.DerefString(req.Remark)
 
 			if err := tx.Save(&user).Error; err != nil {
 				return fmt.Errorf("更新用户失败: %w", err)
