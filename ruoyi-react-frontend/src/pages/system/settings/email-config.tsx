@@ -19,7 +19,6 @@ import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
-  ReloadOutlined,
   MailOutlined,
   SendOutlined,
 } from '@ant-design/icons';

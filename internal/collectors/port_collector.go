@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"gorm.io/gorm"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"gorm.io/gorm"
 )
 
 // PortCollector 端口状态采集器
@@ -21,15 +21,15 @@ type PortCollector struct {
 
 // PortStatusEntry 端口状态条目
 type PortStatusEntry struct {
-	InterfaceName        string
-	AdminStatus          string
-	OperStatus           string
-	Dot1xEnabled         bool
-	Dot1xPortStatus      models.Dot1xPortStatus
-	PortSecurityEnabled  bool
-	PortSecurityMode     models.PortSecurityMode
-	MaxMACCount          *int
-	CurrentMACCount      *int
+	InterfaceName       string
+	AdminStatus         string
+	OperStatus          string
+	Dot1xEnabled        bool
+	Dot1xPortStatus     models.Dot1xPortStatus
+	PortSecurityEnabled bool
+	PortSecurityMode    models.PortSecurityMode
+	MaxMACCount         *int
+	CurrentMACCount     *int
 }
 
 // NewPortCollector 创建端口状态采集器
@@ -357,9 +357,6 @@ func (c *PortCollector) SaveToDatabase(deviceID string, entries []PortStatusEntr
 
 	collectedAt := time.Now()
 
-	// 删除该设备的旧数据（可选：保留历史数据则不删除）
-	// c.db.Where("device_id = ?", deviceID).Delete(&models.DevicePortStatus{})
-
 	// 批量插入新数据
 	for _, entry := range entries {
 		portStatus := models.DevicePortStatus{
@@ -453,9 +450,9 @@ func (c *PortCollector) GetPortsWithDot1xEnabled(deviceID string) ([]models.Devi
 func (c *PortCollector) getInterfaceCommand(vendor models.DeviceVendor) string {
 	commands := map[models.DeviceVendor]string{
 		models.VendorHuawei: "display interface",
-		models.VendorH3C:     "display interface",
-		models.VendorRuijie:  "show interface",
-		models.VendorMaipu:   "show interface",
+		models.VendorH3C:    "display interface",
+		models.VendorRuijie: "show interface",
+		models.VendorMaipu:  "show interface",
 	}
 	if cmd, ok := commands[vendor]; ok {
 		return cmd
@@ -467,9 +464,9 @@ func (c *PortCollector) getInterfaceCommand(vendor models.DeviceVendor) string {
 func (c *PortCollector) getDot1xCommand(vendor models.DeviceVendor) string {
 	commands := map[models.DeviceVendor]string{
 		models.VendorHuawei: "display dot1x",
-		models.VendorH3C:     "display dot1x",
-		models.VendorRuijie:  "show dot1x",
-		models.VendorMaipu:   "show dot1x",
+		models.VendorH3C:    "display dot1x",
+		models.VendorRuijie: "show dot1x",
+		models.VendorMaipu:  "show dot1x",
 	}
 	if cmd, ok := commands[vendor]; ok {
 		return cmd
@@ -481,9 +478,9 @@ func (c *PortCollector) getDot1xCommand(vendor models.DeviceVendor) string {
 func (c *PortCollector) getPortSecurityCommand(vendor models.DeviceVendor) string {
 	commands := map[models.DeviceVendor]string{
 		models.VendorHuawei: "display port-security",
-		models.VendorH3C:     "display port-security",
-		models.VendorRuijie:  "show port-security",
-		models.VendorMaipu:   "show port-security",
+		models.VendorH3C:    "display port-security",
+		models.VendorRuijie: "show port-security",
+		models.VendorMaipu:  "show port-security",
 	}
 	if cmd, ok := commands[vendor]; ok {
 		return cmd

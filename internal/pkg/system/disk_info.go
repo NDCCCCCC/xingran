@@ -28,7 +28,7 @@ func GetDiskInfoDetailed(path string) (uint64, uint64, error) {
 func getEstimatedDiskInfo() (uint64, uint64, error) {
 	// 使用估算值：假设磁盘容量为500GB，75%使用
 	totalBytes := uint64(500) * 1024 * 1024 * 1024 // 500GB
-	availableBytes := totalBytes / 4                 // 25%可用 = 125GB
+	availableBytes := totalBytes / 4               // 25%可用 = 125GB
 
 	return totalBytes, availableBytes, nil
 }

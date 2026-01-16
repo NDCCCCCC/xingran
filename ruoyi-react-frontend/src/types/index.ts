@@ -85,6 +85,7 @@ export interface Department {
   leaderUsername?: string;
   phone?: string;
   email?: string;
+  isExternalOrg?: 0 | 1;  // 是否为外部机构：0=否（内部部门），1=是（拥有职场的外部机构）
   status: 0 | 1;  // 0:正常 1:停用
   children?: Department[];
   createdAt: string;
@@ -489,4 +490,203 @@ export interface UserPreferences {
   language: 'zh-CN' | 'en-US';
   pageSize: number;
   sidebarCollapsed: boolean;
+}// ==================== 运维管理相关类型 ====================
+
+// 楼宇状态
+export type BuildingStatus = 0 | 1;  // 0:正常 1:停用
+
+// 楼宇
+export interface Building {
+  id: string;
+  name: string;
+  code: string;
+  address?: string;
+  totalFloors?: number;
+  totalArea?: number;
+  description?: string;
+  status: BuildingStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 楼层状态
+export type FloorStatus = 0 | 1;  // 0:正常 1:停用
+
+// 楼层
+export interface Floor {
+  id: string;
+  buildingCode: string;
+  buildingName?: string;
+  floorNo: string;
+  name?: string;
+  area?: number;
+  description?: string;
+  status: FloorStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 工位类型
+export type WorkstationOpsType = 0 | 1 | 2;  // 0:固定工位 1:灵活工位 2:管理工位
+
+// 工位状态
+export type WorkstationOpsStatus = 0 | 1 | 2;  // 0:空闲可分配 1:占用已分配 2:维护中不可用
+
+// 工位（运维管理）
+export interface WorkstationOps {
+  id: string;
+  floorId: string;
+  floorName?: string;
+  name: string;
+  type: WorkstationOpsType;
+  status: WorkstationOpsStatus;
+  deptId?: string;        // 所属部门ID
+  deptName?: string;      // 所属部门名称
+  userId?: string;        // 所属用户ID
+  userName?: string;      // 所属用户名称
+  positionX?: number;
+  positionY?: number;
+  rotation?: number;      // 平面图旋转角度（度），0-360，默认0
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 机房状态
+export type RoomStatus = 0 | 1;  // 0:正常 1:停用
+
+// 机房
+export interface ServerRoom {
+  id: string;
+  buildingId: string;     // 所属楼宇ID
+  buildingName?: string;
+  floorNo: string;
+  name: string;
+  area?: number;
+  rackCount?: number;
+  powerCapacity?: number;
+  remark?: string;
+  status: RoomStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 机房照片
+export interface RoomPhoto {
+  id: string;
+  roomId: string;
+  fileId: string;
+  fileName?: string;
+  fileUrl: string;
+  sortOrder: number;
+  isPrimary: boolean;
+  description?: string;
+  createdAt: string;
+}
+
+// 设备类型
+export type RoomDeviceType = 'server' | 'storage' | 'ups' | 'pdu' | 'firewall' | 'kvm' | 'cabinet' | 'other';
+
+// 机房设备状态
+export type RoomDeviceStatus = 0 | 1 | 2;  // 0:正常 1:故障 2:报废
+
+// 机房设备
+export interface RoomDevice {
+  id: string;
+  roomCode: string;
+  roomName?: string;
+  deviceCode: string;
+  deviceName: string;
+  deviceType: RoomDeviceType;
+  vendor?: string;
+  model?: string;
+  serialNumber?: string;
+  positionDesc?: string;
+  positionU?: number;
+  heightU?: number;
+  powerConsumption?: number;
+  purchaseDate?: string;
+  warrantyDate?: string;
+  status: RoomDeviceStatus;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 专线类型
+export type LineType = 'MPLS' | 'Internet' | 'LeasedLine' | 'Fiber';
+
+// 专线状态
+export type LineStatus = 0 | 1 | 2;  // 0:正常 1:故障 2:停用
+
+// 专线
+export interface DedicatedLine {
+  id: string;
+  lineCode: string;
+  lineType: LineType;
+  bandwidth?: string;
+  isp: string;
+  sourceDeviceId?: string;
+  sourceDeviceName?: string;
+  sourcePort?: string;
+  sourceRoomId?: string;       // 源机房ID
+  sourceRoomName?: string;     // 源机房名称
+  destDeviceId?: string;
+  destDeviceName?: string;
+  destPort?: string;
+  destRoomId?: string;         // 目的机房ID
+  destRoomName?: string;       // 目的机房名称
+  ipAddress?: string;
+  subnetMask?: string;
+  vlan?: string;
+  carrierContactName?: string;
+  carrierContactPhone?: string;
+  contractNo?: string;
+  monthlyFee?: number;
+  status: LineStatus;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 信息点类型（使用字典 ops_info_point_type）
+export type InfoPointType = string;
+
+// 信息点状态
+export type InfoPointStatus = 0 | 1 | 2;  // 0:正常 1:故障 2:停用
+
+// 信息点
+export interface InfoPoint {
+  id: string;
+  workstationId: string;
+  workstationName?: string;
+  name: string;
+  infoPointType: InfoPointType;
+  deviceId?: string;
+  deviceName?: string;
+  portId?: string;
+  portName?: string;
+  status: InfoPointStatus;
+  description?: string;
+  remark?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ==================== 值班管理相关类型 ====================
+
+// 我的值班统计
+export interface MyDutyStats {
+  isOnDutyToday: boolean;          // 今日是否值班
+  thisMonthCount: number;          // 本月值班次数
+  totalCount: number;              // 累计值班次数
+  nextDutyDate?: string;           // 下次值班日期
+  nextDutyPoolName?: string;       // 下次值班班组名称
+  todayDutyRecords?: TodayDutyRecord[]; // 今日值班记录
+}
+
+// 今日值班记录
+export interface TodayDutyRecord {
+  poolName: string;                // 班组名称
+  dutyType: 'weekday' | 'weekend' | 'holiday'; // 值班类型
 }

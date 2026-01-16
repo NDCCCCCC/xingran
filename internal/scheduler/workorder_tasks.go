@@ -62,19 +62,19 @@ func executePeriodicWorkOrderCreateTask(ctx context.Context, params map[string]i
 
 		// 创建工单
 		workOrder = &models.WorkOrder{
-			Title:           title,
-			WorkOrderNo:     workOrderNo,
-			CategoryID:      template.CategoryID,
-			Type:            template.Type,
-			Priority:        template.Priority,
-			Status:          models.WorkOrderStatusPending, // 待处理
-			Description:     template.Description,
-			SubmitterID:     "system", // 系统创建
-			IsAutoAssigned:  true,     // 标记为自动分配
-			AssignStrategy:  "assign_one", // 默认分配策略
+			Title:          title,
+			WorkOrderNo:    workOrderNo,
+			CategoryID:     template.CategoryID,
+			Type:           template.Type,
+			Priority:       template.Priority,
+			Status:         models.WorkOrderStatusPending, // 待处理
+			Description:    template.Description,
+			SubmitterID:    "system",     // 系统创建
+			IsAutoAssigned: true,         // 标记为自动分配
+			AssignStrategy: "assign_one", // 默认分配策略
 		}
 
-			// 根据分配类型获取处理人
+		// 根据分配类型获取处理人
 		assigneeID, err := assignWorkOrderHandler(tx, &template, workOrder)
 		if err != nil {
 			log.Printf("分配处理人失败: %v，将创建工单但不分配", err)
@@ -88,7 +88,7 @@ func executePeriodicWorkOrderCreateTask(ctx context.Context, params map[string]i
 
 		// 记录执行日志
 		execLog := &models.PeriodicWorkOrderLog{
-			TemplateID: template.ID,
+			TemplateID:  template.ID,
 			WorkOrderID: workOrder.ID,
 			ExecutedAt:  time.Now(),
 			JobID:       template.JobID,
@@ -241,12 +241,12 @@ func sendWorkOrderNotification(workOrderID, assigneeID, title string) {
 	}
 
 	message := map[string]interface{}{
-		"type":       "new_workorder",
+		"type":        "new_workorder",
 		"workOrderId": workOrderID,
-		"title":      "新工单通知",
-		"content":    fmt.Sprintf("您有一个新的周期性工单待处理：%s", title),
-		"priority":   1,
-		"timestamp":  time.Now().Unix(),
+		"title":       "新工单通知",
+		"content":     fmt.Sprintf("您有一个新的周期性工单待处理：%s", title),
+		"priority":    1,
+		"timestamp":   time.Now().Unix(),
 	}
 
 	GlobalNoticeHub.BroadcastToUsers([]string{assigneeID}, message)

@@ -23,34 +23,34 @@ import (
 // Core 核心模块管理器
 // 负责管理系统的所有核心服务组件，包括数据库连接、缓存、JWT管理、密码加密等
 type Core struct {
-	Config                  *config.Config            // 系统配置
-	DB                      *db.Database             // 数据库连接管理器
-	Cache                   cache.Cache              // 缓存管理器
-	JWTManager              *security.JWTManager     // JWT令牌管理器
-	PwdManager              *security.PasswordManager // 密码管理器
-	SM4Cipher               *security.SM4Cipher      // SM4加密器（用于凭证密码加密）
-	MetricsCacheService     *MetricsCacheService      // 系统指标缓存服务
-	Scheduler               *scheduler.Scheduler      // 定时任务调度器
-	DeviceManager              *device.Manager                      // 网络设备管理器（简化版，仅辅助方法）
-	DeviceExecutor             *device.DeviceExecutor               // 设备执行器（新架构，统一入口）
-	DeviceDiscoveryService     *services.DeviceDiscoveryService     // 设备发现服务
+	Config                      *config.Config                        // 系统配置
+	DB                          *db.Database                          // 数据库连接管理器
+	Cache                       cache.Cache                           // 缓存管理器
+	JWTManager                  *security.JWTManager                  // JWT令牌管理器
+	PwdManager                  *security.PasswordManager             // 密码管理器
+	SM4Cipher                   *security.SM4Cipher                   // SM4加密器（用于凭证密码加密）
+	MetricsCacheService         *MetricsCacheService                  // 系统指标缓存服务
+	Scheduler                   *scheduler.Scheduler                  // 定时任务调度器
+	DeviceManager               *device.Manager                       // 网络设备管理器（简化版，仅辅助方法）
+	DeviceExecutor              *device.DeviceExecutor                // 设备执行器（新架构，统一入口）
+	DeviceDiscoveryService      *services.DeviceDiscoveryService      // 设备发现服务
 	DeviceInfoCollectionService *services.DeviceInfoCollectionService // 设备信息采集服务
-	NetworkDeviceService       *services.NetworkDeviceService       // 网络设备服务
-	DeviceMonitorService       *services.DeviceMonitorService       // 设备监控服务
-	NoticeHub               *websocket.NoticeHub     // WebSocket通知中心
-	CaptchaService          *CaptchaService          // 验证码服务
-	CaptchaBackgroundService *CaptchaBackgroundService // 验证码背景图服务
-	OperLogService          services.OperLogService // 操作日志服务
+	NetworkDeviceService        *services.NetworkDeviceService        // 网络设备服务
+	DeviceMonitorService        *services.DeviceMonitorService        // 设备监控服务
+	NoticeHub                   *websocket.NoticeHub                  // WebSocket通知中心
+	CaptchaService              *CaptchaService                       // 验证码服务
+	CaptchaBackgroundService    *CaptchaBackgroundService             // 验证码背景图服务
+	OperLogService              services.OperLogService               // 操作日志服务
 
 	// 数据缓存服务（方案1：统一缓存架构）
-	DataCacheService        *services.DataCacheService    // 通用数据缓存服务
-	CacheConfigService      *services.CacheConfigService  // 缓存配置服务
-	DeptService             *services.DeptService         // 部门缓存服务
-	RoleCacheService        *services.RoleCacheService    // 角色缓存服务
-	DictCacheService        *services.DictCacheService    // 字典缓存服务
-	MenuCacheService        *services.MenuCacheService    // 菜单缓存服务
-	UserCacheService        *services.UserCacheService    // 用户缓存服务
-	PostCacheService        *services.PostCacheService    // 岗位缓存服务
+	DataCacheService   *services.DataCacheService   // 通用数据缓存服务
+	CacheConfigService *services.CacheConfigService // 缓存配置服务
+	DeptService        *services.DeptService        // 部门缓存服务
+	RoleCacheService   *services.RoleCacheService   // 角色缓存服务
+	DictCacheService   *services.DictCacheService   // 字典缓存服务
+	MenuCacheService   *services.MenuCacheService   // 菜单缓存服务
+	UserCacheService   *services.UserCacheService   // 用户缓存服务
+	PostCacheService   *services.PostCacheService   // 岗位缓存服务
 }
 
 // GetDB 获取数据库连接

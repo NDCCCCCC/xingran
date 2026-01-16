@@ -345,8 +345,8 @@ func (s *UserCacheService) UpdateUserPassword(ctx context.Context, userID, passw
 	if err := s.db.Model(&models.User{}).
 		Where("id = ?", userID).
 		Updates(map[string]interface{}{
-			"password":       password,
-			"salt":           salt,
+			"password":        password,
+			"salt":            salt,
 			"pwd_update_time": time.Now(),
 		}).Error; err != nil {
 		return fmt.Errorf("更新用户密码失败: %w", err)

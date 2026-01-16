@@ -2,6 +2,7 @@ package services
 
 import (
 	"sync"
+
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/templates"
 )
 

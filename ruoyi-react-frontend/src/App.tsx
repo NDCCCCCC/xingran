@@ -18,7 +18,6 @@ import PostManagement from '@/pages/system/post';
 import DictManagement from '@/pages/system/dict';
 import ConfigManagement from '@/pages/system/config';
 import NoticeManagement from '@/pages/system/notice';
-import WorkstationManagement from '@/pages/system/workstation';
 // 系统设置页面
 import SystemSettingsPage from '@/pages/system/settings-page';
 // 系统监控页面
@@ -64,6 +63,16 @@ import ADOUPage from '@/pages/ad-domain/ous';
 import ADGroupPage from '@/pages/ad-domain/groups';
 import ADUserPage from '@/pages/ad-domain/users';
 import ADSyncLogsPage from '@/pages/ad-domain/logs';
+// 运维管理页面
+import BuildingManagement from '@/pages/operations/buildings';
+import FloorManagement from '@/pages/operations/floors';
+import WorkstationManagement from '@/pages/operations/workstations';
+import InfoPointManagement from '@/pages/operations/info-points';
+import ServerRoomManagement from '@/pages/operations/server-rooms';
+import DedicatedLineManagement from '@/pages/operations/dedicated-lines';
+import RoomDeviceManagement from '@/pages/operations/room-devices';
+import BuildingSpacesPage from '@/pages/operations/building-spaces';
+import BuildingSpaces3D from '@/pages/operations/building-spaces-3d';
 import './App.css';
 
 // 创建React Query客户端
@@ -151,7 +160,6 @@ function App() {
                           <Route path="/system/config" element={<ConfigManagement />} />
                           <Route path="/system/notice" element={<NoticeManagement />} />
                           <Route path="/system/notice/:id" element={<AdminNoticeDetailPage />} />
-                          <Route path="/system/workstation" element={<WorkstationManagement />} />
                           <Route path="/system/settings-page" element={<SystemSettingsPage />} />
 
                           {/* 系统监控路由 */}
@@ -217,12 +225,17 @@ function App() {
                           <Route path="/ops/ad-domain/groups" element={<ADGroupPage />} />
                           <Route path="/ops/ad-domain/users" element={<ADUserPage />} />
                           <Route path="/ops/ad-domain/logs" element={<ADSyncLogsPage />} />
-                          {/* 运维管理三级菜单路由（注意：ad-domain 重复是数据问题） */}
-                          <Route path="/ops/ad-domain/ad-domain/configs" element={<ADConfigPage />} />
-                          <Route path="/ops/ad-domain/ad-domain/ous" element={<ADOUPage />} />
-                          <Route path="/ops/ad-domain/ad-domain/groups" element={<ADGroupPage />} />
-                          <Route path="/ops/ad-domain/ad-domain/users" element={<ADUserPage />} />
-                          <Route path="/ops/ad-domain/ad-domain/logs" element={<ADSyncLogsPage />} />
+
+                          {/* 运维管理 - 物理资源管理路由 */}
+                          <Route path="/ops/buildings" element={<BuildingManagement />} />
+                          <Route path="/ops/floors" element={<FloorManagement />} />
+                          <Route path="/ops/workstations" element={<WorkstationManagement />} />
+                          <Route path="/ops/info-points" element={<InfoPointManagement />} />
+                          <Route path="/ops/server-rooms" element={<ServerRoomManagement />} />
+                          <Route path="/ops/dedicated-lines" element={<DedicatedLineManagement />} />
+                          <Route path="/ops/room-devices" element={<RoomDeviceManagement />} />
+                          <Route path="/ops/building-spaces" element={<BuildingSpacesPage />} />
+                          <Route path="/ops/building-spaces-3d" element={<BuildingSpaces3D />} />
 
                           <Route path="*" element={<Navigate to="/dashboard" replace />} />
                         </Routes>

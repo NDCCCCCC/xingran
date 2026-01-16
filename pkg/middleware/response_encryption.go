@@ -7,8 +7,8 @@ import (
 	"sync/atomic"
 
 	"github.com/gin-gonic/gin"
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 )
 
 // ResponseEncryptionConfig 响应加密配置
@@ -20,8 +20,8 @@ type ResponseEncryptionConfig struct {
 // responseWriter 自定义响应Writer，用于捕获响应内容
 type responseWriter struct {
 	gin.ResponseWriter
-	buffer       *bytes.Buffer
-	written      int32 // 原子操作标记：0=未写入，1=已写入
+	buffer  *bytes.Buffer
+	written int32 // 原子操作标记：0=未写入，1=已写入
 }
 
 // Write 拦截写入操作，只写入buffer，不写入原始Writer
@@ -128,7 +128,7 @@ func ResponseEncryption(encryptor *crypto.RequestEncryptor, config *ResponseEncr
 				encryptedResp, err = encryptor.EncryptResponseWithKey(responseBody, keyBytes, ivBytes)
 				if err != nil {
 					applogger.WithFields(map[string]interface{}{
-						"path": c.Request.URL.Path,
+						"path":   c.Request.URL.Path,
 						"method": c.Request.Method,
 					}).WithError(err).Warn("使用已有密钥加密响应失败，返回原始响应")
 					blw.writeBuffer()
@@ -147,7 +147,7 @@ func ResponseEncryption(encryptor *crypto.RequestEncryptor, config *ResponseEncr
 		encryptedJSON, err := json.Marshal(encryptedResp)
 		if err != nil {
 			applogger.WithFields(map[string]interface{}{
-				"path": c.Request.URL.Path,
+				"path":   c.Request.URL.Path,
 				"method": c.Request.Method,
 			}).WithError(err).Warn("序列化加密响应失败，返回原始响应")
 			blw.writeBuffer()
@@ -165,8 +165,8 @@ func ResponseEncryption(encryptor *crypto.RequestEncryptor, config *ResponseEncr
 
 		// 记录加密日志
 		applogger.WithFields(map[string]interface{}{
-			"path": c.Request.URL.Path,
-			"method": c.Request.Method,
+			"path":               c.Request.URL.Path,
+			"method":             c.Request.Method,
 			"response_encrypted": true,
 			"encryption_success": true,
 		}).Info("响应加密成功")

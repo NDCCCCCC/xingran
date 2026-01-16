@@ -10,12 +10,12 @@ import (
 
 // CommandDispatchRequest 命令分发请求
 type CommandDispatchRequest struct {
-	ExecutionName     string                 `json:"executionName" binding:"required,min=2,max=200"`
-	DeviceIDs         []string               `json:"deviceIds" binding:"required,min=1"`
-	CommandContent    string                 `json:"commandContent" binding:"required"`
+	ExecutionName     string                   `json:"executionName" binding:"required,min=2,max=200"`
+	DeviceIDs         []string                 `json:"deviceIds" binding:"required,min=1"`
+	CommandContent    string                   `json:"commandContent" binding:"required"`
 	ExecutionStrategy models.ExecutionStrategy `json:"executionStrategy" binding:"omitempty,oneof=parallel serial"`
-	Concurrency       int                    `json:"concurrency" binding:"omitempty,min=1,max=50"`
-	Timeout           int                    `json:"timeout" binding:"omitempty,min=10,max=3600"`
+	Concurrency       int                      `json:"concurrency" binding:"omitempty,min=1,max=50"`
+	Timeout           int                      `json:"timeout" binding:"omitempty,min=10,max=3600"`
 }
 
 // QuickCommandRequest 快速命令请求
@@ -153,6 +153,12 @@ func getCommandExecution(core *core.Core) gin.HandlerFunc {
 // @Param request body map[string]int true "分页参数"
 // @Success 200 {object} response.Response{data=response.PageResponse}
 // @Router /network/command/list [post]
+// ListCommandExecutions 获取命令执行列表（导出供路由使用）
+func ListCommandExecutions(core *core.Core) gin.HandlerFunc {
+	return listCommandExecutions(core)
+}
+
+// listCommandExecutions 查询命令执行列表
 func listCommandExecutions(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var rawReq map[string]interface{}

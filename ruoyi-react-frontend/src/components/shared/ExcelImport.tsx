@@ -1,0 +1,338 @@
+/**
+ * Excel导入组件
+ * 支持模板下载、文件上传、导入结果显示
+ */
+
+import { useState } from 'react';
+import type { FC } from 'react';
+import {
+  Button,
+  Upload,
+  Modal,
+  Table,
+  Tag,
+  Space,
+  Alert,
+  Progress,
+  Typography,
+  message,
+} from 'antd';
+import {
+  UploadOutlined,
+  DownloadOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  DeleteOutlined,
+} from '@ant-design/icons';
+import type { UploadFile } from 'antd';
+
+const { Text } = Typography;
+
+export interface ImportError {
+  row: number;
+  field: string;
+  value: string;
+  error: string;
+}
+
+export interface ImportResult {
+  success: number;
+  failed: number;
+  errors?: ImportError[];
+}
+
+export interface ExcelImportProps {
+  entityType: string;
+  entityName?: string;
+  templateUrl?: string;
+  importUrl?: string;
+  onImportSuccess?: () => void;
+  visible?: boolean;
+  onClose?: () => void;
+}
+
+const ExcelImport: FC<ExcelImportProps> = ({
+  entityType,
+  entityName = entityType,
+  templateUrl = `/ops/${entityType}/template`,
+  importUrl = `/ops/${entityType}/import`,
+  onImportSuccess,
+  visible = false,
+  onClose,
+}) => {
+  const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+
+  const handleDownloadTemplate = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(templateUrl, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('下载模板失败');
+      }
+
+      const filename = `${entityName}_模板.xlsx`;
+      await downloadFile(response, filename);
+      message.success('模板下载成功');
+    } catch (error) {
+      message.error('下载模板失败');
+    }
+  };
+
+  const beforeUpload = (file: File) => {
+    if (!isValidExcelFile(file)) {
+      message.error('只支持 .xlsx 格式的Excel文件');
+      return Upload.LIST_IGNORE;
+    }
+
+    if (!isValidFileSize(file)) {
+      message.error('文件大小不能超过 10MB');
+      return Upload.LIST_IGNORE;
+    }
+
+    return true;
+  };
+
+  const customRequest = async (options: any) => {
+    const { file, onProgress, onSuccess, onError } = options;
+    const formData = new FormData();
+    formData.append('file', file);
+
+    setImporting(true);
+    setUploadProgress(0);
+    setImportResult(null);
+
+    try {
+      const xhr = new XMLHttpRequest();
+
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          const percent = Math.round((e.loaded / e.total) * 100);
+          setUploadProgress(percent);
+          onProgress({ percent }, file);
+        }
+      };
+
+      xhr.onload = () => {
+        if (xhr.status === 200) {
+          const response = JSON.parse(xhr.responseText);
+          setImporting(false);
+          setUploadProgress(100);
+          setImportResult(response.data);
+          onSuccess(response, file);
+
+          if (response.data.failed === 0) {
+            message.success(`导入成功！共 ${response.data.success} 条数据`);
+            onImportSuccess?.();
+          } else {
+            message.warning(`导入完成！成功 ${response.data.success} 条，失败 ${response.data.failed} 条`);
+          }
+        } else {
+          throw new Error(xhr.responseText || '导入失败');
+        }
+      };
+
+      xhr.onerror = () => {
+        setImporting(false);
+        const error = new Error('网络错误');
+        onError(error);
+        message.error('导入失败');
+      };
+
+      xhr.open('POST', importUrl, true);
+      const token = localStorage.getItem('token');
+      if (token) {
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      }
+      xhr.send(formData);
+    } catch (error) {
+      setImporting(false);
+      onError(error);
+      message.error('导入失败');
+    }
+  };
+
+  const handleReset = () => {
+    setFileList([]);
+    setImportResult(null);
+    setUploadProgress(0);
+  };
+
+  const errorColumns = [
+    {
+      title: '行号',
+      dataIndex: 'row',
+      key: 'row',
+      width: 80,
+    },
+    {
+      title: '字段',
+      dataIndex: 'field',
+      key: 'field',
+      width: 120,
+    },
+    {
+      title: '值',
+      dataIndex: 'value',
+      key: 'value',
+      width: 150,
+      ellipsis: true,
+    },
+    {
+      title: '错误信息',
+      dataIndex: 'error',
+      key: 'error',
+    },
+  ];
+
+  return (
+    <Modal
+      title={`导入${entityName}数据`}
+      open={visible}
+      onCancel={onClose}
+      footer={null}
+      width={800}
+      destroyOnHidden
+    >
+      <Space direction="vertical" size="large" style={{ width: '100%' }}>
+        <Alert
+          message="导入说明"
+          description={
+            <div>
+              <div>1. 先下载Excel模板文件</div>
+              <div>2. 按照模板格式填写数据</div>
+              <div>3. 上传填写好的Excel文件进行导入</div>
+              <div>4. 导入完成后会显示结果，如有错误会详细列出</div>
+            </div>
+          }
+          type="info"
+          showIcon
+        />
+
+        <div>
+          <Text strong>步骤1：下载模板</Text>
+          <div style={{ marginTop: 8 }}>
+            <Button
+              icon={<DownloadOutlined />}
+              onClick={handleDownloadTemplate}
+            >
+              下载{entityName}Excel模板
+            </Button>
+          </div>
+        </div>
+
+        <div>
+          <Text strong>步骤2：上传文件</Text>
+          <div style={{ marginTop: 8 }}>
+            <Upload
+              fileList={fileList}
+              onChange={({ fileList: newFileList }) => setFileList(newFileList)}
+              beforeUpload={beforeUpload}
+              customRequest={customRequest}
+              accept=".xlsx"
+              maxCount={1}
+              disabled={importing}
+              onRemove={handleReset}
+            >
+              <Button
+                icon={<UploadOutlined />}
+                disabled={fileList.length >= 1 || importing}
+              >
+                选择Excel文件
+              </Button>
+            </Upload>
+            <div style={{ marginTop: 8 }}>
+              <Text type="secondary">支持 .xlsx 格式，文件大小不超过 10MB</Text>
+            </div>
+          </div>
+        </div>
+
+        {importing && (
+          <div>
+            <Text strong>导入中...</Text>
+            <Progress percent={uploadProgress} />
+          </div>
+        )}
+
+        {importResult && (
+          <div>
+            <Space direction="vertical" style={{ width: '100%' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Text strong>导入结果</Text>
+                <Button
+                  size="small"
+                  icon={<DeleteOutlined />}
+                  onClick={handleReset}
+                >
+                  重置
+                </Button>
+              </div>
+
+              <Space size="large">
+                <div>
+                  <Tag color="success" icon={<CheckCircleOutlined />}>
+                    成功: {importResult.success}
+                  </Tag>
+                </div>
+                {importResult.failed > 0 && (
+                  <div>
+                    <Tag color="error" icon={<CloseCircleOutlined />}>
+                      失败: {importResult.failed}
+                    </Tag>
+                  </div>
+                )}
+              </Space>
+
+              {importResult.errors && importResult.errors.length > 0 && (
+                <div>
+                  <Text type="danger" strong>
+                    以下数据导入失败，请检查后重新导入：
+                  </Text>
+                  <Table
+                    columns={errorColumns}
+                    dataSource={importResult.errors}
+                    pagination={{ pageSize: 10 }}
+                    size="small"
+                    rowKey="row"
+                    style={{ marginTop: 8 }}
+                  />
+                </div>
+              )}
+            </Space>
+          </div>
+        )}
+      </Space>
+    </Modal>
+  );
+};
+
+function isValidExcelFile(file: File): boolean {
+  return file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+         file.type === 'application/vnd.ms-excel' ||
+         file.name.endsWith('.xlsx');
+}
+
+function isValidFileSize(file: File): boolean {
+  return file.size / 1024 / 1024 < 10;
+}
+
+async function downloadFile(response: Response, filename: string): Promise<void> {
+  const blob = await response.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  window.URL.revokeObjectURL(url);
+  document.body.removeChild(a);
+}
+
+export default ExcelImport;

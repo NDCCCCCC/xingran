@@ -53,7 +53,7 @@ export const GenerateScheduleModal: React.FC<GenerateScheduleModalProps> = ({
         form.resetFields();
         onCancel();
       }}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form form={form} layout="vertical" preserve={false}>
         <Form.Item name="poolId" label="值班池" rules={[{ required: true, message: '请选择值班池' }]}>

@@ -1,0 +1,168 @@
+/**
+ * Periodic Template Actions Hook
+ * 周期性工单模板操作管理 Hook
+ */
+
+import { useState, useCallback } from 'react';
+import { message } from 'antd';
+import {
+  createPeriodicTemplate,
+  updatePeriodicTemplate,
+  deletePeriodicTemplate,
+  enablePeriodicTemplate,
+  disablePeriodicTemplate,
+  generateWorkOrderNow,
+  type PeriodicWorkOrderTemplate,
+  type CreatePeriodicTemplateRequest,
+  type UpdatePeriodicTemplateRequest,
+} from '@/lib/workorderApi';
+
+export interface UseTemplateActionsParams {
+  onLoad: () => void;
+}
+
+export interface UseTemplateActionsReturn {
+  // 编辑状态
+  editingRecord: PeriodicWorkOrderTemplate | null;
+  setEditingRecord: (record: PeriodicWorkOrderTemplate | null) => void;
+
+  // 操作方法
+  handleAdd: (editForm: any) => void;
+  handleEdit: (record: PeriodicWorkOrderTemplate, editForm: any) => void;
+  handleDelete: (id: string) => Promise<void>;
+  handleToggleEnabled: (record: PeriodicWorkOrderTemplate) => Promise<void>;
+  handleGenerateNow: (id: string) => Promise<void>;
+  handleSave: (editForm: any) => Promise<void>;
+}
+
+export function useTemplateActions(params: UseTemplateActionsParams): UseTemplateActionsReturn {
+  const { onLoad } = params;
+
+  const [editingRecord, setEditingRecord] = useState<PeriodicWorkOrderTemplate | null>(null);
+
+  // 新增
+  const handleAdd = useCallback((editForm: any) => {
+    setEditingRecord(null);
+    editForm.resetFields();
+    editForm.setFieldsValue({
+      type: 'fault',
+      priority: 1,
+      assignType: 'duty_pool',
+      notifyAssignee: true,
+    });
+  }, []);
+
+  // 编辑
+  const handleEdit = useCallback((record: PeriodicWorkOrderTemplate, editForm: any) => {
+    setEditingRecord(record);
+    setTimeout(() => {
+      editForm.setFieldsValue({
+        templateName: record.templateName,
+        workOrderTitle: record.workOrderTitle,
+        description: record.description,
+        categoryId: record.categoryId,
+        type: record.type,
+        priority: record.priority,
+        cronExpression: record.cronExpression,
+        assignType: record.assignType,
+        assignTargetId: record.assignTargetId,
+        notifyAssignee: record.notifyAssignee,
+      });
+    }, 0);
+  }, []);
+
+  // 删除
+  const handleDelete = useCallback(async (id: string) => {
+    try {
+      await deletePeriodicTemplate(id);
+      message.success('删除成功');
+      onLoad();
+    } catch (error: any) {
+      message.error(error.message || '删除失败');
+    }
+  }, [onLoad]);
+
+  // 切换启用状态
+  const handleToggleEnabled = useCallback(async (record: PeriodicWorkOrderTemplate) => {
+    try {
+      if (record.isEnabled) {
+        await disablePeriodicTemplate(record.id);
+        message.success('已禁用');
+      } else {
+        await enablePeriodicTemplate(record.id);
+        message.success('已启用');
+      }
+      onLoad();
+    } catch (error: any) {
+      message.error(error.message || '操作失败');
+    }
+  }, [onLoad]);
+
+  // 立即生成工单
+  const handleGenerateNow = useCallback(async (id: string) => {
+    try {
+      await generateWorkOrderNow(id);
+      message.success('工单生成成功');
+      onLoad();
+    } catch (error: any) {
+      message.error(error.message || '生成失败');
+    }
+  }, [onLoad]);
+
+  // 保存
+  const handleSave = useCallback(async (editForm: any) => {
+    try {
+      const values = await editForm.validateFields();
+
+      if (editingRecord) {
+        const updateData: UpdatePeriodicTemplateRequest = {
+          templateName: values.templateName,
+          workOrderTitle: values.workOrderTitle,
+          description: values.description,
+          categoryId: values.categoryId,
+          type: values.type,
+          priority: values.priority,
+          cronExpression: values.cronExpression,
+          assignType: values.assignType,
+          assignTargetId: values.assignTargetId,
+          notifyAssignee: values.notifyAssignee,
+        };
+        await updatePeriodicTemplate(editingRecord.id, updateData);
+        message.success('更新成功');
+      } else {
+        const createData: CreatePeriodicTemplateRequest = {
+          templateName: values.templateName,
+          workOrderTitle: values.workOrderTitle,
+          description: values.description,
+          categoryId: values.categoryId,
+          type: values.type,
+          priority: values.priority,
+          cronExpression: values.cronExpression,
+          assignType: values.assignType,
+          assignTargetId: values.assignTargetId,
+          notifyAssignee: values.notifyAssignee,
+        };
+        await createPeriodicTemplate(createData);
+        message.success('创建成功');
+      }
+      setEditingRecord(null);
+      onLoad();
+    } catch (error: any) {
+      if (error.errorFields) {
+        return;
+      }
+      message.error(editingRecord ? '更新失败' : '创建失败');
+    }
+  }, [editingRecord, onLoad]);
+
+  return {
+    editingRecord,
+    setEditingRecord,
+    handleAdd,
+    handleEdit,
+    handleDelete,
+    handleToggleEnabled,
+    handleGenerateNow,
+    handleSave,
+  };
+}

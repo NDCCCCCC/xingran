@@ -21,11 +21,11 @@ import {
   ReloadOutlined,
   EyeOutlined,
   ClusterOutlined,
-  DatabaseOutlined,
   CloudServerOutlined
 } from '@ant-design/icons';
 import { post } from '@/lib/api';
 import type { ColumnsType } from 'antd/es/table';
+import type { BaseResponse, PageResponse } from '@/types';
 import ActionButtons from '@/components/shared/ActionButtons';
 
 interface ServerInfo {
@@ -67,13 +67,12 @@ const ServerMonitor: FC = () => {
   });
   const [detailDrawerVisible, setDetailDrawerVisible] = useState(false);
   const [selectedServer, setSelectedServer] = useState<ServerInfo | null>(null);
-  const [metricsHistory, setMetricsHistory] = useState<ServerMetrics[]>([]);
   
   // 获取服务器列表
   const fetchServers = async () => {
     setLoading(true);
     try {
-      const result = await post('/monitor/server-info/list', {
+      const result = await post<BaseResponse<PageResponse<ServerInfo>>>('/monitor/server-info/list', {
         ...searchForm,
         current,
         pageSize
@@ -93,7 +92,7 @@ const ServerMonitor: FC = () => {
   const fetchServerDetail = async (server: ServerInfo) => {
     try {
       // 获取历史指标数据
-      const result = await post('/monitor/server-metrics/history', {
+      const result = await post<BaseResponse<PageResponse<ServerMetrics>>>('/monitor/server-metrics/history', {
         serverId: server.id,
         startTime: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 最近24小时
         endTime: new Date().toISOString(),
@@ -101,7 +100,7 @@ const ServerMonitor: FC = () => {
         pageSize: 100
       });
 
-      setMetricsHistory(result.data.list || []);
+      // 历史指标数据已获取但暂未使用
     } catch (error) {
       console.error('获取服务器指标历史失败:', error);
     }
@@ -177,6 +176,8 @@ const ServerMonitor: FC = () => {
       title: '主机名',
       dataIndex: 'hostName',
       key: 'hostName',
+      width: 160,
+      minWidth: 140,
       render: (text: string) => (
         <Space>
           <CloudServerOutlined />
@@ -188,16 +189,22 @@ const ServerMonitor: FC = () => {
       title: '操作系统',
       dataIndex: 'os',
       key: 'os',
+      width: 140,
+      minWidth: 120,
     },
     {
       title: '架构',
       dataIndex: 'arch',
       key: 'arch',
+      width: 80,
+      minWidth: 70,
     },
     {
       title: 'CPU核心',
       dataIndex: 'cpuCount',
       key: 'cpuCount',
+      width: 100,
+      minWidth: 90,
       render: (count: number) => (
         <Statistic
           value={count}
@@ -210,6 +217,8 @@ const ServerMonitor: FC = () => {
       title: '内存',
       dataIndex: 'totalMemory',
       key: 'totalMemory',
+      width: 180,
+      minWidth: 160,
       render: (total: number, record: ServerInfo) => (
         <div>
           <div>总计: {formatMemorySize(total)}</div>
@@ -228,6 +237,8 @@ const ServerMonitor: FC = () => {
       title: '磁盘',
       dataIndex: 'diskTotal',
       key: 'diskTotal',
+      width: 180,
+      minWidth: 160,
       render: (total: number, record: ServerInfo) => (
         <div>
           <div>总计: {formatMemorySize(total)}</div>
@@ -246,6 +257,9 @@ const ServerMonitor: FC = () => {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
+      width: 80,
+      minWidth: 70,
+      align: 'center' as const,
       render: (status: number) => (
         <Tag color={status === 0 ? 'success' : 'error'}>
           {status === 0 ? '正常' : '异常'}
@@ -256,11 +270,16 @@ const ServerMonitor: FC = () => {
       title: '最后活跃时间',
       dataIndex: 'lastActiveAt',
       key: 'lastActiveAt',
+      width: 170,
+      minWidth: 160,
       render: (time: string) => time ? new Date(time).toLocaleString() : '-',
     },
     {
       title: '操作',
       key: 'action',
+      width: 100,
+      minWidth: 80,
+      fixed: 'right' as const,
       render: (_, record: ServerInfo) => {
         const actions = [
           {

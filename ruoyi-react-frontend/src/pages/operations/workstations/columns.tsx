@@ -1,0 +1,75 @@
+/**
+ * Workstation Columns
+ * 工位表格列定义
+ */
+
+import type { ColumnsType } from 'antd/es/table';
+import { Button, Space, Popconfirm } from 'antd';
+import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import type { WorkstationOps } from '@/types';
+import ActionButtons from '@/components/shared/ActionButtons';
+import { renderWorkstationTypeTag } from './constants';
+import { createStatusColumn, createDateTimeColumn } from '@/utils/tableHelpers';
+
+export interface WorkstationColumnsParams {
+  handleEdit: (record: WorkstationOps) => void;
+  handleDelete: (id: string) => void;
+}
+
+export function getWorkstationColumns(params: WorkstationColumnsParams): ColumnsType<WorkstationOps> {
+  const { handleEdit, handleDelete } = params;
+
+  return [
+    { title: '工位名称', dataIndex: 'name', key: 'name', width: 150 },
+    {
+      title: '所属楼层',
+      dataIndex: 'floorName',
+      key: 'floorName',
+      width: 150,
+      render: (_: unknown, record: WorkstationOps) => record.floorName || record.floorId,
+    },
+    {
+      title: '工位类型',
+      dataIndex: 'type',
+      key: 'type',
+      width: 100,
+      render: (type) => renderWorkstationTypeTag(type),
+    },
+    createStatusColumn('status', { width: 100 }),
+    { title: '描述', dataIndex: 'description', key: 'description', ellipsis: true },
+    createDateTimeColumn('createdAt', { width: 180 }),
+    {
+      title: '操作',
+      key: 'action',
+      render: (_: unknown, record: WorkstationOps) => {
+        const actions = [
+          {
+            key: 'edit',
+            label: '编辑',
+            icon: <EditOutlined />,
+            onClick: () => handleEdit(record),
+          },
+          {
+            key: 'delete',
+            label: '删除',
+            icon: <DeleteOutlined />,
+            danger: true,
+            render: () => (
+              <Popconfirm
+                title="确定要删除这个工位吗？"
+                onConfirm={() => handleDelete(record.id)}
+                okText="确定"
+                cancelText="取消"
+              >
+                <Button type="link" danger icon={<DeleteOutlined />} size="small">
+                  删除
+                </Button>
+              </Popconfirm>
+            ),
+          },
+        ];
+        return <ActionButtons actions={actions} />;
+      },
+    },
+  ];
+}

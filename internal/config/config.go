@@ -43,7 +43,7 @@ type DatabaseConfig struct {
 
 // CacheConfig 缓存配置
 type CacheConfig struct {
-	Type        string `mapstructure:"type"`        // redis, memory
+	Type        string `mapstructure:"type"` // redis, memory
 	Host        string `mapstructure:"host"`
 	Port        int    `mapstructure:"port"`
 	Password    string `mapstructure:"password"`
@@ -59,9 +59,9 @@ type JWTConfig struct {
 	AccessKeyExpire  int    `mapstructure:"access_key_expire"`
 	RefreshKeyExpire int    `mapstructure:"refresh_key_expire"`
 	Issuer           string `mapstructure:"issuer"`
-	UseSM2           bool   `mapstructure:"use_sm2"`           // 是否使用SM2算法
-	SM2PrivateKey    string `mapstructure:"sm2_private_key"`  // SM2私钥(十六进制)
-	SM2PublicKey     string `mapstructure:"sm2_public_key"`   // SM2公钥(十六进制)
+	UseSM2           bool   `mapstructure:"use_sm2"`         // 是否使用SM2算法
+	SM2PrivateKey    string `mapstructure:"sm2_private_key"` // SM2私钥(十六进制)
+	SM2PublicKey     string `mapstructure:"sm2_public_key"`  // SM2公钥(十六进制)
 }
 
 // LogConfig 日志配置
@@ -76,8 +76,8 @@ type LogConfig struct {
 
 // SecurityConfig 安全配置
 type SecurityConfig struct {
-	SM4Key            string                  `mapstructure:"sm4_key"`             // SM4 加密密钥（16字节，Base64编码）
-	RequestEncryption RequestEncryptionConfig `mapstructure:"request_encryption"`  // 请求体加密配置
+	SM4Key            string                  `mapstructure:"sm4_key"`            // SM4 加密密钥（16字节，Base64编码）
+	RequestEncryption RequestEncryptionConfig `mapstructure:"request_encryption"` // 请求体加密配置
 }
 
 // RequestEncryptionConfig 请求体加密配置
@@ -193,10 +193,10 @@ func setDefaults() {
 	// 日志默认配置
 	viper.SetDefault("log.level", "info")
 	viper.SetDefault("log.log_dir", "logs")
-	viper.SetDefault("log.max_size", 100)      // 100MB
-	viper.SetDefault("log.max_backups", 30)    // 保留30个备份
-	viper.SetDefault("log.max_age", 90)        // 保留90天
-	viper.SetDefault("log.compress", true)     // 压缩旧日志
+	viper.SetDefault("log.max_size", 100)   // 100MB
+	viper.SetDefault("log.max_backups", 30) // 保留30个备份
+	viper.SetDefault("log.max_age", 90)     // 保留90天
+	viper.SetDefault("log.compress", true)  // 压缩旧日志
 
 	// 安全默认配置（注意：生产环境必须从环境变量设置）
 	// SM4 密钥必须是 16 字节（Base64 编码）

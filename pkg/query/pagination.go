@@ -56,8 +56,8 @@ func (p *PaginationRequest) GetOffset() int {
 // ListParams 列表查询参数（分页 + 排序）
 type ListParams struct {
 	PaginationRequest
-	OrderBy    string `json:"orderBy"`
-	OrderDir   string `json:"orderDir"` // ASC 或 DESC
+	OrderBy  string `json:"orderBy"`
+	OrderDir string `json:"orderDir"` // ASC 或 DESC
 }
 
 // Normalize 规范化列表参数

@@ -8,24 +8,24 @@ import (
 
 // EmailConfig 邮箱服务器配置
 type EmailConfig struct {
-	ID           string    `gorm:"primaryKey;size:64" json:"id"`
-	ConfigName   string    `gorm:"size:100;not null" json:"configName"`
-	Host         string    `gorm:"size:255;not null" json:"host"`
-	Port         int       `gorm:"default:587;not null" json:"port"`
-	Username     string    `gorm:"size:255;not null" json:"username"`
-	Password     string    `gorm:"size:500;not null" json:"-"` // 不在JSON中返回密码
-	FromName     string    `gorm:"size:100" json:"fromName"`
-	FromEmail    string    `gorm:"size:255" json:"fromEmail"`
-	UseSSL       bool      `gorm:"default:true" json:"useSsl"`
-	UseSTARTTLS  bool      `gorm:"column:use_start_tls;default:true" json:"useStartTls"` // 是否使用STARTTLS（false=纯SMTP）
-	IsDefault    bool      `gorm:"default:false" json:"isDefault"`
-	Status       int       `gorm:"default:0" json:"status"` // 0=正常 1=停用
-	Remark       string    `gorm:"size:500" json:"remark"`
-	CreatedBy    string    `gorm:"size:64" json:"createdBy"`
-	CreatedAt    time.Time `json:"createdAt"`
-	UpdatedBy    string    `gorm:"size:64" json:"updatedBy"`
-	UpdatedAt    time.Time `json:"updatedAt"`
-	DelFlag      int       `gorm:"default:0" json:"delFlag"`
+	ID          string    `gorm:"primaryKey;size:64" json:"id"`
+	ConfigName  string    `gorm:"size:100;not null" json:"configName"`
+	Host        string    `gorm:"size:255;not null" json:"host"`
+	Port        int       `gorm:"default:587;not null" json:"port"`
+	Username    string    `gorm:"size:255;not null" json:"username"`
+	Password    string    `gorm:"size:500;not null" json:"-"` // 不在JSON中返回密码
+	FromName    string    `gorm:"size:100" json:"fromName"`
+	FromEmail   string    `gorm:"size:255" json:"fromEmail"`
+	UseSSL      bool      `gorm:"default:true" json:"useSsl"`
+	UseSTARTTLS bool      `gorm:"column:use_start_tls;default:true" json:"useStartTls"` // 是否使用STARTTLS（false=纯SMTP）
+	IsDefault   bool      `gorm:"default:false" json:"isDefault"`
+	Status      int       `gorm:"default:0" json:"status"` // 0=正常 1=停用
+	Remark      string    `gorm:"size:500" json:"remark"`
+	CreatedBy   string    `gorm:"size:64" json:"createdBy"`
+	CreatedAt   time.Time `json:"createdAt"`
+	UpdatedBy   string    `gorm:"size:64" json:"updatedBy"`
+	UpdatedAt   time.Time `json:"updatedAt"`
+	DelFlag     int       `gorm:"default:0" json:"delFlag"`
 }
 
 // TableName 指定表名
@@ -109,20 +109,20 @@ type NotificationChannelType string
 
 const (
 	ChannelTypeWeb   NotificationChannelType = "web"   // 站内信
-	ChannelTypeEmail  NotificationChannelType = "email" // 邮件
-	ChannelTypeSMS    NotificationChannelType = "sms"   // 短信
-	ChannelTypeAPI    NotificationChannelType = "api"   // API通知
+	ChannelTypeEmail NotificationChannelType = "email" // 邮件
+	ChannelTypeSMS   NotificationChannelType = "sms"   // 短信
+	ChannelTypeAPI   NotificationChannelType = "api"   // API通知
 )
 
 // NotificationChannel 通知发送渠道配置（关联表）
 type NotificationChannel struct {
-	ID                string                 `gorm:"primaryKey;size:64" json:"id"`
-	NoticeID          string                 `gorm:"size:64;not null" json:"noticeId"`
-	ChannelType       NotificationChannelType `gorm:"size:20;not null" json:"channelType"`
-	EmailConfigID     *string                `gorm:"size:64" json:"emailConfigId"` // 邮件配置ID
-	APIConfigID       *string                `gorm:"size:64" json:"apiConfigId"`   // API配置ID
-	CustomRecipients  *[]string              `gorm:"type:jsonb" json:"customRecipients"` // 自定义收件人列表（邮件地址或企微用户代码）
-	CreatedAt         time.Time              `json:"createdAt"`
+	ID               string                  `gorm:"primaryKey;size:64" json:"id"`
+	NoticeID         string                  `gorm:"size:64;not null" json:"noticeId"`
+	ChannelType      NotificationChannelType `gorm:"size:20;not null" json:"channelType"`
+	EmailConfigID    *string                 `gorm:"size:64" json:"emailConfigId"`       // 邮件配置ID
+	APIConfigID      *string                 `gorm:"size:64" json:"apiConfigId"`         // API配置ID
+	CustomRecipients *[]string               `gorm:"type:jsonb" json:"customRecipients"` // 自定义收件人列表（邮件地址或企微用户代码）
+	CreatedAt        time.Time               `json:"createdAt"`
 }
 
 // TableName 指定表名

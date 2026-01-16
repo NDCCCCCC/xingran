@@ -28,17 +28,17 @@ func (s *ConfigService) Get(ctx context.Context) (*models.WorkOrderConfig, error
 		if err == gorm.ErrRecordNotFound {
 			// 创建默认配置
 			config = models.WorkOrderConfig{
-				ID:                       "default",
-				AutoAssignEnabled:        true,
-				AutoAssignTarget:         "duty_pool",
-				AutoAssignStrategy:       "assign_one",
-				AutoCloseDays:            7,
-				AllowUserClose:           false,
-				NotificationEnabled:      true,
-				EmailNotification:        false,
-				SmsNotification:          false,
-				RatingEnabled:            true,
-				KnowledgeConvertEnabled:  true,
+				ID:                      "default",
+				AutoAssignEnabled:       true,
+				AutoAssignTarget:        "duty_pool",
+				AutoAssignStrategy:      "assign_one",
+				AutoCloseDays:           7,
+				AllowUserClose:          false,
+				NotificationEnabled:     true,
+				EmailNotification:       false,
+				SmsNotification:         false,
+				RatingEnabled:           true,
+				KnowledgeConvertEnabled: true,
 			}
 			s.db.WithContext(ctx).Create(&config)
 		} else {

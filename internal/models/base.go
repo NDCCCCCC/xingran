@@ -70,20 +70,20 @@ const (
 type DataScope int
 
 const (
-	DataScopeAll        DataScope = 1 // 全部数据
-	DataScopeCustom     DataScope = 2 // 自定义数据
-	DataScopeDept       DataScope = 3 // 本部门数据
-	DataScopeDeptChild  DataScope = 4 // 本部门及子部门数据
-	DataScopeSelf       DataScope = 5 // 仅本人数据
+	DataScopeAll       DataScope = 1 // 全部数据
+	DataScopeCustom    DataScope = 2 // 自定义数据
+	DataScopeDept      DataScope = 3 // 本部门数据
+	DataScopeDeptChild DataScope = 4 // 本部门及子部门数据
+	DataScopeSelf      DataScope = 5 // 仅本人数据
 )
 
 // MenuType 菜单类型枚举
 type MenuType string
 
 const (
-	MenuTypeDir     MenuType = "M" // 目录
-	MenuTypeMenu    MenuType = "C" // 菜单
-	MenuTypeButton  MenuType = "F" // 按钮
+	MenuTypeDir    MenuType = "M" // 目录
+	MenuTypeMenu   MenuType = "C" // 菜单
+	MenuTypeButton MenuType = "F" // 按钮
 )
 
 // VisibleType 显示状态枚举
@@ -114,7 +114,7 @@ const (
 type PostStatus int
 
 const (
-	PostStatusEnabled PostStatus = 0 // 正常
+	PostStatusEnabled  PostStatus = 0 // 正常
 	PostStatusDisabled PostStatus = 1 // 停用
 )
 
@@ -122,8 +122,8 @@ const (
 type ConfigType string
 
 const (
-	ConfigTypeYes   ConfigType = "Y" // 是
-	ConfigTypeNo    ConfigType = "N" // 否
+	ConfigTypeYes ConfigType = "Y" // 是
+	ConfigTypeNo  ConfigType = "N" // 否
 )
 
 // ConfigIsSystem 系统内置枚举

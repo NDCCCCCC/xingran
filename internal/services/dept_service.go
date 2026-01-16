@@ -12,8 +12,8 @@ import (
 
 // DeptService 部门服务（带缓存）
 type DeptService struct {
-	db             *gorm.DB
-	dataCache      *DataCacheService
+	db        *gorm.DB
+	dataCache *DataCacheService
 }
 
 // NewDeptService 创建部门服务

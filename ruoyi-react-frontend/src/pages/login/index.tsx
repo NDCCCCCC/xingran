@@ -90,7 +90,7 @@ const Login: FC = () => {
     setCaptchaId(id);
   };
 
-  const handleSliderVerified = (token: string, id: string) => {
+  const handleSliderVerified = (_token: string, id: string) => {
     setCaptchaId(id);
     setSliderVerified(true);
   };

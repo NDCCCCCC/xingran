@@ -49,8 +49,11 @@ export const TargetSelector: React.FC<TargetSelectorProps> = ({
           <Tree
             checkable
             checkedKeys={targetDepts}
-            onCheck={onDeptChange}
-            treeData={deptTree}
+            onCheck={(checked) => {
+              const keys = Array.isArray(checked) ? checked : checked.checked;
+              onDeptChange(keys);
+            }}
+            treeData={deptTree as any}
             fieldNames={{ title: 'title', key: 'key', children: 'children' }}
           />
         </div>
@@ -93,8 +96,9 @@ export const TargetSelector: React.FC<TargetSelectorProps> = ({
           placeholder="请选择用户"
           showSearch
           filterOption={(input, option) => {
+            if (!option) return false;
             const user = users.find((u: any) => u.id === option.value);
-            return (
+            return !!(
               user?.username?.toLowerCase().includes(input.toLowerCase()) ||
               user?.nickname?.toLowerCase().includes(input.toLowerCase())
             );

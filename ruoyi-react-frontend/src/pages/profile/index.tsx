@@ -24,9 +24,9 @@ import {
   UploadOutlined,
   CalendarOutlined,
 } from '@ant-design/icons';
-import type { UploadFile } from 'antd/es/upload/interface';
 import { getProfileInfo, updateProfileInfo, changePassword, uploadAvatar } from '@/lib/profileApi';
-import { getMyDutyStats, type MyDutyStats } from '@/lib/dutyApi';
+import { getMyDutyStats } from '@/lib/dutyApi';
+import type { MyDutyStats } from '@/types';
 import { useAuthStore } from '@/store/authStore';
 import type { UserProfile } from '@/types';
 import dayjs from 'dayjs';
@@ -35,7 +35,6 @@ const { Option } = Select;
 
 const ProfilePage: FC = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
   const [editForm] = Form.useForm();
@@ -46,14 +45,11 @@ const ProfilePage: FC = () => {
 
   // 加载个人信息
   const loadProfile = async () => {
-    setLoading(true);
     try {
       const data = await getProfileInfo();
       setProfile(data);
     } catch (error) {
       message.error('加载个人信息失败');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -61,8 +57,8 @@ const ProfilePage: FC = () => {
   const loadDutyStats = async () => {
     setDutyStatsLoading(true);
     try {
-      const data = await getMyDutyStats();
-      setDutyStats(data);
+      const result = await getMyDutyStats();
+      setDutyStats((result as unknown as MyDutyStats) || null);
     } catch (error) {
       console.error('加载值班统计失败', error);
     } finally {
@@ -243,7 +239,7 @@ const ProfilePage: FC = () => {
                   <Statistic
                     title="今日状态"
                     value={dutyStats.isOnDutyToday ? "值班中" : "休息"}
-                    styles={{ content: { color: dutyStats.isOnDutyToday ? '#3f8600' : '#8c8c8c' } }}
+                    valueStyle={{ color: dutyStats.isOnDutyToday ? '#3f8600' : '#8c8c8c' }}
                   />
                 </Col>
                 <Col xs={12} sm={6}>

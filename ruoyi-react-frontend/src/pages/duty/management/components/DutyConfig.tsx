@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, Row, Col, Form, Switch, Select, InputNumber, Button, Descriptions, Tag, TimePicker } from 'antd';
 import { BellOutlined, SaveOutlined } from '@ant-design/icons';
 import type { Dayjs } from 'dayjs';
+import dayjs from 'dayjs';
 import type { DutyConfig as DutyConfigType } from '@/lib/dutyApi';
 
 const { Option } = Select;
@@ -39,7 +40,7 @@ export const DutyConfig: React.FC<DutyConfigProps> = ({
     if (config) {
       form.setFieldsValue({
         reminderEnabled: config.reminderEnabled,
-        reminderTime: config.reminderTime,
+        reminderTime: config.reminderTime ? dayjs(config.reminderTime, 'HH:mm') : undefined,
         reminderChannels: config.reminderChannels ? config.reminderChannels.split(',') : [],
         beforeReminderMinutes: config.beforeReminderMinutes,
       });

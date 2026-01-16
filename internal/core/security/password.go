@@ -16,21 +16,21 @@ import (
 // PasswordConfig 密码配置
 // 定义密码哈希算法的参数配置
 type PasswordConfig struct {
-	Iterations int  // PBKDF2迭代次数，影响哈希强度和计算时间
-	SaltLength int  // 盐值长度，用于防止彩虹表攻击
+	Iterations int // PBKDF2迭代次数，影响哈希强度和计算时间
+	SaltLength int // 盐值长度，用于防止彩虹表攻击
 }
 
 // DefaultPasswordConfig 默认密码配置
 // 提供安全且性能平衡的默认配置
 var DefaultPasswordConfig = &PasswordConfig{
-	Iterations: 1000,   // SM3-PBKDF2推荐迭代次数，兼顾安全性和性能
-	SaltLength: 16,     // 128位盐值，提供足够的随机性
+	Iterations: 1000, // SM3-PBKDF2推荐迭代次数，兼顾安全性和性能
+	SaltLength: 16,   // 128位盐值，提供足够的随机性
 }
 
 // PasswordManager 密码管理器
 // 提供密码哈希、验证等安全功能，基于国密SM3算法
 type PasswordManager struct {
-	config *PasswordConfig  // 密码配置参数
+	config *PasswordConfig // 密码配置参数
 }
 
 // NewPasswordManager 创建密码管理器
@@ -49,14 +49,15 @@ func NewPasswordManager(config *PasswordConfig) *PasswordManager {
 //   - salt: 盐值
 //   - iterations: 迭代次数
 //   - keyLen: 期望的密钥长度
+//
 // 算法流程：
-//   1. U1 = SM3(password || salt || 00000001)
-//   2. U2 = SM3(U1)
-//   3. ...
-//   4. result = U1 XOR U2 XOR ... XOR Uc
+//  1. U1 = SM3(password || salt || 00000001)
+//  2. U2 = SM3(U1)
+//  3. ...
+//  4. result = U1 XOR U2 XOR ... XOR Uc
 func (pm *PasswordManager) pbkdf2SM3(password, salt []byte, iterations, keyLen int) []byte {
 	// 初始化数据块和结果
-	block := make([]byte, 32)  // SM3输出长度为32字节
+	block := make([]byte, 32) // SM3输出长度为32字节
 	result := make([]byte, keyLen)
 
 	// 构造初始数据块：password || salt || 计数器(00000001)
@@ -67,13 +68,13 @@ func (pm *PasswordManager) pbkdf2SM3(password, salt []byte, iterations, keyLen i
 	h := sm3.New()
 	h.Write(blockData)
 	copy(block, h.Sum(nil))
-	copy(result, block)  // 初始化结果为U1
+	copy(result, block) // 初始化结果为U1
 
 	// 后续迭代：计算U2到Uc
 	for i := 1; i < iterations; i++ {
 		h.Reset()
-		h.Write(block)       // 上一次的结果作为输入
-		block = h.Sum(nil)   // 计算新的Ui
+		h.Write(block)     // 上一次的结果作为输入
+		block = h.Sum(nil) // 计算新的Ui
 
 		// XOR累加：result = result XOR Ui
 		for j := 0; j < keyLen && j < len(block); j++ {

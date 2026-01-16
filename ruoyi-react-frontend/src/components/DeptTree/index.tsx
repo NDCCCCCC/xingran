@@ -4,6 +4,7 @@ import { Tree, Card, Spin, Input } from 'antd';
 import type { DataNode, EventDataNode } from 'antd/es/tree';
 import { ApartmentOutlined, SearchOutlined } from '@ant-design/icons';
 import { post } from '@/lib/api';
+import type { BaseResponse } from '@/types';
 
 interface DeptTreeProps {
   onSelect?: (selectedKeys: Key[], info: {
@@ -26,7 +27,6 @@ const DeptTree: FC<DeptTreeProps> = ({
   const [searchValue, setSearchValue] = useState('');
   const [expandedKeys, setExpandedKeys] = useState<Key[]>([]);
   const [autoExpandParent, setAutoExpandParent] = useState(true);
-  const [prevExpandedKeys, setPrevExpandedKeys] = useState<Key[]>([]);
 
   // 获取所有父节点（有子节点的节点）的 key
   const getParentKeys = (data: DataNode[]): Key[] => {
@@ -47,7 +47,7 @@ const DeptTree: FC<DeptTreeProps> = ({
   const loadDeptTree = async () => {
     setLoading(true);
     try {
-      const result = await post('/system/departments/list');
+      const result = await post<BaseResponse<any>>('/system/departments/list');
       const deptData = result.data || [];
       const treeData = transformToTreeData(deptData);
       setTreeData(treeData);
@@ -56,7 +56,6 @@ const DeptTree: FC<DeptTreeProps> = ({
       const parentKeys = getParentKeys(treeData);
       const firstParentKey = parentKeys.length > 0 ? [parentKeys[0]] : [];
       setExpandedKeys(firstParentKey);
-      setPrevExpandedKeys(firstParentKey);
     } catch (error) {
       console.error('加载部门树失败:', error);
       setTreeData([]);
@@ -87,7 +86,6 @@ const DeptTree: FC<DeptTreeProps> = ({
       const parentKeys = getParentKeys(treeData);
       const firstParentKey = parentKeys.length > 0 ? [parentKeys[0]] : [];
       setExpandedKeys(firstParentKey);
-      setPrevExpandedKeys(firstParentKey);
       setAutoExpandParent(true);
       return;
     }
@@ -95,7 +93,6 @@ const DeptTree: FC<DeptTreeProps> = ({
     // 搜索匹配的节点
     const expandedKeys = getExpandedKeys(treeData, value);
     setExpandedKeys(expandedKeys);
-    setPrevExpandedKeys(expandedKeys);
     setAutoExpandParent(true);
   };
 
@@ -120,7 +117,6 @@ const DeptTree: FC<DeptTreeProps> = ({
   // 树节点展开处理 - 实现手风琴效果（同一时间只展开一个节点）
   const onExpand = (expandedKeys: Key[]) => {
     setExpandedKeys(expandedKeys);
-    setPrevExpandedKeys(expandedKeys);
     setAutoExpandParent(false);
   };
 

@@ -3,6 +3,7 @@ package workorder
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
@@ -106,7 +107,7 @@ func (s *AssignmentService) UpdateStatus(ctx context.Context, id string, req *Up
 
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		updates := map[string]interface{}{
-			"status":    req.Status,
+			"status":     req.Status,
 			"updated_by": operatorID,
 		}
 
@@ -136,7 +137,7 @@ func (s *AssignmentService) UpdateStatus(ctx context.Context, id string, req *Up
 		}
 		baseService := NewBaseService(s.db)
 		baseService.recordHistory(tx, workOrder.ID, "update_status", "status",
-			string(workOrder.Status), string(req.Status), remark, operatorID)
+			strconv.Itoa(int(workOrder.Status)), strconv.Itoa(int(req.Status)), remark, operatorID)
 
 		return nil
 	})

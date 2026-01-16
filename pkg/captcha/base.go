@@ -13,13 +13,13 @@ const (
 
 // CaptchaResponse 验证码响应
 type CaptchaResponse struct {
-	CaptchaID   string      `json:"captchaId"`              // 验证码ID
-	CaptchaType CaptchaType `json:"captchaType"`            // 验证码类型
-	CaptchaImg  string      `json:"captchaImg,omitempty"`   // base64图片 (文字类型)
-	SliderImg   string      `json:"sliderImg,omitempty"`    // 滑动底图 (滑动类型)
-	PieceImg    string      `json:"pieceImg,omitempty"`     // 拼图块 (滑动类型)
-	YPos        int         `json:"yPos,omitempty"`         // 拼图块Y坐标 (滑动类型)
-	Token       string      `json:"token,omitempty"`        // 验证token (滑动类型)
+	CaptchaID   string      `json:"captchaId"`            // 验证码ID
+	CaptchaType CaptchaType `json:"captchaType"`          // 验证码类型
+	CaptchaImg  string      `json:"captchaImg,omitempty"` // base64图片 (文字类型)
+	SliderImg   string      `json:"sliderImg,omitempty"`  // 滑动底图 (滑动类型)
+	PieceImg    string      `json:"pieceImg,omitempty"`   // 拼图块 (滑动类型)
+	YPos        int         `json:"yPos,omitempty"`       // 拼图块Y坐标 (滑动类型)
+	Token       string      `json:"token,omitempty"`      // 验证token (滑动类型)
 }
 
 // TextGenerator 数字字母验证码生成器接口

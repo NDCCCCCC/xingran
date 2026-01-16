@@ -272,27 +272,27 @@ function generateNonce(): string {
 }
 
 // 封装GET请求
-export function get<T = any>(url: string, params?: any): Promise<T> {
+export function get<T = unknown>(url: string, params?: unknown): Promise<T> {
   return api.get(url, { params });
 }
 
 // 封装POST请求
-export function post<T = any>(url: string, data?: any): Promise<T> {
+export function post<T = unknown>(url: string, data?: unknown): Promise<T> {
   return api.post(url, data);
 }
 
 // 封装PUT请求
-export function put<T = any>(url: string, data?: any): Promise<T> {
+export function put<T = unknown>(url: string, data?: unknown): Promise<T> {
   return api.put(url, data);
 }
 
 // 封装DELETE请求
-export function del<T = any>(url: string): Promise<T> {
+export function del<T = unknown>(url: string): Promise<T> {
   return api.delete(url);
 }
 
 // 封装文件上传
-export function upload<T = any>(url: string, file: File): Promise<T> {
+export function upload<T = unknown>(url: string, file: File): Promise<T> {
   const formData = new FormData();
   formData.append('file', file);
 
@@ -304,7 +304,7 @@ export function upload<T = any>(url: string, file: File): Promise<T> {
 }
 
 // 封装FormData POST请求（用于多字段文件上传）
-export function postFormData<T = any>(url: string, formData: FormData): Promise<T> {
+export function postFormData<T = unknown>(url: string, formData: FormData): Promise<T> {
   return api.post(url, formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
@@ -313,7 +313,7 @@ export function postFormData<T = any>(url: string, formData: FormData): Promise<
 }
 
 // 封装长时间运行请求（用于任务执行等耗时操作）
-export function postLongRequest<T = any>(url: string, data?: any, timeout: number = 300000): Promise<T> {
+export function postLongRequest<T = unknown>(url: string, data?: unknown, timeout: number = 300000): Promise<T> {
   return api.post(url, data, { timeout });
 }
 

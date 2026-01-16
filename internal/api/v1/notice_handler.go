@@ -48,48 +48,48 @@ type NoticeListRequest struct {
 type NoticeChannelRequest struct {
 	ChannelType      models.NotificationChannelType `json:"channelType" binding:"required"`
 	EmailConfigID    *string                        `json:"emailConfigId,omitempty"`
-	APIConfigID     *string                        `json:"apiConfigId,omitempty"`
-	CustomRecipients *[]string                     `json:"customRecipients,omitempty"` // 自定义收件人列表（邮件地址或企微用户代码）
+	APIConfigID      *string                        `json:"apiConfigId,omitempty"`
+	CustomRecipients *[]string                      `json:"customRecipients,omitempty"` // 自定义收件人列表（邮件地址或企微用户代码）
 }
 
 // RecurrenceConfig 周期性执行配置
 type RecurrenceConfig struct {
 	Type           string  `json:"type" binding:"required,oneof=daily weekly monthly custom"` // daily, weekly, monthly, custom
-	ExecuteTime    string  `json:"executeTime" binding:"required"`      // 执行时间 "HH:mm"
-	WeekDay        *int    `json:"weekDay,omitempty"`        // 周几（1-7，weekly时使用，1=周日，2=周一）
-	MonthDay       *int    `json:"monthDay,omitempty"`       // 每月几号（1-31，monthly时使用）
-	CronExpression *string `json:"cronExpression,omitempty"`  // 自定义 Cron 表达式（custom时使用）
-	EndDate        *string `json:"endDate,omitempty"`         // 结束日期（可选），ISO格式字符串
+	ExecuteTime    string  `json:"executeTime" binding:"required"`                            // 执行时间 "HH:mm"
+	WeekDay        *int    `json:"weekDay,omitempty"`                                         // 周几（1-7，weekly时使用，1=周日，2=周一）
+	MonthDay       *int    `json:"monthDay,omitempty"`                                        // 每月几号（1-31，monthly时使用）
+	CronExpression *string `json:"cronExpression,omitempty"`                                  // 自定义 Cron 表达式（custom时使用）
+	EndDate        *string `json:"endDate,omitempty"`                                         // 结束日期（可选），ISO格式字符串
 }
 
 // NoticeCreateRequest 创建通知公告请求（增强版）
 type NoticeCreateRequest struct {
-	NoticeTitle    string                   `json:"noticeTitle" binding:"required,min=2,max=100"`
-	NoticeType     NoticeType               `json:"noticeType" binding:"required,oneof=1 2"`
-	NoticeContent  string                   `json:"noticeContent" binding:"required"`
-	Priority       models.NoticePriority    `json:"priority" binding:"min=0,max=2"`
-	PublishTime    *time.Time               `json:"publishTime"`
-	ExecutionType  *string                  `json:"executionType,omitempty" binding:"omitempty,oneof=once recurring"`  // "once"(一次性) 或 "recurring"(周期性)
-	RecurrenceConfig *RecurrenceConfig     `json:"recurrenceConfig,omitempty"` // 周期性配置
-	CronExpression *string                  `json:"cronExpression,omitempty"` // Cron表达式，用于周期性发送（已废弃，使用RecurrenceConfig）
-	TargetType     models.TargetType        `json:"targetType" binding:"min=0,max=3"`
-	TargetDepts    []string                 `json:"targetDepts,omitempty"`
-	TargetRoles    []string                 `json:"targetRoles,omitempty"`
-	TargetUsers    []string                 `json:"targetUsers,omitempty"`
-	IsMarkdown     bool                     `json:"isMarkdown"`
-	Status         int                      `json:"status" binding:"min=0,max=1,oneof=0 1"`
-	Channels       []NoticeChannelRequest   `json:"channels,omitempty"`
+	NoticeTitle      string                 `json:"noticeTitle" binding:"required,min=2,max=100"`
+	NoticeType       NoticeType             `json:"noticeType" binding:"required,oneof=1 2"`
+	NoticeContent    string                 `json:"noticeContent" binding:"required"`
+	Priority         models.NoticePriority  `json:"priority" binding:"min=0,max=2"`
+	PublishTime      *time.Time             `json:"publishTime"`
+	ExecutionType    *string                `json:"executionType,omitempty" binding:"omitempty,oneof=once recurring"` // "once"(一次性) 或 "recurring"(周期性)
+	RecurrenceConfig *RecurrenceConfig      `json:"recurrenceConfig,omitempty"`                                       // 周期性配置
+	CronExpression   *string                `json:"cronExpression,omitempty"`                                         // Cron表达式，用于周期性发送（已废弃，使用RecurrenceConfig）
+	TargetType       models.TargetType      `json:"targetType" binding:"min=0,max=3"`
+	TargetDepts      []string               `json:"targetDepts,omitempty"`
+	TargetRoles      []string               `json:"targetRoles,omitempty"`
+	TargetUsers      []string               `json:"targetUsers,omitempty"`
+	IsMarkdown       bool                   `json:"isMarkdown"`
+	Status           int                    `json:"status" binding:"min=0,max=1,oneof=0 1"`
+	Channels         []NoticeChannelRequest `json:"channels,omitempty"`
 }
 
 // NoticeUpdateRequest 更新通知公告请求（增强版）
 type NoticeUpdateRequest struct {
-	NoticeTitle     *string               `json:"noticeTitle" binding:"omitempty,min=2,max=100"`
-	NoticeType      *NoticeType           `json:"noticeType" binding:"omitempty,oneof=1 2"`
-	NoticeContent   *string               `json:"noticeContent" binding:"omitempty"`
-	Priority        *models.NoticePriority `json:"priority" binding:"omitempty,min=0,max=2"`
-	Status          *int                   `json:"status" binding:"omitempty,min=0,max=1,oneof=0 1"`
-	PublishTime     *time.Time             `json:"publishTime,omitempty"`
-	ClearPublishTime bool                  `json:"clearPublishTime,omitempty"`
+	NoticeTitle      *string                `json:"noticeTitle" binding:"omitempty,min=2,max=100"`
+	NoticeType       *NoticeType            `json:"noticeType" binding:"omitempty,oneof=1 2"`
+	NoticeContent    *string                `json:"noticeContent" binding:"omitempty"`
+	Priority         *models.NoticePriority `json:"priority" binding:"omitempty,min=0,max=2"`
+	Status           *int                   `json:"status" binding:"omitempty,min=0,max=1,oneof=0 1"`
+	PublishTime      *time.Time             `json:"publishTime,omitempty"`
+	ClearPublishTime bool                   `json:"clearPublishTime,omitempty"`
 }
 
 // listNotices 查询通知公告列表（增强版）
@@ -249,12 +249,12 @@ func createNotice(core *core.Core) gin.HandlerFunc {
 					return
 				}
 				misfirePolicy = models.MisfirePolicyDefault // 周期性任务使用默认策略，不自动删除
-				shouldUpdateToScheduled = true // 标记需要更新状态
+				shouldUpdateToScheduled = true              // 标记需要更新状态
 			} else if req.PublishTime != nil && req.PublishTime.After(time.Now()) {
 				// 一次性定时任务
 				cronExpr = services.CalculateCronExpression(*req.PublishTime)
 				misfirePolicy = models.MisfirePolicyExecuteOnce // 执行后删除
-				shouldUpdateToScheduled = true // 标记需要更新状态
+				shouldUpdateToScheduled = true                  // 标记需要更新状态
 			} else {
 				// 没有定时任务，直接返回
 				response.Success(c, gin.H{"id": notice.ID, "message": "创建成功"})
@@ -355,12 +355,18 @@ func updateNotice(core *core.Core) gin.HandlerFunc {
 		noticeService := services.NewNoticeService(core.DB.GetDB())
 
 		updateReq := &services.UpdateNoticeRequest{
-			NoticeTitle:     req.NoticeTitle,
-			NoticeType:      func() *string { if req.NoticeType != nil { s := string(*req.NoticeType); return &s }; return nil }(),
-			NoticeContent:   req.NoticeContent,
-			Priority:        req.Priority,
-			Status:          req.Status,
-			PublishTime:     req.PublishTime,
+			NoticeTitle: req.NoticeTitle,
+			NoticeType: func() *string {
+				if req.NoticeType != nil {
+					s := string(*req.NoticeType)
+					return &s
+				}
+				return nil
+			}(),
+			NoticeContent:    req.NoticeContent,
+			Priority:         req.Priority,
+			Status:           req.Status,
+			PublishTime:      req.PublishTime,
 			ClearPublishTime: req.ClearPublishTime,
 		}
 

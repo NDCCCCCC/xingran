@@ -4,9 +4,11 @@ import (
 	"log"
 
 	"github.com/gin-gonic/gin"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1"
+	v1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/scheduler"
+	opsServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/websocket"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
@@ -100,6 +102,12 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 				v1.SetupProfileRouter(profile, core)
 			}
 
+			// 文件管理相关接口（所有已登录用户可访问）
+			files := authorized.Group("/files")
+			{
+				v1.SetupFileRouter(files, core)
+			}
+
 			// 系统设置相关接口（所有已登录用户可访问）
 			settings := authorized.Group("/settings")
 			{
@@ -127,6 +135,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			users.Use(middleware.DataScopePermission(core))
 			{
 				v1.SetupUserRouter(users, core)
+				// Excel导入导出
+				operations.SetupExcelRouter(users, "user", core)
 			}
 
 			// 角色管理
@@ -177,18 +187,6 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			}, core))
 			{
 				v1.SetupPostRouter(posts, core)
-			}
-
-			// 工位管理
-			workstations := authorized.Group("/workstations")
-			workstations.Use(middleware.RequirePermissions([]string{
-				string(permission.WorkstationList),
-				string(permission.WorkstationAdd),
-				string(permission.WorkstationEdit),
-				string(permission.WorkstationView),
-			}, core))
-			{
-				v1.SetupWorkstationRouter(workstations, core)
 			}
 
 			// 字典管理
@@ -502,5 +500,185 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 	adDomain.Use(middleware.JWTAuth(core.JWTManager))
 	{
 		v1.SetupADDomainRouter(adDomain, core)
+	}
+
+	// 运维管理模块（物理资源管理）
+	ops := r.Group("/ops")
+	ops.Use(middleware.JWTAuth(core.JWTManager))
+	{
+		// 楼宇管理
+		buildings := ops.Group("/buildings")
+		buildings.Use(middleware.RequirePermissions([]string{
+			"ops:building:list",
+			"ops:building:add",
+			"ops:building:edit",
+			"ops:building:delete",
+		}, core))
+		{
+			buildingService := opsServices.NewBuildingService(core.DB.GetDB())
+			buildingHandler := operations.NewBuildingHandler(buildingService)
+
+			buildings.POST("", buildingHandler.Create)
+			buildings.POST("/list", buildingHandler.List)
+			buildings.POST("/:id", buildingHandler.GetByID)
+			buildings.POST("/:id/update", buildingHandler.Update)
+			buildings.POST("/:id/delete", buildingHandler.Delete)
+			buildings.POST("/batch", buildingHandler.BatchOperation)
+
+			// Excel导入导出
+			operations.SetupExcelRouter(buildings, "building", core)
+		}
+
+		// 楼层管理
+		floors := ops.Group("/floors")
+		floors.Use(middleware.RequirePermissions([]string{
+			"ops:floor:list",
+			"ops:floor:add",
+			"ops:floor:edit",
+			"ops:floor:delete",
+		}, core))
+		{
+			floorService := opsServices.NewFloorService(core.DB.GetDB())
+			floorHandler := operations.NewFloorHandler(floorService)
+
+			// 注意：更具体的路由要放在前面，避免被通用路由匹配
+			floors.POST("/list", floorHandler.List)
+			floors.POST("/tree", floorHandler.GetTree)
+			floors.POST("/batch", floorHandler.BatchOperation)
+			floors.POST("/:id", floorHandler.GetByID)
+			floors.POST("/:id/update", floorHandler.Update)
+			floors.POST("/:id/delete", floorHandler.Delete)
+			floors.POST("", floorHandler.Create) // 放在最后，作为兜底路由
+
+			// Excel导入导出
+			operations.SetupExcelRouter(floors, "floor", core)
+		}
+
+		// 工位管理
+		workstations := ops.Group("/workstations")
+		workstations.Use(middleware.RequirePermissions([]string{
+			"ops:workstation:list",
+			"ops:workstation:add",
+			"ops:workstation:edit",
+			"ops:workstation:delete",
+		}, core))
+		{
+			workstationService := opsServices.NewWorkstationService(core.DB.GetDB())
+			workstationHandler := operations.NewWorkstationHandler(workstationService)
+
+			// 注意：更具体的路由要放在前面，避免被通用路由匹配
+			workstations.POST("/list", workstationHandler.List)
+			workstations.POST("/batch", workstationHandler.BatchOperation)
+			workstations.POST("/positions", workstationHandler.BatchUpdatePositions)
+			workstations.POST("/:id", workstationHandler.GetByID)
+			workstations.POST("/:id/update", workstationHandler.Update)
+			workstations.POST("/:id/delete", workstationHandler.Delete)
+			workstations.POST("", workstationHandler.Create) // 放在最后
+
+			// Excel导入导出
+			operations.SetupExcelRouter(workstations, "workstation", core)
+		}
+
+		// 信息点管理
+		infoPoints := ops.Group("/info-points")
+		infoPoints.Use(middleware.RequirePermissions([]string{
+			"ops:infopoint:list",
+			"ops:infopoint:add",
+			"ops:infopoint:edit",
+			"ops:infopoint:delete",
+		}, core))
+		{
+			infoPointService := opsServices.NewInfoPointService(core.DB.GetDB())
+			infoPointHandler := operations.NewInfoPointHandler(infoPointService)
+
+			// 注意：更具体的路由要放在前面
+			infoPoints.POST("/list", infoPointHandler.List)
+			infoPoints.POST("/batch", infoPointHandler.BatchOperation)
+			infoPoints.POST("/:id", infoPointHandler.GetByID)
+			infoPoints.POST("/:id/update", infoPointHandler.Update)
+			infoPoints.POST("/:id/delete", infoPointHandler.Delete)
+			infoPoints.POST("", infoPointHandler.Create) // 放在最后
+
+			// Excel导入导出
+			operations.SetupExcelRouter(infoPoints, "infoPoint", core)
+		}
+
+		// 机房管理
+		serverRooms := ops.Group("/server-rooms")
+		serverRooms.Use(middleware.RequirePermissions([]string{
+			"ops:serverroom:list",
+			"ops:serverroom:add",
+			"ops:serverroom:edit",
+			"ops:serverroom:delete",
+		}, core))
+		{
+			serverRoomService := opsServices.NewServerRoomService(core.DB.GetDB())
+			serverRoomHandler := operations.NewServerRoomHandler(serverRoomService)
+
+			// 注意：更具体的路由要放在前面
+			serverRooms.POST("/list", serverRoomHandler.List)
+			serverRooms.POST("/batch", serverRoomHandler.BatchOperation)
+			serverRooms.POST("/:id", serverRoomHandler.GetByID)
+			serverRooms.POST("/:id/update", serverRoomHandler.Update)
+			serverRooms.POST("/:id/delete", serverRoomHandler.Delete)
+			serverRooms.POST("", serverRoomHandler.Create) // 放在最后
+
+			// Excel导入导出
+			operations.SetupExcelRouter(serverRooms, "serverRoom", core)
+		}
+
+		// 机房照片管理
+		roomPhotos := ops.Group("/rooms/photos")
+		{
+			operations.SetupRoomPhotoRouter(roomPhotos, core)
+		}
+
+		// 专线管理
+		dedicatedLines := ops.Group("/dedicated-lines")
+		dedicatedLines.Use(middleware.RequirePermissions([]string{
+			"ops:line:list",
+			"ops:line:add",
+			"ops:line:edit",
+			"ops:line:delete",
+		}, core))
+		{
+			dedicatedLineService := opsServices.NewDedicatedLineService(core.DB.GetDB())
+			dedicatedLineHandler := operations.NewDedicatedLineHandler(dedicatedLineService)
+
+			// 注意：更具体的路由要放在前面
+			dedicatedLines.POST("/list", dedicatedLineHandler.List)
+			dedicatedLines.POST("/batch", dedicatedLineHandler.BatchOperation)
+			dedicatedLines.POST("/:id", dedicatedLineHandler.GetByID)
+			dedicatedLines.POST("/:id/update", dedicatedLineHandler.Update)
+			dedicatedLines.POST("/:id/delete", dedicatedLineHandler.Delete)
+			dedicatedLines.POST("", dedicatedLineHandler.Create) // 放在最后
+
+			// Excel导入导出
+			operations.SetupExcelRouter(dedicatedLines, "dedicatedLine", core)
+		}
+
+		// room-devices - 机房设备管理
+		roomDevices := ops.Group("/room-devices")
+		roomDevices.Use(middleware.RequirePermissions([]string{
+			"ops:roomdevice:list",
+			"ops:roomdevice:add",
+			"ops:roomdevice:edit",
+			"ops:roomdevice:delete",
+		}, core))
+		{
+			roomDeviceService := opsServices.NewRoomDeviceService(core.DB.GetDB())
+			roomDeviceHandler := operations.NewRoomDeviceHandler(roomDeviceService)
+
+			// 注意：更具体的路由要放在前面
+			roomDevices.POST("/list", roomDeviceHandler.List)
+			roomDevices.POST("/batch", roomDeviceHandler.BatchOperation)
+			roomDevices.POST("/:id", roomDeviceHandler.GetByID)
+			roomDevices.POST("/:id/update", roomDeviceHandler.Update)
+			roomDevices.POST("/:id/delete", roomDeviceHandler.Delete)
+			roomDevices.POST("", roomDeviceHandler.Create) // 放在最后
+
+			// Excel导入导出
+			operations.SetupExcelRouter(roomDevices, "roomDevice", core)
+		}
 	}
 }

@@ -8,18 +8,18 @@ import (
 	"sync/atomic"
 	"time"
 
-	"gorm.io/gorm"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"gorm.io/gorm"
 )
 
 // PooledConnection 池化连接，带有引用计数和设备级锁
 type PooledConnection struct {
 	wrapper  *ScrapliWrapper
-	refCount int32         // 引用计数（原子操作）
-	lastUsed time.Time     // 最后使用时间
-	deviceID string        // 设备ID
-	mu       *sync.Mutex   // 设备级互斥锁（指针类型，用于共享）
+	refCount int32       // 引用计数（原子操作）
+	lastUsed time.Time   // 最后使用时间
+	deviceID string      // 设备ID
+	mu       *sync.Mutex // 设备级互斥锁（指针类型，用于共享）
 	pool     *DeviceConnectionPool
 }
 
@@ -102,13 +102,13 @@ type DeviceConnectionPool struct {
 	connections    map[string]*PooledConnection // deviceID -> PooledConnection
 	deviceLocks    map[string]*sync.Mutex       // deviceID -> 设备锁
 	poolLock       sync.RWMutex                 // 保护 connections 和 deviceLocks
-	db             *gorm.DB                      // 数据库（用于查询设备和凭证）
-	sm4Cipher      *security.SM4Cipher           // SM4 加密器
-	maxIdle        time.Duration                 // 空闲连接超时时间
-	maxConnections int                           // 最大连接数
-	cleanupTicker  *time.Ticker                  // 清理定时器
-	done           chan struct{}                 // 停止信号
-	enabled        bool                          // 是否启用连接池（用于平滑迁移）
+	db             *gorm.DB                     // 数据库（用于查询设备和凭证）
+	sm4Cipher      *security.SM4Cipher          // SM4 加密器
+	maxIdle        time.Duration                // 空闲连接超时时间
+	maxConnections int                          // 最大连接数
+	cleanupTicker  *time.Ticker                 // 清理定时器
+	done           chan struct{}                // 停止信号
+	enabled        bool                         // 是否启用连接池（用于平滑迁移）
 }
 
 // PoolConfig 连接池配置
@@ -138,8 +138,8 @@ func NewDeviceConnectionPool(db *gorm.DB, sm4Cipher *security.SM4Cipher, config 
 		sm4Cipher:      sm4Cipher,
 		maxIdle:        config.MaxIdle,
 		maxConnections: config.MaxConnections,
-		done:          make(chan struct{}),
-		enabled:       true, // 默认启用
+		done:           make(chan struct{}),
+		enabled:        true, // 默认启用
 	}
 
 	// 启动清理协程
@@ -216,12 +216,12 @@ func (p *DeviceConnectionPool) GetConnection(ctx context.Context, deviceID strin
 
 	// 创建池化连接
 	pc = &PooledConnection{
-		wrapper:   wrapper,
-		refCount:  0,
-		lastUsed:  time.Now(),
-		deviceID:  deviceID,
-		mu:        deviceLock,
-		pool:      p,
+		wrapper:  wrapper,
+		refCount: 0,
+		lastUsed: time.Now(),
+		deviceID: deviceID,
+		mu:       deviceLock,
+		pool:     p,
 	}
 
 	// 添加到池中
@@ -421,7 +421,7 @@ func (p *DeviceConnectionPool) GetStats() map[string]interface{} {
 	}
 
 	return map[string]interface{}{
-		"total_connections": len(p.connections),
+		"total_connections":  len(p.connections),
 		"active_connections": activeCount,
 		"idle_connections":   idleCount,
 		"max_connections":    p.maxConnections,

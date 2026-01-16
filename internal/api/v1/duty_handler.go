@@ -360,12 +360,12 @@ func listHolidays(core *core.Core) gin.HandlerFunc {
 func createHoliday(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req struct {
-			HolidayDate string                 `json:"holidayDate" binding:"required"`
-			HolidayName string                 `json:"holidayName" binding:"required,max=100"`
-			IsOffday    bool                   `json:"isOffday"`
-			HolidayType string                 `json:"holidayType" binding:"required,oneof=legal workday custom"`
-			Year        int                    `json:"year" binding:"required"`
-			Remark      string                 `json:"remark"`
+			HolidayDate string `json:"holidayDate" binding:"required"`
+			HolidayName string `json:"holidayName" binding:"required,max=100"`
+			IsOffday    bool   `json:"isOffday"`
+			HolidayType string `json:"holidayType" binding:"required,oneof=legal workday custom"`
+			Year        int    `json:"year" binding:"required"`
+			Remark      string `json:"remark"`
 		}
 		if err := c.ShouldBindJSON(&req); err != nil {
 			response.Error(c, response.ErrBadRequest, "请求参数错误")
@@ -410,11 +410,11 @@ func updateHoliday(core *core.Core) gin.HandlerFunc {
 		}
 
 		var req struct {
-			HolidayDate string                 `json:"holidayDate"`
-			HolidayName string                 `json:"holidayName"`
-			IsOffday    bool                   `json:"isOffday"`
-			HolidayType string                 `json:"holidayType"`
-			Remark      string                 `json:"remark"`
+			HolidayDate string `json:"holidayDate"`
+			HolidayName string `json:"holidayName"`
+			IsOffday    bool   `json:"isOffday"`
+			HolidayType string `json:"holidayType"`
+			Remark      string `json:"remark"`
 		}
 		if err := c.ShouldBindJSON(&req); err != nil {
 			response.Error(c, response.ErrBadRequest, "请求参数错误")

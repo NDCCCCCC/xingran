@@ -63,7 +63,7 @@ func getSystemMemoryInfo() (uint64, uint64, error) {
 func getEstimatedMemoryInfo() (uint64, uint64, error) {
 	// 假设系统有32GB内存，80%使用
 	totalBytes := uint64(32) * 1024 * 1024 * 1024 // 32GB
-	usedBytes := totalBytes * 80 / 100              // 80%使用
+	usedBytes := totalBytes * 80 / 100            // 80%使用
 
 	return totalBytes, usedBytes, nil
 }

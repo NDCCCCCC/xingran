@@ -4,8 +4,8 @@
 package system
 
 import (
-	"os/exec"
 	"fmt"
+	"os/exec"
 	"strconv"
 	"strings"
 )

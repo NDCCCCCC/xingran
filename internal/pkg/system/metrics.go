@@ -8,15 +8,15 @@ import (
 
 // SystemMetrics 系统指标结构
 type SystemMetrics struct {
-	CPUUsage    float64 `json:"cpuUsage"`    // CPU使用率 (0-100)
-	MemoryUsage float64 `json:"memoryUsage"` // 内存使用率 (0-100)
-	DiskUsage   float64 `json:"diskUsage"`   // 磁盘使用率 (0-100)
-	NetworkRx   uint64  `json:"networkRx"`   // 网络接收字节数
-	NetworkTx   uint64  `json:"networkTx"`   // 网络发送字节数
-	ProcessNum  int     `json:"processNum"`  // 进程/协程数量
-	TotalMemory uint64  `json:"totalMemory"` // 总内存字节数
-	UsedMemory  uint64  `json:"usedMemory"`  // 已用内存字节数
-	Timestamp   time.Time `json:"timestamp"` // 时间戳
+	CPUUsage    float64   `json:"cpuUsage"`    // CPU使用率 (0-100)
+	MemoryUsage float64   `json:"memoryUsage"` // 内存使用率 (0-100)
+	DiskUsage   float64   `json:"diskUsage"`   // 磁盘使用率 (0-100)
+	NetworkRx   uint64    `json:"networkRx"`   // 网络接收字节数
+	NetworkTx   uint64    `json:"networkTx"`   // 网络发送字节数
+	ProcessNum  int       `json:"processNum"`  // 进程/协程数量
+	TotalMemory uint64    `json:"totalMemory"` // 总内存字节数
+	UsedMemory  uint64    `json:"usedMemory"`  // 已用内存字节数
+	Timestamp   time.Time `json:"timestamp"`   // 时间戳
 }
 
 // GetSystemMetrics 获取真实系统指标
@@ -80,4 +80,3 @@ func GetSystemMetrics() (*SystemMetrics, error) {
 
 	return metrics, nil
 }
-

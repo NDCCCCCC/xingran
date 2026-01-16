@@ -27,9 +27,9 @@ type User struct {
 	Remark        string     `gorm:"size:500" json:"remark,omitempty"`
 
 	// 关联
-	Roles       []string     `gorm:"-" json:"roles"`  // 简化为字符串数组，避免复杂关联
-	Posts       []Post       `gorm:"many2many:user_posts;" json:"posts,omitempty"`
-	Department  *Department  `gorm:"foreignKey:DeptID" json:"department,omitempty"`
+	Roles      []string    `gorm:"-" json:"roles"` // 简化为字符串数组，避免复杂关联
+	Posts      []Post      `gorm:"many2many:user_posts;" json:"posts,omitempty"`
+	Dept       *Department `gorm:"foreignKey:DeptID" json:"department,omitempty"`
 }
 
 // UserRole 用户角色关联

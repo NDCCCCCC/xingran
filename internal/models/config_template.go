@@ -17,11 +17,11 @@ const (
 
 // TemplateVariable 模板变量定义
 type TemplateVariable struct {
-	Name         string `json:"name"`         // 变量名
-	Description  string `json:"description"`  // 变量描述
-	DefaultValue string `json:"defaultValue"` // 默认值
-	Required     bool   `json:"required"`     // 是否必填
-	Type         string `json:"type"`         // 变量类型: string/int/ip/select等
+	Name         string   `json:"name"`              // 变量名
+	Description  string   `json:"description"`       // 变量描述
+	DefaultValue string   `json:"defaultValue"`      // 默认值
+	Required     bool     `json:"required"`          // 是否必填
+	Type         string   `json:"type"`              // 变量类型: string/int/ip/select等
 	Options      []string `json:"options,omitempty"` // 选项（当type为select时）
 }
 

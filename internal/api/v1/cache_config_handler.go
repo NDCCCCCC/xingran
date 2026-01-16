@@ -12,20 +12,20 @@ import (
 
 // CacheConfigInfo 缓存配置信息
 type CacheConfigInfo struct {
-	Key         string `json:"key"`          // 配置键
-	Name        string `json:"name"`         // 配置名称
-	Description string `json:"description"`  // 配置说明
-	Category    string `json:"category"`     // 配置分类
-	Min         int    `json:"min"`          // 最小值（分钟）
-	Max         int    `json:"max"`          // 最大值（分钟）
-	Default     int    `json:"default"`      // 默认值（分钟）
-	Value       int    `json:"value"`        // 当前值（分钟）
+	Key         string `json:"key"`         // 配置键
+	Name        string `json:"name"`        // 配置名称
+	Description string `json:"description"` // 配置说明
+	Category    string `json:"category"`    // 配置分类
+	Min         int    `json:"min"`         // 最小值（分钟）
+	Max         int    `json:"max"`         // 最大值（分钟）
+	Default     int    `json:"default"`     // 默认值（分钟）
+	Value       int    `json:"value"`       // 当前值（分钟）
 }
 
 // CacheConfigCategory 缓存配置分类
 type CacheConfigCategory struct {
-	Name     string             `json:"name"`     // 分类名称
-	Configs  []CacheConfigInfo `json:"configs"`  // 配置列表
+	Name    string            `json:"name"`    // 分类名称
+	Configs []CacheConfigInfo `json:"configs"` // 配置列表
 }
 
 // getCacheConfigs 获取缓存配置列表
@@ -175,6 +175,6 @@ func reloadCacheConfigs(core *core.Core) gin.HandlerFunc {
 
 // UpdateCacheConfigRequest 更新缓存配置请求
 type UpdateCacheConfigRequest struct {
-	Key   string `json:"key" binding:"required"`   // 配置键
+	Key   string `json:"key" binding:"required"`                 // 配置键
 	Value int    `json:"value" binding:"required,min=1,max=180"` // 配置值（分钟）
 }

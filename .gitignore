@@ -9,6 +9,7 @@ bin/
 # 临时文件
 *.tmp
 *.temp
+tmpclaude-*
 .cache/
 
 # 环境变量文件
@@ -56,3 +57,6 @@ coverage.html
 
 # 生产配置文件
 configs/config.prod.yamlnul
+
+# Git Worktree 目录
+.worktrees/

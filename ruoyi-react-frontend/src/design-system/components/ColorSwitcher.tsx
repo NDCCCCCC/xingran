@@ -288,14 +288,15 @@ const ColorSwitcher: FC<ColorSwitcherProps> = ({
     const savedSidebar = localStorage.getItem('theme-sidebar-color');
 
     if (savedPrimary) {
-      setPrimaryColor(savedPrimary);
+      // 使用 setTimeout 避免同步 setState
+      setTimeout(() => setPrimaryColor(savedPrimary), 0);
       applyPrimaryColor(savedPrimary);
     }
     if (savedSidebar) {
-      setSidebarColor(savedSidebar);
+      setTimeout(() => setSidebarColor(savedSidebar), 0);
       applySidebarBackgroundColor(savedSidebar);
     }
-     
+
   }, []);
 
   /**

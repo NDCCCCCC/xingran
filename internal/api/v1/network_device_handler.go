@@ -10,47 +10,47 @@ import (
 
 // NetworkDeviceListRequest 网络设备列表请求
 type NetworkDeviceListRequest struct {
-	DeviceName *string                `json:"deviceName,omitempty"`
-	DeviceType *models.DeviceType     `json:"deviceType,omitempty"`
-	Vendor     *models.DeviceVendor  `json:"vendor,omitempty"`
-	IP         *string                `json:"ip,omitempty"`
-	Status     *models.DeviceStatus  `json:"status,omitempty"`
-	DeptID     *string                `json:"deptId,omitempty"`
-	Current    int                    `json:"current" binding:"min=1"`
-	PageSize   int                    `json:"pageSize" binding:"min=1,max=100"`
+	DeviceName *string              `json:"deviceName,omitempty"`
+	DeviceType *models.DeviceType   `json:"deviceType,omitempty"`
+	Vendor     *models.DeviceVendor `json:"vendor,omitempty"`
+	IP         *string              `json:"ip,omitempty"`
+	Status     *models.DeviceStatus `json:"status,omitempty"`
+	DeptID     *string              `json:"deptId,omitempty"`
+	Current    int                  `json:"current" binding:"min=1"`
+	PageSize   int                  `json:"pageSize" binding:"min=1,max=100"`
 }
 
 // NetworkDeviceCreateRequest 创建网络设备请求
 type NetworkDeviceCreateRequest struct {
-	DeviceName   string                `json:"deviceName" binding:"required,min=2,max=100"`
-	DeviceType   models.DeviceType     `json:"deviceType" binding:"required"`
-	Vendor       models.DeviceVendor   `json:"vendor" binding:"required"`
-	Model        string                `json:"model,omitempty" binding:"max=100"`
-	IPAddress    string                `json:"ipAddress" binding:"required,ip"`
-	Port         int                   `json:"port" binding:"min=1,max=65535"`
-	SNMPPort     int                   `json:"snmpPort" binding:"min=1,max=65535"`
-	CredentialID *string               `json:"credentialId,omitempty"`
-	DeptID       *string               `json:"deptId,omitempty"`
-	Location     string                `json:"location,omitempty" binding:"max=200"`
-	Status       models.DeviceStatus   `json:"status" binding:"min=0,max=2"`
-	Description  string                `json:"description,omitempty"`
+	DeviceName   string              `json:"deviceName" binding:"required,min=2,max=100"`
+	DeviceType   models.DeviceType   `json:"deviceType" binding:"required"`
+	Vendor       models.DeviceVendor `json:"vendor" binding:"required"`
+	Model        string              `json:"model,omitempty" binding:"max=100"`
+	IPAddress    string              `json:"ipAddress" binding:"required,ip"`
+	Port         int                 `json:"port" binding:"min=1,max=65535"`
+	SNMPPort     int                 `json:"snmpPort" binding:"min=1,max=65535"`
+	CredentialID *string             `json:"credentialId,omitempty"`
+	DeptID       *string             `json:"deptId,omitempty"`
+	Location     string              `json:"location,omitempty" binding:"max=200"`
+	Status       models.DeviceStatus `json:"status" binding:"min=0,max=2"`
+	Description  string              `json:"description,omitempty"`
 }
 
 // NetworkDeviceUpdateRequest 更新网络设备请求
 type NetworkDeviceUpdateRequest struct {
-	ID           string                `json:"id,omitempty"`
-	DeviceName   string                `json:"deviceName" binding:"required,min=2,max=100"`
-	DeviceType   models.DeviceType     `json:"deviceType" binding:"required"`
-	Vendor       models.DeviceVendor   `json:"vendor" binding:"required"`
-	Model        string                `json:"model,omitempty" binding:"max=100"`
-	IPAddress    string                `json:"ipAddress" binding:"required,ip"`
-	Port         int                   `json:"port" binding:"min=1,max=65535"`
-	SNMPPort     int                   `json:"snmpPort" binding:"min=1,max=65535"`
-	CredentialID *string               `json:"credentialId,omitempty"`
-	DeptID       *string               `json:"deptId,omitempty"`
-	Location     string                `json:"location,omitempty" binding:"max=200"`
-	Status       models.DeviceStatus   `json:"status" binding:"min=0,max=2"`
-	Description  string                `json:"description,omitempty"`
+	ID           string              `json:"id,omitempty"`
+	DeviceName   string              `json:"deviceName" binding:"required,min=2,max=100"`
+	DeviceType   models.DeviceType   `json:"deviceType" binding:"required"`
+	Vendor       models.DeviceVendor `json:"vendor" binding:"required"`
+	Model        string              `json:"model,omitempty" binding:"max=100"`
+	IPAddress    string              `json:"ipAddress" binding:"required,ip"`
+	Port         int                 `json:"port" binding:"min=1,max=65535"`
+	SNMPPort     int                 `json:"snmpPort" binding:"min=1,max=65535"`
+	CredentialID *string             `json:"credentialId,omitempty"`
+	DeptID       *string             `json:"deptId,omitempty"`
+	Location     string              `json:"location,omitempty" binding:"max=200"`
+	Status       models.DeviceStatus `json:"status" binding:"min=0,max=2"`
+	Description  string              `json:"description,omitempty"`
 }
 
 // listNetworkDevices 查询网络设备列表
@@ -198,20 +198,20 @@ func createNetworkDevice(core *core.Core) gin.HandlerFunc {
 		}
 
 		device := models.NetworkDevice{
-			DeviceName:     req.DeviceName,
-			DeviceType:     req.DeviceType,
-			Vendor:         req.Vendor,
-			Model:          req.Model,
-			IPAddress:      req.IPAddress,
-			Port:           req.Port,
-			SNMPPort:       req.SNMPPort,
-			CredentialID:   req.CredentialID,
-			DeptID:         req.DeptID,
-			DeptName:       deptName,
-			Location:       req.Location,
-			Status:         req.Status,
-			Description:    req.Description,
-			BaseModel:      models.BaseModel{CreatedBy: c.GetString("userId")},
+			DeviceName:   req.DeviceName,
+			DeviceType:   req.DeviceType,
+			Vendor:       req.Vendor,
+			Model:        req.Model,
+			IPAddress:    req.IPAddress,
+			Port:         req.Port,
+			SNMPPort:     req.SNMPPort,
+			CredentialID: req.CredentialID,
+			DeptID:       req.DeptID,
+			DeptName:     deptName,
+			Location:     req.Location,
+			Status:       req.Status,
+			Description:  req.Description,
+			BaseModel:    models.BaseModel{CreatedBy: c.GetString("userId")},
 		}
 
 		if err := core.DB.GetDB().Create(&device).Error; err != nil {

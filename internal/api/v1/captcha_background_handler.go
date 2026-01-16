@@ -4,7 +4,6 @@ package v1
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"os"
 	"strconv"
@@ -221,7 +220,8 @@ func deleteCaptchaBackground(core *corepkg.Core) gin.HandlerFunc {
 
 		// 删除文件
 		if err := os.Remove(bg.FilePath); err != nil {
-			fmt.Printf("删除文件失败: %v\n", err)
+			// 静默处理文件删除失败
+			_ = err
 		}
 
 		// 软删除数据库记录

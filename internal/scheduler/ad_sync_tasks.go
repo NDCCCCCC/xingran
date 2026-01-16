@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	adSyncCron  *cron.Cron
+	adSyncCron    *cron.Cron
 	adSyncStarted bool
 )
 
@@ -132,10 +132,10 @@ func syncADConfig(configID string) {
 	duration := int(endTime.Sub(syncLog.StartTime).Seconds())
 
 	updates := map[string]interface{}{
-		"end_time":  endTime,
-		"duration":  duration,
+		"end_time":    endTime,
+		"duration":    duration,
 		"sync_status": models.ADSyncStatusSuccess,
-		"ou_count":   0,
+		"ou_count":    0,
 		"group_count": 0,
 		"user_count":  0,
 		"error_count": 0,

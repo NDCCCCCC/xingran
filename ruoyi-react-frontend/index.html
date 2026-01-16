@@ -8,7 +8,7 @@
     <!-- Content Security Policy (CSP) -->
     <!-- 开发环境：宽松策略，支持 Vite HMR 和本地网络访问 -->
     <!-- 注意: frame-ancestors 需要通过 HTTP 头设置，meta 标签不支持 -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http://10.62.10.33:*; font-src 'self' data:; connect-src 'self' http://localhost:* http://127.0.0.1:* http://10.62.10.33:* https: ws://localhost:* ws://127.0.0.1:* ws://10.62.10.33:* blob:; worker-src 'self' blob:;" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://*.baidu.com http://*.baidu.com https://*.bdimg.com http://*.bdimg.com; style-src 'self' 'unsafe-inline' https://*.baidu.com https://*.bdimg.com; img-src 'self' data: blob: http://10.62.10.33:* https://* http://*; font-src 'self' data:; connect-src 'self' http://localhost:* http://127.0.0.1:* http://10.62.10.33:* https: ws://localhost:* ws://127.0.0.1:* ws://10.62.10.33:* blob:; worker-src 'self' blob:;" />
 
     <!-- 其他安全相关 Meta 标签 -->
     <!-- 注意: X-Frame-Options 需要通过 HTTP 头设置，meta 标签无效 -->

@@ -105,27 +105,27 @@ const (
 	LoginLogRemove PermissionCode = "monitor:loginlog:remove"
 
 	// 在线用户权限
-	OnlineList   PermissionCode = "monitor:online:list"
+	OnlineList        PermissionCode = "monitor:online:list"
 	OnlineForceLogout PermissionCode = "monitor:online:forceLogout"
 
 	// 定时任务权限
-	JobList      PermissionCode = "monitor:job:list"
-	JobView      PermissionCode = "monitor:job:view"
-	JobAdd       PermissionCode = "monitor:job:add"
-	JobEdit      PermissionCode = "monitor:job:edit"
-	JobRemove    PermissionCode = "monitor:job:remove"
-	JobExport    PermissionCode = "monitor:job:export"
-	JobStart     PermissionCode = "monitor:job:start"
-	JobStop      PermissionCode = "monitor:job:stop"
-	JobRun       PermissionCode = "monitor:job:run"
+	JobList   PermissionCode = "monitor:job:list"
+	JobView   PermissionCode = "monitor:job:view"
+	JobAdd    PermissionCode = "monitor:job:add"
+	JobEdit   PermissionCode = "monitor:job:edit"
+	JobRemove PermissionCode = "monitor:job:remove"
+	JobExport PermissionCode = "monitor:job:export"
+	JobStart  PermissionCode = "monitor:job:start"
+	JobStop   PermissionCode = "monitor:job:stop"
+	JobRun    PermissionCode = "monitor:job:run"
 
 	// 服务监控权限
 	ServerList PermissionCode = "monitor:server:list"
 	ServerView PermissionCode = "monitor:server:view"
 
 	// 缓存监控权限
-	CacheList PermissionCode = "monitor:cache:list"
-	CacheView PermissionCode = "monitor:cache:view"
+	CacheList  PermissionCode = "monitor:cache:list"
+	CacheView  PermissionCode = "monitor:cache:view"
 	CacheClean PermissionCode = "monitor:cache:clean"
 
 	// 监控模块权限
@@ -170,10 +170,10 @@ const (
 	NetworkCommandView    PermissionCode = "network:command:view"
 
 	// 配置备份权限
-	NetworkBackupList   PermissionCode = "network:backup:list"
-	NetworkBackupAdd    PermissionCode = "network:backup:add"
+	NetworkBackupList    PermissionCode = "network:backup:list"
+	NetworkBackupAdd     PermissionCode = "network:backup:add"
 	NetworkBackupRestore PermissionCode = "network:backup:restore"
-	NetworkBackupDiff   PermissionCode = "network:backup:diff"
+	NetworkBackupDiff    PermissionCode = "network:backup:diff"
 
 	// 设备发现权限
 	NetworkDiscoveryAdd  PermissionCode = "network:discovery:add"
@@ -186,15 +186,15 @@ const (
 	NetworkPortQuery PermissionCode = "network:port:query"
 
 	// 网络设备模块权限
-	Network         PermissionCode = "network"
-	NetworkDevice   PermissionCode = "network:device"
+	Network           PermissionCode = "network"
+	NetworkDevice     PermissionCode = "network:device"
 	NetworkCredential PermissionCode = "network:credential"
-	NetworkTemplate PermissionCode = "network:template"
-	NetworkCommand  PermissionCode = "network:command"
-	NetworkBackup   PermissionCode = "network:backup"
-	NetworkDiscovery PermissionCode = "network:discovery"
-	NetworkMac      PermissionCode = "network:mac"
-	NetworkPort     PermissionCode = "network:port"
+	NetworkTemplate   PermissionCode = "network:template"
+	NetworkCommand    PermissionCode = "network:command"
+	NetworkBackup     PermissionCode = "network:backup"
+	NetworkDiscovery  PermissionCode = "network:discovery"
+	NetworkMac        PermissionCode = "network:mac"
+	NetworkPort       PermissionCode = "network:port"
 )
 
 // RoutePermission 路由权限映射

@@ -6,15 +6,15 @@ import (
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"gorm.io/gorm"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	"gorm.io/gorm"
 )
 
 // NotificationSenderService 通知发送服务（多渠道）
 type NotificationSenderService struct {
-	db              *gorm.DB
-	emailSender     *EmailSenderService
-	apiSender       *APISenderService
+	db          *gorm.DB
+	emailSender *EmailSenderService
+	apiSender   *APISenderService
 }
 
 // NewNotificationSenderService 创建通知发送服务

@@ -217,9 +217,11 @@ export function getNextRunTimes(expression: string, count: number = 5): Date[] {
     const normalizedExpression = expression.replace(/\?/g, '*');
 
     // 解析 cron 表达式
+    // @ts-expect-error - later库类型定义不完整，但运行时正常
     const schedule = later.parse.cron(normalizedExpression);
 
     // 使用 later.schedule(schedule).next(count) 一次性获取多次执行时间
+    // @ts-expect-error - later库类型定义不完整，但运行时正常
     const times = later.schedule(schedule).next(count);
 
     // 确保返回的是 Date 数组

@@ -11,11 +11,11 @@ import (
 
 // InterfaceInfo 接口信息
 type InterfaceInfo struct {
-	Name        string
-	VLAN        *int
-	Duplex      string
-	Speed       string
-	PortType    string
+	Name     string
+	VLAN     *int
+	Duplex   string
+	Speed    string
+	PortType string
 }
 
 // Dot1xInfo 802.1X信息
@@ -273,9 +273,9 @@ func getAllPortSecurity(wrapper *device.ScrapliWrapper, vendor models.DeviceVend
 func getInterfaceCommand(vendor models.DeviceVendor) string {
 	commands := map[models.DeviceVendor]string{
 		models.VendorHuawei: "display interface brief",
-		models.VendorH3C:     "display interface",
-		models.VendorRuijie:  "show interfaces status",
-		models.VendorMaipu:   "show interface",
+		models.VendorH3C:    "display interface",
+		models.VendorRuijie: "show interfaces status",
+		models.VendorMaipu:  "show interface",
 	}
 
 	if cmd, ok := commands[vendor]; ok {
@@ -288,9 +288,9 @@ func getInterfaceCommand(vendor models.DeviceVendor) string {
 func getInterfaceTemplate(vendor models.DeviceVendor) string {
 	templates := map[models.DeviceVendor]string{
 		models.VendorHuawei: "templates/huawei_vrp_display_interface_brief.textfsm",
-		models.VendorH3C:     "templates/huawei_vrp_display_interface.textfsm",
-		models.VendorRuijie:  "templates/ruijie_os_show_interfaces_status.textfsm",
-		models.VendorMaipu:   "templates/ruijie_os_show_interfaces_status.textfsm",
+		models.VendorH3C:    "templates/huawei_vrp_display_interface.textfsm",
+		models.VendorRuijie: "templates/ruijie_os_show_interfaces_status.textfsm",
+		models.VendorMaipu:  "templates/ruijie_os_show_interfaces_status.textfsm",
 	}
 
 	if tmpl, ok := templates[vendor]; ok {
@@ -303,9 +303,9 @@ func getInterfaceTemplate(vendor models.DeviceVendor) string {
 func getInterfaceDescriptionCommand(vendor models.DeviceVendor) string {
 	commands := map[models.DeviceVendor]string{
 		models.VendorHuawei: "display interface description",
-		models.VendorH3C:     "display interface description",
-		models.VendorRuijie:  "show int des",
-		models.VendorMaipu:   "show int des",
+		models.VendorH3C:    "display interface description",
+		models.VendorRuijie: "show int des",
+		models.VendorMaipu:  "show int des",
 	}
 
 	if cmd, ok := commands[vendor]; ok {
@@ -318,9 +318,9 @@ func getInterfaceDescriptionCommand(vendor models.DeviceVendor) string {
 func getInterfaceDescriptionTemplate(vendor models.DeviceVendor) string {
 	templates := map[models.DeviceVendor]string{
 		models.VendorHuawei: "templates/huawei_vrp_display_interface_description.textfsm",
-		models.VendorH3C:     "templates/huawei_vrp_display_interface_description.textfsm",
-		models.VendorRuijie:  "templates/ruijie_os_show_interface_description.textfsm",
-		models.VendorMaipu:   "templates/ruijie_os_show_interface_description.textfsm",
+		models.VendorH3C:    "templates/huawei_vrp_display_interface_description.textfsm",
+		models.VendorRuijie: "templates/ruijie_os_show_interface_description.textfsm",
+		models.VendorMaipu:  "templates/ruijie_os_show_interface_description.textfsm",
 	}
 
 	if tmpl, ok := templates[vendor]; ok {
@@ -333,9 +333,9 @@ func getInterfaceDescriptionTemplate(vendor models.DeviceVendor) string {
 func getDot1xBatchCommand(vendor models.DeviceVendor) string {
 	commands := map[models.DeviceVendor]string{
 		models.VendorHuawei: "display dot1x",
-		models.VendorH3C:     "display dot1x",
-		models.VendorRuijie:  "show dot1x port-control",
-		models.VendorMaipu:   "show dot1x port-control",
+		models.VendorH3C:    "display dot1x",
+		models.VendorRuijie: "show dot1x port-control",
+		models.VendorMaipu:  "show dot1x port-control",
 	}
 	if cmd, ok := commands[vendor]; ok {
 		return cmd
@@ -347,9 +347,9 @@ func getDot1xBatchCommand(vendor models.DeviceVendor) string {
 func getPortSecurityBatchCommand(vendor models.DeviceVendor) string {
 	commands := map[models.DeviceVendor]string{
 		models.VendorHuawei: "display port-security",
-		models.VendorH3C:     "display port-security",
-		models.VendorRuijie:  "show port-security all",
-		models.VendorMaipu:   "show port-security all",
+		models.VendorH3C:    "display port-security",
+		models.VendorRuijie: "show port-security all",
+		models.VendorMaipu:  "show port-security all",
 	}
 	if cmd, ok := commands[vendor]; ok {
 		return cmd
@@ -361,9 +361,9 @@ func getPortSecurityBatchCommand(vendor models.DeviceVendor) string {
 func getDot1xBatchTemplate(vendor models.DeviceVendor) string {
 	templates := map[models.DeviceVendor]string{
 		models.VendorHuawei: "templates/huawei_vrp_display_dot1x.textfsm",
-		models.VendorH3C:     "templates/huawei_vrp_display_dot1x.textfsm",
-		models.VendorRuijie:  "templates/ruijie_os_show_dot1x.textfsm",
-		models.VendorMaipu:   "templates/ruijie_os_show_dot1x.textfsm",
+		models.VendorH3C:    "templates/huawei_vrp_display_dot1x.textfsm",
+		models.VendorRuijie: "templates/ruijie_os_show_dot1x.textfsm",
+		models.VendorMaipu:  "templates/ruijie_os_show_dot1x.textfsm",
 	}
 	if tmpl, ok := templates[vendor]; ok {
 		return tmpl
@@ -375,9 +375,9 @@ func getDot1xBatchTemplate(vendor models.DeviceVendor) string {
 func getPortSecurityBatchTemplate(vendor models.DeviceVendor) string {
 	templates := map[models.DeviceVendor]string{
 		models.VendorHuawei: "templates/huawei_vrp_display_port-security.textfsm",
-		models.VendorH3C:     "templates/huawei_vrp_display_port-security.textfsm",
-		models.VendorRuijie:  "templates/ruijie_os_show_port-security.textfsm",
-		models.VendorMaipu:   "templates/ruijie_os_show_port-security.textfsm",
+		models.VendorH3C:    "templates/huawei_vrp_display_port-security.textfsm",
+		models.VendorRuijie: "templates/ruijie_os_show_port-security.textfsm",
+		models.VendorMaipu:  "templates/ruijie_os_show_port-security.textfsm",
 	}
 	if tmpl, ok := templates[vendor]; ok {
 		return tmpl

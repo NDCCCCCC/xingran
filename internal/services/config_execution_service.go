@@ -6,10 +6,10 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/sync/errgroup"
-	"gorm.io/gorm"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"golang.org/x/sync/errgroup"
+	"gorm.io/gorm"
 )
 
 // ConfigExecutionService 配置执行服务
@@ -28,9 +28,9 @@ func NewConfigExecutionService(db *gorm.DB, executor *device.DeviceExecutor) *Co
 
 // TemplateExecutionRequest 模板执行请求
 type TemplateExecutionRequest struct {
-	ExecutionName    string
-	TemplateID       string
-	DeviceIDs        []string
+	ExecutionName     string
+	TemplateID        string
+	DeviceIDs         []string
 	TemplateVariables map[string]string
 	ExecutionStrategy models.ExecutionStrategy
 	Concurrency       int
@@ -47,16 +47,16 @@ type TemplateExecutionResult struct {
 
 // DeviceExecutionResult 设备执行结果
 type DeviceExecutionResult struct {
-	DeviceID      string
-	DeviceName    string
-	IPAddress     string
-	Status        models.ExecutionStatus
-	ConfigSent    string
+	DeviceID       string
+	DeviceName     string
+	IPAddress      string
+	Status         models.ExecutionStatus
+	ConfigSent     string
 	OutputReceived string
-	ErrorMessage  string
-	StartedAt     *time.Time
-	CompletedAt   *time.Time
-	Duration      int
+	ErrorMessage   string
+	StartedAt      *time.Time
+	CompletedAt    *time.Time
+	Duration       int
 }
 
 // ExecutionSummary 执行汇总
@@ -314,16 +314,16 @@ func (s *ConfigExecutionService) GetExecutionResult(ctx context.Context, executi
 	results := make(map[string]*DeviceExecutionResult)
 	for _, detail := range details {
 		results[detail.DeviceID] = &DeviceExecutionResult{
-			DeviceID:      detail.DeviceID,
-			DeviceName:    detail.DeviceName,
-			IPAddress:     detail.IPAddress,
-			Status:        detail.Status,
-			ConfigSent:    detail.CommandSent,
+			DeviceID:       detail.DeviceID,
+			DeviceName:     detail.DeviceName,
+			IPAddress:      detail.IPAddress,
+			Status:         detail.Status,
+			ConfigSent:     detail.CommandSent,
 			OutputReceived: detail.OutputReceived,
-			ErrorMessage:  detail.ErrorMessage,
-			StartedAt:     detail.StartedAt,
-			CompletedAt:   detail.CompletedAt,
-			Duration:      detail.Duration,
+			ErrorMessage:   detail.ErrorMessage,
+			StartedAt:      detail.StartedAt,
+			CompletedAt:    detail.CompletedAt,
+			Duration:       detail.Duration,
 		}
 	}
 

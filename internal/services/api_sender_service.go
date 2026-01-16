@@ -17,8 +17,8 @@ import (
 
 // APISenderService API发送服务
 type APISenderService struct {
-	db        *gorm.DB
-	client    *http.Client
+	db     *gorm.DB
+	client *http.Client
 }
 
 // NewAPISenderService 创建API发送服务
@@ -33,20 +33,20 @@ func NewAPISenderService(db *gorm.DB) *APISenderService {
 
 // APIMessage API消息
 type APIMessage struct {
-	Recipients []string                 `json:"recipients"` // 接收者列表（手机号、用户ID等）
-	Title      string                   `json:"title"`      // 标题
-	Content    string                   `json:"content"`    // 内容
-	Data       map[string]interface{}   `json:"data"`       // 额外数据
+	Recipients []string               `json:"recipients"` // 接收者列表（手机号、用户ID等）
+	Title      string                 `json:"title"`      // 标题
+	Content    string                 `json:"content"`    // 内容
+	Data       map[string]interface{} `json:"data"`       // 额外数据
 }
 
 // APISendResult API发送结果
 type APISendResult struct {
-	Success       bool   `json:"success"`
-	Message       string `json:"message"`
-	HTTPCode      int    `json:"httpCode,omitempty"`
-	ResponseBody  string `json:"responseBody,omitempty"`
-	Error         error  `json:"error,omitempty"`
-	RetryCount    int    `json:"retryCount,omitempty"`
+	Success      bool   `json:"success"`
+	Message      string `json:"message"`
+	HTTPCode     int    `json:"httpCode,omitempty"`
+	ResponseBody string `json:"responseBody,omitempty"`
+	Error        error  `json:"error,omitempty"`
+	RetryCount   int    `json:"retryCount,omitempty"`
 }
 
 // Send 发送API通知
@@ -188,30 +188,30 @@ func (s *APISenderService) sendRequest(ctx context.Context, config *models.APINo
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return &APISendResult{
-			Success:    false,
-			Message:    "读取响应失败",
-			HTTPCode:   resp.StatusCode,
+			Success:      false,
+			Message:      "读取响应失败",
+			HTTPCode:     resp.StatusCode,
 			ResponseBody: string(respBody),
-			Error:      err,
+			Error:        err,
 		}
 	}
 
 	// 检查HTTP状态码
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return &APISendResult{
-			Success:       false,
-			Message:       fmt.Sprintf("HTTP请求失败，耗时: %v", duration),
-			HTTPCode:      resp.StatusCode,
-			ResponseBody:  string(respBody),
-			Error:         fmt.Errorf("HTTP status code: %d", resp.StatusCode),
+			Success:      false,
+			Message:      fmt.Sprintf("HTTP请求失败，耗时: %v", duration),
+			HTTPCode:     resp.StatusCode,
+			ResponseBody: string(respBody),
+			Error:        fmt.Errorf("HTTP status code: %d", resp.StatusCode),
 		}
 	}
 
 	return &APISendResult{
-		Success:       true,
-		Message:       fmt.Sprintf("API发送成功，耗时: %v", duration),
-		HTTPCode:      resp.StatusCode,
-		ResponseBody:  string(respBody),
+		Success:      true,
+		Message:      fmt.Sprintf("API发送成功，耗时: %v", duration),
+		HTTPCode:     resp.StatusCode,
+		ResponseBody: string(respBody),
 	}
 }
 
@@ -348,11 +348,11 @@ func (s *APISenderService) SendNoticeAPI(ctx context.Context, configID string, n
 		Title:      notice.NoticeTitle,
 		Content:    notice.NoticeContent,
 		Data: map[string]interface{}{
-			"noticeId":     notice.ID,
-			"noticeType":   notice.NoticeType,
-			"priority":     int(notice.Priority),
-			"publishTime":  notice.PublishTime,
-			"isMarkdown":   notice.IsMarkdown,
+			"noticeId":    notice.ID,
+			"noticeType":  notice.NoticeType,
+			"priority":    int(notice.Priority),
+			"publishTime": notice.PublishTime,
+			"isMarkdown":  notice.IsMarkdown,
 		},
 	}
 
@@ -401,7 +401,7 @@ func (s *APISenderService) TestAPIConfig(ctx context.Context, configID string) *
 		Content:    "这是一条测试消息",
 		Recipients: []string{},
 		Data: map[string]interface{}{
-			"test": true,
+			"test":      true,
 			"timestamp": time.Now().Unix(),
 		},
 	}

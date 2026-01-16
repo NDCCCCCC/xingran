@@ -11,14 +11,14 @@ import (
 
 // OperLogListRequest 操作日志列表请求
 type OperLogListRequest struct {
-	Title         *string `json:"title,omitempty"`
-	BusinessType  *int    `json:"businessType,omitempty"`
-	Status        *int    `json:"status,omitempty"`
-	OperName      *string `json:"operName,omitempty"`
-	BeginTime     *string `json:"beginTime,omitempty"`
-	EndTime       *string `json:"endTime,omitempty"`
-	Current       int     `json:"current" binding:"min=1"`
-	PageSize      int     `json:"pageSize" binding:"min=1,max=100"`
+	Title        *string `json:"title,omitempty"`
+	BusinessType *int    `json:"businessType,omitempty"`
+	Status       *int    `json:"status,omitempty"`
+	OperName     *string `json:"operName,omitempty"`
+	BeginTime    *string `json:"beginTime,omitempty"`
+	EndTime      *string `json:"endTime,omitempty"`
+	Current      int     `json:"current" binding:"min=1"`
+	PageSize     int     `json:"pageSize" binding:"min=1,max=100"`
 }
 
 // listOperLogs 查询操作日志列表
@@ -203,13 +203,13 @@ func batchDeleteOperLogs(core *core.Core) gin.HandlerFunc {
 
 // LoginLogListRequest 登录日志列表请求
 type LoginLogListRequest struct {
-	Username   *string `json:"username,omitempty"`
-	IPAddr     *string `json:"ipaddr,omitempty"`
-	Status     *int    `json:"status,omitempty"`
-	BeginTime  *string `json:"beginTime,omitempty"`
-	EndTime    *string `json:"endTime,omitempty"`
-	Current    int     `json:"current" binding:"min=1"`
-	PageSize   int     `json:"pageSize" binding:"min=1,max=100"`
+	Username  *string `json:"username,omitempty"`
+	IPAddr    *string `json:"ipaddr,omitempty"`
+	Status    *int    `json:"status,omitempty"`
+	BeginTime *string `json:"beginTime,omitempty"`
+	EndTime   *string `json:"endTime,omitempty"`
+	Current   int     `json:"current" binding:"min=1"`
+	PageSize  int     `json:"pageSize" binding:"min=1,max=100"`
 }
 
 // listLoginLogs 查询登录日志列表

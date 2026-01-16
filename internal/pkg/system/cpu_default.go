@@ -9,7 +9,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"time"
 )
 
 // GetCPUUsage 获取其他平台的CPU使用率
