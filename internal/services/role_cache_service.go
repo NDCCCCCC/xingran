@@ -264,7 +264,7 @@ func (s *RoleCacheService) AssignRoleDepts(ctx context.Context, roleID string, d
 }
 
 // assignRoleRelations 通用的角色关联分配函数
-func (s *RoleCacheService) assignRoleRelations(ctx context.Context, roleID string, ids []string, tableName string, model interface{}, relationFactory func(string) interface{}) error {
+func (s *RoleCacheService) assignRoleRelations(_ context.Context, roleID string, ids []string, tableName string, model interface{}, relationFactory func(string) interface{}) error {
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		// 删除旧关联
 		if err := tx.Table(tableName).Where("role_id = ?", roleID).Delete(model).Error; err != nil {

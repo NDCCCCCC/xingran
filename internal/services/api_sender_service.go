@@ -154,14 +154,14 @@ func (s *APISenderService) sendRequest(ctx context.Context, config *models.APINo
 	}
 
 	// 设置请求头
-	s.setRequestHeaders(req, config, msg)
+	s.setRequestHeaders(req, config)
 
 	// 设置认证
-	if err := s.setAuthentication(req, config); err != nil {
+	if authErr := s.setAuthentication(req, config); authErr != nil {
 		return &APISendResult{
 			Success: false,
 			Message: "设置认证失败",
-			Error:   err,
+			Error:   authErr,
 		}
 	}
 
@@ -270,7 +270,7 @@ func (s *APISenderService) buildDefaultBody(msg *APIMessage) (io.Reader, error) 
 }
 
 // setRequestHeaders 设置请求头
-func (s *APISenderService) setRequestHeaders(req *http.Request, config *models.APINotificationConfig, msg *APIMessage) {
+func (s *APISenderService) setRequestHeaders(req *http.Request, config *models.APINotificationConfig) {
 	// 设置默认Content-Type
 	if req.Header.Get("Content-Type") == "" {
 		req.Header.Set("Content-Type", "application/json")

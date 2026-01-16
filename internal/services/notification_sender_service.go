@@ -42,8 +42,8 @@ func (s *NotificationSenderService) SendNotification(ctx context.Context, notice
 
 	// 获取通知的发送渠道配置
 	var channels []models.NotificationChannel
-	if err := s.db.WithContext(ctx).Where("notice_id = ?", noticeID).Find(&channels).Error; err != nil {
-		return fmt.Errorf("获取发送渠道失败: %w", err)
+	if queryErr := s.db.WithContext(ctx).Where("notice_id = ?", noticeID).Find(&channels).Error; queryErr != nil {
+		return fmt.Errorf("获取发送渠道失败: %w", queryErr)
 	}
 
 	// 获取目标用户（无论是否有渠道配置，都需要获取目标用户）
@@ -111,7 +111,7 @@ func (s *NotificationSenderService) SendNotification(ctx context.Context, notice
 }
 
 // sendWebNotification 发送站内信（通过WebSocket）
-func (s *NotificationSenderService) sendWebNotification(ctx context.Context, notice *models.Notice, targetUsers []string) error {
+func (s *NotificationSenderService) sendWebNotification(_ context.Context, notice *models.Notice, targetUsers []string) error {
 	// 这里应该通过WebSocket Hub发送通知
 	// 具体实现需要注入NoticeHub
 	// 暂时返回nil，实际使用时需要集成WebSocket Hub

@@ -242,15 +242,15 @@ func (s *FileService) UploadFile(ctx context.Context, file *multipart.FileHeader
 		return existingFile, nil
 	}
 
-	if _, err := src.Seek(0, 0); err != nil {
-		return nil, fmt.Errorf("重置文件指针失败: %w", err)
+	if _, seekErr := src.Seek(0, 0); seekErr != nil {
+		return nil, fmt.Errorf("重置文件指针失败: %w", seekErr)
 	}
 
 	filename := fmt.Sprintf("%s_%d%s", uuid.New().String()[:8], time.Now().Unix(), ext)
 
 	uploadDir := filepath.Join(s.uploadBaseDir, category)
-	if err := os.MkdirAll(uploadDir, 0755); err != nil {
-		return nil, fmt.Errorf("创建上传目录失败: %w", err)
+	if mkdirErr := os.MkdirAll(uploadDir, 0755); mkdirErr != nil {
+		return nil, fmt.Errorf("创建上传目录失败: %w", mkdirErr)
 	}
 
 	dstPath := filepath.Join(uploadDir, filename)

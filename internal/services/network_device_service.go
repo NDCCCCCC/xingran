@@ -231,15 +231,15 @@ func (s *NetworkDeviceService) QuickCreateDevice(ctx context.Context, req *Quick
 
 	// 验证凭证是否存在
 	var credential models.AuthCredential
-	if err := s.db.WithContext(ctx).Where("id = ?", req.CredentialID).First(&credential).Error; err != nil {
+	if credErr := s.db.WithContext(ctx).Where("id = ?", req.CredentialID).First(&credential).Error; credErr != nil {
 		return nil, fmt.Errorf("授权凭证不存在")
 	}
 
 	// 验证部门是否存在（如果提供）
 	if req.DeptID != nil && *req.DeptID != "" {
 		var deptCount int64
-		if err := s.db.WithContext(ctx).Model(&models.Department{}).Where("id = ?", *req.DeptID).Count(&deptCount).Error; err != nil {
-			return nil, fmt.Errorf("验证部门失败: %w", err)
+		if deptErr := s.db.WithContext(ctx).Model(&models.Department{}).Where("id = ?", *req.DeptID).Count(&deptCount).Error; deptErr != nil {
+			return nil, fmt.Errorf("验证部门失败: %w", deptErr)
 		}
 		if deptCount == 0 {
 			return nil, fmt.Errorf("部门不存在")
@@ -277,7 +277,7 @@ func (s *NetworkDeviceService) QuickCreateDevice(ctx context.Context, req *Quick
 	}
 
 	// 如果设备存在但已删除，恢复并更新
-	if err == nil && existingDevice.DeletedAt.Time.IsZero() == false {
+	if err == nil && !existingDevice.DeletedAt.Valid {
 		// 恢复已删除的设备（清空 deleted_at）
 		// now := time.Now()
 		existingDevice.DeletedAt = gorm.DeletedAt{}

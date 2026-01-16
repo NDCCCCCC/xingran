@@ -121,7 +121,7 @@ func (s *CacheConfigService) LoadConfigs(ctx context.Context) error {
 }
 
 // setDefaultsIfNeeded 设置默认配置
-func (s *CacheConfigService) setDefaultsIfNeeded(ctx context.Context) {
+func (s *CacheConfigService) setDefaultsIfNeeded(_ context.Context) {
 	defaults := map[string]int{
 		CacheConfigDeptTree:    30,
 		CacheConfigDeptList:    30,

@@ -46,10 +46,10 @@ func (s *DutyScheduleService) GenerateSchedule(ctx context.Context, req *Generat
 
 	// 获取节假日列表
 	var holidays []models.Holiday
-	if err := s.db.WithContext(ctx).
+	if queryErr := s.db.WithContext(ctx).
 		Where("holiday_date >= ? AND holiday_date <= ?", startDate, endDate).
-		Find(&holidays).Error; err != nil {
-		return 0, fmt.Errorf("获取节假日失败: %w", err)
+		Find(&holidays).Error; queryErr != nil {
+		return 0, fmt.Errorf("获取节假日失败: %w", queryErr)
 	}
 
 	// 构建节假日映射
@@ -64,10 +64,10 @@ func (s *DutyScheduleService) GenerateSchedule(ctx context.Context, req *Generat
 	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// 如果需要清除已有排班
 		if req.ClearExists {
-			if err := tx.Where("pool_id = ? AND schedule_date >= ? AND schedule_date <= ?",
+			if deleteErr := tx.Where("pool_id = ? AND schedule_date >= ? AND schedule_date <= ?",
 				req.PoolID, startDate, endDate).
-				Delete(&models.DutySchedule{}).Error; err != nil {
-				return fmt.Errorf("清除已有排班失败: %w", err)
+				Delete(&models.DutySchedule{}).Error; deleteErr != nil {
+				return fmt.Errorf("清除已有排班失败: %w", deleteErr)
 			}
 		}
 
@@ -106,8 +106,8 @@ func (s *DutyScheduleService) GenerateSchedule(ctx context.Context, req *Generat
 
 		// 批量插入排班记录
 		if len(schedules) > 0 {
-			if err := tx.Create(&schedules).Error; err != nil {
-				return fmt.Errorf("保存排班记录失败: %w", err)
+			if createErr := tx.Create(&schedules).Error; createErr != nil {
+				return fmt.Errorf("保存排班记录失败: %w", createErr)
 			}
 		}
 

@@ -312,7 +312,7 @@ func (s *AuthCredentialService) GetDevicesByCredential(ctx context.Context, cred
 
 // validateCredentialConfig 验证凭证配置是否完整
 // isNewCredential: 是否为新凭证（新建时密码必填，更新时可为空）
-func (s *AuthCredentialService) validateCredentialConfig(protocolType models.ProtocolType, username, password string, snmpCommunities []string, isNewCredential bool) error {
+func (s *AuthCredentialService) validateCredentialConfig(_ models.ProtocolType, username, password string, _ []string, isNewCredential bool) error {
 	// SSH/Telnet 配置验证
 	// 新建凭证时：用户名和密码都必须提供
 	// 更新凭证时：至少需要用户名或密码其一（允许保留原密码）

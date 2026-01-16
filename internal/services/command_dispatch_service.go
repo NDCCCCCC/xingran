@@ -138,13 +138,13 @@ func (s *CommandDispatchService) executeCommand(ctx context.Context, executionID
 	if req.ExecutionStrategy == models.ExecutionStrategyParallel {
 		// 并行执行
 		// 使用errgroup进行并发控制
-		g, ctx := errgroup.WithContext(ctx)
+		g, execCtx := errgroup.WithContext(ctx)
 		g.SetLimit(req.Concurrency)
 
 		for _, dev := range devices {
 			dev := dev // 创建局部变量
 			g.Go(func() error {
-				result := s.executeOnDevice(ctx, executionID, &dev, req.CommandContent, req.Timeout)
+				result := s.executeOnDevice(execCtx, executionID, &dev, req.CommandContent, req.Timeout)
 
 				mu.Lock()
 				results[dev.ID] = result
@@ -295,16 +295,7 @@ func (s *CommandDispatchService) QuickCommand(ctx context.Context, deviceID, com
 		return nil, fmt.Errorf("设备不存在: %w", err)
 	}
 
-	req := &DispatchRequest{
-		ExecutionName:     fmt.Sprintf("快速命令: %s", device.DeviceName),
-		DeviceIDs:         []string{deviceID},
-		CommandContent:    command,
-		ExecutionStrategy: models.ExecutionStrategySerial,
-		Concurrency:       1,
-		Timeout:           timeout,
-	}
-
-	result := s.executeOnDevice(ctx, "", &device, command, req.Timeout)
+	result := s.executeOnDevice(ctx, "", &device, command, timeout)
 
 	return result, nil
 }

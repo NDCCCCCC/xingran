@@ -3,8 +3,8 @@
  * 字典操作管理 Hook
  */
 
-import { useState, useCallback } from 'react';
-import { message } from 'antd';
+import { useState, useCallback, type Key } from 'react';
+import { message, type FormInstance } from 'antd';
 import type { DictType, DictData } from '@/types';
 import { post } from '@/lib/api';
 import { handleApiError, handleSuccess } from '@/utils/errorHandler';
@@ -31,15 +31,15 @@ export interface UseDictActionsReturn {
   setDataModalVisible: (visible: boolean) => void;
 
   // 操作方法
-  handleCreateType: (typeForm: any) => Promise<void>;
+  handleCreateType: (typeForm: FormInstance) => Promise<void>;
   handleDeleteType: (id: string) => Promise<void>;
-  handleBatchDeleteType: (selectedRowKeys: any[], setSelectedRowKeys: (keys: any[]) => void) => Promise<void>;
-  handleCreateData: (dataForm: any) => Promise<void>;
+  handleBatchDeleteType: (selectedRowKeys: Key[], setSelectedRowKeys: (keys: Key[]) => void) => Promise<void>;
+  handleCreateData: (dataForm: FormInstance) => Promise<void>;
   handleDeleteData: (id: string) => Promise<void>;
-  handleBatchDeleteData: (selectedRowKeys: any[], setSelectedRowKeys: (keys: any[]) => void) => Promise<void>;
+  handleBatchDeleteData: (selectedRowKeys: Key[], setSelectedRowKeys: (keys: Key[]) => void) => Promise<void>;
   handleRefreshCache: () => Promise<void>;
-  openTypeModal: (record?: DictType, typeForm: any) => void;
-  openDataModal: (record?: DictData, dataForm: any) => void;
+  openTypeModal: (record?: DictType, typeForm: FormInstance) => void;
+  openDataModal: (record?: DictData, dataForm: FormInstance) => void;
 }
 
 export function useDictActions(params: UseDictActionsParams): UseDictActionsReturn {
@@ -57,7 +57,7 @@ export function useDictActions(params: UseDictActionsParams): UseDictActionsRetu
   const [dataModalVisible, setDataModalVisible] = useState(false);
 
   // 创建/更新字典类型
-  const handleCreateType = useCallback(async (typeForm: any) => {
+  const handleCreateType = useCallback(async (typeForm: FormInstance) => {
     try {
       const values = await typeForm.validateFields();
       if (editingType) {
@@ -72,8 +72,8 @@ export function useDictActions(params: UseDictActionsParams): UseDictActionsRetu
       setEditingType(null);
       loadDictTypes();
       loadTypeStatistics();
-    } catch (error: any) {
-      if (error.errorFields) {
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
         return;
       }
       handleApiError(error, '操作');
@@ -93,7 +93,7 @@ export function useDictActions(params: UseDictActionsParams): UseDictActionsRetu
   }, [loadDictTypes, loadTypeStatistics]);
 
   // 批量删除字典类型
-  const handleBatchDeleteType = useCallback(async (selectedRowKeys: any[], setSelectedRowKeys: (keys: any[]) => void) => {
+  const handleBatchDeleteType = useCallback(async (selectedRowKeys: Key[], setSelectedRowKeys: (keys: Key[]) => void) => {
     if (selectedRowKeys.length === 0) {
       message.warning('请选择要删除的数据');
       return;
@@ -110,7 +110,7 @@ export function useDictActions(params: UseDictActionsParams): UseDictActionsRetu
   }, [loadDictTypes, loadTypeStatistics]);
 
   // 创建/更新字典数据
-  const handleCreateData = useCallback(async (dataForm: any) => {
+  const handleCreateData = useCallback(async (dataForm: FormInstance) => {
     try {
       const values = await dataForm.validateFields();
       if (editingData) {
@@ -125,8 +125,8 @@ export function useDictActions(params: UseDictActionsParams): UseDictActionsRetu
       setEditingData(null);
       loadDictData();
       loadDataStatistics();
-    } catch (error: any) {
-      if (error.errorFields) {
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
         return;
       }
       handleApiError(error, '操作');
@@ -146,7 +146,7 @@ export function useDictActions(params: UseDictActionsParams): UseDictActionsRetu
   }, [loadDictData, loadDataStatistics]);
 
   // 批量删除字典数据
-  const handleBatchDeleteData = useCallback(async (selectedRowKeys: any[], setSelectedRowKeys: (keys: any[]) => void) => {
+  const handleBatchDeleteData = useCallback(async (selectedRowKeys: Key[], setSelectedRowKeys: (keys: Key[]) => void) => {
     if (selectedRowKeys.length === 0) {
       message.warning('请选择要删除的数据');
       return;
@@ -167,13 +167,13 @@ export function useDictActions(params: UseDictActionsParams): UseDictActionsRetu
     try {
       await post('/system/dicts/refresh-cache', {});
       message.success('刷新缓存成功');
-    } catch (error) {
+    } catch {
       message.error('刷新缓存失败');
     }
   }, []);
 
   // 打开类型编辑模态框
-  const openTypeModal = useCallback((record?: DictType, typeForm: any) => {
+  const openTypeModal = useCallback((record?: DictType, typeForm: FormInstance) => {
     if (record) {
       setEditingType(record);
       typeForm.setFieldsValue(record);
@@ -186,7 +186,7 @@ export function useDictActions(params: UseDictActionsParams): UseDictActionsRetu
   }, []);
 
   // 打开数据编辑模态框
-  const openDataModal = useCallback((record?: DictData, dataForm: any) => {
+  const openDataModal = useCallback((record?: DictData, dataForm: FormInstance) => {
     if (!selectedType) {
       message.warning('请先选择字典类型');
       return;

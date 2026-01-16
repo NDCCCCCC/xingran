@@ -109,11 +109,11 @@ func (s *EmailSenderService) Send(ctx context.Context, configID string, msg *Ema
 	}
 
 	for _, to := range msg.To {
-		if _, err := mail.ParseAddress(to); err != nil {
+		if _, parseErr := mail.ParseAddress(to); parseErr != nil {
 			return &SendResult{
 				Success: false,
 				Message: fmt.Sprintf("无效的收件人地址: %s", to),
-				Error:   err,
+				Error:   parseErr,
 			}
 		}
 	}
@@ -220,19 +220,19 @@ func (s *EmailSenderService) sendWithTLS(addr, username, password, fromAddress s
 
 	// 认证（使用自定义PlainAuth，兼容非加密连接）
 	auth := newPlainAuth("", username, password, strings.Split(addr, ":")[0])
-	if err := client.Auth(auth); err != nil {
-		return fmt.Errorf("SMTP认证失败: %w", err)
+	if authErr := client.Auth(auth); authErr != nil {
+		return fmt.Errorf("SMTP认证失败: %w", authErr)
 	}
 
 	// 设置发件人
-	if err := client.Mail(fromAddress); err != nil {
-		return fmt.Errorf("设置发件人失败: %w", err)
+	if mailErr := client.Mail(fromAddress); mailErr != nil {
+		return fmt.Errorf("设置发件人失败: %w", mailErr)
 	}
 
 	// 设置收件人
 	for _, to := range toAddresses {
-		if err := client.Rcpt(to); err != nil {
-			return fmt.Errorf("设置收件人失败: %w", err)
+		if rcptErr := client.Rcpt(to); rcptErr != nil {
+			return fmt.Errorf("设置收件人失败: %w", rcptErr)
 		}
 	}
 
@@ -243,9 +243,9 @@ func (s *EmailSenderService) sendWithTLS(addr, username, password, fromAddress s
 	}
 	defer writer.Close()
 
-	_, err = writer.Write(content)
-	if err != nil {
-		return fmt.Errorf("写入邮件内容失败: %w", err)
+	_, writeErr := writer.Write(content)
+	if writeErr != nil {
+		return fmt.Errorf("写入邮件内容失败: %w", writeErr)
 	}
 
 	return nil
@@ -272,26 +272,26 @@ func (s *EmailSenderService) sendWithSTARTTLS(addr, username, password, fromAddr
 			InsecureSkipVerify: false,
 			ServerName:         strings.Split(addr, ":")[0],
 		}
-		if err := client.StartTLS(tlsConfig); err != nil {
-			return fmt.Errorf("STARTTLS失败: %w", err)
+		if startTLSErr := client.StartTLS(tlsConfig); startTLSErr != nil {
+			return fmt.Errorf("STARTTLS失败: %w", startTLSErr)
 		}
 	}
 
 	// 认证（使用自定义PlainAuth，兼容非加密连接）
 	auth := newPlainAuth("", username, password, strings.Split(addr, ":")[0])
-	if err := client.Auth(auth); err != nil {
-		return fmt.Errorf("SMTP认证失败: %w", err)
+	if authErr := client.Auth(auth); authErr != nil {
+		return fmt.Errorf("SMTP认证失败: %w", authErr)
 	}
 
 	// 设置发件人
-	if err := client.Mail(fromAddress); err != nil {
-		return fmt.Errorf("设置发件人失败: %w", err)
+	if mailErr := client.Mail(fromAddress); mailErr != nil {
+		return fmt.Errorf("设置发件人失败: %w", mailErr)
 	}
 
 	// 设置收件人
 	for _, to := range toAddresses {
-		if err := client.Rcpt(to); err != nil {
-			return fmt.Errorf("设置收件人失败: %w", err)
+		if rcptErr := client.Rcpt(to); rcptErr != nil {
+			return fmt.Errorf("设置收件人失败: %w", rcptErr)
 		}
 	}
 
@@ -302,9 +302,9 @@ func (s *EmailSenderService) sendWithSTARTTLS(addr, username, password, fromAddr
 	}
 	defer writer.Close()
 
-	_, err = writer.Write(content)
-	if err != nil {
-		return fmt.Errorf("写入邮件内容失败: %w", err)
+	_, writeErr := writer.Write(content)
+	if writeErr != nil {
+		return fmt.Errorf("写入邮件内容失败: %w", writeErr)
 	}
 
 	return nil
@@ -327,19 +327,19 @@ func (s *EmailSenderService) sendPlainSMTP(addr, username, password, fromAddress
 
 	// 认证（使用自定义PlainAuth，兼容非加密连接）
 	auth := newPlainAuth("", username, password, strings.Split(addr, ":")[0])
-	if err := client.Auth(auth); err != nil {
-		return fmt.Errorf("SMTP认证失败: %w", err)
+	if authErr := client.Auth(auth); authErr != nil {
+		return fmt.Errorf("SMTP认证失败: %w", authErr)
 	}
 
 	// 设置发件人
-	if err := client.Mail(fromAddress); err != nil {
-		return fmt.Errorf("设置发件人失败: %w", err)
+	if mailErr := client.Mail(fromAddress); mailErr != nil {
+		return fmt.Errorf("设置发件人失败: %w", mailErr)
 	}
 
 	// 设置收件人
 	for _, to := range toAddresses {
-		if err := client.Rcpt(to); err != nil {
-			return fmt.Errorf("设置收件人失败: %w", err)
+		if rcptErr := client.Rcpt(to); rcptErr != nil {
+			return fmt.Errorf("设置收件人失败: %w", rcptErr)
 		}
 	}
 
@@ -350,9 +350,9 @@ func (s *EmailSenderService) sendPlainSMTP(addr, username, password, fromAddress
 	}
 	defer writer.Close()
 
-	_, err = writer.Write(content)
-	if err != nil {
-		return fmt.Errorf("写入邮件内容失败: %w", err)
+	_, writeErr := writer.Write(content)
+	if writeErr != nil {
+		return fmt.Errorf("写入邮件内容失败: %w", writeErr)
 	}
 
 	return nil

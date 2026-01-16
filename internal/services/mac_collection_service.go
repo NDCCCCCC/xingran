@@ -249,23 +249,6 @@ func (s *MACCollectionService) parseMACLine(line string, vendor models.DeviceVen
 	return MACAddressEntry{}, false
 }
 
-// getDeviceCredential 获取设备凭证
-func (s *MACCollectionService) getDeviceCredential(ctx context.Context, device *models.NetworkDevice) (*models.AuthCredential, error) {
-	if device.CredentialID != nil && *device.CredentialID != "" {
-		var credential models.AuthCredential
-		if err := s.db.WithContext(ctx).Where("id = ?", *device.CredentialID).First(&credential).Error; err != nil {
-			return nil, fmt.Errorf("查询凭证失败: %w", err)
-		}
-		return &credential, nil
-	}
-
-	var credential models.AuthCredential
-	if err := s.db.WithContext(ctx).Where("is_default = ?", true).First(&credential).Error; err != nil {
-		return nil, fmt.Errorf("未找到可用凭证")
-	}
-	return &credential, nil
-}
-
 // GetMACAddressList 获取MAC地址列表
 func (s *MACCollectionService) GetMACAddressList(ctx context.Context, current, pageSize int, deviceID, macAddress, interfaceName string) ([]models.DeviceMACAddress, int64, error) {
 	var macAddrs []models.DeviceMACAddress

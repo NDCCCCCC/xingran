@@ -183,8 +183,8 @@ func (s *ProfileService) UploadAvatar(ctx context.Context, userID string, file *
 	filename := fmt.Sprintf("%s_%d%s", userID, time.Now().Unix(), ext)
 
 	// 4. 确保上传目录存在
-	if err := os.MkdirAll(s.uploadBaseDir, 0755); err != nil {
-		return "", fmt.Errorf("创建上传目录失败: %w", err)
+	if mkdirErr := os.MkdirAll(s.uploadBaseDir, 0755); mkdirErr != nil {
+		return "", fmt.Errorf("创建上传目录失败: %w", mkdirErr)
 	}
 
 	// 5. 保存文件
@@ -195,14 +195,14 @@ func (s *ProfileService) UploadAvatar(ctx context.Context, userID string, file *
 	}
 	defer dst.Close()
 
-	if _, err := io.Copy(dst, src); err != nil {
-		return "", fmt.Errorf("保存文件失败: %w", err)
+	if _, copyErr := io.Copy(dst, src); copyErr != nil {
+		return "", fmt.Errorf("保存文件失败: %w", copyErr)
 	}
 
 	// 6. 更新用户头像路径
 	avatarURL := fmt.Sprintf("/uploads/avatar/%s", filename)
-	if err := s.db.WithContext(ctx).Model(&models.User{}).Where("id = ?", userID).Update("avatar", avatarURL).Error; err != nil {
-		return "", fmt.Errorf("更新头像失败: %w", err)
+	if updateErr := s.db.WithContext(ctx).Model(&models.User{}).Where("id = ?", userID).Update("avatar", avatarURL).Error; updateErr != nil {
+		return "", fmt.Errorf("更新头像失败: %w", updateErr)
 	}
 
 	return avatarURL, nil

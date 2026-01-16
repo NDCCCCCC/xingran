@@ -47,8 +47,8 @@ func (s *DutyConfigService) UpdateDutyConfig(ctx context.Context, config *models
 		// 不存在，创建新配置
 		config.CreatedBy = updaterID
 		config.UpdatedBy = updaterID
-		if err := s.db.WithContext(ctx).Create(config).Error; err != nil {
-			return fmt.Errorf("创建值班配置失败: %w", err)
+		if createErr := s.db.WithContext(ctx).Create(config).Error; createErr != nil {
+			return fmt.Errorf("创建值班配置失败: %w", createErr)
 		}
 		return nil
 	}

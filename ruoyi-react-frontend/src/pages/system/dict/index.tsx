@@ -30,6 +30,7 @@ import {
   ReloadOutlined,
   CheckCircleOutlined,
   StopOutlined,
+  LinkOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 
@@ -37,7 +38,7 @@ import type { DictType, DictData } from '@/types';
 import ActionButtons from '@/components/shared/ActionButtons';
 
 // 导入提取的模块
-import { STATUS_OPTIONS, renderStatusTag, DEFAULT_TYPE_FORM_VALUES, DEFAULT_DATA_FORM_VALUES } from './constants';
+import { STATUS_OPTIONS, renderStatusTag } from './constants';
 import { useDictData, useDictActions } from './hooks';
 
 const { Option } = Select;
@@ -48,13 +49,30 @@ const { TextArea } = Input;
 interface DictTypeTableColumnsProps {
   openTypeModal: (record: DictType) => void;
   handleDeleteType: (id: string) => void;
+  onDictNameClick: (dictType: string) => void;
 }
 
 function getDictTypeTableColumns(props: DictTypeTableColumnsProps): ColumnsType<DictType> {
-  const { openTypeModal, handleDeleteType } = props;
+  const { openTypeModal, handleDeleteType, onDictNameClick } = props;
 
   return [
-    { title: '字典名称', dataIndex: 'dictName', key: 'dictName', width: 160, minWidth: 140 },
+    {
+      title: '字典名称',
+      dataIndex: 'dictName',
+      key: 'dictName',
+      width: 160,
+      minWidth: 140,
+      render: (text: string, record: DictType) => (
+        <Button
+          type="link"
+          icon={<LinkOutlined />}
+          onClick={() => onDictNameClick(record.dictType)}
+          style={{ padding: 0 }}
+        >
+          {text}
+        </Button>
+      ),
+    },
     { title: '字典类型', dataIndex: 'dictType', key: 'dictType', width: 140, minWidth: 120 },
     {
       title: '状态',
@@ -221,19 +239,24 @@ const DictManagement: FC = () => {
       loadDictTypes();
       loadTypeStatistics();
     }
-  }, [activeTab, current, pageSize, loadTypeStatistics]);
+  }, [activeTab, current, pageSize, loadTypeStatistics, loadDictTypes]);
 
   useEffect(() => {
     if (activeTab === 'data' && selectedType) {
       loadDictData();
       loadDataStatistics();
     }
-  }, [activeTab, selectedType, current, pageSize, loadDataStatistics]);
+  }, [activeTab, selectedType, current, pageSize, loadDataStatistics, loadDictData]);
 
   // 表格列
   const typeColumns = getDictTypeTableColumns({
     openTypeModal: (record) => openTypeModal(record, typeForm),
     handleDeleteType,
+    onDictNameClick: (dictType) => {
+      setSelectedType(dictType);
+      setActiveTab('data');
+      setCurrent(1);
+    },
   });
 
   const dataColumns = getDictDataTableColumns({
@@ -318,7 +341,7 @@ const DictManagement: FC = () => {
                         <Button
                           danger
                           icon={<DeleteOutlined />}
-                          onClick={() => handleBatchDeleteType(selectedRowKeys as any[], setSelectedRowKeys as any)}
+                          onClick={() => handleBatchDeleteType(selectedRowKeys, setSelectedRowKeys)}
                         >
                           批量删除 ({selectedRowKeys.length})
                         </Button>
@@ -459,7 +482,7 @@ const DictManagement: FC = () => {
                         <Button
                           danger
                           icon={<DeleteOutlined />}
-                          onClick={() => handleBatchDeleteData(selectedRowKeys as any[], setSelectedRowKeys as any)}
+                          onClick={() => handleBatchDeleteData(selectedRowKeys, setSelectedRowKeys)}
                         >
                           批量删除 ({selectedRowKeys.length})
                         </Button>

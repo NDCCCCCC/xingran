@@ -559,23 +559,6 @@ func (s *ConfigBackupService) GetBackupStatistics(ctx context.Context) (map[stri
 	}, nil
 }
 
-// getDeviceCredential 获取设备凭证
-func (s *ConfigBackupService) getDeviceCredential(ctx context.Context, device *models.NetworkDevice) (*models.AuthCredential, error) {
-	if device.CredentialID != nil && *device.CredentialID != "" {
-		var credential models.AuthCredential
-		if err := s.db.WithContext(ctx).Where("id = ?", *device.CredentialID).First(&credential).Error; err != nil {
-			return nil, fmt.Errorf("查询凭证失败: %w", err)
-		}
-		return &credential, nil
-	}
-
-	var credential models.AuthCredential
-	if err := s.db.WithContext(ctx).Where("is_default = ?", true).First(&credential).Error; err != nil {
-		return nil, fmt.Errorf("未找到可用凭证")
-	}
-	return &credential, nil
-}
-
 // calculateHash 计算配置内容的哈希值
 func calculateHash(content string) string {
 	hash := md5.Sum([]byte(content))

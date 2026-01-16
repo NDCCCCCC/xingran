@@ -152,13 +152,13 @@ func (s *ConfigExecutionService) executeConfig(ctx context.Context, executionID 
 
 	if req.ExecutionStrategy == models.ExecutionStrategyParallel {
 		// 并行执行 - 使用errgroup进行并发控制
-		g, ctx := errgroup.WithContext(ctx)
+		g, execCtx := errgroup.WithContext(ctx)
 		g.SetLimit(req.Concurrency)
 
 		for _, dev := range devices {
 			dev := dev // 创建局部变量
 			g.Go(func() error {
-				result := s.executeConfigOnDevice(ctx, executionID, &dev, config, req.Timeout)
+				result := s.executeConfigOnDevice(execCtx, executionID, &dev, config, req.Timeout)
 
 				mu.Lock()
 				results[dev.ID] = result
@@ -276,25 +276,6 @@ func (s *ConfigExecutionService) executeConfigOnDevice(ctx context.Context, exec
 	s.db.Save(detail)
 
 	return result
-}
-
-// getDeviceCredential 获取设备凭证
-func (s *ConfigExecutionService) getDeviceCredential(ctx context.Context, device *models.NetworkDevice) (*models.AuthCredential, error) {
-	// 优先使用设备关联的凭证
-	if device.CredentialID != nil && *device.CredentialID != "" {
-		var credential models.AuthCredential
-		if err := s.db.Where("id = ?", *device.CredentialID).First(&credential).Error; err != nil {
-			return nil, fmt.Errorf("查询凭证失败: %w", err)
-		}
-		return &credential, nil
-	}
-
-	// 使用默认凭证
-	var credential models.AuthCredential
-	if err := s.db.Where("is_default = ?", true).First(&credential).Error; err != nil {
-		return nil, fmt.Errorf("未找到可用凭证")
-	}
-	return &credential, nil
 }
 
 // GetExecutionResult 获取执行结果

@@ -181,9 +181,10 @@ func (s *NoticeService) GetUserNotices(ctx context.Context, userID string, page,
 
 	// 筛选已读/未读状态
 	if status != nil {
-		if *status == "unread" {
+		switch *status {
+		case "unread":
 			query = query.Where("id NOT IN (SELECT notice_id FROM sys_notice_read WHERE user_id = ?)", userID)
-		} else if *status == "read" {
+		case "read":
 			query = query.Where("id IN (SELECT notice_id FROM sys_notice_read WHERE user_id = ?)", userID)
 		}
 	}

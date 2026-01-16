@@ -160,7 +160,7 @@ func (s *DeviceDiscoveryService) ExecuteDiscovery(ctx context.Context, discovery
 }
 
 // discoverBySNMP 使用SNMP发现设备
-func (s *DeviceDiscoveryService) discoverBySNMP(ctx context.Context, task *models.DeviceDiscovery) ([]*DiscoveredDevice, error) {
+func (s *DeviceDiscoveryService) discoverBySNMP(_ context.Context, task *models.DeviceDiscovery) ([]*DiscoveredDevice, error) {
 	var devices []*DiscoveredDevice
 	var mu sync.Mutex
 	var wg sync.WaitGroup
@@ -287,16 +287,8 @@ func (s *DeviceDiscoveryService) snmpProbe(ip, community string, port int) *Disc
 	return device
 }
 
-// min 辅助函数（保留以避免破坏其他可能的引用）
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 // discoverByScan 使用Ping扫描发现设备
-func (s *DeviceDiscoveryService) discoverByScan(ctx context.Context, task *models.DeviceDiscovery) ([]*DiscoveredDevice, error) {
+func (s *DeviceDiscoveryService) discoverByScan(_ context.Context, task *models.DeviceDiscovery) ([]*DiscoveredDevice, error) {
 	var devices []*DiscoveredDevice
 	var mu sync.Mutex
 	var wg sync.WaitGroup
@@ -547,7 +539,7 @@ func (s *DeviceDiscoveryService) ProbeSingleDevice(ctx context.Context, req *Dev
 	logger.Debugf("[ProbeSingleDevice] 探测成功: SysName=%s, Vendor=%s", discoveredDevice.SysName, discoveredDevice.Vendor)
 
 	// 3. 处理探测结果
-	if discoveredDevice != nil && discoveredDevice.IsAlive {
+	if discoveredDevice.IsAlive {
 		// 探测成功，提取型号信息
 		model := ""
 		vendor := models.DeviceVendor(discoveredDevice.Vendor)
@@ -716,7 +708,7 @@ func isAlive(ip string) bool {
 	ports := []int{80, 443, 22, 23, 161, 8080}
 
 	for _, port := range ports {
-		address := fmt.Sprintf("%s:%d", ip, port)
+		address := net.JoinHostPort(ip, fmt.Sprintf("%d", port))
 		conn, err := net.DialTimeout("tcp", address, 1*time.Second)
 		if err == nil {
 			conn.Close()
@@ -726,67 +718,5 @@ func isAlive(ip string) bool {
 
 	// ICMP ping需要管理员权限，这里使用TCP SYN探测
 	// 如果所有端口都不可达，返回false
-	return false
-}
-
-// identifyVendor 识别设备厂商
-func identifyVendor(sysDescr string) string {
-	descr := string(sysDescr)
-	vendors := map[string]string{
-		"Huawei":   "huawei",
-		"H3C":      "h3c",
-		"Ruijie":   "ruijie",
-		"Maipu":    "maipu",
-		"Cisco":    "cisco",
-		"Juniper":  "juniper",
-		"Arista":   "arista",
-		"Fortinet": "fortinet",
-	}
-
-	for vendor, code := range vendors {
-		if contains(descr, vendor) {
-			return code
-		}
-	}
-
-	return "unknown"
-}
-
-// identifyDeviceType 识别设备类型
-func identifyDeviceType(sysDescr string) string {
-	descr := string(sysDescr)
-
-	if contains(descr, "Router") || contains(descr, "router") {
-		return "router"
-	}
-	if contains(descr, "Switch") || contains(descr, "switch") {
-		return "switch"
-	}
-	if contains(descr, "Firewall") || contains(descr, "firewall") {
-		return "firewall"
-	}
-	if contains(descr, "AP") || contains(descr, "Access Point") {
-		return "ap"
-	}
-	if contains(descr, "Load Balancer") {
-		return "loadbalancer"
-	}
-
-	return "unknown"
-}
-
-// contains 字符串包含检查
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && (s[:len(substr)] == substr ||
-		s[len(s)-len(substr):] == substr ||
-		containsMiddle(s, substr)))
-}
-
-func containsMiddle(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
 	return false
 }

@@ -94,8 +94,8 @@ func (s *SettingsService) UpdateUserPreferences(ctx context.Context, userID stri
 			PageSize:         req.PageSize,
 			SidebarCollapsed: req.SidebarCollapsed,
 		}
-		if err := s.db.WithContext(ctx).Create(&pref).Error; err != nil {
-			return fmt.Errorf("创建用户设置失败: %w", err)
+		if createErr := s.db.WithContext(ctx).Create(&pref).Error; createErr != nil {
+			return fmt.Errorf("创建用户设置失败: %w", createErr)
 		}
 		return nil
 	}
@@ -105,13 +105,13 @@ func (s *SettingsService) UpdateUserPreferences(ctx context.Context, userID stri
 	}
 
 	// 更新现有记录
-	if err := s.db.WithContext(ctx).Model(&pref).Updates(map[string]interface{}{
+	if updateErr := s.db.WithContext(ctx).Model(&pref).Updates(map[string]interface{}{
 		"theme":             req.Theme,
 		"language":          req.Language,
 		"page_size":         req.PageSize,
 		"sidebar_collapsed": req.SidebarCollapsed,
-	}).Error; err != nil {
-		return fmt.Errorf("更新用户设置失败: %w", err)
+	}).Error; updateErr != nil {
+		return fmt.Errorf("更新用户设置失败: %w", updateErr)
 	}
 
 	return nil

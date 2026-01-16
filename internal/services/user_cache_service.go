@@ -206,7 +206,7 @@ func (s *UserCacheService) InvalidateUserCache(ctx context.Context, userID strin
 
 	patterns := []string{
 		fmt.Sprintf("user:id:%s", userID),
-		fmt.Sprintf("user:username:*"), // 用户名可能改变，所以清除所有用户名缓存
+		"user:username:*", // 用户名可能改变，所以清除所有用户名缓存
 		fmt.Sprintf("user:roles:%s", userID),
 		fmt.Sprintf("user:permissions:%s", userID),
 	}
