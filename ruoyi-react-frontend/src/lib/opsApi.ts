@@ -2,7 +2,7 @@
  * 运维管理模块 API
  */
 
-import { post } from './api';
+import { post, postFormData } from './api';
 import type {
   BaseResponse,
   Building,
@@ -194,20 +194,7 @@ export const roomPhotoApi = {
       formData.append('files', file);
     });
 
-    const token = localStorage.getItem('token');
-    const response = await fetch('/api/v1/ops/rooms/photos/upload', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-      body: formData,
-    });
-
-    if (!response.ok) {
-      throw new Error('上传失败');
-    }
-
-    return await response.json();
+    return await postFormData<BaseResponse<RoomPhoto[]>>('/ops/rooms/photos/upload', formData);
   },
 
   // 设置主图
@@ -353,7 +340,7 @@ export const infoPointApi = {
 export const excelApi = {
   // 下载模板
   downloadTemplate: async (entityType: string) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('accessToken');
     const response = await fetch(`/api/v1/ops/${entityType}/template`, {
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -380,25 +367,12 @@ export const excelApi = {
     const formData = new FormData();
     formData.append('file', file);
 
-    const token = localStorage.getItem('token');
-    const response = await fetch(`/api/v1/ops/${entityType}/import`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-      body: formData,
-    });
-
-    if (!response.ok) {
-      throw new Error('导入失败');
-    }
-
-    return await response.json();
+    return await postFormData<BaseResponse<Record<string, unknown>>>(`/ops/${entityType}/import`, formData);
   },
 
   // 导出数据
   export: async (entityType: string, params: Record<string, unknown> = {}) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('accessToken');
     const response = await fetch(`/api/v1/ops/${entityType}/export`, {
       method: 'POST',
       headers: {
