@@ -4,7 +4,11 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	 image "image"
+	_ "image/jpeg"
+	_ "image/png"
 	"io"
 	"mime/multipart"
 	"os"
@@ -38,7 +42,73 @@ type FileValidation struct {
 	AllowedMimes map[string]bool // 允许的MIME类型
 }
 
-// 默认验证规则
+// FileCategoryConfig 文件分类配置
+type FileCategoryConfig struct {
+	MaxSize           int64    // 最大文件大小（字节）
+	AllowedExts       []string // 允许的扩展名列表
+	ExtractDimensions bool     // 是否提取图片尺寸
+	MetadataOnly      bool     // 仅返回元数据不保存
+}
+
+// GetFileValidation 返回FileValidation格式
+func (c *FileCategoryConfig) GetFileValidation() *FileValidation {
+	extMap := make(map[string]bool)
+	for _, ext := range c.AllowedExts {
+		extMap[ext] = true
+	}
+	return &FileValidation{
+		MaxSize:     c.MaxSize,
+		AllowedExts: extMap,
+	}
+}
+
+// CategoryConfigs 文件分类配置
+var CategoryConfigs = map[string]FileCategoryConfig{
+	"avatar": {
+		MaxSize:           2 * 1024 * 1024, // 2MB
+		AllowedExts:       []string{".jpg", ".jpeg", ".png"},
+		ExtractDimensions: true,
+	},
+	"room-photo": {
+		MaxSize:           5 * 1024 * 1024, // 5MB
+		AllowedExts:       []string{".jpg", ".jpeg", ".png"},
+		ExtractDimensions: true,
+	},
+	"image": {
+		MaxSize:           5 * 1024 * 1024, // 5MB
+		AllowedExts:       []string{".jpg", ".jpeg", ".png", ".gif", ".webp"},
+		ExtractDimensions: true,
+	},
+	"document": {
+		MaxSize:           10 * 1024 * 1024, // 10MB
+		AllowedExts:       []string{".pdf", ".doc", ".docx", ".xlsx", ".txt"},
+		ExtractDimensions: false,
+	},
+	"import": {
+		MaxSize:           10 * 1024 * 1024, // 10MB
+		AllowedExts:       []string{".xlsx", ".xls"},
+		ExtractDimensions: false,
+	},
+	"export": {
+		MaxSize:           10 * 1024 * 1024, // 10MB
+		AllowedExts:       []string{".xlsx", ".pdf"},
+		ExtractDimensions: false,
+	},
+}
+
+// GetCategoryConfig 获取分类配置，不存在则返回默认图片配置
+func GetCategoryConfig(category string) *FileCategoryConfig {
+	if config, ok := CategoryConfigs[category]; ok {
+		// 返回配置的副本地址
+		result := config
+		return &result
+	}
+	// 默认返回图片配置副本
+	result := CategoryConfigs["image"]
+	return &result
+}
+
+// 默认验证规则（保留向后兼容）
 var (
 	// ImageValidation 图片文件验证（5MB）
 	ImageValidation = &FileValidation{
@@ -127,7 +197,26 @@ func (s *FileService) UploadFile(ctx context.Context, file *multipart.FileHeader
 		return nil, fmt.Errorf("保存文件失败: %w", err)
 	}
 
-	// 10. 创建数据库记录
+	// 10. 提取图片尺寸（如果是图片且配置允许）
+	var width, height *int
+	var metadata *string
+	config := GetCategoryConfig(category)
+	if config.ExtractDimensions && isImageFile(ext) {
+		w, h, err := extractImageDimensions(dstPath)
+		if err == nil {
+			width, height = &w, &h
+		}
+		// 构建元数据
+		metaMap := map[string]interface{}{
+			"width":  w,
+			"height": h,
+		}
+		metaBytes, _ := json.Marshal(metaMap)
+		metaStr := string(metaBytes)
+		metadata = &metaStr
+	}
+
+	// 11. 创建数据库记录
 	sysFile := &system.SysFile{
 		FileName:     file.Filename,
 		FileSize:     file.Size,
@@ -138,6 +227,9 @@ func (s *FileService) UploadFile(ctx context.Context, file *multipart.FileHeader
 		UploaderID:   userID,
 		BusinessType: category,
 		IsDeleted:    false,
+		Width:        width,
+		Height:       height,
+		Metadata:     metadata,
 	}
 
 	if err := s.db.WithContext(ctx).Create(sysFile).Error; err != nil {
@@ -147,6 +239,31 @@ func (s *FileService) UploadFile(ctx context.Context, file *multipart.FileHeader
 	}
 
 	return sysFile, nil
+}
+
+// isImageFile 判断是否为图片文件
+func isImageFile(ext string) bool {
+	imageExts := map[string]bool{
+		".jpg": true, ".jpeg": true, ".png": true,
+		".gif": true, ".webp": true, ".bmp": true,
+	}
+	return imageExts[ext]
+}
+
+// extractImageDimensions 提取图片尺寸
+func extractImageDimensions(filePath string) (int, int, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return 0, 0, err
+	}
+	defer file.Close()
+
+	img, _, err := image.DecodeConfig(file)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return img.Width, img.Height, nil
 }
 
 // GetFile 获取文件信息

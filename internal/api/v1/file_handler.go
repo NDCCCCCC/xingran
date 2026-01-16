@@ -76,6 +76,9 @@ func uploadFile(core *core.Core) gin.HandlerFunc {
 			"fileType":  sysFile.FileType,
 			"extension": sysFile.Extension,
 			"url":       fileService.GetFileURL(sysFile),
+			"width":     sysFile.Width,
+			"height":    sysFile.Height,
+			"metadata":  sysFile.Metadata,
 			"createdAt": sysFile.CreatedAt,
 		})
 	}
@@ -106,6 +109,9 @@ func getFile(core *core.Core) gin.HandlerFunc {
 			"url":          fileService.GetFileURL(file),
 			"businessType": file.BusinessType,
 			"uploaderID":   file.UploaderID,
+			"width":        file.Width,
+			"height":       file.Height,
+			"metadata":     file.Metadata,
 			"createdAt":    file.CreatedAt,
 		})
 	}
@@ -176,6 +182,9 @@ func listFiles(core *core.Core) gin.HandlerFunc {
 				"url":          fileService.GetFileURL(file),
 				"businessType": file.BusinessType,
 				"uploaderID":   file.UploaderID,
+				"width":        file.Width,
+				"height":       file.Height,
+				"metadata":     file.Metadata,
 				"createdAt":    file.CreatedAt,
 			})
 		}

@@ -7,7 +7,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Tabs, Button, Modal, Form } from 'antd';
 import { LeftOutlined, RightOutlined, CalendarOutlined, SettingOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { getDutyPoolList, getUserList } from '@/lib/dutyApi';
+import { getDutyPoolList, getUserList, type Holiday } from '@/lib/dutyApi';
 import type { DutyPool, SimpleUser } from '@/lib/dutyApi';
 import {
   WeeklyView,
@@ -19,7 +19,7 @@ import {
 import { SwapScheduleModal, ManualScheduleModal, HolidayModal, BatchHolidayModal } from './modals';
 import { useScheduleData, useHolidayData, useDutyConfig } from './hooks';
 import { downloadHolidayTemplate, handleHolidayImport } from './utils';
-import type { ScheduleSearchParams, GenerateScheduleValues, DutyConfigValues } from './types';
+import type { ScheduleSearchParams, GenerateScheduleValues, DutyConfigValues, ImportOptions, BatchHolidayFormValues } from './types';
 
 // ==================== 主组件 ====================
 
@@ -58,6 +58,7 @@ export default function DutyManagement() {
     scheduleData.fetchWeeklyDuty(scheduleData.currentWeekStart);
     holidayData.fetchYears();
     dutyConfig.fetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ==================== 数据获取 ====================
@@ -157,7 +158,7 @@ export default function DutyManagement() {
     setHolidayBatchModalVisible(true);
   }, []);
 
-  const handleHolidayEdit = useCallback((record: any) => {
+  const handleHolidayEdit = useCallback((record: Holiday) => {
     holidayForm.setFieldsValue({
       ...record,
       holidayDate: dayjs(record.holidayDate),
@@ -193,11 +194,11 @@ export default function DutyManagement() {
     }
   }, [holidayData, holidayForm]);
 
-  const handleImport = useCallback((options: any) => {
+  const handleImport = useCallback((options: ImportOptions) => {
     handleHolidayImport(options, holidayData.batchCreate);
   }, [holidayData]);
 
-  const handleBatchHolidayOk = useCallback(async (values: any) => {
+  const handleBatchHolidayOk = useCallback(async (values: BatchHolidayFormValues) => {
     const { dateRange, holidayName, holidayType, isOffday } = values;
 
     const startDate = dateRange[0];

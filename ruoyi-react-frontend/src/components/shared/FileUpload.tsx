@@ -9,6 +9,20 @@ import { Upload, message, Image, Progress, Button, Space } from 'antd';
 import { PlusOutlined, LoadingOutlined } from '@ant-design/icons';
 import type { UploadFile, UploadProps } from 'antd';
 
+// 文件上传响应数据类型
+export interface FileUploadResponse {
+  id: string;
+  fileName: string;
+  fileSize: number;
+  fileType: string;
+  extension: string;
+  url: string;
+  width?: number;      // 图片宽度（像素）
+  height?: number;     // 图片高度（像素）
+  metadata?: string;   // 扩展元数据（JSON格式）
+  createdAt: string;
+}
+
 export interface FileUploadProps {
   value?: UploadFile[];
   onChange?: (files: UploadFile[]) => void;
@@ -18,7 +32,7 @@ export interface FileUploadProps {
   listType?: 'text' | 'picture' | 'picture-card' | 'picture-circle';
   disabled?: boolean;
   category?: string; // 文件分类，如 'avatar', 'room-photo', 'document'
-  onUploadSuccess?: (file: UploadFile, response: any) => void;
+  onUploadSuccess?: (file: UploadFile, response: FileUploadResponse) => void;
   onUploadError?: (file: UploadFile, error: any) => void;
 }
 

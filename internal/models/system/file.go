@@ -19,6 +19,9 @@ type SysFile struct {
 	BusinessType string     // 业务类型(room_photo/import/export等)
 	IsDeleted    bool       // 是否已删除(软删除)
 	DeleteTime   *time.Time // 删除时间
+	Width        *int       `gorm:"column:file_width"`  // 图片宽度（像素）
+	Height       *int       `gorm:"column:file_height"` // 图片高度（像素）
+	Metadata     *string    `gorm:"type:jsonb;column:metadata"` // 扩展元数据（JSON格式）
 }
 
 // TableName 指定表名

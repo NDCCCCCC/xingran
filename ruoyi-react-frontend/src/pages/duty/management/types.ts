@@ -3,6 +3,7 @@
  * 值班管理类型定义
  */
 
+import dayjs from 'dayjs';
 import type { Holiday } from '@/lib/dutyApi';
 
 /** 排班搜索参数 */
@@ -52,3 +53,12 @@ export interface ImportOptions {
 
 /** 节假日创建数据 */
 export type HolidayCreateData = Omit<Holiday, 'id' | 'createdAt' | 'updatedAt' | 'createdBy'>;
+
+/** 批量节假日表单值 */
+export interface BatchHolidayFormValues {
+  dateRange: [dayjs.Dayjs, dayjs.Dayjs];
+  holidayName: string;
+  holidayType: 'legal' | 'custom';
+  isOffday: boolean;
+  remark?: string;
+}

@@ -34,7 +34,7 @@ export function downloadHolidayTemplate() {
 /** 处理节假日 Excel 导入 */
 export function handleHolidayImport(
   options: ImportOptions,
-  batchCreate: (holidays: HolidayCreateData[]) => Promise<void>
+  batchCreate: (holidays: HolidayCreateData[]) => Promise<boolean | void>
 ) {
   const { file, onProgress, onSuccess, onError } = options;
   const reader = new FileReader();
