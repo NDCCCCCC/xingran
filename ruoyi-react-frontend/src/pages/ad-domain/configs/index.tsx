@@ -316,7 +316,7 @@ const ADConfigPage: FC = () => {
         onOk={handleSubmit}
         onCancel={() => setModalVisible(false)}
         width={600}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={editForm} layout="vertical" preserve={false}>
           <Form.Item

@@ -456,7 +456,7 @@ export default function DutyManagement() {
         open={swapModalVisible}
         onOk={handleSwapOk}
         onCancel={() => setSwapModalVisible(false)}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={swapForm} layout="vertical">
           <Form.Item name="fromScheduleId" label="原排班" rules={[{ required: true }]}>
@@ -494,7 +494,7 @@ export default function DutyManagement() {
         open={manualModalVisible}
         onOk={handleManualOk}
         onCancel={() => setManualModalVisible(false)}
-        destroyOnClose
+        destroyOnHidden
         width={500}
       >
         <Form form={manualForm} layout="vertical">
@@ -539,7 +539,7 @@ export default function DutyManagement() {
         open={holidayModalVisible}
         onOk={handleHolidayModalOk}
         onCancel={() => setHolidayModalVisible(false)}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={holidayForm} layout="vertical">
           <Form.Item name="holidayDate" label="日期" rules={[{ required: true, message: '请选择日期' }]}>
@@ -620,7 +620,7 @@ export default function DutyManagement() {
           }
         }}
         onCancel={() => setHolidayBatchModalVisible(false)}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={holidayForm} layout="vertical">
           <Form.Item name="dateRange" label="日期范围" rules={[{ required: true, message: '请选择日期范围' }]} extra="最多可选择90天">
