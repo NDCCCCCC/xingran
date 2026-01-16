@@ -1,5 +1,8 @@
-import { useState, useEffect } from 'react';
-import type { FC } from 'react';
+/**
+ * Cache 缓存管理页面
+ */
+
+import { useState, useEffect, useCallback, useMemo, type FC } from 'react';
 import {
   Card,
   Table,
@@ -11,7 +14,6 @@ import {
   Form,
   InputNumber,
   Tag,
-  Tooltip,
   Row,
   Col,
   Statistic,
@@ -32,317 +34,41 @@ import {
   ExclamationCircleOutlined,
   DatabaseOutlined
 } from '@ant-design/icons';
-import { post, get } from '@/lib/api';
 import type { ColumnsType } from 'antd/es/table';
+import { post, get } from '@/lib/api';
 import ActionButtons from '@/components/shared/ActionButtons';
+import type { BaseResponse, PageResponse } from '@/types';
+
+// 导入提取的文件
+import type { CacheInfo, CacheMonitor, CacheSearchForm } from './types';
+import {
+  TYPE_OPTIONS,
+  OPERATION_OPTIONS,
+  LEVEL_OPTIONS,
+  LEVEL_TAG_CONFIG,
+} from './constants';
+import {
+  formatMemorySize,
+  formatTTL,
+  formatDateTime,
+  exportCacheAsJson,
+} from './utils';
 
 const { TextArea } = Input;
 
-interface CacheInfo {
-  key: string;
-  value: string;
-  ttl: number;
-  size: number;
-  type: string;
-  location: string;  // 新增: "l1", "l2", "both"
-  createdAt: string;
-  updatedAt: string;
+// ==================== 表格列定义 ====================
+
+interface CacheTableColumnsProps {
+  handleViewDetail: (key: string) => void;
+  handleBatchOperate: (operation: string, keys: string[]) => void;
+  formatTTL: (seconds: number) => string;
+  formatMemorySize: (bytes: number) => string;
 }
 
-interface CacheMonitor {
-  l1: {
-    status: {
-      connected: boolean;
-      type: string;
-    };
-    stats: {
-      keyCount: number;
-      usedMemory: number;
-      hitRate: number;
-      hitCount: number;
-      missCount: number;
-    };
-  };
-  l2: {
-    status: {
-      connected: boolean;
-      type: string;
-      version?: string;
-      uptime?: string;
-    };
-    stats: {
-      keyCount: number;
-      usedMemory: number;
-      hitRate: number;
-      hitCount: number;
-      missCount: number;
-    };
-  };
-}
+function getCacheTableColumns(props: CacheTableColumnsProps): ColumnsType<CacheInfo> {
+  const { handleViewDetail, handleBatchOperate, formatTTL, formatMemorySize } = props;
 
-const CacheManager: FC = () => {
-  const [caches, setCaches] = useState<CacheInfo[]>([]);
-  const [monitor, setMonitor] = useState<CacheMonitor | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [total, setTotal] = useState(0);
-  const [current, setCurrent] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [searchForm, setSearchForm] = useState({
-    key: '',
-    type: '',
-    level: 'all'  // 新增: 缓存层级筛选 "all", "l1", "l2"
-  });
-  const [operateModalVisible, setOperateModalVisible] = useState(false);
-    const [statsModalVisible, setStatsModalVisible] = useState(false);
-  const [form] = Form.useForm();
-
-  // 获取缓存列表
-  const fetchCaches = async () => {
-    setLoading(true);
-    try {
-      const result = await post('/monitor/cache/list', {
-        ...searchForm,
-        current,
-        pageSize
-      });
-
-      setCaches(result.data.list || []);
-      setTotal(result.data.total || 0);
-    } catch (error) {
-      console.error('获取缓存列表失败:', error);
-      message.error('网络错误，请稍后重试');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 获取监控数据
-  const fetchMonitor = async () => {
-    try {
-      const result = await post('/monitor/cache/monitor', {});
-      setMonitor(result.data);
-    } catch (error) {
-      console.error('获取监控数据失败:', error);
-      message.error('获取监控数据失败');
-    }
-  };
-
-  // 操作缓存
-  const handleOperate = async () => {
-    try {
-      const values = await form.validateFields();
-      await post('/monitor/cache/operate', {
-        ...values,
-        ttl: values.ttl || undefined
-      });
-
-      message.success('操作成功');
-      setOperateModalVisible(false);
-      form.resetFields();
-      fetchCaches();
-    } catch (error) {
-      console.error('操作失败:', error);
-      message.error('操作失败');
-    }
-  };
-
-  // 批量操作
-  const handleBatchOperate = async (operation: string, keys?: string[]) => {
-    try {
-      await post('/monitor/cache/batch', {
-        keys: keys || [],
-        operation
-      });
-
-      message.success('批量操作成功');
-      fetchCaches();
-    } catch (error) {
-      console.error('批量操作失败:', error);
-      message.error('批量操作失败');
-    }
-  };
-
-  // 清空缓存
-  const handleClearAll = () => {
-    Modal.confirm({
-      title: '确认清空',
-      icon: <ExclamationCircleOutlined />,
-      content: '确定要清空所有缓存吗？此操作不可恢复！',
-      onOk: async () => {
-        try {
-          await post('/monitor/cache/clear', {});
-
-          message.success('清空成功');
-          fetchCaches();
-          fetchMonitor();
-        } catch (error) {
-          console.error('清空失败:', error);
-          message.error('清空失败');
-        }
-      }
-    });
-  };
-
-  // 导出缓存
-  const handleExport = async () => {
-    try {
-      const result = await post('/monitor/cache/export', {
-        ...searchForm
-      });
-
-      // 创建下载链接
-      const dataStr = JSON.stringify(result.data, null, 2);
-      const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
-      const exportFileDefaultName = `cache_export_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
-
-      const linkElement = document.createElement('a');
-      linkElement.setAttribute('href', dataUri);
-      linkElement.setAttribute('download', exportFileDefaultName);
-      linkElement.click();
-
-      message.success('导出成功');
-    } catch (error) {
-      console.error('导出失败:', error);
-      message.error('导出失败');
-    }
-  };
-
-  // 查看缓存详情
-  const handleViewDetail = async (key: string) => {
-    try {
-      const result = await get(`/monitor/cache/${key}`);
-
-      Modal.info({
-        title: '缓存详情',
-        width: 600,
-        content: (
-          <div>
-            <p><strong>键名：</strong>{result.data.key}</p>
-            <p><strong>值：</strong></p>
-            <pre className="bg-gray-100 p-3 rounded">
-              {JSON.stringify(JSON.parse(result.data.value || '{}'), null, 2)}
-            </pre>
-            <p><strong>类型：</strong>{result.data.type}</p>
-            <p><strong>大小：</strong>{(result.data.size || 0).toLocaleString()} 字节</p>
-            <p><strong>TTL：</strong>{formatTTL(result.data.ttl || -1)}</p>
-            <p><strong>创建时间：</strong>{result.data.createdAt ? new Date(result.data.createdAt).toLocaleString() : '-'}</p>
-          </div>
-        )
-      });
-    } catch (error) {
-      console.error('获取缓存详情失败:', error);
-      message.error('获取缓存详情失败');
-    }
-  };
-
-  // 搜索
-  const handleSearch = () => {
-    setCurrent(1);
-    fetchCaches();
-  };
-
-  // 重置
-  const handleReset = () => {
-    setSearchForm({
-      key: '',
-      type: '',
-      level: 'all'
-    });
-    setCurrent(1);
-  };
-
-  // 刷新
-  const handleRefresh = () => {
-    fetchCaches();
-    fetchMonitor();
-  };
-
-  // 分页变化
-  const handleTableChange = (pagination: any) => {
-    setCurrent(pagination.current);
-    setPageSize(pagination.pageSize);
-  };
-
-  useEffect(() => {
-    fetchCaches();
-    fetchMonitor();
-
-    // 设置定时刷新（每30秒）
-    const interval = setInterval(() => {
-      fetchMonitor();
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  // 格式化内存大小
-  const formatMemorySize = (bytes: number): string => {
-    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-    let size = bytes;
-    let unitIndex = 0;
-
-    while (size >= 1024 && unitIndex < units.length - 1) {
-      size /= 1024;
-      unitIndex++;
-    }
-
-    return `${size.toFixed(2)} ${units[unitIndex]}`;
-  };
-
-  // 格式化TTL时间
-  const formatTTL = (seconds: number): string => {
-    if (seconds <= 0) {
-      return '永久';
-    }
-
-    const units = [
-      { name: '秒', value: 60 },
-      { name: '分钟', value: 60 },
-      { name: '小时', value: 24 },
-      { name: '天', value: Infinity }
-    ];
-
-    let value = seconds;
-    let unitIndex = 0;
-
-    while (unitIndex < units.length - 1 && value >= units[unitIndex].value) {
-      value /= units[unitIndex].value;
-      unitIndex++;
-    }
-
-    // 如果小于1，显示为更小的单位
-    if (value < 1 && unitIndex > 0) {
-      value *= units[unitIndex - 1].value;
-      unitIndex--;
-    }
-
-    // 格式化：如果整数就不显示小数，否则最多显示2位小数
-    const formatted = Number.isInteger(value) ? value.toString() : value.toFixed(2);
-
-    return `${formatted}${units[unitIndex].name}`;
-  };
-
-  // 缓存类型选项
-  const typeOptions = [
-    { label: '字符串', value: 'string' },
-    { label: '列表', value: 'list' },
-    {label: '哈希', value: 'hash' },
-    { label: '集合', value: 'set' },
-    { label: '有序集合', value: 'zset' },
-    { label: '其他', value: 'other' }
-  ];
-
-  // 操作选项
-  const operationOptions = [
-    { label: '获取值', value: 'get' },
-    { label: '设置值', value: 'set' },
-    { label: '删除键', value: 'del' },
-    { label: '检查存在', value: 'exists' },
-    { label: '设置过期时间', value: 'expire' },
-    { label: '获取TTL', value: 'ttl' }
-  ];
-
-  const columns: ColumnsType<CacheInfo> = [
+  return [
     {
       title: '缓存键',
       dataIndex: 'key',
@@ -358,9 +84,7 @@ const CacheManager: FC = () => {
       dataIndex: 'type',
       key: 'type',
       width: 100,
-      render: (type: string) => (
-        <Tag color="blue">{type}</Tag>
-      ),
+      render: (type: string) => <Tag color="blue">{type}</Tag>,
     },
     {
       title: '层级',
@@ -368,12 +92,9 @@ const CacheManager: FC = () => {
       key: 'location',
       width: 120,
       render: (location: string) => {
-        if (location === 'l1') {
-          return <Tag color="blue">L1(内存)</Tag>;
-        } else if (location === 'l2') {
-          return <Tag color="green">L2(Redis)</Tag>;
-        } else if (location === 'both') {
-          return <Tag color="purple">L1+L2</Tag>;
+        const config = LEVEL_TAG_CONFIG[location];
+        if (config) {
+          return <Tag color={config.color}>{config.label}</Tag>;
         }
         return <Tag>{location}</Tag>;
       },
@@ -401,14 +122,14 @@ const CacheManager: FC = () => {
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 180,
-      render: (time: string) => time ? new Date(time).toLocaleString() : '-',
+      render: formatDateTime,
     },
     {
       title: '更新时间',
       dataIndex: 'updatedAt',
       key: 'updatedAt',
       width: 180,
-      render: (time: string) => time ? new Date(time).toLocaleString() : '-',
+      render: formatDateTime,
     },
     {
       title: '操作',
@@ -443,6 +164,201 @@ const CacheManager: FC = () => {
       },
     },
   ];
+}
+
+// ==================== 主组件 ====================
+
+const CacheManager: FC = () => {
+  // 状态管理
+  const [caches, setCaches] = useState<CacheInfo[]>([]);
+  const [monitor, setMonitor] = useState<CacheMonitor | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [total, setTotal] = useState(0);
+  const [current, setCurrent] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [searchForm, setSearchForm] = useState<CacheSearchForm>({
+    key: '',
+    type: '',
+    level: 'all'
+  });
+  const [operateModalVisible, setOperateModalVisible] = useState(false);
+  const [statsModalVisible, setStatsModalVisible] = useState(false);
+  const [form] = Form.useForm();
+
+  // ==================== 数据获取 ====================
+
+  const fetchCaches = useCallback(async () => {
+    setLoading(true);
+    try {
+      const result = await post<BaseResponse<PageResponse<CacheInfo>>>('/monitor/cache/list', {
+        ...searchForm,
+        current,
+        pageSize
+      });
+
+      setCaches(result.data?.list || []);
+      setTotal(result.data?.total || 0);
+    } catch (error) {
+      console.error('获取缓存列表失败:', error);
+      message.error('网络错误，请稍后重试');
+    } finally {
+      setLoading(false);
+    }
+  }, [searchForm, current, pageSize]);
+
+  const fetchMonitor = useCallback(async () => {
+    try {
+      const result = await post<BaseResponse<CacheMonitor>>('/monitor/cache/monitor', {});
+      setMonitor(result.data || null);
+    } catch (error) {
+      console.error('获取监控数据失败:', error);
+      message.error('获取监控数据失败');
+    }
+  }, []);
+
+  // ==================== 缓存操作 ====================
+
+  const handleOperate = useCallback(async () => {
+    try {
+      const values = await form.validateFields();
+      await post<BaseResponse<any>>('/monitor/cache/operate', {
+        ...values,
+        ttl: values.ttl || undefined
+      });
+
+      message.success('操作成功');
+      setOperateModalVisible(false);
+      form.resetFields();
+      fetchCaches();
+    } catch (error) {
+      console.error('操作失败:', error);
+      message.error('操作失败');
+    }
+  }, [form, fetchCaches]);
+
+  const handleBatchOperate = useCallback(async (operation: string, keys?: string[]) => {
+    try {
+      await post<BaseResponse<any>>('/monitor/cache/batch', {
+        keys: keys || [],
+        operation
+      });
+
+      message.success('批量操作成功');
+      fetchCaches();
+    } catch (error) {
+      console.error('批量操作失败:', error);
+      message.error('批量操作失败');
+    }
+  }, [fetchCaches]);
+
+  const handleClearAll = useCallback(() => {
+    Modal.confirm({
+      title: '确认清空',
+      icon: <ExclamationCircleOutlined />,
+      content: '确定要清空所有缓存吗？此操作不可恢复！',
+      onOk: async () => {
+        try {
+          await post('/monitor/cache/clear', {});
+
+          message.success('清空成功');
+          fetchCaches();
+          fetchMonitor();
+        } catch (error) {
+          console.error('清空失败:', error);
+          message.error('清空失败');
+        }
+      }
+    });
+  }, [fetchCaches, fetchMonitor]);
+
+  const handleExport = useCallback(async () => {
+    try {
+      const result = await post<BaseResponse<any>>('/monitor/cache/export', {
+        ...searchForm
+      });
+
+      exportCacheAsJson(result.data || {}, searchForm);
+      message.success('导出成功');
+    } catch (error) {
+      console.error('导出失败:', error);
+      message.error('导出失败');
+    }
+  }, [searchForm]);
+
+  const handleViewDetail = useCallback(async (key: string) => {
+    try {
+      const result = await get<BaseResponse<CacheInfo>>(`/monitor/cache/${key}`);
+
+      Modal.info({
+        title: '缓存详情',
+        width: 600,
+        content: (
+          <div>
+            <p><strong>键名：</strong>{result.data?.key}</p>
+            <p><strong>值：</strong></p>
+            <pre className="bg-gray-100 p-3 rounded">
+              {JSON.stringify(JSON.parse(result.data?.value || '{}'), null, 2)}
+            </pre>
+            <p><strong>类型：</strong>{result.data?.type}</p>
+            <p><strong>大小：</strong>{(result.data?.size || 0).toLocaleString()} 字节</p>
+            <p><strong>TTL：</strong>{formatTTL(result.data?.ttl || -1)}</p>
+            <p><strong>创建时间：</strong>{result.data?.createdAt ? new Date(result.data.createdAt).toLocaleString() : '-'}</p>
+          </div>
+        )
+      });
+    } catch (error) {
+      console.error('获取缓存详情失败:', error);
+      message.error('获取缓存详情失败');
+    }
+  }, [formatTTL]);
+
+  // ==================== 搜索和刷新 ====================
+
+  const handleSearch = useCallback(() => {
+    setCurrent(1);
+    fetchCaches();
+  }, [fetchCaches]);
+
+  const handleReset = useCallback(() => {
+    setSearchForm({
+      key: '',
+      type: '',
+      level: 'all'
+    });
+    setCurrent(1);
+  }, []);
+
+  const handleRefresh = useCallback(() => {
+    fetchCaches();
+    fetchMonitor();
+  }, [fetchCaches, fetchMonitor]);
+
+  const handleTableChange = useCallback((pagination: any) => {
+    setCurrent(pagination.current);
+    setPageSize(pagination.pageSize);
+  }, []);
+
+  // ==================== 初始化 ====================
+
+  useEffect(() => {
+    fetchCaches();
+    fetchMonitor();
+
+    // 设置定时刷新（每30秒）
+    const interval = setInterval(() => {
+      fetchMonitor();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [fetchCaches, fetchMonitor]);
+
+  // 表格列 - 使用 useMemo 避免重复创建
+  const columns = useMemo(() => getCacheTableColumns({
+    handleViewDetail,
+    handleBatchOperate,
+    formatTTL,
+    formatMemorySize,
+  }), [handleViewDetail, handleBatchOperate, formatTTL, formatMemorySize]);
 
   return (
     <div className="p-6">
@@ -530,7 +446,7 @@ const CacheManager: FC = () => {
         {/* 搜索表单 */}
         <Card className="mb-4">
           <Row gutter={16}>
-            <Col xs={24} sm={8} md={6}>
+            <Col xs={24} sm={8} md={5}>
               <Input
                 placeholder="缓存键"
                 value={searchForm.key}
@@ -540,7 +456,7 @@ const CacheManager: FC = () => {
                 className="user-form-input"
               />
             </Col>
-            <Col xs={24} sm={8} md={6}>
+            <Col xs={24} sm={8} md={4}>
               <Select
                 placeholder="缓存类型"
                 value={searchForm.type}
@@ -548,10 +464,10 @@ const CacheManager: FC = () => {
                 allowClear
                 className="user-form-input"
                 style={{ width: '100%' }}
-                options={typeOptions}
+                options={TYPE_OPTIONS}
               />
             </Col>
-            <Col xs={24} sm={8} md={4}>
+            <Col xs={24} sm={8} md={3}>
               <Select
                 placeholder="缓存层级"
                 value={searchForm.level}
@@ -559,15 +475,11 @@ const CacheManager: FC = () => {
                 allowClear
                 className="user-form-input"
                 style={{ width: '100%' }}
-                options={[
-                  { label: '全部', value: 'all' },
-                  { label: 'L1(内存)', value: 'l1' },
-                  { label: 'L2(Redis)', value: 'l2' },
-                ]}
+                options={LEVEL_OPTIONS}
               />
             </Col>
-            <Col xs={24} sm={8} md={8}>
-              <Space>
+            <Col xs={24} sm={24} md={12}>
+              <Space wrap>
                 <Button
                   type="primary"
                   icon={<PlusOutlined />}
@@ -740,7 +652,7 @@ const CacheManager: FC = () => {
             name="operation"
             rules={[{ required: true, message: '请选择操作类型' }]}
           >
-            <Select options={operationOptions} />
+            <Select options={OPERATION_OPTIONS} />
           </Form.Item>
           <Form.Item
             label="缓存值"
@@ -755,7 +667,7 @@ const CacheManager: FC = () => {
                 validator: (_, value) => {
                   if (getFieldValue('operation') === 'set' && !value) {
                   return Promise.reject(new Error('请输入缓存值'));
-                }
+                  }
                   return Promise.resolve();
                 },
               }),

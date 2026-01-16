@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"gorm.io/gorm"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"gorm.io/gorm"
 )
 
 // AuthCredentialService 授权凭证服务
@@ -68,11 +68,11 @@ func (s *AuthCredentialService) List(ctx context.Context, req *ListCredentialReq
 // CreateRequest 创建请求
 type CreateCredentialRequest struct {
 	CredentialName  string
-	ProtocolType    models.ProtocolType    // SSH 或 Telnet
+	ProtocolType    models.ProtocolType // SSH 或 Telnet
 	Username        string
 	Password        string
 	EnablePassword  string
-	SNMPCommunities []string               // 多个 SNMP Community
+	SNMPCommunities []string // 多个 SNMP Community
 	SNMPVersion     models.SNMPVersion
 	Description     string
 	IsDefault       bool
@@ -163,11 +163,11 @@ func (s *AuthCredentialService) GetByIDWithPassword(ctx context.Context, id stri
 type UpdateCredentialRequest struct {
 	ID              string
 	CredentialName  string
-	ProtocolType    models.ProtocolType    // SSH 或 Telnet
+	ProtocolType    models.ProtocolType // SSH 或 Telnet
 	Username        string
 	Password        string
 	EnablePassword  string
-	SNMPCommunities []string               // 多个 SNMP Community
+	SNMPCommunities []string // 多个 SNMP Community
 	SNMPVersion     models.SNMPVersion
 	Description     string
 	IsDefault       bool

@@ -184,9 +184,9 @@ type MACAddressEntry struct {
 func (s *MACCollectionService) getMACCommand(vendor models.DeviceVendor) string {
 	commands := map[models.DeviceVendor]string{
 		models.VendorHuawei: "display mac-address",
-		models.VendorH3C:     "display mac-address",
-		models.VendorRuijie:  "show mac-address-table",
-		models.VendorMaipu:   "show mac-address-table",
+		models.VendorH3C:    "display mac-address",
+		models.VendorRuijie: "show mac-address-table",
+		models.VendorMaipu:  "show mac-address-table",
 	}
 
 	if cmd, ok := commands[vendor]; ok {
@@ -300,9 +300,9 @@ func (s *MACCollectionService) GetMACAddressList(ctx context.Context, current, p
 // GetMACAddressStats 获取MAC地址统计信息
 func (s *MACCollectionService) GetMACAddressStats(ctx context.Context) (map[string]interface{}, error) {
 	var stats struct {
-		TotalRecords    int64
-		UniqueDevices   int64
-		UniqueMACs      int64
+		TotalRecords     int64
+		UniqueDevices    int64
+		UniqueMACs       int64
 		LatestCollection time.Time
 	}
 

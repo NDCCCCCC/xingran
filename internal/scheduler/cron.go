@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/robfig/cron/v3"
-	"gorm.io/gorm"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/websocket"
+	"gorm.io/gorm"
 )
 
 // JobTask 任务执行接口
@@ -171,10 +171,10 @@ func NewScheduler(db *gorm.DB) *Scheduler {
 	}
 
 	return &Scheduler{
-		cron: cron.New(cron.WithSeconds(), cron.WithLocation(loc)),
-		db:   db,
-		jobs: make(map[string]*models.Job),
-		executors: make(map[string]cron.EntryID),
+		cron:         cron.New(cron.WithSeconds(), cron.WithLocation(loc)),
+		db:           db,
+		jobs:         make(map[string]*models.Job),
+		executors:    make(map[string]cron.EntryID),
 		logger:       &defaultLogger{},
 		taskRegistry: make(map[string]func(ctx context.Context, params map[string]interface{}) error),
 		running:      false,

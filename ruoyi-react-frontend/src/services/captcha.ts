@@ -8,6 +8,7 @@ import type {
   CaptchaBackgroundListRequest,
   CaptchaBackgroundListResponse,
   CaptchaBackgroundUpdateRequest,
+  CaptchaBackground,
   StatisticsResponse,
 } from '@/types/captcha';
 
@@ -54,7 +55,7 @@ export async function uploadCaptchaBackground(file: File, params: {
   difficultyLevel: number;
   allowedShapes?: string[];
   remark?: string;
-}): Promise<any> {
+}): Promise<CaptchaBackground> {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('pieceShape', params.pieceShape);
@@ -69,26 +70,26 @@ export async function uploadCaptchaBackground(file: File, params: {
 }
 
 // 获取背景图详情
-export async function getCaptchaBackground(id: string): Promise<any> {
-  const response = await post<ApiResponse<any>>(`/system/captcha-backgrounds/${id}`, {});
+export async function getCaptchaBackground(id: string): Promise<CaptchaBackground> {
+  const response = await post<ApiResponse<CaptchaBackground>>(`/system/captcha-backgrounds/${id}`, {});
   return response.data;
 }
 
 // 更新背景图
-export async function updateCaptchaBackground(id: string, data: CaptchaBackgroundUpdateRequest): Promise<any> {
-  const response = await post<ApiResponse<any>>(`/system/captcha-backgrounds/${id}/update`, data);
+export async function updateCaptchaBackground(id: string, data: CaptchaBackgroundUpdateRequest): Promise<CaptchaBackground> {
+  const response = await post<ApiResponse<CaptchaBackground>>(`/system/captcha-backgrounds/${id}/update`, data);
   return response.data;
 }
 
 // 删除背景图
-export async function deleteCaptchaBackground(id: string): Promise<any> {
-  const response = await post<ApiResponse<any>>(`/system/captcha-backgrounds/${id}/delete`, {});
+export async function deleteCaptchaBackground(id: string): Promise<{ success: boolean; message: string }> {
+  const response = await post<ApiResponse<{ success: boolean; message: string }>>(`/system/captcha-backgrounds/${id}/delete`, {});
   return response.data;
 }
 
 // 切换背景图状态
-export async function toggleCaptchaBackgroundStatus(id: string): Promise<any> {
-  const response = await post<ApiResponse<any>>(`/system/captcha-backgrounds/${id}/toggle`, {});
+export async function toggleCaptchaBackgroundStatus(id: string): Promise<CaptchaBackground> {
+  const response = await post<ApiResponse<CaptchaBackground>>(`/system/captcha-backgrounds/${id}/toggle`, {});
   return response.data;
 }
 
@@ -99,8 +100,8 @@ export async function getCaptchaBackgroundStatistics(): Promise<StatisticsRespon
 }
 
 // 预加载缓存
-export async function preloadCaptchaCache(): Promise<any> {
-  const response = await post<ApiResponse<any>>('/system/captcha-backgrounds/preload', {});
+export async function preloadCaptchaCache(): Promise<{ preloaded: number; message: string }> {
+  const response = await post<ApiResponse<{ preloaded: number; message: string }>>('/system/captcha-backgrounds/preload', {});
   return response.data;
 }
 

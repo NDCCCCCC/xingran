@@ -36,7 +36,7 @@ type QueryBuilder struct {
 	conditions     []Condition
 	orConditions   [][]Condition // OR 条件组
 	orderBy        []OrderBy
-	preloads       []string      // 预加载关联
+	preloads       []string // 预加载关联
 	preloadsWith   []preloadConfig
 	excludeDeleted bool
 }

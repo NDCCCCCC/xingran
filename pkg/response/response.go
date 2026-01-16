@@ -8,9 +8,9 @@ import (
 )
 
 const (
-	successCode              = 0
-	successMessage           = "success"
-	defaultServerErrorCode   = 500
+	successCode               = 0
+	successMessage            = "success"
+	defaultServerErrorCode    = 500
 	defaultServerErrorMessage = "服务器内部错误"
 )
 
@@ -33,28 +33,28 @@ type PageResponse struct {
 
 // 错误定义
 var (
-	ErrSuccess             = &AppError{Code: 0, Message: "成功"}
-	ErrServerError         = &AppError{Code: 500, Message: "服务器内部错误", HTTPStatus: 500}
-	ErrBadRequest          = &AppError{Code: 400, Message: "请求参数错误", HTTPStatus: 400}
-	ErrUnauthorized        = &AppError{Code: 401, Message: "未授权", HTTPStatus: 401}
-	ErrForbidden           = &AppError{Code: 403, Message: "禁止访问", HTTPStatus: 403}
-	ErrNotFound            = &AppError{Code: 404, Message: "资源不存在", HTTPStatus: 404}
-	ErrMethodNotAllowed     = &AppError{Code: 405, Message: "请求方法不允许", HTTPStatus: 405}
-	ErrTokenExpired        = &AppError{Code: 1006, Message: "令牌已过期", HTTPStatus: 401}
-	ErrTokenInvalid        = &AppError{Code: 1007, Message: "令牌无效", HTTPStatus: 401}
-	ErrTokenNotValidYet    = &AppError{Code: 1008, Message: "令牌尚未生效", HTTPStatus: 401}
-	ErrUserNotFound        = &AppError{Code: 1002, Message: "用户不存在", HTTPStatus: 404}
-	ErrPasswordError       = &AppError{Code: 1003, Message: "密码错误", HTTPStatus: 401}
-	ErrUserDisabled        = &AppError{Code: 1004, Message: "用户已禁用", HTTPStatus: 401}
-	ErrCaptchaError        = &AppError{Code: 1005, Message: "验证码错误", HTTPStatus: 400}
-	ErrParamError          = &AppError{Code: 1001, Message: "参数错误", HTTPStatus: 400}
-	ErrRecordExists        = &AppError{Code: 1009, Message: "记录已存在", HTTPStatus: 400}
-	ErrRecordNotFound      = &AppError{Code: 1010, Message: "记录不存在", HTTPStatus: 404}
-	ErrNotImplemented      = &AppError{Code: 501, Message: "功能暂未实现", HTTPStatus: 501}
-	ErrPasswordHashFailed  = &AppError{Code: 1011, Message: "密码哈希格式不支持", HTTPStatus: 500}
-	ErrPasswordDecrypt     = &AppError{Code: 1012, Message: "密码解析失败", HTTPStatus: 500}
-	ErrCredentialInvalid   = &AppError{Code: 1013, Message: "用户名或密码错误", HTTPStatus: 401}
-	ErrDatabaseError       = &AppError{Code: 1014, Message: "数据库操作失败", HTTPStatus: 500}
+	ErrSuccess            = &AppError{Code: 0, Message: "成功"}
+	ErrServerError        = &AppError{Code: 500, Message: "服务器内部错误", HTTPStatus: 500}
+	ErrBadRequest         = &AppError{Code: 400, Message: "请求参数错误", HTTPStatus: 400}
+	ErrUnauthorized       = &AppError{Code: 401, Message: "未授权", HTTPStatus: 401}
+	ErrForbidden          = &AppError{Code: 403, Message: "禁止访问", HTTPStatus: 403}
+	ErrNotFound           = &AppError{Code: 404, Message: "资源不存在", HTTPStatus: 404}
+	ErrMethodNotAllowed   = &AppError{Code: 405, Message: "请求方法不允许", HTTPStatus: 405}
+	ErrTokenExpired       = &AppError{Code: 1006, Message: "令牌已过期", HTTPStatus: 401}
+	ErrTokenInvalid       = &AppError{Code: 1007, Message: "令牌无效", HTTPStatus: 401}
+	ErrTokenNotValidYet   = &AppError{Code: 1008, Message: "令牌尚未生效", HTTPStatus: 401}
+	ErrUserNotFound       = &AppError{Code: 1002, Message: "用户不存在", HTTPStatus: 404}
+	ErrPasswordError      = &AppError{Code: 1003, Message: "密码错误", HTTPStatus: 401}
+	ErrUserDisabled       = &AppError{Code: 1004, Message: "用户已禁用", HTTPStatus: 401}
+	ErrCaptchaError       = &AppError{Code: 1005, Message: "验证码错误", HTTPStatus: 400}
+	ErrParamError         = &AppError{Code: 1001, Message: "参数错误", HTTPStatus: 400}
+	ErrRecordExists       = &AppError{Code: 1009, Message: "记录已存在", HTTPStatus: 400}
+	ErrRecordNotFound     = &AppError{Code: 1010, Message: "记录不存在", HTTPStatus: 404}
+	ErrNotImplemented     = &AppError{Code: 501, Message: "功能暂未实现", HTTPStatus: 501}
+	ErrPasswordHashFailed = &AppError{Code: 1011, Message: "密码哈希格式不支持", HTTPStatus: 500}
+	ErrPasswordDecrypt    = &AppError{Code: 1012, Message: "密码解析失败", HTTPStatus: 500}
+	ErrCredentialInvalid  = &AppError{Code: 1013, Message: "用户名或密码错误", HTTPStatus: 401}
+	ErrDatabaseError      = &AppError{Code: 1014, Message: "数据库操作失败", HTTPStatus: 500}
 )
 
 // AppError 应用错误
@@ -102,8 +102,8 @@ func Error(c *gin.Context, err interface{}, message ...string) {
 // Page 分页响应
 func Page(c *gin.Context, list interface{}, total int64, current, pageSize int) {
 	c.JSON(http.StatusOK, Response{
-		Code:      successCode,
-		Message:   successMessage,
+		Code:    successCode,
+		Message: successMessage,
 		Data: PageResponse{
 			List:     list,
 			Total:    total,

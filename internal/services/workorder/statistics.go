@@ -26,20 +26,20 @@ type Statistics struct {
 
 // AssigneeStatistics 处理人统计
 type AssigneeStatistics struct {
-	AssigneeID    string  `json:"assigneeId"`
-	AssigneeName  string  `json:"assigneeName"`
-	TotalCount    int     `json:"totalCount"`
-	PendingCount  int     `json:"pendingCount"`
-	DoneCount     int     `json:"doneCount"`
+	AssigneeID     string  `json:"assigneeId"`
+	AssigneeName   string  `json:"assigneeName"`
+	TotalCount     int     `json:"totalCount"`
+	PendingCount   int     `json:"pendingCount"`
+	DoneCount      int     `json:"doneCount"`
 	AvgProcessTime float64 `json:"avgProcessTime"`
 }
 
 // DepartmentStatistics 部门统计
 type DepartmentStatistics struct {
-	DeptID    string `json:"deptId"`
-	DeptName  string `json:"deptName"`
-	TotalCount int   `json:"totalCount"`
-	DoneCount  int   `json:"doneCount"`
+	DeptID     string `json:"deptId"`
+	DeptName   string `json:"deptName"`
+	TotalCount int    `json:"totalCount"`
+	DoneCount  int    `json:"doneCount"`
 }
 
 // TrendData 趋势数据
@@ -132,10 +132,10 @@ func (s *StatisticsService) Get(ctx context.Context) (*Statistics, error) {
 	}
 	var categoryResults []CategoryStat
 	if err := s.db.WithContext(ctx).Model(&models.WorkOrder{}).
-		Select("sys_workorder_category.id as category_id, "+
-			"sys_workorder_category.category_name, "+
+		Select("sys_workorder_category.id as category_id, " +
+			"sys_workorder_category.category_name, " +
 			"count(*) as count").
-		Joins("INNER JOIN sys_workorder_category ON "+
+		Joins("INNER JOIN sys_workorder_category ON " +
 			"sys_workorder_category.id = sys_workorder.category_id").
 		Group("sys_workorder_category.id, sys_workorder_category.category_name").
 		Scan(&categoryResults).Error; err != nil {
@@ -154,8 +154,8 @@ func (s *StatisticsService) Get(ctx context.Context) (*Statistics, error) {
 	}
 	var assigneeResults []AssigneeStat
 	if err := s.db.WithContext(ctx).Model(&models.WorkOrder{}).
-		Select("sys_user.id as assignee_id, "+
-			"COALESCE(sys_user.nickname, sys_user.username, '') as assignee_name, "+
+		Select("sys_user.id as assignee_id, " +
+			"COALESCE(sys_user.nickname, sys_user.username, '') as assignee_name, " +
 			"count(*) as count").
 		Joins("INNER JOIN sys_user ON sys_user.id = sys_workorder.assignee_id").
 		Where("sys_workorder.assignee_id IS NOT NULL").
@@ -180,10 +180,10 @@ func (s *StatisticsService) Get(ctx context.Context) (*Statistics, error) {
 	}
 	var deptResults []DeptStat
 	if err := s.db.WithContext(ctx).Model(&models.WorkOrder{}).
-		Select("sys_dept.id as dept_id, "+
-			"sys_dept.dept_name, "+
+		Select("sys_dept.id as dept_id, " +
+			"sys_dept.dept_name, " +
 			"count(*) as count").
-		Joins("INNER JOIN sys_dept ON "+
+		Joins("INNER JOIN sys_dept ON " +
 			"sys_dept.id = sys_workorder.dept_id").
 		Where("sys_workorder.dept_id IS NOT NULL").
 		Group("sys_dept.id, sys_dept.dept_name").

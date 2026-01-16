@@ -15,7 +15,8 @@ const (
 
 // Cors 返回CORS中间件
 // allowedOrigins: 允许的域名列表，如 ["http://localhost:3000", "https://example.com"]
-//                   空列表或包含 "*" 则允许所有来源（仅用于开发环境）
+//
+//	空列表或包含 "*" 则允许所有来源（仅用于开发环境）
 func Cors(allowedOrigins []string) gin.HandlerFunc {
 	// 如果没有指定允许的域名或者包含通配符，则允许所有来源（仅开发环境）
 	allowAll := len(allowedOrigins) == 0 || contains(allowedOrigins, "*")

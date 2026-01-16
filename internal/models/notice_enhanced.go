@@ -11,9 +11,9 @@ import (
 type NoticePriority int
 
 const (
-	PriorityNormal  NoticePriority = 0 // 普通
+	PriorityNormal    NoticePriority = 0 // 普通
 	PriorityImportant NoticePriority = 1 // 重要
-	PriorityUrgent NoticePriority = 2 // 紧急
+	PriorityUrgent    NoticePriority = 2 // 紧急
 )
 
 // PublishStatus 发布状态
@@ -38,11 +38,11 @@ const (
 
 // NoticeTarget 通知接收范围
 type NoticeTarget struct {
-	ID        string    `gorm:"primaryKey;type:uuid" json:"id"`
-	NoticeID  string    `gorm:"size:64;not null;index:idx_notice_target_notice_id,priority:1" json:"noticeId"`
-	TargetType string   `gorm:"size:20;not null;index:idx_notice_target_target,priority:1" json:"targetType"` // dept/role/user
-	TargetID  string    `gorm:"size:64;not null;index:idx_notice_target_target,priority:2" json:"targetId"`
-	CreatedAt time.Time `json:"createdAt"`
+	ID         string    `gorm:"primaryKey;type:uuid" json:"id"`
+	NoticeID   string    `gorm:"size:64;not null;index:idx_notice_target_notice_id,priority:1" json:"noticeId"`
+	TargetType string    `gorm:"size:20;not null;index:idx_notice_target_target,priority:1" json:"targetType"` // dept/role/user
+	TargetID   string    `gorm:"size:64;not null;index:idx_notice_target_target,priority:2" json:"targetId"`
+	CreatedAt  time.Time `json:"createdAt"`
 }
 
 // TableName 指定表名
@@ -52,11 +52,11 @@ func (NoticeTarget) TableName() string {
 
 // NoticeRead 通知阅读记录
 type NoticeRead struct {
-	ID       string     `gorm:"primaryKey;type:uuid" json:"id"`
-	NoticeID string     `gorm:"size:64;not null;index:idx_notice_read_notice_id,priority:1" json:"noticeId"`
-	UserID   string     `gorm:"size:64;not null;index:idx_notice_read_user_id,priority:1" json:"userId"`
-	ReadAt   time.Time  `gorm:"index:idx_notice_read_read_at" json:"readAt"`
-	ReadIP   string     `gorm:"size:128" json:"readIp"`
+	ID       string    `gorm:"primaryKey;type:uuid" json:"id"`
+	NoticeID string    `gorm:"size:64;not null;index:idx_notice_read_notice_id,priority:1" json:"noticeId"`
+	UserID   string    `gorm:"size:64;not null;index:idx_notice_read_user_id,priority:1" json:"userId"`
+	ReadAt   time.Time `gorm:"index:idx_notice_read_read_at" json:"readAt"`
+	ReadIP   string    `gorm:"size:128" json:"readIp"`
 }
 
 // TableName 指定表名

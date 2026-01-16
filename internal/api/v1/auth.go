@@ -17,31 +17,31 @@ type LoginRequest struct {
 	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"`
 	// EncryptedPassword 表示密码是否已加密（SM2）
-	EncryptedPassword bool `json:"encryptedPassword,omitempty"`
-	Captcha  string `json:"captcha,omitempty"`
-	CaptchaID string `json:"captchaId,omitempty"`
+	EncryptedPassword bool   `json:"encryptedPassword,omitempty"`
+	Captcha           string `json:"captcha,omitempty"`
+	CaptchaID         string `json:"captchaId,omitempty"`
 }
 
 // LoginResponse 登录响应
 type LoginResponse struct {
-	User         *UserInfo   `json:"user"`
-	AccessToken  string      `json:"accessToken"`
-	RefreshToken string      `json:"refreshToken"`
-	ExpiresIn    int64       `json:"expiresIn"`
-	TokenType    string      `json:"tokenType"`
+	User         *UserInfo `json:"user"`
+	AccessToken  string    `json:"accessToken"`
+	RefreshToken string    `json:"refreshToken"`
+	ExpiresIn    int64     `json:"expiresIn"`
+	TokenType    string    `json:"tokenType"`
 }
 
 // UserInfo 用户信息
 type UserInfo struct {
-	ID          string    `json:"id"`
-	Username    string    `json:"username"`
-	Nickname    *string   `json:"nickname"`
-	Email       *string   `json:"email"`
-	Gender      models.Gender `json:"gender"`
-	Status      models.UserStatus `json:"status"`
-	DeptName    *string   `json:"deptName"`
-	Roles       []string  `json:"roles"`
-	CreateTime  time.Time `json:"createTime"`
+	ID         string            `json:"id"`
+	Username   string            `json:"username"`
+	Nickname   *string           `json:"nickname"`
+	Email      *string           `json:"email"`
+	Gender     models.Gender     `json:"gender"`
+	Status     models.UserStatus `json:"status"`
+	DeptName   *string           `json:"deptName"`
+	Roles      []string          `json:"roles"`
+	CreateTime time.Time         `json:"createTime"`
 }
 
 // SetupAuthRouter 设置认证路由
@@ -84,10 +84,6 @@ func login(core *core.Core) gin.HandlerFunc {
 		}
 
 		// 检查验证码（如果启用）
-		// 添加调试日志
-		config := core.CaptchaService.GetConfig()
-		fmt.Printf("[DEBUG] Captcha Enabled: %s (IsEnabled: %v)\n", config.Enabled, core.CaptchaService.IsEnabled())
-
 		if core.CaptchaService.IsEnabled() {
 			// 获取客户端IP
 			clientIP := c.ClientIP()
@@ -127,49 +123,49 @@ func login(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-	// 解密密码（如果使用 SM2 加密）
-	passwordToVerify := req.Password
-	if req.EncryptedPassword {
-		decrypted, err := core.JWTManager.DecryptPassword(req.Password)
-		if err != nil {
-			response.Error(c, response.ErrBadRequest, "密码解密失败: "+err.Error())
+		// 解密密码（如果使用 SM2 加密）
+		passwordToVerify := req.Password
+		if req.EncryptedPassword {
+			decrypted, err := core.JWTManager.DecryptPassword(req.Password)
+			if err != nil {
+				response.Error(c, response.ErrBadRequest, "密码解密失败: "+err.Error())
+				return
+			}
+			passwordToVerify = decrypted
+		}
+
+		// 验证密码 - 使用SM3算法
+		pwdManager := security.NewPasswordManager(nil)
+		if ok, err := pwdManager.VerifyPassword(passwordToVerify, user.Password); err != nil || !ok {
+			if err != nil {
+				response.Error(c, response.ErrPasswordDecrypt, "密码验证失败: "+err.Error())
+				return
+			}
+
+			// 记录登录失败日志
+			if failErr := core.CaptchaService.RecordLoginFailure(c.Request.Context(), req.Username); failErr != nil {
+				response.Error(c, response.ErrCredentialInvalid, failErr.Error())
+			} else {
+				response.Error(c, response.ErrCredentialInvalid)
+			}
+			recordLoginLog(c, core, req.Username, 1, "用户或密码错误")
 			return
 		}
-		passwordToVerify = decrypted
-	}
 
-	// 验证密码 - 使用SM3算法
-	pwdManager := security.NewPasswordManager(nil)
-	if ok, err := pwdManager.VerifyPassword(passwordToVerify, user.Password); err != nil || !ok {
-		if err != nil {
-			response.Error(c, response.ErrPasswordDecrypt, "密码验证失败: "+err.Error())
-			return
+		// 登录成功，清除失败记录
+		core.CaptchaService.ClearLoginFailure(c.Request.Context(), req.Username)
+
+		// 记录登录成功日志
+		recordLoginLog(c, core, req.Username, 0, "登录成功")
+
+		// 查询用户角色
+		var userRoles []models.UserRole
+		var roleIds []string
+		if err := core.DB.GetDB().Where("user_id = ?", user.ID).Find(&userRoles).Error; err == nil {
+			for _, ur := range userRoles {
+				roleIds = append(roleIds, ur.RoleID)
+			}
 		}
-
-		// 记录登录失败日志
-		if failErr := core.CaptchaService.RecordLoginFailure(c.Request.Context(), req.Username); failErr != nil {
-			response.Error(c, response.ErrCredentialInvalid, failErr.Error())
-		} else {
-			response.Error(c, response.ErrCredentialInvalid)
-		}
-		recordLoginLog(c, core, req.Username, 1, "用户或密码错误")
-		return
-	}
-
-	// 登录成功，清除失败记录
-	core.CaptchaService.ClearLoginFailure(c.Request.Context(), req.Username)
-
-	// 记录登录成功日志
-	recordLoginLog(c, core, req.Username, 0, "登录成功")
-
-	// 查询用户角色
-	var userRoles []models.UserRole
-	var roleIds []string
-	if err := core.DB.GetDB().Where("user_id = ?", user.ID).Find(&userRoles).Error; err == nil {
-		for _, ur := range userRoles {
-			roleIds = append(roleIds, ur.RoleID)
-		}
-	}
 
 		// 生成JWT令牌
 		tokenPair, err := core.JWTManager.GenerateTokenPair(user.ID, user.Username, roleIds)
@@ -180,15 +176,15 @@ func login(core *core.Core) gin.HandlerFunc {
 
 		// 构建用户信息
 		userInfo := &UserInfo{
-			ID:          user.ID,
-			Username:    user.Username,
-			Nickname:    user.Nickname,
-			Email:       user.Email,
-			Gender:      user.Gender,
-			Status:      user.Status,
-			DeptName:    user.DeptName,
-			Roles:       roleIds, // 使用数据库中的角色ID
-			CreateTime:  user.CreatedAt,
+			ID:         user.ID,
+			Username:   user.Username,
+			Nickname:   user.Nickname,
+			Email:      user.Email,
+			Gender:     user.Gender,
+			Status:     user.Status,
+			DeptName:   user.DeptName,
+			Roles:      roleIds, // 使用数据库中的角色ID
+			CreateTime: user.CreatedAt,
 		}
 
 		// 构建响应
@@ -284,15 +280,15 @@ func refreshToken(core *core.Core) gin.HandlerFunc {
 
 		// 构建用户信息
 		userInfo := &UserInfo{
-			ID:          user.ID,
-			Username:    user.Username,
-			Nickname:    user.Nickname,
-			Email:       user.Email,
-			Gender:      user.Gender,
-			Status:      user.Status,
-			DeptName:    user.DeptName,
-			Roles:       roleIds, // 使用实际的角色ID
-			CreateTime:  user.CreatedAt,
+			ID:         user.ID,
+			Username:   user.Username,
+			Nickname:   user.Nickname,
+			Email:      user.Email,
+			Gender:     user.Gender,
+			Status:     user.Status,
+			DeptName:   user.DeptName,
+			Roles:      roleIds, // 使用实际的角色ID
+			CreateTime: user.CreatedAt,
 		}
 
 		// 构建响应
@@ -395,9 +391,7 @@ func recordLoginLog(c *gin.Context, core *core.Core, username string, status int
 
 	// 异步写入数据库，不影响登录响应速度
 	go func() {
-		if err := core.DB.GetDB().Create(&loginLog).Error; err != nil {
-			fmt.Printf("记录登录日志失败: %v\n", err)
-		}
+		_ = core.DB.GetDB().Create(&loginLog)
 	}()
 }
 
@@ -444,8 +438,7 @@ func parseUserAgent(userAgent string) (browser, os string) {
 // contains 检查字符串是否包含子串（不区分大小写）
 func contains(str, substr string) bool {
 	return len(str) >= len(substr) && (str == substr ||
-		len(str) > len(substr) && (
-			str[:len(substr)] == substr ||
+		len(str) > len(substr) && (str[:len(substr)] == substr ||
 			str[len(str)-len(substr):] == substr ||
 			findSubstring(str, substr)))
 }

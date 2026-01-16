@@ -53,8 +53,8 @@ func testCacheEndpoint(core *core.Core) gin.HandlerFunc {
 		}
 
 		response.Success(c, gin.H{
-			"message": "缓存测试成功",
-			"count":   len(depts),
+			"message":   "缓存测试成功",
+			"count":     len(depts),
 			"cacheKeys": keys,
 		})
 	}

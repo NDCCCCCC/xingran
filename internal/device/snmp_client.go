@@ -182,20 +182,20 @@ func parseSNMPValue(variable gosnmp.SnmpPDU) interface{} {
 // SNMP OID 常量
 const (
 	// 系统信息 OIDs
-	oidSysDescr    = "1.3.6.1.2.1.1.1.0"  // 系统描述
-	oidSysObjectID = "1.3.6.1.2.1.1.2.0"  // 系统对象ID
-	oidSysUpTime   = "1.3.6.1.2.1.1.3.0"  // 系统运行时间
-	oidSysContact  = "1.3.6.1.2.1.1.4.0"  // 系统联系人
-	oidSysName     = "1.3.6.1.2.1.1.5.0"  // 系统名称
-	oidSysLocation = "1.3.6.1.2.1.1.6.0"  // 系统位置
+	oidSysDescr    = "1.3.6.1.2.1.1.1.0" // 系统描述
+	oidSysObjectID = "1.3.6.1.2.1.1.2.0" // 系统对象ID
+	oidSysUpTime   = "1.3.6.1.2.1.1.3.0" // 系统运行时间
+	oidSysContact  = "1.3.6.1.2.1.1.4.0" // 系统联系人
+	oidSysName     = "1.3.6.1.2.1.1.5.0" // 系统名称
+	oidSysLocation = "1.3.6.1.2.1.1.6.0" // 系统位置
 
 	// 接口信息 OIDs
-	oidIfNumber     = "1.3.6.1.2.1.2.1.0"     // 接口数量
-	oidIfDescr      = "1.3.6.1.2.1.2.2.1.2"   // 接口描述
-	oidIfType       = "1.3.6.1.2.1.2.2.1.3"   // 接口类型
-	oidIfSpeed      = "1.3.6.1.2.1.2.2.1.5"   // 接口速率
-	oidIfAdminStatus = "1.3.6.1.2.1.2.2.1.7"  // 接口管理状态
-	oidIfOperStatus = "1.3.6.1.2.1.2.2.1.8"   // 接口操作状态
+	oidIfNumber      = "1.3.6.1.2.1.2.1.0"   // 接口数量
+	oidIfDescr       = "1.3.6.1.2.1.2.2.1.2" // 接口描述
+	oidIfType        = "1.3.6.1.2.1.2.2.1.3" // 接口类型
+	oidIfSpeed       = "1.3.6.1.2.1.2.2.1.5" // 接口速率
+	oidIfAdminStatus = "1.3.6.1.2.1.2.2.1.7" // 接口管理状态
+	oidIfOperStatus  = "1.3.6.1.2.1.2.2.1.8" // 接口操作状态
 )
 
 // SystemInfo 系统信息
@@ -296,12 +296,12 @@ func ExtractModelFromSysDescr(sysDescr string, vendor models.DeviceVendor) strin
 func extractHuaweiModel(descr string) string {
 	// 华为常见型号模式
 	patterns := []string{
-		"S[0-9]{4}[A-Z0-9\\-]*",  // S5700, S6720, S12700等
-		"AR[0-9]{3,4}",            // AR2220, AR1220等路由器
-		"USG[0-9]{4}",             // USG6000等防火墙
-		"AirEngine[0-9]{4,6}",     // AirEngine系列AP
-		"AP[0-9]{4}",              // AP4030等
-		"NetEngine[0-9]{4}",       // NetEngine系列路由器
+		"S[0-9]{4}[A-Z0-9\\-]*", // S5700, S6720, S12700等
+		"AR[0-9]{3,4}",          // AR2220, AR1220等路由器
+		"USG[0-9]{4}",           // USG6000等防火墙
+		"AirEngine[0-9]{4,6}",   // AirEngine系列AP
+		"AP[0-9]{4}",            // AP4030等
+		"NetEngine[0-9]{4}",     // NetEngine系列路由器
 	}
 
 	for _, pattern := range patterns {
@@ -318,10 +318,10 @@ func extractHuaweiModel(descr string) string {
 func extractH3CModel(descr string) string {
 	patterns := []string{
 		"S[0-9]{4,5}[A-Z0-9\\-]*", // S5120, S12508, S10500等
-		"MSR[0-9]{4}",              // MSR3640, MSR3020等路由器
-		"F[0-9]{4,5}",              // F1000, F5000等防火墙
-		"WA[0-9]{4,5}",             // WA系列AP
-		"H3C\\s+[A-Z0-9\\-]+",      // H3C空格后跟型号
+		"MSR[0-9]{4}",             // MSR3640, MSR3020等路由器
+		"F[0-9]{4,5}",             // F1000, F5000等防火墙
+		"WA[0-9]{4,5}",            // WA系列AP
+		"H3C\\s+[A-Z0-9\\-]+",     // H3C空格后跟型号
 	}
 
 	for _, pattern := range patterns {
@@ -338,10 +338,10 @@ func extractH3CModel(descr string) string {
 func extractRuijieModel(descr string) string {
 	patterns := []string{
 		"RG-S[0-9]{4,5}[A-Z0-9\\-]*", // RG-S5750, RG-S6220等交换机
-		"RSR[0-9]{2,4}[A-Z0-9\\-]*",   // RSR20, RSR50等路由器
-		"RG-WALL[0-9]{4}",              // RG-WALL防火墙
-		"RG-AP[0-9]{3,4}",              // RG-AP640等AP
-		"RG-EG[0-9]{4}",                // RG-EG网关
+		"RSR[0-9]{2,4}[A-Z0-9\\-]*",  // RSR20, RSR50等路由器
+		"RG-WALL[0-9]{4}",            // RG-WALL防火墙
+		"RG-AP[0-9]{3,4}",            // RG-AP640等AP
+		"RG-EG[0-9]{4}",              // RG-EG网关
 	}
 
 	for _, pattern := range patterns {
@@ -357,10 +357,10 @@ func extractRuijieModel(descr string) string {
 // 迈普设备型号通常如: Secure, MyPower, SM等系列
 func extractMaipuModel(descr string) string {
 	patterns := []string{
-		"Secure[0-9]{4}",        // Secure系列防火墙
-		"MyPower\\s*[A-Z0-9]+",  // MyPower系列
-		"SM[0-9]{4}",            // SM系列交换机
-		"MP[0-9]{4}",            // MP系列路由器
+		"Secure[0-9]{4}",       // Secure系列防火墙
+		"MyPower\\s*[A-Z0-9]+", // MyPower系列
+		"SM[0-9]{4}",           // SM系列交换机
+		"MP[0-9]{4}",           // MP系列路由器
 	}
 
 	for _, pattern := range patterns {
@@ -378,7 +378,7 @@ func extractGenericModel(descr string) string {
 	// 常见通用模式
 	patterns := []string{
 		"[A-Z]{1,4}[0-9]{3,6}[A-Z0-9\\-]*", // 大写字母+数字组合
-		"[A-Z]{2,}-[A-Z0-9\\-]+",            // XX-XXXX格式
+		"[A-Z]{2,}-[A-Z0-9\\-]+",           // XX-XXXX格式
 	}
 
 	for _, pattern := range patterns {
@@ -620,10 +620,9 @@ func containsIgnoreCase(s, substr string) bool {
 
 	return len(s) >= len(substr) &&
 		(s == substr ||
-		 len(s) > len(substr) && (
-			s[:len(substr)] == substr ||
-			s[len(s)-len(substr):] == substr ||
-		 indexOfIgnoreCase(s, substr) >= 0))
+			len(s) > len(substr) && (s[:len(substr)] == substr ||
+				s[len(s)-len(substr):] == substr ||
+				indexOfIgnoreCase(s, substr) >= 0))
 }
 
 func indexOfIgnoreCase(s, substr string) int {

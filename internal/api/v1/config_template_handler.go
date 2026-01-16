@@ -10,38 +10,38 @@ import (
 
 // ConfigTemplateListRequest 配置模板列表请求
 type ConfigTemplateListRequest struct {
-	TemplateName *string                `json:"templateName,omitempty"`
-	TemplateType *models.TemplateType   `json:"templateType,omitempty"`
-	Vendor       *models.DeviceVendor  `json:"vendor,omitempty"`
-	DeviceType   *models.DeviceType     `json:"deviceType,omitempty"`
-	IsSystem     *bool                  `json:"isSystem,omitempty"`
-	Current      int                    `json:"current" binding:"min=1"`
-	PageSize     int                    `json:"pageSize" binding:"min=1,max=100"`
+	TemplateName *string              `json:"templateName,omitempty"`
+	TemplateType *models.TemplateType `json:"templateType,omitempty"`
+	Vendor       *models.DeviceVendor `json:"vendor,omitempty"`
+	DeviceType   *models.DeviceType   `json:"deviceType,omitempty"`
+	IsSystem     *bool                `json:"isSystem,omitempty"`
+	Current      int                  `json:"current" binding:"min=1"`
+	PageSize     int                  `json:"pageSize" binding:"min=1,max=100"`
 }
 
 // ConfigTemplateCreateRequest 创建配置模板请求
 type ConfigTemplateCreateRequest struct {
-	TemplateName    string                     `json:"templateName" binding:"required,min=2,max=100"`
-	TemplateCode    string                     `json:"templateCode" binding:"required,min=2,max=50"`
-	TemplateType    models.TemplateType        `json:"templateType" binding:"required,oneof=init config backup"`
-	Vendor          models.DeviceVendor        `json:"vendor" binding:"required,oneof=huawei h3c ruijie maipu"`
-	DeviceType      models.DeviceType          `json:"deviceType" binding:"required,oneof=router switch firewall ap loadbalancer"`
-	TemplateContent string                     `json:"templateContent" binding:"required"`
-	Variables       []models.TemplateVariable  `json:"variables,omitempty"`
-	Description     string                     `json:"description,omitempty"`
-	IsSystem        bool                       `json:"isSystem"`
+	TemplateName    string                    `json:"templateName" binding:"required,min=2,max=100"`
+	TemplateCode    string                    `json:"templateCode" binding:"required,min=2,max=50"`
+	TemplateType    models.TemplateType       `json:"templateType" binding:"required,oneof=init config backup"`
+	Vendor          models.DeviceVendor       `json:"vendor" binding:"required,oneof=huawei h3c ruijie maipu"`
+	DeviceType      models.DeviceType         `json:"deviceType" binding:"required,oneof=router switch firewall ap loadbalancer"`
+	TemplateContent string                    `json:"templateContent" binding:"required"`
+	Variables       []models.TemplateVariable `json:"variables,omitempty"`
+	Description     string                    `json:"description,omitempty"`
+	IsSystem        bool                      `json:"isSystem"`
 }
 
 // ConfigTemplateUpdateRequest 更新配置模板请求
 type ConfigTemplateUpdateRequest struct {
-	ID              string                     `json:"id" binding:"required"`
-	TemplateName    string                     `json:"templateName" binding:"required,min=2,max=100"`
-	TemplateType    models.TemplateType        `json:"templateType" binding:"required,oneof=init config backup"`
-	Vendor          models.DeviceVendor        `json:"vendor" binding:"required,oneof=huawei h3c ruijie maipu"`
-	DeviceType      models.DeviceType          `json:"deviceType" binding:"required,oneof=router switch firewall ap loadbalancer"`
-	TemplateContent string                     `json:"templateContent" binding:"required"`
-	Variables       []models.TemplateVariable  `json:"variables,omitempty"`
-	Description     string                     `json:"description,omitempty"`
+	ID              string                    `json:"id" binding:"required"`
+	TemplateName    string                    `json:"templateName" binding:"required,min=2,max=100"`
+	TemplateType    models.TemplateType       `json:"templateType" binding:"required,oneof=init config backup"`
+	Vendor          models.DeviceVendor       `json:"vendor" binding:"required,oneof=huawei h3c ruijie maipu"`
+	DeviceType      models.DeviceType         `json:"deviceType" binding:"required,oneof=router switch firewall ap loadbalancer"`
+	TemplateContent string                    `json:"templateContent" binding:"required"`
+	Variables       []models.TemplateVariable `json:"variables,omitempty"`
+	Description     string                    `json:"description,omitempty"`
 }
 
 // listConfigTemplates 查询配置模板列表

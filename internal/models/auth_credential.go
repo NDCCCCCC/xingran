@@ -26,8 +26,8 @@ type AuthCredential struct {
 	CredentialName  string         `gorm:"size:100;not null" json:"credentialName"`
 	ProtocolType    ProtocolType   `gorm:"size:10;not null;default:ssh" json:"protocolType"` // SSH 或 Telnet
 	Username        string         `gorm:"size:100" json:"username,omitempty"`
-	Password        string         `gorm:"size:255" json:"-"` // 加密存储，不返回给前端
-	EnablePassword  string         `gorm:"size:255" json:"-"` // SSH 特权模式密码，加密存储
+	Password        string         `gorm:"size:255" json:"-"`                            // 加密存储，不返回给前端
+	EnablePassword  string         `gorm:"size:255" json:"-"`                            // SSH 特权模式密码，加密存储
 	SNMPCommunities pq.StringArray `gorm:"type:text[]" json:"snmpCommunities,omitempty"` // 多个 SNMP Community
 	SNMPVersion     SNMPVersion    `gorm:"size:10;default:v2c" json:"snmpVersion"`
 	Description     string         `gorm:"type:text" json:"description,omitempty"`

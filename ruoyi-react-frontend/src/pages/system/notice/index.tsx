@@ -19,10 +19,10 @@ import {
   useAPIConfig,
 } from './hooks';
 import {
-  NoticeStatistics,
   StatisticsDrawer,
   NoticeForm,
   NoticeList,
+  NoticeStatisticsCard,
 } from './components';
 
 /**
@@ -272,7 +272,7 @@ const NoticeManagement: FC = () => {
     setStatisticsLoading(true);
     try {
       const response = await getNoticeStatistics(notice.id);
-      setCurrentStatistics(response.data);
+      setCurrentStatistics(response.data || null);
     } catch (error) {
       console.error('加载统计数据失败:', error);
       message.error('加载统计数据失败');
@@ -290,10 +290,10 @@ const NoticeManagement: FC = () => {
 
   // 批量删除（包含统计刷新）
   const handleBatchDeleteWithRefresh = useCallback(async () => {
-    await handleBatchDelete();
+    await handleBatchDelete(selectedRowKeys);
     loadNotices();
     loadStatistics();
-  }, [handleBatchDelete, loadNotices, loadStatistics]);
+  }, [handleBatchDelete, loadNotices, loadStatistics, selectedRowKeys]);
 
   // 发布通知（包含列表刷新）
   const handlePublishWithRefresh = useCallback(async (id: string) => {
@@ -327,7 +327,7 @@ const NoticeManagement: FC = () => {
   return (
     <div>
       {/* 统计卡片 */}
-      <NoticeStatistics statistics={statistics} />
+      <NoticeStatisticsCard statistics={statistics} />
 
       {/* 列表和搜索 */}
       <NoticeList
@@ -392,7 +392,7 @@ const NoticeManagement: FC = () => {
         onMarkdownContentChange={setMarkdownContent}
         onCustomEmailsChange={setCustomEmails}
         onCustomWeComUsersChange={setCustomWeComUsers}
-        onTargetTypeChange={(value) => {
+        onTargetTypeChange={() => {
           editForm.setFieldValue('targetDepts', []);
           editForm.setFieldValue('targetRoles', []);
           editForm.setFieldValue('targetUsers', []);

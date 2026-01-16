@@ -22,31 +22,31 @@ type RoleListRequest struct {
 
 // RoleCreateRequest 角色创建请求
 type RoleCreateRequest struct {
-	RoleName        string            `json:"roleName" binding:"required,max=50"`
-	RoleKey         string            `json:"roleKey" binding:"required,max=50"`
-	RoleSort        int               `json:"roleSort" binding:"min=0"`
-	DataScope       models.DataScope  `json:"dataScope"`
-	MenuCheckStrictly *bool           `json:"menuCheckStrictly"`
-	DeptCheckStrictly *bool           `json:"deptCheckStrictly"`
-	Status          models.RoleStatus `json:"status"`
-	Remark          *string           `json:"remark,omitempty"`
-	MenuIds         []string          `json:"menuIds,omitempty"`
-	DeptIds         []string          `json:"deptIds,omitempty"`
+	RoleName          string            `json:"roleName" binding:"required,max=50"`
+	RoleKey           string            `json:"roleKey" binding:"required,max=50"`
+	RoleSort          int               `json:"roleSort" binding:"min=0"`
+	DataScope         models.DataScope  `json:"dataScope"`
+	MenuCheckStrictly *bool             `json:"menuCheckStrictly"`
+	DeptCheckStrictly *bool             `json:"deptCheckStrictly"`
+	Status            models.RoleStatus `json:"status"`
+	Remark            *string           `json:"remark,omitempty"`
+	MenuIds           []string          `json:"menuIds,omitempty"`
+	DeptIds           []string          `json:"deptIds,omitempty"`
 }
 
 // RoleUpdateRequest 角色更新请求
 type RoleUpdateRequest struct {
-	ID              string            `json:"id" binding:"required"`
-	RoleName        string            `json:"roleName" binding:"required,max=50"`
-	RoleKey         string            `json:"roleKey" binding:"required,max=50"`
-	RoleSort        int               `json:"roleSort" binding:"min=0"`
-	DataScope       models.DataScope  `json:"dataScope"`
-	MenuCheckStrictly *bool           `json:"menuCheckStrictly"`
-	DeptCheckStrictly *bool           `json:"deptCheckStrictly"`
-	Status          models.RoleStatus `json:"status"`
-	Remark          *string           `json:"remark,omitempty"`
-	MenuIds         []string          `json:"menuIds,omitempty"`
-	DeptIds         []string          `json:"deptIds,omitempty"`
+	ID                string            `json:"id" binding:"required"`
+	RoleName          string            `json:"roleName" binding:"required,max=50"`
+	RoleKey           string            `json:"roleKey" binding:"required,max=50"`
+	RoleSort          int               `json:"roleSort" binding:"min=0"`
+	DataScope         models.DataScope  `json:"dataScope"`
+	MenuCheckStrictly *bool             `json:"menuCheckStrictly"`
+	DeptCheckStrictly *bool             `json:"deptCheckStrictly"`
+	Status            models.RoleStatus `json:"status"`
+	Remark            *string           `json:"remark,omitempty"`
+	MenuIds           []string          `json:"menuIds,omitempty"`
+	DeptIds           []string          `json:"deptIds,omitempty"`
 }
 
 // RoleStatusRequest 角色状态请求

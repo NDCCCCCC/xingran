@@ -14,12 +14,12 @@ import (
 
 // CPUStats CPU统计信息
 type CPUStats struct {
-	User   uint64
-	Nice   uint64
-	System uint64
-	Idle   uint64
-	Iowait uint64
-	Irq    uint64
+	User    uint64
+	Nice    uint64
+	System  uint64
+	Idle    uint64
+	Iowait  uint64
+	Irq     uint64
 	Softirq uint64
 }
 
@@ -40,7 +40,7 @@ func GetCPUUsage() (float64, error) {
 		lastCPUStats = *stats
 		firstCall = false
 		time.Sleep(100 * time.Millisecond) // 等待一段时间再进行下一次测量
-		return GetCPUUsage() // 递归调用获取真实使用率
+		return GetCPUUsage()               // 递归调用获取真实使用率
 	}
 
 	// 计算差值

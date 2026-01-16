@@ -14,9 +14,9 @@ type DeviceAsset struct {
 	SystemDescription string    `gorm:"type:text" json:"systemDescription,omitempty"`
 	ProductName       string    `gorm:"size:100" json:"productName,omitempty"`
 	DeviceModel       string    `gorm:"size:100" json:"deviceModel,omitempty"`
-	Uptime            int64     `json:"uptime,omitempty"` // seconds
+	Uptime            int64     `json:"uptime,omitempty"`      // seconds
 	TotalMemory       int64     `json:"totalMemory,omitempty"` // KB
-	FreeMemory        int64     `json:"freeMemory,omitempty"` // KB
+	FreeMemory        int64     `json:"freeMemory,omitempty"`  // KB
 	CPUUsage          float64   `json:"cpuUsage,omitempty"`
 	CollectedAt       time.Time `gorm:"not null" json:"collectedAt"`
 	CreatedAt         time.Time `json:"createdAt"`

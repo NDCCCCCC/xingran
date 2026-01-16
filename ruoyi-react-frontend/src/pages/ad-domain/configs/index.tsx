@@ -11,8 +11,7 @@ import {
   message,
   Popconfirm,
   Card,
-  Tag,
-  Tooltip
+  Tag
 } from 'antd';
 import {
   PlusOutlined,
@@ -169,27 +168,37 @@ const ADConfigPage: FC = () => {
       title: '配置名称',
       dataIndex: 'configName',
       key: 'configName',
+      width: 160,
+      minWidth: 140,
     },
     {
       title: '服务器地址',
       dataIndex: 'serverAddress',
       key: 'serverAddress',
+      width: 200,
+      minWidth: 180,
       render: (text: string, record: ADConfig) => `${text}:${record.serverPort}`,
     },
     {
       title: '域名',
       dataIndex: 'domainName',
       key: 'domainName',
+      width: 150,
+      minWidth: 120,
     },
     {
       title: '基础DN',
       dataIndex: 'baseDn',
       key: 'baseDn',
+      width: 200,
+      minWidth: 180,
       ellipsis: true,
     },
     {
       title: '安全连接',
       key: 'security',
+      width: 140,
+      minWidth: 120,
       render: (_: any, record: ADConfig) => (
         <Space>
           {record.useSsl && <Tag color="blue">SSL</Tag>}
@@ -201,6 +210,8 @@ const ADConfigPage: FC = () => {
     {
       title: '自动同步',
       key: 'syncEnabled',
+      width: 140,
+      minWidth: 120,
       render: (_: any, record: ADConfig) => (
         <Tag color={record.syncEnabled ? 'success' : 'default'}>
           {record.syncEnabled ? `是 (${record.syncInterval}s)` : '否'}
@@ -211,12 +222,17 @@ const ADConfigPage: FC = () => {
       title: '最后同步',
       dataIndex: 'lastSyncAt',
       key: 'lastSyncAt',
+      width: 170,
+      minWidth: 160,
       render: (text: string | null) => text ? new Date(text).toLocaleString('zh-CN') : '-',
     },
     {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
+      width: 80,
+      minWidth: 70,
+      align: 'center' as const,
       render: (status: number) => (
         <Tag color={status === 0 ? 'success' : 'default'}>
           {status === 0 ? '启用' : '停用'}
@@ -226,6 +242,8 @@ const ADConfigPage: FC = () => {
     {
       title: '同步结果',
       key: 'syncResult',
+      width: 150,
+      minWidth: 130,
       render: (_: any, record: ADConfig) => {
         const result = syncProgress[record.id];
         if (!result) return '-';
@@ -241,7 +259,9 @@ const ADConfigPage: FC = () => {
     {
       title: '操作',
       key: 'action',
-      width: 100,
+      width: 250,
+      minWidth: 220,
+      fixed: 'right' as const,
       render: (_: any, record: ADConfig) => {
         const actions = [
           {

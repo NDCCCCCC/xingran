@@ -58,8 +58,8 @@ export function useNoticeData(): UseNoticeDataResult {
         noticeType: params.noticeType,
       };
       const result = await getNoticeList(requestParams);
-      setNotices(result.data.list);
-      setTotal(result.data.total);
+      setNotices(result.data?.list || []);
+      setTotal(result.data?.total || 0);
     } catch (error) {
       console.error('加载通知公告失败:', error);
     } finally {

@@ -113,6 +113,7 @@ export interface Notice {
   targets?: NoticeTarget[];
   reads?: NoticeRead[];
   attachments?: NoticeAttachment[];
+  channels?: NoticeChannelRequest[];  // 渠道配置
   // 用户端扩展字段
   isRead?: boolean;
   readAt?: string;

@@ -3,7 +3,7 @@
  * 用于混合式布局，支持标签页的打开、关闭、切换等操作
  */
 
-import { useRef, useState, useMemo, useEffect } from 'react';
+import { useRef, useState, useMemo, useEffect, useCallback } from 'react';
 import { Tabs, Dropdown, Button } from 'antd';
 import type { MenuProps } from 'antd';
 import { useTabs } from '@/store/tabsStore';
@@ -23,16 +23,16 @@ const TabBar: FC = () => {
   const [maxVisibleTabs, setMaxVisibleTabs] = useState(20);
 
   // 处理标签页点击
-  const handleTabChange = (key: string) => {
+  const handleTabChange = useCallback((key: string) => {
     const tab = tabs.find(t => t.key === key);
     if (tab) {
       setActiveTab(key);
       navigate(tab.path);
     }
-  };
+  }, [tabs, setActiveTab, navigate]);
 
   // 处理标签页关闭
-  const handleTabClose = (targetKey: string) => {
+  const handleTabClose = useCallback((targetKey: string) => {
     // 如果关闭的是当前激活的标签，需要切换到前一个
     if (targetKey === activeTab && tabs.length > 1) {
       const currentIndex = tabs.findIndex(t => t.key === targetKey);
@@ -47,7 +47,7 @@ const TabBar: FC = () => {
       }
     }
     removeTab(targetKey);
-  };
+  }, [activeTab, tabs, setActiveTab, navigate, removeTab]);
 
   // 更多标签菜单
   const moreMenuItems: MenuProps['items'] = useMemo(() => {
@@ -94,7 +94,7 @@ const TabBar: FC = () => {
         danger: true,
       },
     ];
-  }, [tabs, activeTab, closeAllTabs]);
+  }, [tabs, handleTabChange, handleTabClose, closeAllTabs]); // 添加所有在函数内使用的回调
 
   // 过滤掉固定标签（固定标签不可关闭）
   const closableTabs = tabs.filter(tab => tab.closable);

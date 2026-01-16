@@ -1,0 +1,152 @@
+/**
+ * 定时任务表格列定义
+ */
+
+import { Space, Button, Tooltip, Tag, Popconfirm } from 'antd';
+import {
+  PlayCircleOutlined,
+  PauseCircleOutlined,
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  HistoryOutlined,
+} from '@ant-design/icons';
+import type { ColumnsType } from 'antd/es/table';
+import ActionButtons from '@/components/shared/ActionButtons';
+import type { JobInfo } from '../types';
+import { renderCronExpression, renderConcurrentTag, renderJobStatusTag, formatLocalTime } from '../utils';
+
+interface GetJobColumnsParams {
+  handleToggleStatus: (record: JobInfo) => void;
+  handleExecute: (record: JobInfo) => void;
+  handleViewLogs: (record: JobInfo) => void;
+  openModal: (record: JobInfo) => void;
+  handleDelete: (record: JobInfo) => void;
+}
+
+export function getJobColumns(params: GetJobColumnsParams): ColumnsType<JobInfo> {
+  const { handleToggleStatus, handleExecute, handleViewLogs, openModal, handleDelete } = params;
+
+  return [
+    {
+      title: '任务编号',
+      dataIndex: 'id',
+      key: 'id',
+      width: 100,
+      ellipsis: true,
+    },
+    {
+      title: '任务名称',
+      dataIndex: 'jobName',
+      key: 'jobName',
+      width: 150,
+    },
+    {
+      title: '任务组',
+      dataIndex: 'jobGroup',
+      key: 'jobGroup',
+      width: 120,
+    },
+    {
+      title: '调用目标',
+      dataIndex: 'invokeTarget',
+      key: 'invokeTarget',
+      width: 200,
+      ellipsis: true,
+    },
+    {
+      title: 'Cron表达式',
+      dataIndex: 'cronExpression',
+      key: 'cronExpression',
+      width: 150,
+      render: renderCronExpression,
+    },
+    {
+      title: '并发执行',
+      dataIndex: 'concurrent',
+      key: 'concurrent',
+      width: 100,
+      render: renderConcurrentTag,
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
+      width: 100,
+      render: (status: number, record: JobInfo) => (
+        <Space>
+          {renderJobStatusTag(status)}
+          <Tooltip title={status === 0 ? '暂停任务' : '启动任务'}>
+            <Button
+              type="text"
+              size="small"
+              icon={status === 0 ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
+              onClick={() => handleToggleStatus(record)}
+            />
+          </Tooltip>
+        </Space>
+      ),
+    },
+    {
+      title: '下次执行时间',
+      dataIndex: 'nextRunTime',
+      key: 'nextRunTime',
+      width: 180,
+      render: formatLocalTime,
+    },
+    {
+      title: '创建时间',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      width: 180,
+      render: formatLocalTime,
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 100,
+      fixed: 'right',
+      render: (_: unknown, record: JobInfo) => {
+        const actions = [
+          {
+            key: 'execute',
+            label: '立即执行',
+            icon: <PlayCircleOutlined />,
+            onClick: () => handleExecute(record),
+          },
+          {
+            key: 'logs',
+            label: '查看日志',
+            icon: <HistoryOutlined />,
+            onClick: () => handleViewLogs(record),
+          },
+          {
+            key: 'edit',
+            label: '编辑',
+            icon: <EditOutlined />,
+            onClick: () => openModal(record),
+          },
+          {
+            key: 'delete',
+            label: '删除',
+            icon: <DeleteOutlined />,
+            danger: true,
+            render: () => (
+              <Popconfirm
+                title="确定要删除这个任务吗？"
+                description="删除后将无法恢复"
+                onConfirm={() => handleDelete(record)}
+              >
+                <Button type="link" danger icon={<DeleteOutlined />} size="small">
+                  删除
+                </Button>
+              </Popconfirm>
+            ),
+          },
+        ];
+
+        return <ActionButtons actions={actions} />;
+      },
+    },
+  ];
+}

@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"gorm.io/gorm"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"gorm.io/gorm"
 )
 
 // Manager 设备管理器（兼容层）

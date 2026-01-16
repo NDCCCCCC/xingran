@@ -77,6 +77,7 @@ export interface CaptchaBackground {
   remark?: string;
   createdAt: string;
   updatedAt: string;
+  previewUrl: string; // 预览图片 URL（web 可访问的相对路径）
 }
 
 // 背景图列表请求参数

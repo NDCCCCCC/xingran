@@ -65,7 +65,8 @@ func (s *operLogService) RecordAsync(db *gorm.DB, title string, businessType int
 	// 异步写入数据库，不影响响应速度
 	go func() {
 		if err := db.Create(operLog).Error; err != nil {
-			fmt.Printf("记录操作日志失败: %v\n", err)
+			// 静默处理日志记录失败
+			_ = err
 		}
 	}()
 }
@@ -137,7 +138,8 @@ func (s *operLogService) RecordFromGinContext(c *gin.Context, db *gorm.DB, title
 	// 异步写入数据库，不影响响应速度
 	go func() {
 		if err := s.RecordOperLog(context.Background(), db, operLog); err != nil {
-			fmt.Printf("记录操作日志失败: %v\n", err)
+			// 静默处理日志记录失败
+			_ = err
 		}
 	}()
 }

@@ -11,8 +11,8 @@ import (
 type DiscoveryType string
 
 const (
-	DiscoveryTypeSNMP  DiscoveryType = "snmp"  // SNMP发现
-	DiscoveryTypeScan  DiscoveryType = "scan"  // 扫描发现
+	DiscoveryTypeSNMP DiscoveryType = "snmp" // SNMP发现
+	DiscoveryTypeScan DiscoveryType = "scan" // 扫描发现
 )
 
 // DiscoveryStatus 发现状态枚举
@@ -58,24 +58,24 @@ func (i IPRangeList) Value() (driver.Value, error) {
 
 // DeviceDiscovery 设备发现任务模型
 type DeviceDiscovery struct {
-	ID               string          `gorm:"type:uuid;primary_key" json:"id"`
-	TaskName         string          `gorm:"size:200;not null" json:"taskName"`
-	DiscoveryType    DiscoveryType   `gorm:"size:50;not null" json:"discoveryType"`
-	IPRanges         IPRangeList     `gorm:"type:jsonb;not null" json:"ipRanges"`
-	SNMPCommunity    string          `gorm:"size:100" json:"snmpCommunity,omitempty"`
-	SNMPPort         int             `gorm:"default:161" json:"snmpPort"`
-	Status           DiscoveryStatus `gorm:"default:0" json:"status"`
-	TotalIPs         int             `gorm:"default:0" json:"totalIps"`
-	DiscoveredCount  int             `gorm:"default:0" json:"discoveredCount"`
-	AutoImport       bool            `gorm:"default:false" json:"autoImport"`
-	GroupID          *string         `gorm:"type:uuid" json:"groupId,omitempty"` // 关联部门ID
-	StartedAt        *time.Time      `json:"startedAt,omitempty"`
-	CompletedAt      *time.Time      `json:"completedAt,omitempty"`
-	ErrorMessage     string          `gorm:"type:text" json:"errorMessage,omitempty"`
-	CreatedBy        string          `gorm:"size:64" json:"createdBy"`
-	CreatedAt        time.Time       `json:"createdAt"`
-	UpdatedAt        time.Time       `json:"updatedAt"`
-	DeletedAt        *time.Time      `gorm:"index" json:"deletedAt,omitempty"`
+	ID              string          `gorm:"type:uuid;primary_key" json:"id"`
+	TaskName        string          `gorm:"size:200;not null" json:"taskName"`
+	DiscoveryType   DiscoveryType   `gorm:"size:50;not null" json:"discoveryType"`
+	IPRanges        IPRangeList     `gorm:"type:jsonb;not null" json:"ipRanges"`
+	SNMPCommunity   string          `gorm:"size:100" json:"snmpCommunity,omitempty"`
+	SNMPPort        int             `gorm:"default:161" json:"snmpPort"`
+	Status          DiscoveryStatus `gorm:"default:0" json:"status"`
+	TotalIPs        int             `gorm:"default:0" json:"totalIps"`
+	DiscoveredCount int             `gorm:"default:0" json:"discoveredCount"`
+	AutoImport      bool            `gorm:"default:false" json:"autoImport"`
+	GroupID         *string         `gorm:"type:uuid" json:"groupId,omitempty"` // 关联部门ID
+	StartedAt       *time.Time      `json:"startedAt,omitempty"`
+	CompletedAt     *time.Time      `json:"completedAt,omitempty"`
+	ErrorMessage    string          `gorm:"type:text" json:"errorMessage,omitempty"`
+	CreatedBy       string          `gorm:"size:64" json:"createdBy"`
+	CreatedAt       time.Time       `json:"createdAt"`
+	UpdatedAt       time.Time       `json:"updatedAt"`
+	DeletedAt       *time.Time      `gorm:"index" json:"deletedAt,omitempty"`
 }
 
 // TableName 设置表名

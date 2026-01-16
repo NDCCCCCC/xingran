@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 
@@ -9,7 +10,10 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	"gorm.io/gorm"
 )
+
+// ==================== 辅助函数 ====================
 
 // parseInt 安全地将字符串转换为整数
 func parseInt(s string) int {
@@ -34,6 +38,8 @@ func getIntField(m map[string]interface{}, key string, defaultValue int) int {
 	return defaultValue
 }
 
+// ==================== 请求/响应类型 ====================
+
 // UserListRequest 用户列表请求
 type UserListRequest struct {
 	Username  *string `json:"username,omitempty"`
@@ -49,33 +55,33 @@ type UserListRequest struct {
 
 // UserCreateRequest 创建用户请求
 type UserCreateRequest struct {
-	Username     string  `json:"username" binding:"required,min=2,max=20"`
-	Password     string  `json:"password" binding:"required,min=6,max=20"`
-	Nickname     *string `json:"nickname,omitempty"`
-	EmployeeNo   *string `json:"employeeNo,omitempty"` // 工号（企业微信代码）
-	Email        *string `json:"email,omitempty" binding:"omitempty,email"`
-	Phone        *string `json:"phone,omitempty"`
-	Gender       int     `json:"gender" binding:"min=0,max=2"`
-	Status       int     `json:"status" binding:"min=0,max=1,oneof=0 1"`
-	DeptID       *string `json:"deptId,omitempty"`
-	RoleIds      []string `json:"roleIds,omitempty"`
-	PostIds      []string `json:"postIds,omitempty"`
-	Remark       *string `json:"remark,omitempty"`
+	Username   string   `json:"username" binding:"required,min=2,max=20"`
+	Password   string   `json:"password" binding:"required,min=6,max=20"`
+	Nickname   *string  `json:"nickname,omitempty"`
+	EmployeeNo *string  `json:"employeeNo,omitempty"` // 工号（企业微信代码）
+	Email      *string  `json:"email,omitempty" binding:"omitempty,email"`
+	Phone      *string  `json:"phone,omitempty"`
+	Gender     int      `json:"gender" binding:"min=0,max=2"`
+	Status     int      `json:"status" binding:"min=0,max=1,oneof=0 1"`
+	DeptID     *string  `json:"deptId,omitempty"`
+	RoleIds    []string `json:"roleIds,omitempty"`
+	PostIds    []string `json:"postIds,omitempty"`
+	Remark     *string  `json:"remark,omitempty"`
 }
 
 // UserUpdateRequest 更新用户请求
 type UserUpdateRequest struct {
-	ID           string  `json:"id,omitempty"`
-	Nickname     *string `json:"nickname,omitempty"`
-	EmployeeNo   *string `json:"employeeNo,omitempty"` // 工号（企业微信代码）
-	Email        *string `json:"email,omitempty" binding:"omitempty,email"`
-	Phone        *string `json:"phone,omitempty"`
-	Gender       int     `json:"gender" binding:"min=0,max=2"`
-	Status       int     `json:"status" binding:"min=0,max=1,oneof=0 1"`
-	DeptID       *string `json:"deptId,omitempty"`
-	RoleIds      []string `json:"roleIds,omitempty"`
-	PostIds      []string `json:"postIds,omitempty"`
-	Remark       *string `json:"remark,omitempty"`
+	ID         string   `json:"id,omitempty"`
+	Nickname   *string  `json:"nickname,omitempty"`
+	EmployeeNo *string  `json:"employeeNo,omitempty"` // 工号（企业微信代码）
+	Email      *string  `json:"email,omitempty" binding:"omitempty,email"`
+	Phone      *string  `json:"phone,omitempty"`
+	Gender     int      `json:"gender" binding:"min=0,max=2"`
+	Status     int      `json:"status" binding:"min=0,max=1,oneof=0 1"`
+	DeptID     *string  `json:"deptId,omitempty"`
+	RoleIds    []string `json:"roleIds,omitempty"`
+	PostIds    []string `json:"postIds,omitempty"`
+	Remark     *string  `json:"remark,omitempty"`
 }
 
 // UserStatusRequest 用户状态请求
@@ -89,6 +95,7 @@ type UserDeleteRequest struct {
 	Ids []string `json:"ids" binding:"required,min=1"`
 }
 
+// ==================== 基本 CRUD 操作 ====================
 
 // listUsers 查询用户列表
 // @Summary 查询用户列表
@@ -133,140 +140,70 @@ func listUsers(core *core.Core) gin.HandlerFunc {
 		if val, ok := rawReq["endTime"].(string); ok && val != "" {
 			req.EndTime = &val
 		}
-
-		// 处理状态字段 - 支持字符串和数字类型
-		if statusVal, ok := rawReq["status"]; ok && statusVal != nil {
-			var status int
-			switch v := statusVal.(type) {
-			case string:
-				if v == "0" || v == "1" {
-					status = parseInt(v)
-				}
+		if val, ok := rawReq["status"]; ok {
+			req.Status = new(int)
+			switch v := val.(type) {
 			case float64:
-				status = int(v)
+				*req.Status = int(v)
 			case int:
-				status = v
+				*req.Status = v
+			case string:
+				*req.Status = parseInt(v)
 			}
-			req.Status = &status
 		}
 
 		// 构建查询条件
 		db := core.DB.GetDB().Model(&models.User{})
 
 		// 应用数据权限过滤
-		// 对于用户表，使用 "dept_id" 字段进行过滤
-		db = middleware.ApplyDataScopeFromContext(c, db, core, "dept_id")
+		db = middleware.ApplyDataScopeFromContext(c, db, core, "id")
 
-		// 用户名过滤
+		// 添加筛选条件
 		if req.Username != nil && *req.Username != "" {
 			db = db.Where("username LIKE ?", "%"+*req.Username+"%")
 		}
-
-		// 昵称过滤
 		if req.Nickname != nil && *req.Nickname != "" {
 			db = db.Where("nickname LIKE ?", "%"+*req.Nickname+"%")
 		}
-
-		// 手机号过滤
 		if req.Phone != nil && *req.Phone != "" {
-			db = db.Where("phone = ?", *req.Phone)
+			db = db.Where("phone LIKE ?", "%"+*req.Phone+"%")
 		}
-
-		// 状态过滤
 		if req.Status != nil {
 			db = db.Where("status = ?", *req.Status)
 		}
-
-		// 部门过滤
 		if req.DeptID != nil && *req.DeptID != "" {
 			db = db.Where("dept_id = ?", *req.DeptID)
 		}
-
-		// 时间范围过滤
 		if req.BeginTime != nil && *req.BeginTime != "" {
-			db = db.Where("created_at >= ?", *req.BeginTime)
+			if beginTime, err := time.Parse("2006-01-02 15:04:05", *req.BeginTime); err == nil {
+				db = db.Where("created_at >= ?", beginTime)
+			}
 		}
 		if req.EndTime != nil && *req.EndTime != "" {
-			db = db.Where("created_at <= ?", *req.EndTime)
+			if endTime, err := time.Parse("2006-01-02 15:04:05", *req.EndTime); err == nil {
+				db = db.Where("created_at <= ?", endTime)
+			}
 		}
 
-		// 计算总数
+		// 统计总数
 		var total int64
 		if err := db.Count(&total).Error; err != nil {
-			response.Error(c, response.ErrServerError, "查询用户总数失败")
+			response.Error(c, response.ErrServerError, "统计用户数量失败")
 			return
 		}
 
 		// 分页查询
-		var users []models.User
 		offset := (req.Current - 1) * req.PageSize
-		if err := db.Offset(offset).Limit(req.PageSize).Find(&users).Error; err != nil {
+		var users []models.User
+		if err := db.Preload("Dept").
+			Order("created_at DESC").
+			Offset(offset).Limit(req.PageSize).
+			Find(&users).Error; err != nil {
 			response.Error(c, response.ErrServerError, "查询用户列表失败")
 			return
 		}
 
-		// 查询所有角色（用于显示角色名称）
-		var allRoles []models.Role
-		core.DB.GetDB().Find(&allRoles)
-		roleMap := make(map[string]string)
-		for _, role := range allRoles {
-			roleMap[role.ID] = role.RoleName
-		}
-
-		// 加载每个用户的角色和部门信息并构建响应
-		var userWithDept []map[string]interface{}
-		for _, user := range users {
-			// 查询用户角色
-			var userRoles []models.UserRole
-			var roleNames []string
-			var roleIds []string
-			if err := core.DB.GetDB().Where("user_id = ?", user.ID).Find(&userRoles).Error; err == nil {
-				for _, ur := range userRoles {
-					if roleName, ok := roleMap[ur.RoleID]; ok {
-						roleNames = append(roleNames, roleName)
-						roleIds = append(roleIds, ur.RoleID)
-					}
-				}
-			}
-
-			userMap := map[string]interface{}{
-				"id":         user.ID,
-				"username":   user.Username,
-				"nickname":   user.Nickname,
-				"employeeNo": user.EmployeeNo, // 工号（企业微信代码）
-				"email":      user.Email,
-				"phone":      user.Phone,
-				"gender":     user.Gender,
-				"status":     user.Status,
-				"deptId":     user.DeptID,
-				"deptName":   "", // 默认值
-				"roles":      roleNames, // 角色名称数组
-				"roleIds":    roleIds,  // 角色ID数组
-				"remark":     user.Remark,
-				"createdAt":  user.CreatedAt,
-				"updatedAt":  user.UpdatedAt,
-			}
-
-			// 如果有部门ID，查询部门名称
-			if user.DeptID != nil && *user.DeptID != "" {
-				var dept models.Department
-				if err := core.DB.GetDB().First(&dept, "id = ?", *user.DeptID).Error; err == nil {
-					userMap["deptName"] = dept.DeptName
-				}
-			}
-
-			userWithDept = append(userWithDept, userMap)
-		}
-
-		// 构建响应
-		pageResp := response.PageResponse{
-			List:     userWithDept,
-			Total:    total,
-			Current:  req.Current,
-			PageSize: req.PageSize,
-		}
-
-		response.Success(c, pageResp)
+		response.Page(c, users, total, req.Current, req.PageSize)
 	}
 }
 
@@ -277,7 +214,9 @@ func listUsers(core *core.Core) gin.HandlerFunc {
 // @Accept json
 // @Produce json
 // @Param request body UserCreateRequest true "用户信息"
-// @Success 200 {object} response.Response
+// @Success 200 {object} response.Response{data=models.User}
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
 // @Router /users [post]
 func createUser(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -288,22 +227,17 @@ func createUser(core *core.Core) gin.HandlerFunc {
 		}
 
 		// 检查用户名是否已存在
-		var existUser models.User
-		if err := core.DB.GetDB().Where("username = ?", req.Username).First(&existUser).Error; err == nil {
-			response.Error(c, response.ErrBadRequest, "用户名已存在")
+		var count int64
+		if err := core.DB.GetDB().Model(&models.User{}).Where("username = ?", req.Username).Count(&count).Error; err != nil {
+			response.Error(c, response.ErrServerError, "检查用户名失败")
+			return
+		}
+		if count > 0 {
+			response.Error(c, response.ErrRecordExists, "用户名已存在")
 			return
 		}
 
-		// 验证部门ID是否存在
-		if req.DeptID != nil && *req.DeptID != "" {
-			var dept models.Department
-			if err := core.DB.GetDB().Where("id = ?", *req.DeptID).First(&dept).Error; err != nil {
-				response.Error(c, response.ErrBadRequest, "部门不存在")
-				return
-			}
-		}
-
-		// 密码加密
+		// 加密密码
 		pwdManager := core.PwdManager
 		hashedPassword, err := pwdManager.HashPassword(req.Password)
 		if err != nil {
@@ -311,63 +245,63 @@ func createUser(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		// 性别字段：前后端枚举值已统一，0=男,1=女,2=保密
-
 		// 创建用户
 		user := models.User{
-			BaseModel: models.BaseModel{},
-			Username:  req.Username,
-			Password:  hashedPassword,
-			Nickname:  req.Nickname,
-			EmployeeNo: req.EmployeeNo, // 工号（企业微信代码）
-			Email:     req.Email,
-			Phone:     req.Phone,
-			Gender:    models.Gender(req.Gender),
-			Status:    models.UserStatus(req.Status),
-			DeptID:    req.DeptID,
-			DeptName: func() *string {
-				if req.DeptID != nil && *req.DeptID != "" {
-					var dept models.Department
-					if err := core.DB.GetDB().Where("id = ?", *req.DeptID).First(&dept).Error; err == nil {
-						return &dept.DeptName
+			Username:   req.Username,
+			Password:   hashedPassword,
+			Nickname:   req.Nickname,
+			EmployeeNo: req.EmployeeNo,
+			Email:      req.Email,
+			Phone:      req.Phone,
+			Gender:     models.Gender(req.Gender),
+			Status:     models.UserStatus(req.Status),
+			DeptID:     req.DeptID,
+			Remark:     derefString(req.Remark),
+		}
+
+		// 使用事务创建用户及其关联
+		if err := core.DB.GetDB().Transaction(func(tx *gorm.DB) error {
+			// 创建用户
+			if err := tx.Create(&user).Error; err != nil {
+				return fmt.Errorf("创建用户失败: %w", err)
+			}
+
+			// 分配角色
+			if len(req.RoleIds) > 0 {
+				for _, roleID := range req.RoleIds {
+					if err := tx.Table("sys_user_role").Create(&models.UserRole{
+						UserID: user.ID,
+						RoleID: roleID,
+					}).Error; err != nil {
+						return fmt.Errorf("分配角色失败: %w", err)
 					}
 				}
-				return nil
-			}(),
-			Remark: func() string { if req.Remark != nil { return *req.Remark }; return "" }(),
-		}
+			}
 
-		if err := core.DB.GetDB().Create(&user).Error; err != nil {
-			response.Error(c, response.ErrServerError, "创建用户失败")
-			return
-		}
-
-		// 处理用户角色关联
-		if len(req.RoleIds) > 0 {
-			// 创建用户角色关联
-			for _, roleId := range req.RoleIds {
-				userRole := models.UserRole{
-					UserID: user.ID,
-					RoleID: roleId,
-				}
-				if err := core.DB.GetDB().Create(&userRole).Error; err != nil {
-					// 记录错误但不回滚用户创建
-					continue
+			// 分配岗位
+			if len(req.PostIds) > 0 {
+				for _, postID := range req.PostIds {
+					if err := tx.Table("sys_user_post").Create(&models.UserPost{
+						UserID: user.ID,
+						PostID: postID,
+					}).Error; err != nil {
+						return fmt.Errorf("分配岗位失败: %w", err)
+					}
 				}
 			}
-		}
 
-		// 清除用户缓存
-		if err := core.UserCacheService.InvalidateUserCache(c.Request.Context(), user.ID); err != nil {
-			// 记录错误但不影响响应
+			return nil
+		}); err != nil {
+			response.Error(c, response.ErrServerError, err.Error())
+			return
 		}
 
 		// 记录操作日志
 		recordOperLog(c, core, "用户管理", OperTypeCreate)
 
-		response.Success(c, gin.H{
-			"id": user.ID,
-		})
+		// 返回完整的用户信息
+		core.DB.GetDB().Preload("Dept").First(&user, "id = ?", user.ID)
+		response.Success(c, user)
 	}
 }
 
@@ -379,7 +313,9 @@ func createUser(core *core.Core) gin.HandlerFunc {
 // @Produce json
 // @Param id path string true "用户ID"
 // @Success 200 {object} response.Response{data=models.User}
-// @Router /users/{id} [post]
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Router /users/{id} [get]
 func getUser(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID := c.Param("id")
@@ -388,10 +324,13 @@ func getUser(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		// 使用 UserCacheService 获取用户（带缓存）
-		user, err := core.UserCacheService.GetUserByIDWithCache(c.Request.Context(), userID)
-		if err != nil {
-			response.Error(c, response.ErrNotFound, "用户不存在")
+		var user models.User
+		if err := core.DB.GetDB().Preload("Dept").Preload("Roles").Preload("Posts").First(&user, "id = ?", userID).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				response.Error(c, response.ErrNotFound, "用户不存在")
+			} else {
+				response.Error(c, response.ErrServerError, "查询用户失败")
+			}
 			return
 		}
 
@@ -408,7 +347,9 @@ func getUser(core *core.Core) gin.HandlerFunc {
 // @Param id path string true "用户ID"
 // @Param request body UserUpdateRequest true "用户信息"
 // @Success 200 {object} response.Response
-// @Router /users/{id}/update [post]
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Router /users/{id} [put]
 func updateUser(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID := c.Param("id")
@@ -417,128 +358,88 @@ func updateUser(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		var req struct {
-			Nickname   *string  `json:"nickname,omitempty"`
-			EmployeeNo *string  `json:"employeeNo,omitempty"` // 工号（企业微信代码）
-			Email      *string  `json:"email,omitempty" binding:"omitempty,email"`
-			Phone      *string  `json:"phone,omitempty"`
-			Gender     int      `json:"gender"`
-			Status     int      `json:"status"`
-			DeptID     *string  `json:"deptId,omitempty"`
-			RoleIds    []string `json:"roleIds,omitempty"`
-			Remark     *string  `json:"remark,omitempty"`
-		}
+		var req UserUpdateRequest
+		req.ID = userID
 		if err := c.ShouldBindJSON(&req); err != nil {
-			response.Error(c, response.ErrBadRequest, "请求参数错误: "+err.Error())
-			return
-		}
-
-		// 验证 gender 和 status 的值
-		if req.Gender < 0 || req.Gender > 2 {
-			response.Error(c, response.ErrBadRequest, "性别值无效，必须是0(男)、1(女)或2(保密)")
-			return
-		}
-		if req.Status != 0 && req.Status != 1 {
-			response.Error(c, response.ErrBadRequest, "状态值无效，必须是0(启用)或1(禁用)")
+			response.Error(c, response.ErrBadRequest, "请求参数错误")
 			return
 		}
 
 		// 检查用户是否存在
 		var user models.User
-		if err := core.DB.GetDB().Where("id = ?", userID).First(&user).Error; err != nil {
-			response.Error(c, response.ErrNotFound, "用户不存在")
-			return
-		}
-
-		// 验证部门ID是否存在
-		if req.DeptID != nil && *req.DeptID != "" {
-			var dept models.Department
-			if err := core.DB.GetDB().Where("id = ?", *req.DeptID).First(&dept).Error; err != nil {
-				response.Error(c, response.ErrBadRequest, "部门不存在")
-				return
-			}
-		}
-
-		// 更新用户信息
-		updates := map[string]interface{}{}
-
-		// 只更新非空字段
-		if req.Nickname != nil {
-			updates["nickname"] = req.Nickname
-		}
-		if req.EmployeeNo != nil {
-			updates["employee_no"] = req.EmployeeNo
-		}
-		if req.Email != nil {
-			updates["email"] = req.Email
-		}
-		if req.Phone != nil {
-			updates["phone"] = req.Phone
-		}
-		// 性别字段：前后端枚举值已统一，0=男,1=女,2=保密
-		updates["gender"] = models.Gender(req.Gender)
-
-		// 状态字段保持不变：0=启用,1=禁用
-		updates["status"] = models.UserStatus(req.Status)
-
-		// 处理部门更新（包括清空部门的情况）
-		if req.DeptID != nil {
-			if *req.DeptID == "" {
-				// 清空部门
-				emptyStr := ""
-				updates["dept_id"] = nil
-				updates["dept_name"] = &emptyStr
+		if err := core.DB.GetDB().First(&user, "id = ?", userID).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				response.Error(c, response.ErrNotFound, "用户不存在")
 			} else {
-				// 设置新部门
-				updates["dept_id"] = req.DeptID
-				// 同时更新部门名称
-				var dept models.Department
-				if err := core.DB.GetDB().Where("id = ?", *req.DeptID).First(&dept).Error; err == nil {
-					updates["dept_name"] = dept.DeptName
-				}
+				response.Error(c, response.ErrServerError, "查询用户失败")
 			}
-		}
-		if req.Remark != nil {
-			updates["remark"] = req.Remark
-		}
-
-		if err := core.DB.GetDB().Model(&user).Updates(updates).Error; err != nil {
-			response.Error(c, response.ErrServerError, "更新用户失败: "+err.Error())
 			return
 		}
 
-		// 更新用户角色关联
-		if len(req.RoleIds) > 0 {
-			// 先删除原有的角色关联
-			if err := core.DB.GetDB().Where("user_id = ?", userID).Delete(&models.UserRole{}).Error; err != nil {
-				// 记录错误但不中断流程
+		// 使用事务更新用户及其关联
+		if err := core.DB.GetDB().Transaction(func(tx *gorm.DB) error {
+			// 更新用户基本信息
+			user.Nickname = req.Nickname
+			user.EmployeeNo = req.EmployeeNo
+			user.Email = req.Email
+			user.Phone = req.Phone
+			user.Gender = models.Gender(req.Gender)
+			user.Status = models.UserStatus(req.Status)
+			user.DeptID = req.DeptID
+			user.Remark = derefString(req.Remark)
+
+			if err := tx.Save(&user).Error; err != nil {
+				return fmt.Errorf("更新用户失败: %w", err)
 			}
 
-			// 创建新的角色关联
-			for _, roleId := range req.RoleIds {
-				userRole := models.UserRole{
-					UserID: userID,
-					RoleID: roleId,
-				}
-				if err := core.DB.GetDB().Create(&userRole).Error; err != nil {
-					// 记录错误但不中断流程
-					continue
+			// 更新角色关联：先删除旧关联，再添加新关联
+			if err := tx.Table("sys_user_role").Where("user_id = ?", userID).Delete(&models.UserRole{}).Error; err != nil {
+				return fmt.Errorf("删除用户角色关联失败: %w", err)
+			}
+			if len(req.RoleIds) > 0 {
+				for _, roleID := range req.RoleIds {
+					if err := tx.Table("sys_user_role").Create(&models.UserRole{
+						UserID: userID,
+						RoleID: roleID,
+					}).Error; err != nil {
+						return fmt.Errorf("分配角色失败: %w", err)
+					}
 				}
 			}
-		} else {
-			// 如果没有传递角色ID，删除所有角色关联
-			core.DB.GetDB().Where("user_id = ?", userID).Delete(&models.UserRole{})
+
+			// 更新岗位关联：先删除旧关联，再添加新关联
+			if err := tx.Table("sys_user_post").Where("user_id = ?", userID).Delete(&models.UserPost{}).Error; err != nil {
+				return fmt.Errorf("删除用户岗位关联失败: %w", err)
+			}
+			if len(req.PostIds) > 0 {
+				for _, postID := range req.PostIds {
+					if err := tx.Table("sys_user_post").Create(&models.UserPost{
+						UserID: userID,
+						PostID: postID,
+					}).Error; err != nil {
+						return fmt.Errorf("分配岗位失败: %w", err)
+					}
+				}
+			}
+
+			return nil
+		}); err != nil {
+			response.Error(c, response.ErrServerError, err.Error())
+			return
 		}
 
-		// 清除用户缓存
+		// 清除用户相关缓存
 		if err := core.UserCacheService.InvalidateUserCache(c.Request.Context(), userID); err != nil {
+			// 记录错误但不影响响应
+		}
+		if err := core.PostCacheService.InvalidateUserPostCache(c.Request.Context(), userID); err != nil {
 			// 记录错误但不影响响应
 		}
 
 		// 记录操作日志
 		recordOperLog(c, core, "用户管理", OperTypeUpdate)
 
-		response.Success(c, nil)
+		response.Success(c, gin.H{"message": "更新成功"})
 	}
 }
 
@@ -550,7 +451,8 @@ func updateUser(core *core.Core) gin.HandlerFunc {
 // @Produce json
 // @Param id path string true "用户ID"
 // @Success 200 {object} response.Response
-// @Router /users/{id}/delete [post]
+// @Failure 400 {object} response.Response
+// @Router /users/{id} [delete]
 func deleteUser(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID := c.Param("id")
@@ -566,9 +468,26 @@ func deleteUser(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		// 软删除用户
-		if err := core.DB.GetDB().Delete(&user).Error; err != nil {
-			response.Error(c, response.ErrServerError, "删除用户失败")
+		// 使用事务删除用户及其关联数据
+		if err := core.DB.GetDB().Transaction(func(tx *gorm.DB) error {
+			// 删除用户角色关联
+			if err := tx.Table("sys_user_role").Where("user_id = ?", userID).Delete(&models.UserRole{}).Error; err != nil {
+				return fmt.Errorf("删除用户角色关联失败: %w", err)
+			}
+
+			// 删除用户岗位关联
+			if err := tx.Table("sys_user_post").Where("user_id = ?", userID).Delete(&models.UserPost{}).Error; err != nil {
+				return fmt.Errorf("删除用户岗位关联失败: %w", err)
+			}
+
+			// 软删除用户
+			if err := tx.Delete(&user).Error; err != nil {
+				return fmt.Errorf("删除用户失败: %w", err)
+			}
+
+			return nil
+		}); err != nil {
+			response.Error(c, response.ErrServerError, err.Error())
 			return
 		}
 
@@ -577,10 +496,13 @@ func deleteUser(core *core.Core) gin.HandlerFunc {
 			// 记录错误但不影响响应
 		}
 
+		// 清除用户岗位缓存
+		if err := core.PostCacheService.InvalidateUserPostCache(c.Request.Context(), userID); err != nil {
+			// 记录错误但不影响响应
+		}
+
 		// 记录操作日志
 		recordOperLog(c, core, "用户管理", OperTypeDelete)
-
-		// TODO: 删除用户角色和岗位关联
 
 		response.Success(c, nil)
 	}
@@ -603,9 +525,26 @@ func batchDeleteUsers(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		// 批量软删除用户
-		if err := core.DB.GetDB().Where("id IN ?", req.Ids).Delete(&models.User{}).Error; err != nil {
-			response.Error(c, response.ErrServerError, "批量删除用户失败")
+		// 使用事务批量删除用户及其关联数据
+		if err := core.DB.GetDB().Transaction(func(tx *gorm.DB) error {
+			// 批量删除用户角色关联
+			if err := tx.Table("sys_user_role").Where("user_id IN ?", req.Ids).Delete(&models.UserRole{}).Error; err != nil {
+				return fmt.Errorf("删除用户角色关联失败: %w", err)
+			}
+
+			// 批量删除用户岗位关联
+			if err := tx.Table("sys_user_post").Where("user_id IN ?", req.Ids).Delete(&models.UserPost{}).Error; err != nil {
+				return fmt.Errorf("删除用户岗位关联失败: %w", err)
+			}
+
+			// 批量软删除用户
+			if err := tx.Where("id IN ?", req.Ids).Delete(&models.User{}).Error; err != nil {
+				return fmt.Errorf("批量删除用户失败: %w", err)
+			}
+
+			return nil
+		}); err != nil {
+			response.Error(c, response.ErrServerError, err.Error())
 			return
 		}
 
@@ -617,208 +556,6 @@ func batchDeleteUsers(core *core.Core) gin.HandlerFunc {
 		// 记录操作日志
 		recordOperLog(c, core, "用户管理", OperTypeDelete)
 
-		// TODO: 删除用户角色和岗位关联
-
 		response.Success(c, nil)
-	}
-}
-
-// updateUserStatus 更改用户状态
-// @Summary 更改用户状态
-// @Description 启用或禁用用户
-// @Tags 用户管理
-// @Accept json
-// @Produce json
-// @Param id path string true "用户ID"
-// @Param request body UserStatusRequest true "状态信息"
-// @Success 200 {object} response.Response
-// @Router /users/{id}/status [post]
-func updateUserStatus(core *core.Core) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		userID := c.Param("id")
-		if userID == "" {
-			response.Error(c, response.ErrBadRequest, "用户ID不能为空")
-			return
-		}
-
-		var req struct {
-			Status int `json:"status"`
-		}
-		if err := c.ShouldBindJSON(&req); err != nil {
-			// 尝试从原始请求中读取
-			var rawReq map[string]interface{}
-			if err2 := c.ShouldBindJSON(&rawReq); err2 != nil {
-				response.Error(c, response.ErrBadRequest, "请求参数错误: "+err.Error())
-				return
-			}
-			// 尝试转换status值
-			if statusVal, ok := rawReq["status"]; ok {
-				switch v := statusVal.(type) {
-				case float64:
-					req.Status = int(v)
-				case string:
-					if v == "0" || v == "1" {
-						req.Status = 0
-					} else {
-						req.Status = 1
-					}
-				case int:
-					req.Status = v
-				case bool:
-					if v {
-						req.Status = 0
-					} else {
-						req.Status = 1
-					}
-				default:
-					response.Error(c, response.ErrBadRequest, "status字段格式错误")
-					return
-				}
-			} else {
-				response.Error(c, response.ErrBadRequest, "缺少status字段")
-				return
-			}
-		}
-
-		// 检查用户是否存在
-		var user models.User
-		if err := core.DB.GetDB().Where("id = ?", userID).First(&user).Error; err != nil {
-			response.Error(c, response.ErrNotFound, "用户不存在")
-			return
-		}
-
-		// 更新用户状态
-		if err := core.DB.GetDB().Model(&user).Update("status", models.UserStatus(req.Status)).Error; err != nil {
-			response.Error(c, response.ErrServerError, "更新用户状态失败")
-			return
-		}
-
-		// 清除用户缓存
-		if err := core.UserCacheService.InvalidateUserCache(c.Request.Context(), userID); err != nil {
-			// 记录错误但不影响响应
-		}
-
-		// 记录操作日志
-		recordOperLog(c, core, "用户管理", OperTypeUpdate)
-
-		response.Success(c, gin.H{"message": "更新状态成功"})
-	}
-}
-
-// resetPassword 重置密码
-// @Summary 重置密码
-// @Description 重置用户密码
-// @Tags 用户管理
-// @Accept json
-// @Produce json
-// @Param id path string true "用户ID"
-// @Success 200 {object} response.Response
-// @Router /users/{id}/reset-password [post]
-func resetPassword(core *core.Core) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		userID := c.Param("id")
-		if userID == "" {
-			response.Error(c, response.ErrBadRequest, "用户ID不能为空")
-			return
-		}
-
-		var req struct {
-			Password string `json:"password"`
-		}
-		if err := c.ShouldBindJSON(&req); err != nil {
-			response.Error(c, response.ErrBadRequest, "请求参数错误")
-			return
-		}
-
-		// 验证密码
-		if req.Password == "" {
-			response.Error(c, response.ErrBadRequest, "密码不能为空")
-			return
-		}
-		if len(req.Password) < 6 {
-			response.Error(c, response.ErrBadRequest, "密码长度不能少于6位")
-			return
-		}
-		if len(req.Password) > 20 {
-			response.Error(c, response.ErrBadRequest, "密码长度不能超过20位")
-			return
-		}
-
-		// 检查用户是否存在
-		var user models.User
-		if err := core.DB.GetDB().Where("id = ?", userID).First(&user).Error; err != nil {
-			response.Error(c, response.ErrNotFound, "用户不存在")
-			return
-		}
-
-		// 密码加密
-		pwdManager := core.PwdManager
-		hashedPassword, err := pwdManager.HashPassword(req.Password)
-		if err != nil {
-			response.Error(c, response.ErrServerError, "密码加密失败")
-			return
-		}
-
-		// 更新密码
-		if err := core.DB.GetDB().Model(&user).Updates(map[string]interface{}{
-			"password":        hashedPassword,
-			"pwd_update_time": time.Now(),
-		}).Error; err != nil {
-			response.Error(c, response.ErrServerError, "重置密码失败")
-			return
-		}
-
-		// 记录操作日志
-		recordOperLog(c, core, "用户管理", OperTypeUpdate)
-
-		response.Success(c, gin.H{
-			"message": "密码重置成功",
-		})
-	}
-}
-
-// exportUsers 导出用户
-// @Summary 导出用户
-// @Description 导出用户数据到Excel
-// @Tags 用户管理
-// @Accept json
-// @Produce json
-// @Param request body UserListRequest true "查询条件"
-// @Success 200 {file} file
-// @Router /users/export [post]
-func exportUsers(core *core.Core) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// TODO: 实现用户导出功能
-		response.Error(c, response.ErrNotImplemented, "功能暂未实现")
-	}
-}
-
-// importUsers 导入用户
-// @Summary 导入用户
-// @Description 从Excel导入用户数据
-// @Tags 用户管理
-// @Accept multipart/form-data
-// @Produce json
-// @Param file formData file true "Excel文件"
-// @Success 200 {object} response.Response
-// @Router /users/import [post]
-func importUsers(core *core.Core) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// TODO: 实现用户导入功能
-		response.Error(c, response.ErrNotImplemented, "功能暂未实现")
-	}
-}
-
-// downloadTemplate 下载导入模板
-// @Summary 下载导入模板
-// @Description 下载用户导入Excel模板
-// @Tags 用户管理
-// @Produce application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
-// @Success 200 {file} file
-// @Router /users/template [get]
-func downloadTemplate(core *core.Core) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// TODO: 实现模板下载功能
-		response.Error(c, response.ErrNotImplemented, "功能暂未实现")
 	}
 }

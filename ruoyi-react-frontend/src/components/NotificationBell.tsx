@@ -28,7 +28,7 @@ const NotificationBell: FC = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const hasLoadedRef = useRef(false);
 
-  // 加载通知列表（移除 setNotifications 依赖，避免循环）
+  // 加载通知列表
   const loadNotifications = useCallback(async () => {
     try {
       const response = await getNotificationList({ current: 1, pageSize: 10 });
@@ -36,7 +36,7 @@ const NotificationBell: FC = () => {
     } catch (error) {
       console.error('加载通知列表失败:', error);
     }
-  }, []); // 空依赖数组
+  }, [setNotifications]); // setNotifications 是稳定的引用
 
   // 下拉框打开时加载通知列表（只加载一次）
   useEffect(() => {

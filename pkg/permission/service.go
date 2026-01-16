@@ -48,14 +48,14 @@ func (s *service) createDefaultAdminRole(db *gorm.DB) error {
 
 	if count == 0 {
 		adminRole := models.Role{
-			RoleName:         "超级管理员",
-			RoleKey:          "admin",
-			RoleSort:         1,
-			DataScope:        models.DataScopeAll,
+			RoleName:          "超级管理员",
+			RoleKey:           "admin",
+			RoleSort:          1,
+			DataScope:         models.DataScopeAll,
 			MenuCheckStrictly: true,
 			DeptCheckStrictly: true,
-			Status:           models.RoleStatusEnabled,
-			Remark:           "超级管理员",
+			Status:            models.RoleStatusEnabled,
+			Remark:            "超级管理员",
 		}
 
 		if err := db.Create(&adminRole).Error; err != nil {

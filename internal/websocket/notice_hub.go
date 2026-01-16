@@ -28,7 +28,7 @@ type Client struct {
 
 // NoticeMessage 通知消息
 type NoticeMessage struct {
-	Type        string `json:"type"`         // new_notice, unread_count
+	Type        string `json:"type"` // new_notice, unread_count
 	NoticeID    string `json:"noticeId,omitempty"`
 	Title       string `json:"title,omitempty"`
 	Content     string `json:"content,omitempty"`

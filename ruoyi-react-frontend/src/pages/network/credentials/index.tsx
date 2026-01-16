@@ -24,11 +24,9 @@ import {
   SearchOutlined,
   ReloadOutlined,
   KeyOutlined,
-  EyeInvisibleOutlined,
-  EyeOutlined,
   ApiOutlined,
 } from '@ant-design/icons';
-import type { AuthCredential } from '@/types';
+import type { AuthCredential, BaseResponse, PageResponse } from '@/types';
 import { post } from '@/lib/api';
 import { useTableManager } from '@/hooks/useTableManager';
 import { withErrorHandling } from '@/utils/errorHandler';
@@ -86,9 +84,9 @@ const CredentialManagement: FC = () => {
       if (values.searchProtocolType) {
         searchParams.protocolType = values.searchProtocolType;
       }
-      const result = await post('/network/credentials/list', searchParams);
+      const result = await post<BaseResponse<PageResponse<AuthCredential>>>('/network/credentials/list', searchParams);
       // 更新统计数据
-      updateStatistics(result.data.list || []);
+      updateStatistics(result.data?.list || []);
       return result.data;
     }
   );
@@ -96,8 +94,8 @@ const CredentialManagement: FC = () => {
   // 加载统计数据
   const loadStatistics = async () => {
     try {
-      const result = await post('/network/credentials/list', { current: 1, pageSize: 10000 });
-      const allCredentials = result.data.list || [];
+      const result = await post<BaseResponse<PageResponse<AuthCredential>>>('/network/credentials/list', { current: 1, pageSize: 10000 });
+      const allCredentials = result.data?.list || [];
       updateStatistics(allCredentials);
     } catch (error) {
       console.error('加载统计数据失败:', error);

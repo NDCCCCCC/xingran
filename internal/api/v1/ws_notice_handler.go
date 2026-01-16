@@ -6,8 +6,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	gorilla_ws "github.com/ruoyi-next/ruoyi-go-backend/internal/websocket"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
+	gorilla_ws "github.com/ruoyi-next/ruoyi-go-backend/internal/websocket"
 )
 
 var upgrader = websocket.Upgrader{

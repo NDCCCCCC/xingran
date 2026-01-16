@@ -10,7 +10,6 @@ import {
   InputNumber,
   Select,
   Popconfirm,
-  Tag,
   Card,
   Row,
   Col,
@@ -31,7 +30,7 @@ import type { Post } from '@/types';
 import { post } from '@/lib/api';
 import { useTableManager } from '@/hooks/useTableManager';
 import { handleApiError, handleSuccess } from '@/utils/errorHandler';
-import { createStatusColumn, createDateTimeColumn, createActionColumn } from '@/utils/tableHelpers';
+import { createStatusColumn, createDateTimeColumn } from '@/utils/tableHelpers';
 import ActionButtons from '@/components/shared/ActionButtons';
 
 const { Option } = Select;

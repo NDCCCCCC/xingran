@@ -18,7 +18,6 @@ let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 let reconnectAttempts = 0;
 let authStateUnsubscribe: (() => void) | null = null;
-let currentAuthState: boolean | null = null;
 
 // 清理定时器
 function clearTimers() {
@@ -48,23 +47,19 @@ function connect() {
   const { setWsConnected, handleWsMessage, setUnreadCount } = useNoticeStore.getState();
 
   if (!isAuthenticated) {
-    console.log('[WebSocket] 未认证，跳过连接');
     return;
   }
 
   // 如果已经连接或在连接中，不重复连接
   if (wsInstance?.readyState === WebSocket.OPEN || wsInstance?.readyState === WebSocket.CONNECTING) {
-    console.log('[WebSocket] 已连接或正在连接，跳过');
     return;
   }
 
   try {
     const url = buildWebSocketUrl();
-    console.log('[WebSocket] 正在连接:', url);
     wsInstance = new WebSocket(url);
 
     wsInstance.onopen = () => {
-      console.log('[WebSocket] 连接成功');
       setWsConnected(true);
       reconnectAttempts = 0;
       startHeartbeat();
@@ -101,7 +96,6 @@ function connect() {
     };
 
     wsInstance.onclose = (event) => {
-      console.log('[WebSocket] 连接关闭:', event.code, event.reason);
       setWsConnected(false);
       clearTimers();
 
@@ -109,27 +103,23 @@ function connect() {
       if (event.code !== 1000 && isAuthenticated) {
         if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
           reconnectAttempts++;
-          console.log(`[WebSocket] 尝试重连 (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
           reconnectTimer = setTimeout(() => {
             connect();
           }, RECONNECT_INTERVAL);
-        } else {
-          console.error('[WebSocket] 达到最大重连次数，停止重连');
         }
       }
     };
 
-    wsInstance.onerror = (error) => {
-      console.error('[WebSocket] 连接错误:', error);
+    wsInstance.onerror = () => {
+      // WebSocket 连接错误，静默处理
     };
   } catch (error) {
-    console.error('[WebSocket] 创建连接失败:', error);
+    // WebSocket 创建失败，静默处理
   }
 }
 
 // 断开连接
 function disconnect() {
-  console.log('[WebSocket] 主动断开连接');
   clearTimers();
   reconnectAttempts = 0;
 
@@ -162,20 +152,14 @@ export function useWebSocket() {
   useEffect(() => {
     // 如果已经订阅过，跳过
     if (authStateUnsubscribe) {
-      console.log('[WebSocket] 已订阅，跳过重复订阅');
       return;
     }
-
-    console.log('[WebSocket] 初始化认证状态监听');
 
     // 监听认证状态变化
     // zustand 的 subscribe 会立即调用一次回调函数并传入当前值
     authStateUnsubscribe = useAuthStore.subscribe(
-      (state) => state.isAuthenticated,
-      (isAuthenticated) => {
-        console.log('[WebSocket] 认证状态变化:', isAuthenticated);
-        currentAuthState = isAuthenticated;
-        if (isAuthenticated) {
+      (state) => {
+        if (state.isAuthenticated) {
           connect();
         } else {
           disconnect();
@@ -185,7 +169,6 @@ export function useWebSocket() {
 
     return () => {
       // 组件卸载时清理（但不关闭 WebSocket 连接，因为其他组件可能还在使用）
-      console.log('[WebSocket] 组件卸载，不清理连接');
     };
   }, []); // 空依赖数组，只运行一次
 

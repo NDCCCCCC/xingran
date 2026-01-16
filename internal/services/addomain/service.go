@@ -86,10 +86,10 @@ type ADSyncResult = SyncResult
 
 // ADOUNode AD OU节点
 type ADOUNode struct {
-	ID       string       `json:"id"`
-	OUDN     string       `json:"ouDn"`
-	OUName   string       `json:"ouName"`
-	Children []ADOUNode   `json:"children,omitempty"`
+	ID       string     `json:"id"`
+	OUDN     string     `json:"ouDn"`
+	OUName   string     `json:"ouName"`
+	Children []ADOUNode `json:"children,omitempty"`
 }
 
 // ADSyncRequest AD同步请求

@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"gorm.io/gorm"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"gorm.io/gorm"
 )
 
 // ARPCollector ARP表采集器
@@ -121,9 +121,9 @@ func (c *ARPCollector) CollectAllDevices(ctx context.Context) ([]*ARPCollectionR
 func (c *ARPCollector) getARPCommand(vendor models.DeviceVendor) string {
 	commands := map[models.DeviceVendor]string{
 		models.VendorHuawei: "display arp",
-		models.VendorH3C:     "display arp",
-		models.VendorRuijie:  "show arp",
-		models.VendorMaipu:   "show arp",
+		models.VendorH3C:    "display arp",
+		models.VendorRuijie: "show arp",
+		models.VendorMaipu:  "show arp",
 	}
 	if cmd, ok := commands[vendor]; ok {
 		return cmd
@@ -189,7 +189,8 @@ func (c *ARPCollector) parseARPLine(line string, vendor models.DeviceVendor) (AR
 
 // parseHuaweiARPLine 解析华为/H3C ARP行
 // 格式: IP ADDRESS      MAC ADDRESS     VLAN      INTERFACE
-//       192.168.1.1     00e0-fc12-3456  10        GigabitEthernet0/0/1
+//
+//	192.168.1.1     00e0-fc12-3456  10        GigabitEthernet0/0/1
 func (c *ARPCollector) parseHuaweiARPLine(fields []string) (ARPEntry, bool) {
 	if len(fields) < 4 {
 		return ARPEntry{}, false
@@ -227,7 +228,8 @@ func (c *ARPCollector) parseHuaweiARPLine(fields []string) (ARPEntry, bool) {
 
 // parseRuijieARPLine 解析锐捷/迈普ARP行
 // 格式: Protocol  Address          Hardware Address
-//       Internet  192.168.1.1      00e0.fc12.3456
+//
+//	Internet  192.168.1.1      00e0.fc12.3456
 func (c *ARPCollector) parseRuijieARPLine(fields []string) (ARPEntry, bool) {
 	if len(fields) < 3 {
 		return ARPEntry{}, false

@@ -1,4 +1,4 @@
-export { NoticeStatistics } from './NoticeStatistics';
+export { NoticeStatisticsCard } from './NoticeStatistics';
 export { StatisticsDrawer } from './StatisticsDrawer';
 export { TargetSelector } from './TargetSelector';
 export { ChannelSelector } from './ChannelSelector';

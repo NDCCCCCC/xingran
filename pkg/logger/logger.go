@@ -28,9 +28,9 @@ const (
 )
 
 var (
-	log          *logrus.Logger
-	fileLogger   *logrus.Logger
-	fileWriter   io.WriteCloser
+	log        *logrus.Logger
+	fileLogger *logrus.Logger
+	fileWriter io.WriteCloser
 )
 
 // Config 日志配置

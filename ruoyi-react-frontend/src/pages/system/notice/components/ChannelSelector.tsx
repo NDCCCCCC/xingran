@@ -71,7 +71,7 @@ export const ChannelSelector: React.FC<ChannelSelectorProps> = ({
             {apiConfigs.map((config) => (
               <Option key={config.id} value={config.id}>
                 {config.configName}
-                {config.configType === 'webhook' && ` (${config.httpMethod})`}
+                {config.configType === 'webhook' && ` (${config.apiMethod})`}
               </Option>
             ))}
           </Select>

@@ -27,9 +27,9 @@ func NewNotificationConfigService(db *gorm.DB) *NotificationConfigService {
 
 // EmailConfigListRequest 邮箱配置列表请求
 type EmailConfigListRequest struct {
-	Page     int    `json:"page"`
-	PageSize int    `json:"pageSize"`
-	Status   *int   `json:"status"`
+	Page     int  `json:"page"`
+	PageSize int  `json:"pageSize"`
+	Status   *int `json:"status"`
 }
 
 // ListEmailConfigs 获取邮箱配置列表
@@ -139,10 +139,10 @@ func (s *NotificationConfigService) DeleteEmailConfig(ctx context.Context, id st
 
 // APINotificationConfigListRequest API通知配置列表请求
 type APINotificationConfigListRequest struct {
-	Page       int              `json:"page"`
-	PageSize   int              `json:"pageSize"`
+	Page       int                   `json:"page"`
+	PageSize   int                   `json:"pageSize"`
 	ConfigType *models.APIConfigType `json:"configType"`
-	Status     *int             `json:"status"`
+	Status     *int                  `json:"status"`
 }
 
 // ListAPINotificationConfigs 获取API通知配置列表

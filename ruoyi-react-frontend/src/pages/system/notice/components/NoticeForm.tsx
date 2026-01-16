@@ -1,3 +1,4 @@
+import React from 'react';
 import { Form, Input, Select, Button, Modal, Row, Col, Radio, Switch, DatePicker } from 'antd';
 import MDEditor from '@uiw/react-md-editor';
 import '@uiw/react-md-editor/markdown-editor.css';
@@ -8,7 +9,6 @@ import type { Notice } from '@/types/notice';
 import type { APINotificationConfig } from '@/lib/notificationConfigApi';
 import type { Target } from '../hooks/useTargetSelector';
 import type { ExecutionType, RecurrenceType } from '@/types/notice';
-import dayjs from 'dayjs';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -256,17 +256,19 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
 
         <Form.Item name="noticeContent" label="内容" rules={[{ required: true, message: '请输入公告内容' }]}>
           {isMarkdown ? (
-            <MDEditor
-              value={markdownContent}
-              onChange={(val) => {
-                const content = val || '';
-                onMarkdownContentChange(content);
-                form.setFieldValue('noticeContent', content);
-              }}
-              preview="live"
-              height={400}
-              data-color-mode="light"
-            />
+            <React.Fragment>
+              {React.createElement(MDEditor as any, {
+                value: markdownContent,
+                onChange: (val: string | undefined) => {
+                  const content = val || '';
+                  onMarkdownContentChange(content);
+                  form.setFieldValue('noticeContent', content);
+                },
+                preview: 'live',
+                height: 400,
+                'data-color-mode': 'light',
+              })}
+            </React.Fragment>
           ) : (
             <TextArea
               rows={10}

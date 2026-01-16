@@ -313,7 +313,7 @@ func getADGroupDetail(core *core.Core) gin.HandlerFunc {
 		// 先获取配置列表找到对应的configID，然后使用DN查询
 		// 简化实现：直接返回ID
 		response.Success(c, gin.H{
-			"id": id,
+			"id":      id,
 			"message": "功能开发中",
 		})
 		_ = service
@@ -377,7 +377,7 @@ func getADUserDetail(core *core.Core) gin.HandlerFunc {
 		service := addomain.NewADDomainService(core.GetDB())
 		// 简化实现：直接返回ID
 		response.Success(c, gin.H{
-			"id": id,
+			"id":      id,
 			"message": "功能开发中",
 		})
 		_ = service
@@ -392,7 +392,7 @@ func listADSyncLogs(core *core.Core) gin.HandlerFunc {
 		var req struct {
 			ConfigID string `json:"configId,omitempty"`
 			Current  int    `json:"current"`
-			PageSize  int    `json:"pageSize"`
+			PageSize int    `json:"pageSize"`
 		}
 
 		if err := c.ShouldBindJSON(&req); err != nil {

@@ -72,47 +72,47 @@ export const WeeklyView: React.FC<WeeklyViewProps> = ({
                 }}
                 styles={{ body: { padding: '8px', height: '100%', overflow: 'auto' } }}
               >
-                <div style={{ marginBottom: '6px' }}>
-                  <Text
-                    strong
-                    style={{
-                      fontSize: '13px',
-                      color: isToday ? '#1890ff' : undefined,
-                    }}
-                  >
-                    {getWeekdayText(day)}
-                  </Text>
-                  <br />
-                  <Text style={{ fontSize: '12px', color: '#999' }}>
-                    {day.format('MM-DD')}
-                  </Text>
+                <div style={{ display: 'flex', alignItems: 'flex-start', height: '100%' }}>
+                  <div style={{ marginRight: '8px', minWidth: '50px' }}>
+                    <Text
+                      strong
+                      style={{
+                        fontSize: '13px',
+                        color: isToday ? '#1890ff' : undefined,
+                        display: 'block',
+                      }}
+                    >
+                      {getWeekdayText(day)}
+                    </Text>
+                    <Text style={{ fontSize: '12px', color: '#999', display: 'block' }}>
+                      {day.format('MM-DD')}
+                    </Text>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    {members.length > 0 ? (
+                      <Space size="small" wrap>
+                        {members.map((member, index) => (
+                          <Badge
+                            key={index}
+                            color={getDutyTypeBadgeColor(member.dutyType)}
+                            text={
+                              <span
+                                style={{
+                                  fontSize: '12px',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                {member.username}
+                              </span>
+                            }
+                          />
+                        ))}
+                      </Space>
+                    ) : (
+                      <Text style={{ fontSize: '12px', color: '#ccc' }}>无值班</Text>
+                    )}
+                  </div>
                 </div>
-                <Space orientation="vertical" size="small" style={{ width: '100%' }}>
-                  {members.length > 0 ? (
-                    members.map((member, index) => (
-                      <Badge
-                        key={index}
-                        color={getDutyTypeBadgeColor(member.dutyType)}
-                        text={
-                          <span
-                            style={{
-                              fontSize: '12px',
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              display: 'block',
-                              maxWidth: '80px',
-                            }}
-                          >
-                            {member.username}
-                          </span>
-                        }
-                      />
-                    ))
-                  ) : (
-                    <Text style={{ fontSize: '12px', color: '#ccc' }}>无值班</Text>
-                  )}
-                </Space>
               </Card>
             </Col>
           );

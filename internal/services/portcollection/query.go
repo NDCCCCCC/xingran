@@ -94,23 +94,23 @@ func (s *QueryService) CleanOldRecords(ctx context.Context, days int) (int64, er
 
 // ListRequest 查询请求
 type ListRequest struct {
-	Current              int     `json:"current"`
-	PageSize             int     `json:"pageSize"`
-	DeviceID             string  `json:"deviceId"`
-	InterfaceName        string  `json:"interfaceName"`
-	AdminStatus          string  `json:"adminStatus"`
-	OperStatus           string  `json:"operStatus"`
-	Dot1xEnabled         *bool   `json:"dot1xEnabled"`
-	PortSecurityEnabled  *bool   `json:"portSecurityEnabled"`
+	Current             int    `json:"current"`
+	PageSize            int    `json:"pageSize"`
+	DeviceID            string `json:"deviceId"`
+	InterfaceName       string `json:"interfaceName"`
+	AdminStatus         string `json:"adminStatus"`
+	OperStatus          string `json:"operStatus"`
+	Dot1xEnabled        *bool  `json:"dot1xEnabled"`
+	PortSecurityEnabled *bool  `json:"portSecurityEnabled"`
 }
 
 // StatsResult 统计结果
 type StatsResult struct {
-	TotalRecords        int64      `json:"totalRecords"`
-	UniqueDevices       int64      `json:"uniqueDevices"`
-	Dot1xEnabledCount   int64      `json:"dot1xEnabledCount"`
-	SecurityEnabledCount int64     `json:"securityEnabledCount"`
-	UpPortsCount        int64      `json:"upPortsCount"`
-	DownPortsCount      int64      `json:"downPortsCount"`
-	LatestCollection    *time.Time `json:"latestCollection"`
+	TotalRecords         int64      `json:"totalRecords"`
+	UniqueDevices        int64      `json:"uniqueDevices"`
+	Dot1xEnabledCount    int64      `json:"dot1xEnabledCount"`
+	SecurityEnabledCount int64      `json:"securityEnabledCount"`
+	UpPortsCount         int64      `json:"upPortsCount"`
+	DownPortsCount       int64      `json:"downPortsCount"`
+	LatestCollection     *time.Time `json:"latestCollection"`
 }

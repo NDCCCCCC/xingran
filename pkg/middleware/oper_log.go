@@ -34,11 +34,11 @@ func DefaultOperLogConfig() *OperLogConfig {
 			"/ad-domain",
 		},
 		ExcludePaths: []string{
-			"/list",      // 列表查询不记录
-			"/get",       // 获取详情不记录
-			"/export",    // 导出操作单独处理
-			"/import",    // 导入操作单独处理
-			"/download",  // 下载操作不记录
+			"/list",     // 列表查询不记录
+			"/get",      // 获取详情不记录
+			"/export",   // 导出操作单独处理
+			"/import",   // 导入操作单独处理
+			"/download", // 下载操作不记录
 		},
 	}
 }

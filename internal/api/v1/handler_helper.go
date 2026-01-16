@@ -224,9 +224,9 @@ func derefString(s *string) string {
 
 // bindAndParseRoleRequest 绑定并解析角色请求参数
 func bindAndParseRoleRequest(c *gin.Context) (*struct {
-	RoleName string
-	RoleKey  string
-	RoleSort int
+	RoleName  string
+	RoleKey   string
+	RoleSort  int
 	DataScope int
 	Status    int
 	Remark    *string
@@ -234,14 +234,14 @@ func bindAndParseRoleRequest(c *gin.Context) (*struct {
 	DeptIds   []string
 }, bool) {
 	var req struct {
-		RoleName string   `json:"roleName"`
-		RoleKey  string   `json:"roleKey"`
-		RoleSort int      `json:"roleSort"`
-		DataScope int     `json:"dataScope"`
-		Status   int      `json:"status"`
-		Remark   *string  `json:"remark"`
-		MenuIds  []string `json:"menuIds"`
-		DeptIds  []string `json:"deptIds"`
+		RoleName  string   `json:"roleName"`
+		RoleKey   string   `json:"roleKey"`
+		RoleSort  int      `json:"roleSort"`
+		DataScope int      `json:"dataScope"`
+		Status    int      `json:"status"`
+		Remark    *string  `json:"remark"`
+		MenuIds   []string `json:"menuIds"`
+		DeptIds   []string `json:"deptIds"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -294,9 +294,9 @@ func bindAndParseRoleRequest(c *gin.Context) (*struct {
 	}
 
 	result := struct {
-		RoleName string
-		RoleKey  string
-		RoleSort int
+		RoleName  string
+		RoleKey   string
+		RoleSort  int
 		DataScope int
 		Status    int
 		Remark    *string

@@ -1,7 +1,6 @@
-import { Tag } from 'antd';
+import { Tag, Button, Space } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
-import { Button, Space } from 'antd';
 
 /**
  * 表格配置工具

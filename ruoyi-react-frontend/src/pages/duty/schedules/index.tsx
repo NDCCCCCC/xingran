@@ -1,4 +1,9 @@
-import { useState, useEffect } from 'react';
+/**
+ * 值班排班管理页面
+ * Duty Schedule Management Page
+ */
+
+import { useState, useEffect, type FC } from 'react';
 import {
   Button,
   Form,
@@ -17,6 +22,7 @@ import {
   Badge,
   Row,
   Col,
+  Typography,
 } from 'antd';
 import {
   PlusOutlined,
@@ -30,151 +36,35 @@ import {
   RightOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
-import {
-  Typography,
-} from 'antd';
 import dayjs from 'dayjs';
-import {
-  getDutyScheduleList,
-  generateSchedule,
-  getTodayDuty,
-  swapDuty,
-  manualDuty,
-  deleteDutySchedule,
-  batchDeleteDutySchedules,
-  getDutyPoolList,
-  getUserList,
-  getMonthlyDutySchedule,
-  type DutySchedule,
-  type DutyPool,
-  type SimpleUser,
-  type MonthlyDutyMember,
-} from '@/lib/dutyApi';
 import type { Dayjs } from 'dayjs';
 
-const { Text } = Typography;
+import type { DutySchedule, DutyPool, SimpleUser, MonthlyDutyMember } from '@/lib/dutyApi';
 
+// 导入提取的模块
+import { DUTY_TYPE_OPTIONS, DUTY_STATUS_CONFIG, getDutyTypeColor, getDutyTypeText } from './constants';
+import {
+  formatDateTime,
+  formatDate,
+  getWeekdayText,
+  getWeekRangeText,
+  getWeekDays,
+  formatScheduleOptionLabel,
+  formatScheduleOptionContent,
+} from './utils';
+import { useScheduleData, useScheduleModals } from './hooks';
+
+const { Text } = Typography;
 const { RangePicker } = DatePicker;
 const { Option } = Select;
 
-import type { FC } from 'react';
+// ==================== 周视图控制 Hook ====================
 
-const DutySchedulePage: FC = () => {
-  const [form] = Form.useForm();
-  const [generateForm] = Form.useForm();
-  const [swapForm] = Form.useForm();
-  const [manualForm] = Form.useForm();
-
-  const [loading, setLoading] = useState(false);
-  const [dataSource, setDataSource] = useState<DutySchedule[]>([]);
-  const [total, setTotal] = useState(0);
-  const [current, setCurrent] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
-
-  const [generateModalVisible, setGenerateModalVisible] = useState(false);
-  const [swapModalVisible, setSwapModalVisible] = useState(false);
-  const [manualModalVisible, setManualModalVisible] = useState(false);
-
-  const [allSchedules, setAllSchedules] = useState<DutySchedule[]>([]); // 用于调班
-  const [currentWeekStart, setCurrentWeekStart] = useState(dayjs().startOf('week'));
-  const [weeklyDutyData, setWeeklyDutyData] = useState<Record<string, MonthlyDutyMember[]>>({});
-
-  // 值班池和用户数据
-  const [pools, setPools] = useState<DutyPool[]>([]);
-  const [users, setUsers] = useState<SimpleUser[]>([]);
-
-  const fetchList = async (page?: number, pageSize?: number) => {
-    setLoading(true);
-    try {
-      const values = form.getFieldsValue();
-      const result = await getDutyScheduleList({
-        current: page ?? current,
-        pageSize: pageSize ?? pageSize,
-        poolId: values.poolId,
-        userId: values.userId,
-        startDate: values.dateRange?.[0]?.format('YYYY-MM-DD'),
-        endDate: values.dateRange?.[1]?.format('YYYY-MM-DD'),
-        dutyType: values.dutyType,
-      });
-      setDataSource(result.data?.list ?? []);
-      setTotal(result.data?.total ?? 0);
-      setCurrent(result.data?.current ?? 1);
-      setPageSize(result.data?.page_size ?? 10);
-    } catch (error) {
-      message.error('获取排班列表失败');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchTodayDuty = async () => {
-    try {
-      await getTodayDuty();
-      // 暂时不使用今日值班数据
-    } catch (error) {
-      console.error('获取今日值班失败', error);
-    }
-  };
-
-  const fetchAllSchedules = async () => {
-    try {
-      const result = await getDutyScheduleList({ current: 1, pageSize: 1000 });
-      setAllSchedules(result.data?.list ?? []);
-    } catch (error) {
-      console.error('获取所有排班失败', error);
-    }
-  };
-
-  // 获取值班池列表（只获取启用的）
-  const fetchPools = async () => {
-    try {
-      const result = await getDutyPoolList({ current: 1, pageSize: 1000, status: 0 });
-      setPools(result.data?.list || []);
-    } catch (error) {
-      console.error('获取值班池列表失败', error);
-    }
-  };
-
-  // 获取用户列表（只获取启用的）
-  const fetchUsers = async () => {
-    try {
-      const result = await getUserList({ status: 0 });
-      setUsers(result.data?.list || []);
-    } catch (error) {
-      console.error('获取用户列表失败', error);
-    }
-  };
-
-  // 获取周度值班数据
-  const fetchWeeklyDuty = async (weekStart: Dayjs) => {
-    try {
-      const weekEnd = weekStart.endOf('week');
-      const year = weekStart.year();
-      const monthStart = weekStart.month() + 1;
-      const monthEnd = weekEnd.month() + 1;
-
-      // 如果周跨月，需要获取两个月的数据
-      if (monthStart === monthEnd) {
-        const result = await getMonthlyDutySchedule(year, monthStart);
-        setWeeklyDutyData(result.data || {});
-      } else {
-        // 跨月情况，获取两个月的数据并合并
-        const [result1, result2] = await Promise.all([
-          getMonthlyDutySchedule(year, monthStart),
-          getMonthlyDutySchedule(year, monthEnd),
-        ]);
-        setWeeklyDutyData({
-          ...(result1.data || {}),
-          ...(result2.data || {}),
-        });
-      }
-    } catch (error) {
-      console.error('获取周度值班失败', error);
-    }
-  };
-
-  // 周视图切换
+function useWeekView(
+  currentWeekStart: Dayjs,
+  setCurrentWeekStart: (weekStart: Dayjs) => void,
+  fetchWeeklyDuty: (weekStart: Dayjs) => Promise<void>
+) {
   const handlePrevWeek = () => {
     const newWeekStart = currentWeekStart.subtract(1, 'week');
     setCurrentWeekStart(newWeekStart);
@@ -193,178 +83,25 @@ const DutySchedulePage: FC = () => {
     fetchWeeklyDuty(todayWeekStart);
   };
 
-  // 获取周范围显示文本
-  const getWeekRangeText = () => {
-    const weekEnd = currentWeekStart.endOf('week');
-    return `${currentWeekStart.format('YYYY年MM月DD日')} - ${weekEnd.format('YYYY年MM月DD日')}`;
+  return {
+    handlePrevWeek,
+    handleNextWeek,
+    handleTodayWeek,
   };
+}
 
-  // 获取一周的日期数组
-  const getWeekDays = () => {
-    const days = [];
-    for (let i = 0; i < 7; i++) {
-      days.push(currentWeekStart.add(i, 'day'));
-    }
-    return days;
-  };
+// ==================== 表格列定义 ====================
 
-  // 获取星期几文本
-  const getWeekdayText = (day: Dayjs) => {
-    const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-    return weekdays[day.day()];
-  };
+interface DutyTableColumnsProps {
+  current: number;
+  pageSize: number;
+  handleDelete: (id: string) => void;
+}
 
-  // 获取值班类型颜色
-  const getDutyTypeBadgeColor = (type: string) => {
-    switch (type) {
-      case 'weekday':
-        return 'blue';
-      case 'weekend':
-        return 'orange';
-      case 'holiday':
-        return 'red';
-      default:
-        return 'default';
-    }
-  };
+function getDutyTableColumns(props: DutyTableColumnsProps): ColumnsType<DutySchedule> {
+  const { current, pageSize, handleDelete } = props;
 
-  useEffect(() => {
-    fetchList(1, 10);
-    fetchTodayDuty();
-    fetchAllSchedules();
-    fetchPools();
-    fetchUsers();
-    fetchWeeklyDuty(currentWeekStart);
-  }, []);
-
-  const handleTableChange = (pagination: TablePaginationConfig) => {
-    fetchList(pagination.current, pagination.pageSize);
-  };
-
-  const handleSearch = () => {
-    fetchList(1, 10);
-  };
-
-  const handleReset = () => {
-    form.resetFields();
-    fetchList(1, 10);
-  };
-
-  const handleGenerate = async () => {
-    try {
-      const values = await generateForm.validateFields();
-      const result = await generateSchedule({
-        poolId: values.poolId,
-        startDate: values.dateRange[0].format('YYYY-MM-DD'),
-        endDate: values.dateRange[1].format('YYYY-MM-DD'),
-        dutyType: values.dutyType,
-        clearExists: values.clearExists || false,
-      });
-      message.success(`成功生成 ${result.data?.count || 0} 条排班记录`);
-      setGenerateModalVisible(false);
-      fetchList();
-    } catch (error: any) {
-      if (error.errorFields) return;
-      message.error('生成排班失败');
-    }
-  };
-
-  const handleSwap = async () => {
-    try {
-      const values = await swapForm.validateFields();
-      await swapDuty({
-        fromScheduleId: values.fromScheduleId,
-        toScheduleId: values.toScheduleId,
-        reason: values.reason,
-      });
-      message.success('调班成功');
-      setSwapModalVisible(false);
-      fetchList();
-      fetchTodayDuty();
-    } catch (error: any) {
-      if (error.errorFields) return;
-      message.error('调班失败');
-    }
-  };
-
-  const handleManual = async () => {
-    try {
-      const values = await manualForm.validateFields();
-      await manualDuty({
-        poolId: values.poolId,
-        dutyDate: values.dutyDate.format('YYYY-MM-DD'),
-        dutyType: values.dutyType,
-        userIds: values.userIds,
-        reason: values.reason,
-      });
-      message.success('手动排班成功');
-      setManualModalVisible(false);
-      fetchList();
-      fetchTodayDuty();
-    } catch (error: any) {
-      if (error.errorFields) return;
-      message.error('手动排班失败');
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    try {
-      await deleteDutySchedule(id);
-      message.success('删除成功');
-      // 如果当前页只有一条数据且不是第一页，跳转到前一页
-      const newPage = dataSource.length === 1 && current > 1 ? current - 1 : current;
-      fetchList(newPage);
-      fetchTodayDuty();
-    } catch (error) {
-      message.error('删除失败');
-    }
-  };
-
-  const handleBatchDelete = async () => {
-    if (selectedRowKeys.length === 0) {
-      message.warning('请先选择要删除的排班记录');
-      return;
-    }
-    try {
-      await batchDeleteDutySchedules(selectedRowKeys as string[]);
-      message.success(`成功删除 ${selectedRowKeys.length} 条排班记录`);
-      setSelectedRowKeys([]);
-      // 如果删除后当前页没有数据了且不是第一页，跳转到前一页
-      const newPage = dataSource.length === selectedRowKeys.length && current > 1 ? current - 1 : current;
-      fetchList(newPage);
-      fetchTodayDuty();
-    } catch (error) {
-      message.error('批量删除失败');
-    }
-  };
-
-  const getDutyTypeColor = (type: string) => {
-    switch (type) {
-      case 'weekday':
-        return 'blue';
-      case 'weekend':
-        return 'orange';
-      case 'holiday':
-        return 'red';
-      default:
-        return 'default';
-    }
-  };
-
-  const getDutyTypeText = (type: string) => {
-    switch (type) {
-      case 'weekday':
-        return '工作日';
-      case 'weekend':
-        return '周末';
-      case 'holiday':
-        return '节假日';
-      default:
-        return type;
-    }
-  };
-
-  const columns: ColumnsType<DutySchedule> = [
+  return [
     {
       title: '序号',
       key: 'index',
@@ -376,7 +113,7 @@ const DutySchedulePage: FC = () => {
       dataIndex: 'scheduleDate',
       key: 'scheduleDate',
       width: 120,
-      render: (date: string) => dayjs(date).format('YYYY-MM-DD'),
+      render: formatDate,
     },
     {
       title: '星期',
@@ -407,7 +144,7 @@ const DutySchedulePage: FC = () => {
       dataIndex: 'dutyType',
       key: 'dutyType',
       width: 100,
-      render: (type: string) => <Tag color={getDutyTypeColor(type)}>{getDutyTypeText(type)}</Tag>,
+      render: (type: string) => <Tag color={getDutyTypeColor(type as any)}>{getDutyTypeText(type as any)}</Tag>,
     },
     {
       title: '状态',
@@ -415,10 +152,8 @@ const DutySchedulePage: FC = () => {
       key: 'status',
       width: 80,
       render: (status: number) => {
-        if (status === 0) return <Tag color="green">正常</Tag>;
-        if (status === 1) return <Tag color="orange">已调换</Tag>;
-        if (status === 2) return <Tag color="red">已取消</Tag>;
-        return <Tag>未知</Tag>;
+        const config = DUTY_STATUS_CONFIG[status];
+        return config ? <Tag color={config.color}>{config.text}</Tag> : <Tag>未知</Tag>;
       },
     },
     {
@@ -449,43 +184,113 @@ const DutySchedulePage: FC = () => {
       ),
     },
   ];
+}
+
+// ==================== 主组件 ====================
+
+const DutySchedulePage: FC = () => {
+  const [form] = Form.useForm();
+  const [current, setCurrent] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
+
+  // 使用数据管理 Hook
+  const {
+    dataSource,
+    total,
+    allSchedules,
+    pools,
+    users,
+    weeklyDutyData,
+    loading,
+    currentWeekStart,
+    fetchList,
+    fetchAllSchedules,
+    fetchPools,
+    fetchUsers,
+    fetchWeeklyDuty,
+    setCurrentWeekStart,
+  } = useScheduleData({ current, pageSize, searchForm: form });
+
+  // 使用周视图 Hook
+  const { handlePrevWeek, handleNextWeek, handleTodayWeek } = useWeekView(
+    currentWeekStart,
+    setCurrentWeekStart,
+    fetchWeeklyDuty
+  );
+
+  // 使用弹窗管理 Hook
+  const {
+    generateModalVisible,
+    swapModalVisible,
+    manualModalVisible,
+    generateForm,
+    swapForm,
+    manualForm,
+    openGenerateModal,
+    closeGenerateModal,
+    openSwapModal,
+    closeSwapModal,
+    openManualModal,
+    closeManualModal,
+    handleGenerate,
+    handleSwap,
+    handleManual,
+    handleDelete,
+    handleBatchDelete,
+  } = useScheduleModals({
+    onLoad: () => {
+      fetchList();
+      fetchAllSchedules();
+    },
+    allSchedules,
+    dataSource,
+    current,
+  });
+
+  // 初始化加载
+  useEffect(() => {
+    fetchList(1, 10);
+    fetchAllSchedules();
+    fetchPools();
+    fetchUsers();
+    fetchWeeklyDuty(currentWeekStart);
+  }, []);
+
+  const handleTableChange = (pagination: TablePaginationConfig) => {
+    setCurrent(pagination.current || 1);
+    setPageSize(pagination.pageSize || 10);
+    fetchList(pagination.current, pagination.pageSize);
+  };
+
+  const handleSearch = () => {
+    fetchList(1, 10);
+  };
+
+  const handleReset = () => {
+    form.resetFields();
+    fetchList(1, 10);
+  };
+
+  // 获取值班类型 Badge 颜色
+  const getDutyTypeBadgeColor = (type: string) => {
+    switch (type) {
+      case 'weekday':
+        return 'blue';
+      case 'weekend':
+        return 'orange';
+      case 'holiday':
+        return 'red';
+      default:
+        return 'default';
+    }
+  };
+
+  // 表格列
+  const columns = getDutyTableColumns({ current, pageSize, handleDelete });
 
   return (
     <div className="p-6">
-      {/* 今日值班展示 - 暂时隐藏 */}
-      {/* <Card
-        title={
-          <Space>
-            <CalendarOutlined />
-            <span>今日值班 - {dayjs().format('YYYY年MM月DD日')}</span>
-          </Space>
-        }
-        className="mb-4"
-        extra={
-          <Button type="primary" icon={<ReloadOutlined />} onClick={fetchTodayDuty}>
-            刷新
-          </Button>
-        }
-      >
-        {todayDuty.length > 0 ? (
-          <Space orientation="vertical" style={{ width: '100%' }} size="middle">
-            {todayDuty.map((item, index) => (
-              <Card key={index} size="small">
-                <Space>
-                  <Avatar icon={<UserOutlined />} />
-                  <Space orientation="vertical" size={0}>
-                    <Text strong>{item.nickName || item.username}</Text>
-                    <Text type="secondary">用户名: {item.username}</Text>
-                  </Space>
-                </Space>
-              </Card>
-            ))}
-          </Space>
-        ) : (
-          <Alert title="今日暂无值班人员" type="info" showIcon />
-        )}
-      </Card> */}
-
       {/* 值班周视图 */}
       <Card
         title={
@@ -510,10 +315,10 @@ const DutySchedulePage: FC = () => {
         }
       >
         <div className="mb-3">
-          <Text strong style={{ fontSize: '16px' }}>{getWeekRangeText()}</Text>
+          <Text strong style={{ fontSize: '16px' }}>{getWeekRangeText(currentWeekStart)}</Text>
         </div>
         <Row gutter={16}>
-          {getWeekDays().map((day) => {
+          {getWeekDays(currentWeekStart).map((day) => {
             const dateStr = day.format('YYYY-MM-DD');
             const members = weeklyDutyData[dateStr] || [];
             const isToday = day.format('YYYY-MM-DD') === dayjs().format('YYYY-MM-DD');
@@ -612,9 +417,9 @@ const DutySchedulePage: FC = () => {
             </Form.Item>
             <Form.Item name="dutyType" label="值班类型">
               <Select placeholder="请选择值班类型" allowClear className="user-form-input" style={{ width: 120 }}>
-                <Option value="weekday">工作日</Option>
-                <Option value="weekend">周末</Option>
-                <Option value="holiday">节假日</Option>
+                {DUTY_TYPE_OPTIONS.map(opt => (
+                  <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+                ))}
               </Select>
             </Form.Item>
             <Form.Item name="dateRange" label="日期范围">
@@ -632,19 +437,19 @@ const DutySchedulePage: FC = () => {
             </Form.Item>
           </Form>
           <Space>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setGenerateModalVisible(true)}>
+            <Button type="primary" icon={<PlusOutlined />} onClick={openGenerateModal}>
               生成排班
             </Button>
-            <Button icon={<SwapOutlined />} onClick={() => setSwapModalVisible(true)}>
+            <Button icon={<SwapOutlined />} onClick={openSwapModal}>
               调班
             </Button>
-            <Button icon={<EditOutlined />} onClick={() => setManualModalVisible(true)}>
+            <Button icon={<EditOutlined />} onClick={openManualModal}>
               手动排班
             </Button>
             {selectedRowKeys.length > 0 && (
               <Popconfirm
                 title="确定要批量删除选中的排班记录吗？"
-                onConfirm={handleBatchDelete}
+                onConfirm={() => handleBatchDelete(selectedRowKeys, setSelectedRowKeys)}
                 okText="确定"
                 cancelText="取消"
               >
@@ -684,7 +489,7 @@ const DutySchedulePage: FC = () => {
         title="生成排班"
         open={generateModalVisible}
         onOk={handleGenerate}
-        onCancel={() => setGenerateModalVisible(false)}
+        onCancel={closeGenerateModal}
         destroyOnHidden
       >
         <Form form={generateForm} layout="vertical" preserve={false}>
@@ -717,9 +522,9 @@ const DutySchedulePage: FC = () => {
             initialValue="weekday"
           >
             <Select placeholder="请选择值班类型">
-              <Option value="weekday">工作日值班</Option>
-              <Option value="weekend">周末值班</Option>
-              <Option value="holiday">节假日值班</Option>
+              {DUTY_TYPE_OPTIONS.map(opt => (
+                <Option key={opt.value} value={opt.value}>{opt.label}值班</Option>
+              ))}
             </Select>
           </Form.Item>
 
@@ -746,7 +551,7 @@ const DutySchedulePage: FC = () => {
         title="调班"
         open={swapModalVisible}
         onOk={handleSwap}
-        onCancel={() => setSwapModalVisible(false)}
+        onCancel={closeSwapModal}
         destroyOnHidden
         width={600}
       >
@@ -761,9 +566,9 @@ const DutySchedulePage: FC = () => {
                 <Option
                   key={s.id}
                   value={s.id}
-                  label={`${dayjs(s.scheduleDate).format('YYYY-MM-DD')} - ${s.user?.nickName || s.user?.username}`}
+                  label={formatScheduleOptionLabel(s)}
                 >
-                  {dayjs(s.scheduleDate).format('YYYY-MM-DD')} ({getDutyTypeText(s.dutyType)}) - {s.user?.nickName || s.user?.username}
+                  {formatScheduleOptionContent(s, getDutyTypeText)}
                 </Option>
               ))}
             </Select>
@@ -779,9 +584,9 @@ const DutySchedulePage: FC = () => {
                 <Option
                   key={s.id}
                   value={s.id}
-                  label={`${dayjs(s.scheduleDate).format('YYYY-MM-DD')} - ${s.user?.nickName || s.user?.username}`}
+                  label={formatScheduleOptionLabel(s)}
                 >
-                  {dayjs(s.scheduleDate).format('YYYY-MM-DD')} ({getDutyTypeText(s.dutyType)}) - {s.user?.nickName || s.user?.username}
+                  {formatScheduleOptionContent(s, getDutyTypeText)}
                 </Option>
               ))}
             </Select>
@@ -805,7 +610,7 @@ const DutySchedulePage: FC = () => {
         title="手动排班"
         open={manualModalVisible}
         onOk={handleManual}
-        onCancel={() => setManualModalVisible(false)}
+        onCancel={closeManualModal}
         destroyOnHidden
       >
         <Form form={manualForm} layout="vertical" preserve={false}>
@@ -837,9 +642,9 @@ const DutySchedulePage: FC = () => {
             rules={[{ required: true, message: '请选择值班类型' }]}
           >
             <Select placeholder="请选择值班类型">
-              <Option value="weekday">工作日</Option>
-              <Option value="weekend">周末</Option>
-              <Option value="holiday">节假日</Option>
+              {DUTY_TYPE_OPTIONS.map(opt => (
+                <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+              ))}
             </Select>
           </Form.Item>
 

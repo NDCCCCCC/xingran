@@ -200,7 +200,12 @@ func createMenu(core *core.Core) gin.HandlerFunc {
 			Status:    req.Status,
 			Perms:     req.Perms,
 			Icon:      req.Icon,
-			Remark:    func() string { if req.Remark != nil { return *req.Remark }; return "" }(),
+			Remark: func() string {
+				if req.Remark != nil {
+					return *req.Remark
+				}
+				return ""
+			}(),
 		}
 
 		// 使用 MenuCacheService 创建菜单（会自动清除缓存）
@@ -327,7 +332,12 @@ func updateMenu(core *core.Core) gin.HandlerFunc {
 		menu.Status = req.Status
 		menu.Perms = req.Perms
 		menu.Icon = req.Icon
-		menu.Remark = func() string { if req.Remark != nil { return *req.Remark }; return "" }()
+		menu.Remark = func() string {
+			if req.Remark != nil {
+				return *req.Remark
+			}
+			return ""
+		}()
 
 		// 使用 MenuCacheService 更新菜单（会自动清除缓存）
 		if err := core.MenuCacheService.UpdateMenu(c.Request.Context(), &menu); err != nil {
@@ -429,9 +439,9 @@ func deleteMenu(core *core.Core) gin.HandlerFunc {
 		deletedCount := len(menuIdsToDelete)
 		if cascade && deletedCount > 1 {
 			response.Success(c, gin.H{
-				"message":     "删除成功",
+				"message":      "删除成功",
 				"deletedCount": deletedCount,
-				"cascade":     true,
+				"cascade":      true,
 			})
 		} else {
 			response.Success(c, "删除成功")
@@ -441,8 +451,8 @@ func deleteMenu(core *core.Core) gin.HandlerFunc {
 
 // BatchDeleteMenusRequest 批量删除菜单请求
 type BatchDeleteMenusRequest struct {
-	IDs      []string `json:"ids" binding:"required,min=1"`
-	Cascade   bool      `json:"cascade"`
+	IDs     []string `json:"ids" binding:"required,min=1"`
+	Cascade bool     `json:"cascade"`
 }
 
 // batchDeleteMenus 批量删除菜单
@@ -547,9 +557,9 @@ func batchDeleteMenus(core *core.Core) gin.HandlerFunc {
 		recordOperLog(c, core, "菜单管理", OperTypeDelete)
 
 		response.Success(c, gin.H{
-			"message":     "批量删除成功",
+			"message":      "批量删除成功",
 			"deletedCount": len(menuIdsToDelete),
-			"cascade":     req.Cascade,
+			"cascade":      req.Cascade,
 		})
 	}
 }
@@ -642,7 +652,7 @@ func getRoleMenuTreeSelect(core *core.Core) gin.HandlerFunc {
 		menuTree := buildMenuTreeSelect(menus, nil)
 
 		response.Success(c, gin.H{
-			"menus":    menuTree,
+			"menus":       menuTree,
 			"checkedKeys": menuIds,
 		})
 	}

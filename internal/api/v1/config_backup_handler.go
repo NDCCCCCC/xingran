@@ -12,17 +12,17 @@ import (
 
 // BackupCreateRequest 创建备份请求
 type BackupCreateRequest struct {
-	DeviceID     string                 `json:"deviceId" binding:"required"`
-	BackupType   models.BackupType      `json:"backupType" binding:"required,oneof=auto manual"`
-	ChangeReason string                 `json:"changeReason"`
-	CompressLarge bool                  `json:"compressLarge"`
+	DeviceID      string            `json:"deviceId" binding:"required"`
+	BackupType    models.BackupType `json:"backupType" binding:"required,oneof=auto manual"`
+	ChangeReason  string            `json:"changeReason"`
+	CompressLarge bool              `json:"compressLarge"`
 }
 
 // BackupListRequest 备份列表请求
 type BackupListRequest struct {
-	Current   int    `json:"current"`
-	PageSize  int    `json:"pageSize"`
-	DeviceID  string `json:"deviceId"`
+	Current  int    `json:"current"`
+	PageSize int    `json:"pageSize"`
+	DeviceID string `json:"deviceId"`
 }
 
 // DiffBackupsRequest 对比备份请求
@@ -55,7 +55,7 @@ func listConfigBackups(core *core.Core) gin.HandlerFunc {
 			pageSize = 10
 		}
 
-			// 使用核心设备管理器（新架构）
+		// 使用核心设备管理器（新架构）
 		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
 		// defer manager.Close()
 
@@ -93,7 +93,7 @@ func createConfigBackup(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-			// 使用核心设备管理器（新架构）
+		// 使用核心设备管理器（新架构）
 		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
 		// defer manager.Close()
 
@@ -124,7 +124,7 @@ func getBackupContent(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-			// 使用核心设备管理器（新架构）
+		// 使用核心设备管理器（新架构）
 		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
 		// defer manager.Close()
 
@@ -148,7 +148,7 @@ func deleteConfigBackup(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-			// 使用核心设备管理器（新架构）
+		// 使用核心设备管理器（新架构）
 		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
 		// defer manager.Close()
 
@@ -173,7 +173,7 @@ func batchDeleteConfigBackups(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-			// 使用核心设备管理器（新架构）
+		// 使用核心设备管理器（新架构）
 		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
 		// defer manager.Close()
 
@@ -196,7 +196,7 @@ func diffConfigBackups(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-			// 使用核心设备管理器（新架构）
+		// 使用核心设备管理器（新架构）
 		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
 		// defer manager.Close()
 
@@ -224,7 +224,7 @@ func restoreConfigBackup(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-			// 使用核心设备管理器（新架构）
+		// 使用核心设备管理器（新架构）
 		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
 		// defer manager.Close()
 
@@ -241,7 +241,7 @@ func restoreConfigBackup(core *core.Core) gin.HandlerFunc {
 // getBackupStatistics 获取备份统计信息
 func getBackupStatistics(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
-			// 使用核心设备管理器（新架构）
+		// 使用核心设备管理器（新架构）
 		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
 		// defer manager.Close()
 
@@ -260,15 +260,15 @@ func getBackupStatistics(core *core.Core) gin.HandlerFunc {
 func batchBackupDevices(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req struct {
-			DeviceIDs  []string           `json:"deviceIds" binding:"required,min=1"`
-			BackupType models.BackupType  `json:"backupType" binding:"required,oneof=auto manual"`
+			DeviceIDs  []string          `json:"deviceIds" binding:"required,min=1"`
+			BackupType models.BackupType `json:"backupType" binding:"required,oneof=auto manual"`
 		}
 		if err := c.ShouldBindJSON(&req); err != nil {
 			response.Error(c, response.ErrBadRequest, "请求参数错误")
 			return
 		}
 
-			// 使用核心设备管理器（新架构）
+		// 使用核心设备管理器（新架构）
 		// manager := device.NewManager(core.DB.GetDB(), core.SM4Cipher, device.DefaultManagerConfig())
 		// defer manager.Close()
 

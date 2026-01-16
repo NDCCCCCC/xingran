@@ -75,26 +75,26 @@ func (d DifficultyLevel) String() string {
 
 // CaptchaBackground 验证码背景图模型
 type CaptchaBackground struct {
-	ID        string    `gorm:"size:36;primaryKey" json:"id"`
-	CreatedAt time.Time `json:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt"`
+	ID        string     `gorm:"size:36;primaryKey" json:"id"`
+	CreatedAt time.Time  `json:"createdAt"`
+	UpdatedAt time.Time  `json:"updatedAt"`
 	DeletedAt *time.Time `gorm:"index" json:"deletedAt,omitempty"`
-	CreatedBy string    `gorm:"size:64" json:"createdBy"`
-	UpdatedBy string    `gorm:"size:64" json:"updatedBy"`
-	Version   int       `json:"version"`
+	CreatedBy string     `gorm:"size:64" json:"createdBy"`
+	UpdatedBy string     `gorm:"size:64" json:"updatedBy"`
+	Version   int        `json:"version"`
 
 	// 基本信息
-	FileName        string `gorm:"size:255;not null" json:"fileName"`
-	FilePath        string `gorm:"size:500;not null" json:"filePath"`
-	FileSize        int64  `json:"fileSize"`
-	FileWidth       int    `json:"fileWidth"`
-	FileHeight      int    `json:"fileHeight"`
-	FileMD5         string `gorm:"size:32;index" json:"fileMd5,omitempty"`
+	FileName   string `gorm:"size:255;not null" json:"fileName"`
+	FilePath   string `gorm:"size:500;not null" json:"filePath"`
+	FileSize   int64  `json:"fileSize"`
+	FileWidth  int    `json:"fileWidth"`
+	FileHeight int    `json:"fileHeight"`
+	FileMD5    string `gorm:"size:32;index" json:"fileMd5,omitempty"`
 
 	// 验证码配置
-	PieceShape      PieceShape       `gorm:"size:20;not null;default:'circle'" json:"pieceShape"`
-	DifficultyLevel DifficultyLevel  `gorm:"not null;default:1" json:"difficultyLevel"`
-	AllowedShapes   StringArray      `gorm:"type:jsonb" json:"allowedShapes"`
+	PieceShape      PieceShape      `gorm:"size:20;not null;default:'circle'" json:"pieceShape"`
+	DifficultyLevel DifficultyLevel `gorm:"not null;default:1" json:"difficultyLevel"`
+	AllowedShapes   StringArray     `gorm:"type:jsonb" json:"allowedShapes"`
 
 	// 使用统计
 	UseCount   int        `gorm:"default:0" json:"useCount"`
@@ -187,23 +187,23 @@ func (cb *CaptchaBackground) GetFileURL() string {
 // ToDTO 转换为DTO对象
 func (cb *CaptchaBackground) ToDTO() *CaptchaBackgroundDTO {
 	return &CaptchaBackgroundDTO{
-		ID:             cb.ID,
-		FileName:       cb.FileName,
-		FilePath:       cb.FilePath,
-		FileSize:       cb.FileSize,
-		FileWidth:      cb.FileWidth,
-		FileHeight:     cb.FileHeight,
-		PieceShape:     string(cb.PieceShape),
+		ID:              cb.ID,
+		FileName:        cb.FileName,
+		FilePath:        cb.FilePath,
+		FileSize:        cb.FileSize,
+		FileWidth:       cb.FileWidth,
+		FileHeight:      cb.FileHeight,
+		PieceShape:      string(cb.PieceShape),
 		DifficultyLevel: int(cb.DifficultyLevel),
-		AllowedShapes:  cb.AllowedShapes,
-		UseCount:       int64(cb.UseCount),
-		LastUsedAt:     cb.LastUsedAt,
-		SortOrder:      cb.SortOrder,
-		Status:         int(cb.Status),
-		Remark:         cb.Remark,
-		CreatedAt:      cb.CreatedAt,
-		UpdatedAt:      cb.UpdatedAt,
-		PreviewURL:     cb.GetFileURL(),
+		AllowedShapes:   cb.AllowedShapes,
+		UseCount:        int64(cb.UseCount),
+		LastUsedAt:      cb.LastUsedAt,
+		SortOrder:       cb.SortOrder,
+		Status:          int(cb.Status),
+		Remark:          cb.Remark,
+		CreatedAt:       cb.CreatedAt,
+		UpdatedAt:       cb.UpdatedAt,
+		PreviewURL:      cb.GetFileURL(),
 	}
 }
 
@@ -240,8 +240,8 @@ type CaptchaBackgroundListRequest struct {
 
 // CaptchaBackgroundListResponse 背景图列表响应
 type CaptchaBackgroundListResponse struct {
-	Total int64                       `json:"total"`
-	Items []*CaptchaBackgroundDTO    `json:"items"`
+	Total int64                   `json:"total"`
+	Items []*CaptchaBackgroundDTO `json:"items"`
 }
 
 // CaptchaBackgroundUploadRequest 上传请求
@@ -256,11 +256,11 @@ type CaptchaBackgroundUploadRequest struct {
 // CaptchaBackgroundUpdateRequest 更新请求
 type CaptchaBackgroundUpdateRequest struct {
 	PieceShape      *PieceShape `json:"pieceShape,omitempty"`
-	DifficultyLevel *int         `json:"difficultyLevel,omitempty"`
-	AllowedShapes   *[]string    `json:"allowedShapes,omitempty"`
-	Status          *int         `json:"status,omitempty"`
-	SortOrder       *int         `json:"sortOrder,omitempty"`
-	Remark          *string      `json:"remark,omitempty"`
+	DifficultyLevel *int        `json:"difficultyLevel,omitempty"`
+	AllowedShapes   *[]string   `json:"allowedShapes,omitempty"`
+	Status          *int        `json:"status,omitempty"`
+	SortOrder       *int        `json:"sortOrder,omitempty"`
+	Remark          *string     `json:"remark,omitempty"`
 }
 
 // StatisticsResponse 统计信息响应

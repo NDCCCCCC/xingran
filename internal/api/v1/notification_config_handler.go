@@ -353,19 +353,19 @@ type APINotificationConfigListRequest struct {
 
 // APINotificationConfigCreateRequest 创建API通知配置请求
 type APINotificationConfigCreateRequest struct {
-	ConfigName   string                `json:"configName" binding:"required,min=2,max=100"`
-	ConfigType   models.APIConfigType  `json:"configType" binding:"required,oneof=sms webhook push"`
-	APIURL       string                `json:"apiUrl" binding:"required,max=500"`
-	APIMethod    string                `json:"apiMethod" binding:"required,oneof=GET POST"`
+	ConfigName   string                 `json:"configName" binding:"required,min=2,max=100"`
+	ConfigType   models.APIConfigType   `json:"configType" binding:"required,oneof=sms webhook push"`
+	APIURL       string                 `json:"apiUrl" binding:"required,max=500"`
+	APIMethod    string                 `json:"apiMethod" binding:"required,oneof=GET POST"`
 	Headers      map[string]interface{} `json:"headers"`
-	TemplateBody string                `json:"templateBody"`
-	AuthType     models.AuthType       `json:"authType" binding:"oneof=none basic bearer apikey"`
+	TemplateBody string                 `json:"templateBody"`
+	AuthType     models.AuthType        `json:"authType" binding:"oneof=none basic bearer apikey"`
 	AuthConfig   map[string]interface{} `json:"authConfig"`
-	RetryCount   int                   `json:"retryCount" binding:"min=0,max=10"`
-	Timeout      int                   `json:"timeout" binding:"min=1,max=300"`
-	IsDefault    bool                  `json:"isDefault"`
-	Status       int                   `json:"status" binding:"oneof=0 1"`
-	Remark       string                `json:"remark" binding:"max=500"`
+	RetryCount   int                    `json:"retryCount" binding:"min=0,max=10"`
+	Timeout      int                    `json:"timeout" binding:"min=1,max=300"`
+	IsDefault    bool                   `json:"isDefault"`
+	Status       int                    `json:"status" binding:"oneof=0 1"`
+	Remark       string                 `json:"remark" binding:"max=500"`
 }
 
 // APINotificationConfigUpdateRequest 更新API通知配置请求

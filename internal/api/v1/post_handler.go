@@ -182,7 +182,12 @@ func createPost(core *core.Core) gin.HandlerFunc {
 			PostName: req.PostName,
 			PostSort: req.PostSort,
 			Status:   models.PostStatus(req.Status),
-			Remark:   func() string { if req.Remark != nil { return *req.Remark }; return "" }(),
+			Remark: func() string {
+				if req.Remark != nil {
+					return *req.Remark
+				}
+				return ""
+			}(),
 		}
 
 		// 使用 PostCacheService 创建岗位（会自动清除缓存）

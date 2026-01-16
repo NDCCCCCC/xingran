@@ -1,4 +1,9 @@
-import { useState, useEffect } from 'react';
+/**
+ * 系统菜单管理页面
+ * System Menu Management Page
+ */
+
+import { useState, useEffect, type FC } from 'react';
 import {
   Table,
   Button,
@@ -7,7 +12,6 @@ import {
   Form,
   Input,
   Select,
-  message,
   Tag,
   Card,
   Row,
@@ -16,7 +20,6 @@ import {
   InputNumber,
   Switch,
   TreeSelect,
-  Checkbox,
   Alert,
 } from 'antd';
 import {
@@ -29,394 +32,34 @@ import {
   FolderOutlined,
   FileOutlined,
   AppstoreOutlined,
-  WarningOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { Menu } from '@/types';
-import { post } from '@/lib/api';
-import { refreshMenuCache } from '@/store/menuStore';
 import IconSelect from '@/components/IconSelect';
-import { getIconComponent } from '@/utils/iconUtils';
+
+// 导入提取的模块
+import { MENU_TYPE_OPTIONS, MENU_STATUS_OPTIONS, getMenuIcon, getMenuTypeTag, DEFAULT_FORM_VALUES } from './constants';
+import { flattenTree, buildParentOptions, renderTreeData, renderMenuName, type ParentOption } from './utils';
+import { useMenuData, useMenuActions } from './hooks';
 
 const { Option } = Select;
 
-import type { FC } from 'react';
+// ==================== 表格列定义 ====================
 
-const MenuManagement: FC = () => {
-  const [menus, setMenus] = useState<Menu[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [searchForm] = Form.useForm();
-  const [editModalVisible, setEditModalVisible] = useState(false);
-  const [editForm] = Form.useForm();
-  const [editingMenu, setEditingMenu] = useState<Menu | null>(null);
-  const [parentOptions, setParentOptions] = useState<any[]>([]);
+interface MenuTableColumnsProps {
+  handleEdit: (record: Menu) => void;
+  handleDeleteConfirm: (record: Menu) => void;
+}
 
-  // 批量删除相关状态
-  const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
-  const [cascadeDelete, setCascadeDelete] = useState(false);
+function getMenuTableColumns(props: MenuTableColumnsProps): ColumnsType<Menu> {
+  const { handleEdit, handleDeleteConfirm } = props;
 
-  // 统计数据
-  const [statistics, setStatistics] = useState({
-    total: 0,
-    directories: 0,
-    menus: 0,
-    buttons: 0,
-  });
-
-  // 菜单类型图标映射
-  const getMenuIcon = (menuType: string) => {
-    switch (menuType) {
-      case 'M':
-        return <FolderOutlined />;
-      case 'C':
-        return <FileOutlined />;
-      case 'F':
-        return <AppstoreOutlined />;
-      default:
-        return <MenuOutlined />;
-    }
-  };
-
-  // 菜单类型标签
-  const getMenuTypeTag = (menuType: string) => {
-    switch (menuType) {
-      case 'M':
-        return <Tag color="blue">目录</Tag>;
-      case 'C':
-        return <Tag color="green">菜单</Tag>;
-      case 'F':
-        return <Tag color="orange">按钮</Tag>;
-      default:
-        return <Tag>未知</Tag>;
-    }
-  };
-
-  // 加载菜单列表
-  const loadMenus = async (searchParams?: any) => {
-    setLoading(true);
-    try {
-      const result = await post('/system/menus/list', searchParams || {});
-      const menuData = result.data || [];
-      // 处理树形数据
-      const flatMenus = flattenTree(menuData);
-      setMenus(menuData);
-      setParentOptions(buildParentOptions(menuData));
-
-      // 统计数据
-      const stats = {
-        total: flatMenus.length,
-        directories: flatMenus.filter(m => m.menuType === 'M').length,
-        menus: flatMenus.filter(m => m.menuType === 'C').length,
-        buttons: flatMenus.filter(m => m.menuType === 'F').length,
-      };
-      setStatistics(stats);
-    } catch (error) {
-      console.error('加载菜单列表失败:', error);
-      // 设置默认值
-      setMenus([]);
-      setParentOptions([]);
-      setStatistics({ total: 0, directories: 0, menus: 0, buttons: 0 });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 扁平化树形数据
-  const flattenTree = (tree: any[]): any[] => {
-    const result: any[] = [];
-    if (!tree || !Array.isArray(tree)) {
-      return result;
-    }
-    const traverse = (nodes: any[]) => {
-      if (!nodes || !Array.isArray(nodes)) {
-        return;
-      }
-      nodes.forEach(node => {
-        if (node) {
-          result.push(node);
-          if (node.children && node.children.length > 0) {
-            traverse(node.children);
-          }
-        }
-      });
-    };
-    traverse(tree);
-    return result;
-  };
-
-  // 构建父级选项
-  const buildParentOptions = (tree: any[]): any[] => {
-    const options: any[] = [{ title: '顶级菜单', value: '', key: '' }];
-    if (!tree || !Array.isArray(tree)) {
-      return options;
-    }
-    const traverse = (nodes: any[], parentTitle = '') => {
-      if (!nodes || !Array.isArray(nodes)) {
-        return;
-      }
-      nodes.forEach(node => {
-        if (node) {
-          options.push({
-            title: `${parentTitle}${node.menuName}`,
-            value: node.id,
-            key: node.id,
-          });
-          if (node.children && node.children.length > 0) {
-            traverse(node.children, `${parentTitle}${node.menuName} / `);
-          }
-        }
-      });
-    };
-    traverse(tree);
-    return options;
-  };
-
-  useEffect(() => {
-    loadMenus();
-  }, []);
-
-  // 搜索
-  const handleSearch = async () => {
-    const values = await searchForm.validateFields();
-    loadMenus(values);
-  };
-
-  // 重置搜索
-  const handleReset = () => {
-    searchForm.resetFields();
-    loadMenus();
-  };
-
-  // 刷新
-  const handleRefresh = () => {
-    loadMenus();
-  };
-
-  // 新增菜单
-  const handleAdd = () => {
-    setEditingMenu(null);
-    editForm.resetFields();
-    // 设置默认值
-    editForm.setFieldsValue({
-      parentId: '',
-      menuType: 'M',
-      orderNum: 0,
-      status: true,
-    });
-    setEditModalVisible(true);
-  };
-
-  // 编辑菜单
-  const handleEdit = (record: Menu) => {
-    setEditingMenu(record);
-    setEditModalVisible(true);
-  };
-
-  // Modal 打开后的回调
-  const handleModalOpenChange = (open: boolean) => {
-    if (open && editingMenu) {
-      // Modal 打开时设置表单值
-      // visible: 1->true(显示), 0->false(隐藏)
-      // status: 0->true(正常), 1->false(停用)
-      editForm.setFieldsValue({
-        ...editingMenu,
-        visible: editingMenu.visible === 1,
-        status: editingMenu.status === 0,
-      });
-    }
-  };
-
-  // 删除菜单
-  const handleDelete = async (id: string, cascade: boolean = false) => {
-    try {
-      const url = cascade
-        ? `/system/menus/${id}/delete?cascade=true`
-        : `/system/menus/${id}/delete`;
-
-      const result = await post(url);
-
-      if (cascade && result.data?.deletedCount) {
-        message.success(`删除成功！共删除 ${result.data.deletedCount} 个菜单（包含子菜单）`);
-      } else {
-        message.success('删除成功');
-      }
-
-      loadMenus();
-
-      // 刷新菜单缓存，使菜单变更立即生效
-      await refreshMenuCache();
-      message.success('菜单已刷新，变更已生效');
-    } catch (error: any) {
-      console.error('删除菜单失败:', error);
-      const errorMsg = error?.response?.data?.message || error?.message || '删除失败';
-      message.error(errorMsg);
-    }
-  };
-
-  // 批量删除菜单
-  const handleBatchDelete = async () => {
-    if (selectedRowKeys.length === 0) {
-      message.warning('请至少选择一个菜单');
-      return;
-    }
-
-    Modal.confirm({
-      title: '批量删除菜单',
-      icon: <WarningOutlined style={{ color: 'warning' }} />,
-      content: (
-        <div>
-          <p>您已选择 <strong>{selectedRowKeys.length}</strong> 个菜单，确定要删除吗？</p>
-          <Alert
-            message="删除后将无法恢复，请谨慎操作！"
-            type="warning"
-            showIcon
-            style={{ marginBottom: 16 }}
-          />
-          <div style={{ marginTop: 16 }}>
-            <Checkbox
-              checked={cascadeDelete}
-              onChange={(e) => setCascadeDelete(e.target.checked)}
-            >
-              级联删除（同时删除所有子菜单）
-            </Checkbox>
-            {cascadeDelete && (
-              <Alert
-                message="启用级联删除后，将同时删除所选菜单及其所有子菜单"
-                type="info"
-                showIcon
-                style={{ marginTop: 12 }}
-              />
-            )}
-          </div>
-        </div>
-      ),
-      okText: '确定删除',
-      okType: 'danger',
-      cancelText: '取消',
-      onOk: async () => {
-        try {
-          const result = await post('/system/menus/batch-delete', {
-            ids: selectedRowKeys,
-            cascade: cascadeDelete,
-          });
-
-          if (result.data?.deletedCount) {
-            message.success(`批量删除成功！共删除 ${result.data.deletedCount} 个菜单`);
-          } else {
-            message.success('批量删除成功');
-          }
-
-          setSelectedRowKeys([]);
-          loadMenus();
-
-          // 刷新菜单缓存，使菜单变更立即生效
-          await refreshMenuCache();
-          message.success('菜单已刷新，变更已生效');
-        } catch (error: any) {
-          console.error('批量删除失败:', error);
-          const errorMsg = error?.response?.data?.message || error?.message || '批量删除失败';
-          message.error(errorMsg);
-        }
-      },
-    });
-  };
-
-  // 单个删除确认（带级联删除选项）
-  const handleDeleteConfirm = (record: Menu) => {
-    const hasChildren = record.children && record.children.length > 0;
-
-    Modal.confirm({
-      title: '删除菜单',
-      icon: <WarningOutlined style={{ color: 'warning' }} />,
-      content: (
-        <div>
-          <p>确定要删除菜单 <strong>{record.menuName}</strong> 吗？</p>
-          {hasChildren && (
-            <Alert
-              message="该菜单下有子菜单，删除时请选择是否同时删除子菜单"
-              type="warning"
-              showIcon
-              style={{ marginBottom: 16 }}
-            />
-          )}
-          <div style={{ marginTop: hasChildren ? 16 : 0 }}>
-            <Checkbox
-              checked={cascadeDelete}
-              onChange={(e) => setCascadeDelete(e.target.checked)}
-            >
-              级联删除子菜单
-            </Checkbox>
-            {hasChildren && !cascadeDelete && (
-              <Alert
-                message="不启用级联删除时，如果菜单下有子菜单，删除将失败"
-                type="error"
-                showIcon
-                style={{ marginTop: 12 }}
-              />
-            )}
-          </div>
-        </div>
-      ),
-      okText: '确定删除',
-      okType: 'danger',
-      cancelText: '取消',
-      onOk: () => handleDelete(record.id, cascadeDelete),
-    });
-  };
-
-  // 保存菜单
-  const handleSave = async () => {
-    try {
-      const values = await editForm.validateFields();
-
-      // 转换Switch状态值
-      // visible: true->1(显示), false->0(隐藏)
-      // status: true->0(正常), false->1(停用)
-      if (typeof values.visible === 'boolean') {
-        values.visible = values.visible ? 1 : 0;
-      }
-      if (typeof values.status === 'boolean') {
-        values.status = values.status ? 0 : 1;
-      }
-
-      if (editingMenu) {
-        await post(`/system/menus/${editingMenu.id}/update`, {
-          ...values,
-          id: editingMenu.id,
-        });
-      } else {
-        await post('/system/menus', values);
-      }
-
-      message.success(editingMenu ? '更新成功' : '创建成功');
-      setEditModalVisible(false);
-      loadMenus();
-
-      // 刷新菜单缓存，使菜单变更立即生效
-      await refreshMenuCache();
-      message.success('菜单已刷新，变更已生效');
-    } catch (error) {
-      console.error('保存菜单失败:', error);
-    }
-  };
-
-  // 表格列定义
-  const columns: ColumnsType<Menu> = [
+  return [
     {
       title: '菜单名称',
       dataIndex: 'menuName',
       key: 'menuName',
-      render: (text, record) => (
-        <Space>
-          {record.icon && (
-            <span style={{ fontSize: 16 }}>
-              {getIconComponent(record.icon)}
-            </span>
-          )}
-          {!record.icon && getMenuIcon(record.menuType)}
-          <span>{text}</span>
-        </Space>
-      ),
+      render: (_: unknown, record: Menu) => renderMenuName(record),
     },
     {
       title: '菜单类型',
@@ -474,7 +117,7 @@ const MenuManagement: FC = () => {
     {
       title: '操作',
       key: 'action',
-      render: (_, record) => (
+      render: (_: unknown, record: Menu) => (
         <Space size="middle">
           <Button
             type="link"
@@ -495,15 +138,82 @@ const MenuManagement: FC = () => {
       ),
     },
   ];
+}
 
-  // 渲染树形表格数据
-  const renderTreeData = (data: Menu[]): any[] => {
-    return data.map(item => ({
-      ...item,
-      key: item.id,
-      children: item.children && item.children.length > 0 ? renderTreeData(item.children) : undefined,
-    }));
+// ==================== 主组件 ====================
+
+const MenuManagement: FC = () => {
+  const [searchForm] = Form.useForm();
+  const [editForm] = Form.useForm();
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
+
+  // 使用数据管理 Hook
+  const { menus, parentOptions, statistics, loading, loadMenus } = useMenuData();
+
+  // 使用操作管理 Hook
+  const {
+    editingMenu,
+    cascadeDelete,
+    setCascadeDelete,
+    handleAdd,
+    handleEdit,
+    handleDeleteConfirm,
+    handleBatchDelete,
+    handleSave,
+    setEditingMenu,
+  } = useMenuActions({
+    onLoad: loadMenus,
+    selectedRowKeys,
+    setSelectedRowKeys,
+  });
+
+  // 初始化加载
+  useEffect(() => {
+    loadMenus();
+  }, []);
+
+  // 搜索
+  const handleSearch = async () => {
+    const values = searchForm.getFieldsValue();
+    loadMenus(values);
   };
+
+  // 重置搜索
+  const handleReset = () => {
+    searchForm.resetFields();
+    loadMenus();
+  };
+
+  // 刷新
+  const handleRefresh = () => {
+    loadMenus();
+  };
+
+  // 打开新增弹窗
+  const handleOpenAddModal = () => {
+    handleAdd();
+    editForm.resetFields();
+    editForm.setFieldsValue(DEFAULT_FORM_VALUES);
+    setEditModalVisible(true);
+  };
+
+  // Modal 打开后的回调
+  const handleModalOpenChange = (open: boolean) => {
+    if (open && editingMenu) {
+      // Modal 打开时设置表单值
+      // visible: 1->true(显示), 0->false(隐藏)
+      // status: 0->true(正常), 1->false(停用)
+      editForm.setFieldsValue({
+        ...editingMenu,
+        visible: editingMenu.visible === 1,
+        status: editingMenu.status === 0,
+      });
+    }
+  };
+
+  // 表格列
+  const columns = getMenuTableColumns({ handleEdit, handleDeleteConfirm });
 
   return (
     <div>
@@ -559,8 +269,9 @@ const MenuManagement: FC = () => {
             </Form.Item>
             <Form.Item name="status" label="菜单状态">
               <Select placeholder="请选择状态" style={{ width: 120 }} allowClear>
-                <Option value="0">正常</Option>
-                <Option value="1">停用</Option>
+                {MENU_STATUS_OPTIONS.map(opt => (
+                  <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+                ))}
               </Select>
             </Form.Item>
             <Form.Item>
@@ -585,7 +296,7 @@ const MenuManagement: FC = () => {
                 批量删除 ({selectedRowKeys.length})
               </Button>
             )}
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenAddModal}>
               新增菜单
             </Button>
           </Space>
@@ -622,7 +333,7 @@ const MenuManagement: FC = () => {
           pagination={false}
           rowSelection={{
             selectedRowKeys,
-            onChange: (selectedKeys) => setSelectedRowKeys(selectedKeys),
+            onChange: (selectedKeys) => setSelectedRowKeys(selectedKeys as string[]),
             selections: [
               Table.SELECTION_ALL,
               Table.SELECTION_INVERT,
@@ -639,9 +350,12 @@ const MenuManagement: FC = () => {
       <Modal
         title={editingMenu ? '编辑菜单' : '新增菜单'}
         open={editModalVisible}
-        onOk={handleSave}
+        onOk={() => handleSave(editForm)}
         afterOpenChange={handleModalOpenChange}
-        onCancel={() => setEditModalVisible(false)}
+        onCancel={() => {
+          setEditModalVisible(false);
+          setEditingMenu(null);
+        }}
         width={600}
       >
         <Form form={editForm} layout="vertical">
@@ -668,9 +382,9 @@ const MenuManagement: FC = () => {
                 rules={[{ required: true, message: '请选择菜单类型' }]}
               >
                 <Select placeholder="请选择菜单类型">
-                  <Option value="M">目录</Option>
-                  <Option value="C">菜单</Option>
-                  <Option value="F">按钮</Option>
+                  {MENU_TYPE_OPTIONS.map(opt => (
+                    <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+                  ))}
                 </Select>
               </Form.Item>
             </Col>

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -15,6 +16,8 @@ type MemoryCache struct {
 	mutex    sync.RWMutex
 	maxSize  int
 	stopChan chan struct{}
+	hits     int64 // 命中次数
+	misses   int64 // 未命中次数
 }
 
 // NewMemoryCache 创建内存缓存实例
@@ -38,16 +41,20 @@ func (m *MemoryCache) Get(ctx context.Context, key string) (string, error) {
 	}
 
 	m.mutex.RLock()
-	defer m.mutex.RUnlock()
-
 	item, exists := m.items[key]
+	m.mutex.RUnlock()
+
 	if !exists {
+		atomic.AddInt64(&m.misses, 1)
 		return "", ErrNotFound
 	}
 
 	if item.IsExpired() {
+		atomic.AddInt64(&m.misses, 1)
 		return "", ErrExpired
 	}
+
+	atomic.AddInt64(&m.hits, 1)
 
 	// 类型断言
 	switch v := item.Value.(type) {
@@ -263,7 +270,7 @@ func (m *MemoryCache) TTL(ctx context.Context, key string) (time.Duration, error
 		return -1, nil // 永不过期
 	}
 
-	remaining := time.Duration(item.Expiration-time.Now().UnixNano())
+	remaining := time.Duration(item.Expiration - time.Now().UnixNano())
 	if remaining <= 0 {
 		return 0, ErrExpired
 	}
@@ -349,7 +356,7 @@ func (m *MemoryCache) MSetJSON(ctx context.Context, data map[string]interface{},
 		}
 
 		m.items[key] = &CacheItem{
-			Value:     string(jsonValue),
+			Value:      string(jsonValue),
 			Expiration: expirationTime,
 			Created:    time.Now(),
 		}
@@ -637,13 +644,23 @@ func (m *MemoryCache) GetStats(ctx context.Context) (map[string]interface{}, err
 	stats["maxmemory"] = int64(m.maxSize * 1024) // 估算最大内存
 	stats["total_system_memory"] = int64(m.maxSize * 1024)
 
-	// 命中率和未命中率（简化为0）
-	stats["keyspace_hits"] = int64(0)
-	stats["keyspace_misses"] = int64(0)
-	stats["hit_rate"] = 0.0
+	// 使用真实的命中统计
+	hits := atomic.LoadInt64(&m.hits)
+	misses := atomic.LoadInt64(&m.misses)
+	stats["keyspace_hits"] = hits
+	stats["keyspace_misses"] = misses
+
+	// 计算命中率
+	if hits+misses > 0 {
+		hitRate := float64(hits) / float64(hits+misses) * 100
+		stats["hit_rate"] = hitRate
+	} else {
+		stats["hit_rate"] = 0.0
+	}
 
 	// Redis版本（内存缓存没有版本）
 	stats["redis_version"] = "memory"
 
 	return stats, nil
 }
+

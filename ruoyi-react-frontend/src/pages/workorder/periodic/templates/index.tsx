@@ -1,4 +1,9 @@
-import { useState, useEffect } from 'react';
+/**
+ * 周期性工单模板管理页面
+ * Periodic Work Order Template Management Page
+ */
+
+import { useState, useEffect, type FC } from 'react';
 import {
   Button,
   Form,
@@ -8,8 +13,6 @@ import {
   Modal,
   Space,
   Tag,
-  message,
-  Popconfirm,
   Card,
   Row,
   Col,
@@ -18,6 +21,7 @@ import {
   Timeline,
   Switch,
   TreeSelect,
+  Popconfirm,
 } from 'antd';
 import {
   PlusOutlined,
@@ -31,317 +35,36 @@ import {
   ThunderboltOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
-import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
 
-dayjs.extend(utc);
-
-const formatTime = (date: string | Date, format: string = 'YYYY-MM-DD HH:mm') => {
-  if (!date) return '-';
-  const dateStr = typeof date === 'string' ? date.replace('Z', '').replace('z', '') : date;
-  return dayjs(dateStr).format(format);
-};
-import {
-  getPeriodicTemplateList,
-  createPeriodicTemplate,
-  updatePeriodicTemplate,
-  deletePeriodicTemplate,
-  enablePeriodicTemplate,
-  disablePeriodicTemplate,
-  generateWorkOrderNow,
-  getPeriodicLogs,
-  type PeriodicWorkOrderTemplate,
-  type PeriodicWorkOrderLog,
-  type CreatePeriodicTemplateRequest,
-  type UpdatePeriodicTemplateRequest,
-  PeriodicAssignType,
-  WorkOrderPriority,
-  WorkOrderType,
-} from '@/lib/workorderApi';
-import {
-  getEnabledWorkOrderCategories,
-  type WorkOrderCategory,
-} from '@/lib/workorderApi';
-import {
-  getUserList,
-  type SimpleUser,
-} from '@/lib/workorderApi';
+import type { PeriodicWorkOrderTemplate } from '@/lib/workorderApi';
 import ActionButtons from '@/components/shared/ActionButtons';
-import {
-  getDutyPoolList,
-  type DutyPool,
-} from '@/lib/dutyApi';
 import CronSelector from '@/components/CronSelector';
+import { PeriodicAssignType } from '@/lib/workorderApi';
+
+// 导入提取的模块
+import { PRIORITY_CONFIG, TYPE_CONFIG, ASSIGN_TYPE_CONFIG } from './constants';
+import { formatTime, buildCategoryTree, VARIABLE_HELP_CONTENT } from './utils';
+import { useTemplateData, useTemplateActions } from './hooks';
 
 const { Option } = Select;
 const { TextArea } = Input;
 
-// 将工单分类数据转换为 TreeSelect 需要的树形结构
-const buildCategoryTree = (categories: WorkOrderCategory[]): any[] => {
-  return categories.map((cat) => ({
-    title: cat.categoryName,
-    value: cat.id,
-    key: cat.id,
-    children: cat.children && cat.children.length > 0 ? buildCategoryTree(cat.children) : undefined,
-  }));
-};
+// ==================== 表格列定义 ====================
 
-// 优先级配置
-const PRIORITY_CONFIG = {
-  [WorkOrderPriority.Low]: { text: '低', color: 'default' },
-  [WorkOrderPriority.Medium]: { text: '中', color: 'blue' },
-  [WorkOrderPriority.High]: { text: '高', color: 'orange' },
-  [WorkOrderPriority.Urgent]: { text: '紧急', color: 'red' },
-};
+interface TemplateTableColumnsProps {
+  current: number;
+  pageSize: number;
+  handleEdit: (record: PeriodicWorkOrderTemplate) => void;
+  handleToggleEnabled: (record: PeriodicWorkOrderTemplate) => void;
+  handleGenerateNow: (id: string) => void;
+  handleViewLogs: (record: PeriodicWorkOrderTemplate) => void;
+  handleDelete: (id: string) => void;
+}
 
-// 工单类型配置
-const TYPE_CONFIG = {
-  [WorkOrderType.Fault]: { text: '故障' },
-  [WorkOrderType.Request]: { text: '请求' },
-  [WorkOrderType.Change]: { text: '变更' },
-  [WorkOrderType.Incident]: { text: '事件' },
-  [WorkOrderType.Question]: { text: '咨询' },
-};
+function getTemplateTableColumns(props: TemplateTableColumnsProps): ColumnsType<PeriodicWorkOrderTemplate> {
+  const { current, pageSize, handleEdit, handleToggleEnabled, handleGenerateNow, handleViewLogs, handleDelete } = props;
 
-// 分配类型配置
-const ASSIGN_TYPE_CONFIG = {
-  [PeriodicAssignType.Manual]: { text: '手动指定' },
-  [PeriodicAssignType.DutyPool]: { text: '当天值班人员' },
-  [PeriodicAssignType.Rotation]: { text: '轮询' },
-};
-
-import type { FC } from 'react';
-
-const PeriodicTemplatePage: FC = () => {
-  const [form] = Form.useForm();
-  const [editForm] = Form.useForm();
-
-  const [loading, setLoading] = useState(false);
-  const [dataSource, setDataSource] = useState<PeriodicWorkOrderTemplate[]>([]);
-  const [total, setTotal] = useState(0);
-  const [current, setCurrent] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-
-  const [modalVisible, setModalVisible] = useState(false);
-  const [logsDrawerVisible, setLogsDrawerVisible] = useState(false);
-  const [editingRecord, setEditingRecord] = useState<PeriodicWorkOrderTemplate | null>(null);
-  const [selectedTemplate, setSelectedTemplate] = useState<PeriodicWorkOrderTemplate | null>(null);
-  const [logs, setLogs] = useState<PeriodicWorkOrderLog[]>([]);
-
-  // 统计数据
-  const [stats, setStats] = useState({ total: 0, enabled: 0, disabled: 0, totalGenerated: 0 });
-
-  // 分类和用户数据
-  const [categories, setCategories] = useState<WorkOrderCategory[]>([]);
-  const [users, setUsers] = useState<SimpleUser[]>([]);
-  // 值班池数据
-  const [dutyPools, setDutyPools] = useState<DutyPool[]>([]);
-
-  // 获取列表数据
-  const fetchList = async (page?: number, pageSize?: number) => {
-    setLoading(true);
-    try {
-      const values = form.getFieldsValue();
-      const result = await getPeriodicTemplateList({
-        current: page ?? current,
-        pageSize: pageSize ?? pageSize,
-        title: values.title,
-        isEnabled: values.isEnabled,
-      });
-      setDataSource(result.data?.list ?? []);
-      setTotal(result.data?.total ?? 0);
-      setCurrent(result.data?.current ?? 1);
-      setPageSize(result.data?.page_size ?? 10);
-
-      // 计算统计数据
-      const list = result.data?.list ?? [];
-      setStats({
-        total: list.length,
-        enabled: list.filter((t) => t.isEnabled).length,
-        disabled: list.filter((t) => !t.isEnabled).length,
-        totalGenerated: list.reduce((sum, t) => sum + (t.totalGenerated || 0), 0),
-      });
-    } catch {
-      message.error('获取模板列表失败');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 获取分类列表
-  const fetchCategories = async () => {
-    try {
-      const result = await getEnabledWorkOrderCategories();
-      setCategories(result.data || []);
-    } catch (error) {
-      console.error('获取分类列表失败:', error);
-    }
-  };
-
-  // 获取用户列表
-  const fetchUsers = async () => {
-    try {
-      const result = await getUserList({ status: 0 });
-      setUsers(result.data?.list || []);
-    } catch (error) {
-      console.error('获取用户列表失败:', error);
-    }
-  };
-
-  // 获取值班池列表
-  const fetchDutyPools = async () => {
-    try {
-      const result = await getDutyPoolList({ status: 0 });
-      setDutyPools(result.data?.list || []);
-    } catch (error) {
-      console.error('获取值班池列表失败:', error);
-    }
-  };
-
-  useEffect(() => {
-    fetchList(1, 10);
-    fetchCategories();
-    fetchUsers();
-    fetchDutyPools();
-  }, []);
-
-  const handleTableChange = (pagination: TablePaginationConfig) => {
-    fetchList(pagination.current, pagination.pageSize);
-  };
-
-  const handleSearch = () => {
-    fetchList(1, 10);
-  };
-
-  const handleReset = () => {
-    form.resetFields();
-    fetchList(1, 10);
-  };
-
-  const handleAdd = () => {
-    setEditingRecord(null);
-    editForm.resetFields();
-    editForm.setFieldsValue({
-      type: WorkOrderType.Fault,
-      priority: WorkOrderPriority.Medium,
-      assignType: PeriodicAssignType.DutyPool,
-      notifyAssignee: true,
-    });
-    setModalVisible(true);
-  };
-
-  const handleEdit = (record: PeriodicWorkOrderTemplate) => {
-    setEditingRecord(record);
-    setModalVisible(true);
-    setTimeout(() => {
-      editForm.setFieldsValue({
-        templateName: record.templateName,
-        workOrderTitle: record.workOrderTitle,
-        description: record.description,
-        categoryId: record.categoryId,
-        type: record.type,
-        priority: record.priority,
-        cronExpression: record.cronExpression,
-        assignType: record.assignType,
-        assignTargetId: record.assignTargetId,
-        notifyAssignee: record.notifyAssignee,
-      });
-    }, 0);
-  };
-
-  const handleDelete = async (id: string) => {
-    try {
-      await deletePeriodicTemplate(id);
-      message.success('删除成功');
-      fetchList();
-    } catch (error: any) {
-      message.error(error.message || '删除失败');
-    }
-  };
-
-  const handleToggleEnabled = async (record: PeriodicWorkOrderTemplate) => {
-    try {
-      if (record.isEnabled) {
-        await disablePeriodicTemplate(record.id);
-        message.success('已禁用');
-      } else {
-        await enablePeriodicTemplate(record.id);
-        message.success('已启用');
-      }
-      fetchList();
-    } catch (error: any) {
-      message.error(error.message || '操作失败');
-    }
-  };
-
-  const handleGenerateNow = async (id: string) => {
-    try {
-      await generateWorkOrderNow(id);
-      message.success('工单生成成功');
-      fetchList();
-    } catch (error: any) {
-      message.error(error.message || '生成失败');
-    }
-  };
-
-  const handleViewLogs = async (record: PeriodicWorkOrderTemplate) => {
-    setSelectedTemplate(record);
-    setLogsDrawerVisible(true);
-
-    try {
-      const result = await getPeriodicLogs(record.id);
-      setLogs(result.data || []);
-    } catch (error) {
-      console.error('获取执行记录失败:', error);
-    }
-  };
-
-  const handleModalOk = async () => {
-    try {
-      const values = await editForm.validateFields();
-
-      if (editingRecord) {
-        const updateData: UpdatePeriodicTemplateRequest = {
-          templateName: values.templateName,
-          workOrderTitle: values.workOrderTitle,
-          description: values.description,
-          categoryId: values.categoryId,
-          type: values.type,
-          priority: values.priority,
-          cronExpression: values.cronExpression,
-          assignType: values.assignType,
-          assignTargetId: values.assignTargetId,
-          notifyAssignee: values.notifyAssignee,
-        };
-        await updatePeriodicTemplate(editingRecord.id, updateData);
-        message.success('更新成功');
-      } else {
-        const createData: CreatePeriodicTemplateRequest = {
-          templateName: values.templateName,
-          workOrderTitle: values.workOrderTitle,
-          description: values.description,
-          categoryId: values.categoryId,
-          type: values.type,
-          priority: values.priority,
-          cronExpression: values.cronExpression,
-          assignType: values.assignType,
-          assignTargetId: values.assignTargetId,
-          notifyAssignee: values.notifyAssignee,
-        };
-        await createPeriodicTemplate(createData);
-        message.success('创建成功');
-      }
-      setModalVisible(false);
-      fetchList();
-    } catch (error: any) {
-      if (error.errorFields) {
-        return;
-      }
-      message.error(editingRecord ? '更新失败' : '创建失败');
-    }
-  };
-
-  const columns: ColumnsType<PeriodicWorkOrderTemplate> = [
+  return [
     {
       title: '序号',
       key: 'index',
@@ -366,14 +89,14 @@ const PeriodicTemplatePage: FC = () => {
       dataIndex: 'type',
       key: 'type',
       width: 80,
-      render: (type: WorkOrderType) => TYPE_CONFIG[type]?.text || type,
+      render: (type) => TYPE_CONFIG[type]?.text || type,
     },
     {
       title: '优先级',
       dataIndex: 'priority',
       key: 'priority',
       width: 80,
-      render: (priority: WorkOrderPriority) => (
+      render: (priority) => (
         <Tag color={PRIORITY_CONFIG[priority]?.color}>{PRIORITY_CONFIG[priority]?.text}</Tag>
       ),
     },
@@ -388,14 +111,14 @@ const PeriodicTemplatePage: FC = () => {
       dataIndex: 'assignType',
       key: 'assignType',
       width: 120,
-      render: (type: PeriodicAssignType) => ASSIGN_TYPE_CONFIG[type]?.text || type,
+      render: (type) => ASSIGN_TYPE_CONFIG[type]?.text || type,
     },
     {
       title: '下次执行',
       dataIndex: 'nextRunAt',
       key: 'nextRunAt',
       width: 160,
-      render: (date: string) => formatTime(date),
+      render: formatTime,
     },
     {
       title: '已生成',
@@ -462,41 +185,146 @@ const PeriodicTemplatePage: FC = () => {
       },
     },
   ];
+}
 
-  // 变量说明
-  const variableHelp = (
+// ==================== 变量帮助组件 ====================
+
+interface VariableHelpProps {
+  content: typeof VARIABLE_HELP_CONTENT;
+}
+
+function VariableHelp({ content }: VariableHelpProps) {
+  return (
     <div className="text-sm text-gray-500">
-      <p className="font-semibold mb-2">工单标题支持以下变量：</p>
+      <p className="font-semibold mb-2">{content.title}</p>
       <div className="grid grid-cols-2 gap-2">
-        <div><code>{'{date}'}</code> - 当前日期 (2025-01-04)</div>
-        <div><code>{'{datetime}'}</code> - 日期时间 (2025-01-04 15:30:45)</div>
-        <div><code>{'{year}'}</code> - 年份 (2025)</div>
-        <div><code>{'{month}'}</code> - 月份 (01)</div>
-        <div><code>{'{day}'}</code> - 日 (04)</div>
-        <div><code>{'{weekday}'}</code> - 星期 (Monday)</div>
-        <div><code>{'{hour}'}</code> - 小时 (15)</div>
-        <div><code>{'{minute}'}</code> - 分钟 (30)</div>
+        {content.variables.map((v, i) => (
+          <div key={i}><code>{v.code}</code> - {v.description}</div>
+        ))}
       </div>
     </div>
   );
+}
+
+// ==================== 主组件 ====================
+
+const PeriodicTemplatePage: FC = () => {
+  const [form] = Form.useForm();
+  const [editForm] = Form.useForm();
+  const [current, setCurrent] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [logsDrawerVisible, setLogsDrawerVisible] = useState(false);
+
+  // 使用数据管理 Hook
+  const {
+    dataSource,
+    total,
+    loading,
+    categories,
+    users,
+    dutyPools,
+    statistics,
+    logs,
+    selectedTemplate,
+    fetchList,
+    fetchCategories,
+    fetchUsers,
+    fetchDutyPools,
+    fetchLogs,
+    setSelectedTemplate,
+  } = useTemplateData(form, current, pageSize);
+
+  // 使用操作管理 Hook
+  const {
+    editingRecord,
+    setEditingRecord,
+    handleAdd,
+    handleEdit,
+    handleDelete,
+    handleToggleEnabled,
+    handleGenerateNow,
+    handleSave,
+  } = useTemplateActions({
+    onLoad: fetchList,
+  });
+
+  // 初始化加载
+  useEffect(() => {
+    fetchList(1, 10);
+    fetchCategories();
+    fetchUsers();
+    fetchDutyPools();
+  }, []);
+
+  const handleTableChange = (pagination: TablePaginationConfig) => {
+    setCurrent(pagination.current || 1);
+    setPageSize(pagination.pageSize || 10);
+    fetchList(pagination.current, pagination.pageSize);
+  };
+
+  const handleSearch = () => {
+    fetchList(1, 10);
+  };
+
+  const handleReset = () => {
+    form.resetFields();
+    fetchList(1, 10);
+  };
+
+  // 打开新增弹窗
+  const handleOpenAddModal = () => {
+    handleAdd(editForm);
+    setModalVisible(true);
+  };
+
+  // 打开编辑弹窗
+  const handleOpenEditModal = (record: PeriodicWorkOrderTemplate) => {
+    handleEdit(record, editForm);
+    setModalVisible(true);
+  };
+
+  // 查看执行记录
+  const handleViewLogs = async (record: PeriodicWorkOrderTemplate) => {
+    setSelectedTemplate(record);
+    setLogsDrawerVisible(true);
+    await fetchLogs(record.id);
+  };
+
+  // 保存弹窗
+  const handleModalOk = async () => {
+    await handleSave(editForm);
+    setModalVisible(false);
+  };
+
+  // 表格列
+  const columns = getTemplateTableColumns({
+    current,
+    pageSize,
+    handleEdit: handleOpenEditModal,
+    handleToggleEnabled,
+    handleGenerateNow,
+    handleViewLogs,
+    handleDelete,
+  });
 
   return (
     <div className="p-6">
       {/* 统计卡片 - 只在数据大于10时显示 */}
-      {stats.total > 10 && (
+      {statistics.total > 10 && (
         <Card title={null} className="mb-4">
           <Row gutter={16}>
             <Col span={6}>
-              <Statistic title="总模板" value={stats.total} />
+              <Statistic title="总模板" value={statistics.total} />
             </Col>
             <Col span={6}>
-              <Statistic title="已启用" value={stats.enabled} styles={{ content: { color: '#3f8600' } }} />
+              <Statistic title="已启用" value={statistics.enabled} styles={{ content: { color: '#3f8600' } }} />
             </Col>
             <Col span={6}>
-              <Statistic title="已禁用" value={stats.disabled} styles={{ content: { color: '#cf1322' } }} />
+              <Statistic title="已禁用" value={statistics.disabled} styles={{ content: { color: '#cf1322' } }} />
             </Col>
             <Col span={6}>
-              <Statistic title="已生成工单" value={stats.totalGenerated} />
+              <Statistic title="已生成工单" value={statistics.totalGenerated} />
             </Col>
           </Row>
         </Card>
@@ -527,7 +355,7 @@ const PeriodicTemplatePage: FC = () => {
             </Form.Item>
           </Form>
           <Space>
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenAddModal}>
               新增模板
             </Button>
           </Space>
@@ -559,7 +387,10 @@ const PeriodicTemplatePage: FC = () => {
         title={editingRecord ? '编辑模板' : '新增模板'}
         open={modalVisible}
         onOk={handleModalOk}
-        onCancel={() => setModalVisible(false)}
+        onCancel={() => {
+          setModalVisible(false);
+          setEditingRecord(null);
+        }}
         width={700}
       >
         <Form form={editForm} layout="horizontal" labelCol={{ span: 4 }} wrapperCol={{ span: 20 }}>
@@ -595,7 +426,7 @@ const PeriodicTemplatePage: FC = () => {
             name="workOrderTitle"
             label="工单标题"
             rules={[{ required: true, message: '请输入工单标题' }]}
-            extra={variableHelp}
+            extra={<VariableHelp content={VARIABLE_HELP_CONTENT} />}
           >
             <Input placeholder="例如：{date} 日例行检" className="user-form-input" />
           </Form.Item>

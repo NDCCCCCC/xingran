@@ -30,11 +30,11 @@ func NewTextCaptcha(length int) *TextCaptcha {
 	// 创建数字验证码驱动
 	// 参数: 高度, 宽度, 验证码长度, 最大扭曲度, 干扰点数量
 	driver := base64Captcha.NewDriverDigit(
-		40,   // height: 图片高度
-		120,  // width: 图片宽度
+		40,     // height: 图片高度
+		120,    // width: 图片宽度
 		length, // length: 验证码长度
-		0.7,  // maxSkew: 最大扭曲度
-		80,   // dotCount: 干扰点数量
+		0.7,    // maxSkew: 最大扭曲度
+		80,     // dotCount: 干扰点数量
 	)
 
 	// 创建内存存储

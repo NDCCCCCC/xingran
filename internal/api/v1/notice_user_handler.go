@@ -95,7 +95,7 @@ func getMyNotices(core *core.Core) gin.HandlerFunc {
 		for i, notice := range notices {
 			result[i] = NoticeWithReadStatus{
 				Notice: notice,
-				IsRead:  readMap[notice.ID],
+				IsRead: readMap[notice.ID],
 			}
 		}
 
@@ -154,7 +154,7 @@ func getMyNoticeDetail(core *core.Core) gin.HandlerFunc {
 
 		result := NoticeWithReadStatus{
 			Notice: *notice,
-			IsRead:  count > 0,
+			IsRead: count > 0,
 		}
 
 		response.Success(c, result)

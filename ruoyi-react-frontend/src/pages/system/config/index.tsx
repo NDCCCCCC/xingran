@@ -15,6 +15,7 @@ import {
   Col,
   Statistic,
   Alert,
+  message,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -54,21 +55,18 @@ const ConfigManagement: FC = () => {
     editForm,
     editModalVisible,
     editingItem: editingConfig,
-    setEditModalVisible,
-    setEditingItem,
     loadData: loadConfigs,
     handleSearch,
     handleReset,
-    handleRefresh,
     handleAdd,
     handleEdit,
     handleModalClose,
     setCurrent,
     setPageSize,
   } = useTableManager<Config>(
-    async (params) => {
+    async (params): Promise<{ list: Config[]; total: number }> => {
       const values = searchForm.getFieldsValue();
-      const result = await post('/system/configs/list', {
+      const result: any = await post('/system/configs/list', {
         current: params.current || current,
         pageSize: params.pageSize || pageSize,
         ...values,
@@ -99,19 +97,6 @@ const ConfigManagement: FC = () => {
     loadStatistics();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // 打开编辑模态框
-  const openModal = (record?: Config) => {
-    if (record) {
-      setEditingItem(record);
-      editForm.setFieldsValue(record);
-    } else {
-      setEditingItem(null);
-      editForm.resetFields();
-      editForm.setFieldsValue({ configType: 'N', isSystem: 0 });
-    }
-    setEditModalVisible(true);
-  };
 
   // 创建参数配置
   const handleCreate = async () => {
@@ -180,13 +165,16 @@ const ConfigManagement: FC = () => {
 
   // 表格列
   const columns: ColumnsType<Config> = [
-    { title: '参数名称', dataIndex: 'configName', key: 'configName' },
-    { title: '参数键名', dataIndex: 'configKey', key: 'configKey' },
-    { title: '参数键值', dataIndex: 'configValue', key: 'configValue', ellipsis: true },
+    { title: '参数名称', dataIndex: 'configName', key: 'configName', width: 160, minWidth: 140 },
+    { title: '参数键名', dataIndex: 'configKey', key: 'configKey', width: 160, minWidth: 140 },
+    { title: '参数键值', dataIndex: 'configValue', key: 'configValue', width: 180, minWidth: 150, ellipsis: true },
     {
       title: '系统内置',
       dataIndex: 'isSystem',
       key: 'isSystem',
+      width: 100,
+      minWidth: 90,
+      align: 'center' as const,
       render: (isSystem: number) => (
         <Tag color={isSystem === 1 ? 'blue' : 'default'}>{isSystem === 1 ? '是' : '否'}</Tag>
       ),
@@ -195,15 +183,21 @@ const ConfigManagement: FC = () => {
       title: '状态',
       dataIndex: 'configType',
       key: 'configType',
+      width: 80,
+      minWidth: 70,
+      align: 'center' as const,
       render: (configType: string) => (
         <Tag color={configType === 'Y' ? 'success' : 'default'}>{configType === 'Y' ? '是' : '否'}</Tag>
       ),
     },
-    { title: '备注', dataIndex: 'remark', key: 'remark', ellipsis: true },
-    { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt' },
+    { title: '备注', dataIndex: 'remark', key: 'remark', width: 150, minWidth: 120, ellipsis: true },
+    { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 170, minWidth: 160 },
     {
       title: '操作',
       key: 'action',
+      width: 150,
+      minWidth: 130,
+      fixed: 'right' as const,
       render: (_, record) => {
         const actions = [
           {
