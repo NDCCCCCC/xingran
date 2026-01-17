@@ -320,8 +320,17 @@ const Sidebar = () => {
   };
 
   // 获取当前选中的菜单项
+  // 注意：菜单 key 可能不带前导斜杠（如 ops/server-rooms）
+  // 而 location.pathname 带前导斜杠（如 /ops/server-rooms）
+  // 需要返回匹配菜单 key 的格式
   const getSelectedKeys = () => {
-    return [location.pathname];
+    // 去掉前导斜杠，与菜单 key 保持一致
+    const normalizedPath = location.pathname.startsWith('/')
+      ? location.pathname.slice(1)
+      : location.pathname;
+
+    // 返回两种格式，确保能匹配到
+    return [location.pathname, normalizedPath];
   };
 
   return (

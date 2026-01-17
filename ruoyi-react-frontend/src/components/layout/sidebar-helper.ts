@@ -39,9 +39,6 @@ export function buildMenuPathMap(
       }
 
       // 生成菜单key(与convertToMenuItem逻辑一致)
-      // 注意：convertToMenuItem 不加任何前缀，所以这里也不加
-      // 一级菜单需要添加前缀以匹配实际展开的 key (如 "2/ops")
-      // 但是，menu.path 本身可能已包含前缀，所以需要完整存储路径
       const menuKey = menuPath || menu.id;
 
       // 确定当前菜单的层级
