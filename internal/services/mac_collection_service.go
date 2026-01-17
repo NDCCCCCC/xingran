@@ -12,7 +12,6 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 // MACCollectionService MAC地址采集服务
@@ -131,9 +130,21 @@ func (s *MACCollectionService) collectDeviceMAC(ctx context.Context, device *mod
 		return result
 	}
 
-	// 保存到数据库
+	// 批量保存到数据库
+	// 策略：先删除该设备的旧MAC地址，然后批量插入新数据
 	collectionTime := time.Now()
 	successCount := 0
+
+	// 1. 先删除该设备的旧MAC地址记录
+	if err := s.db.WithContext(ctx).
+		Where("device_id = ?", device.ID).
+		Delete(&models.DeviceMACAddress{}).Error; err != nil {
+		result.ErrorMessage = fmt.Sprintf("删除旧MAC地址失败: %v", err)
+		return result
+	}
+
+	// 2. 构建MAC地址记录列表
+	var macRecords []*models.DeviceMACAddress
 	for _, macAddr := range macAddresses {
 		var vlanIDPtr *int
 		if macAddr.VLANID > 0 {
@@ -156,16 +167,17 @@ func (s *MACCollectionService) collectDeviceMAC(ctx context.Context, device *mod
 			MACType:       macType,
 			CollectedAt:   collectionTime,
 		}
+		macRecords = append(macRecords, macRecord)
+	}
 
-		// 使用 OnConflict 处理重复键：如果存在则更新，否则插入
+	// 3. 批量插入新的MAC地址记录
+	if len(macRecords) > 0 {
 		if err := s.db.WithContext(ctx).
-			Clauses(clause.OnConflict{
-				Columns:   []clause.Column{{Name: "device_id"}, {Name: "mac_address"}, {Name: "interface_name"}},
-				DoUpdates: clause.AssignmentColumns([]string{"vlan_id", "mac_type", "collected_at"}),
-			}).
-			Create(macRecord).Error; err == nil {
-			successCount++
+			Create(&macRecords).Error; err != nil {
+			result.ErrorMessage = fmt.Sprintf("批量插入MAC地址失败: %v", err)
+			return result
 		}
+		successCount = len(macRecords)
 	}
 
 	result.SuccessCount = successCount

@@ -10,6 +10,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // CollectionService 端口采集服务
@@ -178,8 +179,12 @@ func (s *CollectionService) collectDevicePort(ctx context.Context, device *model
 		}
 	}
 
-	// 批量保存
-	err = s.db.WithContext(ctx).Create(&portStatuses).Error
+	// 批量保存（使用 OnConflict 处理重复键）
+	// 使用 device_id 和 interface_name 作为唯一键，如果存在则更新
+	err = s.db.WithContext(ctx).Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "device_id"}, {Name: "interface_name"}},
+		DoUpdates: clause.AssignmentColumns([]string{"admin_status", "oper_status", "description", "vlan", "duplex", "speed", "port_type", "dot1x_enabled", "dot1x_port_status", "port_security_enabled", "port_security_mode", "max_mac_count", "current_mac_count", "collected_at"}),
+	}).Create(&portStatuses).Error
 	if err != nil {
 		log.Printf("[端口采集] %s (%s): 批量保存失败: %v", device.DeviceName, device.IPAddress, err)
 		result.SuccessCount = 0

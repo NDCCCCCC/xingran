@@ -196,7 +196,9 @@ func (s *DeviceDiscoveryService) discoverBySNMP(_ context.Context, task *models.
 // snmpProbe SNMP探测单个IP
 // 完全按照测试脚本的逻辑：一个连接上执行多次 Get
 func (s *DeviceDiscoveryService) snmpProbe(ip, community string, port int) *DiscoveredDevice {
-	logger.Debugf("[snmpProbe] 开始: ip=%s, community=%s, port=%d", ip, community, port)
+	// 隐藏 SNMP 团体名敏感信息，只显示长度
+	maskedCommunity := maskSensitiveStringDiscovery(community)
+	logger.Debugf("[snmpProbe] 开始: ip=%s, community=%s, port=%d", ip, maskedCommunity, port)
 
 	// 创建SNMP客户端（配置与测试脚本完全一致）
 	snmpClient := &gosnmp.GoSNMP{
@@ -463,12 +465,18 @@ func (s *DeviceDiscoveryService) ProbeSingleDevice(ctx context.Context, req *Dev
 		}
 
 		communities = credential.SNMPCommunities
-		logger.Debugf("[ProbeSingleDevice] 从凭证 %s 获取到 %d 个 SNMP communities: %v", credential.CredentialName, len(communities), communities)
+		// 隐藏 SNMP communities 敏感信息，只显示数量和长度信息
+		maskedCommunities := make([]string, len(communities))
+		for i, c := range communities {
+			maskedCommunities[i] = maskSensitiveStringDiscovery(c)
+		}
+		logger.Debugf("[ProbeSingleDevice] 从凭证 %s 获取到 %d 个 SNMP communities: %v", credential.CredentialName, len(communities), maskedCommunities)
 	}
 
 	// 2. 只使用第一个 community（避免触发设备的防暴力破解机制）
 	// 注意：测试表明华为设备会检测短时间内多个不同community的请求，并屏蔽源IP
-	logger.Debugf("[ProbeSingleDevice] 使用第 1 个 community 进行探测: %s (共%d个)", communities[0], len(communities))
+	maskedFirstCommunity := maskSensitiveStringDiscovery(communities[0])
+	logger.Debugf("[ProbeSingleDevice] 使用第 1 个 community 进行探测: %s (共%d个)", maskedFirstCommunity, len(communities))
 	if len(communities) > 1 {
 		logger.Debug("[ProbeSingleDevice] 注意: 凭证中配置了多个community，但只会尝试第一个。如需尝试其他，请手动调整顺序。")
 	}
@@ -719,4 +727,18 @@ func isAlive(ip string) bool {
 	// ICMP ping需要管理员权限，这里使用TCP SYN探测
 	// 如果所有端口都不可达，返回false
 	return false
+}
+
+// maskSensitiveStringDiscovery 隐藏敏感信息，只显示长度
+// 例如: "public" -> "pu**c (5 chars)"
+func maskSensitiveStringDiscovery(s string) string {
+	if s == "" {
+		return "(empty)"
+	}
+	length := len(s)
+	if length <= 4 {
+		return "*** (" + fmt.Sprintf("%d", length) + " chars)"
+	}
+	// 显示前两个字符和后两个字符，中间用 * 隐藏
+	return s[:2] + "***" + s[length-2:] + " (" + fmt.Sprintf("%d", length) + " chars)"
 }

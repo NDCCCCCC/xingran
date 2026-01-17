@@ -210,7 +210,9 @@ func (s *DeviceMonitorService) CheckDeviceStatus(ctx context.Context, deviceID s
 		}
 	} else {
 		if len(credential.SNMPCommunities) > 0 {
-			log.Printf("[CheckDeviceStatus] 使用凭证: Community=%s, Version=%s", credential.SNMPCommunities[0], credential.SNMPVersion)
+			// 隐藏 SNMP 团体名敏感信息，只显示长度
+			maskedCommunity := maskSensitiveString(credential.SNMPCommunities[0])
+			log.Printf("[CheckDeviceStatus] 使用凭证: Community=%s, Version=%s", maskedCommunity, credential.SNMPVersion)
 		} else {
 			log.Printf("[CheckDeviceStatus] 凭证没有配置 SNMP Community，跳过检查")
 			return false, nil
@@ -261,7 +263,9 @@ func (s *DeviceMonitorService) CheckDeviceStatus(ctx context.Context, deviceID s
 
 // pingDeviceViaSNMP 通过SNMP ping设备
 func (s *DeviceMonitorService) pingDeviceViaSNMP(target string, port uint16, community string, version device.SNMPVersion) bool {
-	log.Printf("[SNMP Ping] 开始检查设备: %s:%d, community=%s, version=%v", target, port, community, version)
+	// 隐藏 SNMP 团体名敏感信息，只显示长度
+	maskedCommunity := maskSensitiveString(community)
+	log.Printf("[SNMP Ping] 开始检查设备: %s:%d, community=%s, version=%v", target, port, maskedCommunity, version)
 
 	// 创建完整的 SNMP 客户端配置
 	config := &device.SNMPClientConfig{
@@ -445,4 +449,18 @@ func (s *DeviceMonitorService) convertSNMPVersion(version models.SNMPVersion) de
 	default:
 		return device.SNMPVersion2c // 默认使用 v2c
 	}
+}
+
+// maskSensitiveString 隐藏敏感信息，只显示长度
+// 例如: "public" -> "*** (5 chars)"
+func maskSensitiveString(s string) string {
+	if s == "" {
+		return "(empty)"
+	}
+	length := len(s)
+	if length <= 4 {
+		return "*** (" + strconv.Itoa(length) + " chars)"
+	}
+	// 显示前两个字符和后两个字符，中间用 * 隐藏
+	return s[:2] + "***" + s[length-2:] + " (" + strconv.Itoa(length) + " chars)"
 }
