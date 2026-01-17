@@ -29,11 +29,6 @@ func NewRoomDeviceService(db *gorm.DB) RoomDeviceService {
 
 // Create 创建机房设备
 func (s *roomDeviceService) Create(ctx context.Context, device *operations.OpsRoomDevice) error {
-	// 检查编码唯一性
-	if err := s.checkCodeUnique(ctx, device.DeviceCode, ""); err != nil {
-		return err
-	}
-
 	// 验证机房存在性
 	if err := s.validateRoom(ctx, device.RoomID); err != nil {
 		return err
@@ -44,11 +39,6 @@ func (s *roomDeviceService) Create(ctx context.Context, device *operations.OpsRo
 
 // Update 更新机房设备
 func (s *roomDeviceService) Update(ctx context.Context, device *operations.OpsRoomDevice) error {
-	// 检查编码唯一性
-	if err := s.checkCodeUnique(ctx, device.DeviceCode, device.ID); err != nil {
-		return err
-	}
-
 	// 验证机房存在性
 	if err := s.validateRoom(ctx, device.RoomID); err != nil {
 		return err
@@ -82,9 +72,6 @@ func (s *roomDeviceService) List(ctx context.Context, params map[string]interfac
 	// 添加筛选条件
 	if name, ok := params["name"].(string); ok && name != "" {
 		query = query.Where("name LIKE ?", "%"+name+"%")
-	}
-	if code, ok := params["deviceCode"].(string); ok && code != "" {
-		query = query.Where("device_code LIKE ?", "%"+code+"%")
 	}
 	if deviceType, ok := params["deviceType"].(string); ok && deviceType != "" {
 		query = query.Where("device_type = ?", deviceType)
@@ -135,22 +122,6 @@ func (s *roomDeviceService) List(ctx context.Context, params map[string]interfac
 // BatchDelete 批量删除机房设备
 func (s *roomDeviceService) BatchDelete(ctx context.Context, ids []string) error {
 	return s.db.WithContext(ctx).Delete(&operations.OpsRoomDevice{}, "id IN ?", ids).Error
-}
-
-// checkCodeUnique 检查编码唯一性
-func (s *roomDeviceService) checkCodeUnique(ctx context.Context, code string, excludeID string) error {
-	var count int64
-	query := s.db.WithContext(ctx).Model(&operations.OpsRoomDevice{}).Where("device_code = ?", code)
-	if excludeID != "" {
-		query = query.Where("id != ?", excludeID)
-	}
-	if err := query.Count(&count).Error; err != nil {
-		return err
-	}
-	if count > 0 {
-		return errors.New("设备编码已存在")
-	}
-	return nil
 }
 
 // validateRoom 验证机房存在性

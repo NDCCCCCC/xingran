@@ -374,7 +374,7 @@ const CacheManager: FC = () => {
                 title="键数量"
                 value={monitor?.l1?.stats?.keyCount || 0}
                 prefix={<DatabaseOutlined />}
-                valueStyle={{ fontSize: '20px' }}
+                styles={{ content: { fontSize: '20px' } }}
               />
               <div className="mt-2">
                 <small className="text-gray-500">
@@ -391,7 +391,7 @@ const CacheManager: FC = () => {
                 title="键数量"
                 value={monitor?.l2?.stats?.keyCount || 0}
                 prefix={<DatabaseOutlined />}
-                valueStyle={{ fontSize: '20px' }}
+                styles={{ content: { fontSize: '20px' } }}
               />
               <div className="mt-2">
                 <small className="text-gray-500">
@@ -409,7 +409,7 @@ const CacheManager: FC = () => {
                 value={monitor?.l1?.stats?.hitRate || 0}
                 precision={1}
                 suffix="%"
-                valueStyle={{ fontSize: '20px', color: '#3f8600' }}
+                styles={{ content: { fontSize: '20px', color: '#3f8600' } }}
               />
               <Divider className="my-2" />
               <Statistic
@@ -417,7 +417,7 @@ const CacheManager: FC = () => {
                 value={monitor?.l2?.stats?.hitRate || 0}
                 precision={1}
                 suffix="%"
-                valueStyle={{ fontSize: '16px', color: '#1890ff' }}
+                styles={{ content: { fontSize: '16px', color: '#1890ff' } }}
               />
             </Card>
           </Col>
@@ -425,7 +425,7 @@ const CacheManager: FC = () => {
           {/* 状态指示 */}
           <Col xs={24} sm={12} md={6}>
             <Card size="small" title="缓存状态">
-              <Space direction="vertical" className="w-full">
+              <Space orientation="vertical" className="w-full">
                 <div className="flex justify-between items-center">
                   <span>L1状态:</span>
                   <Tag color={monitor?.l1?.status?.connected ? 'success' : 'error'}>
@@ -554,7 +554,7 @@ const CacheManager: FC = () => {
                       <Statistic
                         title="内存使用"
                         value={formatMemorySize(monitor?.l1?.stats?.usedMemory || 0)}
-                        valueStyle={{ fontSize: '18px' }}
+                        styles={{ content: { fontSize: '18px' } }}
                       />
                     </Card>
                   </Col>
@@ -563,7 +563,7 @@ const CacheManager: FC = () => {
                       <Statistic
                         title="内存使用"
                         value={formatMemorySize(monitor?.l2?.stats?.usedMemory || 0)}
-                        valueStyle={{ fontSize: '18px' }}
+                        styles={{ content: { fontSize: '18px' } }}
                       />
                     </Card>
                   </Col>
@@ -576,7 +576,7 @@ const CacheManager: FC = () => {
                         value={monitor?.l1?.stats?.hitRate || 0}
                         precision={2}
                         suffix="%"
-                        valueStyle={{ color: '#3f8600' }}
+                        styles={{ content: { color: '#3f8600' } }}
                       />
                       <Divider className="my-2" />
                       <Row gutter={8}>
@@ -584,14 +584,14 @@ const CacheManager: FC = () => {
                           <Statistic
                             title="命中"
                             value={monitor?.l1?.stats?.hitCount || 0}
-                            valueStyle={{ fontSize: '16px', color: '#3f8600' }}
+                            styles={{ content: { fontSize: '16px', color: '#3f8600' } }}
                           />
                         </Col>
                         <Col span={12}>
                           <Statistic
                             title="未命中"
                             value={monitor?.l1?.stats?.missCount || 0}
-                            valueStyle={{ fontSize: '16px', color: '#cf1322' }}
+                            styles={{ content: { fontSize: '16px', color: '#cf1322' } }}
                           />
                         </Col>
                       </Row>
@@ -603,7 +603,7 @@ const CacheManager: FC = () => {
                         value={monitor?.l2?.stats?.hitRate || 0}
                         precision={2}
                         suffix="%"
-                        valueStyle={{ color: '#1890ff' }}
+                        styles={{ content: { color: '#1890ff' } }}
                       />
                       <Divider className="my-2" />
                       <Row gutter={8}>
@@ -611,14 +611,14 @@ const CacheManager: FC = () => {
                           <Statistic
                             title="命中"
                             value={monitor?.l2?.stats?.hitCount || 0}
-                            valueStyle={{ fontSize: '16px', color: '#3f8600' }}
+                            styles={{ content: { fontSize: '16px', color: '#3f8600' } }}
                           />
                         </Col>
                         <Col span={12}>
                           <Statistic
                             title="未命中"
                             value={monitor?.l2?.stats?.missCount || 0}
-                            valueStyle={{ fontSize: '16px', color: '#cf1322' }}
+                            styles={{ content: { fontSize: '16px', color: '#cf1322' } }}
                           />
                         </Col>
                       </Row>
@@ -707,7 +707,7 @@ const CacheManager: FC = () => {
               <Statistic
                 title="键数量"
                 value={monitor?.l1?.stats?.keyCount || 0}
-                valueStyle={{ fontSize: '24px' }}
+                styles={{ content: { fontSize: '24px' } }}
               />
               <Divider className="my-2" />
               <Row gutter={8}>
@@ -732,7 +732,7 @@ const CacheManager: FC = () => {
                 value={monitor?.l1?.stats?.hitRate || 0}
                 precision={2}
                 suffix="%"
-                valueStyle={{ fontSize: '20px', color: '#1890ff' }}
+                styles={{ content: { fontSize: '20px', color: '#1890ff' } }}
               />
               <Divider className="my-2" />
               <Statistic
@@ -748,7 +748,7 @@ const CacheManager: FC = () => {
               <Statistic
                 title="键数量"
                 value={monitor?.l2?.stats?.keyCount || 0}
-                valueStyle={{ fontSize: '24px' }}
+                styles={{ content: { fontSize: '24px' } }}
               />
               <Divider className="my-2" />
               <Row gutter={8}>
@@ -773,7 +773,7 @@ const CacheManager: FC = () => {
                 value={monitor?.l2?.stats?.hitRate || 0}
                 precision={2}
                 suffix="%"
-                valueStyle={{ fontSize: '20px', color: '#1890ff' }}
+                styles={{ content: { fontSize: '20px', color: '#1890ff' } }}
               />
               <Divider className="my-2" />
               <Statistic

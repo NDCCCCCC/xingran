@@ -560,7 +560,9 @@ export interface ServerRoom {
   id: string;
   buildingId: string;     // 所属楼宇ID
   buildingName?: string;
-  floorNo: string;
+  floorId: string;        // 所属楼层ID
+  floorName?: string;
+  floorNo?: string;       // 楼层号（显示用）
   name: string;
   area?: number;
   rackCount?: number;

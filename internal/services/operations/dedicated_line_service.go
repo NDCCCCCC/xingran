@@ -101,9 +101,6 @@ func (s *dedicatedLineService) List(ctx context.Context, params map[string]inter
 	query := s.db.WithContext(ctx).Model(&operations.OpsDedicatedLine{})
 
 	// 添加筛选条件
-	if name, ok := params["name"].(string); ok && name != "" {
-		query = query.Where("name LIKE ?", "%"+name+"%")
-	}
 	if code, ok := params["lineCode"].(string); ok && code != "" {
 		query = query.Where("line_code LIKE ?", "%"+code+"%")
 	}

@@ -15,7 +15,7 @@ import {
   ImportOutlined, ExportOutlined,
 } from '@ant-design/icons';
 import type { ServerRoom } from '@/types';
-import { serverRoomApi, buildingApi } from '@/lib/opsApi';
+import { serverRoomApi, buildingApi, floorApi } from '@/lib/opsApi';
 import { useTableManager } from '@/hooks/useTableManager';
 import { handleApiError, handleSuccess } from '@/utils/errorHandler';
 import { createStatusColumn, createDateTimeColumn } from '@/utils/tableHelpers';
@@ -29,8 +29,16 @@ const { TextArea } = Input;
 type ViewMode = 'table' | 'card';
 
 interface BuildingOption {
+  id: string;
   code: string;
   name: string;
+}
+
+interface FloorOption {
+  id: string;
+  code: string;
+  name: string;
+  floorNo: string;
 }
 
 const ServerRoomManagement: FC = () => {
@@ -39,6 +47,7 @@ const ServerRoomManagement: FC = () => {
   const [importVisible, setImportVisible] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
   const [buildingOptions, setBuildingOptions] = useState<BuildingOption[]>([]);
+  const [floorOptions, setFloorOptions] = useState<FloorOption[]>([]);
 
   const {
     loading, data: serverRooms, total, current, pageSize, selectedRowKeys,
@@ -70,8 +79,20 @@ const ServerRoomManagement: FC = () => {
     try {
       const result = await buildingApi.list({ current: 1, pageSize: 1000 });
       const buildings = result.data?.list || [];
-      setBuildingOptions(buildings.map((b: any) => ({ code: b.code, name: b.name })));
+      setBuildingOptions(buildings.map((b: any) => ({ id: b.id, code: b.code, name: b.name })));
     } catch (error) { handleApiError(error, '加载楼宇选项', false); }
+  }, []);
+
+  const loadFloorOptions = useCallback(async (buildingId: string) => {
+    if (!buildingId) {
+      setFloorOptions([]);
+      return;
+    }
+    try {
+      const result = await floorApi.list({ current: 1, pageSize: 1000, buildingId });
+      const floors = result.data?.list || [];
+      setFloorOptions(floors.map((f: any) => ({ id: f.id, code: f.code, name: f.name, floorNo: f.floorNo })));
+    } catch (error) { handleApiError(error, '加载楼层选项', false); }
   }, []);
 
   useEffect(() => {
@@ -110,9 +131,17 @@ const ServerRoomManagement: FC = () => {
     catch (error) { handleApiError(error, '批量删除'); }
   };
 
-  const openModal = (record?: ServerRoom) => {
-    if (record) { handleEdit(record); serverRoomForm.setFieldsValue(record); }
-    else { handleAdd(); serverRoomForm.setFieldsValue({ status: 0 }); }
+  const openModal = async (record?: ServerRoom) => {
+    if (record) {
+      handleEdit(record);
+      serverRoomForm.setFieldsValue(record);
+      // 编辑时加载该楼宇的楼层选项
+      await loadFloorOptions(record.buildingId);
+    } else {
+      handleAdd();
+      serverRoomForm.setFieldsValue({ status: 0 });
+      setFloorOptions([]);
+    }
   };
 
   const handleImportSuccess = () => { loadServerRooms(); loadStatistics(); setImportVisible(false); };
@@ -126,7 +155,7 @@ const ServerRoomManagement: FC = () => {
       width: 120,
       render: (_, record) => record.buildingName || record.buildingId,
     },
-    { title: '楼层', dataIndex: 'floorNo', key: 'floorNo', width: 80 },
+    { title: '楼层', dataIndex: 'floorName', key: 'floorName', width: 100, render: (_, record) => record.floorName || record.floorNo || '-' },
     createStatusColumn('status', { width: 100 }),
     { title: '描述', dataIndex: 'remark', key: 'remark', ellipsis: true },
     createDateTimeColumn('createdAt', { width: 180 }),
@@ -197,17 +226,26 @@ const ServerRoomManagement: FC = () => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="buildingCode" label="所在楼宇">
-              <Select placeholder="请选择楼宇" allowClear style={{ width: 150 }}>
-                {buildingOptions.map(b => <Option key={b.code} value={b.code}>{b.name}</Option>)}
+              <Select placeholder="请选择楼宇" options={buildingOptions.map(b => ({ label: b.name, value: b.code }))} />
+            </Form.Item>
+            <Form.Item name="floorNo" label="楼层">
+              <Input placeholder="请输入楼层" />
+            </Form.Item>
+            <Form.Item name="name" label="机房名称">
+              <Input placeholder="请输入机房名称" />
+            </Form.Item>
+            <Form.Item name="status" label="状态">
+              <Select placeholder="请选择状态">
+                <Option value={0}>正常</Option>
+                <Option value={1}>停用</Option>
               </Select>
             </Form.Item>
-            <Form.Item name="floorNo" label="楼层"><Input placeholder="请输入楼层" allowClear style={{ width: 100 }} /></Form.Item>
-            <Form.Item name="name" label="机房名称"><Input placeholder="请输入机房名称" allowClear style={{ width: 150 }} /></Form.Item>
-            <Form.Item name="status" label="状态">
-              <Select placeholder="请选择状态" allowClear style={{ width: 120 }}><Option value={0}>正常</Option><Option value={1}>停用</Option></Select>
-            </Form.Item>
             <Form.Item>
-              <Space><Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>搜索</Button><Button onClick={handleReset}>重置</Button><Button icon={<ReloadOutlined />} onClick={() => { loadServerRooms(); loadStatistics(); }}>刷新</Button></Space>
+              <Space>
+                <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>搜索</Button>
+                <Button onClick={handleReset}>重置</Button>
+                <Button icon={<ReloadOutlined />} onClick={() => { loadServerRooms(); loadStatistics(); }}>刷新</Button>
+              </Space>
             </Form.Item>
           </Form>
           <Space>
@@ -227,17 +265,36 @@ const ServerRoomManagement: FC = () => {
           <Table rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }} columns={columns} dataSource={serverRooms} loading={loading} rowKey="id" pagination={{ current, pageSize, total, showSizeChanger: true, showQuickJumper: true, showTotal: (total) => `共 ${total} 条`, onChange: (page, size) => { setCurrent(page); setPageSize(size || 10); loadServerRooms({ current: page, pageSize: size || 10 }); } }} />
         ) : renderCardView()}
       </Card>
-      <Modal title={editingServerRoom ? '编辑机房' : '新增机房'} open={modalVisible} onOk={handleSave} onCancel={() => { setModalVisible(false); serverRoomForm.resetFields(); setEditingServerRoom(null); }} width={600}>
+      <Modal title={editingServerRoom ? '编辑机房' : '新增机房'} open={modalVisible} onOk={handleSave} onCancel={() => { setModalVisible(false); serverRoomForm.resetFields(); setEditingServerRoom(null); setFloorOptions([]); }} width={600}>
         <Form form={serverRoomForm} layout="horizontal" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
           <Form.Item name="buildingId" label="所在楼宇" rules={[{ required: true, message: '请选择所在楼宇' }]}>
-            <Select placeholder="请选择所在楼宇">
-              {buildingOptions.map(b => <Option key={b.code} value={b.code}>{b.name}</Option>)}
-            </Select>
+            <Select
+              placeholder="请选择所在楼宇"
+              className="user-form-input"
+              options={buildingOptions.map(b => ({ label: b.name, value: b.id }))}
+              onChange={(value) => {
+                loadFloorOptions(value);
+                serverRoomForm.setFieldValue('floorId', undefined);
+              }}
+            />
           </Form.Item>
-          <Form.Item name="floorNo" label="楼层" rules={[{ required: true, message: '请输入楼层' }]}><Input placeholder="请输入楼层，如：3F" /></Form.Item>
-          <Form.Item name="name" label="机房名称" rules={[{ required: true, message: '请输入机房名称' }]}><Input placeholder="请输入机房名称" /></Form.Item>
-          <Form.Item name="status" label="状态" rules={[{ required: true, message: '请选择状态' }]}><Select placeholder="请选择状态"><Option value={0}>正常</Option><Option value={1}>停用</Option></Select></Form.Item>
-          <Form.Item name="remark" label="描述"><TextArea rows={3} placeholder="请输入描述" /></Form.Item>
+          <Form.Item name="floorId" label="楼层" rules={[{ required: true, message: '请选择楼层' }]}>
+            <Select
+              placeholder="请选择楼层"
+              className="user-form-input"
+              disabled={floorOptions.length === 0}
+              options={floorOptions.map(f => ({ label: `${f.floorNo} - ${f.name}`, value: f.id }))}
+            />
+          </Form.Item>
+          <Form.Item name="name" label="机房名称" rules={[{ required: true, message: '请输入机房名称' }]}>
+            <Input placeholder="请输入机房名称" className="user-form-input" />
+          </Form.Item>
+          <Form.Item name="status" label="状态" rules={[{ required: true, message: '请选择状态' }]}>
+            <Select placeholder="请选择状态" className="user-form-input" options={[{ label: '正常', value: 0 }, { label: '停用', value: 1 }]} />
+          </Form.Item>
+          <Form.Item name="remark" label="描述">
+            <TextArea rows={3} placeholder="请输入描述" className="user-form-input" />
+          </Form.Item>
         </Form>
       </Modal>
       <ExcelImport entityType="server-room" entityName="机房" visible={importVisible} onClose={() => setImportVisible(false)} onImportSuccess={handleImportSuccess} />

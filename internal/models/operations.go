@@ -156,7 +156,6 @@ const (
 type RoomDevice struct {
 	BaseModel
 	Name             string           `gorm:"size:100;not null" json:"name"`
-	DeviceCode       string           `gorm:"uniqueIndex;size:50;not null" json:"deviceCode"`
 	DeviceType       RoomDeviceType   `gorm:"size:50;not null" json:"deviceType"`
 	Model            *string          `gorm:"size:100" json:"model,omitempty"`
 	Vendor           *string          `gorm:"size:100" json:"vendor,omitempty"`

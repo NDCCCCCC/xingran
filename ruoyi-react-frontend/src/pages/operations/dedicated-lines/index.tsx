@@ -230,18 +230,33 @@ const DedicatedLineManagement: FC = () => {
       <Card style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
-            <Form.Item name="lineCode" label="专线编码"><Input placeholder="请输入专线编码" allowClear style={{ width: 150 }} /></Form.Item>
+            <Form.Item name="lineCode" label="专线编码">
+              <Input placeholder="请输入专线编码" />
+            </Form.Item>
             <Form.Item name="lineType" label="专线类型">
-              <Select placeholder="请选择类型" allowClear style={{ width: 120 }}>
-                <Option value="MPLS">MPLS</Option><Option value="Internet">互联网专线</Option><Option value="LeasedLine">租用专线</Option><Option value="Fiber">光纤专线</Option>
+              <Select placeholder="请选择类型">
+                <Option value="MPLS">MPLS</Option>
+                <Option value="Internet">互联网专线</Option>
+                <Option value="LeasedLine">租用专线</Option>
+                <Option value="Fiber">光纤专线</Option>
               </Select>
             </Form.Item>
-            <Form.Item name="isp" label="运营商"><Input placeholder="请输入运营商" allowClear style={{ width: 120 }} /></Form.Item>
+            <Form.Item name="isp" label="运营商">
+              <Input placeholder="请输入运营商" />
+            </Form.Item>
             <Form.Item name="status" label="状态">
-              <Select placeholder="请选择状态" allowClear style={{ width: 100 }}><Option value={0}>正常</Option><Option value={1}>故障</Option><Option value={2}>停用</Option></Select>
+              <Select placeholder="请选择状态">
+                <Option value={0}>正常</Option>
+                <Option value={1}>故障</Option>
+                <Option value={2}>停用</Option>
+              </Select>
             </Form.Item>
             <Form.Item>
-              <Space><Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>搜索</Button><Button onClick={handleReset}>重置</Button><Button icon={<ReloadOutlined />} onClick={() => { loadLines(); loadStatistics(); }}>刷新</Button></Space>
+              <Space>
+                <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>搜索</Button>
+                <Button onClick={handleReset}>重置</Button>
+                <Button icon={<ReloadOutlined />} onClick={() => { loadLines(); loadStatistics(); }}>刷新</Button>
+              </Space>
             </Form.Item>
           </Form>
           <Space>
@@ -263,55 +278,128 @@ const DedicatedLineManagement: FC = () => {
       </Card>
       <Modal title={editingLine ? '编辑专线' : '新增专线'} open={modalVisible} onOk={handleSave} onCancel={() => { setModalVisible(false); lineForm.resetFields(); setEditingLine(null); }} width={700}>
         <Form form={lineForm} layout="horizontal" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
-          <Form.Item name="lineCode" label="专线编码" rules={[{ required: true, message: '请输入专线编码' }]}><Input placeholder="请输入专线编码" disabled={!!editingLine} /></Form.Item>
+          <Form.Item name="lineCode" label="专线编码" rules={[{ required: true, message: '请输入专线编码' }]}>
+            <Input placeholder="请输入专线编码" disabled={!!editingLine} className="user-form-input" />
+          </Form.Item>
           <Form.Item name="lineType" label="专线类型" rules={[{ required: true, message: '请选择专线类型' }]}>
-            <Select placeholder="请选择专线类型"><Option value="MPLS">MPLS</Option><Option value="Internet">互联网专线</Option><Option value="LeasedLine">租用专线</Option><Option value="Fiber">光纤专线</Option></Select>
+            <Select placeholder="请选择专线类型" className="user-form-input">
+              <Option value="MPLS">MPLS</Option>
+              <Option value="Internet">互联网专线</Option>
+              <Option value="LeasedLine">租用专线</Option>
+              <Option value="Fiber">光纤专线</Option>
+            </Select>
           </Form.Item>
           <Row gutter={16}>
-            <Col span={12}><Form.Item name="bandwidth" label="带宽"><Input placeholder="如：100M, 1G" /></Form.Item></Col>
-            <Col span={12}><Form.Item name="isp" label="运营商" rules={[{ required: true, message: '请输入运营商' }]}><Input placeholder="电信/移动/联通等" /></Form.Item></Col>
+            <Col span={12}>
+              <Form.Item name="bandwidth" label="带宽">
+                <Input placeholder="如：100M, 1G" className="user-form-input" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="isp" label="运营商" rules={[{ required: true, message: '请输入运营商' }]}>
+                <Input placeholder="电信/移动/联通等" className="user-form-input" />
+              </Form.Item>
+            </Col>
           </Row>
           <Row gutter={16}>
-            <Col span={12}><Form.Item name="sourceRoomId" label="源机房">
-              <Select placeholder="请选择源机房" allowClear showSearch>
-                {serverRooms.map(room => <Option key={room.id} value={room.id}>{room.name}</Option>)}
-              </Select>
-            </Form.Item></Col>
-            <Col span={12}><Form.Item name="sourceDeviceName" label="源设备名称"><Input placeholder="请输入源设备名称" /></Form.Item></Col>
+            <Col span={12}>
+              <Form.Item name="sourceRoomId" label="源机房">
+                <Select placeholder="请选择源机房" allowClear showSearch className="user-form-input">
+                  {serverRooms.map(room => <Option key={room.id} value={room.id}>{room.name}</Option>)}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="sourceDeviceName" label="源设备名称">
+                <Input placeholder="请输入源设备名称" className="user-form-input" />
+              </Form.Item>
+            </Col>
           </Row>
           <Row gutter={16}>
-            <Col span={12}><Form.Item name="sourcePort" label="源端口"><Input placeholder="请输入源端口" /></Form.Item></Col>
+            <Col span={12}>
+              <Form.Item name="sourcePort" label="源端口">
+                <Input placeholder="请输入源端口" className="user-form-input" />
+              </Form.Item>
+            </Col>
             <Col span={12}></Col>
           </Row>
           <Row gutter={16}>
-            <Col span={12}><Form.Item name="destRoomId" label="目的机房">
-              <Select placeholder="请选择目的机房" allowClear showSearch>
-                {serverRooms.map(room => <Option key={room.id} value={room.id}>{room.name}</Option>)}
-              </Select>
-            </Form.Item></Col>
-            <Col span={12}><Form.Item name="destDeviceName" label="目的设备名称"><Input placeholder="请输入目的设备名称" /></Form.Item></Col>
+            <Col span={12}>
+              <Form.Item name="destRoomId" label="目的机房">
+                <Select placeholder="请选择目的机房" allowClear showSearch className="user-form-input">
+                  {serverRooms.map(room => <Option key={room.id} value={room.id}>{room.name}</Option>)}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="destDeviceName" label="目的设备名称">
+                <Input placeholder="请输入目的设备名称" className="user-form-input" />
+              </Form.Item>
+            </Col>
           </Row>
           <Row gutter={16}>
-            <Col span={12}><Form.Item name="destPort" label="目的端口"><Input placeholder="请输入目的端口" /></Form.Item></Col>
+            <Col span={12}>
+              <Form.Item name="destPort" label="目的端口">
+                <Input placeholder="请输入目的端口" className="user-form-input" />
+              </Form.Item>
+            </Col>
             <Col span={12}></Col>
           </Row>
           <Row gutter={16}>
-            <Col span={12}><Form.Item name="ipAddress" label="IP地址"><Input placeholder="请输入IP地址" /></Form.Item></Col>
-            <Col span={12}><Form.Item name="subnetMask" label="子网掩码"><Input placeholder="请输入子网掩码" /></Form.Item></Col>
+            <Col span={12}>
+              <Form.Item name="ipAddress" label="IP地址">
+                <Input placeholder="请输入IP地址" className="user-form-input" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="subnetMask" label="子网掩码">
+                <Input placeholder="请输入子网掩码" className="user-form-input" />
+              </Form.Item>
+            </Col>
           </Row>
           <Row gutter={16}>
-            <Col span={12}><Form.Item name="vlan" label="VLAN"><Input placeholder="请输入VLAN" /></Form.Item></Col>
-            <Col span={12}><Form.Item name="contractNo" label="合同编号"><Input placeholder="请输入合同编号" /></Form.Item></Col>
+            <Col span={12}>
+              <Form.Item name="vlan" label="VLAN">
+                <Input placeholder="请输入VLAN" className="user-form-input" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="contractNo" label="合同编号">
+                <Input placeholder="请输入合同编号" className="user-form-input" />
+              </Form.Item>
+            </Col>
           </Row>
           <Row gutter={16}>
-            <Col span={12}><Form.Item name="carrierContactName" label="运营商联系人"><Input placeholder="请输入联系人" /></Form.Item></Col>
-            <Col span={12}><Form.Item name="carrierContactPhone" label="联系人电话"><Input placeholder="请输入联系电话" /></Form.Item></Col>
+            <Col span={12}>
+              <Form.Item name="carrierContactName" label="运营商联系人">
+                <Input placeholder="请输入联系人" className="user-form-input" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="carrierContactPhone" label="联系人电话">
+                <Input placeholder="请输入联系电话" className="user-form-input" />
+              </Form.Item>
+            </Col>
           </Row>
           <Row gutter={16}>
-            <Col span={12}><Form.Item name="monthlyFee" label="月租费用"><InputNumber min={0} precision={2} placeholder="请输入月租费用" style={{ width: '100%' }} /></Form.Item></Col>
-            <Col span={12}><Form.Item name="status" label="状态" rules={[{ required: true, message: '请选择状态' }]}><Select placeholder="请选择状态"><Option value={0}>正常</Option><Option value={1}>故障</Option><Option value={2}>停用</Option></Select></Form.Item></Col>
+            <Col span={12}>
+              <Form.Item name="monthlyFee" label="月租费用">
+                <InputNumber min={0} precision={2} placeholder="请输入月租费用" style={{ width: '100%' }} className="user-form-input" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="status" label="状态" rules={[{ required: true, message: '请选择状态' }]}>
+                <Select placeholder="请选择状态" className="user-form-input">
+                  <Option value={0}>正常</Option>
+                  <Option value={1}>故障</Option>
+                  <Option value={2}>停用</Option>
+                </Select>
+              </Form.Item>
+            </Col>
           </Row>
-          <Form.Item name="description" label="描述"><TextArea rows={3} placeholder="请输入描述" /></Form.Item>
+          <Form.Item name="description" label="描述">
+            <TextArea rows={3} placeholder="请输入描述" className="user-form-input" />
+          </Form.Item>
         </Form>
       </Modal>
       <ExcelImport entityType="dedicated-line" entityName="专线" visible={importVisible} onClose={() => setImportVisible(false)} onImportSuccess={handleImportSuccess} />

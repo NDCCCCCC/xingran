@@ -106,7 +106,15 @@ func (s *serverRoomService) List(ctx context.Context, params map[string]interfac
 	}
 
 	offset := (current - 1) * pageSize
-	if err := query.Offset(offset).Limit(pageSize).Order("created_at DESC").Find(&list).Error; err != nil {
+	// JOIN 关联表获取楼宇名称和楼层名称（需要类型转换：varchar -> uuid）
+	if err := query.
+		Select("ops_server_rooms.*, b.name as building_name, f.name as floor_name, f.floor_no").
+		Joins("LEFT JOIN ops_buildings b ON b.id::text = ops_server_rooms.building_id").
+		Joins("LEFT JOIN ops_floors f ON f.id::text = ops_server_rooms.floor_id").
+		Offset(offset).
+		Limit(pageSize).
+		Order("ops_server_rooms.created_at DESC").
+		Find(&list).Error; err != nil {
 		return nil, err
 	}
 

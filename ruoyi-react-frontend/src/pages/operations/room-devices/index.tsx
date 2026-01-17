@@ -29,7 +29,7 @@ const { TextArea } = Input;
 type ViewMode = 'table' | 'card';
 
 interface RoomOption {
-  roomCode: string;
+  id: string;
   name: string;
 }
 
@@ -71,7 +71,7 @@ const RoomDeviceManagement: FC = () => {
     try {
       const result = await serverRoomApi.list({ current: 1, pageSize: 1000 });
       const rooms = result.data?.list || [];
-      setRoomOptions(rooms.map((r: any) => ({ roomCode: r.roomCode, name: r.name })));
+      setRoomOptions(rooms.map((r: any) => ({ id: r.id, name: r.name })));
     } catch (error) { handleApiError(error, '加载机房选项', false); }
   }, []);
 
@@ -230,23 +230,39 @@ const RoomDeviceManagement: FC = () => {
       <Card style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
-            <Form.Item name="roomCode" label="所属机房">
-              <Select placeholder="请选择机房" allowClear style={{ width: 150 }}>
-                {roomOptions.map(r => <Option key={r.roomCode} value={r.roomCode}>{r.name}</Option>)}
+            <Form.Item name="roomId" label="所属机房">
+              <Select placeholder="请选择机房">
+                {roomOptions.map(r => <Option key={r.id} value={r.id}>{r.name}</Option>)}
               </Select>
             </Form.Item>
-            <Form.Item name="deviceCode" label="设备编码"><Input placeholder="请输入设备编码" allowClear style={{ width: 150 }} /></Form.Item>
-            <Form.Item name="deviceName" label="设备名称"><Input placeholder="请输入设备名称" allowClear style={{ width: 150 }} /></Form.Item>
+            <Form.Item name="name" label="设备名称">
+              <Input placeholder="请输入设备名称" />
+            </Form.Item>
             <Form.Item name="deviceType" label="设备类型">
-              <Select placeholder="请选择类型" allowClear style={{ width: 120 }}>
-                <Option value="server">服务器</Option><Option value="storage">存储设备</Option><Option value="ups">UPS</Option><Option value="pdu">PDU</Option><Option value="firewall">防火墙</Option><Option value="kvm">KVM</Option><Option value="cabinet">机柜</Option><Option value="other">其他</Option>
+              <Select placeholder="请选择类型">
+                <Option value="server">服务器</Option>
+                <Option value="storage">存储设备</Option>
+                <Option value="ups">UPS</Option>
+                <Option value="pdu">PDU</Option>
+                <Option value="firewall">防火墙</Option>
+                <Option value="kvm">KVM</Option>
+                <Option value="cabinet">机柜</Option>
+                <Option value="other">其他</Option>
               </Select>
             </Form.Item>
             <Form.Item name="status" label="状态">
-              <Select placeholder="请选择状态" allowClear style={{ width: 100 }}><Option value={0}>正常</Option><Option value={1}>故障</Option><Option value={2}>报废</Option></Select>
+              <Select placeholder="请选择状态">
+                <Option value={0}>正常</Option>
+                <Option value={1}>故障</Option>
+                <Option value={2}>报废</Option>
+              </Select>
             </Form.Item>
             <Form.Item>
-              <Space><Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>搜索</Button><Button onClick={handleReset}>重置</Button><Button icon={<ReloadOutlined />} onClick={() => { loadDevices(); loadStatistics(); }}>刷新</Button></Space>
+              <Space>
+                <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>搜索</Button>
+                <Button onClick={handleReset}>重置</Button>
+                <Button icon={<ReloadOutlined />} onClick={() => { loadDevices(); loadStatistics(); }}>刷新</Button>
+              </Space>
             </Form.Item>
           </Form>
           <Space>
@@ -268,37 +284,93 @@ const RoomDeviceManagement: FC = () => {
       </Card>
       <Modal title={editingDevice ? '编辑设备' : '新增设备'} open={modalVisible} onOk={handleSave} onCancel={() => { setModalVisible(false); deviceForm.resetFields(); setEditingDevice(null); }} width={700}>
         <Form form={deviceForm} layout="horizontal" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
-          <Form.Item name="roomCode" label="所属机房" rules={[{ required: true, message: '请选择所属机房' }]}>
-            <Select placeholder="请选择所属机房">
-              {roomOptions.map(r => <Option key={r.roomCode} value={r.roomCode}>{r.name}</Option>)}
+          <Form.Item name="roomId" label="所属机房" rules={[{ required: true, message: '请选择所属机房' }]}>
+            <Select placeholder="请选择所属机房" className="user-form-input">
+              {roomOptions.map(r => <Option key={r.id} value={r.id}>{r.name}</Option>)}
             </Select>
           </Form.Item>
-          <Form.Item name="deviceCode" label="设备编码" rules={[{ required: true, message: '请输入设备编码' }]}><Input placeholder="请输入设备编码" disabled={!!editingDevice} /></Form.Item>
-          <Form.Item name="deviceName" label="设备名称" rules={[{ required: true, message: '请输入设备名称' }]}><Input placeholder="请输入设备名称" /></Form.Item>
+          <Form.Item name="name" label="设备名称" rules={[{ required: true, message: '请输入设备名称' }]}>
+            <Input placeholder="请输入设备名称" className="user-form-input" />
+          </Form.Item>
           <Form.Item name="deviceType" label="设备类型" rules={[{ required: true, message: '请选择设备类型' }]}>
-            <Select placeholder="请选择设备类型"><Option value="server">服务器</Option><Option value="storage">存储设备</Option><Option value="ups">UPS</Option><Option value="pdu">PDU</Option><Option value="firewall">防火墙</Option><Option value="kvm">KVM</Option><Option value="cabinet">机柜</Option><Option value="other">其他</Option></Select>
+            <Select placeholder="请选择设备类型" className="user-form-input">
+              <Option value="server">服务器</Option>
+              <Option value="storage">存储设备</Option>
+              <Option value="ups">UPS</Option>
+              <Option value="pdu">PDU</Option>
+              <Option value="firewall">防火墙</Option>
+              <Option value="kvm">KVM</Option>
+              <Option value="cabinet">机柜</Option>
+              <Option value="other">其他</Option>
+            </Select>
           </Form.Item>
           <Row gutter={16}>
-            <Col span={12}><Form.Item name="vendor" label="厂商"><Input placeholder="请输入厂商" /></Form.Item></Col>
-            <Col span={12}><Form.Item name="model" label="型号"><Input placeholder="请输入型号" /></Form.Item></Col>
+            <Col span={12}>
+              <Form.Item name="vendor" label="厂商">
+                <Input placeholder="请输入厂商" className="user-form-input" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="model" label="型号">
+                <Input placeholder="请输入型号" className="user-form-input" />
+              </Form.Item>
+            </Col>
           </Row>
           <Row gutter={16}>
-            <Col span={12}><Form.Item name="serialNumber" label="序列号"><Input placeholder="请输入序列号" /></Form.Item></Col>
-            <Col span={12}><Form.Item name="positionDesc" label="位置描述"><Input placeholder="请输入位置描述" /></Form.Item></Col>
+            <Col span={12}>
+              <Form.Item name="serialNumber" label="序列号">
+                <Input placeholder="请输入序列号" className="user-form-input" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="positionDesc" label="位置描述">
+                <Input placeholder="请输入位置描述" className="user-form-input" />
+              </Form.Item>
+            </Col>
           </Row>
           <Row gutter={16}>
-            <Col span={12}><Form.Item name="positionU" label="U位置"><InputNumber min={0} placeholder="U位置" style={{ width: '100%' }} /></Form.Item></Col>
-            <Col span={12}><Form.Item name="heightU" label="高度(U)"><InputNumber min={0} placeholder="高度" style={{ width: '100%' }} /></Form.Item></Col>
+            <Col span={12}>
+              <Form.Item name="positionU" label="U位置">
+                <InputNumber min={0} placeholder="U位置" style={{ width: '100%' }} className="user-form-input" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="heightU" label="高度(U)">
+                <InputNumber min={0} placeholder="高度" style={{ width: '100%' }} className="user-form-input" />
+              </Form.Item>
+            </Col>
           </Row>
           <Row gutter={16}>
-            <Col span={12}><Form.Item name="powerConsumption" label="功耗(W)"><InputNumber min={0} placeholder="功耗" style={{ width: '100%' }} /></Form.Item></Col>
-            <Col span={12}><Form.Item name="status" label="状态" rules={[{ required: true, message: '请选择状态' }]}><Select placeholder="请选择状态"><Option value={0}>正常</Option><Option value={1}>故障</Option><Option value={2}>报废</Option></Select></Form.Item></Col>
+            <Col span={12}>
+              <Form.Item name="powerConsumption" label="功耗(W)">
+                <InputNumber min={0} placeholder="功耗" style={{ width: '100%' }} className="user-form-input" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="status" label="状态" rules={[{ required: true, message: '请选择状态' }]}>
+                <Select placeholder="请选择状态" className="user-form-input">
+                  <Option value={0}>正常</Option>
+                  <Option value={1}>故障</Option>
+                  <Option value={2}>报废</Option>
+                </Select>
+              </Form.Item>
+            </Col>
           </Row>
           <Row gutter={16}>
-            <Col span={12}><Form.Item name="purchaseDate" label="购买日期"><DatePicker style={{ width: '100%' }} /></Form.Item></Col>
-            <Col span={12}><Form.Item name="warrantyDate" label="保修到期"><DatePicker style={{ width: '100%' }} /></Form.Item></Col>
+            <Col span={12}>
+              <Form.Item name="purchaseDate" label="购买日期">
+                <DatePicker style={{ width: '100%' }} className="user-form-input" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="warrantyDate" label="保修到期">
+                <DatePicker style={{ width: '100%' }} className="user-form-input" />
+              </Form.Item>
+            </Col>
           </Row>
-          <Form.Item name="description" label="描述"><TextArea rows={3} placeholder="请输入描述" /></Form.Item>
+          <Form.Item name="description" label="描述">
+            <TextArea rows={3} placeholder="请输入描述" className="user-form-input" />
+          </Form.Item>
         </Form>
       </Modal>
       <ExcelImport entityType="room-device" entityName="机房设备" visible={importVisible} onClose={() => setImportVisible(false)} onImportSuccess={handleImportSuccess} />

@@ -29,13 +29,6 @@ export function getJobColumns(params: GetJobColumnsParams): ColumnsType<JobInfo>
 
   return [
     {
-      title: '任务编号',
-      dataIndex: 'id',
-      key: 'id',
-      width: 100,
-      ellipsis: true,
-    },
-    {
       title: '任务名称',
       dataIndex: 'jobName',
       key: 'jobName',

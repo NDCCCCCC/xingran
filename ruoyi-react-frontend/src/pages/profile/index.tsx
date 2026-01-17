@@ -239,7 +239,7 @@ const ProfilePage: FC = () => {
                   <Statistic
                     title="今日状态"
                     value={dutyStats.isOnDutyToday ? "值班中" : "休息"}
-                    valueStyle={{ color: dutyStats.isOnDutyToday ? '#3f8600' : '#8c8c8c' }}
+                    styles={{ content: { color: dutyStats.isOnDutyToday ? '#3f8600' : '#8c8c8c' } }}
                   />
                 </Col>
                 <Col xs={12} sm={6}>
