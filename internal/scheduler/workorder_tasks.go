@@ -29,8 +29,8 @@ func executePeriodicWorkOrderCreateTask(ctx context.Context, params map[string]i
 		return fmt.Errorf("数据库未初始化")
 	}
 
-	// 从参数中获取模板ID
-	templateID, ok := params["templateId"].(string)
+	// 从参数中获取模板ID（统一使用 "param" key）
+	templateID, ok := params["param"].(string)
 	if !ok || templateID == "" {
 		return fmt.Errorf("模板ID参数无效")
 	}
@@ -52,6 +52,14 @@ func executePeriodicWorkOrderCreateTask(ctx context.Context, params map[string]i
 	var title string
 	var workOrder *models.WorkOrder
 
+	// 获取 system 用户的 ID
+	var systemUser struct {
+		ID string
+	}
+	if err := db.Table("sys_user").Select("id").Where("username = ?", "system").First(&systemUser).Error; err != nil {
+		return fmt.Errorf("查询系统用户失败，请确保存在 username='system' 的用户: %w", err)
+	}
+
 	// 开始事务
 	if err := db.Transaction(func(tx *gorm.DB) error {
 		// 生成工单编号
@@ -69,9 +77,9 @@ func executePeriodicWorkOrderCreateTask(ctx context.Context, params map[string]i
 			Priority:       template.Priority,
 			Status:         models.WorkOrderStatusPending, // 待处理
 			Description:    template.Description,
-			SubmitterID:    "system",     // 系统创建
-			IsAutoAssigned: true,         // 标记为自动分配
-			AssignStrategy: "assign_one", // 默认分配策略
+			SubmitterID:    systemUser.ID,  // 系统创建用户ID
+			IsAutoAssigned: true,            // 标记为自动分配
+			AssignStrategy: "assign_one",    // 默认分配策略
 		}
 
 		// 根据分配类型获取处理人

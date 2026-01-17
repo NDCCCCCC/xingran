@@ -93,15 +93,23 @@ func (e *JobExecutor) executeTask(ctx context.Context, jobLog *models.JobLog) er
 	return taskHandler(ctx, params)
 }
 
-// parseInvokeTarget 解析 InvokeTarget，返回任务类型和参数
-// 格式：task_type 或 task_type:param1,param2=value,...
+// parseInvokeTarget 解析任务调用目标，返回任务类型和参数
+//
+// InvokeTarget 格式：taskType 或 taskType:param
+//
+// 参数格式：
+//   - 无参数：taskType（如 duty_reminder）
+//   - 单参数：taskType:param（如 notice_publish:xxx, periodic_workorder_create:xxx）
+//
+// 所有任务处理器统一通过 params["param"] 获取参数值
 func (e *JobExecutor) parseInvokeTarget(invokeTarget string) (string, map[string]interface{}) {
 	// 简单处理：如果包含冒号，则分割
 	for i, c := range invokeTarget {
 		if c == ':' {
 			taskType := invokeTarget[:i]
 			param := invokeTarget[i+1:]
-			return taskType, map[string]interface{}{"noticeId": param}
+			// 统一使用 "param" 作为参数 key，所有任务处理器都通过 params["param"] 获取参数
+			return taskType, map[string]interface{}{"param": param}
 		}
 	}
 	// 没有冒号，返回原始值
@@ -526,8 +534,8 @@ func executeNoticePublishTask(ctx context.Context, params map[string]interface{}
 		return fmt.Errorf("数据库未初始化")
 	}
 
-	// 从参数中获取通知ID
-	noticeID, ok := params["noticeId"].(string)
+	// 从参数中获取通知ID（统一使用 "param" key）
+	noticeID, ok := params["param"].(string)
 	if !ok || noticeID == "" {
 		return fmt.Errorf("通知ID参数无效")
 	}
