@@ -16,7 +16,7 @@ import { getMyNoticeDetail, markNoticeAsRead } from '@/lib/noticeApi';
 import { useNoticeStore } from '@/store/noticeStore';
 import type { Notice } from '@/types/notice';
 import { PRIORITY_COLORS, PRIORITY_LABELS, NOTICE_TYPE_COLORS, NOTICE_TYPE_LABELS } from '@/types/notice';
-import dayjs from 'dayjs';
+import { formatDateTime } from '@/utils/datetime';
 
 /**
  * 用户通知详情页面
@@ -109,7 +109,7 @@ const NoticeDetailPage: FC = () => {
         <Descriptions column={3} size="small" className="mb-6">
           <Descriptions.Item label="发布人">{notice.createdByName || '系统管理员'}</Descriptions.Item>
           <Descriptions.Item label="发布时间">
-            {dayjs(notice.publishTime || notice.createdAt).format('YYYY-MM-DD HH:mm:ss')}
+            {formatDateTime(notice.publishTime || notice.createdAt)}
           </Descriptions.Item>
           <Descriptions.Item label="阅读状态">
             {notice.isRead ? (

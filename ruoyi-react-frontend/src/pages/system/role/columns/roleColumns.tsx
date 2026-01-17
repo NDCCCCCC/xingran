@@ -7,7 +7,8 @@ import { EditOutlined, DeleteOutlined, SafetyCertificateOutlined } from '@ant-de
 import { Popconfirm, Button, Space, Tag } from 'antd';
 import ActionButtons from '@/components/shared/ActionButtons';
 import type { Role } from '@/types';
-import { renderRoleName, renderRoleKeyTag, renderStatusTag, formatLocalTime } from '../utils';
+import { formatDateTime } from '@/utils/datetime';
+import { renderRoleName, renderRoleKeyTag, renderStatusTag } from '../utils';
 
 interface GetRoleColumnsParams {
   handleEdit: (record: Role) => void;
@@ -46,7 +47,7 @@ export function getRoleColumns(params: GetRoleColumnsParams): ColumnsType<Role> 
       title: '创建时间',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: formatLocalTime,
+      render: (text: string) => formatDateTime(text),
     },
     {
       title: '操作',

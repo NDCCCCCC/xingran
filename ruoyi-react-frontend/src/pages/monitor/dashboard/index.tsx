@@ -8,6 +8,7 @@ import {
   DatabaseOutlined
 } from '@ant-design/icons';
 import { post } from '@/lib/api';
+import { formatDateTime } from '@/utils/datetime';
 import type { BaseResponse, PageResponse } from '@/types';
 
 interface ServerMetrics {
@@ -185,8 +186,9 @@ const Dashboard: FC = () => {
       title: '登录时间',
       dataIndex: 'loginTime',
       key: 'loginTime',
-      width: 170,
-      minWidth: 160,
+      width: 180,
+      minWidth: 170,
+      render: (time: string) => formatDateTime(time),
     },
   ];
 

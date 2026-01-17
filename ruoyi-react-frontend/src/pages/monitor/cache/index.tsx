@@ -38,6 +38,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { post, get } from '@/lib/api';
 import ActionButtons from '@/components/shared/ActionButtons';
 import type { BaseResponse, PageResponse } from '@/types';
+import { formatDateTime } from '@/utils/datetime';
 
 // 导入提取的文件
 import type { CacheInfo, CacheMonitor, CacheSearchForm } from './types';
@@ -50,7 +51,7 @@ import {
 import {
   formatMemorySize,
   formatTTL,
-  formatDateTime,
+  formatDateTime as cacheFormatDateTime,
   exportCacheAsJson,
 } from './utils';
 
@@ -122,14 +123,14 @@ function getCacheTableColumns(props: CacheTableColumnsProps): ColumnsType<CacheI
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 180,
-      render: formatDateTime,
+      render: (value: any) => cacheFormatDateTime(value),
     },
     {
       title: '更新时间',
       dataIndex: 'updatedAt',
       key: 'updatedAt',
       width: 180,
-      render: formatDateTime,
+      render: (value: any) => cacheFormatDateTime(value),
     },
     {
       title: '操作',
@@ -277,7 +278,7 @@ const CacheManager: FC = () => {
         ...searchForm
       });
 
-      exportCacheAsJson(result.data || {}, searchForm);
+      exportCacheAsJson(result.data || []);
       message.success('导出成功');
     } catch (error) {
       console.error('导出失败:', error);
@@ -302,7 +303,7 @@ const CacheManager: FC = () => {
             <p><strong>类型：</strong>{result.data?.type}</p>
             <p><strong>大小：</strong>{(result.data?.size || 0).toLocaleString()} 字节</p>
             <p><strong>TTL：</strong>{formatTTL(result.data?.ttl || -1)}</p>
-            <p><strong>创建时间：</strong>{result.data?.createdAt ? new Date(result.data.createdAt).toLocaleString() : '-'}</p>
+            <p><strong>创建时间：</strong>{result.data?.createdAt ? formatDateTime(result.data.createdAt) : '-'}</p>
           </div>
         )
       });

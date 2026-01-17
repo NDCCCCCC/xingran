@@ -114,6 +114,8 @@ export interface DutyScheduleListRequest {
   startDate?: string;
   endDate?: string;
   dutyType?: string;
+  /** 过期状态：0=未过期，1=已过期，不传=全部 */
+  expired?: number;
 }
 
 export interface GenerateScheduleRequest {

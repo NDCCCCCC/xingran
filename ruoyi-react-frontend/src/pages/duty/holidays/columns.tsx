@@ -9,6 +9,7 @@ import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { Holiday } from '@/lib/dutyApi';
 import { WEEKDAY_TEXTS } from './constants';
 import dayjs from 'dayjs';
+import { formatDate } from '@/utils/datetime';
 
 export interface HolidayColumnsParams {
   handleEdit: (record: Holiday) => void;
@@ -30,7 +31,7 @@ export function getHolidayColumns(params: HolidayColumnsParams): ColumnsType<Hol
       dataIndex: 'holidayDate',
       key: 'holidayDate',
       width: 120,
-      render: (date: string) => dayjs(date).format('YYYY-MM-DD'),
+      render: (date: string) => formatDate(date),
       sorter: (a: Holiday, b: Holiday) => dayjs(a.holidayDate).unix() - dayjs(b.holidayDate).unix(),
     },
     {

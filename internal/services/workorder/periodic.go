@@ -315,16 +315,98 @@ func (s *PeriodicService) GenerateWorkOrder(ctx context.Context, templateID stri
 	var dutyPoolID *string
 	var dutyType string
 
-	// 这里简化处理，实际应该根据 AssignType 分配
-	assigneeID = template.AssignTargetID
-	isAutoAssigned = false
+	// 根据 AssignType 分配处理人
+	switch template.AssignType {
+	case models.PeriodicAssignTypeManual:
+		// 手动指定：直接使用 AssignTargetID 作为用户 ID
+		assigneeID = template.AssignTargetID
+		isAutoAssigned = false
+
+	case models.PeriodicAssignTypeDutyPool:
+		// 值班池分配：查询今天的排班记录
+		isAutoAssigned = true
+		if template.AssignTargetID != nil {
+			dutyPoolID = template.AssignTargetID
+
+			// 获取今天的日期（只取日期部分，不含时间）
+			today := time.Now().Truncate(24 * time.Hour).Format("2006-01-02")
+			todayTime, _ := time.Parse("2006-01-02", today)
+
+			// 查询今天的排班记录
+			var schedules []models.DutySchedule
+			if err := s.db.WithContext(ctx).
+				Where("pool_id = ? AND schedule_date = ? AND status = ?", *dutyPoolID, todayTime, models.DutyStatusNormal).
+				Find(&schedules).Error; err != nil {
+				// 查询失败，记录日志但不中断流程
+				fmt.Printf("查询值班池 %s 的排班记录失败: %v\n", *dutyPoolID, err)
+			} else if len(schedules) > 0 {
+				// 获取第一个值班人员的 ID
+				assigneeID = &schedules[0].UserID
+				dutyType = string(schedules[0].DutyType)
+			} else {
+				// 没有找到今天的排班记录，尝试从值班池成员中选择第一个
+				var members []models.DutyPoolMember
+				if err := s.db.WithContext(ctx).
+					Where("pool_id = ?", *dutyPoolID).
+					Order("member_order ASC").
+					Find(&members).Error; err == nil && len(members) > 0 {
+					assigneeID = &members[0].UserID
+					fmt.Printf("未找到排班记录，从值班池 %s 中选择成员 %s\n", *dutyPoolID, *assigneeID)
+				} else {
+					fmt.Printf("值班池 %s 中没有找到有效成员\n", *dutyPoolID)
+				}
+			}
+		}
+
+	case models.PeriodicAssignTypeRotation:
+		// 轮询分配：从值班池中按顺序选择
+		isAutoAssigned = true
+		if template.AssignTargetID != nil {
+			dutyPoolID = template.AssignTargetID
+
+			// 获取已生成的工单数量
+			generatedCount := template.TotalGenerated
+
+			// 查询值班池成员
+			var members []models.DutyPoolMember
+			if err := s.db.WithContext(ctx).
+				Where("pool_id = ?", *dutyPoolID).
+				Order("member_order ASC").
+				Find(&members).Error; err == nil && len(members) > 0 {
+				// 根据已生成数量选择成员（轮询）
+				selectedIndex := generatedCount % len(members)
+				assigneeID = &members[selectedIndex].UserID
+				fmt.Printf("轮询分配：从值班池 %s 中选择成员 %s（索引 %d）\n", *dutyPoolID, *assigneeID, selectedIndex)
+			} else {
+				fmt.Printf("值班池 %s 中没有找到有效成员\n", *dutyPoolID)
+			}
+		}
+
+	default:
+		// 未知类型，默认为手动指定
+		assigneeID = template.AssignTargetID
+		isAutoAssigned = false
+	}
+
+	// 验证 assigneeID 是否有效（如果设置了的话）
+	if assigneeID != nil && *assigneeID != "" {
+		var user models.User
+		if err := s.db.WithContext(ctx).Where("id = ?", *assigneeID).First(&user).Error; err != nil {
+			fmt.Printf("警告：分配的用户 ID %s 不存在，将设置为未分配\n", *assigneeID)
+			assigneeID = nil
+		}
+	}
 
 	// 获取提交者
 	submitterID := ""
 	if template.CreatedBy != "" {
+		// CreatedBy 存储的是用户 ID，直接查询用户是否存在
 		var submitter models.User
-		if err := s.db.WithContext(ctx).Where("username = ?", template.CreatedBy).First(&submitter).Error; err == nil {
+		if err := s.db.WithContext(ctx).Where("id = ?", template.CreatedBy).First(&submitter).Error; err == nil {
 			submitterID = submitter.ID
+		} else {
+			// 如果指定的用户不存在，记录日志并回退到 admin
+			fmt.Printf("警告：模板创建者 ID %s 不存在，将使用系统管理员作为提交者\n", template.CreatedBy)
 		}
 	}
 

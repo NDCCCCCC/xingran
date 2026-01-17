@@ -12,6 +12,8 @@ export interface ScheduleSearchParams {
   userId?: string;
   dutyType?: string;
   dateRange?: [dayjs.Dayjs, dayjs.Dayjs];
+  /** 过期状态：0=未过期，1=已过期 */
+  expired?: number;
 }
 
 /** 生成排班值 */

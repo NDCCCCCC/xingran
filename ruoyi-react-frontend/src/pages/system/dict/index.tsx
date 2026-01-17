@@ -33,6 +33,7 @@ import {
   LinkOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { formatDateTime } from '@/utils/datetime';
 
 import type { DictType, DictData } from '@/types';
 import ActionButtons from '@/components/shared/ActionButtons';
@@ -84,7 +85,13 @@ function getDictTypeTableColumns(props: DictTypeTableColumnsProps): ColumnsType<
       render: (status: number) => renderStatusTag(status),
     },
     { title: '备注', dataIndex: 'remark', key: 'remark', width: 150, minWidth: 120, ellipsis: true },
-    { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 170, minWidth: 160 },
+    {
+      title: '创建时间',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      width: 180,
+      render: (date: string) => formatDateTime(date),
+    },
     {
       title: '操作',
       key: 'action',
@@ -142,7 +149,13 @@ function getDictDataTableColumns(props: DictDataTableColumnsProps): ColumnsType<
       render: (status: number) => renderStatusTag(status),
     },
     { title: '备注', dataIndex: 'remark', key: 'remark', width: 150, minWidth: 120, ellipsis: true },
-    { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 170, minWidth: 160 },
+    {
+      title: '创建时间',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      width: 180,
+      render: (date: string) => formatDateTime(date),
+    },
     {
       title: '操作',
       key: 'action',

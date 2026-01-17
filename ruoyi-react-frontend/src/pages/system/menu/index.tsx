@@ -36,6 +36,7 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import type { Menu } from '@/types';
 import IconSelect from '@/components/IconSelect';
+import { formatDateTime } from '@/utils/datetime';
 
 // 导入提取的模块
 import { MENU_TYPE_OPTIONS, MENU_STATUS_OPTIONS, getMenuIcon, getMenuTypeTag, DEFAULT_FORM_VALUES } from './constants';
@@ -112,7 +113,7 @@ function getMenuTableColumns(props: MenuTableColumnsProps): ColumnsType<Menu> {
       title: '创建时间',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: (text) => new Date(text).toLocaleString(),
+      render: (text) => formatDateTime(text),
     },
     {
       title: '操作',

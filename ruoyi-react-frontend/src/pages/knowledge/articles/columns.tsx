@@ -10,7 +10,7 @@ import type { KnowledgeArticle } from '@/lib/knowledgeApi';
 import { KnowledgeArticleStatus } from '@/lib/knowledgeApi';
 import { STATUS_CONFIG } from './constants';
 import ActionButtons from '@/components/shared/ActionButtons';
-import dayjs from 'dayjs';
+import { formatDateTime } from '@/utils/datetime';
 
 export interface ArticleColumnsParams {
   handlePreview: (record: KnowledgeArticle) => void;
@@ -96,7 +96,7 @@ export function getArticleColumns(params: ArticleColumnsParams): ColumnsType<Kno
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 160,
-      render: (date: string) => dayjs(date).format('YYYY-MM-DD HH:mm'),
+      render: (date: string) => formatDateTime(date, 'YYYY-MM-DD HH:mm'),
     },
     {
       title: '操作',

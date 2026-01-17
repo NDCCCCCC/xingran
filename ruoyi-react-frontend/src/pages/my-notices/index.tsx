@@ -20,6 +20,7 @@ import { PRIORITY_COLORS, PRIORITY_LABELS, NOTICE_TYPE_COLORS, NOTICE_TYPE_LABEL
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/zh-cn';
+import { formatDateTime } from '@/utils/datetime';
 
 dayjs.extend(relativeTime);
 dayjs.locale('zh-cn');
@@ -174,7 +175,7 @@ const MyNoticesPage: FC = () => {
       key: 'publishTime',
       width: 180,
       render: (time: string, record: Notice) => (
-        <Tooltip title={dayjs(time || record.createdAt).format('YYYY-MM-DD HH:mm:ss')}>
+        <Tooltip title={formatDateTime(time || record.createdAt)}>
           <span className="text-gray-500">{dayjs(time || record.createdAt).fromNow()}</span>
         </Tooltip>
       ),

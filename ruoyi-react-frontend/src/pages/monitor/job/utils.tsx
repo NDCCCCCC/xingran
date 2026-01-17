@@ -5,11 +5,11 @@
 
 import { Tag, Tooltip } from 'antd';
 import { JobStatus } from './types';
+import { formatDateTime } from '@/utils/datetime';
 
 /** 格式化时间为本地字符串 */
 export function formatLocalTime(time: string | null | undefined): string {
-  if (!time) return '-';
-  return new Date(time).toLocaleString();
+  return formatDateTime(time);
 }
 
 /** 格式化执行时长 */

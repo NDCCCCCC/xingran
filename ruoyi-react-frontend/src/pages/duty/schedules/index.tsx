@@ -44,7 +44,6 @@ import type { DutySchedule, DutyPool, SimpleUser, MonthlyDutyMember } from '@/li
 // 导入提取的模块
 import { DUTY_TYPE_OPTIONS, DUTY_STATUS_CONFIG, getDutyTypeColor, getDutyTypeText } from './constants';
 import {
-  formatDateTime,
   formatDate,
   getWeekdayText,
   getWeekRangeText,
@@ -145,6 +144,19 @@ function getDutyTableColumns(props: DutyTableColumnsProps): ColumnsType<DutySche
       key: 'dutyType',
       width: 100,
       render: (type: string) => <Tag color={getDutyTypeColor(type as any)}>{getDutyTypeText(type as any)}</Tag>,
+    },
+    {
+      title: '过期状态',
+      key: 'expired',
+      width: 100,
+      render: (_: unknown, record: DutySchedule) => {
+        const isExpired = dayjs(record.scheduleDate).isBefore(dayjs().startOf('day'));
+        return isExpired ? (
+          <Tag color="red">已过期</Tag>
+        ) : (
+          <Tag color="green">未过期</Tag>
+        );
+      },
     },
     {
       title: '状态',
@@ -250,6 +262,8 @@ const DutySchedulePage: FC = () => {
 
   // 初始化加载
   useEffect(() => {
+    // 设置默认值：只显示未过期的排班
+    form.setFieldsValue({ expired: 0 });
     fetchList(1, 10);
     fetchAllSchedules();
     fetchPools();
@@ -269,6 +283,8 @@ const DutySchedulePage: FC = () => {
 
   const handleReset = () => {
     form.resetFields();
+    // 重置后默认只显示未过期的排班
+    form.setFieldsValue({ expired: 0 });
     fetchList(1, 10);
   };
 
@@ -420,6 +436,12 @@ const DutySchedulePage: FC = () => {
                 {DUTY_TYPE_OPTIONS.map(opt => (
                   <Option key={opt.value} value={opt.value}>{opt.label}</Option>
                 ))}
+              </Select>
+            </Form.Item>
+            <Form.Item name="expired" label="排班状态">
+              <Select placeholder="请选择排班状态" allowClear className="user-form-input" style={{ width: 120 }}>
+                <Option value={0}>未过期</Option>
+                <Option value={1}>已过期</Option>
               </Select>
             </Form.Item>
             <Form.Item name="dateRange" label="日期范围">

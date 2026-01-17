@@ -10,13 +10,8 @@ import { Select } from 'antd';
 
 const { Option } = Select;
 
-/**
- * 格式化日期时间
- */
-export function formatDateTime(dateTime: string | undefined): string {
-  if (!dateTime) return '-';
-  return dayjs(dateTime).format('YYYY-MM-DD HH:mm:ss');
-}
+// 统一时间格式化函数从 @/utils/datetime 导入
+export { formatDateTime } from '@/utils/datetime';
 
 /**
  * 根据值获取选项标签

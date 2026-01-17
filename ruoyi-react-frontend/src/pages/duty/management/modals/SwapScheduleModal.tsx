@@ -3,7 +3,7 @@
  */
 
 import { Modal, Form, Select } from 'antd';
-import dayjs from 'dayjs';
+import { formatDate } from '@/utils/datetime';
 import type { DutySchedule } from '@/lib/dutyApi';
 import { SWAP_REASON_OPTIONS } from '../constants';
 
@@ -37,7 +37,7 @@ export function SwapScheduleModal({ visible, allSchedules, onOk, onCancel }: Swa
           <Select placeholder="选择原排班">
             {allSchedules.map((s) => (
               <Option key={s.id} value={s.id}>
-                {dayjs(s.scheduleDate).format('YYYY-MM-DD')} - {s.user?.nickName || s.user?.username}
+                {formatDate(s.scheduleDate)} - {s.user?.nickName || s.user?.username}
               </Option>
             ))}
           </Select>
@@ -46,7 +46,7 @@ export function SwapScheduleModal({ visible, allSchedules, onOk, onCancel }: Swa
           <Select placeholder="选择目标排班">
             {allSchedules.map((s) => (
               <Option key={s.id} value={s.id}>
-                {dayjs(s.scheduleDate).format('YYYY-MM-DD')} - {s.user?.nickName || s.user?.username}
+                {formatDate(s.scheduleDate)} - {s.user?.nickName || s.user?.username}
               </Option>
             ))}
           </Select>

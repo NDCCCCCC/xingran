@@ -330,7 +330,7 @@ const ADGroupPage: FC = () => {
       {/* 成员抽屉 */}
       <Drawer
         title={`组成员 - ${selectedGroup?.groupName}`}
-        width={800}
+        size="large"
         open={drawerVisible}
         onClose={() => setDrawerVisible(false)}
       >

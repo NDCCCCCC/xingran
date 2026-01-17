@@ -21,7 +21,7 @@ import {
   TARGET_TYPE_LABELS,
 } from '@/types/notice';
 import type { NoticePriority, TargetType } from '@/types/notice';
-import dayjs from 'dayjs';
+import { formatDateTime } from '@/utils/datetime';
 
 const { Option } = Select;
 
@@ -120,7 +120,7 @@ export const NoticeList: React.FC<NoticeListProps> = ({
       dataIndex: 'publishTime',
       key: 'publishTime',
       width: 180,
-      render: (time: string) => time ? dayjs(time).format('YYYY-MM-DD HH:mm:ss') : <span className="text-gray-400">-</span>,
+      render: (time: string) => time ? formatDateTime(time) : <span className="text-gray-400">-</span>,
     },
     {
       title: '状态',
@@ -134,6 +134,7 @@ export const NoticeList: React.FC<NoticeListProps> = ({
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 180,
+      render: (date: string) => formatDateTime(date),
     },
     {
       title: '操作',

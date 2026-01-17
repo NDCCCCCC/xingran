@@ -10,6 +10,7 @@ import {
   DeleteOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { formatDate } from '@/utils/datetime';
 import type { DutySchedule, DutyPool, SimpleUser } from '@/lib/dutyApi';
 
 const { RangePicker } = DatePicker;
@@ -55,6 +56,11 @@ export const ScheduleManagement: React.FC<ScheduleManagementProps> = ({
 }) => {
   const [searchForm] = Form.useForm();
 
+  // 初始化默认值：只显示未过期的排班
+  React.useEffect(() => {
+    searchForm.setFieldsValue({ expired: 0 });
+  }, []);
+
   const getDutyTypeColor = (type: string) => {
     switch (type) {
       case 'weekday':
@@ -93,7 +99,7 @@ export const ScheduleManagement: React.FC<ScheduleManagementProps> = ({
       dataIndex: 'scheduleDate',
       key: 'scheduleDate',
       width: 120,
-      render: (date: string) => dayjs(date).format('YYYY-MM-DD'),
+      render: (date: string) => formatDate(date),
     },
     {
       title: '星期',
@@ -125,6 +131,19 @@ export const ScheduleManagement: React.FC<ScheduleManagementProps> = ({
       key: 'dutyType',
       width: 100,
       render: (type: string) => <Tag color={getDutyTypeColor(type)}>{getDutyTypeText(type)}</Tag>,
+    },
+    {
+      title: '过期状态',
+      key: 'expired',
+      width: 100,
+      render: (_: unknown, record: DutySchedule) => {
+        const isExpired = dayjs(record.scheduleDate).isBefore(dayjs().startOf('day'));
+        return isExpired ? (
+          <Tag color="red">已过期</Tag>
+        ) : (
+          <Tag color="green">未过期</Tag>
+        );
+      },
     },
     {
       title: '状态',
@@ -174,6 +193,12 @@ export const ScheduleManagement: React.FC<ScheduleManagementProps> = ({
             <Select.Option value="weekday">工作日</Select.Option>
             <Select.Option value="weekend">周末</Select.Option>
             <Select.Option value="holiday">节假日</Select.Option>
+          </Select>
+        </Form.Item>
+        <Form.Item name="expired">
+          <Select placeholder="排班状态" allowClear style={{ width: 120 }}>
+            <Select.Option value={0}>未过期</Select.Option>
+            <Select.Option value={1}>已过期</Select.Option>
           </Select>
         </Form.Item>
         <Form.Item name="dateRange">

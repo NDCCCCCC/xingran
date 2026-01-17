@@ -33,6 +33,7 @@ import {
   type ADSyncResult
 } from '@/lib/adDomainApi';
 import ActionButtons from '@/components/shared/ActionButtons';
+import { formatDateTime } from '@/utils/datetime';
 
 import type { FC } from 'react';
 
@@ -224,7 +225,7 @@ const ADConfigPage: FC = () => {
       key: 'lastSyncAt',
       width: 170,
       minWidth: 160,
-      render: (text: string | null) => text ? new Date(text).toLocaleString('zh-CN') : '-',
+      render: (text: string | null) => formatDateTime(text),
     },
     {
       title: '状态',

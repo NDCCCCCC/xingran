@@ -2,7 +2,7 @@
  * 信息点管理页面
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { FC } from 'react';
 import {
   Table, Button, Space, Modal, Form, Input, Select, Popconfirm,
@@ -264,6 +264,19 @@ const InfoPointManagement: FC = () => {
     return dictItem?.dictLabel || type;
   };
 
+  // 创建工位ID到名称的映射
+  const workstationMap = useMemo(() => {
+    const map = new Map<string, string>();
+    workstationOptions.forEach(ws => {
+      map.set(ws.id, ws.name);
+    });
+    return map;
+  }, [workstationOptions]);
+
+  const getWorkstationName = (workstationId: string) => {
+    return workstationMap.get(workstationId) || workstationId;
+  };
+
   const getStatusText = (status: number) => {
     const statusMap = { 0: '正常', 1: '故障', 2: '停用' };
     return statusMap[status as keyof typeof statusMap] || '未知';
@@ -281,10 +294,10 @@ const InfoPointManagement: FC = () => {
     },
     {
       title: '所属工位',
-      dataIndex: 'workstationName',
-      key: 'workstationName',
+      dataIndex: 'workstationId',
+      key: 'workstationId',
       width: 150,
-      render: (_, record) => record.workstationName || record.workstationId,
+      render: (workstationId: string) => getWorkstationName(workstationId),
     },
     { title: '所属设备', dataIndex: 'deviceName', key: 'deviceName', width: 120, render: (v) => v || '-' },
     { title: '所属端口', dataIndex: 'portName', key: 'portName', width: 120, render: (v) => v || '-' },
@@ -344,7 +357,7 @@ const InfoPointManagement: FC = () => {
                 description={
                   <div>
                     <div><strong>类型：</strong>{getInfoPointTypeText(infoPoint.infoPointType)}</div>
-                    <div><strong>工位：</strong>{infoPoint.workstationName || infoPoint.workstationId}</div>
+                    <div><strong>工位：</strong>{getWorkstationName(infoPoint.workstationId)}</div>
                     {infoPoint.deviceName && <div><strong>设备：</strong>{infoPoint.deviceName}</div>}
                     {infoPoint.portName && <div><strong>端口：</strong>{infoPoint.portName}</div>}
                   </div>

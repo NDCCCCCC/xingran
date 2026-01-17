@@ -5,7 +5,8 @@
 import { Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { JobLog } from '../types';
-import { formatLocalTime, formatDuration, renderJobStatusTag, renderExceptionInfo } from '../utils';
+import { formatDateTime } from '@/utils/datetime';
+import { formatDuration, renderJobStatusTag, renderExceptionInfo } from '../utils';
 
 export function getJobLogColumns(): ColumnsType<JobLog> {
   return [
@@ -14,7 +15,7 @@ export function getJobLogColumns(): ColumnsType<JobLog> {
       dataIndex: 'startTime',
       key: 'startTime',
       width: 180,
-      render: formatLocalTime,
+      render: (text: string) => formatDateTime(text),
     },
     {
       title: '执行时长',

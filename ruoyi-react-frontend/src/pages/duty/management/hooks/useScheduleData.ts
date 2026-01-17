@@ -22,6 +22,7 @@ interface UseScheduleDataOptions {
   dutyType?: string;
   startDate?: string;
   endDate?: string;
+  expired?: number;
 }
 
 type DutyType = 'weekday' | 'weekend' | 'holiday';
@@ -51,6 +52,7 @@ export function useScheduleData() {
         startDate: options?.startDate,
         endDate: options?.endDate,
         dutyType: options?.dutyType,
+        expired: options?.expired,
       });
       setSchedules(result.data?.list ?? []);
       setTotal(result.data?.total ?? 0);

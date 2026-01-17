@@ -31,7 +31,7 @@ import { useEffect } from 'react';
 import { useTableManager } from '@/hooks/useTableManager';
 import { withErrorHandling } from '@/utils/errorHandler';
 import { useState } from 'react';
-import dayjs from 'dayjs';
+import { formatDateTime } from '@/utils/datetime';
 
 const { Option } = Select;
 
@@ -283,7 +283,7 @@ const PortStatusPage: FC = () => {
       dataIndex: 'collectedAt',
       key: 'collectedAt',
       width: 180,
-      render: (date: string) => date ? dayjs(date).format('YYYY-MM-DD HH:mm:ss') : '-',
+      render: (date: string) => date ? formatDateTime(date) : '-',
     },
   ];
 

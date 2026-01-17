@@ -1,39 +1,56 @@
 import { post } from './api';
 import type { BaseResponse, PageResponse } from '@/types';
 
+// 时间格式化函数
+export { formatTime, formatDateTime, formatDate } from '@/utils/datetime';
+
 // ==================== 类型定义 ====================
 
-// 工单状态枚举
 export enum WorkOrderStatus {
-  Pending = 0,      // 待处理
-  Processing = 1,   // 处理中
-  Completed = 2,    // 已完成
-  Closed = 3,       // 已关闭
-  Rejected = 4,     // 已拒绝
+  Pending = 0,
+  Processing = 1,
+  Completed = 2,
+  Closed = 3,
+  Rejected = 4,
 }
 
-// 工单优先级枚举
 export enum WorkOrderPriority {
-  Low = 0,      // 低
-  Medium = 1,   // 中
-  High = 2,     // 高
-  Urgent = 3,   // 紧急
+  Low = 0,
+  Medium = 1,
+  High = 2,
+  Urgent = 3,
 }
 
-// 工单类型枚举
 export enum WorkOrderType {
-  Fault = 'fault',       // 故障
-  Request = 'request',   // 请求
-  Change = 'change',     // 变更
-  Incident = 'incident', // 事件
-  Question = 'question', // 咨询
+  Fault = 'fault',
+  Request = 'request',
+  Change = 'change',
+  Incident = 'incident',
+  Question = 'question',
 }
 
-// 周期性工单分配类型枚举
 export enum PeriodicAssignType {
-  Manual = 'manual',       // 手动指定
-  DutyPool = 'duty_pool',  // 当天值班人员
-  Rotation = 'rotation',   // 轮询
+  Manual = 'manual',
+  DutyPool = 'duty_pool',
+  Rotation = 'rotation',
+}
+
+// ==================== 工具类型 ====================
+
+export interface CategoryTreeNode {
+  title: string;
+  value: string;
+  key: string;
+  children?: CategoryTreeNode[];
+}
+
+export function buildCategoryTree(categories: WorkOrderCategory[]): CategoryTreeNode[] {
+  return categories.map((cat) => ({
+    title: cat.categoryName,
+    value: cat.id,
+    key: cat.id,
+    children: cat.children?.length ? buildCategoryTree(cat.children) : undefined,
+  }));
 }
 
 // ==================== 工单相关类型 ====================

@@ -3,7 +3,7 @@ import type { FC } from 'react';
 import { Button, Form, Input, Select, Table, Modal, InputNumber, Space, Tag, message, Popconfirm, Card, Statistic, Row, Col, TreeSelect } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, ReloadOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
-import dayjs from 'dayjs';
+import { formatDateTime } from '@/utils/datetime';
 import {
   getDutyPoolList,
   createDutyPool,
@@ -341,7 +341,7 @@ const DutyPoolPage: FC = () => {
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 160,
-      render: (date: string) => dayjs(date).format('YYYY-MM-DD HH:mm'),
+      render: (date: string) => formatDateTime(date, 'YYYY-MM-DD HH:mm'),
     },
     {
       title: '操作',

@@ -204,6 +204,53 @@ func listUsers(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
+		// 填充用户角色信息
+		userIDs := make([]string, len(users))
+		for i, u := range users {
+			userIDs[i] = u.ID
+		}
+
+		// 查询用户角色关系
+		var userRoles []models.UserRole
+		if len(userIDs) > 0 {
+			core.DB.GetDB().Where("user_id IN ?", userIDs).Find(&userRoles)
+		}
+
+		// 构建用户ID到角色ID的映射
+		userRoleMap := make(map[string][]string)
+		for _, ur := range userRoles {
+			userRoleMap[ur.UserID] = append(userRoleMap[ur.UserID], ur.RoleID)
+		}
+
+		// 查询所有相关角色
+		var allRoles []models.Role
+		if len(userRoles) > 0 {
+			roleIDs := make([]string, 0)
+			for _, ur := range userRoles {
+				roleIDs = append(roleIDs, ur.RoleID)
+			}
+			core.DB.GetDB().Where("id IN ?", roleIDs).Find(&allRoles)
+		}
+
+		// 构建角色ID到角色名称的映射
+		roleMap := make(map[string]string)
+		for _, r := range allRoles {
+			roleMap[r.ID] = r.RoleName
+		}
+
+		// 填充每个用户的角色名称数组
+		for i := range users {
+			if roleIDs, ok := userRoleMap[users[i].ID]; ok {
+				roleNames := make([]string, 0, len(roleIDs))
+				for _, rid := range roleIDs {
+					if roleName, exists := roleMap[rid]; exists {
+						roleNames = append(roleNames, roleName)
+					}
+				}
+				users[i].Roles = roleNames
+			}
+		}
+
 		response.Page(c, users, total, req.Current, req.PageSize)
 	}
 }

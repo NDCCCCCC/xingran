@@ -1,11 +1,7 @@
 import { Tag, Button, Space } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
-
-/**
- * 表格配置工具
- * 提供常用的表格列配置生成器
- */
+import { formatDateTime } from '@/utils/datetime';
 
 export interface ColumnConfig {
   title: string;
@@ -15,11 +11,6 @@ export interface ColumnConfig {
   align?: 'left' | 'center' | 'right';
 }
 
-/**
- * 创建状态列配置
- * @param field 字段名
- * @param config 列配置
- */
 export function createStatusColumn(
   field: string = 'status',
   config: Partial<ColumnConfig> = {}
@@ -38,11 +29,6 @@ export function createStatusColumn(
   };
 }
 
-/**
- * 创建时间列配置
- * @param field 字段名
- * @param config 列配置
- */
 export function createDateTimeColumn(
   field: string = 'createdAt',
   config: Partial<ColumnConfig> = {}
@@ -52,17 +38,11 @@ export function createDateTimeColumn(
     dataIndex: field,
     key: field,
     width: 180,
-    render: (text: string) => (text ? new Date(text).toLocaleString() : '-'),
+    render: (text: string) => formatDateTime(text),
     ...config,
   };
 }
 
-/**
- * 创建操作列配置
- * @param onEdit 编辑回调
- * @param onDelete 删除回调
- * @param extraActions 额外操作按钮
- */
 export function createActionColumn(
   onEdit?: (record: any) => void,
   onDelete?: (record: any) => void,
@@ -91,12 +71,6 @@ export function createActionColumn(
   };
 }
 
-/**
- * 创建标签列配置
- * @param field 字段名
- * @param colorMap 标签颜色映射
- * @param labelMap 标签文本映射
- */
 export function createTagColumn(
   field: string,
   colorMap: Record<string, string> = {},
@@ -114,11 +88,6 @@ export function createTagColumn(
   };
 }
 
-/**
- * 创建索引列配置
- * @param currentPage 当前页码
- * @param pageSize 每页条数
- */
 export function createIndexColumn(
   currentPage: number,
   pageSize: number
@@ -132,34 +101,6 @@ export function createIndexColumn(
   };
 }
 
-/**
- * 时间格式化工具函数
- */
-export const formatDateTime = (date: string | Date): string => {
-  if (!date) return '-';
-  const d = typeof date === 'string' ? new Date(date) : date;
-  return d.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
-};
-
-/**
- * 时间格式化（仅日期）
- */
-export const formatDate = (date: string | Date): string => {
-  if (!date) return '-';
-  const d = typeof date === 'string' ? new Date(date) : date;
-  return d.toLocaleDateString('zh-CN');
-};
-
-/**
- * 文件大小格式化
- */
 export const formatFileSize = (bytes: number): string => {
   if (bytes === 0) return '0 B';
   const k = 1024;

@@ -67,7 +67,7 @@ import ActionButtons from '@/components/shared/ActionButtons';
 
 // 导入提取的常量、工具和 Hook
 import { STATUS_CONFIG, PRIORITY_CONFIG, TYPE_CONFIG } from './constants';
-import { formatTime, buildCategoryTree } from './utils';
+import { formatDateTime, buildCategoryTree } from '@/lib/workorderApi';
 import { useWorkOrderData } from './hooks/useWorkOrderData';
 import { useWorkOrderModals, type Comment, type HistoryItem } from './hooks/useWorkOrderModals';
 
@@ -155,8 +155,8 @@ function getWorkOrderTableColumns(props: WorkOrderTableColumnsProps): ColumnsTyp
       title: '创建时间',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      width: 160,
-      render: (date: string) => formatTime(date, 'YYYY-MM-DD HH:mm'),
+      width: 180,
+      render: (date: string) => formatDateTime(date),
     },
     {
       title: '操作',
@@ -490,7 +490,7 @@ const WorkOrderPage: FC = () => {
             </Form.Item>
             <Form.Item name="assigneeId" label="处理人">
               <Select placeholder="请选择处理人" allowClear className="user-form-input" showSearch style={{ width: 120 }} optionFilterProp="children">
-                {users.map((user) => (
+                {users.filter(user => user.id).map((user) => (
                   <Option key={user.id} value={user.id}>{user.nickName || user.username}</Option>
                 ))}
               </Select>
@@ -604,7 +604,7 @@ const WorkOrderPage: FC = () => {
             <Col span={12}>
               <Form.Item name="deptId" label="所属部门">
                 <Select placeholder="请选择部门" allowClear className="user-form-input">
-                  {depts.map((dept) => (
+                  {depts.filter(dept => dept.id).map((dept) => (
                     <Option key={dept.id} value={dept.id}>{dept.deptName}</Option>
                   ))}
                 </Select>
@@ -613,7 +613,7 @@ const WorkOrderPage: FC = () => {
             <Col span={12}>
               <Form.Item name="assigneeId" label="处理人">
                 <Select placeholder="请选择处理人" allowClear showSearch optionFilterProp="children" className="user-form-input">
-                  {users.map((user) => (
+                  {users.filter(user => user.id).map((user) => (
                     <Option key={user.id} value={user.id}>{user.nickName || user.username}</Option>
                   ))}
                 </Select>
@@ -638,7 +638,7 @@ const WorkOrderPage: FC = () => {
       <Drawer
         title="工单详情"
         placement="right"
-        width={720}
+        size="large"
         open={detailDrawerVisible}
         onClose={() => setDetailDrawerVisible(false)}
       >
@@ -661,7 +661,7 @@ const WorkOrderPage: FC = () => {
               <p><strong>报告人：</strong>{selectedRecord.submitter?.nickName || selectedRecord.submitter?.username}</p>
               <p><strong>处理人：</strong>{selectedRecord.assignee?.nickName || selectedRecord.assignee?.username || '-'}</p>
               <p><strong>部门：</strong>{selectedRecord.department?.deptName || '-'}</p>
-              <p><strong>创建时间：</strong>{formatTime(selectedRecord.createdAt)}</p>
+              <p><strong>创建时间：</strong>{formatDateTime(selectedRecord.createdAt)}</p>
             </Card>
 
             <Card title="工单描述" size="small" className="mb-4">
@@ -728,7 +728,7 @@ const WorkOrderPage: FC = () => {
                         <strong>{comment.user?.nickName || comment.user?.username}</strong>
                         {comment.isInternal && <Tag color="orange" className="ml-2">内部</Tag>}
                         <span className="text-gray-400 text-sm ml-2">
-                          {formatTime(comment.createdAt, 'YYYY-MM-DD HH:mm')}
+                          {formatDateTime(comment.createdAt, 'YYYY-MM-DD HH:mm')}
                         </span>
                       </div>
                       <p className="mt-1">{comment.content}</p>
@@ -748,7 +748,7 @@ const WorkOrderPage: FC = () => {
                       <div>
                         <strong>{item.operator?.nickName || item.operator?.username}</strong>
                         <span className="text-gray-400 text-sm ml-2">
-                          {formatTime(item.createdAt, 'YYYY-MM-DD HH:mm')}
+                          {formatDateTime(item.createdAt, 'YYYY-MM-DD HH:mm')}
                         </span>
                       </div>
                       <p className="mt-1">

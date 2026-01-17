@@ -14,7 +14,8 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import ActionButtons from '@/components/shared/ActionButtons';
 import type { JobInfo } from '../types';
-import { renderCronExpression, renderConcurrentTag, renderJobStatusTag, formatLocalTime } from '../utils';
+import { formatDateTime } from '@/utils/datetime';
+import { renderCronExpression, renderConcurrentTag, renderJobStatusTag } from '../utils';
 
 interface GetJobColumnsParams {
   handleToggleStatus: (record: JobInfo) => void;
@@ -85,14 +86,14 @@ export function getJobColumns(params: GetJobColumnsParams): ColumnsType<JobInfo>
       dataIndex: 'nextRunTime',
       key: 'nextRunTime',
       width: 180,
-      render: formatLocalTime,
+      render: (text: string) => formatDateTime(text),
     },
     {
       title: '创建时间',
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 180,
-      render: formatLocalTime,
+      render: (text: string) => formatDateTime(text),
     },
     {
       title: '操作',

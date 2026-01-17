@@ -25,6 +25,7 @@ import {
   ApiOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { formatDateTime } from '@/utils/datetime';
 import {
   getAPINotificationConfigList,
   createAPINotificationConfig,
@@ -208,6 +209,7 @@ const APIConfigPage: FC = () => {
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 180,
+      render: (date: string) => formatDateTime(date),
     },
     {
       title: '操作',

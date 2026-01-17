@@ -13,6 +13,7 @@ import {
 } from '@ant-design/icons';
 import type { ConfigTemplate } from '@/types';
 import ActionButtons from '@/components/shared/ActionButtons';
+import { formatDateTime } from '@/utils/datetime';
 import {
   renderVendorTag,
   renderDeviceTypeTag,
@@ -66,7 +67,13 @@ export function getTemplateColumns(params: TemplateColumnsParams): ColumnsType<C
     },
     { title: '版本', dataIndex: 'version', key: 'version', width: 80 },
     { title: '备注', dataIndex: 'description', key: 'description', ellipsis: true },
-    { title: '更新时间', dataIndex: 'updatedAt', key: 'updatedAt', width: 180 },
+    {
+      title: '更新时间',
+      dataIndex: 'updatedAt',
+      key: 'updatedAt',
+      width: 180,
+      render: (date: string) => formatDateTime(date),
+    },
     {
       title: '操作',
       key: 'action',

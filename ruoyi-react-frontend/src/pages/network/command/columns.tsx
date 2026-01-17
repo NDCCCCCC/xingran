@@ -8,6 +8,7 @@ import { Progress, Button, Tag, Popconfirm, Modal, Tooltip } from 'antd';
 import { EyeOutlined, StopOutlined } from '@ant-design/icons';
 import type { ConfigExecution, ConfigExecutionDetail, NetworkDevice } from '@/types';
 import ActionButtons from '@/components/shared/ActionButtons';
+import { formatDateTime } from '@/utils/datetime';
 import { renderExecutionStatusTag, renderSimpleStatusTag } from './constants';
 
 // 设备表格列
@@ -58,7 +59,13 @@ export function getExecutionColumns(
         );
       },
     },
-    { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 180 },
+    {
+      title: '创建时间',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      width: 180,
+      render: (date: string) => formatDateTime(date),
+    },
     {
       title: '操作',
       key: 'action',

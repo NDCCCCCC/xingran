@@ -28,6 +28,7 @@ import {
   StopOutlined,
 } from '@ant-design/icons';
 import type { Config } from '@/types';
+import { formatDateTime } from '@/utils/datetime';
 import { post } from '@/lib/api';
 import { useTableManager } from '@/hooks/useTableManager';
 import { handleApiError, handleSuccess } from '@/utils/errorHandler';
@@ -191,7 +192,13 @@ const ConfigManagement: FC = () => {
       ),
     },
     { title: '备注', dataIndex: 'remark', key: 'remark', width: 150, minWidth: 120, ellipsis: true },
-    { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 170, minWidth: 160 },
+    {
+      title: '创建时间',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      width: 180,
+      render: (date: string) => formatDateTime(date),
+    },
     {
       title: '操作',
       key: 'action',

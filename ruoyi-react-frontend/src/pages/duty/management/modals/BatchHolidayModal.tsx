@@ -3,7 +3,6 @@
  */
 
 import { Modal, Form, Select, DatePicker, message } from 'antd';
-import dayjs from 'dayjs';
 import { BATCH_HOLIDAY_NAME_OPTIONS, MAX_BATCH_DAYS } from '../constants';
 
 const { Option } = Select;

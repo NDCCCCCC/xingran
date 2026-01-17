@@ -7,6 +7,7 @@ import { Tag, Space } from 'antd';
 import { SafetyCertificateOutlined } from '@ant-design/icons';
 import type { TreeDataNode } from 'antd';
 import type { Key } from 'antd/es/table/interface';
+import { formatDateTime } from '@/utils/datetime';
 
 /** 处理树形数据 */
 export function processTreeData(nodes: any[], keyField: string = 'id', titleField: string = 'title'): TreeDataNode[] {
@@ -42,5 +43,5 @@ export function renderRoleKeyTag(text: string) {
 
 /** 格式化时间为本地字符串 */
 export function formatLocalTime(time: string) {
-  return new Date(time).toLocaleString();
+  return formatDateTime(time);
 }

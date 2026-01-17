@@ -23,6 +23,7 @@ import {
   SendOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { formatDateTime } from '@/utils/datetime';
 import {
   getEmailConfigList,
   createEmailConfig,
@@ -222,18 +223,8 @@ const EmailConfigPage: FC = () => {
       title: '创建时间',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      width: 160,
-      render: (text: string) => {
-        if (!text) return '-';
-        const date = new Date(text);
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        const seconds = String(date.getSeconds()).padStart(2, '0');
-        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-      },
+      width: 180,
+      render: (text: string) => formatDateTime(text),
     },
     {
       title: '操作',

@@ -27,6 +27,7 @@ import { post } from '@/lib/api';
 import type { ColumnsType } from 'antd/es/table';
 import type { BaseResponse, PageResponse } from '@/types';
 import ActionButtons from '@/components/shared/ActionButtons';
+import { formatDateTime } from '@/utils/datetime';
 
 interface ServerInfo {
   id: string;
@@ -272,7 +273,7 @@ const ServerMonitor: FC = () => {
       key: 'lastActiveAt',
       width: 170,
       minWidth: 160,
-      render: (time: string) => time ? new Date(time).toLocaleString() : '-',
+      render: (time: string) => formatDateTime(time),
     },
     {
       title: '操作',
@@ -394,7 +395,7 @@ const ServerMonitor: FC = () => {
                   </Tag>
                 </Descriptions.Item>
                 <Descriptions.Item label="最后活跃时间">
-                  {new Date(selectedServer.lastActiveAt).toLocaleString()}
+                  {formatDateTime(selectedServer.lastActiveAt)}
                 </Descriptions.Item>
               </Descriptions>
             </Card>

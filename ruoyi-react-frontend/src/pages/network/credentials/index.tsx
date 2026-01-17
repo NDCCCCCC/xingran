@@ -27,6 +27,7 @@ import {
   ApiOutlined,
 } from '@ant-design/icons';
 import type { AuthCredential, BaseResponse, PageResponse } from '@/types';
+import { formatDateTime } from '@/utils/datetime';
 import { post } from '@/lib/api';
 import { useTableManager } from '@/hooks/useTableManager';
 import { withErrorHandling } from '@/utils/errorHandler';
@@ -281,7 +282,13 @@ const CredentialManagement: FC = () => {
       ),
     },
     { title: '备注', dataIndex: 'description', key: 'description', width: 150, ellipsis: true },
-    { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 180 },
+    {
+      title: '创建时间',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      width: 180,
+      render: (date: string) => formatDateTime(date),
+    },
     {
       title: '操作',
       key: 'action',

@@ -69,6 +69,7 @@ export function useScheduleData(params: UseScheduleDataParams): UseScheduleDataR
         startDate: values.dateRange?.[0]?.format('YYYY-MM-DD'),
         endDate: values.dateRange?.[1]?.format('YYYY-MM-DD'),
         dutyType: values.dutyType,
+        expired: values.expired,
       });
       setDataSource(result.data?.list ?? []);
       setTotal(result.data?.total ?? 0);

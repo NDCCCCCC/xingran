@@ -15,7 +15,7 @@ import { ArrowLeftOutlined } from '@ant-design/icons';
 import { getNoticeDetail } from '@/lib/noticeApi';
 import type { Notice } from '@/types/notice';
 import { PRIORITY_COLORS, PRIORITY_LABELS, NOTICE_TYPE_COLORS, NOTICE_TYPE_LABELS, PUBLISH_STATUS_COLORS, PUBLISH_STATUS_LABELS } from '@/types/notice';
-import dayjs from 'dayjs';
+import { formatDateTime } from '@/utils/datetime';
 
 /**
  * 管理端通知详情页面
@@ -108,11 +108,11 @@ const AdminNoticeDetailPage: FC = () => {
         <Descriptions column={3} size="small" className="mb-6">
           <Descriptions.Item label="创建人">{notice.createdByName || '系统管理员'}</Descriptions.Item>
           <Descriptions.Item label="创建时间">
-            {dayjs(notice.createdAt).format('YYYY-MM-DD HH:mm:ss')}
+            {formatDateTime(notice.createdAt)}
           </Descriptions.Item>
           <Descriptions.Item label="发布时间">
             {notice.publishTime
-              ? dayjs(notice.publishTime).format('YYYY-MM-DD HH:mm:ss')
+              ? formatDateTime(notice.publishTime)
               : '尚未发布'}
           </Descriptions.Item>
         </Descriptions>

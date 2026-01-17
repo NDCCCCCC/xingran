@@ -46,22 +46,10 @@ import type { DeviceBackupGroup, DiffLine } from './types';
 import { useBackupData, useBackupDiff, useBackupModals } from './hooks';
 import { post } from '@/lib/api';
 import ActionButtons from '@/components/shared/ActionButtons';
+import { formatDateTime } from '@/utils/datetime';
 
 const { Option } = Select;
 const { TextArea } = Input;
-
-// 格式化日期时间
-const formatDateTime = (dateStr: string): string => {
-  if (!dateStr) return '-';
-  const date = new Date(dateStr);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const seconds = String(date.getSeconds()).padStart(2, '0');
-  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-};
 
 // 备份类型选项
 const BACKUP_TYPE_OPTIONS = [
@@ -400,7 +388,7 @@ const ConfigBackupPage: FC = () => {
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 180,
-      render: formatDateTime,
+      render: (value: any) => formatDateTime(value),
     },
     {
       title: '操作',
@@ -655,7 +643,7 @@ const ConfigBackupPage: FC = () => {
           </Space>
         }
         placement="right"
-        width={1000}
+        size="large"
         open={versionListDrawerVisible}
         onClose={() => { closeVersionListDrawer(); setSelectedDeviceGroup(null); }}
         extra={
@@ -828,7 +816,7 @@ const ConfigBackupPage: FC = () => {
           </Space>
         }
         placement="right"
-        width={800}
+        size="large"
         open={contentDrawerVisible}
         onClose={() => { closeContentDrawer(); }}>
           <pre style={{

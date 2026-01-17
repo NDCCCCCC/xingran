@@ -43,8 +43,9 @@ import { PeriodicAssignType } from '@/lib/workorderApi';
 
 // 导入提取的模块
 import { PRIORITY_CONFIG, TYPE_CONFIG, ASSIGN_TYPE_CONFIG } from './constants';
-import { formatTime, buildCategoryTree, VARIABLE_HELP_CONTENT } from './utils';
+import { formatDateTime, buildCategoryTree } from '@/lib/workorderApi';
 import { useTemplateData, useTemplateActions } from './hooks';
+import { VARIABLE_HELP_CONTENT } from './utils';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -117,8 +118,8 @@ function getTemplateTableColumns(props: TemplateTableColumnsProps): ColumnsType<
       title: '下次执行',
       dataIndex: 'nextRunAt',
       key: 'nextRunAt',
-      width: 160,
-      render: formatTime,
+      width: 180,
+      render: (date: string) => formatDateTime(date),
     },
     {
       title: '已生成',
@@ -556,7 +557,7 @@ const PeriodicTemplatePage: FC = () => {
                     color={log.status === 'success' ? 'green' : 'red'}
                   >
                     <div>
-                      <strong>{formatTime(log.executedAt, 'YYYY-MM-DD HH:mm:ss')}</strong>
+                      <strong>{formatDateTime(log.executedAt)}</strong>
                       <Tag color={log.status === 'success' ? 'green' : 'red'} className="ml-2">
                         {log.status === 'success' ? '成功' : '失败'}
                       </Tag>

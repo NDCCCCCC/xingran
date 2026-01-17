@@ -19,13 +19,13 @@ import {
   TagOutlined,
   SearchOutlined,
 } from '@ant-design/icons';
-import dayjs from 'dayjs';
 import {
   searchKnowledgeArticles,
   getKnowledgeArticle,
   likeKnowledgeArticle,
   type KnowledgeArticle,
 } from '@/lib/knowledgeApi';
+import { formatDateTime } from '@/utils/datetime';
 import {
   getKnowledgeCategoryList,
   type KnowledgeCategory,
@@ -266,7 +266,7 @@ const KnowledgeViewPage: FC = () => {
                               <span><EyeOutlined className="mr-1" />{article.viewCount || 0}</span>
                               <span><LikeOutlined className="mr-1" />{article.likeCount || 0}</span>
                             </Space>
-                            <span>{dayjs(article.createdAt).format('YYYY-MM-DD')}</span>
+                            <span>{formatDateTime(article.createdAt, 'YYYY-MM-DD')}</span>
                           </div>
                         </Card>
                       </Col>
@@ -282,7 +282,7 @@ const KnowledgeViewPage: FC = () => {
         <Drawer
           title={null}
           placement="right"
-          width={700}
+          size="large"
           open={detailVisible}
           onClose={() => setDetailVisible(false)}
         >
@@ -305,7 +305,7 @@ const KnowledgeViewPage: FC = () => {
                       <span><EyeOutlined className="mr-1" />浏览: {selectedArticle.viewCount || 0}</span>
                       <span><LikeOutlined className="mr-1" />点赞: {selectedArticle.likeCount || 0}</span>
                     </Space>
-                    <span>{dayjs(selectedArticle.createdAt).format('YYYY-MM-DD HH:mm')}</span>
+                    <span>{formatDateTime(selectedArticle.createdAt, 'YYYY-MM-DD HH:mm')}</span>
                   </div>
                 </Space>
               </div>

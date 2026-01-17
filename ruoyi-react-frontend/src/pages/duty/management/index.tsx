@@ -5,21 +5,20 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Tabs, Button, Modal, Form } from 'antd';
-import { LeftOutlined, RightOutlined, CalendarOutlined, SettingOutlined } from '@ant-design/icons';
+import { LeftOutlined, RightOutlined, CalendarOutlined, SettingOutlined, TeamOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { getDutyPoolList, getUserList, type Holiday } from '@/lib/dutyApi';
 import type { DutyPool, SimpleUser } from '@/lib/dutyApi';
 import {
   WeeklyView,
-  ScheduleManagement,
   HolidayManagement,
   DutyConfig,
-  GenerateScheduleModal,
 } from './components';
-import { SwapScheduleModal, ManualScheduleModal, HolidayModal, BatchHolidayModal } from './modals';
+import { HolidayModal, BatchHolidayModal } from './modals';
 import { useScheduleData, useHolidayData, useDutyConfig } from './hooks';
 import { downloadHolidayTemplate, handleHolidayImport } from './utils';
-import type { ScheduleSearchParams, GenerateScheduleValues, DutyConfigValues, ImportOptions, BatchHolidayFormValues } from './types';
+import type { DutyConfigValues, ImportOptions, BatchHolidayFormValues } from './types';
+import DutyPoolPage from '../pools';
 
 // ==================== 主组件 ====================
 
@@ -39,15 +38,10 @@ export default function DutyManagement() {
   const [users, setUsers] = useState<SimpleUser[]>([]);
 
   // 模态框状态
-  const [generateModalVisible, setGenerateModalVisible] = useState(false);
-  const [swapModalVisible, setSwapModalVisible] = useState(false);
-  const [manualModalVisible, setManualModalVisible] = useState(false);
   const [holidayModalVisible, setHolidayModalVisible] = useState(false);
   const [holidayBatchModalVisible, setHolidayBatchModalVisible] = useState(false);
 
   // 表单
-  const [swapForm] = Form.useForm();
-  const [manualForm] = Form.useForm();
   const [holidayForm] = Form.useForm();
 
   // ==================== 初始化 ====================
@@ -80,68 +74,6 @@ export default function DutyManagement() {
       console.error('获取用户列表失败', error);
     }
   };
-
-  // ==================== 排班操作 ====================
-
-  const handleScheduleSearch = useCallback((values: ScheduleSearchParams) => {
-    const { poolId, userId, dutyType, dateRange } = values;
-    scheduleData.fetchList(1, scheduleData.pageSize, {
-      poolId,
-      userId,
-      dutyType,
-      startDate: dateRange?.[0]?.format('YYYY-MM-DD'),
-      endDate: dateRange?.[1]?.format('YYYY-MM-DD'),
-    });
-  }, [scheduleData]);
-
-  const handleScheduleReset = useCallback(() => {
-    scheduleData.fetchList(1, scheduleData.pageSize);
-  }, [scheduleData]);
-
-  const handleGenerateClick = useCallback(() => {
-    setGenerateModalVisible(true);
-  }, []);
-
-  const handleGenerateOk = useCallback(async (values: GenerateScheduleValues) => {
-    return await scheduleData.generate(values);
-  }, [scheduleData]);
-
-  const handleSwapClick = useCallback(() => {
-    scheduleData.fetchAllSchedules();
-    setSwapModalVisible(true);
-  }, [scheduleData]);
-
-  const handleSwapOk = useCallback(async () => {
-    try {
-      const values = await swapForm.validateFields();
-      await scheduleData.swap(values);
-      setSwapModalVisible(false);
-    } catch (error) {
-      // 表单验证失败
-    }
-  }, [scheduleData, swapForm]);
-
-  const handleManualClick = useCallback(() => {
-    setManualModalVisible(true);
-  }, []);
-
-  const handleManualOk = useCallback(async () => {
-    try {
-      const values = await manualForm.validateFields();
-      const success = await scheduleData.manual({
-        poolId: values.poolId,
-        dutyDate: values.dutyDate.format('YYYY-MM-DD'),
-        dutyType: values.dutyType,
-        userIds: values.userIds,
-        reason: values.reason,
-      });
-      if (success) {
-        setManualModalVisible(false);
-      }
-    } catch (error) {
-      // 表单验证失败
-    }
-  }, [scheduleData, manualForm]);
 
   // ==================== 节假日操作 ====================
 
@@ -265,31 +197,6 @@ export default function DutyManagement() {
             ),
           },
           {
-            key: 'schedule',
-            label: '排班管理',
-            children: (
-              <ScheduleManagement
-                schedules={scheduleData.schedules}
-                loading={scheduleData.loading}
-                total={scheduleData.total}
-                current={scheduleData.current}
-                pageSize={scheduleData.pageSize}
-                selectedRowKeys={scheduleData.selectedRowKeys}
-                pools={pools}
-                users={users}
-                onSearch={handleScheduleSearch}
-                onReset={handleScheduleReset}
-                onPageChange={(page, size) => scheduleData.fetchList(page, size)}
-                onSelectedChange={(keys) => scheduleData.setSelectedRowKeys(keys)}
-                onDelete={(id) => scheduleData.deleteOne(id)}
-                onBatchDelete={() => scheduleData.batchDelete(scheduleData.selectedRowKeys)}
-                onGenerateClick={handleGenerateClick}
-                onSwapClick={handleSwapClick}
-                onManualClick={handleManualClick}
-              />
-            ),
-          },
-          {
             key: 'holiday',
             label: '节假日管理',
             children: (
@@ -326,32 +233,17 @@ export default function DutyManagement() {
               />
             ),
           },
+          {
+            key: 'pools',
+            label: (
+              <span>
+                <TeamOutlined />
+                值班池管理
+              </span>
+            ),
+            children: <DutyPoolPage />,
+          },
         ]}
-      />
-
-      {/* 生成排班模态框 */}
-      <GenerateScheduleModal
-        visible={generateModalVisible}
-        onCancel={() => setGenerateModalVisible(false)}
-        onOk={handleGenerateOk}
-        pools={pools}
-      />
-
-      {/* 调班模态框 */}
-      <SwapScheduleModal
-        visible={swapModalVisible}
-        allSchedules={scheduleData.allSchedules}
-        onOk={handleSwapOk}
-        onCancel={() => setSwapModalVisible(false)}
-      />
-
-      {/* 手动排班模态框 */}
-      <ManualScheduleModal
-        visible={manualModalVisible}
-        pools={pools}
-        users={users}
-        onOk={handleManualOk}
-        onCancel={() => setManualModalVisible(false)}
       />
 
       {/* 节假日模态框 */}

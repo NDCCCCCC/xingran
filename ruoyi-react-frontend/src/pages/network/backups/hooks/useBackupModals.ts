@@ -21,7 +21,7 @@ interface UseBackupModalsReturn {
   selectedDeviceGroup: DeviceBackupGroup | null;
   backupContent: string;
   openBackupModal: () => void;
-  closeBackupModal: () => void;
+  closeBackupModal: (form?: any) => void;
   openRestoreModal: (backup: ConfigBackup) => void;
   closeRestoreModal: () => void;
   openContentDrawer: (backup: ConfigBackup) => Promise<void>;

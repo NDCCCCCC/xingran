@@ -41,6 +41,7 @@ import DeptTree from '@/components/DeptTree';
 import { useTableManager } from '@/hooks/useTableManager';
 import { handleApiError, handleSuccess } from '@/utils/errorHandler';
 import ActionButtons from '@/components/shared/ActionButtons';
+import { formatDateTime } from '@/utils/datetime';
 
 // 导入提取的文件
 import { GENDER_OPTIONS, STATUS_OPTIONS } from './constants';
@@ -130,17 +131,20 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
       key: 'roles',
       width: 160,
       minWidth: 120,
-      render: (roles: string[]) => {
+      render: (roles: string[] | Array<{ roleName?: string; roleKey?: string; id?: string }>) => {
         if (!roles || roles.length === 0) {
           return <span style={{ color: '#999' }}>无角色</span>;
         }
         return (
           <Space size="small" wrap>
-            {roles.map((roleName, index) => (
-              <Tag key={index} color="blue">
-                {roleName}
-              </Tag>
-            ))}
+            {roles.map((role, index) => {
+              const roleName = typeof role === 'string' ? role : role.roleName || role.roleKey || '-';
+              return (
+                <Tag key={index} color="blue">
+                  {roleName}
+                </Tag>
+              );
+            })}
           </Space>
         );
       },
@@ -163,7 +167,7 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
       key: 'createdAt',
       width: 170,
       minWidth: 160,
-      render: (text) => new Date(text).toLocaleString(),
+      render: (text) => formatDateTime(text),
     },
     {
       title: '操作',

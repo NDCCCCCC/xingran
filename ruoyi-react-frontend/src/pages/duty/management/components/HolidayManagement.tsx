@@ -7,7 +7,7 @@ import {
   FileExcelOutlined,
   UploadOutlined,
 } from '@ant-design/icons';
-import dayjs from 'dayjs';
+import { formatDate } from '@/utils/datetime';
 import type { Holiday } from '@/lib/dutyApi';
 
 const { Option } = Select;
@@ -54,7 +54,7 @@ export const HolidayManagement: React.FC<HolidayManagementProps> = ({
       dataIndex: 'holidayDate',
       key: 'holidayDate',
       width: 120,
-      render: (date: string) => dayjs(date).format('YYYY-MM-DD'),
+      render: (date: string) => formatDate(date),
     },
     {
       title: '名称',

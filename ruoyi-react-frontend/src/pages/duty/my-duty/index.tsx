@@ -21,6 +21,7 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import dayjs from 'dayjs';
+import { formatDateTime } from '@/utils/datetime';
 import {
   getMyDutyStats,
   getDutyScheduleList,
@@ -211,7 +212,7 @@ const MyDutyPage: FC = () => {
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 180,
-      render: (date: string) => dayjs(date).format('YYYY-MM-DD HH:mm'),
+      render: (date: string) => formatDateTime(date, 'YYYY-MM-DD HH:mm'),
     },
   ];
 
@@ -222,7 +223,7 @@ const MyDutyPage: FC = () => {
       dataIndex: 'scheduleDate',
       key: 'scheduleDate',
       width: 110,
-      render: (date: string) => dayjs(date).format('MM-DD'),
+      render: (date: string) => formatDateTime(date, 'MM-DD'),
     },
     {
       title: '星期',
@@ -308,7 +309,7 @@ const MyDutyPage: FC = () => {
                 {stats?.nextDutyDate ? (
                   <Space>
                     <span style={{ fontSize: '18px', fontWeight: 500 }}>
-                      {dayjs(stats.nextDutyDate).format('MM-DD')}
+                      {formatDateTime(stats.nextDutyDate, 'MM-DD')}
                     </span>
                     {stats.nextDutyPoolName && (
                       <Tag color="blue">{stats.nextDutyPoolName}</Tag>

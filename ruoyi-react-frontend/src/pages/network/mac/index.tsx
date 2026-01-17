@@ -23,6 +23,7 @@ import {
   AppleOutlined,
 } from '@ant-design/icons';
 import type { DeviceMACAddress, NetworkDevice } from '@/types';
+import { formatDateTime } from '@/utils/datetime';
 import { post } from '@/lib/api';
 import { useTableManager } from '@/hooks/useTableManager';
 import { withErrorHandling } from '@/utils/errorHandler';
@@ -152,7 +153,13 @@ const MACAddressPage: FC = () => {
         return <Tag color={color}>{option?.label || macType}</Tag>;
       },
     },
-    { title: '采集时间', dataIndex: 'collectedAt', key: 'collectedAt', width: 180 },
+    {
+      title: '采集时间',
+      dataIndex: 'collectedAt',
+      key: 'collectedAt',
+      width: 180,
+      render: (date: string) => formatDateTime(date),
+    },
   ];
 
   return (

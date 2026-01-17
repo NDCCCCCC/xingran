@@ -7,6 +7,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { Button, Tag, Progress, Tooltip, Popconfirm } from 'antd';
 import { EyeOutlined, StopOutlined } from '@ant-design/icons';
 import type { NetworkDevice, ConfigExecution, ConfigExecutionDetail } from '@/types';
+import { formatDateTime } from '@/utils/datetime';
 import { STATUS_CONFIG } from './constants';
 import ActionButtons from '@/components/shared/ActionButtons';
 
@@ -63,7 +64,13 @@ export function getExecutionColumns(params: ExecutionColumnsParams): ColumnsType
         return <Progress percent={percent} size="small" status={record.status === 'failed' ? 'exception' : undefined} />;
       },
     },
-    { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 180 },
+    {
+      title: '创建时间',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      width: 180,
+      render: (date: string) => formatDateTime(date),
+    },
     {
       title: '操作',
       key: 'action',

@@ -14,6 +14,7 @@ import {
 } from '@ant-design/icons';
 import type { Department } from '@/types';
 import { renderStatusTag, renderExternalOrgTag } from './constants';
+import { formatDateTime } from '@/utils/datetime';
 
 export interface DeptColumnsParams {
   handleEdit: (record: Department) => void;
@@ -92,7 +93,7 @@ export function getDeptColumns(params: DeptColumnsParams): ColumnsType<Departmen
       title: '创建时间',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: (text) => new Date(text).toLocaleString(),
+      render: (text) => formatDateTime(text),
     },
     {
       title: '操作',
