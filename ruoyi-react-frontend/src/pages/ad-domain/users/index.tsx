@@ -295,7 +295,7 @@ const ADUserPage: FC = () => {
 
   return (
     <Card>
-      <Space direction="vertical" style={{ width: '100%' }} size="large">
+      <Space orientation="vertical" style={{ width: '100%' }} size="large">
         {/* 搜索栏 */}
         <Form form={form} layout="inline">
           <Form.Item label="AD配置">
@@ -391,7 +391,7 @@ const ADUserPage: FC = () => {
         footer={null}
         width={500}
       >
-        <Space direction="vertical" style={{ width: '100%' }}>
+        <Space orientation="vertical" style={{ width: '100%' }}>
           <div>选择目标OU：</div>
           <Select
             style={{ width: '100%' }}

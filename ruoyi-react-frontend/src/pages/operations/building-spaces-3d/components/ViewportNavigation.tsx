@@ -36,15 +36,27 @@ const ViewportNavigation: React.FC<ViewportNavigationProps> = ({ currentView, on
         backdropFilter: 'blur(8px)',
       }}
     >
-      <Space direction="vertical" size="small">
-        <Breadcrumb>
-          <Breadcrumb.Item>
-            <HomeOutlined /> 楼宇空间
-          </Breadcrumb.Item>
-          <Breadcrumb.Item>
-            {current.icon} {current.title}
-          </Breadcrumb.Item>
-        </Breadcrumb>
+      <Space orientation="vertical" size="small">
+        <Breadcrumb
+          items={[
+            {
+              title: (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <HomeOutlined /> 楼宇空间
+                </span>
+              ),
+              href: '/ops/building-spaces',
+            },
+            {
+              title: (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  {current.icon} {current.title}
+                </span>
+              ),
+              href: '#',
+            },
+          ]}
+        />
 
         {currentView !== 'map' && (
           <Button

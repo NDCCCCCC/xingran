@@ -202,7 +202,7 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
         {/* 最近五次执行时间 */}
         {isValid && (
           <div style={{ marginTop: 16 }}>
-            <Space direction="vertical" style={{ width: '100%' }} size="small">
+            <Space orientation="vertical" style={{ width: '100%' }} size="small">
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <ClockCircleOutlined style={{ color: '#1890ff' }} />
                 <span style={{ fontWeight: 500 }}>最近五次执行时间</span>

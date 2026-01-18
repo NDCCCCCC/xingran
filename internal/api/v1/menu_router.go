@@ -9,8 +9,10 @@ import (
 func SetupUserMenuRouter(r *gin.RouterGroup, core *core.Core) {
 	menus := r.Group("/menus")
 	{
-		// 获取用户菜单树
+		// 获取用户菜单树（不包含隐藏菜单，用于导航栏）
 		menus.POST("/user-menus", getUserMenus(core))
+		// 获取用户所有菜单（包含隐藏菜单，用于标签页标题）
+		menus.POST("/user-all", getAllUserMenus(core))
 		// 获取用户权限列表
 		menus.POST("/user-permissions", getUserPermissions(core))
 	}

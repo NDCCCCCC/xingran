@@ -123,7 +123,7 @@ export function WorkstationFloorPlanView({
           {floorPlanWorkstations.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '20px', color: '#999' }}>暂无工位数据</div>
           ) : (
-            <Space direction="vertical" style={{ width: '100%' }} size={[8, 8]}>
+            <Space orientation="vertical" style={{ width: '100%' }} size={[8, 8]}>
               {floorPlanWorkstations.map((ws) => {
                 const typeText = getWorkstationTypeText(ws.type);
                 const fullWorkstation = allWorkstations.find((w) => w.id === ws.id);

@@ -200,7 +200,7 @@ const FileUpload: FC<FileUploadProps> = ({
   }
 
   return (
-    <Space direction="vertical" style={{ width: '100%' }}>
+    <Space orientation="vertical" style={{ width: '100%' }}>
       <Upload {...uploadProps}>
         <Button icon={<PlusOutlined />} disabled={disabled || uploading}>
           选择文件

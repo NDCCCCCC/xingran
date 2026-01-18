@@ -54,7 +54,7 @@ const SettingsPage: FC = () => {
           initialValues={preferences}
           onValuesChange={handleFormChange}
         >
-          <Divider orientationMargin="0">界面设置</Divider>
+          <Divider styles={{ content: { margin: 0 } }}>界面设置</Divider>
 
           <Form.Item
             label="主题"
@@ -87,7 +87,7 @@ const SettingsPage: FC = () => {
             <Switch />
           </Form.Item>
 
-          <Divider orientationMargin="0">数据设置</Divider>
+          <Divider styles={{ content: { margin: 0 } }}>数据设置</Divider>
 
           <Form.Item
             label="默认分页大小"

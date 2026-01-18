@@ -206,7 +206,7 @@ const ADOUPage: FC = () => {
             }
             bodyStyle={{ maxHeight: 'calc(100vh - 280px)', overflow: 'auto' }}
           >
-            <Space direction="vertical" style={{ width: '100%' }} size="small">
+            <Space orientation="vertical" style={{ width: '100%' }} size="small">
               <Select
                 style={{ width: '100%' }}
                 placeholder="选择AD配置"

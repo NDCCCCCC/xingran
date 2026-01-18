@@ -704,7 +704,7 @@ const DeviceManagement: FC = () => {
 
           {probeResult && (
             <>
-              <Divider orientation="left" orientationMargin="0">探测结果</Divider>
+              <Divider orientation="left" styles={{ content: { margin: 0 } }}>探测结果</Divider>
               <Alert
                 title="探测成功"
                 type="success"
@@ -729,7 +729,7 @@ const DeviceManagement: FC = () => {
             </>
           )}
 
-          <Divider orientation="left" orientationMargin="0">其他信息（可选）</Divider>
+          <Divider orientation="left" styles={{ content: { margin: 0 } }}>其他信息（可选）</Divider>
           <Form.Item name="deptId" label="所属部门">
             <Select placeholder="请选择部门" allowClear>
               {renderDeptTreeOptions(departments)}
@@ -830,7 +830,7 @@ const DeviceManagement: FC = () => {
       >
         {viewingDevice && (
           <div>
-            <Divider orientation="left" orientationMargin="0">基本信息</Divider>
+            <Divider orientation="left" styles={{ content: { margin: 0 } }}>基本信息</Divider>
             <Row gutter={16}>
               <Col span={12}>
                 <p><strong>设备名称:</strong> {viewingDevice.deviceName}</p>
@@ -851,7 +851,7 @@ const DeviceManagement: FC = () => {
               </Col>
             </Row>
 
-            <Divider orientation="left" orientationMargin="0">设备详细信息（SSH采集）</Divider>
+            <Divider orientation="left" styles={{ content: { margin: 0 } }}>设备详细信息（SSH采集）</Divider>
             <Row gutter={16}>
               <Col span={12}>
                 <p><strong>型号:</strong> {viewingDevice.model || '-'}</p>
@@ -865,7 +865,7 @@ const DeviceManagement: FC = () => {
 
             {viewingDevice.description && (
               <>
-                <Divider orientation="left" orientationMargin="0">备注</Divider>
+                <Divider orientation="left" styles={{ content: { margin: 0 } }}>备注</Divider>
                 <p>{viewingDevice.description}</p>
               </>
             )}

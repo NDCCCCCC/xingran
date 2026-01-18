@@ -680,9 +680,9 @@ func buildMenuTreeSelect(menus []models.Menu, parentID *string) []map[string]int
 	return tree
 }
 
-// getUserMenus 获取用户菜单树
+// getUserMenus 获取用户菜单树（不包含隐藏菜单）
 // @Summary 获取用户菜单树
-// @Description 获取当前用户的菜单树
+// @Description 获取当前用户的菜单树（仅包含可见菜单，用于导航栏渲染）
 // @Tags 菜单管理
 // @Accept json
 // @Produce json
@@ -697,7 +697,34 @@ func getUserMenus(core *core.Core) gin.HandlerFunc {
 		}
 
 		permissionSvc := permission.NewService()
-		menus, err := permissionSvc.GetUserMenus(core.GetDB(), userID.(string))
+		menus, err := permissionSvc.GetUserMenus(core.GetDB(), userID.(string), false) // 不包含隐藏菜单
+		if err != nil {
+			response.Error(c, response.ErrServerError, "获取用户菜单失败")
+			return
+		}
+
+		response.Success(c, menus)
+	}
+}
+
+// getAllUserMenus 获取用户所有菜单（包含隐藏菜单）
+// @Summary 获取用户所有菜单
+// @Description 获取当前用户的所有菜单（包括隐藏菜单，用于标签页标题等功能）
+// @Tags 菜单管理
+// @Accept json
+// @Produce json
+// @Success 200 {object} response.Response{data=[]models.Menu}
+// @Router /system/menus/user-all [post]
+func getAllUserMenus(core *core.Core) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID, exists := c.Get("user_id")
+		if !exists {
+			response.Error(c, response.ErrUnauthorized, "用户未认证")
+			return
+		}
+
+		permissionSvc := permission.NewService()
+		menus, err := permissionSvc.GetUserMenus(core.GetDB(), userID.(string), true) // 包含隐藏菜单
 		if err != nil {
 			response.Error(c, response.ErrServerError, "获取用户菜单失败")
 			return

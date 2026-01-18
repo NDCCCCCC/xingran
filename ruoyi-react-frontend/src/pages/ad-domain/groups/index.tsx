@@ -280,7 +280,7 @@ const ADGroupPage: FC = () => {
 
   return (
     <Card>
-      <Space direction="vertical" style={{ width: '100%' }} size="large">
+      <Space orientation="vertical" style={{ width: '100%' }} size="large">
         {/* 搜索栏 */}
         <Form form={form} layout="inline">
           <Form.Item label="AD配置">
@@ -334,7 +334,7 @@ const ADGroupPage: FC = () => {
         open={drawerVisible}
         onClose={() => setDrawerVisible(false)}
       >
-        <Space direction="vertical" style={{ width: '100%' }} size="middle">
+        <Space orientation="vertical" style={{ width: '100%' }} size="middle">
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAddMember}>
             添加成员
           </Button>

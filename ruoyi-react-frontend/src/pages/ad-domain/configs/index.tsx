@@ -249,7 +249,7 @@ const ADConfigPage: FC = () => {
         const result = syncProgress[record.id];
         if (!result) return '-';
         return (
-          <Space direction="vertical" size="small">
+          <Space orientation="vertical" size="small">
             <span>OU: {result.ouCount}</span>
             <span>用户组: {result.groupCount}</span>
             <span>用户: {result.userCount}</span>

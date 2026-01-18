@@ -291,7 +291,7 @@ const KnowledgeViewPage: FC = () => {
               <h1 className="text-xl font-bold mb-4">{selectedArticle.title}</h1>
 
               <div className="mb-4 pb-4 border-b">
-                <Space direction="vertical" className="w-full">
+                <Space orientation="vertical" className="w-full">
                   <div className="flex justify-between">
                     <Space>
                       <Tag color="blue">{selectedArticle.category?.categoryName}</Tag>

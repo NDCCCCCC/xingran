@@ -201,7 +201,7 @@ const ExcelImport: FC<ExcelImportProps> = ({
       width={800}
       destroyOnHidden
     >
-      <Space direction="vertical" size="large" style={{ width: '100%' }}>
+      <Space orientation="vertical" size="large" style={{ width: '100%' }}>
         <Alert
           message="导入说明"
           description={
@@ -263,7 +263,7 @@ const ExcelImport: FC<ExcelImportProps> = ({
 
         {importResult && (
           <div>
-            <Space direction="vertical" style={{ width: '100%' }}>
+            <Space orientation="vertical" style={{ width: '100%' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Text strong>导入结果</Text>
                 <Button

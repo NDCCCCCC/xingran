@@ -138,7 +138,7 @@ const NoticeDetailPage: FC = () => {
             <Divider />
             <div>
               <h3 className="text-base font-medium mb-3">附件</h3>
-              <Space direction="vertical" className="w-full">
+              <Space orientation="vertical" className="w-full">
                 {notice.attachments.map((file) => (
                   <Card key={file.id} size="small" className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
