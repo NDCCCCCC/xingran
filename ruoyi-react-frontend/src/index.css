@@ -835,6 +835,10 @@ body {
   margin: 0 4px 0 0 !important;
   display: inline-flex !important;
   align-items: center !important;
+  background: transparent !important;
+  color: var(--sidebar-text) !important;
+  transition: all 0.2s ease !important;
+  position: relative;
 }
 
 .layout-tab-bar .ant-tabs-tab-btn {
@@ -846,6 +850,103 @@ body {
 .layout-tab-bar .ant-tabs-content,
 .layout-tab-bar .ant-tabs-content-holder {
   display: none !important;
+}
+
+/* ========================================
+   TabBar 激活标签样式 - 与侧边栏保持一致
+   ======================================== */
+
+/* 激活标签背景和文字 */
+.layout-tab-bar .ant-tabs-tab-active {
+  background: var(--sidebar-bg-active) !important;
+  color: var(--sidebar-text-active) !important;
+  font-weight: 600 !important;
+  border-radius: 4px 4px 0 0 !important;
+}
+
+/* 自定义底部蓝色指示条（水平） */
+.layout-tab-bar .ant-tabs-tab-active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--sidebar-accent) !important;
+  border-radius: 2px 2px 0 0;
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.5) !important;
+}
+
+/* 隐藏 Ant Design 默认的 ink bar */
+.layout-tab-bar .ant-tabs-ink-bar {
+  display: none !important;
+}
+
+/* 激活标签的图标颜色 */
+.layout-tab-bar .ant-tabs-tab-active .anticon {
+  color: var(--sidebar-accent) !important;
+}
+
+/* 标签悬停效果 */
+.layout-tab-bar .ant-tabs-tab:hover {
+  background: var(--sidebar-bg-hover) !important;
+  color: var(--sidebar-text-hover) !important;
+}
+
+/* ========================================
+   TabBar 滚动按钮样式
+   ======================================== */
+.tab-scroll-button {
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  padding: 0 !important;
+  flex-shrink: 0;
+  border: 1px solid var(--theme-border-primary) !important;
+  background: var(--theme-bg-surface) !important;
+  color: var(--theme-text-secondary) !important;
+  transition: all 0.2s ease !important;
+}
+
+.tab-scroll-button:hover:not(:disabled) {
+  color: var(--theme-primary) !important;
+  border-color: var(--theme-primary) !important;
+}
+
+.tab-scroll-button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* ========================================
+   TabBar 滚动容器样式
+   ======================================== */
+.tabs-scroll-container {
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  min-width: 0; /* 允许 flex 子元素缩小 */
+}
+
+.tabs-scroll-container::-webkit-scrollbar {
+  display: none;
+}
+
+/* 确保 Tabs 容器宽度由内容决定，而不是被父容器限制 */
+.layout-tab-bar .ant-tabs-nav {
+  width: auto !important;
+  min-width: max-content !important;
+}
+
+.layout-tab-bar .ant-tabs-nav-wrap {
+  width: auto !important;
+}
+
+.layout-tab-bar .ant-tabs-nav-list {
+  width: auto !important;
+  min-width: max-content !important;
 }
 
 /* ========================================

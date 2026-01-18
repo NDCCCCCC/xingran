@@ -1,6 +1,10 @@
 /**
  * 多标签页组件
  * 用于混合式布局，支持标签页的打开、关闭、切换等操作
+ * 功能：
+ * - 滚动导航（左右滚动按钮）
+ * - 右键上下文菜单（关闭当前/其他/左侧/右侧标签）
+ * - 激活标签样式（底部蓝色指示条，与侧边栏保持一致）
  */
 
 import { useRef, useState, useMemo, useEffect, useCallback } from 'react';
@@ -12,15 +16,39 @@ import {
   CloseOutlined,
   CloseCircleOutlined,
   DownOutlined,
+  LeftOutlined,
+  RightOutlined,
 } from '@ant-design/icons';
 
-import type { FC } from 'react';
+import type { FC, ReactNode } from 'react';
+
+interface ContextMenuState {
+  visible: boolean;
+  x: number;
+  y: number;
+  tabKey: string;
+}
 
 const TabBar: FC = () => {
-  const { tabs, activeTab, setActiveTab, removeTab, closeAllTabs } = useTabs();
+  const { tabs, activeTab, setActiveTab, removeTab, closeAllTabs, closeOtherTabs, closeLeftTabs, closeRightTabs } = useTabs();
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
-  const [maxVisibleTabs, setMaxVisibleTabs] = useState(20);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // 滚动状态
+  const [scrollState, setScrollState] = useState({
+    canScrollLeft: false,
+    canScrollRight: false,
+    scrollLeft: 0,
+  });
+
+  // 右键菜单状态
+  const [contextMenuState, setContextMenuState] = useState<ContextMenuState>({
+    visible: false,
+    x: 0,
+    y: 0,
+    tabKey: '',
+  });
 
   // 处理标签页点击
   const handleTabChange = useCallback((key: string) => {
@@ -29,6 +57,8 @@ const TabBar: FC = () => {
       setActiveTab(key);
       navigate(tab.path);
     }
+    // 关闭右键菜单
+    setContextMenuState(prev => ({ ...prev, visible: false }));
   }, [tabs, setActiveTab, navigate]);
 
   // 处理标签页关闭
@@ -47,13 +77,152 @@ const TabBar: FC = () => {
       }
     }
     removeTab(targetKey);
+    // 关闭右键菜单
+    setContextMenuState(prev => ({ ...prev, visible: false }));
   }, [activeTab, tabs, setActiveTab, navigate, removeTab]);
+
+  // 滚动控制函数
+  const scrollTabs = useCallback((direction: 'left' | 'right') => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const scrollAmount = 200;
+    const currentScroll = container.scrollLeft;
+    container.scrollTo({
+      left: direction === 'left' ? currentScroll - scrollAmount : currentScroll + scrollAmount,
+      behavior: 'smooth'
+    });
+  }, []);
+
+  // 检测滚动状态
+  const checkScrollState = useCallback(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const { scrollLeft, scrollWidth, clientWidth } = container;
+    const canScrollLeft = scrollLeft > 0;
+    const canScrollRight = scrollWidth > clientWidth && scrollLeft < scrollWidth - clientWidth - 1; // -1 容忍浮点误差
+
+    // 开发环境调试输出
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[TabBar] 滚动状态:', { scrollLeft, scrollWidth, clientWidth, canScrollLeft, canScrollRight });
+    }
+
+    setScrollState({
+      canScrollLeft,
+      canScrollRight,
+      scrollLeft,
+    });
+  }, []);
+
+  // 初始化和监听滚动状态
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    // 初始检测（多次延迟确保 DOM 完全渲染）
+    const timers = [
+      setTimeout(checkScrollState, 0),
+      setTimeout(checkScrollState, 100),
+      setTimeout(checkScrollState, 300),
+    ];
+
+    // 监听滚动事件
+    const handleScroll = () => {
+      checkScrollState();
+    };
+    container.addEventListener('scroll', handleScroll, { passive: true });
+
+    // 监听容器尺寸变化
+    const resizeObserver = new ResizeObserver(() => {
+      requestAnimationFrame(checkScrollState);
+    });
+    resizeObserver.observe(container);
+
+    // 监听窗口大小变化
+    const handleResize = () => {
+      checkScrollState();
+    };
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      timers.forEach(timer => clearTimeout(timer));
+      container.removeEventListener('scroll', handleScroll);
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', handleResize);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabs.length]); // 只在 tabs 数量变化时重新绑定；checkScrollState 引用不变，不需要作为依赖
+
+  // 右键菜单处理
+  const handleTabContextMenu = useCallback((tabKey: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    setContextMenuState({ visible: true, x: e.clientX, y: e.clientY, tabKey });
+  }, []);
+
+  // 右键菜单项
+  const contextMenuItems: MenuProps['items'] = useMemo(() => {
+    const tab = tabs.find(t => t.key === contextMenuState.tabKey);
+    const tabIndex = tabs.findIndex(t => t.key === contextMenuState.tabKey);
+    const hasLeftTabs = tabIndex > 0;
+    const hasRightTabs = tabIndex < tabs.length - 1;
+
+    return [
+      {
+        key: 'close',
+        label: '关闭当前标签',
+        icon: <CloseOutlined />,
+        disabled: !tab?.closable,
+        onClick: () => {
+          if (contextMenuState.tabKey) {
+            handleTabClose(contextMenuState.tabKey);
+          }
+        },
+      },
+      { type: 'divider' },
+      {
+        key: 'closeOthers',
+        label: '关闭其他标签',
+        icon: <CloseCircleOutlined />,
+        onClick: () => {
+          if (contextMenuState.tabKey) {
+            closeOtherTabs(contextMenuState.tabKey);
+          }
+          setContextMenuState(prev => ({ ...prev, visible: false }));
+        },
+      },
+      {
+        key: 'closeLeft',
+        label: '关闭左侧标签',
+        icon: <LeftOutlined />,
+        disabled: !hasLeftTabs,
+        onClick: () => {
+          if (contextMenuState.tabKey) {
+            closeLeftTabs(contextMenuState.tabKey);
+          }
+          setContextMenuState(prev => ({ ...prev, visible: false }));
+        },
+      },
+      {
+        key: 'closeRight',
+        label: '关闭右侧标签',
+        icon: <RightOutlined />,
+        disabled: !hasRightTabs,
+        onClick: () => {
+          if (contextMenuState.tabKey) {
+            closeRightTabs(contextMenuState.tabKey);
+          }
+          setContextMenuState(prev => ({ ...prev, visible: false }));
+        },
+      },
+    ];
+  }, [tabs, contextMenuState.tabKey, handleTabClose, closeOtherTabs, closeLeftTabs, closeRightTabs]);
 
   // 更多标签菜单
   const moreMenuItems: MenuProps['items'] = useMemo(() => {
     const closableTabs = tabs.filter(tab => tab.closable);
     const pinnedTabs = tabs.filter(tab => !tab.closable && tab.pinned);
-    
+
     return [
       ...pinnedTabs.map(tab => ({
         key: tab.key,
@@ -74,8 +243,8 @@ const TabBar: FC = () => {
               {tab.icon}
               <span>{tab.title}</span>
             </div>
-            <CloseOutlined 
-              style={{ fontSize: '12px' }} 
+            <CloseOutlined
+              style={{ fontSize: '12px' }}
               onClick={(e) => {
                 e.stopPropagation();
                 handleTabClose(tab.key);
@@ -90,128 +259,118 @@ const TabBar: FC = () => {
         key: 'closeAll',
         label: '关闭所有',
         icon: <CloseCircleOutlined />,
-        onClick: () => closeAllTabs(),
+        onClick: () => {
+          closeAllTabs();
+          setContextMenuState(prev => ({ ...prev, visible: false }));
+        },
         danger: true,
       },
     ];
-  }, [tabs, handleTabChange, handleTabClose, closeAllTabs]); // 添加所有在函数内使用的回调
+  }, [tabs, handleTabChange, handleTabClose, closeAllTabs]);
 
-  // 过滤掉固定标签（固定标签不可关闭）
-  const closableTabs = tabs.filter(tab => tab.closable);
-  const pinnedTabs = tabs.filter(tab => !tab.closable && tab.pinned);
+  // 自定义 Tab label（添加右键菜单）
+  const createTabLabel = (tab: { title: string | ReactNode; key: string }) => (
+    <span onContextMenu={(e) => handleTabContextMenu(tab.key, e)}>{tab.title}</span>
+  );
 
-  // 计算可见的标签页
-  const visibleTabs = useMemo(() => {
-    const allTabs = [...pinnedTabs, ...closableTabs];
-    if (allTabs.length <= maxVisibleTabs) {
-      return allTabs;
-    }
-    
-    // 如果标签页数量超过限制，显示前N-1个标签页和"更多"按钮
-    return allTabs.slice(0, maxVisibleTabs - 1);
-  }, [tabs, pinnedTabs, closableTabs, maxVisibleTabs]);
-
-  // 是否显示更多按钮
-  const showMoreButton = useMemo(() => {
-    const allTabs = [...pinnedTabs, ...closableTabs];
-    return allTabs.length > maxVisibleTabs;
-  }, [tabs, pinnedTabs, closableTabs, maxVisibleTabs]);
-
-  // 动态计算最大可见标签页数量
+  // 全局事件监听 - 关闭右键菜单
   useEffect(() => {
-    const calculateMaxVisibleTabs = () => {
-      if (!containerRef.current) return;
-      
-      const containerWidth = containerRef.current.clientWidth;
-      // 估算每个标签页的平均宽度（包括图标、文字、关闭按钮和边距）
-      const estimatedTabWidth = 160; // 每个标签页约160px
-      // "更多"按钮的宽度
-      const moreButtonWidth = 80;
-      // 左右边距
-      const paddingWidth = 32;
-      
-      // 计算可用的宽度
-      const availableWidth = containerWidth - paddingWidth - moreButtonWidth;
-      // 计算最大可见标签页数量
-      const calculatedMax = Math.floor(availableWidth / estimatedTabWidth);
-      
-      // 确保至少显示3个标签页
-      const finalMax = Math.max(3, calculatedMax);
-      
-      setMaxVisibleTabs(finalMax);
+    const handleGlobalClick = () => {
+      if (contextMenuState.visible) {
+        setContextMenuState(prev => ({ ...prev, visible: false }));
+      }
     };
 
-    calculateMaxVisibleTabs();
-    
-    // 监听窗口大小变化
-    const handleResize = () => {
-      calculateMaxVisibleTabs();
+    const handleScroll = () => {
+      if (contextMenuState.visible) {
+        setContextMenuState(prev => ({ ...prev, visible: false }));
+      }
     };
-    
-    window.addEventListener('resize', handleResize);
-    
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
-  }, []);
 
-  const items = [
-    ...visibleTabs.map(tab => ({
-      key: tab.key,
-      label: tab.title,
-      closable: tab.closable,
-      icon: tab.icon,
-    })),
-  ];
+    if (contextMenuState.visible) {
+      document.addEventListener('click', handleGlobalClick);
+      document.addEventListener('scroll', handleScroll, true);
+      window.addEventListener('resize', handleScroll);
 
-  if (items.length === 0) {
+      return () => {
+        document.removeEventListener('click', handleGlobalClick);
+        document.removeEventListener('scroll', handleScroll, true);
+        window.removeEventListener('resize', handleScroll);
+      };
+    }
+  }, [contextMenuState.visible]);
+
+  // 所有标签页项
+  const allTabItems = tabs.map(tab => ({
+    key: tab.key,
+    label: createTabLabel(tab),
+    closable: tab.closable,
+    icon: tab.icon,
+  }));
+
+  if (tabs.length === 0) {
     return null;
   }
 
   return (
-    <div
-      ref={containerRef}
-      className="border-b"
-      style={{
-        background: 'var(--theme-bg-surface)',
-        borderColor: 'var(--theme-border-primary)',
-        padding: '0 16px',
-        transition: 'all var(--theme-transition-base)',
-        display: 'flex',
-        alignItems: 'center',
-        height: '40px',
-        minHeight: '40px',
-        position: 'relative',
-        zIndex: 1,
-        flexShrink: 0,
-      }}
-    >
-      <div style={{
-        flex: 1,
-        overflow: 'hidden',
-        height: '100%',
-        display: 'flex',
-        alignItems: 'center',
-      }}>
-        <Tabs
-          activeKey={activeTab}
-          onChange={handleTabChange}
-          type="editable-card"
-          hideAdd
-          items={items}
-          onEdit={(targetKey, action) => {
-            if (action === 'remove') {
-              handleTabClose(targetKey as string);
-            }
-          }}
-          className="layout-tab-bar"
-          style={{
-            color: 'var(--theme-text-primary)',
-          }}
+    <>
+      <div
+        ref={containerRef}
+        className="border-b"
+        style={{
+          background: 'var(--theme-bg-surface)',
+          borderColor: 'var(--theme-border-primary)',
+          padding: '0 16px',
+          transition: 'all var(--theme-transition-base)',
+          display: 'flex',
+          alignItems: 'center',
+          height: '40px',
+          minHeight: '40px',
+          position: 'relative',
+          zIndex: 1,
+          flexShrink: 0,
+        }}
+      >
+        {/* 左滚动按钮 */}
+        <Button
+          icon={<LeftOutlined />}
+          disabled={!scrollState.canScrollLeft}
+          onClick={() => scrollTabs('left')}
+          className="tab-scroll-button"
         />
-      </div>
 
-      {showMoreButton && (
+        {/* 滚动容器 */}
+        <div
+          ref={scrollContainerRef}
+          className="tabs-scroll-container"
+        >
+          <Tabs
+            activeKey={activeTab}
+            onChange={handleTabChange}
+            type="editable-card"
+            hideAdd
+            items={allTabItems}
+            onEdit={(targetKey, action) => {
+              if (action === 'remove') {
+                handleTabClose(targetKey as string);
+              }
+            }}
+            className="layout-tab-bar"
+            style={{
+              color: 'var(--theme-text-primary)',
+            }}
+          />
+        </div>
+
+        {/* 右滚动按钮 */}
+        <Button
+          icon={<RightOutlined />}
+          disabled={!scrollState.canScrollRight}
+          onClick={() => scrollTabs('right')}
+          className="tab-scroll-button"
+        />
+
+        {/* "更多"下拉菜单 */}
         <Dropdown
           menu={{
             items: moreMenuItems,
@@ -239,8 +398,29 @@ const TabBar: FC = () => {
             更多
           </Button>
         </Dropdown>
-      )}
-    </div>
+      </div>
+
+      {/* 右键上下文菜单 - 使用 Dropdown 的 open 控制 */}
+      <Dropdown
+        menu={{ items: contextMenuItems }}
+        trigger={[]}
+        open={contextMenuState.visible}
+        onOpenChange={(open) => setContextMenuState(prev => ({ ...prev, visible: open }))}
+        placement="bottomLeft"
+        getPopupContainer={() => document.body}
+      >
+        <div
+          style={{
+            position: 'fixed',
+            left: contextMenuState.x,
+            top: contextMenuState.y,
+            width: 1,
+            height: 1,
+            pointerEvents: 'none',
+          }}
+        />
+      </Dropdown>
+    </>
   );
 };
 
