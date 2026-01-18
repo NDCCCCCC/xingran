@@ -74,14 +74,38 @@ func (s *NotificationSenderService) SendNotification(ctx context.Context, notice
 
 		case models.ChannelTypeEmail:
 			// 邮件通知
+			var emailConfigID *string
 			if channel.EmailConfigID != nil {
-				emails := s.getUserEmails(userInfo)
-				if len(emails) > 0 {
-					result := s.emailSender.SendNoticeEmail(ctx, *channel.EmailConfigID, notice, emails)
-					if !result.Success {
-						logger.Errorf("发送邮件失败: %s", result.Message)
-					}
+				emailConfigID = channel.EmailConfigID
+			} else {
+				// 如果没有指定邮件配置，使用默认配置
+				configService := NewNotificationConfigService(s.db)
+				defaultConfig, err := configService.GetDefaultEmailConfig(ctx)
+				if err != nil {
+					logger.Errorf("获取默认邮件配置失败: %v", err)
+					break
 				}
+				emailConfigID = &defaultConfig.ID
+				logger.Infof("[邮件] 使用默认邮件配置: %s", defaultConfig.ConfigName)
+			}
+
+			emails := s.getUserEmails(userInfo)
+			// 合并自定义收件人（邮箱地址）
+			if channel.CustomRecipients != nil && len(*channel.CustomRecipients) > 0 {
+				emails = append(emails, *channel.CustomRecipients...)
+				// 去重
+				emails = uniqueStrings(emails)
+			}
+			if len(emails) > 0 {
+				logger.Infof("[邮件] 发送通知: %s 到 %d 个邮箱", notice.NoticeTitle, len(emails))
+				result := s.emailSender.SendNoticeEmail(ctx, *emailConfigID, notice, emails)
+				if !result.Success {
+					logger.Errorf("发送邮件失败: %s", result.Message)
+				} else {
+					logger.Infof("[邮件] 发送成功: %s", result.Message)
+				}
+			} else {
+				logger.Warnf("[邮件] 没有有效的收件人邮箱地址")
 			}
 
 		case models.ChannelTypeSMS:
@@ -99,7 +123,15 @@ func (s *NotificationSenderService) SendNotification(ctx context.Context, notice
 		case models.ChannelTypeAPI:
 			// API通知（Webhook等）
 			if channel.APIConfigID != nil {
-				result := s.apiSender.SendNoticeAPI(ctx, *channel.APIConfigID, notice, targetUsers)
+				recipients := targetUsers
+				// 合并自定义收件人（企微用户ID）
+				if channel.CustomRecipients != nil && len(*channel.CustomRecipients) > 0 {
+					recipients = append(recipients, *channel.CustomRecipients...)
+					// 去重
+					recipients = uniqueStrings(recipients)
+				}
+				logger.Infof("[企微API] 发送通知: %s 到 %d 个用户", notice.NoticeTitle, len(recipients))
+				result := s.apiSender.SendNoticeAPI(ctx, *channel.APIConfigID, notice, recipients)
 				if !result.Success {
 					logger.Errorf("发送API通知失败: %s", result.Message)
 				}
@@ -241,4 +273,17 @@ func (s *NotificationSenderService) GetNotificationChannels(ctx context.Context,
 		return nil, fmt.Errorf("获取发送渠道失败: %w", err)
 	}
 	return channels, nil
+}
+
+// uniqueStrings 去除字符串切片中的重复元素
+func uniqueStrings(slice []string) []string {
+	seen := make(map[string]struct{})
+	result := make([]string, 0, len(slice))
+	for _, item := range slice {
+		if _, exists := seen[item]; !exists {
+			seen[item] = struct{}{}
+			result = append(result, item)
+		}
+	}
+	return result
 }

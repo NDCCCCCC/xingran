@@ -117,7 +117,7 @@ func (s *NoticeService) GetNoticeList(ctx context.Context, page, pageSize int, t
 
 	// 分页查询（按优先级和创建时间排序）
 	offset := (page - 1) * pageSize
-	if err := query.Order("priority DESC, created_at DESC").Offset(offset).Limit(pageSize).Find(&notices).Error; err != nil {
+	if err := query.Preload("Channels").Order("priority DESC, created_at DESC").Offset(offset).Limit(pageSize).Find(&notices).Error; err != nil {
 		return nil, 0, fmt.Errorf("查询通知列表失败: %w", err)
 	}
 
@@ -127,7 +127,7 @@ func (s *NoticeService) GetNoticeList(ctx context.Context, page, pageSize int, t
 // GetNoticeByID 根据ID获取通知
 func (s *NoticeService) GetNoticeByID(ctx context.Context, noticeID string) (*models.Notice, error) {
 	var notice models.Notice
-	if err := s.db.WithContext(ctx).Preload("Targets").Where("id = ?", noticeID).First(&notice).Error; err != nil {
+	if err := s.db.WithContext(ctx).Preload("Targets").Preload("Channels").Where("id = ?", noticeID).First(&notice).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, fmt.Errorf("通知不存在")
 		}

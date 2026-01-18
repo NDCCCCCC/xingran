@@ -10,7 +10,7 @@ import type {
 } from '@/types/notice';
 import type { NoticeStatistics as NoticeStatisticsType } from '@/types/notice';
 import { getNoticeStatistics } from '@/lib/noticeApi';
-import type { ExecutionType, RecurrenceType } from '@/types/notice';
+import type { ExecutionType } from '@/types/notice';
 import dayjs from 'dayjs';
 import {
   useNoticeData,
@@ -78,9 +78,8 @@ const NoticeManagement: FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingNotice, setEditingNotice] = useState<Notice | null>(null);
 
-  // 执行类型和周期配置状态
+  // 执行类型
   const [executionType, setExecutionType] = useState<ExecutionType>('once');
-  const [recurrenceType, setRecurrenceType] = useState<RecurrenceType>('daily');
 
   // 渠道选择状态
   const [selectedChannels, setSelectedChannels] = useState<string[]>(['web']);
@@ -108,7 +107,6 @@ const NoticeManagement: FC = () => {
   const openModal = useCallback(async (record?: Notice) => {
     setModalVisible(true);
     setExecutionType('once');
-    setRecurrenceType('daily');
     setSelectedChannels(['web']);
     setSelectedAPIConfigId(undefined);
     setCustomEmails('');
@@ -126,8 +124,29 @@ const NoticeManagement: FC = () => {
       if (record.channels && record.channels.length > 0) {
         const channelTypes = record.channels.map((c: any) => c.channelType);
         setSelectedChannels(channelTypes);
+
+        // 恢复 API 配置 ID
+        const apiChannel = record.channels.find((c: any) => c.channelType === 'api');
+        if (apiChannel?.apiConfigId) {
+          setSelectedAPIConfigId(apiChannel.apiConfigId);
+        }
+
+        // 恢复自定义邮件地址
+        const emailChannel = record.channels.find((c: any) => c.channelType === 'email');
+        if (emailChannel?.customRecipients && emailChannel.customRecipients.length > 0) {
+          setCustomEmails(emailChannel.customRecipients.join(', '));
+        }
+
+        // 恢复自定义企微用户
+        const apiChannelRecipients = record.channels.find((c: any) => c.channelType === 'api');
+        if (apiChannelRecipients?.customRecipients && apiChannelRecipients.customRecipients.length > 0) {
+          setCustomWeComUsers(apiChannelRecipients.customRecipients.join(', '));
+        }
       } else {
         setSelectedChannels(['web']);
+        setSelectedAPIConfigId(undefined);
+        setCustomEmails('');
+        setCustomWeComUsers('');
       }
       editForm.setFieldsValue({
         ...record,
@@ -177,23 +196,17 @@ const NoticeManagement: FC = () => {
 
       if (executionType === 'recurring') {
         executionTypeValue = 'recurring';
-        const executeTime = values.recurrenceConfig?.executeTime;
-        const executeTimeStr = executeTime ? executeTime.format('HH:mm') : '09:00';
+        const cronExpression = values.recurrenceConfig?.cronExpression;
+
+        if (!cronExpression) {
+          message.error('请输入 Cron 表达式');
+          return;
+        }
 
         recurrenceConfigValue = {
-          type: recurrenceType,
-          executeTime: executeTimeStr,
+          cronExpression: cronExpression,
         };
 
-        if (recurrenceType === 'weekly' && values.recurrenceConfig?.weekDay !== undefined) {
-          recurrenceConfigValue.weekDay = values.recurrenceConfig.weekDay;
-        }
-        if (recurrenceType === 'monthly' && values.recurrenceConfig?.monthDay !== undefined) {
-          recurrenceConfigValue.monthDay = values.recurrenceConfig.monthDay;
-        }
-        if (recurrenceType === 'custom' && values.recurrenceConfig?.cronExpression) {
-          recurrenceConfigValue.cronExpression = values.recurrenceConfig.cronExpression;
-        }
         if (values.recurrenceConfig?.endDate) {
           recurrenceConfigValue.endDate = values.recurrenceConfig.endDate.format('YYYY-MM-DDTHH:mm:ss');
         }
@@ -213,6 +226,13 @@ const NoticeManagement: FC = () => {
 
       // 处理发送渠道配置
       const channels: NoticeChannelRequest[] = [];
+
+      // 站内信渠道
+      if (selectedChannels.includes('web')) {
+        channels.push({ channelType: 'web' });
+      }
+
+      // 邮件通知渠道
       if (selectedChannels.includes('email')) {
         const emailRecipients = customEmails.trim()
           ? customEmails.split(',').map(e => e.trim()).filter(e => e)
@@ -222,6 +242,8 @@ const NoticeManagement: FC = () => {
           ...(emailRecipients && emailRecipients.length > 0 && { customRecipients: emailRecipients })
         });
       }
+
+      // 企微机器人渠道
       if (selectedChannels.includes('api')) {
         if (!selectedAPIConfigId) {
           message.error('请选择企微机器人配置');
@@ -236,9 +258,12 @@ const NoticeManagement: FC = () => {
           ...(weComRecipients && weComRecipients.length > 0 && { customRecipients: weComRecipients })
         });
       }
+
+      // 短信渠道（预留）
       if (selectedChannels.includes('sms')) {
         channels.push({ channelType: 'sms' });
       }
+
       if (channels.length > 0) {
         (request as any).channels = channels;
       }
@@ -264,7 +289,7 @@ const NoticeManagement: FC = () => {
       }
       message.error('操作失败: ' + ((error as Error).message || '未知错误'));
     }
-  }, [editForm, executionType, recurrenceType, selectedChannels, selectedAPIConfigId, customEmails, customWeComUsers, editingNotice, handleCreate, handleUpdate, loadNotices]);
+  }, [editForm, executionType, selectedChannels, selectedAPIConfigId, customEmails, customWeComUsers, editingNotice, handleCreate, handleUpdate, loadNotices]);
 
   // 查看统计
   const handleViewStatistics = useCallback(async (notice: Notice) => {
@@ -356,7 +381,6 @@ const NoticeManagement: FC = () => {
         visible={modalVisible}
         editingNotice={editingNotice}
         executionType={executionType}
-        recurrenceType={recurrenceType}
         selectedChannels={selectedChannels}
         selectedAPIConfigId={selectedAPIConfigId}
         apiConfigs={apiConfigs}
@@ -381,12 +405,6 @@ const NoticeManagement: FC = () => {
         }}
         onSubmit={handleSubmit}
         onExecutionTypeChange={setExecutionType}
-        onRecurrenceTypeChange={(type) => {
-          setRecurrenceType(type);
-          editForm.setFieldValue(['recurrenceConfig', 'weekDay'], undefined);
-          editForm.setFieldValue(['recurrenceConfig', 'monthDay'], undefined);
-          editForm.setFieldValue(['recurrenceConfig', 'cronExpression'], undefined);
-        }}
         onChannelsChange={setSelectedChannels}
         onAPIConfigChange={setSelectedAPIConfigId}
         onMarkdownContentChange={setMarkdownContent}

@@ -216,9 +216,17 @@ export function getNextRunTimes(expression: string, count: number = 5): Date[] {
     // @breejs/later 需要标准 cron 格式，将 Quartz 的 '?' 替换为 '*'
     const normalizedExpression = expression.replace(/\?/g, '*');
 
-    // 解析 cron 表达式
+    // 设置使用本地时间而非 UTC 时间
     // @ts-expect-error - later库类型定义不完整，但运行时正常
-    const schedule = later.parse.cron(normalizedExpression);
+    later.date.localTime();
+
+    // 判断表达式是否包含秒字段（6字段格式包含秒，5字段格式不包含秒）
+    const parts = normalizedExpression.trim().split(/\s+/);
+    const hasSeconds = parts.length === 6;
+
+    // 解析 cron 表达式，必须正确传递 hasSeconds 参数
+    // @ts-expect-error - later库类型定义不完整，但运行时正常
+    const schedule = later.parse.cron(normalizedExpression, hasSeconds);
 
     // 使用 later.schedule(schedule).next(count) 一次性获取多次执行时间
     // @ts-expect-error - later库类型定义不完整，但运行时正常

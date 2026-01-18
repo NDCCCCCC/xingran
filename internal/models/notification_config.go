@@ -4,6 +4,9 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"time"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 // EmailConfig 邮箱服务器配置
@@ -116,13 +119,21 @@ const (
 
 // NotificationChannel 通知发送渠道配置（关联表）
 type NotificationChannel struct {
-	ID               string                  `gorm:"primaryKey;size:64" json:"id"`
-	NoticeID         string                  `gorm:"size:64;not null" json:"noticeId"`
+	ID               string                  `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	NoticeID         string                  `gorm:"type:uuid;not null" json:"noticeId"`
 	ChannelType      NotificationChannelType `gorm:"size:20;not null" json:"channelType"`
-	EmailConfigID    *string                 `gorm:"size:64" json:"emailConfigId"`       // 邮件配置ID
-	APIConfigID      *string                 `gorm:"size:64" json:"apiConfigId"`         // API配置ID
-	CustomRecipients *[]string               `gorm:"type:jsonb" json:"customRecipients"` // 自定义收件人列表（邮件地址或企微用户代码）
+	EmailConfigID    *string                 `gorm:"type:uuid" json:"emailConfigId"`       // 邮件配置ID
+	APIConfigID      *string                 `gorm:"type:uuid" json:"apiConfigId"`         // API配置ID
+	CustomRecipients *[]string               `gorm:"type:jsonb;serializer:json" json:"customRecipients"` // 自定义收件人列表（邮件地址或企微用户代码）
 	CreatedAt        time.Time               `json:"createdAt"`
+}
+
+// BeforeCreate GORM钩子 - 创建前自动生成UUID
+func (nc *NotificationChannel) BeforeCreate(tx *gorm.DB) error {
+	if nc.ID == "" || nc.ID == "00000000-0000-0000-0000-000000000000" {
+		nc.ID = uuid.New().String()
+	}
+	return nil
 }
 
 // TableName 指定表名

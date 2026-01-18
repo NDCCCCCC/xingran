@@ -90,6 +90,7 @@ type NoticeUpdateRequest struct {
 	Status           *int                   `json:"status" binding:"omitempty,min=0,max=1,oneof=0 1"`
 	PublishTime      *time.Time             `json:"publishTime,omitempty"`
 	ClearPublishTime bool                   `json:"clearPublishTime,omitempty"`
+	Channels         []NoticeChannelRequest `json:"channels,omitempty"`
 }
 
 // listNotices 查询通知公告列表（增强版）
@@ -377,6 +378,24 @@ func updateNotice(core *core.Core) gin.HandlerFunc {
 				response.Error(c, response.ErrServerError, err.Error())
 			}
 			return
+		}
+
+		// 设置发送渠道（如果提供了）
+		if len(req.Channels) > 0 {
+			senderService := services.NewNotificationSenderService(core.DB.GetDB())
+			channels := make([]models.NotificationChannel, len(req.Channels))
+			for i, ch := range req.Channels {
+				channels[i] = models.NotificationChannel{
+					ChannelType:      ch.ChannelType,
+					EmailConfigID:    ch.EmailConfigID,
+					APIConfigID:      ch.APIConfigID,
+					CustomRecipients: ch.CustomRecipients,
+				}
+			}
+			if err := senderService.SetNotificationChannels(c.Request.Context(), id, channels); err != nil {
+				response.Error(c, response.ErrServerError, "设置发送渠道失败: "+err.Error())
+				return
+			}
 		}
 
 		// 处理定时任务更新
