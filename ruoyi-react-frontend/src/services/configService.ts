@@ -5,9 +5,10 @@
  * 负责用户配置的获取、更新、缓存和数据迁移
  */
 
-import type { UserPreferences, BackendUserPreferences, ThemeConfiguration, LayoutConfiguration, DataConfiguration } from '@/types/config';
+import type { UserPreferences, BackendUserPreferences, ThemeStyle } from '@/types/config';
 import { defaultUserPreferences, defaultThemeConfiguration, defaultLayoutConfiguration, defaultDataConfiguration } from '@/types/config';
-import { getUserPreferences, updateUserPreferences as updateUserPreferencesAPI } from '@/lib/profileApi';
+import { getUserPreferences } from '@/lib/profileApi';
+import { put } from '@/lib/api';
 
 /**
  * 配置服务类
@@ -27,11 +28,11 @@ class ConfigService {
 		}
 
 		try {
-			// 从服务器获取
-			const response = await getUserPreferences();
+			// 从服务器获取 - get<T> 直接返回 T，不是 { data: T }
+			const backend = await getUserPreferences() as BackendUserPreferences;
 
 			// 转换为前端格式
-			const normalized = this.fromBackendFormat(response.data);
+			const normalized = this.fromBackendFormat(backend);
 
 			// 更新缓存
 			this.cache = normalized;
@@ -55,8 +56,8 @@ class ConfigService {
 		const backendFormat = this.toBackendFormat(preferences);
 
 		try {
-			// 保存到服务器
-			await updateUserPreferencesAPI(backendFormat);
+			// 保存到服务器 - 直接使用 put 调用后端 API
+			await put('/system/settings/preferences', backendFormat);
 
 			// 更新缓存
 			this.cache = preferences;
@@ -76,58 +77,96 @@ class ConfigService {
 
 		// 版本 1 → 版本 2（旧数据结构）
 		if (version === 1) {
-			return {
+			// 验证主题样式
+			const validThemeStyles = ['minimal', 'glassmorphism', 'neumorphism', 'flat2.0', 'luxury-quiet'];
+			const themeStyle = prefs.themeStyle && validThemeStyles.includes(prefs.themeStyle)
+				? prefs.themeStyle
+				: defaultThemeConfiguration.style;
+
+			// 验证布局类型
+			const validLayoutTypes = ['classic', 'hybrid', 'innovative'];
+			const layoutType = prefs.layoutType && validLayoutTypes.includes(prefs.layoutType)
+				? prefs.layoutType
+				: defaultLayoutConfiguration.type;
+
+			// 验证密度模式
+			const validDensityModes = ['compact', 'comfortable', 'spacious'];
+			const density = prefs.density && validDensityModes.includes(prefs.density)
+				? prefs.density
+				: defaultLayoutConfiguration.density;
+
+			const partial: Partial<UserPreferences> = {
 				version: 2,
 				theme: {
 					mode: prefs.theme === 'dark' ? 'dark' : 'light',
-					style: prefs.themeStyle || 'minimal',
+					style: themeStyle,
 				},
 				layout: {
-					type: prefs.layoutType || 'classic',
+					type: layoutType,
 					sidebar: {
-						collapsed: prefs.sidebarCollapsed || false,
-						width: 240,
-						collapsedWidth: 64,
+						collapsed: prefs.sidebarCollapsed,
+						width: prefs.sidebarWidth,
+						collapsedWidth: prefs.sidebarCollapsedWidth,
 					},
-					density: prefs.density || 'comfortable',
+					density: density,
 				},
 				data: {
-					defaultPageSize: prefs.pageSize || 10,
+					defaultPageSize: prefs.pageSize,
 					pageSizeOptions: [10, 20, 50, 100],
 				},
-				language: prefs.language || 'zh-CN',
+				language: prefs.language,
 			};
+			return this.normalizePreferences(partial);
 		}
 
-		// 版本 2（当前版本）- 直接返回
-		return prefs as UserPreferences;
+		// 版本 2（当前版本）
+		return this.normalizePreferences(prefs);
 	}
 
 	/**
 	 * 从后端格式转换为前端格式
 	 */
 	private fromBackendFormat(backend: BackendUserPreferences): UserPreferences {
-		return {
+		// 验证主题样式是否有效，无效则使用默认值
+		const validThemeStyles = ['minimal', 'glassmorphism', 'neumorphism', 'flat2.0', 'luxury-quiet'];
+		const themeStyle = backend.themeStyle && validThemeStyles.includes(backend.themeStyle)
+			? (backend.themeStyle as ThemeStyle)
+			: defaultThemeConfiguration.style;
+
+		// 验证布局类型是否有效
+		const validLayoutTypes = ['classic', 'hybrid', 'innovative'];
+		const layoutType = backend.layoutType && validLayoutTypes.includes(backend.layoutType)
+			? (backend.layoutType as any)
+			: defaultLayoutConfiguration.type;
+
+		// 验证密度模式是否有效
+		const validDensityModes = ['compact', 'comfortable', 'spacious'];
+		const density = backend.layoutDensity && validDensityModes.includes(backend.layoutDensity)
+			? (backend.layoutDensity as any)
+			: defaultLayoutConfiguration.density;
+
+		const partial: Partial<UserPreferences> = {
 			version: 2,
 			theme: {
 				mode: backend.theme === 'dark' ? 'dark' : 'light',
-				style: (backend.themeStyle as any) || 'minimal',
+				style: themeStyle,
 			},
 			layout: {
-				type: (backend.layoutType as any) || 'classic',
+				type: layoutType,
 				sidebar: {
-					collapsed: backend.sidebarCollapsed || false,
-					width: backend.sidebarWidth || 240,
-					collapsedWidth: backend.sidebarCollapsedWidth || 64,
+					collapsed: backend.sidebarCollapsed,
+					width: backend.sidebarWidth ?? defaultLayoutConfiguration.sidebar.width,
+					collapsedWidth: backend.sidebarCollapsedWidth ?? defaultLayoutConfiguration.sidebar.collapsedWidth,
 				},
-				density: (backend.layoutDensity as any) || 'comfortable',
+				density: density,
 			},
 			data: {
-				defaultPageSize: backend.pageSize || 10,
-				pageSizeOptions: [10, 20, 50, 100],
+				defaultPageSize: backend.pageSize,
+				pageSizeOptions: [10, 20, 50, 100], // 使用默认值
 			},
-			language: backend.language || 'zh-CN',
+			language: backend.language as 'zh-CN' | 'en-US',
 		};
+		return this.normalizePreferences(partial);
 	}
 
 	/**
@@ -176,7 +215,7 @@ class ConfigService {
 				...defaultDataConfiguration,
 				...raw.data,
 			},
-			language: raw.language || 'zh-CN',
+			language: (raw.language as 'zh-CN' | 'en-US') || 'zh-CN',
 		};
 	}
 

@@ -147,7 +147,7 @@ export const defaultLayoutConfiguration: LayoutConfiguration = {
 	type: 'classic',
 	sidebar: {
 		collapsed: false,
-		width: 240,
+		width: 280,
 		collapsedWidth: 64,
 	},
 	density: 'comfortable',

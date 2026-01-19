@@ -1,12 +1,17 @@
 /**
  * 百度地图地址解析 Hook
  * 使用百度地图 Geocoding API 将地址转换为经纬度坐标
+ * 支持缓存以减少 API 调用
  */
 
 import { useState, useCallback } from 'react';
+import { getGeocodingCache } from '@/utils/geocodingCache';
 
 // 获取百度地图 AK
 const BAIDU_MAP_AK = import.meta.env.VITE_BAIDU_MAP_AK || '';
+
+// 缓存实例
+const geocodingCache = getGeocodingCache<GeocodingResult>();
 
 export interface GeocodingResult {
   longitude: number;
@@ -51,6 +56,21 @@ export const useGeocoding = () => {
       setError(null);
 
       try {
+        // 生成缓存键
+        const cacheKey = geocodingCache.generateKey({
+          type: 'geocode',
+          address: address.trim(),
+          city: city || '',
+        });
+
+        // 尝试从缓存获取
+        const cached = geocodingCache.get(cacheKey);
+        if (cached) {
+          setLoading(false);
+          return cached;
+        }
+
+        // 缓存未命中，调用 API
         // 构建请求 URL
         const params = new URLSearchParams({
           address: address.trim(),
@@ -72,7 +92,7 @@ export const useGeocoding = () => {
           const result = data.result;
           const location = result.location;
 
-          return {
+          const geocodingResult: GeocodingResult = {
             longitude: location.lng,
             latitude: location.lat,
             formattedAddress: result.formatted_address || address,
@@ -81,6 +101,11 @@ export const useGeocoding = () => {
             district: result.addressComponent?.district || '',
             street: result.addressComponent?.street || '',
           };
+
+          // 存入缓存
+          geocodingCache.set(cacheKey, geocodingResult);
+
+          return geocodingResult;
         } else {
           // 解析失败
           setError({
@@ -121,6 +146,21 @@ export const useGeocoding = () => {
       setError(null);
 
       try {
+        // 生成缓存键（坐标保留6位小数，精度约0.1米）
+        const cacheKey = geocodingCache.generateKey({
+          type: 'reverse_geocode',
+          lng: longitude.toFixed(6),
+          lat: latitude.toFixed(6),
+        });
+
+        // 尝试从缓存获取
+        const cached = geocodingCache.get(cacheKey);
+        if (cached) {
+          setLoading(false);
+          return cached;
+        }
+
+        // 缓存未命中，调用 API
         // 构建请求 URL
         const params = new URLSearchParams({
           location: `${latitude},${longitude}`,
@@ -137,7 +177,7 @@ export const useGeocoding = () => {
           // 解析成功
           const result = data.result;
 
-          return {
+          const geocodingResult: GeocodingResult = {
             longitude,
             latitude,
             formattedAddress: result.formatted_address,
@@ -146,6 +186,11 @@ export const useGeocoding = () => {
             district: result.addressComponent?.district || '',
             street: result.addressComponent?.street || '',
           };
+
+          // 存入缓存
+          geocodingCache.set(cacheKey, geocodingResult);
+
+          return geocodingResult;
         } else {
           // 解析失败
           setError({
