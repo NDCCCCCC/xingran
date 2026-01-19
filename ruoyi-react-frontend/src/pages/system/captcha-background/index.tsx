@@ -17,6 +17,7 @@ import { useCaptchaData } from './hooks';
 import { getCaptchaColumns } from './columns';
 import { CaptchaUploadModal, CaptchaEditModal } from './modals';
 import { SHAPE_OPTIONS, DIFFICULTY_OPTIONS, STATUS_OPTIONS } from './constants';
+import { usePagination } from '@/hooks/usePagination';
 
 const { Option } = Select;
 
@@ -25,18 +26,17 @@ const CaptchaBackgroundManagement: FC = () => {
   const [uploadForm] = Form.useForm();
   const [editForm] = Form.useForm();
 
+  // 使用全局分页 hook
+  const { paginationProps, setTotal } = usePagination();
+
   const {
     backgrounds,
     loading,
     total,
-    current,
-    pageSize,
     statistics,
-    setCurrent,
-    setPageSize,
     loadBackgrounds,
     loadStatistics,
-  } = useCaptchaData(searchForm);
+  } = useCaptchaData(searchForm, setTotal);
 
   const {
     uploadModalVisible,
@@ -58,13 +58,13 @@ const CaptchaBackgroundManagement: FC = () => {
   } = useCaptchaModals();
 
   useEffect(() => {
-    loadBackgrounds();
+    loadBackgrounds({ current: paginationProps.current, pageSize: paginationProps.pageSize });
     loadStatistics();
-  }, [current, pageSize, loadBackgrounds, loadStatistics]);
+  }, [paginationProps.current, paginationProps.pageSize]);
 
   // 操作成功后刷新
   const handleSuccess = () => {
-    loadBackgrounds();
+    loadBackgrounds({ current: paginationProps.current, pageSize: paginationProps.pageSize });
     loadStatistics();
   };
 
@@ -195,18 +195,7 @@ const CaptchaBackgroundManagement: FC = () => {
         dataSource={backgrounds}
         loading={loading}
         rowKey="id"
-        pagination={{
-          current,
-          pageSize,
-          total,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total) => `共 ${total} 条`,
-          onChange: (page, size) => {
-            setCurrent(page);
-            setPageSize(size || 10);
-          },
-        }}
+        pagination={paginationProps}
       />
 
       {/* 上传模态框 */}

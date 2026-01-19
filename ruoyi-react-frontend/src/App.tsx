@@ -1,11 +1,12 @@
 import type { FC, ReactNode } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ConfigProvider } from 'antd';
+import { ConfigProvider as AntConfigProvider } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import { useAuthStore } from '@/store/authStore';
 import { ThemeProvider } from '@/design-system/components/ThemeProvider';
 import LayoutProvider from '@/design-system/components/LayoutProvider';
+import ConfigProvider from '@/components/ConfigProvider';
 import Layout from '@/components/layout';
 import Login from '@/pages/login';
 import Dashboard from '@/pages/dashboard';
@@ -116,10 +117,11 @@ const PublicRoute: FC<{ children: ReactNode }> = ({ children }) => {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ConfigProvider locale={zhCN}>
-        <ThemeProvider>
-          <LayoutProvider>
-            <Router>
+      <AntConfigProvider locale={zhCN}>
+        <ConfigProvider>
+          <ThemeProvider>
+            <LayoutProvider>
+              <Router>
               <Routes>
                 {/* 登录页面 - 未登录才能访问 */}
                 <Route
@@ -248,6 +250,7 @@ function App() {
           </LayoutProvider>
         </ThemeProvider>
       </ConfigProvider>
+    </AntConfigProvider>
     </QueryClientProvider>
   );
 }

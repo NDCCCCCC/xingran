@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import type { FC } from 'react';
 import { Button, Form, Input, Select, Table, Modal, InputNumber, Space, Tag, message, Popconfirm, Card, Statistic, Row, Col, TreeSelect } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, ReloadOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons';
-import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
+import type { ColumnsType } from 'antd/es/table';
 import { formatDateTime } from '@/utils/datetime';
+import { usePagination } from '@/hooks/usePagination';
 import {
   getDutyPoolList,
   createDutyPool,
@@ -36,9 +37,9 @@ const DutyPoolPage: FC = () => {
 
   const [loading, setLoading] = useState(false);
   const [dataSource, setDataSource] = useState<DutyPool[]>([]);
-  const [total, setTotal] = useState(0);
-  const [current, setCurrent] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+
+  // 使用全局分页 hook
+  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
   const [modalVisible, setModalVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState<DutyPool | null>(null);
@@ -122,16 +123,14 @@ const DutyPoolPage: FC = () => {
     try {
       const values = form.getFieldsValue();
       const result = await getDutyPoolList({
-        current: page ?? current,
-        pageSize: pageSize ?? pageSize,
+        current: page ?? paginationProps.current,
+        pageSize: pageSize ?? paginationProps.pageSize,
         poolName: values.poolName,
         status: values.status,
         deptId: values.deptId,
       });
       setDataSource(result.data?.list ?? []);
       setTotal(result.data?.total ?? 0);
-      setCurrent(result.data?.current ?? 1);
-      setPageSize(result.data?.page_size ?? 10);
 
       // 计算统计数据
       const list = result.data?.list ?? [];
@@ -169,22 +168,19 @@ const DutyPoolPage: FC = () => {
   };
 
   useEffect(() => {
-    fetchList(1, 10);
+    fetchList(1, paginationProps.pageSize);
     fetchUsers();
     fetchDepts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleTableChange = (pagination: TablePaginationConfig) => {
-    fetchList(pagination.current, pagination.pageSize);
-  };
-
   const handleSearch = () => {
-    fetchList(1, 10);
+    fetchList(1, paginationProps.pageSize);
   };
 
   const handleReset = () => {
     form.resetFields();
-    fetchList(1, 10);
+    fetchList(1, paginationProps.pageSize);
   };
 
   const handleAdd = () => {
@@ -226,7 +222,7 @@ const DutyPoolPage: FC = () => {
     try {
       await deleteDutyPool(id);
       handleSuccess('删除成功');
-      fetchList();
+      fetchList(paginationProps.current, paginationProps.pageSize);
     } catch (error) {
       handleApiError(error, '删除失败');
     }
@@ -257,7 +253,7 @@ const DutyPoolPage: FC = () => {
         handleSuccess('创建成功');
       }
       setModalVisible(false);
-      fetchList();
+      fetchList(paginationProps.current, paginationProps.pageSize);
     } catch (error: any) {
       if (error.errorFields) {
         // 表单验证错误
@@ -272,7 +268,7 @@ const DutyPoolPage: FC = () => {
       title: '序号',
       key: 'index',
       width: 60,
-      render: (_: unknown, __: unknown, index: number) => (current - 1) * pageSize + index + 1,
+      render: (_: unknown, __: unknown, index: number) => (paginationProps.current - 1) * paginationProps.pageSize + index + 1,
     },
     {
       title: '值班池名称',
@@ -429,15 +425,12 @@ const DutyPoolPage: FC = () => {
           dataSource={dataSource}
           loading={loading}
           scroll={{ x: 1200 }}
-          pagination={{
-            current,
-            pageSize,
-            total,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (t) => `共 ${t} 条`,
+          pagination={paginationProps}
+          onChange={(pagination) => {
+            setCurrent(pagination.current);
+            setPageSize(pagination.pageSize);
+            fetchList(pagination.current, pagination.pageSize);
           }}
-          onChange={handleTableChange}
         />
       </Card>
 

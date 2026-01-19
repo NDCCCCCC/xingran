@@ -25,28 +25,33 @@ import {
   moveADUser,
   enableADUser,
   disableADUser,
-  getADConfigList,
   getADOUTree,
   type ADUser,
-  type ADConfig,
   type ADOUNode
 } from '@/lib/adDomainApi';
 import ActionButtons from '@/components/shared/ActionButtons';
+import { useADConfigs } from '@/hooks/useADConfigs';
+import type { ADConfig } from '@/lib/adDomainApi';
 
 import type { FC } from 'react';
+import { usePagination } from '@/hooks/usePagination';
 
 const ADUserPage: FC = () => {
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
 
-  const [configs, setConfigs] = useState<ADConfig[]>([]);
-  const [selectedConfig, setSelectedConfig] = useState<string>('');
+  // 使用共享的 AD 配置 Hook
+  const { configs, selectedConfig, setSelectedConfig } = useADConfigs({
+    enabledOnly: true,
+    autoSelectFirst: true,
+  });
 
   const [users, setUsers] = useState<ADUser[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [current, setCurrent] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+
+  // 使用全局分页 hook（不使用 setTotal，因为文件本地已有 total 状态管理）
+  const { paginationProps, setCurrent, setPageSize } = usePagination();
 
   const [ouTree, setOUTree] = useState<ADOUNode[]>([]);
 
@@ -55,24 +60,6 @@ const ADUserPage: FC = () => {
 
   const [moveModalVisible, setMoveModalVisible] = useState(false);
   const [movingUser, setMovingUser] = useState<ADUser | null>(null);
-
-  useEffect(() => {
-    fetchConfigs();
-  }, []);
-
-  const fetchConfigs = async () => {
-    try {
-      const res = await getADConfigList({ current: 1, pageSize: 100, status: 0 });
-      if (res.code === 0 && res.data && res.data.list && res.data.list.length > 0) {
-        setConfigs(res.data.list);
-        if (!selectedConfig) {
-          setSelectedConfig(res.data.list[0].id);
-        }
-      }
-    } catch {
-      message.error('获取AD配置失败');
-    }
-  };
 
   const fetchOUTree = async () => {
     if (!selectedConfig) return;
@@ -91,7 +78,7 @@ const ADUserPage: FC = () => {
       fetchOUTree();
       fetchUsers();
     }
-  }, [selectedConfig, current, pageSize]);
+  }, [selectedConfig, paginationProps.current, paginationProps.pageSize]);
 
   const fetchUsers = async () => {
     if (!selectedConfig) return;
@@ -103,8 +90,8 @@ const ADUserPage: FC = () => {
         configId: selectedConfig,
         username: values.username,
         isEnabled: values.isEnabled,
-        current,
-        pageSize,
+        current: paginationProps.current,
+        pageSize: paginationProps.pageSize,
       });
       if (res.code === 0) {
         setUsers(res.data?.list ?? []);
@@ -334,19 +321,7 @@ const ADUserPage: FC = () => {
           loading={loading}
           rowKey="id"
           scroll={{ x: 1500 }}
-          pagination={{
-            current,
-            pageSize,
-            total,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (t) => `共 ${t} 条`,
-            pageSizeOptions: ['10', '20', '50', '100'],
-            onChange: (page, size) => {
-              setCurrent(page);
-              setPageSize(size || 10);
-            },
-          }}
+          pagination={paginationProps}
         />
       </Space>
 

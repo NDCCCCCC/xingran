@@ -39,6 +39,7 @@ import { post } from '@/lib/api';
 import type { BaseResponse, PageResponse } from '@/types';
 import DeptTree from '@/components/DeptTree';
 import { useTableManager } from '@/hooks/useTableManager';
+import { usePagination } from '@/hooks/usePagination';
 import { handleApiError, handleSuccess } from '@/utils/errorHandler';
 import ActionButtons from '@/components/shared/ActionButtons';
 import { formatDateTime } from '@/utils/datetime';
@@ -237,6 +238,9 @@ const UserManagement: FC = () => {
     closeResetPasswordModal,
   } = useUserModals();
 
+  // 使用全局分页 hook
+  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+
   // 数据加载函数
   const fetchUsers = useCallback(async (params: any) => {
     const result = await post<BaseResponse<PageResponse<User>>>('/system/users/list', params);
@@ -247,23 +251,29 @@ const UserManagement: FC = () => {
   const {
     loading,
     data: users,
-    total,
-    current,
-    pageSize,
     selectedRowKeys,
     searchForm,
     editForm,
     editModalVisible,
     editingItem: editingUser,
-    setCurrent,
-    setPageSize,
     setSelectedRowKeys,
     setEditModalVisible,
     loadData: loadUsers,
     handleAdd,
     handleEdit,
     resetSelection,
-  } = useTableManager<User>(fetchUsers, { pageSize: 10 });
+  } = useTableManager<User>(
+    fetchUsers,
+    {
+      externalPagination: {
+        current: paginationProps.current,
+        pageSize: paginationProps.pageSize,
+        setCurrent,
+        setPageSize,
+        setTotal,
+      },
+    }
+  );
 
   // ==================== 初始化 ====================
 
@@ -272,7 +282,8 @@ const UserManagement: FC = () => {
     loadStatistics();
     loadRoles();
     loadDepartments();
-  }, [loadUsers, loadStatistics, loadRoles, loadDepartments]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ==================== 事件处理 ====================
 
@@ -545,22 +556,18 @@ const UserManagement: FC = () => {
               dataSource={users}
               rowKey="id"
               loading={loading}
-              pagination={{
-                current,
-                pageSize,
-                total,
-                showSizeChanger: true,
-                showQuickJumper: true,
-                showTotal: (total) => `共 ${total} 条`,
-                onChange: (page, size) => {
-                  setCurrent(page);
-                  setPageSize(size || 10);
-                  const params: any = { current: page, pageSize: size || 10 };
-                  if (selectedDeptId) {
-                    params.deptId = selectedDeptId;
-                  }
-                  loadUsers(params);
-                },
+              pagination={paginationProps}
+              onChange={(pagination) => {
+                setCurrent(pagination.current);
+                setPageSize(pagination.pageSize);
+                const params: any = {
+                  current: pagination.current,
+                  pageSize: pagination.pageSize,
+                };
+                if (selectedDeptId) {
+                  params.deptId = selectedDeptId;
+                }
+                loadUsers(params);
               }}
               rowSelection={{
                 selectedRowKeys,

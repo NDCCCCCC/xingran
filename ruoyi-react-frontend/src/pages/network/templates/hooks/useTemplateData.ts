@@ -13,14 +13,7 @@ export interface UseTemplateDataReturn {
   templates: ConfigTemplate[];
   loading: boolean;
   total: number;
-  current: number;
-  pageSize: number;
   statistics: TemplateStatistics;
-
-  setTotal: React.Dispatch<React.SetStateAction<number>>;
-  setCurrent: React.Dispatch<React.SetStateAction<number>>;
-  setPageSize: React.Dispatch<React.SetStateAction<number>>;
-  setStatistics: React.Dispatch<React.SetStateAction<TemplateStatistics>>;
 
   loadTemplates: (params?: any, searchValues?: any) => Promise<void>;
   loadStatistics: () => Promise<void>;
@@ -28,12 +21,10 @@ export interface UseTemplateDataReturn {
   handleApiError: (error: unknown, defaultMessage: string) => void;
 }
 
-export function useTemplateData(searchForm: any): UseTemplateDataReturn {
+export function useTemplateData(searchForm: any, setTotal: React.Dispatch<React.SetStateAction<number>>): UseTemplateDataReturn {
   const [templates, setTemplates] = useState<ConfigTemplate[]>([]);
   const [loading, setLoading] = useState(false);
-  const [total, setTotal] = useState(0);
-  const [current, setCurrent] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [total, setTotalLocal] = useState(0);
   const [statistics, setStatistics] = useState<TemplateStatistics>({
     total: 0,
     system: 0,
@@ -55,11 +46,12 @@ export function useTemplateData(searchForm: any): UseTemplateDataReturn {
       try {
         const values = searchValues || searchForm.getFieldsValue();
         const result = await post<BaseResponse<PageResponse<ConfigTemplate>>>('/network/templates/list', {
-          current: params.current || current,
-          pageSize: params.pageSize || pageSize,
+          current: params.current || 1,
+          pageSize: params.pageSize || 10,
           ...values,
         });
         setTemplates(result.data?.list || []);
+        setTotalLocal(result.data?.total || 0);
         setTotal(result.data?.total || 0);
         updateStatistics(result.data?.list || []);
       } catch (error) {
@@ -68,7 +60,7 @@ export function useTemplateData(searchForm: any): UseTemplateDataReturn {
         setLoading(false);
       }
     },
-    [current, pageSize, searchForm]
+    [searchForm, setTotal]
   );
 
   const loadStatistics = useCallback(async () => {
@@ -96,14 +88,8 @@ export function useTemplateData(searchForm: any): UseTemplateDataReturn {
   return {
     templates,
     loading,
-    total,
-    current,
-    pageSize,
+    total: total,
     statistics,
-    setTotal,
-    setCurrent,
-    setPageSize,
-    setStatistics,
     loadTemplates,
     loadStatistics,
     updateStatistics,

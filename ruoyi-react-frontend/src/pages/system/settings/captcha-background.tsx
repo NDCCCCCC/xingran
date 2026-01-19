@@ -36,6 +36,7 @@ import type {
   CaptchaBackgroundStatus,
 } from '@/types/captcha';
 import * as captchaService from '@/services/captcha';
+import { usePagination } from '@/hooks/usePagination';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -66,9 +67,6 @@ const SHAPE_OPTIONS = [
 const CaptchaBackgroundSettingsPage: FC = () => {
   const [backgrounds, setBackgrounds] = useState<CaptchaBackground[]>([]);
   const [loading, setLoading] = useState(false);
-  const [total, setTotal] = useState(0);
-  const [current, setCurrent] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
   const [searchForm] = Form.useForm();
   const [uploadModalVisible, setUploadModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -81,14 +79,17 @@ const CaptchaBackgroundSettingsPage: FC = () => {
   const [uploading, setUploading] = useState(false);
   const [statistics, setStatistics] = useState<any>(null);
 
+  // 使用全局分页 hook
+  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+
   // 加载背景图列表
   const loadBackgrounds = async (params: any = {}) => {
     setLoading(true);
     try {
       const values = searchForm.getFieldsValue();
       const result = await captchaService.getCaptchaBackgroundList({
-        current: params.current || current,
-        pageSize: params.pageSize || pageSize,
+        current: params.current || paginationProps.current,
+        pageSize: params.pageSize || paginationProps.pageSize,
         ...values,
       });
       setBackgrounds(result.items);
@@ -261,12 +262,12 @@ const CaptchaBackgroundSettingsPage: FC = () => {
         />
       ),
     },
-    { title: '文件名', dataIndex: 'fileName', key: 'fileName', ellipsis: true },
+    { title: '文件名', dataIndex: 'fileName', key: 'fileName', width: 150, ellipsis: true },
     {
       title: '拼图形状',
       dataIndex: 'pieceShape',
       key: 'pieceShape',
-      width: 80,
+      width: 120,
       render: (shape: PieceShape) => <Tag color="blue">{PIECE_SHAPE_MAP[shape]}</Tag>,
     },
     {
@@ -305,7 +306,7 @@ const CaptchaBackgroundSettingsPage: FC = () => {
         <Tag color={status === 1 ? 'success' : 'default'}>{status === 1 ? '启用' : '禁用'}</Tag>
       ),
     },
-    { title: '备注', dataIndex: 'remark', key: 'remark', ellipsis: true },
+    { title: '备注', dataIndex: 'remark', key: 'remark', width: 150, ellipsis: true },
     {
       title: '操作',
       key: 'action',
@@ -341,7 +342,7 @@ const CaptchaBackgroundSettingsPage: FC = () => {
   useEffect(() => {
     loadBackgrounds();
     loadStatistics();
-  }, [current, pageSize]);
+  }, [paginationProps.current, paginationProps.pageSize]);
 
   return (
     <div style={{ padding: '0 0 24px' }}>
@@ -437,14 +438,11 @@ const CaptchaBackgroundSettingsPage: FC = () => {
         dataSource={backgrounds}
         loading={loading}
         rowKey="id"
-        pagination={{
-          current,
-          pageSize,
-          total,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total) => `共 ${total} 条`,
-          onChange: (page, size) => { setCurrent(page); setPageSize(size || 10); },
+        pagination={paginationProps}
+        onChange={(pagination) => {
+          setCurrent(pagination.current);
+          setPageSize(pagination.pageSize);
+          loadBackgrounds();
         }}
         scroll={{ x: 1200 }}
       />

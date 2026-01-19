@@ -87,12 +87,20 @@ const ExcelImport: FC<ExcelImportProps> = ({
   };
 
   const beforeUpload = (file: File) => {
-    if (!isValidExcelFile(file)) {
+    // 文件类型验证
+    const validTypes = [
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel',
+    ];
+    const isExcelType = validTypes.includes(file.type) || file.name.endsWith('.xlsx');
+    if (!isExcelType) {
       message.error('只支持 .xlsx 格式的Excel文件');
       return Upload.LIST_IGNORE;
     }
 
-    if (!isValidFileSize(file)) {
+    // 文件大小验证（10MB）
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
       message.error('文件大小不能超过 10MB');
       return Upload.LIST_IGNORE;
     }
@@ -312,16 +320,6 @@ const ExcelImport: FC<ExcelImportProps> = ({
     </Modal>
   );
 };
-
-function isValidExcelFile(file: File): boolean {
-  return file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
-         file.type === 'application/vnd.ms-excel' ||
-         file.name.endsWith('.xlsx');
-}
-
-function isValidFileSize(file: File): boolean {
-  return file.size / 1024 / 1024 < 10;
-}
 
 async function downloadFile(response: Response, filename: string): Promise<void> {
   const blob = await response.blob();

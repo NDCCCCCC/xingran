@@ -39,6 +39,7 @@ import {
   type APIConfigType,
   type AuthType,
 } from '@/lib/notificationConfigApi';
+import { usePagination } from '@/hooks/usePagination';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -47,10 +48,10 @@ const APIConfigPage: FC = () => {
   // 列表相关状态
   const [configs, setConfigs] = useState<APINotificationConfig[]>([]);
   const [loading, setLoading] = useState(false);
-  const [total, setTotal] = useState(0);
-  const [current, setCurrent] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
   const [configTypeFilter, setConfigTypeFilter] = useState<APIConfigType | undefined>();
+
+  // 使用全局分页 hook
+  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
   // 编辑模态框相关状态
   const [modalVisible, setModalVisible] = useState(false);
@@ -63,8 +64,8 @@ const APIConfigPage: FC = () => {
     setLoading(true);
     try {
       const result = await getAPINotificationConfigList({
-        page: current,
-        pageSize,
+        page: paginationProps.current,
+        pageSize: paginationProps.pageSize,
         configType: configTypeFilter,
       });
       setConfigs(result.data.list);
@@ -238,7 +239,7 @@ const APIConfigPage: FC = () => {
 
   useEffect(() => {
     loadConfigs();
-  }, [current, pageSize, configTypeFilter]);
+  }, [paginationProps.current, paginationProps.pageSize, configTypeFilter]);
 
   return (
     <div className="p-6">
@@ -276,17 +277,11 @@ const APIConfigPage: FC = () => {
           loading={loading}
           rowKey="id"
           scroll={{ x: 1200 }}
-          pagination={{
-            current,
-            pageSize,
-            total,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条`,
-            onChange: (page, size) => {
-              setCurrent(page);
-              setPageSize(size || 10);
-            },
+          pagination={paginationProps}
+          onChange={(pagination) => {
+            setCurrent(pagination.current);
+            setPageSize(pagination.pageSize);
+            loadConfigs();
           }}
         />
       </Card>

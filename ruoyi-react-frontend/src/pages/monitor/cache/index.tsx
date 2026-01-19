@@ -37,6 +37,7 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import { post, get } from '@/lib/api';
 import ActionButtons from '@/components/shared/ActionButtons';
+import { usePagination } from '@/hooks/usePagination';
 import type { BaseResponse, PageResponse } from '@/types';
 import { formatDateTime } from '@/utils/datetime';
 
@@ -174,9 +175,6 @@ const CacheManager: FC = () => {
   const [caches, setCaches] = useState<CacheInfo[]>([]);
   const [monitor, setMonitor] = useState<CacheMonitor | null>(null);
   const [loading, setLoading] = useState(false);
-  const [total, setTotal] = useState(0);
-  const [current, setCurrent] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
   const [searchForm, setSearchForm] = useState<CacheSearchForm>({
     key: '',
     type: '',
@@ -186,6 +184,9 @@ const CacheManager: FC = () => {
   const [statsModalVisible, setStatsModalVisible] = useState(false);
   const [form] = Form.useForm();
 
+  // 使用全局分页 hook
+  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+
   // ==================== 数据获取 ====================
 
   const fetchCaches = useCallback(async () => {
@@ -193,8 +194,8 @@ const CacheManager: FC = () => {
     try {
       const result = await post<BaseResponse<PageResponse<CacheInfo>>>('/monitor/cache/list', {
         ...searchForm,
-        current,
-        pageSize
+        current: paginationProps.current,
+        pageSize: paginationProps.pageSize
       });
 
       setCaches(result.data?.list || []);
@@ -205,7 +206,7 @@ const CacheManager: FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [searchForm, current, pageSize]);
+  }, [searchForm, paginationProps.current, paginationProps.pageSize, setTotal]);
 
   const fetchMonitor = useCallback(async () => {
     try {
@@ -337,7 +338,8 @@ const CacheManager: FC = () => {
   const handleTableChange = useCallback((pagination: any) => {
     setCurrent(pagination.current);
     setPageSize(pagination.pageSize);
-  }, []);
+    fetchCaches();
+  }, [fetchCaches, setCurrent, setPageSize]);
 
   // ==================== 初始化 ====================
 
@@ -351,7 +353,7 @@ const CacheManager: FC = () => {
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [fetchCaches, fetchMonitor]);
+  }, [paginationProps.current, paginationProps.pageSize, fetchCaches, fetchMonitor]);
 
   // 表格列 - 使用 useMemo 避免重复创建
   const columns = useMemo(() => getCacheTableColumns({
@@ -527,14 +529,11 @@ const CacheManager: FC = () => {
                 dataSource={caches}
                 rowKey="key"
                 loading={loading}
-                pagination={{
-                  current,
-                  pageSize,
-                  total,
-                  showSizeChanger: true,
-                  showQuickJumper: true,
-                  showTotal: (total) => `共 ${total} 条记录`,
-                  onChange: handleTableChange,
+                pagination={paginationProps}
+                onChange={(pagination) => {
+                  setCurrent(pagination.current);
+                  setPageSize(pagination.pageSize);
+                  fetchCaches();
                 }}
               />
             ),

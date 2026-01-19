@@ -17,6 +17,7 @@ import {
 import type { Building } from '@/types/operations';
 import { buildingApi } from '@/lib/opsApi';
 import { useTableManager } from '@/hooks/useTableManager';
+import { usePagination } from '@/hooks/usePagination';
 import { handleApiError, handleSuccess } from '@/utils/errorHandler';
 import { createStatusColumn, createDateTimeColumn } from '@/utils/tableHelpers';
 import ActionButtons from '@/components/shared/ActionButtons';
@@ -42,6 +43,9 @@ const BuildingManagement: FC = () => {
   const [exportVisible, setExportVisible] = useState(false);
   const [departments, setDepartments] = useState<DepartmentOption[]>([]);
   const [loadingDepts, setLoadingDepts] = useState(false);
+
+  // 使用全局分页 hook
+  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
   // 加载部门列表
   const loadDepartments = useCallback(async () => {
@@ -69,17 +73,24 @@ const BuildingManagement: FC = () => {
   }, []);
 
   const {
-    loading, data: buildings, total, current, pageSize, selectedRowKeys,
+    loading, data: buildings, total, selectedRowKeys,
     searchForm, editForm: buildingForm, editModalVisible: modalVisible,
     editingItem: editingBuilding, setSelectedRowKeys, setEditModalVisible: setModalVisible,
-    setEditingItem: setEditingBuilding, setCurrent, setPageSize, handleSearch,
+    setEditingItem: setEditingBuilding, handleSearch,
     handleReset, handleAdd, handleEdit, handleModalClose, loadData: loadBuildings, resetSelection,
   } = useTableManager<any>(
     async (params) => {
       const result = await buildingApi.list(params);
       return { list: result.data?.list || [], total: result.data?.total || 0 };
     },
-    { pageSize: 10 }
+    {
+      externalPagination: {
+        current: paginationProps.current,
+        pageSize: paginationProps.pageSize,
+        setCurrent,
+        setPageSize,
+      },
+    }
   );
 
   const loadStatistics = useCallback(async () => {
@@ -94,7 +105,11 @@ const BuildingManagement: FC = () => {
     } catch (error) { handleApiError(error, '加载统计数据', false); }
   }, []);
 
-  useEffect(() => { loadBuildings(); loadStatistics(); loadDepartments(); }, [loadDepartments]);
+  useEffect(() => {
+    loadBuildings();
+    loadStatistics();
+    loadDepartments();
+  }, [paginationProps.current, paginationProps.pageSize]);
 
   const handleSave = async () => {
     try {
@@ -220,11 +235,11 @@ const BuildingManagement: FC = () => {
             <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>新增楼宇</Button>
           </Space>
         </div>
-        {selectedRowKeys.length > 0 && <Alert message={<span>已选择 <strong>{selectedRowKeys.length}</strong> 个楼宇，<Button type="link" size="small" onClick={() => setSelectedRowKeys([])} style={{ padding: 0 }}>取消选择</Button></span>} type="info" showIcon style={{ marginTop: 12 }} />}
+        {selectedRowKeys.length > 0 && <Alert title={<span>已选择 <strong>{selectedRowKeys.length}</strong> 个楼宇，<Button type="link" size="small" onClick={() => setSelectedRowKeys([])} style={{ padding: 0 }}>取消选择</Button></span>} type="info" showIcon style={{ marginTop: 12 }} />}
       </Card>
       <Card>
         {viewMode === 'table' ? (
-          <Table rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }} columns={columns} dataSource={buildings} loading={loading} rowKey="id" pagination={{ current, pageSize, total, showSizeChanger: true, showQuickJumper: true, showTotal: (total) => `共 ${total} 条`, onChange: (page, size) => { setCurrent(page); setPageSize(size || 10); loadBuildings({ current: page, pageSize: size || 10 }); } }} />
+          <Table rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }} columns={columns} dataSource={buildings} loading={loading} rowKey="id" pagination={paginationProps} />
         ) : renderCardView()}
       </Card>
       <Modal title={editingBuilding ? '编辑楼宇' : '新增楼宇'} open={modalVisible} onOk={handleSave} onCancel={() => { setModalVisible(false); buildingForm.resetFields(); setEditingBuilding(null); }} width={600}>

@@ -542,18 +542,19 @@ func executeNoticePublishTask(ctx context.Context, params map[string]interface{}
 
 	db := GlobalDB.GetDB()
 
-	// 查询通知和对应的 Job 信息
+	// 查询通知信息（包含结束时间）
 	var notice struct {
 		ID            string
 		NoticeTitle   string
 		Priority      int
 		PublishStatus int
 		TargetType    int
+		EndDate       *string // 结束时间
 	}
 	var job models.Job
 
 	if err := db.Table("sys_notice").
-		Select("id, notice_title, priority, publish_status, target_type").
+		Select("id, notice_title, priority, publish_status, target_type, end_date").
 		Where("id = ? AND publish_status = ?", noticeID, 2). // PublishStatusScheduled = 2
 		First(&notice).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -561,6 +562,27 @@ func executeNoticePublishTask(ctx context.Context, params map[string]interface{}
 			return nil // 不是错误，任务已被处理
 		}
 		return fmt.Errorf("查询通知失败: %w", err)
+	}
+
+	// 检查是否超过结束时间
+	if notice.EndDate != nil && *notice.EndDate != "" {
+		endTime, err := time.Parse(time.RFC3339, *notice.EndDate)
+		if err == nil && time.Now().After(endTime) {
+			log.Printf("通知 [%s] 已超过结束时间，停止任务", notice.NoticeTitle)
+
+			// 删除对应的定时任务
+			jobName := getNoticeJobName(noticeID)
+			if GlobalScheduler != nil {
+				if err := db.Where("job_name = ?", jobName).First(&job).Error; err == nil {
+					if err := GlobalScheduler.RemoveJob(job.ID); err != nil {
+						log.Printf("删除任务失败: %v", err)
+					} else {
+						log.Printf("周期性任务因结束时间已停止: %s", jobName)
+					}
+				}
+			}
+			return nil
+		}
 	}
 
 	// 查询对应的 Job

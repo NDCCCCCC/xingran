@@ -51,6 +51,22 @@ type MenuUpdateRequest struct {
 	Remark    *string            `json:"remark,omitempty"`
 }
 
+// stringPtrValue 安全地从字符串指针获取值，如果为 nil 则返回空字符串
+func stringPtrValue(s *string) string {
+	if s != nil {
+		return *s
+	}
+	return ""
+}
+
+// normalizeParentID 处理空字符串的 ParentID，将其转换为 nil
+func normalizeParentID(parentID *string) *string {
+	if parentID != nil && *parentID == "" {
+		return nil
+	}
+	return parentID
+}
+
 // listMenus 查询菜单列表
 // @Summary 查询菜单列表
 // @Description 查询菜单列表，返回树形结构的菜单数据，支持按菜单名称、状态筛选
@@ -167,9 +183,7 @@ func createMenu(core *core.Core) gin.HandlerFunc {
 		}
 
 		// 处理空字符串的 ParentID，将其转换为 nil
-		if req.ParentID != nil && *req.ParentID == "" {
-			req.ParentID = nil
-		}
+		req.ParentID = normalizeParentID(req.ParentID)
 
 		// 检查菜单名称是否已存在
 		var count int64
@@ -200,12 +214,7 @@ func createMenu(core *core.Core) gin.HandlerFunc {
 			Status:    req.Status,
 			Perms:     req.Perms,
 			Icon:      req.Icon,
-			Remark: func() string {
-				if req.Remark != nil {
-					return *req.Remark
-				}
-				return ""
-			}(),
+			Remark:    stringPtrValue(req.Remark),
 		}
 
 		// 使用 MenuCacheService 创建菜单（会自动清除缓存）
@@ -283,9 +292,7 @@ func updateMenu(core *core.Core) gin.HandlerFunc {
 		}
 
 		// 处理空字符串的 ParentID，将其转换为 nil
-		if req.ParentID != nil && *req.ParentID == "" {
-			req.ParentID = nil
-		}
+		req.ParentID = normalizeParentID(req.ParentID)
 
 		// 检查菜单是否存在
 		var menu models.Menu
@@ -332,12 +339,7 @@ func updateMenu(core *core.Core) gin.HandlerFunc {
 		menu.Status = req.Status
 		menu.Perms = req.Perms
 		menu.Icon = req.Icon
-		menu.Remark = func() string {
-			if req.Remark != nil {
-				return *req.Remark
-			}
-			return ""
-		}()
+		menu.Remark = stringPtrValue(req.Remark)
 
 		// 使用 MenuCacheService 更新菜单（会自动清除缓存）
 		if err := core.MenuCacheService.UpdateMenu(c.Request.Context(), &menu); err != nil {

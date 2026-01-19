@@ -69,6 +69,7 @@ type DutyScheduleListRequest struct {
 	EndDate   *string `json:"endDate,omitempty"`   // YYYY-MM-DD
 	DutyType  *string `json:"dutyType,omitempty"`
 	Status    *int    `json:"status,omitempty"`
+	Expired   *int    `json:"expired,omitempty"`   // 过期状态：0=未过期，1=已过期，不传=全部
 	Current   int     `json:"current"`
 	PageSize  int     `json:"pageSize"`
 }

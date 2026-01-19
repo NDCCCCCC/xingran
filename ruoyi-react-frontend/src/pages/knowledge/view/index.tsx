@@ -133,35 +133,42 @@ const KnowledgeViewPage: FC = () => {
   const flatCategories = useMemo(() => {
     const flatten = (cats: KnowledgeCategory[]): KnowledgeCategory[] => {
       const result: KnowledgeCategory[] = [];
-      cats.forEach((cat) => {
+      for (const cat of cats) {
         result.push(cat);
         if (cat.children && cat.children.length > 0) {
           result.push(...flatten(cat.children));
         }
-      });
+      }
       return result;
     };
     return flatten(categories);
   }, [categories]);
 
-  // 分类树渲染
-  const renderCategoryTree = (cats: KnowledgeCategory[], level = 0) => {
-    return cats.map((cat) => (
-      <div key={cat.id} style={{ marginLeft: `${level * 16}px` }}>
+  // 分类树项组件
+  const CategoryTreeItem: FC<{ category: KnowledgeCategory; level: number }> = ({ category, level }) => {
+    const isSelected = selectedCategory === category.id;
+    const hasChildren = category.children && category.children.length > 0;
+
+    return (
+      <div>
         <div
           className={`flex items-center justify-between py-2 px-3 cursor-pointer rounded hover:bg-gray-100 ${
-            selectedCategory === cat.id ? 'bg-blue-50 text-blue-600' : ''
+            isSelected ? 'bg-blue-50 text-blue-600' : ''
           }`}
-          onClick={() => handleCategoryClick(cat.id)}
+          onClick={() => handleCategoryClick(category.id)}
+          style={{ marginLeft: `${level * 16}px` }}
         >
           <Space>
             <FolderOutlined />
-            <span>{cat.categoryName}</span>
+            <span>{category.categoryName}</span>
           </Space>
         </div>
-        {cat.children && cat.children.length > 0 && renderCategoryTree(cat.children, level + 1)}
+        {hasChildren &&
+          category.children!.map(child => (
+            <CategoryTreeItem key={child.id} category={child} level={level + 1} />
+          ))}
       </div>
-    ));
+    );
   };
 
   return (
@@ -192,7 +199,11 @@ const KnowledgeViewPage: FC = () => {
               {categories.length === 0 ? (
                 <Empty description="暂无分类" image={Empty.PRESENTED_IMAGE_SIMPLE} />
               ) : (
-                <div>{renderCategoryTree(categories)}</div>
+                <div>
+                  {categories.map(cat => (
+                    <CategoryTreeItem key={cat.id} category={cat} level={0} />
+                  ))}
+                </div>
               )}
             </Card>
 

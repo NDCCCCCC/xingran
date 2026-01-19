@@ -26,6 +26,7 @@ const (
 // OpsDedicatedLine 专线模型
 type OpsDedicatedLine struct {
 	models.BaseModel
+	Name                string            `gorm:"size:100;not null" json:"name"`                       // 专线名称
 	LineCode            string            `gorm:"uniqueIndex;size:50;not null" json:"lineCode"` // 专线编码（唯一）
 	LineType            DedicatedLineType `gorm:"size:50;not null" json:"lineType"`             // 专线类型
 	Bandwidth           *string           `gorm:"size:50" json:"bandwidth,omitempty"`           // 带宽（如：100M, 1G），选填

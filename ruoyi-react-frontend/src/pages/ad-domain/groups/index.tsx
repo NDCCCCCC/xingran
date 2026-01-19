@@ -25,26 +25,31 @@ import {
   addADGroupMember,
   removeADGroupMember,
   updateADGroup,
-  getADConfigList,
   getADUserList,
   type ADGroup,
-  type ADUser,
-  type ADConfig
+  type ADUser
 } from '@/lib/adDomainApi';
+import { useADConfigs } from '@/hooks/useADConfigs';
+import type { ADConfig } from '@/lib/adDomainApi';
 
 import type { FC } from 'react';
+import { usePagination } from '@/hooks/usePagination';
 
 const ADGroupPage: FC = () => {
   const [form] = Form.useForm();
 
-  const [configs, setConfigs] = useState<ADConfig[]>([]);
-  const [selectedConfig, setSelectedConfig] = useState<string>('');
+  // 使用共享的 AD 配置 Hook
+  const { configs, selectedConfig, setSelectedConfig } = useADConfigs({
+    enabledOnly: true,
+    autoSelectFirst: true,
+  });
 
   const [groups, setGroups] = useState<ADGroup[]>([]);
   const [groupTotal, setGroupTotal] = useState(0);
   const [groupLoading, setGroupLoading] = useState(false);
-  const [current, setCurrent] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+
+  // 使用全局分页 hook
+  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
   const [selectedGroup, setSelectedGroup] = useState<ADGroup | null>(null);
   const [members, setMembers] = useState<ADUser[]>([]);
@@ -58,24 +63,6 @@ const ADGroupPage: FC = () => {
   const [addMemberVisible, setAddMemberVisible] = useState(false);
   const [availableUsers, setAvailableUsers] = useState<ADUser[]>([]);
 
-  useEffect(() => {
-    fetchConfigs();
-  }, []);
-
-  const fetchConfigs = async () => {
-    try {
-      const res = await getADConfigList({ current: 1, pageSize: 100, status: 0 });
-      if (res.code === 0 && res.data && res.data.list && res.data.list.length > 0) {
-        setConfigs(res.data.list);
-        if (!selectedConfig) {
-          setSelectedConfig(res.data.list[0].id);
-        }
-      }
-    } catch {
-      message.error('获取AD配置失败');
-    }
-  };
-
   const fetchGroups = async () => {
     if (!selectedConfig) return;
 
@@ -83,8 +70,8 @@ const ADGroupPage: FC = () => {
     try {
       const res = await getADGroupList({
         configId: selectedConfig,
-        current,
-        pageSize,
+        current: paginationProps.current,
+        pageSize: paginationProps.pageSize,
       });
       if (res.code === 0) {
         setGroups(res.data?.list ?? []);
@@ -101,7 +88,7 @@ const ADGroupPage: FC = () => {
     if (selectedConfig) {
       fetchGroups();
     }
-  }, [selectedConfig, current, pageSize]);
+  }, [selectedConfig, paginationProps.current, paginationProps.pageSize]);
 
   const handleSearch = () => {
     setCurrent(1);
@@ -312,18 +299,7 @@ const ADGroupPage: FC = () => {
           dataSource={groups}
           loading={groupLoading}
           rowKey="id"
-          pagination={{
-            current,
-            pageSize,
-            total: groupTotal,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (t) => `共 ${t} 条`,
-            onChange: (page, size) => {
-              setCurrent(page);
-              setPageSize(size || 10);
-            },
-          }}
+          pagination={paginationProps}
         />
       </Space>
 

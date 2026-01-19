@@ -9,6 +9,7 @@ import {
 } from '@ant-design/icons';
 import { formatDate } from '@/utils/datetime';
 import type { Holiday } from '@/lib/dutyApi';
+import { usePagination } from '@/hooks/usePagination';
 
 const { Option } = Select;
 
@@ -48,6 +49,8 @@ export const HolidayManagement: React.FC<HolidayManagementProps> = ({
   onImport,
   onDownloadTemplate,
 }) => {
+  // 使用全局分页 hook
+  const { paginationProps } = usePagination();
   const columns: ColumnsType<Holiday> = [
     {
       title: '日期',
@@ -168,13 +171,7 @@ export const HolidayManagement: React.FC<HolidayManagementProps> = ({
         rowKey="id"
         dataSource={holidays}
         loading={loading}
-        pagination={{
-          pageSize: 20,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (t) => `共 ${t} 条`,
-          pageSizeOptions: ['20', '50', '100'],
-        }}
+        pagination={paginationProps}
         columns={columns}
         size="small"
       />

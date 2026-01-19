@@ -104,7 +104,7 @@ export const TargetSelector: React.FC<TargetSelectorProps> = ({
             );
           }}
           className="w-full"
-          options={users.map((user: any) => ({
+          options={users.filter((user: any) => user.id != null).map((user: any) => ({
             label: `${user.nickname || user.username} (${user.username})`,
             value: user.id,
           }))}

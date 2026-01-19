@@ -76,7 +76,7 @@ export const GenerateScheduleModal: React.FC<GenerateScheduleModalProps> = ({
         <Form.Item name="clearExists" label="清除已有排班" valuePropName="checked" initialValue={false}>
           <Switch checkedChildren="是" unCheckedChildren="否" />
         </Form.Item>
-        <Alert message="系统将根据值班池中的成员顺序，按轮询方式自动生成排班记录。只对符合所选值班类型的日期进行排班。" type="info" showIcon />
+        <Alert title="系统将根据值班池中的成员顺序，按轮询方式自动生成排班记录。只对符合所选值班类型的日期进行排班。" type="info" showIcon />
       </Form>
     </Modal>
   );

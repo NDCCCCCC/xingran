@@ -31,16 +31,18 @@ import { post } from '@/lib/api';
 import { STATUS_OPTIONS, DATA_SCOPE_OPTIONS, DEFAULT_FORM_VALUES } from './constants';
 import { getRoleColumns } from './columns';
 import { useRoleData, useRoleActions } from './hooks';
+import { usePagination } from '@/hooks/usePagination';
 
 const { Option } = Select;
 
 // ==================== 主组件 ====================
 
 const RoleManagement: FC = () => {
-  const [current, setCurrent] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
   const [searchForm] = Form.useForm();
   const [editForm] = Form.useForm();
+
+  // 使用全局分页 hook
+  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
   // 使用数据管理 Hook
   const {
@@ -61,8 +63,8 @@ const RoleManagement: FC = () => {
     loadMenuTree,
     loadDeptTree,
   } = useRoleData({
-    current,
-    pageSize,
+    current: paginationProps.current,
+    pageSize: paginationProps.pageSize,
   });
 
   // 使用操作管理 Hook
@@ -104,7 +106,7 @@ const RoleManagement: FC = () => {
     loadStatistics();
     loadMenuTree();
     loadDeptTree();
-  }, []);
+  }, [paginationProps.current, paginationProps.pageSize]);
 
   // 搜索
   const handleSearch = () => {
@@ -217,19 +219,7 @@ const RoleManagement: FC = () => {
           dataSource={roles}
           rowKey="id"
           loading={loading}
-          pagination={{
-            current,
-            pageSize,
-            total,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条`,
-            onChange: (page, size) => {
-              setCurrent(page);
-              setPageSize(size);
-              loadRoles({ current: page, pageSize: size });
-            },
-          }}
+          pagination={paginationProps}
           rowSelection={{
             selectedRowKeys,
             onChange: setSelectedRowKeys,

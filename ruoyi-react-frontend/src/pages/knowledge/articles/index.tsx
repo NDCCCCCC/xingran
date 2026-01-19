@@ -22,6 +22,7 @@ import { getArticleColumns } from './columns';
 import { EditModal, PreviewModal } from './modals';
 import { KnowledgeArticleStatus } from '@/lib/knowledgeApi';
 import { message } from 'antd';
+import { usePagination } from '@/hooks/usePagination';
 
 const { Option } = Select;
 
@@ -29,8 +30,8 @@ const KnowledgeArticlePage: FC = () => {
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
 
-  const [current, setCurrent] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  // 使用全局分页 hook
+  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
   const [modalVisible, setModalVisible] = useState(false);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState<any | null>(null);
@@ -52,16 +53,16 @@ const KnowledgeArticlePage: FC = () => {
     handlePublish,
     handleSave,
   } = useArticleData({
-    current,
-    pageSize,
+    current: paginationProps.current,
+    pageSize: paginationProps.pageSize,
   });
 
   // 初始化加载
   useEffect(() => {
-    fetchList(1, 10);
+    fetchList(paginationProps.current, paginationProps.pageSize);
     fetchCategories();
     fetchTags();
-  }, []);
+  }, [paginationProps.current, paginationProps.pageSize]);
 
   // 表格列
   const columns = getArticleColumns({
@@ -86,19 +87,21 @@ const KnowledgeArticlePage: FC = () => {
     handlePublish,
     handleLike,
     handleDelete,
-    current,
-    pageSize,
+    current: paginationProps.current,
+    pageSize: paginationProps.pageSize,
   });
 
   // 搜索
   const handleSearch = () => {
-    fetchList(1, 10);
+    setCurrent(1);
+    fetchList(1, paginationProps.pageSize);
   };
 
   // 重置
   const handleReset = () => {
     form.resetFields();
-    fetchList(1, 10);
+    setCurrent(1);
+    fetchList(1, paginationProps.pageSize);
   };
 
   // 新增
@@ -213,14 +216,7 @@ const KnowledgeArticlePage: FC = () => {
           dataSource={articles}
           loading={loading}
           scroll={{ x: 1300 }}
-          pagination={{
-            current,
-            pageSize,
-            total,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (t) => `共 ${t} 条`,
-          }}
+          pagination={paginationProps}
           onChange={handleTableChange}
         />
       </Card>

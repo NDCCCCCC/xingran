@@ -39,20 +39,11 @@ export type TargetType = 0 | 1 | 2 | 3;
 export type ExecutionType = 'once' | 'recurring';
 
 /**
- * 周期类型
- */
-export type RecurrenceType = 'daily' | 'weekly' | 'monthly' | 'custom';
-
-/**
  * 周期性配置
  */
 export interface RecurrenceConfig {
-  type: RecurrenceType;
-  executeTime?: string;     // 执行时间 "HH:mm"
-  weekDay?: number;         // 周几（1-7，weekly时使用，1=周日，2=周一）
-  monthDay?: number;        // 每月几号（1-31，monthly时使用）
-  cronExpression?: string;  // 自定义 Cron 表达式（custom时使用）
-  endDate?: string;         // 结束日期（可选）
+  cronExpression: string;  // Cron 表达式
+  endDate?: string;        // 结束日期（可选）
 }
 
 /**
@@ -107,6 +98,7 @@ export interface Notice {
   targetType: TargetType;
   createdByName?: string;
   isMarkdown: boolean;
+  endDate?: string;       // 周期性通知结束时间
   createdAt: string;
   updatedAt: string;
   // 关联数据

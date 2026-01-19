@@ -52,6 +52,7 @@ import {
   formatScheduleOptionContent,
 } from './utils';
 import { useScheduleData, useScheduleModals } from './hooks';
+import { usePagination } from '@/hooks/usePagination';
 
 const { Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -202,9 +203,10 @@ function getDutyTableColumns(props: DutyTableColumnsProps): ColumnsType<DutySche
 
 const DutySchedulePage: FC = () => {
   const [form] = Form.useForm();
-  const [current, setCurrent] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
+
+  // 使用全局分页 hook
+  const { paginationProps, setCurrent, setPageSize } = usePagination();
 
   // 使用数据管理 Hook
   const {
@@ -222,7 +224,7 @@ const DutySchedulePage: FC = () => {
     fetchUsers,
     fetchWeeklyDuty,
     setCurrentWeekStart,
-  } = useScheduleData({ current, pageSize, searchForm: form });
+  } = useScheduleData({ current: paginationProps.current, pageSize: paginationProps.pageSize, searchForm: form });
 
   // 使用周视图 Hook
   const { handlePrevWeek, handleNextWeek, handleTodayWeek } = useWeekView(
@@ -252,40 +254,39 @@ const DutySchedulePage: FC = () => {
     handleBatchDelete,
   } = useScheduleModals({
     onLoad: () => {
-      fetchList();
+      fetchList(paginationProps.current, paginationProps.pageSize);
       fetchAllSchedules();
     },
     allSchedules,
     dataSource,
-    current,
+    current: paginationProps.current,
   });
 
   // 初始化加载
   useEffect(() => {
     // 设置默认值：只显示未过期的排班
     form.setFieldsValue({ expired: 0 });
-    fetchList(1, 10);
+    fetchList(1, paginationProps.pageSize);
     fetchAllSchedules();
     fetchPools();
     fetchUsers();
     fetchWeeklyDuty(currentWeekStart);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleTableChange = (pagination: TablePaginationConfig) => {
-    setCurrent(pagination.current || 1);
-    setPageSize(pagination.pageSize || 10);
-    fetchList(pagination.current, pagination.pageSize);
+    fetchList(pagination.current || 1, pagination.pageSize || 10);
   };
 
   const handleSearch = () => {
-    fetchList(1, 10);
+    fetchList(1, paginationProps.pageSize);
   };
 
   const handleReset = () => {
     form.resetFields();
     // 重置后默认只显示未过期的排班
     form.setFieldsValue({ expired: 0 });
-    fetchList(1, 10);
+    fetchList(1, paginationProps.pageSize);
   };
 
   // 获取值班类型 Badge 颜色
@@ -303,7 +304,7 @@ const DutySchedulePage: FC = () => {
   };
 
   // 表格列
-  const columns = getDutyTableColumns({ current, pageSize, handleDelete });
+  const columns = getDutyTableColumns({ current: paginationProps.current, pageSize: paginationProps.pageSize, handleDelete });
 
   return (
     <div className="p-6">
@@ -409,8 +410,8 @@ const DutySchedulePage: FC = () => {
         </div>
       </Card>
 
-      {/* 排班管理 */}
-      <Card title="排班管理">
+      {/* 排班管理 - 筛选表单 */}
+      <Card style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
           <Form form={form} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="poolId" label="值班池">
@@ -482,7 +483,10 @@ const DutySchedulePage: FC = () => {
             )}
           </Space>
         </div>
+      </Card>
 
+      {/* 排班管理 - 数据表格 */}
+      <Card>
         <Table
           rowKey="id"
           columns={columns}
@@ -493,15 +497,7 @@ const DutySchedulePage: FC = () => {
             selectedRowKeys,
             onChange: (selectedKeys) => setSelectedRowKeys(selectedKeys as string[]),
           }}
-          pagination={{
-            current,
-            pageSize,
-            total,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (t) => `共 ${t} 条`,
-            pageSizeOptions: ['10', '20', '50', '100'],
-          }}
+          pagination={paginationProps}
           onChange={handleTableChange}
         />
       </Card>

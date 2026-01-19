@@ -32,6 +32,7 @@ import { useTableManager } from '@/hooks/useTableManager';
 import { withErrorHandling } from '@/utils/errorHandler';
 import { useState } from 'react';
 import { formatDateTime } from '@/utils/datetime';
+import { usePagination } from '@/hooks/usePagination';
 
 const { Option } = Select;
 
@@ -52,12 +53,12 @@ const PortStatusPage: FC = () => {
     dot1xEnabled: 0,
   });
 
+  // 使用全局分页 hook
+  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+
   const {
     loading,
     data: portStatus,
-    total,
-    current,
-    pageSize,
     selectedRowKeys,
     setSelectedRowKeys,
     searchForm,
@@ -65,14 +66,12 @@ const PortStatusPage: FC = () => {
     handleSearch,
     handleReset,
     handleRefresh,
-    setCurrent,
-    setPageSize,
   } = useTableManager<DevicePortStatus>(
     async (params) => {
       const values = searchForm.getFieldsValue();
       const result = await post('/network/ports/list', {
-        current: params.current || current,
-        pageSize: params.pageSize || pageSize,
+        current: params.current || paginationProps.current,
+        pageSize: params.pageSize || paginationProps.pageSize,
         ...values,
         // 如果从设备页面跳转过来，强制使用 URL 中的 deviceId
         ...(isFromDevice ? { deviceId: deviceIdFromUrl } : {}),
@@ -80,6 +79,15 @@ const PortStatusPage: FC = () => {
       // 更新统计数据
       updateStatistics(result.data.list || []);
       return result.data;
+    },
+    {
+      externalPagination: {
+        current: paginationProps.current,
+        pageSize: paginationProps.pageSize,
+        setCurrent,
+        setPageSize,
+        setTotal,
+      },
     }
   );
 
@@ -412,14 +420,14 @@ const PortStatusPage: FC = () => {
           loading={loading}
           rowKey="id"
           scroll={{ x: 1400 }}
-          pagination={{
-            current,
-            pageSize,
-            total,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条`,
-            onChange: (page, size) => { setCurrent(page); setPageSize(size || 10); },
+          pagination={paginationProps}
+          onChange={(pagination) => {
+            setCurrent(pagination.current);
+            setPageSize(pagination.pageSize);
+            loadPortStatus({
+              current: pagination.current,
+              pageSize: pagination.pageSize,
+            });
           }}
           expandable={{
             expandedRowRender: (record) => (

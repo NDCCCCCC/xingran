@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Button,
   Table,
@@ -23,25 +23,29 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import {
-  getADConfigList,
   createADConfig,
   updateADConfig,
   deleteADConfig,
   testADConnection,
   syncADData,
-  type ADConfig,
   type ADSyncResult
 } from '@/lib/adDomainApi';
 import ActionButtons from '@/components/shared/ActionButtons';
 import { formatDateTime } from '@/utils/datetime';
+import { useADConfigs } from '@/hooks/useADConfigs';
+import type { ADConfig } from '@/lib/adDomainApi';
 
 import type { FC } from 'react';
 
 const ADConfigPage: FC = () => {
   const [editForm] = Form.useForm();
 
-  const [configs, setConfigs] = useState<ADConfig[]>([]);
-  const [loading, setLoading] = useState(false);
+  // 使用共享的 AD 配置 Hook
+  const { configs, loading, refreshConfigs: fetchConfigs } = useADConfigs({
+    enabledOnly: false, // 配置页显示所有配置（包括禁用状态）
+    autoSelectFirst: false, // 不自动选择
+  });
+
   const [modalVisible, setModalVisible] = useState(false);
   const [editingConfig, setEditingConfig] = useState<ADConfig | null>(null);
 
@@ -60,24 +64,6 @@ const ADConfigPage: FC = () => {
 
   const handleSuccess = (msg: string) => {
     message.success(msg);
-  };
-
-  useEffect(() => {
-    fetchConfigs();
-  }, []);
-
-  const fetchConfigs = async () => {
-    setLoading(true);
-    try {
-      const res = await getADConfigList({ current: 1, pageSize: 100 });
-      if (res.code === 0) {
-        setConfigs(res.data?.list ?? []);
-      }
-    } catch (error) {
-      handleApiError(error, '获取AD配置失败');
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handleCreate = () => {

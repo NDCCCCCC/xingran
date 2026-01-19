@@ -98,6 +98,7 @@ type Notice struct {
 	TargetType    TargetType     `gorm:"default:0" json:"targetType"`     // 目标类型: 0=全部 1=部门 2=角色 3=用户
 	CreatedByName string         `gorm:"size:64" json:"createdByName"`    // 创建人姓名
 	IsMarkdown    bool           `gorm:"default:false" json:"isMarkdown"` // 是否为Markdown格式
+	EndDate       *time.Time     `gorm:"column:end_date" json:"endDate,omitempty"` // 周期性通知结束时间
 
 	// 关联
 	Targets     []NoticeTarget        `gorm:"foreignKey:NoticeID" json:"targets,omitempty"`

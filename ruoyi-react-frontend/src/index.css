@@ -856,12 +856,10 @@ body {
    TabBar 激活标签样式 - 与侧边栏保持一致
    ======================================== */
 
-/* 激活标签背景和文字 */
+/* 激活标签样式 - 去掉灰色背景，只保留蓝色文字和下划线 */
 .layout-tab-bar .ant-tabs-tab-active {
-  background: var(--sidebar-bg-active) !important;
   color: var(--sidebar-text-active) !important;
   font-weight: 600 !important;
-  border-radius: 4px 4px 0 0 !important;
 }
 
 /* 自定义底部蓝色指示条（水平） */

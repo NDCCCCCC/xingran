@@ -17,6 +17,7 @@ import {
 import type { RoomDevice } from '@/types';
 import { roomDeviceApi, serverRoomApi } from '@/lib/opsApi';
 import { useTableManager } from '@/hooks/useTableManager';
+import { usePagination } from '@/hooks/usePagination';
 import { handleApiError, handleSuccess } from '@/utils/errorHandler';
 import { createDateTimeColumn } from '@/utils/tableHelpers';
 import ActionButtons from '@/components/shared/ActionButtons';
@@ -40,18 +41,28 @@ const RoomDeviceManagement: FC = () => {
   const [exportVisible, setExportVisible] = useState(false);
   const [roomOptions, setRoomOptions] = useState<RoomOption[]>([]);
 
+  // 使用全局分页 hook
+  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+
   const {
-    loading, data: devices, total, current, pageSize, selectedRowKeys,
+    loading, data: devices, total, selectedRowKeys,
     searchForm, editForm: deviceForm, editModalVisible: modalVisible,
     editingItem: editingDevice, setSelectedRowKeys, setEditModalVisible: setModalVisible,
-    setEditingItem: setEditingDevice, setCurrent, setPageSize, handleSearch,
+    setEditingItem: setEditingDevice, handleSearch,
     handleReset, handleAdd, handleEdit, handleModalClose, loadData: loadDevices, resetSelection,
   } = useTableManager<RoomDevice>(
     async (params) => {
       const result = await roomDeviceApi.list(params);
       return { list: result.data?.list || [], total: result.data?.total || 0 };
     },
-    { pageSize: 10 }
+    {
+      externalPagination: {
+        current: paginationProps.current,
+        pageSize: paginationProps.pageSize,
+        setCurrent,
+        setPageSize,
+      },
+    }
   );
 
   const loadStatistics = useCallback(async () => {
@@ -82,7 +93,7 @@ const RoomDeviceManagement: FC = () => {
       loadStatistics();
       loadRoomOptions();
     }, 0);
-  }, []);
+  }, [paginationProps.current, paginationProps.pageSize]);
 
   const handleSave = async () => {
     try {
@@ -275,11 +286,11 @@ const RoomDeviceManagement: FC = () => {
             <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>新增设备</Button>
           </Space>
         </div>
-        {selectedRowKeys.length > 0 && <Alert message={<span>已选择 <strong>{selectedRowKeys.length}</strong> 个设备，<Button type="link" size="small" onClick={() => setSelectedRowKeys([])} style={{ padding: 0 }}>取消选择</Button></span>} type="info" showIcon style={{ marginTop: 12 }} />}
+        {selectedRowKeys.length > 0 && <Alert title={<span>已选择 <strong>{selectedRowKeys.length}</strong> 个设备，<Button type="link" size="small" onClick={() => setSelectedRowKeys([])} style={{ padding: 0 }}>取消选择</Button></span>} type="info" showIcon style={{ marginTop: 12 }} />}
       </Card>
       <Card>
         {viewMode === 'table' ? (
-          <Table rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }} columns={columns} dataSource={devices} loading={loading} rowKey="id" pagination={{ current, pageSize, total, showSizeChanger: true, showQuickJumper: true, showTotal: (total) => `共 ${total} 条`, onChange: (page, size) => { setCurrent(page); setPageSize(size || 10); loadDevices({ current: page, pageSize: size || 10 }); } }} />
+          <Table rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }} columns={columns} dataSource={devices} loading={loading} rowKey="id" pagination={paginationProps} />
         ) : renderCardView()}
       </Card>
       <Modal title={editingDevice ? '编辑设备' : '新增设备'} open={modalVisible} onOk={handleSave} onCancel={() => { setModalVisible(false); deviceForm.resetFields(); setEditingDevice(null); }} width={700}>

@@ -35,6 +35,7 @@ import {
   WorkOrderPriority,
 } from '@/lib/workorderApi';
 import { useAuthStore } from '@/store/authStore';
+import { usePagination } from '@/hooks/usePagination';
 
 const { Text } = Typography;
 const { Option } = Select;
@@ -49,11 +50,11 @@ const MyDutyPage: FC = () => {
   const [stats, setStats] = useState<MyDutyStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
 
+  // 使用全局分页 hook
+  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+
   // 值班记录列表
   const [schedules, setSchedules] = useState<DutySchedule[]>([]);
-  const [total, setTotal] = useState(0);
-  const [current, setCurrent] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(false);
 
   // 待办工单列表
@@ -97,8 +98,8 @@ const MyDutyPage: FC = () => {
     try {
       const values = form.getFieldsValue();
       const result = await getDutyScheduleList({
-        current: page ?? current,
-        pageSize: size ?? pageSize,
+        current: page ?? paginationProps.current,
+        pageSize: size ?? paginationProps.pageSize,
         userId: user?.id,
         startDate: values.dateRange?.[0]?.format('YYYY-MM-DD'),
         endDate: values.dateRange?.[1]?.format('YYYY-MM-DD'),
@@ -106,8 +107,6 @@ const MyDutyPage: FC = () => {
       });
       setSchedules(result.data?.list ?? []);
       setTotal(result.data?.total ?? 0);
-      setCurrent(result.data?.current ?? 1);
-      setPageSize(result.data?.page_size ?? 10);
     } catch (error) {
       console.error('加载值班记录失败', error);
     } finally {
@@ -118,17 +117,20 @@ const MyDutyPage: FC = () => {
   useEffect(() => {
     loadStats();
     loadWorkOrders();
-    loadSchedules(1, 10);
-  }, []);
+    loadSchedules();
+  }, [paginationProps.current, paginationProps.pageSize]);
 
   // 搜索
   const handleSearch = () => {
-    loadSchedules(1, 10);
+    setCurrent(1);
+    loadSchedules();
   };
 
   // 分页变化
   const handleTableChange = (pagination: TablePaginationConfig) => {
-    loadSchedules(pagination.current, pagination.pageSize);
+    setCurrent(pagination.current);
+    setPageSize(pagination.pageSize);
+    loadSchedules();
   };
 
   // 获取值班类型颜色
@@ -393,12 +395,10 @@ const MyDutyPage: FC = () => {
               dataSource={schedules}
               loading={loading}
               pagination={{
-                current,
+                ...paginationProps,
                 pageSize: 10,
-                total,
                 size: 'small',
                 showSizeChanger: false,
-                showTotal: (t) => `共 ${t} 条`,
               }}
               onChange={handleTableChange}
               size="small"

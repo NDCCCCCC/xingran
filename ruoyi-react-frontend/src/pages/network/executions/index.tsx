@@ -24,14 +24,15 @@ import { useExecutionData, useExecutionModals } from './hooks';
 import { getExecutionColumns, getDetailColumns } from './columns';
 import { ConfigExecuteModal, VariableModal, DetailDrawer } from './modals';
 import { STATUS_OPTIONS } from './constants';
+import { usePagination } from '@/hooks/usePagination';
 
 const { Option } = Select;
 
 const ConfigExecutionPage: FC = () => {
-  const [current, setCurrent] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [execCurrent, setExecCurrent] = useState(1);
   const [executeForm] = Form.useForm();
+
+  // 使用全局分页 hook
+  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
   // 数据管理
   const {
@@ -45,9 +46,9 @@ const ConfigExecutionPage: FC = () => {
     loadExecutionDetails,
     loadStatistics,
   } = useExecutionData({
-    current,
-    pageSize,
-    execCurrent,
+    current: 1, // 未使用，保留默认值
+    pageSize: paginationProps.pageSize,
+    execCurrent: paginationProps.current,
   });
 
   // 模态框和操作管理
@@ -96,7 +97,7 @@ const ConfigExecutionPage: FC = () => {
   useEffect(() => {
     loadExecutions();
     loadStatistics();
-  }, [execCurrent, pageSize, loadExecutions, loadStatistics]);
+  }, [paginationProps.current, paginationProps.pageSize, loadExecutions, loadStatistics]);
 
   return (
     <div>
@@ -214,17 +215,14 @@ const ConfigExecutionPage: FC = () => {
           loading={execLoading}
           rowKey="id"
           scroll={{ x: 1400 }}
-          pagination={{
-            current: execCurrent,
-            pageSize,
-            total: execTotal,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条`,
-            onChange: (page, size) => {
-              setExecCurrent(page);
-              setPageSize(size || 10);
-            },
+          pagination={paginationProps}
+          onChange={(pagination) => {
+            setCurrent(pagination.current);
+            setPageSize(pagination.pageSize);
+            loadExecutions({
+              current: pagination.current,
+              pageSize: pagination.pageSize,
+            });
           }}
         />
       </Card>

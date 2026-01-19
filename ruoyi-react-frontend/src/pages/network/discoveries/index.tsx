@@ -27,12 +27,13 @@ import { STATUS_OPTIONS } from './constants';
 import { parseIPRanges } from './utils';
 import { post } from '@/lib/api';
 import { message } from 'antd';
+import { usePagination } from '@/hooks/usePagination';
 
 const { Option } = Select;
 
 const DeviceDiscoveryPage: FC = () => {
-  const [current, setCurrent] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  // 使用全局分页 hook
+  const { paginationProps, setTotal } = usePagination();
   const [form] = Form.useForm();
 
   // 数据管理
@@ -52,8 +53,8 @@ const DeviceDiscoveryPage: FC = () => {
     loadDepartments,
     loadDiscoveryResults,
   } = useDiscoveryData({
-    current,
-    pageSize,
+    current: paginationProps.current,
+    pageSize: paginationProps.pageSize,
   });
 
   // 轮询管理
@@ -147,7 +148,7 @@ const DeviceDiscoveryPage: FC = () => {
   useEffect(() => {
     loadDiscoveries();
     loadStatistics();
-  }, [current, pageSize, loadDiscoveries, loadStatistics]);
+  }, [paginationProps.current, paginationProps.pageSize, loadDiscoveries, loadStatistics]);
 
   return (
     <div>
@@ -273,18 +274,7 @@ const DeviceDiscoveryPage: FC = () => {
           loading={loading}
           rowKey="id"
           scroll={{ x: 1500 }}
-          pagination={{
-            current,
-            pageSize,
-            total,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条`,
-            onChange: (page, size) => {
-              setCurrent(page);
-              setPageSize(size || 10);
-            },
-          }}
+          pagination={paginationProps}
         />
       </Card>
 

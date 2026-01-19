@@ -173,6 +173,17 @@ func (s *DutyScheduleService) GetDutyScheduleList(ctx context.Context, req *Duty
 	if req.Status != nil {
 		query = query.Where("status = ?", *req.Status)
 	}
+	// 过期状态筛选：0=未过期，1=已过期
+	if req.Expired != nil {
+		today := time.Now().Format("2006-01-02")
+		if *req.Expired == 0 {
+			// 未过期：排班日期 >= 今天
+			query = query.Where("schedule_date >= ?", today)
+		} else if *req.Expired == 1 {
+			// 已过期：排班日期 < 今天
+			query = query.Where("schedule_date < ?", today)
+		}
+	}
 
 	// 统计总数
 	if err := query.Count(&total).Error; err != nil {

@@ -54,12 +54,8 @@ type NoticeChannelRequest struct {
 
 // RecurrenceConfig 周期性执行配置
 type RecurrenceConfig struct {
-	Type           string  `json:"type" binding:"required,oneof=daily weekly monthly custom"` // daily, weekly, monthly, custom
-	ExecuteTime    string  `json:"executeTime" binding:"required"`                            // 执行时间 "HH:mm"
-	WeekDay        *int    `json:"weekDay,omitempty"`                                         // 周几（1-7，weekly时使用，1=周日，2=周一）
-	MonthDay       *int    `json:"monthDay,omitempty"`                                        // 每月几号（1-31，monthly时使用）
-	CronExpression *string `json:"cronExpression,omitempty"`                                  // 自定义 Cron 表达式（custom时使用）
-	EndDate        *string `json:"endDate,omitempty"`                                         // 结束日期（可选），ISO格式字符串
+	CronExpression *string `json:"cronExpression" binding:"required"` // 自定义 Cron 表达式
+	EndDate        *string `json:"endDate,omitempty"`                // 结束日期（可选），ISO格式字符串
 }
 
 // NoticeCreateRequest 创建通知公告请求（增强版）
@@ -230,25 +226,17 @@ func createNotice(core *core.Core) gin.HandlerFunc {
 		if core.Scheduler != nil {
 			var cronExpr string
 			var misfirePolicy models.MisfirePolicy
-			var err error
 
 			// 调试日志
 			logger.Debugf("[NOTICE] executionType=%s, RecurrenceConfig=%v", executionType, req.RecurrenceConfig != nil)
 
 			if executionType == "recurring" && req.RecurrenceConfig != nil {
-				logger.Debugf("[NOTICE] 创建周期性任务: type=%s, executeTime=%s", req.RecurrenceConfig.Type, req.RecurrenceConfig.ExecuteTime)
-				// 周期性执行
-				cronExpr, err = services.GenerateCronExpression(
-					req.RecurrenceConfig.Type,
-					req.RecurrenceConfig.ExecuteTime,
-					req.RecurrenceConfig.WeekDay,
-					req.RecurrenceConfig.MonthDay,
-					req.RecurrenceConfig.CronExpression,
-				)
-				if err != nil {
-					response.Error(c, response.ErrBadRequest, "生成Cron表达式失败: "+err.Error())
+				// 周期性执行，直接使用 Cron 表达式
+				if req.RecurrenceConfig.CronExpression == nil || *req.RecurrenceConfig.CronExpression == "" {
+					response.Error(c, response.ErrBadRequest, "Cron表达式不能为空")
 					return
 				}
+				cronExpr = *req.RecurrenceConfig.CronExpression
 				misfirePolicy = models.MisfirePolicyDefault // 周期性任务使用默认策略，不自动删除
 				shouldUpdateToScheduled = true              // 标记需要更新状态
 			} else if req.PublishTime != nil && req.PublishTime.After(time.Now()) {
@@ -279,11 +267,21 @@ func createNotice(core *core.Core) gin.HandlerFunc {
 				return
 			}
 
-			// 定时任务创建成功后，更新发布状态为"定时发布中"
+			// 定时任务创建成功后，更新发布状态为"定时发布中"，并保存结束时间
 			if shouldUpdateToScheduled {
+				updates := map[string]interface{}{
+					"publish_status": models.PublishStatusScheduled,
+				}
+				// 如果是周期性任务且有结束时间，保存结束时间
+				if executionType == "recurring" && req.RecurrenceConfig != nil && req.RecurrenceConfig.EndDate != nil {
+					// 解析 ISO 格式的时间字符串
+					if endTime, err := time.Parse(time.RFC3339, *req.RecurrenceConfig.EndDate); err == nil {
+						updates["end_date"] = endTime
+					}
+				}
 				if err := core.DB.GetDB().Model(&models.Notice{}).
 					Where("id = ?", notice.ID).
-					Update("publish_status", models.PublishStatusScheduled).Error; err != nil {
+					Updates(updates).Error; err != nil {
 					logger.Warnf("[NOTICE] 更新发布状态失败: %v", err)
 					// 不中断流程，因为定时任务已创建成功
 				}

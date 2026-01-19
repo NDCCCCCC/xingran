@@ -34,6 +34,7 @@ import {
 } from '@ant-design/icons';
 import type { WorkstationOps } from '@/types';
 import { useTableManager } from '@/hooks/useTableManager';
+import { usePagination } from '@/hooks/usePagination';
 import ExcelImport from '@/components/shared/ExcelImport';
 import ExcelExport from '@/components/shared/ExcelExport';
 import { useWorkstationData, useWorkstationModals, useWorkstationView } from './hooks';
@@ -58,12 +59,13 @@ const WorkstationManagement: FC = () => {
   const [deptTreeData, setDeptTreeData] = useState<DeptTreeNode[]>([]);
   const [userOptions, setUserOptions] = useState<UserOption[]>([]);
 
+  // 使用全局分页 hook
+  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+
   const {
     loading,
     data: workstations,
     total,
-    current,
-    pageSize,
     selectedRowKeys,
     searchForm,
     editForm: workstationForm,
@@ -72,8 +74,6 @@ const WorkstationManagement: FC = () => {
     setSelectedRowKeys,
     setEditModalVisible: setModalVisible,
     setEditingItem: setEditingWorkstation,
-    setCurrent,
-    setPageSize,
     handleSearch,
     handleReset,
     handleAdd,
@@ -87,7 +87,14 @@ const WorkstationManagement: FC = () => {
       const result = await workstationApi.list(params);
       return { list: result.data?.list || [], total: result.data?.total || 0 };
     },
-    { pageSize: 10 }
+    {
+      externalPagination: {
+        current: paginationProps.current,
+        pageSize: paginationProps.pageSize,
+        setCurrent,
+        setPageSize,
+      },
+    }
   );
 
   const { loadStatistics, loadFloorOptions, loadDeptOptions, loadUserOptions } = useWorkstationData(
@@ -118,7 +125,7 @@ const WorkstationManagement: FC = () => {
       loadDeptOptions();
       loadUserOptions();
     }, 0);
-  }, [loadWorkstations, loadStatistics, loadFloorOptions, loadDeptOptions, loadUserOptions]);
+  }, [paginationProps.current, paginationProps.pageSize]);
 
   // 操作成功后刷新
   const handleSuccess = () => {
@@ -153,19 +160,7 @@ const WorkstationManagement: FC = () => {
           dataSource={workstations}
           loading={loading}
           rowKey="id"
-          pagination={{
-            current,
-            pageSize,
-            total,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条`,
-            onChange: (page, size) => {
-              setCurrent(page);
-              setPageSize(size || 10);
-              loadWorkstations({ current: page, pageSize: size || 10 });
-            },
-          }}
+          pagination={paginationProps}
         />
       );
     }

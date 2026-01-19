@@ -241,7 +241,7 @@ export const NoticeList: React.FC<NoticeListProps> = ({
         </div>
         {selectedRowKeys.length > 0 && (
           <Alert
-            message={
+            title={
               <span>
                 已选择 <strong>{selectedRowKeys.length}</strong> 个公告，
                 <Button

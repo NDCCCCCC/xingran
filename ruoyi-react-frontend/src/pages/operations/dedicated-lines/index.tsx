@@ -17,6 +17,7 @@ import {
 import type { DedicatedLine } from '@/types';
 import { dedicatedLineApi, serverRoomApi } from '@/lib/opsApi';
 import { useTableManager } from '@/hooks/useTableManager';
+import { usePagination } from '@/hooks/usePagination';
 import { handleApiError, handleSuccess } from '@/utils/errorHandler';
 import { createDateTimeColumn } from '@/utils/tableHelpers';
 import ActionButtons from '@/components/shared/ActionButtons';
@@ -40,6 +41,9 @@ const DedicatedLineManagement: FC = () => {
   const [exportVisible, setExportVisible] = useState(false);
   const [serverRooms, setServerRooms] = useState<ServerRoomOption[]>([]);
 
+  // 使用全局分页 hook
+  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+
   const loadServerRooms = useCallback(async () => {
     try {
       const result = await serverRoomApi.list({ current: 1, pageSize: 1000 });
@@ -51,17 +55,24 @@ const DedicatedLineManagement: FC = () => {
   }, []);
 
   const {
-    loading, data: lines, total, current, pageSize, selectedRowKeys,
+    loading, data: lines, total, selectedRowKeys,
     searchForm, editForm: lineForm, editModalVisible: modalVisible,
     editingItem: editingLine, setSelectedRowKeys, setEditModalVisible: setModalVisible,
-    setEditingItem: setEditingLine, setCurrent, setPageSize, handleSearch,
+    setEditingItem: setEditingLine, handleSearch,
     handleReset, handleAdd, handleEdit, handleModalClose, loadData: loadLines, resetSelection,
   } = useTableManager<DedicatedLine>(
     async (params) => {
       const result = await dedicatedLineApi.list(params);
       return { list: result.data?.list || [], total: result.data?.total || 0 };
     },
-    { pageSize: 10 }
+    {
+      externalPagination: {
+        current: paginationProps.current,
+        pageSize: paginationProps.pageSize,
+        setCurrent,
+        setPageSize,
+      },
+    }
   );
 
   const loadStatistics = useCallback(async () => {
@@ -84,7 +95,7 @@ const DedicatedLineManagement: FC = () => {
       loadStatistics();
       loadServerRooms();
     }, 0);
-  }, [loadServerRooms]);
+  }, [paginationProps.current, paginationProps.pageSize]);
 
   const handleSave = async () => {
     try {
@@ -131,6 +142,7 @@ const DedicatedLineManagement: FC = () => {
   };
 
   const columns: ColumnsType<DedicatedLine> = [
+    { title: '专线名称', dataIndex: 'name', key: 'name', width: 150 },
     { title: '专线编码', dataIndex: 'lineCode', key: 'lineCode', width: 150 },
     {
       title: '专线类型',
@@ -196,12 +208,13 @@ const DedicatedLineManagement: FC = () => {
               <Card.Meta
                 title={
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>{line.lineCode}</span>
+                    <span>{line.name}</span>
                     <Tag color={line.status === 0 ? 'success' : line.status === 1 ? 'error' : 'default'}>{getStatusText(line.status)}</Tag>
                   </div>
                 }
                 description={
                   <div>
+                    <div><strong>编码：</strong>{line.lineCode}</div>
                     <div><strong>类型：</strong>{getLineTypeText(line.lineType)}</div>
                     <div><strong>运营商：</strong>{line.isp}</div>
                     {line.bandwidth && <div><strong>带宽：</strong>{line.bandwidth}</div>}
@@ -269,15 +282,18 @@ const DedicatedLineManagement: FC = () => {
             <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>新增专线</Button>
           </Space>
         </div>
-        {selectedRowKeys.length > 0 && <Alert message={<span>已选择 <strong>{selectedRowKeys.length}</strong> 条专线，<Button type="link" size="small" onClick={() => setSelectedRowKeys([])} style={{ padding: 0 }}>取消选择</Button></span>} type="info" showIcon style={{ marginTop: 12 }} />}
+        {selectedRowKeys.length > 0 && <Alert title={<span>已选择 <strong>{selectedRowKeys.length}</strong> 条专线，<Button type="link" size="small" onClick={() => setSelectedRowKeys([])} style={{ padding: 0 }}>取消选择</Button></span>} type="info" showIcon style={{ marginTop: 12 }} />}
       </Card>
       <Card>
         {viewMode === 'table' ? (
-          <Table rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }} columns={columns} dataSource={lines} loading={loading} rowKey="id" pagination={{ current, pageSize, total, showSizeChanger: true, showQuickJumper: true, showTotal: (total) => `共 ${total} 条`, onChange: (page, size) => { setCurrent(page); setPageSize(size || 10); loadLines({ current: page, pageSize: size || 10 }); } }} />
+          <Table rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }} columns={columns} dataSource={lines} loading={loading} rowKey="id" pagination={paginationProps} />
         ) : renderCardView()}
       </Card>
       <Modal title={editingLine ? '编辑专线' : '新增专线'} open={modalVisible} onOk={handleSave} onCancel={() => { setModalVisible(false); lineForm.resetFields(); setEditingLine(null); }} width={700}>
         <Form form={lineForm} layout="horizontal" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
+          <Form.Item name="name" label="专线名称" rules={[{ required: true, message: '请输入专线名称' }]}>
+            <Input placeholder="请输入专线名称" className="user-form-input" />
+          </Form.Item>
           <Form.Item name="lineCode" label="专线编码" rules={[{ required: true, message: '请输入专线编码' }]}>
             <Input placeholder="请输入专线编码" disabled={!!editingLine} className="user-form-input" />
           </Form.Item>
@@ -397,8 +413,8 @@ const DedicatedLineManagement: FC = () => {
               </Form.Item>
             </Col>
           </Row>
-          <Form.Item name="description" label="描述">
-            <TextArea rows={3} placeholder="请输入描述" className="user-form-input" />
+          <Form.Item name="remark" label="备注">
+            <TextArea rows={3} placeholder="请输入备注" className="user-form-input" />
           </Form.Item>
         </Form>
       </Modal>

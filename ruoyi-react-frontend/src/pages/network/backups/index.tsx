@@ -46,6 +46,7 @@ import type { DeviceBackupGroup, DiffLine } from './types';
 import { useBackupData, useBackupDiff, useBackupModals } from './hooks';
 import { post } from '@/lib/api';
 import ActionButtons from '@/components/shared/ActionButtons';
+import { usePagination } from '@/hooks/usePagination';
 import { formatDateTime } from '@/utils/datetime';
 
 const { Option } = Select;
@@ -59,11 +60,12 @@ const BACKUP_TYPE_OPTIONS = [
 
 const ConfigBackupPage: FC = () => {
   // 表单和状态
-  const [current, setCurrent] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
   const [backupForm] = Form.useForm();
   const [searchForm] = Form.useForm();
   const [selectedDeviceGroup, setSelectedDeviceGroup] = useState<DeviceBackupGroup | null>(null);
+
+  // 使用全局分页 hook
+  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
   // 使用自定义 Hooks
   const {
@@ -75,7 +77,7 @@ const ConfigBackupPage: FC = () => {
     loadDevices,
     loadBackups,
     loadStatistics,
-  } = useBackupData({ current, pageSize, searchForm });
+  } = useBackupData({ current: paginationProps.current, pageSize: paginationProps.pageSize, searchForm });
 
   const {
     diffModalVisible,
@@ -120,7 +122,7 @@ const ConfigBackupPage: FC = () => {
   useEffect(() => {
     loadBackups();
     loadStatistics();
-  }, [current, pageSize]);
+  }, [paginationProps.current, paginationProps.pageSize, loadBackups, loadStatistics]);
 
   // 打开备份弹窗
   const handleOpenBackupModal = () => {
@@ -503,14 +505,14 @@ const ConfigBackupPage: FC = () => {
           loading={loading}
           rowKey="deviceId"
           scroll={{ x: 1200 }}
-          pagination={{
-            current,
-            pageSize,
-            total,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 个设备`,
-            onChange: (page, size) => { setCurrent(page); setPageSize(size || 10); },
+          pagination={paginationProps}
+          onChange={(pagination) => {
+            setCurrent(pagination.current);
+            setPageSize(pagination.pageSize);
+            loadBackups({
+              current: pagination.current,
+              pageSize: pagination.pageSize,
+            });
           }}
         />
       </Card>

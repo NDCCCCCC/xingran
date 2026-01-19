@@ -5,6 +5,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
@@ -30,7 +31,13 @@ func listConfigExecutions(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req ExecutionListRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
-			response.Error(c, response.ErrBadRequest, "请求参数错误")
+			applogger.WithFields(map[string]interface{}{
+				"path":    c.Request.URL.Path,
+				"method":  c.Request.Method,
+				"body":    c.Request.Body,
+				"error":   err.Error(),
+			}).Warn("参数绑定失败")
+			response.Error(c, response.ErrBadRequest, "请求参数错误: "+err.Error())
 			return
 		}
 

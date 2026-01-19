@@ -46,6 +46,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTableManager } from '@/hooks/useTableManager';
 import { handleApiError, handleSuccess } from '@/utils/errorHandler';
 import ActionButtons from '@/components/shared/ActionButtons';
+import { usePagination } from '@/hooks/usePagination';
 
 // 导入提取的常量、工具和 Hook
 import {
@@ -203,6 +204,9 @@ const DeviceManagement: FC = () => {
   const [selectedDeptId, setSelectedDeptId] = useState<string>('');
   const [collectingDeviceId, setCollectingDeviceId] = useState<string | null>(null);
 
+  // 使用全局分页 hook
+  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+
   // 使用自定义 Hooks
   const {
     departments,
@@ -235,14 +239,9 @@ const DeviceManagement: FC = () => {
   const {
     loading,
     data: devices,
-    total,
-    current,
-    pageSize,
     selectedRowKeys,
     modalVisible,
     editingItem: editingDevice,
-    setCurrent,
-    setPageSize,
     setSelectedRowKeys,
     setEditModalVisible,
     loadData: loadDevices,
@@ -259,7 +258,16 @@ const DeviceManagement: FC = () => {
       updateStatistics(result.data.list || []);
       return { list: result.data.list, total: result.data.total };
     },
-    { pageSize: 10 }
+    {
+      pageSize: 10,
+      externalPagination: {
+        current: paginationProps.current,
+        pageSize: paginationProps.pageSize,
+        setCurrent,
+        setPageSize,
+        setTotal,
+      },
+    }
   );
 
   // ==================== 数据操作 ====================
@@ -491,7 +499,8 @@ const DeviceManagement: FC = () => {
   useEffect(() => {
     loadDevices();
     loadStatistics();
-  }, [current, pageSize, loadDevices, loadStatistics]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // 表格列
   const columns = getDeviceTableColumns({
@@ -640,22 +649,18 @@ const DeviceManagement: FC = () => {
               loading={loading}
               rowKey="id"
               scroll={{ x: 1600 }}
-              pagination={{
-                current,
-                pageSize,
-                total,
-                showSizeChanger: true,
-                showQuickJumper: true,
-                showTotal: (total) => `共 ${total} 条`,
-                onChange: (page, size) => {
-                  setCurrent(page);
-                  setPageSize(size || 10);
-                  const params: Record<string, number | string> = { current: page, pageSize: size || 10 };
-                  if (selectedDeptId) {
-                    params.deptId = selectedDeptId;
-                  }
-                  loadDevices(params);
-                },
+              pagination={paginationProps}
+              onChange={(pagination) => {
+                setCurrent(pagination.current);
+                setPageSize(pagination.pageSize);
+                const params: Record<string, number | string> = {
+                  current: pagination.current,
+                  pageSize: pagination.pageSize,
+                };
+                if (selectedDeptId) {
+                  params.deptId = selectedDeptId;
+                }
+                loadDevices(params);
               }}
             />
           </Card>

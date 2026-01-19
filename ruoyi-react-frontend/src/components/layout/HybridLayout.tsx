@@ -13,6 +13,7 @@ import Header from './header';
 import Sidebar from './sidebar';
 import TabBar from './shared/TabBar';
 import type { Menu as MenuType } from '@/types';
+import { getSpecialPathTitle, matchDynamicRouteTitle } from '@/constants/pageTitles';
 
 const { Content } = AntLayout;
 
@@ -43,29 +44,19 @@ const HybridLayout: FC<HybridLayoutProps> = ({ children }) => {
 
   // 根据路径从菜单数据中获取标题
   const getTitleByPath = useCallback((path: string): string => {
-    // 特殊路径处理（优先处理）
-    const specialPathMap: Record<string, string> = {
-      '/dashboard': '仪表盘',
-      '/': '首页',
-    };
-
-    if (specialPathMap[path]) {
-      return specialPathMap[path];
+    // 优先级 1: 检查特殊路径映射
+    const specialTitle = getSpecialPathTitle(path);
+    if (specialTitle) {
+      return specialTitle;
     }
 
-    // 动态路由处理（详情页）
-    // 匹配模式：/my-notices/:id -> "通知详情"
-    const dynamicRoutePatterns: Array<{ pattern: RegExp; title: string }> = [
-      { pattern: /^\/my-notices\/[a-f0-9-]+$/i, title: '通知详情' },
-    ];
-
-    for (const { pattern, title } of dynamicRoutePatterns) {
-      if (pattern.test(path)) {
-        return title;
-      }
+    // 优先级 2: 检查动态路由模式（详情页）
+    const dynamicTitle = matchDynamicRouteTitle(path);
+    if (dynamicTitle) {
+      return dynamicTitle;
     }
 
-    // 在完整菜单数据中查找对应的菜单名称（包括隐藏菜单）
+    // 优先级 3: 在完整菜单数据中查找对应的菜单名称（包括隐藏菜单）
     // 递归查找函数
     const findMenuByPath = (menuList: MenuType[], targetPath: string): string => {
       // 规范化目标路径（去掉前导斜杠）
@@ -100,7 +91,7 @@ const HybridLayout: FC<HybridLayoutProps> = ({ children }) => {
       return menuTitle;
     }
 
-    // 未找到则返回路径的最后一段作为标题
+    // 优先级 4: 未找到则返回路径的最后一段作为标题
     const segments = path.split('/').filter(Boolean);
     return segments[segments.length - 1] || '页面';
   }, [allMenus]);

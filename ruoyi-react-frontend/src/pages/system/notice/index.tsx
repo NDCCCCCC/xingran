@@ -24,6 +24,7 @@ import {
   NoticeList,
   NoticeStatisticsCard,
 } from './components';
+import { usePagination } from '@/hooks/usePagination';
 
 /**
  * 管理端通知公告页面（重构版）
@@ -34,13 +35,14 @@ const NoticeManagement: FC = () => {
   const [searchForm] = Form.useForm();
   const [editForm] = Form.useForm();
 
+  // 使用全局分页 hook
+  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+
   // 使用自定义 Hooks
   const {
     notices,
     loading,
     total,
-    current,
-    pageSize,
     selectedRowKeys,
     loadNotices,
     handleCreate,
@@ -50,8 +52,6 @@ const NoticeManagement: FC = () => {
     handlePublish,
     handleWithdraw,
     setSelectedRowKeys,
-    setCurrent,
-    setPageSize,
   } = useNoticeData();
 
   const { statistics, loadStatistics } = useNoticeStatistics();
@@ -83,7 +83,6 @@ const NoticeManagement: FC = () => {
 
   // 渠道选择状态
   const [selectedChannels, setSelectedChannels] = useState<string[]>(['web']);
-  const [selectedAPIConfigId, setSelectedAPIConfigId] = useState<string | undefined>();
 
   // 统计抽屉状态
   const [statisticsVisible, setStatisticsVisible] = useState(false);
@@ -93,24 +92,17 @@ const NoticeManagement: FC = () => {
   // Markdown编辑器状态
   const [markdownContent, setMarkdownContent] = useState<string>('');
 
-  // 自定义渠道地址状态
-  const [customEmails, setCustomEmails] = useState<string>('');
-  const [customWeComUsers, setCustomWeComUsers] = useState<string>('');
-
   // 初始化加载数据
   useEffect(() => {
-    loadNotices();
+    loadNotices({ current: paginationProps.current, pageSize: paginationProps.pageSize });
     loadStatistics();
-  }, [loadNotices, loadStatistics]);
+  }, [paginationProps.current, paginationProps.pageSize]);
 
   // 打开编辑模态框
   const openModal = useCallback(async (record?: Notice) => {
     setModalVisible(true);
     setExecutionType('once');
     setSelectedChannels(['web']);
-    setSelectedAPIConfigId(undefined);
-    setCustomEmails('');
-    setCustomWeComUsers('');
 
     // 加载目标选择数据和API配置
     loadDeptTree();
@@ -118,60 +110,69 @@ const NoticeManagement: FC = () => {
     loadUsers();
     loadAPIConfigs();
 
-    if (record) {
-      setEditingNotice(record);
-      // 加载已有渠道配置
-      if (record.channels && record.channels.length > 0) {
-        const channelTypes = record.channels.map((c: any) => c.channelType);
-        setSelectedChannels(channelTypes);
+    // 延迟设置表单值，等待 Modal 完全打开
+    setTimeout(() => {
+      if (record) {
+        setEditingNotice(record);
+        // 加载已有渠道配置
+        let customEmailsValue = '';
+        let customWeComUsersValue = '';
+        let apiConfigIdValue = undefined;
 
-        // 恢复 API 配置 ID
-        const apiChannel = record.channels.find((c: any) => c.channelType === 'api');
-        if (apiChannel?.apiConfigId) {
-          setSelectedAPIConfigId(apiChannel.apiConfigId);
+        if (record.channels && record.channels.length > 0) {
+          const channelTypes = record.channels.map((c: any) => c.channelType);
+          setSelectedChannels(channelTypes);
+
+          // 恢复 API 配置 ID
+          const apiChannel = record.channels.find((c: any) => c.channelType === 'api');
+          if (apiChannel?.apiConfigId) {
+            apiConfigIdValue = apiChannel.apiConfigId;
+          }
+
+          // 恢复自定义邮件地址
+          const emailChannel = record.channels.find((c: any) => c.channelType === 'email');
+          if (emailChannel?.customRecipients && emailChannel.customRecipients.length > 0) {
+            customEmailsValue = emailChannel.customRecipients.join(', ');
+          }
+
+          // 恢复自定义企微用户
+          const apiChannelRecipients = record.channels.find((c: any) => c.channelType === 'api');
+          if (apiChannelRecipients?.customRecipients && apiChannelRecipients.customRecipients.length > 0) {
+            customWeComUsersValue = apiChannelRecipients.customRecipients.join(', ');
+          }
         }
 
-        // 恢复自定义邮件地址
-        const emailChannel = record.channels.find((c: any) => c.channelType === 'email');
-        if (emailChannel?.customRecipients && emailChannel.customRecipients.length > 0) {
-          setCustomEmails(emailChannel.customRecipients.join(', '));
-        }
-
-        // 恢复自定义企微用户
-        const apiChannelRecipients = record.channels.find((c: any) => c.channelType === 'api');
-        if (apiChannelRecipients?.customRecipients && apiChannelRecipients.customRecipients.length > 0) {
-          setCustomWeComUsers(apiChannelRecipients.customRecipients.join(', '));
-        }
+        editForm.setFieldsValue({
+          ...record,
+          publishTime: record.publishTime ? dayjs(record.publishTime) : null,
+          targetType: record.targetType ?? 0,
+          targetDepts: record.targets?.filter((t: any) => t.targetType === 'dept').map((t: any) => t.targetId) || [],
+          targetRoles: record.targets?.filter((t: any) => t.targetType === 'role').map((t: any) => t.targetId) || [],
+          targetUsers: record.targets?.filter((t: any) => t.targetType === 'user').map((t: any) => t.targetId) || [],
+          apiConfigId: apiConfigIdValue,
+          customEmails: customEmailsValue,
+          customWeComUsers: customWeComUsersValue,
+        });
+        setMarkdownContent(record.noticeContent || '');
       } else {
-        setSelectedChannels(['web']);
-        setSelectedAPIConfigId(undefined);
-        setCustomEmails('');
-        setCustomWeComUsers('');
+        setEditingNotice(null);
+        setMarkdownContent('');
+        editForm.resetFields();
+        editForm.setFieldsValue({
+          noticeType: '1',
+          status: 0,
+          priority: 0,
+          targetType: 0,
+          isMarkdown: false,
+          targetDepts: [],
+          targetRoles: [],
+          targetUsers: [],
+          apiConfigId: undefined,
+          customEmails: '',
+          customWeComUsers: '',
+        });
       }
-      editForm.setFieldsValue({
-        ...record,
-        publishTime: record.publishTime ? dayjs(record.publishTime) : null,
-        targetType: record.targetType ?? 0,
-        targetDepts: record.targets?.filter((t: any) => t.targetType === 'dept').map((t: any) => t.targetId) || [],
-        targetRoles: record.targets?.filter((t: any) => t.targetType === 'role').map((t: any) => t.targetId) || [],
-        targetUsers: record.targets?.filter((t: any) => t.targetType === 'user').map((t: any) => t.targetId) || [],
-      });
-      setMarkdownContent(record.noticeContent || '');
-    } else {
-      setEditingNotice(null);
-      setMarkdownContent('');
-      editForm.resetFields();
-      editForm.setFieldsValue({
-        noticeType: '1',
-        status: 0,
-        priority: 0,
-        targetType: 0,
-        isMarkdown: false,
-        targetDepts: [],
-        targetRoles: [],
-        targetUsers: [],
-      });
-    }
+    }, 0);
   }, [editForm, loadDeptTree, loadRoles, loadUsers, loadAPIConfigs]);
 
   // 提交表单
@@ -234,8 +235,8 @@ const NoticeManagement: FC = () => {
 
       // 邮件通知渠道
       if (selectedChannels.includes('email')) {
-        const emailRecipients = customEmails.trim()
-          ? customEmails.split(',').map(e => e.trim()).filter(e => e)
+        const emailRecipients = values.customEmails?.trim()
+          ? values.customEmails.split(',').map(e => e.trim()).filter(e => e)
           : undefined;
         channels.push({
           channelType: 'email',
@@ -245,16 +246,17 @@ const NoticeManagement: FC = () => {
 
       // 企微机器人渠道
       if (selectedChannels.includes('api')) {
-        if (!selectedAPIConfigId) {
+        const apiConfigId = values.apiConfigId;
+        if (!apiConfigId) {
           message.error('请选择企微机器人配置');
           return;
         }
-        const weComRecipients = customWeComUsers.trim()
-          ? customWeComUsers.split(',').map(u => u.trim()).filter(u => u)
+        const weComRecipients = values.customWeComUsers?.trim()
+          ? values.customWeComUsers.split(',').map(u => u.trim()).filter(u => u)
           : undefined;
         channels.push({
           channelType: 'api',
-          apiConfigId: selectedAPIConfigId,
+          apiConfigId: apiConfigId,
           ...(weComRecipients && weComRecipients.length > 0 && { customRecipients: weComRecipients })
         });
       }
@@ -282,14 +284,14 @@ const NoticeManagement: FC = () => {
       setModalVisible(false);
       editForm.resetFields();
       setEditingNotice(null);
-      loadNotices();
+      loadNotices({ current: paginationProps.current, pageSize: paginationProps.pageSize });
     } catch (error) {
       if (error && typeof error === 'object' && 'errorFields' in error) {
         return;
       }
       message.error('操作失败: ' + ((error as Error).message || '未知错误'));
     }
-  }, [editForm, executionType, selectedChannels, selectedAPIConfigId, customEmails, customWeComUsers, editingNotice, handleCreate, handleUpdate, loadNotices]);
+  }, [editForm, executionType, selectedChannels, editingNotice, handleCreate, handleUpdate, loadNotices]);
 
   // 查看统计
   const handleViewStatistics = useCallback(async (notice: Notice) => {
@@ -309,45 +311,45 @@ const NoticeManagement: FC = () => {
   // 删除通知（包含统计刷新）
   const handleDeleteWithRefresh = useCallback(async (id: string) => {
     await handleDelete(id);
-    loadNotices();
+    loadNotices({ current: paginationProps.current, pageSize: paginationProps.pageSize });
     loadStatistics();
-  }, [handleDelete, loadNotices, loadStatistics]);
+  }, [handleDelete, loadNotices, loadStatistics, paginationProps]);
 
   // 批量删除（包含统计刷新）
   const handleBatchDeleteWithRefresh = useCallback(async () => {
     await handleBatchDelete(selectedRowKeys);
-    loadNotices();
+    loadNotices({ current: paginationProps.current, pageSize: paginationProps.pageSize });
     loadStatistics();
-  }, [handleBatchDelete, loadNotices, loadStatistics, selectedRowKeys]);
+  }, [handleBatchDelete, loadNotices, loadStatistics, selectedRowKeys, paginationProps]);
 
   // 发布通知（包含列表刷新）
   const handlePublishWithRefresh = useCallback(async (id: string) => {
     await handlePublish(id);
-    loadNotices();
-  }, [handlePublish, loadNotices]);
+    loadNotices({ current: paginationProps.current, pageSize: paginationProps.pageSize });
+  }, [handlePublish, loadNotices, paginationProps]);
 
   // 撤回通知（包含列表刷新）
   const handleWithdrawWithRefresh = useCallback(async (id: string) => {
     await handleWithdraw(id);
-    loadNotices();
-  }, [handleWithdraw, loadNotices]);
+    loadNotices({ current: paginationProps.current, pageSize: paginationProps.pageSize });
+  }, [handleWithdraw, loadNotices, paginationProps]);
 
   // 搜索处理
   const handleSearch = useCallback((params?: any) => {
     const values = searchForm.getFieldsValue();
     loadNotices({
       ...params,
+      current: paginationProps.current,
+      pageSize: paginationProps.pageSize,
       noticeTitle: values.noticeTitle,
       noticeType: values.noticeType,
     });
-  }, [loadNotices, searchForm]);
+  }, [loadNotices, searchForm, paginationProps]);
 
   // 分页处理
   const handlePageChange = useCallback((page: number, size: number) => {
-    setCurrent(page);
-    setPageSize(size || 10);
     loadNotices({ current: page, pageSize: size || 10 });
-  }, [loadNotices, setCurrent, setPageSize]);
+  }, [loadNotices]);
 
   return (
     <div>
@@ -359,8 +361,8 @@ const NoticeManagement: FC = () => {
         notices={notices}
         loading={loading}
         total={total}
-        current={current}
-        pageSize={pageSize}
+        current={paginationProps.current}
+        pageSize={paginationProps.pageSize}
         selectedRowKeys={selectedRowKeys}
         searchForm={searchForm}
         onSearch={handleSearch}
@@ -382,7 +384,6 @@ const NoticeManagement: FC = () => {
         editingNotice={editingNotice}
         executionType={executionType}
         selectedChannels={selectedChannels}
-        selectedAPIConfigId={selectedAPIConfigId}
         apiConfigs={apiConfigs}
         loadingAPIConfigs={loadingAPIConfigs}
         deptTree={deptTree}
@@ -392,24 +393,17 @@ const NoticeManagement: FC = () => {
         loadingRoles={loadingRoles}
         loadingUsers={loadingUsers}
         markdownContent={markdownContent}
-        customEmails={customEmails}
-        customWeComUsers={customWeComUsers}
         form={editForm}
         onCancel={() => {
           setModalVisible(false);
           editForm.resetFields();
           setEditingNotice(null);
           setMarkdownContent('');
-          setCustomEmails('');
-          setCustomWeComUsers('');
         }}
         onSubmit={handleSubmit}
         onExecutionTypeChange={setExecutionType}
         onChannelsChange={setSelectedChannels}
-        onAPIConfigChange={setSelectedAPIConfigId}
         onMarkdownContentChange={setMarkdownContent}
-        onCustomEmailsChange={setCustomEmails}
-        onCustomWeComUsersChange={setCustomWeComUsers}
         onTargetTypeChange={() => {
           editForm.setFieldValue('targetDepts', []);
           editForm.setFieldValue('targetRoles', []);

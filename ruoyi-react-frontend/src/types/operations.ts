@@ -94,6 +94,7 @@ export interface RoomPhoto {
 // 专线
 export interface DedicatedLine {
   id: string;
+  name: string;                // 专线名称
   lineCode: string;
   lineType: DedicatedLineType;
   bandwidth?: string;

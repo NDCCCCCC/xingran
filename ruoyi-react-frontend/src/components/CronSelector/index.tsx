@@ -7,7 +7,7 @@
  */
 
 import { useState, useLayoutEffect, useImperativeHandle, forwardRef } from 'react';
-import { Input, Select, Tabs, Alert, Space, Row, Col, List } from 'antd';
+import { Input, Select, Tabs, Alert, Space, Row, Col } from 'antd';
 import { InfoCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import type { CronConfig, CronFieldType } from './constants';
 import {
@@ -59,6 +59,7 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
         : getDefaultCronConfig()
     );
     const [activeField, setActiveField] = useState<CronFieldType>('minute');
+    const [initialized, setInitialized] = useState(false);
 
     // 同步外部value变化
     useLayoutEffect(() => {
@@ -70,6 +71,23 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [value]);
+
+    // 初始化时，如果没有外部值，使用默认值并触发onChange
+    useLayoutEffect(() => {
+      if (!initialized) {
+        setInitialized(true);
+        if (!value) {
+          // 使用默认配置生成表达式
+          const defaultConfig = getDefaultCronConfig();
+          const defaultExpression = cronConfigToExpression(defaultConfig);
+          setCronConfig(defaultConfig);
+          setCronExpression(defaultExpression);
+          // 触发onChange，将默认值传递给表单
+          onChange?.(defaultExpression);
+        }
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // 暴露给父组件的方法
     useImperativeHandle(ref, () => ({
@@ -207,11 +225,9 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
                 <ClockCircleOutlined style={{ color: '#1890ff' }} />
                 <span style={{ fontWeight: 500 }}>最近五次执行时间</span>
               </div>
-              <List
-                size="small"
-                dataSource={getNextRunTimes(cronExpression, 5)}
-                renderItem={(item, index) => (
-                  <List.Item style={{ padding: '4px 0', border: 'none' }}>
+              <div style={{ background: '#fafafa', padding: '8px 16px', borderRadius: 4 }}>
+                {getNextRunTimes(cronExpression, 5).map((item, index) => (
+                  <div key={index} style={{ padding: '4px 0' }}>
                     <Space>
                       <span style={{ color: '#999', minWidth: 60 }}>
                         第{index + 1}次
@@ -220,10 +236,9 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
                         {formatTime(item)}
                       </span>
                     </Space>
-                  </List.Item>
-                )}
-                style={{ background: '#fafafa', padding: '8px 16px', borderRadius: 4 }}
-              />
+                  </div>
+                ))}
+              </div>
             </Space>
           </div>
         )}
@@ -247,9 +262,14 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
 CronSelector.displayName = 'CronSelector';
 
 export default CronSelector;
- 
+
+// 导出类型
 export type { CronConfig, CronFieldConfig, CronPreset } from './constants';
- 
+
+// 导出常量
+export { CRON_PRESETS, FIELD_RANGES, WEEK_DAY_NAMES, MONTH_NAMES, DEFAULT_CRON_EXPRESSION } from './constants';
+
+// 导出工具函数
 export {
   cronConfigToExpression,
   expressionToCronConfig,
@@ -258,5 +278,3 @@ export {
   cronToChinese,
   getDefaultCronConfig,
 } from './utils';
- 
-export { CRON_PRESETS, FIELD_RANGES, WEEK_DAY_NAMES, MONTH_NAMES, DEFAULT_CRON_EXPRESSION } from './constants';

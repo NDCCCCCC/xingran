@@ -46,6 +46,7 @@ import { PRIORITY_CONFIG, TYPE_CONFIG, ASSIGN_TYPE_CONFIG } from './constants';
 import { formatDateTime, buildCategoryTree } from '@/lib/workorderApi';
 import { useTemplateData, useTemplateActions } from './hooks';
 import { VARIABLE_HELP_CONTENT } from './utils';
+import { usePagination } from '@/hooks/usePagination';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -212,10 +213,11 @@ function VariableHelp({ content }: VariableHelpProps) {
 const PeriodicTemplatePage: FC = () => {
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
-  const [current, setCurrent] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
   const [modalVisible, setModalVisible] = useState(false);
   const [logsDrawerVisible, setLogsDrawerVisible] = useState(false);
+
+  // 使用全局分页 hook
+  const { paginationProps, setCurrent, setPageSize } = usePagination();
 
   // 使用数据管理 Hook
   const {
@@ -234,7 +236,7 @@ const PeriodicTemplatePage: FC = () => {
     fetchDutyPools,
     fetchLogs,
     setSelectedTemplate,
-  } = useTemplateData(form, current, pageSize);
+  } = useTemplateData(form, paginationProps.current, paginationProps.pageSize);
 
   // 使用操作管理 Hook
   const {
@@ -252,25 +254,24 @@ const PeriodicTemplatePage: FC = () => {
 
   // 初始化加载
   useEffect(() => {
-    fetchList(1, 10);
+    fetchList(1, paginationProps.pageSize);
     fetchCategories();
     fetchUsers();
     fetchDutyPools();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleTableChange = (pagination: TablePaginationConfig) => {
-    setCurrent(pagination.current || 1);
-    setPageSize(pagination.pageSize || 10);
-    fetchList(pagination.current, pagination.pageSize);
+    fetchList(pagination.current || 1, pagination.pageSize || 10);
   };
 
   const handleSearch = () => {
-    fetchList(1, 10);
+    fetchList(1, paginationProps.pageSize);
   };
 
   const handleReset = () => {
     form.resetFields();
-    fetchList(1, 10);
+    fetchList(1, paginationProps.pageSize);
   };
 
   // 打开新增弹窗
@@ -300,8 +301,8 @@ const PeriodicTemplatePage: FC = () => {
 
   // 表格列
   const columns = getTemplateTableColumns({
-    current,
-    pageSize,
+    current: paginationProps.current,
+    pageSize: paginationProps.pageSize,
     handleEdit: handleOpenEditModal,
     handleToggleEnabled,
     handleGenerateNow,
@@ -371,14 +372,7 @@ const PeriodicTemplatePage: FC = () => {
           dataSource={dataSource}
           loading={loading}
           scroll={{ x: 1500 }}
-          pagination={{
-            current,
-            pageSize,
-            total,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (t) => `共 ${t} 条`,
-          }}
+          pagination={paginationProps}
           onChange={handleTableChange}
         />
       </Card>

@@ -624,6 +624,7 @@ export type LineStatus = 0 | 1 | 2;  // 0:正常 1:故障 2:停用
 // 专线
 export interface DedicatedLine {
   id: string;
+  name: string;                // 专线名称
   lineCode: string;
   lineType: LineType;
   bandwidth?: string;
@@ -646,7 +647,7 @@ export interface DedicatedLine {
   contractNo?: string;
   monthlyFee?: number;
   status: LineStatus;
-  description?: string;
+  remark?: string;             // 备注（与后端字段保持一致）
   createdAt: string;
   updatedAt: string;
 }
