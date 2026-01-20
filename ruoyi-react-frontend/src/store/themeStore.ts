@@ -1,15 +1,15 @@
 /**
- * 主题状态管理（重构版 - 衍生状态）
- * Theme State Management (Refactored - Derived State)
+ * 主题状态管理（重构版 - 支持明暗双模式）
+ * Theme State Management (Refactored - Support Light/Dark Modes)
  *
  * 主题配置现在从 SettingsStore 衍生
  * 这个 Store 负责将配置应用到 DOM
  */
 
 import { create } from 'zustand';
-import type { ThemeType, ThemeConfig } from '@/types/theme';
+import type { ThemeType } from '@/types/theme';
 import type { ThemeConfiguration } from '@/types/config';
-import { themes, applyThemeVariables, applyEffectVariables } from '@/design-system/themes';
+import { getTheme, applyThemeVariables, applyEffectVariables, applyPrimaryColor, applySidebarBackgroundColor, type ColorMode } from '@/design-system/themes';
 
 interface ThemeState {
 	// 从 SettingsStore 衍生的配置
@@ -17,7 +17,7 @@ interface ThemeState {
 
 	// 当前应用的主题
 	appliedTheme: ThemeType;
-	appliedMode: 'light' | 'dark';
+	appliedMode: ColorMode;
 }
 
 interface ThemeActions {
@@ -26,7 +26,7 @@ interface ThemeActions {
 
 	// 运行时临时预览（不保存到 Settings）
 	previewTheme: (theme: ThemeType) => void;
-	previewMode: (mode: 'light' | 'dark') => void;
+	previewMode: (mode: ColorMode) => void;
 
 	// 应用配置到 DOM
 	applyToDOM: () => void;
@@ -83,15 +83,25 @@ export const useThemeStore = create<ThemeStore>()(
 		// 应用到 DOM
 		applyToDOM: () => {
 			const { configuration } = get();
-			const themeConfig = themes[configuration.style];
 
-			// 应用 CSS 变量
-			applyThemeVariables(themeConfig);
+			// 1. 获取主题配置（根据模式和风格）
+			const themeConfig = getTheme(configuration.style, configuration.mode);
+
+			// 2. 应用 CSS 变量
+			applyThemeVariables(themeConfig, configuration.mode);
 			applyEffectVariables(themeConfig.effects);
 
-			// 设置 data 属性
+			// 3. 设置 data 属性
 			document.documentElement.setAttribute('data-theme', configuration.style);
 			document.documentElement.setAttribute('data-color-mode', configuration.mode);
+
+			// 4. 如果有自定义颜色，覆盖主题预设
+			if (configuration.customColors?.primary && typeof configuration.customColors.primary === 'string') {
+				applyPrimaryColor(configuration.customColors.primary);
+			}
+			if (configuration.customColors?.sidebar && typeof configuration.customColors.sidebar === 'string') {
+				applySidebarBackgroundColor(configuration.customColors.sidebar);
+			}
 		},
 
 		// 保存预览的配置（需要触发 SettingsStore 更新）
@@ -136,7 +146,8 @@ export function useTheme() {
 		// 当前配置
 		theme: configuration.style,
 		mode: configuration.mode,
-		config: themes[configuration.style],
+		customColors: configuration.customColors,
+		config: getTheme(configuration.style, configuration.mode),
 
 		// 应用状态
 		appliedTheme,

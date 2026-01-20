@@ -1,18 +1,18 @@
 /**
- * 新拟态主题
+ * 新拟态主题 - 浅色模式
  * 特点：柔和阴影浮雕效果、圆润设计、同色调高低光
  */
 
 import type { ThemeConfig } from '@/types/theme';
-import { spacing } from '../tokens/spacing';
-import { fontFamily } from '../tokens/typography';
+import { spacing } from '../../tokens/spacing';
+import { fontFamily } from '../../tokens/typography';
 
 // 新拟态专用背景色
 const NEU_BG = '#e0e5ec';
 const NEU_LIGHT = 'rgba(255, 255, 255, 0.85)';
 const NEU_DARK = 'rgba(163, 177, 198, 0.65)';
 
-export const neumorphismTheme: ThemeConfig = {
+export const neumorphismLight: ThemeConfig = {
   id: 'neumorphism',
   name: '新拟态',
   description: '柔和的阴影浮雕效果，营造质感和深度',

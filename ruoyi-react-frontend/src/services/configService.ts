@@ -28,11 +28,11 @@ class ConfigService {
 		}
 
 		try {
-			// 从服务器获取 - get<T> 直接返回 T，不是 { data: T }
-			const backend = await getUserPreferences() as BackendUserPreferences;
+			// 从服务器获取
+			const response = await getUserPreferences() as { data: BackendUserPreferences };
 
-			// 转换为前端格式
-			const normalized = this.fromBackendFormat(backend);
+			// 转换为前端格式 - 从响应中提取 data 字段
+			const normalized = this.fromBackendFormat(response.data);
 
 			// 更新缓存
 			this.cache = normalized;
@@ -145,11 +145,22 @@ class ConfigService {
 			? (backend.layoutDensity as any)
 			: defaultLayoutConfiguration.density;
 
+		// 构建自定义颜色对象（只有存在时才添加）
+		const customColors: { primary?: string; sidebar?: string } = {};
+		if (backend.customPrimaryColor) {
+			customColors.primary = backend.customPrimaryColor;
+		}
+		if (backend.customSidebarColor) {
+			customColors.sidebar = backend.customSidebarColor;
+		}
+
 		const partial: Partial<UserPreferences> = {
 			version: 2,
 			theme: {
 				mode: backend.theme === 'dark' ? 'dark' : 'light',
 				style: themeStyle,
+				// 只有存在自定义颜色时才添加
+				...(Object.keys(customColors).length > 0 ? { customColors } : {}),
 			},
 			layout: {
 				type: layoutType,
@@ -166,31 +177,82 @@ class ConfigService {
 			},
 			language: backend.language as 'zh-CN' | 'en-US',
 		};
+
 		return this.normalizePreferences(partial);
+	}
+
+	/**
+	 * 从 ColorPicker 颜色对象中提取十六进制字符串
+	 */
+	private extractColorString(color: any): string | undefined {
+		if (!color) return undefined;
+
+		// 如果已经是字符串，直接返回
+		if (typeof color === 'string') {
+			return color === '' ? undefined : color;
+		}
+
+		// 如果是对象，尝试提取颜色值
+		if (typeof color === 'object') {
+			// 检查是否有 cleared 标记（ColorPicker 组件的标记）
+			if (color.cleared) {
+				return undefined;
+			}
+
+			// 尝试从 metaColor 中提取十六进制值
+			if (color.metaColor) {
+				const { r, g, b } = color.metaColor;
+				if (typeof r === 'number' && typeof g === 'number' && typeof b === 'number') {
+					// 转换为十六进制
+					const toHex = (n: number) => {
+						const hex = Math.round(n).toString(16);
+						return hex.length === 1 ? '0' + hex : hex;
+					};
+					return `#${toHex(r)}${toHex(g)}${toHex(b)}`.toUpperCase();
+				}
+			}
+
+			// 尝试直接提取十六进制值
+			if (color.toHexString) {
+				return color.toHexString();
+			}
+		}
+
+		return undefined;
 	}
 
 	/**
 	 * 转换为后端格式
 	 */
 	private toBackendFormat(prefs: UserPreferences): BackendUserPreferences {
-		return {
-			// 主题
-			theme: prefs.theme.mode,
-			themeStyle: prefs.theme.style,
+		// 提取颜色字符串
+		const primaryColor = this.extractColorString(prefs.theme?.customColors?.primary);
+		const sidebarColor = this.extractColorString(prefs.theme?.customColors?.sidebar);
+
+		const result: BackendUserPreferences = {
+			// 主题 - 确保有默认值
+			theme: prefs.theme?.mode || 'light',
+			themeStyle: prefs.theme?.style || 'minimal',
 
 			// 布局
-			layoutType: prefs.layout.type,
-			layoutDensity: prefs.layout.density,
-			sidebarWidth: prefs.layout.sidebar.width,
-			sidebarCollapsedWidth: prefs.layout.sidebar.collapsedWidth,
-			sidebarCollapsed: prefs.layout.sidebar.collapsed,
+			layoutType: prefs.layout?.type || 'classic',
+			layoutDensity: prefs.layout?.density || 'comfortable',
+			sidebarWidth: prefs.layout?.sidebar?.width || 280,
+			sidebarCollapsedWidth: prefs.layout?.sidebar?.collapsedWidth || 64,
+			sidebarCollapsed: prefs.layout?.sidebar?.collapsed || false,
 
 			// 数据
-			pageSize: prefs.data.defaultPageSize,
+			pageSize: prefs.data?.defaultPageSize || 10,
 
-			// 语言
-			language: prefs.language || 'zh-CN',
+			// 自定义颜色（可选）- 只在有值时发送
+			customPrimaryColor: primaryColor,
+			customSidebarColor: sidebarColor,
+
+			// 语言 - 确保有默认值
+			language: (prefs.language as 'zh-CN' | 'en-US') || 'zh-CN',
 		};
+
+		return result;
 	}
 
 	/**

@@ -1,10 +1,9 @@
-import { Layout, Avatar, Dropdown, Space, Divider } from 'antd';
+import { Layout, Avatar, Dropdown, Space } from 'antd';
 import { UserOutlined, LogoutOutlined, SettingOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import NotificationBell from '@/components/NotificationBell';
-import ColorSwitcher from '@/design-system/components/ColorSwitcher';
 import GlobalSearch from '@/components/shared/GlobalSearch';
 import type { MenuProps } from 'antd';
 
@@ -67,11 +66,6 @@ const Header: FC = () => {
       </div>
 
       <Space size="middle">
-        {/* 颜色选择器 */}
-        <ColorSwitcher />
-
-        <Divider orientation="vertical" style={{ height: 24 }} />
-
         {/* 通知铃铛 */}
         <NotificationBell />
 

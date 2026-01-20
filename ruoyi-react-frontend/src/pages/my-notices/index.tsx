@@ -48,7 +48,7 @@ const MyNoticesPage: FC = () => {
     setLoading(true);
     try {
       const status = activeTab === 'all' ? undefined : activeTab;
-      const response = await getMyNotices({ current, pageSize, status });
+      const response = await getMyNotices({ current: paginationProps.current, pageSize: paginationProps.pageSize, status });
       const data = response.data;
       if (data) {
         setNotices(data.list || []);
@@ -69,7 +69,7 @@ const MyNoticesPage: FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [activeTab, current, pageSize, setUnreadCount]);
+  }, [activeTab, paginationProps.current, paginationProps.pageSize, setUnreadCount]);
 
   // 初始化时获取全部通知总数
   useEffect(() => {

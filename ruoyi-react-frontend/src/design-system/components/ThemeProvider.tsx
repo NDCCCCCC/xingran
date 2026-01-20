@@ -20,7 +20,7 @@ const ThemeContext = createContext<ThemeContextValue>({
 export const useThemeContext = () => useContext(ThemeContext);
 
 const ThemeProvider: FC<{ children: ReactNode }> = ({ children }) => {
-	const { configuration, appliedTheme, appliedMode } = useThemeStore();
+	const { appliedTheme, appliedMode } = useThemeStore();
 	const previousThemeRef = useRef<string>(appliedTheme);
 
 	useEffect(() => {

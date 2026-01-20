@@ -3,6 +3,7 @@ import { Layout, Menu, Spin, message } from 'antd';
 import type { MenuProps } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useMenuStore } from '@/store/menuStore';
+import { useLayoutStore } from '@/store/layoutStore';
 import type { Menu as MenuType } from '@/types';
 import {
   buildMenuPathMap,
@@ -84,12 +85,12 @@ function convertToMenuItem(menu: MenuType, parentPath: string = ''): MenuItem {
 }
 
 const Sidebar = () => {
-  const [collapsed, setCollapsed] = useState(false);
   const [openKeys, setOpenKeys] = useState<string[]>([]);
   const expectedOpenKeysRef = useRef<string[] | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const { menus, loading, fetchMenus } = useMenuStore();
+  const { sidebarCollapsed, toggleSidebar } = useLayoutStore();
 
   // 组件加载时获取菜单
   useEffect(() => {
@@ -336,8 +337,8 @@ const Sidebar = () => {
   return (
     <Sider
       collapsible
-      collapsed={collapsed}
-      onCollapse={(value) => setCollapsed(value)}
+      collapsed={sidebarCollapsed}
+      onCollapse={toggleSidebar}
       width={280}
       trigger={null}
       style={{
@@ -350,13 +351,13 @@ const Sidebar = () => {
         className="h-16 flex items-center relative"
         style={{
           borderBottom: '1px solid var(--theme-border-primary)',
-          paddingLeft: collapsed ? '0' : '56px',
+          paddingLeft: sidebarCollapsed ? '0' : '56px',
           transition: 'padding-left var(--theme-transition-base)',
         }}
       >
         {/* 收缩按钮 */}
         <button
-          onClick={() => setCollapsed(!collapsed)}
+          onClick={toggleSidebar}
           className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors absolute"
           style={{
             color: 'var(--theme-text-secondary)',
@@ -374,7 +375,7 @@ const Sidebar = () => {
             xmlns="http://www.w3.org/2000/svg"
             style={{
               transition: 'transform var(--theme-transition-base)',
-              transform: collapsed ? 'rotate(180deg)' : 'rotate(0deg)',
+              transform: sidebarCollapsed ? 'rotate(180deg)' : 'rotate(0deg)',
             }}
           >
             <path
@@ -388,7 +389,7 @@ const Sidebar = () => {
 
         <h1
           className={`text-xl font-bold ${
-            collapsed ? 'hidden' : 'block'
+            sidebarCollapsed ? 'hidden' : 'block'
           }`}
           style={{
             background: 'linear-gradient(135deg, var(--theme-primary-500, #3b82f6) 0%, var(--theme-primary-600, #2563eb) 100%)',

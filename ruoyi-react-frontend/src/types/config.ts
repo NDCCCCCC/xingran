@@ -126,6 +126,10 @@ export interface BackendUserPreferences {
 	// 数据
 	pageSize: number;
 
+	// 自定义颜色（可选）
+	customPrimaryColor?: string;
+	customSidebarColor?: string;
+
 	// 语言
 	language: string;
 }

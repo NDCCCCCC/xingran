@@ -3,8 +3,8 @@ import type {
   UserProfile,
   UpdateProfileRequest,
   ChangePasswordRequest,
-  UserPreferences,
 } from '@/types';
+import type { BackendUserPreferences } from '@/types/config';
 
 // ==================== 个人信息 API ====================
 
@@ -40,14 +40,16 @@ export function uploadAvatar(file: File): Promise<{ avatar: string; message: str
 
 /**
  * 获取用户个人设置
+ * 注意：后端返回的是 BackendUserPreferences 格式（扁平结构）
  */
-export function getUserPreferences(): Promise<UserPreferences> {
-  return get<UserPreferences>('/system/settings/preferences');
+export function getUserPreferences(): Promise<BackendUserPreferences> {
+  return get<BackendUserPreferences>('/system/settings/preferences');
 }
 
 /**
  * 更新用户个人设置
+ * 注意：后端接收的是 BackendUserPreferences 格式（扁平结构）
  */
-export function updateUserPreferences(data: UserPreferences): Promise<{ message: string }> {
+export function updateUserPreferences(data: BackendUserPreferences): Promise<{ message: string }> {
   return put('/system/settings/preferences', data);
 }

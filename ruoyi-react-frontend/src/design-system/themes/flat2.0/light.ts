@@ -1,14 +1,14 @@
 /**
- * 扁平化2.0主题
+ * 扁平化2.0主题 - 浅色模式
  * 特点：扁平设计+微妙渐变、鲜艳配色、清晰图标、活力十足
  */
 
 import type { ThemeConfig } from '@/types/theme';
-import { spacing } from '../tokens/spacing';
-import { fontFamily } from '../tokens/typography';
-import { radius } from '../tokens/shadows';
+import { spacing } from '../../tokens/spacing';
+import { fontFamily } from '../../tokens/typography';
+import { radius } from '../../tokens/shadows';
 
-export const flat2Theme: ThemeConfig = {
+export const flat2Light: ThemeConfig = {
   id: 'flat2.0',
   name: '扁平化2.0',
   description: '扁平设计配微妙渐变和阴影，鲜艳配色充满活力',

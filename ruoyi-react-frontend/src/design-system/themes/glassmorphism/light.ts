@@ -1,14 +1,14 @@
 /**
- * 玻璃拟态主题
+ * 玻璃拟态主题 - 浅色模式
  * 特点：半透明背景、背景模糊、柔和光效、现代感
  */
 
 import type { ThemeConfig } from '@/types/theme';
-import { spacing } from '../tokens/spacing';
-import { fontFamily } from '../tokens/typography';
-import { radius } from '../tokens/shadows';
+import { spacing } from '../../tokens/spacing';
+import { fontFamily } from '../../tokens/typography';
+import { radius } from '../../tokens/shadows';
 
-export const glassmorphismTheme: ThemeConfig = {
+export const glassmorphismLight: ThemeConfig = {
   id: 'glassmorphism',
   name: '玻璃拟态',
   description: '半透明背景、背景模糊效果，营造轻盈现代感',
