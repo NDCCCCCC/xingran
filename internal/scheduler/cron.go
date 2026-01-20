@@ -9,6 +9,7 @@ import (
 
 	"github.com/robfig/cron/v3"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/websocket"
 	"gorm.io/gorm"
 )
@@ -549,110 +550,144 @@ func executeNoticePublishTask(ctx context.Context, params map[string]interface{}
 		Priority      int
 		PublishStatus int
 		TargetType    int
-		EndDate       *string // 结束时间
+		EndDate       *string // 结束时间（RFC3339格式）
 	}
 	var job models.Job
 
 	if err := db.Table("sys_notice").
 		Select("id, notice_title, priority, publish_status, target_type, end_date").
-		Where("id = ? AND publish_status = ?", noticeID, 2). // PublishStatusScheduled = 2
+		Where("id = ? AND publish_status = ?", noticeID, models.PublishStatusScheduled).
 		First(&notice).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			log.Printf("通知不存在或已发布: %s", noticeID)
-			return nil // 不是错误，任务已被处理
+			return nil
 		}
 		return fmt.Errorf("查询通知失败: %w", err)
 	}
 
 	// 检查是否超过结束时间
-	if notice.EndDate != nil && *notice.EndDate != "" {
-		endTime, err := time.Parse(time.RFC3339, *notice.EndDate)
-		if err == nil && time.Now().After(endTime) {
-			log.Printf("通知 [%s] 已超过结束时间，停止任务", notice.NoticeTitle)
-
-			// 删除对应的定时任务
-			jobName := getNoticeJobName(noticeID)
-			if GlobalScheduler != nil {
-				if err := db.Where("job_name = ?", jobName).First(&job).Error; err == nil {
-					if err := GlobalScheduler.RemoveJob(job.ID); err != nil {
-						log.Printf("删除任务失败: %v", err)
-					} else {
-						log.Printf("周期性任务因结束时间已停止: %s", jobName)
-					}
-				}
-			}
-			return nil
-		}
+	if shouldStopNotice(notice.EndDate, notice.NoticeTitle, noticeID, db) {
+		return nil
 	}
 
-	// 查询对应的 Job
+	// 查询对应的 Job，检查任务类型
 	jobName := getNoticeJobName(noticeID)
 	if err := db.Where("job_name = ?", jobName).First(&job).Error; err != nil {
 		log.Printf("警告：未找到对应任务 [%s]", jobName)
-	} else {
-		// 如果是一次性任务（ExecuteOnce），执行后删除
-		if job.MisfirePolicy == models.MisfirePolicyExecuteOnce {
-			log.Printf("检测到一次性任务，执行完成后将删除: %s", jobName)
-		}
+	} else if job.MisfirePolicy == models.MisfirePolicyExecuteOnce {
+		log.Printf("检测到一次性任务，执行完成后将删除: %s", jobName)
 	}
 
-	// 更新发布状态为已发布
-	if err := db.Table("sys_notice").
-		Where("id = ?", noticeID).
-		Update("publish_status", 1).Error; err != nil { // PublishStatusPublished = 1
-		return fmt.Errorf("更新发布状态失败: %w", err)
-	}
-
-	// 【关键】一次性任务执行后删除，周期性任务保留
+	// 处理发布状态：一次性任务更新为已发布
 	if job.MisfirePolicy == models.MisfirePolicyExecuteOnce {
-		if GlobalScheduler != nil {
-			if err := GlobalScheduler.RemoveJob(job.ID); err != nil {
-				log.Printf("删除一次性任务失败: %v", err)
-			} else {
-				log.Printf("一次性任务已自动删除: %s", jobName)
-			}
+		if err := db.Table("sys_notice").
+			Where("id = ?", noticeID).
+			Update("publish_status", models.PublishStatusPublished).Error; err != nil {
+			return fmt.Errorf("更新发布状态失败: %w", err)
 		}
-	} else if job.ID != "" {
-		log.Printf("周期性任务继续执行: %s", jobName)
 	}
+
+	// 处理任务生命周期：一次性任务删除，周期性任务保留
+	handleTaskLifecycle(job, jobName, noticeID)
 
 	// 通过 WebSocket 推送给目标用户
-	if GlobalNoticeHub != nil {
-		// 获取目标用户ID列表
-		targetUserIDs, err := getTargetUserIDs(db, noticeID, notice.TargetType)
-		if err != nil {
-			log.Printf("获取目标用户失败: %v", err)
-			// 继续执行，不中断流程
-		} else if len(targetUserIDs) > 0 {
-			message := websocket.NoticeMessage{
-				Type:      "new_notice",
-				NoticeID:  noticeID,
-				Title:     notice.NoticeTitle,
-				Priority:  notice.Priority,
-				Timestamp: time.Now().Unix(),
-			}
-			GlobalNoticeHub.BroadcastToUsers(targetUserIDs, message)
-			log.Printf("通知已发布并推送给 %d 个用户: %s", len(targetUserIDs), notice.NoticeTitle)
-		}
+	broadcastNoticeToUsers(db, noticeID, notice.NoticeTitle, notice.Priority, notice.TargetType)
+
+	// 发送多渠道通知（邮件、短信、API等）
+	senderService := services.NewNotificationSenderService(db)
+	if err := senderService.SendNotification(ctx, noticeID); err != nil {
+		log.Printf("发送多渠道通知失败: %v", err)
 	}
 
 	log.Printf("通知发布成功: %s", notice.NoticeTitle)
 	return nil
 }
 
+// shouldStopNotice 检查通知是否应因结束时间而停止
+func shouldStopNotice(endDate *string, title, noticeID string, db *gorm.DB) bool {
+	if endDate == nil || *endDate == "" {
+		return false
+	}
+
+	endTime, err := time.Parse(time.RFC3339, *endDate)
+	if err != nil || !time.Now().After(endTime) {
+		return false
+	}
+
+	log.Printf("通知 [%s] 已超过结束时间，停止任务", title)
+
+	// 删除对应的定时任务
+	jobName := getNoticeJobName(noticeID)
+	if GlobalScheduler != nil {
+		var job models.Job
+		if err := db.Where("job_name = ?", jobName).First(&job).Error; err == nil {
+			if err := GlobalScheduler.RemoveJob(job.ID); err != nil {
+				log.Printf("删除任务失败: %v", err)
+			} else {
+				log.Printf("周期性任务因结束时间已停止: %s", jobName)
+			}
+		}
+	}
+	return true
+}
+
+// handleTaskLifecycle 处理任务生命周期：一次性任务删除，周期性任务保留
+func handleTaskLifecycle(job models.Job, jobName, noticeID string) {
+	if GlobalScheduler == nil {
+		return
+	}
+
+	if job.MisfirePolicy == models.MisfirePolicyExecuteOnce {
+		if err := GlobalScheduler.RemoveJob(job.ID); err != nil {
+			log.Printf("删除一次性任务失败: %v", err)
+		} else {
+			log.Printf("一次性任务已自动删除: %s", jobName)
+		}
+	} else if job.ID != "" {
+		log.Printf("周期性任务继续执行: %s", jobName)
+	}
+}
+
+// broadcastNoticeToUsers 通过 WebSocket 推送通知给目标用户
+func broadcastNoticeToUsers(db *gorm.DB, noticeID, title string, priority, targetType int) {
+	if GlobalNoticeHub == nil {
+		return
+	}
+
+	targetUserIDs, err := getTargetUserIDs(db, noticeID, targetType)
+	if err != nil {
+		log.Printf("获取目标用户失败: %v", err)
+		return
+	}
+
+	if len(targetUserIDs) == 0 {
+		return
+	}
+
+	message := websocket.NoticeMessage{
+		Type:      "new_notice",
+		NoticeID:  noticeID,
+		Title:     title,
+		Priority:  priority,
+		Timestamp: time.Now().Unix(),
+	}
+	GlobalNoticeHub.BroadcastToUsers(targetUserIDs, message)
+	log.Printf("通知已发布并推送给 %d 个用户: %s", len(targetUserIDs), title)
+}
+
 // getTargetUserIDs 获取通知的目标用户ID列表
 func getTargetUserIDs(db *gorm.DB, noticeID string, targetType int) ([]string, error) {
 	var userIDs []string
 
-	// 如果是全部用户，需要从用户表获取所有用户ID
+	// 全部用户：从用户表获取所有未删除的用户ID
 	if targetType == 0 {
-		if err := db.Table("sys_user").Where("del_flag = 0").Pluck("id", &userIDs).Error; err != nil {
+		if err := db.Table("sys_user").Where("deleted_at IS NULL").Pluck("id", &userIDs).Error; err != nil {
 			return nil, fmt.Errorf("查询用户列表失败: %w", err)
 		}
 		return userIDs, nil
 	}
 
-	// 否则从通知目标表查询
+	// 指定用户：从通知目标表查询
 	if err := db.Table("sys_notice_target").
 		Where("notice_id = ?", noticeID).
 		Pluck("target_id", &userIDs).Error; err != nil {
@@ -677,41 +712,20 @@ func executeDutyReminderTask(ctx context.Context, params map[string]interface{})
 
 	db := GlobalDB.GetDB()
 
-	// 查询值班配置
-	type DutyConfig struct {
-		ReminderEnabled bool
+	// 检查值班提醒是否启用
+	enabled, err := isDutyReminderEnabled(db)
+	if err != nil {
+		return fmt.Errorf("查询值班配置失败: %w", err)
 	}
-	var config DutyConfig
-	configResult := db.Table("sys_duty_config").Select("reminder_enabled").First(&config)
-	if configResult.Error != nil && configResult.Error != gorm.ErrRecordNotFound {
-		return fmt.Errorf("查询值班配置失败: %w", configResult.Error)
-	}
-
-	// 如果配置存在且提醒未启用，则跳过
-	if configResult.Error == nil && !config.ReminderEnabled {
+	if !enabled {
 		log.Printf("值班提醒已禁用，跳过执行")
 		return nil
 	}
 
-	// 查询今日日期
+	// 查询今日值班人员
 	today := time.Now().Format("2006-01-02")
-
-	// 查询今日值班人员（包含用户信息）
-	type DutyMember struct {
-		UserID   string
-		Username string
-		NickName string
-		PoolName string
-	}
-
-	var members []DutyMember
-	query := db.Table("sys_duty_schedule AS ds").
-		Select("ds.user_id, u.username, u.nick_name, dp.pool_name").
-		Joins("LEFT JOIN sys_user AS u ON ds.user_id = u.id").
-		Joins("LEFT JOIN sys_duty_pool AS dp ON ds.pool_id = dp.id").
-		Where("ds.schedule_date = ? AND ds.status = 0", today) // DutyStatusNormal = 0
-
-	if err := query.Find(&members).Error; err != nil {
+	members, err := getTodayDutyMembers(db, today)
+	if err != nil {
 		return fmt.Errorf("查询今日值班人员失败: %w", err)
 	}
 
@@ -721,38 +735,117 @@ func executeDutyReminderTask(ctx context.Context, params map[string]interface{})
 		return nil
 	}
 
-	// 通过 WebSocket 推送值班提醒通知
-	if GlobalNoticeHub != nil {
-		var userIDs []string
-		for _, m := range members {
-			userIDs = append(userIDs, m.UserID)
-		}
-
-		// 构建值班人员列表文本
-		memberList := ""
-		for i, m := range members {
-			if i > 0 {
-				memberList += "、"
-			}
-			if m.NickName != "" {
-				memberList += m.NickName
-			} else {
-				memberList += m.Username
-			}
-		}
-
-		message := websocket.NoticeMessage{
-			Type:      "duty_reminder",
-			Title:     "值班提醒",
-			Content:   fmt.Sprintf("今日值班人员：%s", memberList),
-			Priority:  1, // 普通优先级
-			Timestamp: time.Now().Unix(),
-		}
-		GlobalNoticeHub.BroadcastToUsers(userIDs, message)
-		log.Printf("值班提醒已发送给 %d 个用户: %s", len(userIDs), memberList)
-	}
+	// 发送值班提醒通知
+	sendDutyReminderNotification(members)
 
 	return nil
+}
+
+// isDutyReminderEnabled 检查值班提醒是否启用
+func isDutyReminderEnabled(db *gorm.DB) (bool, error) {
+	type DutyConfig struct {
+		ReminderEnabled bool
+	}
+	var config DutyConfig
+
+	result := db.Table("sys_duty_config").
+		Select("reminder_enabled").
+		First(&config)
+
+	if result.Error == nil {
+		return config.ReminderEnabled, nil
+	}
+	if result.Error == gorm.ErrRecordNotFound {
+		// 默认启用
+		return true, nil
+	}
+	return false, result.Error
+}
+
+// dutyMember 值班成员信息
+type dutyMember struct {
+	UserID   string
+	Username string
+	NickName string
+	PoolName string
+}
+
+// getTodayDutyMembers 获取今日值班人员
+func getTodayDutyMembers(db *gorm.DB, date string) ([]dutyMember, error) {
+	var members []dutyMember
+
+	query := db.Table("sys_duty_schedule AS ds").
+		Select("ds.user_id, u.username, u.nick_name, dp.pool_name").
+		Joins("LEFT JOIN sys_user AS u ON ds.user_id = u.id").
+		Joins("LEFT JOIN sys_duty_pool AS dp ON ds.pool_id = dp.id").
+		Where("ds.schedule_date = ? AND ds.status = 0", date)
+
+	if err := query.Find(&members).Error; err != nil {
+		return nil, err
+	}
+
+	return members, nil
+}
+
+// sendDutyReminderNotification 发送值班提醒通知
+func sendDutyReminderNotification(members []dutyMember) {
+	if GlobalNoticeHub == nil {
+		return
+	}
+
+	// 提取用户ID列表
+	userIDs := make([]string, 0, len(members))
+	for _, m := range members {
+		userIDs = append(userIDs, m.UserID)
+	}
+
+	// 构建值班人员列表文本
+	memberList := formatMemberList(members)
+
+	message := websocket.NoticeMessage{
+		Type:      "duty_reminder",
+		Title:     "值班提醒",
+		Content:   fmt.Sprintf("今日值班人员：%s", memberList),
+		Priority:  1, // 普通优先级
+		Timestamp: time.Now().Unix(),
+	}
+	GlobalNoticeHub.BroadcastToUsers(userIDs, message)
+	log.Printf("值班提醒已发送给 %d 个用户: %s", len(userIDs), memberList)
+}
+
+// formatMemberList 格式化值班人员列表
+func formatMemberList(members []dutyMember) string {
+	if len(members) == 0 {
+		return ""
+	}
+
+	result := make([]string, 0, len(members))
+	for _, m := range members {
+		name := m.NickName
+		if name == "" {
+			name = m.Username
+		}
+		result = append(result, name)
+	}
+
+	// 使用中文顿号连接
+	return joinWithSeparator(result, "、")
+}
+
+// joinWithSeparator 使用指定分隔符连接字符串切片
+func joinWithSeparator(items []string, sep string) string {
+	if len(items) == 0 {
+		return ""
+	}
+	if len(items) == 1 {
+		return items[0]
+	}
+
+	result := items[0]
+	for i := 1; i < len(items); i++ {
+		result += sep + items[i]
+	}
+	return result
 }
 
 // DeviceMonitorService 设备监控服务接口
