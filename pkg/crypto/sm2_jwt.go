@@ -370,30 +370,42 @@ func isHexString(s string) bool {
 }
 
 // decodeHexEncodedResult 处理 SM2 解密后的结果
-// 检测解密结果是否为十六进制编码的字符串（如 SM4 密钥）
-// 如果是 32 字节且可解码为十六进制，则解码为原始字节数组（16 字节）
-// 返回十六进制格式的字符串供后续使用
+// 智能检测：如果是可打印文本（如密码），返回原字符串；如果是二进制数据（如SM4密钥），返回十六进制
 func decodeHexEncodedResult(plaintext []byte, mode string) (string, error) {
+	// 优先检查：是否为可打印 ASCII 文本（如密码字符串）
+	if isPrintableASCII(plaintext) {
+		return string(plaintext), nil
+	}
+
+	// 二进制数据：检查是否为十六进制编码的字符串（如 SM4 密钥）
 	hexStr := fmt.Sprintf("%x", plaintext)
 
-	// 检测模式：解密结果是否为十六进制字符串的 ASCII 表示
 	if len(plaintext) == 32 || len(plaintext) == 64 {
 		asciiStr := string(plaintext)
-
-		// 检查是否为有效的十六进制字符串
 		if isHexString(asciiStr) {
-			// 尝试解码十六进制字符串为原始字节数组
 			decoded, err := hex.DecodeString(asciiStr)
 			if err == nil && len(decoded) == 16 {
-				// 对于 SM4 密钥，期望得到 16 字节
 				decodedHex := fmt.Sprintf("%x", decoded)
 				return decodedHex, nil
 			}
 		}
 	}
 
-	// 默认返回原始十六进制编码
 	return hexStr, nil
+}
+
+// isPrintableASCII 检查字节切片是否为可打印 ASCII 字符串
+func isPrintableASCII(data []byte) bool {
+	if len(data) == 0 {
+		return false
+	}
+	for _, b := range data {
+		// 可打印 ASCII: 32-126 (空格到波浪号)
+		if b < 32 || b > 126 {
+			return false
+		}
+	}
+	return true
 }
 
 // DecryptWithSM2 使用 SM2 私钥解密数据

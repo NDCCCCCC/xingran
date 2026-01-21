@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { post } from '@/lib/api';
 import type { User, LoginRequest } from '@/types';
 import { useMenuStore } from './menuStore';
+import { getEncryptedLoginRequest } from '@/utils/sm2';
 
 interface AuthState {
   user: User | null;
@@ -33,11 +34,16 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       login: async (credentials: LoginRequest) => {
         set({ loading: true });
         try {
-          // 注意：SM2密码加密与后端 tjfoc/gmsm 存在兼容性问题
-          // 目前使用明文传输（通过HTTPS保护），后续需要解决加密库兼容性
+          // 使用 SM2 加密密码（带回退机制）
+          const encryptedRequest = await getEncryptedLoginRequest(
+            credentials.username,
+            credentials.password
+          );
+
           const loginRequest = {
-            username: credentials.username,
-            password: credentials.password,
+            username: encryptedRequest.username,
+            password: encryptedRequest.password,
+            encryptedPassword: encryptedRequest.encryptedPassword,
             captcha: credentials.captcha,
             captchaId: credentials.captchaId,
           };

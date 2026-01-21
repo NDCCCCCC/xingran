@@ -76,32 +76,26 @@ const (
 
 // GetDashboards 获取仪表盘列表
 func (s *DashboardService) GetDashboards(ctx context.Context, params DashboardListParams) (*DashboardListResponse, error) {
-	// 构建查询
 	query := s.db.WithContext(ctx).Model(&models.Dashboard{})
 
-	// 搜索过滤
 	if params.Keyword != "" {
 		keyword := "%" + params.Keyword + "%"
 		query = query.Where("name LIKE ? OR description LIKE ?", keyword, keyword)
 	}
 
-	// 模板过滤
 	if params.IsTemplate {
 		query = query.Where("is_template = ?", true)
 	}
 
-	// 状态过滤
 	if params.Status != nil {
 		query = query.Where("status = ?", *params.Status)
 	}
 
-	// 获取总数
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
 		return nil, fmt.Errorf("failed to count dashboards: %w", err)
 	}
 
-	// 分页查询
 	offset := (params.Current - 1) * params.PageSize
 	var dashboards []models.Dashboard
 	if err := query.Order("created_at DESC").Offset(offset).Limit(params.PageSize).Find(&dashboards).Error; err != nil {
@@ -151,6 +145,7 @@ func (s *DashboardService) CreateDashboard(ctx context.Context, userID string, r
 		TemplateScope:   req.TemplateScope,
 		Status:          models.DashboardStatusNormal,
 	}
+
 	dashboard.CreatedBy = userID
 	dashboard.UpdatedBy = userID
 
@@ -163,7 +158,6 @@ func (s *DashboardService) CreateDashboard(ctx context.Context, userID string, r
 
 // UpdateDashboard 更新仪表盘
 func (s *DashboardService) UpdateDashboard(ctx context.Context, userID string, id string, req UpdateDashboardRequest) error {
-	// 检查仪表盘是否存在
 	var dashboard models.Dashboard
 	if err := s.db.WithContext(ctx).Where("id = ?", id).First(&dashboard).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -172,12 +166,10 @@ func (s *DashboardService) UpdateDashboard(ctx context.Context, userID string, i
 		return fmt.Errorf("failed to fetch dashboard: %w", err)
 	}
 
-	// 权限检查：非模板仪表盘只能由所有者修改
 	if !dashboard.IsTemplate && dashboard.OwnerID != userID {
 		return fmt.Errorf("permission denied: not the owner")
 	}
 
-	// 构建更新数据
 	updates := make(map[string]interface{})
 	if req.Name != nil {
 		updates["name"] = *req.Name
@@ -200,7 +192,6 @@ func (s *DashboardService) UpdateDashboard(ctx context.Context, userID string, i
 		return fmt.Errorf("failed to update dashboard: %w", err)
 	}
 
-	// 清除缓存
 	s.cache.Delete(ctx, dashboardCachePrefix+id)
 
 	return nil
@@ -208,7 +199,6 @@ func (s *DashboardService) UpdateDashboard(ctx context.Context, userID string, i
 
 // DeleteDashboard 删除仪表盘
 func (s *DashboardService) DeleteDashboard(ctx context.Context, userID string, id string) error {
-	// 检查仪表盘是否存在
 	var dashboard models.Dashboard
 	if err := s.db.WithContext(ctx).Where("id = ?", id).First(&dashboard).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -217,17 +207,14 @@ func (s *DashboardService) DeleteDashboard(ctx context.Context, userID string, i
 		return fmt.Errorf("failed to fetch dashboard: %w", err)
 	}
 
-	// 权限检查：非模板仪表盘只能由所有者删除
 	if !dashboard.IsTemplate && dashboard.OwnerID != userID {
 		return fmt.Errorf("permission denied: not the owner")
 	}
 
-	// 软删除
 	if err := s.db.WithContext(ctx).Delete(&dashboard).Error; err != nil {
 		return fmt.Errorf("failed to delete dashboard: %w", err)
 	}
 
-	// 清除缓存
 	s.cache.Delete(ctx, dashboardCachePrefix+id)
 
 	return nil
@@ -235,22 +222,21 @@ func (s *DashboardService) DeleteDashboard(ctx context.Context, userID string, i
 
 // DuplicateDashboard 复制仪表盘
 func (s *DashboardService) DuplicateDashboard(ctx context.Context, userID string, id string) (*models.Dashboard, error) {
-	// 获取原仪表盘
 	original, err := s.GetDashboard(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
-	// 创建副本
 	duplicate := &models.Dashboard{
 		Name:            original.Name + " (副本)",
 		Description:     original.Description,
 		OwnerID:         userID,
 		Layout:          original.Layout,
 		RefreshInterval: original.RefreshInterval,
-		IsTemplate:      false, // 副本不是模板
+		IsTemplate:      false,
 		Status:          models.DashboardStatusNormal,
 	}
+
 	duplicate.CreatedBy = userID
 	duplicate.UpdatedBy = userID
 
@@ -263,7 +249,6 @@ func (s *DashboardService) DuplicateDashboard(ctx context.Context, userID string
 
 // SetDefaultDashboard 设置默认仪表盘
 func (s *DashboardService) SetDefaultDashboard(ctx context.Context, userID string, id string) error {
-	// 检查仪表盘是否存在
 	var dashboard models.Dashboard
 	if err := s.db.WithContext(ctx).Where("id = ?", id).First(&dashboard).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -272,12 +257,10 @@ func (s *DashboardService) SetDefaultDashboard(ctx context.Context, userID strin
 		return fmt.Errorf("failed to fetch dashboard: %w", err)
 	}
 
-	// 权限检查
 	if !dashboard.IsTemplate && dashboard.OwnerID != userID {
 		return fmt.Errorf("permission denied: not the owner")
 	}
 
-	// 取消用户所有仪表盘的默认状态
 	if err := s.db.WithContext(ctx).
 		Model(&models.Dashboard{}).
 		Where("owner_id = ? AND is_default = ?", userID, true).
@@ -285,14 +268,12 @@ func (s *DashboardService) SetDefaultDashboard(ctx context.Context, userID strin
 		return fmt.Errorf("failed to clear default dashboards: %w", err)
 	}
 
-	// 设置新的默认仪表盘
 	if err := s.db.WithContext(ctx).
 		Model(&dashboard).
 		Update("is_default", true).Error; err != nil {
 		return fmt.Errorf("failed to set default dashboard: %w", err)
 	}
 
-	// 清除缓存
 	s.cache.Delete(ctx, dashboardCachePrefix+id)
 
 	return nil
@@ -320,7 +301,6 @@ func (s *DashboardService) GetTemplates(ctx context.Context, scope *models.Templ
 
 // CreateFromTemplate 从模板创建仪表盘
 func (s *DashboardService) CreateFromTemplate(ctx context.Context, userID string, templateID string, name string) (*models.Dashboard, error) {
-	// 获取模板
 	template, err := s.GetDashboard(ctx, templateID)
 	if err != nil {
 		return nil, fmt.Errorf("template not found: %w", err)
@@ -330,7 +310,6 @@ func (s *DashboardService) CreateFromTemplate(ctx context.Context, userID string
 		return nil, fmt.Errorf("not a template")
 	}
 
-	// 从模板创建仪表盘
 	dashboard := &models.Dashboard{
 		Name:            name,
 		Description:     template.Description,
@@ -340,6 +319,7 @@ func (s *DashboardService) CreateFromTemplate(ctx context.Context, userID string
 		IsTemplate:      false,
 		Status:          models.DashboardStatusNormal,
 	}
+
 	dashboard.CreatedBy = userID
 	dashboard.UpdatedBy = userID
 
@@ -367,13 +347,11 @@ func (s *DashboardService) GetVersions(ctx context.Context, dashboardID string) 
 
 // CreateVersion 创建版本快照
 func (s *DashboardService) CreateVersion(ctx context.Context, userID string, dashboardID string, comment string) (*models.DashboardVersion, error) {
-	// 获取仪表盘当前状态
 	dashboard, err := s.GetDashboard(ctx, dashboardID)
 	if err != nil {
 		return nil, fmt.Errorf("dashboard not found: %w", err)
 	}
 
-	// 创建版本记录
 	version := &models.DashboardVersion{
 		DashboardID: dashboardID,
 		Layout:      dashboard.Layout,
@@ -390,7 +368,6 @@ func (s *DashboardService) CreateVersion(ctx context.Context, userID string, das
 
 // RestoreVersion 从版本恢复仪表盘
 func (s *DashboardService) RestoreVersion(ctx context.Context, userID string, dashboardID string, versionID string) error {
-	// 获取版本记录
 	var version models.DashboardVersion
 	if err := s.db.WithContext(ctx).
 		Where("id = ? AND dashboard_id = ?", versionID, dashboardID).
@@ -401,7 +378,6 @@ func (s *DashboardService) RestoreVersion(ctx context.Context, userID string, da
 		return fmt.Errorf("failed to fetch version: %w", err)
 	}
 
-	// 更新仪表盘布局
 	if err := s.db.WithContext(ctx).
 		Model(&models.Dashboard{}).
 		Where("id = ?", dashboardID).
@@ -412,7 +388,6 @@ func (s *DashboardService) RestoreVersion(ctx context.Context, userID string, da
 		return fmt.Errorf("failed to restore version: %w", err)
 	}
 
-	// 清除缓存
 	s.cache.Delete(ctx, dashboardCachePrefix+dashboardID)
 
 	return nil
@@ -427,7 +402,6 @@ func (s *DashboardService) ExportDashboard(ctx context.Context, id string) (stri
 		return "", err
 	}
 
-	// 转换为 JSON
 	data, err := json.Marshal(dashboard)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal dashboard: %w", err)
@@ -443,7 +417,6 @@ func (s *DashboardService) ImportDashboard(ctx context.Context, userID string, c
 		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
 	}
 
-	// 重置 ID 和时间戳
 	dashboard.ID = ""
 	dashboard.OwnerID = userID
 	dashboard.IsTemplate = false

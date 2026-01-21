@@ -9,7 +9,6 @@ import (
 
 // populateRoomNames 填充冗余的机房名称字段
 func (s *dedicatedLineService) populateRoomNames(ctx context.Context, line *operations.OpsDedicatedLine) error {
-	// 填充源机房名称
 	if line.SourceRoomID != nil && *line.SourceRoomID != "" && line.SourceRoomName == nil {
 		var room operations.OpsServerRoom
 		if err := s.db.WithContext(ctx).Select("name").Where("id = ?", *line.SourceRoomID).First(&room).Error; err == nil {
@@ -17,7 +16,6 @@ func (s *dedicatedLineService) populateRoomNames(ctx context.Context, line *oper
 		}
 	}
 
-	// 填充目的机房名称
 	if line.DestRoomID != nil && *line.DestRoomID != "" && line.DestRoomName == nil {
 		var room operations.OpsServerRoom
 		if err := s.db.WithContext(ctx).Select("name").Where("id = ?", *line.DestRoomID).First(&room).Error; err == nil {
@@ -89,7 +87,6 @@ func (s *dedicatedLineService) List(ctx context.Context, params map[string]inter
 
 	query := s.db.WithContext(ctx).Model(&operations.OpsDedicatedLine{})
 
-	// 添加筛选条件
 	if lineType, ok := params["lineType"].(string); ok && lineType != "" {
 		query = query.Where("line_type = ?", lineType)
 	}
@@ -103,7 +100,6 @@ func (s *dedicatedLineService) List(ctx context.Context, params map[string]inter
 		query = query.Where("status = ?", int(status))
 	}
 
-	// 分页
 	current := 1
 	pageSize := 10
 	if c, ok := params["current"].(int); ok {

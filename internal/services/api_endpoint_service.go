@@ -59,26 +59,22 @@ func (s *APIEndpointService) GetUserAccessibleEndpoints(
 	ctx context.Context,
 	userID string,
 ) ([]CategoryEndpoints, error) {
-	// 1. 尝试从缓存获取
 	cacheKey := fmt.Sprintf("user_endpoints:%s", userID)
 	var cachedResult []CategoryEndpoints
 	if err := s.cache.GetJSON(ctx, cacheKey, &cachedResult); err == nil && len(cachedResult) > 0 {
 		return cachedResult, nil
 	}
 
-	// 2. 获取用户权限
 	userPerms, err := s.getUserPermissions(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("获取用户权限失败: %w", err)
 	}
 
-	// 3. 构建权限集合（用于快速查找）
 	permSet := make(map[string]bool)
 	for _, p := range userPerms {
 		permSet[p] = true
 	}
 
-	// 4. 过滤端点
 	var result []CategoryEndpoints
 	for _, module := range s.metadataConfig.Metadata {
 		var accessibleEndpoints []EndpointDetail
@@ -112,7 +108,6 @@ func (s *APIEndpointService) GetUserAccessibleEndpoints(
 		}
 	}
 
-	// 5. 缓存结果（5分钟TTL）
 	_ = s.cache.SetJSON(ctx, cacheKey, result, 5*time.Minute)
 
 	return result, nil
@@ -122,7 +117,6 @@ func (s *APIEndpointService) GetUserAccessibleEndpoints(
 func (s *APIEndpointService) getUserPermissions(ctx context.Context, userID string) ([]string, error) {
 	var permissions []string
 
-	// 使用原生SQL查询获取用户的所有权限
 	err := s.db.WithContext(ctx).Raw(`
 		SELECT DISTINCT m.perms
 		FROM sys_menu m
@@ -143,12 +137,12 @@ func (s *APIEndpointService) hasPermission(
 	required []string,
 ) bool {
 	if len(required) == 0 {
-		return true // 无权限要求
+		return true
 	}
 
 	for _, req := range required {
 		if userPerms[req] {
-			return true // 满足任一权限即可
+			return true
 		}
 	}
 
@@ -164,7 +158,6 @@ func (s *APIEndpointService) ValidateEndpoint(
 		return nil, fmt.Errorf("端点不存在: %s %s", method, route)
 	}
 
-	// 查找所属模块信息
 	var category, icon, module string
 	for _, mod := range s.metadataConfig.Metadata {
 		for _, ep := range mod.Endpoints {

@@ -98,6 +98,7 @@ export interface Department {
 export interface LoginRequest {
   username: string;
   password: string;
+  encryptedPassword?: boolean;  // 标识密码是否已使用 SM2 加密
   captcha?: string;
   captchaId?: string;
 }

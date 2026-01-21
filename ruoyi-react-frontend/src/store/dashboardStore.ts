@@ -562,7 +562,6 @@ export const useDashboardStore = create<DashboardStore>()(
 				const cached = get().widgetDataCache.get(widgetId);
 				if (!cached) return null;
 
-				// 缓存有效期 5 分钟
 				const cacheExpiry = 5 * 60 * 1000;
 				if (Date.now() - cached.timestamp > cacheExpiry) {
 					get().clearWidgetCache(widgetId);
