@@ -5,7 +5,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { FC } from 'react';
 import {
-  Table, Button, Space, Modal, Form, Input, InputNumber, Select, Popconfirm,
+  Table, Button, Space, Modal, Form, Input, InputNumber, Select, TreeSelect, Popconfirm,
   Tag, Card, Row, Col, Statistic, Alert, Radio,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -32,6 +32,7 @@ const { TextArea } = Input;
 interface DepartmentOption {
   id: string;
   deptName: string;
+  children?: DepartmentOption[];
 }
 
 type ViewMode = 'table' | 'card';
@@ -51,20 +52,17 @@ const BuildingManagement: FC = () => {
   const loadDepartments = useCallback(async () => {
     setLoadingDepts(true);
     try {
-      const result = await post<BaseResponse<PageResponse<DepartmentOption>>>('/system/departments/list', { current: 1, pageSize: 1000 });
-      // 扁平化树形数据
-      const flattenDepts = (data: any[]): DepartmentOption[] => {
-        const result: DepartmentOption[] = [];
-        const traverse = (nodes: any[]) => {
-          nodes.forEach(node => {
-            result.push({ id: node.id, deptName: node.deptName });
-            if (node.children?.length > 0) traverse(node.children);
-          });
-        };
-        traverse(data);
-        return result;
+      // 后端返回的是树形结构数组
+      const result = await post<BaseResponse<DepartmentOption[]>>('/system/departments/list', {});
+      // 转换为 TreeSelect 需要的格式：title 和 value
+      const convertToTreeData = (nodes: any[]): DepartmentOption[] => {
+        return nodes.map(node => ({
+          id: node.id,
+          deptName: node.deptName,
+          children: node.children?.length > 0 ? convertToTreeData(node.children) : undefined,
+        }));
       };
-      setDepartments(flattenDepts(result.data?.list || []));
+      setDepartments(convertToTreeData(result.data || []));
     } catch (error) {
       handleApiError(error, '加载部门列表', false);
     } finally {
@@ -145,9 +143,27 @@ const BuildingManagement: FC = () => {
 
   const handleImportSuccess = () => { loadBuildings(); loadStatistics(); setImportVisible(false); };
 
+  // 扁平化部门数据用于查找
+  const deptMap = new Map<string, string>();
+  const flattenDeptsToMap = (nodes: DepartmentOption[]) => {
+    nodes.forEach(node => {
+      deptMap.set(node.id, node.deptName);
+      if (node.children?.length > 0) {
+        flattenDeptsToMap(node.children);
+      }
+    });
+  };
+  flattenDeptsToMap(departments);
+
+  // 获取所属机构名称
+  const getOrgName = (orgId?: string) => {
+    if (!orgId) return '-';
+    return deptMap.get(orgId) || '-';
+  };
+
   const columns: ColumnsType<Building> = [
     { title: '楼宇名称', dataIndex: 'name', key: 'name', width: 150 },
-    { title: '所属机构', dataIndex: 'orgName', key: 'orgName', width: 150, render: (v) => v || '-' },
+    { title: '所属机构', dataIndex: 'orgId', key: 'orgName', width: 150, render: (orgId) => getOrgName(orgId) },
     { title: '地址', dataIndex: 'address', key: 'address', ellipsis: true },
     { title: '楼层数', dataIndex: 'totalFloors', key: 'totalFloors', width: 100, render: (v) => v || 0 },
     createStatusColumn('status', { width: 100 }),
@@ -194,6 +210,7 @@ const BuildingManagement: FC = () => {
                 description={
                   <div>
                     {building.address && <div><strong>地址：</strong>{building.address}</div>}
+                    <div><strong>所属机构：</strong>{getOrgName(building.orgId)}</div>
                     <div><strong>楼层：</strong>{building.totalFloors || 0}层</div>
                   </div>
                 }
@@ -246,13 +263,16 @@ const BuildingManagement: FC = () => {
         <Form form={buildingForm} layout="horizontal" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
           <Form.Item name="name" label="楼宇名称" rules={[{ required: true, message: '请输入楼宇名称' }]}><Input placeholder="请输入楼宇名称" /></Form.Item>
           <Form.Item name="orgId" label="所属机构">
-            <Select placeholder="请选择所属机构" loading={loadingDepts} allowClear showSearch filterOption={(input, option) =>
-              (option?.label as string)?.toString().toLowerCase().includes(input.toLowerCase())
-            }>
-              {departments.map(dept => (
-                <Option key={dept.id} value={dept.id}>{dept.deptName}</Option>
-              ))}
-            </Select>
+            <TreeSelect
+              placeholder="请选择所属机构"
+              loading={loadingDepts}
+              allowClear
+              showSearch
+              treeDefaultExpandAll
+              treeNodeFilterProp="title"
+              fieldNames={{ label: 'deptName', value: 'id', children: 'children' }}
+              treeData={departments}
+            />
           </Form.Item>
           <Form.Item name="address" label="地址"><Input placeholder="请输入地址" /></Form.Item>
           <Form.Item name="totalFloors" label="楼层数">

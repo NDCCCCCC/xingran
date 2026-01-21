@@ -232,6 +232,12 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			// 用户端通知（所有已登录用户可访问，不需要特定权限）
 			v1.SetupNoticeUserRouter(authorized, core)
 
+			// 仪表盘系统（所有已登录用户可访问）
+			dashboards := authorized.Group("/dashboards")
+			{
+				v1.SetupDashboardRouter(dashboards, core)
+			}
+
 			// WebSocket路由（需要认证，但不需要权限验证）
 			wsGroup := authorized.Group("/ws")
 			wsGroup.Use(middleware.CORSForWebSocket())

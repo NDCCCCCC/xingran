@@ -14,7 +14,7 @@ import {
   CheckCircleOutlined, StopOutlined, WarningOutlined, AppstoreOutlined, TableOutlined,
   ImportOutlined, ExportOutlined, LineChartOutlined,
 } from '@ant-design/icons';
-import type { DedicatedLine } from '@/types';
+import type { DedicatedLine, DictData } from '@/types';
 import { dedicatedLineApi, serverRoomApi } from '@/lib/opsApi';
 import { useTableManager } from '@/hooks/useTableManager';
 import { usePagination } from '@/hooks/usePagination';
@@ -23,6 +23,7 @@ import { createDateTimeColumn } from '@/utils/tableHelpers';
 import ActionButtons from '@/components/shared/ActionButtons';
 import ExcelImport from '@/components/shared/ExcelImport';
 import ExcelExport from '@/components/shared/ExcelExport';
+import { post } from '@/lib/api';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -40,6 +41,7 @@ const DedicatedLineManagement: FC = () => {
   const [importVisible, setImportVisible] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
   const [serverRooms, setServerRooms] = useState<ServerRoomOption[]>([]);
+  const [lineTypeDict, setLineTypeDict] = useState<DictData[]>([]);
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
@@ -51,6 +53,15 @@ const DedicatedLineManagement: FC = () => {
       setServerRooms(rooms.map((r: any) => ({ id: r.id, name: r.name })));
     } catch (error) {
       handleApiError(error, '加载机房列表', false);
+    }
+  }, []);
+
+  const loadLineTypeDict = useCallback(async () => {
+    try {
+      const result = await post('/system/dicts/data/list', { dictType: 'ops_dedicated_line_type', current: 1, pageSize: 100 });
+      setLineTypeDict(result.data?.list || []);
+    } catch (error) {
+      handleApiError(error, '加载专线类型字典', false);
     }
   }, []);
 
@@ -94,6 +105,7 @@ const DedicatedLineManagement: FC = () => {
       loadLines();
       loadStatistics();
       loadServerRooms();
+      loadLineTypeDict();
     }, 0);
   }, [paginationProps.current, paginationProps.pageSize]);
 
@@ -126,14 +138,18 @@ const DedicatedLineManagement: FC = () => {
 
   const openModal = (record?: DedicatedLine) => {
     if (record) { handleEdit(record); lineForm.setFieldsValue(record); }
-    else { handleAdd(); lineForm.setFieldsValue({ status: 0, lineType: 'MPLS' }); }
+    else {
+      handleAdd();
+      const defaultType = lineTypeDict.find(d => d.isDefault)?.dictValue || lineTypeDict[0]?.dictValue;
+      lineForm.setFieldsValue({ status: 0, lineType: defaultType });
+    }
   };
 
   const handleImportSuccess = () => { loadLines(); loadStatistics(); setImportVisible(false); };
 
   const getLineTypeText = (type: string) => {
-    const types: Record<string, string> = { MPLS: 'MPLS', Internet: '互联网专线', LeasedLine: '租用专线', Fiber: '光纤专线' };
-    return types[type] || type;
+    const dictItem = lineTypeDict.find(d => d.dictValue === type);
+    return dictItem?.dictLabel || type;
   };
 
   const getStatusText = (status: number) => {
@@ -143,7 +159,6 @@ const DedicatedLineManagement: FC = () => {
 
   const columns: ColumnsType<DedicatedLine> = [
     { title: '专线名称', dataIndex: 'name', key: 'name', width: 150 },
-    { title: '专线编码', dataIndex: 'lineCode', key: 'lineCode', width: 150 },
     {
       title: '专线类型',
       dataIndex: 'lineType',
@@ -214,7 +229,6 @@ const DedicatedLineManagement: FC = () => {
                 }
                 description={
                   <div>
-                    <div><strong>编码：</strong>{line.lineCode}</div>
                     <div><strong>类型：</strong>{getLineTypeText(line.lineType)}</div>
                     <div><strong>运营商：</strong>{line.isp}</div>
                     {line.bandwidth && <div><strong>带宽：</strong>{line.bandwidth}</div>}
@@ -243,22 +257,19 @@ const DedicatedLineManagement: FC = () => {
       <Card style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
-            <Form.Item name="lineCode" label="专线编码">
-              <Input placeholder="请输入专线编码" />
+            <Form.Item name="name" label="专线名称">
+              <Input placeholder="请输入专线名称" allowClear style={{ width: 150 }} />
             </Form.Item>
             <Form.Item name="lineType" label="专线类型">
-              <Select placeholder="请选择类型">
-                <Option value="MPLS">MPLS</Option>
-                <Option value="Internet">互联网专线</Option>
-                <Option value="LeasedLine">租用专线</Option>
-                <Option value="Fiber">光纤专线</Option>
+              <Select placeholder="请选择类型" allowClear style={{ width: 130 }}>
+                {lineTypeDict.map(d => <Option key={d.dictValue} value={d.dictValue}>{d.dictLabel}</Option>)}
               </Select>
             </Form.Item>
             <Form.Item name="isp" label="运营商">
-              <Input placeholder="请输入运营商" />
+              <Input placeholder="请输入运营商" allowClear style={{ width: 120 }} />
             </Form.Item>
             <Form.Item name="status" label="状态">
-              <Select placeholder="请选择状态">
+              <Select placeholder="请选择状态" allowClear style={{ width: 100 }}>
                 <Option value={0}>正常</Option>
                 <Option value={1}>故障</Option>
                 <Option value={2}>停用</Option>
@@ -292,17 +303,11 @@ const DedicatedLineManagement: FC = () => {
       <Modal title={editingLine ? '编辑专线' : '新增专线'} open={modalVisible} onOk={handleSave} onCancel={() => { setModalVisible(false); lineForm.resetFields(); setEditingLine(null); }} width={700}>
         <Form form={lineForm} layout="horizontal" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
           <Form.Item name="name" label="专线名称" rules={[{ required: true, message: '请输入专线名称' }]}>
-            <Input placeholder="请输入专线名称" className="user-form-input" />
-          </Form.Item>
-          <Form.Item name="lineCode" label="专线编码" rules={[{ required: true, message: '请输入专线编码' }]}>
-            <Input placeholder="请输入专线编码" disabled={!!editingLine} className="user-form-input" />
+            <Input placeholder="请输入专线名称" />
           </Form.Item>
           <Form.Item name="lineType" label="专线类型" rules={[{ required: true, message: '请选择专线类型' }]}>
-            <Select placeholder="请选择专线类型" className="user-form-input">
-              <Option value="MPLS">MPLS</Option>
-              <Option value="Internet">互联网专线</Option>
-              <Option value="LeasedLine">租用专线</Option>
-              <Option value="Fiber">光纤专线</Option>
+            <Select placeholder="请选择专线类型">
+              {lineTypeDict.map(d => <Option key={d.dictValue} value={d.dictValue}>{d.dictLabel}</Option>)}
             </Select>
           </Form.Item>
           <Row gutter={16}>

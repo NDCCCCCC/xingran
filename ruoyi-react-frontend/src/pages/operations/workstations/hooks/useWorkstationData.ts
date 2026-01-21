@@ -57,8 +57,9 @@ export function useWorkstationData(
 
   const loadDeptOptions = useCallback(async () => {
     try {
+      // 后端返回的是树形结构数组，不是分页格式
       const result = await post('/system/departments/list', {});
-      // 构建树形结构数据
+      // 构建树形结构数据，使用 fieldNames 指定字段映射
       const buildTreeData = (depts: any[]): DeptTreeNode[] => {
         return depts.map((dept) => ({
           title: dept.deptName || dept.name,
@@ -68,7 +69,8 @@ export function useWorkstationData(
             dept.children && dept.children.length > 0 ? buildTreeData(dept.children) : undefined,
         }));
       };
-      const deptList = Array.isArray(result.data?.list) ? result.data.list : [];
+      // 数据直接在 result.data 中，不是 result.data.list
+      const deptList = Array.isArray(result.data) ? result.data : [];
       setDeptTreeData(buildTreeData(deptList));
     } catch (error) {
       handleApiError(error, '加载部门选项', false);

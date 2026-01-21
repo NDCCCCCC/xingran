@@ -104,7 +104,9 @@ const WorkstationManagement: FC = () => {
     setUserOptions
   );
 
-  const { openModal, closeModal, handleSave, handleDelete, handleBatchDelete } = useWorkstationModals();
+  const { openModal, closeModal, handleSave, handleDelete, handleBatchDelete } = useWorkstationModals(
+    loadUserOptions
+  );
 
   const {
     viewMode,

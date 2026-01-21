@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { FC } from 'react';
 import {
   Table, Button, Space, Modal, Form, Input, Select, Popconfirm,
-  Tag, Card, Row, Col, Statistic, Alert, Radio, Cascader,
+  Tag, Card, Row, Col, Statistic, Alert, Radio, Cascader, Tooltip,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -48,7 +48,6 @@ interface NetworkDeviceOption {
 interface DevicePortOption {
   id: string;
   portName: string;
-  portId: string;
   status: string;
 }
 
@@ -198,7 +197,7 @@ const InfoPointManagement: FC = () => {
       const devices = result.data?.list || [];
       setNetworkDevices(devices.map((d: any) => ({
         id: d.id,
-        name: d.name,
+        name: d.deviceName,
         ipAddress: d.ipAddress,
       })));
     } catch (error) { handleApiError(error, '加载网络设备列表', false); }
@@ -214,8 +213,7 @@ const InfoPointManagement: FC = () => {
       const ports = result.data?.list || [];
       setDevicePorts(ports.map((p: any) => ({
         id: p.id,
-        portName: p.portName || p.name,
-        portId: p.portId || p.port,
+        portName: p.interfaceName || p.portName || p.name,
         status: p.status,
       })));
     } catch (error) { handleApiError(error, '加载设备端口列表', false); }
@@ -293,9 +291,14 @@ const InfoPointManagement: FC = () => {
     return statusMap[status as keyof typeof statusMap] || '未知';
   };
 
+  // 截断设备名称，超出长度显示省略号
+  const truncateDeviceName = (name: string, maxLength = 15) => {
+    if (name.length <= maxLength) return name;
+    return name.substring(0, maxLength) + '...';
+  };
+
   const columns: ColumnsType<InfoPoint> = [
     { title: '信息点名称', dataIndex: 'name', key: 'name', width: 150 },
-    { title: '信息点编码', dataIndex: 'code', key: 'code', width: 150 },
     {
       title: '信息点类型',
       dataIndex: 'infoPointType',
@@ -399,7 +402,6 @@ const InfoPointManagement: FC = () => {
                 {workstationOptions.filter(w => w.id).map(w => <Option key={w.id} value={w.id}>{w.name}</Option>)}
               </Select>
             </Form.Item>
-            <Form.Item name="code" label="信息点编码"><Input placeholder="请输入信息点编码" allowClear style={{ width: 150 }} /></Form.Item>
             <Form.Item name="name" label="信息点名称"><Input placeholder="请输入信息点名称" allowClear style={{ width: 150 }} /></Form.Item>
             <Form.Item name="infoPointType" label="信息点类型">
               <Select placeholder="请选择类型" allowClear style={{ width: 120 }}>
@@ -457,15 +459,25 @@ const InfoPointManagement: FC = () => {
                     setSelectedDeviceId(value);
                     loadDevicePorts(value);
                   }}
-                  filterOption={(input, option) =>
-                    (option?.label as string)?.toString().toLowerCase().includes(input.toLowerCase())
-                  }
+                  filterOption={(input, option) => {
+                    const device = networkDevices.find(d => d.id === option?.value);
+                    if (!device) return false;
+                    const searchText = `${device.name} ${device.ipAddress}`.toLowerCase();
+                    return searchText.includes(input.toLowerCase());
+                  }}
+                  optionLabelProp="label"
                 >
-                  {networkDevices.map(d => (
-                    <Option key={d.id} value={d.id}>
-                      {d.name} ({d.ipAddress})
-                    </Option>
-                  ))}
+                  {networkDevices.map(d => {
+                    const fullName = `${d.name} (${d.ipAddress})`;
+                    const displayName = `${truncateDeviceName(d.name)} (${d.ipAddress})`;
+                    return (
+                      <Option key={d.id} value={d.id} label={displayName} name={d.name}>
+                        <Tooltip title={fullName} placement="right">
+                          <span>{displayName}</span>
+                        </Tooltip>
+                      </Option>
+                    );
+                  })}
                 </Select>
               </Form.Item>
             </Col>
@@ -476,9 +488,12 @@ const InfoPointManagement: FC = () => {
                   allowClear
                   disabled={!selectedDeviceId}
                   showSearch
+                  filterOption={(input, option) =>
+                    (option?.label as string)?.toString().toLowerCase().includes(input.toLowerCase())
+                  }
                 >
                   {devicePorts.map(p => (
-                    <Option key={p.id} value={p.portId}>
+                    <Option key={p.id} value={p.id}>
                       {p.portName}
                     </Option>
                   ))}

@@ -9,7 +9,6 @@ import LayoutProvider from '@/design-system/components/LayoutProvider';
 import ConfigProvider from '@/components/ConfigProvider';
 import Layout from '@/components/layout';
 import Login from '@/pages/login';
-import Dashboard from '@/pages/dashboard';
 // 系统管理页面
 import UserManagement from '@/pages/system/user';
 import RoleManagement from '@/pages/system/role';
@@ -74,6 +73,10 @@ import DedicatedLineManagement from '@/pages/operations/dedicated-lines';
 import RoomDeviceManagement from '@/pages/operations/room-devices';
 import BuildingSpacesPage from '@/pages/operations/building-spaces';
 import BuildingSpaces3D from '@/pages/operations/building-spaces-3d';
+// 仪表盘系统路由
+import DashboardList from '@/pages/dashboard-system';
+import DashboardView from '@/pages/dashboard-system/view';
+import DashboardEdit from '@/pages/dashboard-system/edit';
 import './App.css';
 
 // 创建React Query客户端
@@ -141,7 +144,9 @@ function App() {
                       <Layout>
                         <Routes>
                           <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                          <Route path="/dashboard" element={<Dashboard />} />
+                          <Route path="/dashboard" element={<DashboardList />} />
+                          <Route path="/dashboard/:id" element={<DashboardView />} />
+                          <Route path="/dashboard/:id/edit" element={<DashboardEdit />} />
 
                           {/* 个人中心和系统设置路由 */}
                           <Route path="/profile" element={<ProfilePage />} />
@@ -183,14 +188,6 @@ function App() {
                           <Route path="/network/mac" element={<MACAddressPage />} />
                           <Route path="/network/ports" element={<PortStatusPage />} />
 
-                          {/* 值班管理路由 */}
-                          <Route path="/duty/pools" element={<DutyPoolPage />} />
-                          <Route path="/duty/management" element={<DutyManagementPage />} />
-                          <Route path="/duty/schedules" element={<DutySchedulesPage />} />
-                          <Route path="/duty/holidays" element={<Navigate to="/duty/management" replace />} />
-                          <Route path="/duty/config" element={<Navigate to="/duty/management" replace />} />
-                          <Route path="/duty/my-duty" element={<MyDutyPage />} />
-
                           {/* 运维管理 - 值班路由（带 ops 前缀） */}
                           <Route path="/ops/duty/pools" element={<DutyPoolPage />} />
                           <Route path="/ops/duty/management" element={<DutyManagementPage />} />
@@ -198,12 +195,6 @@ function App() {
                           <Route path="/ops/duty/holidays" element={<Navigate to="/ops/duty/management" replace />} />
                           <Route path="/ops/duty/config" element={<Navigate to="/ops/duty/management" replace />} />
                           <Route path="/ops/duty/my-duty" element={<MyDutyPage />} />
-
-                          {/* 运维工单管理路由 */}
-                          <Route path="/workorder/orders" element={<WorkOrderPage />} />
-                          <Route path="/workorder/categories" element={<WorkOrderCategoryPage />} />
-                          <Route path="/workorder/statistics" element={<WorkOrderStatisticsPage />} />
-                          <Route path="/workorder/periodic/templates" element={<PeriodicTemplatePage />} />
 
                           {/* 运维管理 - 工单路由（带 ops 前缀） */}
                           <Route path="/ops/workorder/orders" element={<WorkOrderPage />} />
@@ -215,12 +206,6 @@ function App() {
                           <Route path="/knowledge/articles" element={<KnowledgeArticlePage />} />
                           <Route path="/knowledge/view" element={<KnowledgeViewPage />} />
 
-                          {/* AD域管理路由 */}
-                          <Route path="/ad-domain/configs" element={<ADConfigPage />} />
-                          <Route path="/ad-domain/ous" element={<ADOUPage />} />
-                          <Route path="/ad-domain/groups" element={<ADGroupPage />} />
-                          <Route path="/ad-domain/users" element={<ADUserPage />} />
-                          <Route path="/ad-domain/logs" element={<ADSyncLogsPage />} />
                           {/* 运维管理路由 */}
                           <Route path="/ops/ad-domain/configs" element={<ADConfigPage />} />
                           <Route path="/ops/ad-domain/ous" element={<ADOUPage />} />

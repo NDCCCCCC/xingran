@@ -309,6 +309,9 @@ func (d *Database) AutoMigrate() error {
 		&operations.OpsDedicatedLine{},
 		&operations.OpsRoomDevice{},
 		&operations.OpsInfoPoint{},
+		// 仪表盘系统相关模型
+		&models.Dashboard{},
+		&models.DashboardVersion{},
 	)
 	if err != nil {
 		return err

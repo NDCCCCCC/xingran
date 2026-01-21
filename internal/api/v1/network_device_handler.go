@@ -617,3 +617,24 @@ func getEnrichmentStatus(core *core.Core) gin.HandlerFunc {
 		})
 	}
 }
+
+// getNetworkDeviceStatistics 获取设备统计信息
+// @Summary 获取设备统计信息
+// @Description 获取网络设备的统计数据，包括总数、在线状态、按类型/厂商/部门分组统计
+// @Tags 网络设备管理
+// @Accept json
+// @Produce json
+// @Success 200 {object} response.Response{data=map[string]interface{}}
+// @Router /network/devices/statistics [get]
+func getNetworkDeviceStatistics(core *core.Core) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		stats, err := core.NetworkDeviceService.GetDeviceStatistics(c.Request.Context())
+		if err != nil {
+			response.Error(c, response.ErrServerError, "获取设备统计失败: "+err.Error())
+			return
+		}
+
+		// 直接返回统计数据，response.Success会自动包装成 {code: 0, data: stats}
+		response.Success(c, stats)
+	}
+}

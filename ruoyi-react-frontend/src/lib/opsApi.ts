@@ -267,7 +267,6 @@ export const roomDeviceApi = {
 // ==================== 专线管理 ====================
 
 export interface DedicatedLineListParams extends PageParams {
-  lineCode?: string;
   lineType?: string;
   isp?: string;
   status?: number;

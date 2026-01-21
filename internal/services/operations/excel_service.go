@@ -87,7 +87,7 @@ func (s *ExcelService) getExampleValue(col ExcelColumn) string {
 			}
 		}
 		switch col.Field {
-		case "name", "code", "workstationCode", "deviceCode", "lineCode":
+		case "name", "code", "workstationCode", "deviceCode":
 			return "示例001"
 		case "status":
 			return "0"

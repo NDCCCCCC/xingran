@@ -17,6 +17,8 @@ func SetupMonitorRouter(r *gin.RouterGroup, core *core.Core) {
 
 // SetupNetworkDeviceRouter 设置网络设备路由
 func SetupNetworkDeviceRouter(r *gin.RouterGroup, core *core.Core) {
+	// 设备统计（用于仪表盘Widget）
+	r.GET("/statistics", getNetworkDeviceStatistics(core))
 	// 设备列表
 	r.POST("/list", listNetworkDevices(core))
 	// 设备探测（SNMP探测获取设备信息）

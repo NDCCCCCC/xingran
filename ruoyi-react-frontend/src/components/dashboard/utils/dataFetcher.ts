@@ -1,0 +1,257 @@
+/**
+ * DataFetcher - 数据获取器
+ *
+ * 统一的数据获取接口，支持API、WebSocket和静态数据
+ */
+
+import { get, post } from '@/lib/api';
+import type { DataSourceConfig, ApiDataSourceConfig, WebSocketDataSourceConfig, StaticDataSourceConfig } from '@/types/dashboard';
+
+/**
+ * 数据获取结果
+ */
+export interface DataFetchResult<T = unknown> {
+	/** 数据 */
+	data: T;
+	/** 时间戳 */
+	timestamp: number;
+	/** 是否有错误 */
+	error?: string;
+}
+
+/**
+ * 数据获取器类
+ */
+export class DataFetcher {
+	/** API 请求缓存 */
+	private apiCache = new Map<string, DataFetchResult<unknown>>();
+
+	/** WebSocket 连接缓存 */
+	private wsConnections = new Map<string, WebSocket>();
+
+	/** 缓存过期时间（毫秒） */
+	private cacheExpiry = 60000; // 默认1分钟
+
+	/**
+	 * 获取数据
+	 */
+	async fetch<T = unknown>(dataSource: any): Promise<DataFetchResult<T>> {
+		console.log('[dataFetcher.fetch] input dataSource:', dataSource);
+
+		// 处理后端返回的包装格式：{ api: { type: 'api', ... } }
+		let unwrappedSource = dataSource;
+		if (dataSource.api) {
+			unwrappedSource = dataSource.api;
+			console.log('[dataFetcher.fetch] unwrapped api source:', unwrappedSource);
+		} else if (dataSource.websocket) {
+			unwrappedSource = dataSource.websocket;
+		} else if (dataSource.static) {
+			unwrappedSource = dataSource.static;
+		}
+
+		// 根据type属性判断数据源类型
+		if (unwrappedSource.type === 'api') {
+			return this.fetchFromAPI(unwrappedSource as ApiDataSourceConfig);
+		}
+		if (unwrappedSource.type === 'websocket') {
+			return this.fetchFromWebSocket(unwrappedSource as WebSocketDataSourceConfig);
+		}
+		if (unwrappedSource.type === 'static') {
+			return this.fetchStatic(unwrappedSource as StaticDataSourceConfig);
+		}
+
+		console.log('[dataFetcher.fetch] invalid data source, returning error');
+		return {
+			data: null as T,
+			timestamp: Date.now(),
+			error: '无效的数据源配置',
+		};
+	}
+
+	/**
+	 * 从API获取数据
+	 */
+	private async fetchFromAPI<T = unknown>(config: ApiDataSourceConfig): Promise<DataFetchResult<T>> {
+		console.log('[dataFetcher.fetchFromAPI] config:', config);
+
+		try {
+			// 检查缓存
+			const cacheKey = this.getCacheKey(config);
+			const cached = this.apiCache.get(cacheKey);
+			if (cached && Date.now() - cached.timestamp < this.cacheExpiry) {
+				console.log('[dataFetcher.fetchFromAPI] returning cached data:', cached.data);
+				return cached as DataFetchResult<T>;
+			}
+
+			let response: any;
+
+			// 根据HTTP方法发送请求
+			if (config.method === 'GET') {
+				// GET请求：参数作为查询参数
+				console.log('[dataFetcher.fetchFromAPI] calling GET:', config.endpoint, 'params:', config.params);
+				response = await get(config.endpoint, config.params);
+			} else {
+				// POST请求：参数作为请求体
+				console.log('[dataFetcher.fetchFromAPI] calling POST:', config.endpoint, 'body:', config.params ?? config.body);
+				response = await post(config.endpoint, config.params ?? config.body ?? {});
+			}
+
+			console.log('[dataFetcher.fetchFromAPI] response:', response);
+
+			// 提取数据：标准API响应格式为 { code: 0, data: {...} }
+			// response.data 包含实际的业务数据
+			let actualData: any = response;
+
+			// 如果响应有 code 字段，说明是标准API响应
+			if (response && typeof response === 'object' && 'code' in response) {
+				if (response.code === 0 && response.data !== undefined) {
+					actualData = response.data;
+				} else {
+					// 业务错误
+					console.log('[dataFetcher.fetchFromAPI] business error:', response.message);
+					return {
+						data: null as T,
+						timestamp: Date.now(),
+						error: response.message || 'API请求失败',
+					};
+				}
+			}
+
+			console.log('[dataFetcher.fetchFromAPI] actualData:', actualData);
+
+			const result: DataFetchResult<T> = {
+				data: actualData as T,
+				timestamp: Date.now(),
+			};
+
+			// 更新缓存 - 缓存提取后的实际数据
+			this.apiCache.set(cacheKey, result as DataFetchResult<unknown>);
+
+			return result;
+		} catch (error) {
+			console.log('[dataFetcher.fetchFromAPI] exception:', error);
+			return {
+				data: null as T,
+				timestamp: Date.now(),
+				error: (error as Error).message,
+			};
+		}
+	}
+
+	/**
+	 * 从WebSocket获取数据
+	 */
+	private fetchFromWebSocket<T = unknown>(config: WebSocketDataSourceConfig): Promise<DataFetchResult<T>> {
+		return new Promise((resolve) => {
+			try {
+				// 检查是否已有连接
+				let ws = this.wsConnections.get(config.channel);
+
+				if (!ws || ws.readyState !== WebSocket.OPEN) {
+					const wsUrl = this.getWebSocketUrl(config.channel);
+					ws = new WebSocket(wsUrl);
+					this.wsConnections.set(config.channel, ws);
+				}
+
+				// 设置一次性消息处理
+				const handler = (event: MessageEvent) => {
+					try {
+						const data = JSON.parse(event.data);
+						resolve({
+							data: data as T,
+							timestamp: Date.now(),
+						});
+						ws?.removeEventListener('message', handler);
+					} catch {
+						// 忽略解析错误
+					}
+				};
+
+				ws.addEventListener('message', handler);
+
+				// 超时处理
+				setTimeout(() => {
+					ws?.removeEventListener('message', handler);
+					resolve({
+						data: null as T,
+						timestamp: Date.now(),
+						error: 'WebSocket请求超时',
+					});
+				}, 5000);
+			} catch (error) {
+				resolve({
+					data: null as T,
+					timestamp: Date.now(),
+					error: (error as Error).message,
+				});
+			}
+		});
+	}
+
+	/**
+	 * 获取静态数据
+	 */
+	private fetchStatic<T = unknown>(config: StaticDataSourceConfig): Promise<DataFetchResult<T>> {
+		return Promise.resolve({
+			data: config.data as T,
+			timestamp: Date.now(),
+		});
+	}
+
+	/**
+	 * 获取缓存键
+	 */
+	private getCacheKey(config: ApiDataSourceConfig): string {
+		return `${config.method}:${config.endpoint}:${JSON.stringify(config.params ?? {})}`;
+	}
+
+	/**
+	 * 获取WebSocket URL
+	 */
+	private getWebSocketUrl(channel: string): string {
+		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+		const host = import.meta.env.VITE_WS_HOST || window.location.host;
+		return `${protocol}//${host}/ws/${channel}`;
+	}
+
+	/**
+	 * 清除缓存
+	 */
+	clearCache(pattern?: string): void {
+		if (pattern) {
+			for (const key of this.apiCache.keys()) {
+				if (key.includes(pattern)) {
+					this.apiCache.delete(key);
+				}
+			}
+		} else {
+			this.apiCache.clear();
+		}
+	}
+
+	/**
+	 * 关闭WebSocket连接
+	 */
+	closeWebSocket(channel?: string): void {
+		if (channel) {
+			const ws = this.wsConnections.get(channel);
+			if (ws) {
+				ws.close();
+				this.wsConnections.delete(channel);
+			}
+		} else {
+			this.wsConnections.forEach(ws => ws.close());
+			this.wsConnections.clear();
+		}
+	}
+
+	/**
+	 * 设置缓存过期时间
+	 */
+	setCacheExpiry(ms: number): void {
+		this.cacheExpiry = ms;
+	}
+}
+
+// 导出单例
+export const dataFetcher = new DataFetcher();

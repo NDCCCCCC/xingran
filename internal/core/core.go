@@ -51,6 +51,10 @@ type Core struct {
 	MenuCacheService   *services.MenuCacheService   // 菜单缓存服务
 	UserCacheService   *services.UserCacheService   // 用户缓存服务
 	PostCacheService   *services.PostCacheService   // 岗位缓存服务
+
+	// API端点元数据服务
+	APIMetadata        *config.APIMetadataConfig    // API元数据配置
+	APIEndpointService *services.APIEndpointService // API端点服务
 }
 
 // GetDB 获取数据库连接
@@ -279,6 +283,13 @@ func (c *Core) Init() error {
 	c.OperLogService = services.NewOperLogService()
 	log.Println("操作日志服务初始化完成")
 
+	// 16. 初始化API端点元数据服务
+	if err := c.initAPIEndpointService(); err != nil {
+		log.Printf("警告：初始化API端点元数据服务失败: %v", err)
+	} else {
+		log.Println("API端点元数据服务初始化完成")
+	}
+
 	return nil
 }
 
@@ -357,4 +368,23 @@ func (c *Core) initCache() (cache.Cache, error) {
 		// 容量：配置中指定的大小，过期时间：配置中指定的清理时间
 		return cache.NewMemoryCache(c.Config.Cache.MaxSize, time.Duration(c.Config.Cache.CleanupTime)*time.Second), nil
 	}
+}
+
+// initAPIEndpointService 初始化API端点元数据服务
+func (c *Core) initAPIEndpointService() error {
+	// 加载API元数据配置
+	metadata, err := config.LoadAPIMetadata("./configs/api_metadata.yaml")
+	if err != nil {
+		return err
+	}
+	c.APIMetadata = metadata
+
+	// 创建API端点服务
+	c.APIEndpointService = services.NewAPIEndpointService(
+		metadata,
+		c.Cache,
+		c.GetDB(),
+	)
+
+	return nil
 }

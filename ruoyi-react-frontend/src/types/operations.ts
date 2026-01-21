@@ -95,8 +95,7 @@ export interface RoomPhoto {
 export interface DedicatedLine {
   id: string;
   name: string;                // 专线名称
-  lineCode: string;
-  lineType: DedicatedLineType;
+  lineType: string;            // 专线类型（数据字典）
   bandwidth?: string;
   isp: string;
   sourceDeviceId?: string;
@@ -123,7 +122,6 @@ export interface DedicatedLine {
   updatedAt: string;
 }
 
-export type DedicatedLineType = 'internet' | 'mpls' | 'leased_line' | 'fiber';
 export type LineStatus = 0 | 1 | 2; // 0: 正常, 1: 故障, 2: 停用
 
 // 机房设备

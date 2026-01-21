@@ -615,9 +615,6 @@ export interface RoomDevice {
   updatedAt: string;
 }
 
-// 专线类型
-export type LineType = 'MPLS' | 'Internet' | 'LeasedLine' | 'Fiber';
-
 // 专线状态
 export type LineStatus = 0 | 1 | 2;  // 0:正常 1:故障 2:停用
 
@@ -625,8 +622,7 @@ export type LineStatus = 0 | 1 | 2;  // 0:正常 1:故障 2:停用
 export interface DedicatedLine {
   id: string;
   name: string;                // 专线名称
-  lineCode: string;
-  lineType: LineType;
+  lineType: string;            // 专线类型（数据字典）
   bandwidth?: string;
   isp: string;
   sourceDeviceId?: string;

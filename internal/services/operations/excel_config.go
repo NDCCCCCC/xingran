@@ -164,8 +164,8 @@ var ExcelConfigs = map[string]ExcelConfig{
 		HasHeader:  true,
 		StartRow:   2,
 		Columns: []ExcelColumn{
-			{Field: "lineCode", Header: "专线编码", Required: true, MaxLength: 50},
-			{Field: "lineType", Header: "专线类型", Options: map[interface{}]string{string(operations.LineTypeMPLS): "MPLS VPN", string(operations.LineTypeInternet): "互联网专线", string(operations.LineTypeLeasedLine): "租用专线", string(operations.LineTypeFiber): "光纤专线"}},
+			{Field: "name", Header: "专线名称", Required: true, MaxLength: 100},
+			{Field: "lineType", Header: "专线类型", Required: true, Options: map[interface{}]string{"internet": "互联网专线", "intranet": "内网专线", "cloud_desktop": "云桌面专线", "mpls": "MPLS VPN", "fiber": "光纤专线", "leased_line": "租用专线"}},
 			{Field: "bandwidth", Header: "带宽", MaxLength: 50},
 			{Field: "isp", Header: "运营商", Required: true, MaxLength: 100},
 			{Field: "sourceDeviceName", Header: "源设备名称", MaxLength: 100},
@@ -180,6 +180,7 @@ var ExcelConfigs = map[string]ExcelConfig{
 			{Field: "contractNo", Header: "合同编号", MaxLength: 100},
 			{Field: "monthlyFee", Header: "月租(元)"},
 			{Field: "status", Header: "状态", Options: map[interface{}]string{int(operations.LineStatusNormal): "正常", int(operations.LineStatusFault): "故障", int(operations.LineStatusDisabled): "停用"}},
+			{Field: "remark", Header: "备注", MaxLength: 500},
 		},
 	},
 	"info-point": {

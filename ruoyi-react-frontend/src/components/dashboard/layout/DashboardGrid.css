@@ -1,0 +1,147 @@
+/**
+ * DashboardGrid 样式
+ *
+ * 仪表盘网格布局容器样式
+ */
+
+.dashboard-grid {
+	width: 100%;
+	min-height: 100%;
+}
+
+/* 编辑模式样式 */
+.dashboard-grid--editable {
+	background-image:
+		linear-gradient(to right, var(--grid-line-color, #f0f0f0) 1px, transparent 1px),
+		linear-gradient(to bottom, var(--grid-line-color, #f0f0f0) 1px, transparent 1px);
+	background-size: calc(100% / 24) var(--row-height, 60px);
+	background-position: -1px -1px;
+}
+
+/* react-grid-layout 覆盖样式 */
+.dashboard-grid .react-grid-layout {
+	position: relative;
+}
+
+.dashboard-grid .react-grid-item {
+	transition: all 200ms ease;
+	transition-property: left, top;
+}
+
+.dashboard-grid .react-grid-item.resizing {
+	opacity: 0.9;
+	z-index: 10;
+}
+
+.dashboard-grid .react-grid-item.react-grid-placeholder {
+	background: var(--grid-placeholder-bg, rgba(0, 0, 0, 0.05));
+	border: 2px dashed var(--grid-placeholder-border, #d9d9d9);
+	border-radius: var(--border-radius-base, 4px);
+	opacity: 1;
+}
+
+/* 编辑模式下的 Widget 样式增强 */
+.dashboard-grid--editable .react-grid-item {
+	cursor: move;
+}
+
+.dashboard-grid--editable .react-grid-item:hover {
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* 调整大小手柄样式 */
+.dashboard-grid .react-resizable-handle {
+	position: absolute;
+	width: 20px;
+	height: 20px;
+	bottom: 0;
+	right: 0;
+	background: linear-gradient(135deg, transparent 50%, var(--resize-handle-color, #bfbfbf) 50%);
+	background-position: bottom right;
+	background-repeat: no-repeat;
+	background-size: 10px 10px;
+	cursor: se-resize;
+	z-index: 1;
+}
+
+.dashboard-grid .react-resizable-handle:hover {
+	background: linear-gradient(135deg, transparent 50%, var(--resize-handle-hover-color, #8c8c8c) 50%);
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+	.dashboard-grid {
+		padding: 8px;
+	}
+
+	.dashboard-grid .react-grid-layout {
+		margin: 0 -8px;
+	}
+}
+
+/* 空状态样式 */
+.dashboard-grid-placeholder {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 400px;
+	width: 100%;
+	background: var(--placeholder-bg, #fafafa);
+	border: 2px dashed var(--placeholder-border, #d9d9d9);
+	border-radius: var(--border-radius-base, 4px);
+}
+
+.dashboard-grid-placeholder__content {
+	text-align: center;
+	color: var(--text-color-secondary, rgba(0, 0, 0, 0.45));
+}
+
+.dashboard-grid-placeholder__icon {
+	font-size: 64px;
+	margin-bottom: 16px;
+	opacity: 0.5;
+}
+
+.dashboard-grid-placeholder__title {
+	font-size: 16px;
+	font-weight: 500;
+	color: var(--text-color, rgba(0, 0, 0, 0.85));
+	margin: 0 0 8px 0;
+}
+
+.dashboard-grid-placeholder__message {
+	font-size: 14px;
+	margin: 0;
+}
+
+/* 拖拽中样式 */
+.dashboard-grid .react-grid-item.dragging {
+	opacity: 0.8;
+	z-index: 100;
+	transform: scale(1.02);
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* 防止拖拽时出现文字选择 */
+.dashboard-grid--editable {
+	user-select: none;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+}
+
+/* 暗色主题适配 */
+@media (prefers-color-scheme: dark) {
+	.dashboard-grid--editable {
+		--grid-line-color: #303030;
+		--grid-placeholder-bg: rgba(255, 255, 255, 0.05);
+		--grid-placeholder-border: #434343;
+		--resize-handle-color: #595959;
+		--resize-handle-hover-color: #8c8c8c;
+	}
+
+	.dashboard-grid-placeholder {
+		--placeholder-bg: #141414;
+		--placeholder-border: #434343;
+	}
+}

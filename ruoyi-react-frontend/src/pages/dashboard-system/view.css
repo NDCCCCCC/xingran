@@ -1,0 +1,23 @@
+/**
+ * Dashboard View Page 样式
+ */
+
+.dashboard-view-page {
+	display: flex;
+	flex-direction: column;
+	height: 100vh;
+}
+
+.dashboard-view-page.loading,
+.dashboard-view-page.empty {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 100vh;
+}
+
+.dashboard-view-page__content {
+	flex: 1;
+	overflow: auto;
+	padding: 16px;
+}
