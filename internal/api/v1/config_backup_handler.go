@@ -139,6 +139,31 @@ func getBackupContent(core *core.Core) gin.HandlerFunc {
 	}
 }
 
+// GetBackupContentRequest 获取备份内容请求
+type GetBackupContentRequest struct {
+	ID string `json:"id" binding:"required"`
+}
+
+// getBackupContentFromBody 获取备份内容（从请求body中获取ID）
+func getBackupContentFromBody(core *core.Core) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req GetBackupContentRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			response.Error(c, response.ErrBadRequest, "请求参数错误")
+			return
+		}
+
+		svc := services.NewConfigBackupService(core.DB.GetDB(), core.DeviceExecutor)
+		content, err := svc.GetBackupContent(c.Request.Context(), req.ID)
+		if err != nil {
+			response.Error(c, response.ErrServerError, err.Error())
+			return
+		}
+
+		response.Success(c, gin.H{"content": content})
+	}
+}
+
 // deleteConfigBackup 删除备份
 func deleteConfigBackup(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -337,6 +362,8 @@ func SetupConfigBackupRouter(r *gin.RouterGroup, core *core.Core) {
 	r.POST("/list", listConfigBackups(core))
 	// 创建备份
 	r.POST("", createConfigBackup(core))
+	// 获取备份内容（从body中获取ID，用于批量查询）
+	r.POST("/content", getBackupContentFromBody(core))
 	// 获取备份详情
 	r.POST("/:id", getBackupContent(core))
 	// 删除备份
