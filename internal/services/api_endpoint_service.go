@@ -108,7 +108,7 @@ func (s *APIEndpointService) GetUserAccessibleEndpoints(
 		}
 	}
 
-	_ = s.cache.SetJSON(ctx, cacheKey, result, 5*time.Minute)
+	s.cache.SetJSON(ctx, cacheKey, result, 5*time.Minute)
 
 	return result, nil
 }
@@ -150,12 +150,10 @@ func (s *APIEndpointService) hasPermission(
 }
 
 // ValidateEndpoint 验证端点是否存在
-func (s *APIEndpointService) ValidateEndpoint(
-	route, method string,
-) (*EndpointDetail, error) {
+func (s *APIEndpointService) ValidateEndpoint(route, method string) (*EndpointDetail, error) {
 	endpointMeta := s.metadataConfig.GetEndpointByRoute(route, method)
 	if endpointMeta == nil {
-		return nil, fmt.Errorf("端点不存在: %s %s", method, route)
+		return nil, fmt.Errorf("endpoint not found: %s %s", method, route)
 	}
 
 	var category, icon, module string

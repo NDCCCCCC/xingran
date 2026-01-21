@@ -102,7 +102,7 @@ const DutyHolidayPage: FC = () => {
           <Upload
             accept=".xlsx,.xls"
             showUploadList={false}
-            customRequest={(options) => handleExcelImport(options, fetchList)}
+            customRequest={(options) => handleExcelImport(options as any, fetchList)}
           >
             <Button icon={<UploadOutlined />} type="primary">
               导入Excel

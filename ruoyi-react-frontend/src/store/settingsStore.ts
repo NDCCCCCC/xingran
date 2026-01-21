@@ -43,6 +43,9 @@ interface SettingsActions {
 	// 导入/导出
 	exportPreferences: () => string;
 	importPreferences: (json: string) => void;
+
+	// 内部方法
+	syncToStores: () => void;
 }
 
 type SettingsStore = SettingsState & SettingsActions;

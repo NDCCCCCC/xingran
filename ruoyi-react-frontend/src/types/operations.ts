@@ -26,10 +26,12 @@ export type BuildingStatus = 0 | 1; // 0: 正常, 1: 停用
 // 楼层
 export interface Floor {
   id: string;
+  code: string;           // 楼层编码（用于工位关联）
   name: string;
   floorNo: string;
   buildingId: string;
   buildingName?: string;
+  buildingCode?: string;
   status: FloorStatus;
   remark?: string;
   orderNum: number;
@@ -115,7 +117,6 @@ export interface DedicatedLine {
   carrierContactId?: string;
   carrierContactName?: string;
   carrierContactPhone?: string;
-  contractNo?: string;
   monthlyFee: number;
   remark?: string;
   createdAt: string;

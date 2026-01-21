@@ -54,8 +54,8 @@ export function useJobData(params: UseJobDataParams): UseJobDataReturn {
 
       const result = await post<{ list: JobInfo[]; total: number }>('/monitor/jobs/list', cleanedParams);
 
-      setJobs(result.data?.list || result.list || []);
-      setTotal(result.data?.total || result.total || 0);
+      setJobs(result.list || []);
+      setTotal(result.total || 0);
     } catch (error) {
       console.error('获取任务列表失败:', error);
     } finally {
@@ -73,7 +73,7 @@ export function useJobData(params: UseJobDataParams): UseJobDataReturn {
         pageSize: 50
       });
 
-      setJobLogs(result.data?.list || result.list || []);
+      setJobLogs(result.list || []);
     } catch (error) {
       console.error('获取任务日志失败:', error);
     }

@@ -84,7 +84,7 @@ const WorkstationManagement: FC = () => {
   } = useTableManager<WorkstationOps>(
     async (params) => {
       const { workstationApi } = await import('@/lib/opsApi');
-      const result = await workstationApi.list(params);
+      const result = await workstationApi.list(params) as { data?: { list: WorkstationOps[]; total: number } };
       return { list: result.data?.list || [], total: result.data?.total || 0 };
     },
     {
@@ -93,6 +93,7 @@ const WorkstationManagement: FC = () => {
         pageSize: paginationProps.pageSize,
         setCurrent,
         setPageSize,
+        setTotal,
       },
     }
   );

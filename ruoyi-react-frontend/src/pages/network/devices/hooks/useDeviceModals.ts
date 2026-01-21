@@ -7,6 +7,8 @@ import type { NetworkDevice } from '@/types';
 
 export interface ProbeResult {
   success: boolean;
+  message?: string;
+  device?: NetworkDevice;
   deviceName?: string;
   deviceType?: string;
   vendor?: string;

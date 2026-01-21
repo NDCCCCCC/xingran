@@ -25,6 +25,7 @@ export const flat2Light: ThemeConfig = {
     warning: ['#fbbf24', '#f59e0b', '#d97706'],
     error: ['#f87171', '#ef4444', '#dc2626'],
     info: ['#60a5fa', '#3b82f6', '#2563eb'],
+    processing: ['#4ade80', '#22c55e', '#16a34a'],
 
     // 背景
     background: {

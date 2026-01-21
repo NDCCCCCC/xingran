@@ -5,7 +5,8 @@
 
 import { Card, Space, Tag, Button, Select } from 'antd';
 import { CloseOutlined, BgColorsOutlined, DesktopOutlined } from '@ant-design/icons';
-import type { WorkstationNode, WorkstationOps } from '@/types';
+import type { WorkstationOps } from '@/types';
+import type { WorkstationNode } from '@/components/shared/FloorPlanEditor.types';
 import FloorPlanEditor from '@/components/shared/FloorPlanEditor';
 import { getWorkstationTypeText, getWorkstationStatusText, getWorkstationStatusColor } from '../constants';
 import type { FloorOption } from '../types';

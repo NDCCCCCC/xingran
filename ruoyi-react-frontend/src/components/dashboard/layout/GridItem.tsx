@@ -4,7 +4,7 @@
  * 包装每个Widget，提供额外的样式和交互功能
  */
 
-import { type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { useDashboardStore } from '@/store/dashboardStore';
 import type { WidgetConfig } from '@/types/dashboard';
 import './GridItem.css';

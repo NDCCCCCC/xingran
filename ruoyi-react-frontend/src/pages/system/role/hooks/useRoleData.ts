@@ -78,7 +78,7 @@ export function useRoleData(params: UseRoleDataParams): UseRoleDataReturn {
         current: params.current || current,
         pageSize: params.pageSize || pageSize,
         ...params,
-      });
+      }) as { data: { list: Role[]; total: number } };
       setRoles(result.data.list);
       setTotal(result.data.total);
     } catch (error) {
@@ -91,10 +91,10 @@ export function useRoleData(params: UseRoleDataParams): UseRoleDataReturn {
   // 加载统计数据
   const loadStatistics = useCallback(async () => {
     try {
-      const result = await post('/system/roles/list', { current: 1, pageSize: 1000 });
+      const result = await post('/system/roles/list', { current: 1, pageSize: 1000 }) as { data: { list: Role[] } };
       const allRoles = result.data.list || [];
-      const activeCount = allRoles.filter((r: any) => r.status === 0).length;
-      const inactiveCount = allRoles.filter((r: any) => r.status === 1).length;
+      const activeCount = allRoles.filter((r: Role) => r.status === 0).length;
+      const inactiveCount = allRoles.filter((r: Role) => r.status === 1).length;
       setStatistics({
         total: allRoles.length,
         active: activeCount,
@@ -102,8 +102,8 @@ export function useRoleData(params: UseRoleDataParams): UseRoleDataReturn {
       });
     } catch (error) {
       console.error('加载统计数据失败', error);
-      const activeCount = roles.filter((r: any) => r.status === 0).length;
-      const inactiveCount = roles.filter((r: any) => r.status === 1).length;
+      const activeCount = roles.filter((r: Role) => r.status === 0).length;
+      const inactiveCount = roles.filter((r: Role) => r.status === 1).length;
       setStatistics({
         total: roles.length,
         active: activeCount,
@@ -115,7 +115,7 @@ export function useRoleData(params: UseRoleDataParams): UseRoleDataReturn {
   // 加载菜单树
   const loadMenuTree = useCallback(async () => {
     try {
-      const result = await post('/system/menus/tree-select');
+      const result = await post('/system/menus/tree-select') as { data: any[] };
       const processTreeData = (nodes: any[]): TreeDataNode[] => {
         return nodes.map((node: any) => ({
           key: node.key || node.id,
@@ -133,7 +133,7 @@ export function useRoleData(params: UseRoleDataParams): UseRoleDataReturn {
   // 加载部门树
   const loadDeptTree = useCallback(async () => {
     try {
-      const result = await post('/system/departments/tree-select');
+      const result = await post('/system/departments/tree-select') as { data: any[] };
       const processTreeData = (nodes: any[]): TreeDataNode[] => {
         return nodes.map((node: any) => ({
           key: node.key || node.id,
@@ -151,7 +151,7 @@ export function useRoleData(params: UseRoleDataParams): UseRoleDataReturn {
   // 加载角色的菜单权限
   const loadRoleMenus = useCallback(async (roleId: string): Promise<string[]> => {
     try {
-      const result = await post(`/system/menus/role-menu-tree-select/${roleId}`);
+      const result = await post(`/system/menus/role-menu-tree-select/${roleId}`) as { data: { checkedKeys?: string[] } };
       return result.data.checkedKeys || [];
     } catch (error) {
       console.error('加载角色菜单权限失败:', error);
@@ -162,7 +162,7 @@ export function useRoleData(params: UseRoleDataParams): UseRoleDataReturn {
   // 加载角色的部门权限
   const loadRoleDepts = useCallback(async (roleId: string): Promise<string[]> => {
     try {
-      const result = await post(`/system/departments/role-dept-tree-select/${roleId}`);
+      const result = await post(`/system/departments/role-dept-tree-select/${roleId}`) as { data: { checkedKeys?: string[] } };
       return result.data.checkedKeys || [];
     } catch (error) {
       console.error('加载角色部门权限失败:', error);

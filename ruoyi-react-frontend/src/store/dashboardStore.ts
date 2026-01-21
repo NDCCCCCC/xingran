@@ -1,10 +1,3 @@
-/**
- * 仪表盘状态管理
- * Dashboard State Management
- *
- * 管理仪表盘列表、当前仪表盘、编辑状态等
- */
-
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type {
@@ -17,216 +10,62 @@ import type {
 } from '@/types/dashboard';
 import { dashboardService } from '@/services/dashboardService';
 
-// ============= 编辑模式 =============
-
-/**
- * 仪表盘视图模式
- */
 export type DashboardViewMode = 'view' | 'edit';
 
-// ============= 状态定义 =============
-
 interface DashboardState {
-	// ========== 仪表盘列表 ==========
-	/** 仪表盘列表 */
 	dashboards: Dashboard[];
-
-	/** 列表加载状态 */
 	listLoading: boolean;
-
-	/** 列表错误 */
 	listError: string | null;
-
-	/** 列表分页信息 */
 	listPagination: {
 		total: number;
 		current: number;
 		pageSize: number;
 	};
-
-	// ========== 当前仪表盘 ==========
-	/** 当前查看/编辑的仪表盘 */
 	currentDashboard: Dashboard | null;
-
-	/** 当前仪表盘加载状态 */
 	currentLoading: boolean;
-
-	/** 当前仪表盘错误 */
 	currentError: string | null;
-
-	// ========== 编辑状态 ==========
-	/** 视图模式 */
 	viewMode: DashboardViewMode;
-
-	/** 布局是否已修改（未保存） */
 	hasUnsavedChanges: boolean;
-
-	/** 选中的 Widget ID（用于编辑） */
 	selectedWidgetId: string | null;
-
-	/** 正在拖拽的 Widget ID */
 	draggingWidgetId: string | null;
-
-	// ========== 缓存 ==========
-	/** Widget 数据缓存 */
 	widgetDataCache: Map<string, {
 		data: unknown;
 		timestamp: number;
 	}>;
-
-	// ========== 全局设置 ==========
-	/** 是否显示网格线 */
 	showGridLines: boolean;
-
-	/** 是否显示 Widget 边框 */
 	showWidgetBorders: boolean;
 }
 
-// ============= 操作定义 =============
-
 interface DashboardActions {
-	// ========== 仪表盘列表操作 ==========
-	/**
-	 * 获取仪表盘列表
-	 */
 	fetchDashboards: (params?: DashboardListParams) => Promise<void>;
-
-	/**
-	 * 创建仪表盘
-	 */
 	createDashboard: (data: CreateDashboardRequest) => Promise<Dashboard>;
-
-	/**
-	 * 更新仪表盘
-	 */
 	updateDashboard: (id: string, data: UpdateDashboardRequest) => Promise<void>;
-
-	/**
-	 * 删除仪表盘
-	 */
 	deleteDashboard: (id: string) => Promise<void>;
-
-	/**
-	 * 复制仪表盘
-	 */
 	duplicateDashboard: (id: string) => Promise<Dashboard>;
-
-	/**
-	 * 设置默认仪表盘
-	 */
 	setDefaultDashboard: (id: string) => Promise<void>;
-
-	// ========== 当前仪表盘操作 ==========
-	/**
-	 * 获取仪表盘详情
-	 */
 	fetchDashboard: (id: string) => Promise<void>;
-
-	/**
-	 * 设置当前仪表盘（本地状态，不从服务器加载）
-	 */
 	setCurrentDashboard: (dashboard: Dashboard | null) => void;
-
-	/**
-	 * 清除当前仪表盘
-	 */
 	clearCurrentDashboard: () => void;
-
-	// ========== 编辑操作 ==========
-	/**
-	 * 设置视图模式
-	 */
 	setViewMode: (mode: DashboardViewMode) => void;
-
-	/**
-	 * 添加 Widget
-	 */
 	addWidget: (widget: WidgetConfig) => void;
-
-	/**
-	 * 更新 Widget
-	 */
 	updateWidget: (widgetId: string, updates: Partial<WidgetConfig>) => void;
-
-	/**
-	 * 删除 Widget
-	 */
 	removeWidget: (widgetId: string) => void;
-
-	/**
-	 * 批量更新 Widget 布局
-	 */
 	updateWidgetLayouts: (layouts: Array<{ id: string; position: WidgetConfig['position'] }>) => void;
-
-	/**
-	 * 更新布局配置
-	 */
 	updateLayout: (layout: Partial<LayoutConfig>) => void;
-
-	/**
-	 * 保存当前仪表盘
-	 */
 	saveCurrentDashboard: () => Promise<void>;
-
-	/**
-	 * 重置当前仪表盘（撤销未保存的更改）
-	 */
 	resetCurrentDashboard: () => Promise<void>;
-
-	// ========== 选择操作 ==========
-	/**
-	 * 选中 Widget
-	 */
 	selectWidget: (widgetId: string | null) => void;
-
-	/**
-	 * 开始拖拽 Widget
-	 */
 	startDragging: (widgetId: string) => void;
-
-	/**
-	 * 停止拖拽 Widget
-	 */
 	stopDragging: () => void;
-
-	// ========== 缓存操作 ==========
-	/**
-	 * 缓存 Widget 数据
-	 */
 	cacheWidgetData: (widgetId: string, data: unknown) => void;
-
-	/**
-	 * 获取缓存的 Widget 数据
-	 */
 	getCachedWidgetData: (widgetId: string) => unknown | null;
-
-	/**
-	 * 清除 Widget 数据缓存
-	 */
 	clearWidgetCache: (widgetId?: string) => void;
-
-	// ========== 全局设置操作 ==========
-	/**
-	 * 切换网格线显示
-	 */
 	toggleGridLines: () => void;
-
-	/**
-	 * 切换 Widget 边框显示
-	 */
 	toggleWidgetBorders: () => void;
-
-	/**
-	 * 重置所有状态
-	 */
 	reset: () => void;
 }
 
-// ============= Store 类型 =============
-
 type DashboardStore = DashboardState & DashboardActions;
-
-// ============= 初始状态 =============
 
 const initialState: DashboardState = {
 	dashboards: [],
@@ -249,15 +88,11 @@ const initialState: DashboardState = {
 	showWidgetBorders: false,
 };
 
-// ============= Store 创建 =============
-
 export const useDashboardStore = create<DashboardStore>()(
 	persist(
 		(set, get) => ({
-			// ========== 初始状态 ==========
 			...initialState,
 
-			// ========== 仪表盘列表操作 ==========
 			fetchDashboards: async (params) => {
 				set({ listLoading: true, listError: null });
 
@@ -290,7 +125,6 @@ export const useDashboardStore = create<DashboardStore>()(
 			createDashboard: async (data) => {
 				const dashboard = await dashboardService.createDashboard(data);
 
-				// 添加到列表
 				set((state) => ({
 					dashboards: [dashboard, ...state.dashboards],
 					listPagination: {
@@ -305,14 +139,12 @@ export const useDashboardStore = create<DashboardStore>()(
 			updateDashboard: async (id, data) => {
 				await dashboardService.updateDashboard(id, data);
 
-				// 更新列表中的仪表盘
 				set((state) => ({
 					dashboards: state.dashboards.map((d) =>
 						d.id === id ? { ...d, ...data } : d
 					),
 				}));
 
-				// 如果是当前仪表盘，也更新它
 				const { currentDashboard } = get();
 				if (currentDashboard?.id === id) {
 					set({
@@ -328,7 +160,6 @@ export const useDashboardStore = create<DashboardStore>()(
 			deleteDashboard: async (id) => {
 				await dashboardService.deleteDashboard(id);
 
-				// 从列表中移除
 				set((state) => ({
 					dashboards: state.dashboards.filter((d) => d.id !== id),
 					listPagination: {
@@ -342,7 +173,6 @@ export const useDashboardStore = create<DashboardStore>()(
 			duplicateDashboard: async (id) => {
 				const dashboard = await dashboardService.duplicateDashboard(id);
 
-				// 添加到列表
 				set((state) => ({
 					dashboards: [dashboard, ...state.dashboards],
 					listPagination: {
@@ -357,7 +187,6 @@ export const useDashboardStore = create<DashboardStore>()(
 			setDefaultDashboard: async (id) => {
 				await dashboardService.setDefaultDashboard(id);
 
-				// 更新列表
 				set((state) => ({
 					dashboards: state.dashboards.map((d) => ({
 						...d,
@@ -366,7 +195,6 @@ export const useDashboardStore = create<DashboardStore>()(
 				}));
 			},
 
-			// ========== 当前仪表盘操作 ==========
 			fetchDashboard: async (id) => {
 				set({ currentLoading: true, currentError: null });
 
@@ -402,7 +230,6 @@ export const useDashboardStore = create<DashboardStore>()(
 				});
 			},
 
-			// ========== 编辑操作 ==========
 			setViewMode: (mode) => {
 				set({ viewMode: mode });
 			},
@@ -533,7 +360,6 @@ export const useDashboardStore = create<DashboardStore>()(
 				await get().fetchDashboard(currentDashboard.id);
 			},
 
-			// ========== 选择操作 ==========
 			selectWidget: (widgetId) => {
 				set({ selectedWidgetId: widgetId });
 			},
@@ -546,7 +372,6 @@ export const useDashboardStore = create<DashboardStore>()(
 				set({ draggingWidgetId: null });
 			},
 
-			// ========== 缓存操作 ==========
 			cacheWidgetData: (widgetId, data) => {
 				set((state) => {
 					const newCache = new Map(state.widgetDataCache);
@@ -583,7 +408,6 @@ export const useDashboardStore = create<DashboardStore>()(
 				});
 			},
 
-			// ========== 全局设置操作 ==========
 			toggleGridLines: () => {
 				set((state) => ({ showGridLines: !state.showGridLines }));
 			},
@@ -592,14 +416,12 @@ export const useDashboardStore = create<DashboardStore>()(
 				set((state) => ({ showWidgetBorders: !state.showWidgetBorders }));
 			},
 
-			// ========== 重置 ==========
 			reset: () => {
 				set(initialState);
 			},
 		}),
 		{
 			name: 'dashboard-storage',
-			// 只持久化部分状态
 			partialize: (state) => ({
 				viewMode: state.viewMode,
 				showGridLines: state.showGridLines,
@@ -608,8 +430,6 @@ export const useDashboardStore = create<DashboardStore>()(
 		}
 	)
 );
-
-// ============= 选择器（用于避免不必要的重渲染） =============
 
 export const selectCurrentDashboard = (state: DashboardStore) => state.currentDashboard;
 export const selectViewMode = (state: DashboardStore) => state.viewMode;

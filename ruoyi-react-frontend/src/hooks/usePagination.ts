@@ -7,7 +7,7 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { useSettingsStore } from '@/store/settingsStore';
-import type { PaginationConfig } from 'antd';
+import type { TablePaginationConfig } from 'antd/es/table';
 
 export interface UsePaginationOptions {
 	// 页面级覆盖（可选）
@@ -30,7 +30,7 @@ export interface UsePaginationReturn {
 	reset: () => void;
 
 	// Ant Design Pagination props（可直接传给 Table）
-	paginationProps: PaginationConfig;
+	paginationProps: TablePaginationConfig;
 }
 
 /**
@@ -71,7 +71,7 @@ export function usePagination(options: UsePaginationOptions = {}): UsePagination
 	}, [defaultPageSize]);
 
 	// Ant Design Pagination 配置
-	const paginationProps: PaginationConfig = useMemo(() => ({
+	const paginationProps: TablePaginationConfig = useMemo(() => ({
 		current,
 		pageSize,
 		total,

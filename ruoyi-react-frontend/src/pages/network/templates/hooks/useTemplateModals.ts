@@ -133,8 +133,8 @@ export function useTemplateModals(): UseTemplateModalsReturn {
 
   const handlePreview = useCallback(async (id: string) => {
     try {
-      const result = await post(`/network/templates/${id}/preview`, {});
-      setPreviewContent(result.data.content || '');
+      const result = await post(`/network/templates/${id}/preview`, {}) as { data?: { content?: string } };
+      setPreviewContent(result.data?.content || '');
       setPreviewVisible(true);
     } catch (error) {
       handleApiError(error, '预览失败');
@@ -156,8 +156,8 @@ export function useTemplateModals(): UseTemplateModalsReturn {
 
   const handleGetVariables = useCallback(async (id: string) => {
     try {
-      const result = await post(`/network/templates/${id}/variables`, {});
-      setTemplateVariables(result.data.variables || {});
+      const result = await post(`/network/templates/${id}/variables`, {}) as { data?: { variables?: Record<string, any> } };
+      setTemplateVariables(result.data?.variables || {});
       setVariablesModalVisible(true);
     } catch (error) {
       handleApiError(error, '获取变量失败');

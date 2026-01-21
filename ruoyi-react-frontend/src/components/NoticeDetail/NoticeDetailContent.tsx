@@ -3,7 +3,7 @@
  * 用于展示通知的完整内容，支持用户端和管理端
  */
 
-import { FC } from 'react';
+import type { FC } from 'react';
 import {
   Card,
   Tag,
@@ -13,7 +13,7 @@ import {
   Button,
 } from 'antd';
 import { CheckCircleOutlined } from '@ant-design/icons';
-import type { Notice } from '@/types/notice';
+import type { Notice, NoticeAttachment } from '@/types/notice';
 import {
   PRIORITY_COLORS,
   PRIORITY_LABELS,
@@ -131,7 +131,7 @@ const NoticeDetailContent: FC<NoticeDetailContentProps> = ({
           <div>
             <h3 className="text-base font-medium mb-3">附件</h3>
             <Space orientation="vertical" className="w-full">
-              {notice.attachments.map((file: any) => (
+              {notice.attachments.map((file: NoticeAttachment) => (
                 <Card key={file.id} size="small" className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-blue-600">{file.fileName}</span>

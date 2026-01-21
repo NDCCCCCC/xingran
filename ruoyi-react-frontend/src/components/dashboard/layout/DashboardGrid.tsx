@@ -4,8 +4,8 @@
  * 基于 react-grid-layout 实现的可拖拽、可调整大小的网格布局
  */
 
-import { type FC, type ReactNode, useRef, useEffect, useState } from 'react';
-import { Responsive, type Layout } from 'react-grid-layout';
+import { type FC, type ReactNode, useRef, useEffect, useState, useCallback } from 'react';
+import { Responsive, type Layout, type ResponsiveProps } from 'react-grid-layout';
 import { useWindowSize } from '@/hooks/useWindowSize';
 import { useDashboardStore } from '@/store/dashboardStore';
 import type { WidgetConfig } from '@/types/dashboard';
@@ -14,6 +14,15 @@ import { defaultLayoutConfig } from '@/types/dashboard';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import './DashboardGrid.css';
+
+// 扩展 ResponsiveProps 以包含 isDraggable 和 isResizable
+interface ExtendedResponsiveProps extends ResponsiveProps {
+	isDraggable?: boolean;
+	isResizable?: boolean;
+	compactType?: 'vertical' | 'horizontal' | null;
+	preventCollision?: boolean;
+	children: React.ReactNode;
+}
 
 interface DashboardGridProps {
 	/** Widget 列表 */
@@ -90,24 +99,24 @@ export const DashboardGrid: FC<DashboardGridProps> = ({
 	};
 
 	// 拖拽开始/结束
-	const handleDragStart = () => {
+	const handleDragStart = useCallback(() => {
 		useDashboardStore.getState().startDragging('dragging');
-	};
+	}, []);
 
-	const handleDragStop = () => {
+	const handleDragStop = useCallback(() => {
 		useDashboardStore.getState().stopDragging();
-	};
+	}, []);
 
-	const handleResizeStart = () => {
+	const handleResizeStart = useCallback(() => {
 		useDashboardStore.getState().startDragging('dragging');
-	};
+	}, []);
 
-	const handleResizeStop = () => {
+	const handleResizeStop = useCallback(() => {
 		useDashboardStore.getState().stopDragging();
-	};
+	}, []);
 
-	// 准备 props - 直接作为对象传递，避免类型问题
-	const gridProps = {
+	// 准备 props - 使用 proper 类型断言
+	const gridProps: ExtendedResponsiveProps = {
 		className: 'layout',
 		width: containerWidth,
 		layouts: { lg: layouts },
@@ -125,11 +134,12 @@ export const DashboardGrid: FC<DashboardGridProps> = ({
 		onResizeStop: handleResizeStop,
 		compactType: 'vertical',
 		preventCollision: false,
+		children,
 	};
 
 	return (
 		<div ref={containerRef} className={`dashboard-grid ${isEditable ? 'dashboard-grid--editable' : ''}`}>
-			<Responsive {...(gridProps as any)}>
+			<Responsive {...gridProps}>
 				{children}
 			</Responsive>
 		</div>

@@ -70,6 +70,7 @@ const ServerRoomManagement: FC = () => {
         pageSize: paginationProps.pageSize,
         setCurrent,
         setPageSize,
+        setTotal,
       },
     }
   );
@@ -100,7 +101,7 @@ const ServerRoomManagement: FC = () => {
       return;
     }
     try {
-      const result = await floorApi.list({ current: 1, pageSize: 1000, buildingId });
+      const result = await floorApi.list({ current: 1, pageSize: 1000, buildingCode: buildingId });
       const floors = result.data?.list || [];
       setFloorOptions(floors.map((f: any) => ({ id: f.id, code: f.code, name: f.name, floorNo: f.floorNo })));
     } catch (error) { handleApiError(error, '加载楼层选项', false); }

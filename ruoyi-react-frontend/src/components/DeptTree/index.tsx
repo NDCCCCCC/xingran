@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { FC, Key, CSSProperties } from 'react';
 import { Tree, Card, Spin, Input } from 'antd';
 import type { DataNode, EventDataNode } from 'antd/es/tree';
 import { ApartmentOutlined, SearchOutlined } from '@ant-design/icons';
 import { post } from '@/lib/api';
-import type { BaseResponse } from '@/types';
+import type { BaseResponse, Department } from '@/types';
 
 interface DeptTreeProps {
   onSelect?: (selectedKeys: Key[], info: {
@@ -44,10 +44,10 @@ const DeptTree: FC<DeptTreeProps> = ({
   };
 
   // 加载部门树数据
-  const loadDeptTree = async () => {
+  const loadDeptTree = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await post<BaseResponse<any>>('/system/departments/list');
+      const result = await post<BaseResponse<Department[]>>('/system/departments/list');
       const deptData = result.data || [];
       const treeData = transformToTreeData(deptData);
       setTreeData(treeData);
@@ -62,10 +62,10 @@ const DeptTree: FC<DeptTreeProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // 转换部门数据为树形结构
-  const transformToTreeData = (data: any[]): DataNode[] => {
+  const transformToTreeData = (data: Department[]): DataNode[] => {
     if (!data || !Array.isArray(data)) {
       return [];
     }
@@ -153,7 +153,7 @@ const DeptTree: FC<DeptTreeProps> = ({
 
   useEffect(() => {
     loadDeptTree();
-  }, []);
+  }, [loadDeptTree]);
 
   const filteredTreeData = filterTreeData(treeData, searchValue);
 

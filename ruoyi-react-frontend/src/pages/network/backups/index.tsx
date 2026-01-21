@@ -600,7 +600,7 @@ const ConfigBackupPage: FC = () => {
                     <Option key={backup.id} value={backup.id}>
                       <Space>
                         <span>版本 {backup.version}</span>
-                        <Tag color={backup.backupType === 'auto' ? 'blue' : 'green'} size="small">
+                        <Tag color={backup.backupType === 'auto' ? 'blue' : 'green'}>
                           {backup.backupType === 'auto' ? '自动' : '手动'}
                         </Tag>
                         <span style={{ color: '#999' }}>{formatDateTime(backup.createdAt)}</span>

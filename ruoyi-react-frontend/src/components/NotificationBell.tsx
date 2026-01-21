@@ -338,23 +338,36 @@ const NotificationBell: FC = () => {
           boxShadow: '0 2px 8px rgba(239, 68, 68, 0.3)',
         }}
       >
-        <Avatar
-          size="large"
-          icon={<BellOutlined />}
+        <div
           className="cursor-pointer transition-all duration-300"
           style={{
-            background: 'linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%)',
-            boxShadow: '0 2px 8px rgba(79, 70, 229, 0.2)',
+            display: 'inline-block',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'scale(1.05)';
-            e.currentTarget.style.boxShadow = '0 4px 16px rgba(79, 70, 229, 0.3)';
+            const avatar = e.currentTarget.querySelector('.ant-avatar') as HTMLElement;
+            if (avatar) {
+              avatar.style.transform = 'scale(1.05)';
+              avatar.style.boxShadow = '0 4px 16px rgba(79, 70, 229, 0.3)';
+            }
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'scale(1)';
-            e.currentTarget.style.boxShadow = '0 2px 8px rgba(79, 70, 229, 0.2)';
+            const avatar = e.currentTarget.querySelector('.ant-avatar') as HTMLElement;
+            if (avatar) {
+              avatar.style.transform = 'scale(1)';
+              avatar.style.boxShadow = '0 2px 8px rgba(79, 70, 229, 0.2)';
+            }
           }}
-        />
+        >
+          <Avatar
+            size="large"
+            icon={<BellOutlined />}
+            style={{
+              background: 'linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%)',
+              boxShadow: '0 2px 8px rgba(79, 70, 229, 0.2)',
+              transition: 'transform 300ms, box-shadow 300ms',
+            }}
+          />
+        </div>
       </Badge>
     </Dropdown>
   );

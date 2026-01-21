@@ -24,6 +24,7 @@ export const minimalLight: ThemeConfig = {
 		warning: ['#faad14', '#d48806', '#ad6800'],
 		error: ['#ff4d4f', '#cf1322', '#a8071a'],
 		info: ['#000000', '#1a1a1a', '#333333'],
+		processing: ['#52c41a', '#389e0d', '#237804'],
 
 		// 背景：纯白系列
 		background: {

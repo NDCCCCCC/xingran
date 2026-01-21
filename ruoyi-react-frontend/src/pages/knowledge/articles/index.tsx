@@ -40,6 +40,7 @@ const KnowledgeArticlePage: FC = () => {
   // 数据管理
   const {
     articles,
+    categories,
     flatCategories,
     tags,
     loading,
@@ -225,6 +226,7 @@ const KnowledgeArticlePage: FC = () => {
       <EditModal
         open={modalVisible}
         editingRecord={editingRecord}
+        categories={categories}
         flatCategories={flatCategories}
         tags={tags}
         onOk={onModalOk}

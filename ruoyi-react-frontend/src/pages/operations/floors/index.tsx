@@ -62,6 +62,7 @@ const FloorManagement: FC = () => {
         pageSize: paginationProps.pageSize,
         setCurrent,
         setPageSize,
+        setTotal,
       },
     }
   );

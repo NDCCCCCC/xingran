@@ -42,13 +42,14 @@ const DedicatedLineManagement: FC = () => {
   const [exportVisible, setExportVisible] = useState(false);
   const [serverRooms, setServerRooms] = useState<ServerRoomOption[]>([]);
   const [lineTypeDict, setLineTypeDict] = useState<DictData[]>([]);
+  const [ispDict, setIspDict] = useState<DictData[]>([]);
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
   const loadServerRooms = useCallback(async () => {
     try {
-      const result = await serverRoomApi.list({ current: 1, pageSize: 1000 });
+      const result = await serverRoomApi.list({ current: 1, pageSize: 1000 }) as { data?: { list: any[] } };
       const rooms = result.data?.list || [];
       setServerRooms(rooms.map((r: any) => ({ id: r.id, name: r.name })));
     } catch (error) {
@@ -58,10 +59,19 @@ const DedicatedLineManagement: FC = () => {
 
   const loadLineTypeDict = useCallback(async () => {
     try {
-      const result = await post('/system/dicts/data/list', { dictType: 'ops_dedicated_line_type', current: 1, pageSize: 100 });
+      const result = await post('/system/dicts/data/list', { dictType: 'ops_dedicated_line_type', current: 1, pageSize: 100 }) as { data?: { list: any[] } };
       setLineTypeDict(result.data?.list || []);
     } catch (error) {
       handleApiError(error, '加载专线类型字典', false);
+    }
+  }, []);
+
+  const loadIspDict = useCallback(async () => {
+    try {
+      const result = await post('/system/dicts/data/list', { dictType: 'ops_isp', current: 1, pageSize: 100 }) as { data?: { list: any[] } };
+      setIspDict(result.data?.list || []);
+    } catch (error) {
+      handleApiError(error, '加载运营商字典', false);
     }
   }, []);
 
@@ -73,7 +83,7 @@ const DedicatedLineManagement: FC = () => {
     handleReset, handleAdd, handleEdit, handleModalClose, loadData: loadLines, resetSelection,
   } = useTableManager<DedicatedLine>(
     async (params) => {
-      const result = await dedicatedLineApi.list(params);
+      const result = await dedicatedLineApi.list(params) as { data?: { list: DedicatedLine[]; total: number } };
       return { list: result.data?.list || [], total: result.data?.total || 0 };
     },
     {
@@ -82,13 +92,14 @@ const DedicatedLineManagement: FC = () => {
         pageSize: paginationProps.pageSize,
         setCurrent,
         setPageSize,
+        setTotal,
       },
     }
   );
 
   const loadStatistics = useCallback(async () => {
     try {
-      const result = await dedicatedLineApi.list({ current: 1, pageSize: 1000 });
+      const result = await dedicatedLineApi.list({ current: 1, pageSize: 1000 }) as { data?: { list: DedicatedLine[] } };
       const allLines = result.data?.list || [];
       setStatistics({
         total: allLines.length,
@@ -106,6 +117,7 @@ const DedicatedLineManagement: FC = () => {
       loadStatistics();
       loadServerRooms();
       loadLineTypeDict();
+      loadIspDict();
     }, 0);
   }, [paginationProps.current, paginationProps.pageSize]);
 
@@ -141,7 +153,8 @@ const DedicatedLineManagement: FC = () => {
     else {
       handleAdd();
       const defaultType = lineTypeDict.find(d => d.isDefault)?.dictValue || lineTypeDict[0]?.dictValue;
-      lineForm.setFieldsValue({ status: 0, lineType: defaultType });
+      const defaultIsp = ispDict.find(d => d.isDefault)?.dictValue || ispDict[0]?.dictValue;
+      lineForm.setFieldsValue({ status: 0, lineType: defaultType, isp: defaultIsp });
     }
   };
 
@@ -150,6 +163,11 @@ const DedicatedLineManagement: FC = () => {
   const getLineTypeText = (type: string) => {
     const dictItem = lineTypeDict.find(d => d.dictValue === type);
     return dictItem?.dictLabel || type;
+  };
+
+  const getIspText = (isp: string) => {
+    const dictItem = ispDict.find(d => d.dictValue === isp);
+    return dictItem?.dictLabel || isp;
   };
 
   const getStatusText = (status: number) => {
@@ -167,7 +185,7 @@ const DedicatedLineManagement: FC = () => {
       render: (type) => <Tag>{getLineTypeText(type)}</Tag>,
     },
     { title: '带宽', dataIndex: 'bandwidth', key: 'bandwidth', width: 100, render: (v) => v || '-' },
-    { title: '运营商', dataIndex: 'isp', key: 'isp', width: 120 },
+    { title: '运营商', dataIndex: 'isp', key: 'isp', width: 120, render: (isp) => <Tag>{getIspText(isp)}</Tag> },
     { title: '源机房', dataIndex: 'sourceRoomName', key: 'sourceRoomName', width: 120, render: (v) => v || '-' },
     { title: '源设备', dataIndex: 'sourceDeviceName', key: 'sourceDeviceName', width: 120, render: (v) => v || '-' },
     { title: '源端口', dataIndex: 'sourcePort', key: 'sourcePort', width: 100, render: (v) => v || '-' },
@@ -230,7 +248,7 @@ const DedicatedLineManagement: FC = () => {
                 description={
                   <div>
                     <div><strong>类型：</strong>{getLineTypeText(line.lineType)}</div>
-                    <div><strong>运营商：</strong>{line.isp}</div>
+                    <div><strong>运营商：</strong>{getIspText(line.isp)}</div>
                     {line.bandwidth && <div><strong>带宽：</strong>{line.bandwidth}</div>}
                     {line.ipAddress && <div><strong>IP：</strong>{line.ipAddress}</div>}
                     {line.monthlyFee && <div><strong>月费：</strong>¥{line.monthlyFee}</div>}
@@ -266,7 +284,9 @@ const DedicatedLineManagement: FC = () => {
               </Select>
             </Form.Item>
             <Form.Item name="isp" label="运营商">
-              <Input placeholder="请输入运营商" allowClear style={{ width: 120 }} />
+              <Select placeholder="请选择运营商" allowClear style={{ width: 120 }}>
+                {ispDict.map(d => <Option key={d.dictValue} value={d.dictValue}>{d.dictLabel}</Option>)}
+              </Select>
             </Form.Item>
             <Form.Item name="status" label="状态">
               <Select placeholder="请选择状态" allowClear style={{ width: 100 }}>
@@ -317,8 +337,10 @@ const DedicatedLineManagement: FC = () => {
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="isp" label="运营商" rules={[{ required: true, message: '请输入运营商' }]}>
-                <Input placeholder="电信/移动/联通等" className="user-form-input" />
+              <Form.Item name="isp" label="运营商" rules={[{ required: true, message: '请选择运营商' }]}>
+                <Select placeholder="请选择运营商" className="user-form-input">
+                  {ispDict.map(d => <Option key={d.dictValue} value={d.dictValue}>{d.dictLabel}</Option>)}
+                </Select>
               </Form.Item>
             </Col>
           </Row>
@@ -385,17 +407,12 @@ const DedicatedLineManagement: FC = () => {
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="contractNo" label="合同编号">
-                <Input placeholder="请输入合同编号" className="user-form-input" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
               <Form.Item name="carrierContactName" label="运营商联系人">
                 <Input placeholder="请输入联系人" className="user-form-input" />
               </Form.Item>
             </Col>
+          </Row>
+          <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="carrierContactPhone" label="联系人电话">
                 <Input placeholder="请输入联系电话" className="user-form-input" />

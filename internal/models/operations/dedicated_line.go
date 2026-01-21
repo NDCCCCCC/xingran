@@ -37,7 +37,6 @@ type OpsDedicatedLine struct {
 	CarrierContactID    *string `gorm:"size:64" json:"carrierContactId,omitempty"`    // 运营商联系人ID
 	CarrierContactName  *string `gorm:"size:100" json:"carrierContactName,omitempty"` // 运营商联系人姓名
 	CarrierContactPhone *string `gorm:"size:20" json:"carrierContactPhone,omitempty"` // 运营商联系人电话
-	ContractNo          *string `gorm:"size:100" json:"contractNo,omitempty"`         // 合同编号
 	MonthlyFee          float64 `gorm:"default:0" json:"monthlyFee"`                  // 月租费用
 	Remark              *string `gorm:"size:500" json:"remark,omitempty"`             // 备注
 }

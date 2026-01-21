@@ -90,6 +90,7 @@ const InfoPointManagement: FC = () => {
         pageSize: paginationProps.pageSize,
         setCurrent,
         setPageSize,
+        setTotal,
       },
     }
   );
@@ -186,14 +187,14 @@ const InfoPointManagement: FC = () => {
 
   const loadInfoPointTypeDict = useCallback(async () => {
     try {
-      const result = await post('/system/dicts/data/list', { dictType: 'ops_info_point_type', current: 1, pageSize: 100 });
+      const result = await post('/system/dicts/data/list', { dictType: 'ops_info_point_type', current: 1, pageSize: 100 }) as { data?: { list: any[] } };
       setInfoPointTypeDict(result.data?.list || []);
     } catch (error) { handleApiError(error, '加载信息点类型字典', false); }
   }, []);
 
   const loadNetworkDevices = useCallback(async () => {
     try {
-      const result = await post('/network/devices/list', { current: 1, pageSize: 1000 });
+      const result = await post('/network/devices/list', { current: 1, pageSize: 1000 }) as { data?: { list: any[] } };
       const devices = result.data?.list || [];
       setNetworkDevices(devices.map((d: any) => ({
         id: d.id,
@@ -209,7 +210,7 @@ const InfoPointManagement: FC = () => {
       return;
     }
     try {
-      const result = await post('/network/ports/list', { deviceId, current: 1, pageSize: 1000 });
+      const result = await post('/network/ports/list', { deviceId, current: 1, pageSize: 1000 }) as { data?: { list: any[] } };
       const ports = result.data?.list || [];
       setDevicePorts(ports.map((p: any) => ({
         id: p.id,

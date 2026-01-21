@@ -59,7 +59,7 @@ export function useDictData(searchForm: any, dataSearchForm: any, current: numbe
         current: params.current || current,
         pageSize: params.pageSize || pageSize,
         ...values,
-      });
+      }) as { data: { list: any[]; total: number } };
       setDictTypes(result.data.list);
       setTotal(result.data.total);
     } catch (error) {
@@ -83,7 +83,7 @@ export function useDictData(searchForm: any, dataSearchForm: any, current: numbe
         pageSize: params.pageSize || pageSize,
         dictType: selectedType,
         ...values,
-      });
+      }) as { data: { list: any[]; total: number } };
       setDictDataList(result.data.list);
       setTotal(result.data.total);
     } catch (error) {
@@ -96,7 +96,7 @@ export function useDictData(searchForm: any, dataSearchForm: any, current: numbe
   // 加载字典类型统计数据
   const loadTypeStatistics = useCallback(async () => {
     try {
-      const result = await post('/system/dicts/types/list', { current: 1, pageSize: 1000 });
+      const result = await post('/system/dicts/types/list', { current: 1, pageSize: 1000 }) as { data: { list: any[] } };
       const allTypes = result.data.list || [];
       const activeCount = allTypes.filter((t: any) => t.status === 0).length;
       const inactiveCount = allTypes.filter((t: any) => t.status === 1).length;
@@ -117,7 +117,7 @@ export function useDictData(searchForm: any, dataSearchForm: any, current: numbe
       return;
     }
     try {
-      const result = await post('/system/dicts/data/list', { current: 1, pageSize: 1000, dictType: selectedType });
+      const result = await post('/system/dicts/data/list', { current: 1, pageSize: 1000, dictType: selectedType }) as { data: { list: any[] } };
       const allData = result.data.list || [];
       const activeCount = allData.filter((d: any) => d.status === 0).length;
       const inactiveCount = allData.filter((d: any) => d.status === 1).length;

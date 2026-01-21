@@ -108,7 +108,7 @@ export const TableWidget: React.FC<TableWidgetProps> = ({
 					size: 'small',
 				} : false}
 				size={display.size ?? 'middle'}
-				variant={display.bordered ? undefined : 'borderless'}
+				bordered={display.bordered ?? false}
 				scroll={{ y: 300 }}
 				rowKey={(record) => String((record as Record<string, unknown>).id ?? JSON.stringify(record))}
 			/>

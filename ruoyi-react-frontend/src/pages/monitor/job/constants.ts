@@ -9,14 +9,14 @@ import { JobStatus, MisfirePolicy } from './types';
 export const STATUS_OPTIONS = [
   { label: '正常', value: JobStatus.Normal },
   { label: '暂停', value: JobStatus.Paused },
-] as const;
+];
 
 /** 错过执行策略选项 */
 export const MISFIRE_POLICY_OPTIONS = [
   { label: '立即执行', value: MisfirePolicy.ExecuteImmediately },
   { label: '执行一次', value: MisfirePolicy.ExecuteOnce },
   { label: '放弃执行', value: MisfirePolicy.Discard },
-] as const;
+];
 
 /** 默认表单值 */
 export const DEFAULT_FORM_VALUES = {

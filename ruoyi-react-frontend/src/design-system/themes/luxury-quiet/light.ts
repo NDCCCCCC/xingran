@@ -34,6 +34,7 @@ export const luxuryQuietLight: ThemeConfig = {
 		warning: ['#ffd666', '#faad14', '#d48806'],
 		error: ['#ff7875', '#ff4d4f', '#cf1322'],
 		info: ['#69c0ff', '#1890ff', '#096dd9'],
+		processing: ['#52c41a', '#389e0d', '#237804'],
 
 		// 背景：柔和浅色系列
 		background: {

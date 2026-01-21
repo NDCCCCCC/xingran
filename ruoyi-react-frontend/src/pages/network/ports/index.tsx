@@ -75,7 +75,7 @@ const PortStatusPage: FC = () => {
         ...values,
         // 如果从设备页面跳转过来，强制使用 URL 中的 deviceId
         ...(isFromDevice ? { deviceId: deviceIdFromUrl } : {}),
-      });
+      }) as { data: { list: DevicePortStatus[]; total: number } };
       // 更新统计数据
       updateStatistics(result.data.list || []);
       return result.data;
@@ -94,7 +94,7 @@ const PortStatusPage: FC = () => {
   // 加载统计数据
   const loadStatistics = async () => {
     try {
-      const result = await get('/network/ports/statistics');
+      const result = await get('/network/ports/statistics') as { data?: { totalRecords?: number; upPortsCount?: number; downPortsCount?: number; dot1xEnabledCount?: number } };
       const stats = result.data || {};
       setStatistics({
         total: stats.totalRecords || 0,
@@ -126,8 +126,8 @@ const PortStatusPage: FC = () => {
       const result = await post('/network/devices/list', {
         current: 1,
         pageSize: 1000,
-      });
-      setDevices(result.data.list || []);
+      }) as { data?: { list: any[] } };
+      setDevices(result.data?.list || []);
     } catch (error) {
       console.error('加载设备列表失败:', error);
     }

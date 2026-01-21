@@ -36,7 +36,7 @@ export function useMenuData(): UseMenuDataReturn {
   const loadMenus = useCallback(async (searchParams?: any) => {
     setLoading(true);
     try {
-      const result = await post('/system/menus/list', searchParams || {});
+      const result = await post('/system/menus/list', searchParams || {}) as { data: Menu[] };
       const menuData = result.data || [];
       // 处理树形数据
       const flatMenus = flattenTree(menuData);

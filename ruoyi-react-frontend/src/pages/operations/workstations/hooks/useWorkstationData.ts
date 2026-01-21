@@ -58,7 +58,7 @@ export function useWorkstationData(
   const loadDeptOptions = useCallback(async () => {
     try {
       // 后端返回的是树形结构数组，不是分页格式
-      const result = await post('/system/departments/list', {});
+      const result = await post('/system/departments/list', {}) as { data: any[] };
       // 构建树形结构数据，使用 fieldNames 指定字段映射
       const buildTreeData = (depts: any[]): DeptTreeNode[] => {
         return depts.map((dept) => ({
@@ -84,7 +84,7 @@ export function useWorkstationData(
         if (deptId) {
           params.deptId = deptId;
         }
-        const result = await post('/system/users/list', params);
+        const result = await post('/system/users/list', params) as { data?: { list: any[] } };
         const users = result.data?.list || [];
         setUserOptions(users.map((u: any) => ({ id: u.id, name: u.username })));
       } catch (error) {

@@ -7,12 +7,11 @@ export interface BaseResponse<T = any> {
   request_id: string;
 }
 
-// 分页响应类型
 export interface PageResponse<T> {
   list: T[];
   total: number;
   current: number;
-  page_size: number;
+  pageSize: number;
 }
 
 // 用户相关类型
@@ -20,16 +19,16 @@ export interface User {
   id: string;
   username: string;
   nickname?: string;
-  employeeNo?: string; // 工号（企业微信代码）
+  employeeNo?: string;
   email?: string;
   phone?: string;
   avatar?: string;
-  gender: 0 | 1 | 2;  // 0:未知 1:男 2:女
-  status: 0 | 1;     // 0:启用 1:禁用
+  gender: 0 | 1 | 2;
+  status: 0 | 1;
   deptId?: string;
   deptName?: string;
-  roles: string[];   // 角色名称数组
-  roleIds?: string[]; // 角色ID数组
+  roles: string[];
+  roleIds?: string[];
   permissions: string[];
   loginIp?: string;
   loginTime?: string;
@@ -43,10 +42,10 @@ export interface Role {
   roleName: string;
   roleKey: string;
   roleSort: number;
-  dataScope: 1 | 2 | 3 | 4 | 5; // 数据范围：1:全部 2:部门 3:部门及子部门 4:个人 5:自定义
+  dataScope: 1 | 2 | 3 | 4 | 5;
   menuCheckStrictly: boolean;
   deptCheckStrictly: boolean;
-  status: 0 | 1; // 0:正常 1:停用
+  status: 0 | 1;
   menuIds: string[];
   deptIds?: string[];
   createTime: string;
@@ -62,9 +61,9 @@ export interface Menu {
   orderNum: number;
   path?: string | null;
   component?: string | null;
-  menuType: 'M' | 'C' | 'F'; // M:目录 C:菜单 F:按钮
-  visible: 0 | 1; // 0:隐藏 1:显示
-  status: 0 | 1; // 0:正常 1:停用
+  menuType: 'M' | 'C' | 'F';
+  visible: 0 | 1;
+  status: 0 | 1;
   perms?: string | null;
   icon?: string | null;
   remark?: string;
@@ -85,20 +84,20 @@ export interface Department {
   leaderUsername?: string;
   phone?: string;
   email?: string;
-  isExternalOrg?: 0 | 1;  // 是否为外部机构：0=否（内部部门），1=是（拥有职场的外部机构）
-  status: 0 | 1;  // 0:正常 1:停用
+  isExternalOrg?: 0 | 1;
+  status: 0 | 1;
   children?: Department[];
   createdAt: string;
   updatedAt: string;
   remark?: string;
-  accessible?: boolean; // 用户是否真正有权限访问该部门
+  accessible?: boolean;
 }
 
 // 登录相关类型
 export interface LoginRequest {
   username: string;
   password: string;
-  encryptedPassword?: boolean;  // 标识密码是否已使用 SM2 加密
+  encryptedPassword?: boolean;
   captcha?: string;
   captchaId?: string;
 }
@@ -130,7 +129,7 @@ export interface DictType {
   id: string;
   dictName: string;
   dictType: string;
-  status: 0 | 1;  // 0:启用 1:禁用
+  status: 0 | 1;
   remark?: string;
   createdAt: string;
   updatedAt: string;
@@ -170,8 +169,8 @@ export interface Config {
   configName: string;
   configKey: string;
   configValue: string;
-  configType: 'Y' | 'N';  // Y:系统内置 N:非系统内置
-  isSystem: 0 | 1;  // 0:否 1:是
+  configType: 'Y' | 'N';
+  isSystem: 0 | 1;
   remark?: string;
   createdAt: string;
   updatedAt: string;
@@ -395,6 +394,7 @@ export interface ConfigExecution {
   startedAt?: string;
   completedAt?: string;
   errorMessage?: string;
+  details?: ConfigExecutionDetail[];
   createdAt: string;
   updatedAt: string;
 }
@@ -491,7 +491,9 @@ export interface UserPreferences {
   language: 'zh-CN' | 'en-US';
   pageSize: number;
   sidebarCollapsed: boolean;
-}// ==================== 运维管理相关类型 ====================
+}
+
+// ==================== 运维管理相关类型 ====================
 
 // 楼宇状态
 export type BuildingStatus = 0 | 1;  // 0:正常 1:停用
@@ -517,6 +519,7 @@ export type FloorStatus = 0 | 1;  // 0:正常 1:停用
 export interface Floor {
   id: string;
   buildingCode: string;
+  code: string;
   buildingName?: string;
   floorNo: string;
   name?: string;
@@ -641,7 +644,6 @@ export interface DedicatedLine {
   vlan?: string;
   carrierContactName?: string;
   carrierContactPhone?: string;
-  contractNo?: string;
   monthlyFee?: number;
   status: LineStatus;
   remark?: string;             // 备注（与后端字段保持一致）

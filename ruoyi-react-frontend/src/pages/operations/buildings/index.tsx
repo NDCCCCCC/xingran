@@ -78,7 +78,7 @@ const BuildingManagement: FC = () => {
     handleReset, handleAdd, handleEdit, handleModalClose, loadData: loadBuildings, resetSelection,
   } = useTableManager<any>(
     async (params) => {
-      const result = await buildingApi.list(params);
+      const result = await buildingApi.list(params) as { data?: { list: any[]; total: number } };
       return { list: result.data?.list || [], total: result.data?.total || 0 };
     },
     {
@@ -87,13 +87,14 @@ const BuildingManagement: FC = () => {
         pageSize: paginationProps.pageSize,
         setCurrent,
         setPageSize,
+        setTotal,
       },
     }
   );
 
   const loadStatistics = useCallback(async () => {
     try {
-      const result = await buildingApi.list({ current: 1, pageSize: 1000 });
+      const result = await buildingApi.list({ current: 1, pageSize: 1000 }) as { data?: { list: any[] } };
       const allBuildings = result.data?.list || [];
       setStatistics({
         total: allBuildings.length,

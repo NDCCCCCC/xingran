@@ -42,7 +42,7 @@ export function useDeptData(): UseDeptDataReturn {
   const loadDepartments = useCallback(async (searchParams?: any) => {
     setLoading(true);
     try {
-      const result = await post('/system/departments/list', searchParams || {});
+      const result = await post('/system/departments/list', searchParams || {}) as { data: Department[] };
       const deptData = result.data || [];
       setDepartments(deptData);
 
@@ -61,7 +61,7 @@ export function useDeptData(): UseDeptDataReturn {
     } catch (error) {
       console.error('加载部门列表失败:', error);
       setDepartments([]);
-      setParentOptions([{ label: '顶级部门', value: '', key: '' }]);
+      setParentOptions([{ title: '顶级部门', value: '', key: '' }]);
       setStatistics({ total: 0, topLevel: 0, subLevel: 0 });
     } finally {
       setLoading(false);
@@ -71,7 +71,7 @@ export function useDeptData(): UseDeptDataReturn {
   const loadDeptUsers = useCallback(async (deptId: string) => {
     setLoadingUsers(true);
     try {
-      const result = await get(`/system/departments/${deptId}/users`);
+      const result = await get(`/system/departments/${deptId}/users`) as { data: DeptUser[] };
       setDeptUsers(result.data || []);
     } catch (error) {
       console.error('加载部门用户失败:', error);

@@ -29,7 +29,7 @@ import { getMyDutyStats } from '@/lib/dutyApi';
 import type { MyDutyStats } from '@/types';
 import { useAuthStore } from '@/store/authStore';
 import type { UserProfile } from '@/types';
-import { formatDate } from '@/utils/datetime';
+import { formatDateTime } from '@/utils/datetime';
 
 const { Option } = Select;
 
@@ -262,7 +262,7 @@ const ProfilePage: FC = () => {
                     <div style={{ fontSize: '20px', fontWeight: 500 }}>
                       {dutyStats.nextDutyDate ? (
                         <Space>
-                          <span>{formatDate(dutyStats.nextDutyDate, 'MM-DD')}</span>
+                          <span>{formatDateTime(dutyStats.nextDutyDate, 'MM-DD')}</span>
                           {dutyStats.nextDutyPoolName && (
                             <Tag color="blue">{dutyStats.nextDutyPoolName}</Tag>
                           )}

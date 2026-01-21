@@ -29,6 +29,8 @@ interface LayoutActions {
 	// 运行时临时操作（不保存到 Settings）
 	toggleSidebar: () => void;
 	setSidebarCollapsed: (collapsed: boolean) => void;
+	setDensity: (density: DensityMode) => void;
+	setLayout: (layout: LayoutType) => void;
 
 	// 保存当前状态到 SettingsStore
 	saveState: () => void;
@@ -242,6 +244,36 @@ export const useLayoutStore = create<LayoutStore>()(
 			});
 		},
 
+		// 运行时设置密度模式（临时，不保存）
+		setDensity: (density) => {
+			set((state) => {
+				const newConfig = {
+					...state.configuration,
+					density,
+				};
+				get().applyToDOM();
+				return {
+					density,
+					configuration: newConfig,
+				};
+			});
+		},
+
+		// 运行时设置布局类型（临时，不保存）
+		setLayout: (layout) => {
+			set((state) => {
+				const newConfig = {
+					...state.configuration,
+					type: layout,
+				};
+				get().applyToDOM();
+				return {
+					currentLayout: layout,
+					configuration: newConfig,
+				};
+			});
+		},
+
 		// 保存当前状态到 SettingsStore
 		saveState: () => {
 			const { configuration } = get();
@@ -278,7 +310,7 @@ if (typeof window !== 'undefined') {
  * 提供更方便的布局访问和操作
  */
 export function useLayout() {
-	const { currentLayout, configuration, sidebarCollapsed, density, syncFromSettings, toggleSidebar, setSidebarCollapsed, saveState } = useLayoutStore();
+	const { currentLayout, configuration, sidebarCollapsed, density, syncFromSettings, toggleSidebar, setSidebarCollapsed, setDensity, setLayout, saveState } = useLayoutStore();
 
 	// 同步 data-layout 和 data-density 属性
 	useEffect(() => {
@@ -298,6 +330,8 @@ export function useLayout() {
 		syncFromSettings,
 		toggleSidebar,
 		setSidebarCollapsed,
+		setDensity,
+		setLayout,
 		saveState,
 		isClassic: currentLayout === 'classic',
 		isHybrid: currentLayout === 'hybrid',

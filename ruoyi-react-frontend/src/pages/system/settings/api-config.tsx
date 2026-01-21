@@ -67,7 +67,7 @@ const APIConfigPage: FC = () => {
         page: paginationProps.current,
         pageSize: paginationProps.pageSize,
         configType: configTypeFilter,
-      });
+      }) as { data: { list: any[]; total: number } };
       setConfigs(result.data.list);
       setTotal(result.data.total);
     } catch (error) {

@@ -22,6 +22,14 @@ import {
 
 import type { FC, ReactNode } from 'react';
 
+declare global {
+  namespace NodeJS {
+    interface ProcessEnv {
+      NODE_ENV: 'development' | 'production' | 'test';
+    }
+  }
+}
+
 interface ContextMenuState {
   visible: boolean;
   x: number;
@@ -104,7 +112,7 @@ const TabBar: FC = () => {
     const canScrollRight = scrollWidth > clientWidth && scrollLeft < scrollWidth - clientWidth - 1; // -1 容忍浮点误差
 
     // 开发环境调试输出
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       console.log('[TabBar] 滚动状态:', { scrollLeft, scrollWidth, clientWidth, canScrollLeft, canScrollRight });
     }
 

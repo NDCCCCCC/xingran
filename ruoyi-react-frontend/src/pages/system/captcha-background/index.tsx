@@ -13,7 +13,7 @@ import {
   UploadOutlined,
 } from '@ant-design/icons';
 import type { CaptchaBackground } from '@/types/captcha';
-import { useCaptchaData } from './hooks';
+import { useCaptchaData, useCaptchaModals } from './hooks';
 import { getCaptchaColumns } from './columns';
 import { CaptchaUploadModal, CaptchaEditModal } from './modals';
 import { SHAPE_OPTIONS, DIFFICULTY_OPTIONS, STATUS_OPTIONS } from './constants';

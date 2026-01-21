@@ -413,7 +413,14 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
     (window as any).viewBuildingDetails = (buildingId: string) => {
       const building = buildings.find(b => b.id === buildingId);
       if (building) {
-        navigateToBuilding(building);
+        // 转换 BuildingItem 为 Building 类型，补充缺失字段
+        navigateToBuilding({
+          ...building,
+          orgId: '', // 这些字段在地图视图中不需要
+          orderNum: 0,
+          createdAt: '',
+          updatedAt: '',
+        } as any);
       }
     };
 
@@ -634,7 +641,14 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
                   }}
                   onClick={() => {
                     setSelectedCluster(null);
-                    navigateToBuilding(building);
+                    // 转换 BuildingItem 为 Building 类型
+                    navigateToBuilding({
+                      ...building,
+                      orgId: '',
+                      orderNum: 0,
+                      createdAt: '',
+                      updatedAt: '',
+                    } as any);
                   }}
                 >
                   <div style={{ width: '100%' }}>

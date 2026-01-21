@@ -53,6 +53,8 @@ const TemplateManagement: FC = () => {
     selectedRowKeys,
     previewContent,
     templateVariables,
+    setPreviewVisible,
+    setVariablesModalVisible,
     setSelectedRowKeys,
     openModal,
     closeModal,

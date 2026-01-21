@@ -24,6 +24,7 @@ import {
   Alert,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import type { DividerProps } from 'antd/es/divider';
 import {
   PlusOutlined,
   EditOutlined,
@@ -63,7 +64,7 @@ import {
   getStatusColor,
 } from './utils';
 import { useDeviceData } from './hooks/useDeviceData';
-import { useDeviceModals } from './hooks/useDeviceModals';
+import { useDeviceModals, type ProbeResult } from './hooks/useDeviceModals';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -240,7 +241,7 @@ const DeviceManagement: FC = () => {
     loading,
     data: devices,
     selectedRowKeys,
-    modalVisible,
+    editModalVisible: modalVisible,
     editingItem: editingDevice,
     setSelectedRowKeys,
     setEditModalVisible,
@@ -254,9 +255,9 @@ const DeviceManagement: FC = () => {
       const result = await post('/network/devices/list', {
         ...values,
         ...params,
-      });
-      updateStatistics(result.data.list || []);
-      return { list: result.data.list, total: result.data.total };
+      }) as { list: NetworkDevice[]; total: number };
+      updateStatistics(result.list || []);
+      return { list: result.list, total: result.total };
     },
     {
       pageSize: 10,
@@ -293,13 +294,13 @@ const DeviceManagement: FC = () => {
       const result = await post('/network/devices/discover', {
         ipAddress: values.ipAddress,
         credentialId: values.credentialId,
-      });
+      }) as ProbeResult;
 
-      if (result.data?.success) {
-        setProbeResult(result.data);
+      if (result?.success) {
+        setProbeResult(result);
         handleSuccess('设备探测');
       } else {
-        handleApiError(result.data?.message || '探测失败', '探测');
+        handleApiError(result?.message || '探测失败', '探测');
       }
     } catch (error) {
       if (error && typeof error === 'object' && 'errorFields' in error) {
@@ -418,11 +419,15 @@ const DeviceManagement: FC = () => {
       setCollectingDeviceId(device.id);
       const result = await post('/network/ports/collect', { deviceId: device.id });
 
-      const data = result.data;
+      const data = result as {
+        errorMessage?: string;
+        successCount?: number;
+        failedCount?: number;
+      };
       if (data.errorMessage) {
         handleApiError(data.errorMessage, '采集', false);
-      } else if (data.successCount > 0) {
-        handleSuccess(`采集成功: 成功 ${data.successCount} 个端口${data.failedCount > 0 ? `，失败 ${data.failedCount} 个` : ''}`);
+      } else if (data.successCount && data.successCount > 0) {
+        handleSuccess(`采集成功: 成功 ${data.successCount} 个端口${data.failedCount && data.failedCount > 0 ? `，失败 ${data.failedCount} 个` : ''}`);
       } else {
         handleApiError('采集失败: 未获取到端口数据', '采集');
       }
@@ -709,7 +714,7 @@ const DeviceManagement: FC = () => {
 
           {probeResult && (
             <>
-              <Divider orientation="left" styles={{ content: { margin: 0 } }}>探测结果</Divider>
+              <Divider orientationMargin={0} orientation={"left" as DividerProps['orientation']}>探测结果</Divider>
               <Alert
                 title="探测成功"
                 type="success"
@@ -734,7 +739,7 @@ const DeviceManagement: FC = () => {
             </>
           )}
 
-          <Divider orientation="left" styles={{ content: { margin: 0 } }}>其他信息（可选）</Divider>
+          <Divider orientationMargin={0} orientation={"left" as DividerProps['orientation']}>其他信息（可选）</Divider>
           <Form.Item name="deptId" label="所属部门">
             <Select placeholder="请选择部门" allowClear>
               {renderDeptTreeOptions(departments)}
@@ -835,7 +840,7 @@ const DeviceManagement: FC = () => {
       >
         {viewingDevice && (
           <div>
-            <Divider orientation="left" styles={{ content: { margin: 0 } }}>基本信息</Divider>
+            <Divider orientationMargin={0} orientation={"left" as DividerProps['orientation']}>基本信息</Divider>
             <Row gutter={16}>
               <Col span={12}>
                 <p><strong>设备名称:</strong> {viewingDevice.deviceName}</p>
@@ -856,7 +861,7 @@ const DeviceManagement: FC = () => {
               </Col>
             </Row>
 
-            <Divider orientation="left" styles={{ content: { margin: 0 } }}>设备详细信息（SSH采集）</Divider>
+            <Divider orientationMargin={0} orientation={"left" as DividerProps['orientation']}>设备详细信息（SSH采集）</Divider>
             <Row gutter={16}>
               <Col span={12}>
                 <p><strong>型号:</strong> {viewingDevice.model || '-'}</p>
@@ -870,7 +875,7 @@ const DeviceManagement: FC = () => {
 
             {viewingDevice.description && (
               <>
-                <Divider orientation="left" styles={{ content: { margin: 0 } }}>备注</Divider>
+                <Divider orientationMargin={0} orientation={"left" as DividerProps['orientation']}>备注</Divider>
                 <p>{viewingDevice.description}</p>
               </>
             )}

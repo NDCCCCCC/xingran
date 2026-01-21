@@ -46,7 +46,6 @@ export function getExecutionColumns(params: ExecutionColumnsParams): ColumnsType
       width: 100,
       render: (status: string) => {
         const config = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.pending;
-        const Tag = require('antd').Tag;
         return <Tag color={config.color} icon={config.icon}>{config.text}</Tag>;
       },
     },

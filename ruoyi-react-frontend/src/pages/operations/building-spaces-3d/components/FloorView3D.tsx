@@ -46,7 +46,7 @@ const FloorView3D: React.FC = () => {
     fixed: 0,
   });
 
-  const { selectedFloor, navigateToBuilding, navigateToMap } = useVisualizationStore();
+  const { selectedFloor, selectedBuilding, navigateToBuilding, navigateToMap } = useVisualizationStore();
 
   // 加载工位数据
   const loadWorkstations = useCallback(async () => {
@@ -106,8 +106,8 @@ const FloorView3D: React.FC = () => {
           type="info"
           showIcon
           action={
-            <Button type="primary" onClick={navigateToBuilding}>
-              返回楼宇
+            <Button type="primary" onClick={() => navigateToMap()}>
+              返回地图
             </Button>
           }
         />
@@ -145,7 +145,11 @@ const FloorView3D: React.FC = () => {
         }
         extra={
           <Space>
-            <Button icon={<ArrowLeftOutlined />} onClick={navigateToBuilding}>
+            <Button
+              icon={<ArrowLeftOutlined />}
+              onClick={() => selectedBuilding && navigateToBuilding(selectedBuilding)}
+              disabled={!selectedBuilding}
+            >
               返回楼宇
             </Button>
             <Button onClick={navigateToMap}>返回地图</Button>

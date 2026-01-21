@@ -88,7 +88,7 @@ const ConfigManagement: FC = () => {
   // 加载统计数据
   const loadStatistics = useCallback(async () => {
     try {
-      const result = await post('/system/configs/list', { current: 1, pageSize: 1000 });
+      const result = await post('/system/configs/list', { current: 1, pageSize: 1000 }) as { data: { list: any[] } };
       const allConfigs = result.data.list || [];
       const activeCount = allConfigs.filter((c: any) => c.configType === 'Y').length;
       const inactiveCount = allConfigs.filter((c: any) => c.configType === 'N').length;

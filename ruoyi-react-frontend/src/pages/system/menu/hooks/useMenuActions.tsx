@@ -54,7 +54,7 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
         ? `/system/menus/${id}/delete?cascade=true`
         : `/system/menus/${id}/delete`;
 
-      const result = await post(url);
+      const result = await post(url) as { data?: { deletedCount?: number } };
 
       if (cascade && result.data?.deletedCount) {
         message.success(`删除成功！共删除 ${result.data.deletedCount} 个菜单（包含子菜单）`);
@@ -162,7 +162,7 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
           const result = await post('/system/menus/batch-delete', {
             ids: selectedRowKeys,
             cascade: cascadeDelete,
-          });
+          }) as { data?: { deletedCount?: number } };
 
           if (result.data?.deletedCount) {
             message.success(`批量删除成功！共删除 ${result.data.deletedCount} 个菜单`);

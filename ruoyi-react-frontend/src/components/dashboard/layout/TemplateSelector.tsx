@@ -4,7 +4,7 @@
  * 允许用户从预设模板创建仪表盘
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useLayoutEffect } from 'react';
 import { Modal, Card, Row, Col, Button, Tag, Space, Tooltip } from 'antd';
 import {
 	AppstoreOutlined,
@@ -37,8 +37,8 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
 	const [selectedTemplate, setSelectedTemplate] = useState<PresetTemplateType | null>(null);
 	const [dashboardName, setDashboardName] = useState('');
 
-	// 重置状态
-	useEffect(() => {
+	// 重置状态 - 使用 useLayoutEffect 避免级联渲染
+	useLayoutEffect(() => {
 		if (visible) {
 			setSelectedTemplate(null);
 			setDashboardName('');

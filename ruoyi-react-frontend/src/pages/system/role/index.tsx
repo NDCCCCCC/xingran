@@ -88,11 +88,11 @@ const RoleManagement: FC = () => {
     loadRoles,
     loadStatistics,
     loadRoleMenus: async (roleId: string) => {
-      const result = await post(`/system/menus/role-menu-tree-select/${roleId}`);
+      const result = await post(`/system/menus/role-menu-tree-select/${roleId}`) as { data: { checkedKeys: string[] } };
       return result.data.checkedKeys || [];
     },
     loadRoleDepts: async (roleId: string) => {
-      const result = await post(`/system/departments/role-dept-tree-select/${roleId}`);
+      const result = await post(`/system/departments/role-dept-tree-select/${roleId}`) as { data: { checkedKeys: string[] } };
       return result.data.checkedKeys || [];
     },
     checkedMenuKeys,

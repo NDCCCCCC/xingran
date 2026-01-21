@@ -63,7 +63,7 @@ const MACAddressPage: FC = () => {
         current: params.current || paginationProps.current,
         pageSize: params.pageSize || paginationProps.pageSize,
         ...values,
-      });
+      }) as { data: { list: DeviceMACAddress[]; total: number } };
       // 更新统计数据
       updateStatistics(result.data.list || []);
       return result.data;
@@ -98,8 +98,8 @@ const MACAddressPage: FC = () => {
       const result = await post('/network/devices/list', {
         current: 1,
         pageSize: 1000,
-      });
-      setDevices(result.data.list || []);
+      }) as { data?: { list: any[] } };
+      setDevices(result.data?.list || []);
     } catch (error) {
       console.error('加载设备列表失败:', error);
     }

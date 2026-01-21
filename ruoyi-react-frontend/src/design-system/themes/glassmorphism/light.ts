@@ -25,6 +25,7 @@ export const glassmorphismLight: ThemeConfig = {
     warning: ['#fcd34d', '#f59e0b', '#d97706'],
     error: ['#fca5a5', '#ef4444', '#dc2626'],
     info: ['#93c5fd', '#3b82f6', '#2563eb'],
+    processing: ['#86efac', '#22c55e', '#16a34a'],
 
     // 背景：半透明
     background: {

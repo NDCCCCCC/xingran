@@ -29,6 +29,7 @@ export const neumorphismLight: ThemeConfig = {
     warning: ['#fde047', '#fbbf24', '#f59e0b'],
     error: ['#fecaca', '#f87171', '#ef4444'],
     info: ['#bfdbfe', '#60a5fa', '#3b82f6'],
+    processing: ['#bbf7d0', '#4ade80', '#22c55e'],
 
     // 背景：新拟态专用
     background: {

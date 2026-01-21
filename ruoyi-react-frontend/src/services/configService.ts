@@ -29,10 +29,10 @@ class ConfigService {
 
 		try {
 			// 从服务器获取
-			const response = await getUserPreferences() as { data: BackendUserPreferences };
+			const backendData = await getUserPreferences();
 
-			// 转换为前端格式 - 从响应中提取 data 字段
-			const normalized = this.fromBackendFormat(response.data);
+			// 转换为前端格式
+			const normalized = this.fromBackendFormat(backendData);
 
 			// 更新缓存
 			this.cache = normalized;

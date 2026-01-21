@@ -47,7 +47,6 @@ func NewDedicatedLineService(db *gorm.DB) DedicatedLineService {
 
 // Create 创建专线
 func (s *dedicatedLineService) Create(ctx context.Context, line *operations.OpsDedicatedLine) error {
-	// 填充冗余的机房名称字段
 	if err := s.populateRoomNames(ctx, line); err != nil {
 		return err
 	}
@@ -57,7 +56,6 @@ func (s *dedicatedLineService) Create(ctx context.Context, line *operations.OpsD
 
 // Update 更新专线
 func (s *dedicatedLineService) Update(ctx context.Context, line *operations.OpsDedicatedLine) error {
-	// 填充冗余的机房名称字段
 	if err := s.populateRoomNames(ctx, line); err != nil {
 		return err
 	}

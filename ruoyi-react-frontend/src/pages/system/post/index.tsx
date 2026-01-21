@@ -68,7 +68,7 @@ const PostManagement: FC = () => {
     resetSelection,
   } = useTableManager<Post>(
     async (params) => {
-      const result = await post('/system/posts/list', params);
+      const result = await post('/system/posts/list', params) as { data: { list: Post[]; total: number } };
       return { list: result.data.list || [], total: result.data.total || 0 };
     },
     {
@@ -77,6 +77,7 @@ const PostManagement: FC = () => {
         pageSize: paginationProps.pageSize,
         setCurrent,
         setPageSize,
+        setTotal,
       },
     }
   );
@@ -84,10 +85,10 @@ const PostManagement: FC = () => {
   // 加载统计数据
   const loadStatistics = useCallback(async () => {
     try {
-      const result = await post('/system/posts/list', { current: 1, pageSize: 1000 });
+      const result = await post('/system/posts/list', { current: 1, pageSize: 1000 }) as { data: { list: Post[] } };
       const allPosts = result.data.list || [];
-      const activeCount = allPosts.filter((p: any) => p.status === 0).length;
-      const inactiveCount = allPosts.filter((p: any) => p.status === 1).length;
+      const activeCount = allPosts.filter((p: Post) => p.status === 0).length;
+      const inactiveCount = allPosts.filter((p: Post) => p.status === 1).length;
       setStatistics({
         total: allPosts.length,
         active: activeCount,

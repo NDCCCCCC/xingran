@@ -5,6 +5,11 @@
 export type ThemeType = 'minimal' | 'glassmorphism' | 'neumorphism' | 'flat2.0' | 'luxury-quiet';
 
 /**
+ * 颜色模式
+ */
+export type ColorMode = 'light' | 'dark';
+
+/**
  * 颜色令牌
  */
 export interface ColorTokens {
@@ -16,6 +21,7 @@ export interface ColorTokens {
   warning: string[];
   error: string[];
   info: string[];
+  processing: string[];
 
   background: {
     primary: string;

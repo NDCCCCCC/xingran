@@ -65,7 +65,7 @@ const EmailConfigPage: FC = () => {
       const result = await getEmailConfigList({
         page: paginationProps.current,
         pageSize: paginationProps.pageSize,
-      });
+      }) as { data: { list: any[]; total: number } };
       setConfigs(result.data.list);
       setTotal(result.data.total);
     } catch (error) {

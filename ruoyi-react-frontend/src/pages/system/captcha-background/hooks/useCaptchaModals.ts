@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { message } from 'antd';
+import { message, Upload } from 'antd';
 import type { UploadFile, UploadProps } from 'antd';
 import type { CaptchaBackground, CaptchaBackgroundUpdateRequest } from '@/types/captcha';
 import * as captchaService from '@/services/captcha';

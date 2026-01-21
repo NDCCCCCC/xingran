@@ -194,7 +194,7 @@ class StorageCache<T> {
 export class GeocodingCache<T> {
   private memoryCache: MemoryCache<T>;
   private storageCache: StorageCache<T>;
-  private cleanupTimer: NodeJS.Timeout | null;
+  private cleanupTimer: ReturnType<typeof setInterval> | null;
 
   constructor(config: Partial<CacheConfig> = {}) {
     const finalConfig = { ...DEFAULT_CONFIG, ...config };
@@ -206,7 +206,7 @@ export class GeocodingCache<T> {
     this.cleanupTimer = setInterval(() => {
       this.memoryCache.cleanup();
       this.storageCache.cleanup();
-    }, 5 * 60 * 1000) as unknown as NodeJS.Timeout;
+    }, 5 * 60 * 1000);
 
     // 初始化时清理一次过期缓存
     this.memoryCache.cleanup();

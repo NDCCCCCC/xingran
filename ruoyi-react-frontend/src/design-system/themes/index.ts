@@ -3,7 +3,10 @@
  * Unified Theme System Export - Support Light/Dark Modes
  */
 
-import type { ThemeConfig, ThemeType } from '@/types/theme';
+import type { ThemeConfig, ThemeType, ColorMode } from '@/types/theme';
+
+// 重新导出 ColorMode 类型供外部使用
+export type { ColorMode };
 import { getMinimalTheme } from './minimal';
 import { getGlassmorphismTheme } from './glassmorphism';
 import { getNeumorphismTheme } from './neumorphism';
@@ -18,9 +21,6 @@ export interface ThemeVariants {
 	light: ThemeConfig;
 	dark: ThemeConfig;
 }
-
-// 重新导出 ColorMode 类型供外部使用
-export type { ColorMode };
 
 /**
  * 所有主题配置（支持模式切换）

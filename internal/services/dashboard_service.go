@@ -27,8 +27,6 @@ func NewDashboardService(db *gorm.DB, cache cache.Cache) *DashboardService {
 	}
 }
 
-// ============= 分页请求/响应 =============
-
 // DashboardListParams 仪表盘列表请求参数
 type DashboardListParams struct {
 	Current    int                       `json:"current" binding:"required,min=1"`
@@ -65,14 +63,10 @@ type UpdateDashboardRequest struct {
 	Status          *models.DashboardStatus `json:"status" binding:"omitempty,min=0,max=1"`
 }
 
-// ============= 缓存键前缀 =============
-
 const (
 	dashboardCachePrefix     = "dashboard:"
 	dashboardListCachePrefix = "dashboard:list:"
 )
-
-// ============= 仪表盘 CRUD 操作 =============
 
 // GetDashboards 获取仪表盘列表
 func (s *DashboardService) GetDashboards(ctx context.Context, params DashboardListParams) (*DashboardListResponse, error) {
@@ -127,7 +121,6 @@ func (s *DashboardService) GetDashboard(ctx context.Context, id string) (*models
 		return nil, fmt.Errorf("failed to fetch dashboard: %w", err)
 	}
 
-	// 缓存结果（5分钟）
 	s.cache.SetJSON(ctx, cacheKey, dashboard, 5*time.Minute)
 
 	return &dashboard, nil
@@ -279,8 +272,6 @@ func (s *DashboardService) SetDefaultDashboard(ctx context.Context, userID strin
 	return nil
 }
 
-// ============= 仪表盘模板操作 =============
-
 // GetTemplates 获取仪表盘模板列表
 func (s *DashboardService) GetTemplates(ctx context.Context, scope *models.TemplateScope) ([]models.Dashboard, error) {
 	query := s.db.WithContext(ctx).
@@ -329,8 +320,6 @@ func (s *DashboardService) CreateFromTemplate(ctx context.Context, userID string
 
 	return dashboard, nil
 }
-
-// ============= 仪表盘版本操作 =============
 
 // GetVersions 获取仪表盘版本历史
 func (s *DashboardService) GetVersions(ctx context.Context, dashboardID string) ([]models.DashboardVersion, error) {
@@ -393,8 +382,6 @@ func (s *DashboardService) RestoreVersion(ctx context.Context, userID string, da
 	return nil
 }
 
-// ============= 仪表盘导入导出 =============
-
 // ExportDashboard 导出仪表盘配置
 func (s *DashboardService) ExportDashboard(ctx context.Context, id string) (string, error) {
 	dashboard, err := s.GetDashboard(ctx, id)
@@ -430,21 +417,12 @@ func (s *DashboardService) ImportDashboard(ctx context.Context, userID string, c
 	return &dashboard, nil
 }
 
-// ============= Widget 数据获取 =============
-
 // GetWidgetData 获取 Widget 数据（调用其他服务的 API）
 func (s *DashboardService) GetWidgetData(ctx context.Context, widgetID string, apiEndpoint string, params map[string]interface{}) (interface{}, error) {
-	// TODO: 实现数据获取逻辑
-	// 这里需要根据 apiEndpoint 调用相应的服务 API
-	// 可以使用 HTTP 客户端或内部服务调用
-
 	return nil, fmt.Errorf("widget data fetching not implemented yet")
 }
 
 // GetBatchWidgetData 批量获取 Widget 数据
 func (s *DashboardService) GetBatchWidgetData(ctx context.Context, widgetIDs []string) (map[string]interface{}, error) {
-	// TODO: 实现批量数据获取逻辑
-	// 可以并发调用 GetWidgetData
-
 	return make(map[string]interface{}), nil
 }
