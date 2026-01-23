@@ -42,14 +42,16 @@ export function uploadAvatar(file: File): Promise<{ avatar: string; message: str
  * 获取用户个人设置
  * 注意：后端返回的是 BackendUserPreferences 格式（扁平结构）
  */
-export function getUserPreferences(): Promise<BackendUserPreferences> {
-  return get<BackendUserPreferences>('/system/settings/preferences');
+export async function getUserPreferences(): Promise<BackendUserPreferences> {
+  const response = await get<{ data: BackendUserPreferences }>('/system/settings/preferences');
+  return response.data;
 }
 
 /**
  * 更新用户个人设置
  * 注意：后端接收的是 BackendUserPreferences 格式（扁平结构）
  */
-export function updateUserPreferences(data: BackendUserPreferences): Promise<{ message: string }> {
-  return put('/system/settings/preferences', data);
+export async function updateUserPreferences(data: BackendUserPreferences): Promise<{ message: string }> {
+  const response = await put<{ data: { message: string } }>('/system/settings/preferences', data);
+  return response.data;
 }

@@ -267,6 +267,9 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 		monitorV1.SetupServerRouter(monitor, core)
 		monitorV1.SetupCacheRouter(monitor, core)
 
+		// 定时任务管理
+		v1.RegisterJobRoutes(monitor, core)
+
 		// 操作日志管理
 		operLogs := monitor.Group("/oper-logs")
 		{

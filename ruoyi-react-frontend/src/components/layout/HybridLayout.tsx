@@ -100,7 +100,7 @@ const HybridLayout: FC<HybridLayoutProps> = ({ children }) => {
   useEffect(() => {
     // 排除登录页
     if (location.pathname !== '/login') {
-      const isDashboard = location.pathname === '/dashboard' || location.pathname === '/';
+      const isDashboard = location.pathname === '/dashboard';
 
       addTab({
         key: location.pathname,
