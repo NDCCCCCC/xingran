@@ -63,14 +63,14 @@ export function useCommandData(
       setExecLoading(true);
       setExecLoadingState(true);
       try {
-        const result = await post('/network/command/list', {
+        const result = await post<BaseResponse<PageResponse<ConfigExecution>>>('/network/command/list', {
           current: params.current || current,
           pageSize: params.pageSize || pageSize,
-        }) as PageResponse<ConfigExecution>;
-        setExecutions(result.list || []);
-        setExecTotal(result.total || 0);
+        });
+        setExecutions(result.data?.list || []);
+        setExecTotal(result.data?.total || 0);
         // 更新统计数据
-        updateStatistics(result.list || []);
+        updateStatistics(result.data?.list || []);
       } catch (error) {
         console.error('加载执行记录失败:', error);
       } finally {
@@ -83,8 +83,8 @@ export function useCommandData(
 
   const loadStatistics = useCallback(async () => {
     try {
-      const result = await post('/network/command/list', { current: 1, pageSize: 10000 }) as PageResponse<ConfigExecution>;
-      const allExecutions = result.list || [];
+      const result = await post<BaseResponse<PageResponse<ConfigExecution>>>('/network/command/list', { current: 1, pageSize: 10000 });
+      const allExecutions = result.data?.list || [];
       updateStatistics(allExecutions);
     } catch (error) {
       console.error('加载统计数据失败:', error);
@@ -93,12 +93,12 @@ export function useCommandData(
 
   const loadDevices = useCallback(async (): Promise<NetworkDevice[]> => {
     try {
-      const result = await post('/network/devices/list', {
+      const result = await post<BaseResponse<PageResponse<NetworkDevice>>>('/network/devices/list', {
         current: 1,
         pageSize: 1000,
         status: 0,
-      }) as PageResponse<NetworkDevice>;
-      return result.list || [];
+      });
+      return result.data?.list || [];
     } catch (error) {
       console.error('加载设备列表失败:', error);
       return [];
@@ -108,10 +108,10 @@ export function useCommandData(
   const loadExecutionDetails = useCallback(
     async (executionId: string): Promise<{ execution: ConfigExecution; details: any[] }> => {
       try {
-        const result = await post(`/network/command/${executionId}`, {}) as ConfigExecution & { details?: any[] };
+        const result = await post<BaseResponse<ConfigExecution & { details?: any[] }>>(`/network/command/${executionId}`, {});
         return {
-          execution: result || {} as ConfigExecution,
-          details: result?.details || [],
+          execution: result.data || {} as ConfigExecution,
+          details: result.data?.details || [],
         };
       } catch (error) {
         console.error('加载执行明细失败:', error);

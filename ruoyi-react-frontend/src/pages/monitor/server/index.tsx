@@ -80,8 +80,8 @@ const ServerMonitor: FC = () => {
         pageSize: paginationProps.pageSize
       });
 
-      setServers(result.data.list || []);
-      setTotal(result.data.total || 0);
+      setServers(result.data?.list || []);
+      setTotal(result.data?.total || 0);
     } catch (error) {
       console.error('获取服务器列表失败:', error);
       message.error('网络错误，请稍后重试');

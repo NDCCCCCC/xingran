@@ -42,7 +42,7 @@ export function useDeptData(): UseDeptDataReturn {
   const loadDepartments = useCallback(async (searchParams?: any) => {
     setLoading(true);
     try {
-      const result = await post('/system/departments/list', searchParams || {}) as { data: Department[] };
+      const result = await post('/system/departments/tree', searchParams || {}) as { data: Department[] };
       const deptData = result.data || [];
       setDepartments(deptData);
 

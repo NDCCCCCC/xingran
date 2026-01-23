@@ -143,7 +143,7 @@ api.interceptors.response.use(
     let { data } = response;
 
     // 检查响应是否加密（只需要 encrypted: true 和 data, iv 字段）
-    const isEncrypted = data && data.encrypted === true && data.data && data.iv;
+    const isEncrypted = !!(data && data.encrypted && data.data && data.iv);
 
     if (isEncrypted) {
       try {

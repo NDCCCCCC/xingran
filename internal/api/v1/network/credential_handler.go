@@ -1,0 +1,255 @@
+package network
+
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+)
+
+// CredentialHandler 授权凭证处理器
+type CredentialHandler struct {
+	credentialService *services.AuthCredentialService
+}
+
+// NewCredentialHandler 创建授权凭证处理器实例
+func NewCredentialHandler(credentialService *services.AuthCredentialService) *CredentialHandler {
+	return &CredentialHandler{credentialService: credentialService}
+}
+
+// List 查询授权凭证列表
+// @Summary 查询授权凭证列表
+// @Description 分页查询授权凭证列表
+// @Tags 授权凭证管理
+// @Accept json
+// @Produce json
+// @Param request body services.ListCredentialRequest true "查询条件"
+// @Success 200 {object} response.Response{data=response.PageResponse}
+// @Router /network/credentials/list [post]
+func (h *CredentialHandler) List(c *gin.Context) {
+	var rawReq map[string]interface{}
+	if err := c.ShouldBindJSON(&rawReq); err != nil {
+		rawReq = make(map[string]interface{})
+	}
+
+	req := services.ListCredentialRequest{
+		Current:  getIntField(rawReq, "current", 1),
+		PageSize: getIntField(rawReq, "pageSize", 10),
+	}
+
+	if val, ok := rawReq["credentialName"].(string); ok && val != "" {
+		req.CredentialName = &val
+	}
+	if val, ok := rawReq["protocolType"].(string); ok && val != "" {
+		pt := models.ProtocolType(val)
+		req.ProtocolType = &pt
+	}
+
+	credentials, total, err := h.credentialService.List(c.Request.Context(), &req)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	pageResp := response.PageResponse{
+		List:     credentials,
+		Total:    total,
+		Current:  req.Current,
+		PageSize: req.PageSize,
+	}
+	response.Success(c, pageResp)
+}
+
+// GetByID 获取凭证详情
+// @Summary 获取凭证详情
+// @Description 根据ID获取凭证详情
+// @Tags 授权凭证管理
+// @Accept json
+// @Produce json
+// @Param id path string true "凭证ID"
+// @Success 200 {object} response.Response{data=models.AuthCredential}
+// @Router /network/credentials/:id [post]
+func (h *CredentialHandler) GetByID(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		response.Error(c, http.StatusBadRequest, "凭证ID不能为空")
+		return
+	}
+
+	credential, err := h.credentialService.GetByID(c.Request.Context(), id)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response.Success(c, credential)
+}
+
+// Create 创建授权凭证
+// @Summary 创建授权凭证
+// @Description 创建新授权凭证
+// @Tags 授权凭证管理
+// @Accept json
+// @Produce json
+// @Param request body services.CreateCredentialRequest true "凭证信息"
+// @Success 200 {object} response.Response{data=models.AuthCredential}
+// @Router /network/credentials [post]
+func (h *CredentialHandler) Create(c *gin.Context) {
+	var req services.CreateCredentialRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		return
+	}
+
+	userID, _ := c.Get("user_id")
+	req.CreatedBy = userID.(string)
+
+	credential, err := h.credentialService.Create(c.Request.Context(), &req)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response.Success(c, credential)
+}
+
+// Update 更新授权凭证
+// @Summary 更新授权凭证
+// @Description 更新凭证信息
+// @Tags 授权凭证管理
+// @Accept json
+// @Produce json
+// @Param id path string true "凭证ID"
+// @Param request body services.UpdateCredentialRequest true "凭证信息"
+// @Success 200 {object} response.Response
+// @Router /network/credentials/:id/update [post]
+func (h *CredentialHandler) Update(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		response.Error(c, http.StatusBadRequest, "凭证ID不能为空")
+		return
+	}
+
+	var req services.UpdateCredentialRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		return
+	}
+
+	req.ID = id
+
+	userID, _ := c.Get("user_id")
+	req.UpdatedBy = userID.(string)
+
+	if err := h.credentialService.Update(c.Request.Context(), &req); err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response.Success(c, gin.H{"message": "更新成功"})
+}
+
+// Delete 删除授权凭证
+// @Summary 删除授权凭证
+// @Description 删除指定凭证
+// @Tags 授权凭证管理
+// @Accept json
+// @Produce json
+// @Param id path string true "凭证ID"
+// @Success 200 {object} response.Response
+// @Router /network/credentials/:id/delete [post]
+func (h *CredentialHandler) Delete(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		response.Error(c, http.StatusBadRequest, "凭证ID不能为空")
+		return
+	}
+
+	if err := h.credentialService.Delete(c.Request.Context(), id); err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response.Success(c, gin.H{"message": "删除成功"})
+}
+
+// BatchDelete 批量删除凭证
+// @Summary 批量删除凭证
+// @Description 批量删除多个凭证
+// @Tags 授权凭证管理
+// @Accept json
+// @Produce json
+// @Param request body object{ids=[]string} true "凭证ID列表"
+// @Success 200 {object} response.Response
+// @Router /network/credentials/batch-delete [post]
+func (h *CredentialHandler) BatchDelete(c *gin.Context) {
+	var req struct {
+		IDs []string `json:"ids" binding:"required,min=1"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		return
+	}
+
+	if err := h.credentialService.BatchDelete(c.Request.Context(), req.IDs); err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response.Success(c, gin.H{
+		"message": "批量删除成功",
+		"count":   len(req.IDs),
+	})
+}
+
+// SetDefault 设置默认凭证
+// @Summary 设置默认凭证
+// @Description 设置指定凭证为默认凭证
+// @Tags 授权凭证管理
+// @Accept json
+// @Produce json
+// @Param id path string true "凭证ID"
+// @Success 200 {object} response.Response
+// @Router /network/credentials/:id/set-default [post]
+func (h *CredentialHandler) SetDefault(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		response.Error(c, http.StatusBadRequest, "凭证ID不能为空")
+		return
+	}
+
+	userID, _ := c.Get("user_id")
+	if err := h.credentialService.SetDefaultCredential(c.Request.Context(), id, userID.(string)); err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response.Success(c, gin.H{"message": "设置成功"})
+}
+
+// GetDevicesByCredential 获取使用凭证的设备列表
+// @Summary 获取使用凭证的设备列表
+// @Description 获取使用指定凭证的所有设备
+// @Tags 授权凭证管理
+// @Accept json
+// @Produce json
+// @Param id path string true "凭证ID"
+// @Success 200 {object} response.Response{data=[]models.NetworkDevice}
+// @Router /network/credentials/:id/devices [post]
+func (h *CredentialHandler) GetDevicesByCredential(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		response.Error(c, http.StatusBadRequest, "凭证ID不能为空")
+		return
+	}
+
+	devices, err := h.credentialService.GetDevicesByCredential(c.Request.Context(), id)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response.Success(c, devices)
+}

@@ -53,7 +53,7 @@ const BuildingManagement: FC = () => {
     setLoadingDepts(true);
     try {
       // 后端返回的是树形结构数组
-      const result = await post<BaseResponse<DepartmentOption[]>>('/system/departments/list', {});
+      const result = await post<BaseResponse<DepartmentOption[]>>('/system/departments/tree', {});
       // 转换为 TreeSelect 需要的格式：title 和 value
       const convertToTreeData = (nodes: any[]): DepartmentOption[] => {
         return nodes.map(node => ({

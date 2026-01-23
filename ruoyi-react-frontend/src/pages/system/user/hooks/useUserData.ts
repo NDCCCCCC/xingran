@@ -61,7 +61,7 @@ export function useUserData(): UseUserDataReturn {
   // 加载部门列表
   const loadDepartments = useCallback(async () => {
     try {
-      const result = await post<BaseResponse<any[]>>('/system/departments/list');
+      const result = await post<BaseResponse<any[]>>('/system/departments/tree');
       setDepartments(result.data || []);
     } catch (error) {
       handleApiError(error, '加载部门列表', false);

@@ -41,6 +41,7 @@ import {
   CloudUploadOutlined,
 } from '@ant-design/icons';
 import type { NetworkDevice } from '@/types';
+import type { BaseResponse, PageResponse } from '@/types';
 import { post } from '@/lib/api';
 import DeptTree from '@/components/DeptTree';
 import { useNavigate } from 'react-router-dom';
@@ -252,12 +253,12 @@ const DeviceManagement: FC = () => {
   } = useTableManager<NetworkDevice>(
     async (params) => {
       const values = searchForm.getFieldsValue();
-      const result = await post('/network/devices/list', {
+      const result = await post<BaseResponse<PageResponse<NetworkDevice>>>('/network/devices/list', {
         ...values,
         ...params,
-      }) as { list: NetworkDevice[]; total: number };
-      updateStatistics(result.list || []);
-      return { list: result.list, total: result.total };
+      });
+      updateStatistics(result.data?.list || []);
+      return { list: result.data?.list || [], total: result.data?.total || 0 };
     },
     {
       pageSize: 10,

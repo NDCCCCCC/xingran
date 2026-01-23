@@ -11,7 +11,7 @@ import {
   updateDutyPool,
   deleteDutyPool,
   getUserList,
-  getDeptList,
+  getDeptTree,
   type DutyPool,
   type DutyPoolCreateRequest,
   type DutyPoolUpdateRequest,
@@ -160,7 +160,7 @@ const DutyPoolPage: FC = () => {
   // 获取部门列表
   const fetchDepts = async () => {
     try {
-      const result = await getDeptList();
+      const result = await getDeptTree();
       setDepts(result.data || []);
     } catch (error) {
       console.error('获取部门列表失败:', error);

@@ -6,6 +6,12 @@ import (
 	"github.com/gin-gonic/gin"
 	v1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations"
+	systemV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/system"
+	workorderV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/workorder"
+	dutyV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/duty"
+	networkV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/network"
+	monitorV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/monitor"
+	v1_knowledge "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/knowledge"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/scheduler"
 	opsServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
@@ -92,26 +98,23 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 		authorized := system.Group("")
 		authorized.Use(middleware.JWTAuth(core.JWTManager))
 		{
-			// 用户菜单和权限接口（所有已登录用户都可访问，不需要特定权限）
-			// user-menus 和 user-permissions 放在权限检查之前
-			v1.SetupUserMenuRouter(authorized, core)
-
 			// 个人信息相关接口（所有已登录用户可访问）
 			profile := authorized.Group("/profile")
 			{
-				v1.SetupProfileRouter(profile, core)
+				systemV1.SetupProfileRouter(profile, core)
 			}
 
 			// 文件管理相关接口（所有已登录用户可访问）
 			files := authorized.Group("/files")
 			{
-				v1.SetupFileRouter(files, core)
+				systemV1.SetupFileRouter(files, core)
 			}
 
 			// 系统设置相关接口（所有已登录用户可访问）
 			settings := authorized.Group("/settings")
 			{
-				v1.SetupSettingsRouter(settings, core)
+				// 新架构：结构体Handler + Service层
+				systemV1.SetupSettingsRouter(settings, core)
 			}
 
 			// 通知配置管理（需要系统配置权限）
@@ -120,7 +123,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 				string(permission.SystemConfig),
 			}, core))
 			{
-				v1.SetupNotificationConfigRouter(notificationConfigs, core)
+				systemV1.SetupNotificationConfigRouter(notificationConfigs, core)
 			}
 
 			// 用户管理
@@ -134,7 +137,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			// 添加数据权限中间件
 			users.Use(middleware.DataScopePermission(core))
 			{
-				v1.SetupUserRouter(users, core)
+				// 新架构：结构体Handler + Service层
+				systemV1.SetupUserRouter(users, core)
 				// Excel导入导出
 				operations.SetupExcelRouter(users, "user", core)
 			}
@@ -148,8 +152,12 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 				string(permission.RoleView),
 			}, core))
 			{
-				v1.SetupRoleRouter(roles, core)
+				// 新架构：结构体Handler + Service层
+				systemV1.SetupRoleRouter(roles, core)
 			}
+
+			// 用户菜单和权限接口（所有已登录用户可访问，不需要特定权限）
+			systemV1.SetupUserMenuRouter(authorized.Group("/my-menus"), core)
 
 			// 菜单管理（需要菜单管理权限）
 			menus := authorized.Group("/menus")
@@ -160,7 +168,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 				string(permission.MenuView),
 			}, core))
 			{
-				v1.SetupMenuRouter(menus, core)
+				// 新架构：结构体Handler + Service层
+				systemV1.SetupMenuRouter(menus, core)
 			}
 
 			// 部门管理
@@ -174,7 +183,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			// 添加数据权限中间件
 			depts.Use(middleware.DataScopePermission(core))
 			{
-				v1.SetupDeptRouter(depts, core)
+				// 新架构：结构体Handler + Service层
+				systemV1.SetupDepartmentRouter(depts, core)
 			}
 
 			// 岗位管理
@@ -186,7 +196,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 				string(permission.PostView),
 			}, core))
 			{
-				v1.SetupPostRouter(posts, core)
+				// 新架构：结构体Handler + Service层
+				systemV1.SetupPostRouter(posts, core)
 			}
 
 			// 字典管理
@@ -198,7 +209,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 				string(permission.DictTypeView),
 			}, core))
 			{
-				v1.SetupDictRouter(dicts, core)
+				systemV1.SetupDictRouter(dicts, core)
 			}
 
 			// 参数配置
@@ -210,7 +221,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 				string(permission.ConfigView),
 			}, core))
 			{
-				v1.SetupConfigRouter(configs, core)
+				systemV1.SetupConfigRouter(configs, core)
 			}
 
 			// 验证码背景图管理（所有已登录用户可访问，作为系统设置的一部分）
@@ -226,16 +237,17 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 				string(permission.NoticeView),
 			}, core))
 			{
-				v1.SetupNoticeRouter(notices, core)
+				systemV1.SetupNoticeRouter(notices, core)
 			}
 
 			// 用户端通知（所有已登录用户可访问，不需要特定权限）
-			v1.SetupNoticeUserRouter(authorized, core)
+			systemV1.SetupNoticeUserRouter(authorized, core)
 
 			// 仪表盘系统（所有已登录用户可访问）
 			dashboards := authorized.Group("/dashboards")
 			{
-				v1.SetupDashboardRouter(dashboards, core)
+				// 新架构：结构体Handler + Service层
+				systemV1.SetupDashboardRouter(dashboards, core)
 			}
 
 			// WebSocket路由（需要认证，但不需要权限验证）
@@ -251,108 +263,50 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 	monitor := r.Group("/monitor")
 	monitor.Use(middleware.JWTAuth(core.JWTManager))
 	{
-		v1.SetupMonitorRouter(monitor, core)
+		// 使用新架构：结构体Handler + Service层
+		monitorV1.SetupServerRouter(monitor, core)
+		monitorV1.SetupCacheRouter(monitor, core)
+
+		// 操作日志管理
+		operLogs := monitor.Group("/oper-logs")
+		{
+			monitorV1.SetupOperLogRouter(operLogs, core)
+		}
+
+		// 登录日志管理
+		loginLogs := monitor.Group("/login-logs")
+		{
+			monitorV1.SetupLoginLogRouter(loginLogs, core)
+		}
 	}
 
-	// 网络设备管理模块
+	// 网络设备管理模块（统一管理）
 	network := r.Group("/network")
 	network.Use(middleware.JWTAuth(core.JWTManager))
+	network.Use(middleware.RequirePermissions([]string{
+		"network:device:list",
+		"network:device:add",
+		"network:device:edit",
+		"network:device:delete",
+		"network:credential:list",
+		"network:credential:add",
+		"network:credential:edit",
+		"network:credential:delete",
+		"network:template:list",
+		"network:template:add",
+		"network:template:edit",
+		"network:template:delete",
+		"network:command:execute",
+		"network:command:view",
+		"network:backup:list",
+		"network:backup:add",
+		"network:backup:restore",
+		"network:backup:diff",
+		"network:discovery:add",
+		"network:discovery:view",
+	}, core))
 	{
-		// 网络设备管理
-		devices := network.Group("/devices")
-		devices.Use(middleware.RequirePermissions([]string{
-			"network:device:list",
-			"network:device:add",
-			"network:device:edit",
-			"network:device:delete",
-		}, core))
-		{
-			v1.SetupNetworkDeviceRouter(devices, core)
-		}
-
-		// 授权凭证管理
-		credentials := network.Group("/credentials")
-		credentials.Use(middleware.RequirePermissions([]string{
-			"network:credential:list",
-			"network:credential:add",
-			"network:credential:edit",
-			"network:credential:delete",
-		}, core))
-		{
-			v1.SetupAuthCredentialRouter(credentials, core)
-		}
-
-		// 配置模板管理
-		templates := network.Group("/templates")
-		templates.Use(middleware.RequirePermissions([]string{
-			"network:template:list",
-			"network:template:add",
-			"network:template:edit",
-			"network:template:delete",
-		}, core))
-		{
-			v1.SetupConfigTemplateRouter(templates, core)
-		}
-
-		// 命令分发
-		command := network.Group("/command")
-		command.Use(middleware.RequirePermissions([]string{
-			"network:command:execute",
-			"network:command:view",
-		}, core))
-		{
-			v1.SetupCommandRouter(command, core)
-		}
-
-		// 配置执行
-		executions := network.Group("/executions")
-		executions.Use(middleware.RequirePermissions([]string{
-			"network:command:execute",
-			"network:command:view",
-		}, core))
-		{
-			v1.SetupConfigExecutionRouter(executions, core)
-		}
-
-		// 配置备份
-		backups := network.Group("/backups")
-		backups.Use(middleware.RequirePermissions([]string{
-			"network:backup:list",
-			"network:backup:add",
-			"network:backup:restore",
-			"network:backup:diff",
-		}, core))
-		{
-			v1.SetupConfigBackupRouter(backups, core)
-		}
-
-		// 设备发现
-		discoveries := network.Group("/discoveries")
-		discoveries.Use(middleware.RequirePermissions([]string{
-			"network:discovery:add",
-			"network:discovery:view",
-		}, core))
-		{
-			v1.SetupDeviceDiscoveryRouter(discoveries, core)
-		}
-
-		// MAC地址管理
-		macAddrs := network.Group("/mac")
-		macAddrs.Use(middleware.RequirePermissions([]string{
-			"network:mac:query",
-		}, core))
-		{
-			v1.SetupMACAddressRouter(macAddrs, core)
-		}
-
-		// 端口状态管理
-		ports := network.Group("/ports")
-		ports.Use(middleware.RequirePermissions([]string{
-			"network:port:query",
-		}, core))
-		{
-			v1.SetupPortStatusRouter(ports, core)
-		}
+		networkV1.SetupNetworkRouter(network, core)
 	}
 
 	// 值班管理模块（运维管理）
@@ -368,7 +322,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			"ops:duty:pool:delete",
 		}, core))
 		{
-			v1.SetupDutyPoolsRouter(dutyPools, core)
+			dutyV1.SetupDutyPoolsRouter(dutyPools, core)
 		}
 
 		// 排班管理
@@ -380,11 +334,11 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			"ops:duty:schedule:delete",
 		}, core))
 		{
-			v1.SetupDutySchedulesRouter(dutySchedules, core)
+			dutyV1.SetupDutySchedulesRouter(dutySchedules, core)
 		}
 
 		// 节假日管理（所有已登录用户可查看）
-		v1.SetupDutyHolidaysRouter(duty.Group("/holidays"), core)
+		dutyV1.SetupDutyHolidaysRouter(duty.Group("/holidays"), core)
 
 		// 值班配置管理（所有已登录用户可查看，管理员可修改）
 		dutyConfig := duty.Group("/config")
@@ -392,11 +346,11 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			string(permission.SystemConfig),
 		}, core))
 		{
-			v1.SetupDutyConfigRouter(dutyConfig, core)
+			dutyV1.SetupDutyConfigRouter(dutyConfig, core)
 		}
 
 		// 我的值班（所有已登录用户可访问）
-		v1.SetupMyDutyRouter(duty.Group("/my-duty"), core)
+		dutyV1.SetupMyDutyRouter(duty.Group("/my-duty"), core)
 	}
 
 	// 运维工单管理模块
@@ -412,8 +366,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			"ops:workorder:delete",
 		}, core))
 		{
-			v1.SetupWorkOrdersRouter(orders, core)
-			v1.SetupWorkOrderRatingsRouter(orders, core) // 评价路由
+			workorderV1.SetupWorkOrdersRouter(orders, core)
+			workorderV1.SetupWorkOrderRatingsRouter(orders, core) // 评价路由
 		}
 
 		// 工单分类管理
@@ -425,7 +379,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			"ops:workorder:category:delete",
 		}, core))
 		{
-			v1.SetupWorkOrderCategoriesRouter(categories, core)
+			workorderV1.SetupWorkOrderCategoriesRouter(categories, core)
 		}
 
 		// 周期性工单模板管理
@@ -437,7 +391,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			"ops:workorder:periodic:delete",
 		}, core))
 		{
-			v1.SetupPeriodicWorkOrderRouter(periodic, core)
+			workorderV1.SetupPeriodicWorkOrderRouter(periodic, core)
 		}
 
 		// 工单配置管理（需要系统配置权限）
@@ -446,11 +400,11 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			string(permission.SystemConfig),
 		}, core))
 		{
-			v1.SetupWorkOrderConfigRouter(workorderConfig, core)
+			workorderV1.SetupWorkOrderConfigRouter(workorderConfig, core)
 		}
 
 		// 工单统计（所有已登录用户可查看）
-		v1.SetupWorkOrderStatisticsRouter(workorder.Group("/statistics"), core)
+		workorderV1.SetupWorkOrderStatisticsRouter(workorder.Group("/statistics"), core)
 	}
 
 	// 知识库管理模块
@@ -466,7 +420,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			"ops:knowledge:article:delete",
 		}, core))
 		{
-			v1.SetupKnowledgeArticlesRouter(articles, core)
+			v1_knowledge.SetupKnowledgeRouter(articles, core)
 		}
 
 		// 知识库分类管理
@@ -478,7 +432,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			"ops:knowledge:category:delete",
 		}, core))
 		{
-			v1.SetupKnowledgeCategoriesRouter(knowledgeCategories, core)
+			v1_knowledge.SetupKnowledgeRouter(knowledgeCategories, core)
 		}
 
 		// 知识库标签管理
@@ -490,22 +444,21 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			"ops:knowledge:tag:delete",
 		}, core))
 		{
-			v1.SetupKnowledgeTagsRouter(knowledgeTags, core)
+			v1_knowledge.SetupKnowledgeRouter(knowledgeTags, core)
 		}
 
 		// 知识库工单转换（工单转知识库）
-		v1.SetupKnowledgeArticlesRouter(knowledge.Group("/workorders"), core)
+		v1_knowledge.SetupKnowledgeRouter(knowledge.Group("/workorders"), core)
 
 		// 知识库搜索和查看（所有已登录用户可访问）
-		v1.SetupKnowledgeArticlesRouter(knowledge.Group("/view"), core)
-		v1.SetupKnowledgeCategoriesRouter(knowledge.Group("/view/categories"), core)
+		v1_knowledge.SetupKnowledgeViewRouter(knowledge.Group("/view"), core)
 	}
 
 	// AD域管理模块
 	adDomain := r.Group("/ad-domain")
 	adDomain.Use(middleware.JWTAuth(core.JWTManager))
 	{
-		v1.SetupADDomainRouter(adDomain, core)
+		systemV1.SetupADDomainRouter(adDomain, core)
 	}
 
 	// 运维管理模块（物理资源管理）

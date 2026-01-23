@@ -1,0 +1,147 @@
+package network
+
+import (
+	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
+)
+
+// SetupNetworkRouter 设置网络设备管理路由
+func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
+	db := core.DB.GetDB()
+
+	// 创建授权凭证服务
+	credentialService := services.NewAuthCredentialService(db, core.SM4Cipher)
+
+	// 创建网络设备服务
+	deviceService := services.NewNetworkDeviceService(
+		db,
+		core.DeviceDiscoveryService,
+		core.DeviceInfoCollectionService,
+	)
+
+	// 创建其他服务
+	templateService := services.NewTemplateService(db)
+	commandService := services.NewCommandDispatchService(db, core.DeviceExecutor)
+	executionService := services.NewConfigExecutionService(db, core.DeviceExecutor)
+	backupService := services.NewConfigBackupService(db, core.DeviceExecutor)
+	discoveryService := core.DeviceDiscoveryService
+
+	// 创建Handler
+	credentialHandler := NewCredentialHandler(credentialService)
+	deviceHandler := NewDeviceHandler(deviceService)
+	templateHandler := NewTemplateHandler(templateService)
+	commandHandler := NewCommandHandler(commandService, db)
+	executionHandler := NewExecutionHandler(executionService)
+	backupHandler := NewBackupHandler(backupService, db)
+	discoveryHandler := NewDiscoveryHandler(discoveryService)
+
+	// ==================== 网络设备路由 ====================
+	devices := r.Group("/devices")
+	{
+		devices.POST("/list", deviceHandler.List)
+		devices.POST("", deviceHandler.Create)
+		devices.POST("/:id", deviceHandler.GetByID)
+		devices.POST("/:id/update", deviceHandler.Update)
+		devices.POST("/:id/delete", deviceHandler.Delete)
+		devices.POST("/batch-delete", deviceHandler.BatchDelete)
+	}
+
+	// ==================== 授权凭证路由 ====================
+	credentials := r.Group("/credentials")
+	{
+		credentials.POST("/list", credentialHandler.List)
+		credentials.POST("", credentialHandler.Create)
+		credentials.POST("/:id", credentialHandler.GetByID)
+		credentials.POST("/:id/update", credentialHandler.Update)
+		credentials.POST("/:id/delete", credentialHandler.Delete)
+		credentials.POST("/batch-delete", credentialHandler.BatchDelete)
+		credentials.POST("/:id/set-default", credentialHandler.SetDefault)
+		credentials.POST("/:id/devices", credentialHandler.GetDevicesByCredential)
+	}
+
+	// ==================== 配置模板路由 ====================
+	templates := r.Group("/templates")
+	{
+		templates.POST("/list", templateHandler.List)
+		templates.POST("", templateHandler.Create)
+		templates.POST("/:id", templateHandler.GetByID)
+		templates.POST("/:id/update", templateHandler.Update)
+		templates.POST("/:id/delete", templateHandler.Delete)
+		templates.POST("/batch-delete", templateHandler.BatchDelete)
+		templates.POST("/:id/preview", templateHandler.Preview)
+		templates.POST("/:id/clone", templateHandler.Clone)
+		templates.POST("/:id/variables", templateHandler.GetVariables)
+	}
+
+	// ==================== 命令分发路由 ====================
+	command := r.Group("/command")
+	{
+		command.POST("/dispatch", commandHandler.Dispatch)
+		command.POST("/quick", commandHandler.QuickCommand)
+		command.POST("/list", commandHandler.List)
+		command.POST("/:id", commandHandler.GetExecutionResult)
+		command.POST("/:id/device/:deviceId", commandHandler.GetDeviceExecutionDetail)
+	}
+
+	// ==================== 配置执行路由 ====================
+	executions := r.Group("/executions")
+	{
+		executions.POST("/list", executionHandler.List)
+		executions.POST("/template/execute", executionHandler.ExecuteByTemplate)
+		executions.POST("/:id", executionHandler.GetByID)
+		executions.POST("/:id/cancel", executionHandler.Cancel)
+		executions.POST("/:id/delete", executionHandler.Delete)
+		executions.POST("/batch-delete", executionHandler.BatchDelete)
+	}
+
+	// ==================== 配置备份路由 ====================
+	backups := r.Group("/backups")
+	{
+		backups.POST("/list", backupHandler.List)
+		backups.POST("", backupHandler.Create)
+		backups.POST("/content", backupHandler.GetContentFromBody)
+		backups.POST("/:id", backupHandler.GetContent)
+		backups.POST("/:id/delete", backupHandler.Delete)
+		backups.POST("/batch-delete", backupHandler.BatchDelete)
+		backups.POST("/diff", backupHandler.Diff)
+		backups.POST("/:id/restore", backupHandler.Restore)
+		backups.GET("/statistics", backupHandler.GetStatistics)
+		backups.POST("/batch", backupHandler.BatchBackup)
+		backups.GET("/version", backupHandler.GetByVersion)
+		backups.GET("/history", backupHandler.GetHistory)
+	}
+
+	// ==================== 设备发现路由 ====================
+	discoveries := r.Group("/discoveries")
+	{
+		discoveries.POST("/list", discoveryHandler.List)
+		discoveries.POST("/create", discoveryHandler.Create)
+		discoveries.POST("/:id", discoveryHandler.GetByID)
+		discoveries.POST("/:id/results", discoveryHandler.GetResults)
+		discoveries.POST("/:id/execute", discoveryHandler.Execute)
+		discoveries.POST("/:id/cancel", discoveryHandler.Cancel)
+		discoveries.POST("/:id/delete", discoveryHandler.Delete)
+		discoveries.POST("/batch-delete", discoveryHandler.BatchDelete)
+		discoveries.POST("/:id/import", discoveryHandler.ImportDevices)
+	}
+
+	// ==================== MAC地址管理路由（独立权限） ====================
+	mac := r.Group("/mac")
+	mac.Use(middleware.RequirePermissions([]string{
+		"network:mac:query",
+	}, core))
+	{
+		SetupMACRouter(mac, core)
+	}
+
+	// ==================== 端口状态管理路由（独立权限） ====================
+	ports := r.Group("/ports")
+	ports.Use(middleware.RequirePermissions([]string{
+		"network:port:query",
+	}, core))
+	{
+		SetupPortRouter(ports, core)
+	}
+}
