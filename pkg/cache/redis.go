@@ -495,16 +495,18 @@ func (m *MultiLevelCache) Get(ctx context.Context, key string) (string, error) {
 }
 
 func (m *MultiLevelCache) Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error {
+	// L1 缓存同步写入
 	if err := m.l1Cache.Set(ctx, key, value, 5*time.Minute); err != nil {
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
-	defer cancel()
-
-	if err := m.l2Cache.Set(ctx, key, value, expiration); err != nil {
-		logger.Warnf("[MultiLevelCache] L2缓存写入失败: %v", err)
-	}
+	// L2 缓存异步写入（使用 Redis 客户端默认的 writeTimeout）
+	go func() {
+		l2Ctx := context.Background()
+		if err := m.l2Cache.Set(l2Ctx, key, value, expiration); err != nil {
+			logger.Warnf("[MultiLevelCache] L2缓存写入失败: %v", err)
+		}
+	}()
 
 	return nil
 }
