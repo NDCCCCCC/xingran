@@ -20,6 +20,12 @@ type RoleService interface {
 	GetAllEnabled(ctx context.Context) ([]*models.Role, error)
 	BatchDelete(ctx context.Context, ids []string) error
 	UpdateStatus(ctx context.Context, id string, status int) error
+
+	// 新增缓存方法
+	GetAllEnabledWithCache(ctx context.Context) ([]*models.Role, error)
+	GetMenusWithCache(ctx context.Context, roleID string) ([]models.Menu, error)
+	GetDeptsWithCache(ctx context.Context, roleID string) ([]models.Department, error)
+	InvalidateRoleCache(ctx context.Context, roleID string) error
 }
 
 // userService 用户服务实现
@@ -435,6 +441,66 @@ func (s *roleService) assignRoleMenusAndDepts(tx *gorm.DB, roleID string, menuId
 		}
 	}
 
+	return nil
+}
+
+// GetAllEnabledWithCache 获取所有启用的角色（无缓存版本，直接查询数据库）
+func (s *roleService) GetAllEnabledWithCache(ctx context.Context) ([]*models.Role, error) {
+	return s.GetAllEnabled(ctx)
+}
+
+// GetMenusWithCache 获取角色的菜单（无缓存版本，直接查询数据库）
+func (s *roleService) GetMenusWithCache(ctx context.Context, roleID string) ([]models.Menu, error) {
+	var menuIDs []string
+	if err := s.db.WithContext(ctx).
+		Table("sys_role_menu").
+		Where("role_id = ?", roleID).
+		Pluck("menu_id", &menuIDs).Error; err != nil {
+		return nil, fmt.Errorf("查询角色菜单失败: %w", err)
+	}
+
+	if len(menuIDs) == 0 {
+		return []models.Menu{}, nil
+	}
+
+	var menus []models.Menu
+	if err := s.db.WithContext(ctx).
+		Where("id IN ? AND status = ?", menuIDs, models.MenuStatusNormal).
+		Order("order_num ASC").
+		Find(&menus).Error; err != nil {
+		return nil, fmt.Errorf("查询菜单失败: %w", err)
+	}
+
+	return menus, nil
+}
+
+// GetDeptsWithCache 获取角色的部门（无缓存版本，直接查询数据库）
+func (s *roleService) GetDeptsWithCache(ctx context.Context, roleID string) ([]models.Department, error) {
+	var deptIDs []string
+	if err := s.db.WithContext(ctx).
+		Table("sys_role_dept").
+		Where("role_id = ?", roleID).
+		Pluck("dept_id", &deptIDs).Error; err != nil {
+		return nil, fmt.Errorf("查询角色部门失败: %w", err)
+	}
+
+	if len(deptIDs) == 0 {
+		return []models.Department{}, nil
+	}
+
+	var depts []models.Department
+	if err := s.db.WithContext(ctx).
+		Where("id IN ? AND status = ?", deptIDs, models.DeptStatusNormal).
+		Order("order_num ASC").
+		Find(&depts).Error; err != nil {
+		return nil, fmt.Errorf("查询部门失败: %w", err)
+	}
+
+	return depts, nil
+}
+
+// InvalidateRoleCache 失效角色缓存（无缓存版本，空操作）
+func (s *roleService) InvalidateRoleCache(ctx context.Context, roleID string) error {
 	return nil
 }
 

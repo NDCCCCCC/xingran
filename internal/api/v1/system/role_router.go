@@ -8,10 +8,25 @@ import (
 
 // SetupRoleRouter 设置角色路由
 func SetupRoleRouter(r *gin.RouterGroup, core *core.Core) {
-	// 创建角色服务（注入依赖）
-	roleService := systemServices.NewRoleService(
-		core.DB.GetDB(),
-	)
+	// 创建缓存提供者适配器
+	var cacheProvider systemServices.CacheProvider
+	if core.DataCacheService != nil {
+		cacheProvider = NewDataCacheAdapter(core.DataCacheService)
+	} else {
+		cacheProvider = &systemServices.NoOpCacheProvider{}
+	}
+
+	// 创建带缓存的角色服务
+	var roleService systemServices.RoleService
+	if core.DataCacheService != nil {
+		roleService = systemServices.NewRoleServiceWithCache(
+			core.DB.GetDB(),
+			cacheProvider,
+			core.CacheConfigService,
+		)
+	} else {
+		roleService = systemServices.NewRoleService(core.DB.GetDB())
+	}
 
 	// 创建Handler
 	handler := NewRoleHandler(roleService)

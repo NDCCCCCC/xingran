@@ -8,10 +8,25 @@ import (
 
 // SetupMenuRouter 设置菜单路由
 func SetupMenuRouter(r *gin.RouterGroup, core *core.Core) {
-	// 创建菜单服务（注入依赖）
-	menuService := systemServices.NewMenuService(
-		core.DB.GetDB(),
-	)
+	// 创建缓存提供者适配器
+	var cacheProvider systemServices.CacheProvider
+	if core.DataCacheService != nil {
+		cacheProvider = NewDataCacheAdapter(core.DataCacheService)
+	} else {
+		cacheProvider = &systemServices.NoOpCacheProvider{}
+	}
+
+	// 创建带缓存的菜单服务
+	var menuService systemServices.MenuService
+	if core.DataCacheService != nil {
+		menuService = systemServices.NewMenuServiceWithCache(
+			core.DB.GetDB(),
+			cacheProvider,
+			core.CacheConfigService,
+		)
+	} else {
+		menuService = systemServices.NewMenuService(core.DB.GetDB())
+	}
 
 	// 创建Handler
 	handler := NewMenuHandler(menuService)
@@ -32,10 +47,25 @@ func SetupMenuRouter(r *gin.RouterGroup, core *core.Core) {
 // SetupUserMenuRouter 设置用户菜单路由（所有已登录用户可访问）
 // 路径：/system/my-menus/*
 func SetupUserMenuRouter(r *gin.RouterGroup, core *core.Core) {
-	// 创建菜单服务（注入依赖）
-	menuService := systemServices.NewMenuService(
-		core.DB.GetDB(),
-	)
+	// 创建缓存提供者适配器
+	var cacheProvider systemServices.CacheProvider
+	if core.DataCacheService != nil {
+		cacheProvider = NewDataCacheAdapter(core.DataCacheService)
+	} else {
+		cacheProvider = &systemServices.NoOpCacheProvider{}
+	}
+
+	// 创建带缓存的菜单服务
+	var menuService systemServices.MenuService
+	if core.DataCacheService != nil {
+		menuService = systemServices.NewMenuServiceWithCache(
+			core.DB.GetDB(),
+			cacheProvider,
+			core.CacheConfigService,
+		)
+	} else {
+		menuService = systemServices.NewMenuService(core.DB.GetDB())
+	}
 
 	// 创建Handler
 	handler := NewMenuHandler(menuService)

@@ -19,6 +19,11 @@ type DepartmentService interface {
 	BatchDelete(ctx context.Context, ids []string) error
 	UpdateStatus(ctx context.Context, id string, status int) error
 	GetRoleDeptIDs(ctx context.Context, roleID string, deptIDs *[]string) error
+
+	// 新增缓存方法
+	GetTreeWithCache(ctx context.Context, includeDisabled bool) ([]*models.Department, error)
+	GetSelectDataWithCache(ctx context.Context) ([]*models.Department, error)
+	InvalidateDeptCache(ctx context.Context) error
 }
 
 // departmentService 部门服务实现
@@ -349,4 +354,19 @@ func (s *departmentService) GetRoleDeptIDs(ctx context.Context, roleID string, d
 		Table("sys_role_dept").
 		Where("role_id = ?", roleID).
 		Pluck("dept_id", deptIDs).Error
+}
+
+// GetTreeWithCache 获取部门树（无缓存版本，直接查询数据库）
+func (s *departmentService) GetTreeWithCache(ctx context.Context, includeDisabled bool) ([]*models.Department, error) {
+	return s.GetTree(ctx, includeDisabled)
+}
+
+// GetSelectDataWithCache 获取选择器数据（无缓存版本，直接查询数据库）
+func (s *departmentService) GetSelectDataWithCache(ctx context.Context) ([]*models.Department, error) {
+	return s.GetTree(ctx, false)
+}
+
+// InvalidateDeptCache 失效部门缓存（无缓存版本，空操作）
+func (s *departmentService) InvalidateDeptCache(ctx context.Context) error {
+	return nil
 }

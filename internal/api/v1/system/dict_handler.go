@@ -148,6 +148,17 @@ func (h *DictTypeHandler) Delete(c *gin.Context) {
 	response.Success(c, nil)
 }
 
+// GetAll 获取所有字典类型（使用缓存）
+func (h *DictTypeHandler) GetAll(c *gin.Context) {
+	dictTypes, err := h.service.GetAllWithCache(c.Request.Context())
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response.Success(c, dictTypes)
+}
+
 // DictDataHandler 字典数据处理器
 type DictDataHandler struct {
 	service systemServices.DictDataService

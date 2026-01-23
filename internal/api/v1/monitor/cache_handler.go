@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -190,6 +191,12 @@ func (h *CacheHandler) GetCacheInfo(c *gin.Context) {
 	if key == "" {
 		response.Error(c, http.StatusBadRequest, "缓存键不能为空")
 		return
+	}
+
+	// 如果键名包含 ruoyi: 前缀，需要移除它
+	// 因为 Cache.Get() 会自动添加前缀，所以这里传入的应该是不带前缀的键名
+	if strings.HasPrefix(key, "ruoyi:") {
+		key = key[6:] // 移除 "ruoyi:" 前缀
 	}
 
 	if h.core.Cache != nil {
@@ -509,11 +516,11 @@ func (h *CacheHandler) getRealtimeCacheStats(c *gin.Context) {
 	result := make(map[string]interface{})
 
 	if l1Stats, ok := stats["l1"].(map[string]interface{}); ok {
-		result["l1"] = formatCacheStats(l1Stats, "L1(内存)")
+		result["l1"] = formatCacheStats(l1Stats, "L1(内存)", true)
 	}
 
 	if l2Stats, ok := stats["l2"].(map[string]interface{}); ok {
-		result["l2"] = formatCacheStats(l2Stats, "L2(Redis)")
+		result["l2"] = formatCacheStats(l2Stats, "L2(Redis)", true)
 	}
 
 	response.Success(c, result)
@@ -833,5 +840,31 @@ func (h *CacheHandler) TestCacheEndpoint(c *gin.Context) {
 		"message":   "缓存测试成功",
 		"count":     len(depts),
 		"cacheKeys": keys,
+	})
+}
+
+// DebugRawKeys 调试端点：直接查询Redis中的所有原始键
+func (h *CacheHandler) DebugRawKeys(c *gin.Context) {
+	fmt.Println("[DEBUG] 查询Redis中的所有原始键")
+
+	if h.core.Cache == nil {
+		response.Error(c, http.StatusInternalServerError, "缓存服务未初始化")
+		return
+	}
+
+	ctx := context.Background()
+
+	// 使用现有的 Cache 接口查询
+	allKeys, _ := h.core.Cache.Keys(ctx, "*")
+	fmt.Printf("[DEBUG] 通过 Cache.Keys(\"*\") 获取到 %d 个键\n", len(allKeys))
+
+	ruoyiKeys, _ := h.core.Cache.Keys(ctx, "ruoyi:*")
+	fmt.Printf("[DEBUG] 通过 Cache.Keys(\"ruoyi:*\") 获取到 %d 个键\n", len(ruoyiKeys))
+
+	response.Success(c, gin.H{
+		"totalKeys":     len(allKeys),
+		"ruoyiKeys":     len(ruoyiKeys),
+		"allKeys":       allKeys,
+		"ruoyiKeysList": ruoyiKeys,
 	})
 }

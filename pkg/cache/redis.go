@@ -9,6 +9,14 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+)
+
+const (
+	dialTimeout  = 10 * time.Second
+	readTimeout  = 5 * time.Second
+	writeTimeout = 5 * time.Second
+	poolTimeout  = 10 * time.Second
 )
 
 // RedisCache Redis缓存实现
@@ -17,17 +25,6 @@ type RedisCache struct {
 	prefix string
 }
 
-const (
-	// dialTimeout 连接超时时间
-	dialTimeout = 10 * time.Second
-	// readTimeout 读取超时时间
-	readTimeout = 5 * time.Second
-	// writeTimeout 写入超时时间
-	writeTimeout = 5 * time.Second
-	// poolTimeout 连接池超时时间
-	poolTimeout = 10 * time.Second
-)
-
 // NewRedisCache 创建Redis缓存实例
 func NewRedisCache(config *CacheConfig, keyPrefix string) (*RedisCache, error) {
 	rdb := redis.NewClient(&redis.Options{
@@ -35,16 +32,15 @@ func NewRedisCache(config *CacheConfig, keyPrefix string) (*RedisCache, error) {
 		Password:        config.Password,
 		DB:              config.DB,
 		PoolSize:        config.PoolSize,
-		MaxRetries:      3,                      // 最大重试次数
-		MinRetryBackoff: 8 * time.Millisecond,   // 最小重试等待时间
-		MaxRetryBackoff: 512 * time.Millisecond, // 最大重试等待时间
-		DialTimeout:     dialTimeout,            // 连接超时
-		ReadTimeout:     readTimeout,            // 读取超时
-		WriteTimeout:    writeTimeout,           // 写入超时
-		PoolTimeout:     poolTimeout,            // 连接池超时
+		MaxRetries:      3,
+		MinRetryBackoff: 8 * time.Millisecond,
+		MaxRetryBackoff: 512 * time.Millisecond,
+		DialTimeout:     dialTimeout,
+		ReadTimeout:     readTimeout,
+		WriteTimeout:    writeTimeout,
+		PoolTimeout:     poolTimeout,
 	})
 
-	// 测试连接 - 使用更长的超时时间
 	ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
 	defer cancel()
 
@@ -52,13 +48,14 @@ func NewRedisCache(config *CacheConfig, keyPrefix string) (*RedisCache, error) {
 		return nil, fmt.Errorf("redis连接失败: %w", err)
 	}
 
+	logger.Infof("[Redis] 连接成功 %s:%d (DB:%d)", config.Host, config.Port, config.DB)
+
 	return &RedisCache{
 		client: rdb,
 		prefix: keyPrefix,
 	}, nil
 }
 
-// buildKey 构建缓存键
 func (r *RedisCache) buildKey(key string) string {
 	if r.prefix == "" {
 		return key
@@ -124,7 +121,6 @@ func (r *RedisCache) MSet(ctx context.Context, pairs ...interface{}) error {
 	if len(pairs)%2 != 0 {
 		return fmt.Errorf("参数数量必须为偶数")
 	}
-
 	if len(pairs) == 0 {
 		return nil
 	}
@@ -183,27 +179,21 @@ func (r *RedisCache) Expire(ctx context.Context, key string, expiration time.Dur
 
 // TTL 获取剩余时间
 func (r *RedisCache) TTL(ctx context.Context, key string) (time.Duration, error) {
-	duration, err := r.client.TTL(ctx, r.buildKey(key)).Result()
-	if err != nil {
-		return 0, err
-	}
-	// go-redis 的 TTL() 方法返回的已经是 time.Duration 类型，不需要再转换
-	return duration, nil
+	return r.client.TTL(ctx, r.buildKey(key)).Result()
 }
 
 // Keys 模式匹配
 func (r *RedisCache) Keys(ctx context.Context, pattern string) ([]string, error) {
-	keys, err := r.client.Keys(ctx, r.buildKey(pattern)).Result()
+	builtPattern := r.buildKey(pattern)
+	keys, err := r.client.Keys(ctx, builtPattern).Result()
 	if err != nil {
 		return nil, err
 	}
 
-	// 移除前缀
 	if r.prefix != "" {
 		prefixWithColon := r.prefix + ":"
 		prefixLen := len(prefixWithColon)
 		for i, key := range keys {
-			// 只有当键以前缀开头时才移除前缀
 			if strings.HasPrefix(key, prefixWithColon) && len(key) > prefixLen {
 				keys[i] = key[prefixLen:]
 			}
@@ -221,6 +211,14 @@ func (r *RedisCache) FlushDB(ctx context.Context) error {
 // Close 关闭连接
 func (r *RedisCache) Close() error {
 	return r.client.Close()
+}
+
+func (r *RedisCache) getClient() *redis.Client {
+	return r.client
+}
+
+func (r *RedisCache) getPrefix() string {
+	return r.prefix
 }
 
 // GetJSON 获取JSON对象
@@ -266,11 +264,9 @@ func (r *RedisCache) GetBool(ctx context.Context, key string) (bool, error) {
 
 // SetBool 设置布尔值
 func (r *RedisCache) SetBool(ctx context.Context, key string, value bool, expiration time.Duration) error {
-	var strValue string
+	strValue := "0"
 	if value {
 		strValue = "1"
-	} else {
-		strValue = "0"
 	}
 	return r.Set(ctx, key, strValue, expiration)
 }
@@ -294,12 +290,12 @@ func (r *RedisCache) MGetJSON(ctx context.Context, keys ...string) (map[string]i
 	result := make(map[string]interface{})
 	for i, key := range keys {
 		if values[i] != nil {
-			var value interface{}
 			if strValue, ok := values[i].(string); ok {
-				if err := json.Unmarshal([]byte(strValue), &value); err == nil {
-					result[key] = value
-				} else {
+				var value interface{}
+				if err := json.Unmarshal([]byte(strValue), &value); err != nil {
 					result[key] = strValue
+				} else {
+					result[key] = value
 				}
 			} else {
 				result[key] = values[i]
@@ -316,7 +312,6 @@ func (r *RedisCache) MSetJSON(ctx context.Context, data map[string]interface{}, 
 		return nil
 	}
 
-	// 先设置所有数据
 	pairs := make([]interface{}, len(data)*2)
 	i := 0
 	for key, value := range data {
@@ -329,12 +324,9 @@ func (r *RedisCache) MSetJSON(ctx context.Context, data map[string]interface{}, 
 		return err
 	}
 
-	// 如果需要设置过期时间，为每个键单独设置
 	if expiration > 0 {
 		for key := range data {
-			if err := r.client.Expire(ctx, r.buildKey(key), expiration).Err(); err != nil {
-				return err
-			}
+			r.client.Expire(ctx, r.buildKey(key), expiration)
 		}
 	}
 
@@ -353,18 +345,11 @@ func (r *RedisCache) HSet(ctx context.Context, key, field string, value interfac
 
 // HGetAll 获取Hash所有字段
 func (r *RedisCache) HGetAll(ctx context.Context, key string) (map[string]string, error) {
-	result, err := r.client.HGetAll(ctx, r.buildKey(key)).Result()
-	if err != nil {
-		return nil, err
-	}
-
-	// Redis的HGetAll已经返回map[string]string，直接返回
-	return result, nil
+	return r.client.HGetAll(ctx, r.buildKey(key)).Result()
 }
 
 // HDel 删除Hash字段
 func (r *RedisCache) HDel(ctx context.Context, key string, fields ...string) error {
-	// HDel接受字符串参数，不需要转换
 	return r.client.HDel(ctx, r.buildKey(key), fields...).Err()
 }
 
@@ -375,7 +360,6 @@ func (r *RedisCache) HKeys(ctx context.Context, key string) ([]string, error) {
 		return nil, err
 	}
 
-	// 移除前缀（如果需要）
 	if r.prefix != "" {
 		prefixLen := len(r.prefix) + 1
 		for i, key := range keys {
@@ -392,116 +376,97 @@ func (r *RedisCache) HKeys(ctx context.Context, key string) ([]string, error) {
 func (r *RedisCache) GetStats(ctx context.Context) (map[string]interface{}, error) {
 	stats := make(map[string]interface{})
 
-	// 获取服务器信息
 	serverInfo, err := r.client.Info(ctx, "server").Result()
 	if err == nil {
-		lines := strings.Split(serverInfo, "\n")
-		for _, line := range lines {
-			line = strings.TrimSpace(line)
-			if strings.HasPrefix(line, "#") || line == "" {
-				continue
+		stats = r.parseInfoSection(serverInfo, stats, []string{
+			"redis_version", "uptime_in_seconds", "uptime_in_days",
+		}, func(v string) interface{} {
+			if v, err := strconv.ParseInt(v, 10, 64); err == nil {
+				return v
 			}
-			parts := strings.SplitN(line, ":", 2)
-			if len(parts) == 2 {
-				key := strings.TrimSpace(parts[0])
-				valueStr := strings.TrimSpace(parts[1])
-				// 对于版本字符串，直接保存为字符串
-				if key == "redis_version" {
-					stats[key] = valueStr
-				} else if key == "uptime_in_seconds" || key == "uptime_in_days" {
-					if value, err := strconv.ParseInt(valueStr, 10, 64); err == nil {
-						stats[key] = value
-					} else {
-						stats[key] = valueStr
-					}
-				} else {
-					stats[key] = valueStr
-				}
-			}
-		}
+			return v
+		})
 	}
 
-	// 获取内存信息
 	memInfo, err := r.client.Info(ctx, "memory").Result()
 	if err == nil {
-		lines := strings.Split(memInfo, "\n")
-		for _, line := range lines {
-			line = strings.TrimSpace(line)
-			if strings.HasPrefix(line, "#") || line == "" {
-				continue
+		stats = r.parseInfoSection(memInfo, stats, []string{
+			"used_memory", "used_memory_rss", "used_memory_peak",
+			"maxmemory", "total_system_memory",
+		}, func(v string) interface{} {
+			if v, err := strconv.ParseInt(v, 10, 64); err == nil {
+				return v
 			}
-			parts := strings.SplitN(line, ":", 2)
-			if len(parts) == 2 {
-				key := strings.TrimSpace(parts[0])
-				valueStr := strings.TrimSpace(parts[1])
-
-				// 转换数值类型的值
-				if key == "used_memory" || key == "used_memory_rss" || key == "used_memory_peak" ||
-					key == "maxmemory" || key == "used_memory_dataset" || key == "used_memory_overhead" ||
-					key == "total_system_memory" {
-					if value, err := strconv.ParseInt(valueStr, 10, 64); err == nil {
-						stats[key] = value
-					}
-				} else {
-					stats[key] = valueStr
-				}
-			}
-		}
+			return v
+		})
 	}
 
-	// 获取键的数量
 	keyCount, err := r.client.DBSize(ctx).Result()
 	if err == nil {
 		stats["key_count"] = keyCount
 	}
 
-	// 获取统计信息
 	statsInfo, err := r.client.Info(ctx, "stats").Result()
 	if err == nil {
-		statsLines := strings.Split(statsInfo, "\n")
-		for _, line := range statsLines {
-			line = strings.TrimSpace(line)
-			if strings.HasPrefix(line, "#") || line == "" {
-				continue
+		stats = r.parseInfoSection(statsInfo, stats, []string{
+			"keyspace_hits", "keyspace_misses",
+			"total_connections_received", "total_commands_processed",
+			"instantaneous_ops_per_sec", "expired_keys", "evicted_keys",
+		}, func(v string) interface{} {
+			if v, err := strconv.ParseInt(v, 10, 64); err == nil {
+				return v
 			}
+			return v
+		})
 
-			parts := strings.SplitN(line, ":", 2)
-			if len(parts) == 2 {
-				key := strings.TrimSpace(parts[0])
-				valueStr := strings.TrimSpace(parts[1])
-
-				if key == "keyspace_hits" || key == "keyspace_misses" ||
-					key == "total_connections_received" || key == "total_commands_processed" ||
-					key == "instantaneous_ops_per_sec" || key == "keyspace_misses" ||
-					key == "expired_keys" || key == "evicted_keys" {
-					if value, err := strconv.ParseInt(valueStr, 10, 64); err == nil {
-						stats[key] = value
-					}
-				}
-			}
-		}
-
-		// 计算命中率
-		hits, hitOk := stats["keyspace_hits"].(int64)
-		misses, missOk := stats["keyspace_misses"].(int64)
-		if hitOk && missOk && (hits+misses) > 0 {
-			hitRate := float64(hits) / float64(hits+misses) * 100
-			stats["hit_rate"] = hitRate
+		hits, _ := stats["keyspace_hits"].(int64)
+		misses, _ := stats["keyspace_misses"].(int64)
+		if hits+misses > 0 {
+			stats["hit_rate"] = float64(hits) / float64(hits+misses) * 100
 		} else {
 			stats["hit_rate"] = 0.0
 		}
 	}
 
-	// 获取数据库信息
-	dbInfo, err := r.client.Info(ctx, "keyspace").Result()
-	if err == nil {
-		stats["keyspace_info"] = dbInfo
-	}
+	dbInfo, _ := r.client.Info(ctx, "keyspace").Result()
+	stats["keyspace_info"] = dbInfo
 
 	return stats, nil
 }
 
-// MultiLevelCache 多级缓存
+func (r *RedisCache) parseInfoSection(info string, stats map[string]interface{}, intKeys []string, parser func(string) interface{}) map[string]interface{} {
+	lines := strings.Split(info, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "#") || line == "" {
+			continue
+		}
+		parts := strings.SplitN(line, ":", 2)
+		if len(parts) == 2 {
+			key := strings.TrimSpace(parts[0])
+			valueStr := strings.TrimSpace(parts[1])
+			if contains(intKeys, key) {
+				stats[key] = parser(valueStr)
+			} else {
+				stats[key] = valueStr
+			}
+		}
+	}
+	return stats
+}
+
+// contains 字符串切片包含检查（简单版本，用于内部辅助）
+func contains(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
+}
+
+// ==================== MultiLevelCache 多级缓存 ====================
+
 type MultiLevelCache struct {
 	l1Cache Cache // 本地缓存
 	l2Cache Cache // Redis缓存
@@ -515,56 +480,40 @@ func NewMultiLevelCache(l1, l2 Cache) *MultiLevelCache {
 	}
 }
 
-// Get 获取缓存值（先查本地缓存，再查Redis）
 func (m *MultiLevelCache) Get(ctx context.Context, key string) (string, error) {
-	// 先查本地缓存
 	if value, err := m.l1Cache.Get(ctx, key); err == nil {
 		return value, nil
 	}
 
-	// 查Redis缓存
 	value, err := m.l2Cache.Get(ctx, key)
 	if err != nil {
 		return "", err
 	}
 
-	// 回写本地缓存（短时间）
 	m.l1Cache.Set(ctx, key, value, 5*time.Minute)
-
 	return value, nil
 }
 
-// Set 设置缓存值（同时设置两级缓存）
 func (m *MultiLevelCache) Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error {
-	// 设置本地缓存（短时间）
 	if err := m.l1Cache.Set(ctx, key, value, 5*time.Minute); err != nil {
 		return err
 	}
 
-	// 设置Redis缓存 - 失败时记录日志但不中断操作
-	// 使用带超时的上下文
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
 	if err := m.l2Cache.Set(ctx, key, value, expiration); err != nil {
-		// L2缓存写入失败，只记录错误，不影响返回
-		// 实际使用中可以配置日志系统
-		_ = err
+		logger.Warnf("[MultiLevelCache] L2缓存写入失败: %v", err)
 	}
 
 	return nil
 }
 
-// Delete 删除缓存（同时删除两级缓存）
 func (m *MultiLevelCache) Delete(ctx context.Context, key string) error {
-	// 删除本地缓存
 	m.l1Cache.Delete(ctx, key)
-
-	// 删除Redis缓存
 	return m.l2Cache.Delete(ctx, key)
 }
 
-// Close 关闭缓存
 func (m *MultiLevelCache) Close() error {
 	if err := m.l1Cache.Close(); err != nil {
 		return err
@@ -572,7 +521,6 @@ func (m *MultiLevelCache) Close() error {
 	return m.l2Cache.Close()
 }
 
-// 其他方法代理到L2缓存
 func (m *MultiLevelCache) Exists(ctx context.Context, key string) (bool, error) {
 	return m.l2Cache.Exists(ctx, key)
 }
@@ -586,13 +534,7 @@ func (m *MultiLevelCache) MSet(ctx context.Context, pairs ...interface{}) error 
 }
 
 func (m *MultiLevelCache) MDelete(ctx context.Context, keys ...string) error {
-	// 同时删除 L1 和 L2 的缓存
-	// L1 删除失败不影响 L2 删除，记录错误但不中断
-	if err := m.l1Cache.MDelete(ctx, keys...); err != nil {
-		// 记录 L1 删除失败，但继续删除 L2
-		_ = err
-	}
-	// L2 删除失败则返回错误
+	m.l1Cache.MDelete(ctx, keys...)
 	return m.l2Cache.MDelete(ctx, keys...)
 }
 
@@ -621,52 +563,55 @@ func (m *MultiLevelCache) TTL(ctx context.Context, key string) (time.Duration, e
 }
 
 func (m *MultiLevelCache) Keys(ctx context.Context, pattern string) ([]string, error) {
-	// 返回 L1 和 L2 的所有键（去重）
 	l1Keys, _ := m.l1Cache.Keys(ctx, pattern)
 	l2Keys, _ := m.l2Cache.Keys(ctx, pattern)
 	return m.mergeKeys(l1Keys, l2Keys), nil
 }
 
-// KeysByLevel 根据层级获取缓存键
 func (m *MultiLevelCache) KeysByLevel(ctx context.Context, pattern string, level string) ([]string, error) {
-	switch level {
-	case "l1", "L1":
+	switch strings.ToLower(level) {
+	case "l1":
 		return m.l1Cache.Keys(ctx, pattern)
-	case "l2", "L2":
+	case "l2":
 		return m.l2Cache.Keys(ctx, pattern)
-	case "all":
+	default:
 		l1Keys, _ := m.l1Cache.Keys(ctx, pattern)
 		l2Keys, _ := m.l2Cache.Keys(ctx, pattern)
 		return m.mergeKeys(l1Keys, l2Keys), nil
-	default:
-		return m.l2Cache.Keys(ctx, pattern)
 	}
 }
 
-// GetKeyLocations 获取每个键所在的层级
-func (m *MultiLevelCache) GetKeyLocations(ctx context.Context, pattern string) (map[string]string, error) {
-	locations := make(map[string]string)
-
-	l1Keys, _ := m.l1Cache.Keys(ctx, pattern)
-	for _, key := range l1Keys {
-		locations[key] = "l1"
-	}
-
-	l2Keys, _ := m.l2Cache.Keys(ctx, pattern)
-	for _, key := range l2Keys {
-		if _, exists := locations[key]; exists {
-			locations[key] = "both"
-		} else {
-			locations[key] = "l2"
-		}
-	}
-
-	return locations, nil
+func (m *MultiLevelCache) FlushDB(ctx context.Context) error {
+	m.l1Cache.FlushDB(ctx)
+	return m.l2Cache.FlushDB(ctx)
 }
 
-// mergeKeys 合并并去重两个键列表
+func (m *MultiLevelCache) GetStats(ctx context.Context) (map[string]interface{}, error) {
+	stats := make(map[string]interface{})
+
+	if l1Stats, ok := m.getCacheStats(m.l1Cache, ctx); ok {
+		stats["l1"] = l1Stats
+	}
+
+	if l2Stats, ok := m.getCacheStats(m.l2Cache, ctx); ok {
+		stats["l2"] = l2Stats
+	}
+
+	return stats, nil
+}
+
+func (m *MultiLevelCache) getCacheStats(cache Cache, ctx context.Context) (map[string]interface{}, bool) {
+	if cacheWithStats, ok := cache.(interface {
+		GetStats(ctx context.Context) (map[string]interface{}, error)
+	}); ok {
+		stats, err := cacheWithStats.GetStats(ctx)
+		return stats, err == nil
+	}
+	return nil, false
+}
+
 func (m *MultiLevelCache) mergeKeys(l1, l2 []string) []string {
-	keySet := make(map[string]bool)
+	keySet := make(map[string]bool, len(l1)+len(l2))
 	for _, k := range l1 {
 		keySet[k] = true
 	}
@@ -680,57 +625,12 @@ func (m *MultiLevelCache) mergeKeys(l1, l2 []string) []string {
 	return result
 }
 
-func (m *MultiLevelCache) FlushDB(ctx context.Context) error {
-	m.l1Cache.FlushDB(ctx)
-	return m.l2Cache.FlushDB(ctx)
-}
-
-// GetStats 获取多级缓存统计信息（返回L1和L2的分离统计）
-func (m *MultiLevelCache) GetStats(ctx context.Context) (map[string]interface{}, error) {
-	stats := make(map[string]interface{})
-
-	// 获取L1统计
-	if l1Stats, ok := m.getL1Stats(ctx); ok {
-		stats["l1"] = l1Stats
-	}
-
-	// 获取L2统计
-	if l2Stats, ok := m.getL2Stats(ctx); ok {
-		stats["l2"] = l2Stats
-	}
-
-	return stats, nil
-}
-
-// getL1Stats 获取L1缓存统计
-func (m *MultiLevelCache) getL1Stats(ctx context.Context) (map[string]interface{}, bool) {
-	if cacheWithStats, ok := m.l1Cache.(interface {
-		GetStats(ctx context.Context) (map[string]interface{}, error)
-	}); ok {
-		stats, err := cacheWithStats.GetStats(ctx)
-		return stats, err == nil
-	}
-	return nil, false
-}
-
-// getL2Stats 获取L2缓存统计
-func (m *MultiLevelCache) getL2Stats(ctx context.Context) (map[string]interface{}, bool) {
-	if cacheWithStats, ok := m.l2Cache.(interface {
-		GetStats(ctx context.Context) (map[string]interface{}, error)
-	}); ok {
-		stats, err := cacheWithStats.GetStats(ctx)
-		return stats, err == nil
-	}
-	return nil, false
-}
-
 // MGetJSON 批量获取JSON对象
 func (m *MultiLevelCache) MGetJSON(ctx context.Context, keys ...string) (map[string]interface{}, error) {
 	if len(keys) == 0 {
 		return make(map[string]interface{}), nil
 	}
 
-	// 优先从L1缓存获取
 	result := make(map[string]interface{})
 	missingKeys := make([]string, 0, len(keys))
 
@@ -747,7 +647,6 @@ func (m *MultiLevelCache) MGetJSON(ctx context.Context, keys ...string) (map[str
 		}
 	}
 
-	// 从L2缓存获取缺失的数据
 	if len(missingKeys) > 0 {
 		if cacheWithMGet, ok := m.l2Cache.(interface {
 			MGetJSON(ctx context.Context, keys ...string) (map[string]interface{}, error)
@@ -756,21 +655,8 @@ func (m *MultiLevelCache) MGetJSON(ctx context.Context, keys ...string) (map[str
 			if err == nil {
 				for key, value := range l2Result {
 					result[key] = value
-					// 回写L1缓存
 					if jsonValue, err := json.Marshal(value); err == nil {
 						m.l1Cache.Set(ctx, key, jsonValue, 5*time.Minute)
-					}
-				}
-			}
-		} else {
-			// 降级到单个获取
-			for _, key := range missingKeys {
-				if value, err := m.l2Cache.Get(ctx, key); err == nil && value != "" {
-					var jsonValue interface{}
-					if err := json.Unmarshal([]byte(value), &jsonValue); err == nil {
-						result[key] = jsonValue
-						// 回写L1缓存
-						m.l1Cache.Set(ctx, key, value, 5*time.Minute)
 					}
 				}
 			}
@@ -786,7 +672,6 @@ func (m *MultiLevelCache) MSetJSON(ctx context.Context, data map[string]interfac
 		return nil
 	}
 
-	// 设置到L1缓存（短时间）
 	l1Data := make(map[string]interface{})
 	for key, value := range data {
 		if jsonValue, err := json.Marshal(value); err == nil {
@@ -794,89 +679,106 @@ func (m *MultiLevelCache) MSetJSON(ctx context.Context, data map[string]interfac
 		}
 	}
 
-	if len(l1Data) > 0 {
-		if cacheWithMSet, ok := m.l1Cache.(interface {
-			MSetJSON(ctx context.Context, data map[string]interface{}, expiration time.Duration) error
-		}); ok {
-			cacheWithMSet.MSetJSON(ctx, l1Data, 5*time.Minute)
-		} else {
-			// 降级到单个设置
-			for key, value := range l1Data {
-				m.l1Cache.Set(ctx, key, value, 5*time.Minute)
-			}
-		}
+	for key, value := range l1Data {
+		m.l1Cache.Set(ctx, key, value, 5*time.Minute)
 	}
 
-	// 设置到L2缓存（长过期时间）
-	if cacheWithMSet, ok := m.l2Cache.(interface {
-		MSetJSON(ctx context.Context, data map[string]interface{}, expiration time.Duration) error
-	}); ok {
-		return cacheWithMSet.MSetJSON(ctx, data, expiration)
-	} else {
-		// 降级到单个设置
-		for key, value := range data {
-			if err := m.l2Cache.Set(ctx, key, value, expiration); err != nil {
-				return err
-			}
+	for key, value := range data {
+		if err := m.l2Cache.Set(ctx, key, value, expiration); err != nil {
+			return err
 		}
 	}
 
 	return nil
 }
 
-// HGet 获取Hash字段
 func (m *MultiLevelCache) HGet(ctx context.Context, key, field string) (string, error) {
 	return m.l2Cache.HGet(ctx, key, field)
 }
 
-// HSet 设置Hash字段
 func (m *MultiLevelCache) HSet(ctx context.Context, key, field string, value interface{}) error {
 	return m.l2Cache.HSet(ctx, key, field, value)
 }
 
-// HGetAll 获取Hash所有字段
 func (m *MultiLevelCache) HGetAll(ctx context.Context, key string) (map[string]string, error) {
 	return m.l2Cache.HGetAll(ctx, key)
 }
 
-// HDel 删除Hash字段
 func (m *MultiLevelCache) HDel(ctx context.Context, key string, fields ...string) error {
 	return m.l2Cache.HDel(ctx, key, fields...)
 }
 
-// HKeys 获取Hash所有字段名
 func (m *MultiLevelCache) HKeys(ctx context.Context, key string) ([]string, error) {
 	return m.l2Cache.HKeys(ctx, key)
 }
 
-// SetInt 设置整数
 func (m *MultiLevelCache) SetInt(ctx context.Context, key string, value int, expiration time.Duration) error {
 	return m.l2Cache.SetInt(ctx, key, value, expiration)
 }
 
-// GetInt 获取整数
 func (m *MultiLevelCache) GetInt(ctx context.Context, key string) (int, error) {
 	return m.l2Cache.GetInt(ctx, key)
 }
 
-// SetJSON 设置JSON对象
 func (m *MultiLevelCache) SetJSON(ctx context.Context, key string, value interface{}, expiration time.Duration) error {
-	// 设置到L1缓存（短时间）
 	if jsonValue, err := json.Marshal(value); err == nil {
 		m.l1Cache.Set(ctx, key, jsonValue, 5*time.Minute)
 	}
-	// 设置到L2缓存
 	return m.l2Cache.SetJSON(ctx, key, value, expiration)
 }
 
-// GetJSON 获取JSON对象
 func (m *MultiLevelCache) GetJSON(ctx context.Context, key string, dest interface{}) error {
-	// 先尝试从L1缓存获取
 	if value, err := m.l1Cache.Get(ctx, key); err == nil && value != "" {
 		if err := json.Unmarshal([]byte(value), dest); err == nil {
 			return nil
 		}
 	}
-	// 从L2缓存获取
 	return m.l2Cache.GetJSON(ctx, key, dest)
+}
+
+// ==================== 直接访问 Redis 的方法（用于缓存监控）====================
+
+type redisCacheInterface interface {
+	getClient() *redis.Client
+	getPrefix() string
+}
+
+// DirectRedisKeys 直接查询 Redis 中的所有键（不使用前缀）
+func (m *MultiLevelCache) DirectRedisKeys(ctx context.Context, pattern string) ([]string, error) {
+	if redisCache, ok := m.l2Cache.(redisCacheInterface); ok {
+		client := redisCache.getClient()
+		if client == nil {
+			return []string{}, nil
+		}
+		return client.Keys(ctx, pattern).Result()
+	}
+	return []string{}, nil
+}
+
+// DirectRedisGet 直接从 Redis 获取缓存值（不使用前缀）
+func (m *MultiLevelCache) DirectRedisGet(ctx context.Context, key string) (string, error) {
+	if redisCache, ok := m.l2Cache.(redisCacheInterface); ok {
+		client := redisCache.getClient()
+		if client == nil {
+			return "", nil
+		}
+		result, err := client.Get(ctx, key).Result()
+		if err == redis.Nil {
+			return "", nil
+		}
+		return result, err
+	}
+	return "", nil
+}
+
+// DirectRedisTTL 直接从 Redis 获取 TTL（不使用前缀）
+func (m *MultiLevelCache) DirectRedisTTL(ctx context.Context, key string) (time.Duration, error) {
+	if redisCache, ok := m.l2Cache.(redisCacheInterface); ok {
+		client := redisCache.getClient()
+		if client == nil {
+			return 0, nil
+		}
+		return client.TTL(ctx, key).Result()
+	}
+	return 0, nil
 }

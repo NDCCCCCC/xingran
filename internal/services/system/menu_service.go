@@ -23,6 +23,11 @@ type MenuService interface {
 	GetAllUserMenus(ctx context.Context, userID string) ([]models.Menu, error)
 	GetUserPermissions(ctx context.Context, userID string) ([]string, error)
 	GetRoleMenuIDs(ctx context.Context, roleID string, menuIDs *[]string) error
+
+	// 新增缓存方法
+	GetTreeWithCache(ctx context.Context, includeHidden bool) ([]models.Menu, error)
+	GetRouterDataWithCache(ctx context.Context) ([]models.Menu, error)
+	InvalidateMenuCache(ctx context.Context) error
 }
 
 // menuService 菜单服务实现
@@ -486,4 +491,27 @@ func (s *menuService) GetRoleMenuIDs(ctx context.Context, roleID string, menuIDs
 		Table("sys_role_menu").
 		Where("role_id = ?", roleID).
 		Pluck("menu_id", menuIDs).Error
+}
+
+// GetTreeWithCache 获取菜单树（无缓存版本，直接查询数据库）
+func (s *menuService) GetTreeWithCache(ctx context.Context, includeHidden bool) ([]models.Menu, error) {
+	return s.GetTree(ctx)
+}
+
+// GetRouterDataWithCache 获取路由数据（无缓存版本，直接查询数据库）
+func (s *menuService) GetRouterDataWithCache(ctx context.Context) ([]models.Menu, error) {
+	var menus []models.Menu
+	if err := s.db.WithContext(ctx).
+		Where("status = ?", models.MenuStatusNormal).
+		Order("order_num ASC").
+		Find(&menus).Error; err != nil {
+		return nil, fmt.Errorf("查询菜单失败: %w", err)
+	}
+
+	return s.buildMenuTree(menus, nil), nil
+}
+
+// InvalidateMenuCache 失效菜单缓存（无缓存版本，空操作）
+func (s *menuService) InvalidateMenuCache(ctx context.Context) error {
+	return nil
 }

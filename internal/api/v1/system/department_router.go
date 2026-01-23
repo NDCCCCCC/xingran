@@ -8,10 +8,25 @@ import (
 
 // SetupDepartmentRouter 设置部门路由
 func SetupDepartmentRouter(r *gin.RouterGroup, core *core.Core) {
-	// 创建部门服务（注入依赖）
-	departmentService := systemServices.NewDepartmentService(
-		core.DB.GetDB(),
-	)
+	// 创建缓存提供者适配器
+	var cacheProvider systemServices.CacheProvider
+	if core.DataCacheService != nil {
+		cacheProvider = NewDataCacheAdapter(core.DataCacheService)
+	} else {
+		cacheProvider = &systemServices.NoOpCacheProvider{}
+	}
+
+	// 创建带缓存的部门服务
+	var departmentService systemServices.DepartmentService
+	if core.DataCacheService != nil {
+		departmentService = systemServices.NewDepartmentServiceWithCache(
+			core.DB.GetDB(),
+			cacheProvider,
+			core.CacheConfigService,
+		)
+	} else {
+		departmentService = systemServices.NewDepartmentService(core.DB.GetDB())
+	}
 
 	// 创建Handler
 	handler := NewDepartmentHandler(departmentService)

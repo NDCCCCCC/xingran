@@ -16,6 +16,11 @@ type PostService interface {
 	GetByID(ctx context.Context, id string) (*models.Post, error)
 	List(ctx context.Context, params PostListParams) (*PageResult, error)
 	BatchDelete(ctx context.Context, ids []string) error
+
+	// 新增缓存方法
+	GetAllWithCache(ctx context.Context) ([]*models.Post, error)
+	GetEnabledWithCache(ctx context.Context) ([]*models.Post, error)
+	InvalidatePostCache(ctx context.Context) error
 }
 
 // postService 岗位服务实现
@@ -192,5 +197,43 @@ func (s *postService) BatchDelete(ctx context.Context, ids []string) error {
 		return fmt.Errorf("批量删除岗位失败: %w", err)
 	}
 
+	return nil
+}
+
+// GetAllWithCache 获取所有岗位（无缓存版本，直接查询数据库）
+func (s *postService) GetAllWithCache(ctx context.Context) ([]*models.Post, error) {
+	var posts []models.Post
+	if err := s.db.WithContext(ctx).
+		Order("post_sort ASC").
+		Find(&posts).Error; err != nil {
+		return nil, fmt.Errorf("查询岗位失败: %w", err)
+	}
+
+	result := make([]*models.Post, len(posts))
+	for i := range posts {
+		result[i] = &posts[i]
+	}
+	return result, nil
+}
+
+// GetEnabledWithCache 获取启用的岗位（无缓存版本，直接查询数据库）
+func (s *postService) GetEnabledWithCache(ctx context.Context) ([]*models.Post, error) {
+	var posts []models.Post
+	if err := s.db.WithContext(ctx).
+		Where("status = ?", models.PostStatusEnabled).
+		Order("post_sort ASC").
+		Find(&posts).Error; err != nil {
+		return nil, fmt.Errorf("查询岗位失败: %w", err)
+	}
+
+	result := make([]*models.Post, len(posts))
+	for i := range posts {
+		result[i] = &posts[i]
+	}
+	return result, nil
+}
+
+// InvalidatePostCache 失效岗位缓存（无缓存版本，空操作）
+func (s *postService) InvalidatePostCache(ctx context.Context) error {
 	return nil
 }

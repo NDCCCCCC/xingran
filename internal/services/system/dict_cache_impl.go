@@ -1,0 +1,239 @@
+package system
+
+import (
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	"gorm.io/gorm"
+)
+
+// dictTypeCacheService 字典类型缓存服务
+type dictTypeCacheService struct {
+	*dictTypeService
+	cache CacheProvider
+	CacheServiceBase
+}
+
+// NewDictTypeServiceWithCache 创建带缓存的字典类型服务
+func NewDictTypeServiceWithCache(
+	db *gorm.DB,
+	cache CacheProvider,
+	config *services.CacheConfigService,
+) DictTypeService {
+	base := &dictTypeService{db: db}
+	return &dictTypeCacheService{
+		dictTypeService: base,
+		cache:           cache,
+		CacheServiceBase: CacheServiceBase{Config: config},
+	}
+}
+
+// GetAllWithCache 获取所有字典类型（覆盖基础方法，使用缓存）
+func (s *dictTypeCacheService) GetAllWithCache(ctx context.Context) ([]*models.DictType, error) {
+	cacheKey := services.CacheKeyDictType
+	var result []*models.DictType
+
+	expiration := s.GetExpiration(services.CacheConfigDictType, 60*time.Minute)
+
+	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
+		return s.queryAllTypes(ctx)
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("获取字典类型失败: %w", err)
+	}
+
+	return result, nil
+}
+
+// queryAllTypes 查询所有字典类型
+func (s *dictTypeCacheService) queryAllTypes(ctx context.Context) ([]*models.DictType, error) {
+	var types []models.DictType
+	if err := s.db.WithContext(ctx).Where("status = ?", 0).
+		Order("id ASC").Find(&types).Error; err != nil {
+		return nil, err
+	}
+	result := make([]*models.DictType, len(types))
+	for i := range types {
+		result[i] = &types[i]
+	}
+	return result, nil
+}
+
+// Create 创建字典类型（带缓存失效）
+func (s *dictTypeCacheService) Create(ctx context.Context, req *DictTypeCreateRequest) error {
+	if err := s.dictTypeService.Create(ctx, req); err != nil {
+		return err
+	}
+	s.invalidateCache(ctx)
+	return nil
+}
+
+// Update 更新字典类型（带缓存失效）
+func (s *dictTypeCacheService) Update(ctx context.Context, req *DictTypeUpdateRequest) error {
+	if err := s.dictTypeService.Update(ctx, req); err != nil {
+		return err
+	}
+	s.invalidateCache(ctx)
+	return nil
+}
+
+// Delete 删除字典类型（带缓存失效）
+func (s *dictTypeCacheService) Delete(ctx context.Context, id string) error {
+	if err := s.dictTypeService.Delete(ctx, id); err != nil {
+		return err
+	}
+	s.invalidateCache(ctx)
+	return nil
+}
+
+// invalidateCache 失效缓存
+func (s *dictTypeCacheService) invalidateCache(ctx context.Context) {
+	InvalidateCacheByPattern(ctx, s.cache, []string{services.CacheKeyDictType + "*"}, "DICT")
+}
+
+// List 查询字典类型列表（全量缓存+内存筛选版本）
+func (s *dictTypeCacheService) List(ctx context.Context, params DictTypeListParams) (*PageResult, error) {
+	allTypes, err := s.GetAllWithCache(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	filtered := s.filterDictTypes(allTypes, params)
+	paged, total := paginate(filtered, params.Current, params.PageSize)
+
+	return &PageResult{
+		List:     paged,
+		Total:    total,
+		Current:  params.Current,
+		PageSize: params.PageSize,
+	}, nil
+}
+
+// filterDictTypes 在内存中筛选字典类型
+func (s *dictTypeCacheService) filterDictTypes(types []*models.DictType, params DictTypeListParams) []*models.DictType {
+	result := types
+
+	if params.DictName != nil && *params.DictName != "" {
+		result = filterSlice(result, func(t *models.DictType) bool {
+			return contains(t.DictName, *params.DictName)
+		})
+	}
+
+	if params.DictType != nil && *params.DictType != "" {
+		result = filterSlice(result, func(t *models.DictType) bool {
+			return contains(t.DictType, *params.DictType)
+		})
+	}
+
+	if params.Status != nil {
+		result = filterSlice(result, func(t *models.DictType) bool {
+			return t.Status == *params.Status
+		})
+	}
+
+	return result
+}
+
+// ==================== 字典数据缓存服务 ====================
+
+// dictDataCacheService 字典数据缓存服务
+type dictDataCacheService struct {
+	*dictDataService
+	cache CacheProvider
+	CacheServiceBase
+}
+
+// NewDictDataServiceWithCache 创建带缓存的字典数据服务
+func NewDictDataServiceWithCache(
+	db *gorm.DB,
+	cache CacheProvider,
+	config *services.CacheConfigService,
+) DictDataService {
+	base := &dictDataService{db: db}
+	return &dictDataCacheService{
+		dictDataService: base,
+		cache:           cache,
+		CacheServiceBase: CacheServiceBase{Config: config},
+	}
+}
+
+// GetByTypeWithCache 根据类型获取字典数据（带缓存）
+func (s *dictDataCacheService) GetByTypeWithCache(ctx context.Context, dictType string) ([]*models.DictData, error) {
+	cacheKey := services.GetDictDataByTypeKey(dictType)
+	var result []*models.DictData
+
+	expiration := s.GetExpiration(services.CacheConfigDictData, 30*time.Minute)
+
+	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
+		return s.queryByType(ctx, dictType)
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("获取字典数据失败: %w", err)
+	}
+
+	return result, nil
+}
+
+// queryByType 根据类型查询字典数据
+func (s *dictDataCacheService) queryByType(ctx context.Context, dictType string) ([]*models.DictData, error) {
+	var data []models.DictData
+	if err := s.db.WithContext(ctx).Where("dict_type = ? AND status = ?", dictType, 0).
+		Order("dict_sort ASC").Find(&data).Error; err != nil {
+		return nil, err
+	}
+	result := make([]*models.DictData, len(data))
+	for i := range data {
+		result[i] = &data[i]
+	}
+	return result, nil
+}
+
+// Create 创建字典数据（带缓存失效）
+func (s *dictDataCacheService) Create(ctx context.Context, req *DictDataCreateRequest) error {
+	if err := s.dictDataService.Create(ctx, req); err != nil {
+		return err
+	}
+	s.invalidateCache(ctx, req.DictType)
+	return nil
+}
+
+// Update 更新字典数据（带缓存失效）
+func (s *dictDataCacheService) Update(ctx context.Context, req *DictDataUpdateRequest) error {
+	// 获取原数据以获取 dictType
+	var oldData models.DictData
+	if err := s.db.WithContext(ctx).First(&oldData, "id = ?", req.ID).Error; err != nil {
+		return err
+	}
+
+	if err := s.dictDataService.Update(ctx, req); err != nil {
+		return err
+	}
+	s.invalidateCache(ctx, oldData.DictType)
+	return nil
+}
+
+// Delete 删除字典数据（带缓存失效）
+func (s *dictDataCacheService) Delete(ctx context.Context, id string) error {
+	// 获取原数据以获取 dictType
+	var oldData models.DictData
+	if err := s.db.WithContext(ctx).First(&oldData, "id = ?", id).Error; err != nil {
+		return err
+	}
+
+	if err := s.dictDataService.Delete(ctx, id); err != nil {
+		return err
+	}
+	s.invalidateCache(ctx, oldData.DictType)
+	return nil
+}
+
+// invalidateCache 失效缓存
+func (s *dictDataCacheService) invalidateCache(ctx context.Context, dictType string) {
+	cacheKey := services.GetDictDataByTypeKey(dictType)
+	InvalidateCacheByKey(ctx, s.cache, []string{cacheKey}, "DICT")
+}

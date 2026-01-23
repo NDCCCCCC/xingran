@@ -166,3 +166,25 @@ func (h *PostHandler) BatchDelete(c *gin.Context) {
 
 	response.Success(c, nil)
 }
+
+// GetAll 获取所有岗位（使用缓存）
+func (h *PostHandler) GetAll(c *gin.Context) {
+	posts, err := h.service.GetAllWithCache(c.Request.Context())
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response.Success(c, posts)
+}
+
+// GetAllEnabled 获取启用的岗位（使用缓存）
+func (h *PostHandler) GetAllEnabled(c *gin.Context) {
+	posts, err := h.service.GetEnabledWithCache(c.Request.Context())
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response.Success(c, posts)
+}

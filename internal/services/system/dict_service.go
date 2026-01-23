@@ -15,6 +15,9 @@ type DictTypeService interface {
 	Delete(ctx context.Context, id string) error
 	GetByID(ctx context.Context, id string) (*models.DictType, error)
 	List(ctx context.Context, params DictTypeListParams) (*PageResult, error)
+
+	// 新增缓存方法
+	GetAllWithCache(ctx context.Context) ([]*models.DictType, error)
 }
 
 // dictTypeService 字典类型服务实现
@@ -172,6 +175,20 @@ func (s *dictTypeService) List(ctx context.Context, params DictTypeListParams) (
 	}, nil
 }
 
+// GetAllWithCache 获取所有字典类型（无缓存版本，直接查询数据库）
+func (s *dictTypeService) GetAllWithCache(ctx context.Context) ([]*models.DictType, error) {
+	var types []models.DictType
+	if err := s.db.WithContext(ctx).Where("status = ?", 0).
+		Order("dict_sort ASC").Find(&types).Error; err != nil {
+		return nil, fmt.Errorf("查询字典类型失败: %w", err)
+	}
+	result := make([]*models.DictType, len(types))
+	for i := range types {
+		result[i] = &types[i]
+	}
+	return result, nil
+}
+
 // DictDataService 字典数据服务接口
 type DictDataService interface {
 	Create(ctx context.Context, req *DictDataCreateRequest) error
@@ -179,6 +196,9 @@ type DictDataService interface {
 	Delete(ctx context.Context, id string) error
 	GetByID(ctx context.Context, id string) (*models.DictData, error)
 	List(ctx context.Context, params DictDataListParams) (*PageResult, error)
+
+	// 新增缓存方法
+	GetByTypeWithCache(ctx context.Context, dictType string) ([]*models.DictData, error)
 }
 
 // dictDataService 字典数据服务实现
@@ -333,4 +353,18 @@ func (s *dictDataService) List(ctx context.Context, params DictDataListParams) (
 		Current:  params.Current,
 		PageSize: params.PageSize,
 	}, nil
+}
+
+// GetByTypeWithCache 根据类型获取字典数据（无缓存版本，直接查询数据库）
+func (s *dictDataService) GetByTypeWithCache(ctx context.Context, dictType string) ([]*models.DictData, error) {
+	var data []models.DictData
+	if err := s.db.WithContext(ctx).Where("dict_type = ? AND status = ?", dictType, 0).
+		Order("dict_sort ASC").Find(&data).Error; err != nil {
+		return nil, fmt.Errorf("查询字典数据失败: %w", err)
+	}
+	result := make([]*models.DictData, len(data))
+	for i := range data {
+		result[i] = &data[i]
+	}
+	return result, nil
 }
