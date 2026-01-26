@@ -53,16 +53,48 @@ func (c *LDAPClient) Connect() error {
 		return fmt.Errorf("连接AD服务器失败: %w", err)
 	}
 
-	// 绑定管理员账号
-	bindDN := fmt.Sprintf("%s\\%s", c.config.DomainName, c.config.AdminUsername)
-	err = conn.Bind(bindDN, c.config.AdminPassword)
-	if err != nil {
-		conn.Close()
-		return fmt.Errorf("绑定管理员账号失败: %w", err)
+	// 清理域名：移除可能的 @domain 后缀
+	cleanDomain := strings.TrimSuffix(c.config.DomainName, fmt.Sprintf("@%s", c.config.DomainName))
+	// 如果清理后为空，使用原始域名
+	if cleanDomain == "" {
+		cleanDomain = c.config.DomainName
 	}
 
-	c.conn = conn
-	return nil
+	// 尝试多种绑定方式
+	var lastErr error
+
+	// 1. UPN 格式: user@domain.com (推荐)
+	bindUsername := fmt.Sprintf("%s@%s", c.config.AdminUsername, cleanDomain)
+	if err := conn.Bind(bindUsername, c.config.AdminPassword); err == nil {
+		c.conn = conn
+		return nil
+	}
+	lastErr = err
+
+	// 2. NetBIOS 格式: DOMAIN\user (需要从域名提取 NetBIOS 名称)
+	netbiosName := extractNetBIOSName(cleanDomain)
+	bindUsername = fmt.Sprintf("%s\\%s", netbiosName, c.config.AdminUsername)
+	if err := conn.Bind(bindUsername, c.config.AdminPassword); err == nil {
+		c.conn = conn
+		return nil
+	}
+	lastErr = err
+
+	// 3. 尝试直接使用用户名（某些AD配置支持）
+	bindUsername = c.config.AdminUsername
+	if err := conn.Bind(bindUsername, c.config.AdminPassword); err == nil {
+		c.conn = conn
+		return nil
+	}
+	lastErr = err
+
+	conn.Close()
+	return fmt.Errorf("绑定管理员账号失败: %w (尝试的格式: UPN=%s, NetBIOS=%s, 直连用户名=%s)",
+		lastErr,
+		fmt.Sprintf("%s@%s", c.config.AdminUsername, cleanDomain),
+		fmt.Sprintf("%s\\%s", netbiosName, c.config.AdminUsername),
+		c.config.AdminUsername,
+	)
 }
 
 // Close 关闭连接
@@ -72,62 +104,133 @@ func (c *LDAPClient) Close() {
 	}
 }
 
-// SearchOUs 搜索OU
+// SearchOUs 搜索OU（使用分页搜索）
 func (c *LDAPClient) SearchOUs(baseDN string) ([]*ldap.Entry, error) {
-	searchRequest := ldap.NewSearchRequest(
+	return c.searchWithPaging(
 		baseDN,
-		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
 		"(objectClass=organizationalUnit)",
 		[]string{"dn", "ou", "description"},
-		nil,
+		1000, // 每页1000条记录
 	)
-
-	sr, err := c.conn.Search(searchRequest)
-	if err != nil {
-		return nil, err
-	}
-
-	return sr.Entries, nil
 }
 
-// SearchGroups 搜索用户组
+// SearchGroups 搜索用户组（使用分页搜索）
 func (c *LDAPClient) SearchGroups(baseDN string) ([]*ldap.Entry, error) {
-	searchRequest := ldap.NewSearchRequest(
+	return c.searchWithPaging(
 		baseDN,
-		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
 		"(objectClass=group)",
 		[]string{"dn", "cn", "description", "member"},
-		nil,
+		1000, // 每页1000条记录
 	)
-
-	sr, err := c.conn.Search(searchRequest)
-	if err != nil {
-		return nil, err
-	}
-
-	return sr.Entries, nil
 }
 
-// SearchUsers 搜索用户
+// SearchUsers 搜索用户（使用分页搜索）
 func (c *LDAPClient) SearchUsers(baseDN string) ([]*ldap.Entry, error) {
-	searchRequest := ldap.NewSearchRequest(
+	return c.searchWithPaging(
 		baseDN,
-		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
 		"(objectClass=user)",
 		[]string{
 			"dn", "sAMAccountName", "displayName", "mail", "telephoneNumber",
 			"mobile", "title", "department", "company", "description",
 			"userAccountControl", "memberOf", "lastLogon", "pwdLastSet",
 		},
-		nil,
+		1000, // 每页1000条记录
 	)
+}
 
-	sr, err := c.conn.Search(searchRequest)
-	if err != nil {
-		return nil, err
+// SearchComputers 搜索计算机（使用分页搜索）
+func (c *LDAPClient) SearchComputers(baseDN string) ([]*ldap.Entry, error) {
+	return c.searchWithPaging(
+		baseDN,
+		"(objectClass=computer)",
+		[]string{
+			"dn", "cn", "description", "lastLogon", "pwdLastSet", "logonCount",
+			"operatingSystem", "operatingSystemVersion", "managedBy",
+			"dNSHostName", "netbootGUID",
+		},
+		1000, // 每页1000条记录
+	)
+}
+
+// searchWithPaging 使用 LDAP 分页控制进行搜索
+// pageSize: 每页返回的记录数
+func (c *LDAPClient) searchWithPaging(baseDN, filter string, attributes []string, pageSize uint32) ([]*ldap.Entry, error) {
+	var allEntries []*ldap.Entry
+
+	// 创建分页控制
+	pagingControl := ldap.NewControlPaging(pageSize)
+
+	pageCount := 0
+	for {
+		pageCount++
+
+		searchRequest := ldap.NewSearchRequest(
+			baseDN,
+			ldap.ScopeWholeSubtree,
+			ldap.NeverDerefAliases,
+			0,     // SizeLimit: 0 表示无限制（由分页控制）
+			0,     // TimeLimit: 0 表示无限制
+			false, // TypesOnly
+			filter,
+			attributes,
+			[]ldap.Control{pagingControl},
+		)
+
+		sr, err := c.conn.Search(searchRequest)
+		if err != nil {
+			// 检查是否是 Size Limit Exceeded 错误
+			if ldap.IsErrorWithCode(err, ldap.LDAPResultSizeLimitExceeded) {
+				// 尝试使用更小的页面大小重试
+				if pageSize > 100 {
+					return c.searchWithPaging(baseDN, filter, attributes, pageSize/2)
+				}
+				return nil, fmt.Errorf("搜索结果超过服务器限制，即使使用分页也无法获取所有结果")
+			}
+			return nil, fmt.Errorf("搜索失败: %w", err)
+		}
+
+		// 添加当前页的结果
+		entriesInPage := len(sr.Entries)
+		allEntries = append(allEntries, sr.Entries...)
+
+		// 输出调试信息
+		fmt.Printf("[LDAP分页] 第 %d 页: 获取到 %d 条记录 (累计: %d)\n",
+			pageCount, entriesInPage, len(allEntries))
+
+		// 从响应中提取分页控制
+		var responsePagingControl *ldap.ControlPaging
+		for _, ctrl := range sr.Controls {
+			if pc, ok := ctrl.(*ldap.ControlPaging); ok {
+				responsePagingControl = pc
+				break
+			}
+		}
+
+		// 如果没有分页控制或Cookie为空，说明已到最后一页
+		if responsePagingControl == nil {
+			fmt.Printf("[LDAP分页] 服务器未返回分页控制，停止分页\n")
+			break
+		}
+
+		if len(responsePagingControl.Cookie) == 0 {
+			fmt.Printf("[LDAP分页] Cookie为空，已获取所有数据\n")
+			break
+		}
+
+		// 准备下一页：使用返回的Cookie创建新的分页控制
+		pagingControl = ldap.NewControlPaging(pageSize)
+		pagingControl.SetCookie(responsePagingControl.Cookie)
 	}
 
-	return sr.Entries, nil
+	fmt.Printf("[LDAP分页] 总计: %d 条记录，分 %d 页获取\n", len(allEntries), pageCount)
+
+	// 检查是否可能触发了MaxPageSize限制
+	if len(allEntries) == int(pageSize) {
+		fmt.Printf("[LDAP分页] ⚠ 警告: 恰好获取到 %d 条记录（等于pageSize），可能触发了AD服务器的MaxPageSize限制\n", pageSize)
+		fmt.Printf("[LDAP分页] 建议检查: 1) AD服务器是否返回了空的分页Cookie 2) AD服务器的MaxPageSize设置\n")
+	}
+
+	return allEntries, nil
 }
 
 // UpdateUserAttribute 更新用户属性
@@ -208,4 +311,16 @@ func extractRDNFromDN(dn string) string {
 		return dn
 	}
 	return dn[:idx]
+}
+
+// extractNetBIOSName 从域名中提取 NetBIOS 名称
+// 例如: example.com -> EXAMPLE, corp.example.com -> CORP
+func extractNetBIOSName(domain string) string {
+	parts := strings.Split(domain, ".")
+	if len(parts) > 0 {
+		// 返回第一部分并转为大写
+		return strings.ToUpper(parts[0])
+	}
+	// 如果没有点，直接返回大写的域名
+	return strings.ToUpper(domain)
 }

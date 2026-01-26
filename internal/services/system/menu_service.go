@@ -13,11 +13,11 @@ import (
 type MenuService interface {
 	Create(ctx context.Context, req *MenuCreateRequest) error
 	Update(ctx context.Context, req *MenuUpdateRequest) error
-	Delete(ctx context.Context, id string) error
+	Delete(ctx context.Context, id string, cascade bool) error
 	GetByID(ctx context.Context, id string) (*models.Menu, error)
 	GetTree(ctx context.Context) ([]models.Menu, error)
 	List(ctx context.Context, params MenuListParams) ([]models.Menu, error)
-	BatchDelete(ctx context.Context, ids []string) error
+	BatchDelete(ctx context.Context, ids []string, cascade bool) error
 	UpdateStatus(ctx context.Context, id string, status int) error
 	GetUserMenus(ctx context.Context, userID string) ([]models.Menu, error)
 	GetAllUserMenus(ctx context.Context, userID string) ([]models.Menu, error)
@@ -161,7 +161,7 @@ func (s *menuService) Update(ctx context.Context, req *MenuUpdateRequest) error 
 }
 
 // Delete 删除菜单
-func (s *menuService) Delete(ctx context.Context, id string) error {
+func (s *menuService) Delete(ctx context.Context, id string, cascade bool) error {
 	// 检查菜单是否存在
 	var menu models.Menu
 	if err := s.db.WithContext(ctx).Where("id = ?", id).First(&menu).Error; err != nil {
@@ -177,11 +177,40 @@ func (s *menuService) Delete(ctx context.Context, id string) error {
 		return fmt.Errorf("检查子菜单失败: %w", err)
 	}
 	if count > 0 {
-		return fmt.Errorf("存在子菜单，无法删除")
+		if !cascade {
+			return fmt.Errorf("存在子菜单，无法删除")
+		}
+		// 级联删除所有子菜单
+		if err := s.deleteChildrenRecursive(ctx, id); err != nil {
+			return fmt.Errorf("级联删除子菜单失败: %w", err)
+		}
 	}
 
 	if err := s.db.WithContext(ctx).Delete(&menu).Error; err != nil {
 		return fmt.Errorf("删除菜单失败: %w", err)
+	}
+
+	return nil
+}
+
+// deleteChildrenRecursive 递归删除所有子菜单
+func (s *menuService) deleteChildrenRecursive(ctx context.Context, parentID string) error {
+	// 查找所有子菜单
+	var children []models.Menu
+	if err := s.db.WithContext(ctx).Where("parent_id = ?", parentID).Find(&children).Error; err != nil {
+		return err
+	}
+
+	// 递归删除每个子菜单及其子菜单
+	for _, child := range children {
+		// 先递归删除该子菜单的子菜单
+		if err := s.deleteChildrenRecursive(ctx, child.ID); err != nil {
+			return err
+		}
+		// 删除该子菜单
+		if err := s.db.WithContext(ctx).Delete(&child).Error; err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -235,7 +264,7 @@ func (s *menuService) List(ctx context.Context, params MenuListParams) ([]models
 }
 
 // BatchDelete 批量删除菜单
-func (s *menuService) BatchDelete(ctx context.Context, ids []string) error {
+func (s *menuService) BatchDelete(ctx context.Context, ids []string, cascade bool) error {
 	if len(ids) == 0 {
 		return fmt.Errorf("ids不能为空")
 	}
@@ -246,7 +275,15 @@ func (s *menuService) BatchDelete(ctx context.Context, ids []string) error {
 		return fmt.Errorf("检查子菜单失败: %w", err)
 	}
 	if count > 0 {
-		return fmt.Errorf("存在子菜单，无法删除")
+		if !cascade {
+			return fmt.Errorf("存在子菜单，无法删除")
+		}
+		// 级联删除所有子菜单
+		for _, id := range ids {
+			if err := s.deleteChildrenRecursive(ctx, id); err != nil {
+				return fmt.Errorf("级联删除子菜单失败: %w", err)
+			}
+		}
 	}
 
 	if err := s.db.WithContext(ctx).Where("id IN ?", ids).Delete(&models.Menu{}).Error; err != nil {

@@ -18,6 +18,7 @@ import { Button, Space, Modal, message } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { useDashboardStore } from '@/store/dashboardStore';
 import type { DashboardViewMode } from '@/store/dashboardStore';
+import { DASHBOARD } from '@/constants/routes';
 
 import './LayoutToolbar.css';
 
@@ -58,8 +59,8 @@ export const LayoutToolbar: React.FC<LayoutToolbarProps> = ({
 		const newMode: DashboardViewMode = viewMode === 'view' ? 'edit' : 'view';
 
 		if (newMode === 'edit' && dashboardId) {
-			// 如果有dashboardId，导航到编辑页面
-			navigate(`/dashboard/${dashboardId}/edit`);
+			// 如果有dashboardId，导航到编辑页面（使用 query 参数）
+			navigate(`${DASHBOARD}/${dashboardId}?mode=edit`);
 		} else {
 			// 否则切换viewMode（用于编辑页面内的预览功能）
 			setViewMode(newMode);
@@ -137,11 +138,11 @@ export const LayoutToolbar: React.FC<LayoutToolbarProps> = ({
 				okText: '离开',
 				cancelText: '取消',
 				onOk: () => {
-					navigate('/dashboard');
+					navigate(DASHBOARD);
 				},
 			});
 		} else {
-			navigate('/dashboard');
+			navigate(DASHBOARD);
 		}
 	};
 

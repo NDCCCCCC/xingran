@@ -30,6 +30,8 @@ export interface User {
   roles: string[];
   roleIds?: string[];
   permissions: string[];
+  isAdmin?: boolean; // 是否为管理员
+  dataScope?: string; // 数据权限范围
   loginIp?: string;
   loginTime?: string;
   createTime: string;
@@ -67,6 +69,7 @@ export interface Menu {
   perms?: string | null;
   icon?: string | null;
   remark?: string;
+  meta?: import('@/types/menu').RouteMeta | null; // 菜单元数据（JSONB）
   children?: Menu[];
   createTime: string;
   updateTime: string;

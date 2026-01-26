@@ -12,6 +12,7 @@ import { useNoticeStore } from '@/store/noticeStore';
 import type { Notice } from '@/types/notice';
 import { formatDateTime } from '@/utils/datetime';
 import NoticeDetailContent from '@/components/NoticeDetail/NoticeDetailContent';
+import { USER_NOTICES } from '@/constants/routes';
 
 /**
  * 用户通知详情页面
@@ -44,7 +45,7 @@ const NoticeDetailPage: FC = () => {
     } catch (error) {
       console.error('加载通知详情失败:', error);
       message.error('加载失败，请稍后重试');
-      navigate('/my-notices');
+      navigate(USER_NOTICES);
     } finally {
       setLoading(false);
     }
@@ -66,7 +67,7 @@ const NoticeDetailPage: FC = () => {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-gray-500">
         <p>通知不存在</p>
-        <Button type="link" onClick={() => navigate('/my-notices')}>
+        <Button type="link" onClick={() => navigate(USER_NOTICES)}>
           返回通知中心
         </Button>
       </div>
@@ -77,7 +78,7 @@ const NoticeDetailPage: FC = () => {
     <div className="p-6 max-w-5xl mx-auto">
       {/* 头部操作栏 */}
       <div className="mb-4">
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/my-notices')}>
+        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(USER_NOTICES)}>
           返回通知中心
         </Button>
       </div>

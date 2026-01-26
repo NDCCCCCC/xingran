@@ -1,300 +1,69 @@
 /**
- * 仪表盘列表页
+ * 仪表盘统一入口组件
+ * 根据 URL 参数和路由参数显示不同视图
  *
- * 显示所有仪表盘，支持创建、编辑、删除等操作
+ * 路由规则：
+ * - /dashboard                    # 默认仪表盘（如果无默认则显示欢迎页）
+ * - /dashboard?mode=list          # 仪表盘列表
+ * - /dashboard/:id                # 查看指定仪表盘
+ * - /dashboard/:id?mode=edit      # 编辑指定仪表盘
  */
-
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import {
-	Card,
-	Table,
-	Button,
-	Space,
-	Tag,
-	message,
-	Popconfirm,
-	Input,
-	Row,
-	Col,
-} from 'antd';
-import {
-	PlusOutlined,
-	EditOutlined,
-	DeleteOutlined,
-	CopyOutlined,
-	SettingOutlined,
-	EyeOutlined,
-	SearchOutlined,
-} from '@ant-design/icons';
+import { useEffect } from 'react';
+import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { useDashboardStore } from '@/store/dashboardStore';
-import { TemplateSelector } from '@/components/dashboard/layout/TemplateSelector';
-import type { Dashboard } from '@/types/dashboard';
-import type { ColumnsType } from 'antd/es/table';
+import { DashboardHome } from './components/DashboardHome';
+import DashboardList from './components/DashboardList';
+import { DashboardView } from './components/DashboardView';
+import { DashboardEdit } from './components/DashboardEdit';
+import { Spin } from 'antd';
 
-import './index.css';
-
-const DashboardList: React.FC = () => {
+const DashboardPage: React.FC = () => {
+	// 手动解析路径参数，因为 dashboard/* 通配符路由无法使用 useParams
+	const location = useLocation();
+	const [searchParams] = useSearchParams();
 	const navigate = useNavigate();
-	const [searchKeyword, setSearchKeyword] = useState('');
-	const [showTemplateSelector, setShowTemplateSelector] = useState(false);
 
-	const {
-		dashboards,
-		listLoading,
-		listPagination,
-		fetchDashboards,
-		createDashboard,
-		deleteDashboard,
-		duplicateDashboard,
-		setDefaultDashboard,
-	} = useDashboardStore();
+	// 从路径中提取 ID：/dashboard/:id 或 /dashboard/:id?mode=edit
+	const pathParts = location.pathname.split('/').filter(Boolean);
+	const id = pathParts.length > 1 ? pathParts[1] : undefined;
+	const mode = searchParams.get('mode') as 'list' | 'edit' | null;
 
-	// 加载仪表盘列表
+	const { setPageMode } = useDashboardStore();
+
+	// 使用 location.key 作为渲染键，确保 location 变化时组件重新渲染
+	const renderKey = `${id}-${mode}-${location.key}`;
+
 	useEffect(() => {
-		fetchDashboards({ current: 1, pageSize: 10 });
-	}, [fetchDashboards]);
-
-	// 刷新列表
-	const handleRefresh = () => {
-		fetchDashboards({
-			current: listPagination.current,
-			pageSize: listPagination.pageSize,
-			keyword: searchKeyword,
-		});
-	};
-
-	// 搜索
-	const handleSearch = () => {
-		fetchDashboards({
-			current: 1,
-			pageSize: listPagination.pageSize,
-			keyword: searchKeyword,
-		});
-	};
-
-	// 创建仪表盘
-	const handleCreate = async (_templateType: string, name: string) => {
-		try {
-			const dashboard = await createDashboard({
-				name,
-				layout: { widgets: [], columns: { desktop: 24, tablet: 12, mobile: 6 }, rowHeight: 60, margin: [16, 16], draggable: true, resizable: true },
-				refreshInterval: 60,
-			});
-			message.success('创建成功');
-			navigate(`/dashboard/${dashboard.id}/edit`);
-		} catch (error) {
-			message.error(`创建失败: ${(error as Error).message}`);
+		// 根据URL状态设置页面模式
+		if (mode === 'list') {
+			setPageMode('list');
+		} else if (mode === 'edit') {
+			setPageMode('edit');
+		} else if (id) {
+			setPageMode('view');
+		} else {
+			setPageMode('home');
 		}
-	};
+	}, [id, mode, location.key, setPageMode]);
 
-	// 删除仪表盘
-	const handleDelete = async (id: string) => {
-		try {
-			await deleteDashboard(id);
-			message.success('删除成功');
-			handleRefresh();
-		} catch (error) {
-			message.error(`删除失败: ${(error as Error).message}`);
-		}
-	};
+	// 路由逻辑
+	// 1. 无id, mode=list → 显示列表
+	if (!id && mode === 'list') {
+		return <DashboardList key={renderKey} />;
+	}
 
-	// 复制仪表盘
-	const handleDuplicate = async (id: string) => {
-		try {
-			await duplicateDashboard(id);
-			message.success('复制成功');
-			handleRefresh();
-		} catch (error) {
-			message.error(`复制失败: ${(error as Error).message}`);
-		}
-	};
+	// 2. 有id, mode=edit → 显示编辑
+	if (id && mode === 'edit') {
+		return <DashboardEdit dashboardId={id} key={renderKey} />;
+	}
 
-	// 设置为默认
-	const handleSetDefault = async (id: string) => {
-		try {
-			await setDefaultDashboard(id);
-			message.success('设置成功');
-			handleRefresh();
-		} catch (error) {
-			message.error(`设置失败: ${(error as Error).message}`);
-		}
-	};
+	// 3. 有id, 无mode或mode=view → 显示查看
+	if (id) {
+		return <DashboardView dashboardId={id} key={renderKey} />;
+	}
 
-	// 表格列配置
-	const columns: ColumnsType<Dashboard> = [
-		{
-			title: '名称',
-			dataIndex: 'name',
-			key: 'name',
-			width: 200,
-		},
-		{
-			title: '描述',
-			dataIndex: 'description',
-			key: 'description',
-			width: 300,
-			ellipsis: true,
-		},
-		{
-			title: 'Widget数',
-			key: 'widgetCount',
-			width: 100,
-			render: (_, record) => record.layout.widgets.length,
-		},
-		{
-			title: '刷新间隔',
-			key: 'refreshInterval',
-			width: 100,
-			render: (_, record) => `${record.refreshInterval}秒`,
-		},
-		{
-			title: '类型',
-			key: 'type',
-			width: 100,
-			render: (_, record) => (
-				<>
-					{record.isDefault && <Tag color="blue">默认</Tag>}
-					{record.isTemplate && <Tag color="green">模板</Tag>}
-				</>
-			),
-		},
-		{
-			title: '状态',
-			dataIndex: 'status',
-			key: 'status',
-			width: 80,
-			render: (status) => (
-				<Tag color={status === 0 ? 'green' : 'red'}>
-					{status === 0 ? '正常' : '停用'}
-				</Tag>
-			),
-		},
-		{
-			title: '操作',
-			key: 'actions',
-			width: 200,
-			fixed: 'right',
-			render: (_, record) => (
-				<Space size="small">
-					<Button
-						type="link"
-						size="small"
-						icon={<EyeOutlined />}
-						onClick={() => navigate(`/dashboard/${record.id}`)}
-					>
-						查看
-					</Button>
-					<Button
-						type="link"
-						size="small"
-						icon={<EditOutlined />}
-						onClick={() => navigate(`/dashboard/${record.id}/edit`)}
-					>
-						编辑
-					</Button>
-					<Button
-						type="link"
-						size="small"
-						icon={<CopyOutlined />}
-						onClick={() => handleDuplicate(record.id)}
-					>
-						复制
-					</Button>
-					{!record.isDefault && (
-						<Button
-							type="link"
-							size="small"
-							icon={<SettingOutlined />}
-							onClick={() => handleSetDefault(record.id)}
-						>
-							设为默认
-						</Button>
-					)}
-					<Popconfirm
-						title="确定要删除这个仪表盘吗？"
-						onConfirm={() => handleDelete(record.id)}
-						okText="确定"
-						cancelText="取消"
-					>
-						<Button
-							type="link"
-							size="small"
-							danger
-							icon={<DeleteOutlined />}
-						>
-							删除
-						</Button>
-					</Popconfirm>
-				</Space>
-			),
-		},
-	];
-
-	return (
-		<div className="dashboard-list-page">
-			<div className="dashboard-list-page__header">
-				<h2 className="dashboard-list-page__title">仪表盘管理</h2>
-				<Button
-					type="primary"
-					icon={<PlusOutlined />}
-					onClick={() => setShowTemplateSelector(true)}
-				>
-					新建仪表盘
-				</Button>
-			</div>
-
-			<Card>
-				<Row gutter={16} style={{ marginBottom: 16 }}>
-					<Col flex="auto">
-						<Input
-							placeholder="搜索仪表盘名称或描述"
-							prefix={<SearchOutlined />}
-							value={searchKeyword}
-							onChange={(e) => setSearchKeyword(e.target.value)}
-							onPressEnter={handleSearch}
-							allowClear
-						/>
-					</Col>
-					<Col>
-						<Button onClick={handleSearch}>搜索</Button>
-					</Col>
-					<Col>
-						<Button onClick={handleRefresh}>刷新</Button>
-					</Col>
-				</Row>
-
-				<Table
-					columns={columns}
-					dataSource={dashboards}
-					rowKey="id"
-					loading={listLoading}
-					scroll={{ x: 1200 }}
-					pagination={{
-						current: listPagination.current,
-						pageSize: listPagination.pageSize,
-						total: listPagination.total,
-						showSizeChanger: true,
-						showQuickJumper: true,
-						showTotal: (total) => `共 ${total} 条`,
-						onChange: (page, pageSize) => {
-							fetchDashboards({
-								current: page,
-								pageSize,
-								keyword: searchKeyword,
-							});
-						},
-					}}
-				/>
-			</Card>
-
-			<TemplateSelector
-				visible={showTemplateSelector}
-				onClose={() => setShowTemplateSelector(false)}
-				onSelect={(templateType, name) => handleCreate(templateType, name)}
-			/>
-		</div>
-	);
+	// 4. 默认: 显示首页（用户默认 > 系统仪表盘 > 欢迎页）
+	return <DashboardHome key={renderKey} />;
 };
 
-export default DashboardList;
+export default DashboardPage;

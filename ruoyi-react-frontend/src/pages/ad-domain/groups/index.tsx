@@ -45,7 +45,6 @@ const ADGroupPage: FC = () => {
   });
 
   const [groups, setGroups] = useState<ADGroup[]>([]);
-  const [groupTotal, setGroupTotal] = useState(0);
   const [groupLoading, setGroupLoading] = useState(false);
 
   // 使用全局分页 hook
@@ -75,7 +74,7 @@ const ADGroupPage: FC = () => {
       });
       if (res.code === 0) {
         setGroups(res.data?.list ?? []);
-        setGroupTotal(res.data?.total ?? 0);
+        setTotal(res.data?.total ?? 0);
       }
     } catch {
       message.error('获取用户组列表失败');

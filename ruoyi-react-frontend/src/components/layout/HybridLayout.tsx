@@ -3,114 +3,126 @@
  * 可折叠侧边栏 + 多标签页系统
  */
 
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback } from 'react';
 import { Layout as AntLayout } from 'antd';
 import { useLocation } from 'react-router-dom';
 import { useLayout } from '@/store/layoutStore';
-import { useTabs } from '@/store/tabsStore';
-import { getAllUserMenus } from '@/lib/menuApi';
+import { useTabs, useTabsStore } from '@/store/tabsStore';
+import { useDashboardStore } from '@/store/dashboardStore';
+import { routeConfigManager } from '@/router/routeConfigManager';
 import Header from './header';
 import Sidebar from './sidebar';
 import TabBar from './shared/TabBar';
-import type { Menu as MenuType } from '@/types';
-import { getSpecialPathTitle, matchDynamicRouteTitle } from '@/constants/pageTitles';
-
-const { Content } = AntLayout;
+import { getSpecialPathTitle, matchDynamicRouteTitle, PAGE_TITLES } from '@/constants/pageTitles';
 
 import type { FC, ReactNode } from 'react';
+
+const { Content } = AntLayout;
 
 interface HybridLayoutProps {
   children: ReactNode;
 }
 
+const DASHBOARD_KEY = 'dashboard';
+
+const isDashboardPath = (path: string): boolean => {
+  return path === '/dashboard' || path.startsWith('/dashboard/');
+};
+
+const getTitleByPath = (path: string): string => {
+  const specialTitle = getSpecialPathTitle(path);
+  if (specialTitle) {
+    return specialTitle;
+  }
+
+  const dynamicTitle = matchDynamicRouteTitle(path);
+  if (dynamicTitle) {
+    return dynamicTitle;
+  }
+
+  if (routeConfigManager.isInitialized()) {
+    return routeConfigManager.getRouteTitle(path);
+  }
+
+  const segments = path.split('/').filter(Boolean);
+  return segments[segments.length - 1] || '页面';
+};
+
 const HybridLayout: FC<HybridLayoutProps> = ({ children }) => {
   const { sidebarCollapsed } = useLayout();
-  const { addTab } = useTabs();
-  const [allMenus, setAllMenus] = useState<MenuType[]>([]); // 完整菜单数据（包含隐藏菜单，用于标签标题）
+  const { addTab, updateTab } = useTabs();
   const location = useLocation();
+  const { currentDashboard } = useDashboardStore();
 
-  // 获取完整菜单数据（包括隐藏菜单，用于标签标题）
+  const getDashboardTitle = useCallback((): string => {
+    return currentDashboard?.name || PAGE_TITLES.DASHBOARD;
+  }, [currentDashboard]);
+
   useEffect(() => {
-    const fetchAllMenus = async () => {
-      try {
-        const all = await getAllUserMenus();
-        setAllMenus(all);
-      } catch (error) {
-        console.error('获取完整菜单失败:', error);
-      }
-    };
-    fetchAllMenus();
-  }, []);
-
-  // 根据路径从菜单数据中获取标题
-  const getTitleByPath = useCallback((path: string): string => {
-    // 优先级 1: 检查特殊路径映射
-    const specialTitle = getSpecialPathTitle(path);
-    if (specialTitle) {
-      return specialTitle;
+    if (location.pathname === '/login') {
+      return;
     }
 
-    // 优先级 2: 检查动态路由模式（详情页）
-    const dynamicTitle = matchDynamicRouteTitle(path);
-    if (dynamicTitle) {
-      return dynamicTitle;
-    }
+    const meta = routeConfigManager.isInitialized()
+      ? routeConfigManager.getRouteMeta(location.pathname)
+      : undefined;
 
-    // 优先级 3: 在完整菜单数据中查找对应的菜单名称（包括隐藏菜单）
-    // 递归查找函数
-    const findMenuByPath = (menuList: MenuType[], targetPath: string): string => {
-      // 规范化目标路径（去掉前导斜杠）
-      const normalizedTargetPath = targetPath.startsWith('/') ? targetPath.slice(1) : targetPath;
+    if (isDashboardPath(location.pathname)) {
+      const title = getDashboardTitle();
+      const state = useTabsStore.getState();
+      const existingTab = state.tabs.find(t => t.key === DASHBOARD_KEY);
 
-      for (const menu of menuList) {
-        if (menu.menuType === 'F') continue; // 跳过按钮类型，但包含隐藏菜单
-
-        // 获取菜单路径
-        const menuPath = menu.path || '';
-
-        // 规范化菜单路径
-        const normalizedMenuPath = menuPath.startsWith('/') ? menuPath.slice(1) : menuPath;
-
-        // 精确匹配菜单路径
-        if (normalizedMenuPath === normalizedTargetPath) {
-          return menu.menuName;
+      if (existingTab) {
+        if (existingTab.title !== title) {
+          updateTab(DASHBOARD_KEY, { title });
         }
-
-        // 递归查找子菜单
-        if (menu.children && menu.children.length > 0) {
-          const found = findMenuByPath(menu.children, targetPath);
-          if (found) return found;
-        }
+      } else {
+        addTab({
+          key: DASHBOARD_KEY,
+          title: title,
+          path: '/dashboard',
+          closable: true,
+          pinned: false,
+        });
       }
-      return '';
-    };
 
-    // 使用菜单数据查找标题
-    const menuTitle = findMenuByPath(allMenus, path);
-    if (menuTitle) {
-      return menuTitle;
-    }
-
-    // 优先级 4: 未找到则返回路径的最后一段作为标题
-    const segments = path.split('/').filter(Boolean);
-    return segments[segments.length - 1] || '页面';
-  }, [allMenus]);
-
-  // 自动添加标签页
-  useEffect(() => {
-    // 排除登录页
-    if (location.pathname !== '/login') {
-      const isDashboard = location.pathname === '/dashboard';
-
+      if (state.activeTab !== DASHBOARD_KEY) {
+        state.setActiveTab(DASHBOARD_KEY);
+      }
+    } else {
       addTab({
         key: location.pathname,
         title: getTitleByPath(location.pathname),
         path: location.pathname,
-        closable: !isDashboard,  // 仪表盘不可关闭
-        pinned: isDashboard,     // 仪表盘为固定标签
+        closable: !meta?.affix,
+        pinned: meta?.affix,
       });
     }
-  }, [location.pathname, addTab, getTitleByPath]);
+  }, [location.pathname, addTab, updateTab, getDashboardTitle]);
+
+  useEffect(() => {
+    if (!routeConfigManager.isInitialized()) {
+      return;
+    }
+
+    const state = useTabsStore.getState();
+
+    state.tabs.forEach(tab => {
+      const newTitle = getTitleByPath(tab.path);
+      const newMeta = routeConfigManager.getRouteMeta(tab.path);
+
+      if (newTitle && newTitle !== tab.title) {
+        state.updateTab(tab.key, { title: newTitle });
+      }
+
+      if (newMeta?.affix !== undefined && newMeta.affix !== tab.pinned) {
+        state.updateTab(tab.key, {
+          closable: !newMeta.affix,
+          pinned: newMeta.affix,
+        });
+      }
+    });
+  }, []);
 
   return (
     <AntLayout className="h-screen" style={{ background: 'var(--theme-bg-secondary)' }}>

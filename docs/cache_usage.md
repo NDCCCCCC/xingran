@@ -2,36 +2,100 @@
 
 ## 概述
 
-本项目采用统一的多级缓存架构（方案1），将所有带缓存的服务作为单例注册到 `Core` 中，Handler 直接通过 `core.XXXService` 调用缓存方法。
+本项目采用基于 `CacheProvider` 接口的模块化缓存架构，将缓存服务作为 System 模块的一部分，通过接口解耦实现灵活的缓存策略。
 
-**新特性**：支持通过参数管理页面动态配置缓存时间，无需重启服务。
-
-### 架构特点
-
+**架构特点**：
+- **接口解耦**：通过 `CacheProvider` 接口实现依赖倒置
+- **服务组合**：缓存服务组合基础服务，避免代码重复
 - **多级缓存**：L1（内存缓存）+ L2（Redis缓存）
-- **统一管理**：所有缓存服务在 Core 中统一初始化和管理
-- **自动序列化**：支持 JSON 序列化/反序列化
-- **缓存失效**：支持按键删除和按模式批量删除
-- **高性能**：读多写少场景性能提升显著
-- **动态配置**：支持从前端动态修改缓存时间 ⭐️ 新特性
+- **动态配置**：支持通过参数管理页面动态配置缓存时间，无需重启服务
+- **全量缓存 + 内存筛选**：提高缓存命中率，减少数据库查询
 
 ### 架构层次
 
 ```
-Handler (dept_handler.go)
+Handler (role_handler.go)
     ↓ 使用
-Core.DeptService (已初始化的单例)
-    ↓ 包含
-DataCacheService (通用缓存服务)
+RoleService (接口)
+    ↓ 实现
+roleCacheService (组合 roleService + CacheProvider)
     ↓ 使用
-CacheConfigService (缓存配置服务) ⭐️ 新增
-    ↓ 读取
-sys_config (数据库配置表)
+CacheProvider (接口)
+    ↓ 实现
+DataCacheServiceAdapter (适配 DataCacheService)
     ↓ 使用
 Core.Cache (多级缓存: L1内存 + L2 Redis)
+    ↓ 读取
+CacheConfigService (缓存配置服务) - 动态 TTL
+    ↓ 读取
+sys_config (数据库配置表)
 ```
 
-## 缓存策略优先级 ⭐️ 重要
+### 新架构优势
+
+| 特性 | 说明 |
+|------|------|
+| **接口解耦** | 通过 `CacheProvider` 接口，可轻松替换缓存实现 |
+| **可测试性** | 提供 `NoOpCacheProvider` 空实现，方便单元测试 |
+| **服务组合** | 缓存服务组合基础服务，继承所有 CRUD 方法 |
+| **统一配置** | 通过 `CacheServiceBase` 统一管理缓存配置 |
+| **通用工具** | `cache_utils.go` 提供通用的缓存失效函数 |
+
+---
+
+## 缓存服务实现
+
+### 核心：CacheProvider 接口
+
+**位置**：`internal/services/system/cache_provider.go`
+
+```go
+// CacheProvider 缓存提供者接口
+// 由 system 模块外部实现，用于解耦缓存逻辑
+type CacheProvider interface {
+    // GetOrSet 获取缓存，如果不存在则执行查询函数并缓存结果
+    GetOrSet(
+        ctx context.Context,
+        key string,
+        dest interface{},
+        expiration time.Duration,
+        query func() (interface{}, error),
+    ) error
+
+    // Delete 删除缓存
+    Delete(ctx context.Context, key string) error
+
+    // DeleteByPattern 根据模式删除缓存
+    DeleteByPattern(ctx context.Context, pattern string) error
+}
+
+// NoOpCacheProvider 空缓存提供者（用于无缓存场景或测试）
+type NoOpCacheProvider struct{}
+```
+
+### 缓存服务基础类
+
+**位置**：`internal/services/system/cache_utils.go`
+
+```go
+// CacheServiceBase 缓存服务基础结构
+type CacheServiceBase struct {
+    Config *services.CacheConfigService
+}
+
+// GetExpiration 获取缓存过期时间（通用方法）
+func (b *CacheServiceBase) GetExpiration(configKey string, defaultVal time.Duration) time.Duration
+
+// InvalidateCacheByPattern 根据模式列表失效缓存（通用方法）
+func InvalidateCacheByPattern(ctx context.Context, cache CacheProvider, patterns []string, module string)
+
+// InvalidateCacheByKey 根据键列表失效缓存（通用方法）
+func InvalidateCacheByKey(ctx context.Context, cache CacheProvider, keys []string, module string)
+```
+
+---
+
+## 缓存策略优先级
 
 ### 缓存必要性评估
 
@@ -73,7 +137,7 @@ Core.Cache (多级缓存: L1内存 + L2 Redis)
 
 ---
 
-## 动态缓存配置 ⭐️ 新特性
+## 动态缓存配置
 
 ### 配置方式
 
@@ -127,16 +191,19 @@ POST /monitor/cache/config/reload
 **3. 在代码中使用动态配置**
 
 ```go
-// 在 Service 中使用动态配置
-func (s *DeptService) GetDeptTreeWithCache(ctx context.Context, includeDisabled bool) ([]*models.Department, error) {
-    // 使用动态配置的缓存时间
-    expiration := s.dataCache.GetExpiration(CacheConfigDeptTree, 30*time.Minute)
+// internal/services/system/role_cache_impl.go
+func (s *roleCacheService) GetAllEnabled(ctx context.Context) ([]*models.Role, error) {
+    cacheKey := services.CacheKeyRoleEnabled
+    var result []*models.Role
 
-    err := s.dataCache.GetOrSet(ctx, cacheKey, &depts, expiration, func() (interface{}, error) {
-        return s.queryDeptTree(includeDisabled)
+    // 使用动态配置的缓存时间
+    expiration := s.GetExpiration(services.CacheConfigRoleMenus, 30*time.Minute)
+
+    err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
+        return s.roleService.GetAllEnabled(ctx)
     })
 
-    return depts, err
+    return result, err
 }
 ```
 
@@ -146,246 +213,214 @@ func (s *DeptService) GetDeptTreeWithCache(ctx context.Context, includeDisabled 
 2. **代码默认值**：如果数据库中没有配置，使用代码中定义的默认值
 3. **最终默认值**：如果都没有，使用 30 分钟
 
-### 配置更新流程
-
-```
-用户修改参数
-    ↓
-写入数据库 (sys_config)
-    ↓
-调用重新加载 API
-    ↓
-CacheConfigService 重新读取配置
-    ↓
-DataCacheService 使用新配置
-    ↓
-新的缓存项使用新的过期时间
-```
-
-**注意**：修改配置后，已经存在的缓存不会立即改变过期时间，只有新创建的缓存才会使用新的配置。如果需要立即应用新配置，可以先清除所有缓存。
-
 ---
 
 ## 已实现的缓存服务
 
-### 1. 岗位缓存服务 (PostCacheService) ⭐️ 列表缓存
+### 1. 角色缓存服务 (RoleService) ⭐️ 列表缓存
 
-**位置**：`internal/services/post_cache_service.go`
+**位置**：`internal/services/system/role_cache_impl.go`
 
-**缓存键**：
-- `post:enabled` - 启用岗位列表缓存 ⭐️ **高优先级**
-- `post:all` - 所有岗位缓存
-- `post:id:{postId}` - 按ID的岗位缓存
-- `post:code:{postCode}` - 按编码的岗位缓存
-- `post:user:{userId}` - 用户岗位列表缓存
-
-**Handler 使用**：
+**架构**：
 ```go
-// internal/api/v1/post_handler.go:listPosts
-func listPosts(core *core.Core) gin.HandlerFunc {
-    // 检查是否有筛选条件
-    hasFilters := (req.PostCode != nil && *req.PostCode != "") ||
-        (req.PostName != nil && *req.PostName != "") ||
-        req.Status != nil
-
-    // 如果没有筛选条件，使用缓存的岗位数据
-    if !hasFilters {
-        allPosts, err := core.PostCacheService.GetEnabledPostsWithCache(c.Request.Context())
-        // 内存分页后返回...
-    }
-    // 有筛选条件时，直接查询数据库
+type roleCacheService struct {
+    *roleService              // 组合基础服务
+    cache       CacheProvider // 使用接口解耦
+    CacheServiceBase          // 统一的缓存配置
 }
 ```
-
-**主要方法**：
-```go
-// 获取启用岗位列表（带缓存）⭐️ 推荐使用
-func (s *PostCacheService) GetEnabledPostsWithCache(ctx context.Context) ([]*models.Post, error)
-
-// 获取所有岗位（带缓存）
-func (s *PostCacheService) GetAllPostsWithCache(ctx context.Context) ([]*models.Post, error)
-
-// 根据ID获取岗位（带缓存）
-func (s *PostCacheService) GetPostByIDWithCache(ctx context.Context, postID string) (*models.Post, error)
-
-// 清除岗位缓存
-func (s *PostCacheService) InvalidatePostCache(ctx context.Context) error
-```
-
-**缓存效果**：无筛选条件的岗位列表查询直接从缓存读取，性能提升 ~20x
-
----
-
-### 2. 角色缓存服务 (RoleCacheService) ⭐️ 列表缓存
-
-**位置**：`internal/services/role_cache_service.go`
 
 **缓存键**：
 - `role:all:enabled` - 所有启用角色列表 ⭐️ **高优先级**
 - `role:menus:{roleId}` - 角色菜单权限缓存
-- `role:menu:tree:{roleId}` - 角色菜单树缓存
 - `role:depts:{roleId}` - 角色部门权限缓存
-
-**Handler 使用**：
-```go
-// internal/api/v1/role_handler.go:getAllRoles
-func getAllRoles(core *core.Core) gin.HandlerFunc {
-    // 使用 RoleCacheService 获取所有启用的角色（带缓存）
-    roles, err := core.RoleCacheService.GetAllRolesWithCache(c.Request.Context())
-    // 返回简化数据...
-}
-```
 
 **主要方法**：
 ```go
 // 获取所有启用的角色（带缓存）⭐️ 推荐使用
-func (s *RoleCacheService) GetAllRolesWithCache(ctx context.Context) ([]*models.Role, error)
+func (s *roleCacheService) GetAllEnabled(ctx context.Context) ([]*models.Role, error)
 
 // 获取角色菜单权限（带缓存）
-func (s *RoleCacheService) GetRoleMenusWithCache(ctx context.Context, roleID string) ([]*models.Menu, error)
-
-// 获取角色菜单树（带缓存）
-func (s *RoleCacheService) GetRoleMenuTreeWithCache(ctx context.Context, roleID string) ([]models.Menu, error)
+func (s *roleCacheService) GetMenusWithCache(ctx context.Context, roleID string) ([]models.Menu, error)
 
 // 获取角色部门权限（带缓存）
-func (s *RoleCacheService) GetRoleDeptsWithCache(ctx context.Context, roleID string) ([]*models.Department, error)
+func (s *roleCacheService) GetDeptsWithCache(ctx context.Context, roleID string) ([]models.Department, error)
 
-// 清除角色缓存
-func (s *RoleCacheService) InvalidateRoleCache(ctx context.Context, roleID string) error
+// 失效角色缓存
+func (s *roleCacheService) InvalidateRoleCache(ctx context.Context, roleID string) error
 
-// 清除所有角色缓存
-func (s *RoleCacheService) InvalidateAllRoleCache(ctx context.Context) error
+// 创建/更新/删除（自动失效缓存）
+func (s *roleCacheService) Create(ctx context.Context, req *RoleCreateRequest) error
+func (s *roleCacheService) Update(ctx context.Context, req *RoleUpdateRequest) error
+func (s *roleCacheService) Delete(ctx context.Context, id string) error
 ```
 
 **缓存效果**：角色选择器数据直接从缓存读取，性能提升 ~15x
 
 ---
 
-### 3. 部门缓存服务 (DeptService)
+### 2. 岗位缓存服务 (PostService) ⭐️ 列表缓存
 
-**位置**：`internal/services/dept_service.go`
+**位置**：`internal/services/system/post_cache_impl.go`
+
+**架构**：
+```go
+type postCacheService struct {
+    *postService              // 组合基础服务
+    cache       CacheProvider // 使用接口解耦
+    CacheServiceBase          // 统一的缓存配置
+}
+```
 
 **缓存键**：
-- `dept:tree` - 部门树缓存（只包含启用状态的部门）
-- `dept:tree:all` - 部门树缓存（包含所有状态的部门，包括禁用的）
-- `dept:list` - 部门列表缓存
+- `post:enabled` - 启用岗位列表缓存 ⭐️ **高优先级**
+- `post:all` - 所有岗位缓存
 
-**说明**：
-- `dept:tree` 用于前端正常显示，只显示状态为启用的部门
-- `dept:tree:all` 用于管理后台编辑时，显示所有部门（包括禁用的）
-- 两个缓存键对应不同的业务场景，不是重复设计
+**特色功能**：全量缓存 + 内存筛选
 
-**缓存时间**：30 分钟
+```go
+// List 查询岗位列表（全量缓存+内存筛选版本）
+func (s *postCacheService) List(ctx context.Context, params PostListParams) (*PageResult, error) {
+    // 1. 获取全量缓存
+    allPosts, err := s.GetAllWithCache(ctx)
+
+    // 2. 内存筛选
+    filtered := s.filterPosts(allPosts, params)
+
+    // 3. 内存分页
+    paged, total := paginate(filtered, params.Current, params.PageSize)
+
+    return &PageResult{...}, nil
+}
+```
 
 **主要方法**：
 ```go
-// 获取部门树（带缓存）
-func (s *DeptService) GetDeptTreeWithCache(ctx context.Context, includeDisabled bool) ([]*models.Department, error)
+// 获取所有岗位（带缓存）
+func (s *postCacheService) GetAllWithCache(ctx context.Context) ([]*models.Post, error)
 
-// 获取部门列表（带缓存）
-func (s *DeptService) GetDeptListWithCache(ctx context.Context, deptName, status string) ([]models.Department, error)
+// 获取启用的岗位（带缓存）
+func (s *postCacheService) GetEnabledWithCache(ctx context.Context) ([]*models.Post, error)
 
-// 清除部门缓存
-func (s *DeptService) InvalidateDeptCache(ctx context.Context) error
+// 查询列表（内存筛选版）
+func (s *postCacheService) List(ctx context.Context, params PostListParams) (*PageResult, error)
+
+// 失效岗位缓存
+func (s *postCacheService) InvalidatePostCache(ctx context.Context) error
+
+// 创建/更新/删除（自动失效缓存）
+func (s *postCacheService) Create(ctx context.Context, req *PostCreateRequest) error
+func (s *postCacheService) Update(ctx context.Context, req *PostUpdateRequest) error
+func (s *postCacheService) Delete(ctx context.Context, id string) error
 ```
+
+**缓存效果**：无筛选条件的岗位列表查询直接从缓存读取，性能提升 ~20x
 
 ---
 
-### 4. 菜单缓存服务 (MenuCacheService)
+### 3. 字典类型缓存服务 (DictTypeService)
 
-**位置**：`internal/services/menu_cache_service.go`
+**位置**：`internal/services/system/dict_cache_impl.go`
 
-**缓存键**：
-- `menu:all` - 所有菜单缓存 ⭐️ 高频使用
-- `menu:tree` - 菜单树缓存 ⭐️ 高频使用
-- `menu:id:{menuId}` - 按ID的菜单缓存
-- `menu:children:{parentId}` - 子菜单缓存
-- `menu:routers` - 路由菜单缓存
-- `menu:perms:{perms}` - 按权限标识的菜单缓存
-
-**缓存时间**：30 分钟
-
-**主要方法**：
+**架构**：
 ```go
-// 获取所有菜单（带缓存）⭐️ 推荐使用
-func (s *MenuCacheService) GetAllMenusWithCache(ctx context.Context) ([]*models.Menu, error)
-
-// 获取菜单树（带缓存）⭐️ 推荐使用
-func (s *MenuCacheService) GetMenuTreeWithCache(ctx context.Context) ([]models.Menu, error)
-
-// 根据ID获取菜单（带缓存）
-func (s *MenuCacheService) GetMenuByIDWithCache(ctx context.Context, menuID string) (*models.Menu, error)
-
-// 获取子菜单（带缓存）
-func (s *MenuCacheService) GetMenuChildrenWithCache(ctx context.Context, parentID string) ([]*models.Menu, error)
-
-// 获取路由菜单（带缓存）
-func (s *MenuCacheService) GetRouters(ctx context.Context) ([]models.Menu, error)
-
-// 清除菜单缓存
-func (s *MenuCacheService) InvalidateMenuCache(ctx context.Context) error
-
-// 清除指定菜单的缓存
-func (s *MenuCacheService) InvalidateMenuCacheByID(ctx context.Context, menuID string) error
+type dictTypeCacheService struct {
+    *dictTypeService          // 组合基础服务
+    cache           CacheProvider
+    CacheServiceBase
+}
 ```
 
----
-
-### 5. 字典缓存服务 (DictCacheService)
-
-**位置**：`internal/services/dict_cache_service.go`
-
 **缓存键**：
-- `dict:type` - 字典类型缓存
-- `dict:data:type:{dictType}` - 按类型查询字典数据缓存
-
-**缓存时间**：类型 60 分钟，数据 30 分钟
+- `dict:type:all` - 所有字典类型缓存
 
 **主要方法**：
 ```go
 // 获取所有字典类型（带缓存）
-func (s *DictCacheService) GetDictTypesWithCache(ctx context.Context) ([]*models.DictType, error)
+func (s *dictTypeCacheService) GetAllWithCache(ctx context.Context) ([]*models.DictType, error)
 
-// 获取字典数据（带缓存）
-func (s *DictCacheService) GetDictDataByTypeWithCache(ctx context.Context, dictType string) ([]*models.DictData, error)
+// 查询列表（内存筛选版）
+func (s *dictTypeCacheService) List(ctx context.Context, params DictTypeListParams) (*PageResult, error)
 
-// 清除字典缓存
-func (s *DictCacheService) InvalidateDictCache(ctx context.Context) error
+// 失效缓存
+func (s *dictTypeCacheService) invalidateCache(ctx context.Context)
+```
+
+**缓存时间**：60 分钟（字典类型变化较少）
+
+---
+
+### 4. 字典数据缓存服务 (DictDataService)
+
+**位置**：`internal/services/system/dict_cache_impl.go`
+
+**架构**：
+```go
+type dictDataCacheService struct {
+    *dictDataService          // 组合基础服务
+    cache           CacheProvider
+    CacheServiceBase
+}
+```
+
+**缓存键**：
+- `dict:data:type:{dictType}` - 按类型查询字典数据缓存
+
+**主要方法**：
+```go
+// 根据类型获取字典数据（带缓存）
+func (s *dictDataCacheService) GetByTypeWithCache(ctx context.Context, dictType string) ([]*models.DictData, error)
+
+// 失效缓存
+func (s *dictDataCacheService) invalidateCache(ctx context.Context, dictType string)
+```
+
+**缓存时间**：30 分钟
+
+---
+
+### 5. 部门缓存服务 (DepartmentService)
+
+**位置**：`internal/services/system/department_cache_impl.go`
+
+**缓存键**：
+- `dept:tree` - 部门树缓存（只包含启用状态的部门）
+- `dept:tree:all` - 部门树缓存（包含所有状态的部门，包括禁用的）
+
+**说明**：
+- `dept:tree` 用于前端正常显示，只显示状态为启用的部门
+- `dept:tree:all` 用于管理后台编辑时，显示所有部门（包括禁用的）
+
+**主要方法**：
+```go
+// 获取部门树（带缓存）
+func (s *departmentCacheService) GetTreeWithCache(ctx context.Context, includeDisabled bool) ([]*models.Department, error)
+
+// 失效缓存
+func (s *departmentCacheService) InvalidateCache(ctx context.Context) error
 ```
 
 ---
 
-### 6. 用户缓存服务 (UserCacheService)
+### 6. 菜单缓存服务 (MenuService)
 
-**位置**：`internal/services/user_cache_service.go`
+**位置**：`internal/services/system/menu_cache_impl.go`
 
 **缓存键**：
-- `user:id:{userId}` - 按ID的用户缓存
-- `user:username:{username}` - 按用户名的用户缓存
-- `user:roles:{userId}` - 用户角色列表缓存
-- `user:permissions:{userId}` - 用户权限列表缓存
-
-**缓存时间**：用户详情 30 分钟
+- `menu:all` - 所有菜单缓存 ⭐️ 高频使用
+- `menu:tree` - 菜单树缓存 ⭐️ 高频使用
 
 **主要方法**：
 ```go
-// 根据ID获取用户（带缓存）
-func (s *UserCacheService) GetUserByIDWithCache(ctx context.Context, userID string) (*models.User, error)
+// 获取所有菜单（带缓存）⭐️ 推荐使用
+func (s *menuCacheService) GetAllWithCache(ctx context.Context) ([]*models.Menu, error)
 
-// 根据用户名获取用户（带缓存）
-func (s *UserCacheService) GetUserByUsernameWithCache(ctx context.Context, username string) (*models.User, error)
+// 获取菜单树（带缓存）⭐️ 推荐使用
+func (s *menuCacheService) GetTreeWithCache(ctx context.Context) ([]models.Menu, error)
 
-// 获取用户角色列表（带缓存）
-func (s *UserCacheService) GetUserRolesWithCache(ctx context.Context, userID string) ([]string, error)
-
-// 清除用户缓存
-func (s *UserCacheService) InvalidateUserCache(ctx context.Context, userID string) error
-
-// 清除所有用户缓存
-func (s *UserCacheService) InvalidateAllUserCache(ctx context.Context) error
+// 失效缓存
+func (s *menuCacheService) InvalidateCache(ctx context.Context) error
 ```
-
-**注意**：用户列表由于涉及数据权限过滤，不适合使用通用缓存。
 
 ---
 
@@ -397,28 +432,31 @@ func (s *UserCacheService) InvalidateAllUserCache(ctx context.Context) error
 
 **创建数据时**：
 ```go
-// 使用 Service 创建数据（会自动清除缓存）
-if err := core.PostCacheService.CreatePost(c.Request.Context(), &post); err != nil {
-    response.Error(c, response.ErrServerError, "创建岗位失败")
-    return
+func (s *roleCacheService) Create(ctx context.Context, req *RoleCreateRequest) error {
+    if err := s.roleService.Create(ctx, req); err != nil {
+        return err
+    }
+    return s.InvalidateRoleCache(ctx, "")
 }
 ```
 
 **更新数据时**：
 ```go
-// 使用 Service 更新数据（会自动清除缓存）
-if err := core.PostCacheService.UpdatePost(c.Request.Context(), &post); err != nil {
-    response.Error(c, response.ErrServerError, "更新岗位失败")
-    return
+func (s *roleCacheService) Update(ctx context.Context, req *RoleUpdateRequest) error {
+    if err := s.roleService.Update(ctx, req); err != nil {
+        return err
+    }
+    return s.InvalidateRoleCache(ctx, req.ID)
 }
 ```
 
 **删除数据时**：
 ```go
-// 使用 Service 删除数据（会自动清除缓存）
-if err := core.PostCacheService.DeletePost(c.Request.Context(), postID); err != nil {
-    response.Error(c, response.ErrServerError, "删除岗位失败")
-    return
+func (s *roleCacheService) Delete(ctx context.Context, id string) error {
+    if err := s.roleService.Delete(ctx, id); err != nil {
+        return err
+    }
+    return s.InvalidateRoleCache(ctx, id)
 }
 ```
 
@@ -433,9 +471,21 @@ Service 操作数据库
     ↓
 Service 调用 InvalidateXxxCache()
     ↓
-删除相关缓存键（支持模式匹配）
+使用通用工具函数删除缓存
     ↓
 下次请求时重新查询数据库并缓存
+```
+
+### 通用缓存失效函数
+
+**位置**：`internal/services/system/cache_utils.go`
+
+```go
+// 根据模式列表失效缓存（通用方法）
+func InvalidateCacheByPattern(ctx context.Context, cache CacheProvider, patterns []string, module string)
+
+// 根据键列表失效缓存（通用方法）
+func InvalidateCacheByKey(ctx context.Context, cache CacheProvider, keys []string, module string)
 ```
 
 ---
@@ -448,18 +498,17 @@ Service 调用 InvalidateXxxCache()
 
 **缓存时间**：30 分钟
 
-**策略**：无条件查询使用缓存，有筛选条件时查数据库
+**策略**：全量缓存 + 内存筛选
 
 ```go
-// 无筛选条件：使用缓存
-if !hasFilters {
-    allData, err := service.GetAllWithCache(ctx)
-    // 内存分页...
-    return
-}
+// 获取全量缓存
+allPosts, err := s.GetAllWithCache(ctx)
 
-// 有筛选条件：直接查数据库
-db.Where("status = ?", status).Find(&data)
+// 内存筛选
+filtered := s.filterPosts(allPosts, params)
+
+// 内存分页
+paged, total := paginate(filtered, params.Current, params.PageSize)
 ```
 
 ### 2. 树形结构数据
@@ -471,7 +520,7 @@ db.Where("status = ?", status).Find(&data)
 **策略**：全量缓存树形结构，前端处理展示
 
 ```go
-err := s.dataCache.GetOrSet(ctx, "dept:tree:all", &tree, 30*time.Minute, func() (interface{}, error) {
+err := s.cache.GetOrSet(ctx, "dept:tree:all", &tree, expiration, func() (interface{}, error) {
     return s.buildTree()
 })
 ```
@@ -485,9 +534,9 @@ err := s.dataCache.GetOrSet(ctx, "dept:tree:all", &tree, 30*time.Minute, func() 
 **策略**：按关联ID缓存
 
 ```go
-cacheKey := fmt.Sprintf("role:menus:%s", roleID)
-err := s.dataCache.GetOrSet(ctx, cacheKey, &menus, 30*time.Minute, func() (interface{}, error) {
-    return s.queryRoleMenus(roleID)
+cacheKey := services.GetRoleMenusKey(roleID)
+err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
+    return s.queryMenus(ctx, roleID)
 })
 ```
 
@@ -524,12 +573,12 @@ db = middleware.ApplyDataScopeFromContext(c, db, core, "dept_id")
 
 **单个缓存**：
 ```go
-core.DataCacheService.Delete(ctx, "dept:tree")
+core.Cache.Delete(ctx, "dept:tree")
 ```
 
 **按模式清除**：
 ```go
-core.DeptService.InvalidateDeptCache(ctx)
+InvalidateCacheByPattern(ctx, cache, []string{"role:*"}, "ROLE")
 ```
 
 **清空所有缓存**：
@@ -560,12 +609,39 @@ core.Cache.FlushDB(ctx)
 
 ## 最佳实践
 
-1. **优先缓存列表数据**：列表查询涉及更多数据库操作，缓存收益更大
-2. **无条件查询优先缓存**：有筛选条件的查询缓存命中率低
-3. **合理设置 TTL**：根据数据变化频率设置合适的过期时间
-4. **及时失效缓存**：数据更新时立即清除相关缓存
-5. **监控缓存效果**：定期检查缓存命中率和性能指标
-6. **避免过度缓存**：不是所有数据都需要缓存，合理选择
+### 1. 使用接口而非具体实现
+
+```go
+// ✅ 正确 - 使用接口
+type roleCacheService struct {
+    cache CacheProvider  // 接口解耦
+}
+
+// ❌ 错误 - 直接依赖具体实现
+type roleCacheService struct {
+    dataCache *DataCacheService  // 强耦合
+}
+```
+
+### 2. 优先缓存列表数据
+
+列表查询涉及更多数据库操作，缓存收益更大
+
+### 3. 全量缓存 + 内存筛选
+
+对于有筛选条件的查询，缓存全量数据后在内存中筛选
+
+### 4. 及时失效缓存
+
+数据更新时立即清除相关缓存
+
+### 5. 合理设置 TTL
+
+根据数据变化频率设置合适的过期时间
+
+### 6. 避免过度缓存
+
+不是所有数据都需要缓存，合理选择
 
 ---
 
@@ -575,7 +651,7 @@ core.Cache.FlushDB(ctx)
 
 1. 检查 Redis 连接是否正常
 2. 检查缓存键是否正确
-3. 检查是否有筛选条件（有筛选时不使用缓存）
+3. 检查是否有筛选条件（有筛选时可能不使用缓存）
 4. 检查缓存时间是否设置过短
 
 ### 性能没有提升
@@ -599,9 +675,18 @@ core.Cache.FlushDB(ctx)
 - 缓存服务：`internal/services/data_cache_service.go`
 - 缓存配置服务：`internal/services/cache_config_service.go`
 
-### 业务缓存服务
-- 岗位服务：`internal/services/post_cache_service.go` ⭐️ 列表缓存
-- 角色服务：`internal/services/role_cache_service.go` ⭐️ 列表缓存
+### System 模块缓存服务（新架构）
+- CacheProvider 接口：`internal/services/system/cache_provider.go`
+- 缓存工具：`internal/services/system/cache_utils.go`
+- 角色缓存：`internal/services/system/role_cache_impl.go` ⭐️ 列表缓存
+- 岗位缓存：`internal/services/system/post_cache_impl.go` ⭐️ 列表缓存
+- 字典缓存：`internal/services/system/dict_cache_impl.go`
+- 部门缓存：`internal/services/system/department_cache_impl.go`
+- 菜单缓存：`internal/services/system/menu_cache_impl.go`
+
+### Legacy 缓存服务（向后兼容）
+- 角色服务：`internal/services/role_cache_service.go`
+- 岗位服务：`internal/services/post_cache_service.go`
 - 部门服务：`internal/services/dept_service.go`
 - 菜单服务：`internal/services/menu_cache_service.go`
 - 字典服务：`internal/services/dict_cache_service.go`
@@ -614,7 +699,6 @@ core.Cache.FlushDB(ctx)
 - 内存实现：`pkg/cache/memory.go`
 - 多级缓存：`pkg/cache/multilevel.go`
 
-### Handler 更新
-- 岗位 Handler：`internal/api/v1/post_handler.go`（已更新使用列表缓存）
-- 角色 Handler：`internal/api/v1/role_handler.go`（已更新使用列表缓存）
-- 用户 Handler：`internal/api/v1/user_handler.go`（已更新使用详情缓存）
+### API 层
+- 缓存管理 API：`internal/api/v1/monitor/cache_handler.go`
+- 缓存管理路由：`internal/api/v1/monitor/cache_router.go`

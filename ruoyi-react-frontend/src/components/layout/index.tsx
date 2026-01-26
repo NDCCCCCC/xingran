@@ -3,7 +3,6 @@
  * 根据当前选择的布局类型动态渲染不同的布局组件
  */
 
-import { useEffect, useState } from 'react';
 import type { FC, ReactNode } from 'react';
 import { useLayoutStore } from '@/store/layoutStore';
 import ClassicLayout from './ClassicLayout';
@@ -16,22 +15,6 @@ interface LayoutProps {
 
 const Layout: FC<LayoutProps> = ({ children }) => {
   const currentLayout = useLayoutStore((state) => state.currentLayout);
-  const [isHydrated, setIsHydrated] = useState(false);
-
-  // 确保 zustand persist 水合完成后再渲染
-  useEffect(() => {
-    // 使用 setTimeout 确保在下一个事件循环中检查状态
-    const timer = setTimeout(() => {
-      setIsHydrated(true);
-    }, 0);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  // 等待 store 水合完成
-  if (!isHydrated) {
-    return null;
-  }
 
   if (currentLayout === 'classic') {
     return <ClassicLayout key={currentLayout}>{children}</ClassicLayout>;

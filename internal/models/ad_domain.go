@@ -45,7 +45,7 @@ func (ADConfig) TableName() string {
 type ADOU struct {
 	BaseModel
 	ADConfigID  string     `gorm:"type:uuid;not null;index:idx_ad_ou_config,priority:1" json:"adConfigId"`
-	OUN         string     `gorm:"size:500;not null" json:"ouDn"`
+	OUN         string     `gorm:"size:500;not null;column:ou_dn" json:"ouDn"`
 	OUName      string     `gorm:"size:255;not null" json:"ouName"`
 	OUPath      string     `gorm:"type:text" json:"ouPath,omitempty"`
 	ParentDN    string     `gorm:"size:500;index:idx_ad_ou_parent" json:"parentDn,omitempty"`
@@ -95,7 +95,7 @@ type ADGroup struct {
 	GroupType   ADGroupType  `json:"groupType,omitempty"`
 	Description string       `gorm:"type:text" json:"description,omitempty"`
 	MemberCount int          `gorm:"default:0" json:"memberCount"`
-	OUN         string       `gorm:"size:500;index:idx_ad_group_ou" json:"ouDn,omitempty"`
+	OUN         string       `gorm:"size:500;index:idx_ad_group_ou;column:ou_dn" json:"ouDn,omitempty"`
 	LastSyncAt  *time.Time   `json:"lastSyncAt,omitempty"`
 }
 
@@ -118,7 +118,7 @@ type ADUser struct {
 	Title              string     `gorm:"size:100" json:"title,omitempty"`
 	Department         string     `gorm:"size:255" json:"department,omitempty"`
 	Company            string     `gorm:"size:255" json:"company,omitempty"`
-	OUN                string     `gorm:"size:500;index:idx_ad_user_ou" json:"ouDn,omitempty"`
+	OUN                string     `gorm:"size:500;index:idx_ad_user_ou;column:ou_dn" json:"ouDn,omitempty"`
 	UserAccountControl int        `json:"userAccountControl,omitempty"`
 	IsEnabled          bool       `gorm:"default:true;index:idx_ad_user_enabled" json:"isEnabled"`
 	IsLocked           bool       `gorm:"default:false" json:"isLocked"`
@@ -187,12 +187,13 @@ type ADSyncLog struct {
 	StartTime  time.Time    `gorm:"not null;index:idx_ad_sync_log_time,priority:2" json:"startTime"`
 	EndTime    *time.Time   `json:"endTime,omitempty"`
 	Duration   int          `json:"duration,omitempty"` // 秒
-	OUCount    int          `gorm:"default:0" json:"ouCount"`
-	GroupCount int          `gorm:"default:0" json:"groupCount"`
-	UserCount  int          `gorm:"default:0" json:"userCount"`
-	ErrorCount int          `gorm:"default:0" json:"errorCount"`
-	ErrorMsg   string       `gorm:"type:text" json:"errorMsg,omitempty"`
-	CreatedAt  time.Time    `json:"createdAt"`
+	OUCount      int          `gorm:"default:0" json:"ouCount"`
+	GroupCount   int          `gorm:"default:0" json:"groupCount"`
+	UserCount    int          `gorm:"default:0" json:"userCount"`
+	ComputerCount int          `gorm:"default:0" json:"computerCount"`
+	ErrorCount   int          `gorm:"default:0" json:"errorCount"`
+	ErrorMsg     string       `gorm:"type:text;column:error_message" json:"errorMessage,omitempty"`
+	CreatedAt    time.Time    `json:"createdAt"`
 }
 
 // BeforeCreate GORM钩子

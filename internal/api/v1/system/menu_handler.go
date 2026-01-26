@@ -8,6 +8,12 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
+// 常量定义
+const (
+	ErrMsgMenuIDRequired = "菜单ID不能为空"
+	ErrMsgRoleIDRequired = "角色ID不能为空"
+)
+
 // MenuHandler 菜单处理器
 type MenuHandler struct {
 	service systemServices.MenuService
@@ -16,6 +22,42 @@ type MenuHandler struct {
 // NewMenuHandler 创建菜单处理器实例
 func NewMenuHandler(service systemServices.MenuService) *MenuHandler {
 	return &MenuHandler{service: service}
+}
+
+// ==================== 辅助方法 ====================
+
+// requireID 获取并验证路径参数ID
+func (h *MenuHandler) requireID(c *gin.Context) (string, bool) {
+	id := c.Param("id")
+	if id == "" {
+		response.Error(c, http.StatusBadRequest, ErrMsgMenuIDRequired)
+		return "", false
+	}
+	return id, true
+}
+
+// getUserID 从上下文获取用户ID
+func (h *MenuHandler) getUserID(c *gin.Context) (string, bool) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		response.Error(c, http.StatusUnauthorized, ErrMsgUnauthorized)
+		return "", false
+	}
+	userIDStr, ok := userID.(string)
+	if !ok {
+		response.Error(c, http.StatusUnauthorized, ErrMsgUnauthorized)
+		return "", false
+	}
+	return userIDStr, true
+}
+
+// bindAndValidate 绑定并验证请求参数
+func (h *MenuHandler) bindAndValidate(c *gin.Context, req interface{}) bool {
+	if err := c.ShouldBindJSON(req); err != nil {
+		response.Error(c, http.StatusBadRequest, ErrMsgInvalidParams+": "+err.Error())
+		return false
+	}
+	return true
 }
 
 // GetTree 获取菜单树
@@ -47,10 +89,7 @@ func (h *MenuHandler) GetTree(c *gin.Context) {
 // @Router /system/menus/list [post]
 func (h *MenuHandler) List(c *gin.Context) {
 	var req systemServices.MenuListParams
-	if err := c.ShouldBindJSON(&req); err != nil {
-		// 允许空请求
-		req = systemServices.MenuListParams{}
-	}
+	c.ShouldBindJSON(&req)
 
 	result, err := h.service.List(c.Request.Context(), req)
 	if err != nil {
@@ -71,9 +110,8 @@ func (h *MenuHandler) List(c *gin.Context) {
 // @Success 200 {object} response.Response{data=models.Menu}
 // @Router /system/menus/:id [post]
 func (h *MenuHandler) GetByID(c *gin.Context) {
-	id := c.Param("id")
-	if id == "" {
-		response.Error(c, http.StatusBadRequest, "菜单ID不能为空")
+	id, ok := h.requireID(c)
+	if !ok {
 		return
 	}
 
@@ -97,8 +135,7 @@ func (h *MenuHandler) GetByID(c *gin.Context) {
 // @Router /system/menus [post]
 func (h *MenuHandler) Create(c *gin.Context) {
 	var req systemServices.MenuCreateRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !h.bindAndValidate(c, &req) {
 		return
 	}
 
@@ -121,15 +158,13 @@ func (h *MenuHandler) Create(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Router /system/menus/:id/update [post]
 func (h *MenuHandler) Update(c *gin.Context) {
-	id := c.Param("id")
-	if id == "" {
-		response.Error(c, http.StatusBadRequest, "菜单ID不能为空")
+	id, ok := h.requireID(c)
+	if !ok {
 		return
 	}
 
 	var req systemServices.MenuUpdateRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !h.bindAndValidate(c, &req) {
 		return
 	}
 
@@ -144,21 +179,24 @@ func (h *MenuHandler) Update(c *gin.Context) {
 
 // Delete 删除菜单
 // @Summary 删除菜单
-// @Description 删除指定菜单
+// @Description 删除指定菜单，支持级联删除子菜单
 // @Tags 菜单管理
 // @Accept json
 // @Produce json
 // @Param id path string true "菜单ID"
+// @Param cascade query bool false "是否级联删除子菜单" default(false)
 // @Success 200 {object} response.Response
 // @Router /system/menus/:id/delete [post]
 func (h *MenuHandler) Delete(c *gin.Context) {
-	id := c.Param("id")
-	if id == "" {
-		response.Error(c, http.StatusBadRequest, "菜单ID不能为空")
+	id, ok := h.requireID(c)
+	if !ok {
 		return
 	}
 
-	if err := h.service.Delete(c.Request.Context(), id); err != nil {
+	// 读取 cascade 查询参数，默认为 false
+	cascade := c.DefaultQuery("cascade", "false") == "true"
+
+	if err := h.service.Delete(c.Request.Context(), id, cascade); err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -168,24 +206,24 @@ func (h *MenuHandler) Delete(c *gin.Context) {
 
 // BatchDelete 批量删除菜单
 // @Summary 批量删除菜单
-// @Description 批量删除多个菜单
+// @Description 批量删除多个菜单，支持级联删除子菜单
 // @Tags 菜单管理
 // @Accept json
 // @Produce json
-// @Param request body object{ids=[]string} true "菜单ID列表"
+// @Param request body object{ids=[]string,cascade=bool} true "菜单ID列表"
 // @Success 200 {object} response.Response
 // @Router /system/menus/batch [post]
 func (h *MenuHandler) BatchDelete(c *gin.Context) {
 	var req struct {
-		IDs []string `json:"ids" binding:"required,min=1"`
+		IDs      []string `json:"ids" binding:"required,min=1"`
+		Cascade  bool     `json:"cascade"`
 	}
 
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !h.bindAndValidate(c, &req) {
 		return
 	}
 
-	if err := h.service.BatchDelete(c.Request.Context(), req.IDs); err != nil {
+	if err := h.service.BatchDelete(c.Request.Context(), req.IDs, req.Cascade); err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -204,17 +242,15 @@ func (h *MenuHandler) BatchDelete(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Router /system/menus/:id/status [post]
 func (h *MenuHandler) UpdateStatus(c *gin.Context) {
-	id := c.Param("id")
-	if id == "" {
-		response.Error(c, http.StatusBadRequest, "菜单ID不能为空")
+	id, ok := h.requireID(c)
+	if !ok {
 		return
 	}
 
 	var req struct {
 		Status int `json:"status" binding:"min=0,max=1"`
 	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !h.bindAndValidate(c, &req) {
 		return
 	}
 
@@ -233,16 +269,14 @@ func (h *MenuHandler) UpdateStatus(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Success 200 {object} response.Response{data=[]models.Menu}
-// @Router /user-menus [get]
+// @Router /system/my-menus [post]
 func (h *MenuHandler) GetUserMenus(c *gin.Context) {
-	// 从上下文获取用户ID
-	userID, exists := c.Get("user_id")
-	if !exists {
-		response.Error(c, http.StatusUnauthorized, "未授权")
+	userID, ok := h.getUserID(c)
+	if !ok {
 		return
 	}
 
-	menus, err := h.service.GetUserMenus(c.Request.Context(), userID.(string))
+	menus, err := h.service.GetUserMenus(c.Request.Context(), userID)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -260,14 +294,12 @@ func (h *MenuHandler) GetUserMenus(c *gin.Context) {
 // @Success 200 {object} response.Response{data=[]models.Menu}
 // @Router /system/my-menus/all [post]
 func (h *MenuHandler) GetAllUserMenus(c *gin.Context) {
-	// 从上下文获取用户ID
-	userID, exists := c.Get("user_id")
-	if !exists {
-		response.Error(c, http.StatusUnauthorized, "未授权")
+	userID, ok := h.getUserID(c)
+	if !ok {
 		return
 	}
 
-	menus, err := h.service.GetAllUserMenus(c.Request.Context(), userID.(string))
+	menus, err := h.service.GetAllUserMenus(c.Request.Context(), userID)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -283,16 +315,14 @@ func (h *MenuHandler) GetAllUserMenus(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Success 200 {object} response.Response{data=[]string}
-// @Router /user-permissions [get]
+// @Router /system/my-menus/permissions [post]
 func (h *MenuHandler) GetUserPermissions(c *gin.Context) {
-	// 从上下文获取用户ID
-	userID, exists := c.Get("user_id")
-	if !exists {
-		response.Error(c, http.StatusUnauthorized, "未授权")
+	userID, ok := h.getUserID(c)
+	if !ok {
 		return
 	}
 
-	permissions, err := h.service.GetUserPermissions(c.Request.Context(), userID.(string))
+	permissions, err := h.service.GetUserPermissions(c.Request.Context(), userID)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -315,7 +345,7 @@ func (h *MenuHandler) GetUserPermissions(c *gin.Context) {
 func (h *MenuHandler) RoleMenuTreeSelect(c *gin.Context) {
 	roleID := c.Param("roleId")
 	if roleID == "" {
-		response.Error(c, http.StatusBadRequest, "角色ID不能为空")
+		response.Error(c, http.StatusBadRequest, ErrMsgRoleIDRequired)
 		return
 	}
 

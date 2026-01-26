@@ -47,11 +47,10 @@ const ADUserPage: FC = () => {
   });
 
   const [users, setUsers] = useState<ADUser[]>([]);
-  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  // 使用全局分页 hook（不使用 setTotal，因为文件本地已有 total 状态管理）
-  const { paginationProps, setCurrent, setPageSize } = usePagination();
+  // 使用全局分页 hook
+  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
   const [ouTree, setOUTree] = useState<ADOUNode[]>([]);
 

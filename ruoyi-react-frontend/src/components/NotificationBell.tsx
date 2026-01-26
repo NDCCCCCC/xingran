@@ -3,6 +3,7 @@ import type { FC, MouseEvent } from 'react';
 import { Badge, Dropdown, Empty, Spin, Tag, Avatar, message } from 'antd';
 import { BellOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import { USER_NOTICES } from '@/constants/routes';
 import { useNoticeStore } from '@/store/noticeStore';
 import { getNotificationList, markNoticeAsRead, markAllNoticesAsRead, ignoreNotice } from '@/lib/noticeApi';
 import type { NoticeListItem } from '@/types/notice';
@@ -150,7 +151,7 @@ const NotificationBell: FC = () => {
             }}
             onClick={() => {
               setDropdownOpen(false);
-              navigate('/my-notices');
+              navigate(USER_NOTICES);
             }}
             onMouseEnter={(e) => e.currentTarget.style.color = 'var(--theme-primary)'}
             onMouseLeave={(e) => e.currentTarget.style.color = 'var(--theme-text-secondary)'}
@@ -311,7 +312,7 @@ const NotificationBell: FC = () => {
             style={{ color: 'var(--theme-primary)' }}
             onClick={() => {
               setDropdownOpen(false);
-              navigate('/my-notices');
+              navigate(USER_NOTICES);
             }}
           >
             查看全部通知 →

@@ -28,7 +28,7 @@ interface TabsActions {
 
 type TabsStore = TabsState & TabsActions;
 
-const MAX_TABS = 20;
+const MAX_TABS = 50;
 
 export const useTabsStore = create<TabsStore>()(
   persist(

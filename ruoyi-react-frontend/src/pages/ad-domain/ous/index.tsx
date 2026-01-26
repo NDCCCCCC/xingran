@@ -105,7 +105,6 @@ const ADOUPage: FC = () => {
         <Space>
           <FolderOutlined />
           <span>{node.name}</span>
-          {node.path && <Tag color="blue">{node.path}</Tag>}
         </Space>
       ),
       key: node.dn,
@@ -203,7 +202,7 @@ const ADOUPage: FC = () => {
                 {ouTree.length > 0 ? (
                   <Tree
                     showLine
-                    defaultExpandAll
+                    defaultExpandAll={false}
                     onSelect={handleOUSelect}
                     treeData={buildTreeData(ouTree)}
                     style={{ fontSize: '13px' }}

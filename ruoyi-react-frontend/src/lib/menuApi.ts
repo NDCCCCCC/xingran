@@ -10,7 +10,7 @@ export async function getUserMenus(): Promise<Menu[]> {
 }
 
 /**
- * 获取用户所有菜单（包含隐藏菜单，用于标签页标题）
+ * 获取用户所有菜单（包含隐藏菜单，用于标签页标题和路由生成）
  */
 export async function getAllUserMenus(): Promise<Menu[]> {
   const response = await post<BaseResponse<Menu[]>>('/system/my-menus/all', {});

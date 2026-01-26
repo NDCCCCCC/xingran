@@ -5,6 +5,30 @@
  * 定义仪表盘、Widget、数据源等相关类型
  */
 
+// ============= 仪表盘可见范围 =============
+
+/**
+ * 仪表盘可见范围
+ */
+export type DashboardScope =
+	| 'private'   // 私有：仅创建者可见
+	| 'dept'      // 部门：本部门可见
+	| 'global';   // 全局：全员可见（仅管理员可设置）
+
+// ============= Widget 数据过滤配置 =============
+
+/**
+ * Widget 数据过滤配置
+ */
+export interface WidgetDataFilter {
+	/** 是否启用数据过滤 */
+	enabled: boolean;
+	/** 过滤类型：dept, user, custom */
+	filterType: 'dept' | 'user' | 'custom';
+	/** 过滤配置 */
+	filterConfig: Record<string, string>;
+}
+
 // ============= Widget 类型定义 =============
 
 /**
@@ -350,6 +374,9 @@ export interface WidgetConfig {
 	/** 显示配置 */
 	display: DisplayConfig;
 
+	/** 数据权限过滤（新增） */
+	dataFilter?: WidgetDataFilter;
+
 	/** 刷新间隔（秒），0 表示不自动刷新 */
 	refreshInterval?: number;
 
@@ -436,11 +463,23 @@ export interface Dashboard {
 	/** 所有者名称 */
 	ownerName?: string;
 
+	/** 创建者部门 ID */
+	ownerDeptId?: string;
+
 	/** 是否为默认仪表盘 */
 	isDefault: boolean;
 
 	/** 是否为模板 */
 	isTemplate: boolean;
+
+	/** 是否为系统仪表盘 */
+	isSystem?: boolean;
+
+	/** 仪表盘可见范围（新增） */
+	scope?: DashboardScope;
+
+	/** 关联部门 ID（scope=dept 时使用） */
+	deptId?: string;
 
 	/** 模板作用域（仅当 isTemplate=true 时有效） */
 	templateScope?: TemplateScope;
@@ -558,6 +597,15 @@ export interface CreateDashboardRequest {
 
 	/** 模板作用域 */
 	templateScope?: TemplateScope;
+
+	/** 仪表盘可见范围（新增） */
+	scope?: DashboardScope;
+
+	/** 关联部门 ID（scope=dept 时使用） */
+	deptId?: string;
+
+	/** 是否为系统仪表盘 */
+	isSystem?: boolean;
 }
 
 /**

@@ -19,6 +19,9 @@ func SetupDashboardRouter(r *gin.RouterGroup, core *core.Core) {
 	handler := NewDashboardHandler(dashboardService)
 
 	// 注册路由（注意：更具体的路由要放在前面，避免被通用路由匹配）
+	// 仪表盘默认入口
+	r.GET("/default", handler.GetDefault)            // 获取默认仪表盘
+
 	// 仪表盘 CRUD 操作
 	r.POST("/list", handler.List)                    // 获取仪表盘列表
 	r.POST("", handler.Create)                       // 创建仪表盘

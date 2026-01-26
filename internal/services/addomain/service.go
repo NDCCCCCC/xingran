@@ -100,23 +100,25 @@ type ADSyncRequest struct {
 // ADDomainService AD域管理服务（主服务）
 // 提供统一的访问入口，内部委托给各个专门的服务
 type ADDomainService struct {
-	Config *ConfigService
-	Sync   *SyncService
-	OU     *OUService
-	User   *UserService
-	Group  *GroupService
-	Log    *LogService
+	Config   *ConfigService
+	Sync     *SyncService
+	OU       *OUService
+	User     *UserService
+	Group    *GroupService
+	Log      *LogService
+	Computer *ComputerService
 }
 
 // NewADDomainService 创建AD域管理服务
 func NewADDomainService(db *gorm.DB) *ADDomainService {
 	return &ADDomainService{
-		Config: NewConfigService(db),
-		Sync:   NewSyncService(db),
-		OU:     NewOUService(db),
-		User:   NewUserService(db),
-		Group:  NewGroupService(db),
-		Log:    NewLogService(db),
+		Config:   NewConfigService(db),
+		Sync:     NewSyncService(db),
+		OU:       NewOUService(db),
+		User:     NewUserService(db),
+		Group:    NewGroupService(db),
+		Log:      NewLogService(db),
+		Computer: NewComputerService(db),
 	}
 }
 
@@ -230,4 +232,19 @@ func (s *ADDomainService) GetADGroupList(ctx context.Context, req *ADGroupListRe
 // GetADSyncLogList 获取同步日志列表（兼容旧API）
 func (s *ADDomainService) GetADSyncLogList(ctx context.Context, configID string, current, pageSize int) ([]models.ADSyncLog, int64, error) {
 	return s.Log.GetList(ctx, configID, current, pageSize)
+}
+
+// GetADGroupMembers 获取AD用户组成员（兼容旧API）
+func (s *ADDomainService) GetADGroupMembers(ctx context.Context, configID, groupDN string, current, pageSize int) ([]models.ADUser, int64, error) {
+	return s.Group.GetMembers(ctx, configID, groupDN, current, pageSize)
+}
+
+// GetADComputerList 获取AD电脑设备列表（兼容旧API）
+func (s *ADDomainService) GetADComputerList(ctx context.Context, req *ComputerListRequest) ([]ComputerDetail, int64, error) {
+	return s.Computer.List(ctx, req)
+}
+
+// GetADComputerByDN 根据DN获取电脑设备（兼容旧API）
+func (s *ADDomainService) GetADComputerByDN(ctx context.Context, configID, computerDN string) (*ComputerDetail, error) {
+	return s.Computer.GetByDN(ctx, configID, computerDN)
 }

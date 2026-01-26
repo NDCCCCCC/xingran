@@ -237,6 +237,10 @@ type WidgetConfig struct {
 	Position        WidgetPosition   `json:"position" gorm:"type:jsonb;not null"`
 	DataSource      DataSourceConfig `json:"dataSource" gorm:"type:jsonb;not null"`
 	Display         DisplayConfig    `json:"display" gorm:"type:jsonb;not null"`
+
+	// 数据权限过滤
+	DataFilter      *WidgetDataFilter `json:"dataFilter,omitempty" gorm:"type:jsonb"`
+
 	RefreshInterval int              `json:"refreshInterval,omitempty" gorm:"default:0"`
 	Enabled         bool             `json:"enabled,omitempty" gorm:"default:true"`
 	CreatedAt       int64            `json:"createdAt,omitempty" gorm:"autoCreateTime:milli"`
@@ -279,15 +283,35 @@ func (l LayoutConfig) Value() (driver.Value, error) {
 	return json.Marshal(l)
 }
 
+// ============= 仪表盘可见范围枚举 =============
+
+// DashboardScope 仪表盘可见范围
+type DashboardScope string
+
+const (
+	DashboardScopePrivate DashboardScope = "private" // 私有：仅创建者可见
+	DashboardScopeDept    DashboardScope = "dept"    // 部门：本部门可见
+	DashboardScopeGlobal  DashboardScope = "global"  // 全局：全员可见
+)
+
+// ============= Widget 数据过滤配置 =============
+
+// WidgetDataFilter Widget数据过滤配置
+type WidgetDataFilter struct {
+	Enabled      bool              `json:"enabled"`      // 是否启用数据过滤
+	FilterType   string            `json:"filterType"`   // 过滤类型：dept, user, custom
+	FilterConfig map[string]string `json:"filterConfig"` // 过滤配置
+}
+
 // ============= 仪表盘模型 =============
 
 // TemplateScope 模板作用域
 type TemplateScope string
 
 const (
-	TemplateScopeGlobal    TemplateScope = "global"
-	TemplateScopeDept      TemplateScope = "dept"
-	TemplateScopePersonal  TemplateScope = "personal"
+	TemplateScopeGlobal   TemplateScope = "global"
+	TemplateScopeDept     TemplateScope = "dept"
+	TemplateScopePersonal TemplateScope = "personal"
 )
 
 // Dashboard 仪表盘模型
@@ -296,12 +320,22 @@ type Dashboard struct {
 	Name          string       `json:"name" gorm:"size:100;not null;index"`
 	Description   string       `json:"description" gorm:"size:500"`
 	OwnerID       string       `json:"ownerId" gorm:"size:64;index"`
+	OwnerDeptID   string       `json:"ownerDeptId" gorm:"size:64;index"` // 创建者部门
 	IsDefault     bool         `json:"isDefault" gorm:"default:false;index"`
 	IsTemplate    bool         `json:"isTemplate" gorm:"default:false;index"`
+	IsSystem      bool         `json:"isSystem" gorm:"default:false;index"` // 系统仪表盘标识
+
+	// 权限相关
+	Scope  DashboardScope `json:"scope" gorm:"size:20;default:'private'"` // 可见范围
+	DeptID *string        `json:"deptId" gorm:"size:64;index"`            // 关联部门（scope=dept时使用）
+
+	// 模板相关
 	TemplateScope TemplateScope `json:"templateScope" gorm:"size:20"`
-	Layout        LayoutConfig `json:"layout" gorm:"type:jsonb;not null"`
-	RefreshInterval int        `json:"refreshInterval" gorm:"default:60"`
-	Status        DashboardStatus `json:"status" gorm:"default:0;index"`
+
+	// 布局相关
+	Layout          LayoutConfig `json:"layout" gorm:"type:jsonb;not null"`
+	RefreshInterval int          `json:"refreshInterval" gorm:"default:60"`
+	Status          DashboardStatus `json:"status" gorm:"default:0;index"`
 }
 
 // TableName 指定表名

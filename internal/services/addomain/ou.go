@@ -29,6 +29,15 @@ type OUNode struct {
 
 // GetTree 获取OU树形结构
 func (s *OUService) GetTree(ctx context.Context, configID string) ([]OUNode, error) {
+	// 首先获取配置的 BaseDN
+	var config models.ADConfig
+	if err := s.db.WithContext(ctx).
+		Select("base_dn").
+		Where("id = ?", configID).
+		First(&config).Error; err != nil {
+		return nil, fmt.Errorf("查询AD配置失败: %w", err)
+	}
+
 	var ous []models.ADOU
 	if err := s.db.WithContext(ctx).
 		Where("ad_config_id = ? AND deleted_at IS NULL", configID).
@@ -36,7 +45,9 @@ func (s *OUService) GetTree(ctx context.Context, configID string) ([]OUNode, err
 		return nil, fmt.Errorf("查询OU失败: %w", err)
 	}
 
-	return s.buildTree(ous, ""), nil
+	// 使用 BaseDN 作为根节点的父级 DN
+	// 因为 LDAP 中 OU 是 BaseDN 的直接子节点
+	return s.buildTree(ous, config.BaseDN), nil
 }
 
 // buildTree 构建OU树

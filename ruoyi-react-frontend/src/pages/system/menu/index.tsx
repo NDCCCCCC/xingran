@@ -167,6 +167,9 @@ const MenuManagement: FC = () => {
     onLoad: loadMenus,
     selectedRowKeys,
     setSelectedRowKeys,
+    onSaveSuccess: () => {
+      setEditModalVisible(false);
+    },
   });
 
   // 初始化加载

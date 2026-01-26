@@ -215,8 +215,19 @@ func (w *ScrapliWrapper) OpenContext(ctx context.Context) error {
 
 		// Open 成功后，给足够时间让 scrapligo 内部的 goroutine（如 GetPrompt）完成初始化
 		// 这可以避免 transport.conn 尚未就绪时的空指针问题
-		// 增加到 200ms 以确保初始化完全完成
-		time.Sleep(200 * time.Millisecond)
+		// 增加到 500ms 以确保初始化完全完成，降低并发使用时出现 panic 的概率
+		time.Sleep(500 * time.Millisecond)
+
+		// 尝试调用 GetPrompt 以确保 transport 完全初始化
+		// 使用 recover 捕获可能的 panic（如 transport.conn 为 nil）
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					// GetPrompt panic，记录但不影响连接（后续操作可能正常）
+				}
+			}()
+			_, _ = w.driver.GetPrompt()
+		}()
 
 		resultCh <- result{err: nil}
 	}()
@@ -266,6 +277,28 @@ func (w *ScrapliWrapper) Close() error {
 func (w *ScrapliWrapper) IsConnected() bool {
 	// v1.3.3 中没有 Connected() 方法，通过检查driver是否为nil来判断
 	return w.driver != nil && !w.closed
+}
+
+// IsReady 检查连接是否真正可用（通过尝试调用 GetPrompt 验证）
+// 这个方法会捕获可能的 panic，因此即使 transport 尚未完全初始化也不会崩溃
+func (w *ScrapliWrapper) IsReady() bool {
+	if !w.IsConnected() {
+		return false
+	}
+
+	// 尝试调用 GetPrompt 来验证 transport 是否真正就绪
+	// 使用 recover 捕获可能的 nil pointer panic
+	ready := func() bool {
+		defer func() {
+			if r := recover(); r != nil {
+				// panic 发生，说明 transport 未就绪
+			}
+		}()
+		_, err := w.driver.GetPrompt()
+		return err == nil
+	}()
+
+	return ready
 }
 
 // SendCommand 发送单个命令

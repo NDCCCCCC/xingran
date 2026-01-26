@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -14,6 +13,17 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	"gorm.io/gorm"
+)
+
+// 常量定义
+const (
+	ErrMsgCacheKeyRequired     = "缓存键不能为空"
+	ErrMsgCacheServiceUnavail  = "缓存服务未初始化"
+	ErrMsgCacheServiceDisabled  = "缓存服务不可用"
+	ErrMsgCacheConfigUnavail   = "缓存配置服务未初始化"
+	ErrMsgInvalidParams        = "请求参数错误"
+	ErrMsgOperationUnsupported = "不支持的操作"
+	ErrMsgInvalidConfigKey     = "无效的配置键"
 )
 
 // CacheHandler 缓存监控处理器
@@ -30,6 +40,37 @@ func NewCacheHandler(core *core.Core, cacheConfigService *services.CacheConfigSe
 		db:                 core.DB.GetDB(),
 		cacheConfigService: cacheConfigService,
 	}
+}
+
+// ==================== 辅助方法 ====================
+
+// requireCache 检查缓存服务是否可用
+func (h *CacheHandler) requireCache(c *gin.Context) bool {
+	if h.core.Cache == nil {
+		response.Error(c, http.StatusInternalServerError, ErrMsgCacheServiceUnavail)
+		return false
+	}
+	return true
+}
+
+// requireCacheConfig 检查缓存配置服务是否可用
+func (h *CacheHandler) requireCacheConfig(c *gin.Context) bool {
+	if h.cacheConfigService == nil {
+		response.Error(c, http.StatusInternalServerError, ErrMsgCacheConfigUnavail)
+		return false
+	}
+	return true
+}
+
+// setPaginationDefaults 设置分页默认值
+func (h *CacheHandler) setPaginationDefaults(current, pageSize int) (int, int) {
+	if current <= 0 {
+		current = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+	return current, pageSize
 }
 
 // ==================== 请求/响应类型 ====================
@@ -106,49 +147,43 @@ type CacheConfigCategory struct {
 // @Router /monitor/cache/list [post]
 func (h *CacheHandler) GetCacheList(c *gin.Context) {
 	var req CacheListRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		req.Current = 1
-		req.PageSize = 10
-	}
+	_ = c.ShouldBindJSON(&req)
 
-	if req.Current <= 0 {
-		req.Current = 1
-	}
-	if req.PageSize <= 0 {
-		req.PageSize = 10
-	}
+	req.Current, req.PageSize = h.setPaginationDefaults(req.Current, req.PageSize)
 	if req.Level == "" {
 		req.Level = "all"
 	}
 
 	if h.core.Cache != nil {
-		caches, err := getCachesFromCacheWithLevel(h.core.Cache, req)
-		if err != nil {
-			response.Error(c, http.StatusInternalServerError, "从Redis获取缓存列表失败: "+err.Error())
-			return
-		}
-
-		total := int64(len(caches))
-		start := (req.Current - 1) * req.PageSize
-		end := start + req.PageSize
-		if end > len(caches) {
-			end = len(caches)
-		}
-
-		var paginatedCaches []models.CacheInfo
-		if start < len(caches) {
-			if end <= len(caches) {
-				paginatedCaches = caches[start:end]
-			} else {
-				paginatedCaches = caches[start:]
-			}
-		}
-
-		response.Page(c, paginatedCaches, total, req.Current, req.PageSize)
+		h.getCacheListFromRedis(c, req)
 		return
 	}
 
-	// 从数据库查询（备用方案）
+	h.getCacheListFromDB(c, req)
+}
+
+// getCacheListFromRedis 从Redis获取缓存列表
+func (h *CacheHandler) getCacheListFromRedis(c *gin.Context, req CacheListRequest) {
+	caches, err := getCachesFromCacheWithLevel(h.core.Cache, req)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, "从Redis获取缓存列表失败: "+err.Error())
+		return
+	}
+
+	total := int64(len(caches))
+	start := (req.Current - 1) * req.PageSize
+	end := min(start+req.PageSize, len(caches))
+
+	var paginatedCaches []models.CacheInfo
+	if start < len(caches) {
+		paginatedCaches = caches[start:end]
+	}
+
+	response.Page(c, paginatedCaches, total, req.Current, req.PageSize)
+}
+
+// getCacheListFromDB 从数据库获取缓存列表
+func (h *CacheHandler) getCacheListFromDB(c *gin.Context, req CacheListRequest) {
 	db := h.db.Model(&models.CacheInfo{})
 
 	if req.Key != "" {
@@ -189,14 +224,13 @@ func (h *CacheHandler) GetCacheList(c *gin.Context) {
 func (h *CacheHandler) GetCacheInfo(c *gin.Context) {
 	key := c.Param("key")
 	if key == "" {
-		response.Error(c, http.StatusBadRequest, "缓存键不能为空")
+		response.Error(c, http.StatusBadRequest, ErrMsgCacheKeyRequired)
 		return
 	}
 
 	// 如果键名包含 ruoyi: 前缀，需要移除它
-	// 因为 Cache.Get() 会自动添加前缀，所以这里传入的应该是不带前缀的键名
 	if strings.HasPrefix(key, "ruoyi:") {
-		key = key[6:] // 移除 "ruoyi:" 前缀
+		key = key[6:]
 	}
 
 	if h.core.Cache != nil {
@@ -258,12 +292,11 @@ func (h *CacheHandler) GetCacheInfo(c *gin.Context) {
 func (h *CacheHandler) OperateCache(c *gin.Context) {
 	var req CacheOperateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误")
+		response.Error(c, http.StatusBadRequest, ErrMsgInvalidParams)
 		return
 	}
 
-	if h.core.Cache == nil {
-		response.Error(c, http.StatusInternalServerError, "缓存服务未初始化")
+	if !h.requireCache(c) {
 		return
 	}
 
@@ -331,7 +364,7 @@ func (h *CacheHandler) OperateCache(c *gin.Context) {
 		result = map[string]interface{}{"ttl": -1}
 
 	default:
-		response.Error(c, http.StatusBadRequest, "不支持的操作")
+		response.Error(c, http.StatusBadRequest, ErrMsgOperationUnsupported)
 		return
 	}
 
@@ -373,12 +406,11 @@ func (h *CacheHandler) saveCacheOperationLog(req CacheOperateRequest, result int
 func (h *CacheHandler) BatchOperateCache(c *gin.Context) {
 	var req CacheBatchRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误")
+		response.Error(c, http.StatusBadRequest, ErrMsgInvalidParams)
 		return
 	}
 
-	if h.core.Cache == nil {
-		response.Error(c, http.StatusInternalServerError, "缓存服务未初始化")
+	if !h.requireCache(c) {
 		return
 	}
 
@@ -422,7 +454,7 @@ func (h *CacheHandler) BatchOperateCache(c *gin.Context) {
 		}
 
 	default:
-		response.Error(c, http.StatusBadRequest, "不支持的操作")
+		response.Error(c, http.StatusBadRequest, ErrMsgOperationUnsupported)
 		return
 	}
 
@@ -439,8 +471,7 @@ func (h *CacheHandler) BatchOperateCache(c *gin.Context) {
 // @Failure 500 {object} response.Response
 // @Router /monitor/cache/clear [post]
 func (h *CacheHandler) ClearCache(c *gin.Context) {
-	if h.core.Cache == nil {
-		response.Error(c, http.StatusInternalServerError, "缓存服务未初始化")
+	if !h.requireCache(c) {
 		return
 	}
 
@@ -470,17 +501,9 @@ func (h *CacheHandler) ClearCache(c *gin.Context) {
 // @Router /monitor/cache/stats/list [post]
 func (h *CacheHandler) GetCacheStats(c *gin.Context) {
 	var req CacheStatsRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		req.Current = 1
-		req.PageSize = 10
-	}
+	_ = c.ShouldBindJSON(&req)
 
-	if req.Current <= 0 {
-		req.Current = 1
-	}
-	if req.PageSize <= 0 {
-		req.PageSize = 10
-	}
+	req.Current, req.PageSize = h.setPaginationDefaults(req.Current, req.PageSize)
 
 	isRealtime := req.IsRealtime || (req.StartTime == nil && req.EndTime == nil)
 
@@ -669,8 +692,7 @@ func (h *CacheHandler) ExportCache(c *gin.Context) {
 // @Success 200 {object} response.Response{data=[]CacheConfigCategory}
 // @Router /monitor/cache/config [get]
 func (h *CacheHandler) GetCacheConfigs(c *gin.Context) {
-	if h.cacheConfigService == nil {
-		response.Error(c, http.StatusInternalServerError, "缓存配置服务未初始化")
+	if !h.requireCacheConfig(c) {
 		return
 	}
 
@@ -715,21 +737,20 @@ func (h *CacheHandler) GetCacheConfigs(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Router /monitor/cache/config [put]
 func (h *CacheHandler) UpdateCacheConfig(c *gin.Context) {
-	if h.cacheConfigService == nil {
-		response.Error(c, http.StatusInternalServerError, "缓存配置服务未初始化")
+	if !h.requireCacheConfig(c) {
 		return
 	}
 
 	var req UpdateCacheConfigRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误")
+		response.Error(c, http.StatusBadRequest, ErrMsgInvalidParams)
 		return
 	}
 
 	configInfoMap := h.cacheConfigService.GetConfigInfo()
 	configInfo, exists := configInfoMap[req.Key]
 	if !exists {
-		response.Error(c, http.StatusBadRequest, "无效的配置键")
+		response.Error(c, http.StatusBadRequest, ErrMsgInvalidConfigKey)
 		return
 	}
 
@@ -760,7 +781,7 @@ func (h *CacheHandler) updateOrCreateConfig(req UpdateCacheConfigRequest, config
 		config = models.Config{
 			ConfigKey:   req.Key,
 			ConfigName:  configInfo.Name,
-			ConfigValue: strconv.Itoa(req.Value),
+			ConfigValue: fmt.Sprintf("%d", req.Value),
 			ConfigType:  models.ConfigTypeYes,
 			Remark:      configInfo.Description,
 		}
@@ -771,7 +792,7 @@ func (h *CacheHandler) updateOrCreateConfig(req UpdateCacheConfigRequest, config
 		return err
 	}
 
-	config.ConfigValue = strconv.Itoa(req.Value)
+	config.ConfigValue = fmt.Sprintf("%d", req.Value)
 	return h.db.Save(&config).Error
 }
 
@@ -784,8 +805,7 @@ func (h *CacheHandler) updateOrCreateConfig(req UpdateCacheConfigRequest, config
 // @Success 200 {object} response.Response
 // @Router /monitor/cache/config/reload [post]
 func (h *CacheHandler) ReloadCacheConfigs(c *gin.Context) {
-	if h.cacheConfigService == nil {
-		response.Error(c, http.StatusInternalServerError, "缓存配置服务未初始化")
+	if !h.requireCacheConfig(c) {
 		return
 	}
 
@@ -809,28 +829,44 @@ func (h *CacheHandler) ReloadCacheConfigs(c *gin.Context) {
 func (h *CacheHandler) TestCacheEndpoint(c *gin.Context) {
 	fmt.Println("[TEST] 测试缓存端点被调用")
 
-	if h.core.DeptService == nil {
-		fmt.Println("[TEST] DeptService 为 nil")
-		response.Error(c, http.StatusInternalServerError, "DeptService 未初始化")
+	if h.core.DataCacheService == nil {
+		fmt.Println("[TEST] DataCacheService 为 nil")
+		response.Error(c, http.StatusInternalServerError, "DataCacheService 未初始化")
 		return
 	}
 
-	fmt.Println("[TEST] DeptService 已初始化，开始调用 GetDeptTreeWithCache")
+	fmt.Println("[TEST] DataCacheService 已初始化，开始测试缓存读写")
 
-	depts, err := h.core.DeptService.GetDeptTreeWithCache(context.Background(), false)
+	// 测试缓存写入
+	testKey := "test:cache:key"
+	testValue := gin.H{"message": "test data", "timestamp": time.Now().Unix()}
+
+	err := h.core.DataCacheService.Set(context.Background(), testKey, testValue, 5*time.Minute)
 	if err != nil {
-		fmt.Printf("[TEST] 获取部门树失败: %v\n", err)
-		response.Error(c, http.StatusInternalServerError, "获取部门树失败: "+err.Error())
+		fmt.Printf("[TEST] 写入缓存失败: %v\n", err)
+		response.Error(c, http.StatusInternalServerError, "写入缓存失败: "+err.Error())
 		return
 	}
 
-	fmt.Printf("[TEST] 获取部门树成功，数量: %d\n", len(depts))
+	fmt.Println("[TEST] 缓存写入成功")
 
-	keys, err := h.core.Cache.Keys(context.Background(), "dept:*")
+	// 测试缓存读取
+	var result gin.H
+	err = h.core.DataCacheService.Get(context.Background(), testKey, &result)
+	if err != nil {
+		fmt.Printf("[TEST] 读取缓存失败: %v\n", err)
+		response.Error(c, http.StatusInternalServerError, "读取缓存失败: "+err.Error())
+		return
+	}
+
+	fmt.Printf("[TEST] 缓存读取成功: %+v\n", result)
+
+	// 查询缓存键
+	keys, err := h.core.Cache.Keys(context.Background(), "test:*")
 	if err != nil {
 		fmt.Printf("[TEST] 获取缓存键失败: %v\n", err)
 	} else {
-		fmt.Printf("[TEST] 找到 %d 个部门相关缓存键\n", len(keys))
+		fmt.Printf("[TEST] 找到 %d 个测试相关缓存键\n", len(keys))
 		for _, key := range keys {
 			fmt.Printf("[TEST]   - %s\n", key)
 		}
@@ -838,7 +874,7 @@ func (h *CacheHandler) TestCacheEndpoint(c *gin.Context) {
 
 	response.Success(c, gin.H{
 		"message":   "缓存测试成功",
-		"count":     len(depts),
+		"data":      result,
 		"cacheKeys": keys,
 	})
 }

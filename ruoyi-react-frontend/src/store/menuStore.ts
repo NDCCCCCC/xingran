@@ -1,78 +1,80 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { getUserMenus, getUserPermissions } from '@/lib/menuApi';
+import { getUserMenus, getAllUserMenus, getUserPermissions } from '@/lib/menuApi';
 import type { Menu } from '@/types';
 
 interface MenuState {
   menus: Menu[];
+  allMenus: Menu[];
   permissions: string[];
   loading: boolean;
 }
 
 interface MenuActions {
   fetchMenus: () => Promise<void>;
-  fetchPermissions: () => Promise<void>; // 新增：获取权限（不从localStorage读取）
+  fetchPermissions: () => Promise<void>;
   setMenus: (menus: Menu[]) => void;
   clearMenus: () => void;
   setPermissions: (permissions: string[]) => void;
-  refreshMenus: () => Promise<void>; // 新增：刷新菜单（清除缓存并重新获取）
+  refreshMenus: () => Promise<void>;
 }
 
-export const useMenuStore = create<MenuState & MenuActions>()(
+type MenuStore = MenuState & MenuActions;
+
+const fetchMenuData = async () => {
+  const [visibleMenus, allMenuList] = await Promise.all([
+    getUserMenus(),
+    getAllUserMenus(),
+  ]);
+  return { visibleMenus, allMenuList };
+};
+
+export const useMenuStore = create<MenuStore>()(
   persist(
     (set) => ({
-      // 初始状态
       menus: [],
-      permissions: [], // 权限列表不再持久化，每次从服务端获取
+      allMenus: [],
+      permissions: [],
       loading: false,
 
-      // 获取用户菜单
       fetchMenus: async () => {
         set({ loading: true });
         try {
-          const menus = await getUserMenus();
-          set({ menus, loading: false });
+          const { visibleMenus, allMenuList } = await fetchMenuData();
+          set({ menus: visibleMenus, allMenus: allMenuList, loading: false });
         } catch (error) {
           set({ loading: false });
           throw error;
         }
       },
 
-      // 获取用户权限（不从localStorage读取，每次从服务端获取）
       fetchPermissions: async () => {
         try {
           const permissions = await getUserPermissions();
           set({ permissions });
         } catch (error) {
-          // 权限获取失败时清空权限列表
           set({ permissions: [] });
           throw error;
         }
       },
 
-      // 设置菜单
-      setMenus: (menus: Menu[]) => {
+      setMenus: (menus) => {
         set({ menus });
       },
 
-      // 清除菜单
       clearMenus: () => {
-        set({ menus: [], permissions: [] });
+        set({ menus: [], allMenus: [], permissions: [] });
       },
 
-      // 设置权限
-      setPermissions: (permissions: string[]) => {
+      setPermissions: (permissions) => {
         set({ permissions });
       },
 
-      // 刷新菜单：清除缓存并重新获取
       refreshMenus: async () => {
-        // 清空当前菜单数据
-        set({ menus: [], permissions: [] });
-        // 重新从服务器获取
+        set({ loading: true });
         try {
-          const menus = await getUserMenus();
-          set({ menus, loading: false });
+          const { visibleMenus, allMenuList } = await fetchMenuData();
+          set({ menus: visibleMenus, allMenus: allMenuList, loading: false });
         } catch (error) {
           set({ loading: false });
           throw error;
@@ -81,29 +83,20 @@ export const useMenuStore = create<MenuState & MenuActions>()(
     }),
     {
       name: 'menu-storage',
-      version: 1, // 版本号，用于数据迁移
+      version: 2,
       partialize: (state) => ({
         menus: state.menus,
-        // permissions 不再持久化到 localStorage，避免权限信息泄露
-        // permissions: state.permissions,
+        allMenus: state.allMenus,
       }),
     }
   )
 );
 
-// 刷新菜单缓存的辅助函数
-// 注意：只清除菜单缓存并重新获取，不影响用户认证信息
 export const refreshMenuCache = async () => {
-  const menuStore = useMenuStore.getState();
-  await menuStore.refreshMenus();
+  await useMenuStore.getState().refreshMenus();
 };
 
-// 清除菜单缓存的辅助函数（兼容旧代码）
-// 注意：只清除菜单缓存，不影响用户认证信息
 export const clearMenuCache = () => {
-  // 清除 localStorage 中的菜单缓存
   localStorage.removeItem('menu-storage');
-  // 同时清除 Zustand 内部存储的菜单数据
-  const menuStore = useMenuStore.getState();
-  menuStore.clearMenus();
+  useMenuStore.getState().clearMenus();
 };

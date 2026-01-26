@@ -12,6 +12,47 @@ import { dashboardService } from '@/services/dashboardService';
 
 export type DashboardViewMode = 'view' | 'edit';
 
+// 页面模式类型
+export type PageMode = 'home' | 'list' | 'view' | 'edit';
+
+// ==================== 辅助函数 ====================
+
+// 创建更新后的仪表盘对象
+const createUpdatedDashboard = (
+	dashboard: Dashboard,
+	updates: Partial<Dashboard>
+): Dashboard => ({
+	...dashboard,
+	...updates,
+});
+
+// 更新仪表盘列表中的项
+const updateDashboardInList = (
+	dashboards: Dashboard[],
+	id: string,
+	updates: Partial<Dashboard>
+): Dashboard[] =>
+	dashboards.map((d) => (d.id === id ? createUpdatedDashboard(d, updates) : d));
+
+// 更新当前仪表盘的widgets
+const updateWidgets = (
+	layout: LayoutConfig,
+	updater: (widgets: WidgetConfig[]) => WidgetConfig[]
+): LayoutConfig => ({
+	...layout,
+	widgets: updater(layout.widgets),
+});
+
+// 更新单个widget
+const updateSingleWidget = (
+	widgets: WidgetConfig[],
+	widgetId: string,
+	updates: Partial<WidgetConfig>
+): WidgetConfig[] =>
+	widgets.map((w) => (w.id === widgetId ? { ...w, ...updates } : w));
+
+// ==================== 类型定义 ====================
+
 interface DashboardState {
 	dashboards: Dashboard[];
 	listLoading: boolean;
@@ -34,6 +75,10 @@ interface DashboardState {
 	}>;
 	showGridLines: boolean;
 	showWidgetBorders: boolean;
+	// 新增状态
+	pageMode: PageMode;
+	defaultDashboard: Dashboard | null;
+	defaultDashboardLoading: boolean;
 }
 
 interface DashboardActions {
@@ -63,6 +108,9 @@ interface DashboardActions {
 	toggleGridLines: () => void;
 	toggleWidgetBorders: () => void;
 	reset: () => void;
+	// 新增 actions
+	fetchDefaultDashboard: () => Promise<void>;
+	setPageMode: (mode: PageMode) => void;
 }
 
 type DashboardStore = DashboardState & DashboardActions;
@@ -86,6 +134,10 @@ const initialState: DashboardState = {
 	widgetDataCache: new Map(),
 	showGridLines: false,
 	showWidgetBorders: false,
+	// 新增状态初始值
+	pageMode: 'home',
+	defaultDashboard: null,
+	defaultDashboardLoading: false,
 };
 
 export const useDashboardStore = create<DashboardStore>()(
@@ -97,12 +149,11 @@ export const useDashboardStore = create<DashboardStore>()(
 				set({ listLoading: true, listError: null });
 
 				try {
-					const response = await dashboardService.getDashboards(
-						params || {
-							current: get().listPagination.current,
-							pageSize: get().listPagination.pageSize,
-						}
-					);
+					const defaultParams = {
+						current: get().listPagination.current,
+						pageSize: get().listPagination.pageSize,
+					};
+					const response = await dashboardService.getDashboards(params ?? defaultParams);
 
 					set({
 						dashboards: response.list,
@@ -140,21 +191,13 @@ export const useDashboardStore = create<DashboardStore>()(
 				await dashboardService.updateDashboard(id, data);
 
 				set((state) => ({
-					dashboards: state.dashboards.map((d) =>
-						d.id === id ? { ...d, ...data } : d
-					),
+					dashboards: updateDashboardInList(state.dashboards, id, data),
+					currentDashboard:
+						state.currentDashboard?.id === id
+							? createUpdatedDashboard(state.currentDashboard, data)
+							: state.currentDashboard,
+					hasUnsavedChanges: false,
 				}));
-
-				const { currentDashboard } = get();
-				if (currentDashboard?.id === id) {
-					set({
-						currentDashboard: {
-							...currentDashboard,
-							...data,
-						},
-						hasUnsavedChanges: false,
-					});
-				}
 			},
 
 			deleteDashboard: async (id) => {
@@ -188,10 +231,9 @@ export const useDashboardStore = create<DashboardStore>()(
 				await dashboardService.setDefaultDashboard(id);
 
 				set((state) => ({
-					dashboards: state.dashboards.map((d) => ({
-						...d,
-						isDefault: d.id === id,
-					})),
+					dashboards: state.dashboards.map((d) =>
+						createUpdatedDashboard(d, { isDefault: d.id === id })
+					),
 				}));
 			},
 
@@ -238,16 +280,13 @@ export const useDashboardStore = create<DashboardStore>()(
 				set((state) => {
 					if (!state.currentDashboard) return state;
 
-					const updatedDashboard = {
-						...state.currentDashboard,
-						layout: {
-							...state.currentDashboard.layout,
-							widgets: [...state.currentDashboard.layout.widgets, widget],
-						},
-					};
-
 					return {
-						currentDashboard: updatedDashboard,
+						currentDashboard: createUpdatedDashboard(state.currentDashboard, {
+							layout: updateWidgets(state.currentDashboard.layout, (widgets) => [
+								...widgets,
+								widget,
+							]),
+						}),
 						hasUnsavedChanges: true,
 					};
 				});
@@ -257,18 +296,12 @@ export const useDashboardStore = create<DashboardStore>()(
 				set((state) => {
 					if (!state.currentDashboard) return state;
 
-					const updatedDashboard = {
-						...state.currentDashboard,
-						layout: {
-							...state.currentDashboard.layout,
-							widgets: state.currentDashboard.layout.widgets.map((w) =>
-								w.id === widgetId ? { ...w, ...updates } : w
-							),
-						},
-					};
-
 					return {
-						currentDashboard: updatedDashboard,
+						currentDashboard: createUpdatedDashboard(state.currentDashboard, {
+							layout: updateWidgets(state.currentDashboard.layout, (widgets) =>
+								updateSingleWidget(widgets, widgetId, updates)
+							),
+						}),
 						hasUnsavedChanges: true,
 					};
 				});
@@ -278,18 +311,12 @@ export const useDashboardStore = create<DashboardStore>()(
 				set((state) => {
 					if (!state.currentDashboard) return state;
 
-					const updatedDashboard = {
-						...state.currentDashboard,
-						layout: {
-							...state.currentDashboard.layout,
-							widgets: state.currentDashboard.layout.widgets.filter(
-								(w) => w.id !== widgetId
-							),
-						},
-					};
-
 					return {
-						currentDashboard: updatedDashboard,
+						currentDashboard: createUpdatedDashboard(state.currentDashboard, {
+							layout: updateWidgets(state.currentDashboard.layout, (widgets) =>
+								widgets.filter((w) => w.id !== widgetId)
+							),
+						}),
 						hasUnsavedChanges: true,
 						selectedWidgetId:
 							state.selectedWidgetId === widgetId ? null : state.selectedWidgetId,
@@ -303,20 +330,16 @@ export const useDashboardStore = create<DashboardStore>()(
 
 					const layoutMap = new Map(layouts.map((l) => [l.id, l.position]));
 
-					const updatedDashboard = {
-						...state.currentDashboard,
-						layout: {
-							...state.currentDashboard.layout,
-							widgets: state.currentDashboard.layout.widgets.map((w) =>
-								layoutMap.has(w.id)
-									? { ...w, position: layoutMap.get(w.id)! }
-									: w
-							),
-						},
-					};
-
 					return {
-						currentDashboard: updatedDashboard,
+						currentDashboard: createUpdatedDashboard(state.currentDashboard, {
+							layout: updateWidgets(state.currentDashboard.layout, (widgets) =>
+								widgets.map((w) =>
+									layoutMap.has(w.id)
+										? { ...w, position: layoutMap.get(w.id)! }
+										: w
+								)
+							),
+						}),
 						hasUnsavedChanges: true,
 					};
 				});
@@ -326,16 +349,13 @@ export const useDashboardStore = create<DashboardStore>()(
 				set((state) => {
 					if (!state.currentDashboard) return state;
 
-					const updatedDashboard = {
-						...state.currentDashboard,
-						layout: {
-							...state.currentDashboard.layout,
-							...layoutUpdates,
-						},
-					};
-
 					return {
-						currentDashboard: updatedDashboard,
+						currentDashboard: createUpdatedDashboard(state.currentDashboard, {
+							layout: {
+								...state.currentDashboard.layout,
+								...layoutUpdates,
+							},
+						}),
 						hasUnsavedChanges: true,
 					};
 				});
@@ -414,6 +434,22 @@ export const useDashboardStore = create<DashboardStore>()(
 
 			toggleWidgetBorders: () => {
 				set((state) => ({ showWidgetBorders: !state.showWidgetBorders }));
+			},
+
+			// 新增 actions
+			fetchDefaultDashboard: async () => {
+				set({ defaultDashboardLoading: true });
+				try {
+					const dashboard = await dashboardService.getDefaultDashboard();
+					set({ defaultDashboard: dashboard, defaultDashboardLoading: false });
+				} catch (error) {
+					set({ defaultDashboard: null, defaultDashboardLoading: false });
+					throw error;
+				}
+			},
+
+			setPageMode: (mode) => {
+				set({ pageMode: mode });
 			},
 
 			reset: () => {

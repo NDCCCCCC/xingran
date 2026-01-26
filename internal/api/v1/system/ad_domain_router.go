@@ -49,6 +49,7 @@ func SetupADDomainRouter(r *gin.RouterGroup, core *core.Core) {
 		groups.POST("/list", handler.ListGroups)
 		groups.GET("/:id", handler.GetGroupDetail)
 		groups.POST("/:id/update", handler.UpdateGroup)
+		groups.POST("/:id/members", handler.GetGroupMembers)
 	}
 
 	// 用户管理
@@ -67,5 +68,16 @@ func SetupADDomainRouter(r *gin.RouterGroup, core *core.Core) {
 	logs.Use(middleware.RequirePermissions([]string{"ops:ad:log:view"}, core))
 	{
 		logs.POST("/list", handler.ListSyncLogs)
+	}
+
+	// 电脑设备管理
+	computers := r.Group("/computers")
+	computers.Use(middleware.RequirePermissions([]string{
+		"ops:ad:computer:view",
+		"ops:ad:computer:detail",
+	}, core))
+	{
+		computers.POST("/list", handler.ListComputers)
+		computers.POST("/detail", handler.GetComputerDetail)
 	}
 }

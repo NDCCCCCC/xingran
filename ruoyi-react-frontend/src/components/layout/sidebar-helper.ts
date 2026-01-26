@@ -38,8 +38,8 @@ export function buildMenuPathMap(
         }
       }
 
-      // 生成菜单key(与convertToMenuItem逻辑一致)
-      const menuKey = menuPath || menu.id;
+      // 生成菜单key(与convertToMenuItem逻辑一致，统一使用menu.id)
+      const menuKey = menu.id;
 
       // 确定当前菜单的层级
       const level = isTopLevel ? 1 : (topLevelKey && !secondLevelKey ? 2 : 3);
@@ -51,6 +51,20 @@ export function buildMenuPathMap(
         secondLevel: level === 3 ? secondLevelKey : undefined,
         fullPath: menuPath || menu.id
       };
+
+      // 调试日志：输出用户中心相关菜单
+      if (menu.menuName === '用户中心' || menu.menuName === '个人中心' ||
+          menu.menuName === '用户设置' || menu.menuName === '我的通知') {
+        console.log('[buildMenuPathMap] 构建菜单路径:', {
+          menuName: menu.menuName,
+          menuId: menu.id,
+          originalPath: menu.path,
+          parentPath,
+          computedMenuPath: menuPath,
+          fullPath: menuInfo.fullPath,
+          level,
+        });
+      }
 
       // 存储映射关系 - 支持多种 key 查找方式
       // 1. 存储完整路径（去掉前导斜杠）

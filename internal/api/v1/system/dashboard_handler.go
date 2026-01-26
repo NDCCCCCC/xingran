@@ -1,12 +1,35 @@
 package system
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
+
+// 定义错误类型（与服务层共享）
+var (
+	ErrUnauthorized = errors.New("unauthorized")
+)
+
+// 常量定义
+const (
+	ErrMsgUnauthorized      = "未授权"
+	ErrMsgDashboardNotFound = "仪表盘不存在"
+	ErrMsgPermissionDenied  = "权限不足"
+	ErrMsgInvalidParams     = "请求参数错误"
+	ErrMsgIDRequired        = "ID不能为空"
+)
+
+// UserContext 用户上下文信息
+type UserContext struct {
+	UserID     string
+	UserDeptID string
+	DataScope  string
+	IsAdmin    bool
+}
 
 // DashboardHandler 仪表盘处理器
 type DashboardHandler struct {
@@ -18,11 +41,101 @@ func NewDashboardHandler(service systemServices.DashboardService) *DashboardHand
 	return &DashboardHandler{service: service}
 }
 
+// getUserContext 从gin上下文中提取用户信息
+func (h *DashboardHandler) getUserContext(c *gin.Context) (*UserContext, error) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		return nil, ErrUnauthorized
+	}
+
+	userIDStr, ok := userID.(string)
+	if !ok {
+		return nil, ErrUnauthorized
+	}
+
+	return &UserContext{
+		UserID:     userIDStr,
+		UserDeptID: c.GetString("dept_id"),
+		DataScope:  c.GetString("data_scope"),
+		IsAdmin:    c.GetBool("is_admin"),
+	}, nil
+}
+
+// requireUserContext 获取用户上下文，失败时返回错误响应
+func (h *DashboardHandler) requireUserContext(c *gin.Context) (*UserContext, bool) {
+	ctx, err := h.getUserContext(c)
+	if err != nil {
+		response.Error(c, http.StatusUnauthorized, ErrMsgUnauthorized)
+		return nil, false
+	}
+	return ctx, true
+}
+
+// handleServiceError 统一处理服务错误
+func (h *DashboardHandler) handleServiceError(c *gin.Context, err error) bool {
+	if err == nil {
+		return false
+	}
+
+	switch {
+	case errors.Is(err, systemServices.ErrDashboardNotFound):
+		response.Error(c, http.StatusNotFound, ErrMsgDashboardNotFound)
+	case errors.Is(err, systemServices.ErrPermissionDenied):
+		response.Error(c, http.StatusForbidden, ErrMsgPermissionDenied)
+	default:
+		response.Error(c, http.StatusInternalServerError, err.Error())
+	}
+	return true
+}
+
+// requireID 获取并验证路径参数ID
+func (h *DashboardHandler) requireID(c *gin.Context) (string, bool) {
+	id := c.Param("id")
+	if id == "" {
+		response.Error(c, http.StatusBadRequest, ErrMsgIDRequired)
+		return "", false
+	}
+	return id, true
+}
+
 // ==================== 仪表盘 CRUD 操作 ====================
 
-// List 获取仪表盘列表
+// GetDefault 获取可访问的默认仪表盘
+// @Summary 获取可访问的默认仪表盘
+// @Description 获取用户可访问的默认仪表盘（用户默认 > 系统仪表盘）
+// @Tags 仪表盘管理
+// @Accept json
+// @Produce json
+// @Success 200 {object} response.Response{data=models.Dashboard}
+// @Router /system/dashboards/default [get]
+func (h *DashboardHandler) GetDefault(c *gin.Context) {
+	userCtx, ok := h.requireUserContext(c)
+	if !ok {
+		return
+	}
+
+	dashboard, err := h.service.GetAccessibleDefaultDashboard(
+		c.Request.Context(),
+		userCtx.UserID,
+		userCtx.UserDeptID,
+		userCtx.DataScope,
+	)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, "获取默认仪表盘失败")
+		return
+	}
+
+	if dashboard == nil {
+		response.Success(c, gin.H{"dashboard": nil})
+		return
+	}
+
+	response.Success(c, gin.H{"dashboard": dashboard})
+}
+
+// List 获取仪表盘列表（权限感知）
 // @Summary 获取仪表盘列表
-// @Description 获取仪表盘列表
+// @Description 获取用户可访问的仪表盘列表
 // @Tags 仪表盘管理
 // @Accept json
 // @Produce json
@@ -32,11 +145,22 @@ func NewDashboardHandler(service systemServices.DashboardService) *DashboardHand
 func (h *DashboardHandler) List(c *gin.Context) {
 	var req systemServices.DashboardListParams
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, http.StatusBadRequest, ErrMsgInvalidParams+": "+err.Error())
 		return
 	}
 
-	result, err := h.service.GetDashboards(c.Request.Context(), req)
+	userCtx, ok := h.requireUserContext(c)
+	if !ok {
+		return
+	}
+
+	result, err := h.service.GetAccessibleDashboards(
+		c.Request.Context(),
+		req,
+		userCtx.UserID,
+		userCtx.UserDeptID,
+		userCtx.DataScope,
+	)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -55,24 +179,23 @@ func (h *DashboardHandler) List(c *gin.Context) {
 // @Success 200 {object} response.Response{data=models.Dashboard}
 // @Router /system/dashboards/:id [get]
 func (h *DashboardHandler) GetByID(c *gin.Context) {
-	id := c.Param("id")
-	if id == "" {
-		response.Error(c, http.StatusBadRequest, "仪表盘ID不能为空")
+	id, ok := h.requireID(c)
+	if !ok {
 		return
 	}
 
 	dashboard, err := h.service.GetDashboard(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusNotFound, "仪表盘不存在")
+		response.Error(c, http.StatusNotFound, ErrMsgDashboardNotFound)
 		return
 	}
 
 	response.Success(c, gin.H{"dashboard": dashboard})
 }
 
-// Create 创建仪表盘
+// Create 创建仪表盘（带权限验证）
 // @Summary 创建仪表盘
-// @Description 创建新的仪表盘
+// @Description 创建新的仪表盘（带权限验证）
 // @Tags 仪表盘管理
 // @Accept json
 // @Produce json
@@ -80,19 +203,25 @@ func (h *DashboardHandler) GetByID(c *gin.Context) {
 // @Success 200 {object} response.Response{data=models.Dashboard}
 // @Router /system/dashboards [post]
 func (h *DashboardHandler) Create(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if !exists {
-		response.Error(c, http.StatusUnauthorized, "未授权")
+	userCtx, ok := h.requireUserContext(c)
+	if !ok {
 		return
 	}
 
 	var req systemServices.CreateDashboardRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, http.StatusBadRequest, ErrMsgInvalidParams+": "+err.Error())
 		return
 	}
 
-	dashboard, err := h.service.CreateDashboard(c.Request.Context(), userID.(string), req)
+	dashboard, err := h.service.CreateDashboardWithPermissions(
+		c.Request.Context(),
+		userCtx.UserID,
+		userCtx.UserDeptID,
+		userCtx.DataScope,
+		userCtx.IsAdmin,
+		req,
+	)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -112,35 +241,24 @@ func (h *DashboardHandler) Create(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Router /system/dashboards/:id/update [post]
 func (h *DashboardHandler) Update(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if !exists {
-		response.Error(c, http.StatusUnauthorized, "未授权")
+	userCtx, ok := h.requireUserContext(c)
+	if !ok {
 		return
 	}
 
-	id := c.Param("id")
-	if id == "" {
-		response.Error(c, http.StatusBadRequest, "仪表盘ID不能为空")
+	id, ok := h.requireID(c)
+	if !ok {
 		return
 	}
 
 	var req systemServices.UpdateDashboardRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, http.StatusBadRequest, ErrMsgInvalidParams+": "+err.Error())
 		return
 	}
 
-	err := h.service.UpdateDashboard(c.Request.Context(), userID.(string), id, req)
-	if err != nil {
-		if err.Error() == "dashboard not found" {
-			response.Error(c, http.StatusNotFound, "仪表盘不存在")
-			return
-		}
-		if err.Error() == "permission denied: not the owner" {
-			response.Error(c, http.StatusForbidden, "权限不足")
-			return
-		}
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.service.UpdateDashboard(c.Request.Context(), userCtx.UserID, id, req)
+	if h.handleServiceError(c, err) {
 		return
 	}
 
@@ -157,29 +275,18 @@ func (h *DashboardHandler) Update(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Router /system/dashboards/:id [delete]
 func (h *DashboardHandler) Delete(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if !exists {
-		response.Error(c, http.StatusUnauthorized, "未授权")
+	userCtx, ok := h.requireUserContext(c)
+	if !ok {
 		return
 	}
 
-	id := c.Param("id")
-	if id == "" {
-		response.Error(c, http.StatusBadRequest, "仪表盘ID不能为空")
+	id, ok := h.requireID(c)
+	if !ok {
 		return
 	}
 
-	err := h.service.DeleteDashboard(c.Request.Context(), userID.(string), id)
-	if err != nil {
-		if err.Error() == "dashboard not found" {
-			response.Error(c, http.StatusNotFound, "仪表盘不存在")
-			return
-		}
-		if err.Error() == "permission denied: not the owner" {
-			response.Error(c, http.StatusForbidden, "权限不足")
-			return
-		}
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.service.DeleteDashboard(c.Request.Context(), userCtx.UserID, id)
+	if h.handleServiceError(c, err) {
 		return
 	}
 
@@ -196,19 +303,17 @@ func (h *DashboardHandler) Delete(c *gin.Context) {
 // @Success 200 {object} response.Response{data=models.Dashboard}
 // @Router /system/dashboards/:id/duplicate [post]
 func (h *DashboardHandler) Duplicate(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if !exists {
-		response.Error(c, http.StatusUnauthorized, "未授权")
+	userCtx, ok := h.requireUserContext(c)
+	if !ok {
 		return
 	}
 
-	id := c.Param("id")
-	if id == "" {
-		response.Error(c, http.StatusBadRequest, "仪表盘ID不能为空")
+	id, ok := h.requireID(c)
+	if !ok {
 		return
 	}
 
-	dashboard, err := h.service.DuplicateDashboard(c.Request.Context(), userID.(string), id)
+	dashboard, err := h.service.DuplicateDashboard(c.Request.Context(), userCtx.UserID, id)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -227,29 +332,18 @@ func (h *DashboardHandler) Duplicate(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Router /system/dashboards/:id/set-default [post]
 func (h *DashboardHandler) SetDefault(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if !exists {
-		response.Error(c, http.StatusUnauthorized, "未授权")
+	userCtx, ok := h.requireUserContext(c)
+	if !ok {
 		return
 	}
 
-	id := c.Param("id")
-	if id == "" {
-		response.Error(c, http.StatusBadRequest, "仪表盘ID不能为空")
+	id, ok := h.requireID(c)
+	if !ok {
 		return
 	}
 
-	err := h.service.SetDefaultDashboard(c.Request.Context(), userID.(string), id)
-	if err != nil {
-		if err.Error() == "dashboard not found" {
-			response.Error(c, http.StatusNotFound, "仪表盘不存在")
-			return
-		}
-		if err.Error() == "permission denied: not the owner" {
-			response.Error(c, http.StatusForbidden, "权限不足")
-			return
-		}
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.service.SetDefaultDashboard(c.Request.Context(), userCtx.UserID, id)
+	if h.handleServiceError(c, err) {
 		return
 	}
 
@@ -298,15 +392,13 @@ func (h *DashboardHandler) GetTemplates(c *gin.Context) {
 // @Success 200 {object} response.Response{data=models.Dashboard}
 // @Router /system/dashboards/templates/:id/create [post]
 func (h *DashboardHandler) CreateFromTemplate(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if !exists {
-		response.Error(c, http.StatusUnauthorized, "未授权")
+	userCtx, ok := h.requireUserContext(c)
+	if !ok {
 		return
 	}
 
-	templateID := c.Param("id")
-	if templateID == "" {
-		response.Error(c, http.StatusBadRequest, "模板ID不能为空")
+	templateID, ok := h.requireID(c)
+	if !ok {
 		return
 	}
 
@@ -314,11 +406,11 @@ func (h *DashboardHandler) CreateFromTemplate(c *gin.Context) {
 		Name string `json:"name" binding:"required,min=1,max=100"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, http.StatusBadRequest, ErrMsgInvalidParams+": "+err.Error())
 		return
 	}
 
-	dashboard, err := h.service.CreateFromTemplate(c.Request.Context(), userID.(string), templateID, req.Name)
+	dashboard, err := h.service.CreateFromTemplate(c.Request.Context(), userCtx.UserID, templateID, req.Name)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -339,9 +431,8 @@ func (h *DashboardHandler) CreateFromTemplate(c *gin.Context) {
 // @Success 200 {object} response.Response{data=[]models.DashboardVersion}
 // @Router /system/dashboards/:id/versions [get]
 func (h *DashboardHandler) GetVersions(c *gin.Context) {
-	id := c.Param("id")
-	if id == "" {
-		response.Error(c, http.StatusBadRequest, "仪表盘ID不能为空")
+	id, ok := h.requireID(c)
+	if !ok {
 		return
 	}
 
@@ -365,15 +456,13 @@ func (h *DashboardHandler) GetVersions(c *gin.Context) {
 // @Success 200 {object} response.Response{data=models.DashboardVersion}
 // @Router /system/dashboards/:id/versions [post]
 func (h *DashboardHandler) CreateVersion(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if !exists {
-		response.Error(c, http.StatusUnauthorized, "未授权")
+	userCtx, ok := h.requireUserContext(c)
+	if !ok {
 		return
 	}
 
-	id := c.Param("id")
-	if id == "" {
-		response.Error(c, http.StatusBadRequest, "仪表盘ID不能为空")
+	id, ok := h.requireID(c)
+	if !ok {
 		return
 	}
 
@@ -382,7 +471,7 @@ func (h *DashboardHandler) CreateVersion(c *gin.Context) {
 	}
 	c.ShouldBindJSON(&req)
 
-	version, err := h.service.CreateVersion(c.Request.Context(), userID.(string), id, req.Comment)
+	version, err := h.service.CreateVersion(c.Request.Context(), userCtx.UserID, id, req.Comment)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -402,9 +491,8 @@ func (h *DashboardHandler) CreateVersion(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Router /system/dashboards/:id/versions/:versionId/restore [post]
 func (h *DashboardHandler) RestoreVersion(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if !exists {
-		response.Error(c, http.StatusUnauthorized, "未授权")
+	userCtx, ok := h.requireUserContext(c)
+	if !ok {
 		return
 	}
 
@@ -415,7 +503,7 @@ func (h *DashboardHandler) RestoreVersion(c *gin.Context) {
 		return
 	}
 
-	err := h.service.RestoreVersion(c.Request.Context(), userID.(string), dashboardID, versionID)
+	err := h.service.RestoreVersion(c.Request.Context(), userCtx.UserID, dashboardID, versionID)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -436,9 +524,8 @@ func (h *DashboardHandler) RestoreVersion(c *gin.Context) {
 // @Success 200 {object} response.Response{data=string}
 // @Router /system/dashboards/:id/export [get]
 func (h *DashboardHandler) Export(c *gin.Context) {
-	id := c.Param("id")
-	if id == "" {
-		response.Error(c, http.StatusBadRequest, "仪表盘ID不能为空")
+	id, ok := h.requireID(c)
+	if !ok {
 		return
 	}
 
@@ -461,9 +548,8 @@ func (h *DashboardHandler) Export(c *gin.Context) {
 // @Success 200 {object} response.Response{data=models.Dashboard}
 // @Router /system/dashboards/import [post]
 func (h *DashboardHandler) Import(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if !exists {
-		response.Error(c, http.StatusUnauthorized, "未授权")
+	userCtx, ok := h.requireUserContext(c)
+	if !ok {
 		return
 	}
 
@@ -471,11 +557,11 @@ func (h *DashboardHandler) Import(c *gin.Context) {
 		Config string `json:"config" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, http.StatusBadRequest, ErrMsgInvalidParams+": "+err.Error())
 		return
 	}
 
-	dashboard, err := h.service.ImportDashboard(c.Request.Context(), userID.(string), req.Config)
+	dashboard, err := h.service.ImportDashboard(c.Request.Context(), userCtx.UserID, req.Config)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -532,7 +618,7 @@ func (h *DashboardHandler) GetBatchWidgetData(c *gin.Context) {
 		WidgetIds []string `json:"widgetIds" binding:"required,min=1"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, http.StatusBadRequest, ErrMsgInvalidParams+": "+err.Error())
 		return
 	}
 
@@ -556,13 +642,12 @@ func (h *DashboardHandler) GetBatchWidgetData(c *gin.Context) {
 // @Success 200 {object} response.Response{data=object}
 // @Router /system/dashboards/endpoints [get]
 func (h *DashboardHandler) GetAvailableEndpoints(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if !exists {
-		response.Error(c, http.StatusUnauthorized, "未授权")
+	userCtx, ok := h.requireUserContext(c)
+	if !ok {
 		return
 	}
 
-	endpoints, err := h.service.GetUserAccessibleEndpoints(c.Request.Context(), userID.(string))
+	endpoints, err := h.service.GetUserAccessibleEndpoints(c.Request.Context(), userCtx.UserID)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -612,15 +697,14 @@ func (h *DashboardHandler) ValidateEndpoint(c *gin.Context) {
 // @Success 200 {object} response.Response{data=object}
 // @Router /system/dashboards/endpoints/filter [get]
 func (h *DashboardHandler) GetUserEndpointsWithFilter(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if !exists {
-		response.Error(c, http.StatusUnauthorized, "未授权")
+	userCtx, ok := h.requireUserContext(c)
+	if !ok {
 		return
 	}
 
 	widgetType := c.Query("widgetType")
 
-	categories, err := h.service.GetUserAccessibleEndpoints(c.Request.Context(), userID.(string))
+	categories, err := h.service.GetUserAccessibleEndpoints(c.Request.Context(), userCtx.UserID)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -647,13 +731,12 @@ func (h *DashboardHandler) GetUserEndpointsWithFilter(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Router /system/dashboards/endpoints/cache/invalidate [post]
 func (h *DashboardHandler) InvalidateEndpointCache(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if !exists {
-		response.Error(c, http.StatusUnauthorized, "未授权")
+	userCtx, ok := h.requireUserContext(c)
+	if !ok {
 		return
 	}
 
-	h.service.InvalidateUserCache(c.Request.Context(), userID.(string))
+	h.service.InvalidateUserCache(c.Request.Context(), userCtx.UserID)
 
 	response.Success(c, gin.H{
 		"message": "缓存已清除",

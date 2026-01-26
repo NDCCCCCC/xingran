@@ -18,50 +18,34 @@ const { Sider } = Layout;
 
 type MenuItem = NonNullable<MenuProps['items']>[number];
 
-// ========================================
-// 获取图标组件 - 使用 iconUtils 中的函数
-// ========================================
-// 直接从后端 API 获取的图标名称（如 UserOutlined、SettingOutlined 等）
-// 通过 iconUtils 中的 getIconComponent 函数转换为 React 组件
-function getIcon(iconName?: string | null): React.ReactNode {
+const getIcon = (iconName?: string | null): React.ReactNode => {
   return getIconComponent(iconName);
-}
+};
 
-// 将后端菜单数据转换为 Ant Design Menu 组件所需的格式
-function convertToMenuItem(menu: MenuType, parentPath: string = ''): MenuItem {
+const convertToMenuItem = (menu: MenuType, parentPath: string = ''): MenuItem => {
   const icon = getIcon(menu.icon);
 
-  // 只显示目录(M)和菜单(C)类型，不显示按钮(F)类型
-  if (menu.menuType === 'F') {
+  if (menu.menuType === 'F' || menu.visible !== 1) {
     return null as any;
   }
 
-  // 隐藏的菜单（visible=0）不显示
-  if (menu.visible !== 1) {
-    return null as any;
-  }
-
-  const isDisabled = menu.status !== 0; // 停用的菜单
-
-  // 构建完整路径（与 buildMenuPathMap 逻辑一致）
+  const isDisabled = menu.status !== 0;
   let menuPath = menu.path || '';
+
   if (menuPath && !menuPath.startsWith('/') && parentPath) {
     if (!menuPath.startsWith(parentPath + '/')) {
       menuPath = `${parentPath}/${menuPath}`;
     }
   }
 
-  // 生成菜单key（与 buildMenuPathMap 逻辑一致）
-  const menuKey = menuPath || menu.id;
+  const menuKey = menu.id;
 
-  // 如果有子菜单，递归转换
   if (menu.children && menu.children.length > 0) {
     const validChildren = menu.children
       .filter(child => child.menuType !== 'F' && child.visible === 1)
       .map(child => convertToMenuItem(child, menuPath))
       .filter((item): item is MenuItem => item !== null);
 
-    // 如果有正常子菜单，或者是父级目录，都显示
     if (validChildren.length > 0 || menu.menuType === 'M') {
       return {
         key: menuKey,
@@ -74,7 +58,6 @@ function convertToMenuItem(menu: MenuType, parentPath: string = ''): MenuItem {
     }
   }
 
-  // 显示所有可见的菜单（包括停用的）
   return {
     key: menuKey,
     icon,
@@ -82,7 +65,7 @@ function convertToMenuItem(menu: MenuType, parentPath: string = ''): MenuItem {
     disabled: isDisabled,
     style: isDisabled ? { opacity: 0.5 } : undefined,
   };
-}
+};
 
 const Sidebar = () => {
   const [openKeys, setOpenKeys] = useState<string[]>([]);
@@ -185,33 +168,22 @@ const Sidebar = () => {
   // 菜单点击处理
   // ========================================
   const handleMenuClick: MenuProps['onClick'] = (e) => {
-    // 在菜单数据中查找对应的菜单
-    const findMenuByPath = (menuList: MenuType[], key: string, parentPath: string = ''): MenuType | null => {
+    // 在菜单数据中查找对应的菜单（通过 ID）
+    const findMenuById = (menuList: MenuType[], id: string): MenuType | null => {
       for (const menu of menuList) {
-        let menuPath = menu.path || '';
-        if (menuPath && !menuPath.startsWith('/') && parentPath) {
-          if (!menuPath.startsWith(parentPath + '/')) {
-            menuPath = `${parentPath}/${menuPath}`;
-          }
-        }
-
-        const menuKey = menuPath || menu.id;
-
-        // 检查是否匹配
-        if ((menuKey === key || menu.id === key) && menu.visible === 1) {
+        if (menu.id === id) {
           return menu;
         }
-
         // 递归查找子菜单
         if (menu.children) {
-          const found = findMenuByPath(menu.children, key, menuPath);
+          const found = findMenuById(menu.children, id);
           if (found) return found;
         }
       }
       return null;
     };
 
-    const clickedMenu = findMenuByPath(menus, e.key);
+    const clickedMenu = findMenuById(menus, e.key);
 
     // 检查菜单是否停用
     if (clickedMenu && clickedMenu.status !== 0) {
@@ -221,9 +193,44 @@ const Sidebar = () => {
 
     // 只有菜单类型（C）才执行导航，目录类型（M）不导航
     if (clickedMenu && clickedMenu.menuType === 'C') {
+      // 构建完整的导航路径（考虑父路径）
+      const buildFullPath = (menu: MenuType, parentPath: string = ''): string => {
+        const menuPath = menu.path || '';
+        if (!menuPath) return parentPath;
+
+        // 如果已经是绝对路径，直接返回
+        if (menuPath.startsWith('/')) {
+          return menuPath;
+        }
+
+        // 如果没有父路径，返回菜单路径
+        if (!parentPath) {
+          return `/${menuPath}`;
+        }
+
+        // 拼接父路径和菜单路径
+        return `${parentPath}/${menuPath}`;
+      };
+
+      // 从 menuPathMap 中查找该菜单的完整路径
+      const menuInfo = menuPathMap.get(clickedMenu.id);
+
+      // 调试日志
+      console.log('[Sidebar MenuClick] 菜单点击:', {
+        menuName: clickedMenu.menuName,
+        menuId: clickedMenu.id,
+        menuPath: clickedMenu.path,
+        menuInfo: menuInfo,
+        fullPathFromMap: menuInfo?.fullPath,
+        fallbackPath: buildFullPath(clickedMenu),
+      });
+
+      const fullPath = menuInfo?.fullPath || buildFullPath(clickedMenu);
+
       // 确保路径以 / 开头
-      const path = e.key.startsWith('/') ? e.key : `/${e.key}`;
-      navigate(path);
+      const navigationPath = fullPath.startsWith('/') ? fullPath : `/${fullPath}`;
+      console.log('[Sidebar MenuClick] 导航到:', navigationPath);
+      navigate(navigationPath);
     }
   };
 
@@ -325,13 +332,31 @@ const Sidebar = () => {
   // 而 location.pathname 带前导斜杠（如 /ops/server-rooms）
   // 需要返回匹配菜单 key 的格式
   const getSelectedKeys = () => {
-    // 去掉前导斜杠，与菜单 key 保持一致
-    const normalizedPath = location.pathname.startsWith('/')
-      ? location.pathname.slice(1)
-      : location.pathname;
+    // 根据当前路径找到对应的菜单 ID
+    const findMenuIdByPath = (menuList: MenuType[], targetPath: string): string | null => {
+      const normalizedPath = targetPath.startsWith('/') ? targetPath.slice(1) : targetPath;
 
-    // 返回两种格式，确保能匹配到
-    return [location.pathname, normalizedPath];
+      for (const menu of menuList) {
+        if (menu.menuType === 'F') continue;
+
+        const menuPath = menu.path || '';
+
+        // 精确匹配路径
+        if (menuPath === normalizedPath || menuPath === targetPath) {
+          return menu.id;
+        }
+
+        // 递归查找子菜单
+        if (menu.children) {
+          const found = findMenuIdByPath(menu.children, targetPath);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    const menuId = findMenuIdByPath(menus, location.pathname);
+    return menuId ? [menuId] : [];
   };
 
   return (

@@ -5,6 +5,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import NotificationBell from '@/components/NotificationBell';
 import GlobalSearch from '@/components/shared/GlobalSearch';
+import { USER_PROFILE, USER_SETTINGS } from '@/constants/routes';
 import type { MenuProps } from 'antd';
 
 const { Header: AntHeader } = Layout;
@@ -30,13 +31,13 @@ const Header: FC = () => {
       key: 'profile',
       label: '个人中心',
       icon: <UserOutlined />,
-      onClick: () => navigate('/profile'),
+      onClick: () => navigate(USER_PROFILE),
     },
     {
       key: 'settings',
       label: '系统设置',
       icon: <SettingOutlined />,
-      onClick: () => navigate('/settings'),
+      onClick: () => navigate(USER_SETTINGS),
     },
     {
       type: 'divider',

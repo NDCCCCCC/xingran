@@ -7,6 +7,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useMenuStore } from '@/store/menuStore';
 import { TextCaptcha, SliderCaptcha } from '@/components/captcha';
 import { getCaptchaConfig } from '@/services/captcha';
+import { DASHBOARD } from '@/constants/routes';
 import type { LoginRequest } from '@/types';
 import type { CaptchaEnabled } from '@/types/captcha';
 import './login.css';
@@ -73,7 +74,7 @@ const Login: FC = () => {
         fetchPermissions(), // 获取权限（不从localStorage读取）
       ]);
       message.success('登录成功');
-      navigate('/dashboard');
+      navigate(DASHBOARD);
     } catch (error) {
       console.error('登录失败:', error);
       // 登录失败后刷新验证码

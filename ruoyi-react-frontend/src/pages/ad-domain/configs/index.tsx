@@ -68,15 +68,29 @@ const ADConfigPage: FC = () => {
 
   const handleCreate = () => {
     setEditingConfig(null);
-    editForm.resetFields();
-    editForm.setFieldsValue({
-      serverPort: 389,
-      useSsl: false,
-      useTls: false,
-      syncEnabled: true,
-      syncInterval: 3600,
-    });
     setModalVisible(true);
+    // 等待 Modal 打开后再设置表单值（在 Modal 的 afterOpenChange 中处理）
+    // 默认值将在 Modal 打开后通过 editForm.setFieldsValue 设置
+  };
+
+  // Modal 打开后的回调
+  const handleModalOpenChange = (open: boolean) => {
+    if (open && editingConfig) {
+      // 编辑模式：设置表单值（因为 destroyOnHide 会销毁 Form）
+      editForm.setFieldsValue({
+        ...editingConfig,
+        adminPassword: undefined, // 不回填密码
+      });
+    } else if (open && !editingConfig) {
+      // 新增模式：设置默认值
+      editForm.setFieldsValue({
+        serverPort: 389,
+        useSsl: false,
+        useTls: false,
+        syncEnabled: true,
+        syncInterval: 3600,
+      });
+    }
   };
 
   const handleEdit = (config: ADConfig) => {
@@ -322,6 +336,7 @@ const ADConfigPage: FC = () => {
         open={modalVisible}
         onOk={handleSubmit}
         onCancel={() => setModalVisible(false)}
+        afterOpenChange={handleModalOpenChange}
         width={600}
         destroyOnHidden
       >
@@ -397,6 +412,8 @@ const ADConfigPage: FC = () => {
           <Form.Item
             label="同步间隔(秒)"
             name="syncInterval"
+            initialValue={3600}
+            rules={[{ required: true, message: '请输入同步间隔' }]}
           >
             <InputNumber min={60} style={{ width: '100%' }} />
           </Form.Item>

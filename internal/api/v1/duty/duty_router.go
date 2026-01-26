@@ -26,7 +26,7 @@ func SetupDutySchedulesRouter(r *gin.RouterGroup, core *core.Core) {
 	r.POST("/list", handler.ListSchedules)
 	r.POST("/generate", handler.GenerateSchedule)
 	r.POST("/today", handler.GetTodayDuty)
-	r.GET("/monthly", handler.GetMonthlySchedule) // 使用GET支持Query参数
+	r.POST("/monthly", handler.GetMonthlySchedule) // 改为POST以支持JSON body参数
 	r.POST("/swap", handler.SwapDuty)
 	r.POST("/manual", handler.ManualDuty)
 	r.POST("/:id/delete", handler.DeleteSchedule)

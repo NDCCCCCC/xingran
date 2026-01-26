@@ -60,6 +60,21 @@
 	overflow: auto;
 }
 
+/* 编辑/删除按钮区域 */
+.grid-item__actions {
+	position: absolute;
+	top: 8px;
+	left: 8px;
+	right: 8px;
+	z-index: 10;
+	display: flex;
+	justify-content: center;
+	padding: 4px;
+	background: rgba(255, 255, 255, 0.95);
+	border-radius: 4px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
 /* 占位符样式 */
 .grid-item-placeholder {
 	display: flex;

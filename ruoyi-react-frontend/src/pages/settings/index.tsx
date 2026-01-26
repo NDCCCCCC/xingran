@@ -1,6 +1,6 @@
 /**
- * 系统设置页面（增强版 - 支持明暗模式和自定义颜色）
- * System Settings Page (Enhanced - Light/Dark Mode & Custom Colors)
+ * 用户设置页面（增强版 - 支持明暗模式和自定义颜色）
+ * User Settings Page (Enhanced - Light/Dark Mode & Custom Colors)
  */
 
 import { useEffect, useState, type FC } from 'react';
@@ -140,7 +140,7 @@ const SettingsPage: FC = () => {
 
 	return (
 		<div className="p-6">
-			<Card title="系统设置" loading={loading}>
+			<Card title="用户设置" loading={loading}>
 				<Alert
 					title="配置说明"
 					description="所有配置会自动保存到服务器，并在您下次登录时恢复。"

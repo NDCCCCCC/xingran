@@ -42,15 +42,9 @@ type Core struct {
 	CaptchaBackgroundService    *CaptchaBackgroundService             // 验证码背景图服务
 	OperLogService              services.OperLogService               // 操作日志服务
 
-	// 数据缓存服务（方案1：统一缓存架构）
+	// 缓存服务（用于 System 模块）
 	DataCacheService   *services.DataCacheService   // 通用数据缓存服务
 	CacheConfigService *services.CacheConfigService // 缓存配置服务
-	DeptService        *services.DeptService        // 部门缓存服务
-	RoleCacheService   *services.RoleCacheService   // 角色缓存服务
-	DictCacheService   *services.DictCacheService   // 字典缓存服务
-	MenuCacheService   *services.MenuCacheService   // 菜单缓存服务
-	UserCacheService   *services.UserCacheService   // 用户缓存服务
-	PostCacheService   *services.PostCacheService   // 岗位缓存服务
 
 	// API端点元数据服务
 	APIMetadata        *config.APIMetadataConfig    // API元数据配置
@@ -69,15 +63,7 @@ func (c *Core) GetDB() *gorm.DB {
 // New 创建核心模块管理器
 // 根据配置创建Core实例，初始化JWT管理器和密码管理器
 func New(cfg *config.Config) *Core {
-	// 初始化 SM4 加密器
-	sm4Cipher, err := security.NewSM4Cipher(cfg.Security.SM4Key)
-	if err != nil {
-		log.Printf("警告：SM4 加密器初始化失败: %v", err)
-		log.Printf("配置的密钥长度: %d", len(cfg.Security.SM4Key))
-		// 继续启动，但密码加密功能将不可用
-	} else {
-		log.Printf("SM4 加密器初始化成功")
-	}
+	sm4Cipher := initSM4Cipher(cfg.Security.SM4Key)
 
 	return &Core{
 		Config:     cfg,
@@ -85,6 +71,18 @@ func New(cfg *config.Config) *Core {
 		PwdManager: security.NewPasswordManager(nil),
 		SM4Cipher:  sm4Cipher,
 	}
+}
+
+// initSM4Cipher 初始化SM4加密器
+func initSM4Cipher(sm4Key string) *security.SM4Cipher {
+	sm4Cipher, err := security.NewSM4Cipher(sm4Key)
+	if err != nil {
+		log.Printf("警告：SM4 加密器初始化失败: %v", err)
+		log.Printf("配置的密钥长度: %d", len(sm4Key))
+		return nil
+	}
+	log.Printf("SM4 加密器初始化成功")
+	return sm4Cipher
 }
 
 // Init 初始化核心模块
@@ -136,27 +134,17 @@ func (c *Core) Init() error {
 		log.Println("缓存系统初始化完成")
 	}
 
-	// 6. 初始化数据缓存服务（方案1：统一缓存架构）
-	// 这些服务使用 Core.Cache 进行数据缓存，提供带缓存的业务方法
+	// 6. 初始化缓存服务（用于 System 模块）
+	// System 模块的服务通过 CacheProvider 接口使用缓存
 	if c.Cache != nil {
 		// 初始化缓存配置服务
 		c.CacheConfigService = services.NewCacheConfigService(c.GetDB())
 
-		// 初始化数据缓存服务
+		// 初始化数据缓存服务（供 System 模块适配使用）
 		c.DataCacheService = services.NewDataCacheService(c.Cache)
 		c.DataCacheService.SetCacheConfig(c.CacheConfigService)
 
-		// 初始化业务服务
-		c.DeptService = services.NewDeptService(c.GetDB(), c.DataCacheService)
-		c.RoleCacheService = services.NewRoleCacheService(c.GetDB(), c.DataCacheService)
-		c.DictCacheService = services.NewDictCacheService(c.GetDB(), c.DataCacheService)
-
-		// 初始化新的缓存服务
-		c.MenuCacheService = services.NewMenuCacheService(c.GetDB(), c.DataCacheService)
-		c.UserCacheService = services.NewUserCacheService(c.GetDB(), c.DataCacheService)
-		c.PostCacheService = services.NewPostCacheService(c.GetDB(), c.DataCacheService)
-
-		log.Println("数据缓存服务初始化完成（部门、角色、字典、菜单、用户、岗位）")
+		log.Println("缓存服务初始化完成")
 	}
 
 	// 7. 初始化系统指标缓存服务

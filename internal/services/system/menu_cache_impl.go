@@ -128,16 +128,16 @@ func (s *menuCacheService) Update(ctx context.Context, req *MenuUpdateRequest) e
 }
 
 // Delete 删除菜单（带缓存失效）
-func (s *menuCacheService) Delete(ctx context.Context, id string) error {
-	if err := s.menuService.Delete(ctx, id); err != nil {
+func (s *menuCacheService) Delete(ctx context.Context, id string, cascade bool) error {
+	if err := s.menuService.Delete(ctx, id, cascade); err != nil {
 		return err
 	}
 	return s.InvalidateMenuCache(ctx)
 }
 
 // BatchDelete 批量删除菜单（带缓存失效）
-func (s *menuCacheService) BatchDelete(ctx context.Context, ids []string) error {
-	if err := s.menuService.BatchDelete(ctx, ids); err != nil {
+func (s *menuCacheService) BatchDelete(ctx context.Context, ids []string, cascade bool) error {
+	if err := s.menuService.BatchDelete(ctx, ids, cascade); err != nil {
 		return err
 	}
 	return s.InvalidateMenuCache(ctx)
