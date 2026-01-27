@@ -328,35 +328,78 @@ const Sidebar = () => {
   };
 
   // 获取当前选中的菜单项
-  // 注意：菜单 key 可能不带前导斜杠（如 ops/server-rooms）
-  // 而 location.pathname 带前导斜杠（如 /ops/server-rooms）
-  // 需要返回匹配菜单 key 的格式
+  // 使用 menuPathMap 来查找，因为其中包含了正确构建的 fullPath
   const getSelectedKeys = () => {
-    // 根据当前路径找到对应的菜单 ID
-    const findMenuIdByPath = (menuList: MenuType[], targetPath: string): string | null => {
-      const normalizedPath = targetPath.startsWith('/') ? targetPath.slice(1) : targetPath;
+    if (!location.pathname) return [];
 
-      for (const menu of menuList) {
-        if (menu.menuType === 'F') continue;
+    // 尝试多种路径格式匹配
+    const pathsToTry = [
+      location.pathname,                    // /system/user-center
+      location.pathname.startsWith('/') ? location.pathname.slice(1) : location.pathname,  // system/user-center
+    ];
 
-        const menuPath = menu.path || '';
+    for (const path of pathsToTry) {
+      const menuInfo = menuPathMap.get(path);
+      if (menuInfo) {
+        // 通过 menuPathMap 的 key 反向查找菜单 ID
+        // menuPathMap 中存储了 path -> menuInfo 的映射
+        // 但我们需要返回菜单 ID（即菜单的 key）
+        // 所以需要从 menus 中查找对应的菜单
 
-        // 精确匹配路径
-        if (menuPath === normalizedPath || menuPath === targetPath) {
-          return menu.id;
-        }
+        // 遍历 menus 找到 fullPath 匹配的菜单
+        const findMenuByFullPath = (menuList: MenuType[], fullPath: string): string | null => {
+          for (const menu of menuList) {
+            if (menu.menuType === 'F') continue;
 
-        // 递归查找子菜单
-        if (menu.children) {
-          const found = findMenuIdByPath(menu.children, targetPath);
-          if (found) return found;
-        }
+            // 检查当前菜单的路径
+            const menuPath = menu.path || '';
+            let computedPath = menuPath;
+
+            // 如果是子菜单，需要拼接父路径
+            const buildFullPath = (m: MenuType, parent: string = ''): string => {
+              const p = m.path || '';
+              if (!p) return parent;
+              if (p.startsWith('/')) return p.slice(1); // 去掉前导斜杠
+              if (!parent) return p;
+              return p.startsWith(parent + '/') ? p : `${parent}/${p}`;
+            };
+
+            computedPath = buildFullPath(menu, '');
+
+            // 递归处理子菜单
+            if (menu.children) {
+              for (const child of menu.children) {
+                const childFullPath = buildFullPath(child, computedPath);
+                if (childFullPath === fullPath || child.path === fullPath) {
+                  return child.id;
+                }
+
+                // 检查三级菜单
+                if (child.children) {
+                  for (const grandChild of child.children) {
+                    const grandChildFullPath = buildFullPath(grandChild, childFullPath);
+                    if (grandChildFullPath === fullPath || grandChild.path === fullPath) {
+                      return grandChild.id;
+                    }
+                  }
+                }
+              }
+            }
+
+            // 检查一级菜单
+            if (computedPath === fullPath || menuPath === fullPath) {
+              return menu.id;
+            }
+          }
+          return null;
+        };
+
+        const menuId = findMenuByFullPath(menus, path);
+        if (menuId) return [menuId];
       }
-      return null;
-    };
+    }
 
-    const menuId = findMenuIdByPath(menus, location.pathname);
-    return menuId ? [menuId] : [];
+    return [];
   };
 
   return (

@@ -106,9 +106,15 @@ func (s *SyncService) SyncData(ctx context.Context, config *models.ADConfig, syn
 	}
 
 	now := time.Now()
-	s.db.WithContext(ctx).Model(config).Updates(map[string]interface{}{
+	updateResult := s.db.WithContext(ctx).Model(config).Updates(map[string]interface{}{
 		"last_sync_at": now,
 	})
+	if updateResult.Error != nil {
+		// 更新失败记录日志，但不影响同步结果
+		fmt.Printf("警告：更新AD配置last_sync_at失败: %v\n", updateResult.Error)
+	} else {
+		fmt.Printf("AD配置 %s last_sync_at 已更新为: %v\n", config.ConfigName, now.Format("2006-01-02 15:04:05"))
+	}
 
 	s.updateSyncLog(ctx, syncLog.ID, models.ADSyncStatusSuccess, result.OUCount, result.GroupCount, result.UserCount, result.ComputerCount, "")
 
