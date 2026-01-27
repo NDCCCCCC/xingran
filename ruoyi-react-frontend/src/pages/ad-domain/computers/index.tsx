@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Card,
   Table,
   Select,
+  TreeSelect,
   Input,
   Space,
   Button,
@@ -11,12 +12,15 @@ import {
   message,
   Descriptions,
   Modal,
+  Tooltip,
 } from 'antd';
 import {
   ReloadOutlined,
   DesktopOutlined,
   CheckCircleOutlined,
   WarningOutlined,
+  SearchOutlined,
+  FolderOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -38,6 +42,11 @@ const ADComputerPage: FC = () => {
     autoSelectFirst: true,
   });
 
+  // 获取当前选择的配置对象
+  const currentConfig = useMemo(() => {
+    return configs.find(c => c.id === selectedConfig);
+  }, [configs, selectedConfig]);
+
   const [computers, setComputers] = useState<ADComputerDetail[]>([]);
   const [loading, setLoading] = useState(false);
   const { paginationProps, setCurrent, setTotal } = usePagination();
@@ -45,13 +54,36 @@ const ADComputerPage: FC = () => {
   const [ouTree, setOUTree] = useState<ADOUNode[]>([]);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedComputer, setSelectedComputer] = useState<ADComputerDetail | null>(null);
+  const [ouSelectVisible, setOUSelectVisible] = useState(false);
+
+  // 常用OU快捷列表（可配置）
+  const commonOUs = useMemo(() => {
+    if (!ouTree.length) return [];
+    const findOUByName = (name: string, nodes: ADOUNode[] = ouTree): ADOUNode | null => {
+      for (const node of nodes) {
+        if (node.name === name) return node;
+        if (node.children) {
+          const found = findOUByName(name, node.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    const commonNames = ['湖北分公司', '失效终端', '本部部门分组'];
+    return commonNames
+      .map(name => findOUByName(name))
+      .filter(Boolean) as ADOUNode[];
+  }, [ouTree]);
 
   const fetchOUTree = async () => {
     if (!selectedConfig) return;
     try {
       const res = await getADOUTree(selectedConfig);
-      if (res.code === 0) {
-        setOUTree(res.data ?? []);
+      if (res.code === 0 && res.data) {
+        // 过滤出 ou=computer 下的子OU
+        const computerOU = res.data.find(ou => ou.name === 'Computer');
+        setOUTree(computerOU?.children ?? []);
       }
     } catch (error) {
       console.error('获取OU树失败', error);
@@ -107,21 +139,20 @@ const ADComputerPage: FC = () => {
     }
   };
 
-  // 构建扁平化的OU选项列表
-  const buildOUOptions = (nodes: ADOUNode[], level = 0): Array<{ value: string; label: string }> => {
-    const options: Array<{ value: string; label: string }> = [];
-    const prefix = '　'.repeat(level);
+  // 构建TreeSelect所需的数据结构
+  const buildTreeSelectData = (nodes: ADOUNode[]): Array<{ value: string; title: string; children?: Array<any> }> => {
+    return nodes.map(node => ({
+      value: node.dn,
+      title: node.name,
+      children: node.children && node.children.length > 0 ? buildTreeSelectData(node.children) : undefined,
+    }));
+  };
 
-    for (const node of nodes) {
-      options.push({
-        value: node.dn,
-        label: `${prefix}${node.name}`,
-      });
-      if (node.children && node.children.length > 0) {
-        options.push(...buildOUOptions(node.children, level + 1));
-      }
-    }
-    return options;
+  const treeSelectData = useMemo(() => buildTreeSelectData(ouTree), [ouTree]);
+
+  const handleQuickOUSelect = (ouDn: string) => {
+    form.setFieldValue('ouDn', ouDn);
+    handleSearch();
   };
 
   const columns: ColumnsType<ADComputerDetail> = [
@@ -234,13 +265,33 @@ const ADComputerPage: FC = () => {
               options={configs.map((c) => ({ label: c.configName, value: c.id }))}
             />
           </Form.Item>
-          <Form.Item name="ouDn">
-            <Select
-              placeholder="所属OU"
-              allowClear
-              style={{ width: 200 }}
-              options={buildOUOptions(ouTree)}
-            />
+          <Form.Item name="ouDn" label="所属OU">
+            <Space.Compact style={{ width: '100%' }}>
+              <TreeSelect
+                placeholder="请选择OU"
+                allowClear
+                showSearch
+                treeDefaultExpandAll={false}
+                treeIcon={<FolderOutlined />}
+                treeNodeFilterProp="title"
+                style={{ width: 300 }}
+                styles={{ popup: { root: { maxHeight: 400, overflow: 'auto' } } }}
+                treeData={treeSelectData}
+                onChange={(value) => {
+                  form.setFieldValue('ouDn', value);
+                }}
+              />
+              {commonOUs.length > 0 && (
+                <Tooltip title="快捷选择常用OU">
+                  <Button
+                    icon={<SearchOutlined />}
+                    onClick={() => setOUSelectVisible(true)}
+                  >
+                    快捷
+                  </Button>
+                </Tooltip>
+              )}
+            </Space.Compact>
           </Form.Item>
           <Form.Item name="computerName">
             <Input placeholder="计算机名称" allowClear style={{ width: 180 }} />
@@ -354,6 +405,52 @@ const ADComputerPage: FC = () => {
             )}
           </Descriptions>
         )}
+      </Modal>
+
+      {/* OU快捷选择弹窗 */}
+      <Modal
+        title="快捷选择常用OU"
+        open={ouSelectVisible}
+        onCancel={() => setOUSelectVisible(false)}
+        footer={[
+          <Button key="close" onClick={() => setOUSelectVisible(false)}>
+            关闭
+          </Button>,
+        ]}
+        width={600}
+      >
+        <Space orientation="vertical" style={{ width: '100%' }} size="middle">
+          <div style={{ color: '#666', fontSize: '14px' }}>
+            点击下方OU标签快速筛选该OU下的电脑设备
+          </div>
+          <div style={{ maxHeight: 400, overflowY: 'auto' }}>
+            <Space wrap>
+              {commonOUs.map((ou) => (
+                <Tag
+                  key={ou.dn}
+                  style={{
+                    cursor: 'pointer',
+                    padding: '8px 16px',
+                    fontSize: '14px',
+                    marginBottom: '8px',
+                  }}
+                  icon={<FolderOutlined />}
+                  onClick={() => {
+                    handleQuickOUSelect(ou.dn);
+                    setOUSelectVisible(false);
+                  }}
+                >
+                  {ou.name}
+                </Tag>
+              ))}
+            </Space>
+          </div>
+          {commonOUs.length === 0 && (
+            <div style={{ textAlign: 'center', color: '#999', padding: '40px' }}>
+              暂无常用OU配置
+            </div>
+          )}
+        </Space>
       </Modal>
     </Card>
   );

@@ -4,6 +4,7 @@ package models
 type Department struct {
 	BaseModel
 	DeptName      string     `gorm:"size:50;not null" json:"deptName"`
+	DeptCode      string     `gorm:"size:50;uniqueIndex;not null" json:"deptCode"` // 部门编码，用于Excel导入
 	ParentID      *string    `gorm:"type:uuid" json:"parentId,omitempty"`
 	Ancestors     string     `gorm:"size:500;default:''" json:"ancestors"`
 	OrderNum      int        `gorm:"default:0" json:"orderNum"`

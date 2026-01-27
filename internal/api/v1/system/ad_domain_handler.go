@@ -9,7 +9,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	addomainServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
@@ -37,10 +36,10 @@ func (h *ADDomainHandler) setDefaultPagination(current, pageSize *int) {
 	}
 }
 
-// requireConfigID 验证并返回配置ID
+// requireConfigID 验证配置ID是否为空
 func (h *ADDomainHandler) requireConfigID(id string) error {
 	if id == "" {
-		return errors.New("AD配置ID不能为空")
+		return errors.New("配置ID不能为空")
 	}
 	return nil
 }
@@ -99,7 +98,7 @@ func (h *ADDomainHandler) GetConfig(c *gin.Context) {
 
 	config, err := h.service.GetADConfigByID(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusNotFound, "AD配置不存在")
+		response.Error(c, http.StatusNotFound, "配置不存在")
 		return
 	}
 
@@ -158,16 +157,12 @@ func (h *ADDomainHandler) TestConnection(c *gin.Context) {
 		return
 	}
 
-	err := h.service.TestADConnection(c.Request.Context(), id)
-	if err != nil {
+	if err := h.service.TestADConnection(c.Request.Context(), id); err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	response.Success(c, gin.H{
-		"success": true,
-		"message": "连接成功",
-	})
+	response.Success(c, gin.H{"success": true})
 }
 
 // SyncData 同步AD数据
@@ -193,7 +188,7 @@ func (h *ADDomainHandler) SyncData(c *gin.Context) {
 	result, err := h.service.SyncADData(ctx, id, req.SyncType)
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
-			response.Error(c, http.StatusRequestTimeout, "同步超时，请稍后重试或联系管理员")
+			response.Error(c, http.StatusRequestTimeout, "同步超时，请稍后重试")
 			return
 		}
 		response.Error(c, http.StatusInternalServerError, err.Error())
@@ -215,17 +210,12 @@ func (h *ADDomainHandler) GetOUTree(c *gin.Context) {
 		return
 	}
 
-	// 调试日志
-	applogger.Infof("GetOUTree: configId=%s", req.ConfigID)
-
 	tree, err := h.service.GetOUTree(c.Request.Context(), req.ConfigID)
 	if err != nil {
-		applogger.Errorf("GetOUTree failed: %v", err)
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	applogger.Infof("GetOUTree success: returned %d OUs", len(tree))
 	response.Success(c, tree)
 }
 
@@ -252,7 +242,7 @@ func (h *ADDomainHandler) GetGroupDetail(c *gin.Context) {
 
 // UpdateGroup 更新AD用户组
 func (h *ADDomainHandler) UpdateGroup(c *gin.Context) {
-	response.Error(c, http.StatusNotImplemented, "功能暂未实现")
+	response.Error(c, http.StatusNotImplemented, "功能开发中")
 }
 
 // GetGroupMembers 获取AD用户组成员
@@ -300,6 +290,162 @@ func (h *ADDomainHandler) ListUsers(c *gin.Context) {
 // GetUserDetail 获取AD用户详情
 func (h *ADDomainHandler) GetUserDetail(c *gin.Context) {
 	response.Error(c, http.StatusNotImplemented, "功能开发中")
+}
+
+// UpdateUser 更新AD用户
+func (h *ADDomainHandler) UpdateUser(c *gin.Context) {
+	// 路由格式: /users/:id/update，其中:id是用户ID（数据库中的ID）
+	userID := c.Param("id")
+	if userID == "" {
+		response.Error(c, http.StatusBadRequest, "用户ID不能为空")
+		return
+	}
+
+	var req struct {
+		ConfigID string                                     `json:"configId" binding:"required"`
+		Update   addomainServices.ADUserUpdateRequest `json:"update"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		return
+	}
+
+	// 根据userID获取用户的DN
+	user, err := h.service.GetADUserByID(c.Request.Context(), userID)
+	if err != nil {
+		response.Error(c, http.StatusNotFound, "用户不存在")
+		return
+	}
+
+	config, err := h.service.GetADConfigByID(c.Request.Context(), req.ConfigID)
+	if err != nil {
+		response.Error(c, http.StatusNotFound, "AD配置不存在")
+		return
+	}
+
+	if err := h.service.UpdateADUser(c.Request.Context(), config, user.UserDN, &req.Update); err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	recordOperLog(c, h.core, "AD用户", OperTypeUpdate)
+	response.Success(c, gin.H{"message": "更新成功"})
+}
+
+// MoveUser 移动AD用户到新OU
+func (h *ADDomainHandler) MoveUser(c *gin.Context) {
+	// 路由格式: /users/:id/move，其中:id是用户ID
+	userID := c.Param("id")
+	if userID == "" {
+		response.Error(c, http.StatusBadRequest, "用户ID不能为空")
+		return
+	}
+
+	var req struct {
+		ConfigID string `json:"configId" binding:"required"`
+		Move     struct {
+			NewOUDN string `json:"newOuDn" binding:"required"`
+		} `json:"move"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		return
+	}
+
+	// 根据userID获取用户的DN
+	user, err := h.service.GetADUserByID(c.Request.Context(), userID)
+	if err != nil {
+		response.Error(c, http.StatusNotFound, "用户不存在")
+		return
+	}
+
+	config, err := h.service.GetADConfigByID(c.Request.Context(), req.ConfigID)
+	if err != nil {
+		response.Error(c, http.StatusNotFound, "AD配置不存在")
+		return
+	}
+
+	if err := h.service.MoveADUser(c.Request.Context(), config, user.UserDN, req.Move.NewOUDN); err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	recordOperLog(c, h.core, "AD用户", OperTypeOther)
+	response.Success(c, gin.H{"message": "移动成功"})
+}
+
+// EnableUser 启用AD用户
+func (h *ADDomainHandler) EnableUser(c *gin.Context) {
+	userID := c.Param("id")
+	if userID == "" {
+		response.Error(c, http.StatusBadRequest, "用户ID不能为空")
+		return
+	}
+
+	var req struct {
+		ConfigID string `json:"configId" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		return
+	}
+
+	user, err := h.service.GetADUserByID(c.Request.Context(), userID)
+	if err != nil {
+		response.Error(c, http.StatusNotFound, "用户不存在")
+		return
+	}
+
+	config, err := h.service.GetADConfigByID(c.Request.Context(), req.ConfigID)
+	if err != nil {
+		response.Error(c, http.StatusNotFound, "AD配置不存在")
+		return
+	}
+
+	if err := h.service.EnableADUser(c.Request.Context(), config, user.UserDN); err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	recordOperLog(c, h.core, "AD用户", OperTypeOther)
+	response.Success(c, gin.H{"message": "启用成功"})
+}
+
+// DisableUser 禁用AD用户
+func (h *ADDomainHandler) DisableUser(c *gin.Context) {
+	userID := c.Param("id")
+	if userID == "" {
+		response.Error(c, http.StatusBadRequest, "用户ID不能为空")
+		return
+	}
+
+	var req struct {
+		ConfigID string `json:"configId" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		return
+	}
+
+	user, err := h.service.GetADUserByID(c.Request.Context(), userID)
+	if err != nil {
+		response.Error(c, http.StatusNotFound, "用户不存在")
+		return
+	}
+
+	config, err := h.service.GetADConfigByID(c.Request.Context(), req.ConfigID)
+	if err != nil {
+		response.Error(c, http.StatusNotFound, "AD配置不存在")
+		return
+	}
+
+	if err := h.service.DisableADUser(c.Request.Context(), config, user.UserDN); err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	recordOperLog(c, h.core, "AD用户", OperTypeOther)
+	response.Success(c, gin.H{"message": "禁用成功"})
 }
 
 // ListSyncLogs 查询AD同步日志列表

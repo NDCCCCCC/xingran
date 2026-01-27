@@ -33,17 +33,20 @@ type ExcelColumn struct {
 	MaxLength int
 	Pattern   string
 	Options   ExcelOptionsMap
-	Reference string
+	Reference string   // 引用配置，格式："table.field"，用于名称到ID的转换
+	UpsertKey bool     // 是否作为Upsert的唯一键（用于判断重复记录）
 }
 
 // ExcelConfig Excel配置
 type ExcelConfig struct {
-	SheetName  string
-	TableName  string
-	EntityName string
-	Columns    []ExcelColumn
-	HasHeader  bool
-	StartRow   int
+	SheetName     string
+	TableName     string
+	EntityName    string
+	Columns       []ExcelColumn
+	HasHeader     bool
+	StartRow      int
+	CachePatterns []string  // 导入后需要清理的缓存模式
+	UniqueKeys    []string  // 用于判断重复的字段组合（备用，未配置UpsertKey时使用）
 }
 
 // ExcelConfigs 所有Excel配置映射
@@ -71,17 +74,18 @@ var ExcelConfigs = map[string]ExcelConfig{
 		TableName:  "ops_buildings",
 		EntityName: "楼宇",
 		HasHeader:  true,
-		StartRow:   2, // 第一行是表头，从第二行开始是数据
+		StartRow:   2,
+		CachePatterns: []string{"building:*", "buildings:*"},
+		UniqueKeys:    []string{"name", "orgId"}, // 按名称+机构判断重复
 		Columns: []ExcelColumn{
-			{Field: "name", Header: "楼宇名称", Required: true, MaxLength: 100},
+			{Field: "name", Header: "楼宇名称", Required: true, MaxLength: 100, UpsertKey: true},
 			{Field: "cityCode", Header: "城市代码", MaxLength: 20},
 			{Field: "cityName", Header: "城市名称", MaxLength: 50},
 			{Field: "address", Header: "地址", MaxLength: 200},
 			{Field: "longitude", Header: "经度"},
 			{Field: "latitude", Header: "纬度"},
-			{Field: "parentId", Header: "父级楼宇ID", MaxLength: 64},
+			{Field: "orgName", Header: "所属机构名称/编码", Required: true, MaxLength: 100, Reference: "sys_dept.dept_code"}, // 用户提供机构名称或编码，自动转换为orgId
 			{Field: "level", Header: "层级", Options: map[interface{}]string{1: "城市级汇总", 2: "具体楼宇"}},
-			{Field: "orgId", Header: "所属机构ID", MaxLength: 64},
 			{Field: "status", Header: "状态", Options: map[interface{}]string{int(operations.BuildingStatusNormal): "正常", int(operations.BuildingStatusStopped): "停用"}},
 			{Field: "remark", Header: "备注", MaxLength: 500},
 		},
@@ -92,11 +96,12 @@ var ExcelConfigs = map[string]ExcelConfig{
 		EntityName: "楼层",
 		HasHeader:  true,
 		StartRow:   2,
+		CachePatterns: []string{"floor:*", "floors:*"},
+		UniqueKeys:    []string{"buildingId", "floorNo"}, // 按楼宇+楼层号判断重复
 		Columns: []ExcelColumn{
 			{Field: "name", Header: "楼层名称", Required: true, MaxLength: 100},
-			{Field: "floorNo", Header: "楼层号", Required: true, MaxLength: 50},
-			{Field: "buildingId", Header: "所属楼宇ID", Required: true, Reference: "ops_buildings.id"},
-			{Field: "buildingName", Header: "所属楼宇名称", MaxLength: 100},
+			{Field: "floorNo", Header: "楼层号", Required: true, MaxLength: 50, UpsertKey: true},
+			{Field: "buildingName", Header: "所属楼宇名称", Required: true, MaxLength: 100, Reference: "ops_buildings.name"}, // 用户提供楼宇名称，自动转换为buildingId
 			{Field: "status", Header: "状态", Options: map[interface{}]string{int(operations.FloorStatusNormal): "正常", int(operations.FloorStatusStopped): "停用"}},
 			{Field: "remark", Header: "备注", MaxLength: 500},
 		},
@@ -107,10 +112,11 @@ var ExcelConfigs = map[string]ExcelConfig{
 		EntityName: "工位",
 		HasHeader:  true,
 		StartRow:   2,
+		CachePatterns: []string{"workstation:*", "workstations:*"},
+		UniqueKeys:    []string{"floorId", "workstationName"}, // 按楼层+工位名称判断重复
 		Columns: []ExcelColumn{
-			{Field: "name", Header: "工位名称", Required: true, MaxLength: 100},
-			{Field: "floorId", Header: "所属楼层ID", Required: true, Reference: "ops_floors.id"},
-			{Field: "floorName", Header: "所属楼层名称", MaxLength: 100},
+			{Field: "name", Header: "工位名称", Required: true, MaxLength: 100, UpsertKey: true},
+			{Field: "floorName", Header: "所属楼层名称", Required: true, MaxLength: 100, Reference: "ops_floors.name"}, // 用户提供楼层名称，自动转换为floorId
 			{Field: "workstationType", Header: "工位类型", Options: map[interface{}]string{int(models.WorkstationTypeFixed): "固定工位", int(models.WorkstationTypeHotDesk): "灵活工位", int(models.WorkstationTypeManager): "管理工位"}},
 			{Field: "status", Header: "状态", Options: map[interface{}]string{int(models.WorkstationStatusAvailable): "空闲", int(models.WorkstationStatusOccupied): "占用", int(models.WorkstationStatusMaintain): "维护"}},
 			{Field: "remark", Header: "备注", MaxLength: 500},
@@ -189,15 +195,12 @@ var ExcelConfigs = map[string]ExcelConfig{
 		EntityName: "信息点",
 		HasHeader:  true,
 		StartRow:   2,
+		CachePatterns: []string{"infoPoint:*", "info_points:*"},
+		UniqueKeys:    []string{"workstationId", "name"}, // 按工位+名称判断重复
 		Columns: []ExcelColumn{
-			{Field: "name", Header: "信息点名称", Required: true, MaxLength: 100},
+			{Field: "name", Header: "信息点名称", Required: true, MaxLength: 100, UpsertKey: true},
 			{Field: "infoPointType", Header: "信息点类型", Options: map[interface{}]string{string(operations.InfoPointTypeNetwork): "网络信息点", string(operations.InfoPointTypePower): "电源信息点", string(operations.InfoPointTypeOther): "其他"}},
-			{Field: "workstationId", Header: "关联工位ID", Required: true, Reference: "sys_workstation.id"},
-			{Field: "workstationName", Header: "关联工位名称", MaxLength: 100},
-			{Field: "deviceId", Header: "关联设备ID", MaxLength: 64},
-			{Field: "deviceName", Header: "关联设备名称", MaxLength: 100},
-			{Field: "portId", Header: "关联端口ID", MaxLength: 64},
-			{Field: "portName", Header: "关联端口名称", MaxLength: 100},
+			{Field: "workstationName", Header: "关联工位名称", Required: true, MaxLength: 100, Reference: "sys_workstation.workstation_name"}, // 用户提供工位名称，自动转换为workstationId
 			{Field: "status", Header: "状态", Options: map[interface{}]string{int(operations.InfoPointStatusNormal): "正常", int(operations.InfoPointStatusFault): "故障", int(operations.InfoPointStatusDisabled): "停用"}},
 			{Field: "remark", Header: "备注", MaxLength: 500},
 		},

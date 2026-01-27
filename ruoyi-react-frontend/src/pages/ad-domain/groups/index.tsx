@@ -26,8 +26,10 @@ import {
   removeADGroupMember,
   updateADGroup,
   getADUserList,
+  getADOUTree,
   type ADGroup,
-  type ADUser
+  type ADUser,
+  type ADOUNode
 } from '@/lib/adDomainApi';
 import { useADConfigs } from '@/hooks/useADConfigs';
 import type { ADConfig } from '@/lib/adDomainApi';
@@ -62,19 +64,64 @@ const ADGroupPage: FC = () => {
   const [addMemberVisible, setAddMemberVisible] = useState(false);
   const [availableUsers, setAvailableUsers] = useState<ADUser[]>([]);
 
-  const fetchGroups = async () => {
+  const [searchGroupName, setSearchGroupName] = useState<string>();
+  const [ouList, setOUList] = useState<Array<{ dn: string; name: string }>>([]);
+  const [selectedOUDN, setSelectedOUDN] = useState<string | undefined>();
+
+  // 扁平化OU树，提取所有OU
+  const flattenOUTree = (nodes: ADOUNode[]): Array<{ dn: string; name: string }> => {
+    const result: Array<{ dn: string; name: string }> = [];
+    const traverse = (node: ADOUNode) => {
+      result.push({ dn: node.dn, name: node.name });
+      if (node.children) {
+        node.children.forEach(traverse);
+      }
+    };
+    nodes.forEach(traverse);
+    return result;
+  };
+
+  // 获取OU列表
+  useEffect(() => {
+    if (!selectedConfig) return;
+
+    const fetchOUs = async () => {
+      try {
+        const res = await getADOUTree(selectedConfig);
+        if (res.code === 0 && res.data) {
+          const flattened = flattenOUTree(res.data);
+          setOUList(flattened);
+
+          // 默认选择"本部部门分组"
+          const defaultOU = flattened.find(ou => ou.name === '本部部门分组');
+          if (defaultOU) {
+            setSelectedOUDN(defaultOU.dn);
+          }
+        }
+      } catch {
+        // 忽略错误
+      }
+    };
+
+    fetchOUs();
+  }, [selectedConfig]);
+
+  const fetchGroups = async (groupName?: string) => {
     if (!selectedConfig) return;
 
     setGroupLoading(true);
     try {
       const res = await getADGroupList({
         configId: selectedConfig,
+        ouDn: selectedOUDN,
+        groupName: groupName,
         current: paginationProps.current,
         pageSize: paginationProps.pageSize,
       });
       if (res.code === 0) {
         setGroups(res.data?.list ?? []);
         setTotal(res.data?.total ?? 0);
+        setSearchGroupName(groupName);
       }
     } catch {
       message.error('获取用户组列表失败');
@@ -85,13 +132,19 @@ const ADGroupPage: FC = () => {
 
   useEffect(() => {
     if (selectedConfig) {
-      fetchGroups();
+      fetchGroups(searchGroupName);
     }
-  }, [selectedConfig, paginationProps.current, paginationProps.pageSize]);
+  }, [selectedConfig, selectedOUDN, paginationProps.current, paginationProps.pageSize]);
 
   const handleSearch = () => {
+    const groupName = form.getFieldValue('groupName');
     setCurrent(1);
-    fetchGroups();
+    fetchGroups(groupName);
+  };
+
+  const handleOUChange = (ouDn: string) => {
+    setSelectedOUDN(ouDn || undefined);
+    setCurrent(1);
   };
 
   const handleViewMembers = async (group: ADGroup) => {
@@ -277,6 +330,23 @@ const ADGroupPage: FC = () => {
               options={configs.map(c => ({ label: c.configName, value: c.id }))}
             />
           </Form.Item>
+          <Form.Item label="所属OU">
+            <Select
+              style={{ width: 250 }}
+              value={selectedOUDN}
+              onChange={handleOUChange}
+              allowClear
+              placeholder="选择OU（默认：本部部门分组）"
+              showSearch
+              optionFilterProp="children"
+            >
+              {ouList.map(ou => (
+                <Select.Option key={ou.dn} value={ou.dn}>
+                  {ou.name}
+                </Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
           <Form.Item name="groupName">
             <Input placeholder="组名称" allowClear />
           </Form.Item>
@@ -285,7 +355,7 @@ const ADGroupPage: FC = () => {
               <Button type="primary" onClick={handleSearch}>
                 查询
               </Button>
-              <Button icon={<ReloadOutlined />} onClick={fetchGroups}>
+              <Button icon={<ReloadOutlined />} onClick={() => fetchGroups(searchGroupName)}>
                 刷新
               </Button>
             </Space>

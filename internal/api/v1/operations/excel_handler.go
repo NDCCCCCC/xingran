@@ -13,6 +13,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 	opsServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
@@ -47,7 +48,9 @@ func importData(entityType string, core *core.Core) gin.HandlerFunc {
 		}
 
 		// 调用服务导入数据
-		excelService := opsServices.NewExcelService(core.DB.GetDB(), core.PwdManager)
+		// 创建缓存适配器
+		cacheProvider := system.NewCacheAdapter(core.Cache)
+		excelService := opsServices.NewExcelService(core.DB.GetDB(), core.PwdManager, cacheProvider)
 		result, err := excelService.ImportData(c.Request.Context(), entityType, file, userID.(string))
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
@@ -85,7 +88,9 @@ func exportData(entityType string, core *core.Core) gin.HandlerFunc {
 		}
 
 		// 调用服务导出数据
-		excelService := opsServices.NewExcelService(core.DB.GetDB(), core.PwdManager)
+		// 创建缓存适配器
+		cacheProvider := system.NewCacheAdapter(core.Cache)
+		excelService := opsServices.NewExcelService(core.DB.GetDB(), core.PwdManager, cacheProvider)
 		file, err := excelService.ExportData(c.Request.Context(), entityType, params)
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
@@ -121,7 +126,9 @@ type ExportRequest struct {
 func downloadTemplate(entityType string, core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 生成模板
-		excelService := opsServices.NewExcelService(core.DB.GetDB(), core.PwdManager)
+		// 创建缓存适配器
+		cacheProvider := system.NewCacheAdapter(core.Cache)
+		excelService := opsServices.NewExcelService(core.DB.GetDB(), core.PwdManager, cacheProvider)
 		file, err := excelService.GenerateTemplate(entityType)
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())

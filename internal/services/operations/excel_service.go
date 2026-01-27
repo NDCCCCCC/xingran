@@ -10,19 +10,30 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/xuri/excelize/v2"
 	"gorm.io/gorm"
 )
 
 // ExcelService Excel导入导出服务
 type ExcelService struct {
-	db         *gorm.DB
-	pwdManager *security.PasswordManager
+	db                *gorm.DB
+	pwdManager        *security.PasswordManager
+	referenceResolver ReferenceResolver
+	cacheInvalidator  *CacheInvalidator
+	cache             system.CacheProvider
 }
 
 // NewExcelService 创建Excel服务
-func NewExcelService(db *gorm.DB, pwdManager *security.PasswordManager) *ExcelService {
-	return &ExcelService{db: db, pwdManager: pwdManager}
+func NewExcelService(db *gorm.DB, pwdManager *security.PasswordManager, cache system.CacheProvider) *ExcelService {
+	return &ExcelService{
+		db:                db,
+		pwdManager:        pwdManager,
+		referenceResolver: NewReferenceResolver(db),
+		cacheInvalidator:  NewCacheInvalidator(cache),
+		cache:             cache,
+	}
 }
 
 // ImportError 导入错误
@@ -98,7 +109,7 @@ func (s *ExcelService) getExampleValue(col ExcelColumn) string {
 	return ""
 }
 
-// ImportData 导入Excel数据
+// ImportData 导入Excel数据（增强版：支持引用解析和批量Upsert）
 func (s *ExcelService) ImportData(ctx context.Context, entityType string, file *multipart.FileHeader, userID string) (*ImportResult, error) {
 	config, exists := GetExcelConfig(entityType)
 	if !exists {
@@ -132,7 +143,10 @@ func (s *ExcelService) ImportData(ctx context.Context, entityType string, file *
 		Errors: make([]ImportError, 0),
 	}
 
-	// 解析每一行数据
+	// 阶段1：收集所有行数据和引用解析请求
+	var validRecords []map[string]interface{}
+	var allRefRequests []ReferenceRequest
+
 	for rowNum := config.StartRow; rowNum <= len(rows); rowNum++ {
 		if rowNum-1 >= len(rows) {
 			break
@@ -144,7 +158,7 @@ func (s *ExcelService) ImportData(ctx context.Context, entityType string, file *
 			continue
 		}
 
-		// 验证并解析数据
+		// 验证并解析数据（不立即保存）
 		data, validationErrors := s.validateAndParseRow(ctx, row, rowNum, config, userID)
 		if len(validationErrors) > 0 {
 			result.Failed++
@@ -152,21 +166,162 @@ func (s *ExcelService) ImportData(ctx context.Context, entityType string, file *
 			continue
 		}
 
-		// 保存到数据库
-		if err := s.saveData(ctx, entityType, data); err != nil {
-			result.Failed++
-			result.Errors = append(result.Errors, ImportError{
-				Row:   rowNum,
-				Field: "all",
-				Error: err.Error(),
-			})
-			continue
+		// 收集引用解析请求
+		rowRefs := s.extractReferenceRequests(data, config)
+		if len(rowRefs) > 0 {
+			allRefRequests = append(allRefRequests, rowRefs...)
 		}
 
-		result.Success++
+		validRecords = append(validRecords, data)
+	}
+
+	// 阶段2：批量解析所有引用（性能优化）
+	if len(allRefRequests) > 0 {
+		refResults, err := s.referenceResolver.ResolveBatch(ctx, allRefRequests)
+		if err != nil {
+			// 引用解析失败，记录错误但继续处理
+			logger.Warnf("批量解析引用失败: %v", err)
+		}
+
+		// 应用引用解析结果到所有记录
+		for _, data := range validRecords {
+			s.applyReferenceResults(data, refResults, config)
+		}
+	}
+
+	// 阶段3：批量Upsert到数据库
+	upserter := NewBatchUpsert(s.db, config)
+	if len(validRecords) > 0 {
+		// 将记录转换为适合Upsert的格式（处理字段名映射）
+		records := s.prepareRecordsForUpsert(validRecords, config)
+
+		inserted, updated, err := upserter.Upsert(ctx, records)
+		if err != nil {
+			return nil, fmt.Errorf("批量保存数据失败: %w", err)
+		}
+
+		result.Success = inserted + updated
+
+		// 阶段4：清理缓存
+		if result.Success > 0 && len(config.CachePatterns) > 0 {
+			if cacheErr := s.cacheInvalidator.InvalidateByEntityType(ctx, entityType, config.CachePatterns); cacheErr != nil {
+				logger.Warnf("[%s] 清理缓存失败: %v", entityType, cacheErr)
+			}
+		}
 	}
 
 	return result, nil
+}
+
+// extractReferenceRequests 提取引用解析请求
+func (s *ExcelService) extractReferenceRequests(
+	data map[string]interface{},
+	config ExcelConfig,
+) []ReferenceRequest {
+	var requests []ReferenceRequest
+
+	for _, col := range config.Columns {
+		if col.Reference != "" {
+			if value, ok := data[col.Field].(string); ok && value != "" {
+				requests = append(requests, ReferenceRequest{
+					Reference: col.Reference,
+					Value:     value,
+				})
+			}
+		}
+	}
+
+	return requests
+}
+
+// applyReferenceResults 应用引用解析结果
+// 将用户填写的名称/编码替换为数据库中的ID
+func (s *ExcelService) applyReferenceResults(
+	data map[string]interface{},
+	refResults map[string]string,
+	config ExcelConfig,
+) {
+	resolver := &referenceResolverImpl{}
+
+	for _, col := range config.Columns {
+		if col.Reference != "" {
+			if value, ok := data[col.Field].(string); ok && value != "" {
+				key := resolver.makeKey(col.Reference, value)
+				if id, exists := refResults[key]; exists {
+					// 将名称/编码替换为ID，并映射到正确的字段
+					targetField := s.getTargetFieldForReference(col.Field, col.Reference)
+					data[targetField] = id
+					// 删除原始的名称字段（避免数据冗余）
+					delete(data, col.Field)
+				} else {
+					logger.Debugf("引用解析失败: %s=%s", col.Reference, value)
+				}
+			}
+		}
+	}
+}
+
+// getTargetFieldForReference 根据引用配置获取目标字段名
+// 例如：orgName -> orgId, buildingName -> buildingId
+func (s *ExcelService) getTargetFieldForReference(currentField, reference string) string {
+	// 如果字段名以Name结尾，替换为Id
+	if strings.HasSuffix(currentField, "Name") {
+		return strings.TrimSuffix(currentField, "Name") + "Id"
+	}
+	// 如果字段名以Code结尾，同样处理
+	if strings.HasSuffix(currentField, "Code") {
+		return strings.TrimSuffix(currentField, "Code") + "Id"
+	}
+	// 默认返回原字段名
+	return currentField
+}
+
+// prepareRecordsForUpsert 准备用于批量Upsert的记录
+// 处理字段名映射和特殊字段
+func (s *ExcelService) prepareRecordsForUpsert(
+	records []map[string]interface{},
+	config ExcelConfig,
+) []map[string]interface{} {
+	prepared := make([]map[string]interface{}, 0, len(records))
+
+	for _, record := range records {
+		preparedRecord := make(map[string]interface{})
+
+		for _, col := range config.Columns {
+			if value, exists := record[col.Field]; exists {
+				// 映射字段名（处理数据库列名和JSON标签的差异）
+				dbFieldName := s.getDBFieldName(col.Field)
+				preparedRecord[dbFieldName] = value
+			}
+		}
+
+		// 添加公共字段
+		preparedRecord["updated_at"] = time.Now()
+
+		prepared = append(prepared, preparedRecord)
+	}
+
+	return prepared
+}
+
+// getDBFieldName 获取数据库字段名
+// 将驼峰命名转换为下划线命名
+func (s *ExcelService) getDBFieldName(fieldName string) string {
+	// 简单实现：大多数字段名已经是数据库字段名
+	// 特殊处理需要转换的字段
+	fieldMapping := map[string]string{
+		"workstationName": "workstation_name",
+		"buildingName":    "building_name",
+		"floorName":       "floor_name",
+		"orgName":         "org_id", // 特殊：orgName映射到org_id
+		"infoPointType":   "info_point_type",
+	}
+
+	if mapped, exists := fieldMapping[fieldName]; exists {
+		return mapped
+	}
+
+	return fieldName
 }
 
 // isEmptyRow 检查是否为空行

@@ -8,7 +8,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// UserService 用户管理服务
+// UserService 用户服务
 type UserService struct {
 	db *gorm.DB
 }
@@ -28,16 +28,18 @@ type UserListRequest struct {
 	PageSize  int     `json:"pageSize"`
 }
 
-// GetList 获取AD用户列表
+// GetList 获取用户列表
 func (s *UserService) GetList(ctx context.Context, req *UserListRequest) ([]models.ADUser, int64, error) {
 	var users []models.ADUser
 	var total int64
 
 	query := s.db.WithContext(ctx).Model(&models.ADUser{}).
-		Where("ad_config_id = ? AND deleted_at IS NULL", req.ConfigID)
+		Where("ad_config_id = ? AND deleted_at IS NULL", req.ConfigID).
+		Where("username NOT LIKE ?", "$DUPLICATE-%")
 
 	if req.OUDN != nil {
-		query = query.Where("ou_dn = ?", *req.OUDN)
+		// 选择父OU时包含所有子OU: ou_dn = '选中的OU' OR ou_dn LIKE '%,选中的OU'
+		query = query.Where("ou_dn = ? OR ou_dn LIKE ?", *req.OUDN, "%,"+*req.OUDN)
 	}
 
 	if req.Username != nil {
@@ -49,13 +51,13 @@ func (s *UserService) GetList(ctx context.Context, req *UserListRequest) ([]mode
 	}
 
 	if err := query.Count(&total).Error; err != nil {
-		return nil, 0, fmt.Errorf("查询AD用户总数失败: %w", err)
+		return nil, 0, fmt.Errorf("查询总数失败: %w", err)
 	}
 
 	offset := (req.Current - 1) * req.PageSize
 	err := query.Offset(offset).Limit(req.PageSize).Order("username ASC").Find(&users).Error
 	if err != nil {
-		return nil, 0, fmt.Errorf("查询AD用户列表失败: %w", err)
+		return nil, 0, fmt.Errorf("查询列表失败: %w", err)
 	}
 
 	return users, total, nil
@@ -71,7 +73,22 @@ func (s *UserService) GetByDN(ctx context.Context, configID, userDN string) (*mo
 		if err == gorm.ErrRecordNotFound {
 			return nil, fmt.Errorf("用户不存在")
 		}
-		return nil, fmt.Errorf("查询用户失败: %w", err)
+		return nil, fmt.Errorf("查询失败: %w", err)
+	}
+	return &user, nil
+}
+
+// GetByID 根据数据库ID获取用户
+func (s *UserService) GetByID(ctx context.Context, userID string) (*models.ADUser, error) {
+	var user models.ADUser
+	err := s.db.WithContext(ctx).
+		Where("id = ? AND deleted_at IS NULL", userID).
+		First(&user).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, fmt.Errorf("用户不存在")
+		}
+		return nil, fmt.Errorf("查询失败: %w", err)
 	}
 	return &user, nil
 }
@@ -87,13 +104,13 @@ type UserUpdateRequest struct {
 	Description *string `json:"description,omitempty"`
 }
 
-// Update 更新AD用户
+// Update 更新用户
 func (s *UserService) Update(ctx context.Context, config *models.ADConfig, userDN string, req *UserUpdateRequest) error {
 	config.AdminPassword = decryptPassword(config.AdminPassword)
 
 	client := NewLDAPClient(config)
 	if err := client.Connect(); err != nil {
-		return fmt.Errorf("连接AD服务器失败: %w", err)
+		return fmt.Errorf("连接失败: %w", err)
 	}
 	defer client.Close()
 
@@ -156,7 +173,7 @@ func (s *UserService) Update(ctx context.Context, config *models.ADConfig, userD
 	return nil
 }
 
-// Enable 启用AD用户
+// Enable 启用用户
 func (s *UserService) Enable(ctx context.Context, config *models.ADConfig, userDN string) error {
 	config.AdminPassword = decryptPassword(config.AdminPassword)
 
@@ -170,7 +187,6 @@ func (s *UserService) Enable(ctx context.Context, config *models.ADConfig, userD
 		return err
 	}
 
-	// 更新本地缓存
 	s.db.WithContext(ctx).Model(&models.ADUser{}).
 		Where("ad_config_id = ? AND user_dn = ?", config.ID, userDN).
 		Update("is_enabled", true)
@@ -178,7 +194,7 @@ func (s *UserService) Enable(ctx context.Context, config *models.ADConfig, userD
 	return nil
 }
 
-// Disable 禁用AD用户
+// Disable 禁用用户
 func (s *UserService) Disable(ctx context.Context, config *models.ADConfig, userDN string) error {
 	config.AdminPassword = decryptPassword(config.AdminPassword)
 
@@ -192,7 +208,6 @@ func (s *UserService) Disable(ctx context.Context, config *models.ADConfig, user
 		return err
 	}
 
-	// 更新本地缓存
 	s.db.WithContext(ctx).Model(&models.ADUser{}).
 		Where("ad_config_id = ? AND user_dn = ?", config.ID, userDN).
 		Update("is_enabled", false)
@@ -200,7 +215,7 @@ func (s *UserService) Disable(ctx context.Context, config *models.ADConfig, user
 	return nil
 }
 
-// Move 移动AD用户到其他OU
+// Move 移动用户到其他OU
 func (s *UserService) Move(ctx context.Context, config *models.ADConfig, userDN, newOUDN string) error {
 	config.AdminPassword = decryptPassword(config.AdminPassword)
 
@@ -214,7 +229,6 @@ func (s *UserService) Move(ctx context.Context, config *models.ADConfig, userDN,
 		return err
 	}
 
-	// 更新本地缓存
 	s.db.WithContext(ctx).Model(&models.ADUser{}).
 		Where("ad_config_id = ? AND user_dn = ?", config.ID, userDN).
 		Update("ou_dn", newOUDN)

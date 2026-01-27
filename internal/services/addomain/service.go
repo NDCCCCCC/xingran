@@ -218,6 +218,11 @@ func (s *ADDomainService) GetADUserByDN(ctx context.Context, configID, userDN st
 	return s.User.GetByDN(ctx, configID, userDN)
 }
 
+// GetADUserByID 根据数据库ID获取用户（兼容旧API）
+func (s *ADDomainService) GetADUserByID(ctx context.Context, userID string) (*models.ADUser, error) {
+	return s.User.GetByID(ctx, userID)
+}
+
 // GetADGroupList 获取AD用户组列表（兼容旧API）
 func (s *ADDomainService) GetADGroupList(ctx context.Context, req *ADGroupListRequest) ([]models.ADGroup, int64, error) {
 	return s.Group.GetList(ctx, &GroupListRequest{
@@ -247,4 +252,32 @@ func (s *ADDomainService) GetADComputerList(ctx context.Context, req *ComputerLi
 // GetADComputerByDN 根据DN获取电脑设备（兼容旧API）
 func (s *ADDomainService) GetADComputerByDN(ctx context.Context, configID, computerDN string) (*ComputerDetail, error) {
 	return s.Computer.GetByDN(ctx, configID, computerDN)
+}
+
+// UpdateADUser 更新AD用户（兼容旧API）
+func (s *ADDomainService) UpdateADUser(ctx context.Context, config *models.ADConfig, userDN string, req *ADUserUpdateRequest) error {
+	return s.User.Update(ctx, config, userDN, &UserUpdateRequest{
+		DisplayName: req.DisplayName,
+		Email:       req.Email,
+		Phone:       req.Phone,
+		Mobile:      req.Mobile,
+		Title:       req.Title,
+		Department:  req.Department,
+		Description: req.Description,
+	})
+}
+
+// MoveADUser 移动AD用户（兼容旧API）
+func (s *ADDomainService) MoveADUser(ctx context.Context, config *models.ADConfig, userDN, newOUDN string) error {
+	return s.User.Move(ctx, config, userDN, newOUDN)
+}
+
+// EnableADUser 启用AD用户（兼容旧API）
+func (s *ADDomainService) EnableADUser(ctx context.Context, config *models.ADConfig, userDN string) error {
+	return s.User.Enable(ctx, config, userDN)
+}
+
+// DisableADUser 禁用AD用户（兼容旧API）
+func (s *ADDomainService) DisableADUser(ctx context.Context, config *models.ADConfig, userDN string) error {
+	return s.User.Disable(ctx, config, userDN)
 }

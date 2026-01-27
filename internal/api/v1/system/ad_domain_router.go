@@ -61,6 +61,10 @@ func SetupADDomainRouter(r *gin.RouterGroup, core *core.Core) {
 	{
 		users.POST("/list", handler.ListUsers)
 		users.GET("/:id", handler.GetUserDetail)
+		users.POST("/:id/update", handler.UpdateUser)
+		users.POST("/:id/move", handler.MoveUser)
+		users.POST("/:id/enable", handler.EnableUser)
+		users.POST("/:id/disable", handler.DisableUser)
 	}
 
 	// 同步日志

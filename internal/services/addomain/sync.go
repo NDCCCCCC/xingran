@@ -22,13 +22,13 @@ func NewSyncService(db *gorm.DB) *SyncService {
 
 // SyncResult 同步结果
 type SyncResult struct {
-	OUCount      int `json:"ouCount"`
-	GroupCount   int `json:"groupCount"`
-	UserCount    int `json:"userCount"`
+	OUCount       int `json:"ouCount"`
+	GroupCount    int `json:"groupCount"`
+	UserCount     int `json:"userCount"`
 	ComputerCount int `json:"computerCount"`
 }
 
-// SyncDataByID 根据配置ID同步AD数据
+// SyncDataByID 根据配置ID同步数据
 func (s *SyncService) SyncDataByID(ctx context.Context, configID string, syncType string) (*SyncResult, error) {
 	var config models.ADConfig
 	if err := s.db.WithContext(ctx).Where("id = ? AND status = ?", configID, models.ADConfigStatusEnabled).First(&config).Error; err != nil {
@@ -37,9 +37,8 @@ func (s *SyncService) SyncDataByID(ctx context.Context, configID string, syncTyp
 	return s.SyncData(ctx, &config, syncType)
 }
 
-// SyncData 同步AD数据
+// SyncData 同步数据
 func (s *SyncService) SyncData(ctx context.Context, config *models.ADConfig, syncType string) (*SyncResult, error) {
-	// 创建同步日志
 	syncLog := &models.ADSyncLog{
 		ADConfigID: config.ID,
 		SyncType:   models.ADSyncType(syncType),
@@ -50,7 +49,6 @@ func (s *SyncService) SyncData(ctx context.Context, config *models.ADConfig, syn
 		return nil, fmt.Errorf("创建同步日志失败: %w", err)
 	}
 
-	// 解密密码
 	config.AdminPassword = decryptPassword(config.AdminPassword)
 
 	client := NewLDAPClient(config)
@@ -62,7 +60,6 @@ func (s *SyncService) SyncData(ctx context.Context, config *models.ADConfig, syn
 
 	result := &SyncResult{}
 
-	// 同步OU
 	ous, err := client.SearchOUs(config.BaseDN)
 	if err != nil {
 		s.updateSyncLog(ctx, syncLog.ID, models.ADSyncStatusFailed, 0, 0, 0, 0, err.Error())
@@ -74,7 +71,6 @@ func (s *SyncService) SyncData(ctx context.Context, config *models.ADConfig, syn
 		return nil, err
 	}
 
-	// 同步用户组
 	groups, err := client.SearchGroups(config.BaseDN)
 	if err != nil {
 		s.updateSyncLog(ctx, syncLog.ID, models.ADSyncStatusFailed, result.OUCount, 0, 0, 0, err.Error())
@@ -86,7 +82,6 @@ func (s *SyncService) SyncData(ctx context.Context, config *models.ADConfig, syn
 		return nil, err
 	}
 
-	// 同步用户
 	users, err := client.SearchUsers(config.BaseDN)
 	if err != nil {
 		s.updateSyncLog(ctx, syncLog.ID, models.ADSyncStatusFailed, result.OUCount, result.GroupCount, 0, 0, err.Error())
@@ -98,7 +93,6 @@ func (s *SyncService) SyncData(ctx context.Context, config *models.ADConfig, syn
 		return nil, err
 	}
 
-	// 同步电脑设备
 	computerService := NewComputerService(s.db)
 	computers, err := client.SearchComputers(config.BaseDN)
 	if err != nil {
@@ -111,13 +105,11 @@ func (s *SyncService) SyncData(ctx context.Context, config *models.ADConfig, syn
 		return nil, err
 	}
 
-	// 更新配置的最后同步时间
 	now := time.Now()
 	s.db.WithContext(ctx).Model(config).Updates(map[string]interface{}{
 		"last_sync_at": now,
 	})
 
-	// 完成同步日志
 	s.updateSyncLog(ctx, syncLog.ID, models.ADSyncStatusSuccess, result.OUCount, result.GroupCount, result.UserCount, result.ComputerCount, "")
 
 	return result, nil
@@ -225,26 +217,22 @@ func (s *SyncService) syncGroups(ctx context.Context, config *models.ADConfig, e
 		return nil
 	}
 
-	// 批量获取所有 Group DN
 	groupDNs := make([]string, 0, len(entries))
 	for _, entry := range entries {
 		groupDNs = append(groupDNs, entry.DN)
 	}
 
-	// 批量查询已存在的 Group
 	var existingGroups []models.ADGroup
 	s.db.WithContext(ctx).Where("ad_config_id = ? AND group_dn IN ?", config.ID, groupDNs).Find(&existingGroups)
 
-	// 创建 DN -> Group 的映射
 	existingGroupMap := make(map[string]*models.ADGroup)
 	for i := range existingGroups {
 		existingGroupMap[existingGroups[i].GroupDN] = &existingGroups[i]
 	}
 
-	// 准备批量操作的数据
 	var groupsToCreate []models.ADGroup
 	groupsToUpdate := make(map[string]*models.ADGroup)
-	groupMembersMap := make(map[string][]string) // groupDN -> members
+	groupMembersMap := make(map[string][]string)
 	now := time.Now()
 
 	for _, entry := range entries {
@@ -253,14 +241,10 @@ func (s *SyncService) syncGroups(ctx context.Context, config *models.ADConfig, e
 		description := entry.GetAttributeValue("description")
 		members := entry.GetAttributeValues("member")
 
-		// 提取所属OU DN
 		ouDN := extractParentDN(groupDN)
-
-		// 保存成员信息供后续同步
 		groupMembersMap[groupDN] = members
 
 		if existingGroup, exists := existingGroupMap[groupDN]; exists {
-			// 已存在，标记为需要更新
 			existingGroup.GroupName = groupName
 			existingGroup.Description = description
 			existingGroup.MemberCount = len(members)
@@ -268,7 +252,6 @@ func (s *SyncService) syncGroups(ctx context.Context, config *models.ADConfig, e
 			existingGroup.LastSyncAt = &now
 			groupsToUpdate[groupDN] = existingGroup
 		} else {
-			// 不存在，准备创建
 			groupsToCreate = append(groupsToCreate, models.ADGroup{
 				ADConfigID:  config.ID,
 				GroupDN:     groupDN,
@@ -281,21 +264,18 @@ func (s *SyncService) syncGroups(ctx context.Context, config *models.ADConfig, e
 		}
 	}
 
-	// 批量创建新的 Group
 	if len(groupsToCreate) > 0 {
 		if err := s.db.WithContext(ctx).Create(&groupsToCreate).Error; err != nil {
 			return fmt.Errorf("批量创建用户组失败: %w", err)
 		}
 	}
 
-	// 批量更新已存在的 Group
 	for _, group := range groupsToUpdate {
 		if err := s.db.WithContext(ctx).Save(group).Error; err != nil {
 			return fmt.Errorf("更新用户组失败: %w", err)
 		}
 	}
 
-	// 批量同步成员关系
 	for groupDN, members := range groupMembersMap {
 		if err := s.syncGroupMembers(ctx, config, groupDN, members); err != nil {
 			return err
@@ -416,9 +396,9 @@ func (s *SyncService) syncUsers(ctx context.Context, config *models.ADConfig, en
 		}
 	}
 
-	// 批量创建新的 User（分批）
+	// 批量创建新的 User（分批，每批500个）
 	if len(usersToCreate) > 0 {
-		batchSize := 100
+		batchSize := 500
 		for i := 0; i < len(usersToCreate); i += batchSize {
 			end := i + batchSize
 			if end > len(usersToCreate) {
@@ -430,10 +410,24 @@ func (s *SyncService) syncUsers(ctx context.Context, config *models.ADConfig, en
 		}
 	}
 
-	// 批量更新已存在的 User
-	for _, user := range usersToUpdate {
-		if err := s.db.WithContext(ctx).Save(user).Error; err != nil {
-			return fmt.Errorf("更新用户失败: %w", err)
+	// 批量更新已存在的 User（分批处理，每批500个）
+	if len(usersToUpdate) > 0 {
+		batchSize := 500
+		usersSlice := make([]*models.ADUser, 0, len(usersToUpdate))
+		for _, user := range usersToUpdate {
+			usersSlice = append(usersSlice, user)
+		}
+
+		for i := 0; i < len(usersSlice); i += batchSize {
+			end := i + batchSize
+			if end > len(usersSlice) {
+				end = len(usersSlice)
+			}
+			for _, user := range usersSlice[i:end] {
+				if err := s.db.WithContext(ctx).Save(user).Error; err != nil {
+					return fmt.Errorf("更新用户失败: %w", err)
+				}
+			}
 		}
 	}
 
