@@ -23,7 +23,7 @@ interface HybridLayoutProps {
   children: ReactNode;
 }
 
-const DASHBOARD_KEY = 'dashboard';
+const DASHBOARD_KEY = '/dashboard';
 
 const isDashboardPath = (path: string): boolean => {
   return path === '/dashboard' || path.startsWith('/dashboard/');
@@ -55,8 +55,12 @@ const HybridLayout: FC<HybridLayoutProps> = ({ children }) => {
   const { currentDashboard } = useDashboardStore();
 
   const getDashboardTitle = useCallback((): string => {
+    // 当在 /dashboard 首页时，始终显示"仪表盘"，不使用 currentDashboard.name
+    if (location.pathname === '/dashboard') {
+      return PAGE_TITLES.DASHBOARD;
+    }
     return currentDashboard?.name || PAGE_TITLES.DASHBOARD;
-  }, [currentDashboard]);
+  }, [currentDashboard, location.pathname]);
 
   useEffect(() => {
     if (location.pathname === '/login') {

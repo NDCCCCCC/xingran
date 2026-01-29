@@ -38,4 +38,5 @@ func SetupCacheRouter(r *gin.RouterGroup, core *core.Core) {
 	// ==================== 测试端点路由 ====================
 	r.GET("/cache/test", cacheHandler.TestCacheEndpoint)
 	r.GET("/cache/debug/raw-keys", cacheHandler.DebugRawKeys)
+	r.GET("/cache/debug/l1", cacheHandler.DebugL1Cache)
 }

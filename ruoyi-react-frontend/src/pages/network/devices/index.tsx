@@ -13,6 +13,7 @@ import {
   Input,
   InputNumber,
   Select,
+  TreeSelect,
   Popconfirm,
   Tag,
   Card,
@@ -62,6 +63,8 @@ import {
   formatDateTime,
   getOptionLabel,
   renderDeptTreeOptions,
+  transformDepartmentsToTreeData,
+  getFirstLevelKeys,
   getStatusColor,
 } from './utils';
 import { useDeviceData } from './hooks/useDeviceData';
@@ -205,6 +208,7 @@ const DeviceManagement: FC = () => {
   // 自定义状态
   const [selectedDeptId, setSelectedDeptId] = useState<string>('');
   const [collectingDeviceId, setCollectingDeviceId] = useState<string | null>(null);
+  const [deptTreeExpandedKeys, setDeptTreeExpandedKeys] = useState<React.Key[]>([]);
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
@@ -454,6 +458,8 @@ const DeviceManagement: FC = () => {
     }
     loadDepartments();
     loadCredentials();
+    // 设置默认展开第一级部门节点
+    setDeptTreeExpandedKeys(getFirstLevelKeys(departments));
   };
 
   // 打开快速创建模态框
@@ -760,7 +766,7 @@ const DeviceManagement: FC = () => {
         title={editingDevice ? '编辑设备' : '手动新增设备'}
         open={modalVisible}
         onOk={handleCreate}
-        onCancel={() => { setEditModalVisible(false); editForm.resetFields(); handleAdd(); }}
+        onCancel={() => { setEditModalVisible(false); editForm.resetFields(); }}
         width={700}
       >
         <Alert
@@ -809,9 +815,22 @@ const DeviceManagement: FC = () => {
             </Select>
           </Form.Item>
           <Form.Item name="deptId" label="所属部门">
-            <Select placeholder="请选择部门" allowClear>
-              {renderDeptTreeOptions(departments)}
-            </Select>
+            <TreeSelect
+              placeholder="请选择部门"
+              allowClear
+              showSearch
+              treeDefaultExpandAll={false}
+              expandedKeys={deptTreeExpandedKeys}
+              onExpand={(expandedKeys) => setDeptTreeExpandedKeys(expandedKeys)}
+              treeData={transformDepartmentsToTreeData(departments)}
+              fieldNames={{ label: 'title', value: 'value', children: 'children' }}
+              style={{ width: '100%' }}
+              dropdownStyle={{ maxHeight: 400, overflow: 'auto' }}
+              filterTreeNode={(input, treeNode) => {
+                const title = treeNode.title?.toString().toLowerCase() || '';
+                return title.includes(input.toLowerCase());
+              }}
+            />
           </Form.Item>
           <Form.Item name="location" label="位置">
             <Input placeholder="请输入位置" />

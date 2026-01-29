@@ -924,3 +924,87 @@ func (h *CacheHandler) DebugRawKeys(c *gin.Context) {
 		"ruoyiKeysList": ruoyiKeys,
 	})
 }
+
+// DebugL1Cache 调试端点：检查L1缓存状态和命中率
+func (h *CacheHandler) DebugL1Cache(c *gin.Context) {
+	fmt.Println("[DEBUG] 检查L1缓存状态")
+
+	if h.core.Cache == nil {
+		response.Error(c, http.StatusInternalServerError, "缓存服务未初始化")
+		return
+	}
+
+	ctx := context.Background()
+
+	// 获取缓存统计
+	cacheWithStats, ok := h.core.Cache.(interface {
+		GetStats(ctx context.Context) (map[string]interface{}, error)
+	})
+	if !ok {
+		response.Error(c, http.StatusInternalServerError, "缓存不支持统计信息")
+		return
+	}
+
+	stats, err := cacheWithStats.GetStats(ctx)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, "获取缓存统计失败")
+		return
+	}
+
+	// 提取L1统计
+	l1StatsRaw, hasL1 := stats["l1"]
+	var l1Stats map[string]interface{}
+	if hasL1 {
+		l1Stats, _ = l1StatsRaw.(map[string]interface{})
+	}
+
+	// 获取L1缓存键数量
+	var l1Keys []string
+	type KeysByLevelInterface interface {
+		KeysByLevel(ctx context.Context, pattern string, level string) ([]string, error)
+	}
+	if cacheWithLevel, ok := h.core.Cache.(KeysByLevelInterface); ok {
+		l1Keys, _ = cacheWithLevel.KeysByLevel(ctx, "*", "l1")
+	}
+
+	result := gin.H{
+		"l1_stats": gin.H{
+			"exists":      hasL1,
+			"stats":       l1Stats,
+			"key_count":   len(l1Keys),
+			"sample_keys": l1Keys,
+		},
+	}
+
+	// 分析命中率
+	if l1Stats != nil {
+		hits, _ := l1Stats["keyspace_hits"].(int64)
+		misses, _ := l1Stats["keyspace_misses"].(int64)
+		hitRate, _ := l1Stats["hit_rate"].(float64)
+
+		result["analysis"] = gin.H{
+			"hits":        hits,
+			"misses":      misses,
+			"total":       hits + misses,
+			"hit_rate":    hitRate,
+			"hit_rate_percent": fmt.Sprintf("%.2f%%", hitRate),
+		}
+
+		if hits == 0 && misses == 0 {
+			result["diagnosis"] = "L1缓存没有发生任何读取操作（hits=0, misses=0）"
+		} else if hits == 0 && misses > 0 {
+			result["diagnosis"] = fmt.Sprintf("L1缓存全部未命中（%d次misses），可能原因：1.缓存冷启动 2.缓存过期(5分钟) 3.LRU淘汰", misses)
+		} else if hitRate < 20 {
+			result["diagnosis"] = fmt.Sprintf("L1缓存命中率过低(%.2f%%)，建议：1.增加L1容量 2.延长TTL 3.检查访问模式", hitRate)
+		} else {
+			result["diagnosis"] = "L1缓存工作正常"
+		}
+	}
+
+	fmt.Printf("[DEBUG] L1缓存: %d个键, hits=%d, misses=%d\n",
+		len(l1Keys),
+		result["l1_stats"].(gin.H)["stats"].(map[string]interface{})["keyspace_hits"],
+		result["l1_stats"].(gin.H)["stats"].(map[string]interface{})["keyspace_misses"])
+
+	response.Success(c, result)
+}

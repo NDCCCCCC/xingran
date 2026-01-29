@@ -7,6 +7,7 @@ import type { Department } from '@/types';
 import type { SelectOption } from './constants';
 import type { ReactElement } from 'react';
 import { Select } from 'antd';
+import type { DataNode } from 'antd/es/tree';
 
 const { Option } = Select;
 
@@ -49,6 +50,36 @@ export function renderDeptTreeOptions(
   };
 
   return renderOptions(departments);
+}
+
+/**
+ * 将部门数据转换为 TreeSelect 需要的树形数据格式
+ */
+export function transformDepartmentsToTreeData(departments: Department[]): DataNode[] {
+  if (!departments || departments.length === 0) {
+    return [];
+  }
+
+  const transform = (nodes: Department[]): DataNode[] => {
+    return nodes.map(node => ({
+      title: node.deptName,
+      value: node.id,
+      key: node.id,
+      children: node.children && node.children.length > 0 ? transform(node.children) : undefined,
+    }));
+  };
+
+  return transform(departments);
+}
+
+/**
+ * 获取第一级节点的 key（用于 TreeSelect 默认展开）
+ */
+export function getFirstLevelKeys(departments: Department[]): string[] {
+  if (!departments || departments.length === 0) {
+    return [];
+  }
+  return departments.map(dept => dept.id);
 }
 
 /**
