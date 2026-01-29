@@ -62,6 +62,30 @@ npm run lint
 - Frontend env: `ruoyi-react-frontend/.env.development`
 - Environment variables: `.env` (DB_HOST, DB_PASSWORD, REDIS_URL, etc.)
 
+**Important Config Values:**
+- `server.mode`: "debug" (dev) or "release" (production)
+- `database.type`: "postgres" or "sqlite"
+- `cache.prefix`: "ruoyi" (used for all Redis keys, see Cache System section)
+- `baidu.map_ak`: Baidu Maps API key for geocoding (read from env or config)
+- `security.request_encryption.exclude_paths`: Endpoints that skip SM2+SM4 encryption
+
+**Environment Variables:**
+```bash
+# Database
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=ruoyi
+DB_PASSWORD=your_password
+DB_NAME=ruoyi_next
+
+# Redis
+REDIS_URL=redis://localhost:6379
+REDIS_PASSWORD=
+
+# Baidu Maps (for geocoding)
+BAIDU_MAP_AK=your_api_key_here
+```
+
 ---
 
 ## Architecture
@@ -372,6 +396,8 @@ func GetDictDataByTypeKey(dictType string) string {
 1. **pkg/cache/** - Low-level cache interface
    - `Cache` interface with Get/Set/Delete methods
    - Redis implementation in `redis.go`
+   - **Important**: Redis uses prefix `ruoyi:` for all keys
+   - When calling cache methods, use keys WITHOUT prefix, the prefix is added automatically
 
 2. **services/** - High-level caching
    - `DataCacheService` - Generic caching with JSON serialization
@@ -381,6 +407,37 @@ func GetDictDataByTypeKey(dictType string) string {
 **Cache key patterns:**
 - Use helper functions like `GetDictDataByTypeKey(dictType)` instead of hardcoding
 - Constants defined in root-level `*_cache_service.go` files
+
+**CRITICAL: Cache Key Prefix Handling**
+- Redis prefix is set to `ruoyi` in `internal/core/core.go:342`
+- When storing: `cache.Set(ctx, "user:1", value)` → actual Redis key: `ruoyi:user:1`
+- When user provides key with prefix in cache monitor operations, always strip it first:
+  ```go
+  if strings.HasPrefix(key, "ruoyi:") {
+      key = key[6:]  // Remove prefix before operations
+  }
+  ```
+
+### Operations Management (楼宇/楼层/工位管理)
+
+- **Excel Import/Export**: Batch import with geocoding support
+  - Location: `internal/services/operations/excel_service.go`
+  - Config: `internal/services/operations/excel_config.go`
+  - Supports: Building, Floor, Workstation, InfoPoint
+  - Auto-features: Geocoding (address → coordinates), department matching, cache invalidation
+
+- **Geocoding Service**: Baidu Maps integration for address resolution
+  - Location: `internal/services/operations/geocoding_service.go`
+  - API: `POST /ops/building/geocode`
+  - Purpose: Solve CORS issues when calling Baidu Maps from frontend
+  - In-memory caching: 30 minutes TTL
+  - Concurrency limit: 5 parallel requests
+
+- **Building Org ID Validation**:
+  - **CRITICAL**: `org_id` must be a valid UUID, NOT a department name
+  - Validation happens in `building_service.go` `validateOrg()` function
+  - Pattern: `^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`
+  - Migration 084 fixes existing data with department names instead of UUIDs
 
 ### Scheduler System
 
@@ -471,3 +528,59 @@ func GetDictDataByTypeKey(dictType string) string {
 - **Import paths**: Use full module path `github.com/ruoyi-next/ruoyi-go-backend/...`
 - **Context propagation**: Always pass `c.Request.Context()` to service methods
 - **Response wrapper**: Use `response.Success()` and `response.Error()`, not raw JSON
+- **Cache prefix confusion**: User input may include `ruoyi:` prefix from UI, always strip before cache operations
+- **UUID validation**: When validating org_id, check format first to avoid PostgreSQL type errors
+- **Frontend API calls**: Use wrapped functions in `@/lib/api.ts`, NOT raw axios
+
+### Testing
+
+```bash
+# Run all tests
+go test ./...
+
+# Run tests for specific package
+go test ./internal/services/operations/
+
+# Run tests with coverage
+go test -cover ./...
+
+# Run specific test
+go test -v -run TestGeocode ./internal/services/operations/
+```
+
+### Running Single Test
+
+```bash
+# Navigate to the package directory first
+cd internal/services/operations
+
+# Run specific test function
+go test -v -run TestBatchUpsert
+
+# Run with verbose output
+go test -v .
+```
+
+### Building
+
+```bash
+# Development build (Windows)
+go build -o ruoyi-backend.exe ./cmd/main.go
+
+# Production build (Linux)
+set GOOS=linux
+set GOARCH=amd64
+set CGO_ENABLED=0
+go build -ldflags="-s -w" -o ruoyi-backend-linux ./cmd/main.go
+```
+
+### Database Migrations
+
+Migrations are in `internal/core/db/migrations/`. They run automatically on application startup.
+
+To run migrations manually:
+```bash
+# Check migration status
+# Migrations are versioned and auto-applied via gorm-auto-migrate
+# Check `internal/core/db/migrations/` for available migrations
+```
