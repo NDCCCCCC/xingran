@@ -43,6 +43,7 @@ import { useTableManager } from '@/hooks/useTableManager';
 import { usePagination } from '@/hooks/usePagination';
 import { handleApiError, handleSuccess } from '@/utils/errorHandler';
 import ActionButtons from '@/components/shared/ActionButtons';
+import { DepartmentTreeSelect } from '@/components/shared';
 import { formatDateTime } from '@/utils/datetime';
 
 // 导入提取的文件
@@ -630,14 +631,9 @@ const UserManagement: FC = () => {
             </Select>
           </Form.Item>
           <Form.Item name="deptId" label="部门">
-            <TreeSelect
-              placeholder="请选择部门"
-              allowClear
-              showSearch
-              treeLine={{ showLeafIcon: false }}
-              treeData={convertDeptTreeData(departments)}
+            <DepartmentTreeSelect
+              departments={departments}
               className="user-form-input"
-              style={{ width: '100%' }}
             />
           </Form.Item>
           <Form.Item name="roleIds" label="角色">

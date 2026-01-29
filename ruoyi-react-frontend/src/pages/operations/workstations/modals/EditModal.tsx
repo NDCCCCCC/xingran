@@ -3,8 +3,9 @@
  * 工位编辑模态框
  */
 
-import { Modal, Form, Input, InputNumber, Select, TreeSelect, Row, Col } from 'antd';
+import { Modal, Form, Input, InputNumber, Select, Row, Col } from 'antd';
 import type { WorkstationOps } from '@/types';
+import { DepartmentTreeSelect } from '@/components/shared';
 import { STATUS_OPTIONS, TYPE_OPTIONS } from '../constants';
 
 const { Option } = Select;
@@ -72,20 +73,14 @@ export function WorkstationEditModal({
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="deptId" label="所属部门">
-              <TreeSelect
-                placeholder="请选择所属部门"
-                allowClear
+              <DepartmentTreeSelect
                 treeData={deptTreeData}
-                showSearch
-                treeDefaultExpandAll
-                treeCheckable={false}
                 onChange={() => {
                   // 当部门变化时，清空用户选择并重新加载用户
                   form.setFieldsValue({ userId: undefined });
                   const deptId = form.getFieldValue('deptId');
                   onDeptChange(deptId);
                 }}
-                style={{ width: '100%' }}
               />
             </Form.Item>
           </Col>

@@ -4,7 +4,7 @@
  */
 
 import { useEffect } from 'react';
-import { Modal, Form, Input, InputNumber, Select, TreeSelect, Space } from 'antd';
+import { Modal, Form, Input, InputNumber, Select, Space, TreeSelect } from 'antd';
 import type { FormInstance } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
 import type { DeptUser, ParentOption } from '../types';

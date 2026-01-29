@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import type { FC } from 'react';
-import { Button, Form, Input, Select, Table, Modal, InputNumber, Space, Tag, message, Popconfirm, Card, Statistic, Row, Col, TreeSelect } from 'antd';
+import { Button, Form, Input, Select, Table, Modal, InputNumber, Space, Tag, message, Popconfirm, Card, Statistic, Row, Col } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, ReloadOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { formatDateTime } from '@/utils/datetime';
 import { usePagination } from '@/hooks/usePagination';
+import { DepartmentTreeSelect } from '@/components/shared';
 import {
   getDutyPoolList,
   createDutyPool,
@@ -20,16 +21,6 @@ import {
 } from '@/lib/dutyApi';
 
 const { Option } = Select;
-
-// 将部门数据转换为 TreeSelect 需要的树形结构
-const buildDeptTree = (depts: SimpleDept[]): any[] => {
-  return depts.map((dept) => ({
-    title: dept.deptName,
-    value: dept.id,
-    key: dept.id,
-    children: dept.children && dept.children.length > 0 ? buildDeptTree(dept.children) : undefined,
-  }));
-};
 
 const DutyPoolPage: FC = () => {
   const [form] = Form.useForm();
@@ -385,14 +376,11 @@ const DutyPoolPage: FC = () => {
               <Input placeholder="请输入值班池名称" allowClear className="user-form-input" style={{ width: 150 }} />
             </Form.Item>
             <Form.Item name="deptId" label="所属部门">
-              <TreeSelect
+              <DepartmentTreeSelect
+                departments={depts}
                 placeholder="请选择部门"
-                allowClear
                 className="user-form-input"
                 style={{ width: 200 }}
-                treeData={buildDeptTree(depts)}
-                showSearch
-                treeNodeFilterProp="title"
               />
             </Form.Item>
             <Form.Item name="status" label="状态">
@@ -453,12 +441,8 @@ const DutyPoolPage: FC = () => {
           </Form.Item>
 
           <Form.Item name="deptId" label="所属部门">
-            <TreeSelect
-              placeholder="请选择部门"
-              allowClear
-              treeData={buildDeptTree(depts)}
-              showSearch
-              treeNodeFilterProp="title"
+            <DepartmentTreeSelect
+              departments={depts}
               onChange={(value) => {
                 // 根据选择的部门筛选用户
                 const deptIds = getDeptAndChildrenIds(value, depts);

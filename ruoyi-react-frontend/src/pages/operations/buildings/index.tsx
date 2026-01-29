@@ -23,6 +23,7 @@ import { createStatusColumn, createDateTimeColumn } from '@/utils/tableHelpers';
 import ActionButtons from '@/components/shared/ActionButtons';
 import ExcelImport from '@/components/shared/ExcelImport';
 import ExcelExport from '@/components/shared/ExcelExport';
+import { DepartmentTreeSelect } from '@/components/shared';
 import { useBuildingGeocoding } from './useBuildingGeocoding';
 import { useDepartmentData } from './useDepartmentData';
 
@@ -267,15 +268,10 @@ const BuildingManagement: FC = () => {
           </Form.Item>
 
           <Form.Item name="orgId" label="所属机构">
-            <TreeSelect
-              placeholder="请选择所属机构"
+            <DepartmentTreeSelect
+              departments={departmentData.departments}
               loading={departmentData.loading}
-              allowClear
-              showSearch
-              treeDefaultExpandAll
-              treeNodeFilterProp="title"
-              fieldNames={{ label: 'deptName', value: 'id', children: 'children' }}
-              treeData={departmentData.departments}
+              placeholder="请选择所属机构"
             />
           </Form.Item>
 

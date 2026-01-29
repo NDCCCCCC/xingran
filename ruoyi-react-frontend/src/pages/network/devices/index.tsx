@@ -13,7 +13,6 @@ import {
   Input,
   InputNumber,
   Select,
-  TreeSelect,
   Popconfirm,
   Tag,
   Card,
@@ -49,6 +48,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTableManager } from '@/hooks/useTableManager';
 import { handleApiError, handleSuccess } from '@/utils/errorHandler';
 import ActionButtons from '@/components/shared/ActionButtons';
+import { DepartmentTreeSelect } from '@/components/shared';
 import { usePagination } from '@/hooks/usePagination';
 
 // 导入提取的常量、工具和 Hook
@@ -62,9 +62,6 @@ import {
 import {
   formatDateTime,
   getOptionLabel,
-  renderDeptTreeOptions,
-  transformDepartmentsToTreeData,
-  getFirstLevelKeys,
   getStatusColor,
 } from './utils';
 import { useDeviceData } from './hooks/useDeviceData';
@@ -208,7 +205,6 @@ const DeviceManagement: FC = () => {
   // 自定义状态
   const [selectedDeptId, setSelectedDeptId] = useState<string>('');
   const [collectingDeviceId, setCollectingDeviceId] = useState<string | null>(null);
-  const [deptTreeExpandedKeys, setDeptTreeExpandedKeys] = useState<React.Key[]>([]);
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
@@ -458,8 +454,6 @@ const DeviceManagement: FC = () => {
     }
     loadDepartments();
     loadCredentials();
-    // 设置默认展开第一级部门节点
-    setDeptTreeExpandedKeys(getFirstLevelKeys(departments));
   };
 
   // 打开快速创建模态框
@@ -748,9 +742,7 @@ const DeviceManagement: FC = () => {
 
           <Divider orientationMargin={0} orientation={"left" as DividerProps['orientation']}>其他信息（可选）</Divider>
           <Form.Item name="deptId" label="所属部门">
-            <Select placeholder="请选择部门" allowClear>
-              {renderDeptTreeOptions(departments)}
-            </Select>
+            <DepartmentTreeSelect departments={departments} />
           </Form.Item>
           <Form.Item name="location" label="位置">
             <Input placeholder="请输入设备位置" />
@@ -815,21 +807,8 @@ const DeviceManagement: FC = () => {
             </Select>
           </Form.Item>
           <Form.Item name="deptId" label="所属部门">
-            <TreeSelect
-              placeholder="请选择部门"
-              allowClear
-              showSearch
-              treeDefaultExpandAll={false}
-              expandedKeys={deptTreeExpandedKeys}
-              onExpand={(expandedKeys) => setDeptTreeExpandedKeys(expandedKeys)}
-              treeData={transformDepartmentsToTreeData(departments)}
-              fieldNames={{ label: 'title', value: 'value', children: 'children' }}
-              style={{ width: '100%' }}
-              dropdownStyle={{ maxHeight: 400, overflow: 'auto' }}
-              filterTreeNode={(input, treeNode) => {
-                const title = treeNode.title?.toString().toLowerCase() || '';
-                return title.includes(input.toLowerCase());
-              }}
+            <DepartmentTreeSelect
+              departments={departments}
             />
           </Form.Item>
           <Form.Item name="location" label="位置">
