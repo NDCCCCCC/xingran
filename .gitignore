@@ -60,3 +60,17 @@ configs/config.prod.yamlnul
 
 # Git Worktree 目录
 .worktrees/
+
+# 代码分析和优化报告
+CODE_OPTIMIZATION_REPORT.md
+COMMIT_GUIDE.md
+cleanup_temp_files.ps1
+cleanup_temp_files.sh
+
+# SQL 修复脚本（临时）
+fix_*.sql
+
+# 数据目录
+数据/
+*.xlsx
+*.png
