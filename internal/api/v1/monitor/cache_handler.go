@@ -333,7 +333,12 @@ func (h *CacheHandler) OperateCache(c *gin.Context) {
 		result = "设置成功"
 
 	case "del":
-		err = h.core.Cache.Delete(ctx, req.Key)
+		// 如果键名包含 ruoyi: 前缀，需要移除它
+		deleteKey := req.Key
+		if strings.HasPrefix(deleteKey, "ruoyi:") {
+			deleteKey = deleteKey[6:]
+		}
+		err = h.core.Cache.Delete(ctx, deleteKey)
 		if err != nil {
 			response.Error(c, http.StatusInternalServerError, "删除缓存失败")
 			return
@@ -341,7 +346,12 @@ func (h *CacheHandler) OperateCache(c *gin.Context) {
 		result = "删除成功"
 
 	case "exists":
-		exists, err := h.core.Cache.Exists(ctx, req.Key)
+		// 如果键名包含 ruoyi: 前缀，需要移除它
+		checkKey := req.Key
+		if strings.HasPrefix(checkKey, "ruoyi:") {
+			checkKey = checkKey[6:]
+		}
+		exists, err := h.core.Cache.Exists(ctx, checkKey)
 		if err != nil {
 			response.Error(c, http.StatusInternalServerError, "检查缓存存在性失败")
 			return
@@ -353,7 +363,12 @@ func (h *CacheHandler) OperateCache(c *gin.Context) {
 			response.Error(c, http.StatusBadRequest, "过期时间必须大于0")
 			return
 		}
-		err = h.core.Cache.Expire(ctx, req.Key, time.Duration(req.TTL)*time.Second)
+		// 如果键名包含 ruoyi: 前缀，需要移除它
+		expireKey := req.Key
+		if strings.HasPrefix(expireKey, "ruoyi:") {
+			expireKey = expireKey[6:]
+		}
+		err = h.core.Cache.Expire(ctx, expireKey, time.Duration(req.TTL)*time.Second)
 		if err != nil {
 			response.Error(c, http.StatusInternalServerError, "设置过期时间失败")
 			return
@@ -440,7 +455,12 @@ func (h *CacheHandler) BatchOperateCache(c *gin.Context) {
 		failedKeys := make(map[string]string)
 
 		for _, key := range req.Keys {
-			err := h.core.Cache.Delete(ctx, key)
+			// 如果键名包含 ruoyi: 前缀，需要移除它
+			deleteKey := key
+			if strings.HasPrefix(deleteKey, "ruoyi:") {
+				deleteKey = deleteKey[6:]
+			}
+			err := h.core.Cache.Delete(ctx, deleteKey)
 			if err != nil {
 				failedKeys[key] = err.Error()
 			} else {

@@ -75,9 +75,6 @@ export const BaseWidget: React.FC<BaseWidgetProps> = ({
 	const error = externalError ?? internalError;
 	const onRefresh = externalOnRefresh ?? refresh;
 
-	// 调试日志
-	console.log('[BaseWidget] widget:', widget.id, 'data:', data, 'loading:', loading, 'error:', error);
-
 	const isSelected = selectedWidgetId === widget.id;
 	const isEditable = viewMode === 'edit';
 

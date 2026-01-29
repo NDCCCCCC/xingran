@@ -77,6 +77,9 @@ func (s *departmentCacheService) queryTree(ctx context.Context, includeDisabled 
 		return nil, err
 	}
 
+	// 填充负责人信息
+	s.departmentService.fillLeaderInfo(ctx, depts)
+
 	return s.departmentService.buildDeptTree(depts, nil), nil
 }
 
@@ -103,6 +106,9 @@ func (s *departmentCacheService) querySelectData(ctx context.Context) ([]*models
 		Find(&depts).Error; err != nil {
 		return nil, err
 	}
+
+	// 填充负责人信息
+	s.departmentService.fillLeaderInfo(ctx, depts)
 
 	return s.departmentService.buildDeptTree(depts, nil), nil
 }
@@ -155,4 +161,9 @@ func (s *departmentCacheService) UpdateStatus(ctx context.Context, id string, st
 		return err
 	}
 	return s.InvalidateDeptCache(ctx)
+}
+
+// GetDB 获取数据库连接
+func (s *departmentCacheService) GetDB() *gorm.DB {
+	return s.departmentService.GetDB()
 }

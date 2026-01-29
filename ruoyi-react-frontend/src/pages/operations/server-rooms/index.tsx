@@ -309,8 +309,8 @@ const ServerRoomManagement: FC = () => {
           </Form.Item>
         </Form>
       </Modal>
-      <ExcelImport entityType="server-room" entityName="机房" visible={importVisible} onClose={() => setImportVisible(false)} onImportSuccess={handleImportSuccess} />
-      <ExcelExport entityType="server-room" entityName="机房" visible={exportVisible} onClose={() => setExportVisible(false)} />
+      <ExcelImport entityType="serverRoom" entityName="机房" visible={importVisible} onClose={() => setImportVisible(false)} onImportSuccess={handleImportSuccess} />
+      <ExcelExport entityType="serverRoom" entityName="机房" visible={exportVisible} onClose={() => setExportVisible(false)} />
     </div>
   );
 };

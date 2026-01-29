@@ -506,8 +506,8 @@ const InfoPointManagement: FC = () => {
           <Form.Item name="description" label="描述"><TextArea rows={3} placeholder="请输入描述" /></Form.Item>
         </Form>
       </Modal>
-      <ExcelImport entityType="info-point" entityName="信息点" visible={importVisible} onClose={() => setImportVisible(false)} onImportSuccess={handleImportSuccess} />
-      <ExcelExport entityType="info-point" entityName="信息点" visible={exportVisible} onClose={() => setExportVisible(false)} />
+      <ExcelImport entityType="infoPoint" entityName="信息点" visible={importVisible} onClose={() => setImportVisible(false)} onImportSuccess={handleImportSuccess} />
+      <ExcelExport entityType="infoPoint" entityName="信息点" visible={exportVisible} onClose={() => setExportVisible(false)} />
     </div>
   );
 };

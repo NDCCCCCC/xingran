@@ -469,7 +469,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 	ops.Use(middleware.JWTAuth(core.JWTManager))
 	{
 		// 楼宇管理
-		buildings := ops.Group("/buildings")
+		buildings := ops.Group("/building")
 		buildings.Use(middleware.RequirePermissions([]string{
 			"ops:building:list",
 			"ops:building:add",
@@ -478,7 +478,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 		}, core))
 		{
 			buildingService := opsServices.NewBuildingService(core.DB.GetDB())
-			buildingHandler := operations.NewBuildingHandler(buildingService)
+			geocodingService := opsServices.NewGeocodingService(core.Config.Baidu.MapAK)
+			buildingHandler := operations.NewBuildingHandler(buildingService, geocodingService)
 
 			buildings.POST("", buildingHandler.Create)
 			buildings.POST("/list", buildingHandler.List)
@@ -486,13 +487,14 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			buildings.POST("/:id/update", buildingHandler.Update)
 			buildings.POST("/:id/delete", buildingHandler.Delete)
 			buildings.POST("/batch", buildingHandler.BatchOperation)
+			buildings.POST("/geocode", buildingHandler.Geocode)
 
 			// Excel导入导出
 			operations.SetupExcelRouter(buildings, "building", core)
 		}
 
 		// 楼层管理
-		floors := ops.Group("/floors")
+		floors := ops.Group("/floor")
 		floors.Use(middleware.RequirePermissions([]string{
 			"ops:floor:list",
 			"ops:floor:add",
@@ -517,7 +519,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 		}
 
 		// 工位管理
-		workstations := ops.Group("/workstations")
+		workstations := ops.Group("/workstation")
 		workstations.Use(middleware.RequirePermissions([]string{
 			"ops:workstation:list",
 			"ops:workstation:add",
@@ -542,7 +544,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 		}
 
 		// 信息点管理
-		infoPoints := ops.Group("/info-points")
+		infoPoints := ops.Group("/infoPoint")
 		infoPoints.Use(middleware.RequirePermissions([]string{
 			"ops:infopoint:list",
 			"ops:infopoint:add",
@@ -566,7 +568,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 		}
 
 		// 机房管理
-		serverRooms := ops.Group("/server-rooms")
+		serverRooms := ops.Group("/serverRoom")
 		serverRooms.Use(middleware.RequirePermissions([]string{
 			"ops:serverroom:list",
 			"ops:serverroom:add",
@@ -596,7 +598,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 		}
 
 		// 专线管理
-		dedicatedLines := ops.Group("/dedicated-lines")
+		dedicatedLines := ops.Group("/dedicatedLine")
 		dedicatedLines.Use(middleware.RequirePermissions([]string{
 			"ops:line:list",
 			"ops:line:add",
@@ -620,7 +622,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 		}
 
 		// room-devices - 机房设备管理
-		roomDevices := ops.Group("/room-devices")
+		roomDevices := ops.Group("/roomDevice")
 		roomDevices.Use(middleware.RequirePermissions([]string{
 			"ops:roomdevice:list",
 			"ops:roomdevice:add",

@@ -54,8 +54,8 @@ export interface ExcelImportProps {
 const ExcelImport: FC<ExcelImportProps> = ({
   entityType,
   entityName = entityType,
-  templateUrl = `/ops/${entityType}/template`,
-  importUrl = `/ops/${entityType}/import`,
+  templateUrl = `/api/v1/ops/${entityType}/template`,
+  importUrl = `/api/v1/ops/${entityType}/import`,
   onImportSuccess,
   visible = false,
   onClose,
@@ -67,7 +67,7 @@ const ExcelImport: FC<ExcelImportProps> = ({
 
   const handleDownloadTemplate = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       const response = await fetch(templateUrl, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -155,7 +155,7 @@ const ExcelImport: FC<ExcelImportProps> = ({
       };
 
       xhr.open('POST', importUrl, true);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       if (token) {
         xhr.setRequestHeader('Authorization', `Bearer ${token}`);
       }
@@ -211,7 +211,7 @@ const ExcelImport: FC<ExcelImportProps> = ({
     >
       <Space orientation="vertical" size="large" style={{ width: '100%' }}>
         <Alert
-          message="导入说明"
+          title="导入说明"
           description={
             <div>
               <div>1. 先下载Excel模板文件</div>

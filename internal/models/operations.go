@@ -2,32 +2,6 @@ package models
 
 // 运维管理相关模型
 
-// BuildingStatus 楼宇状态
-type BuildingStatus int
-
-const (
-	BuildingStatusNormal  BuildingStatus = 0 // 正常
-	BuildingStatusStopped BuildingStatus = 1 // 停用
-)
-
-// Building 楼宇模型
-type Building struct {
-	BaseModel
-	Name     string         `gorm:"size:100;not null" json:"name"`
-	Code     string         `gorm:"uniqueIndex;size:50;not null" json:"code"`
-	Address  string         `gorm:"size:200" json:"address"`
-	OrgID    string         `gorm:"size:64" json:"orgId"`
-	OrgName  *string        `gorm:"size:100" json:"orgName,omitempty"`
-	Status   BuildingStatus `gorm:"default:0" json:"status"`
-	Remark   *string        `gorm:"size:500" json:"remark,omitempty"`
-	OrderNum int            `gorm:"default:0" json:"orderNum"`
-}
-
-// TableName 设置表名
-func (Building) TableName() string {
-	return "ops_buildings"
-}
-
 // FloorStatus 楼层状态
 type FloorStatus int
 

@@ -24,17 +24,17 @@ func SetupNoticeRouter(r *gin.RouterGroup, core *core.Core) {
 
 	// 通知公告路由
 	r.POST("/list", noticeHandler.List)
+	r.POST("/batch-delete", noticeHandler.BatchDelete)
+	r.GET("/cron-expressions", noticeHandler.GetCronExpressions)
 	r.POST("", noticeHandler.Create)
 	r.POST("/:id", noticeHandler.GetByID)
 	r.POST("/:id/update", noticeHandler.Update)
 	r.POST("/:id/delete", noticeHandler.Delete)
-	r.POST("/batch-delete", noticeHandler.BatchDelete)
 	r.GET("/:id/statistics", noticeHandler.GetStatistics)
 	r.POST("/:id/publish", noticeHandler.Publish)
 	r.POST("/:id/withdraw", noticeHandler.Withdraw)
 	r.GET("/:id/channels", noticeHandler.GetChannels)
 	r.POST("/:id/channels", noticeHandler.SetChannels)
-	r.GET("/cron-expressions", noticeHandler.GetCronExpressions)
 }
 
 // schedulerAdapter 调度器适配器

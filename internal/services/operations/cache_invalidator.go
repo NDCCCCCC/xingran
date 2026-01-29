@@ -30,6 +30,12 @@ func (c *CacheInvalidator) InvalidateByEntityType(
 		return nil
 	}
 
+	// 如果没有配置缓存，直接返回
+	if c.cache == nil {
+		logger.Debugf("[%s] 未配置缓存提供者，跳过缓存清理", entityType)
+		return nil
+	}
+
 	for _, pattern := range patterns {
 		if err := c.cache.DeleteByPattern(ctx, pattern); err != nil {
 			logger.Warnf("[%s] 清除缓存失败: pattern=%s, error=%v", entityType, pattern, err)
@@ -47,6 +53,12 @@ func (c *CacheInvalidator) InvalidateByPatterns(
 	patterns []string,
 	module string,
 ) error {
+	// 如果没有配置缓存，直接返回
+	if c.cache == nil {
+		logger.Debugf("[%s] 未配置缓存提供者，跳过缓存清理", module)
+		return nil
+	}
+
 	for _, pattern := range patterns {
 		if err := c.cache.DeleteByPattern(ctx, pattern); err != nil {
 			logger.Warnf("[%s] 清除缓存失败: pattern=%s, error=%v", module, pattern, err)

@@ -14,11 +14,11 @@ func SetupWorkOrdersRouter(r *gin.RouterGroup, core *core.Core) {
 	// 工单基础操作
 	r.POST("/list", handler.List)
 	r.POST("/my-pending", handler.GetMyPending)
+	r.POST("/batch-delete", handler.BatchDelete)
 	r.POST("", handler.Create)
 	r.POST("/:id", handler.GetByID)
 	r.POST("/:id/update", handler.Update)
 	r.POST("/:id/delete", handler.Delete)
-	r.POST("/batch-delete", handler.BatchDelete)
 
 	// 工单分配与状态
 	r.POST("/:id/assign", handler.Assign)

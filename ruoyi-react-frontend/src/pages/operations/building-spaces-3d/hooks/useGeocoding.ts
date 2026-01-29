@@ -1,14 +1,13 @@
 /**
  * 百度地图地址解析 Hook
- * 使用百度地图 Geocoding API 将地址转换为经纬度坐标
+ * 通过后端 API 调用百度地图 Geocoding API 将地址转换为经纬度坐标
+ * 避免前端直接调用百度地图 API 时的 CORS 问题
  * 支持缓存以减少 API 调用
  */
 
 import { useState, useCallback } from 'react';
+import { post } from '@/lib/api';
 import { getGeocodingCache } from '@/utils/geocodingCache';
-
-// 获取百度地图 AK
-const BAIDU_MAP_AK = import.meta.env.VITE_BAIDU_MAP_AK || '';
 
 // 缓存实例
 const geocodingCache = getGeocodingCache<GeocodingResult>();
@@ -39,14 +38,6 @@ export const useGeocoding = () => {
    */
   const geocode = useCallback(
     async (address: string, city?: string): Promise<GeocodingResult | null> => {
-      if (!BAIDU_MAP_AK) {
-        setError({
-          code: -1,
-          message: '未配置百度地图 AK，请在环境变量中设置 VITE_BAIDU_MAP_AK',
-        });
-        return null;
-      }
-
       if (!address || address.trim().length === 0) {
         setError({ code: -1, message: '地址不能为空' });
         return null;
@@ -70,36 +61,21 @@ export const useGeocoding = () => {
           return cached;
         }
 
-        // 缓存未命中，调用 API
-        // 构建请求 URL
-        const params = new URLSearchParams({
+        // 缓存未命中，调用后端 API
+        const response = await post<{ data?: GeocodingResponse }>('/ops/building/geocode', {
           address: address.trim(),
-          output: 'json',
-          ak: BAIDU_MAP_AK,
+          city: city || '',
         });
 
-        if (city) {
-          params.append('city', city);
-        }
-
-        const url = `https://api.map.baidu.com/geocoding/v3/?${params.toString()}`;
-
-        const response = await fetch(url);
-        const data = await response.json();
-
-        if (data.status === 0) {
-          // 解析成功
-          const result = data.result;
-          const location = result.location;
-
+        if (response.data) {
           const geocodingResult: GeocodingResult = {
-            longitude: location.lng,
-            latitude: location.lat,
-            formattedAddress: result.formatted_address || address,
-            province: result.addressComponent?.province || '',
-            city: result.addressComponent?.city || '',
-            district: result.addressComponent?.district || '',
-            street: result.addressComponent?.street || '',
+            longitude: response.data.longitude,
+            latitude: response.data.latitude,
+            formattedAddress: response.data.formattedAddress || address,
+            province: response.data.province || '',
+            city: response.data.city || '',
+            district: response.data.district || '',
+            street: response.data.street || '',
           };
 
           // 存入缓存
@@ -109,8 +85,8 @@ export const useGeocoding = () => {
         } else {
           // 解析失败
           setError({
-            code: data.status,
-            message: data.message || '地址解析失败',
+            code: -1,
+            message: '地址解析失败',
           });
           return null;
         }
@@ -134,14 +110,6 @@ export const useGeocoding = () => {
    */
   const reverseGeocode = useCallback(
     async (longitude: number, latitude: number): Promise<GeocodingResult | null> => {
-      if (!BAIDU_MAP_AK) {
-        setError({
-          code: -1,
-          message: '未配置百度地图 AK，请在环境变量中设置 VITE_BAIDU_MAP_AK',
-        });
-        return null;
-      }
-
       setLoading(true);
       setError(null);
 
@@ -160,45 +128,10 @@ export const useGeocoding = () => {
           return cached;
         }
 
-        // 缓存未命中，调用 API
-        // 构建请求 URL
-        const params = new URLSearchParams({
-          location: `${latitude},${longitude}`,
-          output: 'json',
-          ak: BAIDU_MAP_AK,
-        });
-
-        const url = `https://api.map.baidu.com/reverse_geocoding/v3/?${params.toString()}`;
-
-        const response = await fetch(url);
-        const data = await response.json();
-
-        if (data.status === 0) {
-          // 解析成功
-          const result = data.result;
-
-          const geocodingResult: GeocodingResult = {
-            longitude,
-            latitude,
-            formattedAddress: result.formatted_address,
-            province: result.addressComponent?.province || '',
-            city: result.addressComponent?.city || '',
-            district: result.addressComponent?.district || '',
-            street: result.addressComponent?.street || '',
-          };
-
-          // 存入缓存
-          geocodingCache.set(cacheKey, geocodingResult);
-
-          return geocodingResult;
-        } else {
-          // 解析失败
-          setError({
-            code: data.status,
-            message: data.message || '逆地址解析失败',
-          });
-          return null;
-        }
+        // TODO: 后端暂时不支持逆地址解析，这里保留接口但返回空值
+        // 如果需要，可以在后端添加逆地址解析的 API 端点
+        setLoading(false);
+        return null;
       } catch (err) {
         setError({
           code: -1,
@@ -219,3 +152,14 @@ export const useGeocoding = () => {
     error,
   };
 };
+
+// 后端 API 响应类型
+interface GeocodingResponse {
+  longitude: number;
+  latitude: number;
+  formattedAddress?: string;
+  province?: string;
+  city?: string;
+  district?: string;
+  street?: string;
+}

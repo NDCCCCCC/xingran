@@ -52,20 +52,6 @@ export function buildMenuPathMap(
         fullPath: menuPath || menu.id
       };
 
-      // 调试日志：输出用户中心相关菜单
-      if (menu.menuName === '用户中心' || menu.menuName === '个人中心' ||
-          menu.menuName === '用户设置' || menu.menuName === '我的通知') {
-        console.log('[buildMenuPathMap] 构建菜单路径:', {
-          menuName: menu.menuName,
-          menuId: menu.id,
-          originalPath: menu.path,
-          parentPath,
-          computedMenuPath: menuPath,
-          fullPath: menuInfo.fullPath,
-          level,
-        });
-      }
-
       // 存储映射关系 - 支持多种 key 查找方式
       // 1. 存储完整路径（去掉前导斜杠）
       if (menuPath) {

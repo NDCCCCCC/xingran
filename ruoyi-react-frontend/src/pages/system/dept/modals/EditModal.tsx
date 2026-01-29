@@ -3,7 +3,9 @@
  * 部门编辑模态框
  */
 
+import { useEffect } from 'react';
 import { Modal, Form, Input, InputNumber, Select, TreeSelect, Space } from 'antd';
+import type { FormInstance } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
 import type { DeptUser, ParentOption } from '../types';
 import { STATUS_OPTIONS, EXTERNAL_ORG_OPTIONS } from '../constants';
@@ -16,6 +18,7 @@ export interface DeptEditModalProps {
   parentOptions: ParentOption[];
   deptUsers: DeptUser[];
   loadingUsers: boolean;
+  form: FormInstance;  // 新增：接收外部传入的form实例
   onOk: () => Promise<void>;
   onCancel: () => void;
   onParentChange: (value: string) => void;
@@ -28,12 +31,21 @@ export function DeptEditModal({
   parentOptions,
   deptUsers,
   loadingUsers,
+  form,
   onOk,
   onCancel,
   onParentChange,
   onLeaderChange,
 }: DeptEditModalProps) {
-  const [form] = Form.useForm();
+  // 当editingDept变化时，设置表单值
+  useEffect(() => {
+    if (open && editingDept) {
+      form.setFieldsValue(editingDept);
+    } else if (open && !editingDept) {
+      // 新增模式，重置表单为默认值
+      form.resetFields();
+    }
+  }, [open, editingDept, form]);
 
   return (
     <Modal
@@ -57,7 +69,6 @@ export function DeptEditModal({
             treeData={[{ title: '顶级部门', value: '', key: '' }, ...parentOptions]}
             allowClear
             showSearch
-            treeDefaultExpandAll
             treeLine={{ showLeafIcon: false }}
             onChange={onParentChange}
           />

@@ -18,8 +18,8 @@ func SetupFileRouter(r *gin.RouterGroup, core *core.Core) {
 
 	// 注册路由
 	r.POST("/upload", handler.Upload)
+	r.POST("/batch-delete", handler.BatchDelete)
+	r.GET("", handler.List)
 	r.GET("/:id", handler.GetByID)
 	r.DELETE("/:id", handler.Delete)
-	r.GET("", handler.List)
-	r.POST("/batch-delete", handler.BatchDelete)
 }

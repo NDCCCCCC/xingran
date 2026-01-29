@@ -34,10 +34,10 @@ func SetupRoleRouter(r *gin.RouterGroup, core *core.Core) {
 	// 注册路由
 	r.POST("/list", handler.List)
 	r.POST("/all", handler.GetAllEnabled)
+	r.POST("/batch", handler.BatchDelete)
 	r.POST("", handler.Create)
 	r.POST("/:id", handler.GetByID)
 	r.POST("/:id/update", handler.Update)
 	r.POST("/:id/delete", handler.Delete)
 	r.POST("/:id/status", handler.UpdateStatus)
-	r.POST("/batch", handler.BatchDelete)
 }

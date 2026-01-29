@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { FC } from 'react';
 import {
   Table, Button, Space, Modal, Form, Input, InputNumber, Select, TreeSelect, Popconfirm,
-  Tag, Card, Row, Col, Statistic, Alert, Radio,
+  Tag, Card, Row, Col, Statistic, Alert, Radio, Spin,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -23,52 +23,26 @@ import { createStatusColumn, createDateTimeColumn } from '@/utils/tableHelpers';
 import ActionButtons from '@/components/shared/ActionButtons';
 import ExcelImport from '@/components/shared/ExcelImport';
 import ExcelExport from '@/components/shared/ExcelExport';
-import { post } from '@/lib/api';
-import type { BaseResponse, PageResponse } from '@/types';
+import { useBuildingGeocoding } from './useBuildingGeocoding';
+import { useDepartmentData } from './useDepartmentData';
 
 const { Option } = Select;
 const { TextArea } = Input;
 
-interface DepartmentOption {
-  id: string;
-  deptName: string;
-  children?: DepartmentOption[];
-}
-
 type ViewMode = 'table' | 'card';
 
 const BuildingManagement: FC = () => {
+  // 使用自定义 Hooks
+  const geocoding = useBuildingGeocoding();
+  const departmentData = useDepartmentData();
+
   const [statistics, setStatistics] = useState({ total: 0, active: 0, inactive: 0 });
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [importVisible, setImportVisible] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
-  const [departments, setDepartments] = useState<DepartmentOption[]>([]);
-  const [loadingDepts, setLoadingDepts] = useState(false);
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
-
-  // 加载部门列表
-  const loadDepartments = useCallback(async () => {
-    setLoadingDepts(true);
-    try {
-      // 后端返回的是树形结构数组
-      const result = await post<BaseResponse<DepartmentOption[]>>('/system/departments/tree', {});
-      // 转换为 TreeSelect 需要的格式：title 和 value
-      const convertToTreeData = (nodes: any[]): DepartmentOption[] => {
-        return nodes.map(node => ({
-          id: node.id,
-          deptName: node.deptName,
-          children: node.children?.length > 0 ? convertToTreeData(node.children) : undefined,
-        }));
-      };
-      setDepartments(convertToTreeData(result.data || []));
-    } catch (error) {
-      handleApiError(error, '加载部门列表', false);
-    } finally {
-      setLoadingDepts(false);
-    }
-  }, []);
 
   const {
     loading, data: buildings, total, selectedRowKeys,
@@ -107,12 +81,29 @@ const BuildingManagement: FC = () => {
   useEffect(() => {
     loadBuildings();
     loadStatistics();
-    loadDepartments();
+    departmentData.loadDepartments();
   }, [paginationProps.current, paginationProps.pageSize]);
+
+  // ==================== 楼宇操作函数 ====================
 
   const handleSave = async () => {
     try {
       const values = await buildingForm.validateFields();
+
+      // 地址解析：如果有地址，自动解析获取经纬度
+      if (values.address && values.address.trim()) {
+        const coords = await geocoding.resolveAddress(values.address);
+        if (coords) {
+          values.longitude = coords.longitude;
+          values.latitude = coords.latitude;
+        }
+      } else {
+        // 没有地址，清空经纬度
+        values.longitude = undefined;
+        values.latitude = undefined;
+        geocoding.reset();
+      }
+
       if (editingBuilding) {
         await buildingApi.update(editingBuilding.id, values);
         handleSuccess('更新');
@@ -138,33 +129,30 @@ const BuildingManagement: FC = () => {
   };
 
   const openModal = (record?: any) => {
-    if (record) { handleEdit(record); buildingForm.setFieldsValue(record); }
-    else { handleAdd(); buildingForm.setFieldsValue({ status: 0 }); }
+    geocoding.reset();
+
+    if (record) {
+      handleEdit(record);
+      buildingForm.setFieldsValue(record);
+
+      // 如果楼宇已有经纬度，显示出来
+      if (record.longitude && record.latitude) {
+        geocoding.setResult({
+          longitude: record.longitude,
+          latitude: record.latitude,
+        });
+      }
+    } else {
+      handleAdd();
+      buildingForm.setFieldsValue({ status: 0 });
+    }
   };
 
   const handleImportSuccess = () => { loadBuildings(); loadStatistics(); setImportVisible(false); };
 
-  // 扁平化部门数据用于查找
-  const deptMap = new Map<string, string>();
-  const flattenDeptsToMap = (nodes: DepartmentOption[]) => {
-    nodes.forEach(node => {
-      deptMap.set(node.id, node.deptName);
-      if (node.children?.length > 0) {
-        flattenDeptsToMap(node.children);
-      }
-    });
-  };
-  flattenDeptsToMap(departments);
-
-  // 获取所属机构名称
-  const getOrgName = (orgId?: string) => {
-    if (!orgId) return '-';
-    return deptMap.get(orgId) || '-';
-  };
-
   const columns: ColumnsType<Building> = [
     { title: '楼宇名称', dataIndex: 'name', key: 'name', width: 150 },
-    { title: '所属机构', dataIndex: 'orgId', key: 'orgName', width: 150, render: (orgId) => getOrgName(orgId) },
+    { title: '所属机构', dataIndex: 'orgId', key: 'orgName', width: 150, render: departmentData.getOrgName },
     { title: '地址', dataIndex: 'address', key: 'address', ellipsis: true },
     { title: '楼层数', dataIndex: 'totalFloors', key: 'totalFloors', width: 100, render: (v) => v || 0 },
     createStatusColumn('status', { width: 100 }),
@@ -211,7 +199,7 @@ const BuildingManagement: FC = () => {
                 description={
                   <div>
                     {building.address && <div><strong>地址：</strong>{building.address}</div>}
-                    <div><strong>所属机构：</strong>{getOrgName(building.orgId)}</div>
+                    <div><strong>所属机构：</strong>{departmentData.getOrgName(building.orgId)}</div>
                     <div><strong>楼层：</strong>{building.totalFloors || 0}层</div>
                   </div>
                 }
@@ -260,27 +248,97 @@ const BuildingManagement: FC = () => {
           <Table rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }} columns={columns} dataSource={buildings} loading={loading} rowKey="id" pagination={paginationProps} />
         ) : renderCardView()}
       </Card>
-      <Modal title={editingBuilding ? '编辑楼宇' : '新增楼宇'} open={modalVisible} onOk={handleSave} onCancel={() => { setModalVisible(false); buildingForm.resetFields(); setEditingBuilding(null); }} width={600}>
+      <Modal
+        title={editingBuilding ? '编辑楼宇' : '新增楼宇'}
+        open={modalVisible}
+        onOk={handleSave}
+        onCancel={() => {
+          setModalVisible(false);
+          buildingForm.resetFields();
+          setEditingBuilding(null);
+          geocoding.reset();
+        }}
+        width={600}
+        confirmLoading={geocoding.loading}
+      >
         <Form form={buildingForm} layout="horizontal" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
-          <Form.Item name="name" label="楼宇名称" rules={[{ required: true, message: '请输入楼宇名称' }]}><Input placeholder="请输入楼宇名称" /></Form.Item>
+          <Form.Item name="name" label="楼宇名称" rules={[{ required: true, message: '请输入楼宇名称' }]}>
+            <Input placeholder="请输入楼宇名称" />
+          </Form.Item>
+
           <Form.Item name="orgId" label="所属机构">
             <TreeSelect
               placeholder="请选择所属机构"
-              loading={loadingDepts}
+              loading={departmentData.loading}
               allowClear
               showSearch
               treeDefaultExpandAll
               treeNodeFilterProp="title"
               fieldNames={{ label: 'deptName', value: 'id', children: 'children' }}
-              treeData={departments}
+              treeData={departmentData.departments}
             />
           </Form.Item>
-          <Form.Item name="address" label="地址"><Input placeholder="请输入地址" /></Form.Item>
+
+          <Form.Item name="address" label="地址">
+            <Input placeholder="请输入地址（保存时将自动解析经纬度）" />
+          </Form.Item>
+
+          {/* 经纬度显示（只读，自动解析） */}
+          {(geocoding.result || editingBuilding?.longitude) && (
+            <Form.Item label="经纬度">
+              <Input
+                disabled
+                value={
+                  geocoding.result
+                    ? `${geocoding.result.longitude?.toFixed(6)}, ${geocoding.result.latitude?.toFixed(6)}`
+                    : editingBuilding?.longitude && editingBuilding?.latitude
+                    ? `${editingBuilding.longitude.toFixed(6)}, ${editingBuilding.latitude.toFixed(6)}`
+                    : ''
+                }
+                addonAfter={
+                  geocoding.loading ? (
+                    <Spin size="small" />
+                  ) : geocoding.result ? (
+                    <CheckCircleOutlined style={{ color: '#52c41a' }} />
+                  ) : null
+                }
+                placeholder="经纬度（保存时根据地址自动解析）"
+              />
+            </Form.Item>
+          )}
+
+          {/* 地址解析警告提示 */}
+          {geocoding.warning && (
+            <Alert
+              message={geocoding.warning}
+              type="warning"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+          )}
+
           <Form.Item name="totalFloors" label="楼层数">
             <InputNumber min={0} disabled style={{ width: '100%' }} placeholder="根据创建的楼层自动计算" />
           </Form.Item>
-          <Form.Item name="status" label="状态" rules={[{ required: true, message: '请选择状态' }]}><Select placeholder="请选择状态"><Option value={0}>正常</Option><Option value={1}>停用</Option></Select></Form.Item>
-          <Form.Item name="remark" label="描述"><TextArea rows={3} placeholder="请输入描述" /></Form.Item>
+
+          <Form.Item name="status" label="状态" rules={[{ required: true, message: '请选择状态' }]}>
+            <Select placeholder="请选择状态">
+              <Option value={0}>正常</Option>
+              <Option value={1}>停用</Option>
+            </Select>
+          </Form.Item>
+
+          <Form.Item name="remark" label="描述">
+            <TextArea rows={3} placeholder="请输入描述" />
+          </Form.Item>
+
+          {/* 隐藏字段：确保经纬度被包含在表单值中 */}
+          <Form.Item name="longitude" hidden>
+            <InputNumber />
+          </Form.Item>
+          <Form.Item name="latitude" hidden>
+            <InputNumber />
+          </Form.Item>
         </Form>
       </Modal>
       <ExcelImport entityType="building" entityName="楼宇" visible={importVisible} onClose={() => setImportVisible(false)} onImportSuccess={handleImportSuccess} />

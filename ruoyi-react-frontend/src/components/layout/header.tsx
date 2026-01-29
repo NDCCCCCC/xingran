@@ -7,10 +7,11 @@ import NotificationBell from '@/components/NotificationBell';
 import GlobalSearch from '@/components/shared/GlobalSearch';
 import { USER_PROFILE, USER_SETTINGS } from '@/constants/routes';
 import type { MenuProps } from 'antd';
+import type { FC } from 'react';
+import { AVATAR_BORDER_OPACITY, AVATAR_BORDER_WIDTH, HEADER_Z_INDEX } from './header.constants';
+import '@/design-system/themes/theme-styles.css';
 
 const { Header: AntHeader } = Layout;
-
-import type { FC } from 'react';
 
 const Header: FC = () => {
   const { user, logout } = useAuthStore();
@@ -52,14 +53,10 @@ const Header: FC = () => {
 
   return (
     <AntHeader
-      className="flex items-center justify-between px-6 shadow-lg"
+      className="layout-header flex items-center justify-between px-6 shadow-lg"
       style={{
-        background: 'var(--theme-bg-surface)',
-        color: 'var(--theme-text-primary)',
-        borderBottom: '1px solid var(--theme-border-primary)',
-        transition: 'var(--theme-transition-base)',
         position: 'relative',
-        zIndex: 10,
+        zIndex: HEADER_Z_INDEX,
       }}
     >
       {/* 左侧留空，保持布局平衡 */}
@@ -81,9 +78,9 @@ const Header: FC = () => {
             src={user?.avatar}
             className="cursor-pointer shadow-md border-2"
             style={{
-              background: 'linear-gradient(135deg, var(--theme-primary-500, #3b82f6) 0%, var(--theme-primary-600, #2563eb) 100%)',
+              background: 'linear-gradient(135deg, var(--theme-brand, #3b82f6) 0%, var(--theme-brand-dark, #2563eb) 100%)',
               color: 'var(--theme-text-inverse)',
-              borderColor: 'rgba(255, 255, 255, 0.3)',
+              borderColor: `rgba(255, 255, 255, ${AVATAR_BORDER_OPACITY})`,
               transition: 'var(--theme-transition-base)',
             }}
           />

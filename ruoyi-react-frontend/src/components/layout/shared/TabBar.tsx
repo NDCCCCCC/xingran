@@ -13,22 +13,23 @@ import type { MenuProps } from 'antd';
 import { useTabs } from '@/store/tabsStore';
 import { useNavigate } from 'react-router-dom';
 import {
-  CloseOutlined,
-  CloseCircleOutlined,
-  DownOutlined,
-  LeftOutlined,
-  RightOutlined,
+	CloseOutlined,
+	CloseCircleOutlined,
+	DownOutlined,
+	LeftOutlined,
+	RightOutlined,
 } from '@ant-design/icons';
-
+import '@/design-system/themes/theme-styles.css';
 import type { FC, ReactNode } from 'react';
-
-declare global {
-  namespace NodeJS {
-    interface ProcessEnv {
-      NODE_ENV: 'development' | 'production' | 'test';
-    }
-  }
-}
+import {
+	SCROLL_STEP,
+	INITIAL_DELAYS,
+	DEFAULT_HEIGHT,
+	DEFAULT_PADDING,
+	MIN_WIDTH,
+	DROPDOWN_MAX_ZINDEX,
+} from './TabBar.constants';
+import { checkScrollState, scrollContainer, setupDelayedChecks } from './TabBar.utils';
 
 interface ContextMenuState {
   visible: boolean;
@@ -91,36 +92,14 @@ const TabBar: FC = () => {
 
   // 滚动控制函数
   const scrollTabs = useCallback((direction: 'left' | 'right') => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    const scrollAmount = 200;
-    const currentScroll = container.scrollLeft;
-    container.scrollTo({
-      left: direction === 'left' ? currentScroll - scrollAmount : currentScroll + scrollAmount,
-      behavior: 'smooth'
-    });
+    scrollContainer(scrollContainerRef.current, direction, SCROLL_STEP);
   }, []);
 
   // 检测滚动状态
-  const checkScrollState = useCallback(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
+  const updateScrollState = useCallback(() => {
+    const state = checkScrollState(scrollContainerRef.current);
 
-    const { scrollLeft, scrollWidth, clientWidth } = container;
-    const canScrollLeft = scrollLeft > 0;
-    const canScrollRight = scrollWidth > clientWidth && scrollLeft < scrollWidth - clientWidth - 1; // -1 容忍浮点误差
-
-    // 开发环境调试输出
-    if (import.meta.env.DEV) {
-      console.log('[TabBar] 滚动状态:', { scrollLeft, scrollWidth, clientWidth, canScrollLeft, canScrollRight });
-    }
-
-    setScrollState({
-      canScrollLeft,
-      canScrollRight,
-      scrollLeft,
-    });
+    setScrollState(state);
   }, []);
 
   // 初始化和监听滚动状态
@@ -129,28 +108,20 @@ const TabBar: FC = () => {
     if (!container) return;
 
     // 初始检测（多次延迟确保 DOM 完全渲染）
-    const timers = [
-      setTimeout(checkScrollState, 0),
-      setTimeout(checkScrollState, 100),
-      setTimeout(checkScrollState, 300),
-    ];
+    const timers = setupDelayedChecks(updateScrollState, INITIAL_DELAYS);
 
     // 监听滚动事件
-    const handleScroll = () => {
-      checkScrollState();
-    };
+    const handleScroll = () => updateScrollState();
     container.addEventListener('scroll', handleScroll, { passive: true });
 
     // 监听容器尺寸变化
     const resizeObserver = new ResizeObserver(() => {
-      requestAnimationFrame(checkScrollState);
+      requestAnimationFrame(updateScrollState);
     });
     resizeObserver.observe(container);
 
     // 监听窗口大小变化
-    const handleResize = () => {
-      checkScrollState();
-    };
+    const handleResize = () => updateScrollState();
     window.addEventListener('resize', handleResize);
 
     return () => {
@@ -160,7 +131,7 @@ const TabBar: FC = () => {
       window.removeEventListener('resize', handleResize);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tabs.length]); // 只在 tabs 数量变化时重新绑定；checkScrollState 引用不变，不需要作为依赖
+  }, [tabs.length]); // 只在 tabs 数量变化时重新绑定；updateScrollState 引用不变，不需要作为依赖
 
   // 右键菜单处理
   const handleTabContextMenu = useCallback((tabKey: string, e: React.MouseEvent) => {
@@ -324,33 +295,36 @@ const TabBar: FC = () => {
     <>
       <div
         ref={containerRef}
-        className="border-b"
+        className="layout-tab-bar border-b"
         style={{
-          background: 'var(--theme-bg-surface)',
-          borderColor: 'var(--theme-border-primary)',
-          padding: '0 16px',
-          transition: 'all var(--theme-transition-base)',
+          padding: `0 ${DEFAULT_PADDING}px`,
           display: 'flex',
           alignItems: 'center',
-          height: '40px',
-          minHeight: '40px',
+          height: `${DEFAULT_HEIGHT}px`,
+          minHeight: `${DEFAULT_HEIGHT}px`,
           position: 'relative',
           zIndex: 1,
           flexShrink: 0,
         }}
       >
+
         {/* 左滚动按钮 */}
         <Button
           icon={<LeftOutlined />}
           disabled={!scrollState.canScrollLeft}
           onClick={() => scrollTabs('left')}
           className="tab-scroll-button"
+          type="text"
         />
 
         {/* 滚动容器 */}
         <div
           ref={scrollContainerRef}
-          className="tabs-scroll-container"
+          style={{
+            overflow: 'hidden',
+            flex: 1,
+            minWidth: 0,
+          }}
         >
           <Tabs
             activeKey={activeTab}
@@ -376,6 +350,7 @@ const TabBar: FC = () => {
           disabled={!scrollState.canScrollRight}
           onClick={() => scrollTabs('right')}
           className="tab-scroll-button"
+          type="text"
         />
 
         {/* "更多"下拉菜单 */}
@@ -383,7 +358,7 @@ const TabBar: FC = () => {
           menu={{
             items: moreMenuItems,
             style: {
-              zIndex: 1000,
+              zIndex: DROPDOWN_MAX_ZINDEX,
             },
           }}
           trigger={['click']}
@@ -397,8 +372,8 @@ const TabBar: FC = () => {
             icon={<DownOutlined />}
             style={{
               marginLeft: '8px',
-              height: '32px',
-              minWidth: '32px',
+              height: `${MIN_WIDTH}px`,
+              minWidth: `${MIN_WIDTH}px`,
               padding: '0 8px',
               color: 'var(--theme-text-secondary)',
             }}

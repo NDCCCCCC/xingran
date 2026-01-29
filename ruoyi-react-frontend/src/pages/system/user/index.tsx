@@ -11,6 +11,7 @@ import {
   Form,
   Input,
   Select,
+  TreeSelect,
   Popconfirm,
   Tag,
   Avatar,
@@ -46,7 +47,7 @@ import { formatDateTime } from '@/utils/datetime';
 
 // 导入提取的文件
 import { GENDER_OPTIONS, STATUS_OPTIONS } from './constants';
-import { renderDeptTreeOptions, formatGender, formatStatus } from './utils.tsx';
+import { convertDeptTreeData, formatGender, formatStatus } from './utils.tsx';
 import { useUserData } from './hooks/useUserData';
 import { useUserModals } from './hooks/useUserModals';
 
@@ -399,10 +400,11 @@ const UserManagement: FC = () => {
       setEditModalVisible(false);
       loadUsers();
       loadStatistics();
+      loadDepartments(); // 刷新部门列表以更新部门选择器中的数据
     } catch (error) {
       handleApiError(error, '操作');
     }
-  }, [editingUser, editForm, loadUsers, loadStatistics, setEditModalVisible]);
+  }, [editingUser, editForm, loadUsers, loadStatistics, loadDepartments, setEditModalVisible]);
 
   const handleSaveResetPassword = useCallback(async () => {
     try {
@@ -628,9 +630,15 @@ const UserManagement: FC = () => {
             </Select>
           </Form.Item>
           <Form.Item name="deptId" label="部门">
-            <Select placeholder="请选择部门" allowClear className="user-form-input">
-              {renderDeptTreeOptions(departments)}
-            </Select>
+            <TreeSelect
+              placeholder="请选择部门"
+              allowClear
+              showSearch
+              treeLine={{ showLeafIcon: false }}
+              treeData={convertDeptTreeData(departments)}
+              className="user-form-input"
+              style={{ width: '100%' }}
+            />
           </Form.Item>
           <Form.Item name="roleIds" label="角色">
             <Select

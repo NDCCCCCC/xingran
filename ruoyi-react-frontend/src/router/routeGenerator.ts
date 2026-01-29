@@ -34,13 +34,6 @@ export class RouteGenerator {
       return [];
     }
 
-    console.log('[RouteGenerator] Input menus:', menus);
-    console.log('[RouteGenerator] Filter for menuType C:', menus.filter(m => m.menuType === 'C'));
-
-    menus.forEach(m => {
-      console.log(`[RouteGenerator] Menu: ${m.menuName}, Type: ${m.menuType}, Path: ${m.path}, Children: ${m.children?.length || 0}`);
-    });
-
     const routes: MenuRouteConfig[] = [];
 
     const processMenu = (menu: Menu, parentPath = '') => {
@@ -61,19 +54,6 @@ export class RouteGenerator {
         };
 
         routes.push(route);
-
-        if (menu.menuName?.includes('端口') || menu.menuName?.includes('个人') ||
-            menu.menuName?.includes('系统设置') || menu.menuName?.includes('通知')) {
-          console.log(`[RouteGenerator] Created route for ${menu.menuName}:`, {
-            menuName: menu.menuName,
-            parentPath,
-            menuPath: menu.path,
-            fullPath,
-            component: menu.component,
-            componentPath,
-            importPath: `../pages/${componentPath.slice(6)}.tsx`,
-          });
-        }
       }
 
       if (menu.children && menu.children.length > 0) {
@@ -87,7 +67,6 @@ export class RouteGenerator {
       processMenu(menu);
     }
 
-    console.log(`[RouteGenerator] Total routes generated: ${routes.length}`);
     return routes;
   }
 

@@ -28,15 +28,11 @@ export const StatCardWidget: React.FC<StatCardWidgetProps> = ({
 
 	// 提取数值
 	const { value, label, trend, icon, color } = useMemo(() => {
-		console.log('[StatCardWidget] widget:', widget.id, 'data:', data, 'type:', typeof data);
-
 		if (typeof data !== 'object' || !data) {
-			console.log('[StatCardWidget] data is invalid, returning "-"');
 			return { value: '-', label: widget.title, trend: null, icon: null, color: display.iconColor };
 		}
 
 		const d = data as Record<string, unknown>;
-		console.log('[StatCardWidget] d keys:', Object.keys(d), 'd:', d);
 
 		// 尝试多种字段名来获取数值
 		let numericValue: unknown = d.value ?? d.count ?? d.total;
@@ -51,7 +47,6 @@ export const StatCardWidget: React.FC<StatCardWidgetProps> = ({
 			for (const field of possibleFields) {
 				if (typeof d[field] === 'number') {
 					numericValue = d[field];
-					console.log('[StatCardWidget] found numeric value in field:', field, numericValue);
 					break;
 				}
 			}
@@ -63,13 +58,10 @@ export const StatCardWidget: React.FC<StatCardWidgetProps> = ({
 				const val = d[key];
 				if (typeof val === 'number' && !isNaN(val)) {
 					numericValue = val;
-					console.log('[StatCardWidget] found numeric value in:', key, numericValue);
 					break;
 				}
 			}
 		}
-
-		console.log('[StatCardWidget] final numericValue:', numericValue);
 
 		return {
 			value: formatValue(numericValue ?? 0, display),

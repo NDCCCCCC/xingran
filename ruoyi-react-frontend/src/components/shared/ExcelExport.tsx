@@ -36,7 +36,7 @@ export interface ExcelExportProps {
 const ExcelExport: FC<ExcelExportProps> = ({
   entityType,
   entityName = entityType,
-  exportUrl = `/ops/${entityType}/export`,
+  exportUrl = `/api/v1/ops/${entityType}/export`,
   statusOptions,
   visible = false,
   onClose,
@@ -49,7 +49,7 @@ const ExcelExport: FC<ExcelExportProps> = ({
     setExporting(true);
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       const response = await fetch(exportUrl, {
         method: 'POST',
         headers: {

@@ -385,8 +385,8 @@ const RoomDeviceManagement: FC = () => {
           </Form.Item>
         </Form>
       </Modal>
-      <ExcelImport entityType="room-device" entityName="机房设备" visible={importVisible} onClose={() => setImportVisible(false)} onImportSuccess={handleImportSuccess} />
-      <ExcelExport entityType="room-device" entityName="机房设备" visible={exportVisible} onClose={() => setExportVisible(false)} />
+      <ExcelImport entityType="roomDevice" entityName="机房设备" visible={importVisible} onClose={() => setImportVisible(false)} onImportSuccess={handleImportSuccess} />
+      <ExcelExport entityType="roomDevice" entityName="机房设备" visible={exportVisible} onClose={() => setExportVisible(false)} />
     </div>
   );
 };

@@ -19,6 +19,7 @@ type DepartmentService interface {
 	BatchDelete(ctx context.Context, ids []string) error
 	UpdateStatus(ctx context.Context, id string, status int) error
 	GetRoleDeptIDs(ctx context.Context, roleID string, deptIDs *[]string) error
+	GetDB() *gorm.DB
 
 	// 新增缓存方法
 	GetTreeWithCache(ctx context.Context, includeDisabled bool) ([]*models.Department, error)
@@ -46,42 +47,45 @@ type DepartmentListParams struct {
 
 // DepartmentCreateRequest 创建部门请求
 type DepartmentCreateRequest struct {
-	DeptName string
-	ParentID *string
-	OrderNum int
-	Leader   *string
-	Phone    *string
-	Email    *string
-	Status   models.DeptStatus
-	Remark   *string
+	DeptName      string
+	ParentID      *string
+	OrderNum      int
+	Leader        *string
+	Phone         *string
+	Email         *string
+	IsExternalOrg int `json:"isExternalOrg"`
+	Status        models.DeptStatus
+	Remark        *string
 }
 
 // ToModel 转换为部门模型
 func (r *DepartmentCreateRequest) ToModel(ancestors string) models.Department {
 	return models.Department{
-		DeptName: r.DeptName,
-		ParentID: r.ParentID,
-		Ancestors: ancestors,
-		OrderNum: r.OrderNum,
-		Leader:   r.Leader,
-		Phone:    r.Phone,
-		Email:    r.Email,
-		Status:   r.Status,
-		Remark:   toStringPtr(r.Remark),
+		DeptName:      r.DeptName,
+		ParentID:      r.ParentID,
+		Ancestors:     ancestors,
+		OrderNum:      r.OrderNum,
+		Leader:        r.Leader,
+		Phone:         r.Phone,
+		Email:         r.Email,
+		IsExternalOrg: r.IsExternalOrg,
+		Status:        r.Status,
+		Remark:        toStringPtr(r.Remark),
 	}
 }
 
 // DepartmentUpdateRequest 更新部门请求
 type DepartmentUpdateRequest struct {
-	ID       string
-	DeptName string
-	ParentID *string
-	OrderNum int
-	Leader   *string
-	Phone    *string
-	Email    *string
-	Status   models.DeptStatus
-	Remark   *string
+	ID            string
+	DeptName      string
+	ParentID      *string
+	OrderNum      int
+	Leader        *string
+	Phone         *string
+	Email         *string
+	IsExternalOrg int `json:"isExternalOrg"`
+	Status        models.DeptStatus
+	Remark        *string
 }
 
 // ==================== 服务方法实现 ====================
@@ -145,6 +149,7 @@ func (s *departmentService) Update(ctx context.Context, req *DepartmentUpdateReq
 	dept.Leader = req.Leader
 	dept.Phone = req.Phone
 	dept.Email = req.Email
+	dept.IsExternalOrg = req.IsExternalOrg
 	dept.Status = req.Status
 	dept.Remark = toStringPtr(req.Remark)
 
@@ -216,6 +221,9 @@ func (s *departmentService) GetTree(ctx context.Context, includeDisabled bool) (
 		return nil, fmt.Errorf("查询部门列表失败: %w", err)
 	}
 
+	// 填充负责人信息
+	s.fillLeaderInfo(ctx, depts)
+
 	// 构建树形结构
 	deptTree := s.buildDeptTree(depts, nil)
 	return deptTree, nil
@@ -237,6 +245,9 @@ func (s *departmentService) List(ctx context.Context, params DepartmentListParam
 	if err := query.Order("order_num ASC").Find(&depts).Error; err != nil {
 		return nil, fmt.Errorf("查询部门列表失败: %w", err)
 	}
+
+	// 填充负责人信息
+	s.fillLeaderInfo(ctx, depts)
 
 	return depts, nil
 }
@@ -296,7 +307,17 @@ func (s *departmentService) UpdateStatus(ctx context.Context, id string, status 
 func (s *departmentService) buildDeptTree(depts []models.Department, parentID *string) []*models.Department {
 	var tree []*models.Department
 	for _, dept := range depts {
-		if (parentID == nil && dept.ParentID == nil) || (parentID != nil && dept.ParentID != nil && *dept.ParentID == *parentID) {
+		// 检查是否为父级部门
+		isParent := false
+		if parentID == nil {
+			// 查找顶级部门：parentID 为 nil 或 ancestors 为空
+			isParent = dept.ParentID == nil || dept.Ancestors == ""
+		} else {
+			// 查找子部门：parentID 匹配
+			isParent = dept.ParentID != nil && *dept.ParentID == *parentID
+		}
+
+		if isParent {
 			children := s.buildDeptTree(depts, &dept.ID)
 			if len(children) > 0 {
 				dept.Children = children
@@ -369,4 +390,50 @@ func (s *departmentService) GetSelectDataWithCache(ctx context.Context) ([]*mode
 // InvalidateDeptCache 失效部门缓存（无缓存版本，空操作）
 func (s *departmentService) InvalidateDeptCache(ctx context.Context) error {
 	return nil
+}
+
+// GetDB 获取数据库连接
+func (s *departmentService) GetDB() *gorm.DB {
+	return s.db
+}
+
+// fillLeaderInfo 填充部门负责人信息
+// 批量查询所有负责人信息，避免N+1查询问题
+func (s *departmentService) fillLeaderInfo(ctx context.Context, depts []models.Department) {
+	// 收集所有负责人ID
+	var leaderIDs []string
+	for _, dept := range depts {
+		if dept.Leader != nil && *dept.Leader != "" {
+			leaderIDs = append(leaderIDs, *dept.Leader)
+		}
+	}
+
+	if len(leaderIDs) == 0 {
+		return
+	}
+
+	// 批量查询负责人信息
+	var leaders []models.User
+	if err := s.db.WithContext(ctx).
+		Select("id, username, nickname").
+		Where("id IN ?", leaderIDs).
+		Find(&leaders).Error; err != nil {
+		return
+	}
+
+	// 构建ID到用户的映射
+	leaderMap := make(map[string]*models.User)
+	for i := range leaders {
+		leaderMap[leaders[i].ID] = &leaders[i]
+	}
+
+	// 填充负责人信息
+	for i := range depts {
+		if depts[i].Leader != nil && *depts[i].Leader != "" {
+			if leader, exists := leaderMap[*depts[i].Leader]; exists {
+				depts[i].LeaderName = leader.Nickname
+				depts[i].LeaderUsername = &leader.Username
+			}
+		}
+	}
 }

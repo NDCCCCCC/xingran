@@ -12,7 +12,33 @@ import { getGlassmorphismTheme } from './glassmorphism';
 import { getNeumorphismTheme } from './neumorphism';
 import { getFlat2Theme } from './flat2.0';
 import { getLuxuryQuietTheme } from './luxury-quiet';
-import { getLuminance, getContrastTextColor, getHoverBackgroundColor, generateColorVariants } from '@/design-system/utils/color';
+import {
+	getLuminance,
+	getContrastTextColor,
+	getHoverBackgroundColor,
+	generateColorVariants
+} from '@/design-system/utils/color';
+
+/** 默认蓝色（用于颜色解析失败时的回退） */
+const DEFAULT_COLOR = '#3b82f6';
+
+/**
+ * 将 HEX 颜色转换为 RGBA 字符串
+ * @param hex HEX 格式的颜色值
+ * @param alpha 不透明度（0-1）
+ * @returns RGBA 字符串
+ */
+function hexToRgba(hex: string, alpha: number): string {
+	const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+	if (result) {
+		const r = parseInt(result[1], 16);
+		const g = parseInt(result[2], 16);
+		const b = parseInt(result[3], 16);
+		return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+	}
+	// 解析失败时返回默认蓝色的 RGBA
+	return `rgba(59, 130, 246, ${alpha})`;
+}
 
 /**
  * 主题变体集合（包含 light 和 dark）
@@ -160,8 +186,19 @@ function applyColorVariables(colors: ThemeConfig['colors']): void {
 		root.style.setProperty('--theme-primary-50', colors.primary[0]);
 		root.style.setProperty('--theme-primary-100', colors.primary[1] || colors.primary[0]);
 		root.style.setProperty('--theme-primary-500', colors.primary[2] || colors.primary[0]);
-		root.style.setProperty('--theme-primary-700', colors.primary[3] || colors.primary[0]);
+		root.style.setProperty('--theme-primary-600', colors.primary[3] || colors.primary[2] || colors.primary[0]);
+		root.style.setProperty('--theme-primary-700', colors.primary[4] || colors.primary[3] || colors.primary[0]);
 	}
+
+	// 品牌色（用于 header 用户图标、sidebar 系统名称等品牌元素）
+	// 优先使用 accent（通常足够深），然后是 secondary（需要更深的索引），最后是 primary
+	const brandColor = colors.accent?.[1] || colors.secondary?.[3] || colors.primary?.[2] || DEFAULT_COLOR;
+	const brandColorDark = colors.accent?.[2] || colors.secondary?.[4] || colors.primary?.[3] || '#2563eb';
+	root.style.setProperty('--theme-brand', brandColor);
+	root.style.setProperty('--theme-brand-dark', brandColorDark);
+
+	// 品牌色的10%不透明度版本（用于选中菜单背景等）
+	root.style.setProperty('--theme-brand-alpha-10', hexToRgba(brandColor, 0.1));
 
 	// 边框色
 	root.style.setProperty('--theme-border-primary', colors.border.primary);
@@ -250,16 +287,13 @@ export function applyEffectVariables(effects: ThemeConfig['effects']): void {
  * 应用自定义主题色（覆盖主题预设）
  * @param primaryColor 主色调（HEX格式）
  */
-export function applyPrimaryColor(primaryColor: string | unknown): void {
-	// 类型安全检查
-	if (!primaryColor || typeof primaryColor !== 'string') {
+export function applyPrimaryColor(primaryColor: string): void {
+	if (!primaryColor) {
 		console.warn('applyPrimaryColor: Invalid color value', primaryColor);
 		return;
 	}
 
 	const root = document.documentElement;
-
-	// 生成颜色变体
 	const variants = generateColorVariants(primaryColor);
 
 	root.style.setProperty('--theme-primary', variants.primary);
@@ -269,28 +303,30 @@ export function applyPrimaryColor(primaryColor: string | unknown): void {
 
 	// 同步更新侧边栏强调色
 	root.style.setProperty('--sidebar-accent', variants.primary);
+
+	// 同步更新品牌色（用于 header 用户图标、sidebar 系统名称）
+	root.style.setProperty('--theme-brand', variants.primary);
+	root.style.setProperty('--theme-brand-dark', variants.primaryHover);
+
+	// 同步更新品牌色的10%不透明度版本
+	root.style.setProperty('--theme-brand-alpha-10', hexToRgba(variants.primary, 0.1));
 }
 
 /**
  * 应用自定义侧边栏背景色
  * @param backgroundColor 背景色（HEX格式）
  */
-export function applySidebarBackgroundColor(backgroundColor: string | unknown): void {
-	// 类型安全检查
-	if (!backgroundColor || typeof backgroundColor !== 'string') {
+export function applySidebarBackgroundColor(backgroundColor: string): void {
+	if (!backgroundColor) {
 		console.warn('applySidebarBackgroundColor: Invalid color value', backgroundColor);
 		return;
 	}
 
 	const root = document.documentElement;
-
-	// 设置侧边栏背景色
-	root.style.setProperty('--sidebar-bg', backgroundColor);
-
-	// 自动计算并设置文字颜色
 	const textColor = getContrastTextColor(backgroundColor);
 	const hoverBackgroundColor = getHoverBackgroundColor(backgroundColor);
 
+	root.style.setProperty('--sidebar-bg', backgroundColor);
 	root.style.setProperty('--sidebar-text', textColor);
 	root.style.setProperty('--sidebar-text-hover', '#FFFFFF');
 	root.style.setProperty('--sidebar-text-active', '#FFFFFF');

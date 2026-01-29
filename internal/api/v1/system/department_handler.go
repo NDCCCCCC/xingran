@@ -6,16 +6,31 @@ import (
 	"github.com/gin-gonic/gin"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	"gorm.io/gorm"
 )
 
 // DepartmentHandler 部门处理器
 type DepartmentHandler struct {
 	service systemServices.DepartmentService
+	db      *gorm.DB
 }
 
 // NewDepartmentHandler 创建部门处理器实例
 func NewDepartmentHandler(service systemServices.DepartmentService) *DepartmentHandler {
-	return &DepartmentHandler{service: service}
+	// 尝试从service获取db连接
+	var db *gorm.DB
+	if svc, ok := service.(interface{ GetDB() *gorm.DB }); ok {
+		db = svc.GetDB()
+	}
+	return &DepartmentHandler{service: service, db: db}
+}
+
+// GetDB 获取数据库连接
+func (h *DepartmentHandler) GetDB() (*gorm.DB, error) {
+	if h.db != nil {
+		return h.db, nil
+	}
+	return nil, http.ErrNotSupported
 }
 
 // GetTree 获取部门树
@@ -254,4 +269,53 @@ func (h *DepartmentHandler) RoleDeptTreeSelect(c *gin.Context) {
 	response.Success(c, gin.H{
 		"checkedKeys": deptIDs,
 	})
+}
+
+// GetUsers 获取部门用户列表
+// @Summary 获取部门用户列表
+// @Description 获取指定部门的用户列表
+// @Tags 部门管理
+// @Accept json
+// @Produce json
+// @Param id path string true "部门ID"
+// @Success 200 {object} response.Response{data=[]User}
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/departments/{id}/users [get]
+func (h *DepartmentHandler) GetUsers(c *gin.Context) {
+	deptID := c.Param("id")
+	if deptID == "" {
+		response.Error(c, http.StatusBadRequest, "部门ID不能为空")
+		return
+	}
+
+	// 直接查询数据库（因为service未导出GetDB方法）
+	db, err := h.GetDB()
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, "获取数据库连接失败")
+		return
+	}
+
+	// 查询该部门的用户
+	var users []struct {
+		ID       string  `gorm:"column:id" json:"id"`
+		Username string  `gorm:"column:username" json:"username"`
+		Nickname *string `gorm:"column:nickname" json:"nickname,omitempty"`
+		Phone    *string `gorm:"column:phone" json:"phone,omitempty"`
+		Email    *string `gorm:"column:email" json:"email,omitempty"`
+	}
+
+	err = db.WithContext(c.Request.Context()).
+		Table("sys_user").
+		Select("id, username, nickname, phone, email").
+		Where("dept_id = ? AND deleted_at IS NULL", deptID).
+		Order("username ASC").
+		Find(&users).Error
+
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, "查询部门用户失败: "+err.Error())
+		return
+	}
+
+	response.Success(c, users)
 }

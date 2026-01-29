@@ -440,8 +440,8 @@ const DedicatedLineManagement: FC = () => {
           </Form.Item>
         </Form>
       </Modal>
-      <ExcelImport entityType="dedicated-line" entityName="专线" visible={importVisible} onClose={() => setImportVisible(false)} onImportSuccess={handleImportSuccess} />
-      <ExcelExport entityType="dedicated-line" entityName="专线" visible={exportVisible} onClose={() => setExportVisible(false)} />
+      <ExcelImport entityType="dedicatedLine" entityName="专线" visible={importVisible} onClose={() => setImportVisible(false)} onImportSuccess={handleImportSuccess} />
+      <ExcelExport entityType="dedicatedLine" entityName="专线" visible={exportVisible} onClose={() => setExportVisible(false)} />
     </div>
   );
 };

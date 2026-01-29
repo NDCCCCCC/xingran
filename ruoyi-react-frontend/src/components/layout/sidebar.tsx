@@ -6,13 +6,22 @@ import { useMenuStore } from '@/store/menuStore';
 import { useLayoutStore } from '@/store/layoutStore';
 import type { Menu as MenuType } from '@/types';
 import {
-  buildMenuPathMap,
-  isSameTopLevelMenu,
-  getMenuLevel,
-  isSecondLevelMenu,
-  isTopLevelMenu,
+	buildMenuPathMap,
+	isSameTopLevelMenu,
+	getMenuLevel,
+	isSecondLevelMenu,
+	isTopLevelMenu,
 } from './sidebar-helper';
 import { getIconComponent } from '@/utils/iconUtils';
+import { buildFullPath, findMenuById, findMenuByFullPath } from './sidebar.utils';
+import {
+	DEFAULT_SIDEBAR_WIDTH,
+	HEADER_HEIGHT,
+	COLLAPSE_BUTTON_LEFT,
+	MENU_FONT_SIZE,
+	NAVIGATION_DELAY,
+} from './sidebar.constants';
+import '@/design-system/themes/theme-styles.css';
 
 const { Sider } = Layout;
 
@@ -161,28 +170,13 @@ const Sidebar = () => {
     // 清除预期值标记（给足够的时间让状态更新完成）
     setTimeout(() => {
       expectedOpenKeysRef.current = null;
-    }, 100);
+    }, NAVIGATION_DELAY);
   }, [location.pathname, menuPathMap]);
 
   // ========================================
   // 菜单点击处理
   // ========================================
   const handleMenuClick: MenuProps['onClick'] = (e) => {
-    // 在菜单数据中查找对应的菜单（通过 ID）
-    const findMenuById = (menuList: MenuType[], id: string): MenuType | null => {
-      for (const menu of menuList) {
-        if (menu.id === id) {
-          return menu;
-        }
-        // 递归查找子菜单
-        if (menu.children) {
-          const found = findMenuById(menu.children, id);
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-
     const clickedMenu = findMenuById(menus, e.key);
 
     // 检查菜单是否停用
@@ -193,43 +187,12 @@ const Sidebar = () => {
 
     // 只有菜单类型（C）才执行导航，目录类型（M）不导航
     if (clickedMenu && clickedMenu.menuType === 'C') {
-      // 构建完整的导航路径（考虑父路径）
-      const buildFullPath = (menu: MenuType, parentPath: string = ''): string => {
-        const menuPath = menu.path || '';
-        if (!menuPath) return parentPath;
-
-        // 如果已经是绝对路径，直接返回
-        if (menuPath.startsWith('/')) {
-          return menuPath;
-        }
-
-        // 如果没有父路径，返回菜单路径
-        if (!parentPath) {
-          return `/${menuPath}`;
-        }
-
-        // 拼接父路径和菜单路径
-        return `${parentPath}/${menuPath}`;
-      };
-
       // 从 menuPathMap 中查找该菜单的完整路径
       const menuInfo = menuPathMap.get(clickedMenu.id);
-
-      // 调试日志
-      console.log('[Sidebar MenuClick] 菜单点击:', {
-        menuName: clickedMenu.menuName,
-        menuId: clickedMenu.id,
-        menuPath: clickedMenu.path,
-        menuInfo: menuInfo,
-        fullPathFromMap: menuInfo?.fullPath,
-        fallbackPath: buildFullPath(clickedMenu),
-      });
-
       const fullPath = menuInfo?.fullPath || buildFullPath(clickedMenu);
 
       // 确保路径以 / 开头
       const navigationPath = fullPath.startsWith('/') ? fullPath : `/${fullPath}`;
-      console.log('[Sidebar MenuClick] 导航到:', navigationPath);
       navigate(navigationPath);
     }
   };
@@ -328,72 +291,17 @@ const Sidebar = () => {
   };
 
   // 获取当前选中的菜单项
-  // 使用 menuPathMap 来查找，因为其中包含了正确构建的 fullPath
   const getSelectedKeys = () => {
     if (!location.pathname) return [];
 
-    // 尝试多种路径格式匹配
     const pathsToTry = [
-      location.pathname,                    // /system/user-center
-      location.pathname.startsWith('/') ? location.pathname.slice(1) : location.pathname,  // system/user-center
+      location.pathname,
+      location.pathname.startsWith('/') ? location.pathname.slice(1) : location.pathname,
     ];
 
     for (const path of pathsToTry) {
       const menuInfo = menuPathMap.get(path);
       if (menuInfo) {
-        // 通过 menuPathMap 的 key 反向查找菜单 ID
-        // menuPathMap 中存储了 path -> menuInfo 的映射
-        // 但我们需要返回菜单 ID（即菜单的 key）
-        // 所以需要从 menus 中查找对应的菜单
-
-        // 遍历 menus 找到 fullPath 匹配的菜单
-        const findMenuByFullPath = (menuList: MenuType[], fullPath: string): string | null => {
-          for (const menu of menuList) {
-            if (menu.menuType === 'F') continue;
-
-            // 检查当前菜单的路径
-            const menuPath = menu.path || '';
-            let computedPath = menuPath;
-
-            // 如果是子菜单，需要拼接父路径
-            const buildFullPath = (m: MenuType, parent: string = ''): string => {
-              const p = m.path || '';
-              if (!p) return parent;
-              if (p.startsWith('/')) return p.slice(1); // 去掉前导斜杠
-              if (!parent) return p;
-              return p.startsWith(parent + '/') ? p : `${parent}/${p}`;
-            };
-
-            computedPath = buildFullPath(menu, '');
-
-            // 递归处理子菜单
-            if (menu.children) {
-              for (const child of menu.children) {
-                const childFullPath = buildFullPath(child, computedPath);
-                if (childFullPath === fullPath || child.path === fullPath) {
-                  return child.id;
-                }
-
-                // 检查三级菜单
-                if (child.children) {
-                  for (const grandChild of child.children) {
-                    const grandChildFullPath = buildFullPath(grandChild, childFullPath);
-                    if (grandChildFullPath === fullPath || grandChild.path === fullPath) {
-                      return grandChild.id;
-                    }
-                  }
-                }
-              }
-            }
-
-            // 检查一级菜单
-            if (computedPath === fullPath || menuPath === fullPath) {
-              return menu.id;
-            }
-          }
-          return null;
-        };
-
         const menuId = findMenuByFullPath(menus, path);
         if (menuId) return [menuId];
       }
@@ -407,17 +315,18 @@ const Sidebar = () => {
       collapsible
       collapsed={sidebarCollapsed}
       onCollapse={toggleSidebar}
-      width={280}
+      width={DEFAULT_SIDEBAR_WIDTH}
       trigger={null}
+      className="layout-sidebar"
       style={{
-        background: 'var(--theme-bg-secondary)',
-        borderRight: '1px solid var(--theme-border-primary)',
-        transition: 'all var(--theme-transition-base)',
+        background: '#ffffff',
       }}
     >
+
       <div
-        className="h-16 flex items-center relative"
+        className="flex items-center relative"
         style={{
+          height: `${HEADER_HEIGHT}px`,
           borderBottom: '1px solid var(--theme-border-primary)',
           paddingLeft: sidebarCollapsed ? '0' : '56px',
           transition: 'padding-left var(--theme-transition-base)',
@@ -432,7 +341,7 @@ const Sidebar = () => {
             background: 'transparent',
             border: 'none',
             cursor: 'pointer',
-            left: '16px',
+            left: `${COLLAPSE_BUTTON_LEFT}px`,
           }}
         >
           <svg
@@ -456,14 +365,14 @@ const Sidebar = () => {
         </button>
 
         <h1
-          className={`text-xl font-bold ${
-            sidebarCollapsed ? 'hidden' : 'block'
-          }`}
+          className="text-xl font-bold"
           style={{
-            background: 'linear-gradient(135deg, var(--theme-primary-500, #3b82f6) 0%, var(--theme-primary-600, #2563eb) 100%)',
+            backgroundImage: 'linear-gradient(135deg, var(--theme-brand, #3b82f6) 0%, #ffffff 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
+            color: 'transparent',
+            display: sidebarCollapsed ? 'none' : 'inline-block',
           }}
         >
           数字化平台
@@ -485,7 +394,7 @@ const Sidebar = () => {
           className="border-r-0 px-2 py-4"
           style={{
             background: 'transparent',
-            fontSize: '14px',
+            fontSize: `${MENU_FONT_SIZE}px`,
             color: 'var(--theme-text-primary)',
           }}
         />

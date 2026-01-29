@@ -69,10 +69,7 @@ export function useWidgetData<T = unknown>(
 		const currentWidget = widgetRef.current;
 		const isDisabled = disabledRef.current;
 
-		console.log('[useWidgetData.fetchData] widget:', currentWidget.id, 'disabled:', isDisabled, 'enabled:', currentWidget.enabled);
-
 		if (isDisabled || !currentWidget.enabled) {
-			console.log('[useWidgetData.fetchData] skipping fetch (disabled or not enabled)');
 			return;
 		}
 
@@ -87,7 +84,6 @@ export function useWidgetData<T = unknown>(
 			// 尝试从缓存获取
 			const cached = getCachedWidgetData(currentWidget.id);
 			if (cached && !showLoading) {
-				console.log('[useWidgetData.fetchData] returning cached data:', cached);
 				setData(cached as T);
 				setIsRefreshing(false);
 				return;
@@ -96,18 +92,14 @@ export function useWidgetData<T = unknown>(
 			// 从数据源获取
 			const result = await dataFetcher.fetch<T>(currentWidget.dataSource);
 
-			console.log('[useWidgetData.fetchData] fetch result:', result);
-
 			if (result.error) {
 				setError(result.error);
 			} else {
-				console.log('[useWidgetData.fetchData] setting data:', result.data);
 				setData(result.data);
 				// 缓存数据
 				cacheWidgetData(currentWidget.id, result.data);
 			}
 		} catch (err) {
-			console.log('[useWidgetData.fetchData] exception:', err);
 			setError((err as Error).message);
 		} finally {
 			setLoading(false);

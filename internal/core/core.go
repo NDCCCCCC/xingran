@@ -157,7 +157,7 @@ func (c *Core) Init() error {
 	// 7.2 创建连接池
 	poolConfig := &device.PoolConfig{
 		MaxIdle:        5 * time.Minute,
-		MaxConnections: 50,
+		MaxConnections: 20, // 降低并发连接数，减少 scrapligo panic 问题
 	}
 	connectionPool := device.NewDeviceConnectionPool(c.GetDB(), c.SM4Cipher, poolConfig)
 	// 7.3 创建任务调度器

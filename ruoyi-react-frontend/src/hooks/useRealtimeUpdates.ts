@@ -51,7 +51,6 @@ export function useRealtimeUpdates(
 			const ws = new WebSocket(getWsUrl());
 
 			ws.onopen = () => {
-				console.log('[Dashboard WebSocket] Connected');
 				options?.onConnectionChange?.(true);
 
 				// 订阅所有WebSocket数据源的Widget
@@ -93,7 +92,6 @@ export function useRealtimeUpdates(
 			};
 
 			ws.onclose = () => {
-				console.log('[Dashboard WebSocket] Closed');
 				options?.onConnectionChange?.(false);
 				subscribedChannelsRef.current.clear();
 

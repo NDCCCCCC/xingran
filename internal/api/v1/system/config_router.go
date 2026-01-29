@@ -14,11 +14,11 @@ func SetupConfigRouter(r *gin.RouterGroup, core *core.Core) {
 
 	// 参数配置路由
 	r.POST("/list", configHandler.List)
+	r.POST("/batch-delete", configHandler.BatchDelete)
+	r.POST("/refresh-cache", configHandler.RefreshCache)
 	r.POST("", configHandler.Create)
 	r.POST("/:id", configHandler.GetByID)
 	r.GET("/key/:configKey", configHandler.GetByKey)
 	r.POST("/:id/update", configHandler.Update)
 	r.POST("/:id/delete", configHandler.Delete)
-	r.POST("/batch-delete", configHandler.BatchDelete)
-	r.POST("/refresh-cache", configHandler.RefreshCache)
 }

@@ -35,9 +35,9 @@ func SetupPostRouter(r *gin.RouterGroup, core *core.Core) {
 	r.POST("/list", handler.List)
 	r.POST("/all", handler.GetAll)
 	r.POST("/enabled", handler.GetAllEnabled)
+	r.POST("/batch-delete", handler.BatchDelete)
 	r.POST("", handler.Create)
 	r.POST("/:id", handler.GetByID)
 	r.POST("/:id/update", handler.Update)
 	r.POST("/:id/delete", handler.Delete)
-	r.POST("/batch-delete", handler.BatchDelete)
 }

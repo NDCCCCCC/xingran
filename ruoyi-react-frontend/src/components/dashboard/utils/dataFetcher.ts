@@ -36,13 +36,10 @@ export class DataFetcher {
 	 * 获取数据
 	 */
 	async fetch<T = unknown>(dataSource: any): Promise<DataFetchResult<T>> {
-		console.log('[dataFetcher.fetch] input dataSource:', dataSource);
-
 		// 处理后端返回的包装格式：{ api: { type: 'api', ... } }
 		let unwrappedSource = dataSource;
 		if (dataSource.api) {
 			unwrappedSource = dataSource.api;
-			console.log('[dataFetcher.fetch] unwrapped api source:', unwrappedSource);
 		} else if (dataSource.websocket) {
 			unwrappedSource = dataSource.websocket;
 		} else if (dataSource.static) {
@@ -60,7 +57,6 @@ export class DataFetcher {
 			return this.fetchStatic(unwrappedSource as StaticDataSourceConfig);
 		}
 
-		console.log('[dataFetcher.fetch] invalid data source, returning error');
 		return {
 			data: null as T,
 			timestamp: Date.now(),
@@ -72,14 +68,11 @@ export class DataFetcher {
 	 * 从API获取数据
 	 */
 	private async fetchFromAPI<T = unknown>(config: ApiDataSourceConfig): Promise<DataFetchResult<T>> {
-		console.log('[dataFetcher.fetchFromAPI] config:', config);
-
 		try {
 			// 检查缓存
 			const cacheKey = this.getCacheKey(config);
 			const cached = this.apiCache.get(cacheKey);
 			if (cached && Date.now() - cached.timestamp < this.cacheExpiry) {
-				console.log('[dataFetcher.fetchFromAPI] returning cached data:', cached.data);
 				return cached as DataFetchResult<T>;
 			}
 
@@ -87,19 +80,12 @@ export class DataFetcher {
 
 			// 根据HTTP方法发送请求
 			if (config.method === 'GET') {
-				// GET请求：参数作为查询参数
-				console.log('[dataFetcher.fetchFromAPI] calling GET:', config.endpoint, 'params:', config.params);
 				response = await get(config.endpoint, config.params);
 			} else {
-				// POST请求：参数作为请求体
-				console.log('[dataFetcher.fetchFromAPI] calling POST:', config.endpoint, 'body:', config.params ?? config.body);
 				response = await post(config.endpoint, config.params ?? config.body ?? {});
 			}
 
-			console.log('[dataFetcher.fetchFromAPI] response:', response);
-
 			// 提取数据：标准API响应格式为 { code: 0, data: {...} }
-			// response.data 包含实际的业务数据
 			let actualData: any = response;
 
 			// 如果响应有 code 字段，说明是标准API响应
@@ -108,7 +94,6 @@ export class DataFetcher {
 					actualData = response.data;
 				} else {
 					// 业务错误
-					console.log('[dataFetcher.fetchFromAPI] business error:', response.message);
 					return {
 						data: null as T,
 						timestamp: Date.now(),
@@ -116,8 +101,6 @@ export class DataFetcher {
 					};
 				}
 			}
-
-			console.log('[dataFetcher.fetchFromAPI] actualData:', actualData);
 
 			const result: DataFetchResult<T> = {
 				data: actualData as T,
@@ -129,7 +112,6 @@ export class DataFetcher {
 
 			return result;
 		} catch (error) {
-			console.log('[dataFetcher.fetchFromAPI] exception:', error);
 			return {
 				data: null as T,
 				timestamp: Date.now(),

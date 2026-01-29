@@ -225,6 +225,16 @@ func (s *userService) Update(ctx context.Context, req *UserUpdateRequest) error 
 		user.DeptID = req.DeptID
 		user.Remark = toStringPtr(req.Remark)
 
+		// 如果部门发生变化，同步更新部门名称
+		if req.DeptID != nil {
+			var dept models.Department
+			if err := tx.Select("dept_name").First(&dept, "id = ?", *req.DeptID).Error; err == nil {
+				user.DeptName = &dept.DeptName
+			}
+		} else {
+			user.DeptName = nil
+		}
+
 		if err := tx.Save(&user).Error; err != nil {
 			return fmt.Errorf("更新用户失败: %w", err)
 		}

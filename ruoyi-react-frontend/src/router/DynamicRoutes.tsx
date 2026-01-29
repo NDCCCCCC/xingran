@@ -21,22 +21,6 @@ const createLazyRoute = (route: MenuRouteConfig) => {
   const importPath = `../pages/${route.component.slice(6)}.tsx`;
   const Component = lazy(() => import(/* @vite-ignore */ importPath));
 
-  console.log('[DynamicRoutes] Creating route:', {
-    path: route.path,
-    component: route.component,
-    importPath,
-  });
-
-  if (route.path?.includes('port') || route.path?.includes('user') ||
-      route.path?.includes('profile') || route.path?.includes('settings') ||
-      route.path?.includes('notice')) {
-    console.log('[DynamicRoutes] ⭐ IMPORTANT Route:', {
-      path: route.path,
-      component: route.component,
-      importPath,
-    });
-  }
-
   if (route.path === 'dashboard') {
     return (
       <Route
@@ -68,19 +52,13 @@ export function DynamicRoutes() {
   const { allMenus } = useMenuStore();
 
   const routeElements = useMemo(() => {
-    console.log('[DynamicRoutes] allMenus:', allMenus);
-    console.log('[DynamicRoutes] allMenus.length:', allMenus.length);
-
     if (allMenus.length === 0) {
-      console.log('[DynamicRoutes] No menus, returning empty routes');
       return [];
     }
 
     const configs = cachedRoutes && cachedMenusCount === allMenus.length
       ? cachedRoutes
       : RouteGenerator.generate(allMenus);
-
-    console.log('[DynamicRoutes] Generated routes:', configs);
 
     if (!cachedRoutes || cachedMenusCount !== allMenus.length) {
       cachedRoutes = configs;

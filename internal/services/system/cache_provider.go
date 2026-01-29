@@ -2,6 +2,7 @@ package system
 
 import (
 	"context"
+	"reflect"
 	"time"
 )
 
@@ -34,11 +35,31 @@ func (n *NoOpCacheProvider) GetOrSet(ctx context.Context, key string, dest inter
 	if err != nil {
 		return err
 	}
-	// 将结果设置到目标变量（使用辅助函数）
-	if ptr, ok := dest.(*interface{}); ok {
-		*ptr = result
-	}
+	// 将结果设置到目标变量（使用反射）
+	setValue(dest, result)
 	return nil
+}
+
+// setValue 使用反射设置目标变量的值
+func setValue(dest interface{}, value interface{}) {
+	if dest == nil {
+		return
+	}
+
+	// 使用反射来设置值
+	destValue := reflect.ValueOf(dest)
+	if destValue.Kind() != reflect.Ptr {
+		return
+	}
+
+	// 获取指向的值
+	elem := destValue.Elem()
+
+	// 设置新值
+	val := reflect.ValueOf(value)
+	if elem.IsValid() && val.IsValid() && val.Type().AssignableTo(elem.Type()) {
+		elem.Set(val)
+	}
 }
 
 func (n *NoOpCacheProvider) Delete(ctx context.Context, key string) error                { return nil }

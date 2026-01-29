@@ -142,7 +142,7 @@ const FileUpload: FC<FileUploadProps> = ({
     };
 
     xhr.open('POST', '/system/files/upload', true);
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('accessToken');
     if (token) {
       xhr.setRequestHeader('Authorization', `Bearer ${token}`);
     }
@@ -170,7 +170,7 @@ const FileUpload: FC<FileUploadProps> = ({
         await fetch(`/system/files/${file.response.data.id}`, {
           method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
           },
         });
       } catch (error) {

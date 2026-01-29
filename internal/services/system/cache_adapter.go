@@ -2,6 +2,7 @@ package system
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
@@ -30,31 +31,42 @@ func (a *CacheAdapter) GetOrSet(
 	// 尝试从缓存获取
 	cached, err := a.cache.Get(ctx, key)
 	if err == nil && cached != "" {
-		// 缓存命中，直接返回（简化处理，实际应反序列化）
-		if ptr, ok := dest.(*interface{}); ok {
-			*ptr = cached
+		// 缓存命中，反序列化并设置到目标变量
+		if err := json.Unmarshal([]byte(cached), dest); err != nil {
+			logger.Warnf("反序列化缓存失败: key=%s, error=%v", key, err)
+			// 反序列化失败，继续执行查询
+		} else {
+			return nil
 		}
-		return nil
 	}
 
-	// 缓存未命中，执行查询
+	// 缓存未命中或反序列化失败，执行查询
 	result, err := query()
 	if err != nil {
 		return err
 	}
 
+	// 序列化结果
+	data, err := json.Marshal(result)
+	if err != nil {
+		logger.Warnf("序列化结果失败: key=%s, error=%v", key, err)
+		// 序列化失败，仍然设置结果到目标变量
+		setValue(dest, result)
+		return nil
+	}
+
 	// 保存到缓存
-	if cacheErr := a.cache.Set(ctx, key, result, expiration); cacheErr != nil {
+	if cacheErr := a.cache.Set(ctx, key, string(data), expiration); cacheErr != nil {
 		logger.Warnf("保存缓存失败: key=%s, error=%v", key, cacheErr)
 	}
 
 	// 设置结果到目标变量
-	if ptr, ok := dest.(*interface{}); ok {
-		*ptr = result
-	}
+	setValue(dest, result)
 
 	return nil
 }
+
+// setValue 使用反射设置目标变量的值（定义在 cache_provider.go 中）
 
 // Delete 删除缓存
 func (a *CacheAdapter) Delete(ctx context.Context, key string) error {
