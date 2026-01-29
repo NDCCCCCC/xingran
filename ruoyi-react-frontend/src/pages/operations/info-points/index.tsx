@@ -309,13 +309,17 @@ const InfoPointManagement: FC = () => {
     },
     {
       title: '所属工位',
-      dataIndex: 'workstationId',
-      key: 'workstationId',
+      dataIndex: 'workstationName',
+      key: 'workstationName',
       width: 150,
-      render: (workstationId: string) => getWorkstationName(workstationId),
+      ellipsis: { showTitle: false },
+      render: (_, record) => {
+        const name = record.workstationName || getWorkstationName(record.workstationId);
+        return <Tooltip title={name}>{name || '-'}</Tooltip>;
+      },
     },
-    { title: '所属设备', dataIndex: 'deviceName', key: 'deviceName', width: 120, render: (v) => v || '-' },
-    { title: '所属端口', dataIndex: 'portName', key: 'portName', width: 120, render: (v) => v || '-' },
+    { title: '所属设备', dataIndex: 'deviceName', key: 'deviceName', width: 180, ellipsis: { showTitle: false }, render: (v) => v || '-' },
+    { title: '所属端口', dataIndex: 'portName', key: 'portName', width: 180, ellipsis: { showTitle: false }, render: (v) => v || '-' },
     {
       title: '状态',
       dataIndex: 'status',
@@ -326,7 +330,7 @@ const InfoPointManagement: FC = () => {
         return <Tag color={colors[status as keyof typeof colors]}>{getStatusText(status)}</Tag>;
       },
     },
-    { title: '描述', dataIndex: 'description', key: 'description', ellipsis: true },
+    { title: '描述', dataIndex: 'description', key: 'description', width: 200, ellipsis: { showTitle: false }, render: (v) => <Tooltip title={v}>{v || '-'}</Tooltip> },
     createDateTimeColumn('createdAt', { width: 180 }),
     {
       title: '操作', key: 'action',
@@ -372,7 +376,7 @@ const InfoPointManagement: FC = () => {
                 description={
                   <div>
                     <div><strong>类型：</strong>{getInfoPointTypeText(infoPoint.infoPointType)}</div>
-                    <div><strong>工位：</strong>{getWorkstationName(infoPoint.workstationId)}</div>
+                    <div><strong>工位：</strong>{infoPoint.workstationName || getWorkstationName(infoPoint.workstationId)}</div>
                     {infoPoint.deviceName && <div><strong>设备：</strong>{infoPoint.deviceName}</div>}
                     {infoPoint.portName && <div><strong>端口：</strong>{infoPoint.portName}</div>}
                   </div>
