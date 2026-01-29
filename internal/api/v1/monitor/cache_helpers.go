@@ -126,7 +126,13 @@ func getCachesFromCacheWithLevel(cacheInterface interface{}, req CacheListReques
 
 	var caches []models.CacheInfo
 	for _, key := range keys {
-		if isSystemKey(key) {
+		// 统一去除 ruoyi: 前缀（如果存在）
+		displayKey := key
+		if strings.HasPrefix(key, "ruoyi:") {
+			displayKey = key[6:]
+		}
+
+		if isSystemKey(displayKey) {
 			continue
 		}
 
@@ -141,9 +147,9 @@ func getCachesFromCacheWithLevel(cacheInterface interface{}, req CacheListReques
 				ttl, _ = directRedis.DirectRedisTTL(ctx, key)
 			}
 		} else {
-			value, getErr = mlCache.Get(ctx, key)
+			value, getErr = mlCache.Get(ctx, displayKey)
 			if getErr == nil {
-				ttl, _ = mlCache.TTL(ctx, key)
+				ttl, _ = mlCache.TTL(ctx, displayKey)
 			}
 		}
 
@@ -156,25 +162,24 @@ func getCachesFromCacheWithLevel(cacheInterface interface{}, req CacheListReques
 			ttlSeconds = int64(ttl.Seconds())
 		}
 
+		// 正确判断缓存位置（支持useDirectRedis模式）
 		location := "l2"
 		if req.Level == "l1" {
 			location = "l1"
-		} else if !useDirectRedis && req.Level == "all" {
-			l1Keys, _ := mlCache.KeysByLevel(ctx, key, "l1")
-			l2Keys, _ := mlCache.KeysByLevel(ctx, key, "l2")
+		} else if req.Level == "all" {
+			// 检查L1中是否存在
+			l1Keys, _ := mlCache.KeysByLevel(ctx, displayKey, "l1")
 			l1Has := len(l1Keys) > 0
-			l2Has := len(l2Keys) > 0
-			if l1Has && l2Has {
-				location = "both"
-			} else if l1Has {
-				location = "l1"
-			} else if l2Has {
-				location = "l2"
+
+			if l1Has {
+				location = "both"  // L1和L2都存在
+			} else {
+				location = "l2"    // 仅L2存在
 			}
 		}
 
 		caches = append(caches, models.CacheInfo{
-			Key:       key,
+			Key:       displayKey,
 			Value:     value,
 			Type:      "string",
 			Size:      int64(len(value)),
