@@ -100,23 +100,25 @@ type ADSyncRequest struct {
 // ADDomainService AD域管理服务（主服务）
 // 提供统一的访问入口，内部委托给各个专门的服务
 type ADDomainService struct {
-	Config *ConfigService
-	Sync   *SyncService
-	OU     *OUService
-	User   *UserService
-	Group  *GroupService
-	Log    *LogService
+	Config   *ConfigService
+	Sync     *SyncService
+	OU       *OUService
+	User     *UserService
+	Group    *GroupService
+	Log      *LogService
+	Computer *ComputerService
 }
 
 // NewADDomainService 创建AD域管理服务
 func NewADDomainService(db *gorm.DB) *ADDomainService {
 	return &ADDomainService{
-		Config: NewConfigService(db),
-		Sync:   NewSyncService(db),
-		OU:     NewOUService(db),
-		User:   NewUserService(db),
-		Group:  NewGroupService(db),
-		Log:    NewLogService(db),
+		Config:   NewConfigService(db),
+		Sync:     NewSyncService(db),
+		OU:       NewOUService(db),
+		User:     NewUserService(db),
+		Group:    NewGroupService(db),
+		Log:      NewLogService(db),
+		Computer: NewComputerService(db),
 	}
 }
 
@@ -216,6 +218,11 @@ func (s *ADDomainService) GetADUserByDN(ctx context.Context, configID, userDN st
 	return s.User.GetByDN(ctx, configID, userDN)
 }
 
+// GetADUserByID 根据数据库ID获取用户（兼容旧API）
+func (s *ADDomainService) GetADUserByID(ctx context.Context, userID string) (*models.ADUser, error) {
+	return s.User.GetByID(ctx, userID)
+}
+
 // GetADGroupList 获取AD用户组列表（兼容旧API）
 func (s *ADDomainService) GetADGroupList(ctx context.Context, req *ADGroupListRequest) ([]models.ADGroup, int64, error) {
 	return s.Group.GetList(ctx, &GroupListRequest{
@@ -230,4 +237,47 @@ func (s *ADDomainService) GetADGroupList(ctx context.Context, req *ADGroupListRe
 // GetADSyncLogList 获取同步日志列表（兼容旧API）
 func (s *ADDomainService) GetADSyncLogList(ctx context.Context, configID string, current, pageSize int) ([]models.ADSyncLog, int64, error) {
 	return s.Log.GetList(ctx, configID, current, pageSize)
+}
+
+// GetADGroupMembers 获取AD用户组成员（兼容旧API）
+func (s *ADDomainService) GetADGroupMembers(ctx context.Context, configID, groupDN string, current, pageSize int) ([]models.ADUser, int64, error) {
+	return s.Group.GetMembers(ctx, configID, groupDN, current, pageSize)
+}
+
+// GetADComputerList 获取AD电脑设备列表（兼容旧API）
+func (s *ADDomainService) GetADComputerList(ctx context.Context, req *ComputerListRequest) ([]ComputerDetail, int64, error) {
+	return s.Computer.List(ctx, req)
+}
+
+// GetADComputerByDN 根据DN获取电脑设备（兼容旧API）
+func (s *ADDomainService) GetADComputerByDN(ctx context.Context, configID, computerDN string) (*ComputerDetail, error) {
+	return s.Computer.GetByDN(ctx, configID, computerDN)
+}
+
+// UpdateADUser 更新AD用户（兼容旧API）
+func (s *ADDomainService) UpdateADUser(ctx context.Context, config *models.ADConfig, userDN string, req *ADUserUpdateRequest) error {
+	return s.User.Update(ctx, config, userDN, &UserUpdateRequest{
+		DisplayName: req.DisplayName,
+		Email:       req.Email,
+		Phone:       req.Phone,
+		Mobile:      req.Mobile,
+		Title:       req.Title,
+		Department:  req.Department,
+		Description: req.Description,
+	})
+}
+
+// MoveADUser 移动AD用户（兼容旧API）
+func (s *ADDomainService) MoveADUser(ctx context.Context, config *models.ADConfig, userDN, newOUDN string) error {
+	return s.User.Move(ctx, config, userDN, newOUDN)
+}
+
+// EnableADUser 启用AD用户（兼容旧API）
+func (s *ADDomainService) EnableADUser(ctx context.Context, config *models.ADConfig, userDN string) error {
+	return s.User.Enable(ctx, config, userDN)
+}
+
+// DisableADUser 禁用AD用户（兼容旧API）
+func (s *ADDomainService) DisableADUser(ctx context.Context, config *models.ADConfig, userDN string) error {
+	return s.User.Disable(ctx, config, userDN)
 }

@@ -4,6 +4,14 @@ import { Form } from 'antd';
 export interface TableManagerOptions {
   pageSize?: number;
   onSuccess?: () => void;
+  // 支持外部传入的分页状态（用于全局分页管理）
+  externalPagination?: {
+    current: number;
+    pageSize: number;
+    setCurrent: (page: number) => void;
+    setPageSize: (size: number) => void;
+    setTotal: (total: number) => void;
+  };
 }
 
 export interface TableManagerReturn<T> {
@@ -46,14 +54,22 @@ export function useTableManager<T>(
   loadFunction: (params: any) => Promise<{ list: T[]; total: number }>,
   options: TableManagerOptions = {}
 ): TableManagerReturn<T> {
-  const { pageSize: defaultPageSize = 10, onSuccess } = options;
+  const { pageSize: defaultPageSize = 10, onSuccess, externalPagination } = options;
 
   // 表格状态
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<T[]>([]);
   const [total, setTotal] = useState(0);
-  const [current, setCurrent] = useState(1);
-  const [pageSize, setPageSize] = useState(defaultPageSize);
+
+  // 使用外部分页状态或内部状态
+  const [internalCurrent, setInternalCurrent] = useState(1);
+  const [internalPageSize, setInternalPageSize] = useState(defaultPageSize);
+
+  const current = externalPagination?.current ?? internalCurrent;
+  const pageSize = externalPagination?.pageSize ?? internalPageSize;
+  const setCurrent = externalPagination?.setCurrent ?? setInternalCurrent;
+  const setPageSize = externalPagination?.setPageSize ?? setInternalPageSize;
+
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
   // 表单状态
@@ -75,14 +91,19 @@ export function useTableManager<T>(
         ...params,
       });
       setData(result.list || []);
-      setTotal(result.total || 0);
+      const newTotal = result.total || 0;
+      setTotal(newTotal);
+      // 同步 total 到外部分页状态
+      if (externalPagination?.setTotal) {
+        externalPagination.setTotal(newTotal);
+      }
     } catch (error) {
       // 错误由调用方处理
       throw error;
     } finally {
       setLoading(false);
     }
-  }, [current, pageSize]);
+  }, [current, pageSize, externalPagination]);
 
   // 搜索
   const handleSearch = useCallback(() => {

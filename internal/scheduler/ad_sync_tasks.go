@@ -69,17 +69,29 @@ func checkAndSyncADConfigs(db *gorm.DB) {
 
 	for _, config := range configs {
 		shouldSync := false
+		var elapsed float64
 
 		// 从未同步过
 		if config.LastSyncAt == nil {
 			shouldSync = true
-			log.Printf("AD配置 %s 从未同步过，准备进行首次同步", config.ConfigName)
+			log.Printf("AD配置 %s 从未同步过，准备进行首次同步 (配置的同步间隔: %d秒)", config.ConfigName, config.SyncInterval)
 		} else {
 			// 检查是否超过同步间隔
-			elapsed := time.Since(*config.LastSyncAt).Seconds()
+			elapsed = time.Since(*config.LastSyncAt).Seconds()
+			log.Printf("AD配置 %s 检查同步: 距离上次同步 %.0f 秒，配置的同步间隔 %d 秒", config.ConfigName, elapsed, config.SyncInterval)
+
+			// 如果已经超过同步间隔，或者在下次检查之前会超过间隔，则触发同步
+			// 下次检查时间是 5 分钟后（300秒）
+			nextCheckIn := 300.0
+			timeUntilNextSync := float64(config.SyncInterval) - elapsed
+
 			if elapsed >= float64(config.SyncInterval) {
 				shouldSync = true
-				log.Printf("AD配置 %s 距离上次同步已超过 %d 秒，准备同步", config.ConfigName, config.SyncInterval)
+				log.Printf("AD配置 %s 距离上次同步已超过 %.0f 秒 (配置间隔: %d秒)，准备同步", config.ConfigName, elapsed, config.SyncInterval)
+			} else if timeUntilNextSync <= nextCheckIn && timeUntilNextSync > 0 {
+				// 如果在下次检查之前就会达到同步间隔，提前触发同步，避免多等待一个检查周期
+				shouldSync = true
+				log.Printf("AD配置 %s 将在下次检查前达到同步间隔(剩余 %.0f 秒)，提前触发同步", config.ConfigName, timeUntilNextSync)
 			}
 		}
 
@@ -111,50 +123,16 @@ func syncADConfig(configID string) {
 
 	log.Printf("开始同步AD配置: %s", config.ConfigName)
 
-	// 创建同步日志
-	syncLog := &models.ADSyncLog{
-		ADConfigID: config.ID,
-		SyncType:   models.ADSyncTypeFull,
-		SyncStatus: models.ADSyncStatusRunning,
-		StartTime:  time.Now(),
-	}
-	if err := db.Create(syncLog).Error; err != nil {
-		log.Printf("AD同步失败: 创建同步日志失败 - %v", err)
-		return
-	}
-
-	// 创建Service并执行同步
+	// 创建Service并执行同步（SyncData内部会创建和管理同步日志）
 	adService := addomain.NewADDomainService(db)
 	result, err := adService.Sync.SyncDataByID(ctx, configID, "full")
 
-	// 更新同步日志
-	endTime := time.Now()
-	duration := int(endTime.Sub(syncLog.StartTime).Seconds())
-
-	updates := map[string]interface{}{
-		"end_time":    endTime,
-		"duration":    duration,
-		"sync_status": models.ADSyncStatusSuccess,
-		"ou_count":    0,
-		"group_count": 0,
-		"user_count":  0,
-		"error_count": 0,
-	}
-
 	if err != nil {
 		log.Printf("AD同步失败: %s - %v", config.ConfigName, err)
-		updates["sync_status"] = models.ADSyncStatusFailed
-		updates["error_message"] = err.Error()
-		updates["error_count"] = 1
 	} else {
-		log.Printf("AD同步成功: %s - OU=%d, 用户组=%d, 用户=%d",
-			config.ConfigName, result.OUCount, result.GroupCount, result.UserCount)
-		updates["ou_count"] = result.OUCount
-		updates["group_count"] = result.GroupCount
-		updates["user_count"] = result.UserCount
+		log.Printf("AD同步成功: %s - OU=%d, 用户组=%d, 用户=%d, 电脑=%d",
+			config.ConfigName, result.OUCount, result.GroupCount, result.UserCount, result.ComputerCount)
 	}
-
-	db.Model(syncLog).Updates(updates)
 }
 
 // executeADDataSyncTask 执行AD数据同步任务（供Scheduler调用）

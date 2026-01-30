@@ -167,6 +167,9 @@ const MenuManagement: FC = () => {
     onLoad: loadMenus,
     selectedRowKeys,
     setSelectedRowKeys,
+    onSaveSuccess: () => {
+      setEditModalVisible(false);
+    },
   });
 
   // 初始化加载
@@ -199,6 +202,12 @@ const MenuManagement: FC = () => {
     setEditModalVisible(true);
   };
 
+  // 打开编辑弹窗
+  const handleOpenEditModal = (record: Menu) => {
+    handleEdit(record);
+    setEditModalVisible(true);
+  };
+
   // Modal 打开后的回调
   const handleModalOpenChange = (open: boolean) => {
     if (open && editingMenu) {
@@ -214,7 +223,7 @@ const MenuManagement: FC = () => {
   };
 
   // 表格列
-  const columns = getMenuTableColumns({ handleEdit, handleDeleteConfirm });
+  const columns = getMenuTableColumns({ handleEdit: handleOpenEditModal, handleDeleteConfirm });
 
   return (
     <div>
@@ -368,7 +377,7 @@ const MenuManagement: FC = () => {
               >
                 <TreeSelect
                   style={{ width: '100%' }}
-                  dropdownStyle={{ maxHeight: 400, overflow: 'auto' }}
+                  styles={{ popup: { root: { maxHeight: 400, overflow: 'auto' } } }}
                   treeData={parentOptions}
                   placeholder="请选择上级菜单"
                   treeDefaultExpandAll

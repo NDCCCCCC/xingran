@@ -1,16 +1,17 @@
-import { Layout, Avatar, Dropdown, Space, Divider } from 'antd';
+import { Layout, Avatar, Dropdown, Space } from 'antd';
 import { UserOutlined, LogoutOutlined, SettingOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import NotificationBell from '@/components/NotificationBell';
-import ColorSwitcher from '@/design-system/components/ColorSwitcher';
 import GlobalSearch from '@/components/shared/GlobalSearch';
+import { USER_PROFILE, USER_SETTINGS } from '@/constants/routes';
 import type { MenuProps } from 'antd';
+import type { FC } from 'react';
+import { AVATAR_BORDER_OPACITY, AVATAR_BORDER_WIDTH, HEADER_Z_INDEX } from './header.constants';
+import '@/design-system/themes/theme-styles.css';
 
 const { Header: AntHeader } = Layout;
-
-import type { FC } from 'react';
 
 const Header: FC = () => {
   const { user, logout } = useAuthStore();
@@ -31,13 +32,13 @@ const Header: FC = () => {
       key: 'profile',
       label: '个人中心',
       icon: <UserOutlined />,
-      onClick: () => navigate('/profile'),
+      onClick: () => navigate(USER_PROFILE),
     },
     {
       key: 'settings',
       label: '系统设置',
       icon: <SettingOutlined />,
-      onClick: () => navigate('/settings'),
+      onClick: () => navigate(USER_SETTINGS),
     },
     {
       type: 'divider',
@@ -52,14 +53,10 @@ const Header: FC = () => {
 
   return (
     <AntHeader
-      className="flex items-center justify-between px-6 shadow-lg"
+      className="layout-header flex items-center justify-between px-6 shadow-lg"
       style={{
-        background: 'var(--theme-bg-surface)',
-        color: 'var(--theme-text-primary)',
-        borderBottom: '1px solid var(--theme-border-primary)',
-        transition: 'var(--theme-transition-base)',
         position: 'relative',
-        zIndex: 10,
+        zIndex: HEADER_Z_INDEX,
       }}
     >
       {/* 左侧留空，保持布局平衡 */}
@@ -67,11 +64,6 @@ const Header: FC = () => {
       </div>
 
       <Space size="middle">
-        {/* 颜色选择器 */}
-        <ColorSwitcher />
-
-        <Divider orientation="vertical" style={{ height: 24 }} />
-
         {/* 通知铃铛 */}
         <NotificationBell />
 
@@ -86,9 +78,9 @@ const Header: FC = () => {
             src={user?.avatar}
             className="cursor-pointer shadow-md border-2"
             style={{
-              background: 'linear-gradient(135deg, var(--theme-primary-500, #3b82f6) 0%, var(--theme-primary-600, #2563eb) 100%)',
+              background: 'linear-gradient(135deg, var(--theme-brand, #3b82f6) 0%, var(--theme-brand-dark, #2563eb) 100%)',
               color: 'var(--theme-text-inverse)',
-              borderColor: 'rgba(255, 255, 255, 0.3)',
+              borderColor: `rgba(255, 255, 255, ${AVATAR_BORDER_OPACITY})`,
               transition: 'var(--theme-transition-base)',
             }}
           />

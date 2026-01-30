@@ -28,6 +28,7 @@ import { post } from '@/lib/api';
 import { useTableManager } from '@/hooks/useTableManager';
 import { withErrorHandling } from '@/utils/errorHandler';
 import { useState, useEffect } from 'react';
+import { usePagination } from '@/hooks/usePagination';
 
 const { Option } = Select;
 
@@ -42,12 +43,12 @@ const MACAddressPage: FC = () => {
     secure: 0,
   });
 
+  // 使用全局分页 hook
+  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+
   const {
     loading,
     data: macAddresses,
-    total,
-    current,
-    pageSize,
     selectedRowKeys,
     setSelectedRowKeys,
     searchForm,
@@ -55,19 +56,26 @@ const MACAddressPage: FC = () => {
     handleSearch,
     handleReset,
     handleRefresh,
-    setCurrent,
-    setPageSize,
   } = useTableManager<DeviceMACAddress>(
     async (params) => {
       const values = searchForm.getFieldsValue();
       const result = await post('/network/mac/list', {
-        current: params.current || current,
-        pageSize: params.pageSize || pageSize,
+        current: params.current || paginationProps.current,
+        pageSize: params.pageSize || paginationProps.pageSize,
         ...values,
-      });
+      }) as { data: { list: DeviceMACAddress[]; total: number } };
       // 更新统计数据
       updateStatistics(result.data.list || []);
       return result.data;
+    },
+    {
+      externalPagination: {
+        current: paginationProps.current,
+        pageSize: paginationProps.pageSize,
+        setCurrent,
+        setPageSize,
+        setTotal,
+      },
     }
   );
 
@@ -90,8 +98,8 @@ const MACAddressPage: FC = () => {
       const result = await post('/network/devices/list', {
         current: 1,
         pageSize: 1000,
-      });
-      setDevices(result.data.list || []);
+      }) as { data?: { list: any[] } };
+      setDevices(result.data?.list || []);
     } catch (error) {
       console.error('加载设备列表失败:', error);
     }
@@ -259,14 +267,14 @@ const MACAddressPage: FC = () => {
           loading={loading}
           rowKey="id"
           scroll={{ x: 1200 }}
-          pagination={{
-            current,
-            pageSize,
-            total,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条`,
-            onChange: (page, size) => { setCurrent(page); setPageSize(size || 10); },
+          pagination={paginationProps}
+          onChange={(pagination) => {
+            setCurrent(pagination.current);
+            setPageSize(pagination.pageSize);
+            loadMACAddresses({
+              current: pagination.current,
+              pageSize: pagination.pageSize,
+            });
           }}
         />
       </Card>

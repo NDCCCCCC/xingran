@@ -14,14 +14,16 @@ import {
   CheckCircleOutlined, StopOutlined, WarningOutlined, AppstoreOutlined, TableOutlined,
   ImportOutlined, ExportOutlined, LineChartOutlined,
 } from '@ant-design/icons';
-import type { DedicatedLine } from '@/types';
+import type { DedicatedLine, DictData } from '@/types';
 import { dedicatedLineApi, serverRoomApi } from '@/lib/opsApi';
 import { useTableManager } from '@/hooks/useTableManager';
+import { usePagination } from '@/hooks/usePagination';
 import { handleApiError, handleSuccess } from '@/utils/errorHandler';
 import { createDateTimeColumn } from '@/utils/tableHelpers';
 import ActionButtons from '@/components/shared/ActionButtons';
 import ExcelImport from '@/components/shared/ExcelImport';
 import ExcelExport from '@/components/shared/ExcelExport';
+import { post } from '@/lib/api';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -39,10 +41,15 @@ const DedicatedLineManagement: FC = () => {
   const [importVisible, setImportVisible] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
   const [serverRooms, setServerRooms] = useState<ServerRoomOption[]>([]);
+  const [lineTypeDict, setLineTypeDict] = useState<DictData[]>([]);
+  const [ispDict, setIspDict] = useState<DictData[]>([]);
+
+  // 使用全局分页 hook
+  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
   const loadServerRooms = useCallback(async () => {
     try {
-      const result = await serverRoomApi.list({ current: 1, pageSize: 1000 });
+      const result = await serverRoomApi.list({ current: 1, pageSize: 1000 }) as { data?: { list: any[] } };
       const rooms = result.data?.list || [];
       setServerRooms(rooms.map((r: any) => ({ id: r.id, name: r.name })));
     } catch (error) {
@@ -50,23 +57,49 @@ const DedicatedLineManagement: FC = () => {
     }
   }, []);
 
+  const loadLineTypeDict = useCallback(async () => {
+    try {
+      const result = await post('/system/dicts/data/list', { dictType: 'ops_dedicated_line_type', current: 1, pageSize: 100 }) as { data?: { list: any[] } };
+      setLineTypeDict(result.data?.list || []);
+    } catch (error) {
+      handleApiError(error, '加载专线类型字典', false);
+    }
+  }, []);
+
+  const loadIspDict = useCallback(async () => {
+    try {
+      const result = await post('/system/dicts/data/list', { dictType: 'ops_isp', current: 1, pageSize: 100 }) as { data?: { list: any[] } };
+      setIspDict(result.data?.list || []);
+    } catch (error) {
+      handleApiError(error, '加载运营商字典', false);
+    }
+  }, []);
+
   const {
-    loading, data: lines, total, current, pageSize, selectedRowKeys,
+    loading, data: lines, total, selectedRowKeys,
     searchForm, editForm: lineForm, editModalVisible: modalVisible,
     editingItem: editingLine, setSelectedRowKeys, setEditModalVisible: setModalVisible,
-    setEditingItem: setEditingLine, setCurrent, setPageSize, handleSearch,
+    setEditingItem: setEditingLine, handleSearch,
     handleReset, handleAdd, handleEdit, handleModalClose, loadData: loadLines, resetSelection,
   } = useTableManager<DedicatedLine>(
     async (params) => {
-      const result = await dedicatedLineApi.list(params);
+      const result = await dedicatedLineApi.list(params) as { data?: { list: DedicatedLine[]; total: number } };
       return { list: result.data?.list || [], total: result.data?.total || 0 };
     },
-    { pageSize: 10 }
+    {
+      externalPagination: {
+        current: paginationProps.current,
+        pageSize: paginationProps.pageSize,
+        setCurrent,
+        setPageSize,
+        setTotal,
+      },
+    }
   );
 
   const loadStatistics = useCallback(async () => {
     try {
-      const result = await dedicatedLineApi.list({ current: 1, pageSize: 1000 });
+      const result = await dedicatedLineApi.list({ current: 1, pageSize: 1000 }) as { data?: { list: DedicatedLine[] } };
       const allLines = result.data?.list || [];
       setStatistics({
         total: allLines.length,
@@ -83,8 +116,10 @@ const DedicatedLineManagement: FC = () => {
       loadLines();
       loadStatistics();
       loadServerRooms();
+      loadLineTypeDict();
+      loadIspDict();
     }, 0);
-  }, [loadServerRooms]);
+  }, [paginationProps.current, paginationProps.pageSize]);
 
   const handleSave = async () => {
     try {
@@ -115,14 +150,24 @@ const DedicatedLineManagement: FC = () => {
 
   const openModal = (record?: DedicatedLine) => {
     if (record) { handleEdit(record); lineForm.setFieldsValue(record); }
-    else { handleAdd(); lineForm.setFieldsValue({ status: 0, lineType: 'MPLS' }); }
+    else {
+      handleAdd();
+      const defaultType = lineTypeDict.find(d => d.isDefault)?.dictValue || lineTypeDict[0]?.dictValue;
+      const defaultIsp = ispDict.find(d => d.isDefault)?.dictValue || ispDict[0]?.dictValue;
+      lineForm.setFieldsValue({ status: 0, lineType: defaultType, isp: defaultIsp });
+    }
   };
 
   const handleImportSuccess = () => { loadLines(); loadStatistics(); setImportVisible(false); };
 
   const getLineTypeText = (type: string) => {
-    const types: Record<string, string> = { MPLS: 'MPLS', Internet: '互联网专线', LeasedLine: '租用专线', Fiber: '光纤专线' };
-    return types[type] || type;
+    const dictItem = lineTypeDict.find(d => d.dictValue === type);
+    return dictItem?.dictLabel || type;
+  };
+
+  const getIspText = (isp: string) => {
+    const dictItem = ispDict.find(d => d.dictValue === isp);
+    return dictItem?.dictLabel || isp;
   };
 
   const getStatusText = (status: number) => {
@@ -131,7 +176,7 @@ const DedicatedLineManagement: FC = () => {
   };
 
   const columns: ColumnsType<DedicatedLine> = [
-    { title: '专线编码', dataIndex: 'lineCode', key: 'lineCode', width: 150 },
+    { title: '专线名称', dataIndex: 'name', key: 'name', width: 150 },
     {
       title: '专线类型',
       dataIndex: 'lineType',
@@ -140,13 +185,15 @@ const DedicatedLineManagement: FC = () => {
       render: (type) => <Tag>{getLineTypeText(type)}</Tag>,
     },
     { title: '带宽', dataIndex: 'bandwidth', key: 'bandwidth', width: 100, render: (v) => v || '-' },
-    { title: '运营商', dataIndex: 'isp', key: 'isp', width: 120 },
+    { title: '运营商', dataIndex: 'isp', key: 'isp', width: 120, render: (isp) => <Tag>{getIspText(isp)}</Tag> },
     { title: '源机房', dataIndex: 'sourceRoomName', key: 'sourceRoomName', width: 120, render: (v) => v || '-' },
     { title: '源设备', dataIndex: 'sourceDeviceName', key: 'sourceDeviceName', width: 120, render: (v) => v || '-' },
     { title: '源端口', dataIndex: 'sourcePort', key: 'sourcePort', width: 100, render: (v) => v || '-' },
+    { title: '源IP', dataIndex: 'sourceIpAddress', key: 'sourceIpAddress', width: 130, render: (v) => v || '-' },
     { title: '目的机房', dataIndex: 'destRoomName', key: 'destRoomName', width: 120, render: (v) => v || '-' },
     { title: '目的设备', dataIndex: 'destDeviceName', key: 'destDeviceName', width: 120, render: (v) => v || '-' },
-    { title: 'IP地址', dataIndex: 'ipAddress', key: 'ipAddress', width: 120, render: (v) => v || '-' },
+    { title: '目的端口', dataIndex: 'destPort', key: 'destPort', width: 100, render: (v) => v || '-' },
+    { title: '目的IP', dataIndex: 'destIpAddress', key: 'destIpAddress', width: 130, render: (v) => v || '-' },
     {
       title: '状态',
       dataIndex: 'status',
@@ -196,16 +243,17 @@ const DedicatedLineManagement: FC = () => {
               <Card.Meta
                 title={
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>{line.lineCode}</span>
+                    <span>{line.name}</span>
                     <Tag color={line.status === 0 ? 'success' : line.status === 1 ? 'error' : 'default'}>{getStatusText(line.status)}</Tag>
                   </div>
                 }
                 description={
                   <div>
                     <div><strong>类型：</strong>{getLineTypeText(line.lineType)}</div>
-                    <div><strong>运营商：</strong>{line.isp}</div>
+                    <div><strong>运营商：</strong>{getIspText(line.isp)}</div>
                     {line.bandwidth && <div><strong>带宽：</strong>{line.bandwidth}</div>}
-                    {line.ipAddress && <div><strong>IP：</strong>{line.ipAddress}</div>}
+                    {line.sourceIpAddress && <div><strong>源IP：</strong>{line.sourceIpAddress}</div>}
+                    {line.destIpAddress && <div><strong>目的IP：</strong>{line.destIpAddress}</div>}
                     {line.monthlyFee && <div><strong>月费：</strong>¥{line.monthlyFee}</div>}
                   </div>
                 }
@@ -230,22 +278,21 @@ const DedicatedLineManagement: FC = () => {
       <Card style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
-            <Form.Item name="lineCode" label="专线编码">
-              <Input placeholder="请输入专线编码" />
+            <Form.Item name="name" label="专线名称">
+              <Input placeholder="请输入专线名称" allowClear style={{ width: 150 }} />
             </Form.Item>
             <Form.Item name="lineType" label="专线类型">
-              <Select placeholder="请选择类型">
-                <Option value="MPLS">MPLS</Option>
-                <Option value="Internet">互联网专线</Option>
-                <Option value="LeasedLine">租用专线</Option>
-                <Option value="Fiber">光纤专线</Option>
+              <Select placeholder="请选择类型" allowClear style={{ width: 130 }}>
+                {lineTypeDict.map(d => <Option key={d.dictValue} value={d.dictValue}>{d.dictLabel}</Option>)}
               </Select>
             </Form.Item>
             <Form.Item name="isp" label="运营商">
-              <Input placeholder="请输入运营商" />
+              <Select placeholder="请选择运营商" allowClear style={{ width: 120 }}>
+                {ispDict.map(d => <Option key={d.dictValue} value={d.dictValue}>{d.dictLabel}</Option>)}
+              </Select>
             </Form.Item>
             <Form.Item name="status" label="状态">
-              <Select placeholder="请选择状态">
+              <Select placeholder="请选择状态" allowClear style={{ width: 100 }}>
                 <Option value={0}>正常</Option>
                 <Option value={1}>故障</Option>
                 <Option value={2}>停用</Option>
@@ -269,24 +316,21 @@ const DedicatedLineManagement: FC = () => {
             <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>新增专线</Button>
           </Space>
         </div>
-        {selectedRowKeys.length > 0 && <Alert message={<span>已选择 <strong>{selectedRowKeys.length}</strong> 条专线，<Button type="link" size="small" onClick={() => setSelectedRowKeys([])} style={{ padding: 0 }}>取消选择</Button></span>} type="info" showIcon style={{ marginTop: 12 }} />}
+        {selectedRowKeys.length > 0 && <Alert title={<span>已选择 <strong>{selectedRowKeys.length}</strong> 条专线，<Button type="link" size="small" onClick={() => setSelectedRowKeys([])} style={{ padding: 0 }}>取消选择</Button></span>} type="info" showIcon style={{ marginTop: 12 }} />}
       </Card>
       <Card>
         {viewMode === 'table' ? (
-          <Table rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }} columns={columns} dataSource={lines} loading={loading} rowKey="id" pagination={{ current, pageSize, total, showSizeChanger: true, showQuickJumper: true, showTotal: (total) => `共 ${total} 条`, onChange: (page, size) => { setCurrent(page); setPageSize(size || 10); loadLines({ current: page, pageSize: size || 10 }); } }} />
+          <Table rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }} columns={columns} dataSource={lines} loading={loading} rowKey="id" pagination={paginationProps} />
         ) : renderCardView()}
       </Card>
       <Modal title={editingLine ? '编辑专线' : '新增专线'} open={modalVisible} onOk={handleSave} onCancel={() => { setModalVisible(false); lineForm.resetFields(); setEditingLine(null); }} width={700}>
         <Form form={lineForm} layout="horizontal" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
-          <Form.Item name="lineCode" label="专线编码" rules={[{ required: true, message: '请输入专线编码' }]}>
-            <Input placeholder="请输入专线编码" disabled={!!editingLine} className="user-form-input" />
+          <Form.Item name="name" label="专线名称" rules={[{ required: true, message: '请输入专线名称' }]}>
+            <Input placeholder="请输入专线名称" />
           </Form.Item>
           <Form.Item name="lineType" label="专线类型" rules={[{ required: true, message: '请选择专线类型' }]}>
-            <Select placeholder="请选择专线类型" className="user-form-input">
-              <Option value="MPLS">MPLS</Option>
-              <Option value="Internet">互联网专线</Option>
-              <Option value="LeasedLine">租用专线</Option>
-              <Option value="Fiber">光纤专线</Option>
+            <Select placeholder="请选择专线类型">
+              {lineTypeDict.map(d => <Option key={d.dictValue} value={d.dictValue}>{d.dictLabel}</Option>)}
             </Select>
           </Form.Item>
           <Row gutter={16}>
@@ -296,8 +340,10 @@ const DedicatedLineManagement: FC = () => {
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="isp" label="运营商" rules={[{ required: true, message: '请输入运营商' }]}>
-                <Input placeholder="电信/移动/联通等" className="user-form-input" />
+              <Form.Item name="isp" label="运营商" rules={[{ required: true, message: '请选择运营商' }]}>
+                <Select placeholder="请选择运营商" className="user-form-input">
+                  {ispDict.map(d => <Option key={d.dictValue} value={d.dictValue}>{d.dictLabel}</Option>)}
+                </Select>
               </Form.Item>
             </Col>
           </Row>
@@ -315,14 +361,9 @@ const DedicatedLineManagement: FC = () => {
               </Form.Item>
             </Col>
           </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="sourcePort" label="源端口">
-                <Input placeholder="请输入源端口" className="user-form-input" />
-              </Form.Item>
-            </Col>
-            <Col span={12}></Col>
-          </Row>
+          <Form.Item name="sourcePort" label="源端口">
+            <Input placeholder="请输入源端口" className="user-form-input" style={{ width: '50%' }} />
+          </Form.Item>
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="destRoomId" label="目的机房">
@@ -337,23 +378,30 @@ const DedicatedLineManagement: FC = () => {
               </Form.Item>
             </Col>
           </Row>
+          <Form.Item name="destPort" label="目的端口">
+            <Input placeholder="请输入目的端口" className="user-form-input" style={{ width: '50%' }} />
+          </Form.Item>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="destPort" label="目的端口">
-                <Input placeholder="请输入目的端口" className="user-form-input" />
+              <Form.Item name="sourceIpAddress" label="源IP地址">
+                <Input placeholder="请输入源IP地址" className="user-form-input" />
               </Form.Item>
             </Col>
-            <Col span={12}></Col>
+            <Col span={12}>
+              <Form.Item name="sourceSubnetMask" label="源子网掩码">
+                <Input placeholder="请输入源子网掩码" className="user-form-input" />
+              </Form.Item>
+            </Col>
           </Row>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="ipAddress" label="IP地址">
-                <Input placeholder="请输入IP地址" className="user-form-input" />
+              <Form.Item name="destIpAddress" label="目的IP地址">
+                <Input placeholder="请输入目的IP地址" className="user-form-input" />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="subnetMask" label="子网掩码">
-                <Input placeholder="请输入子网掩码" className="user-form-input" />
+              <Form.Item name="destSubnetMask" label="目的子网掩码">
+                <Input placeholder="请输入目的子网掩码" className="user-form-input" />
               </Form.Item>
             </Col>
           </Row>
@@ -364,17 +412,12 @@ const DedicatedLineManagement: FC = () => {
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="contractNo" label="合同编号">
-                <Input placeholder="请输入合同编号" className="user-form-input" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
               <Form.Item name="carrierContactName" label="运营商联系人">
                 <Input placeholder="请输入联系人" className="user-form-input" />
               </Form.Item>
             </Col>
+          </Row>
+          <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="carrierContactPhone" label="联系人电话">
                 <Input placeholder="请输入联系电话" className="user-form-input" />
@@ -397,13 +440,13 @@ const DedicatedLineManagement: FC = () => {
               </Form.Item>
             </Col>
           </Row>
-          <Form.Item name="description" label="描述">
-            <TextArea rows={3} placeholder="请输入描述" className="user-form-input" />
+          <Form.Item name="remark" label="备注">
+            <TextArea rows={3} placeholder="请输入备注" className="user-form-input" />
           </Form.Item>
         </Form>
       </Modal>
-      <ExcelImport entityType="dedicated-line" entityName="专线" visible={importVisible} onClose={() => setImportVisible(false)} onImportSuccess={handleImportSuccess} />
-      <ExcelExport entityType="dedicated-line" entityName="专线" visible={exportVisible} onClose={() => setExportVisible(false)} />
+      <ExcelImport entityType="dedicatedLine" entityName="专线" visible={importVisible} onClose={() => setImportVisible(false)} onImportSuccess={handleImportSuccess} />
+      <ExcelExport entityType="dedicatedLine" entityName="专线" visible={exportVisible} onClose={() => setExportVisible(false)} />
     </div>
   );
 };

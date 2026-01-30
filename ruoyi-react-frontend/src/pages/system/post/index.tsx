@@ -29,6 +29,7 @@ import {
 import type { Post } from '@/types';
 import { post } from '@/lib/api';
 import { useTableManager } from '@/hooks/useTableManager';
+import { usePagination } from '@/hooks/usePagination';
 import { handleApiError, handleSuccess } from '@/utils/errorHandler';
 import { createStatusColumn, createDateTimeColumn } from '@/utils/tableHelpers';
 import ActionButtons from '@/components/shared/ActionButtons';
@@ -43,12 +44,13 @@ const PostManagement: FC = () => {
     inactive: 0,
   });
 
+  // 使用全局分页 hook
+  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+
   const {
     loading,
     data: posts,
     total,
-    current,
-    pageSize,
     selectedRowKeys,
     searchForm,
     editForm: postForm,
@@ -57,8 +59,6 @@ const PostManagement: FC = () => {
     setSelectedRowKeys,
     setEditModalVisible: setModalVisible,
     setEditingItem: setEditingPost,
-    setCurrent,
-    setPageSize,
     handleSearch,
     handleReset,
     handleAdd,
@@ -68,19 +68,27 @@ const PostManagement: FC = () => {
     resetSelection,
   } = useTableManager<Post>(
     async (params) => {
-      const result = await post('/system/posts/list', params);
+      const result = await post('/system/posts/list', params) as { data: { list: Post[]; total: number } };
       return { list: result.data.list || [], total: result.data.total || 0 };
     },
-    { pageSize: 10 }
+    {
+      externalPagination: {
+        current: paginationProps.current,
+        pageSize: paginationProps.pageSize,
+        setCurrent,
+        setPageSize,
+        setTotal,
+      },
+    }
   );
 
   // 加载统计数据
   const loadStatistics = useCallback(async () => {
     try {
-      const result = await post('/system/posts/list', { current: 1, pageSize: 1000 });
+      const result = await post('/system/posts/list', { current: 1, pageSize: 1000 }) as { data: { list: Post[] } };
       const allPosts = result.data.list || [];
-      const activeCount = allPosts.filter((p: any) => p.status === 0).length;
-      const inactiveCount = allPosts.filter((p: any) => p.status === 1).length;
+      const activeCount = allPosts.filter((p: Post) => p.status === 0).length;
+      const inactiveCount = allPosts.filter((p: Post) => p.status === 1).length;
       setStatistics({
         total: allPosts.length,
         active: activeCount,
@@ -315,18 +323,11 @@ const PostManagement: FC = () => {
           dataSource={posts}
           loading={loading}
           rowKey="id"
-          pagination={{
-            current,
-            pageSize,
-            total,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条`,
-            onChange: (page, size) => {
-              setCurrent(page);
-              setPageSize(size || 10);
-              loadPosts({ current: page, pageSize: size || 10 });
-            },
+          pagination={paginationProps}
+          onChange={(pagination) => {
+            setCurrent(pagination.current);
+            setPageSize(pagination.pageSize);
+            loadPosts();
           }}
         />
       </Card>

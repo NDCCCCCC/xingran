@@ -542,5 +542,5 @@ export function getDeptList(): Promise<BaseResponse<SimpleDept[]>> {
 }
 
 export function getDeptTree(): Promise<BaseResponse<SimpleDept[]>> {
-  return post('/system/departments/list');
+  return post('/system/departments/tree');
 }

@@ -12,7 +12,7 @@ export interface UseDiscoveryPollingParams {
 }
 
 export function useDiscoveryPolling({ discoveries, onPoll }: UseDiscoveryPollingParams) {
-  const pollingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const pollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     const runningTasks = discoveries.filter(d => d.status === 'running');

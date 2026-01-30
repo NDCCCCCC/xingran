@@ -7,7 +7,7 @@ import { message } from 'antd';
 import {
   getWorkOrderList,
   getUserList,
-  getDeptList,
+  getDeptTree,
   getEnabledWorkOrderCategories,
   type WorkOrder,
   type SimpleUser,
@@ -103,7 +103,7 @@ export function useWorkOrderData(
       setDataSource(list);
       setTotal(result.data?.total ?? 0);
       setCurrent(result.data?.current ?? 1);
-      setPageSize(result.data?.page_size ?? 10);
+      setPageSize(result.data?.pageSize ?? 10);
 
       // 计算统计数据
       setStats({
@@ -133,7 +133,7 @@ export function useWorkOrderData(
   // 获取部门列表
   const fetchDepts = useCallback(async () => {
     try {
-      const result = await getDeptList();
+      const result = await getDeptTree();
       setDepts(result.data || []);
     } catch (error) {
       console.error('获取部门列表失败:', error);

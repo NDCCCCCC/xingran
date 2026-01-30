@@ -17,6 +17,7 @@ import {
 import type { Floor } from '@/types';
 import { floorApi, buildingApi } from '@/lib/opsApi';
 import { useTableManager } from '@/hooks/useTableManager';
+import { usePagination } from '@/hooks/usePagination';
 import { handleApiError, handleSuccess } from '@/utils/errorHandler';
 import { createStatusColumn, createDateTimeColumn } from '@/utils/tableHelpers';
 import ActionButtons from '@/components/shared/ActionButtons';
@@ -41,18 +42,29 @@ const FloorManagement: FC = () => {
   const [exportVisible, setExportVisible] = useState(false);
   const [buildingOptions, setBuildingOptions] = useState<BuildingOption[]>([]);
 
+  // 使用全局分页 hook
+  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+
   const {
-    loading, data: floors, total, current, pageSize, selectedRowKeys,
+    loading, data: floors, total, selectedRowKeys,
     searchForm, editForm: floorForm, editModalVisible: modalVisible,
     editingItem: editingFloor, setSelectedRowKeys, setEditModalVisible: setModalVisible,
-    setEditingItem: setEditingFloor, setCurrent, setPageSize, handleSearch,
+    setEditingItem: setEditingFloor, handleSearch,
     handleReset, handleAdd, handleEdit, handleModalClose, loadData: loadFloors, resetSelection,
   } = useTableManager<Floor>(
     async (params) => {
       const result = await floorApi.list(params);
       return { list: result.data?.list || [], total: result.data?.total || 0 };
     },
-    { pageSize: 10 }
+    {
+      externalPagination: {
+        current: paginationProps.current,
+        pageSize: paginationProps.pageSize,
+        setCurrent,
+        setPageSize,
+        setTotal,
+      },
+    }
   );
 
   const loadStatistics = useCallback(async () => {
@@ -82,7 +94,7 @@ const FloorManagement: FC = () => {
       loadStatistics();
       loadBuildingOptions();
     }, 0);
-  }, []);
+  }, [paginationProps.current, paginationProps.pageSize]);
 
   const handleSave = async () => {
     try {
@@ -226,11 +238,11 @@ const FloorManagement: FC = () => {
             <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>新增楼层</Button>
           </Space>
         </div>
-        {selectedRowKeys.length > 0 && <Alert message={<span>已选择 <strong>{selectedRowKeys.length}</strong> 个楼层，<Button type="link" size="small" onClick={() => setSelectedRowKeys([])} style={{ padding: 0 }}>取消选择</Button></span>} type="info" showIcon style={{ marginTop: 12 }} />}
+        {selectedRowKeys.length > 0 && <Alert title={<span>已选择 <strong>{selectedRowKeys.length}</strong> 个楼层，<Button type="link" size="small" onClick={() => setSelectedRowKeys([])} style={{ padding: 0 }}>取消选择</Button></span>} type="info" showIcon style={{ marginTop: 12 }} />}
       </Card>
       <Card>
         {viewMode === 'table' ? (
-          <Table rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }} columns={columns} dataSource={floors} loading={loading} rowKey="id" pagination={{ current, pageSize, total, showSizeChanger: true, showQuickJumper: true, showTotal: (total) => `共 ${total} 条`, onChange: (page, size) => { setCurrent(page); setPageSize(size || 10); loadFloors({ current: page, pageSize: size || 10 }); } }} />
+          <Table rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }} columns={columns} dataSource={floors} loading={loading} rowKey="id" pagination={paginationProps} />
         ) : renderCardView()}
       </Card>
       <Modal title={editingFloor ? '编辑楼层' : '新增楼层'} open={modalVisible} onOk={handleSave} onCancel={() => { setModalVisible(false); floorForm.resetFields(); setEditingFloor(null); }} width={600}>

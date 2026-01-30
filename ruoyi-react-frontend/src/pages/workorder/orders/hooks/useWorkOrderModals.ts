@@ -10,7 +10,7 @@ export interface Comment {
   content: string;
   isInternal: boolean;
   createdAt: string;
-  user: {
+  user?: {
     id: string;
     nickName?: string;
     username?: string;
@@ -24,7 +24,7 @@ export interface HistoryItem {
   oldValue?: string;
   newValue?: string;
   createdAt: string;
-  operator: {
+  operator?: {
     id: string;
     nickName?: string;
     username?: string;

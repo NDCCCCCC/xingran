@@ -28,39 +28,39 @@ export interface BuildingListParams extends PageParams {
 export const buildingApi = {
   // 查询楼宇列表
   list: async (params: BuildingListParams) => {
-    return await post<BaseResponse<PageResponse<Building>>>('/ops/buildings/list', params);
+    return await post<BaseResponse<PageResponse<Building>>>('/ops/building/list', params);
   },
 
   // 获取楼宇详情
   get: async (id: string) => {
-    return await post<BaseResponse<Building>>('/ops/buildings/' + id, {});
+    return await post<BaseResponse<Building>>('/ops/building/' + id, {});
   },
 
   // 创建楼宇
   create: async (data: Partial<Building>) => {
-    return await post('/ops/buildings', data);
+    return await post('/ops/building', data);
   },
 
   // 更新楼宇
   update: async (id: string, data: Partial<Building>) => {
-    return await post('/ops/buildings/' + id + '/update', data);
+    return await post('/ops/building/' + id + '/update', data);
   },
 
   // 删除楼宇
   delete: async (id: string) => {
-    return await post('/ops/buildings/' + id + '/delete', {});
+    return await post('/ops/building/' + id + '/delete', {});
   },
 
   // 批量操作
   batch: async (action: string, data: Record<string, unknown>) => {
-    return await post('/ops/buildings/batch', { action, ...data });
+    return await post('/ops/building/batch', { action, ...data });
   },
 };
 
 // ==================== 楼层管理 ====================
 
 export interface FloorListParams extends PageParams {
-  buildingCode?: string;
+  buildingId?: string;
   floorNo?: string;
   name?: string;
   status?: number;
@@ -68,32 +68,32 @@ export interface FloorListParams extends PageParams {
 
 export const floorApi = {
   list: async (params: FloorListParams) => {
-    return await post<BaseResponse<PageResponse<Floor>>>('/ops/floors/list', params);
+    return await post<BaseResponse<PageResponse<Floor>>>('/ops/floor/list', params);
   },
 
   get: async (id: string) => {
-    return await post<BaseResponse<Floor>>('/ops/floors/' + id, {});
+    return await post<BaseResponse<Floor>>('/ops/floor/' + id, {});
   },
 
   create: async (data: Partial<Floor>) => {
-    return await post('/ops/floors', data);
+    return await post('/ops/floor', data);
   },
 
   update: async (id: string, data: Partial<Floor>) => {
-    return await post('/ops/floors/' + id + '/update', data);
+    return await post('/ops/floor/' + id + '/update', data);
   },
 
   delete: async (id: string) => {
-    return await post('/ops/floors/' + id + '/delete', {});
+    return await post('/ops/floor/' + id + '/delete', {});
   },
 
   // 获取楼层树
   tree: async () => {
-    return await post<BaseResponse<Floor[]>>('/ops/floors/tree', {});
+    return await post<BaseResponse<Floor[]>>('/ops/floor/tree', {});
   },
 
   batch: async (action: string, data: Record<string, unknown>) => {
-    return await post('/ops/floors/batch', { action, ...data });
+    return await post('/ops/floor/batch', { action, ...data });
   },
 };
 
@@ -108,32 +108,32 @@ export interface WorkstationListParams extends PageParams {
 
 export const workstationApi = {
   list: async (params: WorkstationListParams) => {
-    return await post<BaseResponse<PageResponse<WorkstationOps>>>('/ops/workstations/list', params);
+    return await post<BaseResponse<PageResponse<WorkstationOps>>>('/ops/workstation/list', params);
   },
 
   get: async (id: string) => {
-    return await post<BaseResponse<WorkstationOps>>('/ops/workstations/' + id, {});
+    return await post<BaseResponse<WorkstationOps>>('/ops/workstation/' + id, {});
   },
 
   create: async (data: Partial<WorkstationOps>) => {
-    return await post('/ops/workstations', data);
+    return await post('/ops/workstation', data);
   },
 
   update: async (id: string, data: Partial<WorkstationOps>) => {
-    return await post('/ops/workstations/' + id + '/update', data);
+    return await post('/ops/workstation/' + id + '/update', data);
   },
 
   delete: async (id: string) => {
-    return await post('/ops/workstations/' + id + '/delete', {});
+    return await post('/ops/workstation/' + id + '/delete', {});
   },
 
   // 批量更新位置
   updatePositions: async (items: { id: string; positionX: number; positionY: number }[]) => {
-    return await post('/ops/workstations/positions', { items });
+    return await post('/ops/workstation/positions', { items });
   },
 
   batch: async (action: string, data: Record<string, unknown>) => {
-    return await post('/ops/workstations/batch', { action, ...data });
+    return await post('/ops/workstation/batch', { action, ...data });
   },
 };
 
@@ -148,27 +148,27 @@ export interface ServerRoomListParams extends PageParams {
 
 export const serverRoomApi = {
   list: async (params: ServerRoomListParams) => {
-    return await post<BaseResponse<PageResponse<ServerRoom>>>('/ops/server-rooms/list', params);
+    return await post<BaseResponse<PageResponse<ServerRoom>>>('/ops/serverRoom/list', params);
   },
 
   get: async (id: string) => {
-    return await post<BaseResponse<ServerRoom>>('/ops/server-rooms/' + id, {});
+    return await post<BaseResponse<ServerRoom>>('/ops/serverRoom/' + id, {});
   },
 
   create: async (data: Partial<ServerRoom>) => {
-    return await post('/ops/server-rooms', data);
+    return await post('/ops/serverRoom', data);
   },
 
   update: async (id: string, data: Partial<ServerRoom>) => {
-    return await post('/ops/server-rooms/' + id + '/update', data);
+    return await post('/ops/serverRoom/' + id + '/update', data);
   },
 
   delete: async (id: string) => {
-    return await post('/ops/server-rooms/' + id + '/delete', {});
+    return await post('/ops/serverRoom/' + id + '/delete', {});
   },
 
   batch: async (action: string, data: Record<string, unknown>) => {
-    return await post('/ops/server-rooms/batch', { action, ...data });
+    return await post('/ops/serverRoom/batch', { action, ...data });
   },
 };
 
@@ -240,34 +240,33 @@ export interface RoomDeviceListParams extends PageParams {
 
 export const roomDeviceApi = {
   list: async (params: RoomDeviceListParams) => {
-    return await post<BaseResponse<PageResponse<RoomDevice>>>('/ops/room-devices/list', params);
+    return await post<BaseResponse<PageResponse<RoomDevice>>>('/ops/roomDevice/list', params);
   },
 
   get: async (id: string) => {
-    return await post<BaseResponse<RoomDevice>>('/ops/room-devices/' + id, {});
+    return await post<BaseResponse<RoomDevice>>('/ops/roomDevice/' + id, {});
   },
 
   create: async (data: Partial<RoomDevice>) => {
-    return await post('/ops/room-devices', data);
+    return await post('/ops/roomDevice', data);
   },
 
   update: async (id: string, data: Partial<RoomDevice>) => {
-    return await post('/ops/room-devices/' + id + '/update', data);
+    return await post('/ops/roomDevice/' + id + '/update', data);
   },
 
   delete: async (id: string) => {
-    return await post('/ops/room-devices/' + id + '/delete', {});
+    return await post('/ops/roomDevice/' + id + '/delete', {});
   },
 
   batch: async (action: string, data: Record<string, unknown>) => {
-    return await post('/ops/room-devices/batch', { action, ...data });
+    return await post('/ops/roomDevice/batch', { action, ...data });
   },
 };
 
 // ==================== 专线管理 ====================
 
 export interface DedicatedLineListParams extends PageParams {
-  lineCode?: string;
   lineType?: string;
   isp?: string;
   status?: number;
@@ -275,27 +274,27 @@ export interface DedicatedLineListParams extends PageParams {
 
 export const dedicatedLineApi = {
   list: async (params: DedicatedLineListParams) => {
-    return await post<BaseResponse<PageResponse<DedicatedLine>>>('/ops/dedicated-lines/list', params);
+    return await post<BaseResponse<PageResponse<DedicatedLine>>>('/ops/dedicatedLine/list', params);
   },
 
   get: async (id: string) => {
-    return await post<BaseResponse<DedicatedLine>>('/ops/dedicated-lines/' + id, {});
+    return await post<BaseResponse<DedicatedLine>>('/ops/dedicatedLine/' + id, {});
   },
 
   create: async (data: Partial<DedicatedLine>) => {
-    return await post('/ops/dedicated-lines', data);
+    return await post('/ops/dedicatedLine', data);
   },
 
   update: async (id: string, data: Partial<DedicatedLine>) => {
-    return await post('/ops/dedicated-lines/' + id + '/update', data);
+    return await post('/ops/dedicatedLine/' + id + '/update', data);
   },
 
   delete: async (id: string) => {
-    return await post('/ops/dedicated-lines/' + id + '/delete', {});
+    return await post('/ops/dedicatedLine/' + id + '/delete', {});
   },
 
   batch: async (action: string, data: Record<string, unknown>) => {
-    return await post('/ops/dedicated-lines/batch', { action, ...data });
+    return await post('/ops/dedicatedLine/batch', { action, ...data });
   },
 };
 
@@ -311,27 +310,27 @@ export interface InfoPointListParams extends PageParams {
 
 export const infoPointApi = {
   list: async (params: InfoPointListParams) => {
-    return await post<BaseResponse<PageResponse<InfoPoint>>>('/ops/info-points/list', params);
+    return await post<BaseResponse<PageResponse<InfoPoint>>>('/ops/infoPoint/list', params);
   },
 
   get: async (id: string) => {
-    return await post<BaseResponse<InfoPoint>>('/ops/info-points/' + id, {});
+    return await post<BaseResponse<InfoPoint>>('/ops/infoPoint/' + id, {});
   },
 
   create: async (data: Partial<InfoPoint>) => {
-    return await post('/ops/info-points', data);
+    return await post('/ops/infoPoint', data);
   },
 
   update: async (id: string, data: Partial<InfoPoint>) => {
-    return await post('/ops/info-points/' + id + '/update', data);
+    return await post('/ops/infoPoint/' + id + '/update', data);
   },
 
   delete: async (id: string) => {
-    return await post('/ops/info-points/' + id + '/delete', {});
+    return await post('/ops/infoPoint/' + id + '/delete', {});
   },
 
   batch: async (action: string, data: Record<string, unknown>) => {
-    return await post('/ops/info-points/batch', { action, ...data });
+    return await post('/ops/infoPoint/batch', { action, ...data });
   },
 };
 

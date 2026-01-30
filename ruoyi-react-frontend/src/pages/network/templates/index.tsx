@@ -25,6 +25,7 @@ import {
   TemplateVariablesModal,
 } from './modals';
 import { VENDOR_OPTIONS, TEMPLATE_TYPE_OPTIONS } from './constants';
+import { usePagination } from '@/hooks/usePagination';
 
 const { Option } = Select;
 
@@ -32,18 +33,17 @@ const TemplateManagement: FC = () => {
   const [searchForm] = Form.useForm();
   const [editForm] = Form.useForm();
 
+  // 使用全局分页 hook
+  const { paginationProps, setTotal } = usePagination();
+
   const {
     templates,
     loading,
     total,
-    current,
-    pageSize,
     statistics,
-    setCurrent,
-    setPageSize,
     loadTemplates,
     loadStatistics,
-  } = useTemplateData(searchForm);
+  } = useTemplateData(searchForm, setTotal);
 
   const {
     editModalVisible,
@@ -53,6 +53,8 @@ const TemplateManagement: FC = () => {
     selectedRowKeys,
     previewContent,
     templateVariables,
+    setPreviewVisible,
+    setVariablesModalVisible,
     setSelectedRowKeys,
     openModal,
     closeModal,
@@ -65,30 +67,30 @@ const TemplateManagement: FC = () => {
   } = useTemplateModals();
 
   useEffect(() => {
-    loadTemplates();
+    loadTemplates({ current: paginationProps.current, pageSize: paginationProps.pageSize });
     loadStatistics();
-  }, [current, pageSize, loadTemplates, loadStatistics]);
+  }, [paginationProps.current, paginationProps.pageSize]);
 
   // 搜索
   const handleSearch = () => {
-    loadTemplates();
+    loadTemplates({ current: paginationProps.current, pageSize: paginationProps.pageSize });
   };
 
   // 重置
   const handleReset = () => {
     searchForm.resetFields();
-    loadTemplates();
+    loadTemplates({ current: paginationProps.current, pageSize: paginationProps.pageSize });
   };
 
   // 刷新
   const handleRefresh = () => {
-    loadTemplates();
+    loadTemplates({ current: paginationProps.current, pageSize: paginationProps.pageSize });
     loadStatistics();
   };
 
   // 操作成功后刷新
   const handleSuccess = () => {
-    loadTemplates();
+    loadTemplates({ current: paginationProps.current, pageSize: paginationProps.pageSize });
     loadStatistics();
   };
 
@@ -218,18 +220,7 @@ const TemplateManagement: FC = () => {
           loading={loading}
           rowKey="id"
           scroll={{ x: 1500 }}
-          pagination={{
-            current,
-            pageSize,
-            total,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条`,
-            onChange: (page, size) => {
-              setCurrent(page);
-              setPageSize(size || 10);
-            },
-          }}
+          pagination={paginationProps}
         />
       </Card>
 

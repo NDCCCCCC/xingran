@@ -5,7 +5,8 @@
 
 import { Card, Space, Tag, Button, Select } from 'antd';
 import { CloseOutlined, BgColorsOutlined, DesktopOutlined } from '@ant-design/icons';
-import type { WorkstationNode, WorkstationOps } from '@/types';
+import type { WorkstationOps } from '@/types';
+import type { WorkstationNode } from '@/components/shared/FloorPlanEditor.types';
 import FloorPlanEditor from '@/components/shared/FloorPlanEditor';
 import { getWorkstationTypeText, getWorkstationStatusText, getWorkstationStatusColor } from '../constants';
 import type { FloorOption } from '../types';
@@ -123,7 +124,7 @@ export function WorkstationFloorPlanView({
           {floorPlanWorkstations.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '20px', color: '#999' }}>暂无工位数据</div>
           ) : (
-            <Space direction="vertical" style={{ width: '100%' }} size={[8, 8]}>
+            <Space orientation="vertical" style={{ width: '100%' }} size={[8, 8]}>
               {floorPlanWorkstations.map((ws) => {
                 const typeText = getWorkstationTypeText(ws.type);
                 const fullWorkstation = allWorkstations.find((w) => w.id === ws.id);

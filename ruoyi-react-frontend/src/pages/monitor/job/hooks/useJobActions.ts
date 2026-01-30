@@ -29,7 +29,7 @@ export interface UseJobActionsReturn {
   setSelectedJob: React.Dispatch<React.SetStateAction<JobInfo | null>>;
 
   // 操作方法
-  openModal: (record?: JobInfo, form: any) => void;
+  openModal: (record: JobInfo | undefined, form: any) => void;
   handleSubmit: (form: any) => Promise<void>;
   handleDelete: (record: JobInfo) => Promise<void>;
   handleToggleStatus: (record: JobInfo) => Promise<void>;
@@ -48,7 +48,7 @@ export function useJobActions(params: UseJobActionsParams): UseJobActionsReturn 
   const [selectedJob, setSelectedJob] = useState<JobInfo | null>(null);
 
   // 打开新增/编辑模态框
-  const openModal = useCallback((record?: JobInfo, form: any) => {
+  const openModal = useCallback((record: JobInfo | undefined, form: any) => {
     if (record) {
       setIsEdit(true);
       setModalTitle('编辑定时任务');

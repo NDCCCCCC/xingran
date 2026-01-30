@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
-import type { WorkstationNode } from '@/components/shared/FloorPlanEditor';
+import type { WorkstationNode } from '@/components/shared/FloorPlanEditor.types';
 import { workstationApi } from '@/lib/opsApi';
 import { handleApiError } from '@/utils/errorHandler';
 import { toWorkstationNode } from '../constants';

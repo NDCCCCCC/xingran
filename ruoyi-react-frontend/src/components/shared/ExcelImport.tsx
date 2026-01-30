@@ -54,8 +54,8 @@ export interface ExcelImportProps {
 const ExcelImport: FC<ExcelImportProps> = ({
   entityType,
   entityName = entityType,
-  templateUrl = `/ops/${entityType}/template`,
-  importUrl = `/ops/${entityType}/import`,
+  templateUrl = `/api/v1/ops/${entityType}/template`,
+  importUrl = `/api/v1/ops/${entityType}/import`,
   onImportSuccess,
   visible = false,
   onClose,
@@ -67,7 +67,7 @@ const ExcelImport: FC<ExcelImportProps> = ({
 
   const handleDownloadTemplate = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       const response = await fetch(templateUrl, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -87,12 +87,20 @@ const ExcelImport: FC<ExcelImportProps> = ({
   };
 
   const beforeUpload = (file: File) => {
-    if (!isValidExcelFile(file)) {
+    // 文件类型验证
+    const validTypes = [
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel',
+    ];
+    const isExcelType = validTypes.includes(file.type) || file.name.endsWith('.xlsx');
+    if (!isExcelType) {
       message.error('只支持 .xlsx 格式的Excel文件');
       return Upload.LIST_IGNORE;
     }
 
-    if (!isValidFileSize(file)) {
+    // 文件大小验证（10MB）
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
       message.error('文件大小不能超过 10MB');
       return Upload.LIST_IGNORE;
     }
@@ -147,7 +155,7 @@ const ExcelImport: FC<ExcelImportProps> = ({
       };
 
       xhr.open('POST', importUrl, true);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       if (token) {
         xhr.setRequestHeader('Authorization', `Bearer ${token}`);
       }
@@ -201,9 +209,9 @@ const ExcelImport: FC<ExcelImportProps> = ({
       width={800}
       destroyOnHidden
     >
-      <Space direction="vertical" size="large" style={{ width: '100%' }}>
+      <Space orientation="vertical" size="large" style={{ width: '100%' }}>
         <Alert
-          message="导入说明"
+          title="导入说明"
           description={
             <div>
               <div>1. 先下载Excel模板文件</div>
@@ -263,7 +271,7 @@ const ExcelImport: FC<ExcelImportProps> = ({
 
         {importResult && (
           <div>
-            <Space direction="vertical" style={{ width: '100%' }}>
+            <Space orientation="vertical" style={{ width: '100%' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Text strong>导入结果</Text>
                 <Button
@@ -312,16 +320,6 @@ const ExcelImport: FC<ExcelImportProps> = ({
     </Modal>
   );
 };
-
-function isValidExcelFile(file: File): boolean {
-  return file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
-         file.type === 'application/vnd.ms-excel' ||
-         file.name.endsWith('.xlsx');
-}
-
-function isValidFileSize(file: File): boolean {
-  return file.size / 1024 / 1024 < 10;
-}
 
 async function downloadFile(response: Response, filename: string): Promise<void> {
   const blob = await response.blob();

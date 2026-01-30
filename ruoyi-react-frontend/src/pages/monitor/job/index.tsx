@@ -31,17 +31,18 @@ import { STATUS_OPTIONS, MISFIRE_POLICY_OPTIONS, DEFAULT_FORM_VALUES, DEFAULT_SE
 import { getJobColumns, getJobLogColumns } from './columns';
 import { useJobData, useJobActions } from './hooks';
 import CronSelector from '@/components/CronSelector';
+import { usePagination } from '@/hooks/usePagination';
 
 const { TextArea } = Input;
 
 // ==================== 主组件 ====================
 
 const JobManager: FC = () => {
-  const [current, setCurrent] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
   const [searchForm, setSearchForm] = useState(DEFAULT_SEARCH_FORM);
-
   const [form] = Form.useForm();
+
+  // 使用全局分页 hook
+  const { paginationProps, setCurrent, setPageSize } = usePagination();
 
   // 使用数据管理 Hook
   const {
@@ -53,8 +54,8 @@ const JobManager: FC = () => {
     fetchJobLogs,
   } = useJobData({
     searchForm,
-    current,
-    pageSize,
+    current: paginationProps.current,
+    pageSize: paginationProps.pageSize,
   });
 
   // 使用操作管理 Hook
@@ -82,7 +83,7 @@ const JobManager: FC = () => {
   // 初始化加载
   useEffect(() => {
     fetchJobs();
-  }, [current, pageSize]);
+  }, [paginationProps.current, paginationProps.pageSize, fetchJobs]);
 
   // 表格列
   const columns = getJobColumns({
@@ -110,6 +111,7 @@ const JobManager: FC = () => {
   const handleTableChange = (pagination: any) => {
     setCurrent(pagination.current);
     setPageSize(pagination.pageSize);
+    fetchJobs();
   };
 
   return (
@@ -174,14 +176,11 @@ const JobManager: FC = () => {
           dataSource={jobs}
           rowKey="id"
           loading={loading}
-          pagination={{
-            current,
-            pageSize,
-            total,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条记录`,
-            onChange: handleTableChange,
+          pagination={paginationProps}
+          onChange={(pagination) => {
+            setCurrent(pagination.current);
+            setPageSize(pagination.pageSize);
+            fetchJobs();
           }}
           scroll={{ x: 1500 }}
         />

@@ -3,6 +3,7 @@ package operations
 import (
 	"context"
 	"errors"
+	"regexp"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 	"gorm.io/gorm"
@@ -128,6 +129,18 @@ func (s *buildingService) BatchDelete(ctx context.Context, ids []string) error {
 
 // validateOrg 验证机构存在性
 func (s *buildingService) validateOrg(ctx context.Context, orgID string) error {
+	// 如果 org_id 为空，则不需要验证
+	if orgID == "" {
+		return nil
+	}
+
+	// 验证 UUID 格式
+	uuidPattern := regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+	if !uuidPattern.MatchString(orgID) {
+		return errors.New("所属机构ID格式无效：必须是有效的UUID格式")
+	}
+
+	// 验证机构是否存在
 	var count int64
 	if err := s.db.WithContext(ctx).Table("sys_dept").Where("id = ?", orgID).Count(&count).Error; err != nil {
 		return err

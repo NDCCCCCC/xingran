@@ -38,8 +38,8 @@ export function buildMenuPathMap(
         }
       }
 
-      // 生成菜单key(与convertToMenuItem逻辑一致)
-      const menuKey = menuPath || menu.id;
+      // 生成菜单key(与convertToMenuItem逻辑一致，统一使用menu.id)
+      const menuKey = menu.id;
 
       // 确定当前菜单的层级
       const level = isTopLevel ? 1 : (topLevelKey && !secondLevelKey ? 2 : 3);

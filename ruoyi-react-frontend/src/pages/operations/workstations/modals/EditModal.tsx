@@ -3,8 +3,9 @@
  * 工位编辑模态框
  */
 
-import { Modal, Form, Input, InputNumber, Select, TreeSelect, Row, Col } from 'antd';
+import { Modal, Form, Input, InputNumber, Select, Row, Col } from 'antd';
 import type { WorkstationOps } from '@/types';
+import { DepartmentTreeSelect } from '@/components/shared';
 import { STATUS_OPTIONS, TYPE_OPTIONS } from '../constants';
 
 const { Option } = Select;
@@ -13,7 +14,7 @@ const { TextArea } = Input;
 export interface WorkstationEditModalProps {
   open: boolean;
   editingWorkstation: WorkstationOps | null;
-  floorOptions: { code: string; name: string }[];
+  floorOptions: { id: string; code: string; name: string }[];
   deptTreeData: any[];
   userOptions: { id: string; name: string }[];
   onOk: () => Promise<void>;
@@ -51,7 +52,7 @@ export function WorkstationEditModal({
         <Form.Item name="floorId" label="所属楼层" rules={[{ required: true, message: '请选择所属楼层' }]}>
           <Select placeholder="请选择所属楼层">
             {floorOptions.map((f) => (
-              <Option key={f.code} value={f.code}>
+              <Option key={f.id} value={f.id}>
                 {f.name}
               </Option>
             ))}
@@ -72,20 +73,14 @@ export function WorkstationEditModal({
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="deptId" label="所属部门">
-              <TreeSelect
-                placeholder="请选择所属部门"
-                allowClear
+              <DepartmentTreeSelect
                 treeData={deptTreeData}
-                showSearch
-                treeDefaultExpandAll
-                treeCheckable={false}
                 onChange={() => {
                   // 当部门变化时，清空用户选择并重新加载用户
                   form.setFieldsValue({ userId: undefined });
                   const deptId = form.getFieldValue('deptId');
                   onDeptChange(deptId);
                 }}
-                style={{ width: '100%' }}
               />
             </Form.Item>
           </Col>

@@ -36,7 +36,7 @@ export interface ExcelExportProps {
 const ExcelExport: FC<ExcelExportProps> = ({
   entityType,
   entityName = entityType,
-  exportUrl = `/ops/${entityType}/export`,
+  exportUrl = `/api/v1/ops/${entityType}/export`,
   statusOptions,
   visible = false,
   onClose,
@@ -49,7 +49,7 @@ const ExcelExport: FC<ExcelExportProps> = ({
     setExporting(true);
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       const response = await fetch(exportUrl, {
         method: 'POST',
         headers: {
@@ -130,7 +130,7 @@ const ExcelExport: FC<ExcelExportProps> = ({
       </Form>
 
       <div style={{ marginTop: 16, padding: 12, background: '#f5f5f5', borderRadius: 4 }}>
-        <Space direction="vertical" size={4}>
+        <Space orientation="vertical" size={4}>
           <div>• 不填写任何条件将导出所有数据</div>
           <div>• 导出文件为 .xlsx 格式</div>
           <div>• 大量数据导出可能需要较长时间，请耐心等待</div>

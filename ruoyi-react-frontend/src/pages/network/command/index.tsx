@@ -31,6 +31,7 @@ import { useCommandData, useCommandModals } from './hooks';
 import { getExecutionColumns, deviceColumns } from './columns';
 import { CommandDispatchModal, CommandDetailDrawer } from './modals';
 import { STATUS_OPTIONS } from './constants';
+import { usePagination } from '@/hooks/usePagination';
 
 const { Option } = Select;
 
@@ -44,27 +45,34 @@ const CommandDispatch: FC = () => {
   const [currentExecution, setCurrentExecution] = useState<ConfigExecution | null>(null);
   const [executionDetails, setExecutionDetails] = useState<any[]>([]);
 
+  // 使用全局分页 hook
+  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+
   const {
     executions,
     execTotal,
-    execCurrent,
-    pageSize,
     statistics,
     setExecTotal,
-    setExecCurrent,
-    setPageSize,
     loadExecutions,
     loadStatistics,
     loadDevices,
     loadExecutionDetails,
-  } = useCommandData(setExecLoading);
+  } = useCommandData(setExecLoading, {
+    current: paginationProps.current,
+    pageSize: paginationProps.pageSize,
+  });
+
+  // 同步 total 到全局分页状态
+  useEffect(() => {
+    setTotal(execTotal);
+  }, [execTotal, setTotal]);
 
   const { handleQuickCommand, handleCancelExecution } = useCommandModals();
 
   useEffect(() => {
     loadExecutions();
     loadStatistics();
-  }, [execCurrent, pageSize, loadExecutions, loadStatistics]);
+  }, [paginationProps.current, paginationProps.pageSize, loadExecutions, loadStatistics]);
 
   // 操作成功后刷新
   const handleSuccess = () => {
@@ -202,17 +210,14 @@ const CommandDispatch: FC = () => {
           loading={execLoading}
           rowKey="id"
           scroll={{ x: 1400 }}
-          pagination={{
-            current: execCurrent,
-            pageSize,
-            total: execTotal,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条`,
-            onChange: (page, size) => {
-              setExecCurrent(page);
-              setPageSize(size || 10);
-            },
+          pagination={paginationProps}
+          onChange={(pagination) => {
+            setCurrent(pagination.current);
+            setPageSize(pagination.pageSize);
+            loadExecutions({
+              current: pagination.current,
+              pageSize: pagination.pageSize,
+            });
           }}
         />
       </Card>

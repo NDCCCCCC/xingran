@@ -17,6 +17,7 @@ import {
 import type { ServerRoom } from '@/types';
 import { serverRoomApi, buildingApi, floorApi } from '@/lib/opsApi';
 import { useTableManager } from '@/hooks/useTableManager';
+import { usePagination } from '@/hooks/usePagination';
 import { handleApiError, handleSuccess } from '@/utils/errorHandler';
 import { createStatusColumn, createDateTimeColumn } from '@/utils/tableHelpers';
 import ActionButtons from '@/components/shared/ActionButtons';
@@ -49,18 +50,29 @@ const ServerRoomManagement: FC = () => {
   const [buildingOptions, setBuildingOptions] = useState<BuildingOption[]>([]);
   const [floorOptions, setFloorOptions] = useState<FloorOption[]>([]);
 
+  // 使用全局分页 hook
+  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+
   const {
-    loading, data: serverRooms, total, current, pageSize, selectedRowKeys,
+    loading, data: serverRooms, total, selectedRowKeys,
     searchForm, editForm: serverRoomForm, editModalVisible: modalVisible,
     editingItem: editingServerRoom, setSelectedRowKeys, setEditModalVisible: setModalVisible,
-    setEditingItem: setEditingServerRoom, setCurrent, setPageSize, handleSearch,
+    setEditingItem: setEditingServerRoom, handleSearch,
     handleReset, handleAdd, handleEdit, handleModalClose, loadData: loadServerRooms, resetSelection,
   } = useTableManager<ServerRoom>(
     async (params) => {
       const result = await serverRoomApi.list(params);
       return { list: result.data?.list || [], total: result.data?.total || 0 };
     },
-    { pageSize: 10 }
+    {
+      externalPagination: {
+        current: paginationProps.current,
+        pageSize: paginationProps.pageSize,
+        setCurrent,
+        setPageSize,
+        setTotal,
+      },
+    }
   );
 
   const loadStatistics = useCallback(async () => {
@@ -102,7 +114,7 @@ const ServerRoomManagement: FC = () => {
       loadStatistics();
       loadBuildingOptions();
     }, 0);
-  }, []);
+  }, [paginationProps.current, paginationProps.pageSize]);
 
   const handleSave = async () => {
     try {
@@ -258,11 +270,11 @@ const ServerRoomManagement: FC = () => {
             <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>新增机房</Button>
           </Space>
         </div>
-        {selectedRowKeys.length > 0 && <Alert message={<span>已选择 <strong>{selectedRowKeys.length}</strong> 个机房，<Button type="link" size="small" onClick={() => setSelectedRowKeys([])} style={{ padding: 0 }}>取消选择</Button></span>} type="info" showIcon style={{ marginTop: 12 }} />}
+        {selectedRowKeys.length > 0 && <Alert title={<span>已选择 <strong>{selectedRowKeys.length}</strong> 个机房，<Button type="link" size="small" onClick={() => setSelectedRowKeys([])} style={{ padding: 0 }}>取消选择</Button></span>} type="info" showIcon style={{ marginTop: 12 }} />}
       </Card>
       <Card>
         {viewMode === 'table' ? (
-          <Table rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }} columns={columns} dataSource={serverRooms} loading={loading} rowKey="id" pagination={{ current, pageSize, total, showSizeChanger: true, showQuickJumper: true, showTotal: (total) => `共 ${total} 条`, onChange: (page, size) => { setCurrent(page); setPageSize(size || 10); loadServerRooms({ current: page, pageSize: size || 10 }); } }} />
+          <Table rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }} columns={columns} dataSource={serverRooms} loading={loading} rowKey="id" pagination={paginationProps} />
         ) : renderCardView()}
       </Card>
       <Modal title={editingServerRoom ? '编辑机房' : '新增机房'} open={modalVisible} onOk={handleSave} onCancel={() => { setModalVisible(false); serverRoomForm.resetFields(); setEditingServerRoom(null); setFloorOptions([]); }} width={600}>
@@ -297,8 +309,8 @@ const ServerRoomManagement: FC = () => {
           </Form.Item>
         </Form>
       </Modal>
-      <ExcelImport entityType="server-room" entityName="机房" visible={importVisible} onClose={() => setImportVisible(false)} onImportSuccess={handleImportSuccess} />
-      <ExcelExport entityType="server-room" entityName="机房" visible={exportVisible} onClose={() => setExportVisible(false)} />
+      <ExcelImport entityType="serverRoom" entityName="机房" visible={importVisible} onClose={() => setImportVisible(false)} onImportSuccess={handleImportSuccess} />
+      <ExcelExport entityType="serverRoom" entityName="机房" visible={exportVisible} onClose={() => setExportVisible(false)} />
     </div>
   );
 };

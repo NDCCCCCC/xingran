@@ -57,7 +57,7 @@ export function useScheduleData() {
       setSchedules(result.data?.list ?? []);
       setTotal(result.data?.total ?? 0);
       if (result.data?.current) setCurrent(result.data.current);
-      if (result.data?.page_size) setPageSize(result.data.page_size);
+      if (result.data?.pageSize) setPageSize(result.data.pageSize);
     } catch (error) {
       message.error('获取排班列表失败');
     } finally {

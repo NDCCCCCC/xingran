@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import type { FC } from 'react';
 import { Button, message } from 'antd';
 import { ReloadOutlined } from '@ant-design/icons';
 import { getCaptcha, verifySliderCaptcha } from '@/services/captcha';
@@ -10,8 +11,6 @@ interface SliderCaptchaProps {
   onError?: (error: string) => void;
 }
 
-import type { FC } from 'react';
-
 const SliderCaptcha: FC<SliderCaptchaProps> = ({ onVerified, onError }) => {
   const [captchaData, setCaptchaData] = useState<CaptchaResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -21,8 +20,8 @@ const SliderCaptcha: FC<SliderCaptchaProps> = ({ onVerified, onError }) => {
   const sliderRef = useRef<HTMLDivElement>(null);
   const dragStateRef = useRef({ currentX: 0 }); // 用 ref 来保存拖动过程中的位置
 
-  // 加载验证码
-  const loadCaptcha = async () => {
+  // 加载验证码 - 使用 useCallback 保持引用稳定
+  const loadCaptcha = useCallback(async () => {
     setLoading(true);
     setVerified(false);
     setCurrentX(0);
@@ -43,18 +42,18 @@ const SliderCaptcha: FC<SliderCaptchaProps> = ({ onVerified, onError }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [onError]);
 
   useEffect(() => {
     loadCaptcha();
-  }, []);
+  }, [loadCaptcha]);
 
-  const handleMouseDown = () => {
+  const handleMouseDown = useCallback(() => {
     if (verified) return;
     setDragging(true);
-  };
+  }, [verified]);
 
-  const handleMouseUp = async () => {
+  const handleMouseUp = useCallback(async () => {
     setDragging(false);
     const x = dragStateRef.current.currentX;
 
@@ -84,9 +83,9 @@ const SliderCaptcha: FC<SliderCaptchaProps> = ({ onVerified, onError }) => {
       message.error('验证失败');
       loadCaptcha();
     }
-  };
+  }, [captchaData, onVerified, loadCaptcha]);
 
-  const handleMouseMove = (e: MouseEvent) => {
+  const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!sliderRef.current) return;
 
     const rect = sliderRef.current.getBoundingClientRect();
@@ -96,31 +95,25 @@ const SliderCaptcha: FC<SliderCaptchaProps> = ({ onVerified, onError }) => {
 
     dragStateRef.current.currentX = x;
     setCurrentX(x); // 更新 UI
-  };
+  }, []);
 
   // 手动管理全局事件监听
   useEffect(() => {
-    // 拖动开始时添加监听器
-    const startDragging = () => {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp as any);
-    };
+    if (!dragging) return;
 
-    // 拖动结束时移除监听器
-    const stopDragging = () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp as any);
-    };
+    // 定义事件监听器类型
+    const mouseMoveListener = handleMouseMove;
+    const mouseUpListener = handleMouseUp;
 
-    if (dragging) {
-      startDragging();
-    }
+    document.addEventListener('mousemove', mouseMoveListener);
+    document.addEventListener('mouseup', mouseUpListener);
 
     // 清理函数
     return () => {
-      stopDragging();
+      document.removeEventListener('mousemove', mouseMoveListener);
+      document.removeEventListener('mouseup', mouseUpListener);
     };
-  }, [dragging]);
+  }, [dragging, handleMouseMove, handleMouseUp]);
 
   return (
     <div className="slider-captcha-container">

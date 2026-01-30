@@ -3,64 +3,58 @@ import { Layout, Menu, Spin, message } from 'antd';
 import type { MenuProps } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useMenuStore } from '@/store/menuStore';
+import { useLayoutStore } from '@/store/layoutStore';
 import type { Menu as MenuType } from '@/types';
 import {
-  buildMenuPathMap,
-  isSameTopLevelMenu,
-  getMenuLevel,
-  isSecondLevelMenu,
-  isTopLevelMenu,
+	buildMenuPathMap,
+	isSameTopLevelMenu,
+	getMenuLevel,
+	isSecondLevelMenu,
+	isTopLevelMenu,
 } from './sidebar-helper';
 import { getIconComponent } from '@/utils/iconUtils';
+import { buildFullPath, findMenuById, findMenuByFullPath } from './sidebar.utils';
+import {
+	DEFAULT_SIDEBAR_WIDTH,
+	HEADER_HEIGHT,
+	COLLAPSE_BUTTON_LEFT,
+	MENU_FONT_SIZE,
+	NAVIGATION_DELAY,
+} from './sidebar.constants';
+import '@/design-system/themes/theme-styles.css';
 
 const { Sider } = Layout;
 
 type MenuItem = NonNullable<MenuProps['items']>[number];
 
-// ========================================
-// 获取图标组件 - 使用 iconUtils 中的函数
-// ========================================
-// 直接从后端 API 获取的图标名称（如 UserOutlined、SettingOutlined 等）
-// 通过 iconUtils 中的 getIconComponent 函数转换为 React 组件
-function getIcon(iconName?: string | null): React.ReactNode {
+const getIcon = (iconName?: string | null): React.ReactNode => {
   return getIconComponent(iconName);
-}
+};
 
-// 将后端菜单数据转换为 Ant Design Menu 组件所需的格式
-function convertToMenuItem(menu: MenuType, parentPath: string = ''): MenuItem {
+const convertToMenuItem = (menu: MenuType, parentPath: string = ''): MenuItem => {
   const icon = getIcon(menu.icon);
 
-  // 只显示目录(M)和菜单(C)类型，不显示按钮(F)类型
-  if (menu.menuType === 'F') {
+  if (menu.menuType === 'F' || menu.visible !== 1) {
     return null as any;
   }
 
-  // 隐藏的菜单（visible=0）不显示
-  if (menu.visible !== 1) {
-    return null as any;
-  }
-
-  const isDisabled = menu.status !== 0; // 停用的菜单
-
-  // 构建完整路径（与 buildMenuPathMap 逻辑一致）
+  const isDisabled = menu.status !== 0;
   let menuPath = menu.path || '';
+
   if (menuPath && !menuPath.startsWith('/') && parentPath) {
     if (!menuPath.startsWith(parentPath + '/')) {
       menuPath = `${parentPath}/${menuPath}`;
     }
   }
 
-  // 生成菜单key（与 buildMenuPathMap 逻辑一致）
-  const menuKey = menuPath || menu.id;
+  const menuKey = menu.id;
 
-  // 如果有子菜单，递归转换
   if (menu.children && menu.children.length > 0) {
     const validChildren = menu.children
       .filter(child => child.menuType !== 'F' && child.visible === 1)
       .map(child => convertToMenuItem(child, menuPath))
       .filter((item): item is MenuItem => item !== null);
 
-    // 如果有正常子菜单，或者是父级目录，都显示
     if (validChildren.length > 0 || menu.menuType === 'M') {
       return {
         key: menuKey,
@@ -73,7 +67,6 @@ function convertToMenuItem(menu: MenuType, parentPath: string = ''): MenuItem {
     }
   }
 
-  // 显示所有可见的菜单（包括停用的）
   return {
     key: menuKey,
     icon,
@@ -81,15 +74,15 @@ function convertToMenuItem(menu: MenuType, parentPath: string = ''): MenuItem {
     disabled: isDisabled,
     style: isDisabled ? { opacity: 0.5 } : undefined,
   };
-}
+};
 
 const Sidebar = () => {
-  const [collapsed, setCollapsed] = useState(false);
   const [openKeys, setOpenKeys] = useState<string[]>([]);
   const expectedOpenKeysRef = useRef<string[] | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const { menus, loading, fetchMenus } = useMenuStore();
+  const { sidebarCollapsed, toggleSidebar } = useLayoutStore();
 
   // 组件加载时获取菜单
   useEffect(() => {
@@ -177,40 +170,14 @@ const Sidebar = () => {
     // 清除预期值标记（给足够的时间让状态更新完成）
     setTimeout(() => {
       expectedOpenKeysRef.current = null;
-    }, 100);
+    }, NAVIGATION_DELAY);
   }, [location.pathname, menuPathMap]);
 
   // ========================================
   // 菜单点击处理
   // ========================================
   const handleMenuClick: MenuProps['onClick'] = (e) => {
-    // 在菜单数据中查找对应的菜单
-    const findMenuByPath = (menuList: MenuType[], key: string, parentPath: string = ''): MenuType | null => {
-      for (const menu of menuList) {
-        let menuPath = menu.path || '';
-        if (menuPath && !menuPath.startsWith('/') && parentPath) {
-          if (!menuPath.startsWith(parentPath + '/')) {
-            menuPath = `${parentPath}/${menuPath}`;
-          }
-        }
-
-        const menuKey = menuPath || menu.id;
-
-        // 检查是否匹配
-        if ((menuKey === key || menu.id === key) && menu.visible === 1) {
-          return menu;
-        }
-
-        // 递归查找子菜单
-        if (menu.children) {
-          const found = findMenuByPath(menu.children, key, menuPath);
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-
-    const clickedMenu = findMenuByPath(menus, e.key);
+    const clickedMenu = findMenuById(menus, e.key);
 
     // 检查菜单是否停用
     if (clickedMenu && clickedMenu.status !== 0) {
@@ -220,9 +187,13 @@ const Sidebar = () => {
 
     // 只有菜单类型（C）才执行导航，目录类型（M）不导航
     if (clickedMenu && clickedMenu.menuType === 'C') {
+      // 从 menuPathMap 中查找该菜单的完整路径
+      const menuInfo = menuPathMap.get(clickedMenu.id);
+      const fullPath = menuInfo?.fullPath || buildFullPath(clickedMenu);
+
       // 确保路径以 / 开头
-      const path = e.key.startsWith('/') ? e.key : `/${e.key}`;
-      navigate(path);
+      const navigationPath = fullPath.startsWith('/') ? fullPath : `/${fullPath}`;
+      navigate(navigationPath);
     }
   };
 
@@ -320,50 +291,57 @@ const Sidebar = () => {
   };
 
   // 获取当前选中的菜单项
-  // 注意：菜单 key 可能不带前导斜杠（如 ops/server-rooms）
-  // 而 location.pathname 带前导斜杠（如 /ops/server-rooms）
-  // 需要返回匹配菜单 key 的格式
   const getSelectedKeys = () => {
-    // 去掉前导斜杠，与菜单 key 保持一致
-    const normalizedPath = location.pathname.startsWith('/')
-      ? location.pathname.slice(1)
-      : location.pathname;
+    if (!location.pathname) return [];
 
-    // 返回两种格式，确保能匹配到
-    return [location.pathname, normalizedPath];
+    const pathsToTry = [
+      location.pathname,
+      location.pathname.startsWith('/') ? location.pathname.slice(1) : location.pathname,
+    ];
+
+    for (const path of pathsToTry) {
+      const menuInfo = menuPathMap.get(path);
+      if (menuInfo) {
+        const menuId = findMenuByFullPath(menus, path);
+        if (menuId) return [menuId];
+      }
+    }
+
+    return [];
   };
 
   return (
     <Sider
       collapsible
-      collapsed={collapsed}
-      onCollapse={(value) => setCollapsed(value)}
-      width={280}
+      collapsed={sidebarCollapsed}
+      onCollapse={toggleSidebar}
+      width={DEFAULT_SIDEBAR_WIDTH}
       trigger={null}
+      className="layout-sidebar"
       style={{
-        background: 'var(--theme-bg-secondary)',
-        borderRight: '1px solid var(--theme-border-primary)',
-        transition: 'all var(--theme-transition-base)',
+        background: '#ffffff',
       }}
     >
+
       <div
-        className="h-16 flex items-center relative"
+        className="flex items-center relative"
         style={{
+          height: `${HEADER_HEIGHT}px`,
           borderBottom: '1px solid var(--theme-border-primary)',
-          paddingLeft: collapsed ? '0' : '56px',
+          paddingLeft: sidebarCollapsed ? '0' : '56px',
           transition: 'padding-left var(--theme-transition-base)',
         }}
       >
         {/* 收缩按钮 */}
         <button
-          onClick={() => setCollapsed(!collapsed)}
+          onClick={toggleSidebar}
           className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors absolute"
           style={{
             color: 'var(--theme-text-secondary)',
             background: 'transparent',
             border: 'none',
             cursor: 'pointer',
-            left: '16px',
+            left: `${COLLAPSE_BUTTON_LEFT}px`,
           }}
         >
           <svg
@@ -374,7 +352,7 @@ const Sidebar = () => {
             xmlns="http://www.w3.org/2000/svg"
             style={{
               transition: 'transform var(--theme-transition-base)',
-              transform: collapsed ? 'rotate(180deg)' : 'rotate(0deg)',
+              transform: sidebarCollapsed ? 'rotate(180deg)' : 'rotate(0deg)',
             }}
           >
             <path
@@ -387,14 +365,14 @@ const Sidebar = () => {
         </button>
 
         <h1
-          className={`text-xl font-bold ${
-            collapsed ? 'hidden' : 'block'
-          }`}
+          className="text-xl font-bold"
           style={{
-            background: 'linear-gradient(135deg, var(--theme-primary-500, #3b82f6) 0%, var(--theme-primary-600, #2563eb) 100%)',
+            backgroundImage: 'linear-gradient(135deg, var(--theme-brand, #3b82f6) 0%, #ffffff 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
+            color: 'transparent',
+            display: sidebarCollapsed ? 'none' : 'inline-block',
           }}
         >
           数字化平台
@@ -416,7 +394,7 @@ const Sidebar = () => {
           className="border-r-0 px-2 py-4"
           style={{
             background: 'transparent',
-            fontSize: '14px',
+            fontSize: `${MENU_FONT_SIZE}px`,
             color: 'var(--theme-text-primary)',
           }}
         />

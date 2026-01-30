@@ -1,16 +1,18 @@
 import { useState, useEffect } from 'react';
 import type { FC } from 'react';
-import { Button, Form, Input, Select, Table, Modal, InputNumber, Space, Tag, message, Popconfirm, Card, Statistic, Row, Col, TreeSelect } from 'antd';
+import { Button, Form, Input, Select, Table, Modal, InputNumber, Space, Tag, message, Popconfirm, Card, Statistic, Row, Col } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, ReloadOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons';
-import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
+import type { ColumnsType } from 'antd/es/table';
 import { formatDateTime } from '@/utils/datetime';
+import { usePagination } from '@/hooks/usePagination';
+import { DepartmentTreeSelect } from '@/components/shared';
 import {
   getDutyPoolList,
   createDutyPool,
   updateDutyPool,
   deleteDutyPool,
   getUserList,
-  getDeptList,
+  getDeptTree,
   type DutyPool,
   type DutyPoolCreateRequest,
   type DutyPoolUpdateRequest,
@@ -20,25 +22,15 @@ import {
 
 const { Option } = Select;
 
-// 将部门数据转换为 TreeSelect 需要的树形结构
-const buildDeptTree = (depts: SimpleDept[]): any[] => {
-  return depts.map((dept) => ({
-    title: dept.deptName,
-    value: dept.id,
-    key: dept.id,
-    children: dept.children && dept.children.length > 0 ? buildDeptTree(dept.children) : undefined,
-  }));
-};
-
 const DutyPoolPage: FC = () => {
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
 
   const [loading, setLoading] = useState(false);
   const [dataSource, setDataSource] = useState<DutyPool[]>([]);
-  const [total, setTotal] = useState(0);
-  const [current, setCurrent] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+
+  // 使用全局分页 hook
+  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
   const [modalVisible, setModalVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState<DutyPool | null>(null);
@@ -122,16 +114,14 @@ const DutyPoolPage: FC = () => {
     try {
       const values = form.getFieldsValue();
       const result = await getDutyPoolList({
-        current: page ?? current,
-        pageSize: pageSize ?? pageSize,
+        current: page ?? paginationProps.current,
+        pageSize: pageSize ?? paginationProps.pageSize,
         poolName: values.poolName,
         status: values.status,
         deptId: values.deptId,
       });
       setDataSource(result.data?.list ?? []);
       setTotal(result.data?.total ?? 0);
-      setCurrent(result.data?.current ?? 1);
-      setPageSize(result.data?.page_size ?? 10);
 
       // 计算统计数据
       const list = result.data?.list ?? [];
@@ -161,7 +151,7 @@ const DutyPoolPage: FC = () => {
   // 获取部门列表
   const fetchDepts = async () => {
     try {
-      const result = await getDeptList();
+      const result = await getDeptTree();
       setDepts(result.data || []);
     } catch (error) {
       console.error('获取部门列表失败:', error);
@@ -169,22 +159,19 @@ const DutyPoolPage: FC = () => {
   };
 
   useEffect(() => {
-    fetchList(1, 10);
+    fetchList(1, paginationProps.pageSize);
     fetchUsers();
     fetchDepts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleTableChange = (pagination: TablePaginationConfig) => {
-    fetchList(pagination.current, pagination.pageSize);
-  };
-
   const handleSearch = () => {
-    fetchList(1, 10);
+    fetchList(1, paginationProps.pageSize);
   };
 
   const handleReset = () => {
     form.resetFields();
-    fetchList(1, 10);
+    fetchList(1, paginationProps.pageSize);
   };
 
   const handleAdd = () => {
@@ -226,7 +213,7 @@ const DutyPoolPage: FC = () => {
     try {
       await deleteDutyPool(id);
       handleSuccess('删除成功');
-      fetchList();
+      fetchList(paginationProps.current, paginationProps.pageSize);
     } catch (error) {
       handleApiError(error, '删除失败');
     }
@@ -257,7 +244,7 @@ const DutyPoolPage: FC = () => {
         handleSuccess('创建成功');
       }
       setModalVisible(false);
-      fetchList();
+      fetchList(paginationProps.current, paginationProps.pageSize);
     } catch (error: any) {
       if (error.errorFields) {
         // 表单验证错误
@@ -272,7 +259,7 @@ const DutyPoolPage: FC = () => {
       title: '序号',
       key: 'index',
       width: 60,
-      render: (_: unknown, __: unknown, index: number) => (current - 1) * pageSize + index + 1,
+      render: (_: unknown, __: unknown, index: number) => (paginationProps.current - 1) * paginationProps.pageSize + index + 1,
     },
     {
       title: '值班池名称',
@@ -389,14 +376,11 @@ const DutyPoolPage: FC = () => {
               <Input placeholder="请输入值班池名称" allowClear className="user-form-input" style={{ width: 150 }} />
             </Form.Item>
             <Form.Item name="deptId" label="所属部门">
-              <TreeSelect
+              <DepartmentTreeSelect
+                departments={depts}
                 placeholder="请选择部门"
-                allowClear
                 className="user-form-input"
                 style={{ width: 200 }}
-                treeData={buildDeptTree(depts)}
-                showSearch
-                treeNodeFilterProp="title"
               />
             </Form.Item>
             <Form.Item name="status" label="状态">
@@ -429,15 +413,12 @@ const DutyPoolPage: FC = () => {
           dataSource={dataSource}
           loading={loading}
           scroll={{ x: 1200 }}
-          pagination={{
-            current,
-            pageSize,
-            total,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (t) => `共 ${t} 条`,
+          pagination={paginationProps}
+          onChange={(pagination) => {
+            setCurrent(pagination.current);
+            setPageSize(pagination.pageSize);
+            fetchList(pagination.current, pagination.pageSize);
           }}
-          onChange={handleTableChange}
         />
       </Card>
 
@@ -460,12 +441,8 @@ const DutyPoolPage: FC = () => {
           </Form.Item>
 
           <Form.Item name="deptId" label="所属部门">
-            <TreeSelect
-              placeholder="请选择部门"
-              allowClear
-              treeData={buildDeptTree(depts)}
-              showSearch
-              treeNodeFilterProp="title"
+            <DepartmentTreeSelect
+              departments={depts}
               onChange={(value) => {
                 // 根据选择的部门筛选用户
                 const deptIds = getDeptAndChildrenIds(value, depts);

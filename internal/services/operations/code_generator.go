@@ -12,12 +12,11 @@ import (
 type CodeType string
 
 const (
-	CodeTypeBuilding      CodeType = "BLD" // 楼宇
-	CodeTypeFloor         CodeType = "FLR" // 楼层
-	CodeTypeWorkstation   CodeType = "WRK" // 工位
-	CodeTypeServerRoom    CodeType = "ROM" // 机房
-	CodeTypeDedicatedLine CodeType = "LIN" // 专线
-	CodeTypeRoomDevice    CodeType = "DEV" // 机房设备
+	CodeTypeBuilding    CodeType = "BLD" // 楼宇
+	CodeTypeFloor       CodeType = "FLR" // 楼层
+	CodeTypeWorkstation CodeType = "WRK" // 工位
+	CodeTypeServerRoom  CodeType = "ROM" // 机房
+	CodeTypeRoomDevice  CodeType = "DEV" // 机房设备
 )
 
 // CodeGenerator 编号生成器

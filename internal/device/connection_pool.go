@@ -35,6 +35,19 @@ func (pc *PooledConnection) Acquire() bool {
 		return false
 	}
 
+	// 等待连接完全就绪（防止竞态条件）
+	// 这确保只有在连接完全初始化后才允许使用
+	if err := pc.wrapper.WaitForReady(5 * time.Second); err != nil {
+		pc.mu.Unlock()
+		return false
+	}
+
+	// 再次验证连接状态（可能在等待期间变化）
+	if !pc.wrapper.IsConnected() || !pc.wrapper.IsReady() {
+		pc.mu.Unlock()
+		return false
+	}
+
 	// 增加引用计数
 	newCount := atomic.AddInt32(&pc.refCount, 1)
 	if newCount == 1 {
@@ -61,7 +74,7 @@ func (pc *PooledConnection) Release() {
 }
 
 // Execute 在连接上执行命令（自动管理锁和引用计数）
-func (pc *PooledConnection) Execute(ctx context.Context, fn func(*ScrapliWrapper) error) error {
+func (pc *PooledConnection) Execute(ctx context.Context, fn func(*ScrapliWrapper) error) (err error) {
 	if !pc.Acquire() {
 		return fmt.Errorf("连接不可用: deviceID=%s", pc.deviceID)
 	}
@@ -71,6 +84,17 @@ func (pc *PooledConnection) Execute(ctx context.Context, fn func(*ScrapliWrapper
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
+
+	// 捕获可能的 panic（特别是 scrapligo 库的空指针问题）
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("执行命令时发生 panic: %v, deviceID=%s", r, pc.deviceID)
+			// 标记连接为已关闭，防止后续使用
+			if pc.wrapper != nil {
+				pc.wrapper.setState(StateClosed)
+			}
+		}
+	}()
 
 	// 执行命令
 	return fn(pc.wrapper)
@@ -182,7 +206,8 @@ func (p *DeviceConnectionPool) GetConnection(ctx context.Context, deviceID strin
 
 	if exists {
 		// 连接存在，检查是否有效
-		if pc.wrapper != nil && pc.wrapper.IsConnected() {
+		// 使用 IsReady() 而不是 IsConnected() 以确保 transport 完全初始化
+		if pc.wrapper != nil && pc.wrapper.IsReady() {
 			// CRITICAL: 必须在返回前释放设备锁，否则会导致死锁
 			// 因为后续的 Acquire() 会尝试获取同一个锁（pc.mu 就是 deviceLock）
 			deviceLock.Unlock()
@@ -212,6 +237,23 @@ func (p *DeviceConnectionPool) GetConnection(ctx context.Context, deviceID strin
 	if err != nil {
 		deviceLock.Unlock()
 		return nil, fmt.Errorf("创建连接失败: %w", err)
+	}
+
+	// CRITICAL: 等待连接完全初始化后再返回
+	// 这是防止 panic 的关键：确保连接完全就绪后才允许使用
+	// 使用一个较长的超时时间（30秒），因为 OpenContext 内部已经有超时控制
+	if err := wrapper.WaitForReady(30 * time.Second); err != nil {
+		// 初始化失败，关闭连接
+		_ = wrapper.Close()
+		deviceLock.Unlock()
+		return nil, fmt.Errorf("等待连接就绪失败: %w", err)
+	}
+
+	// 最终验证：确保连接真正可用
+	if !wrapper.IsReady() {
+		_ = wrapper.Close()
+		deviceLock.Unlock()
+		return nil, fmt.Errorf("连接未完全初始化")
 	}
 
 	// 创建池化连接
@@ -325,8 +367,8 @@ func (p *DeviceConnectionPool) createConnection(ctx context.Context, deviceID st
 		}
 	}
 
-	// 设置连接超时
-	connectCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	// 设置连接超时（增加到60秒，给设备更多响应时间）
+	connectCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
 
 	if err := wrapper.OpenContext(connectCtx); err != nil {

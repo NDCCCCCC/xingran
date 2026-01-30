@@ -46,7 +46,8 @@ export function useWorkstationData(
       const floors = result.data?.list || [];
       setFloorOptions(
         floors.map((f: any) => ({
-          code: f.id,
+          id: f.id,
+          code: f.code || f.floorNo,
           name: `${f.buildingName || f.buildingCode} - ${f.name || f.floorNo}`,
         }))
       );
@@ -57,8 +58,9 @@ export function useWorkstationData(
 
   const loadDeptOptions = useCallback(async () => {
     try {
-      const result = await post('/system/departments/list', {});
-      // 构建树形结构数据
+      // 后端返回的是树形结构数组，不是分页格式
+      const result = await post('/system/departments/tree', {}) as { data: any[] };
+      // 构建树形结构数据，使用 fieldNames 指定字段映射
       const buildTreeData = (depts: any[]): DeptTreeNode[] => {
         return depts.map((dept) => ({
           title: dept.deptName || dept.name,
@@ -68,7 +70,8 @@ export function useWorkstationData(
             dept.children && dept.children.length > 0 ? buildTreeData(dept.children) : undefined,
         }));
       };
-      const deptList = Array.isArray(result.data?.list) ? result.data.list : [];
+      // 数据直接在 result.data 中，不是 result.data.list
+      const deptList = Array.isArray(result.data) ? result.data : [];
       setDeptTreeData(buildTreeData(deptList));
     } catch (error) {
       handleApiError(error, '加载部门选项', false);
@@ -82,7 +85,7 @@ export function useWorkstationData(
         if (deptId) {
           params.deptId = deptId;
         }
-        const result = await post('/system/users/list', params);
+        const result = await post('/system/users/list', params) as { data?: { list: any[] } };
         const users = result.data?.list || [];
         setUserOptions(users.map((u: any) => ({ id: u.id, name: u.username })));
       } catch (error) {

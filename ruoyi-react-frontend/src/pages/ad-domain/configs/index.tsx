@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Button,
   Table,
@@ -23,25 +23,29 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import {
-  getADConfigList,
   createADConfig,
   updateADConfig,
   deleteADConfig,
   testADConnection,
   syncADData,
-  type ADConfig,
   type ADSyncResult
 } from '@/lib/adDomainApi';
 import ActionButtons from '@/components/shared/ActionButtons';
 import { formatDateTime } from '@/utils/datetime';
+import { useADConfigs } from '@/hooks/useADConfigs';
+import type { ADConfig } from '@/lib/adDomainApi';
 
 import type { FC } from 'react';
 
 const ADConfigPage: FC = () => {
   const [editForm] = Form.useForm();
 
-  const [configs, setConfigs] = useState<ADConfig[]>([]);
-  const [loading, setLoading] = useState(false);
+  // 使用共享的 AD 配置 Hook
+  const { configs, loading, refreshConfigs: fetchConfigs } = useADConfigs({
+    enabledOnly: false, // 配置页显示所有配置（包括禁用状态）
+    autoSelectFirst: false, // 不自动选择
+  });
+
   const [modalVisible, setModalVisible] = useState(false);
   const [editingConfig, setEditingConfig] = useState<ADConfig | null>(null);
 
@@ -62,35 +66,31 @@ const ADConfigPage: FC = () => {
     message.success(msg);
   };
 
-  useEffect(() => {
-    fetchConfigs();
-  }, []);
-
-  const fetchConfigs = async () => {
-    setLoading(true);
-    try {
-      const res = await getADConfigList({ current: 1, pageSize: 100 });
-      if (res.code === 0) {
-        setConfigs(res.data?.list ?? []);
-      }
-    } catch (error) {
-      handleApiError(error, '获取AD配置失败');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleCreate = () => {
     setEditingConfig(null);
-    editForm.resetFields();
-    editForm.setFieldsValue({
-      serverPort: 389,
-      useSsl: false,
-      useTls: false,
-      syncEnabled: true,
-      syncInterval: 3600,
-    });
     setModalVisible(true);
+    // 等待 Modal 打开后再设置表单值（在 Modal 的 afterOpenChange 中处理）
+    // 默认值将在 Modal 打开后通过 editForm.setFieldsValue 设置
+  };
+
+  // Modal 打开后的回调
+  const handleModalOpenChange = (open: boolean) => {
+    if (open && editingConfig) {
+      // 编辑模式：设置表单值（因为 destroyOnHide 会销毁 Form）
+      editForm.setFieldsValue({
+        ...editingConfig,
+        adminPassword: undefined, // 不回填密码
+      });
+    } else if (open && !editingConfig) {
+      // 新增模式：设置默认值
+      editForm.setFieldsValue({
+        serverPort: 389,
+        useSsl: false,
+        useTls: false,
+        syncEnabled: true,
+        syncInterval: 3600,
+      });
+    }
   };
 
   const handleEdit = (config: ADConfig) => {
@@ -249,7 +249,7 @@ const ADConfigPage: FC = () => {
         const result = syncProgress[record.id];
         if (!result) return '-';
         return (
-          <Space direction="vertical" size="small">
+          <Space orientation="vertical" size="small">
             <span>OU: {result.ouCount}</span>
             <span>用户组: {result.groupCount}</span>
             <span>用户: {result.userCount}</span>
@@ -336,6 +336,7 @@ const ADConfigPage: FC = () => {
         open={modalVisible}
         onOk={handleSubmit}
         onCancel={() => setModalVisible(false)}
+        afterOpenChange={handleModalOpenChange}
         width={600}
         destroyOnHidden
       >
@@ -411,6 +412,8 @@ const ADConfigPage: FC = () => {
           <Form.Item
             label="同步间隔(秒)"
             name="syncInterval"
+            initialValue={3600}
+            rules={[{ required: true, message: '请输入同步间隔' }]}
           >
             <InputNumber min={60} style={{ width: '100%' }} />
           </Form.Item>

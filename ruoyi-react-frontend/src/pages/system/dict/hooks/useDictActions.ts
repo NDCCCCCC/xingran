@@ -38,8 +38,8 @@ export interface UseDictActionsReturn {
   handleDeleteData: (id: string) => Promise<void>;
   handleBatchDeleteData: (selectedRowKeys: Key[], setSelectedRowKeys: (keys: Key[]) => void) => Promise<void>;
   handleRefreshCache: () => Promise<void>;
-  openTypeModal: (record?: DictType, typeForm: FormInstance) => void;
-  openDataModal: (record?: DictData, dataForm: FormInstance) => void;
+  openTypeModal: (record: DictType | undefined, typeForm: FormInstance) => void;
+  openDataModal: (record: DictData | undefined, dataForm: FormInstance) => void;
 }
 
 export function useDictActions(params: UseDictActionsParams): UseDictActionsReturn {
@@ -173,7 +173,7 @@ export function useDictActions(params: UseDictActionsParams): UseDictActionsRetu
   }, []);
 
   // 打开类型编辑模态框
-  const openTypeModal = useCallback((record?: DictType, typeForm: FormInstance) => {
+  const openTypeModal = useCallback((record: DictType | undefined, typeForm: FormInstance) => {
     if (record) {
       setEditingType(record);
       typeForm.setFieldsValue(record);
@@ -186,7 +186,7 @@ export function useDictActions(params: UseDictActionsParams): UseDictActionsRetu
   }, []);
 
   // 打开数据编辑模态框
-  const openDataModal = useCallback((record?: DictData, dataForm: FormInstance) => {
+  const openDataModal = useCallback((record: DictData | undefined, dataForm: FormInstance) => {
     if (!selectedType) {
       message.warning('请先选择字典类型');
       return;

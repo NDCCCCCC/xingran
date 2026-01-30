@@ -8,17 +8,18 @@ import type { ConfigExecution, NetworkDevice, BaseResponse, PageResponse } from 
 import { post } from '@/lib/api';
 import type { CommandStatistics } from '../types';
 
+export interface UseCommandDataParams {
+  current: number;
+  pageSize: number;
+}
+
 export interface UseCommandDataReturn {
   executions: ConfigExecution[];
   execLoading: boolean;
   execTotal: number;
-  execCurrent: number;
-  pageSize: number;
   statistics: CommandStatistics;
 
   setExecTotal: React.Dispatch<React.SetStateAction<number>>;
-  setExecCurrent: React.Dispatch<React.SetStateAction<number>>;
-  setPageSize: React.Dispatch<React.SetStateAction<number>>;
   setStatistics: React.Dispatch<React.SetStateAction<CommandStatistics>>;
   setExecutions: React.Dispatch<React.SetStateAction<ConfigExecution[]>>;
 
@@ -29,13 +30,12 @@ export interface UseCommandDataReturn {
 }
 
 export function useCommandData(
-  setExecLoading: React.Dispatch<React.SetStateAction<boolean>>
+  setExecLoading: React.Dispatch<React.SetStateAction<boolean>>,
+  { current, pageSize }: UseCommandDataParams
 ): UseCommandDataReturn {
   const [executions, setExecutions] = useState<ConfigExecution[]>([]);
   const [execLoading, setExecLoadingState] = useState(false);
   const [execTotal, setExecTotal] = useState(0);
-  const [execCurrent, setExecCurrent] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
   const [statistics, setStatistics] = useState<CommandStatistics>({
     total: 0,
     pending: 0,
@@ -64,7 +64,7 @@ export function useCommandData(
       setExecLoadingState(true);
       try {
         const result = await post<BaseResponse<PageResponse<ConfigExecution>>>('/network/command/list', {
-          current: params.current || execCurrent,
+          current: params.current || current,
           pageSize: params.pageSize || pageSize,
         });
         setExecutions(result.data?.list || []);
@@ -78,7 +78,7 @@ export function useCommandData(
         setExecLoadingState(false);
       }
     },
-    [execCurrent, pageSize, setExecLoading, updateStatistics]
+    [current, pageSize, setExecLoading, updateStatistics]
   );
 
   const loadStatistics = useCallback(async () => {
@@ -96,7 +96,7 @@ export function useCommandData(
       const result = await post<BaseResponse<PageResponse<NetworkDevice>>>('/network/devices/list', {
         current: 1,
         pageSize: 1000,
-        status: 0, // 只显示在线设备
+        status: 0,
       });
       return result.data?.list || [];
     } catch (error) {
@@ -108,7 +108,7 @@ export function useCommandData(
   const loadExecutionDetails = useCallback(
     async (executionId: string): Promise<{ execution: ConfigExecution; details: any[] }> => {
       try {
-        const result = await post<BaseResponse<ConfigExecution>>(`/network/command/${executionId}`, {});
+        const result = await post<BaseResponse<ConfigExecution & { details?: any[] }>>(`/network/command/${executionId}`, {});
         return {
           execution: result.data || {} as ConfigExecution,
           details: result.data?.details || [],
@@ -125,12 +125,8 @@ export function useCommandData(
     executions,
     execLoading,
     execTotal,
-    execCurrent,
-    pageSize,
     statistics,
     setExecTotal,
-    setExecCurrent,
-    setPageSize,
     setStatistics,
     setExecutions,
     loadExecutions,

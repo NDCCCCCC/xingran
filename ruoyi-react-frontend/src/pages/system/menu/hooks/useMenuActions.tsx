@@ -3,17 +3,19 @@
  * 菜单操作管理 Hook
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Modal, message, Alert, Checkbox } from 'antd';
 import { WarningOutlined } from '@ant-design/icons';
 import type { Menu } from '@/types';
 import { post } from '@/lib/api';
+import type { CheckboxChangeEvent } from 'antd/es/checkbox';
 import { refreshMenuCache } from '@/store/menuStore';
 
 export interface UseMenuActionsParams {
   onLoad: () => void;
   selectedRowKeys: string[];
   setSelectedRowKeys: (keys: string[]) => void;
+  onSaveSuccess?: () => void;
 }
 
 export interface UseMenuActionsReturn {
@@ -32,9 +34,10 @@ export interface UseMenuActionsReturn {
 }
 
 export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsReturn {
-  const { onLoad, selectedRowKeys, setSelectedRowKeys } = params;
+  const { onLoad, selectedRowKeys, setSelectedRowKeys, onSaveSuccess } = params;
 
   const [editingMenu, setEditingMenu] = useState<Menu | null>(null);
+  // 批量删除使用的级联删除状态
   const [cascadeDelete, setCascadeDelete] = useState(false);
 
   // 新增菜单
@@ -54,7 +57,7 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
         ? `/system/menus/${id}/delete?cascade=true`
         : `/system/menus/${id}/delete`;
 
-      const result = await post(url);
+      const result = await post(url) as { data?: { deletedCount?: number } };
 
       if (cascade && result.data?.deletedCount) {
         message.success(`删除成功！共删除 ${result.data.deletedCount} 个菜单（包含子菜单）`);
@@ -64,13 +67,13 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
 
       onLoad();
 
-      // 刷新菜单缓存，使菜单变更立即生效
-      await refreshMenuCache();
-      message.success('菜单已刷新，变更已生效');
+      // 静默刷新菜单缓存，不会触发页面跳转
+      refreshMenuCache();
     } catch (error: any) {
       console.error('删除菜单失败:', error);
       const errorMsg = error?.response?.data?.message || error?.message || '删除失败';
       message.error(errorMsg);
+      throw error; // 重新抛出错误以保持 Modal 打开
     }
   }, [onLoad]);
 
@@ -78,10 +81,31 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
   const handleDeleteConfirm = useCallback((record: Menu) => {
     const hasChildren = record.children && record.children.length > 0;
 
-    Modal.confirm({
-      title: '删除菜单',
-      icon: <WarningOutlined style={{ color: '#faad14' }} />,
-      content: (
+    // 创建一个可响应状态更新的确认框
+    let localCascade = false;
+    let modalInstance: any = null;
+
+    const DeleteConfirmContent = () => {
+      const [checked, setChecked] = useState(false);
+
+      // 使用 ref 来保存最新的状态值，供 onOk 回调使用
+      const checkboxRef = useRef(false);
+
+      const handleChange = (e: CheckboxChangeEvent) => {
+        const newValue = e.target.checked;
+        setChecked(newValue);
+        checkboxRef.current = newValue;
+        localCascade = newValue;
+      };
+
+      // 将 checkboxRef 挂载到 modalInstance 上，供 onOk 访问
+      useEffect(() => {
+        if (modalInstance) {
+          modalInstance.checkboxRef = checkboxRef;
+        }
+      }, [checkboxRef]);
+
+      return (
         <div>
           <p>确定要删除菜单 <strong>{record.menuName}</strong> 吗？</p>
           {hasChildren && (
@@ -94,12 +118,12 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
           )}
           <div style={{ marginTop: hasChildren ? 16 : 0 }}>
             <Checkbox
-              checked={cascadeDelete}
-              onChange={(e) => setCascadeDelete(e.target.checked)}
+              checked={checked}
+              onChange={handleChange}
             >
               级联删除子菜单
             </Checkbox>
-            {hasChildren && !cascadeDelete && (
+            {hasChildren && !checked && (
               <Alert
                 message="不启用级联删除时，如果菜单下有子菜单，删除将失败"
                 type="error"
@@ -109,13 +133,23 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
             )}
           </div>
         </div>
-      ),
+      );
+    };
+
+    modalInstance = Modal.confirm({
+      title: '删除菜单',
+      icon: <WarningOutlined style={{ color: '#faad14' }} />,
+      content: <DeleteConfirmContent />,
       okText: '确定删除',
       okType: 'danger',
       cancelText: '取消',
-      onOk: () => handleDelete(record.id, cascadeDelete),
+      onOk: () => {
+        // 从 modalInstance 获取最新的 checkbox 状态
+        const cascadeValue = modalInstance.checkboxRef?.current || false;
+        return handleDelete(record.id, cascadeValue);
+      },
     });
-  }, [cascadeDelete, handleDelete]);
+  }, [handleDelete]);
 
   // 批量删除菜单
   const handleBatchDelete = useCallback(() => {
@@ -124,10 +158,27 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
       return;
     }
 
-    Modal.confirm({
-      title: '批量删除菜单',
-      icon: <WarningOutlined style={{ color: '#faad14' }} />,
-      content: (
+    // 创建一个可响应状态更新的确认框
+    let modalInstance: any = null;
+
+    const BatchDeleteConfirmContent = () => {
+      const [checked, setChecked] = useState(false);
+      const checkboxRef = useRef(false);
+
+      const handleChange = (e: CheckboxChangeEvent) => {
+        const newValue = e.target.checked;
+        setChecked(newValue);
+        checkboxRef.current = newValue;
+      };
+
+      // 将 checkboxRef 挂载到 modalInstance 上，供 onOk 访问
+      useEffect(() => {
+        if (modalInstance) {
+          modalInstance.checkboxRef = checkboxRef;
+        }
+      }, [checkboxRef]);
+
+      return (
         <div>
           <p>您已选择 <strong>{selectedRowKeys.length}</strong> 个菜单，确定要删除吗？</p>
           <Alert
@@ -138,12 +189,12 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
           />
           <div style={{ marginTop: 16 }}>
             <Checkbox
-              checked={cascadeDelete}
-              onChange={(e) => setCascadeDelete(e.target.checked)}
+              checked={checked}
+              onChange={handleChange}
             >
               级联删除（同时删除所有子菜单）
             </Checkbox>
-            {cascadeDelete && (
+            {checked && (
               <Alert
                 message="启用级联删除后，将同时删除所选菜单及其所有子菜单"
                 type="info"
@@ -153,16 +204,24 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
             )}
           </div>
         </div>
-      ),
+      );
+    };
+
+    modalInstance = Modal.confirm({
+      title: '批量删除菜单',
+      icon: <WarningOutlined style={{ color: '#faad14' }} />,
+      content: <BatchDeleteConfirmContent />,
       okText: '确定删除',
       okType: 'danger',
       cancelText: '取消',
       onOk: async () => {
         try {
+          // 从 modalInstance 获取最新的 checkbox 状态
+          const cascadeValue = modalInstance.checkboxRef?.current || false;
           const result = await post('/system/menus/batch-delete', {
             ids: selectedRowKeys,
-            cascade: cascadeDelete,
-          });
+            cascade: cascadeValue,
+          }) as { data?: { deletedCount?: number } };
 
           if (result.data?.deletedCount) {
             message.success(`批量删除成功！共删除 ${result.data.deletedCount} 个菜单`);
@@ -173,17 +232,17 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
           setSelectedRowKeys([]);
           onLoad();
 
-          // 刷新菜单缓存，使菜单变更立即生效
-          await refreshMenuCache();
-          message.success('菜单已刷新，变更已生效');
+          // 静默刷新菜单缓存，不会触发页面跳转
+          refreshMenuCache();
         } catch (error: any) {
           console.error('批量删除失败:', error);
           const errorMsg = error?.response?.data?.message || error?.message || '批量删除失败';
           message.error(errorMsg);
+          throw error; // 重新抛出错误以保持 Modal 打开
         }
       },
     });
-  }, [selectedRowKeys, cascadeDelete, onLoad, setSelectedRowKeys]);
+  }, [selectedRowKeys, onLoad, setSelectedRowKeys]);
 
   // 保存菜单
   const handleSave = useCallback(async (editForm: any) => {
@@ -213,13 +272,15 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
       setEditingMenu(null);
       onLoad();
 
-      // 刷新菜单缓存，使菜单变更立即生效
-      await refreshMenuCache();
-      message.success('菜单已刷新，变更已生效');
+      // 静默刷新菜单缓存，不会触发页面跳转
+      refreshMenuCache();
+
+      // 调用保存成功回调，用于关闭模态框等操作
+      onSaveSuccess?.();
     } catch (error) {
       console.error('保存菜单失败:', error);
     }
-  }, [editingMenu, onLoad]);
+  }, [editingMenu, onLoad, onSaveSuccess]);
 
   return {
     editingMenu,

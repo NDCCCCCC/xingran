@@ -70,6 +70,7 @@ import { STATUS_CONFIG, PRIORITY_CONFIG, TYPE_CONFIG } from './constants';
 import { formatDateTime, buildCategoryTree } from '@/lib/workorderApi';
 import { useWorkOrderData } from './hooks/useWorkOrderData';
 import { useWorkOrderModals, type Comment, type HistoryItem } from './hooks/useWorkOrderModals';
+import { usePagination } from '@/hooks/usePagination';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -218,13 +219,14 @@ const WorkOrderPage: FC = () => {
 
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
+  // 使用全局分页 hook
+  const { paginationProps, setCurrent, setPageSize } = usePagination();
+
   // 使用自定义 Hooks
   const {
     loading,
     dataSource,
     total,
-    current,
-    pageSize,
     stats,
     users,
     depts,
@@ -252,17 +254,17 @@ const WorkOrderPage: FC = () => {
   // ==================== 表格操作 ====================
 
   const handleTableChange = useCallback((pagination: TablePaginationConfig) => {
-    fetchList(pagination.current, pagination.pageSize);
+    fetchList(pagination.current || 1, pagination.pageSize || 10);
   }, [fetchList]);
 
   const handleSearch = useCallback(() => {
-    fetchList(1, 10);
-  }, [fetchList]);
+    fetchList(1, paginationProps.pageSize);
+  }, [fetchList, paginationProps]);
 
   const handleReset = useCallback(() => {
     form.resetFields();
-    fetchList(1, 10);
-  }, [form, fetchList]);
+    fetchList(1, paginationProps.pageSize);
+  }, [form, fetchList, paginationProps]);
 
   // ==================== CRUD 操作 ====================
 
@@ -284,7 +286,7 @@ const WorkOrderPage: FC = () => {
     try {
       await deleteWorkOrder(id);
       message.success('删除成功');
-      fetchList();
+      fetchList(paginationProps.current, paginationProps.pageSize);
     } catch (error) {
       message.error('删除失败');
     }
@@ -299,7 +301,7 @@ const WorkOrderPage: FC = () => {
       await batchDeleteWorkOrders(selectedRowKeys as string[]);
       message.success('批量删除成功');
       setSelectedRowKeys([]);
-      fetchList();
+      fetchList(paginationProps.current, paginationProps.pageSize);
     } catch (error) {
       message.error('批量删除失败');
     }
@@ -308,15 +310,9 @@ const WorkOrderPage: FC = () => {
   const handleAssignToTodayDuty = useCallback(async (id: string) => {
     try {
       const result = await assignToTodayDuty(id);
-      if (result.data?.message?.includes('没有值班人员')) {
-        fetchList();
-      } else {
-        message.success('已分配给当天值班人员');
-        fetchList();
-      }
+      fetchList(paginationProps.current, paginationProps.pageSize);
     } catch (error: unknown) {
       console.error('分配失败:', error);
-      fetchList();
     }
   }, [fetchList]);
 
@@ -404,9 +400,9 @@ const WorkOrderPage: FC = () => {
     handleEdit,
     handleAssignToTodayDuty,
     handleDelete,
-    current,
-    pageSize,
-  }), [openDetailDrawer, handleEdit, handleAssignToTodayDuty, handleDelete, current, pageSize]);
+    current: paginationProps.current,
+    pageSize: paginationProps.pageSize,
+  }), [openDetailDrawer, handleEdit, handleAssignToTodayDuty, handleDelete, paginationProps]);
 
   // 分类树 - 使用 useMemo 避免重复构建
   const categoryTree = useMemo(() => buildCategoryTree(categories), [categories]);
@@ -540,14 +536,7 @@ const WorkOrderPage: FC = () => {
             selectedRowKeys,
             onChange: setSelectedRowKeys,
           }}
-          pagination={{
-            current,
-            pageSize,
-            total,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (t) => `共 ${t} 条`,
-          }}
+          pagination={paginationProps}
           onChange={handleTableChange}
         />
       </Card>

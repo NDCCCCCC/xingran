@@ -31,6 +31,7 @@ import type { Config } from '@/types';
 import { formatDateTime } from '@/utils/datetime';
 import { post } from '@/lib/api';
 import { useTableManager } from '@/hooks/useTableManager';
+import { usePagination } from '@/hooks/usePagination';
 import { handleApiError, handleSuccess } from '@/utils/errorHandler';
 import ActionButtons from '@/components/shared/ActionButtons';
 
@@ -44,12 +45,13 @@ const ConfigManagement: FC = () => {
     inactive: 0,
   });
 
+  // 使用全局分页 hook
+  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+
   const {
     loading,
     data: configs,
     total,
-    current,
-    pageSize,
     selectedRowKeys,
     setSelectedRowKeys,
     searchForm,
@@ -62,24 +64,31 @@ const ConfigManagement: FC = () => {
     handleAdd,
     handleEdit,
     handleModalClose,
-    setCurrent,
-    setPageSize,
   } = useTableManager<Config>(
     async (params): Promise<{ list: Config[]; total: number }> => {
       const values = searchForm.getFieldsValue();
       const result: any = await post('/system/configs/list', {
-        current: params.current || current,
-        pageSize: params.pageSize || pageSize,
+        current: params.current || paginationProps.current,
+        pageSize: params.pageSize || paginationProps.pageSize,
         ...values,
       });
       return result.data;
+    },
+    {
+      externalPagination: {
+        current: paginationProps.current,
+        pageSize: paginationProps.pageSize,
+        setCurrent,
+        setPageSize,
+        setTotal,
+      },
     }
   );
 
   // 加载统计数据
   const loadStatistics = useCallback(async () => {
     try {
-      const result = await post('/system/configs/list', { current: 1, pageSize: 1000 });
+      const result = await post('/system/configs/list', { current: 1, pageSize: 1000 }) as { data: { list: any[] } };
       const allConfigs = result.data.list || [];
       const activeCount = allConfigs.filter((c: any) => c.configType === 'Y').length;
       const inactiveCount = allConfigs.filter((c: any) => c.configType === 'N').length;
@@ -356,18 +365,14 @@ const ConfigManagement: FC = () => {
           dataSource={configs}
           loading={loading}
           rowKey="id"
-          pagination={{
-            current,
-            pageSize,
-            total,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条`,
-            onChange: (page, size) => {
-              setCurrent(page);
-              setPageSize(size || 10);
-              loadConfigs({ current: page, pageSize: size || 10 });
-            },
+          pagination={paginationProps}
+          onChange={(pagination) => {
+            setCurrent(pagination.current);
+            setPageSize(pagination.pageSize);
+            loadConfigs({
+              current: pagination.current,
+              pageSize: pagination.pageSize,
+            });
           }}
         />
       </Card>

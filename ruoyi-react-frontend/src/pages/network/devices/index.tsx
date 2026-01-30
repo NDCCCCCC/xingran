@@ -24,6 +24,7 @@ import {
   Alert,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import type { DividerProps } from 'antd/es/divider';
 import {
   PlusOutlined,
   EditOutlined,
@@ -40,12 +41,15 @@ import {
   CloudUploadOutlined,
 } from '@ant-design/icons';
 import type { NetworkDevice } from '@/types';
+import type { BaseResponse, PageResponse } from '@/types';
 import { post } from '@/lib/api';
 import DeptTree from '@/components/DeptTree';
 import { useNavigate } from 'react-router-dom';
 import { useTableManager } from '@/hooks/useTableManager';
 import { handleApiError, handleSuccess } from '@/utils/errorHandler';
 import ActionButtons from '@/components/shared/ActionButtons';
+import { DepartmentTreeSelect } from '@/components/shared';
+import { usePagination } from '@/hooks/usePagination';
 
 // 导入提取的常量、工具和 Hook
 import {
@@ -58,11 +62,10 @@ import {
 import {
   formatDateTime,
   getOptionLabel,
-  renderDeptTreeOptions,
   getStatusColor,
 } from './utils';
 import { useDeviceData } from './hooks/useDeviceData';
-import { useDeviceModals } from './hooks/useDeviceModals';
+import { useDeviceModals, type ProbeResult } from './hooks/useDeviceModals';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -203,6 +206,9 @@ const DeviceManagement: FC = () => {
   const [selectedDeptId, setSelectedDeptId] = useState<string>('');
   const [collectingDeviceId, setCollectingDeviceId] = useState<string | null>(null);
 
+  // 使用全局分页 hook
+  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+
   // 使用自定义 Hooks
   const {
     departments,
@@ -235,14 +241,9 @@ const DeviceManagement: FC = () => {
   const {
     loading,
     data: devices,
-    total,
-    current,
-    pageSize,
     selectedRowKeys,
-    modalVisible,
+    editModalVisible: modalVisible,
     editingItem: editingDevice,
-    setCurrent,
-    setPageSize,
     setSelectedRowKeys,
     setEditModalVisible,
     loadData: loadDevices,
@@ -252,14 +253,23 @@ const DeviceManagement: FC = () => {
   } = useTableManager<NetworkDevice>(
     async (params) => {
       const values = searchForm.getFieldsValue();
-      const result = await post('/network/devices/list', {
+      const result = await post<BaseResponse<PageResponse<NetworkDevice>>>('/network/devices/list', {
         ...values,
         ...params,
       });
-      updateStatistics(result.data.list || []);
-      return { list: result.data.list, total: result.data.total };
+      updateStatistics(result.data?.list || []);
+      return { list: result.data?.list || [], total: result.data?.total || 0 };
     },
-    { pageSize: 10 }
+    {
+      pageSize: 10,
+      externalPagination: {
+        current: paginationProps.current,
+        pageSize: paginationProps.pageSize,
+        setCurrent,
+        setPageSize,
+        setTotal,
+      },
+    }
   );
 
   // ==================== 数据操作 ====================
@@ -285,13 +295,13 @@ const DeviceManagement: FC = () => {
       const result = await post('/network/devices/discover', {
         ipAddress: values.ipAddress,
         credentialId: values.credentialId,
-      });
+      }) as ProbeResult;
 
-      if (result.data?.success) {
-        setProbeResult(result.data);
+      if (result?.success) {
+        setProbeResult(result);
         handleSuccess('设备探测');
       } else {
-        handleApiError(result.data?.message || '探测失败', '探测');
+        handleApiError(result?.message || '探测失败', '探测');
       }
     } catch (error) {
       if (error && typeof error === 'object' && 'errorFields' in error) {
@@ -410,11 +420,15 @@ const DeviceManagement: FC = () => {
       setCollectingDeviceId(device.id);
       const result = await post('/network/ports/collect', { deviceId: device.id });
 
-      const data = result.data;
+      const data = result as {
+        errorMessage?: string;
+        successCount?: number;
+        failedCount?: number;
+      };
       if (data.errorMessage) {
         handleApiError(data.errorMessage, '采集', false);
-      } else if (data.successCount > 0) {
-        handleSuccess(`采集成功: 成功 ${data.successCount} 个端口${data.failedCount > 0 ? `，失败 ${data.failedCount} 个` : ''}`);
+      } else if (data.successCount && data.successCount > 0) {
+        handleSuccess(`采集成功: 成功 ${data.successCount} 个端口${data.failedCount && data.failedCount > 0 ? `，失败 ${data.failedCount} 个` : ''}`);
       } else {
         handleApiError('采集失败: 未获取到端口数据', '采集');
       }
@@ -491,7 +505,8 @@ const DeviceManagement: FC = () => {
   useEffect(() => {
     loadDevices();
     loadStatistics();
-  }, [current, pageSize, loadDevices, loadStatistics]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // 表格列
   const columns = getDeviceTableColumns({
@@ -640,22 +655,18 @@ const DeviceManagement: FC = () => {
               loading={loading}
               rowKey="id"
               scroll={{ x: 1600 }}
-              pagination={{
-                current,
-                pageSize,
-                total,
-                showSizeChanger: true,
-                showQuickJumper: true,
-                showTotal: (total) => `共 ${total} 条`,
-                onChange: (page, size) => {
-                  setCurrent(page);
-                  setPageSize(size || 10);
-                  const params: Record<string, number | string> = { current: page, pageSize: size || 10 };
-                  if (selectedDeptId) {
-                    params.deptId = selectedDeptId;
-                  }
-                  loadDevices(params);
-                },
+              pagination={paginationProps}
+              onChange={(pagination) => {
+                setCurrent(pagination.current);
+                setPageSize(pagination.pageSize);
+                const params: Record<string, number | string> = {
+                  current: pagination.current,
+                  pageSize: pagination.pageSize,
+                };
+                if (selectedDeptId) {
+                  params.deptId = selectedDeptId;
+                }
+                loadDevices(params);
               }}
             />
           </Card>
@@ -704,7 +715,7 @@ const DeviceManagement: FC = () => {
 
           {probeResult && (
             <>
-              <Divider orientation="left" orientationMargin="0">探测结果</Divider>
+              <Divider orientationMargin={0} orientation={"left" as DividerProps['orientation']}>探测结果</Divider>
               <Alert
                 title="探测成功"
                 type="success"
@@ -729,11 +740,9 @@ const DeviceManagement: FC = () => {
             </>
           )}
 
-          <Divider orientation="left" orientationMargin="0">其他信息（可选）</Divider>
+          <Divider orientationMargin={0} orientation={"left" as DividerProps['orientation']}>其他信息（可选）</Divider>
           <Form.Item name="deptId" label="所属部门">
-            <Select placeholder="请选择部门" allowClear>
-              {renderDeptTreeOptions(departments)}
-            </Select>
+            <DepartmentTreeSelect departments={departments} />
           </Form.Item>
           <Form.Item name="location" label="位置">
             <Input placeholder="请输入设备位置" />
@@ -749,7 +758,7 @@ const DeviceManagement: FC = () => {
         title={editingDevice ? '编辑设备' : '手动新增设备'}
         open={modalVisible}
         onOk={handleCreate}
-        onCancel={() => { setEditModalVisible(false); editForm.resetFields(); handleAdd(); }}
+        onCancel={() => { setEditModalVisible(false); editForm.resetFields(); }}
         width={700}
       >
         <Alert
@@ -798,9 +807,9 @@ const DeviceManagement: FC = () => {
             </Select>
           </Form.Item>
           <Form.Item name="deptId" label="所属部门">
-            <Select placeholder="请选择部门" allowClear>
-              {renderDeptTreeOptions(departments)}
-            </Select>
+            <DepartmentTreeSelect
+              departments={departments}
+            />
           </Form.Item>
           <Form.Item name="location" label="位置">
             <Input placeholder="请输入位置" />
@@ -830,7 +839,7 @@ const DeviceManagement: FC = () => {
       >
         {viewingDevice && (
           <div>
-            <Divider orientation="left" orientationMargin="0">基本信息</Divider>
+            <Divider orientationMargin={0} orientation={"left" as DividerProps['orientation']}>基本信息</Divider>
             <Row gutter={16}>
               <Col span={12}>
                 <p><strong>设备名称:</strong> {viewingDevice.deviceName}</p>
@@ -851,7 +860,7 @@ const DeviceManagement: FC = () => {
               </Col>
             </Row>
 
-            <Divider orientation="left" orientationMargin="0">设备详细信息（SSH采集）</Divider>
+            <Divider orientationMargin={0} orientation={"left" as DividerProps['orientation']}>设备详细信息（SSH采集）</Divider>
             <Row gutter={16}>
               <Col span={12}>
                 <p><strong>型号:</strong> {viewingDevice.model || '-'}</p>
@@ -865,7 +874,7 @@ const DeviceManagement: FC = () => {
 
             {viewingDevice.description && (
               <>
-                <Divider orientation="left" orientationMargin="0">备注</Divider>
+                <Divider orientationMargin={0} orientation={"left" as DividerProps['orientation']}>备注</Divider>
                 <p>{viewingDevice.description}</p>
               </>
             )}

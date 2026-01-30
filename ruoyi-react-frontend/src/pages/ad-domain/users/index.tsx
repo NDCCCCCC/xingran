@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Card,
   Table,
   Select,
+  TreeSelect,
   Input,
   Space,
   Button,
@@ -10,13 +11,16 @@ import {
   Form,
   Modal,
   message,
+  Tooltip,
 } from 'antd';
 import {
   ReloadOutlined,
   CheckCircleOutlined,
   StopOutlined,
   SwapOutlined,
-  EditOutlined
+  EditOutlined,
+  SearchOutlined,
+  FolderOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -25,30 +29,35 @@ import {
   moveADUser,
   enableADUser,
   disableADUser,
-  getADConfigList,
   getADOUTree,
   type ADUser,
-  type ADConfig,
   type ADOUNode
 } from '@/lib/adDomainApi';
 import ActionButtons from '@/components/shared/ActionButtons';
+import { useADConfigs } from '@/hooks/useADConfigs';
+import type { ADConfig } from '@/lib/adDomainApi';
 
 import type { FC } from 'react';
+import { usePagination } from '@/hooks/usePagination';
 
 const ADUserPage: FC = () => {
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
 
-  const [configs, setConfigs] = useState<ADConfig[]>([]);
-  const [selectedConfig, setSelectedConfig] = useState<string>('');
+  // 使用共享的 AD 配置 Hook
+  const { configs, selectedConfig, setSelectedConfig } = useADConfigs({
+    enabledOnly: true,
+    autoSelectFirst: true,
+  });
 
   const [users, setUsers] = useState<ADUser[]>([]);
-  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [current, setCurrent] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+
+  // 使用全局分页 hook
+  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
   const [ouTree, setOUTree] = useState<ADOUNode[]>([]);
+  const [ouSelectVisible, setOUSelectVisible] = useState(false);
 
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingUser, setEditingUser] = useState<ADUser | null>(null);
@@ -56,42 +65,54 @@ const ADUserPage: FC = () => {
   const [moveModalVisible, setMoveModalVisible] = useState(false);
   const [movingUser, setMovingUser] = useState<ADUser | null>(null);
 
-  useEffect(() => {
-    fetchConfigs();
-  }, []);
-
-  const fetchConfigs = async () => {
-    try {
-      const res = await getADConfigList({ current: 1, pageSize: 100, status: 0 });
-      if (res.code === 0 && res.data && res.data.list && res.data.list.length > 0) {
-        setConfigs(res.data.list);
-        if (!selectedConfig) {
-          setSelectedConfig(res.data.list[0].id);
-        }
-      }
-    } catch {
-      message.error('获取AD配置失败');
-    }
-  };
-
   const fetchOUTree = async () => {
     if (!selectedConfig) return;
     try {
       const res = await getADOUTree(selectedConfig);
-      if (res.code === 0) {
-        setOUTree(res.data ?? []);
+      if (res.code === 0 && res.data) {
+        // 过滤掉不需要的OU：Computer, None, Servers, mgtgrp
+        const excludedOUNames = ['Computer', 'None', 'Servers', 'mgtgrp'];
+        const filterOUTree = (nodes: ADOUNode[]): ADOUNode[] => {
+          return nodes
+            .filter(node => !excludedOUNames.includes(node.name))
+            .map(node => ({
+              ...node,
+              children: node.children ? filterOUTree(node.children) : undefined,
+            }));
+        };
+        setOUTree(filterOUTree(res.data));
       }
     } catch (error) {
       console.error('获取OU树失败', error);
     }
   };
 
+  // 常用OU快捷列表（可配置）
+  const commonOUs = useMemo(() => {
+    if (!ouTree.length) return [];
+    const findOUByName = (name: string, nodes: ADOUNode[] = ouTree): ADOUNode | null => {
+      for (const node of nodes) {
+        if (node.name === name) return node;
+        if (node.children) {
+          const found = findOUByName(name, node.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    const commonNames = ['湖北分公司', '失效终端', '本部部门分组'];
+    return commonNames
+      .map(name => findOUByName(name))
+      .filter(Boolean) as ADOUNode[];
+  }, [ouTree]);
+
   useEffect(() => {
     if (selectedConfig) {
       fetchOUTree();
       fetchUsers();
     }
-  }, [selectedConfig, current, pageSize]);
+  }, [selectedConfig, paginationProps.current, paginationProps.pageSize]);
 
   const fetchUsers = async () => {
     if (!selectedConfig) return;
@@ -101,10 +122,11 @@ const ADUserPage: FC = () => {
       const values = form.getFieldsValue();
       const res = await getADUserList({
         configId: selectedConfig,
+        ouDn: values.ouDn,
         username: values.username,
         isEnabled: values.isEnabled,
-        current,
-        pageSize,
+        current: paginationProps.current,
+        pageSize: paginationProps.pageSize,
       });
       if (res.code === 0) {
         setUsers(res.data?.list ?? []);
@@ -185,21 +207,20 @@ const ADUserPage: FC = () => {
     }
   };
 
-  // 构建扁平化的OU选项列表
-  const buildOUOptions = (nodes: ADOUNode[], level = 0): Array<{ value: string; label: string }> => {
-    const options: Array<{ value: string; label: string }> = [];
-    const prefix = '　'.repeat(level);
+  // 构建TreeSelect所需的数据结构
+  const buildTreeSelectData = (nodes: ADOUNode[]): Array<{ value: string; title: string; children?: Array<any> }> => {
+    return nodes.map(node => ({
+      value: node.dn,
+      title: node.name,
+      children: node.children && node.children.length > 0 ? buildTreeSelectData(node.children) : undefined,
+    }));
+  };
 
-    for (const node of nodes) {
-      options.push({
-        value: node.dn,
-        label: `${prefix}${node.name}`,
-      });
-      if (node.children && node.children.length > 0) {
-        options.push(...buildOUOptions(node.children, level + 1));
-      }
-    }
-    return options;
+  const treeSelectData = useMemo(() => buildTreeSelectData(ouTree), [ouTree]);
+
+  const handleQuickOUSelect = (ouDn: string) => {
+    form.setFieldValue('ouDn', ouDn);
+    handleSearch();
   };
 
   const columns: ColumnsType<ADUser> = [
@@ -295,7 +316,7 @@ const ADUserPage: FC = () => {
 
   return (
     <Card>
-      <Space direction="vertical" style={{ width: '100%' }} size="large">
+      <Space orientation="vertical" style={{ width: '100%' }} size="large">
         {/* 搜索栏 */}
         <Form form={form} layout="inline">
           <Form.Item label="AD配置">
@@ -305,6 +326,34 @@ const ADUserPage: FC = () => {
               onChange={setSelectedConfig}
               options={configs.map(c => ({ label: c.configName, value: c.id }))}
             />
+          </Form.Item>
+          <Form.Item name="ouDn" label="所属OU">
+            <Space.Compact style={{ width: '100%' }}>
+              <TreeSelect
+                placeholder="请选择OU"
+                allowClear
+                showSearch
+                treeDefaultExpandAll={false}
+                treeIcon={<FolderOutlined />}
+                treeNodeFilterProp="title"
+                style={{ width: 300 }}
+                styles={{ popup: { root: { maxHeight: 400, overflow: 'auto' } } }}
+                treeData={treeSelectData}
+                onChange={(value) => {
+                  form.setFieldValue('ouDn', value);
+                }}
+              />
+              {commonOUs.length > 0 && (
+                <Tooltip title="快捷选择常用OU">
+                  <Button
+                    icon={<SearchOutlined />}
+                    onClick={() => setOUSelectVisible(true)}
+                  >
+                    快捷
+                  </Button>
+                </Tooltip>
+              )}
+            </Space.Compact>
           </Form.Item>
           <Form.Item name="username">
             <Input placeholder="用户名" allowClear style={{ width: 150 }} />
@@ -334,19 +383,7 @@ const ADUserPage: FC = () => {
           loading={loading}
           rowKey="id"
           scroll={{ x: 1500 }}
-          pagination={{
-            current,
-            pageSize,
-            total,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (t) => `共 ${t} 条`,
-            pageSizeOptions: ['10', '20', '50', '100'],
-            onChange: (page, size) => {
-              setCurrent(page);
-              setPageSize(size || 10);
-            },
-          }}
+          pagination={paginationProps}
         />
       </Space>
 
@@ -391,16 +428,68 @@ const ADUserPage: FC = () => {
         footer={null}
         width={500}
       >
-        <Space direction="vertical" style={{ width: '100%' }}>
+        <Space orientation="vertical" style={{ width: '100%' }}>
           <div>选择目标OU：</div>
-          <Select
+          <TreeSelect
             style={{ width: '100%' }}
             placeholder="请选择目标OU"
-            options={buildOUOptions(ouTree)}
+            allowClear
+            showSearch
+            treeDefaultExpandAll={false}
+            treeIcon={<FolderOutlined />}
+            treeNodeFilterProp="title"
+            styles={{ popup: { root: { maxHeight: 400, overflow: 'auto' } } }}
+            treeData={treeSelectData}
             onChange={(value) => {
               handleMoveConfirm(value);
             }}
           />
+        </Space>
+      </Modal>
+
+      {/* OU快捷选择弹窗 */}
+      <Modal
+        title="快捷选择常用OU"
+        open={ouSelectVisible}
+        onCancel={() => setOUSelectVisible(false)}
+        footer={[
+          <Button key="close" onClick={() => setOUSelectVisible(false)}>
+            关闭
+          </Button>,
+        ]}
+        width={600}
+      >
+        <Space orientation="vertical" style={{ width: '100%' }} size="middle">
+          <div style={{ color: '#666', fontSize: '14px' }}>
+            点击下方OU标签快速筛选该OU下的用户
+          </div>
+          <div style={{ maxHeight: 400, overflowY: 'auto' }}>
+            <Space wrap>
+              {commonOUs.map((ou) => (
+                <Tag
+                  key={ou.dn}
+                  style={{
+                    cursor: 'pointer',
+                    padding: '8px 16px',
+                    fontSize: '14px',
+                    marginBottom: '8px',
+                  }}
+                  icon={<FolderOutlined />}
+                  onClick={() => {
+                    handleQuickOUSelect(ou.dn);
+                    setOUSelectVisible(false);
+                  }}
+                >
+                  {ou.name}
+                </Tag>
+              ))}
+            </Space>
+          </div>
+          {commonOUs.length === 0 && (
+            <div style={{ textAlign: 'center', color: '#999', padding: '40px' }}>
+              暂无常用OU配置
+            </div>
+          )}
         </Space>
       </Modal>
     </Card>

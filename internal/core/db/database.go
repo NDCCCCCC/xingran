@@ -27,30 +27,13 @@ type Database struct {
 
 // NewDatabase 创建数据库连接
 func NewDatabase(cfg *config.DatabaseConfig) (*Database, error) {
-	// 确定数据库类型
-	dbType := "sqlite"
-	if cfg.Host != "" && cfg.Port > 0 {
-		dbType = "postgres"
-	}
+	dbType := determineDatabaseType(cfg)
 
-	// 根据类型创建连接
-	var db *gorm.DB
-	var err error
-
-	switch dbType {
-	case "sqlite":
-		db, err = createSQLiteConnection(cfg)
-	case "postgres":
-		db, err = createPostgresConnection(cfg)
-	default:
-		return nil, fmt.Errorf("不支持的数据库类型: %s", dbType)
-	}
-
+	db, err := createDatabaseConnection(cfg, dbType)
 	if err != nil {
 		return nil, fmt.Errorf("连接数据库失败: %w", err)
 	}
 
-	// 配置GORM
 	if err := configureGORM(db); err != nil {
 		return nil, fmt.Errorf("配置GORM失败: %w", err)
 	}
@@ -61,28 +44,35 @@ func NewDatabase(cfg *config.DatabaseConfig) (*Database, error) {
 	}, nil
 }
 
+// determineDatabaseType 确定数据库类型
+func determineDatabaseType(cfg *config.DatabaseConfig) string {
+	if cfg.Host != "" && cfg.Port > 0 {
+		return "postgres"
+	}
+	return "sqlite"
+}
+
+// createDatabaseConnection 根据类型创建数据库连接
+func createDatabaseConnection(cfg *config.DatabaseConfig, dbType string) (*gorm.DB, error) {
+	switch dbType {
+	case "sqlite":
+		return createSQLiteConnection(cfg)
+	case "postgres":
+		return createPostgresConnection(cfg)
+	default:
+		return nil, fmt.Errorf("不支持的数据库类型: %s", dbType)
+	}
+}
+
 // createSQLiteConnection 创建SQLite连接
 func createSQLiteConnection(cfg *config.DatabaseConfig) (*gorm.DB, error) {
-	// 确保数据目录存在
 	dbPath := cfg.Host
 	if dbPath == "" {
 		dbPath = "./data/ruoyi.db"
 	}
 
-	// 配置GORM日志：只记录慢查询和真正的错误，忽略 ErrRecordNotFound
-	gormLogger := logger.New(
-		log.New(os.Stdout, "\r\n", log.LstdFlags),
-		logger.Config{
-			SlowThreshold:             200 * time.Millisecond, // 慢查询阈值200ms
-			LogLevel:                  logger.Warn,            // 只记录警告和错误
-			IgnoreRecordNotFoundError: true,                   // 忽略 ErrRecordNotFound
-			Colorful:                  false,
-		},
-	)
-
-	// 配置SQLite选项
 	gormConfig := &gorm.Config{
-		Logger: gormLogger,
+		Logger: createGORMLogger(),
 		NowFunc: func() time.Time {
 			return time.Now().Local()
 		},
@@ -97,40 +87,35 @@ func createSQLiteConnection(cfg *config.DatabaseConfig) (*gorm.DB, error) {
 	return db, nil
 }
 
+// createGORMLogger 创建GORM日志配置
+func createGORMLogger() logger.Interface {
+	return logger.New(
+		log.New(os.Stdout, "\r\n", log.LstdFlags),
+		logger.Config{
+			SlowThreshold:             200 * time.Millisecond,
+			LogLevel:                  logger.Warn,
+			IgnoreRecordNotFoundError: true,
+			Colorful:                  false,
+		},
+	)
+}
+
 // createPostgresConnection 创建PostgreSQL连接
 func createPostgresConnection(cfg *config.DatabaseConfig) (*gorm.DB, error) {
-	// 首先连接到postgres数据库创建目标数据库
 	adminDSN := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=postgres sslmode=%s",
 		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.SSLMode)
 
-	// 尝试创建数据库
 	if err := createDatabaseIfNotExists(adminDSN, cfg.DBName); err != nil {
 		log.Printf("创建数据库失败: %v", err)
 	}
 
 	dsn := cfg.GetDSN()
 
-	// 配置GORM日志：只记录慢查询和真正的错误，忽略 ErrRecordNotFound
-	gormLogger := logger.New(
-		log.New(os.Stdout, "\r\n", log.LstdFlags),
-		logger.Config{
-			SlowThreshold:             200 * time.Millisecond, // 慢查询阈值200ms
-			LogLevel:                  logger.Warn,            // 只记录警告和错误
-			IgnoreRecordNotFoundError: true,                   // 忽略 ErrRecordNotFound
-			Colorful:                  false,
-		},
-	)
-
-	// 配置GORM
 	gormConfig := &gorm.Config{
-		Logger: gormLogger,
-		NowFunc: func() time.Time {
-			return time.Now().Local()
-		},
-		// 禁用外键约束的自动创建和管理
+		Logger:                                    createGORMLogger(),
+		NowFunc:                                    func() time.Time { return time.Now().Local() },
 		DisableForeignKeyConstraintWhenMigrating: true,
-		// 跳过默认事务以提高性能
-		SkipDefaultTransaction: true,
+		SkipDefaultTransaction:                     true,
 	}
 
 	db, err := gorm.Open(postgres.Open(dsn), gormConfig)
@@ -138,24 +123,26 @@ func createPostgresConnection(cfg *config.DatabaseConfig) (*gorm.DB, error) {
 		return nil, fmt.Errorf("连接PostgreSQL失败: %w", err)
 	}
 
-	// 获取底层的sql.DB对象进行连接池配置
 	sqlDB, err := db.DB()
 	if err != nil {
 		return nil, fmt.Errorf("获取数据库实例失败: %w", err)
 	}
 
-	// 设置连接池参数
-	sqlDB.SetMaxOpenConns(cfg.MaxOpenConns)
-	sqlDB.SetMaxIdleConns(cfg.MaxIdleConns)
-	sqlDB.SetConnMaxLifetime(time.Duration(cfg.MaxLifetime) * time.Second)
+	configureConnectionPool(sqlDB, cfg)
 
-	// 测试连接
 	if err := sqlDB.Ping(); err != nil {
 		return nil, fmt.Errorf("数据库连接测试失败: %w", err)
 	}
 
 	log.Println("PostgreSQL连接成功")
 	return db, nil
+}
+
+// configureConnectionPool 配置数据库连接池
+func configureConnectionPool(sqlDB *sql.DB, cfg *config.DatabaseConfig) {
+	sqlDB.SetMaxOpenConns(cfg.MaxOpenConns)
+	sqlDB.SetMaxIdleConns(cfg.MaxIdleConns)
+	sqlDB.SetConnMaxLifetime(time.Duration(cfg.MaxLifetime) * time.Second)
 }
 
 // configureGORM 配置GORM
@@ -301,6 +288,7 @@ func (d *Database) AutoMigrate() error {
 		&models.ADGroup{},
 		&models.ADUser{},
 		&models.ADGroupMember{},
+		&models.ADComputer{},
 		&models.ADSyncLog{},
 		// 运维管理相关模型（Workstation 复用系统已有的 sys_workstation）
 		&operations.OpsBuilding{},
@@ -309,6 +297,9 @@ func (d *Database) AutoMigrate() error {
 		&operations.OpsDedicatedLine{},
 		&operations.OpsRoomDevice{},
 		&operations.OpsInfoPoint{},
+		// 仪表盘系统相关模型
+		&models.Dashboard{},
+		&models.DashboardVersion{},
 	)
 	if err != nil {
 		return err

@@ -1,97 +1,172 @@
 /**
- * 主题状态管理
- * 使用Zustand进行主题切换和持久化
+ * 主题状态管理（重构版 - 支持明暗双模式）
+ * Theme State Management (Refactored - Support Light/Dark Modes)
+ *
+ * 主题配置现在从 SettingsStore 衍生
+ * 这个 Store 负责将配置应用到 DOM
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import type { ThemeType, ThemeConfig } from '@/types/theme';
-import { themes, applyThemeVariables, applyEffectVariables } from '@/design-system/themes';
+import type { ThemeType } from '@/types/theme';
+import type { ThemeConfiguration } from '@/types/config';
+import { getTheme, applyThemeVariables, applyEffectVariables, applyPrimaryColor, applySidebarBackgroundColor, type ColorMode } from '@/design-system/themes';
 
 interface ThemeState {
-  currentTheme: ThemeType;
-  themeConfig: ThemeConfig;
+	// 从 SettingsStore 衍生的配置
+	configuration: ThemeConfiguration;
+
+	// 当前应用的主题
+	appliedTheme: ThemeType;
+	appliedMode: ColorMode;
 }
 
 interface ThemeActions {
-  setTheme: (theme: ThemeType) => void;
-  toggleTheme: () => void;
-  resetTheme: () => void;
+	// 从 SettingsStore 同步配置
+	syncFromSettings: (config: ThemeConfiguration) => void;
+
+	// 运行时临时预览（不保存到 Settings）
+	previewTheme: (theme: ThemeType) => void;
+	previewMode: (mode: ColorMode) => void;
+
+	// 应用配置到 DOM
+	applyToDOM: () => void;
+
+	// 保存预览的配置到 SettingsStore
+	savePreview: () => void;
+
+	// 取消预览，恢复到 SettingsStore 的配置
+	resetPreview: () => void;
 }
 
 type ThemeStore = ThemeState & ThemeActions;
 
 export const useThemeStore = create<ThemeStore>()(
-  persist(
-    (set, get) => ({
-      // 初始状态
-      currentTheme: 'minimal',
-      themeConfig: themes.minimal,
+	(set, get) => ({
+		// 初始状态
+		configuration: {
+			mode: 'light',
+			style: 'minimal',
+		},
+		appliedTheme: 'minimal',
+		appliedMode: 'light',
 
-      // 设置主题
-      setTheme: (theme: ThemeType) => {
-        const newThemeConfig = themes[theme];
+		// 从 SettingsStore 同步配置
+		syncFromSettings: (config) => {
+			set({ configuration: config });
+			get().applyToDOM();
+		},
 
-        set({
-          currentTheme: theme,
-          themeConfig: newThemeConfig,
-        });
+		// 预览主题（临时，不保存）
+		previewTheme: (theme) => {
+			set({
+				appliedTheme: theme,
+				configuration: {
+					...get().configuration,
+					style: theme,
+				},
+			});
+			get().applyToDOM();
+		},
 
-        // 应用主题到DOM
-        applyThemeVariables(newThemeConfig);
-        applyEffectVariables(newThemeConfig.effects);
+		// 预览模式（临时，不保存）
+		previewMode: (mode) => {
+			set({
+				appliedMode: mode,
+				configuration: {
+					...get().configuration,
+					mode,
+				},
+			});
+			get().applyToDOM();
+		},
 
-        // 设置data-theme属性
-        document.documentElement.setAttribute('data-theme', theme);
-      },
+		// 应用到 DOM
+		applyToDOM: () => {
+			const { configuration } = get();
 
-      // 切换到下一个主题
-      toggleTheme: () => {
-        const themeTypes: ThemeType[] = ['minimal', 'glassmorphism', 'neumorphism', 'flat2.0'];
-        const currentIndex = themeTypes.indexOf(get().currentTheme);
-        const nextTheme = themeTypes[(currentIndex + 1) % themeTypes.length];
-        get().setTheme(nextTheme);
-      },
+			// 1. 获取主题配置（根据模式和风格）
+			const themeConfig = getTheme(configuration.style, configuration.mode);
 
-      // 重置为默认主题
-      resetTheme: () => {
-        get().setTheme('minimal');
-      },
-    }),
-    {
-      name: 'theme-storage',
-      // 只持久化主题类型，配置每次从themes中获取
-      partialize: (state) => ({
-        currentTheme: state.currentTheme,
-      }),
-      // 初始化时应用主题
-      onRehydrateStorage: () => (state) => {
-        if (state) {
-          const themeConfig = themes[state.currentTheme];
-          applyThemeVariables(themeConfig);
-          applyEffectVariables(themeConfig.effects);
-          document.documentElement.setAttribute('data-theme', state.currentTheme);
-        }
-      },
-    }
-  )
+			// 2. 应用 CSS 变量
+			applyThemeVariables(themeConfig, configuration.mode);
+			applyEffectVariables(themeConfig.effects);
+
+			// 3. 设置 data 属性
+			document.documentElement.setAttribute('data-theme', configuration.style);
+			document.documentElement.setAttribute('data-color-mode', configuration.mode);
+
+			// 4. 如果有自定义颜色，覆盖主题预设
+			if (configuration.customColors?.primary && typeof configuration.customColors.primary === 'string') {
+				applyPrimaryColor(configuration.customColors.primary);
+			}
+			if (configuration.customColors?.sidebar && typeof configuration.customColors.sidebar === 'string') {
+				applySidebarBackgroundColor(configuration.customColors.sidebar);
+			}
+		},
+
+		// 保存预览的配置（需要触发 SettingsStore 更新）
+		savePreview: () => {
+			const { configuration } = get();
+
+			// 触发 settings-changed 事件，让 ConfigProvider 处理保存
+			if (typeof window !== 'undefined') {
+				window.dispatchEvent(new CustomEvent('save-theme-settings', {
+					detail: configuration,
+				}));
+			}
+		},
+
+		// 取消预览
+		resetPreview: () => {
+			// 触发重新从 SettingsStore 同步
+			if (typeof window !== 'undefined') {
+				window.dispatchEvent(new Event('reset-theme-preview'));
+			}
+		},
+	})
 );
 
+// 监听 SettingsStore 变化
+if (typeof window !== 'undefined') {
+	window.addEventListener('settings-changed', ((event: CustomEvent) => {
+		const preferences = event.detail;
+		const syncTheme = useThemeStore.getState().syncFromSettings;
+		syncTheme(preferences.theme);
+	}) as EventListener);
+}
+
 /**
- * 主题Hook
+ * 主题 Hook
  * 提供更方便的主题访问和操作
  */
 export function useTheme() {
-  const { currentTheme, themeConfig, setTheme, toggleTheme } = useThemeStore();
+	const { configuration, appliedTheme, appliedMode, syncFromSettings, previewTheme, previewMode, savePreview, resetPreview } = useThemeStore();
 
-  return {
-    theme: currentTheme,
-    config: themeConfig,
-    setTheme,
-    toggleTheme,
-    isMinimal: currentTheme === 'minimal',
-    isGlassmorphism: currentTheme === 'glassmorphism',
-    isNeumorphism: currentTheme === 'neumorphism',
-    isFlat2: currentTheme === 'flat2.0',
-  };
+	return {
+		// 当前配置
+		theme: configuration.style,
+		mode: configuration.mode,
+		customColors: configuration.customColors,
+		config: getTheme(configuration.style, configuration.mode),
+
+		// 应用状态
+		appliedTheme,
+		appliedMode,
+
+		// 操作方法
+		setTheme: syncFromSettings,
+		previewTheme,
+		previewMode,
+		savePreview,
+		resetPreview,
+
+		// 便捷属性
+		isMinimal: appliedTheme === 'minimal',
+		isGlassmorphism: appliedTheme === 'glassmorphism',
+		isNeumorphism: appliedTheme === 'neumorphism',
+		isFlat2: appliedTheme === 'flat2.0',
+		isLuxuryQuiet: appliedTheme === 'luxury-quiet',
+		isLight: appliedMode === 'light',
+		isDark: appliedMode === 'dark',
+	};
 }

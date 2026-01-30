@@ -98,7 +98,7 @@ const AddressInput: React.FC<AddressInputProps> = ({ value, onChange, disabled }
 
   return (
     <div>
-      <Space direction="vertical" style={{ width: '100%' }}>
+      <Space orientation="vertical" style={{ width: '100%' }}>
         <Space>
           <EnvironmentOutlined />
           <span>城市：</span>

@@ -11,6 +11,7 @@ import LayoutSwitcher from '@/design-system/components/LayoutSwitcher';
 import DensitySwitcher from '@/design-system/components/DensitySwitcher';
 import ColorSwitcher from '@/design-system/components/ColorSwitcher';
 import { useAuthStore } from '@/store/authStore';
+import { DASHBOARD, MONITOR_DASHBOARD } from '@/constants/routes';
 import {
   DashboardOutlined,
   UserOutlined,
@@ -23,6 +24,7 @@ import {
   LogoutOutlined,
 } from '@ant-design/icons';
 import QuickNav from './shared/QuickNav';
+
 import type { FC, ReactNode } from 'react';
 
 interface InnovativeLayoutProps {
@@ -38,12 +40,12 @@ interface SpaceNav {
   description: string;
 }
 
-const spaceNavs: SpaceNav[] = [
+const SPACE_NAVS: SpaceNav[] = [
   {
     key: 'dashboard',
     title: '仪表盘',
     icon: <DashboardOutlined />,
-    path: '/dashboard',
+    path: DASHBOARD,
     color: '#3b82f6',
     description: '数据概览与统计',
   },
@@ -59,7 +61,7 @@ const spaceNavs: SpaceNav[] = [
     key: 'monitor',
     title: '系统监控',
     icon: <MonitorOutlined />,
-    path: '/monitor/dashboard',
+    path: MONITOR_DASHBOARD,
     color: '#f59e0b',
     description: '服务器、日志、任务',
   },
@@ -91,7 +93,7 @@ const spaceNavs: SpaceNav[] = [
     key: 'notice',
     title: '消息通知',
     icon: <ApiOutlined />,
-    path: '/my-notices',
+    path: '/user/my-notices',
     color: '#14b8a6',
     description: '通知、消息、提醒',
   },
@@ -99,7 +101,7 @@ const spaceNavs: SpaceNav[] = [
     key: 'profile',
     title: '个人中心',
     icon: <UserOutlined />,
-    path: '/profile',
+    path: '/user/profile',
     color: '#6366f1',
     description: '个人信息、设置',
   },
@@ -107,11 +109,25 @@ const spaceNavs: SpaceNav[] = [
     key: 'settings',
     title: '系统设置',
     icon: <SettingOutlined />,
-    path: '/settings',
+    path: '/user/settings',
     color: '#8b5cf6',
     description: '配置、偏好、主题',
   },
 ];
+
+const createSpaceIconStyles = (isActive: boolean, color: string) => ({
+  width: '48px',
+  height: '48px',
+  borderRadius: '12px',
+  display: 'flex' as const,
+  alignItems: 'center',
+  justifyContent: 'center',
+  cursor: 'pointer',
+  background: isActive ? color : 'transparent',
+  color: isActive ? '#fff' : 'var(--theme-text-secondary)',
+  transition: 'all var(--theme-transition-base)',
+  fontSize: '20px',
+});
 
 const InnovativeLayout: FC<InnovativeLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
@@ -136,7 +152,6 @@ const InnovativeLayout: FC<InnovativeLayoutProps> = ({ children }) => {
         transition: 'all var(--theme-transition-slow)',
       }}
     >
-      {/* 左侧空间导航 */}
       <div
         style={{
           width: '80px',
@@ -165,23 +180,11 @@ const InnovativeLayout: FC<InnovativeLayoutProps> = ({ children }) => {
           数智
         </div>
 
-        {spaceNavs.map((space) => (
+        {SPACE_NAVS.map((space) => (
           <Tooltip key={space.key} title={space.description} placement="right">
             <div
               onClick={() => handleSpaceClick(space)}
-              style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                background: activeSpace === space.key ? space.color : 'transparent',
-                color: activeSpace === space.key ? '#fff' : 'var(--theme-text-secondary)',
-                transition: 'all var(--theme-transition-base)',
-                fontSize: '20px',
-              }}
+              style={createSpaceIconStyles(activeSpace === space.key, space.color)}
               onMouseEnter={(e) => {
                 if (activeSpace !== space.key) {
                   e.currentTarget.style.background = space.color + '20';
@@ -201,7 +204,6 @@ const InnovativeLayout: FC<InnovativeLayoutProps> = ({ children }) => {
         ))}
       </div>
 
-      {/* 主内容区 */}
       <div
         className="flex-1 overflow-auto"
         style={{
@@ -211,7 +213,6 @@ const InnovativeLayout: FC<InnovativeLayoutProps> = ({ children }) => {
           width: '100%',
         }}
       >
-        {/* 控制栏 */}
         <div
           style={{
             display: 'flex',
@@ -239,18 +240,10 @@ const InnovativeLayout: FC<InnovativeLayoutProps> = ({ children }) => {
           </Space>
 
           <Space size="middle" separator={<Divider orientation="vertical" style={{ margin: 0 }} />}>
-            {/* 主题切换器 */}
             <ThemeSwitcher />
-
-            {/* 布局切换器 */}
             <LayoutSwitcher />
-
-            {/* 密度模式切换器 */}
             <DensitySwitcher />
-
-            {/* 颜色切换器 */}
             <ColorSwitcher />
-
             <span
               style={{
                 fontSize: '14px',
@@ -259,7 +252,6 @@ const InnovativeLayout: FC<InnovativeLayoutProps> = ({ children }) => {
             >
               {user?.nickname || user?.username}
             </span>
-
             <Tooltip title="退出登录">
               <Button
                 type="text"
@@ -274,10 +266,8 @@ const InnovativeLayout: FC<InnovativeLayoutProps> = ({ children }) => {
           </Space>
         </div>
 
-        {/* 快速导航 */}
         <QuickNav />
 
-        {/* 内容卡片 */}
         <Card
           style={{
             borderRadius: 'var(--theme-radius-xl)',

@@ -11,6 +11,7 @@ import {
   Form,
   Input,
   Select,
+  TreeSelect,
   Popconfirm,
   Tag,
   Avatar,
@@ -39,13 +40,15 @@ import { post } from '@/lib/api';
 import type { BaseResponse, PageResponse } from '@/types';
 import DeptTree from '@/components/DeptTree';
 import { useTableManager } from '@/hooks/useTableManager';
+import { usePagination } from '@/hooks/usePagination';
 import { handleApiError, handleSuccess } from '@/utils/errorHandler';
 import ActionButtons from '@/components/shared/ActionButtons';
+import { DepartmentTreeSelect } from '@/components/shared';
 import { formatDateTime } from '@/utils/datetime';
 
 // 导入提取的文件
 import { GENDER_OPTIONS, STATUS_OPTIONS } from './constants';
-import { renderDeptTreeOptions, formatGender, formatStatus } from './utils.tsx';
+import { convertDeptTreeData, formatGender, formatStatus } from './utils.tsx';
 import { useUserData } from './hooks/useUserData';
 import { useUserModals } from './hooks/useUserModals';
 
@@ -237,6 +240,9 @@ const UserManagement: FC = () => {
     closeResetPasswordModal,
   } = useUserModals();
 
+  // 使用全局分页 hook
+  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+
   // 数据加载函数
   const fetchUsers = useCallback(async (params: any) => {
     const result = await post<BaseResponse<PageResponse<User>>>('/system/users/list', params);
@@ -247,23 +253,29 @@ const UserManagement: FC = () => {
   const {
     loading,
     data: users,
-    total,
-    current,
-    pageSize,
     selectedRowKeys,
     searchForm,
     editForm,
     editModalVisible,
     editingItem: editingUser,
-    setCurrent,
-    setPageSize,
     setSelectedRowKeys,
     setEditModalVisible,
     loadData: loadUsers,
     handleAdd,
     handleEdit,
     resetSelection,
-  } = useTableManager<User>(fetchUsers, { pageSize: 10 });
+  } = useTableManager<User>(
+    fetchUsers,
+    {
+      externalPagination: {
+        current: paginationProps.current,
+        pageSize: paginationProps.pageSize,
+        setCurrent,
+        setPageSize,
+        setTotal,
+      },
+    }
+  );
 
   // ==================== 初始化 ====================
 
@@ -272,7 +284,8 @@ const UserManagement: FC = () => {
     loadStatistics();
     loadRoles();
     loadDepartments();
-  }, [loadUsers, loadStatistics, loadRoles, loadDepartments]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ==================== 事件处理 ====================
 
@@ -388,10 +401,11 @@ const UserManagement: FC = () => {
       setEditModalVisible(false);
       loadUsers();
       loadStatistics();
+      loadDepartments(); // 刷新部门列表以更新部门选择器中的数据
     } catch (error) {
       handleApiError(error, '操作');
     }
-  }, [editingUser, editForm, loadUsers, loadStatistics, setEditModalVisible]);
+  }, [editingUser, editForm, loadUsers, loadStatistics, loadDepartments, setEditModalVisible]);
 
   const handleSaveResetPassword = useCallback(async () => {
     try {
@@ -545,22 +559,18 @@ const UserManagement: FC = () => {
               dataSource={users}
               rowKey="id"
               loading={loading}
-              pagination={{
-                current,
-                pageSize,
-                total,
-                showSizeChanger: true,
-                showQuickJumper: true,
-                showTotal: (total) => `共 ${total} 条`,
-                onChange: (page, size) => {
-                  setCurrent(page);
-                  setPageSize(size || 10);
-                  const params: any = { current: page, pageSize: size || 10 };
-                  if (selectedDeptId) {
-                    params.deptId = selectedDeptId;
-                  }
-                  loadUsers(params);
-                },
+              pagination={paginationProps}
+              onChange={(pagination) => {
+                setCurrent(pagination.current);
+                setPageSize(pagination.pageSize);
+                const params: any = {
+                  current: pagination.current,
+                  pageSize: pagination.pageSize,
+                };
+                if (selectedDeptId) {
+                  params.deptId = selectedDeptId;
+                }
+                loadUsers(params);
               }}
               rowSelection={{
                 selectedRowKeys,
@@ -621,9 +631,10 @@ const UserManagement: FC = () => {
             </Select>
           </Form.Item>
           <Form.Item name="deptId" label="部门">
-            <Select placeholder="请选择部门" allowClear className="user-form-input">
-              {renderDeptTreeOptions(departments)}
-            </Select>
+            <DepartmentTreeSelect
+              departments={departments}
+              className="user-form-input"
+            />
           </Form.Item>
           <Form.Item name="roleIds" label="角色">
             <Select

@@ -6,6 +6,7 @@
 import { useState, useCallback } from 'react';
 import type { JobInfo, JobLog, SearchFormState } from '../types';
 import { post } from '@/lib/api';
+import type { BaseResponse, PageResponse } from '@/types';
 
 export interface UseJobDataParams {
   searchForm: SearchFormState;
@@ -52,10 +53,10 @@ export function useJobData(params: UseJobDataParams): UseJobDataReturn {
         pageSize
       };
 
-      const result = await post<{ list: JobInfo[]; total: number }>('/monitor/jobs/list', cleanedParams);
+      const result = await post<BaseResponse<PageResponse<JobInfo>>>('/monitor/jobs/list', cleanedParams);
 
-      setJobs(result.data?.list || result.list || []);
-      setTotal(result.data?.total || result.total || 0);
+      setJobs(result.data?.list || []);
+      setTotal(result.data?.total || 0);
     } catch (error) {
       console.error('获取任务列表失败:', error);
     } finally {
@@ -66,14 +67,14 @@ export function useJobData(params: UseJobDataParams): UseJobDataReturn {
   // 获取任务日志
   const fetchJobLogs = useCallback(async (jobName?: string, jobGroup?: string) => {
     try {
-      const result = await post<{ list: JobLog[]; total: number }>('/monitor/jobs/logs/list', {
+      const result = await post<BaseResponse<PageResponse<JobLog>>>('/monitor/jobs/logs/list', {
         jobName: jobName || '',
         jobGroup: jobGroup || '',
         current: 1,
         pageSize: 50
       });
 
-      setJobLogs(result.data?.list || result.list || []);
+      setJobLogs(result.data?.list || []);
     } catch (error) {
       console.error('获取任务日志失败:', error);
     }

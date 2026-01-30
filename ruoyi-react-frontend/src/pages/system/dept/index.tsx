@@ -3,7 +3,7 @@
  * 部门管理页面
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import type { FC } from 'react';
 import { Table, Button, Space, Form, Input, Select, Card, Row, Col, Statistic, message } from 'antd';
 import {
@@ -12,6 +12,8 @@ import {
   ReloadOutlined,
   ApartmentOutlined,
   TeamOutlined,
+  ImportOutlined,
+  ExportOutlined,
 } from '@ant-design/icons';
 import type { Department } from '@/types';
 import { useDeptData } from './hooks';
@@ -19,6 +21,8 @@ import { getDeptColumns } from './columns';
 import { DeptEditModal } from './modals';
 import { STATUS_OPTIONS } from './constants';
 import { renderTreeData } from './utils';
+import ExcelImport from '@/components/shared/ExcelImport';
+import ExcelExport from '@/components/shared/ExcelExport';
 
 const { Option } = Select;
 
@@ -27,6 +31,10 @@ const DepartmentManagement: FC = () => {
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingDept, setEditingDept] = useState<Department | null>(null);
   const [editForm] = Form.useForm();
+  const [importVisible, setImportVisible] = useState(false);
+  const [exportVisible, setExportVisible] = useState(false);
+  // 展开的行键
+  const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
 
   const {
     departments,
@@ -43,6 +51,17 @@ const DepartmentManagement: FC = () => {
   useEffect(() => {
     loadDepartments();
   }, [loadDepartments]);
+
+  // 当部门数据更新时，默认展开第一级部门
+  useEffect(() => {
+    if (departments && departments.length > 0) {
+      const treeData = renderTreeData(departments);
+      const rootKeys = treeData.map(d => d.key);
+      setExpandedRowKeys(rootKeys);
+    } else {
+      setExpandedRowKeys([]);
+    }
+  }, [departments]);
 
   // 搜索
   const handleSearch = async () => {
@@ -74,8 +93,6 @@ const DepartmentManagement: FC = () => {
     setEditingDept(record);
     setEditModalVisible(true);
     loadDeptUsers(record.id);
-    // Modal 打开时设置表单值
-    editForm.setFieldsValue(record);
   };
 
   // 删除部门
@@ -148,6 +165,13 @@ const DepartmentManagement: FC = () => {
     } catch (error) {
       console.error('保存部门失败:', error);
     }
+  };
+
+  // 导入成功回调
+  const handleImportSuccess = () => {
+    message.success('导入成功');
+    loadDepartments();
+    setImportVisible(false);
   };
 
   // 表格行样式：不可访问的部门显示为灰色
@@ -238,6 +262,12 @@ const DepartmentManagement: FC = () => {
             <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
               新增部门
             </Button>
+            <Button icon={<ImportOutlined />} onClick={() => setImportVisible(true)}>
+              导入
+            </Button>
+            <Button icon={<ExportOutlined />} onClick={() => setExportVisible(true)}>
+              导出
+            </Button>
           </Space>
         </div>
       </Card>
@@ -247,12 +277,20 @@ const DepartmentManagement: FC = () => {
         <Table
           columns={columns}
           dataSource={renderTreeData(departments)}
-          rowKey="id"
+          rowKey="key"
           loading={loading}
           pagination={false}
           rowClassName={(record) => getRowClassName(record)}
           expandable={{
-            defaultExpandAllRows: true,
+            expandedRowKeys: expandedRowKeys,
+            onExpand: (expanded, record) => {
+              if (expanded) {
+                setExpandedRowKeys([...expandedRowKeys, record.key]);
+              } else {
+                setExpandedRowKeys(expandedRowKeys.filter(k => k !== record.key));
+              }
+            },
+            childrenColumnName: 'children',
           }}
         />
       </Card>
@@ -264,10 +302,29 @@ const DepartmentManagement: FC = () => {
         parentOptions={parentOptions}
         deptUsers={deptUsers}
         loadingUsers={loadingUsers}
+        form={editForm}
         onOk={handleSave}
         onCancel={() => setEditModalVisible(false)}
         onParentChange={handleParentChange}
         onLeaderChange={handleLeaderChange}
+      />
+
+      {/* Excel导入导出 */}
+      <ExcelImport
+        entityType="department"
+        entityName="部门"
+        templateUrl="/api/v1/system/departments/template"
+        importUrl="/api/v1/system/departments/import"
+        visible={importVisible}
+        onClose={() => setImportVisible(false)}
+        onImportSuccess={handleImportSuccess}
+      />
+      <ExcelExport
+        entityType="department"
+        entityName="部门"
+        exportUrl="/api/v1/system/departments/export"
+        visible={exportVisible}
+        onClose={() => setExportVisible(false)}
       />
     </div>
   );

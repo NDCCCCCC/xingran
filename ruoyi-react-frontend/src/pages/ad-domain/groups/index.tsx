@@ -25,26 +25,32 @@ import {
   addADGroupMember,
   removeADGroupMember,
   updateADGroup,
-  getADConfigList,
   getADUserList,
+  getADOUTree,
   type ADGroup,
   type ADUser,
-  type ADConfig
+  type ADOUNode
 } from '@/lib/adDomainApi';
+import { useADConfigs } from '@/hooks/useADConfigs';
+import type { ADConfig } from '@/lib/adDomainApi';
 
 import type { FC } from 'react';
+import { usePagination } from '@/hooks/usePagination';
 
 const ADGroupPage: FC = () => {
   const [form] = Form.useForm();
 
-  const [configs, setConfigs] = useState<ADConfig[]>([]);
-  const [selectedConfig, setSelectedConfig] = useState<string>('');
+  // 使用共享的 AD 配置 Hook
+  const { configs, selectedConfig, setSelectedConfig } = useADConfigs({
+    enabledOnly: true,
+    autoSelectFirst: true,
+  });
 
   const [groups, setGroups] = useState<ADGroup[]>([]);
-  const [groupTotal, setGroupTotal] = useState(0);
   const [groupLoading, setGroupLoading] = useState(false);
-  const [current, setCurrent] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+
+  // 使用全局分页 hook
+  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
   const [selectedGroup, setSelectedGroup] = useState<ADGroup | null>(null);
   const [members, setMembers] = useState<ADUser[]>([]);
@@ -58,37 +64,64 @@ const ADGroupPage: FC = () => {
   const [addMemberVisible, setAddMemberVisible] = useState(false);
   const [availableUsers, setAvailableUsers] = useState<ADUser[]>([]);
 
-  useEffect(() => {
-    fetchConfigs();
-  }, []);
+  const [searchGroupName, setSearchGroupName] = useState<string>();
+  const [ouList, setOUList] = useState<Array<{ dn: string; name: string }>>([]);
+  const [selectedOUDN, setSelectedOUDN] = useState<string | undefined>();
 
-  const fetchConfigs = async () => {
-    try {
-      const res = await getADConfigList({ current: 1, pageSize: 100, status: 0 });
-      if (res.code === 0 && res.data && res.data.list && res.data.list.length > 0) {
-        setConfigs(res.data.list);
-        if (!selectedConfig) {
-          setSelectedConfig(res.data.list[0].id);
-        }
+  // 扁平化OU树，提取所有OU
+  const flattenOUTree = (nodes: ADOUNode[]): Array<{ dn: string; name: string }> => {
+    const result: Array<{ dn: string; name: string }> = [];
+    const traverse = (node: ADOUNode) => {
+      result.push({ dn: node.dn, name: node.name });
+      if (node.children) {
+        node.children.forEach(traverse);
       }
-    } catch {
-      message.error('获取AD配置失败');
-    }
+    };
+    nodes.forEach(traverse);
+    return result;
   };
 
-  const fetchGroups = async () => {
+  // 获取OU列表
+  useEffect(() => {
+    if (!selectedConfig) return;
+
+    const fetchOUs = async () => {
+      try {
+        const res = await getADOUTree(selectedConfig);
+        if (res.code === 0 && res.data) {
+          const flattened = flattenOUTree(res.data);
+          setOUList(flattened);
+
+          // 默认选择"本部部门分组"
+          const defaultOU = flattened.find(ou => ou.name === '本部部门分组');
+          if (defaultOU) {
+            setSelectedOUDN(defaultOU.dn);
+          }
+        }
+      } catch {
+        // 忽略错误
+      }
+    };
+
+    fetchOUs();
+  }, [selectedConfig]);
+
+  const fetchGroups = async (groupName?: string) => {
     if (!selectedConfig) return;
 
     setGroupLoading(true);
     try {
       const res = await getADGroupList({
         configId: selectedConfig,
-        current,
-        pageSize,
+        ouDn: selectedOUDN,
+        groupName: groupName,
+        current: paginationProps.current,
+        pageSize: paginationProps.pageSize,
       });
       if (res.code === 0) {
         setGroups(res.data?.list ?? []);
-        setGroupTotal(res.data?.total ?? 0);
+        setTotal(res.data?.total ?? 0);
+        setSearchGroupName(groupName);
       }
     } catch {
       message.error('获取用户组列表失败');
@@ -99,13 +132,19 @@ const ADGroupPage: FC = () => {
 
   useEffect(() => {
     if (selectedConfig) {
-      fetchGroups();
+      fetchGroups(searchGroupName);
     }
-  }, [selectedConfig, current, pageSize]);
+  }, [selectedConfig, selectedOUDN, paginationProps.current, paginationProps.pageSize]);
 
   const handleSearch = () => {
+    const groupName = form.getFieldValue('groupName');
     setCurrent(1);
-    fetchGroups();
+    fetchGroups(groupName);
+  };
+
+  const handleOUChange = (ouDn: string) => {
+    setSelectedOUDN(ouDn || undefined);
+    setCurrent(1);
   };
 
   const handleViewMembers = async (group: ADGroup) => {
@@ -280,7 +319,7 @@ const ADGroupPage: FC = () => {
 
   return (
     <Card>
-      <Space direction="vertical" style={{ width: '100%' }} size="large">
+      <Space orientation="vertical" style={{ width: '100%' }} size="large">
         {/* 搜索栏 */}
         <Form form={form} layout="inline">
           <Form.Item label="AD配置">
@@ -291,6 +330,23 @@ const ADGroupPage: FC = () => {
               options={configs.map(c => ({ label: c.configName, value: c.id }))}
             />
           </Form.Item>
+          <Form.Item label="所属OU">
+            <Select
+              style={{ width: 250 }}
+              value={selectedOUDN}
+              onChange={handleOUChange}
+              allowClear
+              placeholder="选择OU（默认：本部部门分组）"
+              showSearch
+              optionFilterProp="children"
+            >
+              {ouList.map(ou => (
+                <Select.Option key={ou.dn} value={ou.dn}>
+                  {ou.name}
+                </Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
           <Form.Item name="groupName">
             <Input placeholder="组名称" allowClear />
           </Form.Item>
@@ -299,7 +355,7 @@ const ADGroupPage: FC = () => {
               <Button type="primary" onClick={handleSearch}>
                 查询
               </Button>
-              <Button icon={<ReloadOutlined />} onClick={fetchGroups}>
+              <Button icon={<ReloadOutlined />} onClick={() => fetchGroups(searchGroupName)}>
                 刷新
               </Button>
             </Space>
@@ -312,18 +368,7 @@ const ADGroupPage: FC = () => {
           dataSource={groups}
           loading={groupLoading}
           rowKey="id"
-          pagination={{
-            current,
-            pageSize,
-            total: groupTotal,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (t) => `共 ${t} 条`,
-            onChange: (page, size) => {
-              setCurrent(page);
-              setPageSize(size || 10);
-            },
-          }}
+          pagination={paginationProps}
         />
       </Space>
 
@@ -334,7 +379,7 @@ const ADGroupPage: FC = () => {
         open={drawerVisible}
         onClose={() => setDrawerVisible(false)}
       >
-        <Space direction="vertical" style={{ width: '100%' }} size="middle">
+        <Space orientation="vertical" style={{ width: '100%' }} size="middle">
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAddMember}>
             添加成员
           </Button>

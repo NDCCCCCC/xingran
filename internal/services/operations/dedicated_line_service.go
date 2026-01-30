@@ -2,7 +2,6 @@ package operations
 
 import (
 	"context"
-	"errors"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 	"gorm.io/gorm"
@@ -10,7 +9,6 @@ import (
 
 // populateRoomNames 填充冗余的机房名称字段
 func (s *dedicatedLineService) populateRoomNames(ctx context.Context, line *operations.OpsDedicatedLine) error {
-	// 填充源机房名称
 	if line.SourceRoomID != nil && *line.SourceRoomID != "" && line.SourceRoomName == nil {
 		var room operations.OpsServerRoom
 		if err := s.db.WithContext(ctx).Select("name").Where("id = ?", *line.SourceRoomID).First(&room).Error; err == nil {
@@ -18,7 +16,6 @@ func (s *dedicatedLineService) populateRoomNames(ctx context.Context, line *oper
 		}
 	}
 
-	// 填充目的机房名称
 	if line.DestRoomID != nil && *line.DestRoomID != "" && line.DestRoomName == nil {
 		var room operations.OpsServerRoom
 		if err := s.db.WithContext(ctx).Select("name").Where("id = ?", *line.DestRoomID).First(&room).Error; err == nil {
@@ -50,12 +47,6 @@ func NewDedicatedLineService(db *gorm.DB) DedicatedLineService {
 
 // Create 创建专线
 func (s *dedicatedLineService) Create(ctx context.Context, line *operations.OpsDedicatedLine) error {
-	// 检查编码唯一性
-	if err := s.checkCodeUnique(ctx, line.LineCode, ""); err != nil {
-		return err
-	}
-
-	// 填充冗余的机房名称字段
 	if err := s.populateRoomNames(ctx, line); err != nil {
 		return err
 	}
@@ -65,12 +56,6 @@ func (s *dedicatedLineService) Create(ctx context.Context, line *operations.OpsD
 
 // Update 更新专线
 func (s *dedicatedLineService) Update(ctx context.Context, line *operations.OpsDedicatedLine) error {
-	// 检查编码唯一性
-	if err := s.checkCodeUnique(ctx, line.LineCode, line.ID); err != nil {
-		return err
-	}
-
-	// 填充冗余的机房名称字段
 	if err := s.populateRoomNames(ctx, line); err != nil {
 		return err
 	}
@@ -100,10 +85,6 @@ func (s *dedicatedLineService) List(ctx context.Context, params map[string]inter
 
 	query := s.db.WithContext(ctx).Model(&operations.OpsDedicatedLine{})
 
-	// 添加筛选条件
-	if code, ok := params["lineCode"].(string); ok && code != "" {
-		query = query.Where("line_code LIKE ?", "%"+code+"%")
-	}
 	if lineType, ok := params["lineType"].(string); ok && lineType != "" {
 		query = query.Where("line_type = ?", lineType)
 	}
@@ -117,7 +98,6 @@ func (s *dedicatedLineService) List(ctx context.Context, params map[string]inter
 		query = query.Where("status = ?", int(status))
 	}
 
-	// 分页
 	current := 1
 	pageSize := 10
 	if c, ok := params["current"].(int); ok {
@@ -153,20 +133,4 @@ func (s *dedicatedLineService) List(ctx context.Context, params map[string]inter
 // BatchDelete 批量删除专线
 func (s *dedicatedLineService) BatchDelete(ctx context.Context, ids []string) error {
 	return s.db.WithContext(ctx).Delete(&operations.OpsDedicatedLine{}, "id IN ?", ids).Error
-}
-
-// checkCodeUnique 检查编码唯一性
-func (s *dedicatedLineService) checkCodeUnique(ctx context.Context, code string, excludeID string) error {
-	var count int64
-	query := s.db.WithContext(ctx).Model(&operations.OpsDedicatedLine{}).Where("line_code = ?", code)
-	if excludeID != "" {
-		query = query.Where("id != ?", excludeID)
-	}
-	if err := query.Count(&count).Error; err != nil {
-		return err
-	}
-	if count > 0 {
-		return errors.New("专线编码已存在")
-	}
-	return nil
 }

@@ -11,13 +11,13 @@ export interface ADConfig {
   domainName: string;
   baseDn: string;
   adminUsername: string;
-  adminPassword?: string; // 仅创建/更新时使用
+  adminPassword?: string;
   useSsl: boolean;
   useTls: boolean;
   syncEnabled: boolean;
   syncInterval: number;
   lastSyncAt?: string;
-  status: number; // 0=启用 1=停用
+  status: number;
   createdAt: string;
   createdBy: string;
   updatedAt?: string;
@@ -92,18 +92,49 @@ export interface ADUser {
 export interface ADSyncLog {
   id: string;
   adConfigId: string;
-  syncType: string; // full/incremental
-  syncStatus: string; // running/success/failed
+  syncType: string;
+  syncStatus: string;
   startTime: string;
   endTime?: string;
   duration?: number;
   ouCount: number;
   groupCount: number;
   userCount: number;
+  computerCount?: number;
   errorCount: number;
   errorMessage?: string;
   createdAt: string;
 }
+
+export interface ADComputer {
+  id: string;
+  adConfigId: string;
+  computerName: string;
+  distinguishedName: string;
+  lastLogon?: string;
+  passwordLastSet?: string;
+  logonCount: number;
+  ouDn?: string;
+  status: number;
+  originalDescription?: string;
+  ipAddress?: string;
+  macAddress?: string;
+  managedBy?: string;
+  operatingSystem?: string;
+  osVersion?: string;
+  cpuModel?: string;
+  architecture?: string;
+  memoryCapacity?: string;
+  hardDiskCapacity?: string;
+  lastOnlineTime?: string;
+  serialNumber?: string;
+  systemInfo?: string;
+  lastLogonUser?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type ADComputerDetail = ADComputer;
 
 export interface ADSyncResult {
   ouCount: number;
@@ -165,6 +196,14 @@ export interface ADGroupListRequest {
   pageSize?: number;
 }
 
+export interface ADComputerListRequest {
+  configId: string;
+  ouDn?: string;
+  computerName?: string;
+  current?: number;
+  pageSize?: number;
+}
+
 export interface ADUserUpdateRequest {
   displayName?: string;
   email?: string;
@@ -180,14 +219,20 @@ export interface ADGroupUpdateRequest {
   description?: string;
 }
 
+// ==================== 辅助函数 ====================
+
+const DEFAULT_PAGINATION = { current: 1, pageSize: 10 };
+
+function withDefaultPagination<T extends { current?: number; pageSize?: number }>(
+  params: T
+): T {
+  return { ...DEFAULT_PAGINATION, ...params };
+}
+
 // ==================== AD配置 API ====================
 
 export function getADConfigList(params: ADConfigListRequest = {}): Promise<BaseResponse<PageResponse<ADConfig>>> {
-  return post('/ad-domain/configs/list', {
-    current: 1,
-    pageSize: 10,
-    ...params
-  });
+  return post('/ad-domain/configs/list', withDefaultPagination(params));
 }
 
 export function createADConfig(data: ADConfigCreateRequest): Promise<BaseResponse<ADConfig>> {
@@ -223,11 +268,7 @@ export function getADOUTree(configId: string): Promise<BaseResponse<ADOUNode[]>>
 // ==================== 用户组管理 API ====================
 
 export function getADGroupList(params: ADGroupListRequest): Promise<BaseResponse<PageResponse<ADGroup>>> {
-  return post('/ad-domain/groups/list', {
-    current: 1,
-    pageSize: 10,
-    ...params
-  });
+  return post('/ad-domain/groups/list', withDefaultPagination(params));
 }
 
 export function getADGroupDetail(id: string): Promise<BaseResponse<ADGroup>> {
@@ -238,12 +279,14 @@ export function updateADGroup(id: string, configId: string, data: ADGroupUpdateR
   return post(`/ad-domain/groups/${id}/update`, { configId, ...data });
 }
 
-export function getADGroupMembers(id: string, configId: string, params?: { current?: number; pageSize?: number }): Promise<BaseResponse<PageResponse<ADUser>>> {
+export function getADGroupMembers(
+  id: string,
+  configId: string,
+  params: { current?: number; pageSize?: number } = {}
+): Promise<BaseResponse<PageResponse<ADUser>>> {
   return post(`/ad-domain/groups/${id}/members`, {
     configId,
-    current: 1,
-    pageSize: 10,
-    ...params
+    ...withDefaultPagination(params),
   });
 }
 
@@ -258,11 +301,7 @@ export function removeADGroupMember(id: string, configId: string, userDn: string
 // ==================== 用户管理 API ====================
 
 export function getADUserList(params: ADUserListRequest): Promise<BaseResponse<PageResponse<ADUser>>> {
-  return post('/ad-domain/users/list', {
-    current: 1,
-    pageSize: 10,
-    ...params
-  });
+  return post('/ad-domain/users/list', withDefaultPagination(params));
 }
 
 export function getADUserDetail(id: string, configId: string): Promise<BaseResponse<ADUser>> {
@@ -287,11 +326,22 @@ export function disableADUser(id: string, configId: string): Promise<BaseRespons
 
 // ==================== 同步日志 API ====================
 
-export function getADSyncLogs(configId: string, params?: { current?: number; pageSize?: number }): Promise<BaseResponse<PageResponse<ADSyncLog>>> {
+export function getADSyncLogs(
+  configId: string,
+  params: { current?: number; pageSize?: number } = {}
+): Promise<BaseResponse<PageResponse<ADSyncLog>>> {
   return post('/ad-domain/logs/list', {
     configId,
-    current: 1,
-    pageSize: 10,
-    ...params
+    ...withDefaultPagination(params),
   });
+}
+
+// ==================== 电脑设备管理 API ====================
+
+export function getADComputerList(params: ADComputerListRequest): Promise<BaseResponse<PageResponse<ADComputerDetail>>> {
+  return post('/ad-domain/computers/list', withDefaultPagination(params));
+}
+
+export function getADComputerDetail(configId: string, computerDn: string): Promise<BaseResponse<ADComputerDetail>> {
+  return post('/ad-domain/computers/detail', { configId, computerDn });
 }

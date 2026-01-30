@@ -37,6 +37,7 @@ import { formatDateTime } from '@/utils/datetime';
 
 import type { DictType, DictData } from '@/types';
 import ActionButtons from '@/components/shared/ActionButtons';
+import { usePagination } from '@/hooks/usePagination';
 
 // 导入提取的模块
 import { STATUS_OPTIONS, renderStatusTag } from './constants';
@@ -198,10 +199,11 @@ const DictManagement: FC = () => {
   const [dataSearchForm] = Form.useForm();
   const [typeForm] = Form.useForm();
   const [dataForm] = Form.useForm();
-  const [current, setCurrent] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
   const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
   const [activeTab, setActiveTab] = useState('type');
+
+  // 使用全局分页 hook
+  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
   // 使用数据管理 Hook
   const {
@@ -217,7 +219,7 @@ const DictManagement: FC = () => {
     loadDictData,
     loadTypeStatistics,
     loadDataStatistics,
-  } = useDictData(searchForm, dataSearchForm, current, pageSize);
+  } = useDictData(searchForm, dataSearchForm, paginationProps.current, paginationProps.pageSize);
 
   // 使用操作管理 Hook
   const {
@@ -252,14 +254,14 @@ const DictManagement: FC = () => {
       loadDictTypes();
       loadTypeStatistics();
     }
-  }, [activeTab, current, pageSize, loadTypeStatistics, loadDictTypes]);
+  }, [activeTab, paginationProps.current, paginationProps.pageSize, loadTypeStatistics, loadDictTypes]);
 
   useEffect(() => {
     if (activeTab === 'data' && selectedType) {
       loadDictData();
       loadDataStatistics();
     }
-  }, [activeTab, selectedType, current, pageSize, loadDataStatistics, loadDictData]);
+  }, [activeTab, selectedType, paginationProps.current, paginationProps.pageSize, loadDataStatistics, loadDictData]);
 
   // 表格列
   const typeColumns = getDictTypeTableColumns({
@@ -269,6 +271,7 @@ const DictManagement: FC = () => {
       setSelectedType(dictType);
       setActiveTab('data');
       setCurrent(1);
+      loadDictData();
     },
   });
 
@@ -400,18 +403,11 @@ const DictManagement: FC = () => {
                     dataSource={dictTypes}
                     loading={loading}
                     rowKey="id"
-                    pagination={{
-                      current,
-                      pageSize,
-                      total,
-                      showSizeChanger: true,
-                      showQuickJumper: true,
-                      showTotal: (total) => `共 ${total} 条`,
-                      onChange: (page, size) => {
-                        setCurrent(page);
-                        setPageSize(size || 10);
-                        loadDictTypes({ current: page, pageSize: size || 10 });
-                      },
+                    pagination={paginationProps}
+                    onChange={(pagination) => {
+                      setCurrent(pagination.current);
+                      setPageSize(pagination.pageSize);
+                      loadDictTypes();
                     }}
                   />
                 </Card>
@@ -538,18 +534,11 @@ const DictManagement: FC = () => {
                     dataSource={dictDataList}
                     loading={loading}
                     rowKey="id"
-                    pagination={{
-                      current,
-                      pageSize,
-                      total,
-                      showSizeChanger: true,
-                      showQuickJumper: true,
-                      showTotal: (total) => `共 ${total} 条`,
-                      onChange: (page, size) => {
-                        setCurrent(page);
-                        setPageSize(size || 10);
-                        loadDictData({ current: page, pageSize: size || 10 });
-                      },
+                    pagination={paginationProps}
+                    onChange={(pagination) => {
+                      setCurrent(pagination.current);
+                      setPageSize(pagination.pageSize);
+                      loadDictData();
                     }}
                   />
                 </Card>

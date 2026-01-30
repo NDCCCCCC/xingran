@@ -34,6 +34,7 @@ import {
   type EmailConfigCreateRequest,
   type EmailConfigUpdateRequest,
 } from '@/lib/notificationConfigApi';
+import { usePagination } from '@/hooks/usePagination';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -42,9 +43,9 @@ const EmailConfigPage: FC = () => {
   // 列表相关状态
   const [configs, setConfigs] = useState<EmailConfig[]>([]);
   const [loading, setLoading] = useState(false);
-  const [total, setTotal] = useState(0);
-  const [current, setCurrent] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+
+  // 使用全局分页 hook
+  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
   // 编辑模态框相关状态
   const [modalVisible, setModalVisible] = useState(false);
@@ -62,9 +63,9 @@ const EmailConfigPage: FC = () => {
     setLoading(true);
     try {
       const result = await getEmailConfigList({
-        page: current,
-        pageSize,
-      });
+        page: paginationProps.current,
+        pageSize: paginationProps.pageSize,
+      }) as { data: { list: any[]; total: number } };
       setConfigs(result.data.list);
       setTotal(result.data.total);
     } catch (error) {
@@ -261,7 +262,7 @@ const EmailConfigPage: FC = () => {
 
   useEffect(() => {
     loadConfigs();
-  }, [current, pageSize]);
+  }, [paginationProps.current, paginationProps.pageSize]);
 
   return (
     <div className="p-6">
@@ -284,17 +285,11 @@ const EmailConfigPage: FC = () => {
           loading={loading}
           rowKey="id"
           scroll={{ x: 1200 }}
-          pagination={{
-            current,
-            pageSize,
-            total,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条`,
-            onChange: (page, size) => {
-              setCurrent(page);
-              setPageSize(size || 10);
-            },
+          pagination={paginationProps}
+          onChange={(pagination) => {
+            setCurrent(pagination.current);
+            setPageSize(pagination.pageSize);
+            loadConfigs();
           }}
         />
       </Card>

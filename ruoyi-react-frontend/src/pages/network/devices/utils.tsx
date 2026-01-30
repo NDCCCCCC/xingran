@@ -3,12 +3,7 @@
  */
 
 import dayjs from 'dayjs';
-import type { Department } from '@/types';
 import type { SelectOption } from './constants';
-import type { ReactElement } from 'react';
-import { Select } from 'antd';
-
-const { Option } = Select;
 
 // 统一时间格式化函数从 @/utils/datetime 导入
 export { formatDateTime } from '@/utils/datetime';
@@ -18,37 +13,6 @@ export { formatDateTime } from '@/utils/datetime';
  */
 export function getOptionLabel(options: SelectOption[], value: string | number): string | undefined {
   return options.find(o => o.value === value)?.label;
-}
-
-/**
- * 渲染树形部门选项
- */
-export function renderDeptTreeOptions(
-  departments: Department[]
-): ReactElement[] {
-  if (!departments || departments.length === 0) {
-    return [<Option key="" value="">暂无部门数据</Option>];
-  }
-
-  const renderOptions = (nodes: Department[], level = 0): ReactElement[] => {
-    const options: ReactElement[] = [];
-
-    nodes.forEach(node => {
-      options.push(
-        <Option key={node.id} value={node.id}>
-          {'　'.repeat(level * 2)}{node.deptName}
-        </Option>
-      );
-
-      if (node.children && node.children.length > 0) {
-        options.push(...renderOptions(node.children, level + 1));
-      }
-    });
-
-    return options;
-  };
-
-  return renderOptions(departments);
 }
 
 /**

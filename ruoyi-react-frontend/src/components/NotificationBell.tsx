@@ -3,6 +3,7 @@ import type { FC, MouseEvent } from 'react';
 import { Badge, Dropdown, Empty, Spin, Tag, Avatar, message } from 'antd';
 import { BellOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import { USER_NOTICES } from '@/constants/routes';
 import { useNoticeStore } from '@/store/noticeStore';
 import { getNotificationList, markNoticeAsRead, markAllNoticesAsRead, ignoreNotice } from '@/lib/noticeApi';
 import type { NoticeListItem } from '@/types/notice';
@@ -150,7 +151,7 @@ const NotificationBell: FC = () => {
             }}
             onClick={() => {
               setDropdownOpen(false);
-              navigate('/my-notices');
+              navigate(USER_NOTICES);
             }}
             onMouseEnter={(e) => e.currentTarget.style.color = 'var(--theme-primary)'}
             onMouseLeave={(e) => e.currentTarget.style.color = 'var(--theme-text-secondary)'}
@@ -311,7 +312,7 @@ const NotificationBell: FC = () => {
             style={{ color: 'var(--theme-primary)' }}
             onClick={() => {
               setDropdownOpen(false);
-              navigate('/my-notices');
+              navigate(USER_NOTICES);
             }}
           >
             查看全部通知 →
@@ -338,23 +339,36 @@ const NotificationBell: FC = () => {
           boxShadow: '0 2px 8px rgba(239, 68, 68, 0.3)',
         }}
       >
-        <Avatar
-          size="large"
-          icon={<BellOutlined />}
+        <div
           className="cursor-pointer transition-all duration-300"
           style={{
-            background: 'linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%)',
-            boxShadow: '0 2px 8px rgba(79, 70, 229, 0.2)',
+            display: 'inline-block',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'scale(1.05)';
-            e.currentTarget.style.boxShadow = '0 4px 16px rgba(79, 70, 229, 0.3)';
+            const avatar = e.currentTarget.querySelector('.ant-avatar') as HTMLElement;
+            if (avatar) {
+              avatar.style.transform = 'scale(1.05)';
+              avatar.style.boxShadow = '0 4px 16px rgba(79, 70, 229, 0.3)';
+            }
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'scale(1)';
-            e.currentTarget.style.boxShadow = '0 2px 8px rgba(79, 70, 229, 0.2)';
+            const avatar = e.currentTarget.querySelector('.ant-avatar') as HTMLElement;
+            if (avatar) {
+              avatar.style.transform = 'scale(1)';
+              avatar.style.boxShadow = '0 2px 8px rgba(79, 70, 229, 0.2)';
+            }
           }}
-        />
+        >
+          <Avatar
+            size="large"
+            icon={<BellOutlined />}
+            style={{
+              background: 'linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%)',
+              boxShadow: '0 2px 8px rgba(79, 70, 229, 0.2)',
+              transition: 'transform 300ms, box-shadow 300ms',
+            }}
+          />
+        </div>
       </Badge>
     </Dropdown>
   );

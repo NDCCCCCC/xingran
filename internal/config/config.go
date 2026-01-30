@@ -18,6 +18,7 @@ type Config struct {
 	JWT      JWTConfig      `mapstructure:"jwt"`
 	Security SecurityConfig `mapstructure:"security"`
 	Log      LogConfig      `mapstructure:"log"`
+	Baidu    BaiduConfig    `mapstructure:"baidu"`
 }
 
 // ServerConfig 服务器配置
@@ -87,6 +88,11 @@ type RequestEncryptionConfig struct {
 	RequireEncryption bool     `mapstructure:"require_encryption"` // 是否强制加密
 }
 
+// BaiduConfig 百度地图配置
+type BaiduConfig struct {
+	MapAK string `mapstructure:"map_ak"` // 百度地图API Key
+}
+
 // Load 加载配置
 func Load() *Config {
 	viper.SetConfigName("config")
@@ -119,40 +125,35 @@ func Load() *Config {
 	}
 
 	// 从环境变量直接读取敏感配置
-	if host := os.Getenv("DB_HOST"); host != "" {
-		config.Database.Host = host
-	}
-	if user := os.Getenv("DB_USER"); user != "" {
-		config.Database.User = user
-	}
-	if password := os.Getenv("DB_PASSWORD"); password != "" {
-		config.Database.Password = password
-	}
-	if dbname := os.Getenv("DB_NAME"); dbname != "" {
-		config.Database.DBName = dbname
-	}
+	overrideFromEnv(&config.Database.Host, "DB_HOST")
+	overrideFromEnv(&config.Database.User, "DB_USER")
+	overrideFromEnv(&config.Database.Password, "DB_PASSWORD")
+	overrideFromEnv(&config.Database.DBName, "DB_NAME")
+	overrideFromEnv(&config.Database.SSLMode, "DB_SSLMODE")
+	overrideFromEnv(&config.JWT.SecretKey, "JWT_SECRET")
+	overrideFromEnv(&config.Security.SM4Key, "SM4_KEY")
+	overrideFromEnv(&config.Baidu.MapAK, "BAIDU_MAP_AK")
+
+	// 数值类型环境变量
 	if port := os.Getenv("DB_PORT"); port != "" {
 		if p, err := strconv.Atoi(port); err == nil {
 			config.Database.Port = p
 		}
-	}
-	if sslmode := os.Getenv("DB_SSLMODE"); sslmode != "" {
-		config.Database.SSLMode = sslmode
-	}
-	if jwtSecret := os.Getenv("JWT_SECRET"); jwtSecret != "" {
-		config.JWT.SecretKey = jwtSecret
 	}
 	if serverPort := os.Getenv("SERVER_PORT"); serverPort != "" {
 		if p, err := strconv.Atoi(serverPort); err == nil {
 			config.Server.Port = p
 		}
 	}
-	// SM4 密钥从环境变量读取
-	if sm4Key := os.Getenv("SM4_KEY"); sm4Key != "" {
-		config.Security.SM4Key = sm4Key
-	}
 
 	return &config
+}
+
+// overrideFromEnv 从环境变量覆盖配置值（辅助函数）
+func overrideFromEnv(target *string, envKey string) {
+	if value := os.Getenv(envKey); value != "" {
+		*target = value
+	}
 }
 
 // setDefaults 设置默认配置

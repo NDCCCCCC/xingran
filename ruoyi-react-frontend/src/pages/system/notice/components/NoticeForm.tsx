@@ -17,7 +17,6 @@ export interface NoticeFormProps {
   editingNotice: Notice | null;
   executionType: ExecutionType;
   selectedChannels: string[];
-  selectedAPIConfigId: string | undefined;
   apiConfigs: APINotificationConfig[];
   loadingAPIConfigs: boolean;
   deptTree: Target[];
@@ -27,17 +26,12 @@ export interface NoticeFormProps {
   loadingRoles: boolean;
   loadingUsers: boolean;
   markdownContent: string;
-  customEmails: string;
-  customWeComUsers: string;
   form: any;
   onCancel: () => void;
   onSubmit: () => void;
   onExecutionTypeChange: (type: ExecutionType) => void;
   onChannelsChange: (channels: string[]) => void;
-  onAPIConfigChange: (configId: string | undefined) => void;
   onMarkdownContentChange: (content: string) => void;
-  onCustomEmailsChange: (emails: string) => void;
-  onCustomWeComUsersChange: (users: string) => void;
   onTargetTypeChange: (value: number) => void;
   onDeptChange: (keys: React.Key[]) => void;
   onRoleChange: (values: any[]) => void;
@@ -53,7 +47,6 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
   editingNotice,
   executionType,
   selectedChannels,
-  selectedAPIConfigId,
   apiConfigs,
   loadingAPIConfigs,
   deptTree,
@@ -63,17 +56,12 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
   loadingRoles,
   loadingUsers,
   markdownContent,
-  customEmails,
-  customWeComUsers,
   form,
   onCancel,
   onSubmit,
   onExecutionTypeChange,
   onChannelsChange,
-  onAPIConfigChange,
   onMarkdownContentChange,
-  onCustomEmailsChange,
-  onCustomWeComUsersChange,
   onTargetTypeChange,
   onDeptChange,
   onRoleChange,
@@ -143,7 +131,7 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
         {/* 执行方式 */}
         <Row>
           <Col span={24}>
-            <Form.Item label="执行方式" labelCol={{ span: 5 }} wrapperCol={{ span: 17 }}>
+            <Form.Item label="执行方式" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
               <Radio.Group
                 value={executionType}
                 onChange={(e) => {
@@ -186,7 +174,7 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
                 name={['recurrenceConfig', 'cronExpression']}
                 label="Cron表达式"
                 labelCol={{ span: 5 }}
-                wrapperCol={{ span: 17 }}
+                wrapperCol={{ span: 19 }}
                 required
                 rules={[{ required: true, message: '请输入 Cron 表达式' }]}
               >
@@ -207,7 +195,7 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
         {/* 接收范围配置 */}
         <Row>
           <Col span={24}>
-            <Form.Item label="接收" labelCol={{ span: 5 }} wrapperCol={{ span: 17 }} required>
+            <Form.Item label="接收" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }} required>
               <Row gutter={8}>
                 <Col span={6}>
                   <Form.Item name="targetType" noStyle initialValue={0}>
@@ -258,14 +246,14 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
         {/* 发送渠道配置 */}
         <Row>
           <Col span={24}>
-            <Form.Item label="发送渠道" labelCol={{ span: 5 }} wrapperCol={{ span: 17 }}>
+            <Form.Item label="发送渠道" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
               <Checkbox.Group
                 value={selectedChannels}
                 onChange={(checkedValues) => {
                   const newChannels = checkedValues as string[];
                   onChannelsChange(newChannels);
                   if (!newChannels.includes('api')) {
-                    onAPIConfigChange(undefined);
+                    form.setFieldValue('apiConfigId', undefined);
                   }
                 }}
               >
@@ -281,16 +269,16 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
         {selectedChannels.includes('api') && (
           <Row>
             <Col span={24}>
-              <Form.Item label="企微配置" labelCol={{ span: 5 }} wrapperCol={{ span: 17 }}>
+              <Form.Item name="apiConfigId" label="企微配置" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
                 <Select
                   placeholder="请选择企微机器人配置"
-                  value={selectedAPIConfigId}
-                  onChange={onAPIConfigChange}
                   loading={loadingAPIConfigs}
                   allowClear
-                  style={{ width: 300 }}
+                  onChange={(value) => {
+                    form.setFieldValue('apiConfigId', value);
+                  }}
                 >
-                  {apiConfigs.map((config) => (
+                  {apiConfigs.filter((config) => config.id != null).map((config) => (
                     <Option key={config.id} value={config.id}>
                       {config.configName}
                       {config.configType === 'webhook' && ` (${config.apiMethod})`}
@@ -306,13 +294,10 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
         {selectedChannels.includes('email') && (
           <Row>
             <Col span={24}>
-              <Form.Item label="自定义邮箱" labelCol={{ span: 5 }} wrapperCol={{ span: 17 }}>
+              <Form.Item name="customEmails" label="自定义邮箱" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
                 <Input
                   placeholder="多个邮箱用逗号分隔，如: user1@example.com, user2@example.com"
-                  value={customEmails}
-                  onChange={(e) => onCustomEmailsChange(e.target.value)}
                   allowClear
-                  style={{ width: 400 }}
                 />
               </Form.Item>
             </Col>
@@ -323,13 +308,10 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
         {selectedChannels.includes('api') && (
           <Row>
             <Col span={24}>
-              <Form.Item label="企微用户" labelCol={{ span: 5 }} wrapperCol={{ span: 17 }}>
+              <Form.Item name="customWeComUsers" label="企微用户" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
                 <Input
                   placeholder="多个用户代码用逗号分隔，如: USER001, USER002"
-                  value={customWeComUsers}
-                  onChange={(e) => onCustomWeComUsersChange(e.target.value)}
                   allowClear
-                  style={{ width: 400 }}
                 />
               </Form.Item>
             </Col>
@@ -343,7 +325,7 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
               name="noticeContent"
               label="内容"
               labelCol={{ span: 5 }}
-              wrapperCol={{ span: 17 }}
+              wrapperCol={{ span: 19 }}
               rules={[{ required: true, message: '请输入公告内容' }]}
             >
               {isMarkdown ? (

@@ -8,7 +8,7 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"gorm.io/gorm"
 )
 
@@ -28,14 +28,14 @@ type RoomPhotoService interface {
 
 type roomPhotoService struct {
 	db          *gorm.DB
-	fileService *services.FileService
+	fileService *systemServices.FileService
 }
 
 // NewRoomPhotoService 创建机房照片服务实例
 func NewRoomPhotoService(db *gorm.DB) RoomPhotoService {
 	return &roomPhotoService{
 		db:          db,
-		fileService: services.NewFileService(db),
+		fileService: systemServices.NewFileService(db),
 	}
 }
 
@@ -58,7 +58,7 @@ func (s *roomPhotoService) UploadPhotos(ctx context.Context, roomID string, file
 	photos := make([]*operations.OpsRoomPhoto, 0, len(files))
 	for i, file := range files {
 		// 上传文件
-		sysFile, err := s.fileService.UploadFile(ctx, file, "room-photo", userID, services.ImageValidation)
+		sysFile, err := s.fileService.UploadFile(ctx, file, "room-photo", userID, systemServices.ImageValidation)
 		if err != nil {
 			return nil, fmt.Errorf("上传文件失败: %w", err)
 		}

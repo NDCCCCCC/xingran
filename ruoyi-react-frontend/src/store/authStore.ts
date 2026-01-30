@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { post } from '@/lib/api';
 import type { User, LoginRequest } from '@/types';
 import { useMenuStore } from './menuStore';
+import { getEncryptedLoginRequest } from '@/utils/sm2';
 
 interface AuthState {
   user: User | null;
@@ -22,30 +23,31 @@ interface AuthActions {
 export const useAuthStore = create<AuthState & AuthActions>()(
   persist(
     (set, get) => ({
-      // 初始状态
       user: null,
       accessToken: null,
       refreshToken: null,
       isAuthenticated: false,
       loading: false,
 
-      // 登录
       login: async (credentials: LoginRequest) => {
         set({ loading: true });
         try {
-          // 注意：SM2密码加密与后端 tjfoc/gmsm 存在兼容性问题
-          // 目前使用明文传输（通过HTTPS保护），后续需要解决加密库兼容性
+          const encryptedRequest = await getEncryptedLoginRequest(
+            credentials.username,
+            credentials.password
+          );
+
           const loginRequest = {
-            username: credentials.username,
-            password: credentials.password,
+            username: encryptedRequest.username,
+            password: encryptedRequest.password,
+            encryptedPassword: encryptedRequest.encryptedPassword,
             captcha: credentials.captcha,
             captchaId: credentials.captchaId,
           };
 
-          const response = await post('/system/auth/login', loginRequest);
+          const response = await post('/system/auth/login', loginRequest) as { data: { user: any; accessToken: string; refreshToken: string } };
           const { user, accessToken, refreshToken } = response.data;
 
-          // 保存到localStorage
           localStorage.setItem('accessToken', accessToken);
           localStorage.setItem('refreshToken', refreshToken);
 
@@ -62,16 +64,12 @@ export const useAuthStore = create<AuthState & AuthActions>()(
         }
       },
 
-      // 登出
       logout: () => {
-        // 清除localStorage
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
 
-        // 清除菜单数据
         useMenuStore.getState().clearMenus();
 
-        // 清除状态
         set({
           user: null,
           accessToken: null,
@@ -80,7 +78,6 @@ export const useAuthStore = create<AuthState & AuthActions>()(
         });
       },
 
-      // 刷新令牌
       refreshTokenAction: async () => {
         const { refreshToken } = get();
         if (!refreshToken) {
@@ -89,10 +86,9 @@ export const useAuthStore = create<AuthState & AuthActions>()(
         }
 
         try {
-          const response = await post('/system/auth/refresh', { refreshToken });
+          const response = await post('/system/auth/refresh', { refreshToken }) as { data: { accessToken: string; refreshToken: string } };
           const { accessToken: newAccessToken, refreshToken: newRefreshToken } = response.data;
 
-          // 更新localStorage
           localStorage.setItem('accessToken', newAccessToken);
           localStorage.setItem('refreshToken', newRefreshToken);
 
@@ -101,13 +97,11 @@ export const useAuthStore = create<AuthState & AuthActions>()(
             refreshToken: newRefreshToken,
           });
         } catch (error) {
-          // 刷新失败，清除状态
           get().logout();
           throw error;
         }
       },
 
-      // 更新用户信息
       updateUser: (userData: Partial<User>) => {
         const { user } = get();
         if (user) {
@@ -127,4 +121,4 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       }),
     }
   )
-);// Last updated: 2025年12月16日 13:58:00
+);

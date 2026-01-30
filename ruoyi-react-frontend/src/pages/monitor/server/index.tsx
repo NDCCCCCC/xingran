@@ -24,6 +24,7 @@ import {
   CloudServerOutlined
 } from '@ant-design/icons';
 import { post } from '@/lib/api';
+import { usePagination } from '@/hooks/usePagination';
 import type { ColumnsType } from 'antd/es/table';
 import type { BaseResponse, PageResponse } from '@/types';
 import ActionButtons from '@/components/shared/ActionButtons';
@@ -59,15 +60,15 @@ interface ServerMetrics {
 const ServerMonitor: FC = () => {
   const [servers, setServers] = useState<ServerInfo[]>([]);
   const [loading, setLoading] = useState(false);
-  const [total, setTotal] = useState(0);
-  const [current, setCurrent] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
   const [searchForm, setSearchForm] = useState({
     hostName: '',
     status: undefined
   });
   const [detailDrawerVisible, setDetailDrawerVisible] = useState(false);
   const [selectedServer, setSelectedServer] = useState<ServerInfo | null>(null);
+
+  // 使用全局分页 hook
+  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
   
   // 获取服务器列表
   const fetchServers = async () => {
@@ -75,12 +76,12 @@ const ServerMonitor: FC = () => {
     try {
       const result = await post<BaseResponse<PageResponse<ServerInfo>>>('/monitor/server-info/list', {
         ...searchForm,
-        current,
-        pageSize
+        current: paginationProps.current,
+        pageSize: paginationProps.pageSize
       });
 
-      setServers(result.data.list || []);
-      setTotal(result.data.total || 0);
+      setServers(result.data?.list || []);
+      setTotal(result.data?.total || 0);
     } catch (error) {
       console.error('获取服务器列表失败:', error);
       message.error('网络错误，请稍后重试');
@@ -138,6 +139,7 @@ const ServerMonitor: FC = () => {
   const handleTableChange = (pagination: any) => {
     setCurrent(pagination.current);
     setPageSize(pagination.pageSize);
+    fetchServers();
   };
 
   // 格式化内存大小
@@ -170,7 +172,7 @@ const ServerMonitor: FC = () => {
 
   useEffect(() => {
     fetchServers();
-  }, [current, pageSize]);
+  }, [paginationProps.current, paginationProps.pageSize]);
 
   const columns: ColumnsType<ServerInfo> = [
     {
@@ -348,14 +350,11 @@ const ServerMonitor: FC = () => {
           dataSource={servers}
           rowKey="id"
           loading={loading}
-          pagination={{
-            current,
-            pageSize,
-            total,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条记录`,
-            onChange: handleTableChange,
+          pagination={paginationProps}
+          onChange={(pagination) => {
+            setCurrent(pagination.current);
+            setPageSize(pagination.pageSize);
+            fetchServers();
           }}
         />
       </Card>

@@ -33,6 +33,7 @@ import { useTableManager } from '@/hooks/useTableManager';
 import { withErrorHandling } from '@/utils/errorHandler';
 import { useState, useEffect } from 'react';
 import ActionButtons from '@/components/shared/ActionButtons';
+import { usePagination } from '@/hooks/usePagination';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -48,12 +49,12 @@ const CredentialManagement: FC = () => {
     telnet: 0,
   });
 
+  // 使用全局分页 hook
+  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+
   const {
     loading,
     data: credentials,
-    total,
-    current,
-    pageSize,
     selectedRowKeys,
     setSelectedRowKeys,
     searchForm,
@@ -69,15 +70,13 @@ const CredentialManagement: FC = () => {
     handleAdd,
     handleEdit,
     handleModalClose,
-    setCurrent,
-    setPageSize,
   } = useTableManager<AuthCredential>(
     async (params) => {
       const values = searchForm.getFieldsValue();
       // 映射搜索字段名到API字段名
       const searchParams: any = {
-        current: params.current || current,
-        pageSize: params.pageSize || pageSize,
+        current: params.current || paginationProps.current,
+        pageSize: params.pageSize || paginationProps.pageSize,
       };
       if (values.searchCredentialName) {
         searchParams.credentialName = values.searchCredentialName;
@@ -89,6 +88,15 @@ const CredentialManagement: FC = () => {
       // 更新统计数据
       updateStatistics(result.data?.list || []);
       return result.data;
+    },
+    {
+      externalPagination: {
+        current: paginationProps.current,
+        pageSize: paginationProps.pageSize,
+        setCurrent,
+        setPageSize,
+        setTotal,
+      },
     }
   );
 
@@ -406,14 +414,14 @@ const CredentialManagement: FC = () => {
           loading={loading}
           rowKey="id"
           scroll={{ x: 1400 }}
-          pagination={{
-            current,
-            pageSize,
-            total,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条`,
-            onChange: (page, size) => { setCurrent(page); setPageSize(size || 10); },
+          pagination={paginationProps}
+          onChange={(pagination) => {
+            setCurrent(pagination.current);
+            setPageSize(pagination.pageSize);
+            loadCredentials({
+              current: pagination.current,
+              pageSize: pagination.pageSize,
+            });
           }}
         />
       </Card>

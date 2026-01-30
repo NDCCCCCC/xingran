@@ -22,41 +22,26 @@ import type { DataNode } from 'antd/es/tree';
 import {
   getADOUTree,
   getADUserList,
-  getADConfigList,
   type ADOUNode,
-  type ADUser,
-  type ADConfig
+  type ADUser
 } from '@/lib/adDomainApi';
+import { useADConfigs } from '@/hooks/useADConfigs';
+import type { ADConfig } from '@/lib/adDomainApi';
 
 import type { FC } from 'react';
 
 const ADOUPage: FC = () => {
-  const [configs, setConfigs] = useState<ADConfig[]>([]);
-  const [selectedConfig, setSelectedConfig] = useState<string>('');
+  // 使用共享的 AD 配置 Hook
+  const { configs, selectedConfig, setSelectedConfig } = useADConfigs({
+    enabledOnly: true,
+    autoSelectFirst: true,
+  });
+
   const [ouTree, setOUTree] = useState<ADOUNode[]>([]);
   const [selectedOU, setSelectedOU] = useState<string>('');
   const [users, setUsers] = useState<ADUser[]>([]);
   const [treeLoading, setTreeLoading] = useState(false);
   const [usersLoading, setUsersLoading] = useState(false);
-
-  useEffect(() => {
-    fetchConfigs();
-  }, []);
-
-  const fetchConfigs = async () => {
-    try {
-      const res = await getADConfigList({ current: 1, pageSize: 100, status: 0 });
-      if (res.code === 0 && res.data && res.data.list && res.data.list.length > 0) {
-        setConfigs(res.data.list);
-        // 默认选择第一个配置
-        if (!selectedConfig) {
-          setSelectedConfig(res.data.list[0].id);
-        }
-      }
-    } catch {
-      message.error('获取AD配置失败');
-    }
-  };
 
   const fetchOUTree = async () => {
     if (!selectedConfig) return;
@@ -120,7 +105,6 @@ const ADOUPage: FC = () => {
         <Space>
           <FolderOutlined />
           <span>{node.name}</span>
-          {node.path && <Tag color="blue">{node.path}</Tag>}
         </Space>
       ),
       key: node.dn,
@@ -206,7 +190,7 @@ const ADOUPage: FC = () => {
             }
             bodyStyle={{ maxHeight: 'calc(100vh - 280px)', overflow: 'auto' }}
           >
-            <Space direction="vertical" style={{ width: '100%' }} size="small">
+            <Space orientation="vertical" style={{ width: '100%' }} size="small">
               <Select
                 style={{ width: '100%' }}
                 placeholder="选择AD配置"
@@ -218,7 +202,7 @@ const ADOUPage: FC = () => {
                 {ouTree.length > 0 ? (
                   <Tree
                     showLine
-                    defaultExpandAll
+                    defaultExpandAll={false}
                     onSelect={handleOUSelect}
                     treeData={buildTreeData(ouTree)}
                     style={{ fontSize: '13px' }}

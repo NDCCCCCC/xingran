@@ -12,25 +12,16 @@ export interface UseCaptchaDataReturn {
   backgrounds: CaptchaBackground[];
   loading: boolean;
   total: number;
-  current: number;
-  pageSize: number;
   statistics: CaptchaStatistics | null;
-
-  setTotal: React.Dispatch<React.SetStateAction<number>>;
-  setCurrent: React.Dispatch<React.SetStateAction<number>>;
-  setPageSize: React.Dispatch<React.SetStateAction<number>>;
-  setStatistics: React.Dispatch<React.SetStateAction<CaptchaStatistics | null>>;
 
   loadBackgrounds: (params?: any, searchValues?: any) => Promise<void>;
   loadStatistics: () => Promise<void>;
 }
 
-export function useCaptchaData(searchForm: any): UseCaptchaDataReturn {
+export function useCaptchaData(searchForm: any, setTotal: React.Dispatch<React.SetStateAction<number>>): UseCaptchaDataReturn {
   const [backgrounds, setBackgrounds] = useState<CaptchaBackground[]>([]);
   const [loading, setLoading] = useState(false);
-  const [total, setTotal] = useState(0);
-  const [current, setCurrent] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [total, setTotalLocal] = useState(0);
   const [statistics, setStatistics] = useState<CaptchaStatistics | null>(null);
 
   const loadBackgrounds = useCallback(
@@ -39,11 +30,12 @@ export function useCaptchaData(searchForm: any): UseCaptchaDataReturn {
       try {
         const values = searchValues || searchForm.getFieldsValue();
         const result = await captchaService.getCaptchaBackgroundList({
-          current: params.current || current,
-          pageSize: params.pageSize || pageSize,
+          current: params.current || 1,
+          pageSize: params.pageSize || 10,
           ...values,
         });
         setBackgrounds(result.items);
+        setTotalLocal(result.total);
         setTotal(result.total);
       } catch (error) {
         console.error('加载背景图列表失败:', error);
@@ -51,7 +43,7 @@ export function useCaptchaData(searchForm: any): UseCaptchaDataReturn {
         setLoading(false);
       }
     },
-    [current, pageSize, searchForm]
+    [searchForm]
   );
 
   const loadStatistics = useCallback(async () => {
@@ -66,14 +58,8 @@ export function useCaptchaData(searchForm: any): UseCaptchaDataReturn {
   return {
     backgrounds,
     loading,
-    total,
-    current,
-    pageSize,
+    total: total,
     statistics,
-    setTotal,
-    setCurrent,
-    setPageSize,
-    setStatistics,
     loadBackgrounds,
     loadStatistics,
   };

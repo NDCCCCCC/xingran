@@ -5,7 +5,8 @@
 import React, { useState, useEffect } from 'react';
 import { Button, message, Spin } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
-import FloorPlanEditor, { type WorkstationNode } from '@/components/shared/FloorPlanEditor';
+import FloorPlanEditor from '@/components/shared/FloorPlanEditor';
+import type { WorkstationNode } from '@/components/shared/FloorPlanEditor.types';
 import { workstationApi } from '@/lib/opsApi';
 import type { Floor } from '../types';
 import styles from './styles.module.css';

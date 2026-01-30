@@ -7,11 +7,13 @@ import { useState } from 'react';
 import type { FC } from 'react';
 import { Dropdown, Button, Space, Tooltip } from 'antd';
 import { useTheme } from '@/store/themeStore';
+import { useSettingsStore } from '@/store/settingsStore';
 import { themePresets } from '@/design-system/themes';
 import type { MenuProps } from 'antd';
 
 const ThemeSwitcher: FC = () => {
-  const { theme, setTheme } = useTheme();
+  const { theme } = useTheme();
+  const { updateTheme } = useSettingsStore();
   const [open, setOpen] = useState(false);
 
   // 构建菜单项
@@ -29,7 +31,7 @@ const ThemeSwitcher: FC = () => {
       </div>
     ),
     onClick: () => {
-      setTheme(preset.id);
+      updateTheme({ style: preset.id });
       setOpen(false);
     },
   }));

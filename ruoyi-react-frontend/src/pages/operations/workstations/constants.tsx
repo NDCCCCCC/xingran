@@ -4,7 +4,8 @@
  */
 
 import { Tag } from 'antd';
-import type { WorkstationNode } from '@/components/shared/FloorPlanEditor';
+import type { WorkstationNode } from '@/components/shared/FloorPlanEditor.types';
+import type { WorkstationOps } from '@/types';
 
 // 工位状态选项
 export const STATUS_OPTIONS = [

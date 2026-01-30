@@ -18,6 +18,7 @@ export interface WorkstationStatistics {
 
 // 楼层选项
 export interface FloorOption {
+  id: string;
   code: string;
   name: string;
 }

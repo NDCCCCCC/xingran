@@ -26,10 +26,12 @@ export type BuildingStatus = 0 | 1; // 0: 正常, 1: 停用
 // 楼层
 export interface Floor {
   id: string;
+  code: string;           // 楼层编码（用于工位关联）
   name: string;
   floorNo: string;
   buildingId: string;
   buildingName?: string;
+  buildingCode?: string;
   status: FloorStatus;
   remark?: string;
   orderNum: number;
@@ -94,8 +96,8 @@ export interface RoomPhoto {
 // 专线
 export interface DedicatedLine {
   id: string;
-  lineCode: string;
-  lineType: DedicatedLineType;
+  name: string;                // 专线名称
+  lineType: string;            // 专线类型（数据字典）
   bandwidth?: string;
   isp: string;
   sourceDeviceId?: string;
@@ -103,26 +105,26 @@ export interface DedicatedLine {
   sourcePort?: string;
   sourceRoomId?: string;       // 源机房ID
   sourceRoomName?: string;     // 源机房名称
+  sourceIpAddress?: string;    // 源IP地址
+  sourceSubnetMask?: string;   // 源子网掩码
   destDeviceId?: string;
   destDeviceName?: string;
   destPort?: string;
   destRoomId?: string;         // 目的机房ID
   destRoomName?: string;       // 目的机房名称
-  ipAddress?: string;
-  subnetMask?: string;
+  destIpAddress?: string;      // 目的IP地址
+  destSubnetMask?: string;     // 目的子网掩码
   vlan?: string;
   status: LineStatus;
   carrierContactId?: string;
   carrierContactName?: string;
   carrierContactPhone?: string;
-  contractNo?: string;
   monthlyFee: number;
   remark?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-export type DedicatedLineType = 'internet' | 'mpls' | 'leased_line' | 'fiber';
 export type LineStatus = 0 | 1 | 2; // 0: 正常, 1: 故障, 2: 停用
 
 // 机房设备

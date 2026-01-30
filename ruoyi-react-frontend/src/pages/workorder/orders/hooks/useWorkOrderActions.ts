@@ -31,10 +31,10 @@ export interface UseWorkOrderActionsReturn {
   handleAdd: () => void;
   handleEdit: (record: WorkOrder) => void;
   handleDelete: (id: string) => Promise<void>;
-  handleBatchDelete: () => Promise<void>;
+  handleBatchDelete: (selectedRowKeys: React.Key[]) => Promise<void>;
   handleAssignToTodayDuty: (id: string) => Promise<void>;
-  handleModalOk: (editForm: any, editingRecord: WorkOrder | null) => Promise<void>;
-  handleAddComment: (commentForm: any, commentInternal: boolean) => Promise<void>;
+  handleModalOk: (editForm: any, editingRecord: WorkOrder | null, setModalVisible: (visible: boolean) => void) => Promise<void>;
+  handleAddComment: (commentForm: any, commentInternal: boolean, setComments: (comments: any[]) => void) => Promise<void>;
   handleStatusChange: (status: number) => Promise<void>;
 }
 

@@ -1,0 +1,210 @@
+/**
+ * GridItem 样式
+ *
+ * 网格项包装器样式
+ */
+
+.grid-item {
+	position: relative;
+	width: 100%;
+	height: 100%;
+	background: var(--widget-bg, #ffffff);
+	border-radius: var(--border-radius-base, 4px);
+	overflow: hidden;
+	transition: box-shadow 0.2s ease;
+}
+
+/* 编辑模式样式 */
+.grid-item--editable {
+	cursor: pointer;
+}
+
+.grid-item--editable:hover {
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* 选中状态 */
+.grid-item--selected {
+	outline: 2px solid var(--primary-color, #1890ff);
+	outline-offset: -2px;
+}
+
+.grid-item--selected::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	right: 0;
+	width: 0;
+	height: 0;
+	border-style: solid;
+	border-width: 0 24px 24px 0;
+	border-color: transparent var(--primary-color, #1890ff) transparent transparent;
+	z-index: 1;
+}
+
+.grid-item--selected::after {
+	content: '✓';
+	position: absolute;
+	top: 4px;
+	right: 4px;
+	color: white;
+	font-size: 12px;
+	font-weight: bold;
+	z-index: 2;
+}
+
+/* 内容区域 */
+.grid-item__content {
+	width: 100%;
+	height: 100%;
+	overflow: auto;
+}
+
+/* 编辑/删除按钮区域 */
+.grid-item__actions {
+	position: absolute;
+	top: 8px;
+	left: 8px;
+	right: 8px;
+	z-index: 10;
+	display: flex;
+	justify-content: center;
+	padding: 4px;
+	background: rgba(255, 255, 255, 0.95);
+	border-radius: 4px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* 占位符样式 */
+.grid-item-placeholder {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	height: 100%;
+	background: var(--widget-placeholder-bg, #fafafa);
+	border: 2px dashed var(--widget-placeholder-border, #d9d9d9);
+	border-radius: var(--border-radius-base, 4px);
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.grid-item-placeholder:hover {
+	background: var(--widget-placeholder-hover-bg, #f0f0f0);
+	border-color: var(--primary-color, #1890ff);
+}
+
+.grid-item-placeholder__content {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 8px;
+	color: var(--text-color-secondary, rgba(0, 0, 0, 0.45));
+}
+
+.grid-item-placeholder__icon {
+	font-size: 24px;
+	opacity: 0.5;
+}
+
+.grid-item-placeholder__text {
+	font-size: 12px;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+	.grid-item--editable {
+		cursor: default;
+	}
+
+	.grid-item-placeholder {
+		border-width: 1px;
+	}
+
+	.grid-item-placeholder__icon {
+		font-size: 20px;
+	}
+
+	.grid-item-placeholder__text {
+		font-size: 11px;
+	}
+}
+
+/* 暗色主题适配 */
+@media (prefers-color-scheme: dark) {
+	.grid-item {
+		--widget-bg: #1f1f1f;
+	}
+
+	.grid-item-placeholder {
+		--widget-placeholder-bg: #141414;
+		--widget-placeholder-border: #434343;
+		--widget-placeholder-hover-bg: #1f1f1f;
+	}
+}
+
+/* 透明背景Widget */
+.grid-item.grid-item--transparent {
+	background: transparent;
+}
+
+/* 显示边框的Widget */
+.grid-item.grid-item--bordered {
+	border: 1px solid var(--widget-border-color, #f0f0f0);
+}
+
+/* 加载状态 */
+.grid-item.grid-item--loading {
+	position: relative;
+	pointer-events: none;
+}
+
+.grid-item.grid-item--loading::after {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(255, 255, 255, 0.8);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 10;
+}
+
+.grid-item.grid-item--loading::before {
+	content: '';
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	width: 24px;
+	height: 24px;
+	border: 2px solid var(--primary-color, #1890ff);
+	border-top-color: transparent;
+	border-radius: 50%;
+	animation: grid-item-spin 0.8s linear infinite;
+	z-index: 11;
+}
+
+@keyframes grid-item-spin {
+	to {
+		transform: translate(-50%, -50%) rotate(360deg);
+	}
+}
+
+/* 错误状态 */
+.grid-item.grid-item--error {
+	border: 1px solid var(--error-color, #ff4d4f);
+}
+
+.grid-item.grid-item--error .grid-item__content {
+	opacity: 0.6;
+}
+
+/* 禁用状态 */
+.grid-item.grid-item--disabled {
+	opacity: 0.5;
+	pointer-events: none;
+}

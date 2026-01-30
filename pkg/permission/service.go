@@ -10,7 +10,7 @@ import (
 // Service 权限服务接口
 type Service interface {
 	InitDefaultRolesAndMenus(db *gorm.DB) error
-	GetUserMenus(db *gorm.DB, userID string) ([]models.Menu, error)
+	GetUserMenus(db *gorm.DB, userID string, includeHidden bool) ([]models.Menu, error)
 	GetUserPermissions(db *gorm.DB, userID string) ([]string, error)
 	GetRoleMenus(db *gorm.DB, roleID string) ([]string, error)
 	UpdateRoleMenus(db *gorm.DB, roleID string, menuIDs []string) error
@@ -165,36 +165,74 @@ func (s *service) UpdateRoleDepts(db *gorm.DB, roleID string, deptIDs []string) 
 // 设计原则：
 // - visible=0（隐藏）：不显示在导航栏，但权限有效，可通过直接URL访问
 // - status=1（停用）：显示在导航栏但为灰色，点击后提示"功能已停用"，权限无效
-func (s *service) GetUserMenus(db *gorm.DB, userID string) ([]models.Menu, error) {
+//
+// 参数：
+// - userID: 用户ID
+// - includeHidden: 是否包含隐藏菜单（false=只返回visible=1的菜单，true=返回所有菜单）
+func (s *service) GetUserMenus(db *gorm.DB, userID string, includeHidden bool) ([]models.Menu, error) {
 	// 一次性获取所有可能的菜单（包括用户菜单及其祖先）
 	// 使用递归CTE或JOIN避免N+1查询
 	var menus []models.Menu
 
 	// 首先获取用户直接有权限的菜单
-	err := db.Raw(`
-		WITH RECURSIVE menu_tree AS (
-			-- 基础：用户有权限的菜单
-			SELECT DISTINCT m.*
-			FROM sys_menu m
-			INNER JOIN sys_role_menu rm ON m.id = rm.menu_id
-			INNER JOIN sys_user_role ur ON rm.role_id = ur.role_id
-			WHERE ur.user_id = ?
-			AND m.visible = ?
-			AND m.menu_type IN ('M', 'C')
-			AND m.deleted_at IS NULL
+	var querySQL string
+	var queryParams []interface{}
 
-			UNION ALL
+	if includeHidden {
+		// 包含隐藏菜单的SQL
+		querySQL = `
+			WITH RECURSIVE menu_tree AS (
+				-- 基础：用户有权限的菜单
+				SELECT DISTINCT m.*
+				FROM sys_menu m
+				INNER JOIN sys_role_menu rm ON m.id = rm.menu_id
+				INNER JOIN sys_user_role ur ON rm.role_id = ur.role_id
+				WHERE ur.user_id = ?
+				AND m.menu_type IN ('M', 'C')
+				AND m.deleted_at IS NULL
 
-			-- 递归：获取所有祖先菜单
-			SELECT m.*
-			FROM sys_menu m
-			INNER JOIN menu_tree mt ON m.id = mt.parent_id
-			WHERE m.visible = ?
-			AND m.deleted_at IS NULL
-		)
-		SELECT DISTINCT * FROM menu_tree
-		ORDER BY order_num
-	`, userID, models.VisibleShow, models.VisibleShow).Scan(&menus).Error
+				UNION ALL
+
+				-- 递归：获取所有祖先菜单
+				SELECT m.*
+				FROM sys_menu m
+				INNER JOIN menu_tree mt ON m.id = mt.parent_id
+				WHERE m.deleted_at IS NULL
+			)
+			SELECT DISTINCT * FROM menu_tree
+			ORDER BY order_num
+		`
+		queryParams = []interface{}{userID}
+	} else {
+		// 不包含隐藏菜单的SQL（原有逻辑）
+		querySQL = `
+			WITH RECURSIVE menu_tree AS (
+				-- 基础：用户有权限的菜单
+				SELECT DISTINCT m.*
+				FROM sys_menu m
+				INNER JOIN sys_role_menu rm ON m.id = rm.menu_id
+				INNER JOIN sys_user_role ur ON rm.role_id = ur.role_id
+				WHERE ur.user_id = ?
+				AND m.visible = ?
+				AND m.menu_type IN ('M', 'C')
+				AND m.deleted_at IS NULL
+
+				UNION ALL
+
+				-- 递归：获取所有祖先菜单
+				SELECT m.*
+				FROM sys_menu m
+				INNER JOIN menu_tree mt ON m.id = mt.parent_id
+				WHERE m.visible = ?
+				AND m.deleted_at IS NULL
+			)
+			SELECT DISTINCT * FROM menu_tree
+			ORDER BY order_num
+		`
+		queryParams = []interface{}{userID, models.VisibleShow, models.VisibleShow}
+	}
+
+	err := db.Raw(querySQL, queryParams...).Scan(&menus).Error
 
 	if err != nil {
 		return nil, err

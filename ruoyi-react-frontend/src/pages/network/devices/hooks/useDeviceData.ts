@@ -67,10 +67,10 @@ export function useDeviceData(
     }
   }, [updateStatistics]);
 
-  // 加载部门列表
+  // 加载部门列表（树形结构）
   const loadDepartments = useCallback(async () => {
     try {
-      const result = await post<BaseResponse<Department[]>>('/system/departments/list');
+      const result = await post<BaseResponse<Department[]>>('/system/departments/tree', {});
       setDepartments(result.data || []);
     } catch (error) {
       handleApiError(error, '加载部门列表', false);

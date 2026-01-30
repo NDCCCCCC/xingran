@@ -98,9 +98,13 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
   const loadExecutions = useCallback(async (params: any = {}) => {
     setExecLoading(true);
     try {
+      // 确保参数有有效值，避免 undefined 导致后端验证失败
+      const requestCurrent = params.current ?? execCurrent ?? 1;
+      const requestPageSize = params.pageSize ?? pageSize ?? 10;
+
       const result = await post<BaseResponse<PageResponse<ConfigExecution>>>('/network/executions/list', {
-        current: params.current || execCurrent,
-        pageSize: params.pageSize || pageSize,
+        current: requestCurrent,
+        pageSize: requestPageSize,
       });
       setDataState(prev => ({ ...prev, executions: result.data?.list || [] }));
       setExecTotal(result.data?.total || 0);
@@ -116,7 +120,7 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
   // 加载统计数据
   const loadStatistics = useCallback(async () => {
     try {
-      const result = await post<BaseResponse<PageResponse<ConfigExecution>>>('/network/executions/list', { current: 1, pageSize: 10000 });
+      const result = await post<BaseResponse<PageResponse<ConfigExecution>>>('/network/executions/list', { current: 1, pageSize: 100 });
       const allExecutions = result.data?.list || [];
       updateStatistics(allExecutions);
     } catch (error) {

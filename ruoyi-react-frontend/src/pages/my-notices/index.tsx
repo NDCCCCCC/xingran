@@ -15,6 +15,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { useNavigate } from 'react-router-dom';
 import { useNoticeStore } from '@/store/noticeStore';
 import { getMyNotices, markNoticeAsRead, markAllNoticesAsRead } from '@/lib/noticeApi';
+import { usePagination } from '@/hooks/usePagination';
 import type { Notice } from '@/types/notice';
 import { PRIORITY_COLORS, PRIORITY_LABELS, NOTICE_TYPE_COLORS, NOTICE_TYPE_LABELS } from '@/types/notice';
 import dayjs from 'dayjs';
@@ -37,16 +38,17 @@ const MyNoticesPage: FC = () => {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [total, setTotal] = useState(0);
   const [allTotal, setAllTotal] = useState(0); // 全部通知总数（用于标签显示）
-  const [current, setCurrent] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
   const [activeTab, setActiveTab] = useState<'all' | 'unread' | 'read'>('all');
+
+  // 使用全局分页 hook
+  const { paginationProps, setCurrent, setPageSize } = usePagination();
 
   // 加载通知列表
   const loadNotices = useCallback(async () => {
     setLoading(true);
     try {
       const status = activeTab === 'all' ? undefined : activeTab;
-      const response = await getMyNotices({ current, pageSize, status });
+      const response = await getMyNotices({ current: paginationProps.current, pageSize: paginationProps.pageSize, status });
       const data = response.data;
       if (data) {
         setNotices(data.list || []);
@@ -67,7 +69,7 @@ const MyNoticesPage: FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [activeTab, current, pageSize, setUnreadCount]);
+  }, [activeTab, paginationProps.current, paginationProps.pageSize, setUnreadCount]);
 
   // 初始化时获取全部通知总数
   useEffect(() => {
@@ -132,6 +134,7 @@ const MyNoticesPage: FC = () => {
   const handleTabChange = (key: string) => {
     setActiveTab(key as 'all' | 'unread' | 'read');
     setCurrent(1);
+    loadNotices();
   };
 
   // 表格列定义
@@ -221,7 +224,7 @@ const MyNoticesPage: FC = () => {
 
   useEffect(() => {
     loadNotices();
-  }, [activeTab, current, pageSize, loadNotices]);
+  }, [activeTab, paginationProps.current, paginationProps.pageSize, loadNotices]);
 
   const tabItems = [
     { key: 'all', label: `全部通知 (${allTotal})` },
@@ -256,17 +259,11 @@ const MyNoticesPage: FC = () => {
           dataSource={notices}
           loading={loading}
           rowKey="id"
-          pagination={{
-            current,
-            pageSize,
-            total,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条`,
-            onChange: (page, size) => {
-              setCurrent(page);
-              setPageSize(size || 10);
-            },
+          pagination={paginationProps}
+          onChange={(pagination) => {
+            setCurrent(pagination.current);
+            setPageSize(pagination.pageSize);
+            loadNotices();
           }}
           onRow={(record) => ({
             className: !record.isRead ? 'bg-blue-50' : '',

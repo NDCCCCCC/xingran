@@ -14,9 +14,10 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  // 预构建优化配置
   optimizeDeps: {
-    // 包含 sm-crypto 进行预构建，使其与 ES 模块兼容
-    include: ['sm-crypto'],
+    // 包含 sm-crypto 和 react-router-dom 进行预构建，使其与 ES 模块兼容
+    include: ['sm-crypto', 'react', 'react-dom', 'react-router-dom'],
   },
   build: {
     rollupOptions: {
@@ -56,16 +57,14 @@ export default defineConfig({
     port: 4000,
     host: true,
     proxy: {
+      // 将所有 /api 请求代理到后端服务器
       '/api': {
         target: 'http://10.62.10.33:9000',
         changeOrigin: true,
-        secure: false,
-      },
-      '/uploads': {
-        target: 'http://10.62.10.33:9000',
-        changeOrigin: true,
-        secure: false,
+        // 不需要重写路径，因为后端就是用 /api/v1 前缀
       },
     },
+    // Vite 默认支持 SPA fallback，会自动将所有请求返回 index.html
+    // 这样直接访问 /dashboard 等子路由时也能正常工作
   },
 })

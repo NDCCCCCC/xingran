@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Modal, Input, List, Typography, Tag, Divider } from 'antd';
 import { useNavigate } from 'react-router-dom';
+import { DASHBOARD, MONITOR_DASHBOARD } from '@/constants/routes';
 import {
   SearchOutlined,
   DashboardOutlined,
@@ -39,7 +40,7 @@ const searchResults: SearchResult[] = [
     title: '仪表盘',
     description: '数据概览与统计分析',
     icon: <DashboardOutlined />,
-    path: '/dashboard',
+    path: DASHBOARD,
     category: '页面',
     keywords: ['dashboard', '仪表盘', '首页', '数据'],
   },
@@ -75,7 +76,7 @@ const searchResults: SearchResult[] = [
     title: '系统监控',
     description: '服务器性能监控',
     icon: <MonitorOutlined />,
-    path: '/monitor/dashboard',
+    path: MONITOR_DASHBOARD,
     category: '监控',
     keywords: ['monitor', '监控', '服务器', '性能'],
   },

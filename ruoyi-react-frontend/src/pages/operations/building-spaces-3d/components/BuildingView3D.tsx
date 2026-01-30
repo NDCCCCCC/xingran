@@ -71,7 +71,7 @@ const BuildingView3D: React.FC = () => {
     try {
       setLoading(true);
       const result = await floorApi.list({
-        buildingCode: targetBuildingId,
+        buildingId: targetBuildingId,
         current: 1,
         pageSize: 100,
       });

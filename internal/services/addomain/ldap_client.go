@@ -9,6 +9,18 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 )
 
+const (
+	// 默认分页大小
+	defaultPageSize = 1000
+
+	// 最小分页大小（用于重试）
+	minPageSize = 100
+
+	// 用户账户控制值
+	uacNormalAccount      = "512" // NORMAL_ACCOUNT
+	uacDisabledAccount    = "514" // NORMAL_ACCOUNT | ACCOUNTDISABLE
+)
+
 // LDAPClient LDAP客户端封装
 type LDAPClient struct {
 	conn   *ldap.Conn
@@ -24,45 +36,81 @@ func NewLDAPClient(config *models.ADConfig) *LDAPClient {
 
 // Connect 连接到AD服务器
 func (c *LDAPClient) Connect() error {
-	var conn *ldap.Conn
-	var err error
-
-	// 构建连接地址
 	address := fmt.Sprintf("%s:%d", c.config.ServerAddress, c.config.ServerPort)
-
-	if c.config.UseSSL {
-		// 使用LDAPS
-		conn, err = ldap.DialTLS("tcp", address, &tls.Config{
-			InsecureSkipVerify: true, // 生产环境应该验证证书
-		})
-	} else if c.config.UseTLS {
-		// 使用StartTLS
-		conn, err = ldap.Dial("tcp", address)
-		if err != nil {
-			return err
-		}
-		err = conn.StartTLS(&tls.Config{
-			InsecureSkipVerify: true,
-		})
-	} else {
-		// 普通连接
-		conn, err = ldap.Dial("tcp", address)
+	conn, err := c.dialConnection(address)
+	if err != nil {
+		return err
 	}
 
-	if err != nil {
-		return fmt.Errorf("连接AD服务器失败: %w", err)
-	}
-
-	// 绑定管理员账号
-	bindDN := fmt.Sprintf("%s\\%s", c.config.DomainName, c.config.AdminUsername)
-	err = conn.Bind(bindDN, c.config.AdminPassword)
-	if err != nil {
+	cleanDomain := c.cleanDomain()
+	if err := c.tryBindAttempts(conn, cleanDomain); err != nil {
 		conn.Close()
-		return fmt.Errorf("绑定管理员账号失败: %w", err)
+		return err
 	}
 
 	c.conn = conn
 	return nil
+}
+
+// dialConnection 根据配置建立连接
+func (c *LDAPClient) dialConnection(address string) (*ldap.Conn, error) {
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: true,
+	}
+
+	switch {
+	case c.config.UseSSL:
+		return ldap.DialTLS("tcp", address, tlsConfig)
+	case c.config.UseTLS:
+		conn, err := ldap.Dial("tcp", address)
+		if err != nil {
+			return nil, err
+		}
+		if err := conn.StartTLS(tlsConfig); err != nil {
+			conn.Close()
+			return nil, err
+		}
+		return conn, nil
+	default:
+		return ldap.Dial("tcp", address)
+	}
+}
+
+// cleanDomain 清理域名
+func (c *LDAPClient) cleanDomain() string {
+	suffix := fmt.Sprintf("@%s", c.config.DomainName)
+	cleanDomain := strings.TrimSuffix(c.config.DomainName, suffix)
+	if cleanDomain == "" {
+		return c.config.DomainName
+	}
+	return cleanDomain
+}
+
+// tryBindAttempts 尝试多种绑定方式
+func (c *LDAPClient) tryBindAttempts(conn *ldap.Conn, domain string) error {
+	password := c.config.AdminPassword
+	username := c.config.AdminUsername
+	netbiosName := extractNetBIOSName(domain)
+
+	attempts := []struct {
+		name     string
+		username string
+	}{
+		{"UPN", fmt.Sprintf("%s@%s", username, domain)},
+		{"NetBIOS", fmt.Sprintf("%s\\%s", netbiosName, username)},
+		{"Direct", username},
+	}
+
+	var lastErr error
+	for _, attempt := range attempts {
+		err := conn.Bind(attempt.username, password)
+		if err == nil {
+			return nil
+		}
+		lastErr = err
+	}
+
+	return fmt.Errorf("绑定失败: %w (尝试: UPN, NetBIOS, 直连)", lastErr)
 }
 
 // Close 关闭连接
@@ -72,101 +120,147 @@ func (c *LDAPClient) Close() {
 	}
 }
 
-// SearchOUs 搜索OU
+// SearchOUs 搜索OU（使用分页搜索）
 func (c *LDAPClient) SearchOUs(baseDN string) ([]*ldap.Entry, error) {
-	searchRequest := ldap.NewSearchRequest(
+	return c.searchWithPaging(
 		baseDN,
-		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
 		"(objectClass=organizationalUnit)",
 		[]string{"dn", "ou", "description"},
-		nil,
+		defaultPageSize,
 	)
-
-	sr, err := c.conn.Search(searchRequest)
-	if err != nil {
-		return nil, err
-	}
-
-	return sr.Entries, nil
 }
 
-// SearchGroups 搜索用户组
+// SearchGroups 搜索用户组（使用分页搜索）
 func (c *LDAPClient) SearchGroups(baseDN string) ([]*ldap.Entry, error) {
-	searchRequest := ldap.NewSearchRequest(
+	return c.searchWithPaging(
 		baseDN,
-		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
 		"(objectClass=group)",
 		[]string{"dn", "cn", "description", "member"},
-		nil,
+		defaultPageSize,
 	)
-
-	sr, err := c.conn.Search(searchRequest)
-	if err != nil {
-		return nil, err
-	}
-
-	return sr.Entries, nil
 }
 
-// SearchUsers 搜索用户
+// SearchUsers 搜索用户（使用分页搜索）
 func (c *LDAPClient) SearchUsers(baseDN string) ([]*ldap.Entry, error) {
-	searchRequest := ldap.NewSearchRequest(
+	return c.searchWithPaging(
 		baseDN,
-		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
-		"(objectClass=user)",
+		"(&(objectClass=user)(!(cn=*DUPLICATE-*)))", // 排除AD复制冲突对象
 		[]string{
 			"dn", "sAMAccountName", "displayName", "mail", "telephoneNumber",
 			"mobile", "title", "department", "company", "description",
 			"userAccountControl", "memberOf", "lastLogon", "pwdLastSet",
 		},
-		nil,
+		defaultPageSize,
 	)
+}
 
-	sr, err := c.conn.Search(searchRequest)
-	if err != nil {
-		return nil, err
+// SearchComputers 搜索计算机（使用分页搜索）
+func (c *LDAPClient) SearchComputers(baseDN string) ([]*ldap.Entry, error) {
+	return c.searchWithPaging(
+		baseDN,
+		"(objectClass=computer)",
+		[]string{
+			"dn", "cn", "description", "lastLogon", "pwdLastSet", "logonCount",
+			"operatingSystem", "operatingSystemVersion", "managedBy",
+			"dNSHostName", "netbootGUID",
+		},
+		defaultPageSize,
+	)
+}
+
+// searchWithPaging 使用 LDAP 分页控制进行搜索
+func (c *LDAPClient) searchWithPaging(baseDN, filter string, attributes []string, pageSize uint32) ([]*ldap.Entry, error) {
+	var allEntries []*ldap.Entry
+	pagingControl := ldap.NewControlPaging(pageSize)
+
+	for {
+		searchRequest := ldap.NewSearchRequest(
+			baseDN,
+			ldap.ScopeWholeSubtree,
+			ldap.NeverDerefAliases,
+			0,     // SizeLimit: 0 表示无限制（由分页控制）
+			0,     // TimeLimit: 0 表示无限制
+			false, // TypesOnly
+			filter,
+			attributes,
+			[]ldap.Control{pagingControl},
+		)
+
+		sr, err := c.conn.Search(searchRequest)
+		if err != nil {
+			return c.handleSearchError(err, baseDN, filter, attributes, pageSize)
+		}
+
+		allEntries = append(allEntries, sr.Entries...)
+
+		// 检查是否还有更多页
+		responsePagingControl := c.extractPagingControl(sr.Controls)
+		if responsePagingControl == nil || len(responsePagingControl.Cookie) == 0 {
+			break
+		}
+
+		// 准备下一页
+		pagingControl = ldap.NewControlPaging(pageSize)
+		pagingControl.SetCookie(responsePagingControl.Cookie)
 	}
 
-	return sr.Entries, nil
+	return allEntries, nil
+}
+
+// handleSearchError 处理搜索错误，必要时重试
+func (c *LDAPClient) handleSearchError(err error, baseDN, filter string, attributes []string, pageSize uint32) ([]*ldap.Entry, error) {
+	if ldap.IsErrorWithCode(err, ldap.LDAPResultSizeLimitExceeded) {
+		if pageSize > minPageSize {
+			return c.searchWithPaging(baseDN, filter, attributes, pageSize/2)
+		}
+		return nil, fmt.Errorf("搜索结果超过服务器限制，即使使用分页也无法获取所有结果")
+	}
+	return nil, fmt.Errorf("搜索失败: %w", err)
+}
+
+// extractPagingControl 从响应控件中提取分页控制
+func (c *LDAPClient) extractPagingControl(controls []ldap.Control) *ldap.ControlPaging {
+	for _, ctrl := range controls {
+		if pc, ok := ctrl.(*ldap.ControlPaging); ok {
+			return pc
+		}
+	}
+	return nil
 }
 
 // UpdateUserAttribute 更新用户属性
 func (c *LDAPClient) UpdateUserAttribute(userDN string, attrs map[string]string) error {
-	modifyRequest := ldap.NewModifyRequest(userDN, nil)
-	for attr, value := range attrs {
-		modifyRequest.Replace(attr, []string{value})
-	}
-
-	return c.conn.Modify(modifyRequest)
+	return c.updateAttributes(userDN, attrs)
 }
 
 // UpdateGroupAttribute 更新用户组属性
 func (c *LDAPClient) UpdateGroupAttribute(groupDN string, attrs map[string]string) error {
-	modifyRequest := ldap.NewModifyRequest(groupDN, nil)
+	return c.updateAttributes(groupDN, attrs)
+}
+
+// updateAttributes 通用的属性更新方法
+func (c *LDAPClient) updateAttributes(dn string, attrs map[string]string) error {
+	modifyRequest := ldap.NewModifyRequest(dn, nil)
 	for attr, value := range attrs {
 		modifyRequest.Replace(attr, []string{value})
 	}
-
 	return c.conn.Modify(modifyRequest)
 }
 
 // EnableUser 启用用户
 func (c *LDAPClient) EnableUser(userDN string) error {
-	// 设置userAccountControl，移除ACCOUNTDISABLE (0x0002)
-	modifyRequest := ldap.NewModifyRequest(userDN, nil)
-	// 这里简化处理，实际需要读取当前UAC值并修改
-	modifyRequest.Replace("userAccountControl", []string{"512"}) // NORMAL_ACCOUNT
-
-	return c.conn.Modify(modifyRequest)
+	return c.setUserAccountControl(userDN, uacNormalAccount)
 }
 
 // DisableUser 禁用用户
 func (c *LDAPClient) DisableUser(userDN string) error {
-	// 设置userAccountControl，添加ACCOUNTDISABLE (0x0002)
-	modifyRequest := ldap.NewModifyRequest(userDN, nil)
-	// 这里简化处理，实际需要读取当前UAC值并修改
-	modifyRequest.Replace("userAccountControl", []string{"514"}) // NORMAL_ACCOUNT | ACCOUNTDISABLE
+	return c.setUserAccountControl(userDN, uacDisabledAccount)
+}
 
+// setUserAccountControl 设置用户账户控制属性
+func (c *LDAPClient) setUserAccountControl(userDN, uacValue string) error {
+	modifyRequest := ldap.NewModifyRequest(userDN, nil)
+	modifyRequest.Replace("userAccountControl", []string{uacValue})
 	return c.conn.Modify(modifyRequest)
 }
 
@@ -200,12 +294,20 @@ func (c *LDAPClient) RemoveGroupMember(groupDN, userDN string) error {
 	return c.conn.Modify(modifyRequest)
 }
 
-// extractRDNFromDN 从DN中提取RDN (相对标识名)
+// extractRDNFromDN 从DN中提取RDN
 func extractRDNFromDN(dn string) string {
-	// 查找第一个逗号
 	idx := strings.Index(dn, ",")
 	if idx == -1 {
 		return dn
 	}
 	return dn[:idx]
+}
+
+// extractNetBIOSName 从域名中提取NetBIOS名称
+func extractNetBIOSName(domain string) string {
+	parts := strings.Split(domain, ".")
+	if len(parts) > 0 {
+		return strings.ToUpper(parts[0])
+	}
+	return strings.ToUpper(domain)
 }
