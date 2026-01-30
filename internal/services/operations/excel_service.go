@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"mime/multipart"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -11,7 +12,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/xuri/excelize/v2"
@@ -71,9 +71,9 @@ func (s *ExcelService) GenerateTemplate(entityType string) (*excelize.File, erro
 	f.SetActiveSheet(index)
 
 	// 删除默认的 Sheet1
-	if err := f.DeleteSheet("Sheet1"); err != nil {
+	if deleteErr := f.DeleteSheet("Sheet1"); deleteErr != nil {
 		// 忽略删除失败（比如 Sheet1 不存在的情况）
-		logger.Debugf("删除默认Sheet1失败: %v", err)
+		logger.Debugf("删除默认Sheet1失败: %v", deleteErr)
 	}
 
 	headerStyle, err := createHeaderStyle(f)
@@ -377,7 +377,7 @@ func (s *ExcelService) applyReferenceResults(
 				key := resolver.makeKey(col.Reference, value)
 				if id, exists := refResults[key]; exists {
 					// 将名称/编码替换为ID，并映射到正确的字段
-					targetField := s.getTargetFieldForReference(col.Field, col.Reference)
+					targetField := s.getTargetFieldForReference(col.Field)
 					data[targetField] = id
 					// 删除原始的名称字段（避免数据冗余）
 					delete(data, col.Field)
@@ -391,7 +391,7 @@ func (s *ExcelService) applyReferenceResults(
 
 // getTargetFieldForReference 根据引用配置获取目标字段名
 // 例如：orgName -> orgId, buildingName -> buildingId
-func (s *ExcelService) getTargetFieldForReference(currentField, reference string) string {
+func (s *ExcelService) getTargetFieldForReference(currentField string) string {
 	// 如果字段名以Name结尾，替换为Id
 	if strings.HasSuffix(currentField, "Name") {
 		return strings.TrimSuffix(currentField, "Name") + "Id"
@@ -514,6 +514,29 @@ func (s *ExcelService) validateAndParseRow(ctx context.Context, row []string, ro
 			continue
 		}
 
+		// 验证格式（Pattern）
+		if col.Pattern != "" {
+			matched, regexErr := regexp.MatchString(col.Pattern, value)
+			if regexErr != nil {
+				errors = append(errors, ImportError{
+					Row:   rowNum,
+					Field: col.Header,
+					Value: value,
+					Error: fmt.Sprintf("格式验证正则表达式错误: %v", regexErr),
+				})
+				continue
+			}
+			if !matched {
+				errors = append(errors, ImportError{
+					Row:   rowNum,
+					Field: col.Header,
+					Value: value,
+					Error: "格式不正确",
+				})
+				continue
+			}
+		}
+
 		// 解析字段值
 		parsedValue, err := s.parseFieldValue(col, value)
 		if err != nil {
@@ -597,94 +620,6 @@ func (s *ExcelService) validateUniqueness(ctx context.Context, config ExcelConfi
 	return errors
 }
 
-// saveData 保存数据到数据库
-func (s *ExcelService) saveData(ctx context.Context, entityType string, data map[string]interface{}) error {
-	switch entityType {
-	case "user":
-		return s.saveUser(ctx, data)
-	// 其他实体类型的处理可以在这里添加
-	// case "building":
-	//     return s.saveBuilding(ctx, data)
-	default:
-		return fmt.Errorf("不支持的实体类型: %s", entityType)
-	}
-}
-
-// saveUser 保存用户数据
-func (s *ExcelService) saveUser(ctx context.Context, data map[string]interface{}) error {
-	// 提取用户名
-	username, ok := data["username"].(string)
-	if !ok || username == "" {
-		return fmt.Errorf("用户名不能为空")
-	}
-
-	// 检查用户名是否已存在
-	var count int64
-	if err := s.db.WithContext(ctx).Table("sys_user").Where("username = ?", username).Count(&count).Error; err != nil {
-		return fmt.Errorf("检查用户名失败: %w", err)
-	}
-	if count > 0 {
-		return fmt.Errorf("用户名 %s 已存在", username)
-	}
-
-	// 创建用户（使用事务）
-	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// 使用默认密码 "123456" 进行哈希（使用SM3）
-		hashedPassword, err := s.pwdManager.HashPassword("123456")
-		if err != nil {
-			return fmt.Errorf("密码加密失败: %w", err)
-		}
-
-		// 提取字段值
-		nickname, _ := data["nickname"].(string)
-		employeeNo, _ := data["employeeNo"].(string)
-		email, _ := data["email"].(string)
-		phone, _ := data["phone"].(string)
-		remark, _ := data["remark"].(string)
-
-		// 处理性别（默认为保密）
-		gender := models.GenderSecret
-		if g, ok := data["gender"].(int); ok {
-			gender = models.Gender(g)
-		}
-
-		// 处理状态（默认为正常）
-		status := models.UserStatusEnabled
-		if st, ok := data["status"].(int); ok {
-			status = models.UserStatus(st)
-		}
-
-		// 处理部门编码
-		var deptID *string
-		if deptCode, ok := data["deptCode"].(string); ok && deptCode != "" {
-			var dept models.Department
-			if err := tx.Where("dept_code = ?", deptCode).First(&dept).Error; err != nil {
-				return fmt.Errorf("部门编码 %s 不存在", deptCode)
-			}
-			deptID = &dept.ID
-		}
-
-		// 创建用户记录
-		user := &models.User{
-			Username:   username,
-			Password:   hashedPassword,
-			Nickname:   &nickname,
-			EmployeeNo: &employeeNo,
-			Email:      &email,
-			Phone:      &phone,
-			Gender:     gender,
-			Status:     status,
-			DeptID:     deptID,
-			Remark:     remark,
-		}
-		if err := tx.Create(user).Error; err != nil {
-			return fmt.Errorf("创建用户失败: %w", err)
-		}
-
-		return nil
-	})
-}
-
 // ExportData 导出数据到Excel
 func (s *ExcelService) ExportData(ctx context.Context, entityType string, params map[string]interface{}) (*excelize.File, error) {
 	config, exists := GetExcelConfig(entityType)
@@ -701,8 +636,8 @@ func (s *ExcelService) ExportData(ctx context.Context, entityType string, params
 	f.SetActiveSheet(index)
 
 	// 删除默认的 Sheet1
-	if err := f.DeleteSheet("Sheet1"); err != nil {
-		logger.Debugf("删除默认Sheet1失败: %v", err)
+	if deleteErr := f.DeleteSheet("Sheet1"); deleteErr != nil {
+		logger.Debugf("删除默认Sheet1失败: %v", deleteErr)
 	}
 
 	headerStyle, err := createHeaderStyle(f)
@@ -946,14 +881,14 @@ func (s *ExcelService) processThreeLevelDepartments(
 		Name string
 	}
 	type Dept struct {
-		Code         string
-		Name         string
-		GroupCode    string
-		GroupName    string
+		Code      string
+		Name      string
+		GroupCode string
+		GroupName string
 	}
 
-	groupMap := make(map[string]DeptGroup) // groupCode -> DeptGroup
-	deptMap := make(map[string]Dept)       // deptCode -> Dept
+	groupMap := make(map[string]DeptGroup)  // groupCode -> DeptGroup
+	deptMap := make(map[string]Dept)        // deptCode -> Dept
 	sectionCodeSet := make(map[string]bool) // 收集所有科室编码
 	validRecords := make([]map[string]interface{}, 0, len(records))
 	invalidRowNumbers := make(map[int]bool) // 记录无效行号
@@ -1052,7 +987,7 @@ func (s *ExcelService) processThreeLevelDepartments(
 
 		// 获取部门的ID和ancestors
 		var parent struct {
-			ID       string `gorm:"column:id"`
+			ID        string `gorm:"column:id"`
 			Ancestors string `gorm:"column:ancestors"`
 		}
 		err := s.db.WithContext(ctx).
@@ -1060,7 +995,6 @@ func (s *ExcelService) processThreeLevelDepartments(
 			Select("id, ancestors").
 			Where("dept_code = ? AND deleted_at IS NULL", deptCode).
 			First(&parent).Error
-
 		if err != nil {
 			// 计算实际行号
 			rowNum := i + config.StartRow
@@ -1122,7 +1056,6 @@ func (s *ExcelService) findDeptIDByCode(ctx context.Context, deptCode string) (s
 		Select("id").
 		Where("dept_code = ? AND deleted_at IS NULL", deptCode).
 		First(&result).Error
-
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return "", fmt.Errorf("部门不存在: %s", deptCode)
@@ -1141,7 +1074,6 @@ func (s *ExcelService) ensureDeptGroupExists(ctx context.Context, code, name str
 		Table("sys_dept").
 		Where("dept_code = ? AND deleted_at IS NULL", code).
 		Count(&count).Error
-
 	if err != nil {
 		return err
 	}
@@ -1175,7 +1107,6 @@ func (s *ExcelService) ensureDeptExists(ctx context.Context, code, name, parentI
 		Table("sys_dept").
 		Where("dept_code = ? AND deleted_at IS NULL", code).
 		Count(&count).Error
-
 	if err != nil {
 		return err
 	}
@@ -1194,7 +1125,6 @@ func (s *ExcelService) ensureDeptExists(ctx context.Context, code, name, parentI
 		Select("ancestors").
 		Where("id = ? AND deleted_at IS NULL", parentID).
 		First(&parent).Error
-
 	if err != nil {
 		return fmt.Errorf("查询上级部门失败: %w", err)
 	}
