@@ -2,7 +2,7 @@
  * 信息点管理页面
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { FC } from 'react';
 import {
   Table, Button, Space, Modal, Form, Input, Select, Popconfirm,
@@ -64,14 +64,17 @@ const InfoPointManagement: FC = () => {
   const [importVisible, setImportVisible] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
   const [workstationOptions, setWorkstationOptions] = useState<WorkstationOption[]>([]);
-  const [cascaderOptions, setCascaderOptions] = useState<CascaderOption[]>([]);
   const [infoPointTypeDict, setInfoPointTypeDict] = useState<DictData[]>([]);
   const [networkDevices, setNetworkDevices] = useState<NetworkDeviceOption[]>([]);
   const [devicePorts, setDevicePorts] = useState<DevicePortOption[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
 
+  // Cascader 懒加载状态
+  const [cascaderOptions, setCascaderOptions] = useState<CascaderOption[]>([]);
+  const [loadingCascader, setLoadingCascader] = useState(false);
+
   // 使用全局分页 hook
-  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+  const { paginationProps, current, pageSize, setCurrent, setPageSize, setTotal } = usePagination();
 
   const {
     loading, data: infoPoints, total, selectedRowKeys,
@@ -86,8 +89,8 @@ const InfoPointManagement: FC = () => {
     },
     {
       externalPagination: {
-        current: paginationProps.current,
-        pageSize: paginationProps.pageSize,
+        current,
+        pageSize,
         setCurrent,
         setPageSize,
         setTotal,
@@ -108,82 +111,119 @@ const InfoPointManagement: FC = () => {
     } catch (error) { handleApiError(error, '加载统计数据', false); }
   }, []);
 
-  const loadWorkstationOptions = useCallback(async () => {
+  // ==================== Cascader 懒加载函数 ====================
+
+  // 加载楼宇列表（第一级）
+  const loadBuildingsForCascader = useCallback(async () => {
     try {
-      // 加载楼宇数据
       const buildingResult = await buildingApi.list({ current: 1, pageSize: 1000 });
       const buildings = buildingResult.data?.list || [];
-
-      // 为每个楼宇加载楼层和工位
-      const cascaderData: CascaderOption[] = await Promise.all(
-        buildings.map(async (building: any) => {
-          try {
-            // 加载该楼宇的楼层
-            const floorResult = await floorApi.list({ buildingCode: building.code, current: 1, pageSize: 1000 });
-            const floors = floorResult.data?.list || [];
-
-            // 为每个楼层加载工位
-            const floorChildren = await Promise.all(
-              floors.map(async (floor: any) => {
-                try {
-                  // 加载该楼层的工位
-                  const wsResult = await workstationApi.list({ floorCode: floor.floorNo || floor.id, current: 1, pageSize: 1000 });
-                  const workstations = wsResult.data?.list || [];
-
-                  return {
-                    value: floor.id,
-                    label: floor.name || floor.floorNo,
-                    children: workstations
-                      .filter((w: any) => w.id) // 过滤掉没有id的工位
-                      .map((w: any) => ({
-                        value: w.id,
-                        label: w.name || '未命名工位',
-                        isLeaf: true,
-                      })),
-                  };
-                } catch {
-                  return {
-                    value: floor.id,
-                    label: floor.name || floor.floorNo,
-                    children: [],
-                  };
-                }
-              })
-            );
-
-            return {
-              value: building.id,
-              label: building.name,
-              children: floorChildren.filter((fc: any) => fc.children && fc.children.length > 0),
-            };
-          } catch {
-            return {
-              value: building.id,
-              label: building.name,
-              children: [],
-            };
-          }
-        })
-      );
-
-      // 过滤掉没有工位的楼宇
-      setCascaderOptions(cascaderData.filter(c => c.children && c.children.length > 0));
-
-      // 同时为搜索表单准备简化的工位选项（使用id作为key）
-      const allWorkstations: WorkstationOption[] = [];
-      cascaderData.forEach(building => {
-        building.children?.forEach(floor => {
-          floor.children?.forEach(ws => {
-            allWorkstations.push({
-              id: ws.value,
-              name: ws.label,
-            });
-          });
-        });
-      });
-      setWorkstationOptions(allWorkstations);
-    } catch (error) { handleApiError(error, '加载工位选项', false); }
+      return buildings.map((b: any) => ({
+        value: b.id,
+        label: b.name,
+        isLeaf: false, // 表示有子节点需要懒加载
+      }));
+    } catch (error) {
+      handleApiError(error, '加载楼宇列表', false);
+      return [];
+    }
   }, []);
+
+  // 加载指定楼宇的楼层（第二级）
+  const loadFloorsForCascader = useCallback(async (buildingId: string) => {
+    try {
+      // 修复：使用 buildingId 而不是 buildingCode
+      const floorResult = await floorApi.list({ buildingId, current: 1, pageSize: 1000 });
+      const floors = floorResult.data?.list || [];
+      return floors.map((f: any) => ({
+        value: f.id,
+        label: f.name || f.floorNo,
+        isLeaf: false, // 表示有子节点需要懒加载
+        floorNo: f.floorNo,
+      }));
+    } catch (error) {
+      handleApiError(error, '加载楼层列表', false);
+      return [];
+    }
+  }, []);
+
+  // 加载指定楼层的工位（第三级）
+  const loadWorkstationsForCascader = useCallback(async (floorId: string, floorNo: string) => {
+    try {
+      const wsResult = await workstationApi.list({ floorCode: floorNo, current: 1, pageSize: 1000 });
+      const workstations = wsResult.data?.list || [];
+      return workstations
+        .filter((w: any) => w.id)
+        .map((w: any) => ({
+          value: w.id,
+          label: w.name || '未命名工位',
+          isLeaf: true,
+        }));
+    } catch (error) {
+      handleApiError(error, '加载工位列表', false);
+      return [];
+    }
+  }, []);
+
+  // Cascader 懒加载处理函数
+  const handleCascaderLoadData = useCallback(async (selectedOptions: CascaderOption[]) => {
+    const targetOption = selectedOptions[selectedOptions.length - 1];
+
+    setLoadingCascader(true);
+
+    try {
+      if (selectedOptions.length === 1) {
+        // 加载楼层（第二级）
+        const buildingId = targetOption.value;
+        const floors = await loadFloorsForCascader(buildingId);
+        targetOption.children = floors;
+      } else if (selectedOptions.length === 2) {
+        // 加载工位（第三级）
+        const floorId = targetOption.value;
+        const floorNo = (targetOption as any).floorNo;
+        const workstations = await loadWorkstationsForCascader(floorId, floorNo || floorId);
+        targetOption.children = workstations;
+      }
+
+      // 触发重新渲染
+      setCascaderOptions([...cascaderOptions]);
+    } finally {
+      setLoadingCascader(false);
+    }
+  }, [cascaderOptions, loadFloorsForCascader, loadWorkstationsForCascader]);
+
+  // 初始化 Cascader 选项（加载楼宇列表）
+  const initCascaderOptions = useCallback(async () => {
+    setLoadingCascader(true);
+    try {
+      const buildings = await loadBuildingsForCascader();
+      setCascaderOptions(buildings);
+    } finally {
+      setLoadingCascader(false);
+    }
+  }, [loadBuildingsForCascader]);
+
+  // 加载搜索表单的工位选项（按需加载）
+  const loadSearchWorkstationOptions = useCallback(async () => {
+    if (workstationOptions.length > 0) return; // 已加载则跳过
+
+    try {
+      const wsResult = await workstationApi.list({ current: 1, pageSize: 1000 });
+      const workstations = wsResult.data?.list || [];
+      setWorkstationOptions(
+        workstations
+          .filter((w: any) => w.id)
+          .map((w: any) => ({
+            id: w.id,
+            name: w.name || '未命名工位',
+          }))
+      );
+    } catch (error) {
+      handleApiError(error, '加载工位选项', false);
+    }
+  }, [workstationOptions.length]);
+
+  // ===========================================================
 
   const loadInfoPointTypeDict = useCallback(async () => {
     try {
@@ -220,20 +260,39 @@ const InfoPointManagement: FC = () => {
     } catch (error) { handleApiError(error, '加载设备端口列表', false); }
   }, []);
 
+  // 使用 ref 存储加载函数，避免函数引用变化导致 useEffect 频繁触发
+  const loadFunctionsRef = useRef({
+    loadInfoPoints,
+    loadStatistics,
+    loadInfoPointTypeDict,
+    loadNetworkDevices,
+  });
+  loadFunctionsRef.current = {
+    loadInfoPoints,
+    loadStatistics,
+    loadInfoPointTypeDict,
+    loadNetworkDevices,
+  };
+
   useEffect(() => {
     // 使用 setTimeout 避免同步 setState
     setTimeout(() => {
-      loadInfoPoints();
-      loadStatistics();
-      loadWorkstationOptions();
-      loadInfoPointTypeDict();
-      loadNetworkDevices();
+      loadFunctionsRef.current.loadInfoPoints();
+      loadFunctionsRef.current.loadStatistics();
+      loadFunctionsRef.current.loadInfoPointTypeDict();
+      loadFunctionsRef.current.loadNetworkDevices();
     }, 0);
-  }, [paginationProps.current, paginationProps.pageSize]);
+  }, [current, pageSize]);
 
   const handleSave = async () => {
     try {
       const values = await infoPointForm.validateFields();
+
+      // 处理 Cascader 的 workstationId 值（从数组提取最后一个元素）
+      if (Array.isArray(values.workstationId)) {
+        values.workstationId = values.workstationId[values.workstationId.length - 1];
+      }
+
       if (editingInfoPoint) {
         await infoPointApi.update(editingInfoPoint.id, values);
         handleSuccess('更新');
@@ -258,12 +317,83 @@ const InfoPointManagement: FC = () => {
     catch (error) { handleApiError(error, '批量删除'); }
   };
 
-  const openModal = (record?: InfoPoint) => {
-    if (record) { handleEdit(record); infoPointForm.setFieldsValue(record); }
+  const openModal = async (record?: InfoPoint) => {
+    // 初始化 Cascader 选项（加载楼宇列表）
+    await initCascaderOptions();
+
+    if (record) {
+      handleEdit(record);
+      const formValues = { ...record };
+
+      // 处理 workstationId：将单个字符串转换为三级路径数组
+      if (formValues.workstationId && typeof formValues.workstationId === 'string') {
+        try {
+          // 查询工位详细信息以获取所属楼层
+          const wsResult = await workstationApi.get(formValues.workstationId);
+          const workstation = wsResult.data as any;
+
+          if (workstation && workstation.floorId) {
+            // 查询楼层信息以获取所属楼宇
+            const floorResult = await floorApi.get(workstation.floorId);
+            const floor = floorResult.data as any;
+
+            const buildingId = floor?.buildingId || floor?.buildingCode;
+            const floorId = workstation.floorId;
+            const workstationId = formValues.workstationId;
+
+            if (buildingId && floorId && workstationId) {
+              // 预加载 Cascader 路径数据，确保回显时能找到匹配的节点
+              await preloadCascaderPath(buildingId, floorId);
+
+              // 构建三级路径: [buildingId, floorId, workstationId]
+              formValues.workstationId = [buildingId, floorId, workstationId] as any;
+            }
+          }
+        } catch (error) {
+          console.error('获取工位信息失败:', error);
+          formValues.workstationId = undefined;
+        }
+      }
+
+      infoPointForm.setFieldsValue(formValues);
+    }
     else {
       handleAdd();
       const defaultType = infoPointTypeDict.find(d => d.isDefault)?.dictValue || infoPointTypeDict[0]?.dictValue;
       infoPointForm.setFieldsValue({ status: 0, infoPointType: defaultType });
+    }
+  };
+
+  // 预加载 Cascader 路径数据（用于编辑回显）
+  const preloadCascaderPath = async (buildingId: string, floorId: string) => {
+    try {
+      // 找到对应的楼宇节点
+      const buildingIndex = cascaderOptions.findIndex(b => b.value === buildingId);
+      if (buildingIndex === -1) return;
+
+      // 加载该楼宇下的楼层列表
+      const floors = await loadFloorsForCascader(buildingId);
+
+      // 找到对应的楼层节点
+      const floorIndex = floors.findIndex(f => f.value === floorId);
+      if (floorIndex === -1) return;
+
+      const floorNo = floors[floorIndex].floorNo;
+
+      // 加载该楼层下的工位列表
+      const workstations = await loadWorkstationsForCascader(floorId, floorNo || floorId);
+
+      // 更新楼层节点的 children（工位列表）- 使用类型断言
+      (floors[floorIndex] as any).children = workstations;
+
+      // 更新楼宇节点的 children（楼层列表）- 使用类型断言
+      const updatedOptions = [...cascaderOptions];
+      (updatedOptions[buildingIndex] as any).children = floors;
+
+      // 触发重新渲染
+      setCascaderOptions(updatedOptions);
+    } catch (error) {
+      console.error('预加载 Cascader 路径失败:', error);
     }
   };
 
@@ -403,7 +533,19 @@ const InfoPointManagement: FC = () => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="workstationId" label="所属工位">
-              <Select placeholder="请选择工位" allowClear style={{ width: 150 }}>
+              <Select
+                placeholder="请选择工位"
+                allowClear
+                style={{ width: 150 }}
+                onDropdownVisibleChange={(open) => {
+                  if (open) loadSearchWorkstationOptions();
+                }}
+                showSearch
+                filterOption={(input, option) => {
+                  const ws = workstationOptions.find(w => w.id === option?.value);
+                  return ws?.name.toLowerCase().includes(input.toLowerCase()) ?? false;
+                }}
+              >
                 {workstationOptions.filter(w => w.id).map(w => <Option key={w.id} value={w.id}>{w.name}</Option>)}
               </Select>
             </Form.Item>
@@ -442,6 +584,8 @@ const InfoPointManagement: FC = () => {
           <Form.Item name="workstationId" label="所属工位" rules={[{ required: true, message: '请选择所属工位' }]}>
             <Cascader
               options={cascaderOptions}
+              loadData={handleCascaderLoadData}
+              loading={loadingCascader}
               placeholder="请先选择楼宇，再选择楼层，最后选择工位"
               changeOnSelect
               showSearch={{ filter: (inputValue, path) => path.some(option => option.label?.toLowerCase().includes(inputValue.toLowerCase())) }}

@@ -255,7 +255,7 @@ const WorkstationManagement: FC = () => {
             <Form.Item name="floorId" label="所属楼层">
               <Select placeholder="请选择楼层" allowClear style={{ width: 150 }}>
                 {floorOptions.map((f) => (
-                  <Option key={f.code} value={f.code}>
+                  <Option key={f.id} value={f.id}>
                     {f.name}
                   </Option>
                 ))}

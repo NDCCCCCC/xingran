@@ -14,7 +14,7 @@ const { TextArea } = Input;
 export interface WorkstationEditModalProps {
   open: boolean;
   editingWorkstation: WorkstationOps | null;
-  floorOptions: { code: string; name: string }[];
+  floorOptions: { id: string; code: string; name: string }[];
   deptTreeData: any[];
   userOptions: { id: string; name: string }[];
   onOk: () => Promise<void>;
@@ -52,7 +52,7 @@ export function WorkstationEditModal({
         <Form.Item name="floorId" label="所属楼层" rules={[{ required: true, message: '请选择所属楼层' }]}>
           <Select placeholder="请选择所属楼层">
             {floorOptions.map((f) => (
-              <Option key={f.code} value={f.code}>
+              <Option key={f.id} value={f.id}>
                 {f.name}
               </Option>
             ))}

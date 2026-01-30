@@ -60,7 +60,7 @@ export const buildingApi = {
 // ==================== 楼层管理 ====================
 
 export interface FloorListParams extends PageParams {
-  buildingCode?: string;
+  buildingId?: string;
   floorNo?: string;
   name?: string;
   status?: number;

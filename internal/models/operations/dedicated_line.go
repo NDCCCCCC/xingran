@@ -30,8 +30,10 @@ type OpsDedicatedLine struct {
 	DestPort            *string `gorm:"size:50" json:"destPort,omitempty"`            // 目的端口
 	DestRoomID          *string `gorm:"size:64" json:"destRoomId,omitempty"`          // 目的机房ID
 	DestRoomName        *string `gorm:"size:100" json:"destRoomName,omitempty"`       // 目的机房名称（冗余）
-	IPAddress           *string `gorm:"size:50" json:"ipAddress,omitempty"`           // IP地址（可选）
-	SubnetMask          *string `gorm:"size:50" json:"subnetMask,omitempty"`          // 子网掩码（可选）
+	SourceIPAddress     *string `gorm:"size:50" json:"sourceIpAddress,omitempty"`     // 源IP地址（可选）
+	DestIPAddress       *string `gorm:"size:50" json:"destIpAddress,omitempty"`       // 目的IP地址（可选）
+	SourceSubnetMask    *string `gorm:"size:50" json:"sourceSubnetMask,omitempty"`    // 源子网掩码（可选）
+	DestSubnetMask      *string `gorm:"size:50" json:"destSubnetMask,omitempty"`      // 目的子网掩码（可选）
 	VLAN                *string `gorm:"size:50" json:"vlan,omitempty"`                // VLAN（可选）
 	Status              LineStatus `gorm:"default:0" json:"status"`                    // 状态: 0=正常, 1=故障, 2=停用
 	CarrierContactID    *string `gorm:"size:64" json:"carrierContactId,omitempty"`    // 运营商联系人ID

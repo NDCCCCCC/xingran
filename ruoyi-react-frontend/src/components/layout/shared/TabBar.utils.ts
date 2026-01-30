@@ -44,6 +44,6 @@ export function scrollContainer(container: HTMLElement | null, direction: 'left'
 /**
  * 设置延迟定时器
  */
-export function setupDelayedChecks(callback: () => void, delays: readonly number[]): NodeJS.Timeout[] {
+export function setupDelayedChecks(callback: () => void, delays: readonly number[]): number[] {
   return delays.map(delay => setTimeout(callback, delay));
 }

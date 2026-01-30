@@ -76,6 +76,10 @@ func (s *workstationService) List(ctx context.Context, params map[string]interfa
 	if floorId, ok := params["floorId"].(string); ok && floorId != "" {
 		query = query.Where("sys_workstation.floor_id = ?", floorId)
 	}
+	if floorCode, ok := params["floorCode"].(string); ok && floorCode != "" {
+		// 通过 JOIN ops_floors 表使用 floor_no 筛选
+		query = query.Where("EXISTS (SELECT 1 FROM ops_floors WHERE ops_floors.id = sys_workstation.floor_id::uuid AND ops_floors.floor_no = ?)", floorCode)
+	}
 	if status, ok := params["status"].(int); ok {
 		query = query.Where("sys_workstation.status = ?", status)
 	}

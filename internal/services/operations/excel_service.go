@@ -182,9 +182,9 @@ func (s *ExcelService) getExampleValue(col ExcelColumn) string {
 		return "核心交换机A"
 	case "sourcePort", "destPort":
 		return "Gi0/1"
-	case "ipAddress":
+	case "sourceIpAddress", "destIpAddress":
 		return "192.168.1.1"
-	case "subnetMask":
+	case "sourceSubnetMask", "destSubnetMask":
 		return "255.255.255.0"
 	case "vlan":
 		return "100"
@@ -555,7 +555,7 @@ func (s *ExcelService) parseFieldValue(col ExcelColumn, value string) (interface
 	switch col.Field {
 	case "totalFloors", "capacity", "rackCount", "positionU", "heightU", "powerConsumption":
 		return strconv.Atoi(value)
-	case "totalArea", "area", "bandwidth", "monthlyFee":
+	case "totalArea", "area", "monthlyFee":
 		return strconv.ParseFloat(value, 64)
 	}
 

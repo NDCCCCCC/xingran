@@ -189,9 +189,11 @@ const DedicatedLineManagement: FC = () => {
     { title: '源机房', dataIndex: 'sourceRoomName', key: 'sourceRoomName', width: 120, render: (v) => v || '-' },
     { title: '源设备', dataIndex: 'sourceDeviceName', key: 'sourceDeviceName', width: 120, render: (v) => v || '-' },
     { title: '源端口', dataIndex: 'sourcePort', key: 'sourcePort', width: 100, render: (v) => v || '-' },
+    { title: '源IP', dataIndex: 'sourceIpAddress', key: 'sourceIpAddress', width: 130, render: (v) => v || '-' },
     { title: '目的机房', dataIndex: 'destRoomName', key: 'destRoomName', width: 120, render: (v) => v || '-' },
     { title: '目的设备', dataIndex: 'destDeviceName', key: 'destDeviceName', width: 120, render: (v) => v || '-' },
-    { title: 'IP地址', dataIndex: 'ipAddress', key: 'ipAddress', width: 120, render: (v) => v || '-' },
+    { title: '目的端口', dataIndex: 'destPort', key: 'destPort', width: 100, render: (v) => v || '-' },
+    { title: '目的IP', dataIndex: 'destIpAddress', key: 'destIpAddress', width: 130, render: (v) => v || '-' },
     {
       title: '状态',
       dataIndex: 'status',
@@ -250,7 +252,8 @@ const DedicatedLineManagement: FC = () => {
                     <div><strong>类型：</strong>{getLineTypeText(line.lineType)}</div>
                     <div><strong>运营商：</strong>{getIspText(line.isp)}</div>
                     {line.bandwidth && <div><strong>带宽：</strong>{line.bandwidth}</div>}
-                    {line.ipAddress && <div><strong>IP：</strong>{line.ipAddress}</div>}
+                    {line.sourceIpAddress && <div><strong>源IP：</strong>{line.sourceIpAddress}</div>}
+                    {line.destIpAddress && <div><strong>目的IP：</strong>{line.destIpAddress}</div>}
                     {line.monthlyFee && <div><strong>月费：</strong>¥{line.monthlyFee}</div>}
                   </div>
                 }
@@ -358,14 +361,9 @@ const DedicatedLineManagement: FC = () => {
               </Form.Item>
             </Col>
           </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="sourcePort" label="源端口">
-                <Input placeholder="请输入源端口" className="user-form-input" />
-              </Form.Item>
-            </Col>
-            <Col span={12}></Col>
-          </Row>
+          <Form.Item name="sourcePort" label="源端口">
+            <Input placeholder="请输入源端口" className="user-form-input" style={{ width: '50%' }} />
+          </Form.Item>
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="destRoomId" label="目的机房">
@@ -380,23 +378,30 @@ const DedicatedLineManagement: FC = () => {
               </Form.Item>
             </Col>
           </Row>
+          <Form.Item name="destPort" label="目的端口">
+            <Input placeholder="请输入目的端口" className="user-form-input" style={{ width: '50%' }} />
+          </Form.Item>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="destPort" label="目的端口">
-                <Input placeholder="请输入目的端口" className="user-form-input" />
+              <Form.Item name="sourceIpAddress" label="源IP地址">
+                <Input placeholder="请输入源IP地址" className="user-form-input" />
               </Form.Item>
             </Col>
-            <Col span={12}></Col>
+            <Col span={12}>
+              <Form.Item name="sourceSubnetMask" label="源子网掩码">
+                <Input placeholder="请输入源子网掩码" className="user-form-input" />
+              </Form.Item>
+            </Col>
           </Row>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="ipAddress" label="IP地址">
-                <Input placeholder="请输入IP地址" className="user-form-input" />
+              <Form.Item name="destIpAddress" label="目的IP地址">
+                <Input placeholder="请输入目的IP地址" className="user-form-input" />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="subnetMask" label="子网掩码">
-                <Input placeholder="请输入子网掩码" className="user-form-input" />
+              <Form.Item name="destSubnetMask" label="目的子网掩码">
+                <Input placeholder="请输入目的子网掩码" className="user-form-input" />
               </Form.Item>
             </Col>
           </Row>

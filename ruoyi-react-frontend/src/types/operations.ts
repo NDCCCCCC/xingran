@@ -105,13 +105,15 @@ export interface DedicatedLine {
   sourcePort?: string;
   sourceRoomId?: string;       // 源机房ID
   sourceRoomName?: string;     // 源机房名称
+  sourceIpAddress?: string;    // 源IP地址
+  sourceSubnetMask?: string;   // 源子网掩码
   destDeviceId?: string;
   destDeviceName?: string;
   destPort?: string;
   destRoomId?: string;         // 目的机房ID
   destRoomName?: string;       // 目的机房名称
-  ipAddress?: string;
-  subnetMask?: string;
+  destIpAddress?: string;      // 目的IP地址
+  destSubnetMask?: string;     // 目的子网掩码
   vlan?: string;
   status: LineStatus;
   carrierContactId?: string;

@@ -46,7 +46,8 @@ export function useWorkstationData(
       const floors = result.data?.list || [];
       setFloorOptions(
         floors.map((f: any) => ({
-          code: f.id,
+          id: f.id,
+          code: f.code || f.floorNo,
           name: `${f.buildingName || f.buildingCode} - ${f.name || f.floorNo}`,
         }))
       );
