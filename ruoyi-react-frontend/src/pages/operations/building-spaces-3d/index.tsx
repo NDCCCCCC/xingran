@@ -11,14 +11,13 @@ import { handleApiError } from '@/utils/errorHandler';
 import HubeiMap from './components/HubeiMap';
 import BuildingView3D from './components/BuildingView3D';
 import FloorView3D from './components/FloorView3D';
-import ViewportNavigation from './components/ViewportNavigation';
 import type { BuildingItem } from './types';
 
 const BuildingSpaces3D: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [buildings, setBuildings] = useState<BuildingItem[]>([]);
 
-  const { viewLevel, navigateToMap } = useVisualizationStore();
+  const { viewLevel } = useVisualizationStore();
 
   // 加载楼宇数据
   const loadBuildings = useCallback(async () => {
@@ -63,9 +62,6 @@ const BuildingSpaces3D: React.FC = () => {
 
   return (
     <div style={{ height: '100vh', position: 'relative', overflow: 'hidden' }}>
-      {/* 视图导航 */}
-      <ViewportNavigation onBackToMap={navigateToMap} currentView={viewLevel} />
-
       {/* 主视图 */}
       {renderView()}
 

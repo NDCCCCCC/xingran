@@ -49,7 +49,9 @@ func (s *buildingService) Update(ctx context.Context, building *operations.OpsBu
 		return err
 	}
 
-	return s.db.WithContext(ctx).Save(building).Error
+	// 使用 Omit 排除 CreatedAt 字段，只更新其他字段
+	// UpdatedAt 会被 GORM 自动更新
+	return s.db.WithContext(ctx).Omit("CreatedAt").Save(building).Error
 }
 
 // Delete 删除楼宇
@@ -79,7 +81,23 @@ func (s *buildingService) List(ctx context.Context, params map[string]interface{
 		query = query.Where("name LIKE ?", "%"+name+"%")
 	}
 	if orgId, ok := params["orgId"].(string); ok && orgId != "" {
-		query = query.Where("org_id = ?", orgId)
+		// 查询该部门及其所有子部门的ID
+		var deptIDs []string
+		// 查询条件：当前部门(id = orgId) OR 其子部门(ancestors包含orgId)
+		if err := s.db.WithContext(ctx).Table("sys_dept").
+			Where("id = ? OR ancestors LIKE ? OR ancestors LIKE ? OR ancestors = ?",
+				orgId, "%,"+orgId+",%", "%,"+orgId, orgId).
+			Pluck("id", &deptIDs).Error; err != nil {
+			return nil, err
+		}
+
+		// 如果找到了部门ID，使用 IN 查询
+		if len(deptIDs) > 0 {
+			query = query.Where("org_id IN ?", deptIDs)
+		} else {
+			// 如果没找到任何部门，返回空结果
+			query = query.Where("1 = 0")
+		}
 	}
 	if status, ok := params["status"].(int); ok {
 		query = query.Where("status = ?", status)

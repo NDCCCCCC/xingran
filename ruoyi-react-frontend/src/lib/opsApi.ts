@@ -23,6 +23,7 @@ export interface BuildingListParams extends PageParams {
   name?: string;
   code?: string;
   status?: number;
+  orgId?: string;  // 所属机构ID，用于按部门筛选
 }
 
 export const buildingApi = {

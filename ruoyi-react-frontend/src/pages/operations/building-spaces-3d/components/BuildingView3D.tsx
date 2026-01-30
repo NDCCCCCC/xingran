@@ -208,24 +208,19 @@ const BuildingView3D: React.FC = () => {
           boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
         }}
       >
-        <Space size="large">
-          <Button icon={<ArrowLeftOutlined />} onClick={navigateToMap} type="text">
-            返回地图
-          </Button>
-          <div>
-            <Space>
-              <BuildOutlined style={{ color: '#1890ff' }} />
-              <span style={{ fontSize: 16, fontWeight: 'bold', color: '#262626' }}>{selectedBuilding.name}</span>
-              <Tag color={statusColor}>{statusText}</Tag>
-              {selectedFloor && (
-                <>
-                  <span style={{ color: '#8c8c8c' }}>→</span>
-                  <Tag color="blue">{selectedFloor.name || selectedFloor.floorNo}</Tag>
-                </>
-              )}
-            </Space>
-          </div>
-        </Space>
+        <div>
+          <Space>
+            <BuildOutlined style={{ color: '#1890ff' }} />
+            <span style={{ fontSize: 16, fontWeight: 'bold', color: '#262626' }}>{selectedBuilding.name}</span>
+            <Tag color={statusColor}>{statusText}</Tag>
+            {selectedFloor && (
+              <>
+                <span style={{ color: '#8c8c8c' }}>→</span>
+                <Tag color="blue">{selectedFloor.name || selectedFloor.floorNo}</Tag>
+              </>
+            )}
+          </Space>
+        </div>
 
         <div style={{ fontSize: 12, color: '#8c8c8c' }}>
           <Space split={<span style={{ color: '#d9d9d9' }}>|</span>}>
@@ -263,35 +258,47 @@ const BuildingView3D: React.FC = () => {
               flexDirection: 'column',
             }}>
               {/* 楼宇切换下拉框 */}
-              {buildings.length > 1 && (
-                <div style={{
-                  position: 'absolute',
-                  top: 16,
-                  left: 16,
-                  zIndex: 10,
-                  background: 'rgba(255, 255, 255, 0.95)',
-                  backdropFilter: 'blur(10px)',
-                  borderRadius: 8,
-                  padding: '8px 12px',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                  border: '1px solid #e8e8e8',
-                  minWidth: 200,
-                }}>
-                  <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 4 }}>
-                    切换楼宇
-                  </div>
-                  <Select
+              <div style={{
+                position: 'absolute',
+                top: 16,
+                left: 16,
+                zIndex: 10,
+                background: 'rgba(255, 255, 255, 0.95)',
+                backdropFilter: 'blur(10px)',
+                borderRadius: 8,
+                padding: '12px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                border: '1px solid #e8e8e8',
+                minWidth: 220,
+              }}>
+                <Space direction="vertical" size="small" style={{ width: '100%' }}>
+                  <Button
+                    icon={<ArrowLeftOutlined />}
+                    onClick={navigateToMap}
+                    size="small"
                     style={{ width: '100%' }}
-                    placeholder="选择楼宇"
-                    value={currentBuilding?.id}
-                    onChange={handleBuildingChange}
-                    options={buildings.map(b => ({
-                      label: b.name,
-                      value: b.id,
-                    }))}
-                  />
-                </div>
-              )}
+                  >
+                    返回地图
+                  </Button>
+                  {buildings.length > 1 && (
+                    <>
+                      <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 4 }}>
+                        切换楼宇
+                      </div>
+                      <Select
+                        style={{ width: '100%' }}
+                        placeholder="选择楼宇"
+                        value={currentBuilding?.id}
+                        onChange={handleBuildingChange}
+                        options={buildings.map(b => ({
+                          label: b.name,
+                          value: b.id,
+                        }))}
+                      />
+                    </>
+                  )}
+                </Space>
+              </div>
 
               {/* 3D 楼宇模型 */}
               <div style={{ height: '100%', width: '100%' }}>

@@ -15,12 +15,14 @@ interface DeptTreeProps {
   }) => void;
   selectedKeys?: Key[];
   style?: CSSProperties;
+  externalOnly?: boolean;  // 仅显示外部机构部门
 }
 
 const DeptTree: FC<DeptTreeProps> = ({
   onSelect: onDeptSelect,
   selectedKeys = [],
-  style
+  style,
+  externalOnly = false,
 }) => {
   const [treeData, setTreeData] = useState<DataNode[]>([]);
   const [loading, setLoading] = useState(false);
@@ -43,12 +45,52 @@ const DeptTree: FC<DeptTreeProps> = ({
     return parentKeys;
   };
 
+  // 过滤出外部机构部门（isExternalOrg === 1）
+  const filterExternalOrgDepts = (data: Department[]): Department[] => {
+    if (!data || !Array.isArray(data)) {
+      return [];
+    }
+
+    const filterNodes = (nodes: Department[]): Department[] => {
+      return nodes.reduce<Department[]>((acc, node) => {
+        // 先递归过滤子节点
+        const filteredChildren = node.children && node.children.length > 0
+          ? filterNodes(node.children)
+          : [];
+
+        // 判断是否保留该节点：
+        // 1. 当前节点本身是外部机构（isExternalOrg === 1），或者
+        // 2. 该节点的子树中有外部机构部门（需要保留作为路径）
+        const isExternal = node.isExternalOrg === 1;
+        const hasExternalDescendants = filteredChildren.length > 0;
+
+        if (isExternal || hasExternalDescendants) {
+          acc.push({
+            ...node,
+            // 统一使用过滤后的子节点，不保留原始子节点
+            children: filteredChildren.length > 0 ? filteredChildren : undefined,
+          });
+        }
+
+        return acc;
+      }, []);
+    };
+
+    return filterNodes(data);
+  };
+
   // 加载部门树数据
   const loadDeptTree = useCallback(async () => {
     setLoading(true);
     try {
       const result = await post<BaseResponse<Department[]>>('/system/departments/tree');
-      const deptData = result.data || [];
+      let deptData = result.data || [];
+
+      // 如果只需要外部机构部门，进行过滤
+      if (externalOnly) {
+        deptData = filterExternalOrgDepts(deptData);
+      }
+
       const treeData = transformToTreeData(deptData);
       setTreeData(treeData);
 
@@ -62,7 +104,7 @@ const DeptTree: FC<DeptTreeProps> = ({
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [externalOnly]);
 
   // 转换部门数据为树形结构
   const transformToTreeData = (data: Department[]): DataNode[] => {
