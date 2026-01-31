@@ -1,14 +1,6 @@
 import { post } from '@/lib/api';
-
-// API响应包装类型
-interface ApiResponse<T> {
-  code: number;
-  message: string;
-  data: T;
-  timestamp: number;
-  request_id: string;
-}
-import type { PageData, PageParams, Workstation } from '@/types/operations';
+import type { PageParams } from '@/types/base';
+import type { PageData, WorkstationOps } from '@/types/operations';
 
 // API响应包装类型
 interface ApiResponse<T> {
@@ -21,14 +13,14 @@ interface ApiResponse<T> {
 
 export const workstationApi = {
   // 列表查询
-  list: (params: PageParams) => post<ApiResponse<PageData<Workstation>>>('/ops/workstations/list', params),
+  list: (params: PageParams) => post<ApiResponse<PageData<WorkstationOps>>>('/ops/workstations/list', params),
 
   // 创建
-  create: (data: Omit<Workstation, 'id' | 'createdAt' | 'updatedAt'>) =>
+  create: (data: Omit<WorkstationOps, 'id' | 'createdAt' | 'updatedAt'>) =>
     post('/ops/workstations', data),
 
   // 更新
-  update: (id: string, data: Partial<Workstation>) =>
+  update: (id: string, data: Partial<WorkstationOps>) =>
     post(`/ops/workstations/${id}/update`, data),
 
   // 删除

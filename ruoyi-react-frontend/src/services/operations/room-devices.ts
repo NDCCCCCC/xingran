@@ -1,14 +1,6 @@
 import { post } from '@/lib/api';
-
-// API响应包装类型
-interface ApiResponse<T> {
-  code: number;
-  message: string;
-  data: T;
-  timestamp: number;
-  request_id: string;
-}
-import type { PageData, PageParams, RoomDevice } from '@/types/operations';
+import type { PageParams } from '@/types/base';
+import type { PageData, RoomDevice } from '@/types/operations';
 
 // API响应包装类型
 interface ApiResponse<T> {

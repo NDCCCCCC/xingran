@@ -384,8 +384,7 @@ export const floorPlanTextApi = {
 
 // ==================== 地理编码（带缓存） ====================
 
-import { getBaiduMapCache } from '@/utils/baiduMapCache';
-import { cacheStats } from '@/utils/cacheStats';
+import { getDualLevelCache } from '@/utils/dualLevelCache';
 
 export interface GeocodeResult {
   lng: number;
@@ -418,25 +417,23 @@ export const geocodeWithCache = async (
   }
 
   const cacheKey = `${GEOCODE_CACHE_PREFIX}${address}`;
-  const baiduCache = getBaiduMapCache<GeocodeResult>();
+  const cache = getDualLevelCache<GeocodeResult>();
 
   // 尝试从缓存获取
-  const cached = baiduCache.get(cacheKey);
+  const cached = cache.get(cacheKey);
   if (cached) {
-    cacheStats.recordStorageHit();
     console.log('✅ 地理编码缓存命中:', address);
     return cached;
   }
 
   // 调用后端API
-  cacheStats.recordAPICall();
   console.log('🌐 调用后端地理编码API:', address);
 
   try {
     const result = await post<BaseResponse<GeocodeResult>>('/ops/building/geocode', { address });
 
     if (result.code === 0 && result.data) {
-      baiduCache.set(cacheKey, result.data);
+      cache.set(cacheKey, result.data);
       console.log('💾 地理编码结果已缓存:', address);
       return result.data;
     }
@@ -472,12 +469,15 @@ export const batchGeocodeWithCache = async (
  * 获取地理编码缓存统计
  */
 export const getGeocodeStats = () => {
-  const baiduCache = getBaiduMapCache<unknown>();
-  const stats = cacheStats.getStats();
-  const cacheInfo = baiduCache.getStats();
+  const cache = getDualLevelCache<unknown>();
+  const cacheInfo = cache.getStats();
 
   return {
-    ...stats,
+    // 直接使用 DualLevelCache 的统计
+    ...cacheInfo,
+    // 兼容旧字段名（apiCalls = misses）
+    apiCalls: cacheInfo.misses,
+    // 保留字段名兼容性
     cacheSize: cacheInfo.totalSize,
     memoryCacheSize: cacheInfo.memorySize,
     storageCacheSize: cacheInfo.storageSize,
@@ -488,14 +488,14 @@ export const getGeocodeStats = () => {
  * 清除地理编码缓存
  */
 export const clearGeocodeCache = (address?: string) => {
-  const baiduCache = getBaiduMapCache<unknown>();
+  const cache = getDualLevelCache<unknown>();
 
   if (address) {
     const cacheKey = `${GEOCODE_CACHE_PREFIX}${address}`;
-    baiduCache.delete(cacheKey);
+    cache.delete(cacheKey);
     console.log('🗑️ 已清除地址缓存:', address);
   } else {
-    baiduCache.clear();
+    cache.clear();
     console.log('🗑️ 已清除所有地理编码缓存');
   }
 };
@@ -504,6 +504,7 @@ export const clearGeocodeCache = (address?: string) => {
  * 重置地理编码统计
  */
 export const resetGeocodeStats = () => {
-  cacheStats.reset();
+  const cache = getDualLevelCache<unknown>();
+  cache.resetStats();
   console.log('🔄 已重置地理编码统计');
 };

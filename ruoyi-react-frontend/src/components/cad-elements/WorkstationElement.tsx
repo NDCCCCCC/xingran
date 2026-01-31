@@ -46,7 +46,7 @@ const CHAIR_DIMENSIONS = {
 // 工位类型
 type DeskType = 'straight' | 'l-shaped';
 
-function WorkstationElement({
+export function WorkstationElement({
   workstation,
   selected = false,
   hovered = false,
@@ -526,7 +526,5 @@ function WorkstationElement({
     </g>
   );
 }
-
-export default WorkstationElement;
 
 

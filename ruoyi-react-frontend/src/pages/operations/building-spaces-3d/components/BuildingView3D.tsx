@@ -18,6 +18,7 @@ import FloorPlan3D from './FloorPlan3D';
 interface FloorData {
   id: string;
   name: string;
+  code: string;
   floorNo: string;
   workstationCount: number;
   status: number;

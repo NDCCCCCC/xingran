@@ -23,7 +23,7 @@ const SELECTION_BORDER_COLOR = '#1890ff';
 const CONTROL_POINT_RADIUS = 4;
 const CONTROL_POINT_STROKE_WIDTH = 2;
 
-function CADTextElement({
+export function CADTextElement({
   text,
   selected = false,
   hovered = false,
@@ -128,5 +128,3 @@ function CADTextElement({
     </g>
   );
 }
-
-export default CADTextElement;

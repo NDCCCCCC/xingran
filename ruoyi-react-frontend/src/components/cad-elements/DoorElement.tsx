@@ -45,7 +45,7 @@ interface DoorGeometry {
   leafEndY2?: number;
 }
 
-function DoorElement({
+export function DoorElement({
   door,
   selected = false,
   hovered = false,
@@ -279,5 +279,3 @@ function DoorElement({
     </g>
   );
 }
-
-export default DoorElement;

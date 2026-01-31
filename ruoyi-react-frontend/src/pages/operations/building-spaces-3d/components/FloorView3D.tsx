@@ -179,7 +179,7 @@ interface FloorDescriptionsProps {
   floor: {
     code: string;
     floorNo: string;
-    buildingName: string;
+    buildingName?: string;
   };
 }
 
@@ -196,7 +196,7 @@ interface WorkstationStatsCardProps {
 }
 
 const WorkstationStatsCard: React.FC<WorkstationStatsCardProps> = ({ stats }) => (
-  <Card size="small" title={<DesktopOutlined /> 工位统计} style={styles.statsCard}>
+  <Card size="small" title={<><DesktopOutlined /> 工位统计</>} style={styles.statsCard}>
     <Row gutter={16}>
       <Col span={6}>
         <StatCard value={stats.total} label="总工位数" color="#1890ff" />
@@ -300,7 +300,7 @@ const styles = {
     overflowY: 'auto' as const,
   },
   loadingContainer: {
-    textAlign: 'center',
+    textAlign: 'center' as const,
     padding: 40,
   },
   statsCard: {

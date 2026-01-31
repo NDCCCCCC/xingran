@@ -1,4 +1,6 @@
 import { post } from '@/lib/api';
+import type { PageParams } from '@/types/base';
+import type { PageData, InfoPoint } from '@/types/operations';
 
 // API响应包装类型
 interface ApiResponse<T> {
@@ -8,8 +10,6 @@ interface ApiResponse<T> {
   timestamp: number;
   request_id: string;
 }
-
-import type { PageData, PageParams, InfoPoint } from '@/types/operations';
 
 export const infoPointApi = {
   // 列表查询

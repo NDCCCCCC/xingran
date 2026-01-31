@@ -4,6 +4,20 @@
 
 import type { Status } from './base';
 
+// PageParams 已在 base.ts 中定义，此处不再重复导出
+
+// ==================== 通用分页类型 ====================
+
+/**
+ * 分页数据
+ */
+export interface PageData<T> {
+  list: T[];
+  total: number;
+  current: number;
+  pageSize: number;
+}
+
 // ==================== 楼宇相关 ====================
 
 /**
@@ -22,6 +36,8 @@ export interface Building {
   totalFloors?: number;
   totalArea?: number;
   description?: string;
+  longitude?: number;
+  latitude?: number;
   status: BuildingStatus;
   createdAt: string;
   updatedAt: string;

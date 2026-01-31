@@ -133,7 +133,7 @@ const REMARK_FIELD: FieldConfig = {
   placeholder: '备注信息',
 };
 
-function CADPropertyPanel({
+export function CADPropertyPanel({
   selectedElement,
   onUpdate,
   readOnly = false,
@@ -303,5 +303,3 @@ function CADPropertyPanel({
     </Card>
   );
 }
-
-export default CADPropertyPanel;

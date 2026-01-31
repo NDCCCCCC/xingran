@@ -241,7 +241,7 @@ const FloorManagement: FC = () => {
   // 表格列配置
   const columns = createFloorTableColumns({
     onEdit: openModal,
-    onEditFloorPlan,
+    onEditFloorPlan: handleEditFloorPlan,
     onDelete: handleDelete,
   });
 

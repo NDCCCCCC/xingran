@@ -4,15 +4,18 @@
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { message, Modal, Input } from 'antd';
-import CADToolbar from './CADToolbar';
-import CADPropertyPanel from './CADPropertyPanel';
-import CADLayersPanel from './CADLayersPanel';
+import { CADToolbar } from './CADToolbar';
+import { CADPropertyPanel } from './CADPropertyPanel';
+import { CADLayersPanel } from './CADLayersPanel';
 import { WallElement, DoorElement, WorkstationElement, CADTextElement } from '../cad-elements';
 import { useWallDrawing } from '@/hooks/useWallDrawing';
 import { CAD_COLOR_THEME } from './theme';
 import { EDITOR_CONSTANTS, snapToGrid, checkWorkstationCollision, pointToLineDistance, findNearbyWallNode } from './editorUtils';
 import type { FloorPlanData, Wall, Door, EditorMode, Layer, Point, WallType, TextElement } from './types';
 import type { WorkstationNode } from '@/components/shared/FloorPlanEditor.types';
+
+// 拖动阈值（像素）：鼠标移动超过此距离才开始拖动
+const DRAG_THRESHOLD = 5;
 
 export interface CADFloorPlanEditorProps {
   floorId: string;
@@ -26,7 +29,7 @@ export interface CADFloorPlanEditorProps {
   style?: React.CSSProperties;
 }
 
-function CADFloorPlanEditor({
+export function CADFloorPlanEditor({
   floorId,
   floorName,
   walls = [],
@@ -1287,5 +1290,3 @@ function CADFloorPlanEditor({
     </div>
   );
 }
-
-export default CADFloorPlanEditor;

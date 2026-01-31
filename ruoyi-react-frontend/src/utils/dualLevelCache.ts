@@ -1,5 +1,5 @@
 /**
- * 百度地图缓存管理器
+ * 双层缓存管理器
  * 实现 Memory + localStorage 双层缓存
  * 提供缓存统计和管理功能
  */
@@ -13,13 +13,13 @@ const DEFAULT_MEMORY_TTL = 30 * 60 * 1000;
 const DEFAULT_STORAGE_TTL = 7 * 24 * 60 * 60 * 1000;
 
 /** localStorage 存储键前缀 */
-const DEFAULT_STORAGE_PREFIX = 'baidu_map_cache_';
+const DEFAULT_STORAGE_PREFIX = 'dual_level_cache_';
 
 /** 定期清理间隔（5分钟） */
 const CLEANUP_INTERVAL = 5 * 60 * 1000;
 
 /** 日志前缀 */
-const LOG_PREFIX = '[BaiduMapCache]';
+const LOG_PREFIX = '[DualLevelCache]';
 
 // ==================== 类型定义 ====================
 
@@ -220,7 +220,7 @@ class StorageCache<T> {
             localStorage.removeItem(storageKey);
           }
         } catch {
-          // �损坏的条目
+          // 损坏的条目
           localStorage.removeItem(storageKey);
         }
       }
@@ -239,9 +239,9 @@ class StorageCache<T> {
   }
 }
 
-// ==================== 百度地图缓存类 ====================
+// ==================== 双层缓存类 ====================
 
-export class BaiduMapCache<T> {
+export class DualLevelCache<T> {
   private memoryCache: MemoryCache<T>;
   private storageCache: StorageCache<T>;
   private cleanupTimer: ReturnType<typeof setInterval> | null = null;
@@ -408,16 +408,16 @@ export class BaiduMapCache<T> {
 }
 
 // 导出单例实例
-let cacheInstance: BaiduMapCache<any> | null = null;
+let cacheInstance: DualLevelCache<any> | null = null;
 
-export const getBaiduMapCache = <T>(): BaiduMapCache<T> => {
+export const getDualLevelCache = <T>(): DualLevelCache<T> => {
   if (!cacheInstance) {
-    cacheInstance = new BaiduMapCache<T>();
+    cacheInstance = new DualLevelCache<T>();
   }
-  return cacheInstance as BaiduMapCache<T>;
+  return cacheInstance as DualLevelCache<T>;
 };
 
-export const clearBaiduMapCache = (): void => {
+export const clearDualLevelCache = (): void => {
   if (cacheInstance) {
     cacheInstance.destroy();
     cacheInstance = null;

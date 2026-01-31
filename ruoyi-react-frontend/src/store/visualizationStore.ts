@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import type { Building, Floor, Workstation } from '@/types/operations';
+import type { Building, Floor, WorkstationOps } from '@/types/operations';
 
 // 视图层级类型
 export type ViewLevel = 'map' | 'building' | 'floor' | 'workstation';
@@ -33,7 +33,7 @@ interface VisualizationState {
   selectedCity: string | null;
   selectedBuilding: Building | null;
   selectedFloor: Floor | null;
-  selectedWorkstation: Workstation | null;
+  selectedWorkstationOps: WorkstationOps | null;
 
   // 相机状态（3D 视图）
   cameraPosition: [number, number, number];
@@ -52,7 +52,7 @@ interface VisualizationState {
   selectCity: (cityCode: string) => void;
   selectBuilding: (building: Building) => void;
   selectFloor: (floor: Floor) => void;
-  selectWorkstation: (workstation: Workstation) => void;
+  selectWorkstationOps: (workstation: WorkstationOps) => void;
   clearSelection: () => void;
 
   setCameraPosition: (position: [number, number, number]) => void;
@@ -65,7 +65,7 @@ interface VisualizationState {
   // 导航方法
   navigateToBuilding: (building: Building) => void;
   navigateToFloor: (floor: Floor) => void;
-  navigateToWorkstation: (workstation: Workstation) => void;
+  navigateToWorkstationOps: (workstation: WorkstationOps) => void;
   navigateToMap: () => void;
 }
 
@@ -97,7 +97,7 @@ export const useVisualizationStore = create<VisualizationState>()(
       selectedCity: null,
       selectedBuilding: null,
       selectedFloor: null,
-      selectedWorkstation: null,
+      selectedWorkstationOps: null,
 
       cameraPosition: [0, 50, 100],
       cameraTarget: [0, 0, 0],
@@ -128,13 +128,13 @@ export const useVisualizationStore = create<VisualizationState>()(
 
       selectFloor: (floor) => set({ selectedFloor: floor }),
 
-      selectWorkstation: (workstation) => set({ selectedWorkstation: workstation }),
+      selectWorkstationOps: (workstation) => set({ selectedWorkstationOps: workstation }),
 
       clearSelection: () => set({
         selectedCity: null,
         selectedBuilding: null,
         selectedFloor: null,
-        selectedWorkstation: null,
+        selectedWorkstationOps: null,
       }),
 
       // 相机操作
@@ -180,9 +180,9 @@ export const useVisualizationStore = create<VisualizationState>()(
         });
       },
 
-      navigateToWorkstation: (workstation) => {
+      navigateToWorkstationOps: (workstation) => {
         set({
-          selectedWorkstation: workstation,
+          selectedWorkstationOps: workstation,
           viewLevel: 'workstation',
         });
       },
@@ -198,7 +198,7 @@ export const useVisualizationStore = create<VisualizationState>()(
           selectedCity: null,
           selectedBuilding: null,
           selectedFloor: null,
-          selectedWorkstation: null,
+          selectedWorkstationOps: null,
           isTransitioning: true,
         });
       },

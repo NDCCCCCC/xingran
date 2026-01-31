@@ -47,7 +47,7 @@ export interface CADToolbarProps {
   style?: React.CSSProperties;
 }
 
-function CADToolbar({
+export function CADToolbar({
   mode,
   onModeChange,
   onZoomIn,
@@ -155,5 +155,3 @@ function CADToolbar({
     </div>
   );
 }
-
-export default CADToolbar;

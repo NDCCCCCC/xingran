@@ -14,7 +14,7 @@ import {
 } from '@ant-design/icons';
 import type { BuildingItem } from '../types';
 import { useVisualizationStore } from '@/store/visualizationStore';
-import { loadBaiduMapGLScript, isBaiduMapGLLoaded } from './BaiduMapGLScript';
+import { loadBaiduMapGLScript, isBaiduMapGLLoaded } from './BaiduMapScript';
 import {
   BAIDU_MAP_AK,
   MAP_CONFIG,

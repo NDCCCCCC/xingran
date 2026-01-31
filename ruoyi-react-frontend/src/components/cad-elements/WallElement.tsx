@@ -20,7 +20,7 @@ const CONTROL_POINT_RADIUS = 5;
 const CONTROL_POINT_STROKE_WIDTH = 2;
 const CONTROL_POINT_FILL = '#fff';
 
-function WallElement({
+export function WallElement({
   wall,
   selected = false,
   hovered = false,
@@ -97,5 +97,3 @@ function WallElement({
     </g>
   );
 }
-
-export default WallElement;
