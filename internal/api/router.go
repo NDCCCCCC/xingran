@@ -21,7 +21,34 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/permission"
 )
 
-// noticeHubAdapter 适配器，将 websocket.NoticeHub 适配为 scheduler.NoticeHub
+const (
+	// 系统权限常量
+	permSystemConfig = "system:config"
+)
+
+// 常用操作权限集合
+var (
+	buildingPermissions = []string{
+		"ops:building:list",
+		"ops:building:add",
+		"ops:building:edit",
+		"ops:building:delete",
+	}
+	floorPermissions = []string{
+		"ops:floor:list",
+		"ops:floor:add",
+		"ops:floor:edit",
+		"ops:floor:delete",
+	}
+	workstationPermissions = []string{
+		"ops:workstation:list",
+		"ops:workstation:add",
+		"ops:workstation:edit",
+		"ops:workstation:delete",
+	}
+)
+
+// noticeHubAdapter 将 websocket.NoticeHub 适配为 scheduler.NoticeHub 接口
 type noticeHubAdapter struct {
 	hub *websocket.NoticeHub
 }
@@ -32,58 +59,83 @@ func (a *noticeHubAdapter) BroadcastToUsers(userIDs []string, message interface{
 	}
 }
 
-// SetupRouter 设置路由
-func SetupRouter(r *gin.RouterGroup, core *core.Core) {
-	// 添加请求ID中间件
-	r.Use(middleware.RequestID())
-
-	// 创建请求加密器（使用 SM2+SM4 混合加密）
-	// SM4-CBC 加密请求体，SM2 加密 SM4 密钥
+// setupEncryptionMiddlewares 配置请求/响应加密中间件
+func setupEncryptionMiddlewares(r *gin.RouterGroup, core *core.Core) *crypto.RequestEncryptor {
 	var encryptor *crypto.RequestEncryptor
+
 	if core.Config.Security.RequestEncryption.Enabled {
 		sm2PrivateKey, sm2PublicKey := core.JWTManager.GetSM2KeyPair()
 		if sm2PrivateKey != nil && sm2PublicKey != nil {
 			encryptor = crypto.NewRequestEncryptor(sm2PrivateKey, sm2PublicKey)
 			log.Println("请求体加密器已初始化（SM2+SM4 混合加密）")
+
+			decryptionConfig := &middleware.RequestDecryptionConfig{
+				Enabled:           true,
+				ExcludePaths:      core.Config.Security.RequestEncryption.ExcludePaths,
+				RequireEncryption: core.Config.Security.RequestEncryption.RequireEncryption,
+			}
+
+			encryptionConfig := &middleware.ResponseEncryptionConfig{
+				Enabled:      true,
+				ExcludePaths: core.Config.Security.RequestEncryption.ExcludePaths,
+			}
+
+			r.Use(middleware.RequestDecryption(encryptor, decryptionConfig))
+			r.Use(middleware.ResponseEncryption(encryptor, encryptionConfig))
+			log.Println("请求/响应加密中间件已启用")
 		} else {
 			log.Println("警告: SM2 密钥对未配置，无法启用请求体加密")
 		}
 	}
 
-	// 解密配置
-	decryptionConfig := &middleware.RequestDecryptionConfig{
-		Enabled:           core.Config.Security.RequestEncryption.Enabled,
-		ExcludePaths:      core.Config.Security.RequestEncryption.ExcludePaths,
-		RequireEncryption: core.Config.Security.RequestEncryption.RequireEncryption,
-	}
+	return encryptor
+}
 
-	// 响应加密配置
-	encryptionConfig := &middleware.ResponseEncryptionConfig{
-		Enabled:      core.Config.Security.RequestEncryption.Enabled,
-		ExcludePaths: core.Config.Security.RequestEncryption.ExcludePaths,
-	}
-
-	// 添加请求解密中间件（在认证之前）
-	if encryptor != nil && core.Config.Security.RequestEncryption.Enabled {
-		r.Use(middleware.RequestDecryption(encryptor, decryptionConfig))
-		log.Println("请求体解密中间件已启用")
-	}
-
-	// 添加响应加密中间件（在所有路由之后执行）
-	if encryptor != nil && core.Config.Security.RequestEncryption.Enabled {
-		r.Use(middleware.ResponseEncryption(encryptor, encryptionConfig))
-		log.Println("响应体加密中间件已启用")
-	}
-
-	// 创建并启动通知中心
+// setupNoticeHub 初始化通知中心
+func setupNoticeHub(r *gin.RouterGroup, core *core.Core) *websocket.NoticeHub {
 	noticeHub := websocket.NewNoticeHub()
 	go noticeHub.Run()
 	log.Println("通知中心已启动")
-	// 将 NoticeHub 设置到 Core 中，供其他服务使用
+
 	core.NoticeHub = noticeHub
-	// 将 NoticeHub 设置到调度器全局变量，供通知发布定时任务使用
-	// 使用适配器将 websocket.NoticeHub 转换为 scheduler.NoticeHub
 	scheduler.SetNoticeHub(&noticeHubAdapter{hub: noticeHub})
+
+	return noticeHub
+}
+
+// registerCRUDRoutes 注册标准CRUD路由
+func registerCRUDRoutes(group *gin.RouterGroup, handler interface{}) {
+	type CRUDHandler interface {
+		List(c *gin.Context)
+		Create(c *gin.Context)
+		GetByID(c *gin.Context)
+		Update(c *gin.Context)
+		Delete(c *gin.Context)
+	}
+
+	type BatchHandler interface {
+		BatchOperation(c *gin.Context)
+	}
+
+	if h, ok := handler.(CRUDHandler); ok {
+		group.POST("/list", h.List)
+		group.POST("/:id", h.GetByID)
+		group.POST("/:id/update", h.Update)
+		group.POST("/:id/delete", h.Delete)
+		group.POST("", h.Create)
+
+		if bh, batchOk := handler.(BatchHandler); batchOk {
+			group.POST("/batch", bh.BatchOperation)
+		}
+	}
+}
+
+// SetupRouter 设置路由
+func SetupRouter(r *gin.RouterGroup, core *core.Core) {
+	r.Use(middleware.RequestID())
+
+	_ = setupEncryptionMiddlewares(r, core)
+	noticeHub := setupNoticeHub(r, core)
 
 	// 系统管理模块
 	system := r.Group("/system")
@@ -118,13 +170,11 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			}
 
 			// 通知配置管理（需要系统配置权限）
-			notificationConfigs := authorized.Group("/settings")
-			notificationConfigs.Use(middleware.RequirePermissions([]string{
-				string(permission.SystemConfig),
-			}, core))
-			{
-				systemV1.SetupNotificationConfigRouter(notificationConfigs, core)
-			}
+		notificationConfigs := authorized.Group("/settings")
+		notificationConfigs.Use(middleware.RequirePermissions([]string{permSystemConfig}, core))
+		{
+			systemV1.SetupNotificationConfigRouter(notificationConfigs, core)
+		}
 
 			// 用户管理
 			users := authorized.Group("/users")
@@ -345,9 +395,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 
 		// 值班配置管理（所有已登录用户可查看，管理员可修改）
 		dutyConfig := duty.Group("/config")
-		dutyConfig.Use(middleware.RequirePermissions([]string{
-			string(permission.SystemConfig),
-		}, core))
+		dutyConfig.Use(middleware.RequirePermissions([]string{permSystemConfig}, core))
 		{
 			dutyV1.SetupDutyConfigRouter(dutyConfig, core)
 		}
@@ -399,9 +447,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 
 		// 工单配置管理（需要系统配置权限）
 		workorderConfig := workorder.Group("/config")
-		workorderConfig.Use(middleware.RequirePermissions([]string{
-			string(permission.SystemConfig),
-		}, core))
+		workorderConfig.Use(middleware.RequirePermissions([]string{permSystemConfig}, core))
 		{
 			workorderV1.SetupWorkOrderConfigRouter(workorderConfig, core)
 		}

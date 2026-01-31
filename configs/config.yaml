@@ -6,6 +6,7 @@ server:
   mode: "debug"  # debug, release, test
 
 # 数据库配置 - PostgreSQL
+# 环境变量: DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
 database:
   host: "10.62.10.34"
   port: 5432
@@ -15,9 +16,10 @@ database:
   sslmode: "disable"
   max_open_conns: 10
   max_idle_conns: 5
-  max_lifetime: 1800
+  max_lifetime: 1800  # 连接最大生命周期（秒）
 
 # 缓存配置 - 开发环境
+# 环境变量: REDIS_URL, REDIS_PASSWORD
 cache:
   type: "redis"  # redis, memory
   host: "10.62.10.34"
@@ -26,7 +28,7 @@ cache:
   db: 0
   pool_size: 10
   max_size: 1000
-  cleanup_time: 600
+  cleanup_time: 600  # 清理间隔（秒）
 
 # JWT配置
 jwt:
@@ -67,6 +69,6 @@ security:
     require_encryption: false  # 是否强制要求加密（渐进式启用：先设为 false，验证后设为 true）
 
 # 百度地图配置
-# 注意：AK 从环境变量 BAIDU_MAP_AK 读取，或在此配置（不推荐提交到代码仓库）
+# 环境变量: BAIDU_MAP_AK
 baidu:
-  map_ak: "31jIJbkkaQHV6pNXbrQmnOoSrynzalC8"  # 百度地图API Key
+  map_ak: "31jIJbkkaQHV6pNXbrQmnOoSrynzalC8"

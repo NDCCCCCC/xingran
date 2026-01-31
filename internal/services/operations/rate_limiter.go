@@ -5,8 +5,15 @@ import (
 	"time"
 )
 
+const (
+	// BaiduAPIMaxTokens 百度API最大令牌数（每分钟请求数）
+	BaiduAPIMaxTokens = 100
+	// BaiduAPIRefillInterval 百度API令牌填充间隔（600ms = 100次/分钟）
+	BaiduAPIRefillInterval = 600 * time.Millisecond
+)
+
 // RateLimiter 令牌桶限流器
-// 用于控制API调用频率，保护百度地图配额
+// 用于控制API调用频率，保护第三方API配额
 type RateLimiter struct {
 	mu            sync.Mutex
 	maxTokens     int           // 桶容量
@@ -33,22 +40,8 @@ func (rl *RateLimiter) Allow() bool {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 
-	now := time.Now()
-	elapsed := now.Sub(rl.lastRefill)
+	rl.refillTokens()
 
-	// 计算应该补充的令牌数
-	tokensToAdd := int(elapsed / rl.refillRate)
-
-	// 更新令牌数
-	if tokensToAdd > 0 {
-		rl.currentTokens += tokensToAdd
-		if rl.currentTokens > rl.maxTokens {
-			rl.currentTokens = rl.maxTokens
-		}
-		rl.lastRefill = now
-	}
-
-	// 检查是否有可用令牌
 	if rl.currentTokens > 0 {
 		rl.currentTokens--
 		return true
@@ -72,6 +65,26 @@ func (rl *RateLimiter) Reset() {
 	rl.lastRefill = time.Now()
 }
 
+// refillTokens 补充令牌
+func (rl *RateLimiter) refillTokens() {
+	now := time.Now()
+	elapsed := now.Sub(rl.lastRefill)
+	tokensToAdd := int(elapsed / rl.refillRate)
+
+	if tokensToAdd > 0 {
+		rl.currentTokens = min(rl.currentTokens+tokensToAdd, rl.maxTokens)
+		rl.lastRefill = now
+	}
+}
+
+// min 返回两个整数中的较小值
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 // BaiduAPIRateLimiter 百度地图API限流器
 // 每分钟最多100次请求
-var BaiduAPIRateLimiter = NewRateLimiter(100, 600*time.Millisecond)
+var BaiduAPIRateLimiter = NewRateLimiter(BaiduAPIMaxTokens, BaiduAPIRefillInterval)
