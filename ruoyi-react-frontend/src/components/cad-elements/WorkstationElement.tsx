@@ -3,7 +3,7 @@
  * 支持：一字型桌和L型桌，带有显示器、键盘、鼠标等设备符号
  */
 
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { getWorkstationColor } from '@/components/cad-editor/theme';
 import type { WorkstationNode } from '@/components/shared/FloorPlanEditor.types';
 
@@ -17,10 +17,36 @@ export interface WorkstationElementProps {
   style?: React.CSSProperties;
 }
 
-// 工位类型定义
+// 点类型定义
+interface Point {
+  x: number;
+  y: number;
+}
+
+// CAD 标准颜色常量
+const LINE_COLOR = '#2c3e50';
+const DESK_FILL_COLOR = 'rgba(236, 240, 241, 0.8)';
+const DIVIDER_COLOR = '#34495e';
+const DEVICE_STROKE_COLOR = '#5d6d7e';
+const HIGHLIGHT_COLOR = '#1890ff';
+const HOVER_COLOR = '#40a9ff';
+const DEFAULT_COLOR = '#3498db';
+
+// 椅子尺寸常量
+const CHAIR_DIMENSIONS = {
+  width: 32,
+  depth: 32,
+  backrestHeight: 6,
+  armrestWidth: 5,
+  armrestDepth: 10,
+  deskOffset: 12,
+  lShapedRotation: 135 * Math.PI / 180,
+} as const;
+
+// 工位类型
 type DeskType = 'straight' | 'l-shaped';
 
-export const WorkstationElement: React.FC<WorkstationElementProps> = ({
+function WorkstationElement({
   workstation,
   selected = false,
   hovered = false,
@@ -28,19 +54,14 @@ export const WorkstationElement: React.FC<WorkstationElementProps> = ({
   onHover,
   onDoubleClick,
   style,
-}) => {
-  // CAD 标准颜色
-  const lineColor = '#2c3e50'; // 深灰色线条
-  const deskFillColor = 'rgba(236, 240, 241, 0.8)'; // 桌面填充色
-  const dividerColor = '#34495e'; // 隔断颜色
-  const deviceStrokeColor = '#5d6d7e'; // 设备边框色
-  const highlightColor = selected ? '#1890ff' : hovered ? '#40a9ff' : '#3498db';
+}: WorkstationElementProps) {
+  const highlightColor = selected ? HIGHLIGHT_COLOR : hovered ? HOVER_COLOR : DEFAULT_COLOR;
 
-  // 工位尺寸（CAD 标准：毫米）
-  const deskWidth = workstation.width || 160; // 默认1600mm（加宽）
-  const deskDepth = workstation.height || 70; // 默认700mm
-  const rotation = workstation.rotation || 0;
-  const deskType: DeskType = (workstation.type === 1 ? 'l-shaped' : 'straight');
+  const deskWidth = workstation.width ?? 160;
+  const deskDepth = workstation.height ?? 70;
+  const rotation = workstation.rotation ?? 0;
+  const deskType: DeskType = workstation.type === 1 ? 'l-shaped' : 'straight';
+  const isLShaped = deskType === 'l-shaped';
 
   // 计算工位位置
   const geometry = useMemo(() => {
@@ -53,51 +74,73 @@ export const WorkstationElement: React.FC<WorkstationElementProps> = ({
     const sin = Math.sin(angleRad);
 
     // 计算旋转后的点
-    function rotatePoint(x: number, y: number) {
-      const dx = x;
-      const dy = y;
+    function rotatePoint(x: number, y: number): Point {
       return {
-        x: centerX + dx * cos - dy * sin,
-        y: centerY + dx * sin + dy * cos,
+        x: centerX + x * cos - y * sin,
+        y: centerY + x * sin + y * cos,
       };
     }
 
-    // L型桌参数（基于deskDepth计算）
-    const mainWidth = 160; // 主桌面宽度
-    const mainDepth = deskDepth; // 主桌面深度，使用deskDepth
-    const sideWidth = 60; // 侧边桌面宽度
-    const sideDepth = 80; // 侧边桌面深度
+    // 创建旋转后的矩形（辅助函数）
+    function createRotatedRect(x: number, y: number, width: number, height: number): Point[] {
+      const halfW = width / 2;
+      const halfH = height / 2;
+      return [
+        rotatePoint(x - halfW, y - halfH),
+        rotatePoint(x + halfW, y - halfH),
+        rotatePoint(x + halfW, y + halfH),
+        rotatePoint(x - halfW, y + halfH),
+      ];
+    }
 
-    // L型桌坐标（定义在条件块外以便后续使用）
-    // 主桌面：居中放置
-    const mainLeft = -mainWidth / 2; // -80
-    const mainTop = -mainDepth / 2; // -40
-    const mainRight = mainLeft + mainWidth; // 80
-    const mainBottom = mainTop + mainDepth; // 40
-
-    // 侧边桌面：连接在主桌面左侧下方，向右移动60
-    const sideLeft = mainLeft - sideWidth + 60; // -80
-    const sideTop = mainBottom; // 40（紧贴主桌面下边）
-    const sideRight = sideLeft + sideWidth; // -20
-    const sideBottom = sideTop + sideDepth; // 100
-
-    // 椅子和显示器中心位置（在条件块之前定义以便在return中使用）
-    let chairCenterX = 0;
-    let monitorCenterX = 0;
-
-    // 一字型桌：完整矩形
+    // 桌面矩形
     const halfDeskW = deskWidth / 2;
     const halfDeskD = deskDepth / 2;
-    // 定义点类型
-    interface Point {
-      x: number;
-      y: number;
-    }
-    let deskRect: Point[] = [];
-    let lShapeRect: Point[] = [];
+    let deskRect: Point[];
+    let lShapeRect: Point[];
+    let chairCenterX = 0;
+    let monitorCenterX = 0;
+    let chairFrontDeskD: number;
+    let monitorBackDeskD: number;
+    let labelYOffset: number;
 
-    if (deskType === 'straight') {
-      // 一字型桌：单个矩形
+    if (isLShaped) {
+      // L型桌参数
+      const mainWidth = 160;
+      const mainDepth = deskDepth;
+      const sideWidth = 60;
+      const sideDepth = 80;
+      const mainLeft = -mainWidth / 2;
+      const mainTop = -mainDepth / 2;
+      const mainRight = mainLeft + mainWidth;
+      const mainBottom = mainTop + mainDepth;
+      const sideLeft = mainLeft - sideWidth + 60;
+      const sideTop = mainBottom;
+      const sideRight = sideLeft + sideWidth;
+      const sideBottom = sideTop + sideDepth;
+
+      // 主桌面和侧边桌面
+      deskRect = [
+        rotatePoint(mainLeft, mainTop),
+        rotatePoint(mainRight, mainTop),
+        rotatePoint(mainRight, mainBottom),
+        rotatePoint(mainLeft, mainBottom),
+      ];
+      lShapeRect = [
+        rotatePoint(sideLeft, sideTop),
+        rotatePoint(sideRight, sideTop),
+        rotatePoint(sideRight, sideBottom),
+        rotatePoint(sideLeft, sideBottom),
+      ];
+
+      // 椅子和显示器位置
+      chairCenterX = sideRight + 40;
+      monitorCenterX = (mainLeft + mainRight) / 2;
+      chairFrontDeskD = mainBottom + 30;
+      monitorBackDeskD = mainDepth;
+      labelYOffset = sideBottom + 15;
+    } else {
+      // 一字型桌
       deskRect = [
         rotatePoint(-halfDeskW, -halfDeskD),
         rotatePoint(halfDeskW, -halfDeskD),
@@ -107,51 +150,24 @@ export const WorkstationElement: React.FC<WorkstationElementProps> = ({
       lShapeRect = [];
       chairCenterX = 0;
       monitorCenterX = 0;
-    } else {
-      // L型桌：主桌面和侧边桌面连接成L形
-      deskRect = [
-        rotatePoint(mainLeft, mainTop),
-        rotatePoint(mainRight, mainTop),
-        rotatePoint(mainRight, mainBottom),
-        rotatePoint(mainLeft, mainBottom),
-      ];
-
-      lShapeRect = [
-        rotatePoint(sideLeft, sideTop),
-        rotatePoint(sideRight, sideTop),
-        rotatePoint(sideRight, sideBottom),
-        rotatePoint(sideLeft, sideBottom),
-      ];
-
-      // L型桌：椅子在L型转角处，向右下方移动避免重叠
-      chairCenterX = sideRight + 40; // 在侧边桌右边再向右40
-      monitorCenterX = (mainLeft + mainRight) / 2; // 显示器在主桌面中心
-    }
-
-    // 椅子位置计算
-    let chairCenterY = 0;
-    let chairFrontDeskD = halfDeskD; // 椅子前方的桌边深度
-
-    if (deskType === 'straight') {
-      // 一字型桌：椅子位于桌面中心正下方
       chairFrontDeskD = halfDeskD;
-    } else {
-      // L型桌：椅子在转角处，向下移动
-      chairFrontDeskD = mainBottom + 30; // 在主桌面下边再下移30
+      monitorBackDeskD = halfDeskD;
+      labelYOffset = 0; // 将在下面计算
     }
 
-    const chairOffset = 12; // 椅子距离桌边的距离
-    const chairWidth = 32; // 椅子宽度
-    const chairDepth = 32; // 椅子深度
-    chairCenterY = chairFrontDeskD + chairOffset;
+    // 椅子中心Y坐标
+    const chairCenterY = chairFrontDeskD + CHAIR_DIMENSIONS.deskOffset;
+    if (!isLShaped) {
+      labelYOffset = chairCenterY + CHAIR_DIMENSIONS.depth / 2 + 15;
+    }
 
-    // L型桌椅子的额外旋转角度（90度，顺时针）
-    const chairRotation = deskType === 'l-shaped' ? 135 * Math.PI / 180 : 0;
+    // L型桌椅子的额外旋转
+    const chairRotation = isLShaped ? CHAIR_DIMENSIONS.lShapedRotation : 0;
     const chairCos = Math.cos(chairRotation);
     const chairSin = Math.sin(chairRotation);
 
-    // 为L型桌椅子应用旋转的辅助函数
-    function rotateChairPoint(x: number, y: number) {
+    // 椅子局部坐标旋转辅助函数
+    function rotateChairLocal(x: number, y: number): Point {
       const dx = x - chairCenterX;
       const dy = y - chairCenterY;
       return {
@@ -160,188 +176,86 @@ export const WorkstationElement: React.FC<WorkstationElementProps> = ({
       };
     }
 
-    // 椅子矩形（俯视）- 使用世界坐标系
-    // 对于 L 型桌，椅子需要旋转，所以先创建局部坐标的椅子，然后旋转，最后转换为世界坐标
-    const _chairRectLocal = [
-      { x: chairCenterX - chairWidth/2, y: chairCenterY - chairDepth/2 },
-      { x: chairCenterX + chairWidth/2, y: chairCenterY - chairDepth/2 },
-      { x: chairCenterX + chairWidth/2, y: chairCenterY + chairDepth/2 },
-      { x: chairCenterX - chairWidth/2, y: chairCenterY + chairDepth/2 },
+    // 将局部矩形转换为世界坐标的通用函数
+    function toWorldRect(localRect: Point[]): Point[] {
+      let rect = localRect;
+      if (isLShaped) {
+        rect = localRect.map(p => rotateChairLocal(p.x, p.y));
+      }
+      return rect.map(p => rotatePoint(p.x, p.y));
+    }
+
+    // 椅子矩形
+    const { width: chairW, depth: chairD, backrestHeight, armrestWidth, armrestDepth } = CHAIR_DIMENSIONS;
+    const chairRectLocal: Point[] = [
+      { x: chairCenterX - chairW / 2, y: chairCenterY - chairD / 2 },
+      { x: chairCenterX + chairW / 2, y: chairCenterY - chairD / 2 },
+      { x: chairCenterX + chairW / 2, y: chairCenterY + chairD / 2 },
+      { x: chairCenterX - chairW / 2, y: chairCenterY + chairD / 2 },
     ];
+    const chairRect = toWorldRect(chairRectLocal);
 
-    let chairRect: { x: number; y: number }[];
-    if (deskType === 'l-shaped') {
-      // L 型桌：先旋转，再转换为世界坐标
-      const rotatedChairRect = [
-        rotateChairPoint(_chairRectLocal[0].x, _chairRectLocal[0].y),
-        rotateChairPoint(_chairRectLocal[1].x, _chairRectLocal[1].y),
-        rotateChairPoint(_chairRectLocal[2].x, _chairRectLocal[2].y),
-        rotateChairPoint(_chairRectLocal[3].x, _chairRectLocal[3].y),
-      ];
-      // 旋转后的坐标仍然是局部坐标，需要转换为世界坐标
-      chairRect = rotatedChairRect.map(p => rotatePoint(p.x, p.y));
-    } else {
-      // 一字型桌：直接转换为世界坐标
-      chairRect = _chairRectLocal.map(p => rotatePoint(p.x, p.y));
-    }
-
-    // 椅子靠背（上方）
-    const backrestHeight = 6;
-    const _backrestRectLocal = [
-      { x: chairCenterX - chairWidth/2, y: chairCenterY - chairDepth/2 - backrestHeight },
-      { x: chairCenterX + chairWidth/2, y: chairCenterY - chairDepth/2 - backrestHeight },
-      { x: chairCenterX + chairWidth/2, y: chairCenterY - chairDepth/2 },
-      { x: chairCenterX - chairWidth/2, y: chairCenterY - chairDepth/2 },
+    // 椅子靠背
+    const backrestRectLocal: Point[] = [
+      { x: chairCenterX - chairW / 2, y: chairCenterY - chairD / 2 - backrestHeight },
+      { x: chairCenterX + chairW / 2, y: chairCenterY - chairD / 2 - backrestHeight },
+      { x: chairCenterX + chairW / 2, y: chairCenterY - chairD / 2 },
+      { x: chairCenterX - chairW / 2, y: chairCenterY - chairD / 2 },
     ];
+    const backrestRect = toWorldRect(backrestRectLocal);
 
-    let backrestRect: { x: number; y: number }[];
-    if (deskType === 'l-shaped') {
-      const rotatedBackrestRect = [
-        rotateChairPoint(_backrestRectLocal[0].x, _backrestRectLocal[0].y),
-        rotateChairPoint(_backrestRectLocal[1].x, _backrestRectLocal[1].y),
-        rotateChairPoint(_backrestRectLocal[2].x, _backrestRectLocal[2].y),
-        rotateChairPoint(_backrestRectLocal[3].x, _backrestRectLocal[3].y),
-      ];
-      backrestRect = rotatedBackrestRect.map(p => rotatePoint(p.x, p.y));
-    } else {
-      backrestRect = _backrestRectLocal.map(p => rotatePoint(p.x, p.y));
-    }
-
-    // 扶手（左右两侧）
-    const armrestWidth = 5;
-    const armrestDepth = 10;
-    const _leftArmrestLocal = [
-      { x: chairCenterX - chairWidth/2 - armrestWidth/2, y: chairCenterY - armrestDepth/2 },
-      { x: chairCenterX - chairWidth/2 + armrestWidth/2, y: chairCenterY - armrestDepth/2 },
-      { x: chairCenterX - chairWidth/2 + armrestWidth/2, y: chairCenterY + armrestDepth/2 },
-      { x: chairCenterX - chairWidth/2 - armrestWidth/2, y: chairCenterY + armrestDepth/2 },
+    // 左扶手
+    const leftArmrestLocal: Point[] = [
+      { x: chairCenterX - chairW / 2 - armrestWidth / 2, y: chairCenterY - armrestDepth / 2 },
+      { x: chairCenterX - chairW / 2 + armrestWidth / 2, y: chairCenterY - armrestDepth / 2 },
+      { x: chairCenterX - chairW / 2 + armrestWidth / 2, y: chairCenterY + armrestDepth / 2 },
+      { x: chairCenterX - chairW / 2 - armrestWidth / 2, y: chairCenterY + armrestDepth / 2 },
     ];
+    const leftArmrest = toWorldRect(leftArmrestLocal);
 
-    let leftArmrest: { x: number; y: number }[];
-    if (deskType === 'l-shaped') {
-      const rotatedLeftArmrest = [
-        rotateChairPoint(_leftArmrestLocal[0].x, _leftArmrestLocal[0].y),
-        rotateChairPoint(_leftArmrestLocal[1].x, _leftArmrestLocal[1].y),
-        rotateChairPoint(_leftArmrestLocal[2].x, _leftArmrestLocal[2].y),
-        rotateChairPoint(_leftArmrestLocal[3].x, _leftArmrestLocal[3].y),
-      ];
-      leftArmrest = rotatedLeftArmrest.map(p => rotatePoint(p.x, p.y));
-    } else {
-      leftArmrest = _leftArmrestLocal.map(p => rotatePoint(p.x, p.y));
-    }
-
-    const _rightArmrestLocal = [
-      { x: chairCenterX + chairWidth/2 - armrestWidth/2, y: chairCenterY - armrestDepth/2 },
-      { x: chairCenterX + chairWidth/2 + armrestWidth/2, y: chairCenterY - armrestDepth/2 },
-      { x: chairCenterX + chairWidth/2 + armrestWidth/2, y: chairCenterY + armrestDepth/2 },
-      { x: chairCenterX + chairWidth/2 - armrestWidth/2, y: chairCenterY + armrestDepth/2 },
+    // 右扶手
+    const rightArmrestLocal: Point[] = [
+      { x: chairCenterX + chairW / 2 - armrestWidth / 2, y: chairCenterY - armrestDepth / 2 },
+      { x: chairCenterX + chairW / 2 + armrestWidth / 2, y: chairCenterY - armrestDepth / 2 },
+      { x: chairCenterX + chairW / 2 + armrestWidth / 2, y: chairCenterY + armrestDepth / 2 },
+      { x: chairCenterX + chairW / 2 - armrestWidth / 2, y: chairCenterY + armrestDepth / 2 },
     ];
+    const rightArmrest = toWorldRect(rightArmrestLocal);
 
-    let rightArmrest: { x: number; y: number }[];
-    if (deskType === 'l-shaped') {
-      const rotatedRightArmrest = [
-        rotateChairPoint(_rightArmrestLocal[0].x, _rightArmrestLocal[0].y),
-        rotateChairPoint(_rightArmrestLocal[1].x, _rightArmrestLocal[1].y),
-        rotateChairPoint(_rightArmrestLocal[2].x, _rightArmrestLocal[2].y),
-        rotateChairPoint(_rightArmrestLocal[3].x, _rightArmrestLocal[3].y),
-      ];
-      rightArmrest = rotatedRightArmrest.map(p => rotatePoint(p.x, p.y));
-    } else {
-      rightArmrest = _rightArmrestLocal.map(p => rotatePoint(p.x, p.y));
-    }
-
-    // 显示器、键盘、鼠标位置计算
-    let monitorBackDeskD = halfDeskD; // 显示器后方的桌边深度
-    if (deskType === 'straight') {
-      monitorBackDeskD = halfDeskD;
-    } else {
-      // L型桌：显示器在主桌面后端
-      monitorBackDeskD = mainDepth; // 主桌面的深度
-    }
-
-    // 显示器（位于主桌面后端中央）
-    const monitorOffset = monitorBackDeskD - 14; // 距离桌边
-    const monitorWidth = 36;
-    const monitorHeight = 3; // 显示器厚度（俯视图为线）
+    // 显示器、键盘、鼠标（使用辅助函数简化）
+    const monitorOffset = monitorBackDeskD - 14;
     const monitorY = -monitorBackDeskD + monitorOffset;
-    const monitorRect = [
-      rotatePoint(monitorCenterX - monitorWidth/2, monitorY - monitorHeight/2),
-      rotatePoint(monitorCenterX + monitorWidth/2, monitorY - monitorHeight/2),
-      rotatePoint(monitorCenterX + monitorWidth/2, monitorY + monitorHeight/2),
-      rotatePoint(monitorCenterX - monitorWidth/2, monitorY + monitorHeight/2),
-    ];
+    const monitorRect = createRotatedRect(monitorCenterX, monitorY, 36, 3);
 
-    // 显示器支架（小矩形）
-    const standWidth = 6;
-    const standDepth = 6;
-    const standRect = [
-      rotatePoint(monitorCenterX - standWidth/2, monitorY + monitorHeight/2),
-      rotatePoint(monitorCenterX + standWidth/2, monitorY + monitorHeight/2),
-      rotatePoint(monitorCenterX + standWidth/2, monitorY + monitorHeight/2 + standDepth),
-      rotatePoint(monitorCenterX - standWidth/2, monitorY + monitorHeight/2 + standDepth),
-    ];
+    // 显示器支架
+    const standRect = createRotatedRect(monitorCenterX, monitorY + 3 / 2 + 3, 6, 6);
 
-    // 键盘（显示器前方）
+    // 键盘
     const keyboardOffset = monitorOffset + 5;
-    const keyboardWidth = 32;
-    const keyboardDepth = 11;
     const keyboardY = -monitorBackDeskD + keyboardOffset;
-    const keyboardRect = [
-      rotatePoint(monitorCenterX - keyboardWidth/2, keyboardY - keyboardDepth/2),
-      rotatePoint(monitorCenterX + keyboardWidth/2, keyboardY - keyboardDepth/2),
-      rotatePoint(monitorCenterX + keyboardWidth/2, keyboardY + keyboardDepth/2),
-      rotatePoint(monitorCenterX - keyboardWidth/2, keyboardY + keyboardDepth/2),
-    ];
+    const keyboardRect = createRotatedRect(monitorCenterX, keyboardY, 32, 11);
 
-    // 鼠标（键盘右侧）
+    // 鼠标
     const mouseOffset = keyboardOffset + 8;
-    const mouseSize = 5;
     const mouseY = -monitorBackDeskD + mouseOffset;
-    const mouseRect = [
-      rotatePoint(monitorCenterX - mouseSize/2, mouseY - mouseSize/2),
-      rotatePoint(monitorCenterX + mouseSize/2, mouseY - mouseSize/2),
-      rotatePoint(monitorCenterX + mouseSize/2, mouseY + mouseSize/2),
-      rotatePoint(monitorCenterX - mouseSize/2, mouseY + mouseSize/2),
-    ];
+    const mouseRect = createRotatedRect(monitorCenterX, mouseY, 5, 5);
 
-    // 隔断（左右两侧）
+    // 隔断
     const partitionWidth = 3;
-    let leftPartition: typeof deskRect = [];
-    let rightPartition: typeof deskRect = [];
+    let leftPartition: Point[];
+    let rightPartition: Point[];
 
-    if (deskType === 'straight') {
-      // 一字型桌：左右隔断
-      const partitionHeight = deskDepth;
-      leftPartition = [
-        rotatePoint(-halfDeskW - partitionWidth/2, -partitionHeight/2),
-        rotatePoint(-halfDeskW + partitionWidth/2, -partitionHeight/2),
-        rotatePoint(-halfDeskW + partitionWidth/2, partitionHeight/2),
-        rotatePoint(-halfDeskW - partitionWidth/2, partitionHeight/2),
-      ];
-      rightPartition = [
-        rotatePoint(halfDeskW - partitionWidth/2, -partitionHeight/2),
-        rotatePoint(halfDeskW + partitionWidth/2, -partitionHeight/2),
-        rotatePoint(halfDeskW + partitionWidth/2, partitionHeight/2),
-        rotatePoint(halfDeskW - partitionWidth/2, partitionHeight/2),
-      ];
-    } else {
-      // L型桌：不需要隔断
+    if (isLShaped) {
       leftPartition = [];
       rightPartition = [];
-    }
-
-    // 计算标签和状态指示器的位置（使用rotatePoint转换为绝对坐标并应用旋转）
-    // 工位名称：放在工位下方（一字型：椅子下方，L型：侧边桌下方）
-    // 状态指示器：保持在工位上方
-    let labelYOffset = 0;
-    if (deskType === 'l-shaped') {
-      labelYOffset = sideBottom + 15; // L型：侧边桌下方15px
     } else {
-      labelYOffset = chairCenterY + chairDepth/2 + 15; // 一字型：椅子下方15px
+      leftPartition = createRotatedRect(-halfDeskW - partitionWidth / 2, 0, partitionWidth, deskDepth);
+      rightPartition = createRotatedRect(halfDeskW + partitionWidth / 2, 0, partitionWidth, deskDepth);
     }
 
-    const labelPos = rotatePoint(0, labelYOffset); // 标签位置（绝对坐标，已应用旋转）
-    const statusPos = rotatePoint(0, -deskDepth/2 - 15); // 状态指示器位置（绝对坐标，已应用旋转）
+    // 标签和状态指示器位置
+    const labelPos = rotatePoint(0, labelYOffset);
+    const statusPos = rotatePoint(0, -deskDepth / 2 - 15);
 
     return {
       deskRect,
@@ -365,33 +279,44 @@ export const WorkstationElement: React.FC<WorkstationElementProps> = ({
       statusIndicatorX: statusPos.x,
       statusIndicatorY: statusPos.y,
     };
-  }, [workstation.x, workstation.y, workstation.width, workstation.height, workstation.rotation, workstation.type, deskWidth, deskDepth, deskType]);
+  }, [workstation.x, workstation.y, workstation.width, workstation.height, workstation.rotation, workstation.type, deskWidth, deskDepth, isLShaped]);
 
-  const handleMouseEnter = () => {
+  const handleMouseEnter = useCallback(() => {
     onHover?.(true);
-  };
+  }, [onHover]);
 
-  const handleMouseLeave = () => {
+  const handleMouseLeave = useCallback(() => {
     onHover?.(false);
+  }, [onHover]);
+
+  // 生成多边形路径字符串的辅助函数
+  const toPointsString = function(points: Point[]): string {
+    return points.map((p) => `${p.x},${p.y}`).join(' ');
   };
 
-  // 生成多边形路径字符串
-  const deskPoints = geometry.deskRect.map((p) => `${p.x},${p.y}`).join(' ');
-  const lShapePoints = geometry.lShapeRect.map((p) => `${p.x},${p.y}`).join(' ');
-  const chairPoints = geometry.chairRect.map((p) => `${p.x},${p.y}`).join(' ');
-  const backrestPoints = geometry.backrestRect.map((p) => `${p.x},${p.y}`).join(' ');
-  const leftArmrestPoints = geometry.leftArmrest.map((p) => `${p.x},${p.y}`).join(' ');
-  const rightArmrestPoints = geometry.rightArmrest.map((p) => `${p.x},${p.y}`).join(' ');
-  const monitorPoints = geometry.monitorRect.map((p) => `${p.x},${p.y}`).join(' ');
-  const standPoints = geometry.standRect.map((p) => `${p.x},${p.y}`).join(' ');
-  const keyboardPoints = geometry.keyboardRect.map((p) => `${p.x},${p.y}`).join(' ');
-  const mousePoints = geometry.mouseRect.map((p) => `${p.x},${p.y}`).join(' ');
-  const leftPartitionPoints = geometry.leftPartition.map((p) => `${p.x},${p.y}`).join(' ');
-  const rightPartitionPoints = geometry.rightPartition.map((p) => `${p.x},${p.y}`).join(' ');
+  // 生成所有路径字符串
+  const deskPoints = toPointsString(geometry.deskRect);
+  const lShapePoints = toPointsString(geometry.lShapeRect);
+  const chairPoints = toPointsString(geometry.chairRect);
+  const backrestPoints = toPointsString(geometry.backrestRect);
+  const leftArmrestPoints = toPointsString(geometry.leftArmrest);
+  const rightArmrestPoints = toPointsString(geometry.rightArmrest);
+  const monitorPoints = toPointsString(geometry.monitorRect);
+  const standPoints = toPointsString(geometry.standRect);
+  const keyboardPoints = toPointsString(geometry.keyboardRect);
+  const mousePoints = toPointsString(geometry.mouseRect);
+  const leftPartitionPoints = toPointsString(geometry.leftPartition);
+  const rightPartitionPoints = toPointsString(geometry.rightPartition);
+
+  const containerClassName = [
+    'cad-workstation',
+    selected && 'cad-workstation-selected',
+    hovered && 'cad-workstation-hovered',
+  ].filter(Boolean).join(' ');
 
   return (
     <g
-      className={`cad-workstation ${selected ? 'cad-workstation-selected' : ''} ${hovered ? 'cad-workstation-hovered' : ''}`}
+      className={containerClassName}
       onClick={onSelect}
       onDoubleClick={onDoubleClick}
       onMouseEnter={handleMouseEnter}
@@ -399,11 +324,11 @@ export const WorkstationElement: React.FC<WorkstationElementProps> = ({
       style={style}
     >
       {/* L型桌面 */}
-      {deskType === 'l-shaped' && (
+      {isLShaped && (
         <polygon
           points={lShapePoints}
-          fill={deskFillColor}
-          stroke={selected ? highlightColor : lineColor}
+          fill={DESK_FILL_COLOR}
+          stroke={highlightColor}
           strokeWidth={selected ? 2 : 1.2}
           style={{ pointerEvents: 'none' }}
         />
@@ -412,8 +337,8 @@ export const WorkstationElement: React.FC<WorkstationElementProps> = ({
       {/* 主桌面 */}
       <polygon
         points={deskPoints}
-        fill={deskFillColor}
-        stroke={selected ? highlightColor : lineColor}
+        fill={DESK_FILL_COLOR}
+        stroke={highlightColor}
         strokeWidth={selected ? 2 : 1.2}
         style={{ cursor: 'pointer' }}
       />
@@ -422,7 +347,7 @@ export const WorkstationElement: React.FC<WorkstationElementProps> = ({
       <polygon
         points={deskPoints}
         fill="none"
-        stroke={lineColor}
+        stroke={LINE_COLOR}
         strokeWidth={0.4}
         strokeDasharray="2,2"
         opacity={0.25}
@@ -430,11 +355,10 @@ export const WorkstationElement: React.FC<WorkstationElementProps> = ({
       />
 
       {/* 隔断（左右两侧） */}
-      {/* 隔断（左右两侧） */}
       {leftPartitionPoints && (
         <polygon
           points={leftPartitionPoints}
-          fill={dividerColor}
+          fill={DIVIDER_COLOR}
           stroke="none"
           style={{ pointerEvents: 'none' }}
         />
@@ -442,7 +366,7 @@ export const WorkstationElement: React.FC<WorkstationElementProps> = ({
       {rightPartitionPoints && (
         <polygon
           points={rightPartitionPoints}
-          fill={dividerColor}
+          fill={DIVIDER_COLOR}
           stroke="none"
           style={{ pointerEvents: 'none' }}
         />
@@ -451,7 +375,7 @@ export const WorkstationElement: React.FC<WorkstationElementProps> = ({
       {/* 显示器支架 */}
       <polygon
         points={standPoints}
-        fill={deviceStrokeColor}
+        fill={DEVICE_STROKE_COLOR}
         stroke="none"
         style={{ pointerEvents: 'none' }}
       />
@@ -462,7 +386,7 @@ export const WorkstationElement: React.FC<WorkstationElementProps> = ({
         y={geometry.monitorRect[0].y}
         width={Math.abs(geometry.monitorRect[1].x - geometry.monitorRect[0].x)}
         height={Math.abs(geometry.monitorRect[1].y - geometry.monitorRect[0].y)}
-        fill={selected ? highlightColor : deviceStrokeColor}
+        fill={highlightColor}
         stroke="none"
         rx={1}
         style={{ pointerEvents: 'none' }}
@@ -472,7 +396,7 @@ export const WorkstationElement: React.FC<WorkstationElementProps> = ({
       <polygon
         points={keyboardPoints}
         fill="none"
-        stroke={deviceStrokeColor}
+        stroke={DEVICE_STROKE_COLOR}
         strokeWidth={0.6}
         style={{ pointerEvents: 'none' }}
       />
@@ -481,38 +405,35 @@ export const WorkstationElement: React.FC<WorkstationElementProps> = ({
       <polygon
         points={mousePoints}
         fill="none"
-        stroke={deviceStrokeColor}
+        stroke={DEVICE_STROKE_COLOR}
         strokeWidth={0.5}
         style={{ pointerEvents: 'none' }}
       />
 
-      {/* 椅子 - 位于桌面前方（CAD图的下方） */}
+      {/* 椅子 */}
       <g style={{ pointerEvents: 'none' }}>
-        {/* 椅子靠背 */}
         <polygon
           points={backrestPoints}
-          fill={deviceStrokeColor}
-          stroke={lineColor}
+          fill={DEVICE_STROKE_COLOR}
+          stroke={LINE_COLOR}
           strokeWidth={0.8}
         />
-        {/* 椅子座位 */}
         <polygon
           points={chairPoints}
           fill="rgba(52, 152, 219, 0.2)"
-          stroke={deviceStrokeColor}
+          stroke={DEVICE_STROKE_COLOR}
           strokeWidth={0.8}
         />
-        {/* 扶手 */}
         <polygon
           points={leftArmrestPoints}
-          fill={deviceStrokeColor}
-          stroke={lineColor}
+          fill={DEVICE_STROKE_COLOR}
+          stroke={LINE_COLOR}
           strokeWidth={0.5}
         />
         <polygon
           points={rightArmrestPoints}
-          fill={deviceStrokeColor}
-          stroke={lineColor}
+          fill={DEVICE_STROKE_COLOR}
+          stroke={LINE_COLOR}
           strokeWidth={0.5}
         />
       </g>
@@ -522,7 +443,7 @@ export const WorkstationElement: React.FC<WorkstationElementProps> = ({
         <text
           x={geometry.labelCenterX}
           y={geometry.labelCenterY}
-          fill={selected ? highlightColor : lineColor}
+          fill={highlightColor}
           fontSize={12}
           fontWeight="500"
           textAnchor="middle"
@@ -533,18 +454,16 @@ export const WorkstationElement: React.FC<WorkstationElementProps> = ({
         </text>
       )}
 
-      {/* 状态指示器 - CAD 标准符号 */}
+      {/* 状态指示器 */}
       <g style={{ pointerEvents: 'none' }}>
-        {/* 状态圆圈 */}
         <circle
           cx={geometry.statusIndicatorX}
           cy={geometry.statusIndicatorY}
           r={7}
-          fill={selected ? highlightColor : getWorkstationColor(workstation, selected, hovered)}
-          stroke={lineColor}
+          fill={highlightColor}
+          stroke={LINE_COLOR}
           strokeWidth={1}
         />
-        {/* 状态文字 */}
         <text
           x={geometry.statusIndicatorX}
           y={geometry.statusIndicatorY}
@@ -568,19 +487,18 @@ export const WorkstationElement: React.FC<WorkstationElementProps> = ({
               cy={point.y}
               r={3.5}
               fill="#fff"
-              stroke="#1890ff"
+              stroke={HIGHLIGHT_COLOR}
               strokeWidth={1.5}
               className="cad-workstation-control-point"
               style={{ cursor: 'move' }}
             />
           ))}
-          {/* 中心控制点 */}
           <circle
             cx={geometry.centerX}
             cy={geometry.centerY}
             r={4}
             fill="#fff"
-            stroke="#1890ff"
+            stroke={HIGHLIGHT_COLOR}
             strokeWidth={2}
             className="cad-workstation-center-point"
             style={{ cursor: 'grab' }}
@@ -588,7 +506,7 @@ export const WorkstationElement: React.FC<WorkstationElementProps> = ({
         </>
       )}
 
-      {/* 方向指示器（有旋转时显示） */}
+      {/* 方向指示器 */}
       {rotation !== 0 && (
         <g style={{ pointerEvents: 'none' }}>
           <line
@@ -596,18 +514,18 @@ export const WorkstationElement: React.FC<WorkstationElementProps> = ({
             y1={geometry.labelCenterY - 5}
             x2={geometry.labelCenterX}
             y2={geometry.labelCenterY - 20}
-            stroke={lineColor}
+            stroke={LINE_COLOR}
             strokeWidth={1}
           />
           <polygon
             points={`${geometry.labelCenterX},${geometry.labelCenterY - 23} ${geometry.labelCenterX - 3},${geometry.labelCenterY - 16} ${geometry.labelCenterX + 3},${geometry.labelCenterY - 16}`}
-            fill={lineColor}
+            fill={LINE_COLOR}
           />
         </g>
       )}
     </g>
   );
-};
+}
 
 export default WorkstationElement;
 

@@ -2,7 +2,7 @@
  * CAD 楼层平面图编辑器主组件
  */
 
-import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { message, Modal, Input } from 'antd';
 import CADToolbar from './CADToolbar';
 import CADPropertyPanel from './CADPropertyPanel';
@@ -10,6 +10,7 @@ import CADLayersPanel from './CADLayersPanel';
 import { WallElement, DoorElement, WorkstationElement, CADTextElement } from '../cad-elements';
 import { useWallDrawing } from '@/hooks/useWallDrawing';
 import { CAD_COLOR_THEME } from './theme';
+import { EDITOR_CONSTANTS, snapToGrid, checkWorkstationCollision, pointToLineDistance, findNearbyWallNode } from './editorUtils';
 import type { FloorPlanData, Wall, Door, EditorMode, Layer, Point, WallType, TextElement } from './types';
 import type { WorkstationNode } from '@/components/shared/FloorPlanEditor.types';
 
@@ -25,82 +26,7 @@ export interface CADFloorPlanEditorProps {
   style?: React.CSSProperties;
 }
 
-const DEFAULT_GRID_SIZE = 20;
-const DEFAULT_CANVAS_SIZE = { width: 2000, height: 2000 };
-const MIN_WORKSTATION_SPACING = 20; // 工位之间最小间距（像素）
-const MIN_SCALE = 0.1;
-const MAX_SCALE = 5;
-const ZOOM_STEP = 0.1;
-
-// ==================== 辅助函数 ====================
-
-/**
- * 将坐标吸附到网格
- * @param coordinate 原始坐标
- * @param gridSize 网格大小
- * @returns 吸附后的坐标
- */
-function snapToGrid(coordinate: number, gridSize: number): number {
-  return Math.round(coordinate / gridSize) * gridSize;
-}
-
-/**
- * 检查两个矩形是否碰撞（考虑最小间距）
- * @param rect1 第一个矩形 {x, y, width, height}，中心坐标
- * @param rect2 第二个矩形 {x, y, width, height}，中心坐标
- * @param minSpacing 最小间距
- * @returns 是否碰撞
- */
-function checkRectCollision(
-  rect1: { x: number; y: number; width: number; height: number },
-  rect2: { x: number; y: number; width: number; height: number },
-  minSpacing: number
-): boolean {
-  // 计算两个矩形的边界（包含间距）
-  const rect1Left = rect1.x - rect1.width / 2 - minSpacing;
-  const rect1Right = rect1.x + rect1.width / 2 + minSpacing;
-  const rect1Top = rect1.y - rect1.height / 2 - minSpacing;
-  const rect1Bottom = rect1.y + rect1.height / 2 + minSpacing;
-
-  const rect2Left = rect2.x - rect2.width / 2;
-  const rect2Right = rect2.x + rect2.width / 2;
-  const rect2Top = rect2.y - rect2.height / 2;
-  const rect2Bottom = rect2.y + rect2.height / 2;
-
-  // 检查是否重叠
-  return !(
-    rect1Right < rect2Left ||
-    rect1Left > rect2Right ||
-    rect1Bottom < rect2Top ||
-    rect1Top > rect2Bottom
-  );
-}
-
-/**
- * 检查工位是否与现有工位碰撞
- * @param workstation 要检查的工位
- * @param existingWorkstations 现有工位列表
- * @param excludeId 要排除的工位ID（用于拖动时排除自身）
- * @returns 是否碰撞
- */
-function checkWorkstationCollision(
-  workstation: { x: number; y: number; width: number; height: number },
-  existingWorkstations: Array<{ id: string; x: number; y: number; width: number; height: number }>,
-  excludeId?: string
-): boolean {
-  for (const ws of existingWorkstations) {
-    // 跳过自身（用于拖动时的碰撞检测）
-    if (excludeId && ws.id === excludeId) {
-      continue;
-    }
-    if (checkRectCollision(workstation, ws, MIN_WORKSTATION_SPACING)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-export const CADFloorPlanEditor: React.FC<CADFloorPlanEditorProps> = ({
+function CADFloorPlanEditor({
   floorId,
   floorName,
   walls = [],
@@ -110,24 +36,22 @@ export const CADFloorPlanEditor: React.FC<CADFloorPlanEditorProps> = ({
   onSave,
   readOnly = false,
   style,
-}) => {
+}: CADFloorPlanEditorProps) {
   // ==================== 状态 ====================
   const [mode, setMode] = useState<EditorMode>('select');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<'wall' | 'door' | 'workstation' | 'text' | null>(null);
-  // 多选状态
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState<Point>({ x: 0, y: 0 });
   const [history, setHistory] = useState<FloorPlanData[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
-  // 文本输入对话框状态
   const [textInputVisible, setTextInputVisible] = useState(false);
   const [textInputPosition, setTextInputPosition] = useState<Point | null>(null);
   const [tempTextContent, setTempTextContent] = useState('');
 
-  // 图层状态管理
+  // 图层状态
   const [layers, setLayers] = useState<Layer[]>([
     { id: 'grid', name: '网格', type: 'grid', visible: true, locked: true, opacity: 1 },
     { id: 'wall', name: '墙体', type: 'wall', visible: true, locked: false, opacity: 1 },
@@ -140,37 +64,30 @@ export const CADFloorPlanEditor: React.FC<CADFloorPlanEditorProps> = ({
   const [floorPlanData, setFloorPlanData] = useState<FloorPlanData>({
     floorId,
     floorName,
-    width: DEFAULT_CANVAS_SIZE.width,
-    height: DEFAULT_CANVAS_SIZE.height,
+    width: EDITOR_CONSTANTS.DEFAULT_CANVAS_WIDTH,
+    height: EDITOR_CONSTANTS.DEFAULT_CANVAS_HEIGHT,
     walls,
     doors,
     workstations,
     texts: texts || [],
-    gridSize: DEFAULT_GRID_SIZE,
+    gridSize: EDITOR_CONSTANTS.DEFAULT_GRID_SIZE,
     showGrid: true,
     snapToGrid: true,
   });
 
-const DRAG_THRESHOLD = 5; // 拖动阈值（像素），只有移动超过这个距离才算拖拽
-
+  // 拖动和交互状态
   const svgRef = useRef<SVGSVGElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState<Point | null>(null);
   const [lastMousePos, setLastMousePos] = useState<Point | null>(null);
   const [isAltPressed, setIsAltPressed] = useState(false);
-  const lastElementMouseCanvasPos = useRef<Point | null>(null); // 存储上一次鼠标的画布坐标
-  const dragStartCanvasPos = useRef<Point | null>(null); // 拖动开始的画布坐标
-  const hasMovedBeyondThreshold = useRef<boolean>(false); // 是否已超过拖动阈值
-
-  // 拖动元素状态（单个或批量）
+  const lastElementMouseCanvasPos = useRef<Point | null>(null);
+  const dragStartCanvasPos = useRef<Point | null>(null);
+  const hasMovedBeyondThreshold = useRef<boolean>(false);
   const [draggedElement, setDraggedElement] = useState<{ id: string; type: 'wall' | 'door' | 'workstation' | 'text' } | null>(null);
-
-  // 框选状态
   const [isBoxSelecting, setIsBoxSelecting] = useState(false);
   const [boxSelectStart, setBoxSelectStart] = useState<Point | null>(null);
   const [boxSelectEnd, setBoxSelectEnd] = useState<Point | null>(null);
-
-  // 当前正在编辑的墙体ID
   const [editingWallId, setEditingWallId] = useState<string | null>(null);
 
   // ==================== 墙体绘制 ====================
@@ -257,11 +174,11 @@ const DRAG_THRESHOLD = 5; // 拖动阈值（像素），只有移动超过这个
 
   // ==================== 视图操作 ====================
   const handleZoomIn = useCallback(() => {
-    setScale((prev) => Math.min(prev + ZOOM_STEP, MAX_SCALE));
+    setScale((prev) => Math.min(prev + EDITOR_CONSTANTS.ZOOM_STEP, EDITOR_CONSTANTS.MAX_SCALE));
   }, []);
 
   const handleZoomOut = useCallback(() => {
-    setScale((prev) => Math.max(prev - ZOOM_STEP, MIN_SCALE));
+    setScale((prev) => Math.max(prev - EDITOR_CONSTANTS.ZOOM_STEP, EDITOR_CONSTANTS.MIN_SCALE));
   }, []);
 
   const handleResetView = useCallback(() => {
@@ -269,42 +186,32 @@ const DRAG_THRESHOLD = 5; // 拖动阈值（像素），只有移动超过这个
     setOffset({ x: 0, y: 0 });
   }, []);
 
-  // Alt + 鼠标滚轮缩放（使用原生事件监听器以支持 passive: false）
+  // Alt + 鼠标滚轮缩放
   useEffect(() => {
     const svgElement = svgRef.current;
     if (!svgElement) return;
 
     const handleWheel = (e: WheelEvent) => {
-      // 只有按住 Alt 键时才响应滚轮缩放
-      if (!e.altKey) {
-        return;
-      }
+      if (!e.altKey) return;
 
-      // 阻止默认滚动行为
       e.preventDefault();
 
-      // deltaY < 0 = 向上滚动 = 放大
-      // deltaY > 0 = 向下滚动 = 缩小
-      const zoomDelta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
+      const zoomDelta = e.deltaY > 0 ? -EDITOR_CONSTANTS.ZOOM_STEP : EDITOR_CONSTANTS.ZOOM_STEP;
 
       setScale((prevScale) => {
-        const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, prevScale + zoomDelta));
+        const newScale = Math.max(
+          EDITOR_CONSTANTS.MIN_SCALE,
+          Math.min(EDITOR_CONSTANTS.MAX_SCALE, prevScale + zoomDelta)
+        );
 
-        // 可选：实现以鼠标位置为中心的缩放
-        // 计算鼠标在画布坐标系中的位置
         const rect = svgRef.current?.getBoundingClientRect();
         if (rect) {
           const mouseX = e.clientX - rect.left;
           const mouseY = e.clientY - rect.top;
-
-          // 计算缩放前鼠标在画布中的位置（画布坐标）
           const canvasX = (mouseX - offset.x) / prevScale;
           const canvasY = (mouseY - offset.y) / prevScale;
-
-          // 计算缩放后新的 offset，使鼠标指向的画布位置保持不变
           const newOffsetX = mouseX - canvasX * newScale;
           const newOffsetY = mouseY - canvasY * newScale;
-
           setOffset({ x: newOffsetX, y: newOffsetY });
         }
 
@@ -312,7 +219,6 @@ const DRAG_THRESHOLD = 5; // 拖动阈值（像素），只有移动超过这个
       });
     };
 
-    // 添加事件监听器，设置 passive: false 以允许 preventDefault
     svgElement.addEventListener('wheel', handleWheel, { passive: false });
 
     return () => {
@@ -1380,39 +1286,6 @@ const DRAG_THRESHOLD = 5; // 拖动阈值（像素），只有移动超过这个
       </Modal>
     </div>
   );
-};
-
-// 辅助函数：计算点到线段的距离
-function pointToLineDistance(point: Point, lineStart: Point, lineEnd: Point): number {
-  const A = point.x - lineStart.x;
-  const B = point.y - lineStart.y;
-  const C = lineEnd.x - lineStart.x;
-  const D = lineEnd.y - lineStart.y;
-
-  const dot = A * C + B * D;
-  const lenSq = C * C + D * D;
-  let param = -1;
-
-  if (lenSq !== 0) {
-    param = dot / lenSq;
-  }
-
-  let xx: number, yy: number;
-
-  if (param < 0) {
-    xx = lineStart.x;
-    yy = lineStart.y;
-  } else if (param > 1) {
-    xx = lineEnd.x;
-    yy = lineEnd.y;
-  } else {
-    xx = lineStart.x + param * C;
-    yy = lineStart.y + param * D;
-  }
-
-  const dx = point.x - xx;
-  const dy = point.y - yy;
-  return Math.sqrt(dx * dx + dy * dy);
 }
 
 export default CADFloorPlanEditor;

@@ -2,7 +2,7 @@
  * 文本元素组件
  */
 
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import type { TextElement } from '@/components/cad-editor/types';
 
 export interface TextElementProps {
@@ -15,7 +15,15 @@ export interface TextElementProps {
   style?: React.CSSProperties;
 }
 
-export const CADTextElement: React.FC<TextElementProps> = ({
+const DEFAULT_FONT_SIZE = 14;
+const DEFAULT_FONT_COLOR = '#333333';
+const DEFAULT_FONT_FAMILY = 'Arial, sans-serif';
+const SELECTION_BG_COLOR = 'rgba(24, 144, 255, 0.1)';
+const SELECTION_BORDER_COLOR = '#1890ff';
+const CONTROL_POINT_RADIUS = 4;
+const CONTROL_POINT_STROKE_WIDTH = 2;
+
+function CADTextElement({
   text,
   selected = false,
   hovered = false,
@@ -23,36 +31,58 @@ export const CADTextElement: React.FC<TextElementProps> = ({
   onHover,
   onDoubleClick,
   style,
-}) => {
+}: TextElementProps) {
+  const fontSize = text.fontSize ?? DEFAULT_FONT_SIZE;
+  const textColor = text.color ?? DEFAULT_FONT_COLOR;
+
   const textStyle = useMemo(() => ({
-    fill: text.color || '#333333',
-    fontSize: text.fontSize || 14,
-    fontFamily: text.fontFamily || 'Arial, sans-serif',
-    fontWeight: text.fontWeight || 'normal',
-    fontStyle: text.fontStyle || 'normal',
+    fill: textColor,
+    fontSize,
+    fontFamily: text.fontFamily ?? DEFAULT_FONT_FAMILY,
+    fontWeight: text.fontWeight ?? 'normal',
+    fontStyle: text.fontStyle ?? 'normal',
     cursor: 'pointer',
-    userSelect: 'none',
-  }), [text]);
+    userSelect: 'none' as const,
+  }), [textColor, fontSize, text.fontFamily, text.fontWeight, text.fontStyle]);
 
   const transform = useMemo(() => {
-    const transforms = [];
-    if (text.angle) {
-      transforms.push(`rotate(${text.angle} ${text.position.x} ${text.position.y})`);
-    }
-    return transforms.join(' ');
+    if (!text.angle) return '';
+    return `rotate(${text.angle} ${text.position.x} ${text.position.y})`;
   }, [text.angle, text.position]);
 
-  const handleMouseEnter = () => {
+  const handleMouseEnter = useCallback(() => {
     onHover?.(true);
-  };
+  }, [onHover]);
 
-  const handleMouseLeave = () => {
+  const handleMouseLeave = useCallback(() => {
     onHover?.(false);
-  };
+  }, [onHover]);
+
+  const containerClassName = [
+    'cad-text',
+    selected && 'cad-text-selected',
+    hovered && 'cad-text-hovered',
+  ].filter(Boolean).join(' ');
+
+  // 选中背景的尺寸计算
+  const selectionBg = useMemo(() => {
+    if (!selected) return null;
+
+    const textWidth = text.content.length * fontSize * 0.6;
+    const padding = 5;
+    const height = fontSize * 1.2;
+
+    return {
+      x: text.position.x - padding,
+      y: text.position.y - fontSize,
+      width: textWidth + padding * 2,
+      height,
+    };
+  }, [selected, text.content, text.position, fontSize]);
 
   return (
     <g
-      className={`cad-text ${selected ? 'cad-text-selected' : ''} ${hovered ? 'cad-text-hovered' : ''}`}
+      className={containerClassName}
       onClick={onSelect}
       onDoubleClick={onDoubleClick}
       onMouseEnter={handleMouseEnter}
@@ -60,22 +90,20 @@ export const CADTextElement: React.FC<TextElementProps> = ({
       style={style}
       transform={transform}
     >
-      {/* 选中状态背景 */}
-      {selected && (
+      {selectionBg && (
         <rect
-          x={text.position.x - 5}
-          y={text.position.y - (text.fontSize || 14)}
-          width={text.content.length * (text.fontSize || 14) * 0.6 + 10}
-          height={(text.fontSize || 14) * 1.2}
-          fill="rgba(24, 144, 255, 0.1)"
-          stroke="#1890ff"
+          x={selectionBg.x}
+          y={selectionBg.y}
+          width={selectionBg.width}
+          height={selectionBg.height}
+          fill={SELECTION_BG_COLOR}
+          stroke={SELECTION_BORDER_COLOR}
           strokeWidth={1}
           strokeDasharray="3,3"
           style={{ pointerEvents: 'none' }}
         />
       )}
 
-      {/* 文本内容 */}
       <text
         x={text.position.x}
         y={text.position.y}
@@ -86,20 +114,19 @@ export const CADTextElement: React.FC<TextElementProps> = ({
         {text.content}
       </text>
 
-      {/* 选中状态的控制点 */}
       {selected && (
         <circle
           cx={text.position.x}
           cy={text.position.y}
-          r={4}
+          r={CONTROL_POINT_RADIUS}
           fill="#fff"
-          stroke="#1890ff"
-          strokeWidth={2}
+          stroke={SELECTION_BORDER_COLOR}
+          strokeWidth={CONTROL_POINT_STROKE_WIDTH}
           style={{ cursor: 'move' }}
         />
       )}
     </g>
   );
-};
+}
 
 export default CADTextElement;

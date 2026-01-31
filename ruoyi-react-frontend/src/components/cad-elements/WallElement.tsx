@@ -2,7 +2,7 @@
  * 墙体元素组件
  */
 
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { getWallColor } from '@/components/cad-editor/theme';
 import type { Wall } from '@/components/cad-editor/types';
 
@@ -16,7 +16,11 @@ export interface WallElementProps {
   style?: React.CSSProperties;
 }
 
-export const WallElement: React.FC<WallElementProps> = ({
+const CONTROL_POINT_RADIUS = 5;
+const CONTROL_POINT_STROKE_WIDTH = 2;
+const CONTROL_POINT_FILL = '#fff';
+
+function WallElement({
   wall,
   selected = false,
   hovered = false,
@@ -24,7 +28,7 @@ export const WallElement: React.FC<WallElementProps> = ({
   onHover,
   onDoubleClick,
   style,
-}) => {
+}: WallElementProps) {
   const color = useMemo(
     () => getWallColor(wall, selected, hovered),
     [wall, selected, hovered]
@@ -33,35 +37,36 @@ export const WallElement: React.FC<WallElementProps> = ({
   const pathData = useMemo(() => {
     if (wall.points.length === 0) return '';
 
-    const first = wall.points[0];
-    let path = `M ${first.x} ${first.y}`;
-
-    for (let i = 1; i < wall.points.length; i++) {
-      const point = wall.points[i];
-      path += ` L ${point.x} ${point.y}`;
-    }
+    const points = wall.points;
+    const path = `M ${points[0].x} ${points[0].y}` +
+      points.slice(1).map(p => ` L ${p.x} ${p.y}`).join('');
 
     return path;
   }, [wall.points]);
 
-  const handleMouseEnter = () => {
+  const handleMouseEnter = useCallback(() => {
     onHover?.(true);
-  };
+  }, [onHover]);
 
-  const handleMouseLeave = () => {
+  const handleMouseLeave = useCallback(() => {
     onHover?.(false);
-  };
+  }, [onHover]);
+
+  const containerClassName = [
+    'cad-wall',
+    selected && 'cad-wall-selected',
+    hovered && 'cad-wall-hovered',
+  ].filter(Boolean).join(' ');
 
   return (
     <g
-      className={`cad-wall ${selected ? 'cad-wall-selected' : ''} ${hovered ? 'cad-wall-hovered' : ''}`}
+      className={containerClassName}
       onClick={onSelect}
       onDoubleClick={onDoubleClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       style={style}
     >
-      {/* 墙体轮廓 */}
       <path
         d={pathData}
         stroke={color}
@@ -72,7 +77,6 @@ export const WallElement: React.FC<WallElementProps> = ({
         style={{ cursor: 'pointer' }}
       />
 
-      {/* 选中状态下的控制点 */}
       {selected && wall.points.length > 0 && (
         <>
           {wall.points.map((point, index) => (
@@ -80,10 +84,10 @@ export const WallElement: React.FC<WallElementProps> = ({
               key={index}
               cx={point.x}
               cy={point.y}
-              r={5}
-              fill="#fff"
+              r={CONTROL_POINT_RADIUS}
+              fill={CONTROL_POINT_FILL}
               stroke={color}
-              strokeWidth={2}
+              strokeWidth={CONTROL_POINT_STROKE_WIDTH}
               className="cad-wall-control-point"
               style={{ cursor: 'move' }}
             />
@@ -92,6 +96,6 @@ export const WallElement: React.FC<WallElementProps> = ({
       )}
     </g>
   );
-};
+}
 
 export default WallElement;

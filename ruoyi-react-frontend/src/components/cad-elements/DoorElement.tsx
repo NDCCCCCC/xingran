@@ -2,9 +2,8 @@
  * 门元素组件 - CAD 标准制图样式
  */
 
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { getDoorColor } from '@/components/cad-editor/theme';
-import { rotatePoint } from '@/utils/cad/geometry';
 import type { Door } from '@/components/cad-editor/types';
 
 export interface DoorElementProps {
@@ -17,7 +16,36 @@ export interface DoorElementProps {
   style?: React.CSSProperties;
 }
 
-export const DoorElement: React.FC<DoorElementProps> = ({
+// CAD 标准常量
+const DOOR_THICKNESS = 5;
+const OPENING_STROKE_WIDTH = 12;
+const OPENING_COLOR = '#ffffff';
+const LINE_COLOR = '#2c3e50';
+const HINGE_RADIUS = 2.5;
+const ARC_STROKE_WIDTH = 2;
+const FRAME_STROKE_WIDTH = 1;
+const CONTROL_POINT_RADIUS = 4;
+const CONTROL_POINT_STROKE_WIDTH = 2;
+const SMALL_CONTROL_POINT_RADIUS = 3;
+const SMALL_CONTROL_POINT_STROKE_WIDTH = 1.5;
+const EMERGENCY_LABEL_OFFSET = 12;
+const EMERGENCY_LABEL_COLOR = '#e74c3c';
+const EMERGENCY_FONT_SIZE = 9;
+const HIGHLIGHT_COLOR = '#1890ff';
+const HOVER_COLOR = '#40a9ff';
+const SLIDING_ARROW_LENGTH = 6;
+const SLIDING_DASH_ARRAY = '4,3';
+
+interface DoorGeometry {
+  hingePoint: { x: number; y: number };
+  openEndPoint: { x: number; y: number };
+  leafEndX: number;
+  leafEndY: number;
+  leafEndX2?: number;
+  leafEndY2?: number;
+}
+
+function DoorElement({
   door,
   selected = false,
   hovered = false,
@@ -25,220 +53,222 @@ export const DoorElement: React.FC<DoorElementProps> = ({
   onHover,
   onDoubleClick,
   style,
-}) => {
+}: DoorElementProps) {
   const color = useMemo(
     () => getDoorColor(door, selected, hovered),
     [door, selected, hovered]
   );
 
-  // CAD 标准颜色
-  const lineColor = '#2c3e50'; // 深灰色线条
-  const highlightColor = selected ? '#1890ff' : hovered ? '#40a9ff' : '#3498db';
+  const highlightColor = selected ? HIGHLIGHT_COLOR : hovered ? HOVER_COLOR : color;
 
-  // 计算门的位置和方向
-  const doorGeometry = useMemo(() => {
-    const { position, width, length, angle, direction, type } = door;
-
-    // 门厚度（CAD 标准）
-    const doorThickness = 5;
-
-    // 门开口宽度
-    const openingWidth = width;
-
-    // 根据角度计算门洞位置
+  const geometry = useMemo<DoorGeometry>(() => {
+    const { position, width, length, angle, direction } = door;
     const angleRad = (angle * Math.PI) / 180;
     const cos = Math.cos(angleRad);
     const sin = Math.sin(angleRad);
+    const halfWidth = width / 2;
 
-    // 门洞的起点和终点（墙体上的开口）
-    // direction 表示门的开启方向：
-    // - 'left'  = 门向左开  = 合页在右边（+方向）
-    // - 'right' = 门向右开  = 合页在左边（-方向）
-    const halfWidth = openingWidth / 2;
+    // 计算合页和开口终点
     const hingePoint = {
       x: direction === 'left' ? position.x + cos * halfWidth : position.x - cos * halfWidth,
       y: direction === 'left' ? position.y + sin * halfWidth : position.y - sin * halfWidth,
     };
+
     const openEndPoint = {
       x: direction === 'left' ? position.x - cos * halfWidth : position.x + cos * halfWidth,
       y: direction === 'left' ? position.y - sin * halfWidth : position.y + sin * halfWidth,
     };
 
-    // 计算门扇（用弧线表示开启方向）
-    let doorArcPath = '';
+    // 计算门扇角度
     let doorAngle = angle;
-
     switch (direction) {
       case 'left':
-        // 门向左开（合页在右），门扇逆时针旋转90度
         doorAngle += 90;
         break;
       case 'right':
-        // 门向右开（合页在左），门扇顺时针旋转90度
         doorAngle -= 90;
-        break;
-      case 'double':
-        // 双开门不需要调整
-        break;
-      case 'sliding':
-        // 推拉门用虚线表示
         break;
     }
 
-    // 计算门扇终点
     const leafAngleRad = (doorAngle * Math.PI) / 180;
     const leafEndX = hingePoint.x + Math.cos(leafAngleRad) * length;
     const leafEndY = hingePoint.y + Math.sin(leafAngleRad) * length;
 
+    const result: DoorGeometry = {
+      hingePoint,
+      openEndPoint,
+      leafEndX,
+      leafEndY,
+    };
+
     // 双开门的第二扇
-    let leafEndX2, leafEndY2;
-    if (type === 'double') {
-      leafEndX2 = openEndPoint.x + Math.cos(leafAngleRad + Math.PI) * length;
-      leafEndY2 = openEndPoint.y + Math.sin(leafAngleRad + Math.PI) * length;
+    if (door.type === 'double') {
+      result.leafEndX2 = openEndPoint.x + Math.cos(leafAngleRad + Math.PI) * length;
+      result.leafEndY2 = openEndPoint.y + Math.sin(leafAngleRad + Math.PI) * length;
     }
 
-    return { hingePoint, openEndPoint, leafEndX, leafEndY, leafEndX2, leafEndY2, angleRad, leafAngleRad };
+    return result;
   }, [door.position, door.width, door.length, door.angle, door.direction, door.type]);
 
-  const handleMouseEnter = () => {
+  const handleMouseEnter = useCallback(() => {
     onHover?.(true);
-  };
+  }, [onHover]);
 
-  const handleMouseLeave = () => {
+  const handleMouseLeave = useCallback(() => {
     onHover?.(false);
+  }, [onHover]);
+
+  const containerClassName = [
+    'cad-door',
+    selected && 'cad-door-selected',
+    hovered && 'cad-door-hovered',
+  ].filter(Boolean).join(' ');
+
+  const renderDoorArc = function() {
+    if (door.type === 'sliding') {
+      // 推拉门 - 虚线箭头
+      return (
+        <g style={{ pointerEvents: 'none' }}>
+          <line
+            x1={geometry.hingePoint.x}
+            y1={geometry.hingePoint.y}
+            x2={geometry.leafEndX}
+            y2={geometry.leafEndY}
+            stroke={highlightColor}
+            strokeWidth={ARC_STROKE_WIDTH}
+            strokeDasharray={SLIDING_DASH_ARRAY}
+          />
+          <polygon
+            points={`${geometry.leafEndX},${geometry.leafEndY} ${geometry.leafEndX - SLIDING_ARROW_LENGTH},${geometry.leafEndY + 3} ${geometry.leafEndX - SLIDING_ARROW_LENGTH},${geometry.leafEndY - 3}`}
+            fill={highlightColor}
+          />
+        </g>
+      );
+    }
+
+    if (door.type === 'double' && geometry.leafEndX2 !== undefined && geometry.leafEndY2 !== undefined) {
+      // 双开门
+      const sweepFlag = door.direction === 'left' ? 1 : 0;
+      return (
+        <g style={{ pointerEvents: 'none' }}>
+          <path
+            d={`M ${geometry.hingePoint.x} ${geometry.hingePoint.y}
+                    A ${door.length} ${door.length} 0 0 ${sweepFlag}
+                    ${geometry.leafEndX} ${geometry.leafEndY}`}
+            fill="none"
+            stroke={highlightColor}
+            strokeWidth={ARC_STROKE_WIDTH}
+          />
+          <path
+            d={`M ${geometry.openEndPoint.x} ${geometry.openEndPoint.y}
+                    A ${door.length} ${door.length} 0 0 ${1 - sweepFlag}
+                    ${geometry.leafEndX2} ${geometry.leafEndY2}`}
+            fill="none"
+            stroke={highlightColor}
+            strokeWidth={ARC_STROKE_WIDTH}
+          />
+        </g>
+      );
+    }
+
+    // 单开门
+    const sweepFlag = door.direction === 'left' ? 1 : 0;
+    return (
+      <path
+        d={`M ${geometry.hingePoint.x} ${geometry.hingePoint.y}
+                A ${door.length} ${door.length} 0 0 ${sweepFlag}
+                ${geometry.leafEndX} ${geometry.leafEndY}`}
+        fill="none"
+        stroke={highlightColor}
+        strokeWidth={ARC_STROKE_WIDTH}
+        style={{ pointerEvents: 'none' }}
+      />
+    );
   };
 
   return (
     <g
-      className={`cad-door ${selected ? 'cad-door-selected' : ''} ${hovered ? 'cad-door-hovered' : ''}`}
+      className={containerClassName}
       onClick={onSelect}
       onDoubleClick={onDoubleClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       style={style}
     >
-      {/* 门洞（墙体开口）- 绘制在墙体内，所以用白色填充遮挡线条 */}
+      {/* 门洞（墙体开口） */}
       <line
-        x1={doorGeometry.hingePoint.x}
-        y1={doorGeometry.hingePoint.y}
-        x2={doorGeometry.openEndPoint.x}
-        y2={doorGeometry.openEndPoint.y}
-        stroke="#ffffff"
-        strokeWidth={12}
+        x1={geometry.hingePoint.x}
+        y1={geometry.hingePoint.y}
+        x2={geometry.openEndPoint.x}
+        y2={geometry.openEndPoint.y}
+        stroke={OPENING_COLOR}
+        strokeWidth={OPENING_STROKE_WIDTH}
         style={{ pointerEvents: 'none' }}
       />
 
-      {/* 门扇弧线 - CAD 标准表示法 */}
-      {door.type === 'sliding' ? (
-        // 推拉门 - 用虚线箭头表示
-        <g style={{ pointerEvents: 'none' }}>
-          <line
-            x1={doorGeometry.hingePoint.x}
-            y1={doorGeometry.hingePoint.y}
-            x2={doorGeometry.leafEndX}
-            y2={doorGeometry.leafEndY}
-            stroke={highlightColor}
-            strokeWidth={2}
-            strokeDasharray="4,3"
-          />
-          <polygon
-            points={`${doorGeometry.leafEndX},${doorGeometry.leafEndY} ${doorGeometry.leafEndX - 6},${doorGeometry.leafEndY + 3} ${doorGeometry.leafEndX - 6},${doorGeometry.leafEndY - 3}`}
-            fill={highlightColor}
-          />
-        </g>
-      ) : door.type === 'double' ? (
-        // 双开门 - 两扇门弧线
-        <g style={{ pointerEvents: 'none' }}>
-          <path
-            d={`M ${doorGeometry.hingePoint.x} ${doorGeometry.hingePoint.y}
-                    A ${door.length} ${door.length} 0 0 ${door.direction === 'left' ? 1 : 0}
-                    ${doorGeometry.leafEndX} ${doorGeometry.leafEndY}`}
-            fill="none"
-            stroke={highlightColor}
-            strokeWidth={2}
-          />
-          <path
-            d={`M ${doorGeometry.openEndPoint.x} ${doorGeometry.openEndPoint.y}
-                    A ${door.length} ${door.length} 0 0 ${door.direction === 'left' ? 0 : 1}
-                    ${doorGeometry.leafEndX2} ${doorGeometry.leafEndY2}`}
-            fill="none"
-            stroke={highlightColor}
-            strokeWidth={2}
-          />
-        </g>
-      ) : (
-        // 单开门 - 门扇弧线
-        <path
-          d={`M ${doorGeometry.hingePoint.x} ${doorGeometry.hingePoint.y}
-                  A ${door.length} ${door.length} 0 0 ${door.direction === 'left' ? 1 : 0}
-                  ${doorGeometry.leafEndX} ${doorGeometry.leafEndY}`}
-          fill="none"
-          stroke={highlightColor}
-          strokeWidth={2}
-          style={{ pointerEvents: 'none' }}
-        />
-      )}
+      {/* 门扇弧线 */}
+      {renderDoorArc()}
 
-      {/* 门框线（CAD 标准：细线表示门框） */}
+      {/* 门框线 */}
       <line
-        x1={doorGeometry.hingePoint.x}
-        y1={doorGeometry.hingePoint.y}
-        x2={doorGeometry.openEndPoint.x}
-        y2={doorGeometry.openEndPoint.y}
-        stroke={lineColor}
-        strokeWidth={1}
+        x1={geometry.hingePoint.x}
+        y1={geometry.hingePoint.y}
+        x2={geometry.openEndPoint.x}
+        y2={geometry.openEndPoint.y}
+        stroke={LINE_COLOR}
+        strokeWidth={FRAME_STROKE_WIDTH}
         style={{ pointerEvents: 'none' }}
       />
 
-      {/* 合页标记 - CAD 标准符号 */}
+      {/* 合页标记 */}
       <circle
-        cx={doorGeometry.hingePoint.x}
-        cy={doorGeometry.hingePoint.y}
-        r={2.5}
-        fill={lineColor}
+        cx={geometry.hingePoint.x}
+        cy={geometry.hingePoint.y}
+        r={HINGE_RADIUS}
+        fill={LINE_COLOR}
         style={{ pointerEvents: 'none' }}
       />
 
-      {/* 选中状态的控制点 */}
+      {/* 控制点 */}
       {selected && (
         <>
           <circle
             cx={door.position.x}
             cy={door.position.y}
-            r={4}
+            r={CONTROL_POINT_RADIUS}
             fill="#fff"
-            stroke="#1890ff"
-            strokeWidth={2}
+            stroke={HIGHLIGHT_COLOR}
+            strokeWidth={CONTROL_POINT_STROKE_WIDTH}
             style={{ cursor: 'move' }}
           />
           <circle
-            cx={doorGeometry.hingePoint.x}
-            cy={doorGeometry.hingePoint.y}
-            r={3}
+            cx={geometry.hingePoint.x}
+            cy={geometry.hingePoint.y}
+            r={SMALL_CONTROL_POINT_RADIUS}
             fill="#fff"
-            stroke="#1890ff"
-            strokeWidth={1.5}
+            stroke={HIGHLIGHT_COLOR}
+            strokeWidth={SMALL_CONTROL_POINT_STROKE_WIDTH}
             style={{ cursor: 'pointer' }}
           />
           <circle
-            cx={doorGeometry.openEndPoint.x}
-            cy={doorGeometry.openEndPoint.y}
-            r={3}
+            cx={geometry.openEndPoint.x}
+            cy={geometry.openEndPoint.y}
+            r={SMALL_CONTROL_POINT_RADIUS}
             fill="#fff"
-            stroke="#1890ff"
-            strokeWidth={1.5}
+            stroke={HIGHLIGHT_COLOR}
+            strokeWidth={SMALL_CONTROL_POINT_STROKE_WIDTH}
             style={{ cursor: 'pointer' }}
           />
         </>
       )}
 
-      {/* 门类型标识 - CAD 标准符号 */}
+      {/* 紧急出口标识 */}
       {door.type === 'emergency' && (
         <text
           x={door.position.x}
-          y={door.position.y - door.length / 2 - 12}
-          fill="#e74c3c"
-          fontSize={9}
+          y={door.position.y - door.length / 2 - EMERGENCY_LABEL_OFFSET}
+          fill={EMERGENCY_LABEL_COLOR}
+          fontSize={EMERGENCY_FONT_SIZE}
           textAnchor="middle"
           fontWeight="bold"
           style={{ pointerEvents: 'none' }}
@@ -248,6 +278,6 @@ export const DoorElement: React.FC<DoorElementProps> = ({
       )}
     </g>
   );
-};
+}
 
 export default DoorElement;

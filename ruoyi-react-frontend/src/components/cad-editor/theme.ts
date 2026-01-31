@@ -2,55 +2,71 @@
  * CAD 编辑器颜色主题
  */
 
+// ==================== 常量定义 ====================
+
+/** 工位状态: 0 = 空闲, 1 = 占用, 2 = 维护 */
+export const WORKSTATION_STATUS = {
+  AVAILABLE: 0,
+  OCCUPIED: 1,
+  MAINTAIN: 2,
+} as const;
+
+/** 默认吸附距离 */
+export const DEFAULT_SNAP_DISTANCE = 10;
+
+/** 默认网格大小 */
+export const DEFAULT_GRID_SIZE = 20;
+
 // ==================== 颜色主题 ====================
 
+/** CAD 编辑器颜色主题 */
 export const CAD_COLOR_THEME = {
-  // 背景色
+  /** 背景色 */
   background: '#fafafa',
 
-  // 网格
+  /** 网格颜色 */
   grid: '#e8e8e8',
   gridMajor: '#d0d0d0',
 
-  // 墙体颜色
+  /** 墙体颜色 */
   wall: {
-    default: '#5C6BC0',    // 靛蓝色
-    exterior: '#455A64',   // 外墙深灰
-    selected: '#1890ff',   // 选中亮蓝
-    hover: '#7986CB',      // 悬停
+    default: '#5C6BC0',
+    exterior: '#455A64',
+    selected: '#1890ff',
+    hover: '#7986CB',
   },
 
-  // 门颜色
+  /** 门颜色 */
   door: {
-    default: '#FF7043',    // 橙色
-    emergency: '#F5222D',  // 紧急红色
-    selected: '#ff4d4f',   // 选中
-    hover: '#FF8A65',      // 悬停
+    default: '#FF7043',
+    emergency: '#F5222D',
+    selected: '#ff4d4f',
+    hover: '#FF8A65',
   },
 
-  // 工位颜色
+  /** 工位颜色 */
   workstation: {
-    available: '#52c41a',  // 空闲绿色
-    occupied: '#ff4d4f',   // 占用红色
-    maintain: '#faad14',   // 维护橙色
-    selected: '#1890ff',   // 选中
-    hover: '#69c0ff',      // 悬停
+    available: '#52c41a',
+    occupied: '#ff4d4f',
+    maintain: '#faad14',
+    selected: '#1890ff',
+    hover: '#69c0ff',
   },
 
-  // 辅助元素
+  /** 辅助元素颜色 */
   guide: {
-    line: '#ffec3d',       // 辅助线黄色
-    snap: '#52c41a',       // 吸附点绿色
+    line: '#ffec3d',
+    snap: '#52c41a',
   },
 
-  // 测量
+  /** 测量元素颜色 */
   measurement: {
-    line: '#8c8c8c',       // 测量线灰色
-    text: '#262626',       // 测量文字
+    line: '#8c8c8c',
+    text: '#262626',
     background: 'rgba(255, 255, 255, 0.9)',
   },
 
-  // 选择框
+  /** 选择框颜色 */
   selection: {
     fill: 'rgba(24, 144, 255, 0.1)',
     stroke: '#1890ff',
@@ -64,8 +80,8 @@ export const CAD_COLOR_THEME = {
  */
 export function getWallColor(
   wall: { type?: string; color?: string },
-  selected: boolean = false,
-  hovered: boolean = false
+  selected = false,
+  hovered = false
 ): string {
   if (selected) return CAD_COLOR_THEME.wall.selected;
   if (hovered) return CAD_COLOR_THEME.wall.hover;
@@ -79,8 +95,8 @@ export function getWallColor(
  */
 export function getDoorColor(
   door: { type?: string; color?: string },
-  selected: boolean = false,
-  hovered: boolean = false
+  selected = false,
+  hovered = false
 ): string {
   if (selected) return CAD_COLOR_THEME.door.selected;
   if (hovered) return CAD_COLOR_THEME.door.hover;
@@ -94,20 +110,19 @@ export function getDoorColor(
  */
 export function getWorkstationColor(
   workstation: { status?: number; color?: string },
-  selected: boolean = false,
-  hovered: boolean = false
+  selected = false,
+  hovered = false
 ): string {
   if (selected) return CAD_COLOR_THEME.workstation.selected;
   if (hovered) return CAD_COLOR_THEME.workstation.hover;
   if (workstation.color) return workstation.color;
 
-  // 0 = 空闲, 1 = 占用, 2 = 维护
   switch (workstation.status) {
-    case 0:
+    case WORKSTATION_STATUS.AVAILABLE:
       return CAD_COLOR_THEME.workstation.available;
-    case 1:
+    case WORKSTATION_STATUS.OCCUPIED:
       return CAD_COLOR_THEME.workstation.occupied;
-    case 2:
+    case WORKSTATION_STATUS.MAINTAIN:
       return CAD_COLOR_THEME.workstation.maintain;
     default:
       return CAD_COLOR_THEME.workstation.available;
@@ -120,6 +135,7 @@ export const DEFAULT_WALL_COLOR = CAD_COLOR_THEME.wall.default;
 export const DEFAULT_DOOR_COLOR = CAD_COLOR_THEME.door.default;
 export const DEFAULT_WORKSTATION_COLOR = CAD_COLOR_THEME.workstation.available;
 
-// ==================== 类型导出 ====================
+// ==================== 类型定义 ====================
 
+/** CAD 颜色主题类型 */
 export type CadColorTheme = typeof CAD_COLOR_THEME;

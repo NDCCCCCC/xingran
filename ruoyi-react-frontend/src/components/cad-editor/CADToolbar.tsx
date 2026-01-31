@@ -4,7 +4,6 @@
 
 import { useCallback, useMemo } from 'react';
 import { Button, Space, Tooltip } from 'antd';
-import type { ButtonProps } from 'antd';
 import {
   BorderOutlined,
   ApartmentOutlined,
@@ -17,7 +16,21 @@ import {
   UndoOutlined,
   RedoOutlined,
 } from '@ant-design/icons';
-import type { ToolAction, EditorMode } from './types';
+import type { EditorMode } from './types';
+
+// 工具按钮配置
+interface ToolButtonConfig {
+  key: EditorMode;
+  icon: React.ReactNode;
+  label: string;
+}
+
+const DRAWING_TOOLS: readonly ToolButtonConfig[] = [
+  { key: 'draw_wall', icon: <BorderOutlined />, label: '墙体' },
+  { key: 'draw_door', icon: <ApartmentOutlined />, label: '门' },
+  { key: 'draw_workstation', icon: <DesktopOutlined />, label: '工位' },
+  { key: 'draw_text', icon: <FontSizeOutlined />, label: '文本' },
+] as const;
 
 export interface CADToolbarProps {
   mode: EditorMode;
@@ -34,14 +47,7 @@ export interface CADToolbarProps {
   style?: React.CSSProperties;
 }
 
-interface ToolButton {
-  key: ToolAction;
-  icon: React.ReactNode;
-  label: string;
-  disabled?: boolean;
-}
-
-export const CADToolbar = function CADToolbar({
+function CADToolbar({
   mode,
   onModeChange,
   onZoomIn,
@@ -55,54 +61,31 @@ export const CADToolbar = function CADToolbar({
   readOnly = false,
   style,
 }: CADToolbarProps) {
-  const handleModeChange = useCallback(
-    (newMode: EditorMode) => {
-      onModeChange(newMode === mode ? 'select' : newMode);
+  const handleModeToggle = useCallback(
+    (toolMode: EditorMode) => {
+      onModeChange(mode === toolMode ? 'select' : toolMode);
     },
     [mode, onModeChange]
   );
 
-  const toolButtons = useMemo<ToolButton[]>(
-    () => [
-      {
-        key: 'draw_wall',
-        icon: <BorderOutlined />,
-        label: '墙体',
-        disabled: readOnly,
-      },
-      {
-        key: 'draw_door',
-        icon: <ApartmentOutlined />,
-        label: '门',
-        disabled: readOnly,
-      },
-      {
-        key: 'draw_workstation',
-        icon: <DesktopOutlined />,
-        label: '工位',
-        disabled: readOnly,
-      },
-      {
-        key: 'draw_text',
-        icon: <FontSizeOutlined />,
-        label: '文本',
-        disabled: readOnly,
-      },
-    ],
+  const toolButtons = useMemo(
+    () => DRAWING_TOOLS.map(tool => ({
+      ...tool,
+      disabled: readOnly,
+    })),
     [readOnly]
   );
 
-  const renderToolButton = function renderToolButton(tool: ToolButton) {
+  const renderToolButton = function(tool: ToolButtonConfig & { disabled: boolean }) {
     const isActive = mode === tool.key;
-    const buttonType: ButtonProps['type'] = isActive ? 'primary' : 'default';
 
     return (
       <Tooltip key={tool.key} title={tool.label}>
         <Button
-          type={buttonType}
+          type={isActive ? 'primary' : 'default'}
           icon={tool.icon}
           disabled={tool.disabled}
-          onClick={() => handleModeChange(tool.key as EditorMode)}
+          onClick={() => handleModeToggle(tool.key)}
         >
           {tool.label}
         </Button>
@@ -110,19 +93,24 @@ export const CADToolbar = function CADToolbar({
     );
   };
 
+  const toolbarStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '8px 16px',
+    background: '#fff',
+    borderBottom: '1px solid #e8e8e8',
+    ...style,
+  };
+
+  const dividerStyle: React.CSSProperties = {
+    width: 1,
+    height: 24,
+    background: '#e8e8e8',
+  };
+
   return (
-    <div
-      className="cad-toolbar"
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        padding: '8px 16px',
-        background: '#fff',
-        borderBottom: '1px solid #e8e8e8',
-        ...style,
-      }}
-    >
+    <div className="cad-toolbar" style={toolbarStyle}>
       <Space size="small">
         {toolButtons.map(renderToolButton)}
       </Space>
@@ -141,7 +129,7 @@ export const CADToolbar = function CADToolbar({
         </Tooltip>
       </Space>
 
-      <div style={{ width: 1, height: 24, background: '#e8e8e8' }} />
+      <div style={dividerStyle} />
 
       <Space size="small">
         <Tooltip title="撤销 (Ctrl+Z)">
@@ -152,7 +140,7 @@ export const CADToolbar = function CADToolbar({
         </Tooltip>
       </Space>
 
-      <div style={{ width: 1, height: 24, background: '#e8e8e8' }} />
+      <div style={dividerStyle} />
 
       <Tooltip title="保存 (Ctrl+S)">
         <Button
@@ -166,6 +154,6 @@ export const CADToolbar = function CADToolbar({
       </Tooltip>
     </div>
   );
-};
+}
 
 export default CADToolbar;
