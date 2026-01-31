@@ -7,6 +7,10 @@ import (
 	"gorm.io/gorm"
 )
 
+const (
+	floorPlanTextTable = "ops_floor_plan_texts"
+)
+
 type FloorPlanTextService interface {
 	Create(ctx context.Context, text *operationsmodels.FloorPlanText) error
 	Update(ctx context.Context, text *operationsmodels.FloorPlanText) error
@@ -29,21 +33,21 @@ func NewFloorPlanTextService(db *gorm.DB) FloorPlanTextService {
 }
 
 func (s *floorPlanTextService) Create(ctx context.Context, text *operationsmodels.FloorPlanText) error {
-	if err := s.validator.ValidateFloor(ctx, text.FloorID.String()); err != nil {
+	if err := s.validator.ValidateFloor(ctx, text.FloorID); err != nil {
 		return err
 	}
 	return s.db.WithContext(ctx).Create(text).Error
 }
 
 func (s *floorPlanTextService) Update(ctx context.Context, text *operationsmodels.FloorPlanText) error {
-	if err := s.validator.ValidateFloor(ctx, text.FloorID.String()); err != nil {
+	if err := s.validator.ValidateFloor(ctx, text.FloorID); err != nil {
 		return err
 	}
 	return s.db.WithContext(ctx).Save(text).Error
 }
 
 func (s *floorPlanTextService) Delete(ctx context.Context, id string) error {
-	return s.db.WithContext(ctx).Delete(&operationsmodels.FloorPlanText{}, "id = ?", id).Error
+	return s.db.WithContext(ctx).Table(floorPlanTextTable).Where("id = ?", id).Delete(&operationsmodels.FloorPlanText{}).Error
 }
 
 func (s *floorPlanTextService) GetByID(ctx context.Context, id string) (*operationsmodels.FloorPlanText, error) {
@@ -91,5 +95,5 @@ func (s *floorPlanTextService) BatchDelete(ctx context.Context, ids []string) er
 	if len(ids) == 0 {
 		return nil
 	}
-	return s.db.WithContext(ctx).Delete(&operationsmodels.FloorPlanText{}, "id IN ?", ids).Error
+	return s.db.WithContext(ctx).Table(floorPlanTextTable).Where("id IN ?", ids).Delete(&operationsmodels.FloorPlanText{}).Error
 }

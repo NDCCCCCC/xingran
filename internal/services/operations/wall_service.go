@@ -7,6 +7,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// WallService 墙体服务接口
 type WallService interface {
 	Create(ctx context.Context, wall *operationsmodels.Wall) error
 	Update(ctx context.Context, wall *operationsmodels.Wall) error
@@ -21,6 +22,7 @@ type wallService struct {
 	validator Validator
 }
 
+// NewWallService 创建墙体服务
 func NewWallService(db *gorm.DB) WallService {
 	return &wallService{
 		db:        db,
@@ -56,33 +58,16 @@ func (s *wallService) GetByID(ctx context.Context, id string) (*operationsmodels
 }
 
 func (s *wallService) List(ctx context.Context, params map[string]interface{}) (*PageResult, error) {
-	var total int64
-	var list []operationsmodels.Wall
-
-	query := s.db.WithContext(ctx).Model(&operationsmodels.Wall{})
-
-	if floorId, ok := params["floorId"].(string); ok && floorId != "" {
-		query = query.Where("floor_id = ?", floorId)
-	}
-	if wallType, ok := params["type"].(string); ok && wallType != "" {
-		query = query.Where("type = ?", wallType)
-	}
-	if name, ok := params["name"].(string); ok && name != "" {
-		query = query.Where("name LIKE ?", "%"+name+"%")
-	}
-
+	query := s.buildListQuery(ctx, params)
 	pagination := extractPagination(params)
 
-	if err := query.Count(&total).Error; err != nil {
+	total, err := s.countRecords(query)
+	if err != nil {
 		return nil, err
 	}
 
-	offset := calculateOffset(pagination)
-	if err := query.
-		Offset(offset).
-		Limit(pagination.PageSize).
-		Order("created_at DESC").
-		Find(&list).Error; err != nil {
+	list, err := s.fetchRecords(query, pagination, &[]operationsmodels.Wall{})
+	if err != nil {
 		return nil, err
 	}
 
@@ -99,4 +84,39 @@ func (s *wallService) BatchDelete(ctx context.Context, ids []string) error {
 		return nil
 	}
 	return s.db.WithContext(ctx).Delete(&operationsmodels.Wall{}, "id IN ?", ids).Error
+}
+
+// buildListQuery 构建列表查询
+func (s *wallService) buildListQuery(ctx context.Context, params map[string]interface{}) *gorm.DB {
+	query := s.db.WithContext(ctx).Model(&operationsmodels.Wall{})
+
+	if floorId, ok := params["floorId"].(string); ok && floorId != "" {
+		query = query.Where("floor_id = ?", floorId)
+	}
+	if wallType, ok := params["type"].(string); ok && wallType != "" {
+		query = query.Where("type = ?", wallType)
+	}
+	if name, ok := params["name"].(string); ok && name != "" {
+		query = query.Where("name LIKE ?", "%"+name+"%")
+	}
+
+	return query
+}
+
+// countRecords 统计记录数
+func (s *wallService) countRecords(query *gorm.DB) (int64, error) {
+	var total int64
+	err := query.Count(&total).Error
+	return total, err
+}
+
+// fetchRecords 获取记录列表
+func (s *wallService) fetchRecords(query *gorm.DB, pagination PaginationParams, dest interface{}) (interface{}, error) {
+	offset := calculateOffset(pagination)
+	err := query.
+		Offset(offset).
+		Limit(pagination.PageSize).
+		Order("created_at DESC").
+		Find(dest).Error
+	return dest, err
 }

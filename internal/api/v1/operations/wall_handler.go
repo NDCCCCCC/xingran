@@ -19,13 +19,11 @@ func NewWallHandler(service opsServices.WallService) *WallHandler {
 
 func (h *WallHandler) Create(c *gin.Context) {
 	var wall operationsmodels.Wall
-	if err := c.ShouldBindJSON(&wall); err != nil {
-		response.Error(c, http.StatusBadRequest, "参数错误: "+err.Error())
+	if !handleJSONBinding(c, &wall) {
 		return
 	}
 
-	if err := h.service.Create(c.Request.Context(), &wall); err != nil {
-		response.Error(c, http.StatusInternalServerError, "创建失败: "+err.Error())
+	if !handleServiceError(c, h.service.Create(c.Request.Context(), &wall), "创建") {
 		return
 	}
 
@@ -34,13 +32,10 @@ func (h *WallHandler) Create(c *gin.Context) {
 
 func (h *WallHandler) List(c *gin.Context) {
 	var params map[string]interface{}
-	if err := c.ShouldBindJSON(&params); err != nil {
-		params = make(map[string]interface{})
-	}
+	c.ShouldBindJSON(&params)
 
 	result, err := h.service.List(c.Request.Context(), params)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "查询失败: "+err.Error())
+	if !handleServiceError(c, err, "查询") {
 		return
 	}
 
@@ -61,14 +56,12 @@ func (h *WallHandler) GetByID(c *gin.Context) {
 func (h *WallHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	var wall operationsmodels.Wall
-	if err := c.ShouldBindJSON(&wall); err != nil {
-		response.Error(c, http.StatusBadRequest, "参数错误: "+err.Error())
+	if !handleJSONBinding(c, &wall) {
 		return
 	}
 
 	wall.ID = id
-	if err := h.service.Update(c.Request.Context(), &wall); err != nil {
-		response.Error(c, http.StatusInternalServerError, "更新失败: "+err.Error())
+	if !handleServiceError(c, h.service.Update(c.Request.Context(), &wall), "更新") {
 		return
 	}
 
@@ -77,8 +70,7 @@ func (h *WallHandler) Update(c *gin.Context) {
 
 func (h *WallHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
-	if err := h.service.Delete(c.Request.Context(), id); err != nil {
-		response.Error(c, http.StatusInternalServerError, "删除失败: "+err.Error())
+	if !handleServiceError(c, h.service.Delete(c.Request.Context(), id), "删除") {
 		return
 	}
 
@@ -86,24 +78,17 @@ func (h *WallHandler) Delete(c *gin.Context) {
 }
 
 func (h *WallHandler) BatchOperation(c *gin.Context) {
-	var req struct {
-		IDs    []string `json:"ids"`
-		Action string   `json:"action"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "参数错误")
+	var req BatchOperationRequest
+	if !handleJSONBinding(c, &req) {
 		return
 	}
 
-	switch req.Action {
-	case "delete":
-		if err := h.service.BatchDelete(c.Request.Context(), req.IDs); err != nil {
-			response.Error(c, http.StatusInternalServerError, "批量删除失败")
-			return
-		}
-	default:
-		response.Error(c, http.StatusBadRequest, "不支持的操作")
+	if req.Action != "delete" {
+		response.Error(c, http.StatusBadRequest, "不支持的操作: "+req.Action)
+		return
+	}
+
+	if !handleServiceError(c, h.service.BatchDelete(c.Request.Context(), req.IDs), "批量删除") {
 		return
 	}
 

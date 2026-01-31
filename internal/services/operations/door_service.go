@@ -7,6 +7,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// DoorService 门服务接口
 type DoorService interface {
 	Create(ctx context.Context, door *operationsmodels.Door) error
 	Update(ctx context.Context, door *operationsmodels.Door) error
@@ -21,6 +22,7 @@ type doorService struct {
 	validator Validator
 }
 
+// NewDoorService 创建门服务
 func NewDoorService(db *gorm.DB) DoorService {
 	return &doorService{
 		db:        db,
@@ -29,25 +31,15 @@ func NewDoorService(db *gorm.DB) DoorService {
 }
 
 func (s *doorService) Create(ctx context.Context, door *operationsmodels.Door) error {
-	if err := s.validator.ValidateFloor(ctx, door.FloorID); err != nil {
+	if err := s.validateDoorRelations(ctx, door); err != nil {
 		return err
-	}
-	if door.WallID != nil && *door.WallID != "" {
-		if err := s.validator.ValidateWall(ctx, *door.WallID); err != nil {
-			return err
-		}
 	}
 	return s.db.WithContext(ctx).Create(door).Error
 }
 
 func (s *doorService) Update(ctx context.Context, door *operationsmodels.Door) error {
-	if err := s.validator.ValidateFloor(ctx, door.FloorID); err != nil {
+	if err := s.validateDoorRelations(ctx, door); err != nil {
 		return err
-	}
-	if door.WallID != nil && *door.WallID != "" {
-		if err := s.validator.ValidateWall(ctx, *door.WallID); err != nil {
-			return err
-		}
 	}
 	return s.db.WithContext(ctx).Save(door).Error
 }
@@ -66,36 +58,16 @@ func (s *doorService) GetByID(ctx context.Context, id string) (*operationsmodels
 }
 
 func (s *doorService) List(ctx context.Context, params map[string]interface{}) (*PageResult, error) {
-	var total int64
-	var list []operationsmodels.Door
-
-	query := s.db.WithContext(ctx).Model(&operationsmodels.Door{})
-
-	if floorId, ok := params["floorId"].(string); ok && floorId != "" {
-		query = query.Where("floor_id = ?", floorId)
-	}
-	if wallId, ok := params["wallId"].(string); ok && wallId != "" {
-		query = query.Where("wall_id = ?", wallId)
-	}
-	if doorType, ok := params["type"].(string); ok && doorType != "" {
-		query = query.Where("type = ?", doorType)
-	}
-	if name, ok := params["name"].(string); ok && name != "" {
-		query = query.Where("name LIKE ?", "%"+name+"%")
-	}
-
+	query := s.buildListQuery(ctx, params)
 	pagination := extractPagination(params)
 
-	if err := query.Count(&total).Error; err != nil {
+	total, err := s.countRecords(query)
+	if err != nil {
 		return nil, err
 	}
 
-	offset := calculateOffset(pagination)
-	if err := query.
-		Offset(offset).
-		Limit(pagination.PageSize).
-		Order("created_at DESC").
-		Find(&list).Error; err != nil {
+	list, err := s.fetchRecords(query, pagination, &[]operationsmodels.Door{})
+	if err != nil {
 		return nil, err
 	}
 
@@ -112,4 +84,55 @@ func (s *doorService) BatchDelete(ctx context.Context, ids []string) error {
 		return nil
 	}
 	return s.db.WithContext(ctx).Delete(&operationsmodels.Door{}, "id IN ?", ids).Error
+}
+
+// validateDoorRelations 验证门的关联关系
+func (s *doorService) validateDoorRelations(ctx context.Context, door *operationsmodels.Door) error {
+	if err := s.validator.ValidateFloor(ctx, door.FloorID); err != nil {
+		return err
+	}
+	if door.WallID != nil && *door.WallID != "" {
+		if err := s.validator.ValidateWall(ctx, *door.WallID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// buildListQuery 构建列表查询
+func (s *doorService) buildListQuery(ctx context.Context, params map[string]interface{}) *gorm.DB {
+	query := s.db.WithContext(ctx).Model(&operationsmodels.Door{})
+
+	if floorId, ok := params["floorId"].(string); ok && floorId != "" {
+		query = query.Where("floor_id = ?", floorId)
+	}
+	if wallId, ok := params["wallId"].(string); ok && wallId != "" {
+		query = query.Where("wall_id = ?", wallId)
+	}
+	if doorType, ok := params["type"].(string); ok && doorType != "" {
+		query = query.Where("type = ?", doorType)
+	}
+	if name, ok := params["name"].(string); ok && name != "" {
+		query = query.Where("name LIKE ?", "%"+name+"%")
+	}
+
+	return query
+}
+
+// countRecords 统计记录数
+func (s *doorService) countRecords(query *gorm.DB) (int64, error) {
+	var total int64
+	err := query.Count(&total).Error
+	return total, err
+}
+
+// fetchRecords 获取记录列表
+func (s *doorService) fetchRecords(query *gorm.DB, pagination PaginationParams, dest interface{}) (interface{}, error) {
+	offset := calculateOffset(pagination)
+	err := query.
+		Offset(offset).
+		Limit(pagination.PageSize).
+		Order("created_at DESC").
+		Find(dest).Error
+	return dest, err
 }
