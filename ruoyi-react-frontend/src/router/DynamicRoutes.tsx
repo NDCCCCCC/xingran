@@ -13,43 +13,53 @@ import Login from '@/pages/login';
 import FloorPlanEditor from '@/pages/operations/floor-plan-editor';
 import { Spin } from 'antd';
 
+// 路由缓存
 let cachedRoutes: MenuRouteConfig[] | null = null;
 let cachedMenusCount = 0;
 
+// 常量定义
+const DASHBOARD_PATH = 'dashboard';
+const FLOOR_PLAN_EDITOR_PATH = 'floor-plan-editor/:floorId';
+const PAGES_PREFIX = 'pages/';
+const PAGES_RELATIVE_PREFIX = '../pages/';
+const TSX_EXTENSION = '.tsx';
+
+// 辅助函数
 const hasValidToken = (): boolean => !!localStorage.getItem('accessToken');
 
+const normalizeComponentPath = (componentPath: string): string => {
+  let path = componentPath;
+
+  // 去掉 'pages/' 前缀
+  if (path.startsWith(PAGES_PREFIX)) {
+    path = path.slice(PAGES_PREFIX.length);
+  }
+
+  // 添加 .tsx 扩展名
+  if (!path.endsWith(TSX_EXTENSION)) {
+    path = `${path}${TSX_EXTENSION}`;
+  }
+
+  return `${PAGES_RELATIVE_PREFIX}${path}`;
+};
+
 const createLazyRoute = (route: MenuRouteConfig) => {
-  // route.component 格式: pages/operations/floor-plan-editor/index
-  // Vite 动态导入需要使用相对路径或绝对路径，不支持别名
-  let componentPath = route.component;
-
-  // 去掉 'pages/' 前缀（如果有）
-  if (componentPath.startsWith('pages/')) {
-    componentPath = componentPath.slice(6);
-  }
-
-  // 添加 .tsx 扩展名（如果没有）
-  if (!componentPath.endsWith('.tsx')) {
-    componentPath = `${componentPath}.tsx`;
-  }
-
-  // 使用相对路径从 router 目录到 pages 目录
-  // router.tsx 位于 src/router/，pages 位于 src/pages/
-  // 所以需要使用 ../pages/ 前缀
-  const importPath = `../pages/${componentPath}`;
-
+  const importPath = normalizeComponentPath(route.component);
   const Component = lazy(() => import(/* @vite-ignore */ importPath));
 
-  if (route.path === 'dashboard') {
+  const fallback = <Spin size="large" />;
+  const element = (
+    <Suspense fallback={fallback}>
+      <Component />
+    </Suspense>
+  );
+
+  if (route.path === DASHBOARD_PATH) {
     return (
       <Route
         key={route.path}
-        path="dashboard/*"
-        element={
-          <Suspense fallback={<Spin size="large" />}>
-            <Component />
-          </Suspense>
-        }
+        path={`${DASHBOARD_PATH}/*`}
+        element={element}
       />
     );
   }
@@ -58,11 +68,7 @@ const createLazyRoute = (route: MenuRouteConfig) => {
     <Route
       key={route.path}
       path={route.path}
-      element={
-        <Suspense fallback={<Spin size="large" />}>
-          <Component />
-        </Suspense>
-      }
+      element={element}
     />
   );
 };
@@ -75,10 +81,12 @@ export function DynamicRoutes() {
       return [];
     }
 
+    // 使用缓存的路由配置
     const configs = cachedRoutes && cachedMenusCount === allMenus.length
       ? cachedRoutes
       : RouteGenerator.generate(allMenus);
 
+    // 更新缓存
     if (!cachedRoutes || cachedMenusCount !== allMenus.length) {
       cachedRoutes = configs;
       cachedMenusCount = allMenus.length;
@@ -89,6 +97,7 @@ export function DynamicRoutes() {
 
   const isAuthenticated = hasValidToken();
 
+  // 未认证用户路由
   if (!isAuthenticated) {
     return (
       <Routes>
@@ -98,6 +107,7 @@ export function DynamicRoutes() {
     );
   }
 
+  // 已认证用户路由
   return (
     <Routes>
       <Route path="/login" element={<Navigate to="/" replace />} />
@@ -106,7 +116,7 @@ export function DynamicRoutes() {
         {routeElements}
         {/* 平面图编辑器路由 - 静态路由，支持楼层ID参数 */}
         <Route
-          path="floor-plan-editor/:floorId"
+          path={FLOOR_PLAN_EDITOR_PATH}
           element={
             <Suspense fallback={<Spin size="large" />}>
               <FloorPlanEditor />
