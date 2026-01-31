@@ -3,6 +3,7 @@ package operations
 import (
 	"context"
 
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
 	operationsmodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 	"gorm.io/gorm"
 )
@@ -13,7 +14,7 @@ type WallService interface {
 	Update(ctx context.Context, wall *operationsmodels.Wall) error
 	Delete(ctx context.Context, id string) error
 	GetByID(ctx context.Context, id string) (*operationsmodels.Wall, error)
-	List(ctx context.Context, params map[string]interface{}) (*PageResult, error)
+	List(ctx context.Context, req requests.WallListRequest) (*PageResult, error)
 	BatchDelete(ctx context.Context, ids []string) error
 }
 
@@ -57,16 +58,17 @@ func (s *wallService) GetByID(ctx context.Context, id string) (*operationsmodels
 	return &wall, nil
 }
 
-func (s *wallService) List(ctx context.Context, params map[string]interface{}) (*PageResult, error) {
-	query := s.buildListQuery(ctx, params)
-	pagination := extractPagination(params)
+func (s *wallService) List(ctx context.Context, req requests.WallListRequest) (*PageResult, error) {
+	query := s.buildListQueryFromRequest(ctx, req)
 
 	total, err := s.countRecords(query)
 	if err != nil {
 		return nil, err
 	}
 
-	list, err := s.fetchRecords(query, pagination, &[]operationsmodels.Wall{})
+	current, pageSize := req.GetPagination()
+
+	list, err := s.fetchRecords(query, current, pageSize, &[]operationsmodels.Wall{})
 	if err != nil {
 		return nil, err
 	}
@@ -74,8 +76,8 @@ func (s *wallService) List(ctx context.Context, params map[string]interface{}) (
 	return &PageResult{
 		List:     list,
 		Total:    total,
-		Current:  pagination.Current,
-		PageSize: pagination.PageSize,
+		Current:  current,
+		PageSize: pageSize,
 	}, nil
 }
 
@@ -86,18 +88,15 @@ func (s *wallService) BatchDelete(ctx context.Context, ids []string) error {
 	return s.db.WithContext(ctx).Delete(&operationsmodels.Wall{}, "id IN ?", ids).Error
 }
 
-// buildListQuery 构建列表查询
-func (s *wallService) buildListQuery(ctx context.Context, params map[string]interface{}) *gorm.DB {
+// buildListQueryFromRequest 从请求构建列表查询（类型安全版本）
+func (s *wallService) buildListQueryFromRequest(ctx context.Context, req requests.WallListRequest) *gorm.DB {
 	query := s.db.WithContext(ctx).Model(&operationsmodels.Wall{})
 
-	if floorId, ok := params["floorId"].(string); ok && floorId != "" {
-		query = query.Where("floor_id = ?", floorId)
+	if req.FloorID != "" {
+		query = query.Where("floor_id = ?", req.FloorID)
 	}
-	if wallType, ok := params["type"].(string); ok && wallType != "" {
-		query = query.Where("type = ?", wallType)
-	}
-	if name, ok := params["name"].(string); ok && name != "" {
-		query = query.Where("name LIKE ?", "%"+name+"%")
+	if req.WallType != "" {
+		query = query.Where("type = ?", req.WallType)
 	}
 
 	return query
@@ -111,11 +110,11 @@ func (s *wallService) countRecords(query *gorm.DB) (int64, error) {
 }
 
 // fetchRecords 获取记录列表
-func (s *wallService) fetchRecords(query *gorm.DB, pagination PaginationParams, dest interface{}) (interface{}, error) {
-	offset := calculateOffset(pagination)
+func (s *wallService) fetchRecords(query *gorm.DB, current, pageSize int, dest interface{}) (interface{}, error) {
+	offset := (current - 1) * pageSize
 	err := query.
 		Offset(offset).
-		Limit(pagination.PageSize).
+		Limit(pageSize).
 		Order("created_at DESC").
 		Find(dest).Error
 	return dest, err

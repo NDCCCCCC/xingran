@@ -2,6 +2,7 @@ package operations
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"gorm.io/gorm"
@@ -13,6 +14,15 @@ const (
 	workstationJoinSelect  = "sys_workstation.*, ops_floors.name as floor_name, ops_floors.floor_no as floor_code"
 	workstationJoinClause  = "LEFT JOIN ops_floors ON ops_floors.id = sys_workstation.floor_id::uuid"
 )
+
+// validateTableName 验证表名是否在白名单中，防止 SQL 注入
+func validateTableName(tableName string) bool {
+	allowedTables := map[string]bool{
+		"ops_floors": true,
+		"sys_floors": true,
+	}
+	return allowedTables[tableName]
+}
 
 // WorkstationService 工位服务接口
 type WorkstationService interface {
@@ -86,6 +96,10 @@ func (s *workstationService) List(ctx context.Context, params map[string]interfa
 		query = query.Where("sys_workstation.floor_id = ?", floorId)
 	}
 	if floorCode := extractStringParam(params, "floorCode"); floorCode != "" {
+		// 验证表名是否在白名单中，防止 SQL 注入
+		if !validateTableName(floorTable) {
+			return nil, fmt.Errorf("invalid table name: %s", floorTable)
+		}
 		query = query.Where("EXISTS (SELECT 1 FROM "+floorTable+" WHERE "+floorTable+".id = sys_workstation.floor_id::uuid AND "+floorTable+".floor_no = ?)", floorCode)
 	}
 	if status := extractIntParam(params, "status", -1); status >= 0 {

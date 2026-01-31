@@ -3,6 +3,7 @@ package operations
 import (
 	"context"
 
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
 	operationsmodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 	"gorm.io/gorm"
 )
@@ -16,7 +17,7 @@ type FloorPlanTextService interface {
 	Update(ctx context.Context, text *operationsmodels.FloorPlanText) error
 	Delete(ctx context.Context, id string) error
 	GetByID(ctx context.Context, id string) (*operationsmodels.FloorPlanText, error)
-	List(ctx context.Context, params map[string]interface{}) (*PageResult, error)
+	List(ctx context.Context, req requests.FloorPlanTextListRequest) (*PageResult, error)
 	BatchDelete(ctx context.Context, ids []string) error
 }
 
@@ -59,35 +60,38 @@ func (s *floorPlanTextService) GetByID(ctx context.Context, id string) (*operati
 	return &text, nil
 }
 
-func (s *floorPlanTextService) List(ctx context.Context, params map[string]interface{}) (*PageResult, error) {
+func (s *floorPlanTextService) List(ctx context.Context, req requests.FloorPlanTextListRequest) (*PageResult, error) {
 	var total int64
 	var list []operationsmodels.FloorPlanText
 
 	query := s.db.WithContext(ctx).Model(&operationsmodels.FloorPlanText{})
 
-	if floorId, ok := params["floorId"].(string); ok && floorId != "" {
-		query = query.Where("floor_id = ?", floorId)
+	// 添加筛选条件 - 类型安全，无需类型断言
+	if req.FloorID != "" {
+		query = query.Where("floor_id = ?", req.FloorID)
 	}
-	if content, ok := params["content"].(string); ok && content != "" {
-		query = query.Where("content LIKE ?", "%"+content+"%")
+	if req.Content != "" {
+		query = query.Where("content LIKE ?", "%"+req.Content+"%")
 	}
 
-	pagination := extractPagination(params)
+	// 分页 - 使用请求结构体的方法
+	offset := req.GetOffset()
+	_, pageSize := req.GetPagination()
+	current, _ := req.GetPagination()
 
 	if err := query.Count(&total).Error; err != nil {
 		return nil, err
 	}
 
-	offset := calculateOffset(pagination)
-	if err := query.Offset(offset).Limit(pagination.PageSize).Order("created_at DESC").Find(&list).Error; err != nil {
+	if err := query.Offset(offset).Limit(pageSize).Order("created_at DESC").Find(&list).Error; err != nil {
 		return nil, err
 	}
 
 	return &PageResult{
 		Total:    total,
 		List:     list,
-		Current:  pagination.Current,
-		PageSize: pagination.PageSize,
+		Current:  current,
+		PageSize: pageSize,
 	}, nil
 }
 

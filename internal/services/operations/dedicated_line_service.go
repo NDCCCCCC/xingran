@@ -3,6 +3,7 @@ package operations
 import (
 	"context"
 
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 	"gorm.io/gorm"
 )
@@ -32,7 +33,7 @@ type DedicatedLineService interface {
 	Update(ctx context.Context, line *operations.OpsDedicatedLine) error
 	Delete(ctx context.Context, id string) error
 	GetByID(ctx context.Context, id string) (*operations.OpsDedicatedLine, error)
-	List(ctx context.Context, params map[string]interface{}) (*PageResult, error)
+	List(ctx context.Context, req requests.DedicatedLineListRequest) (*PageResult, error)
 	BatchDelete(ctx context.Context, ids []string) error
 }
 
@@ -78,46 +79,42 @@ func (s *dedicatedLineService) GetByID(ctx context.Context, id string) (*operati
 	return &line, nil
 }
 
-// List 查询专线列表
-func (s *dedicatedLineService) List(ctx context.Context, params map[string]interface{}) (*PageResult, error) {
+// List 查询专线列表（类型安全版本）
+func (s *dedicatedLineService) List(ctx context.Context, req requests.DedicatedLineListRequest) (*PageResult, error) {
 	var total int64
 	var list []operations.OpsDedicatedLine
 
 	query := s.db.WithContext(ctx).Model(&operations.OpsDedicatedLine{})
 
-	if lineType, ok := params["lineType"].(string); ok && lineType != "" {
-		query = query.Where("line_type = ?", lineType)
+	// 添加筛选条件 - 类型安全，使用相关字段进行筛选
+	if req.SourceRoomName != "" {
+		query = query.Where("source_room_name LIKE ?", "%"+req.SourceRoomName+"%")
 	}
-	if isp, ok := params["isp"].(string); ok && isp != "" {
-		query = query.Where("isp LIKE ?", "%"+isp+"%")
+	if req.DestRoomName != "" {
+		query = query.Where("dest_room_name LIKE ?", "%"+req.DestRoomName+"%")
 	}
-	if status, ok := params["status"].(int); ok {
-		query = query.Where("status = ?", status)
+	if req.SourceDeviceName != "" {
+		query = query.Where("source_device_name LIKE ?", "%"+req.SourceDeviceName+"%")
 	}
-	if status, ok := params["status"].(float64); ok {
-		query = query.Where("status = ?", int(status))
+	if req.DestDeviceName != "" {
+		query = query.Where("dest_device_name LIKE ?", "%"+req.DestDeviceName+"%")
+	}
+	if req.CarrierContactName != "" {
+		query = query.Where("carrier_contact_name LIKE ?", "%"+req.CarrierContactName+"%")
+	}
+	if req.HasStatus() {
+		query = query.Where("status = ?", req.GetStatus(0))
 	}
 
-	current := 1
-	pageSize := 10
-	if c, ok := params["current"].(int); ok {
-		current = c
-	}
-	if c, ok := params["current"].(float64); ok {
-		current = int(c)
-	}
-	if ps, ok := params["pageSize"].(int); ok {
-		pageSize = ps
-	}
-	if ps, ok := params["pageSize"].(float64); ok {
-		pageSize = int(ps)
-	}
+	// 分页 - 使用请求结构体的方法
+	offset := req.GetOffset()
+	_, pageSize := req.GetPagination()
+	current, _ := req.GetPagination()
 
 	if err := query.Count(&total).Error; err != nil {
 		return nil, err
 	}
 
-	offset := (current - 1) * pageSize
 	if err := query.Offset(offset).Limit(pageSize).Order("created_at DESC").Find(&list).Error; err != nil {
 		return nil, err
 	}

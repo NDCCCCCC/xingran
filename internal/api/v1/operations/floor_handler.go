@@ -20,13 +20,11 @@ func NewFloorHandler(service opsServices.FloorService) *FloorHandler {
 // Create 创建楼层
 func (h *FloorHandler) Create(c *gin.Context) {
 	var floor operations.OpsFloor
-	if err := c.ShouldBindJSON(&floor); err != nil {
-		response.Error(c, http.StatusBadRequest, "参数错误: "+err.Error())
+	if !handleJSONBinding(c, &floor) {
 		return
 	}
 
-	if err := h.service.Create(c.Request.Context(), &floor); err != nil {
-		response.Error(c, http.StatusInternalServerError, "创建失败: "+err.Error())
+	if !handleServiceError(c, h.service.Create(c.Request.Context(), &floor), "创建") {
 		return
 	}
 
@@ -77,14 +75,12 @@ func (h *FloorHandler) GetByID(c *gin.Context) {
 func (h *FloorHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	var floor operations.OpsFloor
-	if err := c.ShouldBindJSON(&floor); err != nil {
-		response.Error(c, http.StatusBadRequest, "参数错误: "+err.Error())
+	if !handleJSONBinding(c, &floor) {
 		return
 	}
 
 	floor.ID = id
-	if err := h.service.Update(c.Request.Context(), &floor); err != nil {
-		response.Error(c, http.StatusInternalServerError, "更新失败: "+err.Error())
+	if !handleServiceError(c, h.service.Update(c.Request.Context(), &floor), "更新") {
 		return
 	}
 
@@ -94,8 +90,7 @@ func (h *FloorHandler) Update(c *gin.Context) {
 // Delete 删除楼层
 func (h *FloorHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
-	if err := h.service.Delete(c.Request.Context(), id); err != nil {
-		response.Error(c, http.StatusInternalServerError, "删除失败: "+err.Error())
+	if !handleServiceError(c, h.service.Delete(c.Request.Context(), id), "删除") {
 		return
 	}
 
@@ -109,15 +104,13 @@ func (h *FloorHandler) BatchOperation(c *gin.Context) {
 		Action string   `json:"action"`
 	}
 
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "参数错误")
+	if !handleJSONBinding(c, &req) {
 		return
 	}
 
 	switch req.Action {
 	case "delete":
-		if err := h.service.BatchDelete(c.Request.Context(), req.IDs); err != nil {
-			response.Error(c, http.StatusInternalServerError, "批量删除失败")
+		if !handleServiceError(c, h.service.BatchDelete(c.Request.Context(), req.IDs), "批量删除") {
 			return
 		}
 	default:

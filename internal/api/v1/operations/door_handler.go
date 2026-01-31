@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
 	operationsmodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 	opsServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
@@ -31,10 +32,12 @@ func (h *DoorHandler) Create(c *gin.Context) {
 }
 
 func (h *DoorHandler) List(c *gin.Context) {
-	var params map[string]interface{}
-	c.ShouldBindJSON(&params)
+	var req requests.DoorListRequest
+	if !handleJSONBinding(c, &req) {
+		return
+	}
 
-	result, err := h.service.List(c.Request.Context(), params)
+	result, err := h.service.List(c.Request.Context(), req)
 	if !handleServiceError(c, err, "查询") {
 		return
 	}
@@ -78,7 +81,7 @@ func (h *DoorHandler) Delete(c *gin.Context) {
 }
 
 func (h *DoorHandler) BatchOperation(c *gin.Context) {
-	var req BatchOperationRequest
+	var req requests.DoorBatchOperationRequest
 	if !handleJSONBinding(c, &req) {
 		return
 	}

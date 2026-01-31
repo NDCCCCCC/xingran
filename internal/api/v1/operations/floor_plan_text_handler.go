@@ -4,20 +4,10 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
 	operationsmodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 	opsServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
-)
-
-const (
-	errInvalidParams  = "参数错误"
-	errCreateFailed   = "创建失败"
-	errUpdateFailed   = "更新失败"
-	errDeleteFailed   = "删除失败"
-	errQueryFailed    = "查询失败"
-	errNotFound       = "文本不存在"
-	errInvalidAction  = "不支持的操作"
-	errBatchDelete    = "批量删除失败"
 )
 
 type FloorPlanTextHandler struct {
@@ -28,91 +18,90 @@ func NewFloorPlanTextHandler(service opsServices.FloorPlanTextService) *FloorPla
 	return &FloorPlanTextHandler{service: service}
 }
 
+// Create 创建平面图文本
 func (h *FloorPlanTextHandler) Create(c *gin.Context) {
 	var text operationsmodels.FloorPlanText
-	if err := c.ShouldBindJSON(&text); err != nil {
-		response.Error(c, http.StatusBadRequest, errInvalidParams+": "+err.Error())
+	if !handleJSONBinding(c, &text) {
 		return
 	}
 
-	if err := h.service.Create(c.Request.Context(), &text); err != nil {
-		response.Error(c, http.StatusInternalServerError, errCreateFailed+": "+err.Error())
+	if !handleServiceError(c, h.service.Create(c.Request.Context(), &text), "创建") {
 		return
 	}
 
 	response.Success(c, text)
 }
 
+// List 查询平面图文本列表（类型安全版本）
 func (h *FloorPlanTextHandler) List(c *gin.Context) {
-	params := make(map[string]interface{})
-	_ = c.ShouldBindJSON(&params)
+	var req requests.FloorPlanTextListRequest
+	if !handleJSONBinding(c, &req) {
+		return
+	}
 
-	result, err := h.service.List(c.Request.Context(), params)
+	result, err := h.service.List(c.Request.Context(), req)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, errQueryFailed+": "+err.Error())
+		response.Error(c, http.StatusInternalServerError, "查询失败: "+err.Error())
 		return
 	}
 
 	response.Success(c, result)
 }
 
+// GetByID 获取平面图文本详情
 func (h *FloorPlanTextHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
 	text, err := h.service.GetByID(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusNotFound, errNotFound)
+		response.Error(c, http.StatusNotFound, "文本不存在")
 		return
 	}
 
 	response.Success(c, text)
 }
 
+// Update 更新平面图文本
 func (h *FloorPlanTextHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	var text operationsmodels.FloorPlanText
-	if err := c.ShouldBindJSON(&text); err != nil {
-		response.Error(c, http.StatusBadRequest, errInvalidParams+": "+err.Error())
+	if !handleJSONBinding(c, &text) {
 		return
 	}
 
 	text.ID = id
-	if err := h.service.Update(c.Request.Context(), &text); err != nil {
-		response.Error(c, http.StatusInternalServerError, errUpdateFailed+": "+err.Error())
+	if !handleServiceError(c, h.service.Update(c.Request.Context(), &text), "更新") {
 		return
 	}
 
 	response.Success(c, nil)
 }
 
+// Delete 删除平面图文本
 func (h *FloorPlanTextHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
-	if err := h.service.Delete(c.Request.Context(), id); err != nil {
-		response.Error(c, http.StatusInternalServerError, errDeleteFailed+": "+err.Error())
+	if !handleServiceError(c, h.service.Delete(c.Request.Context(), id), "删除") {
 		return
 	}
 
 	response.Success(c, nil)
 }
 
+// BatchOperation 批量操作（类型安全版本）
 func (h *FloorPlanTextHandler) BatchOperation(c *gin.Context) {
-	var req struct {
-		IDs    []string `json:"ids"`
-		Action string   `json:"action"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, errInvalidParams)
+	var req requests.FloorPlanTextBatchOperationRequest
+	if !handleJSONBinding(c, &req) {
 		return
 	}
 
-	if req.Action == "delete" {
-		if err := h.service.BatchDelete(c.Request.Context(), req.IDs); err != nil {
-			response.Error(c, http.StatusInternalServerError, errBatchDelete+": "+err.Error())
+	switch req.Action {
+	case "delete":
+		if !handleServiceError(c, h.service.BatchDelete(c.Request.Context(), req.IDs), "批量删除") {
 			return
 		}
-		response.Success(c, nil)
+	default:
+		response.Error(c, http.StatusBadRequest, "不支持的操作")
 		return
 	}
 
-	response.Error(c, http.StatusBadRequest, errInvalidAction)
+	response.Success(c, nil)
 }

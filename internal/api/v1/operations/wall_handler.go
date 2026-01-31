@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
 	operationsmodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 	opsServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
@@ -31,10 +32,12 @@ func (h *WallHandler) Create(c *gin.Context) {
 }
 
 func (h *WallHandler) List(c *gin.Context) {
-	var params map[string]interface{}
-	c.ShouldBindJSON(&params)
+	var req requests.WallListRequest
+	if !handleJSONBinding(c, &req) {
+		return
+	}
 
-	result, err := h.service.List(c.Request.Context(), params)
+	result, err := h.service.List(c.Request.Context(), req)
 	if !handleServiceError(c, err, "查询") {
 		return
 	}
@@ -78,7 +81,7 @@ func (h *WallHandler) Delete(c *gin.Context) {
 }
 
 func (h *WallHandler) BatchOperation(c *gin.Context) {
-	var req BatchOperationRequest
+	var req requests.WallBatchOperationRequest
 	if !handleJSONBinding(c, &req) {
 		return
 	}

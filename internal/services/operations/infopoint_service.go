@@ -3,6 +3,7 @@ package operations
 import (
 	"context"
 
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 	"gorm.io/gorm"
@@ -14,7 +15,7 @@ type InfoPointService interface {
 	Update(ctx context.Context, infoPoint *operations.OpsInfoPoint) error
 	Delete(ctx context.Context, id string) error
 	GetByID(ctx context.Context, id string) (*operations.OpsInfoPoint, error)
-	List(ctx context.Context, params map[string]interface{}) (*PageResult, error)
+	List(ctx context.Context, req requests.InfoPointListRequest) (*PageResult, error)
 	BatchDelete(ctx context.Context, ids []string) error
 }
 
@@ -91,54 +92,36 @@ func (s *infoPointService) GetByID(ctx context.Context, id string) (*operations.
 	return &infoPoint, nil
 }
 
-// List 查询信息点列表
-func (s *infoPointService) List(ctx context.Context, params map[string]interface{}) (*PageResult, error) {
+// List 查询信息点列表（类型安全版本）
+func (s *infoPointService) List(ctx context.Context, req requests.InfoPointListRequest) (*PageResult, error) {
 	var total int64
 	var list []operations.OpsInfoPoint
 
 	query := s.db.WithContext(ctx).Model(&operations.OpsInfoPoint{})
 
-	// 添加筛选条件
-	if name, ok := params["name"].(string); ok && name != "" {
-		query = query.Where("name LIKE ?", "%"+name+"%")
+	// 添加筛选条件 - 类型安全，无需类型断言
+	if req.Name != "" {
+		query = query.Where("name LIKE ?", "%"+req.Name+"%")
 	}
-	if workstationId, ok := params["workstationId"].(string); ok && workstationId != "" {
-		query = query.Where("workstation_id = ?", workstationId)
+	if req.WorkID != "" {
+		query = query.Where("workstation_id = ?", req.WorkID)
 	}
-	if deviceId, ok := params["deviceId"].(string); ok && deviceId != "" {
-		query = query.Where("device_id = ?", deviceId)
+	if req.PointType != "" {
+		query = query.Where("info_point_type = ?", req.PointType)
 	}
-	if infoPointType, ok := params["infoPointType"].(string); ok && infoPointType != "" {
-		query = query.Where("info_point_type = ?", infoPointType)
-	}
-	if status, ok := params["status"].(int); ok {
-		query = query.Where("status = ?", status)
-	}
-	if status, ok := params["status"].(float64); ok {
-		query = query.Where("status = ?", int(status))
+	if req.HasStatus() {
+		query = query.Where("status = ?", req.GetStatus(0))
 	}
 
-	// 分页
-	current := 1
-	pageSize := 10
-	if c, ok := params["current"].(int); ok {
-		current = c
-	}
-	if c, ok := params["current"].(float64); ok {
-		current = int(c)
-	}
-	if ps, ok := params["pageSize"].(int); ok {
-		pageSize = ps
-	}
-	if ps, ok := params["pageSize"].(float64); ok {
-		pageSize = int(ps)
-	}
+	// 分页 - 使用请求结构体的方法
+	offset := req.GetOffset()
+	_, pageSize := req.GetPagination()
+	current, _ := req.GetPagination()
 
 	if err := query.Count(&total).Error; err != nil {
 		return nil, err
 	}
 
-	offset := (current - 1) * pageSize
 	if err := query.Offset(offset).Limit(pageSize).Order("created_at DESC").Find(&list).Error; err != nil {
 		return nil, err
 	}
