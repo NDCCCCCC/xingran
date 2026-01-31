@@ -4,6 +4,7 @@ package core
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"time"
@@ -41,6 +42,7 @@ type Core struct {
 	CaptchaService              *CaptchaService                       // 验证码服务
 	CaptchaBackgroundService    *CaptchaBackgroundService             // 验证码背景图服务
 	OperLogService              services.OperLogService               // 操作日志服务
+	TokenBlacklistService       services.TokenBlacklistService        // 令牌黑名单服务
 
 	// 缓存服务（用于 System 模块）
 	DataCacheService   *services.DataCacheService   // 通用数据缓存服务
@@ -62,15 +64,21 @@ func (c *Core) GetDB() *gorm.DB {
 
 // New 创建核心模块管理器
 // 根据配置创建Core实例，初始化JWT管理器和密码管理器
-func New(cfg *config.Config) *Core {
+func New(cfg *config.Config) (*Core, error) {
 	sm4Cipher := initSM4Cipher(cfg.Security.SM4Key)
+
+	// 初始化JWT管理器
+	jwtManager, err := security.NewJWTManager(&cfg.JWT)
+	if err != nil {
+		return nil, fmt.Errorf("初始化JWT管理器失败: %w", err)
+	}
 
 	return &Core{
 		Config:     cfg,
-		JWTManager: security.NewJWTManager(&cfg.JWT),
+		JWTManager: jwtManager,
 		PwdManager: security.NewPasswordManager(nil),
 		SM4Cipher:  sm4Cipher,
-	}
+	}, nil
 }
 
 // initSM4Cipher 初始化SM4加密器
@@ -271,7 +279,11 @@ func (c *Core) Init() error {
 	c.OperLogService = services.NewOperLogService()
 	log.Println("操作日志服务初始化完成")
 
-	// 16. 初始化API端点元数据服务
+	// 16. 初始化令牌黑名单服务
+	c.TokenBlacklistService = services.NewTokenBlacklistService(c.Cache)
+	log.Println("令牌黑名单服务初始化完成")
+
+	// 17. 初始化API端点元数据服务
 	if err := c.initAPIEndpointService(); err != nil {
 		log.Printf("警告：初始化API端点元数据服务失败: %v", err)
 	} else {

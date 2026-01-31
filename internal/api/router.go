@@ -148,7 +148,10 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 
 		// 需要认证的接口
 		authorized := system.Group("")
-		authorized.Use(middleware.JWTAuth(core.JWTManager))
+		// 使用带黑名单检查的 JWT 认证中间件
+		authorized.Use(middleware.JWTAuthWithBlacklist(core.JWTManager, core.TokenBlacklistService))
+		// 添加操作日志中间件
+		authorized.Use(middleware.OperLogMiddleware(core.OperLogService, core))
 		{
 			// 个人信息相关接口（所有已登录用户可访问）
 			profile := authorized.Group("/profile")
@@ -191,6 +194,13 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 				systemV1.SetupUserRouter(users, core)
 				// Excel导入导出
 				operations.SetupExcelRouter(users, "user", core)
+			}
+
+			// 用户解锁路由（管理员权限）
+			userUnlock := authorized.Group("/user")
+			userUnlock.Use(middleware.RequirePermissions([]string{permSystemConfig}, core))
+			{
+				systemV1.SetupUserUnlockRouter(userUnlock, core)
 			}
 
 			// 角色管理
@@ -336,6 +346,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 	// 网络设备管理模块（统一管理）
 	network := r.Group("/network")
 	network.Use(middleware.JWTAuth(core.JWTManager))
+	// 添加操作日志中间件
+	network.Use(middleware.OperLogMiddleware(core.OperLogService, core))
 	network.Use(middleware.RequirePermissions([]string{
 		"network:device:list",
 		"network:device:add",
@@ -365,6 +377,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 	// 值班管理模块（运维管理）
 	duty := r.Group("/duty")
 	duty.Use(middleware.JWTAuth(core.JWTManager))
+	// 添加操作日志中间件
+	duty.Use(middleware.OperLogMiddleware(core.OperLogService, core))
 	{
 		// 值班池管理
 		dutyPools := duty.Group("/pools")
@@ -407,6 +421,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 	// 运维工单管理模块
 	workorder := r.Group("/workorder")
 	workorder.Use(middleware.JWTAuth(core.JWTManager))
+	// 添加操作日志中间件
+	workorder.Use(middleware.OperLogMiddleware(core.OperLogService, core))
 	{
 		// 工单管理
 		orders := workorder.Group("/orders")
@@ -459,6 +475,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 	// 知识库管理模块
 	knowledge := r.Group("/knowledge")
 	knowledge.Use(middleware.JWTAuth(core.JWTManager))
+	// 添加操作日志中间件
+	knowledge.Use(middleware.OperLogMiddleware(core.OperLogService, core))
 	{
 		// 知识库文章管理
 		articles := knowledge.Group("/articles")
@@ -506,6 +524,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 	// AD域管理模块
 	adDomain := r.Group("/ad-domain")
 	adDomain.Use(middleware.JWTAuth(core.JWTManager))
+	// 添加操作日志中间件
+	adDomain.Use(middleware.OperLogMiddleware(core.OperLogService, core))
 	{
 		systemV1.SetupADDomainRouter(adDomain, core)
 	}
@@ -513,6 +533,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 	// 运维管理模块（物理资源管理）
 	ops := r.Group("/ops")
 	ops.Use(middleware.JWTAuth(core.JWTManager))
+	// 添加操作日志中间件
+	ops.Use(middleware.OperLogMiddleware(core.OperLogService, core))
 	{
 		// 楼宇管理
 		buildings := ops.Group("/building")

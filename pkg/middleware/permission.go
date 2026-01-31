@@ -277,7 +277,14 @@ func ApplyDataScope(db *gorm.DB, userID string, dataScope models.DataScope, core
 	case models.DataScopeDept:
 		// 本部门数据权限，查询用户所属部门
 		var deptId string
-		core.DB.GetDB().Raw("SELECT dept_id FROM sys_user WHERE id = ?", userID).Scan(&deptId)
+		if err := core.DB.GetDB().Raw("SELECT dept_id FROM sys_user WHERE id = ?", userID).Scan(&deptId).Error; err != nil {
+			// 记录错误并返回无权限查询
+			if err != gorm.ErrRecordNotFound {
+				// 非记录未找到错误，可能是数据库连接问题
+				// 可以考虑添加日志记录
+			}
+			return db.Where("1=0")
+		}
 		if deptId != "" {
 			return db.Where(deptField+" = ?", deptId)
 		}
@@ -285,7 +292,14 @@ func ApplyDataScope(db *gorm.DB, userID string, dataScope models.DataScope, core
 	case models.DataScopeDeptChild:
 		// 本部门及子部门数据权限
 		var deptId string
-		core.DB.GetDB().Raw("SELECT dept_id FROM sys_user WHERE id = ?", userID).Scan(&deptId)
+		if err := core.DB.GetDB().Raw("SELECT dept_id FROM sys_user WHERE id = ?", userID).Scan(&deptId).Error; err != nil {
+			// 记录错误并返回无权限查询
+			if err != gorm.ErrRecordNotFound {
+				// 非记录未找到错误，可能是数据库连接问题
+				// 可以考虑添加日志记录
+			}
+			return db.Where("1=0")
+		}
 		if deptId != "" {
 			// 查询本部门及所有子部门
 			var childDeptIds []string
