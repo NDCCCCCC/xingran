@@ -6,6 +6,19 @@ import { useState, useCallback } from 'react';
 import type { Point } from '@/utils/cad/geometry';
 import { snapToGrid, distance } from '@/utils/cad/geometry';
 
+// ==================== 常量定义 ====================
+
+/** 角度吸附增量（度）：15度 = 0度、15度、30度、45度、60度、75度、90度等 */
+const ANGLE_SNAP_INCREMENT = 15;
+
+/** 最小绘制距离（像素） */
+const MIN_DRAW_DISTANCE = 5;
+
+/** 默认网格大小 */
+const DEFAULT_GRID_SIZE = 20;
+
+// ==================== 类型定义 ====================
+
 export interface WallDrawingResult {
   points: Point[];
   type: 'straight' | 'polyline';
@@ -19,8 +32,7 @@ export interface UseWallDrawingOptions {
   onComplete?: (wall: WallDrawingResult) => void;
 }
 
-// 角度吸附增量（度）
-const ANGLE_SNAP_INCREMENT = 15; // 15度 = 0度、15度、30度、45度、60度、75度、90度等
+// ==================== 辅助函数 ====================
 
 /**
  * 角度吸附：将角度吸附到最近的增量角度
@@ -39,8 +51,6 @@ function applyAngleSnap(point: Point, origin: Point): Point {
   const dy = point.y - origin.y;
   const angle = Math.atan2(dy, dx);
   const dist = Math.sqrt(dx * dx + dy * dy);
-
-  // 吸附角度
   const snappedAngle = snapAngle(angle, ANGLE_SNAP_INCREMENT);
 
   return {
@@ -49,9 +59,11 @@ function applyAngleSnap(point: Point, origin: Point): Point {
   };
 }
 
+// ==================== Hook 实现 ====================
+
 export function useWallDrawing(options: UseWallDrawingOptions = {}) {
   const {
-    gridSize = 20,
+    gridSize = DEFAULT_GRID_SIZE,
     snapEnabled = true,
     angleSnapEnabled = true,
     onPointsChange,
@@ -61,13 +73,11 @@ export function useWallDrawing(options: UseWallDrawingOptions = {}) {
   const [isDrawing, setIsDrawing] = useState(false);
   const [drawPoints, setDrawPoints] = useState<Point[]>([]);
   const [previewPoint, setPreviewPoint] = useState<Point | null>(null);
-  // 用于判断是否按住 Shift 键禁用角度吸附
   const [disableAngleSnap, setDisableAngleSnap] = useState(false);
 
   const snapPoint = useCallback((point: Point, origin?: Point): Point => {
     let result = snapEnabled ? snapToGrid(point, gridSize) : point;
 
-    // 如果有原点且启用角度吸附且没有禁用
     if (origin && angleSnapEnabled && !disableAngleSnap) {
       result = applyAngleSnap(result, origin);
     }
@@ -80,7 +90,6 @@ export function useWallDrawing(options: UseWallDrawingOptions = {}) {
 
     setIsDrawing(true);
 
-    // 如果提供了已有墙体点，使用它们作为起点
     if (existingPoints && existingPoints.length > 0) {
       setDrawPoints(existingPoints);
       setPreviewPoint(snappedPoint);
@@ -93,12 +102,14 @@ export function useWallDrawing(options: UseWallDrawingOptions = {}) {
   }, [snapPoint, onPointsChange]);
 
   const addPoint = useCallback((point: Point) => {
-    if (!isDrawing || drawPoints.length === 0) return;
+    if (!isDrawing || drawPoints.length === 0) {
+      return;
+    }
 
     const lastPoint = drawPoints[drawPoints.length - 1];
     const snappedPoint = snapPoint(point, lastPoint);
 
-    if (distance(lastPoint, snappedPoint) < 5) {
+    if (distance(lastPoint, snappedPoint) < MIN_DRAW_DISTANCE) {
       return;
     }
 
@@ -107,12 +118,13 @@ export function useWallDrawing(options: UseWallDrawingOptions = {}) {
     setPreviewPoint(snappedPoint);
 
     onPointsChange?.(newPoints);
-  }, [isDrawing, drawPoints, snapPoint, distance, onPointsChange]);
+  }, [isDrawing, drawPoints, snapPoint, onPointsChange]);
 
   const updatePreview = useCallback((point: Point, shiftKey?: boolean) => {
-    if (!isDrawing) return;
+    if (!isDrawing) {
+      return;
+    }
 
-    // Shift 键禁用角度吸附
     setDisableAngleSnap(!!shiftKey);
 
     const lastPoint = drawPoints[drawPoints.length - 1];

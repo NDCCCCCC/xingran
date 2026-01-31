@@ -4,6 +4,25 @@
  * 提供缓存统计和管理功能
  */
 
+// ==================== 常量定义 ====================
+
+/** 默认内存缓存过期时间（30分钟） */
+const DEFAULT_MEMORY_TTL = 30 * 60 * 1000;
+
+/** 默认 localStorage 缓存过期时间（7天） */
+const DEFAULT_STORAGE_TTL = 7 * 24 * 60 * 60 * 1000;
+
+/** localStorage 存储键前缀 */
+const DEFAULT_STORAGE_PREFIX = 'baidu_map_cache_';
+
+/** 定期清理间隔（5分钟） */
+const CLEANUP_INTERVAL = 5 * 60 * 1000;
+
+/** 日志前缀 */
+const LOG_PREFIX = '[BaiduMapCache]';
+
+// ==================== 类型定义 ====================
+
 interface CacheItem<T> {
   data: T;
   timestamp: number;
@@ -11,22 +30,41 @@ interface CacheItem<T> {
 }
 
 interface CacheConfig {
-  memoryTTL: number;     // 内存缓存过期时间（毫秒）
-  storageTTL: number;    // localStorage 缓存过期时间（毫秒）
-  storagePrefix: string; // localStorage 存储键前缀
+  memoryTTL: number;
+  storageTTL: number;
+  storagePrefix: string;
+}
+
+interface CacheStats {
+  memoryHits: number;
+  storageHits: number;
+  misses: number;
+}
+
+interface CacheStatsResult {
+  memoryHits: number;
+  storageHits: number;
+  misses: number;
+  totalHits: number;
+  totalRequests: number;
+  hitRate: string;
+  memorySize: number;
+  storageSize: number;
+  totalSize: number;
 }
 
 // 默认配置
 const DEFAULT_CONFIG: CacheConfig = {
-  memoryTTL: 30 * 60 * 1000,      // 30分钟
-  storageTTL: 7 * 24 * 60 * 60 * 1000,  // 7天
-  storagePrefix: 'baidu_map_cache_',
+  memoryTTL: DEFAULT_MEMORY_TTL,
+  storageTTL: DEFAULT_STORAGE_TTL,
+  storagePrefix: DEFAULT_STORAGE_PREFIX,
 };
 
-// 内存缓存存储
+// ==================== 内存缓存存储 ====================
+
 class MemoryCache<T> {
   private cache: Map<string, CacheItem<T>>;
-  private ttl: number;
+  private readonly ttl: number;
 
   constructor(ttl: number) {
     this.cache = new Map();
@@ -44,7 +82,9 @@ class MemoryCache<T> {
 
   get(key: string): T | null {
     const item = this.cache.get(key);
-    if (!item) return null;
+    if (!item) {
+      return null;
+    }
 
     if (Date.now() > item.expiresAt) {
       this.cache.delete(key);
@@ -80,10 +120,11 @@ class MemoryCache<T> {
   }
 }
 
-// localStorage 缓存存储
+// ==================== localStorage 缓存存储 ====================
+
 class StorageCache<T> {
-  private prefix: string;
-  private ttl: number;
+  private readonly prefix: string;
+  private readonly ttl: number;
 
   constructor(prefix: string, ttl: number) {
     this.prefix = prefix;
@@ -92,6 +133,10 @@ class StorageCache<T> {
 
   private getStorageKey(key: string): string {
     return `${this.prefix}${key}`;
+  }
+
+  private isExpired(item: CacheItem<T>): boolean {
+    return Date.now() > item.expiresAt;
   }
 
   set(key: string, data: T): void {
@@ -103,26 +148,28 @@ class StorageCache<T> {
         expiresAt: now + this.ttl,
       };
       localStorage.setItem(this.getStorageKey(key), JSON.stringify(item));
-    } catch (e) {
-      console.warn('[BaiduMapCache] localStorage write failed:', e);
+    } catch (error) {
+      console.warn(`${LOG_PREFIX} localStorage write failed:`, error);
     }
   }
 
   get(key: string): T | null {
     try {
       const raw = localStorage.getItem(this.getStorageKey(key));
-      if (!raw) return null;
+      if (!raw) {
+        return null;
+      }
 
       const item: CacheItem<T> = JSON.parse(raw);
 
-      if (Date.now() > item.expiresAt) {
+      if (this.isExpired(item)) {
         this.delete(key);
         return null;
       }
 
       return item.data;
-    } catch (e) {
-      console.warn('[BaiduMapCache] localStorage read failed:', e);
+    } catch (error) {
+      console.warn(`${LOG_PREFIX} localStorage read failed:`, error);
       return null;
     }
   }
@@ -134,21 +181,21 @@ class StorageCache<T> {
   delete(key: string): void {
     try {
       localStorage.removeItem(this.getStorageKey(key));
-    } catch (e) {
-      console.warn('[BaiduMapCache] localStorage delete failed:', e);
+    } catch (error) {
+      console.warn(`${LOG_PREFIX} localStorage delete failed:`, error);
     }
   }
 
   clear(): void {
     try {
       const keys = Object.keys(localStorage);
-      keys.forEach((key) => {
+      for (const key of keys) {
         if (key.startsWith(this.prefix)) {
           localStorage.removeItem(key);
         }
-      });
-    } catch (e) {
-      console.warn('[BaiduMapCache] localStorage clear failed:', e);
+      }
+    } catch (error) {
+      console.warn(`${LOG_PREFIX} localStorage clear failed:`, error);
     }
   }
 
@@ -156,23 +203,29 @@ class StorageCache<T> {
     try {
       const now = Date.now();
       const keys = Object.keys(localStorage);
-      keys.forEach((storageKey) => {
-        if (!storageKey.startsWith(this.prefix)) return;
+
+      for (const storageKey of keys) {
+        if (!storageKey.startsWith(this.prefix)) {
+          continue;
+        }
 
         try {
           const raw = localStorage.getItem(storageKey);
-          if (!raw) return;
+          if (!raw) {
+            continue;
+          }
 
           const item: CacheItem<T> = JSON.parse(raw);
           if (now > item.expiresAt) {
             localStorage.removeItem(storageKey);
           }
-        } catch (e) {
+        } catch {
+          // �损坏的条目
           localStorage.removeItem(storageKey);
         }
-      });
-    } catch (e) {
-      console.warn('[BaiduMapCache] localStorage cleanup failed:', e);
+      }
+    } catch (error) {
+      console.warn(`${LOG_PREFIX} localStorage cleanup failed:`, error);
     }
   }
 
@@ -186,13 +239,14 @@ class StorageCache<T> {
   }
 }
 
-// 百度地图缓存类
+// ==================== 百度地图缓存类 ====================
+
 export class BaiduMapCache<T> {
   private memoryCache: MemoryCache<T>;
   private storageCache: StorageCache<T>;
-  private cleanupTimer: ReturnType<typeof setInterval> | null;
-  private config: CacheConfig;
-  private stats = {
+  private cleanupTimer: ReturnType<typeof setInterval> | null = null;
+  private readonly config: CacheConfig;
+  private stats: CacheStats = {
     memoryHits: 0,
     storageHits: 0,
     misses: 0,
@@ -203,11 +257,11 @@ export class BaiduMapCache<T> {
     this.memoryCache = new MemoryCache<T>(this.config.memoryTTL);
     this.storageCache = new StorageCache<T>(this.config.storagePrefix, this.config.storageTTL);
 
-    // 定期清理过期缓存（每5分钟）
+    // 定期清理过期缓存
     this.cleanupTimer = setInterval(() => {
       this.memoryCache.cleanup();
       this.storageCache.cleanup();
-    }, 5 * 60 * 1000);
+    }, CLEANUP_INTERVAL);
 
     // 初始化时清理一次
     this.cleanup();
@@ -232,7 +286,7 @@ export class BaiduMapCache<T> {
     const memValue = this.memoryCache.get(key);
     if (memValue) {
       this.stats.memoryHits++;
-      console.log('[BaiduMapCache] Memory cache hit:', key);
+      console.log(`${LOG_PREFIX} Memory cache hit:`, key);
       return memValue;
     }
 
@@ -240,14 +294,14 @@ export class BaiduMapCache<T> {
     const storageValue = this.storageCache.get(key);
     if (storageValue) {
       this.stats.storageHits++;
-      console.log('[BaiduMapCache] localStorage cache hit:', key);
+      console.log(`${LOG_PREFIX} localStorage cache hit:`, key);
       // 回填到内存缓存
       this.memoryCache.set(key, storageValue);
       return storageValue;
     }
 
     this.stats.misses++;
-    console.log('[BaiduMapCache] Cache miss:', key);
+    console.log(`${LOG_PREFIX} Cache miss:`, key);
     return null;
   }
 
@@ -306,7 +360,7 @@ export class BaiduMapCache<T> {
   /**
    * 获取缓存统计信息
    */
-  getStats() {
+  getStats(): CacheStatsResult {
     const totalHits = this.stats.memoryHits + this.stats.storageHits;
     const totalRequests = totalHits + this.stats.misses;
 
