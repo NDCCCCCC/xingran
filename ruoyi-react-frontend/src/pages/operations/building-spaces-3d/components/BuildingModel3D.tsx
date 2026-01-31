@@ -7,15 +7,9 @@ import { useRef, useState } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera, Html, useCursor } from '@react-three/drei';
 import * as THREE from 'three';
-
-// 楼层数据接口
-interface FloorData {
-  id: string;
-  name: string;
-  floorNo: string;
-  workstationCount: number;
-  status: number;
-}
+import type { FloorData } from './types';
+import { SCENE_DIMENSIONS } from './constants';
+import { getFloorColor, getFloorStatusText } from './utils';
 
 interface BuildingModel3DProps {
   floors: FloorData[];
@@ -23,38 +17,37 @@ interface BuildingModel3DProps {
   selectedFloorId?: string;
 }
 
-// 单个楼层组件
-const Floor3D: React.FC<{
+interface Floor3DProps {
   floor: FloorData;
   position: [number, number, number];
   onClick?: () => void;
   isSelected?: boolean;
-}> = ({ floor, position, onClick, isSelected }) => {
+}
+
+const EMPTY_STATE = {
+  icon: '🏢',
+  title: '暂无楼层数据',
+  description: '请先为该楼宇添加楼层信息',
+};
+
+// 单个楼层组件
+const Floor3D: React.FC<Floor3DProps> = ({ floor, position, onClick, isSelected }) => {
   const meshRef = useRef<THREE.Mesh>(null);
   const [hovered, setHovered] = useState(false);
   useCursor(hovered);
 
-  // 悬停动画 - 只保留缩放效果
+  const targetScale = hovered || isSelected ? 1.1 : 1;
+
   useFrame(() => {
     if (meshRef.current) {
-      const targetScale = hovered || isSelected ? 1.1 : 1;
       meshRef.current.scale.x = THREE.MathUtils.lerp(meshRef.current.scale.x, targetScale, 0.1);
       meshRef.current.scale.y = THREE.MathUtils.lerp(meshRef.current.scale.y, targetScale, 0.1);
       meshRef.current.scale.z = THREE.MathUtils.lerp(meshRef.current.scale.z, targetScale, 0.1);
     }
   });
 
-  // 根据状态选择颜色（适配白色背景）
-  const getStatusColor = () => {
-    if (floor.status === 1) return 0xd32f2f; // 停用 - 深红色
-    if (floor.workstationCount === 0) return 0xf57c00; // 无工位 - 深橙色
-    const occupiedRatio = floor.workstationCount > 0 ? 0.3 : 0;
-    return occupiedRatio > 0.7 ? 0x388e3c : 0x1976d2; // 绿色或蓝色
-  };
-
-  const baseColor = getStatusColor();
-  const floorHeight = 0.4;
-  const floorSize = 4.5;
+  const baseColor = getFloorColor(floor);
+  const { HEIGHT: floorHeight, SIZE: floorSize } = SCENE_DIMENSIONS.FLOOR;
 
   return (
     <group position={position}>
@@ -78,7 +71,7 @@ const Floor3D: React.FC<{
         />
       </mesh>
 
-      {/* 楼层边框 - 仅在悬停时显示，不显示选中边框 */}
+      {/* 悬停边框 */}
       {hovered && (
         <mesh position={[0, floorHeight / 2, 0]}>
           <boxGeometry args={[floorSize + 0.15, floorHeight + 0.05, floorSize + 0.15]} />
@@ -86,15 +79,12 @@ const Floor3D: React.FC<{
         </mesh>
       )}
 
-      {/* 使用 Html 显示文字标签 - 不随模型旋转 */}
+      {/* 楼层标签 */}
       <Html
         position={[0, floorHeight + 0.5, 0]}
         center
         distanceFactor={8}
-        style={{
-          pointerEvents: 'none',
-          userSelect: 'none',
-        }}
+        style={{ pointerEvents: 'none', userSelect: 'none' }}
       >
         <div style={{
           background: hovered || isSelected ? 'rgba(24, 144, 255, 0.95)' : 'rgba(0, 0, 0, 0.75)',
@@ -111,15 +101,13 @@ const Floor3D: React.FC<{
         </div>
       </Html>
 
-      {/* 悬停时显示详细信息 */}
+      {/* 悬停详情 */}
       {hovered && (
         <Html
           position={[0, floorHeight + 2.5, 0]}
           center
           distanceFactor={8}
-          style={{
-            pointerEvents: 'none',
-          }}
+          style={{ pointerEvents: 'none' }}
         >
           <div style={{
             background: '#fff',
@@ -142,7 +130,9 @@ const Floor3D: React.FC<{
             <div style={{ fontSize: 14, color: '#595959', display: 'flex', flexDirection: 'column', gap: 6 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span>工位数量：</span>
-                <span style={{ fontWeight: 'bold', color: '#1890ff', fontSize: 15 }}>{floor.workstationCount} 个</span>
+                <span style={{ fontWeight: 'bold', color: '#1890ff', fontSize: 15 }}>
+                  {floor.workstationCount} 个
+                </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span>楼层状态：</span>
@@ -151,7 +141,7 @@ const Floor3D: React.FC<{
                   color: floor.status === 0 ? '#52c41a' : '#ff4d4f',
                   fontSize: 14
                 }}>
-                  {floor.status === 0 ? '正常' : '停用'}
+                  {getFloorStatusText(floor.status)}
                 </span>
               </div>
               <div style={{ fontSize: 13, color: '#8c8c8c', marginTop: 6, textAlign: 'center', paddingTop: 4 }}>
@@ -169,13 +159,9 @@ const Floor3D: React.FC<{
 const BuildingScene: React.FC<BuildingModel3DProps> = ({ floors, onFloorClick, selectedFloorId }) => {
   const groupRef = useRef<THREE.Group>(null);
 
-  // 基础楼层间距
-  const BASE_FLOOR_SPACING = 1.2;
-
-  // 计算楼层的固定基准位置
-  const getFloorBasePosition = (index: number) => {
-    const y = 0.3 + index * BASE_FLOOR_SPACING;
-    return [0, y, 0] as [number, number, number];
+  const getFloorPosition = (index: number): [number, number, number] => {
+    const y = 0.3 + index * SCENE_DIMENSIONS.FLOOR.SPACING;
+    return [0, y, 0];
   };
 
   return (
@@ -187,29 +173,21 @@ const BuildingScene: React.FC<BuildingModel3DProps> = ({ floors, onFloorClick, s
       <directionalLight position={[0, -10, 0]} intensity={0.3} />
 
       {/* 楼层堆叠 */}
-      {floors.map((floor, index) => {
-        const basePosition = getFloorBasePosition(index);
-        return (
-          <Floor3D
-            key={floor.id}
-            floor={floor}
-            position={basePosition}
-            onClick={() => {
-              if (onFloorClick) {
-                onFloorClick(floor);
-              }
-            }}
-            isSelected={selectedFloorId === floor.id}
-          />
-        );
-      })}
+      {floors.map((floor, index) => (
+        <Floor3D
+          key={floor.id}
+          floor={floor}
+          position={getFloorPosition(index)}
+          onClick={() => onFloorClick?.(floor)}
+          isSelected={selectedFloorId === floor.id}
+        />
+      ))}
     </group>
   );
 };
 
 // 主组件
 const BuildingModel3D: React.FC<BuildingModel3DProps> = ({ floors, onFloorClick, selectedFloorId }) => {
-  // 如果没有楼层，显示提示
   if (floors.length === 0) {
     return (
       <div style={{
@@ -223,9 +201,9 @@ const BuildingModel3D: React.FC<BuildingModel3DProps> = ({ floors, onFloorClick,
         background: '#f5f5f5',
         color: '#8c8c8c',
       }}>
-        <div style={{ fontSize: 48 }}>🏢</div>
-        <div style={{ fontSize: 16 }}>暂无楼层数据</div>
-        <div style={{ fontSize: 12, opacity: 0.7 }}>请先为该楼宇添加楼层信息</div>
+        <div style={{ fontSize: 48 }}>{EMPTY_STATE.icon}</div>
+        <div style={{ fontSize: 16 }}>{EMPTY_STATE.title}</div>
+        <div style={{ fontSize: 12, opacity: 0.7 }}>{EMPTY_STATE.description}</div>
       </div>
     );
   }
