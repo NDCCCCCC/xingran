@@ -1,14 +1,16 @@
 /**
  * 湖北省楼宇空间 3D 可视化页面
+ * 支持切换百度地图普通版和WebGL版本
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { Spin, Alert } from 'antd';
+import { Spin, Alert, Switch } from 'antd';
 import { LoadingOutlined } from '@ant-design/icons';
 import { useVisualizationStore } from '@/store/visualizationStore';
 import { buildingApi } from '@/lib/opsApi';
 import { handleApiError } from '@/utils/errorHandler';
 import HubeiMap from './components/HubeiMap';
+import HubeiMapGL from './components/HubeiMapGL';
 import BuildingView3D from './components/BuildingView3D';
 import FloorView3D from './components/FloorView3D';
 import type { BuildingItem } from './types';
@@ -16,6 +18,7 @@ import type { BuildingItem } from './types';
 const BuildingSpaces3D: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [buildings, setBuildings] = useState<BuildingItem[]>([]);
+  const [useWebGL, setUseWebGL] = useState(true); // 默认使用WebGL版本
 
   const { viewLevel } = useVisualizationStore();
 
@@ -50,13 +53,21 @@ const BuildingSpaces3D: React.FC = () => {
 
     switch (viewLevel) {
       case 'map':
-        return <HubeiMap buildings={buildings} />;
+        return useWebGL ? (
+          <HubeiMapGL buildings={buildings} />
+        ) : (
+          <HubeiMap buildings={buildings} />
+        );
       case 'building':
         return <BuildingView3D />;
       case 'floor':
         return <FloorView3D />;
       default:
-        return <HubeiMap buildings={buildings} />;
+        return useWebGL ? (
+          <HubeiMapGL buildings={buildings} />
+        ) : (
+          <HubeiMap buildings={buildings} />
+        );
     }
   };
 
@@ -64,6 +75,37 @@ const BuildingSpaces3D: React.FC = () => {
     <div style={{ height: '100vh', position: 'relative', overflow: 'hidden' }}>
       {/* 主视图 */}
       {renderView()}
+
+      {/* WebGL版本切换开关 */}
+      {viewLevel === 'map' && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 16,
+            left: 16,
+            background: 'rgba(255, 255, 255, 0.95)',
+            padding: '12px 16px',
+            borderRadius: '8px',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+            zIndex: 100,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ fontSize: 14, fontWeight: 'bold', color: '#1890ff' }}>
+              🗺️ 地图版本
+            </span>
+            <Switch
+              checked={useWebGL}
+              onChange={(checked) => setUseWebGL(checked)}
+              checkedChildren="WebGL"
+              unCheckedChildren="普通"
+            />
+          </div>
+          <div style={{ fontSize: 11, color: '#999', marginTop: 4 }}>
+            {useWebGL ? 'WebGL 版本支持 3D 视角' : '普通版本兼容性更好'}
+          </div>
+        </div>
+      )}
 
       {/* 提示信息 */}
       {(buildings.length === 0 && !loading) && (

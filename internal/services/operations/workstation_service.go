@@ -28,6 +28,9 @@ type PositionUpdateItem struct {
 	PositionX int    `json:"positionX"`
 	PositionY int    `json:"positionY"`
 	Rotation  *int   `json:"rotation,omitempty"` // 旋转角度（可选）
+	Width     *int   `json:"width,omitempty"`     // 工位宽度（毫米，可选）
+	Depth     *int   `json:"depth,omitempty"`     // 工位深度（毫米，可选）
+	DeskType  *int   `json:"deskType,omitempty"`  // 桌型（可选）：0=一字型, 1=L型
 }
 
 // NewWorkstationService 创建工位服务实例
@@ -138,7 +141,7 @@ func (s *workstationService) BatchDelete(ctx context.Context, ids []string) erro
 	return s.db.WithContext(ctx).Delete(&models.Workstation{}, "id IN ?", ids).Error
 }
 
-// BatchUpdatePositions 批量更新工位位置
+// BatchUpdatePositions 批量更新工位位置和尺寸
 func (s *workstationService) BatchUpdatePositions(ctx context.Context, items []PositionUpdateItem) error {
 	if len(items) == 0 {
 		return nil
@@ -153,6 +156,18 @@ func (s *workstationService) BatchUpdatePositions(ctx context.Context, items []P
 			// 如果提供了 rotation 值，则更新
 			if item.Rotation != nil {
 				updates["rotation"] = *item.Rotation
+			}
+			// 如果提供了 width 值，则更新
+			if item.Width != nil {
+				updates["width"] = *item.Width
+			}
+			// 如果提供了 depth 值，则更新
+			if item.Depth != nil {
+				updates["depth"] = *item.Depth
+			}
+			// 如果提供了 deskType 值，则更新
+			if item.DeskType != nil {
+				updates["desk_type"] = *item.DeskType
 			}
 
 			if err := tx.Model(&models.Workstation{}).

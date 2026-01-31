@@ -413,3 +413,276 @@ export const excelApi = {
     return await post<BaseResponse<Array<{ label: string; value: number }>>>(`/ops/${entityType}/status-options`, {});
   },
 };
+
+// ==================== 墙体管理（CAD平面图） ====================
+
+export interface Wall {
+  id: string;
+  floorId: string;
+  type: 'straight' | 'curved' | 'l_shaped' | 'polyline';
+  points: string;
+  thickness: number;
+  height: number;
+  color: string;
+  name?: string;
+  remark?: string;
+}
+
+export interface WallListParams extends PageParams {
+  floorId?: string;
+  type?: string;
+  name?: string;
+}
+
+export const wallApi = {
+  list: async (params: WallListParams) => {
+    return await post<BaseResponse<PageResponse<Wall>>>('/ops/walls/list', params);
+  },
+
+  get: async (id: string) => {
+    return await post<BaseResponse<Wall>>('/ops/walls/' + id, {});
+  },
+
+  create: async (data: Partial<Wall>) => {
+    return await post('/ops/walls', data);
+  },
+
+  update: async (id: string, data: Partial<Wall>) => {
+    return await post('/ops/walls/' + id + '/update', data);
+  },
+
+  delete: async (id: string) => {
+    return await post('/ops/walls/' + id + '/delete', {});
+  },
+
+  batch: async (action: string, ids: string[]) => {
+    return await post('/ops/walls/batch', { action, ids });
+  },
+};
+
+// ==================== 门管理（CAD平面图） ====================
+
+export interface Door {
+  id: string;
+  floorId: string;
+  wallId?: string;
+  position: string;
+  angle: number;
+  type: 'single' | 'double' | 'sliding' | 'revolving' | 'emergency';
+  direction: 'left' | 'right' | 'double' | 'sliding';
+  width: number;
+  length: number;
+  color: string;
+  name?: string;
+  remark?: string;
+}
+
+export interface DoorListParams extends PageParams {
+  floorId?: string;
+  wallId?: string;
+  type?: string;
+  name?: string;
+}
+
+export const doorApi = {
+  list: async (params: DoorListParams) => {
+    return await post<BaseResponse<PageResponse<Door>>>('/ops/doors/list', params);
+  },
+
+  get: async (id: string) => {
+    return await post<BaseResponse<Door>>('/ops/doors/' + id, {});
+  },
+
+  create: async (data: Partial<Door>) => {
+    return await post('/ops/doors', data);
+  },
+
+  update: async (id: string, data: Partial<Door>) => {
+    return await post('/ops/doors/' + id + '/update', data);
+  },
+
+  delete: async (id: string) => {
+    return await post('/ops/doors/' + id + '/delete', {});
+  },
+
+  batch: async (action: string, ids: string[]) => {
+    return await post('/ops/doors/batch', { action, ids });
+  },
+};
+
+// ==================== 平面图文本管理（CAD平面图） ====================
+
+export interface FloorPlanText {
+  id: string;
+  floorId: string;
+  position: string;
+  content: string;
+  fontSize: number;
+  color: string;
+  fontFamily?: string;
+  fontWeight?: string;
+  fontStyle?: string;
+  angle?: number;
+  remark?: string;
+}
+
+export interface FloorPlanTextListParams extends PageParams {
+  floorId?: string;
+  content?: string;
+}
+
+export const floorPlanTextApi = {
+  list: async (params: FloorPlanTextListParams) => {
+    return await post<BaseResponse<PageResponse<FloorPlanText>>>('/ops/floor-plan-texts/list', params);
+  },
+
+  get: async (id: string) => {
+    return await post<BaseResponse<FloorPlanText>>('/ops/floor-plan-texts/' + id, {});
+  },
+
+  create: async (data: Partial<FloorPlanText>) => {
+    return await post('/ops/floor-plan-texts', data);
+  },
+
+  update: async (id: string, data: Partial<FloorPlanText>) => {
+    return await post('/ops/floor-plan-texts/' + id + '/update', data);
+  },
+
+  delete: async (id: string) => {
+    return await post('/ops/floor-plan-texts/' + id + '/delete', {});
+  },
+
+  batch: async (action: string, ids: string[]) => {
+    return await post('/ops/floor-plan-texts/batch', { action, ids });
+  },
+};
+
+// ==================== 地理编码（带缓存） ====================
+
+export interface GeocodeResult {
+  lng: number;
+  lat: number;
+  formattedAddress?: string;
+  addressComponent?: {
+    province: string;
+    city: string;
+    district: string;
+    street: string;
+  };
+  precise?: number;
+  level?: string;
+}
+
+import { getBaiduMapCache } from '@/utils/baiduMapCache';
+import { cacheStats } from '@/utils/cacheStats';
+
+/**
+ * 带缓存的地理编码
+ * 优先从缓存获取，缓存未命中时调用后端API
+ *
+ * @param address 地址字符串
+ * @param maxAge 缓存最大有效期（毫秒），默认7天
+ * @returns 地理编码结果或null
+ */
+export const geocodeWithCache = async (
+  address: string,
+  maxAge = 7 * 24 * 60 * 60 * 1000
+): Promise<GeocodeResult | null> => {
+  if (!address || address.trim() === '') {
+    return null;
+  }
+
+  const cacheKey = `geocode_${address}`;
+  const baiduCache = getBaiduMapCache<GeocodeResult>();
+
+  // 1. 尝试从缓存获取
+  const cached = baiduCache.get(cacheKey);
+  if (cached) {
+    cacheStats.recordStorageHit();
+    console.log('✅ 地理编码缓存命中:', address);
+    return cached;
+  }
+
+  // 2. 调用后端API
+  cacheStats.recordAPICall();
+  console.log('🌐 调用后端地理编码API:', address);
+
+  try {
+    const result = await post<BaseResponse<GeocodeResult>>('/ops/building/geocode', { address });
+
+    if (result.code === 0 && result.data) {
+      // 3. 存入缓存
+      baiduCache.set(cacheKey, result.data);
+      console.log('💾 地理编码结果已缓存:', address);
+      return result.data;
+    }
+
+    return null;
+  } catch (error) {
+    console.error('❌ 地理编码失败:', error);
+    return null;
+  }
+};
+
+/**
+ * 批量地理编码（带缓存）
+ *
+ * @param addresses 地址数组
+ * @returns 地址到坐标的映射
+ */
+export const batchGeocodeWithCache = async (
+  addresses: string[]
+): Promise<Map<string, GeocodeResult>> => {
+  const results = new Map<string, GeocodeResult>();
+
+  // 并发处理所有地址
+  const promises = addresses.map(async (address) => {
+    const result = await geocodeWithCache(address);
+    if (result) {
+      results.set(address, result);
+    }
+  });
+
+  await Promise.all(promises);
+  return results;
+};
+
+/**
+ * 获取地理编码缓存统计
+ */
+export const getGeocodeStats = () => {
+  const baiduCache = getBaiduMapCache<any>();
+  const stats = cacheStats.getStats();
+  const cacheInfo = baiduCache.getStats();
+
+  return {
+    ...stats,
+    cacheSize: cacheInfo.totalSize,
+    memoryCacheSize: cacheInfo.memorySize,
+    storageCacheSize: cacheInfo.storageSize,
+  };
+};
+
+/**
+ * 清除地理编码缓存
+ */
+export const clearGeocodeCache = (address?: string) => {
+  const baiduCache = getBaiduMapCache<any>();
+
+  if (address) {
+    const cacheKey = `geocode_${address}`;
+    baiduCache.delete(cacheKey);
+    console.log('🗑️ 已清除地址缓存:', address);
+  } else {
+    baiduCache.clear();
+    console.log('🗑️ 已清除所有地理编码缓存');
+  }
+};
+
+/**
+ * 重置地理编码统计
+ */
+export const resetGeocodeStats = () => {
+  cacheStats.reset();
+  console.log('🔄 已重置地理编码统计');
+};

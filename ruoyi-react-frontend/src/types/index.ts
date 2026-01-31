@@ -554,6 +554,9 @@ export interface WorkstationOps {
   positionX?: number;
   positionY?: number;
   rotation?: number;      // 平面图旋转角度（度），0-360，默认0
+  width?: number;         // 工位宽度（毫米），默认160
+  depth?: number;         // 工位深度（毫米），默认70
+  deskType?: number;      // 桌型：0=一字型, 1=L型，默认0
   description?: string;
   createdAt: string;
   updatedAt: string;

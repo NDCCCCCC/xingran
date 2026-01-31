@@ -6,16 +6,17 @@ import { useState, useEffect, useCallback } from 'react';
 import type { FC } from 'react';
 import {
   Table, Button, Space, Modal, Form, Input, InputNumber, Select, Popconfirm,
-  Tag, Card, Row, Col, Statistic, Alert, Radio,
+  Tag, Card, Row, Col, Statistic, Alert, Radio, Spin, message,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
   PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, ReloadOutlined,
   CheckCircleOutlined, StopOutlined, AppstoreOutlined, TableOutlined,
-  ImportOutlined, ExportOutlined,
+  ImportOutlined, ExportOutlined, BgColorsOutlined, ArrowLeftOutlined,
+  EditOutlined as EditModeIcon, EyeOutlined,
 } from '@ant-design/icons';
-import type { Floor } from '@/types';
-import { floorApi, buildingApi } from '@/lib/opsApi';
+import type { Floor, WorkstationOps } from '@/types';
+import { floorApi, buildingApi, wallApi, doorApi, workstationApi, floorPlanTextApi } from '@/lib/opsApi';
 import { useTableManager } from '@/hooks/useTableManager';
 import { usePagination } from '@/hooks/usePagination';
 import { handleApiError, handleSuccess } from '@/utils/errorHandler';
@@ -23,11 +24,15 @@ import { createStatusColumn, createDateTimeColumn } from '@/utils/tableHelpers';
 import ActionButtons from '@/components/shared/ActionButtons';
 import ExcelImport from '@/components/shared/ExcelImport';
 import ExcelExport from '@/components/shared/ExcelExport';
+import { CADFloorPlanEditor } from '@/components/cad-editor';
+import type { FloorPlanData, Wall, Door } from '@/components/cad-editor/types';
+import type { WorkstationNode } from '@/components/shared/FloorPlanEditor.types';
 
 const { Option } = Select;
 const { TextArea } = Input;
 
 type ViewMode = 'table' | 'card';
+type PageMode = 'list' | 'editor';
 
 interface BuildingOption {
   id: string;
@@ -36,6 +41,12 @@ interface BuildingOption {
 }
 
 const FloorManagement: FC = () => {
+  const [pageMode, setPageMode] = useState<PageMode>('list');
+  const [currentFloor, setCurrentFloor] = useState<Floor | null>(null);
+  const [floorPlanLoading, setFloorPlanLoading] = useState(false);
+  const [floorPlanData, setFloorPlanData] = useState<FloorPlanData | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+
   const [statistics, setStatistics] = useState({ total: 0, active: 0, inactive: 0 });
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [importVisible, setImportVisible] = useState(false);
@@ -132,6 +143,247 @@ const FloorManagement: FC = () => {
 
   const handleRefresh = () => { loadFloors(); loadStatistics(); };
 
+  // 打开平面图编辑器
+  const handleEditFloorPlan = async (floor: Floor) => {
+    setCurrentFloor(floor);
+    setPageMode('editor');
+    setIsEditMode(false);
+    await loadFloorPlanData(floor.id);
+  };
+
+  // 加载平面图数据
+  const loadFloorPlanData = async (floorId: string) => {
+    setFloorPlanLoading(true);
+    try {
+      const [wallsResult, doorsResult, workstationsResult] = await Promise.all([
+        wallApi.list({ floorId, current: 1, pageSize: 1000 }),
+        doorApi.list({ floorId, current: 1, pageSize: 1000 }),
+        workstationApi.list({ floorId, current: 1, pageSize: 1000 }),
+      ]);
+
+      const walls = wallsResult.data?.list || [];
+      const doors = doorsResult.data?.list || [];
+      const workstations = workstationsResult.data?.list || [];
+
+      // 尝试加载文本元素（如果后端还没重启，则使用空数组）
+      let texts: any[] = [];
+      try {
+        const textsResult = await floorPlanTextApi.list({ floorId, current: 1, pageSize: 1000 });
+        texts = textsResult.data?.list || [];
+      } catch (textError) {
+        console.warn('文本元素API不可用，可能需要重启后端服务:', textError);
+        texts = [];
+      }
+
+      const parsedWalls: Wall[] = walls.map((wall: any) => ({
+        ...wall,
+        points: typeof wall.points === 'string' ? JSON.parse(wall.points) : wall.points,
+      }));
+
+      const parsedDoors: Door[] = doors.map((door: any) => ({
+        ...door,
+        position: typeof door.position === 'string' ? JSON.parse(door.position) : door.position,
+      }));
+
+      const parsedTexts = texts.map((text: any) => ({
+        ...text,
+        position: typeof text.position === 'string' ? JSON.parse(text.position) : text.position,
+      }));
+
+      // 处理工位数据：自动排列没有位置的工位
+      const processedWorkstations = processWorkstations(workstations);
+
+      setFloorPlanData({
+        floorId,
+        floorName: currentFloor?.name || `${currentFloor?.floorNo}层`,
+        width: 2000,
+        height: 2000,
+        walls: parsedWalls,
+        doors: parsedDoors,
+        workstations: processedWorkstations,
+        texts: parsedTexts,
+        gridSize: 20,
+        showGrid: true,
+        snapToGrid: true,
+      });
+    } catch (error) {
+      console.error('加载平面图失败:', error);
+      message.error('加载平面图失败');
+      setFloorPlanData({
+        floorId,
+        floorName: currentFloor?.name || `${currentFloor?.floorNo}层`,
+        width: 2000,
+        height: 2000,
+        walls: [],
+        doors: [],
+        workstations: [],
+        texts: [],
+        gridSize: 20,
+        showGrid: true,
+        snapToGrid: true,
+      });
+    } finally {
+      setFloorPlanLoading(false);
+    }
+  };
+
+  // 处理工位数据：为没有位置的工位自动分配位置（10个一行）
+  const processWorkstations = (workstations: WorkstationOps[]): WorkstationNode[] => {
+    const DEFAULT_WORKSTATION_WIDTH = 160;  // 默认工位宽度（毫米）
+    const DEFAULT_WORKSTATION_DEPTH = 70;  // 默认工位深度（毫米）
+    const GAP = 20;                            // 间距
+    const ITEMS_PER_ROW = 10;                  // 每行10个
+    const START_X = 100;                        // 起始X坐标
+    const START_Y = 100;                        // 起始Y坐标
+
+    // 分离有位置和无位置的工位
+    const withPosition: WorkstationNode[] = [];
+    const withoutPosition: WorkstationOps[] = [];
+
+    workstations.forEach((ws) => {
+      if (ws.positionX !== undefined && ws.positionY !== undefined) {
+        // 有位置的工位：使用数据库中的实际值，如果没有尺寸字段则使用默认值
+        withPosition.push({
+          id: ws.id,
+          code: ws.name,
+          name: ws.name,
+          x: ws.positionX,
+          y: ws.positionY,
+          width: (ws.width || DEFAULT_WORKSTATION_WIDTH) / 10, // 转换为像素（毫米/10）
+          height: (ws.depth || DEFAULT_WORKSTATION_DEPTH) / 10, // 转换为像素（毫米/10）
+          rotation: ws.rotation || 0,
+          type: ws.deskType || 0, // 0: 一字型, 1: L型
+          status: ws.status,
+        });
+      } else {
+        withoutPosition.push(ws);
+      }
+    });
+
+    // 为没有位置的工位自动分配位置
+    withoutPosition.forEach((ws, index) => {
+      const row = Math.floor(index / ITEMS_PER_ROW);
+      const col = index % ITEMS_PER_ROW;
+
+      const wsWidth = (ws.width || DEFAULT_WORKSTATION_WIDTH) / 10;
+      const wsDepth = (ws.depth || DEFAULT_WORKSTATION_DEPTH) / 10;
+
+      withPosition.push({
+        id: ws.id,
+        code: ws.name,
+        name: ws.name,
+        x: START_X + col * (wsWidth + GAP),
+        y: START_Y + row * (wsDepth + GAP),
+        width: wsWidth,
+        height: wsDepth,
+        rotation: ws.rotation || 0,
+        type: ws.deskType || 0,
+        status: ws.status,
+      });
+    });
+
+    return withPosition;
+  };
+
+  // 保存平面图
+  const handleSaveFloorPlan = async (data: FloorPlanData) => {
+    if (!currentFloor) return;
+    try {
+      const floorId = currentFloor.id;
+
+      // 保存墙体
+      for (const wall of data.walls) {
+        const isNew = wall.id.startsWith('wall_');
+        // 新建时不包含 id，让后端生成 UUID
+        const { id: _wallId, ...wallWithoutId } = wall;
+        const wallData = {
+          ...(isNew ? wallWithoutId : wall),
+          floorId,
+          points: JSON.stringify(wall.points),
+          type: wall.type as 'straight' | 'curved' | 'l_shaped' | 'polyline',
+        };
+
+        if (isNew) {
+          await wallApi.create(wallData);
+        } else {
+          await wallApi.update(wall.id, wallData);
+        }
+      }
+
+      // 保存门
+      for (const door of data.doors) {
+        const isNew = door.id.startsWith('door_');
+        // 新建时不包含 id，让后端生成 UUID
+        const { id: _doorId, ...doorWithoutId } = door;
+        const doorData = {
+          ...(isNew ? doorWithoutId : door),
+          floorId,
+          position: JSON.stringify(door.position),
+        };
+
+        if (isNew) {
+          await doorApi.create(doorData);
+        } else {
+          await doorApi.update(door.id, doorData);
+        }
+      }
+
+      // 保存文本元素（如果后端还没重启，则跳过）
+      if (data.texts && data.texts.length > 0) {
+        try {
+          for (const text of data.texts) {
+            const isNew = text.id.startsWith('text_');
+            // 新建时不包含 id，让后端生成 UUID
+            const { id: _textId, ...textWithoutId } = text;
+            const textData = {
+              ...(isNew ? textWithoutId : text),
+              floorId,
+              position: JSON.stringify(text.position),
+            };
+
+            if (isNew) {
+              await floorPlanTextApi.create(textData);
+            } else {
+              await floorPlanTextApi.update(text.id, textData);
+            }
+          }
+        } catch (textError) {
+          console.warn('保存文本元素失败，可能需要重启后端服务:', textError);
+          // 不阻止整个保存流程
+        }
+      }
+
+      // 保存工位数据（位置、尺寸、桌型）
+      const workstationUpdates = data.workstations.map((ws) => ({
+        id: ws.id,
+        positionX: Math.round(ws.x),
+        positionY: Math.round(ws.y),
+        rotation: ws.rotation || 0,
+        width: Math.round((ws.width || 160) * 10),  // 转换为毫米（像素*10）
+        depth: Math.round((ws.height || 70) * 10),   // 转换为毫米（像素*10）
+        deskType: ws.type || 0,  // 0: 一字型, 1: L型
+      }));
+
+      if (workstationUpdates.length > 0) {
+        await workstationApi.updatePositions(workstationUpdates as any);
+      }
+
+      message.success('保存成功');
+      await loadFloorPlanData(floorId);
+    } catch (error) {
+      console.error('保存失败:', error);
+      message.error('保存失败');
+    }
+  };
+
+  // 返回列表视图
+  const handleBackToList = () => {
+    setPageMode('list');
+    setCurrentFloor(null);
+    setFloorPlanData(null);
+    setIsEditMode(false);
+  };
+
   const columns: ColumnsType<Floor> = [
     { title: '楼层名称', dataIndex: 'name', key: 'name', width: 150 },
     { title: '楼层号', dataIndex: 'floorNo', key: 'floorNo', width: 100 },
@@ -151,6 +403,7 @@ const FloorManagement: FC = () => {
       render: (_, record) => {
         const actions = [
           { key: 'edit', label: '编辑', icon: <EditOutlined />, onClick: () => openModal(record) },
+          { key: 'floorPlan', label: '编辑平面图', icon: <BgColorsOutlined />, onClick: () => handleEditFloorPlan(record) },
           {
             key: 'delete', label: '删除', icon: <DeleteOutlined />, danger: true,
             render: () => (
@@ -175,6 +428,7 @@ const FloorManagement: FC = () => {
               hoverable
               actions={[
                 <EditOutlined key="edit" onClick={() => openModal(floor)} />,
+                <BgColorsOutlined key="floorPlan" onClick={() => handleEditFloorPlan(floor)} title="编辑平面图" />,
                 <Popconfirm key="delete" title="确定要删除这个楼层吗？" onConfirm={() => handleDelete(floor.id)} okText="确定" cancelText="取消">
                   <DeleteOutlined style={{ color: '#ff4d4f' }} />
                 </Popconfirm>,
@@ -202,7 +456,57 @@ const FloorManagement: FC = () => {
     );
   };
 
-  return (
+  // 渲染平面图编辑器视图
+  const renderFloorPlanEditor = () => {
+    if (!currentFloor || !floorPlanData) {
+      return (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh', flexDirection: 'column', gap: 16 }}>
+          <Spin size="large" />
+          <span style={{ color: '#999' }}>加载中...</span>
+        </div>
+      );
+    }
+
+    return (
+      <div style={{ height: 'calc(100vh - 180px)', display: 'flex', flexDirection: 'column' }}>
+        <Card
+          title={`${currentFloor.name || `${currentFloor.floorNo}层`} - 平面图编辑`}
+          extra={
+            <Space>
+              <Button
+                icon={isEditMode ? <EyeOutlined /> : <EditModeIcon />}
+                onClick={() => setIsEditMode(!isEditMode)}
+              >
+                {isEditMode ? '预览模式' : '编辑模式'}
+              </Button>
+              <Button icon={<ReloadOutlined />} onClick={() => loadFloorPlanData(currentFloor.id)}>
+                刷新
+              </Button>
+              <Button icon={<ArrowLeftOutlined />} onClick={handleBackToList}>
+                返回列表
+              </Button>
+            </Space>
+          }
+          style={{ flex: 1, display: 'flex', flexDirection: 'column' }}
+          styles={{ body: { flex: 1, padding: 0, overflow: 'hidden' } }}
+        >
+          <CADFloorPlanEditor
+            floorId={currentFloor.id}
+            floorName={currentFloor.name || `${currentFloor.floorNo}层`}
+            walls={floorPlanData.walls}
+            doors={floorPlanData.doors}
+            workstations={floorPlanData.workstations}
+            texts={floorPlanData.texts || []}
+            onSave={handleSaveFloorPlan}
+            readOnly={!isEditMode}
+          />
+        </Card>
+      </div>
+    );
+  };
+
+  // 渲染列表视图
+  const renderListView = () => (
     <div>
       {total > 10 && (
         <Row gutter={16} style={{ marginBottom: 16 }}>
@@ -261,6 +565,12 @@ const FloorManagement: FC = () => {
       </Modal>
       <ExcelImport entityType="floor" entityName="楼层" visible={importVisible} onClose={() => setImportVisible(false)} onImportSuccess={handleImportSuccess} />
       <ExcelExport entityType="floor" entityName="楼层" visible={exportVisible} onClose={() => setExportVisible(false)} />
+    </div>
+  );
+
+  return (
+    <div>
+      {pageMode === 'editor' ? renderFloorPlanEditor() : renderListView()}
     </div>
   );
 };

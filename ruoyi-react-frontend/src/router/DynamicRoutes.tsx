@@ -10,6 +10,7 @@ import { RouteGenerator } from './routeGenerator';
 import type { MenuRouteConfig } from '@/types/menu';
 import Layout from '@/components/layout';
 import Login from '@/pages/login';
+import FloorPlanEditor from '@/pages/operations/floor-plan-editor';
 import { Spin } from 'antd';
 
 let cachedRoutes: MenuRouteConfig[] | null = null;
@@ -18,7 +19,25 @@ let cachedMenusCount = 0;
 const hasValidToken = (): boolean => !!localStorage.getItem('accessToken');
 
 const createLazyRoute = (route: MenuRouteConfig) => {
-  const importPath = `../pages/${route.component.slice(6)}.tsx`;
+  // route.component 格式: pages/operations/floor-plan-editor/index
+  // Vite 动态导入需要使用相对路径或绝对路径，不支持别名
+  let componentPath = route.component;
+
+  // 去掉 'pages/' 前缀（如果有）
+  if (componentPath.startsWith('pages/')) {
+    componentPath = componentPath.slice(6);
+  }
+
+  // 添加 .tsx 扩展名（如果没有）
+  if (!componentPath.endsWith('.tsx')) {
+    componentPath = `${componentPath}.tsx`;
+  }
+
+  // 使用相对路径从 router 目录到 pages 目录
+  // router.tsx 位于 src/router/，pages 位于 src/pages/
+  // 所以需要使用 ../pages/ 前缀
+  const importPath = `../pages/${componentPath}`;
+
   const Component = lazy(() => import(/* @vite-ignore */ importPath));
 
   if (route.path === 'dashboard') {
@@ -85,6 +104,15 @@ export function DynamicRoutes() {
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route element={<Layout><Outlet /></Layout>}>
         {routeElements}
+        {/* 平面图编辑器路由 - 静态路由，支持楼层ID参数 */}
+        <Route
+          path="floor-plan-editor/:floorId"
+          element={
+            <Suspense fallback={<Spin size="large" />}>
+              <FloorPlanEditor />
+            </Suspense>
+          }
+        />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Route>
     </Routes>

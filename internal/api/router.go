@@ -644,5 +644,74 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			// Excel导入导出
 			operations.SetupExcelRouter(roomDevices, "roomDevice", core)
 		}
+
+		// CAD平面图编辑器（包含墙体、门等元素）
+		// 使用平面图编辑器和墙体、门的权限标识符
+		walls := ops.Group("/walls")
+		walls.Use(middleware.RequirePermissions([]string{
+			"ops:floor-plan:list",
+			"ops:floor-plan:query",
+			"ops:floor-plan:edit",
+			"ops:floor-plan:save",
+			"ops:walls:list",
+			"ops:walls:add",
+			"ops:walls:edit",
+			"ops:walls:delete",
+		}, core))
+		{
+			wallService := opsServices.NewWallService(core.DB.GetDB())
+			wallHandler := operations.NewWallHandler(wallService)
+
+			walls.POST("/list", wallHandler.List)
+			walls.POST("/batch", wallHandler.BatchOperation)
+			walls.POST("/:id", wallHandler.GetByID)
+			walls.POST("/:id/update", wallHandler.Update)
+			walls.POST("/:id/delete", wallHandler.Delete)
+			walls.POST("", wallHandler.Create)
+		}
+
+		// 门管理（CAD平面图）- 使用平面图编辑器和门权限
+		doors := ops.Group("/doors")
+		doors.Use(middleware.RequirePermissions([]string{
+			"ops:floor-plan:list",
+			"ops:floor-plan:query",
+			"ops:floor-plan:edit",
+			"ops:floor-plan:save",
+			"ops:doors:list",
+			"ops:doors:add",
+			"ops:doors:edit",
+			"ops:doors:delete",
+		}, core))
+		{
+			doorService := opsServices.NewDoorService(core.DB.GetDB())
+			doorHandler := operations.NewDoorHandler(doorService)
+
+			doors.POST("/list", doorHandler.List)
+			doors.POST("/batch", doorHandler.BatchOperation)
+			doors.POST("/:id", doorHandler.GetByID)
+			doors.POST("/:id/update", doorHandler.Update)
+			doors.POST("/:id/delete", doorHandler.Delete)
+			doors.POST("", doorHandler.Create)
+		}
+
+		// 平面图文本管理（CAD平面图）
+		texts := ops.Group("/floor-plan-texts")
+		texts.Use(middleware.RequirePermissions([]string{
+			"ops:floor-plan:list",
+			"ops:floor-plan:query",
+			"ops:floor-plan:edit",
+			"ops:floor-plan:save",
+		}, core))
+		{
+			textService := opsServices.NewFloorPlanTextService(core.DB.GetDB())
+			textHandler := operations.NewFloorPlanTextHandler(textService)
+
+			texts.POST("/list", textHandler.List)
+			texts.POST("/batch", textHandler.BatchOperation)
+			texts.POST("/:id", textHandler.GetByID)
+			texts.POST("/:id/update", textHandler.Update)
+			texts.POST("/:id/delete", textHandler.Delete)
+			texts.POST("", textHandler.Create)
+		}
 	}
 }

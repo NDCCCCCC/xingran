@@ -47,6 +47,7 @@ const PATH_TRANSLATIONS: Record<string, string> = {
   'room-devices': '机房设备',
   'building-spaces': '楼宇空间',
   'building-spaces-3d': '楼宇空间3D',
+  'floor-plan-editor': '平面图编辑',
   'info-points': '信息点管理',
   'network': '网络',
   'devices': '设备',

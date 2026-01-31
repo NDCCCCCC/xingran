@@ -375,7 +375,7 @@ const Sidebar = () => {
             display: sidebarCollapsed ? 'none' : 'inline-block',
           }}
         >
-          数字化平台
+          数智化平台
         </h1>
       </div>
 
