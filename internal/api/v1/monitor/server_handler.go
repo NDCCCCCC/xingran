@@ -8,6 +8,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	monitorServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/monitor"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
 // ServerHandler 服务器监控处理器
@@ -71,8 +72,7 @@ func (h *ServerHandler) GetServerInfo(c *gin.Context) {
 // @Router /monitor/server-metrics/current [post]
 func (h *ServerHandler) GetCurrentServerMetrics(c *gin.Context) {
 	metrics, err := h.serverService.GetCurrentServerMetrics(c.Request.Context())
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "获取服务器指标") {
 		return
 	}
 
@@ -130,8 +130,8 @@ func (h *ServerHandler) SaveSystemMetrics(c *gin.Context) {
 		Timestamp:    time.Now(),
 	}
 
-	if err := h.serverService.SaveSystemMetrics(c.Request.Context(), metrics); err != nil {
-		response.Error(c, http.StatusInternalServerError, "保存系统指标失败")
+	err := h.serverService.SaveSystemMetrics(c.Request.Context(), metrics)
+	if !responseHelpers.HandleServiceError(c, err, "保存系统指标") {
 		return
 	}
 
