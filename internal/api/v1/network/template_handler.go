@@ -7,6 +7,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
 // TemplateHandler 配置模板处理器
@@ -109,8 +110,7 @@ func (h *TemplateHandler) GetByID(c *gin.Context) {
 // @Router /network/templates [post]
 func (h *TemplateHandler) Create(c *gin.Context) {
 	var req services.CreateTemplateRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
@@ -118,8 +118,7 @@ func (h *TemplateHandler) Create(c *gin.Context) {
 	req.CreatedBy = userID.(string)
 
 	template, err := h.templateService.Create(c.Request.Context(), &req)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "创建模板") {
 		return
 	}
 
@@ -144,8 +143,7 @@ func (h *TemplateHandler) Update(c *gin.Context) {
 	}
 
 	var req services.UpdateTemplateRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
@@ -154,8 +152,8 @@ func (h *TemplateHandler) Update(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	req.UpdatedBy = userID.(string)
 
-	if err := h.templateService.Update(c.Request.Context(), &req); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.templateService.Update(c.Request.Context(), &req)
+	if !responseHelpers.HandleServiceError(c, err, "更新模板") {
 		return
 	}
 
@@ -178,8 +176,8 @@ func (h *TemplateHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.templateService.Delete(c.Request.Context(), id); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.templateService.Delete(c.Request.Context(), id)
+	if !responseHelpers.HandleServiceError(c, err, "删除模板") {
 		return
 	}
 
@@ -199,13 +197,12 @@ func (h *TemplateHandler) BatchDelete(c *gin.Context) {
 	var req struct {
 		IDs []string `json:"ids" binding:"required,min=1"`
 	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
-	if err := h.templateService.BatchDelete(c.Request.Context(), req.IDs); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.templateService.BatchDelete(c.Request.Context(), req.IDs)
+	if !responseHelpers.HandleServiceError(c, err, "批量删除模板") {
 		return
 	}
 
@@ -267,15 +264,13 @@ func (h *TemplateHandler) Clone(c *gin.Context) {
 		NewName string `json:"newName" binding:"required,min=2,max=100"`
 		NewCode string `json:"newCode" binding:"required,min=2,max=50"`
 	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
 	userID, _ := c.Get("user_id")
 	template, err := h.templateService.Clone(c.Request.Context(), id, req.NewName, req.NewCode, userID.(string))
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "克隆模板") {
 		return
 	}
 

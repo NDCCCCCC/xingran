@@ -7,6 +7,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	"gorm.io/gorm"
 )
 
@@ -35,8 +36,7 @@ func NewCommandHandler(commandService *services.CommandDispatchService, db *gorm
 // @Router /network/command/dispatch [post]
 func (h *CommandHandler) Dispatch(c *gin.Context) {
 	var req services.DispatchRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
@@ -55,8 +55,7 @@ func (h *CommandHandler) Dispatch(c *gin.Context) {
 	req.CreatedBy = userID.(string)
 
 	result, err := h.commandService.Dispatch(c.Request.Context(), &req)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "分发命令") {
 		return
 	}
 
@@ -78,8 +77,7 @@ func (h *CommandHandler) QuickCommand(c *gin.Context) {
 		Command  string `json:"command" binding:"required"`
 		Timeout  int    `json:"timeout" binding:"omitempty,min=10,max=300"`
 	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
@@ -88,8 +86,7 @@ func (h *CommandHandler) QuickCommand(c *gin.Context) {
 	}
 
 	result, err := h.commandService.QuickCommand(c.Request.Context(), req.DeviceID, req.Command, req.Timeout)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "执行快速命令") {
 		return
 	}
 

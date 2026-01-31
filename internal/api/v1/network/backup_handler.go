@@ -8,6 +8,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	"gorm.io/gorm"
 )
 
@@ -80,8 +81,7 @@ func (h *BackupHandler) Create(c *gin.Context) {
 		ChangeReason  string            `json:"changeReason"`
 		CompressLarge bool              `json:"compressLarge"`
 	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
@@ -101,8 +101,7 @@ func (h *BackupHandler) Create(c *gin.Context) {
 		CreatedBy:     userID.(string),
 		CompressLarge: req.CompressLarge,
 	})
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "创建备份") {
 		return
 	}
 
@@ -147,14 +146,12 @@ func (h *BackupHandler) GetContentFromBody(c *gin.Context) {
 	var req struct {
 		ID string `json:"id" binding:"required"`
 	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
 	content, err := h.backupService.GetBackupContent(c.Request.Context(), req.ID)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "获取备份内容") {
 		return
 	}
 
@@ -177,8 +174,8 @@ func (h *BackupHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.backupService.DeleteBackup(c.Request.Context(), id); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.backupService.DeleteBackup(c.Request.Context(), id)
+	if !responseHelpers.HandleServiceError(c, err, "删除备份") {
 		return
 	}
 
@@ -198,13 +195,12 @@ func (h *BackupHandler) BatchDelete(c *gin.Context) {
 	var req struct {
 		BackupIDs []string `json:"backupIds" binding:"required,min=1"`
 	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
-	if err := h.backupService.BatchDeleteBackups(c.Request.Context(), req.BackupIDs); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.backupService.BatchDeleteBackups(c.Request.Context(), req.BackupIDs)
+	if !responseHelpers.HandleServiceError(c, err, "批量删除备份") {
 		return
 	}
 
@@ -228,14 +224,12 @@ func (h *BackupHandler) Diff(c *gin.Context) {
 		BackupID1 string `json:"backupId1" binding:"required"`
 		BackupID2 string `json:"backupId2" binding:"required"`
 	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
 	name1, name2, diff, err := h.backupService.DiffBackups(c.Request.Context(), req.BackupID1, req.BackupID2)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "对比备份") {
 		return
 	}
 
@@ -265,13 +259,12 @@ func (h *BackupHandler) Restore(c *gin.Context) {
 	var req struct {
 		DeviceID string `json:"deviceId" binding:"required"`
 	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
-	if err := h.backupService.RestoreBackup(c.Request.Context(), id, req.DeviceID); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.backupService.RestoreBackup(c.Request.Context(), id, req.DeviceID)
+	if !responseHelpers.HandleServiceError(c, err, "恢复配置") {
 		return
 	}
 
@@ -288,8 +281,7 @@ func (h *BackupHandler) Restore(c *gin.Context) {
 // @Router /network/backups/statistics [get]
 func (h *BackupHandler) GetStatistics(c *gin.Context) {
 	stats, err := h.backupService.GetBackupStatistics(c.Request.Context())
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "获取备份统计") {
 		return
 	}
 
@@ -310,15 +302,13 @@ func (h *BackupHandler) BatchBackup(c *gin.Context) {
 		DeviceIDs  []string          `json:"deviceIds" binding:"required,min=1"`
 		BackupType models.BackupType `json:"backupType" binding:"required,oneof=auto manual"`
 	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
 	userID, _ := c.Get("user_id")
 	results, err := h.backupService.BatchBackupDevices(c.Request.Context(), req.DeviceIDs, req.BackupType, userID.(string))
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "批量备份设备") {
 		return
 	}
 
@@ -379,8 +369,9 @@ func (h *BackupHandler) GetHistory(c *gin.Context) {
 	if err := h.db.Where("device_id = ?", deviceID).
 		Order("version DESC").
 		Find(&backups).Error; err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
-		return
+		if !responseHelpers.HandleServiceError(c, err, "获取备份历史") {
+			return
+		}
 	}
 
 	response.Success(c, backups)

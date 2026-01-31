@@ -7,6 +7,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
 // CredentialHandler 授权凭证处理器
@@ -98,8 +99,7 @@ func (h *CredentialHandler) GetByID(c *gin.Context) {
 // @Router /network/credentials [post]
 func (h *CredentialHandler) Create(c *gin.Context) {
 	var req services.CreateCredentialRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
@@ -107,8 +107,7 @@ func (h *CredentialHandler) Create(c *gin.Context) {
 	req.CreatedBy = userID.(string)
 
 	credential, err := h.credentialService.Create(c.Request.Context(), &req)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "创建凭证") {
 		return
 	}
 
@@ -133,8 +132,7 @@ func (h *CredentialHandler) Update(c *gin.Context) {
 	}
 
 	var req services.UpdateCredentialRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
@@ -143,8 +141,8 @@ func (h *CredentialHandler) Update(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	req.UpdatedBy = userID.(string)
 
-	if err := h.credentialService.Update(c.Request.Context(), &req); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.credentialService.Update(c.Request.Context(), &req)
+	if !responseHelpers.HandleServiceError(c, err, "更新凭证") {
 		return
 	}
 
@@ -167,8 +165,8 @@ func (h *CredentialHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.credentialService.Delete(c.Request.Context(), id); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.credentialService.Delete(c.Request.Context(), id)
+	if !responseHelpers.HandleServiceError(c, err, "删除凭证") {
 		return
 	}
 
@@ -188,13 +186,12 @@ func (h *CredentialHandler) BatchDelete(c *gin.Context) {
 	var req struct {
 		IDs []string `json:"ids" binding:"required,min=1"`
 	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
-	if err := h.credentialService.BatchDelete(c.Request.Context(), req.IDs); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.credentialService.BatchDelete(c.Request.Context(), req.IDs)
+	if !responseHelpers.HandleServiceError(c, err, "批量删除凭证") {
 		return
 	}
 
@@ -221,8 +218,8 @@ func (h *CredentialHandler) SetDefault(c *gin.Context) {
 	}
 
 	userID, _ := c.Get("user_id")
-	if err := h.credentialService.SetDefaultCredential(c.Request.Context(), id, userID.(string)); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.credentialService.SetDefaultCredential(c.Request.Context(), id, userID.(string))
+	if !responseHelpers.HandleServiceError(c, err, "设置默认凭证") {
 		return
 	}
 
@@ -246,8 +243,7 @@ func (h *CredentialHandler) GetDevicesByCredential(c *gin.Context) {
 	}
 
 	devices, err := h.credentialService.GetDevicesByCredential(c.Request.Context(), id)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "获取使用凭证的设备") {
 		return
 	}
 

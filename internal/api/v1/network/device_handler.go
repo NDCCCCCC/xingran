@@ -7,6 +7,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
 // DeviceHandler 网络设备处理器
@@ -118,8 +119,7 @@ func (h *DeviceHandler) GetByID(c *gin.Context) {
 // @Router /network/devices [post]
 func (h *DeviceHandler) Create(c *gin.Context) {
 	var req services.CreateDeviceRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
@@ -127,8 +127,7 @@ func (h *DeviceHandler) Create(c *gin.Context) {
 	req.CreatedBy = userID.(string)
 
 	device, err := h.deviceService.Create(c.Request.Context(), &req)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "创建设备") {
 		return
 	}
 
@@ -153,8 +152,7 @@ func (h *DeviceHandler) Update(c *gin.Context) {
 	}
 
 	var req services.UpdateDeviceRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
@@ -163,8 +161,8 @@ func (h *DeviceHandler) Update(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	req.UpdatedBy = userID.(string)
 
-	if err := h.deviceService.Update(c.Request.Context(), &req); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.deviceService.Update(c.Request.Context(), &req)
+	if !responseHelpers.HandleServiceError(c, err, "更新设备") {
 		return
 	}
 
@@ -187,8 +185,8 @@ func (h *DeviceHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.deviceService.Delete(c.Request.Context(), id); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.deviceService.Delete(c.Request.Context(), id)
+	if !responseHelpers.HandleServiceError(c, err, "删除设备") {
 		return
 	}
 
@@ -208,13 +206,12 @@ func (h *DeviceHandler) BatchDelete(c *gin.Context) {
 	var req struct {
 		IDs []string `json:"ids" binding:"required,min=1"`
 	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
-	if err := h.deviceService.BatchDelete(c.Request.Context(), req.IDs); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.deviceService.BatchDelete(c.Request.Context(), req.IDs)
+	if !responseHelpers.HandleServiceError(c, err, "批量删除设备") {
 		return
 	}
 
