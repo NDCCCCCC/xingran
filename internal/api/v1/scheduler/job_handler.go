@@ -7,6 +7,7 @@ import (
 	schedulerServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/scheduler"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/common"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
 // JobHandler 定时任务处理器
@@ -39,14 +40,12 @@ func NewJobHandler(
 // @Router /monitor/jobs [post]
 func (h *JobHandler) Create(c *gin.Context) {
 	var req schedulerServices.JobCreateRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
 	job, err := h.jobService.Create(c.Request.Context(), &req)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "创建定时任务") {
 		return
 	}
 
@@ -171,14 +170,13 @@ func (h *JobHandler) Update(c *gin.Context) {
 	}
 
 	var req schedulerServices.JobUpdateRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 	req.ID = id
 
-	if err := h.jobService.Update(c.Request.Context(), &req); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.jobService.Update(c.Request.Context(), &req)
+	if !responseHelpers.HandleServiceError(c, err, "更新定时任务") {
 		return
 	}
 
@@ -204,12 +202,12 @@ func (h *JobHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.jobService.Delete(c.Request.Context(), id); err != nil {
-		if err.Error() == "定时任务不存在" {
-			response.Error(c, http.StatusNotFound, err.Error())
-		} else {
-			response.Error(c, http.StatusInternalServerError, err.Error())
-		}
+	err := h.jobService.Delete(c.Request.Context(), id)
+	if err != nil && err.Error() == "定时任务不存在" {
+		response.Error(c, http.StatusNotFound, err.Error())
+		return
+	}
+	if !responseHelpers.HandleServiceError(c, err, "删除定时任务") {
 		return
 	}
 
@@ -239,13 +237,12 @@ func (h *JobHandler) UpdateStatus(c *gin.Context) {
 	var req struct {
 		Status int `json:"status"`
 	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
-	if err := h.jobService.UpdateStatus(c.Request.Context(), id, req.Status); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.jobService.UpdateStatus(c.Request.Context(), id, req.Status)
+	if !responseHelpers.HandleServiceError(c, err, "更新任务状态") {
 		return
 	}
 
@@ -276,8 +273,8 @@ func (h *JobHandler) Execute(c *gin.Context) {
 		return
 	}
 
-	if err := h.jobService.Execute(c.Request.Context(), id); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.jobService.Execute(c.Request.Context(), id)
+	if !responseHelpers.HandleServiceError(c, err, "执行任务") {
 		return
 	}
 
@@ -370,13 +367,12 @@ func (h *JobHandler) CleanLogs(c *gin.Context) {
 	var req struct {
 		Days int `json:"days" binding:"required,min=1"`
 	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
-	if err := h.jobLogService.CleanOldLogs(c.Request.Context(), req.Days); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.jobLogService.CleanOldLogs(c.Request.Context(), req.Days)
+	if !responseHelpers.HandleServiceError(c, err, "清理旧日志") {
 		return
 	}
 

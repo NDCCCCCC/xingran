@@ -7,6 +7,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/workorder"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
 // WorkOrderHandler 工单管理处理器
@@ -37,8 +38,7 @@ func (h *WorkOrderHandler) List(c *gin.Context) {
 	}
 
 	list, total, err := h.service.Base.GetList(c.Request.Context(), &req)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "获取工单列表") {
 		return
 	}
 
@@ -74,8 +74,7 @@ func (h *WorkOrderHandler) GetMyPending(c *gin.Context) {
 	}
 
 	list, total, err := h.service.Base.GetMyPending(c.Request.Context(), &req, userID.(string))
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "获取待办工单") {
 		return
 	}
 
@@ -121,15 +120,13 @@ func (h *WorkOrderHandler) GetByID(c *gin.Context) {
 // @Router /workorder/orders [post]
 func (h *WorkOrderHandler) Create(c *gin.Context) {
 	var req workorder.CreateRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
 	userID, _ := c.Get("user_id")
 	workOrder, err := h.service.Base.Create(c.Request.Context(), &req, userID.(string))
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "创建工单") {
 		return
 	}
 
@@ -154,16 +151,15 @@ func (h *WorkOrderHandler) Update(c *gin.Context) {
 	}
 
 	var req workorder.UpdateRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
 	req.ID = id
 	userID, _ := c.Get("user_id")
 
-	if err := h.service.Base.Update(c.Request.Context(), &req, userID.(string)); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.service.Base.Update(c.Request.Context(), &req, userID.(string))
+	if !responseHelpers.HandleServiceError(c, err, "更新工单") {
 		return
 	}
 
@@ -186,8 +182,8 @@ func (h *WorkOrderHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.Base.Delete(c.Request.Context(), id); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.service.Base.Delete(c.Request.Context(), id)
+	if !responseHelpers.HandleServiceError(c, err, "删除工单") {
 		return
 	}
 
@@ -207,13 +203,12 @@ func (h *WorkOrderHandler) BatchDelete(c *gin.Context) {
 	var req struct {
 		IDs []string `json:"ids" binding:"required,min=1"`
 	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
-	if err := h.service.Base.BatchDelete(c.Request.Context(), req.IDs); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.service.Base.BatchDelete(c.Request.Context(), req.IDs)
+	if !responseHelpers.HandleServiceError(c, err, "批量删除工单") {
 		return
 	}
 
@@ -243,14 +238,13 @@ func (h *WorkOrderHandler) Assign(c *gin.Context) {
 	}
 
 	var req workorder.AssignRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
 	userID, _ := c.Get("user_id")
-	if err := h.service.Assignment.Assign(c.Request.Context(), id, &req, userID.(string)); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.service.Assignment.Assign(c.Request.Context(), id, &req, userID.(string))
+	if !responseHelpers.HandleServiceError(c, err, "分配工单") {
 		return
 	}
 
@@ -274,13 +268,13 @@ func (h *WorkOrderHandler) AssignToTodayDuty(c *gin.Context) {
 	}
 
 	userID, _ := c.Get("user_id")
-	if err := h.service.Assignment.AssignToTodayDuty(c.Request.Context(), id, userID.(string)); err != nil {
-		// 当没有值班人员时，静默处理，不显示错误
-		if err.Error() == "今天没有值班人员" {
-			response.Success(c, gin.H{"message": "今天没有值班人员，工单未分配"})
-			return
-		}
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.service.Assignment.AssignToTodayDuty(c.Request.Context(), id, userID.(string))
+	// 当没有值班人员时，静默处理，不显示错误
+	if err != nil && err.Error() == "今天没有值班人员" {
+		response.Success(c, gin.H{"message": "今天没有值班人员，工单未分配"})
+		return
+	}
+	if !responseHelpers.HandleServiceError(c, err, "分配给值班人员") {
 		return
 	}
 
@@ -305,14 +299,13 @@ func (h *WorkOrderHandler) UpdateStatus(c *gin.Context) {
 	}
 
 	var req workorder.UpdateStatusRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
 	userID, _ := c.Get("user_id")
-	if err := h.service.Assignment.UpdateStatus(c.Request.Context(), id, &req, userID.(string)); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.service.Assignment.UpdateStatus(c.Request.Context(), id, &req, userID.(string))
+	if !responseHelpers.HandleServiceError(c, err, "更新状态") {
 		return
 	}
 
@@ -338,8 +331,7 @@ func (h *WorkOrderHandler) GetComments(c *gin.Context) {
 	}
 
 	comments, err := h.service.Comment.GetList(c.Request.Context(), id)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "获取评论") {
 		return
 	}
 
@@ -364,14 +356,13 @@ func (h *WorkOrderHandler) AddComment(c *gin.Context) {
 	}
 
 	var req workorder.AddRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
 	userID, _ := c.Get("user_id")
-	if err := h.service.Comment.Add(c.Request.Context(), id, &req, userID.(string)); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.service.Comment.Add(c.Request.Context(), id, &req, userID.(string))
+	if !responseHelpers.HandleServiceError(c, err, "添加评论") {
 		return
 	}
 
@@ -397,8 +388,7 @@ func (h *WorkOrderHandler) GetHistory(c *gin.Context) {
 	}
 
 	workOrder, err := h.service.Base.GetByID(c.Request.Context(), id)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "获取工单历史") {
 		return
 	}
 
@@ -415,8 +405,7 @@ func (h *WorkOrderHandler) GetHistory(c *gin.Context) {
 // @Router /workorder/statistics [post]
 func (h *WorkOrderHandler) GetStatistics(c *gin.Context) {
 	stats, err := h.service.Statistics.Get(c.Request.Context())
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "获取统计数据") {
 		return
 	}
 
@@ -435,8 +424,7 @@ func (h *WorkOrderHandler) GetStatistics(c *gin.Context) {
 // @Router /workorder/categories/list [post]
 func (h *WorkOrderHandler) ListCategories(c *gin.Context) {
 	categories, err := h.service.Category.GetTree(c.Request.Context())
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "获取分类列表") {
 		return
 	}
 
@@ -453,8 +441,7 @@ func (h *WorkOrderHandler) ListCategories(c *gin.Context) {
 // @Router /workorder/categories/enabled [post]
 func (h *WorkOrderHandler) GetEnabledCategories(c *gin.Context) {
 	categories, err := h.service.Category.GetEnabled(c.Request.Context())
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "获取启用的分类") {
 		return
 	}
 
@@ -497,14 +484,13 @@ func (h *WorkOrderHandler) GetCategoryByID(c *gin.Context) {
 // @Router /workorder/categories [post]
 func (h *WorkOrderHandler) CreateCategory(c *gin.Context) {
 	var req models.WorkOrderCategory
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
 	userID, _ := c.Get("user_id")
-	if err := h.service.Category.Create(c.Request.Context(), &req, userID.(string)); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.service.Category.Create(c.Request.Context(), &req, userID.(string))
+	if !responseHelpers.HandleServiceError(c, err, "创建分类") {
 		return
 	}
 
@@ -529,15 +515,14 @@ func (h *WorkOrderHandler) UpdateCategory(c *gin.Context) {
 	}
 
 	var req models.WorkOrderCategory
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 	req.ID = id
 
 	userID, _ := c.Get("user_id")
-	if err := h.service.Category.Update(c.Request.Context(), &req, userID.(string)); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.service.Category.Update(c.Request.Context(), &req, userID.(string))
+	if !responseHelpers.HandleServiceError(c, err, "更新分类") {
 		return
 	}
 
@@ -560,8 +545,8 @@ func (h *WorkOrderHandler) DeleteCategory(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.Category.Delete(c.Request.Context(), id); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.service.Category.Delete(c.Request.Context(), id)
+	if !responseHelpers.HandleServiceError(c, err, "删除分类") {
 		return
 	}
 
@@ -585,8 +570,7 @@ func (h *WorkOrderHandler) ListPeriodic(c *gin.Context) {
 	}
 
 	list, total, err := h.service.Periodic.GetTemplateList(c.Request.Context(), &req)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "获取周期性工单模板") {
 		return
 	}
 
@@ -609,15 +593,13 @@ func (h *WorkOrderHandler) ListPeriodic(c *gin.Context) {
 // @Router /workorder/periodic [post]
 func (h *WorkOrderHandler) CreatePeriodic(c *gin.Context) {
 	var req workorder.CreateTemplateRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
 	userID, _ := c.Get("user_id")
 	template, err := h.service.Periodic.CreateTemplate(c.Request.Context(), &req, userID.(string))
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "创建周期性工单模板") {
 		return
 	}
 
@@ -642,14 +624,13 @@ func (h *WorkOrderHandler) UpdatePeriodic(c *gin.Context) {
 	}
 
 	var req workorder.UpdateTemplateRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
 	userID, _ := c.Get("user_id")
-	if err := h.service.Periodic.UpdateTemplate(c.Request.Context(), id, &req, userID.(string)); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.service.Periodic.UpdateTemplate(c.Request.Context(), id, &req, userID.(string))
+	if !responseHelpers.HandleServiceError(c, err, "更新周期性工单模板") {
 		return
 	}
 
@@ -672,8 +653,8 @@ func (h *WorkOrderHandler) DeletePeriodic(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.Periodic.DeleteTemplate(c.Request.Context(), id); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.service.Periodic.DeleteTemplate(c.Request.Context(), id)
+	if !responseHelpers.HandleServiceError(c, err, "删除周期性工单模板") {
 		return
 	}
 
@@ -692,8 +673,7 @@ func (h *WorkOrderHandler) DeletePeriodic(c *gin.Context) {
 // @Router /workorder/config [post]
 func (h *WorkOrderHandler) GetConfig(c *gin.Context) {
 	config, err := h.service.Config.Get(c.Request.Context())
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "获取配置") {
 		return
 	}
 
@@ -711,13 +691,12 @@ func (h *WorkOrderHandler) GetConfig(c *gin.Context) {
 // @Router /workorder/config/update [post]
 func (h *WorkOrderHandler) UpdateConfig(c *gin.Context) {
 	var req models.WorkOrderConfig
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
-	if err := h.service.Config.Update(c.Request.Context(), &req); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.service.Config.Update(c.Request.Context(), &req)
+	if !responseHelpers.HandleServiceError(c, err, "更新配置") {
 		return
 	}
 

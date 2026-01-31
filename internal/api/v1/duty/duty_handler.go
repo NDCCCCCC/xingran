@@ -9,6 +9,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
 // DutyHandler 值班管理处理器
@@ -64,15 +65,13 @@ func (h *DutyHandler) ListPools(c *gin.Context) {
 // @Router /duty/pools [post]
 func (h *DutyHandler) CreatePool(c *gin.Context) {
 	var req services.DutyPoolCreateRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
 	userID, _ := c.Get("user_id")
 	pool, err := h.service.CreateDutyPool(c.Request.Context(), &req, userID.(string))
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "创建值班池") {
 		return
 	}
 
@@ -122,16 +121,15 @@ func (h *DutyHandler) UpdatePool(c *gin.Context) {
 	}
 
 	var req services.DutyPoolUpdateRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
 	req.ID = poolID
 	userID, _ := c.Get("user_id")
 
-	if err := h.service.UpdateDutyPool(c.Request.Context(), &req, userID.(string)); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.service.UpdateDutyPool(c.Request.Context(), &req, userID.(string))
+	if !responseHelpers.HandleServiceError(c, err, "更新值班池") {
 		return
 	}
 
@@ -154,8 +152,8 @@ func (h *DutyHandler) DeletePool(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteDutyPool(c.Request.Context(), poolID); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.service.DeleteDutyPool(c.Request.Context(), poolID)
+	if !responseHelpers.HandleServiceError(c, err, "删除值班池") {
 		return
 	}
 
@@ -205,15 +203,13 @@ func (h *DutyHandler) ListSchedules(c *gin.Context) {
 // @Router /duty/schedules/generate [post]
 func (h *DutyHandler) GenerateSchedule(c *gin.Context) {
 	var req services.GenerateScheduleRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
 	userID, _ := c.Get("user_id")
 	count, err := h.service.GenerateSchedule(c.Request.Context(), &req, userID.(string))
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "生成排班") {
 		return
 	}
 
@@ -314,14 +310,13 @@ func (h *DutyHandler) GetMonthlySchedule(c *gin.Context) {
 // @Router /duty/schedules/swap [post]
 func (h *DutyHandler) SwapDuty(c *gin.Context) {
 	var req services.SwapDutyRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
 	userID, _ := c.Get("user_id")
-	if err := h.service.SwapDuty(c.Request.Context(), &req, userID.(string)); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.service.SwapDuty(c.Request.Context(), &req, userID.(string))
+	if !responseHelpers.HandleServiceError(c, err, "调班") {
 		return
 	}
 
@@ -339,14 +334,13 @@ func (h *DutyHandler) SwapDuty(c *gin.Context) {
 // @Router /duty/schedules/manual [post]
 func (h *DutyHandler) ManualDuty(c *gin.Context) {
 	var req services.ManualDutyRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
 	userID, _ := c.Get("user_id")
-	if err := h.service.ManualDuty(c.Request.Context(), &req, userID.(string)); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.service.ManualDuty(c.Request.Context(), &req, userID.(string))
+	if !responseHelpers.HandleServiceError(c, err, "手动排班") {
 		return
 	}
 
@@ -369,8 +363,8 @@ func (h *DutyHandler) DeleteSchedule(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteDutySchedule(c.Request.Context(), scheduleID); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.service.DeleteDutySchedule(c.Request.Context(), scheduleID)
+	if !responseHelpers.HandleServiceError(c, err, "删除排班记录") {
 		return
 	}
 
@@ -390,13 +384,12 @@ func (h *DutyHandler) BatchDeleteSchedules(c *gin.Context) {
 	var req struct {
 		IDs []string `json:"ids" binding:"required,min=1"`
 	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
-	if err := h.service.BatchDeleteDutySchedules(c.Request.Context(), req.IDs); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.service.BatchDeleteDutySchedules(c.Request.Context(), req.IDs)
+	if !responseHelpers.HandleServiceError(c, err, "批量删除排班记录") {
 		return
 	}
 
@@ -422,14 +415,12 @@ func (h *DutyHandler) ListHolidays(c *gin.Context) {
 		Year int `json:"year"`
 	}
 
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
 	holidays, err := h.service.GetHolidayList(c.Request.Context(), req.Year)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "获取节假日列表") {
 		return
 	}
 
@@ -454,8 +445,7 @@ func (h *DutyHandler) CreateHoliday(c *gin.Context) {
 		Year        int    `json:"year" binding:"required"`
 		Remark      string `json:"remark"`
 	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
@@ -477,8 +467,8 @@ func (h *DutyHandler) CreateHoliday(c *gin.Context) {
 		Remark:      req.Remark,
 	}
 
-	if err := h.service.CreateHoliday(c.Request.Context(), holiday, userID.(string)); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err = h.service.CreateHoliday(c.Request.Context(), holiday, userID.(string))
+	if !responseHelpers.HandleServiceError(c, err, "创建节假日") {
 		return
 	}
 
@@ -535,8 +525,8 @@ func (h *DutyHandler) DeleteHoliday(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteHoliday(c.Request.Context(), holidayID); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.service.DeleteHoliday(c.Request.Context(), holidayID)
+	if !responseHelpers.HandleServiceError(c, err, "删除节假日") {
 		return
 	}
 
@@ -563,8 +553,7 @@ func (h *DutyHandler) BatchCreateHolidays(c *gin.Context) {
 			Remark      string `json:"remark"`
 		} `json:"holidays" binding:"required,min=1"`
 	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
@@ -589,8 +578,8 @@ func (h *DutyHandler) BatchCreateHolidays(c *gin.Context) {
 		}
 	}
 
-	if err := h.service.BatchCreateHolidays(c.Request.Context(), holidays, userID.(string)); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.service.BatchCreateHolidays(c.Request.Context(), holidays, userID.(string))
+	if !responseHelpers.HandleServiceError(c, err, "批量创建节假日") {
 		return
 	}
 
@@ -649,15 +638,14 @@ func (h *DutyHandler) GetConfig(c *gin.Context) {
 // @Router /duty/config/update [post]
 func (h *DutyHandler) UpdateConfig(c *gin.Context) {
 	var req models.DutyConfig
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
 	userID, _ := c.Get("user_id")
 
-	if err := h.service.UpdateDutyConfig(c.Request.Context(), &req, userID.(string)); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.service.UpdateDutyConfig(c.Request.Context(), &req, userID.(string))
+	if !responseHelpers.HandleServiceError(c, err, "更新配置") {
 		return
 	}
 
