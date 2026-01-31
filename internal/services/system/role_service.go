@@ -6,17 +6,18 @@ import (
 	"strconv"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
 // RoleService 角色服务接口
 type RoleService interface {
-	Create(ctx context.Context, req *RoleCreateRequest) error
-	Update(ctx context.Context, req *RoleUpdateRequest) error
+	Create(ctx context.Context, req *requests.RoleCreateRequest) error
+	Update(ctx context.Context, req *requests.RoleUpdateRequest) error
 	Delete(ctx context.Context, id string) error
 	GetByID(ctx context.Context, id string) (*models.Role, error)
-	List(ctx context.Context, params RoleListParams) (*PageResult, error)
+	List(ctx context.Context, params requests.RoleListParams) (*PageResult, error)
 	GetAllEnabled(ctx context.Context) ([]*models.Role, error)
 	BatchDelete(ctx context.Context, ids []string) error
 	UpdateStatus(ctx context.Context, id string, status int) error
@@ -38,58 +39,10 @@ func NewRoleService(db *gorm.DB) RoleService {
 	return &roleService{db: db}
 }
 
-// ==================== 请求/响应类型 ====================
-
-// RoleListParams 角色列表查询参数
-type RoleListParams struct {
-	RoleName string
-	RoleKey  string
-	Status   string
-	Current  int
-	PageSize int
-}
-
-// DefaultRoleListParams 默认列表参数
-func DefaultRoleListParams() RoleListParams {
-	return RoleListParams{
-		Current:  1,
-		PageSize: 10,
-	}
-}
-
-// RoleCreateRequest 创建角色请求
-type RoleCreateRequest struct {
-	RoleName          string
-	RoleKey           string
-	RoleSort          int
-	DataScope         models.DataScope
-	MenuCheckStrictly *bool
-	DeptCheckStrictly *bool
-	Status            models.RoleStatus
-	Remark            *string
-	MenuIds           []string
-	DeptIds           []string
-}
-
-// RoleUpdateRequest 更新角色请求
-type RoleUpdateRequest struct {
-	ID                string
-	RoleName          string
-	RoleKey           string
-	RoleSort          int
-	DataScope         models.DataScope
-	MenuCheckStrictly *bool
-	DeptCheckStrictly *bool
-	Status            models.RoleStatus
-	Remark            *string
-	MenuIds           []string
-	DeptIds           []string
-}
-
 // ==================== 服务方法实现 ====================
 
 // Create 创建角色
-func (s *roleService) Create(ctx context.Context, req *RoleCreateRequest) error {
+func (s *roleService) Create(ctx context.Context, req *requests.RoleCreateRequest) error {
 	// 检查角色名称是否已存在
 	if exists, err := s.checkRoleNameExists(ctx, req.RoleName, ""); err != nil {
 		return fmt.Errorf("检查角色名称失败: %w", err)
@@ -132,7 +85,7 @@ func (s *roleService) Create(ctx context.Context, req *RoleCreateRequest) error 
 }
 
 // Update 更新角色
-func (s *roleService) Update(ctx context.Context, req *RoleUpdateRequest) error {
+func (s *roleService) Update(ctx context.Context, req *requests.RoleUpdateRequest) error {
 	// 检查角色是否存在
 	var role models.Role
 	if err := s.db.WithContext(ctx).First(&role, "id = ?", req.ID).Error; err != nil {
@@ -238,7 +191,7 @@ func (s *roleService) GetByID(ctx context.Context, id string) (*models.Role, err
 }
 
 // List 查询角色列表
-func (s *roleService) List(ctx context.Context, params RoleListParams) (*PageResult, error) {
+func (s *roleService) List(ctx context.Context, params requests.RoleListParams) (*PageResult, error) {
 	var total int64
 	var list []models.Role
 

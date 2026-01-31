@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	"gorm.io/gorm"
@@ -57,14 +58,14 @@ func (h *DepartmentHandler) GetTree(c *gin.Context) {
 // @Tags 部门管理
 // @Accept json
 // @Produce json
-// @Param request body systemServices.DepartmentListParams true "查询条件"
+// @Param request body requests.DepartmentListParams true "查询条件"
 // @Success 200 {object} response.Response{data=[]models.Department}
 // @Router /system/departments/list [post]
 func (h *DepartmentHandler) List(c *gin.Context) {
-	var req systemServices.DepartmentListParams
+	var req requests.DepartmentListParams
 	if err := c.ShouldBindJSON(&req); err != nil {
 		// 允许空请求
-		req = systemServices.DepartmentListParams{}
+		req = requests.DepartmentListParams{}
 	}
 
 	result, err := h.service.List(c.Request.Context(), req)
@@ -107,11 +108,11 @@ func (h *DepartmentHandler) GetByID(c *gin.Context) {
 // @Tags 部门管理
 // @Accept json
 // @Produce json
-// @Param request body systemServices.DepartmentCreateRequest true "部门信息"
+// @Param request body requests.DepartmentCreateRequest true "部门信息"
 // @Success 200 {object} response.Response{data=models.Department}
 // @Router /system/departments [post]
 func (h *DepartmentHandler) Create(c *gin.Context) {
-	var req systemServices.DepartmentCreateRequest
+	var req requests.DepartmentCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
 		return
@@ -132,7 +133,7 @@ func (h *DepartmentHandler) Create(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "部门ID"
-// @Param request body systemServices.DepartmentUpdateRequest true "部门信息"
+// @Param request body requests.DepartmentUpdateRequest true "部门信息"
 // @Success 200 {object} response.Response
 // @Router /system/departments/:id/update [post]
 func (h *DepartmentHandler) Update(c *gin.Context) {
@@ -142,7 +143,7 @@ func (h *DepartmentHandler) Update(c *gin.Context) {
 		return
 	}
 
-	var req systemServices.DepartmentUpdateRequest
+	var req requests.DepartmentUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
 		return

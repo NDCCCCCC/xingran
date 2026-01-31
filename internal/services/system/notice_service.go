@@ -2,21 +2,21 @@ package system
 
 import (
 	"context"
-	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"gorm.io/gorm"
 )
 
 // NoticeService 通知公告服务接口
 type NoticeService interface {
-	Create(ctx context.Context, req *NoticeCreateRequest, creatorID, creatorName string) (*models.Notice, error)
-	Update(ctx context.Context, id string, req *NoticeUpdateRequest) error
+	Create(ctx context.Context, req *requests.NoticeCreateRequest, creatorID, creatorName string) (*models.Notice, error)
+	Update(ctx context.Context, id string, req *requests.NoticeUpdateRequest) error
 	Delete(ctx context.Context, id string) error
 	BatchDelete(ctx context.Context, ids []string) error
 	GetByID(ctx context.Context, id string) (*models.Notice, error)
-	List(ctx context.Context, params NoticeListParams) (*PageResult, error)
+	List(ctx context.Context, params requests.NoticeListParams) (*PageResult, error)
 	Publish(ctx context.Context, id string) error
 	Withdraw(ctx context.Context, id string) error
 	GetStatistics(ctx context.Context, id string) (*models.NoticeStatistics, error)
@@ -48,73 +48,9 @@ func NewNotificationChannelService(db *gorm.DB) NotificationChannelService {
 	return services.NewNotificationSenderService(db)
 }
 
-// ==================== 请求/响应类型 ====================
-
-// NoticeListParams 通知公告列表查询参数
-type NoticeListParams struct {
-	NoticeTitle *string
-	NoticeType  *string
-	CreateTime  *string
-	Current     int
-	PageSize    int
-}
-
-// DefaultNoticeListParams 默认列表参数
-func DefaultNoticeListParams() NoticeListParams {
-	return NoticeListParams{
-		Current:  1,
-		PageSize: 10,
-	}
-}
-
-// NoticeCreateRequest 创建通知公告请求
-type NoticeCreateRequest struct {
-	NoticeTitle      string
-	NoticeType       string
-	NoticeContent    string
-	Priority         models.NoticePriority
-	PublishTime      *time.Time
-	ExecutionType    *string
-	RecurrenceConfig *RecurrenceConfig
-	CronExpression   *string
-	TargetType       models.TargetType
-	TargetDepts      []string
-	TargetRoles      []string
-	TargetUsers      []string
-	IsMarkdown       bool
-	Status           int
-	Channels         []NotificationChannelRequest
-}
-
-// RecurrenceConfig 周期性执行配置
-type RecurrenceConfig struct {
-	CronExpression *string `json:"cronExpression"`
-	EndDate        *string `json:"endDate"`
-}
-
-// NotificationChannelRequest 通知渠道配置请求
-type NotificationChannelRequest struct {
-	ChannelType      models.NotificationChannelType
-	EmailConfigID    *string
-	APIConfigID      *string
-	CustomRecipients *[]string
-}
-
-// NoticeUpdateRequest 更新通知公告请求
-type NoticeUpdateRequest struct {
-	NoticeTitle      *string
-	NoticeType       *string
-	NoticeContent    *string
-	Priority         *models.NoticePriority
-	Status           *int
-	PublishTime      *time.Time
-	ClearPublishTime bool
-	Channels         []NotificationChannelRequest
-}
-
 // ==================== 服务方法实现 ====================
 
-func (s *noticeService) Create(ctx context.Context, req *NoticeCreateRequest, creatorID, creatorName string) (*models.Notice, error) {
+func (s *noticeService) Create(ctx context.Context, req *requests.NoticeCreateRequest, creatorID, creatorName string) (*models.Notice, error) {
 	createReq := &services.CreateNoticeRequest{
 		NoticeTitle:   req.NoticeTitle,
 		NoticeType:    req.NoticeType,
@@ -131,7 +67,7 @@ func (s *noticeService) Create(ctx context.Context, req *NoticeCreateRequest, cr
 	return s.noticeService.CreateNoticeWithTargets(ctx, createReq, creatorID, creatorName)
 }
 
-func (s *noticeService) Update(ctx context.Context, id string, req *NoticeUpdateRequest) error {
+func (s *noticeService) Update(ctx context.Context, id string, req *requests.NoticeUpdateRequest) error {
 	updateReq := &services.UpdateNoticeRequest{
 		NoticeTitle:      req.NoticeTitle,
 		NoticeType:       req.NoticeType,
@@ -157,7 +93,7 @@ func (s *noticeService) GetByID(ctx context.Context, id string) (*models.Notice,
 	return s.noticeService.GetNoticeByID(ctx, id)
 }
 
-func (s *noticeService) List(ctx context.Context, params NoticeListParams) (*PageResult, error) {
+func (s *noticeService) List(ctx context.Context, params requests.NoticeListParams) (*PageResult, error) {
 	notices, total, err := s.noticeService.GetNoticeList(
 		ctx,
 		params.Current,

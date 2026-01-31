@@ -5,18 +5,19 @@ import (
 	"fmt"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	"gorm.io/gorm"
 )
 
 // ConfigService 参数配置服务接口
 type ConfigService interface {
-	Create(ctx context.Context, req *ConfigCreateRequest) error
-	Update(ctx context.Context, req *ConfigUpdateRequest) error
+	Create(ctx context.Context, req *requests.ConfigCreateRequest) error
+	Update(ctx context.Context, req *requests.ConfigUpdateRequest) error
 	Delete(ctx context.Context, id string) error
 	BatchDelete(ctx context.Context, ids []string) error
 	GetByID(ctx context.Context, id string) (*models.Config, error)
 	GetByKey(ctx context.Context, configKey string) (*models.Config, error)
-	List(ctx context.Context, params ConfigListParams) (*PageResult, error)
+	List(ctx context.Context, params requests.ConfigListParams) (*PageResult, error)
 	RefreshCache(ctx context.Context) error
 }
 
@@ -30,49 +31,9 @@ func NewConfigService(db *gorm.DB) ConfigService {
 	return &configService{db: db}
 }
 
-// ==================== 请求/响应类型 ====================
-
-// ConfigListParams 参数配置列表查询参数
-type ConfigListParams struct {
-	ConfigName *string
-	ConfigKey  *string
-	ConfigType *string
-	BeginTime  *string
-	EndTime    *string
-	Current    int
-	PageSize   int
-}
-
-// DefaultConfigListParams 默认列表参数
-func DefaultConfigListParams() ConfigListParams {
-	return ConfigListParams{
-		Current:  1,
-		PageSize: 10,
-	}
-}
-
-// ConfigCreateRequest 创建参数配置请求
-type ConfigCreateRequest struct {
-	ConfigName  string
-	ConfigKey   string
-	ConfigValue string
-	ConfigType  models.ConfigType
-	IsSystem    int
-	Remark      *string
-}
-
-// ConfigUpdateRequest 更新参数配置请求
-type ConfigUpdateRequest struct {
-	ID          string
-	ConfigName  string
-	ConfigValue string
-	ConfigType  models.ConfigType
-	Remark      *string
-}
-
 // ==================== 服务方法实现 ====================
 
-func (s *configService) Create(ctx context.Context, req *ConfigCreateRequest) error {
+func (s *configService) Create(ctx context.Context, req *requests.ConfigCreateRequest) error {
 	// 检查配置键是否已存在
 	var existConfig models.Config
 	if err := s.db.WithContext(ctx).Where("config_key = ?", req.ConfigKey).First(&existConfig).Error; err == nil {
@@ -95,7 +56,7 @@ func (s *configService) Create(ctx context.Context, req *ConfigCreateRequest) er
 	return nil
 }
 
-func (s *configService) Update(ctx context.Context, req *ConfigUpdateRequest) error {
+func (s *configService) Update(ctx context.Context, req *requests.ConfigUpdateRequest) error {
 	var config models.Config
 	if err := s.db.WithContext(ctx).First(&config, "id = ?", req.ID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -184,7 +145,7 @@ func (s *configService) GetByKey(ctx context.Context, configKey string) (*models
 	return &config, nil
 }
 
-func (s *configService) List(ctx context.Context, params ConfigListParams) (*PageResult, error) {
+func (s *configService) List(ctx context.Context, params requests.ConfigListParams) (*PageResult, error) {
 	var total int64
 	var list []models.Config
 

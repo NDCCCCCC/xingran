@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"gorm.io/gorm"
 )
@@ -112,7 +113,7 @@ func (s *menuCacheService) InvalidateMenuCache(ctx context.Context) error {
 }
 
 // Create 创建菜单（带缓存失效）
-func (s *menuCacheService) Create(ctx context.Context, req *MenuCreateRequest) error {
+func (s *menuCacheService) Create(ctx context.Context, req *requests.MenuCreateRequest) error {
 	if err := s.menuService.Create(ctx, req); err != nil {
 		return err
 	}
@@ -120,7 +121,7 @@ func (s *menuCacheService) Create(ctx context.Context, req *MenuCreateRequest) e
 }
 
 // Update 更新菜单（带缓存失效）
-func (s *menuCacheService) Update(ctx context.Context, req *MenuUpdateRequest) error {
+func (s *menuCacheService) Update(ctx context.Context, req *requests.MenuUpdateRequest) error {
 	if err := s.menuService.Update(ctx, req); err != nil {
 		return err
 	}

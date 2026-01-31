@@ -2,9 +2,9 @@ package system
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
@@ -25,13 +25,13 @@ func NewUserHandler(service systemServices.UserService) *UserHandler {
 // @Tags 用户管理
 // @Accept json
 // @Produce json
-// @Param request body systemServices.UserCreateRequest true "用户信息"
+// @Param request body requests.UserCreateRequest true "用户信息"
 // @Success 200 {object} response.Response{data=models.User}
 // @Failure 400 {object} response.Response
 // @Failure 500 {object} response.Response
 // @Router /system/users [post]
 func (h *UserHandler) Create(c *gin.Context) {
-	var req systemServices.UserCreateRequest
+	var req requests.UserCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
 		return
@@ -45,78 +45,27 @@ func (h *UserHandler) Create(c *gin.Context) {
 	response.Success(c, gin.H{"message": "创建成功"})
 }
 
-// List 查询用户列表
+// List 查询用户列表（类型安全版本）
 // @Summary 查询用户列表
 // @Description 分页查询用户列表，支持多条件过滤
 // @Tags 用户管理
 // @Accept json
 // @Produce json
-// @Param request body systemServices.UserListParams true "查询条件"
+// @Param request body requests.UserListParams true "查询条件"
 // @Success 200 {object} response.Response{data=response.PageResponse}
 // @Router /system/users/list [post]
 func (h *UserHandler) List(c *gin.Context) {
-	var rawReq map[string]interface{}
-	// 允许空的请求体，设置默认值
-	if err := c.ShouldBindJSON(&rawReq); err != nil {
-		// 如果是空请求体，初始化默认值
-		rawReq = make(map[string]interface{})
+	// 直接绑定到类型安全的请求结构体
+	var params requests.UserListParams
+	if err := c.ShouldBindJSON(&params); err != nil {
+		// 如果是空请求体或解析失败，使用默认值
+		params = requests.DefaultUserListParams()
 	}
 
-	// 转换为结构体并处理类型转换
-	params := systemServices.DefaultUserListParams()
-
-	// 处理分页参数
-	if val, ok := rawReq["current"]; ok {
-		switch v := val.(type) {
-		case float64:
-			params.Current = int(v)
-		case int:
-			params.Current = v
-		case string:
-			params.Current = parseInt(v)
-		}
-	}
-	if val, ok := rawReq["pageSize"]; ok {
-		switch v := val.(type) {
-		case float64:
-			params.PageSize = int(v)
-		case int:
-			params.PageSize = v
-		case string:
-			params.PageSize = parseInt(v)
-		}
-	}
-
-	// 处理字符串字段
-	if val, ok := rawReq["username"].(string); ok && val != "" {
-		params.Username = &val
-	}
-	if val, ok := rawReq["nickname"].(string); ok && val != "" {
-		params.Nickname = &val
-	}
-	if val, ok := rawReq["phone"].(string); ok && val != "" {
-		params.Phone = &val
-	}
-	if val, ok := rawReq["deptId"].(string); ok && val != "" {
-		params.DeptID = &val
-	}
-	if val, ok := rawReq["beginTime"].(string); ok && val != "" {
-		params.BeginTime = &val
-	}
-	if val, ok := rawReq["endTime"].(string); ok && val != "" {
-		params.EndTime = &val
-	}
-	if val, ok := rawReq["status"]; ok {
-		params.Status = new(int)
-		switch v := val.(type) {
-		case float64:
-			*params.Status = int(v)
-		case int:
-			*params.Status = v
-		case string:
-			*params.Status = parseInt(v)
-		}
-	}
+	// 应用分页限制
+	current, pageSize := params.GetPagination()
+	params.Current = current
+	params.PageSize = pageSize
 
 	result, err := h.service.List(c.Request.Context(), params)
 	if err != nil {
@@ -161,7 +110,7 @@ func (h *UserHandler) GetByID(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "用户ID"
-// @Param request body systemServices.UserUpdateRequest true "用户信息"
+// @Param request body requests.UserUpdateRequest true "用户信息"
 // @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
 // @Failure 404 {object} response.Response
@@ -173,7 +122,7 @@ func (h *UserHandler) Update(c *gin.Context) {
 		return
 	}
 
-	var req systemServices.UserUpdateRequest
+	var req requests.UserUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
 		return
@@ -297,14 +246,4 @@ func (h *UserHandler) ResetPassword(c *gin.Context) {
 	}
 
 	response.Success(c, gin.H{"message": "重置成功，新密码为：123456"})
-}
-
-// ==================== 辅助函数 ====================
-
-// parseInt 安全地将字符串转换为整数
-func parseInt(s string) int {
-	if i, err := strconv.Atoi(s); err == nil {
-		return i
-	}
-	return 0
 }

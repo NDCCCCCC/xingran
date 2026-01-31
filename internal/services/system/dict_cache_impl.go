@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"gorm.io/gorm"
 )
@@ -64,7 +65,7 @@ func (s *dictTypeCacheService) queryAllTypes(ctx context.Context) ([]*models.Dic
 }
 
 // Create 创建字典类型（带缓存失效）
-func (s *dictTypeCacheService) Create(ctx context.Context, req *DictTypeCreateRequest) error {
+func (s *dictTypeCacheService) Create(ctx context.Context, req *requests.DictTypeCreateRequest) error {
 	if err := s.dictTypeService.Create(ctx, req); err != nil {
 		return err
 	}
@@ -73,7 +74,7 @@ func (s *dictTypeCacheService) Create(ctx context.Context, req *DictTypeCreateRe
 }
 
 // Update 更新字典类型（带缓存失效）
-func (s *dictTypeCacheService) Update(ctx context.Context, req *DictTypeUpdateRequest) error {
+func (s *dictTypeCacheService) Update(ctx context.Context, req *requests.DictTypeUpdateRequest) error {
 	if err := s.dictTypeService.Update(ctx, req); err != nil {
 		return err
 	}
@@ -96,7 +97,7 @@ func (s *dictTypeCacheService) invalidateCache(ctx context.Context) {
 }
 
 // List 查询字典类型列表（全量缓存+内存筛选版本）
-func (s *dictTypeCacheService) List(ctx context.Context, params DictTypeListParams) (*PageResult, error) {
+func (s *dictTypeCacheService) List(ctx context.Context, params requests.DictTypeListParams) (*PageResult, error) {
 	allTypes, err := s.GetAllWithCache(ctx)
 	if err != nil {
 		return nil, err
@@ -114,7 +115,7 @@ func (s *dictTypeCacheService) List(ctx context.Context, params DictTypeListPara
 }
 
 // filterDictTypes 在内存中筛选字典类型
-func (s *dictTypeCacheService) filterDictTypes(types []*models.DictType, params DictTypeListParams) []*models.DictType {
+func (s *dictTypeCacheService) filterDictTypes(types []*models.DictType, params requests.DictTypeListParams) []*models.DictType {
 	result := types
 
 	if params.DictName != nil && *params.DictName != "" {
@@ -194,7 +195,7 @@ func (s *dictDataCacheService) queryByType(ctx context.Context, dictType string)
 }
 
 // Create 创建字典数据（带缓存失效）
-func (s *dictDataCacheService) Create(ctx context.Context, req *DictDataCreateRequest) error {
+func (s *dictDataCacheService) Create(ctx context.Context, req *requests.DictDataCreateRequest) error {
 	if err := s.dictDataService.Create(ctx, req); err != nil {
 		return err
 	}
@@ -203,7 +204,7 @@ func (s *dictDataCacheService) Create(ctx context.Context, req *DictDataCreateRe
 }
 
 // Update 更新字典数据（带缓存失效）
-func (s *dictDataCacheService) Update(ctx context.Context, req *DictDataUpdateRequest) error {
+func (s *dictDataCacheService) Update(ctx context.Context, req *requests.DictDataUpdateRequest) error {
 	// 获取原数据以获取 dictType
 	var oldData models.DictData
 	if err := s.db.WithContext(ctx).First(&oldData, "id = ?", req.ID).Error; err != nil {

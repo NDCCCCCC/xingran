@@ -5,16 +5,17 @@ import (
 	"fmt"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	"gorm.io/gorm"
 )
 
 // PostService 岗位服务接口
 type PostService interface {
-	Create(ctx context.Context, req *PostCreateRequest) error
-	Update(ctx context.Context, req *PostUpdateRequest) error
+	Create(ctx context.Context, req *requests.PostCreateRequest) error
+	Update(ctx context.Context, req *requests.PostUpdateRequest) error
 	Delete(ctx context.Context, id string) error
 	GetByID(ctx context.Context, id string) (*models.Post, error)
-	List(ctx context.Context, params PostListParams) (*PageResult, error)
+	List(ctx context.Context, params requests.PostListParams) (*PageResult, error)
 	BatchDelete(ctx context.Context, ids []string) error
 
 	// 新增缓存方法
@@ -33,47 +34,10 @@ func NewPostService(db *gorm.DB) PostService {
 	return &postService{db: db}
 }
 
-// ==================== 请求/响应类型 ====================
-
-// PostListParams 岗位列表查询参数
-type PostListParams struct {
-	PostCode *string
-	PostName *string
-	Status   *int
-	Current  int
-	PageSize int
-}
-
-// DefaultPostListParams 默认列表参数
-func DefaultPostListParams() PostListParams {
-	return PostListParams{
-		Current:  1,
-		PageSize: 10,
-	}
-}
-
-// PostCreateRequest 创建岗位请求
-type PostCreateRequest struct {
-	PostCode string
-	PostName string
-	PostSort int
-	Status   models.PostStatus
-	Remark   *string
-}
-
-// PostUpdateRequest 更新岗位请求
-type PostUpdateRequest struct {
-	ID       string
-	PostName string
-	PostSort int
-	Status   models.PostStatus
-	Remark   *string
-}
-
 // ==================== 服务方法实现 ====================
 
 // Create 创建岗位
-func (s *postService) Create(ctx context.Context, req *PostCreateRequest) error {
+func (s *postService) Create(ctx context.Context, req *requests.PostCreateRequest) error {
 	// 检查岗位编码是否已存在
 	var existPost models.Post
 	if err := s.db.WithContext(ctx).Where("post_code = ?", req.PostCode).First(&existPost).Error; err == nil {
@@ -96,7 +60,7 @@ func (s *postService) Create(ctx context.Context, req *PostCreateRequest) error 
 }
 
 // Update 更新岗位
-func (s *postService) Update(ctx context.Context, req *PostUpdateRequest) error {
+func (s *postService) Update(ctx context.Context, req *requests.PostUpdateRequest) error {
 	// 检查岗位是否存在
 	var post models.Post
 	if err := s.db.WithContext(ctx).First(&post, "id = ?", req.ID).Error; err != nil {
@@ -151,7 +115,7 @@ func (s *postService) GetByID(ctx context.Context, id string) (*models.Post, err
 }
 
 // List 查询岗位列表
-func (s *postService) List(ctx context.Context, params PostListParams) (*PageResult, error) {
+func (s *postService) List(ctx context.Context, params requests.PostListParams) (*PageResult, error) {
 	var total int64
 	var list []models.Post
 
