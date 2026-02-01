@@ -3,8 +3,6 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"log"
-	"os"
 	"time"
 
 	_ "github.com/lib/pq"
@@ -12,6 +10,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -72,7 +71,7 @@ func createSQLiteConnection(cfg *config.DatabaseConfig) (*gorm.DB, error) {
 	}
 
 	gormConfig := &gorm.Config{
-		Logger: createGORMLogger(),
+		Logger: createFilteredLogger(),
 		NowFunc: func() time.Time {
 			return time.Now().Local()
 		},
@@ -83,21 +82,22 @@ func createSQLiteConnection(cfg *config.DatabaseConfig) (*gorm.DB, error) {
 		return nil, fmt.Errorf("连接SQLite失败: %w", err)
 	}
 
-	log.Printf("SQLite连接成功: %s", dbPath)
+	applogger.Infof("SQLite连接成功: %s", dbPath)
 	return db, nil
 }
 
-// createGORMLogger 创建GORM日志配置
-func createGORMLogger() logger.Interface {
-	return logger.New(
-		log.New(os.Stdout, "\r\n", log.LstdFlags),
-		logger.Config{
-			SlowThreshold:             200 * time.Millisecond,
-			LogLevel:                  logger.Warn,
-			IgnoreRecordNotFoundError: true,
-			Colorful:                  false,
+// createFilteredLogger 创建使用 FilterLogger 的 GORM 配置
+func createFilteredLogger() *FilterLogger {
+	return NewFilterLogger(LogFilterConfig{
+		MinLevel: logger.Silent, // 完全静默 SQL 日志
+		FilterTypes: map[LogType]bool{
+			LogTypeSQL:       true, // 过滤普通 SQL
+			LogTypeSlowQuery: true, // 过滤慢查询
+			LogTypeError:     false, // 保留错误
+			LogTypeNilRecord: true, // 过滤未找到记录
 		},
-	)
+		SlowThreshold: 1000,
+	})
 }
 
 // createPostgresConnection 创建PostgreSQL连接
@@ -106,13 +106,13 @@ func createPostgresConnection(cfg *config.DatabaseConfig) (*gorm.DB, error) {
 		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.SSLMode)
 
 	if err := createDatabaseIfNotExists(adminDSN, cfg.DBName); err != nil {
-		log.Printf("创建数据库失败: %v", err)
+		applogger.Errorf("创建数据库失败: %v", err)
 	}
 
 	dsn := cfg.GetDSN()
 
 	gormConfig := &gorm.Config{
-		Logger:                                    createGORMLogger(),
+		Logger:                                    createFilteredLogger(),
 		NowFunc:                                    func() time.Time { return time.Now().Local() },
 		DisableForeignKeyConstraintWhenMigrating: true,
 		SkipDefaultTransaction:                     true,
@@ -134,7 +134,7 @@ func createPostgresConnection(cfg *config.DatabaseConfig) (*gorm.DB, error) {
 		return nil, fmt.Errorf("数据库连接测试失败: %w", err)
 	}
 
-	log.Println("PostgreSQL连接成功")
+	applogger.Infof("PostgreSQL连接成功")
 	return db, nil
 }
 
@@ -207,9 +207,9 @@ func (d *Database) cleanupOldConstraints() {
 		if count > 0 {
 			sql := fmt.Sprintf("ALTER TABLE %s DROP CONSTRAINT %s", c.table, c.constraint)
 			if err := d.DB.Exec(sql).Error; err != nil {
-				log.Printf("警告：删除约束 %s.%s 失败: %v", c.table, c.constraint, err)
+				applogger.Warnf("删除约束 %s.%s 失败: %v", c.table, c.constraint, err)
 			} else {
-				log.Printf("成功删除约束 %s.%s", c.table, c.constraint)
+				applogger.Infof("成功删除约束 %s.%s", c.table, c.constraint)
 			}
 		}
 
@@ -305,11 +305,11 @@ func (d *Database) AutoMigrate() error {
 		return err
 	}
 
-	log.Println("所有表迁移成功")
+	applogger.Infof("所有表迁移成功")
 
 	// 执行凭证模型重新设计迁移
 	if err := d.migrateCredentialModel(); err != nil {
-		log.Printf("凭证模型迁移失败: %v", err)
+		applogger.Errorf("凭证模型迁移失败: %v", err)
 		// 迁移失败不中断启动，只记录日志
 	}
 
@@ -321,7 +321,7 @@ func (d *Database) AutoMigrate() error {
 func (d *Database) migrateCredentialModel() error {
 	// 只对 PostgreSQL 执行 SQL 迁移
 	if d.Type != "postgres" {
-		log.Println("非 PostgreSQL 数据库，跳过凭证模型 SQL 迁移")
+		applogger.Infof("非 PostgreSQL 数据库，跳过凭证模型 SQL 迁移")
 		return nil
 	}
 
@@ -351,7 +351,7 @@ func (d *Database) migrateCredentialModel() error {
 
 	// 如果旧列存在，需要删除
 	if oldColumnExists {
-		log.Println("发现旧的 credential_type 列，执行清理...")
+		applogger.Infof("发现旧的 credential_type 列，执行清理...")
 		if err := d.dropOldCredentialColumns(); err != nil {
 			return fmt.Errorf("删除旧列失败: %w", err)
 		}
@@ -359,11 +359,11 @@ func (d *Database) migrateCredentialModel() error {
 
 	// 如果 protocol_type 列已存在，说明迁移已执行过
 	if columnExists {
-		log.Println("凭证模型迁移已执行，跳过")
+		applogger.Infof("凭证模型迁移已执行，跳过")
 		return nil
 	}
 
-	log.Println("开始执行凭证模型迁移...")
+	applogger.Infof("开始执行凭证模型迁移...")
 
 	// 使用事务
 	if err := d.DB.Transaction(func(tx *gorm.DB) error {
@@ -416,12 +416,12 @@ func (d *Database) migrateCredentialModel() error {
 		// 步骤7：添加约束
 		if err := tx.Exec("ALTER TABLE sys_auth_credential ADD CONSTRAINT chk_protocol_type CHECK (protocol_type IN ('ssh', 'telnet'))").Error; err != nil {
 			// 约束可能已存在，忽略错误
-			log.Printf("添加 protocol_type 约束失败（可能已存在）: %v", err)
+			applogger.Warnf("添加 protocol_type 约束失败（可能已存在）: %v", err)
 		}
 
 		if err := tx.Exec("ALTER TABLE sys_auth_credential ADD CONSTRAINT chk_snmp_version CHECK (snmp_version IN ('v1', 'v2c', 'v3'))").Error; err != nil {
 			// 约束可能已存在，忽略错误
-			log.Printf("添加 snmp_version 约束失败（可能已存在）: %v", err)
+			applogger.Warnf("添加 snmp_version 约束失败（可能已存在）: %v", err)
 		}
 
 		return nil
@@ -429,7 +429,7 @@ func (d *Database) migrateCredentialModel() error {
 		return fmt.Errorf("凭证模型迁移失败: %w", err)
 	}
 
-	log.Println("凭证模型迁移完成")
+	applogger.Infof("凭证模型迁移完成")
 
 	return nil
 }
@@ -499,7 +499,7 @@ func initData(db *gorm.DB) error {
 		return fmt.Errorf("创建运维管理菜单失败: %w", err)
 	}
 
-	log.Println("基础数据初始化完成")
+	applogger.Infof("基础数据初始化完成")
 	return nil
 }
 
@@ -509,7 +509,7 @@ func createDefaultDept(db *gorm.DB) error {
 	var count int64
 	db.Model(&models.Department{}).Count(&count)
 	if count > 0 {
-		log.Println("部门数据已存在，跳过初始化")
+		applogger.Infof("部门数据已存在，跳过初始化")
 		return nil
 	}
 
@@ -562,7 +562,7 @@ func createDefaultDept(db *gorm.DB) error {
 		if dept.DeptName == "深圳总公司" {
 			shenzhenDeptID = dept.ID
 		}
-		log.Printf("创建部门 %s 成功", dept.DeptName)
+		applogger.Infof("创建部门 %s 成功", dept.DeptName)
 	}
 
 	// 创建深圳总公司的子部门
@@ -606,10 +606,10 @@ func createDefaultDept(db *gorm.DB) error {
 		if err := db.Create(&dept).Error; err != nil {
 			return fmt.Errorf("创建部门 %s 失败: %w", dept.DeptName, err)
 		}
-		log.Printf("创建部门 %s 成功", dept.DeptName)
+		applogger.Infof("创建部门 %s 成功", dept.DeptName)
 	}
 
-	log.Println("默认部门创建完成")
+	applogger.Infof("默认部门创建完成")
 	return nil
 }
 
@@ -649,7 +649,7 @@ func createDefaultUser(db *gorm.DB) error {
 		return fmt.Errorf("创建默认用户失败: %w", err)
 	}
 
-	log.Println("创建默认管理员用户成功")
+	applogger.Infof("创建默认管理员用户成功")
 	return nil
 }
 
@@ -683,17 +683,17 @@ func createDefaultRole(db *gorm.DB) error {
 		// 检查角色是否已存在（通过role_key）
 		db.Model(&models.Role{}).Where("role_key = ?", role.RoleKey).Count(&count)
 		if count > 0 {
-			log.Printf("角色 %s (role_key: %s) 已存在，跳过创建", role.RoleName, role.RoleKey)
+			applogger.Infof("角色 %s (role_key: %s) 已存在，跳过创建", role.RoleName, role.RoleKey)
 			continue
 		}
 
 		if err := db.Create(&role).Error; err != nil {
 			return fmt.Errorf("创建角色 %s 失败: %w", role.RoleName, err)
 		}
-		log.Printf("创建角色 %s 成功", role.RoleName)
+		applogger.Infof("创建角色 %s 成功", role.RoleName)
 	}
 
-	log.Println("默认角色检查/创建完成")
+	applogger.Infof("默认角色检查/创建完成")
 	return nil
 }
 
@@ -702,14 +702,14 @@ func createUserRoleRelations(db *gorm.DB) error {
 	// 获取默认用户
 	var adminUser models.User
 	if err := db.Where("username = ?", "admin").First(&adminUser).Error; err != nil {
-		log.Printf("未找到管理员用户: %v", err)
+		applogger.Warnf("未找到管理员用户: %v", err)
 		return nil // 如果用户不存在，跳过
 	}
 
 	// 获取管理员角色
 	var adminRole models.Role
 	if err := db.Where("role_key = ?", "admin").First(&adminRole).Error; err != nil {
-		log.Printf("未找到管理员角色: %v", err)
+		applogger.Warnf("未找到管理员角色: %v", err)
 		return nil // 如果角色不存在，跳过
 	}
 
@@ -717,7 +717,7 @@ func createUserRoleRelations(db *gorm.DB) error {
 	var count int64
 	db.Table("sys_user_role").Where("user_id = ? AND role_id = ?", adminUser.ID, adminRole.ID).Count(&count)
 	if count > 0 {
-		log.Println("用户角色关联已存在，跳过创建")
+		applogger.Infof("用户角色关联已存在，跳过创建")
 		return nil
 	}
 
@@ -727,7 +727,7 @@ func createUserRoleRelations(db *gorm.DB) error {
 		return fmt.Errorf("创建用户角色关联失败: %w", err)
 	}
 
-	log.Println("创建用户角色关联成功")
+	applogger.Infof("创建用户角色关联成功")
 	return nil
 }
 
@@ -754,9 +754,9 @@ func createDatabaseIfNotExists(adminDSN, dbName string) error {
 		if err != nil {
 			return fmt.Errorf("创建数据库失败: %w", err)
 		}
-		log.Printf("数据库 %s 创建成功", dbName)
+		applogger.Infof("数据库 %s 创建成功", dbName)
 	} else {
-		log.Printf("数据库 %s 已存在", dbName)
+		applogger.Infof("数据库 %s 已存在", dbName)
 	}
 
 	return nil
@@ -844,17 +844,17 @@ func createNetworkDeviceSystemParams(db *gorm.DB) error {
 		var count int64
 		db.Model(&models.Config{}).Where("config_key = ?", param.ConfigKey).Count(&count)
 		if count > 0 {
-			log.Printf("系统参数 %s 已存在，跳过创建", param.ConfigName)
+			applogger.Infof("系统参数 %s 已存在，跳过创建", param.ConfigName)
 			continue
 		}
 
 		if err := db.Create(&param).Error; err != nil {
 			return fmt.Errorf("创建系统参数 %s 失败: %w", param.ConfigName, err)
 		}
-		log.Printf("创建系统参数 %s 成功", param.ConfigName)
+		applogger.Infof("创建系统参数 %s 成功", param.ConfigName)
 	}
 
-	log.Println("网络设备系统参数创建完成")
+	applogger.Infof("网络设备系统参数创建完成")
 	return nil
 }
 
@@ -919,17 +919,17 @@ func createNetworkDeviceScheduledJobs(db *gorm.DB) error {
 		var count int64
 		db.Model(&models.Job{}).Where("invoke_target = ?", job.InvokeTarget).Count(&count)
 		if count > 0 {
-			log.Printf("定时任务 %s 已存在，跳过创建", job.JobName)
+			applogger.Infof("定时任务 %s 已存在，跳过创建", job.JobName)
 			continue
 		}
 
 		if err := db.Create(&job).Error; err != nil {
 			return fmt.Errorf("创建定时任务 %s 失败: %w", job.JobName, err)
 		}
-		log.Printf("创建定时任务 %s 成功", job.JobName)
+		applogger.Infof("创建定时任务 %s 成功", job.JobName)
 	}
 
-	log.Println("网络设备定时任务创建完成")
+	applogger.Infof("网络设备定时任务创建完成")
 	return nil
 }
 
@@ -998,17 +998,17 @@ func createCaptchaBackgroundSystemParams(db *gorm.DB) error {
 		var count int64
 		db.Model(&models.Config{}).Where("config_key = ?", param.ConfigKey).Count(&count)
 		if count > 0 {
-			log.Printf("系统参数 %s 已存在，跳过创建", param.ConfigName)
+			applogger.Infof("系统参数 %s 已存在，跳过创建", param.ConfigName)
 			continue
 		}
 
 		if err := db.Create(&param).Error; err != nil {
 			return fmt.Errorf("创建系统参数 %s 失败: %w", param.ConfigName, err)
 		}
-		log.Printf("创建系统参数 %s 成功", param.ConfigName)
+		applogger.Infof("创建系统参数 %s 成功", param.ConfigName)
 	}
 
-	log.Println("验证码背景图系统参数创建完成")
+	applogger.Infof("验证码背景图系统参数创建完成")
 	return nil
 }
 
@@ -1161,9 +1161,9 @@ func createOperationsManagementMenus(db *gorm.DB) error {
 		if err := db.Create(&opsMenu).Error; err != nil {
 			return fmt.Errorf("创建运维管理菜单失败: %w", err)
 		}
-		log.Printf("创建菜单 %s 成功", opsMenu.MenuName)
+		applogger.Infof("创建菜单 %s 成功", opsMenu.MenuName)
 	} else {
-		log.Println("运维管理菜单已存在，跳过创建")
+		applogger.Infof("运维管理菜单已存在，跳过创建")
 	}
 
 	// 定义需要创建的页面菜单（检查是否存在，不存在才创建）
@@ -1196,7 +1196,7 @@ func createOperationsManagementMenus(db *gorm.DB) error {
 		if err == nil {
 			// 菜单已存在，使用现有菜单ID，跳过创建
 			menuIDs[pm.name] = existingMenu.ID
-			log.Printf("菜单 %s 已存在，跳过创建", pm.name)
+			applogger.Infof("菜单 %s 已存在，跳过创建", pm.name)
 			continue
 		}
 
@@ -1218,7 +1218,7 @@ func createOperationsManagementMenus(db *gorm.DB) error {
 			return fmt.Errorf("创建菜单 %s 失败: %w", pm.name, err)
 		}
 		menuIDs[pm.name] = menu.ID
-		log.Printf("创建菜单 %s 成功", pm.name)
+		applogger.Infof("创建菜单 %s 成功", pm.name)
 	}
 
 	// 定义需要创建的按钮权限菜单
@@ -1274,7 +1274,7 @@ func createOperationsManagementMenus(db *gorm.DB) error {
 
 		if err == nil {
 			// 按钮已存在，跳过创建
-			log.Printf("按钮菜单 %s 已存在，跳过创建", bm.name)
+			applogger.Infof("按钮菜单 %s 已存在，跳过创建", bm.name)
 			continue
 		}
 
@@ -1295,9 +1295,9 @@ func createOperationsManagementMenus(db *gorm.DB) error {
 		if err := db.Create(&menu).Error; err != nil {
 			return fmt.Errorf("创建按钮菜单 %s 失败: %w", bm.name, err)
 		}
-		log.Printf("创建按钮菜单 %s 成功", bm.name)
+		applogger.Infof("创建按钮菜单 %s 成功", bm.name)
 	}
 
-	log.Println("运维管理菜单创建完成")
+	applogger.Infof("运维管理菜单创建完成")
 	return nil
 }

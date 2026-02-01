@@ -3,10 +3,11 @@ package device
 import (
 	"context"
 	"fmt"
-	"log"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 )
 
 // DeviceTask 设备任务
@@ -74,7 +75,7 @@ func NewDeviceTaskScheduler(pool *DeviceConnectionPool, config *SchedulerConfig)
 		metrics:        &SchedulerMetrics{},
 	}
 
-	log.Printf("[任务调度器] 已创建调度器: 队列大小=%d, 超时=%v", config.QueueSize, config.TaskTimeout)
+	applogger.Infof("[任务调度器] 已创建调度器: 队列大小=%d, 超时=%v", config.QueueSize, config.TaskTimeout)
 
 	return scheduler
 }
@@ -137,7 +138,7 @@ func (s *DeviceTaskScheduler) Submit(task *DeviceTask) error {
 	// 非阻塞提交
 	select {
 	case queue <- task:
-		log.Printf("[任务调度器] 任务已提交: taskID=%s, deviceID=%s, priority=%d",
+		applogger.Infof("[任务调度器] 任务已提交: taskID=%s, deviceID=%s, priority=%d",
 			task.ID, task.DeviceID, task.Priority)
 		return nil
 	default:
@@ -155,7 +156,7 @@ func (s *DeviceTaskScheduler) startWorker(deviceID string) {
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				log.Printf("[任务调度器] 设备 %s worker panic: %v", deviceID, r)
+				applogger.Infof("[任务调度器] 设备 %s worker panic: %v", deviceID, r)
 			}
 			// 清理
 			s.schedulerLock.Lock()
@@ -164,14 +165,14 @@ func (s *DeviceTaskScheduler) startWorker(deviceID string) {
 			s.schedulerLock.Unlock()
 		}()
 
-		log.Printf("[任务调度器] 启动设备 worker: deviceID=%s", deviceID)
+		applogger.Infof("[任务调度器] 启动设备 worker: deviceID=%s", deviceID)
 
 		for {
 			select {
 			case task := <-s.queues[deviceID]:
 				s.executeTask(workerCtx, task)
 			case <-workerCtx.Done():
-				log.Printf("[任务调度器] 停止设备 worker: deviceID=%s", deviceID)
+				applogger.Infof("[任务调度器] 停止设备 worker: deviceID=%s", deviceID)
 				return
 			}
 		}
@@ -180,7 +181,7 @@ func (s *DeviceTaskScheduler) startWorker(deviceID string) {
 
 // executeTask 执行单个任务
 func (s *DeviceTaskScheduler) executeTask(workerCtx context.Context, task *DeviceTask) {
-	log.Printf("[任务调度器] 开始执行任务: taskID=%s, deviceID=%s", task.ID, task.DeviceID)
+	applogger.Infof("[任务调度器] 开始执行任务: taskID=%s, deviceID=%s", task.ID, task.DeviceID)
 
 	// 设置超时
 	timeout := s.taskTimeout
@@ -188,16 +189,16 @@ func (s *DeviceTaskScheduler) executeTask(workerCtx context.Context, task *Devic
 		timeout = task.Timeout
 	}
 
-	log.Printf("[任务调度器] 任务超时设置: %v", timeout)
+	applogger.Infof("[任务调度器] 任务超时设置: %v", timeout)
 
 	ctx, cancel := context.WithTimeout(workerCtx, timeout)
 	defer cancel()
 
 	// 获取连接
-	log.Printf("[任务调度器] 正在获取连接: taskID=%s, deviceID=%s", task.ID, task.DeviceID)
+	applogger.Infof("[任务调度器] 正在获取连接: taskID=%s, deviceID=%s", task.ID, task.DeviceID)
 	conn, err := s.connectionPool.GetConnection(ctx, task.DeviceID)
 	if err != nil {
-		log.Printf("[任务调度器] 获取连接失败: taskID=%s, deviceID=%s, error=%v",
+		applogger.Infof("[任务调度器] 获取连接失败: taskID=%s, deviceID=%s, error=%v",
 			task.ID, task.DeviceID, err)
 		s.recordFailure()
 		if task.Callback != nil {
@@ -206,12 +207,12 @@ func (s *DeviceTaskScheduler) executeTask(workerCtx context.Context, task *Devic
 		return
 	}
 
-	log.Printf("[任务调度器] 连接获取成功: taskID=%s, deviceID=%s", task.ID, task.DeviceID)
+	applogger.Infof("[任务调度器] 连接获取成功: taskID=%s, deviceID=%s", task.ID, task.DeviceID)
 
 	// 执行任务（worker 已保证串行，手动管理连接获取/释放）
 	if !conn.Acquire() {
 		err := fmt.Errorf("无法获取连接: deviceID=%s", task.DeviceID)
-		log.Printf("[任务调度器] %v", err)
+		applogger.Infof("[任务调度器] %v", err)
 		s.recordFailure()
 		if task.Callback != nil {
 			task.Callback(err)
@@ -219,33 +220,33 @@ func (s *DeviceTaskScheduler) executeTask(workerCtx context.Context, task *Devic
 		return
 	}
 
-	log.Printf("[任务调度器] 连接已获取，开始执行任务: taskID=%s", task.ID)
+	applogger.Infof("[任务调度器] 连接已获取，开始执行任务: taskID=%s", task.ID)
 
 	// 执行任务（带 panic 恢复）
 	var execErr error
 	func() {
 		defer func() {
 			if r := recover(); r != nil {
-				log.Printf("[任务调度器] 任务执行 panic: taskID=%s, deviceID=%s, panic=%v",
+				applogger.Infof("[任务调度器] 任务执行 panic: taskID=%s, deviceID=%s, panic=%v",
 					task.ID, task.DeviceID, r)
 				execErr = fmt.Errorf("任务执行 panic: %v", r)
 			}
 			// 确保释放连接
-			log.Printf("[任务调度器] 释放连接: taskID=%s", task.ID)
+			applogger.Infof("[任务调度器] 释放连接: taskID=%s", task.ID)
 			conn.Release()
 		}()
 
-		log.Printf("[任务调度器] 调用 task.Execute: taskID=%s", task.ID)
+		applogger.Infof("[任务调度器] 调用 task.Execute: taskID=%s", task.ID)
 		execErr = task.Execute(ctx, conn)
-		log.Printf("[任务调度器] task.Execute 返回: taskID=%s, error=%v", task.ID, execErr)
+		applogger.Infof("[任务调度器] task.Execute 返回: taskID=%s, error=%v", task.ID, execErr)
 	}()
 
 	if execErr != nil {
-		log.Printf("[任务调度器] 任务执行失败: taskID=%s, deviceID=%s, error=%v",
+		applogger.Infof("[任务调度器] 任务执行失败: taskID=%s, deviceID=%s, error=%v",
 			task.ID, task.DeviceID, execErr)
 		s.recordFailure()
 	} else {
-		log.Printf("[任务调度器] 任务执行成功: taskID=%s, deviceID=%s", task.ID, task.DeviceID)
+		applogger.Infof("[任务调度器] 任务执行成功: taskID=%s, deviceID=%s", task.ID, task.DeviceID)
 		s.recordCompletion()
 	}
 
@@ -254,7 +255,7 @@ func (s *DeviceTaskScheduler) executeTask(workerCtx context.Context, task *Devic
 		task.Callback(execErr)
 	}
 
-	log.Printf("[任务调度器] 任务完成: taskID=%s", task.ID)
+	applogger.Infof("[任务调度器] 任务完成: taskID=%s", task.ID)
 }
 
 // SubmitAndWait 提交任务并等待完成
@@ -288,7 +289,7 @@ func (s *DeviceTaskScheduler) SubmitAndWait(ctx context.Context, task *DeviceTas
 
 // Stop 停止调度器
 func (s *DeviceTaskScheduler) Stop() {
-	log.Printf("[任务调度器] 正在停止调度器...")
+	applogger.Infof("[任务调度器] 正在停止调度器...")
 
 	s.schedulerLock.Lock()
 
@@ -297,7 +298,7 @@ func (s *DeviceTaskScheduler) Stop() {
 
 	// 取消所有 worker
 	for deviceID, cancel := range s.workerCancel {
-		log.Printf("[任务调度器] 停止设备 worker: deviceID=%s", deviceID)
+		applogger.Infof("[任务调度器] 停止设备 worker: deviceID=%s", deviceID)
 		cancel()
 	}
 
@@ -310,7 +311,7 @@ func (s *DeviceTaskScheduler) Stop() {
 	s.schedulerLock.Unlock()
 
 	// 等待所有 worker 退出（在锁外等待，避免死锁）
-	log.Printf("[任务调度器] 等待 %d 个 worker 退出...", len(deviceIDs))
+	applogger.Infof("[任务调度器] 等待 %d 个 worker 退出...", len(deviceIDs))
 	time.Sleep(100 * time.Millisecond) // 给worker时间处理取消信号
 
 	s.schedulerLock.Lock()
@@ -330,7 +331,7 @@ func (s *DeviceTaskScheduler) Stop() {
 
 	close(s.done)
 
-	log.Printf("[任务调度器] 调度器已停止")
+	applogger.Infof("[任务调度器] 调度器已停止")
 }
 
 // GetStats 获取统计信息

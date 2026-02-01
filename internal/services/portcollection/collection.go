@@ -3,12 +3,12 @@ package portcollection
 import (
 	"context"
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -95,7 +95,7 @@ func (s *CollectionService) CollectDevice(ctx context.Context, deviceID string) 
 func (s *CollectionService) collectDevicePort(ctx context.Context, device *models.NetworkDevice) *CollectionResult {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Printf("[端口采集] 设备 %s 发生 panic: %v", device.DeviceName, r)
+			applogger.Infof("[端口采集] 设备 %s 发生 panic: %v", device.DeviceName, r)
 		}
 	}()
 
@@ -143,14 +143,14 @@ func (s *CollectionService) collectDevicePort(ctx context.Context, device *model
 	// 批量获取802.1X状态
 	dot1xMap, err := getAllDot1xStatus(wrapper, device.Vendor, s.templateCache)
 	if err != nil {
-		log.Printf("[警告] 获取802.1X状态失败: %v", err)
+		applogger.Infof("[警告] 获取802.1X状态失败: %v", err)
 		dot1xMap = make(map[string]Dot1xInfo)
 	}
 
 	// 批量获取端口安全配置
 	securityMap, err := getAllPortSecurity(wrapper, device.Vendor, s.templateCache)
 	if err != nil {
-		log.Printf("[警告] 获取端口安全配置失败: %v", err)
+		applogger.Infof("[警告] 获取端口安全配置失败: %v", err)
 		securityMap = make(map[string]PortSecurityInfo)
 	}
 
@@ -186,11 +186,11 @@ func (s *CollectionService) collectDevicePort(ctx context.Context, device *model
 		DoUpdates: clause.AssignmentColumns([]string{"admin_status", "oper_status", "description", "vlan", "duplex", "speed", "port_type", "dot1x_enabled", "dot1x_port_status", "port_security_enabled", "port_security_mode", "max_mac_count", "current_mac_count", "collected_at"}),
 	}).Create(&portStatuses).Error
 	if err != nil {
-		log.Printf("[端口采集] %s (%s): 批量保存失败: %v", device.DeviceName, device.IPAddress, err)
+		applogger.Infof("[端口采集] %s (%s): 批量保存失败: %v", device.DeviceName, device.IPAddress, err)
 		result.SuccessCount = 0
 		result.FailedCount = len(portStatuses)
 	} else {
-		log.Printf("[端口采集] %s (%s): 成功=%d", device.DeviceName, device.IPAddress, len(portStatuses))
+		applogger.Infof("[端口采集] %s (%s): 成功=%d", device.DeviceName, device.IPAddress, len(portStatuses))
 		result.SuccessCount = len(portStatuses)
 	}
 

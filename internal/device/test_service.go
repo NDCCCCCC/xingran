@@ -3,11 +3,11 @@ package device
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -56,7 +56,7 @@ func NewTestService(db *gorm.DB, sm4Cipher *security.SM4Cipher) *TestService {
 
 // TestConnection 测试单个设备连接
 func (s *TestService) TestConnection(ctx context.Context, deviceID string) error {
-	log.Printf("[测试服务] 测试设备连接: deviceID=%s", deviceID)
+	applogger.Infof("[测试服务] 测试设备连接: deviceID=%s", deviceID)
 
 	// 查询设备信息
 	var device models.NetworkDevice
@@ -75,13 +75,13 @@ func (s *TestService) TestConnection(ctx context.Context, deviceID string) error
 		return fmt.Errorf("执行命令失败: %w", err)
 	}
 
-	log.Printf("[测试服务] 设备 %s 连接测试成功，输出长度=%d", device.DeviceName, len(output))
+	applogger.Infof("[测试服务] 设备 %s 连接测试成功，输出长度=%d", device.DeviceName, len(output))
 	return nil
 }
 
 // TestAllDevices 测试所有设备连接
 func (s *TestService) TestAllDevices(ctx context.Context) ([]*TestResult, error) {
-	log.Printf("[测试服务] 开始测试所有设备连接...")
+	applogger.Infof("[测试服务] 开始测试所有设备连接...")
 
 	// 查询所有在线设备
 	var devices []models.NetworkDevice
@@ -89,14 +89,14 @@ func (s *TestService) TestAllDevices(ctx context.Context) ([]*TestResult, error)
 		return nil, fmt.Errorf("查询设备列表失败: %w", err)
 	}
 
-	log.Printf("[测试服务] 找到 %d 个在线设备", len(devices))
+	applogger.Infof("[测试服务] 找到 %d 个在线设备", len(devices))
 
 	results := make([]*TestResult, 0, len(devices))
 
 	for _, device := range devices {
 		// 跳过没有凭证的设备
 		if device.CredentialID == nil || *device.CredentialID == "" {
-			log.Printf("[测试服务] 跳过设备 %s: 没有关联凭证", device.DeviceName)
+			applogger.Infof("[测试服务] 跳过设备 %s: 没有关联凭证", device.DeviceName)
 			results = append(results, &TestResult{
 				DeviceID:   device.ID,
 				DeviceName: device.DeviceName,
@@ -118,11 +118,11 @@ func (s *TestService) TestAllDevices(ctx context.Context) ([]*TestResult, error)
 		if err != nil {
 			result.Success = false
 			result.Message = err.Error()
-			log.Printf("[测试服务] 设备 %s 测试失败: %v", device.DeviceName, err)
+			applogger.Infof("[测试服务] 设备 %s 测试失败: %v", device.DeviceName, err)
 		} else {
 			result.Success = true
 			result.Message = "连接成功"
-			log.Printf("[测试服务] 设备 %s 测试成功", device.DeviceName)
+			applogger.Infof("[测试服务] 设备 %s 测试成功", device.DeviceName)
 		}
 
 		results = append(results, result)
@@ -142,7 +142,7 @@ func (s *TestService) TestAllDevices(ctx context.Context) ([]*TestResult, error)
 		}
 	}
 
-	log.Printf("[测试服务] 测试完成: 成功=%d, 失败=%d, 总计=%d", successCount, failCount, len(results))
+	applogger.Infof("[测试服务] 测试完成: 成功=%d, 失败=%d, 总计=%d", successCount, failCount, len(results))
 
 	return results, nil
 }
@@ -177,17 +177,17 @@ func (s *TestService) GetStats() map[string]interface{} {
 
 // Close 关闭测试服务
 func (s *TestService) Close() error {
-	log.Printf("[测试服务] 正在关闭测试服务...")
+	applogger.Infof("[测试服务] 正在关闭测试服务...")
 
 	// 停止调度器
 	s.scheduler.Stop()
 
 	// 关闭连接池
 	if err := s.pool.Close(); err != nil {
-		log.Printf("[测试服务] 关闭连接池失败: %v", err)
+		applogger.Infof("[测试服务] 关闭连接池失败: %v", err)
 		return err
 	}
 
-	log.Printf("[测试服务] 测试服务已关闭")
+	applogger.Infof("[测试服务] 测试服务已关闭")
 	return nil
 }

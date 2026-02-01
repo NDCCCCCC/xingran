@@ -3,12 +3,12 @@ package scheduler
 import (
 	"context"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
 	"github.com/robfig/cron/v3"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -41,7 +41,7 @@ func executePeriodicWorkOrderCreateTask(ctx context.Context, params map[string]i
 	var template models.PeriodicWorkOrderTemplate
 	if err := db.Where("id = ? AND is_enabled = ?", templateID, true).First(&template).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			log.Printf("周期性工单模板不存在或已禁用: %s", templateID)
+			applogger.Infof("周期性工单模板不存在或已禁用: %s", templateID)
 			return nil // 不是错误，模板已被禁用
 		}
 		return fmt.Errorf("查询周期性工单模板失败: %w", err)
@@ -85,7 +85,7 @@ func executePeriodicWorkOrderCreateTask(ctx context.Context, params map[string]i
 		// 根据分配类型获取处理人
 		assigneeID, err := assignWorkOrderHandler(tx, &template, workOrder)
 		if err != nil {
-			log.Printf("分配处理人失败: %v，将创建工单但不分配", err)
+			applogger.Infof("分配处理人失败: %v，将创建工单但不分配", err)
 		}
 		workOrder.AssigneeID = assigneeID
 
@@ -110,7 +110,7 @@ func executePeriodicWorkOrderCreateTask(ctx context.Context, params map[string]i
 
 		// 更新模板的已生成工单数量
 		if err := tx.Model(&template).UpdateColumn("total_generated", gorm.Expr("total_generated + 1")).Error; err != nil {
-			log.Printf("更新模板生成数量失败: %v", err)
+			applogger.Infof("更新模板生成数量失败: %v", err)
 		}
 
 		return nil
@@ -123,7 +123,7 @@ func executePeriodicWorkOrderCreateTask(ctx context.Context, params map[string]i
 		sendWorkOrderNotification(workOrder.ID, *workOrder.AssigneeID, title)
 	}
 
-	log.Printf("周期性工单创建成功: %s - %s", workOrderNo, title)
+	applogger.Infof("周期性工单创建成功: %s - %s", workOrderNo, title)
 	return nil
 }
 
@@ -233,7 +233,7 @@ func assignWorkOrderHandler(db *gorm.DB, template *models.PeriodicWorkOrderTempl
 
 	case models.PeriodicAssignTypeRotation:
 		// 按轮询分配（暂未实现）
-		log.Printf("轮询分配暂未实现")
+		applogger.Infof("轮询分配暂未实现")
 		return nil, nil
 
 	default:
@@ -244,7 +244,7 @@ func assignWorkOrderHandler(db *gorm.DB, template *models.PeriodicWorkOrderTempl
 // sendWorkOrderNotification 发送工单通知
 func sendWorkOrderNotification(workOrderID, assigneeID, title string) {
 	if GlobalNoticeHub == nil {
-		log.Printf("通知中心未初始化，跳过工单通知")
+		applogger.Infof("通知中心未初始化，跳过工单通知")
 		return
 	}
 
@@ -258,7 +258,7 @@ func sendWorkOrderNotification(workOrderID, assigneeID, title string) {
 	}
 
 	GlobalNoticeHub.BroadcastToUsers([]string{assigneeID}, message)
-	log.Printf("工单通知已发送给用户: %s", assigneeID)
+	applogger.Infof("工单通知已发送给用户: %s", assigneeID)
 }
 
 // SyncPeriodicWorkOrderJobs 同步周期性工单任务到调度器
@@ -276,21 +276,21 @@ func SyncPeriodicWorkOrderJobs(scheduler *Scheduler) error {
 		return fmt.Errorf("查询周期性工单模板失败: %w", err)
 	}
 
-	log.Printf("开始同步周期性工单任务，共 %d 个模板", len(templates))
+	applogger.Infof("开始同步周期性工单任务，共 %d 个模板", len(templates))
 
 	successCount := 0
 	failCount := 0
 
 	for _, template := range templates {
 		if err := syncWorkOrderJob(db, scheduler, &template); err != nil {
-			log.Printf("同步工单任务失败 [%s]: %v", template.TemplateName, err)
+			applogger.Infof("同步工单任务失败 [%s]: %v", template.TemplateName, err)
 			failCount++
 		} else {
 			successCount++
 		}
 	}
 
-	log.Printf("周期性工单任务同步完成: 成功=%d, 失败=%d", successCount, failCount)
+	applogger.Infof("周期性工单任务同步完成: 成功=%d, 失败=%d", successCount, failCount)
 	return nil
 }
 
@@ -338,10 +338,10 @@ func createWorkOrderJob(db *gorm.DB, scheduler *Scheduler, template *models.Peri
 	}
 
 	if err := db.Model(&models.PeriodicWorkOrderTemplate{}).Where("id = ?", template.ID).Update("job_id", newJob.ID).Error; err != nil {
-		log.Printf("更新模板JobID失败 [%s]: %v", template.TemplateName, err)
+		applogger.Infof("更新模板JobID失败 [%s]: %v", template.TemplateName, err)
 	}
 
-	log.Printf("周期性工单任务已创建: %s (下次执行: %v)", template.TemplateName, nextRunTime)
+	applogger.Infof("周期性工单任务已创建: %s (下次执行: %v)", template.TemplateName, nextRunTime)
 	return nil
 }
 
@@ -350,7 +350,7 @@ func updateExistingWorkOrderJob(db *gorm.DB, template *models.PeriodicWorkOrderT
 	// 更新模板的 JobID
 	if template.JobID == nil || *template.JobID != job.ID {
 		if err := db.Model(&models.PeriodicWorkOrderTemplate{}).Where("id = ?", template.ID).Update("job_id", job.ID).Error; err != nil {
-			log.Printf("更新模板JobID失败 [%s]: %v", template.TemplateName, err)
+			applogger.Infof("更新模板JobID失败 [%s]: %v", template.TemplateName, err)
 		}
 	}
 
@@ -359,7 +359,7 @@ func updateExistingWorkOrderJob(db *gorm.DB, template *models.PeriodicWorkOrderT
 		return fmt.Errorf("更新下次执行时间失败: %w", err)
 	}
 
-	log.Printf("周期性工单任务已同步: %s (下次执行: %v)", template.TemplateName, nextRunTime)
+	applogger.Infof("周期性工单任务已同步: %s (下次执行: %v)", template.TemplateName, nextRunTime)
 	return nil
 }
 
@@ -401,15 +401,15 @@ func DisablePeriodicWorkOrderJob(scheduler *Scheduler, templateID string) error 
 	// 如果有关联的定时任务，停止任务
 	if template.JobID != nil && *template.JobID != "" {
 		if err := scheduler.StopJob(*template.JobID); err != nil {
-			log.Printf("停止定时任务失败: %v", err)
+			applogger.Infof("停止定时任务失败: %v", err)
 			// 不中断流程，继续执行
 		} else {
-			log.Printf("定时任务已停止: %s", *template.JobID)
+			applogger.Infof("定时任务已停止: %s", *template.JobID)
 		}
 
 		// 删除定时任务
 		if err := scheduler.RemoveJob(*template.JobID); err != nil {
-			log.Printf("删除定时任务失败: %v", err)
+			applogger.Infof("删除定时任务失败: %v", err)
 		}
 	}
 
@@ -465,6 +465,6 @@ func EnablePeriodicWorkOrderJob(scheduler *Scheduler, templateID string) error {
 		return fmt.Errorf("更新模板JobID失败: %w", err)
 	}
 
-	log.Printf("周期性工单任务已启用: %s (下次执行: %v)", template.TemplateName, nextRunTime)
+	applogger.Infof("周期性工单任务已启用: %s (下次执行: %v)", template.TemplateName, nextRunTime)
 	return nil
 }

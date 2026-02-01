@@ -3,18 +3,21 @@ package scheduler
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/robfig/cron/v3"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/constants"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	"golang.org/x/sync/semaphore"
 	"gorm.io/gorm"
 )
 
 var (
 	adSyncCron    *cron.Cron
 	adSyncStarted bool
+	adSyncSem     *semaphore.Weighted // 并发控制信号量
 )
 
 // ==================== AD同步任务注册函数 ====================
@@ -33,6 +36,9 @@ func StartADSyncScheduler(db *gorm.DB) {
 		return
 	}
 
+	// 使用常量配置最大并发数初始化信号量
+	adSyncSem = semaphore.NewWeighted(constants.MaxConcurrentADSync)
+
 	adSyncCron = cron.New(cron.WithSeconds())
 
 	// 每5分钟检查一次需要同步的AD配置
@@ -40,13 +46,13 @@ func StartADSyncScheduler(db *gorm.DB) {
 		checkAndSyncADConfigs(db)
 	})
 	if err != nil {
-		log.Printf("启动AD同步定时任务失败: %v", err)
+		applogger.Errorf("启动AD同步定时任务失败: %v", err)
 		return
 	}
 
 	adSyncCron.Start()
 	adSyncStarted = true
-	log.Println("AD同步定时任务已启动")
+	applogger.Infof("AD同步定时任务已启动")
 }
 
 // StopADSyncScheduler 停止AD同步调度器
@@ -54,7 +60,7 @@ func StopADSyncScheduler() {
 	if adSyncCron != nil {
 		adSyncCron.Stop()
 		adSyncStarted = false
-		log.Println("AD同步定时任务已停止")
+		applogger.Infof("AD同步定时任务已停止")
 	}
 }
 
@@ -63,7 +69,7 @@ func checkAndSyncADConfigs(db *gorm.DB) {
 	var configs []models.ADConfig
 	err := db.Where("sync_enabled = ? AND status = ?", true, models.ADConfigStatusEnabled).Find(&configs).Error
 	if err != nil {
-		log.Printf("查询AD配置失败: %v", err)
+		applogger.Errorf("查询AD配置失败: %v", err)
 		return
 	}
 
@@ -74,11 +80,11 @@ func checkAndSyncADConfigs(db *gorm.DB) {
 		// 从未同步过
 		if config.LastSyncAt == nil {
 			shouldSync = true
-			log.Printf("AD配置 %s 从未同步过，准备进行首次同步 (配置的同步间隔: %d秒)", config.ConfigName, config.SyncInterval)
+			applogger.Infof("AD配置 %s 从未同步过，准备进行首次同步 (配置的同步间隔: %d秒)", config.ConfigName, config.SyncInterval)
 		} else {
 			// 检查是否超过同步间隔
 			elapsed = time.Since(*config.LastSyncAt).Seconds()
-			log.Printf("AD配置 %s 检查同步: 距离上次同步 %.0f 秒，配置的同步间隔 %d 秒", config.ConfigName, elapsed, config.SyncInterval)
+			applogger.Debugf("AD配置 %s 检查同步: 距离上次同步 %.0f 秒，配置的同步间隔 %d 秒", config.ConfigName, elapsed, config.SyncInterval)
 
 			// 如果已经超过同步间隔，或者在下次检查之前会超过间隔，则触发同步
 			// 下次检查时间是 5 分钟后（300秒）
@@ -87,17 +93,26 @@ func checkAndSyncADConfigs(db *gorm.DB) {
 
 			if elapsed >= float64(config.SyncInterval) {
 				shouldSync = true
-				log.Printf("AD配置 %s 距离上次同步已超过 %.0f 秒 (配置间隔: %d秒)，准备同步", config.ConfigName, elapsed, config.SyncInterval)
+				applogger.Infof("AD配置 %s 距离上次同步已超过 %.0f 秒 (配置间隔: %d秒)，准备同步", config.ConfigName, elapsed, config.SyncInterval)
 			} else if timeUntilNextSync <= nextCheckIn && timeUntilNextSync > 0 {
 				// 如果在下次检查之前就会达到同步间隔，提前触发同步，避免多等待一个检查周期
 				shouldSync = true
-				log.Printf("AD配置 %s 将在下次检查前达到同步间隔(剩余 %.0f 秒)，提前触发同步", config.ConfigName, timeUntilNextSync)
+				applogger.Infof("AD配置 %s 将在下次检查前达到同步间隔(剩余 %.0f 秒)，提前触发同步", config.ConfigName, timeUntilNextSync)
 			}
 		}
 
 		if shouldSync {
-			// 异步执行同步，避免阻塞其他配置的检查
-			go syncADConfig(config.ID)
+			// 使用信号量控制并发数，异步执行同步
+			go func(configID string, configName string) {
+				// 尝试获取信号量
+				if err := adSyncSem.Acquire(context.Background(), 1); err != nil {
+					applogger.Errorf("AD同步启动失败: %s - %v", configName, err)
+					return
+				}
+				defer adSyncSem.Release(1)
+
+				syncADConfig(configID)
+			}(config.ID, config.ConfigName)
 		}
 	}
 }
@@ -106,7 +121,7 @@ func checkAndSyncADConfigs(db *gorm.DB) {
 func syncADConfig(configID string) {
 	// 从全局数据库获取DB实例
 	if GlobalDB == nil {
-		log.Printf("AD同步失败: 数据库未初始化")
+		applogger.Errorf("AD同步失败: 数据库未初始化")
 		return
 	}
 
@@ -117,20 +132,20 @@ func syncADConfig(configID string) {
 	var config models.ADConfig
 	err := db.Where("id = ?", configID).First(&config).Error
 	if err != nil {
-		log.Printf("AD同步失败: 查询配置失败 - %v", err)
+		applogger.Errorf("AD同步失败: 查询配置失败 - %v", err)
 		return
 	}
 
-	log.Printf("开始同步AD配置: %s", config.ConfigName)
+	applogger.Infof("开始同步AD配置: %s", config.ConfigName)
 
 	// 创建Service并执行同步（SyncData内部会创建和管理同步日志）
 	adService := addomain.NewADDomainService(db)
 	result, err := adService.Sync.SyncDataByID(ctx, configID, "full")
 
 	if err != nil {
-		log.Printf("AD同步失败: %s - %v", config.ConfigName, err)
+		applogger.Errorf("AD同步失败: %s - %v", config.ConfigName, err)
 	} else {
-		log.Printf("AD同步成功: %s - OU=%d, 用户组=%d, 用户=%d, 电脑=%d",
+		applogger.Infof("AD同步成功: %s - OU=%d, 用户组=%d, 用户=%d, 电脑=%d",
 			config.ConfigName, result.OUCount, result.GroupCount, result.UserCount, result.ComputerCount)
 	}
 }

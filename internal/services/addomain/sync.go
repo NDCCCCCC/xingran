@@ -7,7 +7,9 @@ import (
 
 	"github.com/go-ldap/ldap/v3"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // SyncService AD数据同步服务
@@ -39,6 +41,9 @@ func (s *SyncService) SyncDataByID(ctx context.Context, configID string, syncTyp
 
 // SyncData 同步数据
 func (s *SyncService) SyncData(ctx context.Context, config *models.ADConfig, syncType string) (*SyncResult, error) {
+	overallStart := time.Now()
+	applogger.Infof("[AD同步] 开始同步配置: %s", config.ConfigName)
+
 	syncLog := &models.ADSyncLog{
 		ADConfigID: config.ID,
 		SyncType:   models.ADSyncType(syncType),
@@ -51,72 +56,99 @@ func (s *SyncService) SyncData(ctx context.Context, config *models.ADConfig, syn
 
 	config.AdminPassword = decryptPassword(config.AdminPassword)
 
+	// 1. LDAP 连接
+	connStart := time.Now()
 	client := NewLDAPClient(config)
 	if err := client.Connect(); err != nil {
 		s.updateSyncLog(ctx, syncLog.ID, models.ADSyncStatusFailed, 0, 0, 0, 0, err.Error())
 		return nil, fmt.Errorf("连接AD服务器失败: %w", err)
 	}
 	defer client.Close()
+	applogger.Infof("[AD同步] LDAP连接耗时: %v", time.Since(connStart))
 
 	result := &SyncResult{}
 
+	// 2. 搜索和同步 OU
+	searchStart := time.Now()
 	ous, err := client.SearchOUs(config.BaseDN)
 	if err != nil {
 		s.updateSyncLog(ctx, syncLog.ID, models.ADSyncStatusFailed, 0, 0, 0, 0, err.Error())
 		return nil, fmt.Errorf("搜索OU失败: %w", err)
 	}
+	applogger.Infof("[AD同步] LDAP搜索OU耗时: %v, 数量: %d", time.Since(searchStart), len(ous))
 	result.OUCount = len(ous)
+
+	syncStart := time.Now()
 	if err := s.syncOUs(ctx, config, ous); err != nil {
 		s.updateSyncLog(ctx, syncLog.ID, models.ADSyncStatusFailed, result.OUCount, 0, 0, 0, err.Error())
 		return nil, err
 	}
+	applogger.Infof("[AD同步] 同步OU耗时: %v", time.Since(syncStart))
 
+	// 3. 搜索和同步 Group
+	searchStart = time.Now()
 	groups, err := client.SearchGroups(config.BaseDN)
 	if err != nil {
 		s.updateSyncLog(ctx, syncLog.ID, models.ADSyncStatusFailed, result.OUCount, 0, 0, 0, err.Error())
 		return nil, fmt.Errorf("搜索用户组失败: %w", err)
 	}
+	applogger.Infof("[AD同步] LDAP搜索Group耗时: %v, 数量: %d", time.Since(searchStart), len(groups))
 	result.GroupCount = len(groups)
+
+	syncStart = time.Now()
 	if err := s.syncGroups(ctx, config, groups); err != nil {
 		s.updateSyncLog(ctx, syncLog.ID, models.ADSyncStatusFailed, result.OUCount, result.GroupCount, 0, 0, err.Error())
 		return nil, err
 	}
+	applogger.Infof("[AD同步] 同步Group耗时: %v", time.Since(syncStart))
 
+	// 4. 搜索和同步 User
+	searchStart = time.Now()
 	users, err := client.SearchUsers(config.BaseDN)
 	if err != nil {
 		s.updateSyncLog(ctx, syncLog.ID, models.ADSyncStatusFailed, result.OUCount, result.GroupCount, 0, 0, err.Error())
 		return nil, fmt.Errorf("搜索用户失败: %w", err)
 	}
+	applogger.Infof("[AD同步] LDAP搜索User耗时: %v, 数量: %d", time.Since(searchStart), len(users))
 	result.UserCount = len(users)
+
+	syncStart = time.Now()
 	if err := s.syncUsers(ctx, config, users); err != nil {
 		s.updateSyncLog(ctx, syncLog.ID, models.ADSyncStatusFailed, result.OUCount, result.GroupCount, result.UserCount, 0, err.Error())
 		return nil, err
 	}
+	applogger.Infof("[AD同步] 同步User耗时: %v", time.Since(syncStart))
 
+	// 5. 搜索和同步 Computer
 	computerService := NewComputerService(s.db)
+	searchStart = time.Now()
 	computers, err := client.SearchComputers(config.BaseDN)
 	if err != nil {
 		s.updateSyncLog(ctx, syncLog.ID, models.ADSyncStatusFailed, result.OUCount, result.GroupCount, result.UserCount, 0, err.Error())
 		return nil, fmt.Errorf("搜索电脑设备失败: %w", err)
 	}
+	applogger.Infof("[AD同步] LDAP搜索Computer耗时: %v, 数量: %d", time.Since(searchStart), len(computers))
 	result.ComputerCount = len(computers)
+
+	syncStart = time.Now()
 	if err := computerService.syncComputers(ctx, config, computers); err != nil {
 		s.updateSyncLog(ctx, syncLog.ID, models.ADSyncStatusFailed, result.OUCount, result.GroupCount, result.UserCount, result.ComputerCount, err.Error())
 		return nil, err
 	}
+	applogger.Infof("[AD同步] 同步Computer耗时: %v", time.Since(syncStart))
 
+	// 更新配置最后同步时间
 	now := time.Now()
 	updateResult := s.db.WithContext(ctx).Model(config).Updates(map[string]interface{}{
 		"last_sync_at": now,
 	})
 	if updateResult.Error != nil {
-		// 更新失败记录日志，但不影响同步结果
-		fmt.Printf("警告：更新AD配置last_sync_at失败: %v\n", updateResult.Error)
-	} else {
-		fmt.Printf("AD配置 %s last_sync_at 已更新为: %v\n", config.ConfigName, now.Format("2006-01-02 15:04:05"))
+		applogger.Warnf("更新AD配置last_sync_at失败: %v", updateResult.Error)
 	}
 
 	s.updateSyncLog(ctx, syncLog.ID, models.ADSyncStatusSuccess, result.OUCount, result.GroupCount, result.UserCount, result.ComputerCount, "")
+	applogger.Infof("[AD同步] 同步完成! 总耗时: %v | OU=%d Group=%d User=%d Computer=%d",
+		time.Since(overallStart), result.OUCount, result.GroupCount, result.UserCount, result.ComputerCount)
 
 	return result, nil
 }
@@ -207,13 +239,37 @@ func (s *SyncService) batchCreateOUs(ctx context.Context, ous []models.ADOU) err
 	return nil
 }
 
-// batchUpdateOUs 批量更新OU
+// batchUpdateOUs 批量更新OU - 使用 upsert（分批处理）
 func (s *SyncService) batchUpdateOUs(ctx context.Context, ous map[string]*models.ADOU) error {
+	if len(ous) == 0 {
+		return nil
+	}
+
+	ouSlice := make([]*models.ADOU, 0, len(ous))
 	for _, ou := range ous {
-		if err := s.db.WithContext(ctx).Save(ou).Error; err != nil {
-			return fmt.Errorf("更新OU失败: %w", err)
+		ouSlice = append(ouSlice, ou)
+	}
+
+	// 分批处理，避免超过 PostgreSQL 参数限制
+	batchSize := 500
+	for i := 0; i < len(ouSlice); i += batchSize {
+		end := i + batchSize
+		if end > len(ouSlice) {
+			end = len(ouSlice)
+		}
+		batch := ouSlice[i:end]
+		if len(batch) > 0 {
+			if err := s.db.WithContext(ctx).Clauses(clause.OnConflict{
+				Columns:   []clause.Column{{Name: "ad_config_id"}, {Name: "ou_dn"}},
+				DoUpdates: clause.AssignmentColumns([]string{
+					"ou_name", "description", "parent_dn", "ou_path", "last_sync_at",
+				}),
+			}).Create(batch).Error; err != nil {
+				return fmt.Errorf("批量更新OU失败: %w", err)
+			}
 		}
 	}
+
 	return nil
 }
 
@@ -276,9 +332,31 @@ func (s *SyncService) syncGroups(ctx context.Context, config *models.ADConfig, e
 		}
 	}
 
-	for _, group := range groupsToUpdate {
-		if err := s.db.WithContext(ctx).Save(group).Error; err != nil {
-			return fmt.Errorf("更新用户组失败: %w", err)
+	// 批量更新用户组 - 使用 upsert（分批处理）
+	if len(groupsToUpdate) > 0 {
+		groupSlice := make([]*models.ADGroup, 0, len(groupsToUpdate))
+		for _, group := range groupsToUpdate {
+			groupSlice = append(groupSlice, group)
+		}
+
+		// 分批处理，避免超过 PostgreSQL 参数限制
+		batchSize := 500
+		for i := 0; i < len(groupSlice); i += batchSize {
+			end := i + batchSize
+			if end > len(groupSlice) {
+				end = len(groupSlice)
+			}
+			batch := groupSlice[i:end]
+			if len(batch) > 0 {
+				if err := s.db.WithContext(ctx).Clauses(clause.OnConflict{
+					Columns:   []clause.Column{{Name: "ad_config_id"}, {Name: "group_dn"}},
+					DoUpdates: clause.AssignmentColumns([]string{
+						"group_name", "description", "member_count", "ou_dn", "last_sync_at",
+					}),
+				}).Create(batch).Error; err != nil {
+					return fmt.Errorf("批量更新用户组失败: %w", err)
+				}
+			}
 		}
 	}
 
@@ -297,7 +375,11 @@ func (s *SyncService) syncUsers(ctx context.Context, config *models.ADConfig, en
 		return nil
 	}
 
-	// 批量获取所有 User DN
+	totalStart := time.Now()
+	applogger.Infof("[用户同步] 开始同步用户，LDAP条目数: %d", len(entries))
+
+	// 1. 提取DN列表
+	step1Start := time.Now()
 	userDNs := make([]string, 0, len(entries))
 	for _, entry := range entries {
 		username := entry.GetAttributeValue("sAMAccountName")
@@ -305,22 +387,38 @@ func (s *SyncService) syncUsers(ctx context.Context, config *models.ADConfig, en
 			userDNs = append(userDNs, entry.DN)
 		}
 	}
+	applogger.Infof("[用户同步] 步骤1-提取DN: 耗时 %.2fs, DN数量: %d", time.Since(step1Start).Seconds(), len(userDNs))
 
 	if len(userDNs) == 0 {
 		return nil
 	}
 
-	// 批量查询已存在的 User
+	// 2. 批量查询已存在的用户（分批查询以优化性能）
+	step2Start := time.Now()
 	var existingUsers []models.ADUser
-	s.db.WithContext(ctx).Where("ad_config_id = ? AND user_dn IN ?", config.ID, userDNs).Find(&existingUsers)
+	queryBatchSize := 500 // 每批查询 500 个 DN，避免 IN 子句过大
+	for i := 0; i < len(userDNs); i += queryBatchSize {
+		end := i + queryBatchSize
+		if end > len(userDNs) {
+			end = len(userDNs)
+		}
+		batch := userDNs[i:end]
+		var batchUsers []models.ADUser
+		s.db.WithContext(ctx).Where("ad_config_id = ? AND user_dn IN ?", config.ID, batch).Find(&batchUsers)
+		existingUsers = append(existingUsers, batchUsers...)
+	}
+	applogger.Infof("[用户同步] 步骤2-查询已存在用户: 耗时 %.2fs, 找到 %d 条", time.Since(step2Start).Seconds(), len(existingUsers))
 
-	// 创建 DN -> User 的映射
+	// 3. 创建映射
+	step3Start := time.Now()
 	existingUserMap := make(map[string]*models.ADUser)
 	for i := range existingUsers {
 		existingUserMap[existingUsers[i].UserDN] = &existingUsers[i]
 	}
+	applogger.Infof("[用户同步] 步骤3-构建映射: 耗时 %.2fs", time.Since(step3Start).Seconds())
 
-	// 准备批量操作的数据
+	// 4. 处理条目
+	step4Start := time.Now()
 	var usersToCreate []models.ADUser
 	usersToUpdate := make(map[string]*models.ADUser)
 	now := time.Now()
@@ -401,8 +499,10 @@ func (s *SyncService) syncUsers(ctx context.Context, config *models.ADConfig, en
 			usersToCreate = append(usersToCreate, newUser)
 		}
 	}
+	applogger.Infof("[用户同步] 步骤4-处理条目: 耗时 %.2fs, 待创建: %d, 待更新: %d", time.Since(step4Start).Seconds(), len(usersToCreate), len(usersToUpdate))
 
-	// 批量创建新的 User（分批，每批500个）
+	// 5. 批量创建
+	step5Start := time.Now()
 	if len(usersToCreate) > 0 {
 		batchSize := 500
 		for i := 0; i < len(usersToCreate); i += batchSize {
@@ -415,8 +515,10 @@ func (s *SyncService) syncUsers(ctx context.Context, config *models.ADConfig, en
 			}
 		}
 	}
+	applogger.Infof("[用户同步] 步骤5-批量创建: 耗时 %.2fs", time.Since(step5Start).Seconds())
 
-	// 批量更新已存在的 User（分批处理，每批500个）
+	// 6. 批量更新
+	step6Start := time.Now()
 	if len(usersToUpdate) > 0 {
 		batchSize := 500
 		usersSlice := make([]*models.ADUser, 0, len(usersToUpdate))
@@ -429,14 +531,26 @@ func (s *SyncService) syncUsers(ctx context.Context, config *models.ADConfig, en
 			if end > len(usersSlice) {
 				end = len(usersSlice)
 			}
-			for _, user := range usersSlice[i:end] {
-				if err := s.db.WithContext(ctx).Save(user).Error; err != nil {
-					return fmt.Errorf("更新用户失败: %w", err)
+			batch := usersSlice[i:end]
+			if len(batch) > 0 {
+				if err := s.db.WithContext(ctx).Clauses(clause.OnConflict{
+					Columns:   []clause.Column{{Name: "ad_config_id"}, {Name: "user_dn"}},
+					DoUpdates: clause.AssignmentColumns([]string{
+						"username", "display_name", "email", "phone", "mobile",
+						"title", "department", "company", "description", "ou_dn",
+						"user_account_control", "is_enabled", "is_locked",
+						"password_expired", "member_of", "last_logon",
+						"password_last_set", "last_sync_at",
+					}),
+				}).Create(batch).Error; err != nil {
+					return fmt.Errorf("批量更新用户失败: %w", err)
 				}
 			}
 		}
 	}
+	applogger.Infof("[用户同步] 步骤6-批量更新: 耗时 %.2fs", time.Since(step6Start).Seconds())
 
+	applogger.Infof("[用户同步] 完成同步，总耗时: %.2fs", time.Since(totalStart).Seconds())
 	return nil
 }
 
@@ -472,6 +586,13 @@ func (s *SyncService) syncGroupMembers(ctx context.Context, config *models.ADCon
 
 // updateSyncLog 更新同步日志
 func (s *SyncService) updateSyncLog(ctx context.Context, logID string, status models.ADSyncStatus, ouCount, groupCount, userCount, computerCount int, errorMsg string) {
+	// 先获取原始日志记录以计算耗时
+	var log models.ADSyncLog
+	if err := s.db.WithContext(ctx).Where("id = ?", logID).First(&log).Error; err != nil {
+		// 如果查询失败，仍然尝试更新（但不计算耗时）
+		log = models.ADSyncLog{StartTime: time.Now()}
+	}
+
 	updates := map[string]interface{}{
 		"sync_status":    status,
 		"ou_count":       ouCount,
@@ -484,6 +605,9 @@ func (s *SyncService) updateSyncLog(ctx context.Context, logID string, status mo
 	if status != models.ADSyncStatusRunning {
 		now := time.Now()
 		updates["end_time"] = now
+		// 计算耗时（秒）
+		duration := int(now.Sub(log.StartTime).Seconds())
+		updates["duration"] = duration
 	}
 
 	if errorMsg != "" {

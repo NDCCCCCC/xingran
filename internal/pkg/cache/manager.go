@@ -4,13 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"runtime"
 	"sync"
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/pkg/system"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 )
 
 // MetricsCacheManager 系统指标缓存管理器
@@ -308,7 +308,7 @@ func (m *MetricsCacheManager) updateMetrics() {
 
 	metrics, err := m.getRealtimeMetrics()
 	if err != nil {
-		log.Printf("获取系统指标失败: %v", err)
+		applogger.Warnf("获取系统指标失败: %v", err)
 		return
 	}
 
@@ -317,11 +317,11 @@ func (m *MetricsCacheManager) updateMetrics() {
 
 	if m.redisCache != nil {
 		if err := m.setToL2(ctx, key, metrics, 5*time.Minute); err != nil {
-			log.Printf("写入L2缓存失败: %v", err)
+			applogger.Warnf("写入L2缓存失败: %v", err)
 		}
 	}
 
-	log.Printf("系统指标已更新: CPU=%.1f%%, Memory=%.1f%%",
+	applogger.Warnf("系统指标已更新: CPU=%.1f%%, Memory=%.1f%%",
 		metrics.CPUUsage, metrics.MemoryUsage)
 }
 
@@ -352,7 +352,7 @@ func (m *MetricsCacheManager) updateServerInfo() {
 
 	info, err := m.getRealtimeServerInfo()
 	if err != nil {
-		log.Printf("获取服务器信息失败: %v", err)
+		applogger.Warnf("获取服务器信息失败: %v", err)
 		return
 	}
 
@@ -361,11 +361,11 @@ func (m *MetricsCacheManager) updateServerInfo() {
 
 	if m.redisCache != nil {
 		if err := m.setToL2(ctx, key, info, 30*time.Minute); err != nil {
-			log.Printf("写入L2缓存失败: %v", err)
+			applogger.Warnf("写入L2缓存失败: %v", err)
 		}
 	}
 
-	log.Printf("服务器信息已更新: %s", info["hostname"])
+	applogger.Warnf("服务器信息已更新: %s", info["hostname"])
 }
 
 // cleanupExpiredCache 清理过期的L1缓存
@@ -387,7 +387,7 @@ func (m *MetricsCacheManager) cleanupExpiredCache() {
 				}
 				return true
 			})
-			log.Println("L1缓存清理完成")
+			applogger.Infof("L1缓存清理完成")
 		case <-m.stopChan:
 			return
 		}
@@ -398,7 +398,7 @@ func (m *MetricsCacheManager) cleanupExpiredCache() {
 func (m *MetricsCacheManager) Stop() {
 	close(m.stopChan)
 	m.wg.Wait()
-	log.Println("指标缓存管理器已停止")
+	applogger.Infof("指标缓存管理器已停止")
 }
 
 // GetCacheStats 获取缓存统计信息

@@ -5,7 +5,6 @@ package core
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"time"
 
@@ -17,6 +16,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/websocket"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/permission"
 	"gorm.io/gorm"
 )
@@ -85,11 +85,11 @@ func New(cfg *config.Config) (*Core, error) {
 func initSM4Cipher(sm4Key string) *security.SM4Cipher {
 	sm4Cipher, err := security.NewSM4Cipher(sm4Key)
 	if err != nil {
-		log.Printf("警告：SM4 加密器初始化失败: %v", err)
-		log.Printf("配置的密钥长度: %d", len(sm4Key))
+		applogger.Errorf("SM4 加密器初始化失败: %v", err)
+		applogger.Warnf("配置的密钥长度: %d", len(sm4Key))
 		return nil
 	}
-	log.Printf("SM4 加密器初始化成功")
+	applogger.Infof("SM4 加密器初始化成功")
 	return sm4Cipher
 }
 
@@ -101,7 +101,7 @@ func (c *Core) Init() error {
 	var err error
 	c.DB, err = db.NewDatabase(&c.Config.Database)
 	if err != nil {
-		log.Printf("警告：数据库初始化失败: %v", err)
+		applogger.Errorf("数据库初始化失败: %v", err)
 		// 数据库失败时跳过后续数据库相关操作
 		return nil
 	}
@@ -109,16 +109,16 @@ func (c *Core) Init() error {
 	// 2. 自动迁移数据库表结构
 	// 根据模型定义自动创建或更新数据库表
 	if err := c.DB.AutoMigrate(); err != nil {
-		log.Printf("警告：数据库迁移失败: %v", err)
+		applogger.Warnf("数据库迁移失败: %v", err)
 	}
 
 	// 3. 初始化系统基础数据
 	// 包括创建默认管理员账户、基础角色等
 	if err := c.DB.InitData(); err != nil {
-		log.Printf("警告：初始化基础数据失败: %v", err)
+		applogger.Warnf("初始化基础数据失败: %v", err)
 		// 数据初始化失败不影响服务启动
 	} else {
-		log.Println("基础数据初始化成功")
+		applogger.Infof("基础数据初始化成功")
 	}
 
 	// 4. 初始化权限服务
@@ -126,9 +126,9 @@ func (c *Core) Init() error {
 	if c.DB != nil {
 		permissionSvc := permission.NewService()
 		if err := permissionSvc.InitDefaultRolesAndMenus(c.GetDB()); err != nil {
-			log.Printf("警告：初始化默认角色和菜单失败: %v", err)
+			applogger.Warnf("初始化默认角色和菜单失败: %v", err)
 		} else {
-			log.Println("默认角色和菜单初始化成功")
+			applogger.Infof("默认角色和菜单初始化成功")
 		}
 	}
 
@@ -136,10 +136,10 @@ func (c *Core) Init() error {
 	// 支持Redis多级缓存或纯内存缓存
 	c.Cache, err = c.initCache()
 	if err != nil {
-		log.Printf("警告：初始化缓存系统失败: %v", err)
+		applogger.Warnf("初始化缓存系统失败: %v", err)
 		// 缓存失败不影响服务启动
 	} else {
-		log.Println("缓存系统初始化完成")
+		applogger.Infof("缓存系统初始化完成")
 	}
 
 	// 6. 初始化缓存服务（用于 System 模块）
@@ -152,12 +152,12 @@ func (c *Core) Init() error {
 		c.DataCacheService = services.NewDataCacheService(c.Cache)
 		c.DataCacheService.SetCacheConfig(c.CacheConfigService)
 
-		log.Println("缓存服务初始化完成")
+		applogger.Infof("缓存服务初始化完成")
 	}
 
 	// 7. 初始化系统指标缓存服务
 	c.MetricsCacheService = NewMetricsCacheService(c)
-	log.Println("系统指标缓存服务初始化完成")
+	applogger.Infof("系统指标缓存服务初始化完成")
 
 	// 8. 初始化网络设备管理器（新架构）
 	// 7.1 创建简化版管理器（仅辅助方法）
@@ -184,49 +184,49 @@ func (c *Core) Init() error {
 	c.DeviceExecutor = device.NewDeviceExecutor(taskScheduler, executorConfig)
 	// 7.5 将执行器设置到管理器（兼容层）
 	c.DeviceManager.SetExecutor(c.DeviceExecutor)
-	log.Println("网络设备管理器（新架构）初始化完成")
+	applogger.Infof("网络设备管理器（新架构）初始化完成")
 
 	// 8. 初始化设备发现服务
 	c.DeviceDiscoveryService = services.NewDeviceDiscoveryService(c.GetDB())
-	log.Println("设备发现服务初始化完成")
+	applogger.Infof("设备发现服务初始化完成")
 
 	// 9. 初始化设备信息采集服务（后台异步，统一处理设备创建和定时任务）
 	c.DeviceInfoCollectionService = services.NewDeviceInfoCollectionService(c.GetDB(), c.DeviceExecutor)
 	if err := c.DeviceInfoCollectionService.Start(context.Background()); err != nil {
-		log.Printf("警告：启动设备信息采集服务失败: %v", err)
+		applogger.Warnf("启动设备信息采集服务失败: %v", err)
 	} else {
-		log.Println("设备信息采集服务启动成功")
+		applogger.Infof("设备信息采集服务启动成功")
 	}
 
 	// 10. 初始化网络设备服务
 	c.NetworkDeviceService = services.NewNetworkDeviceService(c.GetDB(), c.DeviceDiscoveryService, c.DeviceInfoCollectionService)
-	log.Println("网络设备服务初始化完成")
+	applogger.Infof("网络设备服务初始化完成")
 
 	// 11. 初始化定时任务调度器
 	c.Scheduler = scheduler.NewScheduler(c.GetDB())
 	if err := c.Scheduler.Start(context.Background()); err != nil {
-		log.Printf("警告：启动调度器失败: %v", err)
+		applogger.Warnf("启动调度器失败: %v", err)
 	} else {
-		log.Println("定时任务调度器启动成功")
+		applogger.Infof("定时任务调度器启动成功")
 
 		// 设置全局调度器引用（供定时任务使用）
 		scheduler.SetGlobalScheduler(c.Scheduler)
 
 		// 注册网络设备相关定时任务
 		scheduler.RegisterNetworkDeviceTasks(c.Scheduler, c.GetDB())
-		log.Println("网络设备定时任务注册完成")
+		applogger.Infof("网络设备定时任务注册完成")
 
 		// 注册通知相关定时任务
 		scheduler.RegisterNoticeTasks(c.Scheduler)
-		log.Println("通知定时任务注册完成")
+		applogger.Infof("通知定时任务注册完成")
 
 		// 注册运维工单相关定时任务
 		scheduler.RegisterWorkOrderTasks(c.Scheduler)
-		log.Println("运维工单定时任务注册完成")
+		applogger.Infof("运维工单定时任务注册完成")
 
 		// 注册AD域同步定时任务
 		scheduler.RegisterADSyncTasks(c.Scheduler)
-		log.Println("AD域同步定时任务注册完成")
+		applogger.Infof("AD域同步定时任务注册完成")
 
 		// 启动AD域同步调度器（每5分钟检查需要同步的配置）
 		scheduler.StartADSyncScheduler(c.GetDB())
@@ -236,9 +236,9 @@ func (c *Core) Init() error {
 
 		// 同步周期性工单模板到调度器
 		if err := scheduler.SyncPeriodicWorkOrderJobs(c.Scheduler); err != nil {
-			log.Printf("警告：同步周期性工单任务失败: %v", err)
+			applogger.Warnf("同步周期性工单任务失败: %v", err)
 		} else {
-			log.Println("周期性工单任务同步完成")
+			applogger.Infof("周期性工单任务同步完成")
 		}
 	}
 
@@ -250,14 +250,14 @@ func (c *Core) Init() error {
 	scheduler.SetDeviceMonitorService(c.DeviceMonitorService)
 	// 设置设备信息采集服务到调度器，供定时任务调用
 	scheduler.SetDeviceInfoCollectionService(c.DeviceInfoCollectionService)
-	log.Println("设备监控服务初始化完成")
+	applogger.Infof("设备监控服务初始化完成")
 
 	// 13. 初始化验证码服务
 	c.CaptchaService = NewCaptchaService(c.DB, c.Cache)
 	if err := c.CaptchaService.LoadConfig(context.Background()); err != nil {
-		log.Printf("警告：加载验证码配置失败: %v", err)
+		applogger.Warnf("加载验证码配置失败: %v", err)
 	} else {
-		log.Printf("验证码服务初始化完成，类型: %s", c.CaptchaService.GetConfig().Enabled)
+		applogger.Infof("验证码服务初始化完成，类型: %s", c.CaptchaService.GetConfig().Enabled)
 	}
 
 	// 14. 初始化验证码背景图服务
@@ -268,26 +268,26 @@ func (c *Core) Init() error {
 	// 14.1 确保存储目录存在
 	storagePath := "./uploads/captcha/backgrounds"
 	if err := os.MkdirAll(storagePath, 0755); err != nil {
-		log.Printf("警告：创建验证码背景图存储目录失败: %v", err)
+		applogger.Warnf("创建验证码背景图存储目录失败: %v", err)
 	} else {
-		log.Printf("验证码背景图存储目录已创建: %s", storagePath)
+		applogger.Infof("验证码背景图存储目录已创建: %s", storagePath)
 	}
 
-	log.Println("验证码背景图服务初始化完成")
+	applogger.Infof("验证码背景图服务初始化完成")
 
 	// 15. 初始化操作日志服务
 	c.OperLogService = services.NewOperLogService()
-	log.Println("操作日志服务初始化完成")
+	applogger.Infof("操作日志服务初始化完成")
 
 	// 16. 初始化令牌黑名单服务
 	c.TokenBlacklistService = services.NewTokenBlacklistService(c.Cache)
-	log.Println("令牌黑名单服务初始化完成")
+	applogger.Infof("令牌黑名单服务初始化完成")
 
 	// 17. 初始化API端点元数据服务
 	if err := c.initAPIEndpointService(); err != nil {
-		log.Printf("警告：初始化API端点元数据服务失败: %v", err)
+		applogger.Warnf("初始化API端点元数据服务失败: %v", err)
 	} else {
-		log.Println("API端点元数据服务初始化完成")
+		applogger.Infof("API端点元数据服务初始化完成")
 	}
 
 	return nil
@@ -299,29 +299,29 @@ func (c *Core) Close() {
 	// 停止通知中心
 	if c.NoticeHub != nil {
 		c.NoticeHub.Stop()
-		log.Println("通知中心已停止")
+		applogger.Infof("通知中心已停止")
 	}
 	// 停止设备信息采集服务
 	if c.DeviceInfoCollectionService != nil {
 		c.DeviceInfoCollectionService.Stop()
-		log.Println("设备信息采集服务已停止")
+		applogger.Infof("设备信息采集服务已停止")
 	}
 	// 停止AD域同步调度器
 	scheduler.StopADSyncScheduler()
 	// 关闭设备监控服务
 	if c.DeviceMonitorService != nil {
 		c.DeviceMonitorService.Close()
-		log.Println("设备监控服务已关闭")
+		applogger.Infof("设备监控服务已关闭")
 	}
 	// 停止定时任务调度器
 	if c.Scheduler != nil {
 		c.Scheduler.Stop()
-		log.Println("定时任务调度器已停止")
+		applogger.Infof("定时任务调度器已停止")
 	}
 	// 关闭网络设备连接管理器
 	if c.DeviceManager != nil {
 		c.DeviceManager.Close()
-		log.Println("网络设备连接管理器已关闭")
+		applogger.Infof("网络设备连接管理器已关闭")
 	}
 	if c.DB != nil {
 		c.DB.Close()

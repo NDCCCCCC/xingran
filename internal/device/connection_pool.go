@@ -3,13 +3,13 @@ package device
 import (
 	"context"
 	"fmt"
-	"log"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -169,7 +169,7 @@ func NewDeviceConnectionPool(db *gorm.DB, sm4Cipher *security.SM4Cipher, config 
 	// 启动清理协程
 	pool.startCleanup()
 
-	log.Printf("[连接池] 已创建连接池: 最大空闲=%v, 最大连接数=%d", config.MaxIdle, config.MaxConnections)
+	applogger.Infof("[连接池] 已创建连接池: 最大空闲=%v, 最大连接数=%d", config.MaxIdle, config.MaxConnections)
 
 	return pool
 }
@@ -375,7 +375,7 @@ func (p *DeviceConnectionPool) createConnection(ctx context.Context, deviceID st
 		return nil, fmt.Errorf("连接设备失败 [%s]: %w", device.IPAddress, err)
 	}
 
-	log.Printf("[连接池] 设备连接成功: %s (%s:%d)", device.DeviceName, device.IPAddress, port)
+	applogger.Infof("[连接池] 设备连接成功: %s (%s:%d)", device.DeviceName, device.IPAddress, port)
 
 	return wrapper, nil
 }
@@ -441,7 +441,7 @@ func (p *DeviceConnectionPool) cleanupIdleConnections() {
 	}
 
 	if cleaned > 0 {
-		log.Printf("[连接池] 清理了 %d 个空闲连接, 当前连接数=%d",
+		applogger.Infof("[连接池] 清理了 %d 个空闲连接, 当前连接数=%d",
 			cleaned, len(p.connections))
 	}
 }
@@ -482,7 +482,7 @@ func (p *DeviceConnectionPool) GetDevice(deviceID string) (*models.NetworkDevice
 
 // Close 关闭连接池
 func (p *DeviceConnectionPool) Close() error {
-	log.Printf("[连接池] 正在关闭连接池...")
+	applogger.Infof("[连接池] 正在关闭连接池...")
 
 	// 停止清理协程
 	close(p.done)
@@ -508,7 +508,7 @@ func (p *DeviceConnectionPool) Close() error {
 	p.connections = make(map[string]*PooledConnection)
 	p.deviceLocks = make(map[string]*sync.Mutex)
 
-	log.Printf("[连接池] 连接池已关闭")
+	applogger.Infof("[连接池] 连接池已关闭")
 
 	return nil
 }

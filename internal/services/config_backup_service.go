@@ -5,7 +5,6 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -15,6 +14,7 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -213,7 +213,7 @@ func (s *ConfigBackupService) BatchBackupDevices(ctx context.Context, deviceIDs 
 	var mu sync.Mutex
 	semaphore := make(chan struct{}, s.maxConcurrent) // 使用动态并发数
 
-	log.Printf("[配置备份] 开始批量备份 %d 个设备", len(deviceIDs))
+	applogger.Infof("[配置备份] 开始批量备份 %d 个设备", len(deviceIDs))
 
 	for _, deviceID := range deviceIDs {
 		wg.Add(1)
@@ -224,7 +224,7 @@ func (s *ConfigBackupService) BatchBackupDevices(ctx context.Context, deviceIDs 
 
 			var device models.NetworkDevice
 			if err := s.db.WithContext(ctx).Where("id = ?", id).First(&device).Error; err != nil {
-				log.Printf("[配置备份] 设备不存在，跳过: %s", id)
+				applogger.Infof("[配置备份] 设备不存在，跳过: %s", id)
 				return // 跳过不存在的设备
 			}
 
@@ -237,14 +237,14 @@ func (s *ConfigBackupService) BatchBackupDevices(ctx context.Context, deviceIDs 
 				CompressLarge: true,
 			}
 
-			log.Printf("[配置备份] 开始备份设备: %s (%s)", device.DeviceName, device.IPAddress)
+			applogger.Infof("[配置备份] 开始备份设备: %s (%s)", device.DeviceName, device.IPAddress)
 			result, err := s.CreateBackup(ctx, req)
 			if err != nil {
-				log.Printf("[配置备份] 备份失败 [%s]: %v", device.DeviceName, err)
+				applogger.Infof("[配置备份] 备份失败 [%s]: %v", device.DeviceName, err)
 				return
 			}
 
-			log.Printf("[配置备份] 备份成功 [%s] 版本: %d, 大小: %d 字节", device.DeviceName, result.Version, result.ConfigSize)
+			applogger.Infof("[配置备份] 备份成功 [%s] 版本: %d, 大小: %d 字节", device.DeviceName, result.Version, result.ConfigSize)
 
 			mu.Lock()
 			results = append(results, result)
@@ -253,7 +253,7 @@ func (s *ConfigBackupService) BatchBackupDevices(ctx context.Context, deviceIDs 
 	}
 
 	wg.Wait()
-	log.Printf("[配置备份] 批量备份完成，成功: %d/%d", len(results), len(deviceIDs))
+	applogger.Infof("[配置备份] 批量备份完成，成功: %d/%d", len(results), len(deviceIDs))
 	return results, nil
 }
 
@@ -268,13 +268,13 @@ func (s *ConfigBackupService) AutoBackupAllDevices(ctx context.Context) error {
 		return nil
 	}
 
-	log.Printf("[配置备份] 开始智能备份 %d 个设备", len(devices))
+	applogger.Infof("[配置备份] 开始智能备份 %d 个设备", len(devices))
 
 	var successCount, skippedCount int
 	for _, device := range devices {
 		skipped, err := s.AutoBackupSingleDevice(ctx, &device)
 		if err != nil {
-			log.Printf("[配置备份] 备份失败 [%s]: %v", device.DeviceName, err)
+			applogger.Infof("[配置备份] 备份失败 [%s]: %v", device.DeviceName, err)
 			continue
 		}
 		if skipped {
@@ -284,7 +284,7 @@ func (s *ConfigBackupService) AutoBackupAllDevices(ctx context.Context) error {
 		}
 	}
 
-	log.Printf("[配置备份] 智能备份完成: 新备份=%d, 配置未变=%d, 总计=%d", successCount, skippedCount, len(devices))
+	applogger.Infof("[配置备份] 智能备份完成: 新备份=%d, 配置未变=%d, 总计=%d", successCount, skippedCount, len(devices))
 	return nil
 }
 
@@ -309,14 +309,14 @@ func (s *ConfigBackupService) AutoBackupSingleDevice(ctx context.Context, device
 
 	if err != nil {
 		// 没有找到历史备份，创建新备份
-		log.Printf("[配置备份] 设备 %s 无历史备份，创建新备份", device.DeviceName)
+		applogger.Infof("[配置备份] 设备 %s 无历史备份，创建新备份", device.DeviceName)
 		return s.createNewAutoBackup(ctx, device, config, currentHash)
 	}
 
 	// 比较配置哈希
 	if latestBackup.ConfigHash == currentHash {
 		// 配置未改变，仅更新 UpdatedAt
-		log.Printf("[配置备份] 设备 %s 配置未改变，更新时间", device.DeviceName)
+		applogger.Infof("[配置备份] 设备 %s 配置未改变，更新时间", device.DeviceName)
 		if err := s.db.WithContext(ctx).
 			Model(&latestBackup).
 			Update("updated_at", time.Now()).Error; err != nil {
@@ -326,7 +326,7 @@ func (s *ConfigBackupService) AutoBackupSingleDevice(ctx context.Context, device
 	}
 
 	// 配置已改变，创建新备份
-	log.Printf("[配置备份] 设备 %s 配置已改变，创建新备份 (版本: %d -> %d)",
+	applogger.Infof("[配置备份] 设备 %s 配置已改变，创建新备份 (版本: %d -> %d)",
 		device.DeviceName, latestBackup.Version, latestBackup.Version+1)
 	return s.createNewAutoBackup(ctx, device, config, currentHash)
 }
@@ -395,7 +395,7 @@ func (s *ConfigBackupService) createNewAutoBackup(ctx context.Context, device *m
 		return false, fmt.Errorf("保存备份记录失败: %w", err)
 	}
 
-	log.Printf("[配置备份] 备份成功 [%s] 版本: %d, 大小: %d 字节", device.DeviceName, newVersion, configSize)
+	applogger.Infof("[配置备份] 备份成功 [%s] 版本: %d, 大小: %d 字节", device.DeviceName, newVersion, configSize)
 	return false, nil // 创建了新备份，skipped = false
 }
 
@@ -609,7 +609,7 @@ func (s *ConfigBackupService) loadConfigFromDB() {
 	if err == nil && config.ConfigValue != "" {
 		if concurrent, parseErr := strconv.Atoi(config.ConfigValue); parseErr == nil && concurrent > 0 {
 			s.maxConcurrent = concurrent
-			log.Printf("[配置备份] 从数据库读取并发数配置: %d", s.maxConcurrent)
+			applogger.Infof("[配置备份] 从数据库读取并发数配置: %d", s.maxConcurrent)
 		}
 	}
 }

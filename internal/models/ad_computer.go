@@ -15,13 +15,13 @@ const (
 // ADComputer AD域电脑
 type ADComputer struct {
 	BaseModel
-	ADConfigID          string         `gorm:"type:uuid;not null;index:idx_ad_computer_config,priority:1" json:"adConfigId"`
+	ADConfigID          string         `gorm:"type:uuid;not null;index:idx_ad_computer_config,priority:1;uniqueIndex:uni_sys_ad_computer_config_name,priority:1;index:idx_ad_computer_dn,priority:1" json:"adConfigId"`
 	ComputerName        string         `gorm:"size:255;not null;index:idx_ad_computer_name;uniqueIndex:uni_sys_ad_computer_config_name,priority:2" json:"computerName"`
-	DistinguishedName    string         `gorm:"size:500;not null" json:"distinguishedName"`
+	DistinguishedName    string         `gorm:"size:500;not null;index:idx_ad_computer_dn,priority:2" json:"distinguishedName"`
 	LastLogon           *time.Time     `json:"lastLogon,omitempty"`
 	PasswordLastSet      *time.Time     `json:"passwordLastSet,omitempty"`
 	LogonCount           int            `gorm:"default:0" json:"logonCount"`
-	OUDN                 string         `gorm:"size:500;index:idx_ad_computer_ou" json:"ouDn,omitempty"`
+	OUDN                 string         `gorm:"size:500;index:idx_ad_computer_ou;column:oudn" json:"ouDn,omitempty"`
 	Status               ComputerStatus `gorm:"default:0" json:"status"`
 
 	// 解析后的字段（从description中解析）

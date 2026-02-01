@@ -88,8 +88,8 @@ const (
 // ADGroup AD域用户组
 type ADGroup struct {
 	BaseModel
-	ADConfigID  string       `gorm:"type:uuid;not null;index:idx_ad_group_config,priority:1" json:"adConfigId"`
-	GroupDN     string       `gorm:"size:500;not null" json:"groupDn"`
+	ADConfigID  string       `gorm:"type:uuid;not null;index:idx_ad_group_config,priority:1;uniqueIndex:uni_sys_ad_group_config_dn,priority:1" json:"adConfigId"`
+	GroupDN     string       `gorm:"size:500;not null;uniqueIndex:uni_sys_ad_group_config_dn,priority:2" json:"groupDn"`
 	GroupName   string       `gorm:"size:255;not null" json:"groupName"`
 	GroupScope  ADGroupScope `gorm:"size:50" json:"groupScope,omitempty"`
 	GroupType   ADGroupType  `json:"groupType,omitempty"`
@@ -108,8 +108,8 @@ func (ADGroup) TableName() string {
 // ADUser AD域用户
 type ADUser struct {
 	BaseModel
-	ADConfigID         string     `gorm:"type:uuid;not null;index:idx_ad_user_config,priority:1" json:"adConfigId"`
-	UserDN             string     `gorm:"size:500;not null" json:"userDn"`
+	ADConfigID         string     `gorm:"type:uuid;not null;index:idx_ad_user_config,priority:1;uniqueIndex:uni_sys_ad_user_config_dn,priority:1" json:"adConfigId"`
+	UserDN             string     `gorm:"size:500;not null;uniqueIndex:uni_sys_ad_user_config_dn,priority:2" json:"userDn"`
 	Username           string     `gorm:"size:255;not null;index:idx_ad_user_username" json:"username"`
 	DisplayName        string     `gorm:"size:255" json:"displayName,omitempty"`
 	Email              string     `gorm:"size:255;index:idx_ad_user_email" json:"email,omitempty"`

@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 	"sync"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -103,7 +103,7 @@ func (s *MACCollectionService) collectDeviceMAC(ctx context.Context, device *mod
 	// 添加 panic recovery，防止 scrapligo 库的 panic 导致程序崩溃
 	defer func() {
 		if r := recover(); r != nil {
-			log.Printf("[MAC采集] 设备 %s 发生 panic: %v", device.DeviceName, r)
+			applogger.Infof("[MAC采集] 设备 %s 发生 panic: %v", device.DeviceName, r)
 		}
 	}()
 
@@ -345,7 +345,7 @@ func (s *MACCollectionService) loadConfigFromDB() {
 	if err == nil && config.ConfigValue != "" {
 		if concurrent, parseErr := strconv.Atoi(config.ConfigValue); parseErr == nil && concurrent > 0 {
 			s.maxConcurrent = concurrent
-			log.Printf("[MAC采集] 从数据库读取并发数配置: %d", s.maxConcurrent)
+			applogger.Infof("[MAC采集] 从数据库读取并发数配置: %d", s.maxConcurrent)
 		}
 	}
 }

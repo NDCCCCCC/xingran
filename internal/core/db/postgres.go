@@ -2,10 +2,10 @@ package db
 
 import (
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -17,12 +17,27 @@ type Postgres struct {
 }
 
 // NewPostgres 创建PostgreSQL连接
+// 注意：此函数未被当前系统使用，保留用于可能的未来需求
+// 实际使用的数据库初始化函数在 database.go 中的 NewDatabase()
 func NewPostgres(cfg *config.DatabaseConfig) (*Postgres, error) {
 	dsn := cfg.GetDSN()
 
-	// 配置GORM
+	// 配置GORM - 使用可配置的日志过滤器
+	filterConfig := LogFilterConfig{
+		MinLevel: logger.Silent,
+		FilterTypes: map[LogType]bool{
+			LogTypeSQL:       true, // 过滤普通 SQL
+			LogTypeSlowQuery: true, // 过滤慢查询
+			LogTypeError:     false, // 保留错误
+			LogTypeNilRecord: true, // 过滤未找到记录
+		},
+		SlowThreshold: 1000,
+	}
+
+	customLogger := NewFilterLogger(filterConfig)
+
 	gormConfig := &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
+		Logger: customLogger,
 		NowFunc: func() time.Time {
 			return time.Now().Local()
 		},
@@ -50,7 +65,7 @@ func NewPostgres(cfg *config.DatabaseConfig) (*Postgres, error) {
 		return nil, fmt.Errorf("数据库连接测试失败: %w", err)
 	}
 
-	log.Println("PostgreSQL连接成功")
+	applogger.Infof("PostgreSQL连接成功")
 
 	return &Postgres{DB: db}, nil
 }

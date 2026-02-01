@@ -1,8 +1,6 @@
 package api
 
 import (
-	"log"
-
 	"github.com/gin-gonic/gin"
 	v1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations"
@@ -19,6 +17,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/permission"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 )
 
 const (
@@ -67,7 +66,7 @@ func setupEncryptionMiddlewares(r *gin.RouterGroup, core *core.Core) *crypto.Req
 		sm2PrivateKey, sm2PublicKey := core.JWTManager.GetSM2KeyPair()
 		if sm2PrivateKey != nil && sm2PublicKey != nil {
 			encryptor = crypto.NewRequestEncryptor(sm2PrivateKey, sm2PublicKey)
-			log.Println("请求体加密器已初始化（SM2+SM4 混合加密）")
+			applogger.Infof("请求体加密器已初始化（SM2+SM4 混合加密）")
 
 			decryptionConfig := &middleware.RequestDecryptionConfig{
 				Enabled:           true,
@@ -82,9 +81,9 @@ func setupEncryptionMiddlewares(r *gin.RouterGroup, core *core.Core) *crypto.Req
 
 			r.Use(middleware.RequestDecryption(encryptor, decryptionConfig))
 			r.Use(middleware.ResponseEncryption(encryptor, encryptionConfig))
-			log.Println("请求/响应加密中间件已启用")
+			applogger.Infof("请求/响应加密中间件已启用")
 		} else {
-			log.Println("警告: SM2 密钥对未配置，无法启用请求体加密")
+			applogger.Warnf("SM2 密钥对未配置，无法启用请求体加密")
 		}
 	}
 
@@ -95,7 +94,7 @@ func setupEncryptionMiddlewares(r *gin.RouterGroup, core *core.Core) *crypto.Req
 func setupNoticeHub(r *gin.RouterGroup, core *core.Core) *websocket.NoticeHub {
 	noticeHub := websocket.NewNoticeHub()
 	go noticeHub.Run()
-	log.Println("通知中心已启动")
+	applogger.Infof("通知中心已启动")
 
 	core.NoticeHub = noticeHub
 	scheduler.SetNoticeHub(&noticeHubAdapter{hub: noticeHub})
