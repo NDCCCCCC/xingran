@@ -143,7 +143,6 @@ func (s *SyncService) syncOUs(ctx context.Context, config *models.ADConfig, entr
 
 	ouDNs := extractDNs(entries)
 	existingOUs := s.getExistingOUs(ctx, config.ID, ouDNs)
-
 	now := time.Now()
 	ousToCreate, ousToUpdate := s.categorizeOUs(entries, existingOUs, config, now)
 
@@ -261,15 +260,11 @@ func (s *SyncService) syncGroups(ctx context.Context, config *models.ADConfig, e
 		return nil
 	}
 
-	groupDNs := make([]string, 0, len(entries))
-	for _, entry := range entries {
-		groupDNs = append(groupDNs, entry.DN)
-	}
-
+	groupDNs := extractDNs(entries)
 	var existingGroups []models.ADGroup
 	s.db.WithContext(ctx).Where("ad_config_id = ? AND group_dn IN ?", config.ID, groupDNs).Find(&existingGroups)
 
-	existingGroupMap := make(map[string]*models.ADGroup)
+	existingGroupMap := make(map[string]*models.ADGroup, len(existingGroups))
 	for i := range existingGroups {
 		existingGroupMap[existingGroups[i].GroupDN] = &existingGroups[i]
 	}
@@ -281,16 +276,13 @@ func (s *SyncService) syncGroups(ctx context.Context, config *models.ADConfig, e
 
 	for _, entry := range entries {
 		groupDN := entry.DN
-		groupName := entry.GetAttributeValue("cn")
-		description := entry.GetAttributeValue("description")
-		members := entry.GetAttributeValues("member")
-
 		ouDN := extractParentDN(groupDN)
+		members := entry.GetAttributeValues("member")
 		groupMembersMap[groupDN] = members
 
 		if existingGroup, exists := existingGroupMap[groupDN]; exists {
-			existingGroup.GroupName = groupName
-			existingGroup.Description = description
+			existingGroup.GroupName = entry.GetAttributeValue("cn")
+			existingGroup.Description = entry.GetAttributeValue("description")
 			existingGroup.MemberCount = len(members)
 			existingGroup.OUN = ouDN
 			existingGroup.LastSyncAt = &now
@@ -299,8 +291,8 @@ func (s *SyncService) syncGroups(ctx context.Context, config *models.ADConfig, e
 			groupsToCreate = append(groupsToCreate, models.ADGroup{
 				ADConfigID:  config.ID,
 				GroupDN:     groupDN,
-				GroupName:   groupName,
-				Description: description,
+				GroupName:   entry.GetAttributeValue("cn"),
+				Description: entry.GetAttributeValue("description"),
 				MemberCount: len(members),
 				OUN:         ouDN,
 				LastSyncAt:  &now,
@@ -308,43 +300,68 @@ func (s *SyncService) syncGroups(ctx context.Context, config *models.ADConfig, e
 		}
 	}
 
-	if len(groupsToCreate) > 0 {
-		if err := s.db.WithContext(ctx).Create(&groupsToCreate).Error; err != nil {
-			return fmt.Errorf("批量创建用户组失败: %w", err)
-		}
+	if err := s.createGroupsInBatches(ctx, groupsToCreate); err != nil {
+		return err
 	}
 
-	// 批量更新用户组 - 使用 upsert（分批处理）
-	if len(groupsToUpdate) > 0 {
-		groupSlice := make([]*models.ADGroup, 0, len(groupsToUpdate))
-		for _, group := range groupsToUpdate {
-			groupSlice = append(groupSlice, group)
-		}
-
-		// 分批处理，避免超过 PostgreSQL 参数限制
-		batchSize := 500
-		for i := 0; i < len(groupSlice); i += batchSize {
-			end := i + batchSize
-			if end > len(groupSlice) {
-				end = len(groupSlice)
-			}
-			batch := groupSlice[i:end]
-			if len(batch) > 0 {
-				if err := s.db.WithContext(ctx).Clauses(clause.OnConflict{
-					Columns:   []clause.Column{{Name: "ad_config_id"}, {Name: "group_dn"}},
-					DoUpdates: clause.AssignmentColumns([]string{
-						"group_name", "description", "member_count", "ou_dn", "last_sync_at",
-					}),
-				}).Create(batch).Error; err != nil {
-					return fmt.Errorf("批量更新用户组失败: %w", err)
-				}
-			}
-		}
+	if err := s.updateGroupsInBatches(ctx, groupsToUpdate); err != nil {
+		return err
 	}
 
 	for groupDN, members := range groupMembersMap {
 		if err := s.syncGroupMembers(ctx, config, groupDN, members); err != nil {
 			return err
+		}
+	}
+
+	return nil
+}
+
+// createGroupsInBatches 批量创建用户组
+func (s *SyncService) createGroupsInBatches(ctx context.Context, groups []models.ADGroup) error {
+	if len(groups) == 0 {
+		return nil
+	}
+
+	batchSize := 500
+	for i := 0; i < len(groups); i += batchSize {
+		end := i + batchSize
+		if end > len(groups) {
+			end = len(groups)
+		}
+		if err := s.db.WithContext(ctx).Create(groups[i:end]).Error; err != nil {
+			return fmt.Errorf("批量创建用户组失败: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// updateGroupsInBatches 批量更新用户组
+func (s *SyncService) updateGroupsInBatches(ctx context.Context, groups map[string]*models.ADGroup) error {
+	if len(groups) == 0 {
+		return nil
+	}
+
+	groupSlice := make([]*models.ADGroup, 0, len(groups))
+	for _, group := range groups {
+		groupSlice = append(groupSlice, group)
+	}
+
+	batchSize := 500
+	for i := 0; i < len(groupSlice); i += batchSize {
+		end := i + batchSize
+		if end > len(groupSlice) {
+			end = len(groupSlice)
+		}
+		batch := groupSlice[i:end]
+		if err := s.db.WithContext(ctx).Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "ad_config_id"}, {Name: "group_dn"}},
+			DoUpdates: clause.AssignmentColumns([]string{
+				"group_name", "description", "member_count", "ou_dn", "last_sync_at",
+			}),
+		}).Create(batch).Error; err != nil {
+			return fmt.Errorf("批量更新用户组失败: %w", err)
 		}
 	}
 
@@ -527,18 +544,16 @@ func (s *SyncService) syncUsers(ctx context.Context, config *models.ADConfig, en
 
 // syncGroupMembers 同步用户组成员关系
 func (s *SyncService) syncGroupMembers(ctx context.Context, config *models.ADConfig, groupDN string, memberDNs []string) error {
-	// 先删除旧的成员关系（使用 Unscoped 真正删除，因为表有唯一约束）
+	// 先删除旧的成员关系
 	s.db.WithContext(ctx).Unscoped().Where("ad_config_id = ? AND group_dn = ?", config.ID, groupDN).
 		Delete(&models.ADGroupMember{})
 
-	// 批量添加新的成员关系
 	if len(memberDNs) == 0 {
 		return nil
 	}
 
 	// 准备批量数据
-	var members []models.ADGroupMember
-	members = make([]models.ADGroupMember, 0, len(memberDNs))
+	members := make([]models.ADGroupMember, 0, len(memberDNs))
 	for _, userDN := range memberDNs {
 		members = append(members, models.ADGroupMember{
 			ADConfigID: config.ID,
@@ -547,7 +562,6 @@ func (s *SyncService) syncGroupMembers(ctx context.Context, config *models.ADCon
 		})
 	}
 
-	// 使用批量插入
 	if err := s.db.WithContext(ctx).Create(&members).Error; err != nil {
 		return fmt.Errorf("批量添加组成员失败: %w", err)
 	}

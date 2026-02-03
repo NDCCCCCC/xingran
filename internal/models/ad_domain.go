@@ -234,22 +234,17 @@ const (
 	ADPasswordExpired = 0x800000
 )
 
-// IsDisabled 检查账户是否禁用
+// IsDisabledByUAC 检查账户是否禁用
 func (u *ADUser) IsDisabledByUAC() bool {
 	return u.UserAccountControl&ADAccountDisable != 0
 }
 
-// IsLocked 检查账户是否锁定
+// IsLockedByUAC 检查账户是否锁定
 func (u *ADUser) IsLockedByUAC() bool {
 	return u.UserAccountControl&ADLockout != 0
 }
 
-// IsPasswordExpired 检查密码是否过期
+// IsPasswordExpiredByUAC 检查密码是否过期
 func (u *ADUser) IsPasswordExpiredByUAC() bool {
 	return u.UserAccountControl&ADPasswordExpired != 0
-}
-
-// IsDontExpirePassword 检查密码是否永不过期
-func (u *ADUser) IsDontExpirePassword() bool {
-	return u.UserAccountControl&ADDontExpirePassword != 0
 }
