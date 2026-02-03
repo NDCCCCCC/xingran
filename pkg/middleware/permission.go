@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/permission"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	"gorm.io/gorm"
@@ -278,10 +279,9 @@ func ApplyDataScope(db *gorm.DB, userID string, dataScope models.DataScope, core
 		// 本部门数据权限，查询用户所属部门
 		var deptId string
 		if err := core.DB.GetDB().Raw("SELECT dept_id FROM sys_user WHERE id = ?", userID).Scan(&deptId).Error; err != nil {
-			// 记录错误并返回无权限查询
 			if err != gorm.ErrRecordNotFound {
-				// 非记录未找到错误，可能是数据库连接问题
-				// 可以考虑添加日志记录
+				// 非记录未找到错误，记录数据库错误日志
+				applogger.Errorf("Failed to query user dept for data scope filtering (user_id=%s): %v", userID, err)
 			}
 			return db.Where("1=0")
 		}
@@ -293,10 +293,9 @@ func ApplyDataScope(db *gorm.DB, userID string, dataScope models.DataScope, core
 		// 本部门及子部门数据权限
 		var deptId string
 		if err := core.DB.GetDB().Raw("SELECT dept_id FROM sys_user WHERE id = ?", userID).Scan(&deptId).Error; err != nil {
-			// 记录错误并返回无权限查询
 			if err != gorm.ErrRecordNotFound {
-				// 非记录未找到错误，可能是数据库连接问题
-				// 可以考虑添加日志记录
+				// 非记录未找到错误，记录数据库错误日志
+				applogger.Errorf("Failed to query user dept for data scope filtering (user_id=%s): %v", userID, err)
 			}
 			return db.Where("1=0")
 		}

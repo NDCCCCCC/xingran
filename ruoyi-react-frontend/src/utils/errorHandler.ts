@@ -185,7 +185,7 @@ export function handleHttpResponseError(
   const errorMessage = responseData?.message || DEFAULT_ERROR_MESSAGES[errorType];
 
   // 特殊处理 400 错误中的 SM2 解密失败
-  if (status === 400 && errorMessage.includes('SM2') || errorMessage.includes('解密')) {
+  if (status === 400 && (errorMessage.includes('SM2') || errorMessage.includes('解密'))) {
     console.warn('[ErrorHandler] SM2 解密失败，清除公钥缓存');
     clearPublicKeyCache();
   }

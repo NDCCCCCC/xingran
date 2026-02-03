@@ -9,6 +9,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
@@ -250,8 +251,8 @@ func logout(core *core.Core) gin.HandlerFunc {
 		// 将令牌加入黑名单
 		expiry := claims.ExpiresAt.Time
 		if err := core.TokenBlacklistService.AddToBlacklist(c.Request.Context(), tokenStr, expiry); err != nil {
-			// 黑名单添加失败不影响登出，只记录日志
-			// 可以使用日志框架记录
+			// 黑名单添加失败不影响登出，但记录警告日志
+			applogger.Warnf("Failed to add token to blacklist: %v", err)
 		}
 
 		response.Success(c, gin.H{
