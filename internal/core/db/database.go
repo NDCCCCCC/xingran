@@ -25,11 +25,23 @@ type Database struct {
 
 // NewDatabase 创建数据库连接
 func NewDatabase(cfg *config.DatabaseConfig) (*Database, error) {
-	dbType := determineDatabaseType(cfg)
+	var db *gorm.DB
+	var dbType string
 
-	db, err := createDatabaseConnection(cfg, dbType)
-	if err != nil {
-		return nil, fmt.Errorf("连接数据库失败: %w", err)
+	if cfg.Host != "" && cfg.Port > 0 {
+		dbType = "postgres"
+		var err error
+		db, err = createPostgresConnection(cfg)
+		if err != nil {
+			return nil, fmt.Errorf("连接PostgreSQL失败: %w", err)
+		}
+	} else {
+		dbType = "sqlite"
+		var err error
+		db, err = createSQLiteConnection(cfg)
+		if err != nil {
+			return nil, fmt.Errorf("连接SQLite失败: %w", err)
+		}
 	}
 
 	if err := configureGORM(db); err != nil {
@@ -40,26 +52,6 @@ func NewDatabase(cfg *config.DatabaseConfig) (*Database, error) {
 		DB:   db,
 		Type: dbType,
 	}, nil
-}
-
-// determineDatabaseType 确定数据库类型
-func determineDatabaseType(cfg *config.DatabaseConfig) string {
-	if cfg.Host != "" && cfg.Port > 0 {
-		return "postgres"
-	}
-	return "sqlite"
-}
-
-// createDatabaseConnection 根据类型创建数据库连接
-func createDatabaseConnection(cfg *config.DatabaseConfig, dbType string) (*gorm.DB, error) {
-	switch dbType {
-	case "sqlite":
-		return createSQLiteConnection(cfg)
-	case "postgres":
-		return createPostgresConnection(cfg)
-	default:
-		return nil, fmt.Errorf("不支持的数据库类型: %s", dbType)
-	}
 }
 
 // createSQLiteConnection 创建SQLite连接
@@ -137,8 +129,6 @@ func configureConnectionPool(sqlDB *sql.DB, cfg *config.DatabaseConfig) {
 
 // configureGORM 配置GORM
 func configureGORM(_ *gorm.DB) error {
-	// 配置表名前缀
-	// 对于SQLite，不需要额外配置
 	return nil
 }
 
