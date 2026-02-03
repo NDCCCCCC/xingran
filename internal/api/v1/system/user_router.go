@@ -33,14 +33,20 @@ func (a *noOpCacheInvalidator) InvalidateUserPostCache(ctx context.Context, user
 
 // SetupUserRouter 设置用户路由
 func SetupUserRouter(r *gin.RouterGroup, core *core.Core) {
+	// 创建空缓存失效器
 	cacheInvalidator := NewNoOpCacheInvalidator()
+
+	// 创建用户服务
 	userService := systemServices.NewUserService(
 		core.DB.GetDB(),
 		core.PwdManager,
 		cacheInvalidator,
 	)
+
+	// 创建用户处理器
 	handler := NewUserHandler(userService)
 
+	// 注册路由
 	r.POST("", handler.Create)
 	r.POST("/list", handler.List)
 	r.POST("/batch-delete", handler.BatchDelete)

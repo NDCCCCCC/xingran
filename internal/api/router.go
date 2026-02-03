@@ -20,32 +20,7 @@ import (
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 )
 
-const (
-	// 系统权限常量
-	permSystemConfig = "system:config"
-)
-
-// 常用操作权限集合
-var (
-	buildingPermissions = []string{
-		"ops:building:list",
-		"ops:building:add",
-		"ops:building:edit",
-		"ops:building:delete",
-	}
-	floorPermissions = []string{
-		"ops:floor:list",
-		"ops:floor:add",
-		"ops:floor:edit",
-		"ops:floor:delete",
-	}
-	workstationPermissions = []string{
-		"ops:workstation:list",
-		"ops:workstation:add",
-		"ops:workstation:edit",
-		"ops:workstation:delete",
-	}
-)
+const permSystemConfig = "system:config"
 
 // noticeHubAdapter 将 websocket.NoticeHub 适配为 scheduler.NoticeHub 接口
 type noticeHubAdapter struct {
@@ -133,7 +108,7 @@ func registerCRUDRoutes(group *gin.RouterGroup, handler interface{}) {
 func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 	r.Use(middleware.RequestID())
 
-	_ = setupEncryptionMiddlewares(r, core)
+	setupEncryptionMiddlewares(r, core)
 	noticeHub := setupNoticeHub(r, core)
 
 	// 系统管理模块
