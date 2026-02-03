@@ -1,12 +1,12 @@
 package v1
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	gorilla_ws "github.com/ruoyi-next/ruoyi-go-backend/internal/websocket"
 )
 
@@ -44,7 +44,7 @@ func SetupNoticeWebSocketRouter(r *gin.RouterGroup, hub *gorilla_ws.NoticeHub, c
 		// 升级连接
 		conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 		if err != nil {
-			log.Printf("WebSocket升级失败: %v", err)
+			applogger.Warnf("WebSocket升级失败: %v", err)
 			return
 		}
 
@@ -58,7 +58,7 @@ func SetupNoticeWebSocketRouter(r *gin.RouterGroup, hub *gorilla_ws.NoticeHub, c
 				messageType, message, err := conn.ReadMessage()
 				if err != nil {
 					if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-						log.Printf("WebSocket错误: %v", err)
+						applogger.Warnf("WebSocket错误: %v", err)
 					}
 					break
 				}
@@ -73,6 +73,6 @@ func SetupNoticeWebSocketRouter(r *gin.RouterGroup, hub *gorilla_ws.NoticeHub, c
 			}
 		}()
 
-		log.Printf("用户 %s WebSocket连接已建立", userID)
+		applogger.Warnf("用户 %s WebSocket连接已建立", userID)
 	})
 }

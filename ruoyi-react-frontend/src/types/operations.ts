@@ -1,174 +1,257 @@
-// 运维管理通用类型定义
+/**
+ * 运维管理相关类型
+ */
 
-// 楼宇
+import type { Status } from './base';
+
+// PageParams 已在 base.ts 中定义，此处不再重复导出
+
+// ==================== 通用分页类型 ====================
+
+/**
+ * 分页数据
+ */
+export interface PageData<T> {
+  list: T[];
+  total: number;
+  current: number;
+  pageSize: number;
+}
+
+// ==================== 楼宇相关 ====================
+
+/**
+ * 楼宇状态
+ */
+export type BuildingStatus = Status;
+
+/**
+ * 楼宇类型
+ */
 export interface Building {
   id: string;
   name: string;
-  cityCode: string;        // 城市代码（如：wuhan, xiangyang）
-  cityName: string;        // 城市名称（如：武汉市, 襄阳市）
-  address: string;         // 详细地址
-  longitude?: number;      // 经度
-  latitude?: number;       // 纬度
-  parentId?: string;       // 父级楼宇ID
-  level: 1 | 2;            // 层级：1=城市级汇总，2=具体楼宇
-  orgId: string;
-  orgName?: string;
-  totalFloors?: number;    // 楼层数（根据创建的楼层自动计算）
+  code: string;
+  address?: string;
+  totalFloors?: number;
+  totalArea?: number;
+  description?: string;
+  longitude?: number;
+  latitude?: number;
   status: BuildingStatus;
-  remark?: string;
-  orderNum: number;
   createdAt: string;
   updatedAt: string;
 }
 
-export type BuildingStatus = 0 | 1; // 0: 正常, 1: 停用
+// ==================== 楼层相关 ====================
 
-// 楼层
+/**
+ * 楼层状态
+ */
+export type FloorStatus = Status;
+
+/**
+ * 楼层类型
+ */
 export interface Floor {
   id: string;
-  code: string;           // 楼层编码（用于工位关联）
-  name: string;
-  floorNo: string;
-  buildingId: string;
+  buildingCode: string;
+  code: string;
   buildingName?: string;
-  buildingCode?: string;
+  floorNo: string;
+  name?: string;
+  area?: number;
+  description?: string;
   status: FloorStatus;
-  remark?: string;
-  orderNum: number;
   createdAt: string;
   updatedAt: string;
 }
 
-export type FloorStatus = 0 | 1; // 0: 正常, 1: 停用
+// ==================== 工位相关 ====================
 
-// 工位
-export interface Workstation {
+/**
+ * 工位类型：0=固定工位，1=灵活工位，2=管理工位
+ */
+export type WorkstationOpsType = 0 | 1 | 2;
+
+/**
+ * 工位状态：0=空闲可分配，1=占用已分配，2=维护中不可用
+ */
+export type WorkstationOpsStatus = 0 | 1 | 2;
+
+/**
+ * 工位（运维管理）
+ */
+export interface WorkstationOps {
   id: string;
-  name: string;
   floorId: string;
   floorName?: string;
-  userId?: string;
-  userName?: string;
+  name: string;
+  type: WorkstationOpsType;
+  status: WorkstationOpsStatus;
   deptId?: string;
   deptName?: string;
-  phonePoint?: string;
-  status: WorkstationStatus;
-  type: WorkstationType;
-  equipment?: string;
-  networkInfo?: string;
-  remark?: string;
+  userId?: string;
+  userName?: string;
   positionX?: number;
   positionY?: number;
+  rotation?: number;
+  width?: number;
+  depth?: number;
+  deskType?: number;
+  description?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-export type WorkstationStatus = 0 | 1; // 0: 空闲, 1: 占用
-export type WorkstationType = 0 | 1; // 0: 固定, 1: 共享
+// ==================== 机房相关 ====================
 
-// 机房
+/**
+ * 机房状态
+ */
+export type RoomStatus = Status;
+
+/**
+ * 机房类型
+ */
 export interface ServerRoom {
   id: string;
-  name: string;
   buildingId: string;
   buildingName?: string;
   floorId: string;
   floorName?: string;
-  status: RoomStatus;
+  floorNo?: string;
+  name: string;
+  area?: number;
+  rackCount?: number;
+  powerCapacity?: number;
   remark?: string;
-  photos?: RoomPhoto[];
-  networkDevices?: NetworkDevice[];
+  status: RoomStatus;
   createdAt: string;
   updatedAt: string;
 }
 
-export type RoomStatus = 0 | 1; // 0: 正常, 1: 停用
-
+/**
+ * 机房照片
+ */
 export interface RoomPhoto {
   id: string;
+  roomId: string;
   fileId: string;
+  fileName?: string;
   fileUrl: string;
   sortOrder: number;
   isPrimary: boolean;
   description?: string;
+  createdAt: string;
 }
 
-// 专线
+// ==================== 机房设备相关 ====================
+
+/**
+ * 设备类型
+ */
+export type RoomDeviceType =
+  | 'server'
+  | 'storage'
+  | 'ups'
+  | 'pdu'
+  | 'firewall'
+  | 'kvm'
+  | 'cabinet'
+  | 'other';
+
+/**
+ * 设备状态：0=正常，1=故障，2=报废
+ */
+export type RoomDeviceStatus = 0 | 1 | 2;
+
+/**
+ * 机房设备
+ */
+export interface RoomDevice {
+  id: string;
+  roomCode: string;
+  roomName?: string;
+  deviceCode: string;
+  deviceName: string;
+  deviceType: RoomDeviceType;
+  vendor?: string;
+  model?: string;
+  serialNumber?: string;
+  positionDesc?: string;
+  positionU?: number;
+  heightU?: number;
+  powerConsumption?: number;
+  purchaseDate?: string;
+  warrantyDate?: string;
+  status: RoomDeviceStatus;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ==================== 专线相关 ====================
+
+/**
+ * 专线状态：0=正常，1=故障，2=停用
+ */
+export type LineStatus = 0 | 1 | 2;
+
+/**
+ * 专线类型
+ */
 export interface DedicatedLine {
   id: string;
-  name: string;                // 专线名称
-  lineType: string;            // 专线类型（数据字典）
+  name: string;
+  lineType: string;
   bandwidth?: string;
   isp: string;
   sourceDeviceId?: string;
   sourceDeviceName?: string;
   sourcePort?: string;
-  sourceRoomId?: string;       // 源机房ID
-  sourceRoomName?: string;     // 源机房名称
-  sourceIpAddress?: string;    // 源IP地址
-  sourceSubnetMask?: string;   // 源子网掩码
+  sourceRoomId?: string;
+  sourceRoomName?: string;
   destDeviceId?: string;
   destDeviceName?: string;
   destPort?: string;
-  destRoomId?: string;         // 目的机房ID
-  destRoomName?: string;       // 目的机房名称
-  destIpAddress?: string;      // 目的IP地址
-  destSubnetMask?: string;     // 目的子网掩码
+  destRoomId?: string;
+  destRoomName?: string;
+  sourceIpAddress?: string;
+  sourceSubnetMask?: string;
+  destIpAddress?: string;
+  destSubnetMask?: string;
   vlan?: string;
-  status: LineStatus;
-  carrierContactId?: string;
   carrierContactName?: string;
   carrierContactPhone?: string;
-  monthlyFee: number;
+  monthlyFee?: number;
+  status: LineStatus;
   remark?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-export type LineStatus = 0 | 1 | 2; // 0: 正常, 1: 故障, 2: 停用
+// ==================== 信息点相关 ====================
 
-// 机房设备
-export interface RoomDevice {
-  id: string;
-  name: string;
-  deviceCode: string;
-  deviceType: RoomDeviceType;
-  model?: string;
-  vendor?: string;
-  serialNumber?: string;
-  roomId: string;
-  roomName?: string;
-  positionU: number;
-  positionDesc?: string;
-  assetNumber?: string;
-  purchaseDate?: string;
-  warrantyDate?: string;
-  status: RoomDeviceStatus;
-  responsibleId?: string;
-  responsibleName?: string;
-  powerConsumption?: number;
-  remark?: string;
-  createdAt: string;
-  updatedAt: string;
-}
+/**
+ * 信息点类型
+ */
+export type InfoPointType = string;
 
-export type RoomDeviceType = 'server' | 'storage' | 'ups' | 'pdu' | 'firewall' | 'kvm' | 'cabinet' | 'other';
-export type RoomDeviceStatus = 0 | 1 | 2; // 0: 正常, 1: 故障, 2: 报废
+/**
+ * 信息点状态：0=正常，1=故障，2=停用
+ */
+export type InfoPointStatus = 0 | 1 | 2;
 
-// 网络设备（引用）
-export interface NetworkDevice {
-  id: string;
-  name: string;
-  ipAddress: string;
-}
-
-// 信息点
+/**
+ * 信息点
+ */
 export interface InfoPoint {
   id: string;
-  name: string;
-  infoPointType: InfoPointType;
   workstationId: string;
   workstationName?: string;
+  name: string;
+  infoPointType: InfoPointType;
   deviceId?: string;
   deviceName?: string;
   portId?: string;
@@ -178,22 +261,4 @@ export interface InfoPoint {
   remark?: string;
   createdAt: string;
   updatedAt: string;
-}
-
-export type InfoPointType = 'network' | 'power' | 'other';
-export type InfoPointStatus = 0 | 1 | 2; // 0: 正常, 1: 故障, 2: 停用
-
-// 分页数据
-export interface PageData<T> {
-  list: T[];
-  total: number;
-  current: number;
-  pageSize: number;
-}
-
-// 分页参数
-export interface PageParams {
-  current: number;
-  pageSize: number;
-  [key: string]: any;
 }

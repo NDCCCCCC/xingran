@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
@@ -24,13 +25,13 @@ func NewRoleHandler(service systemServices.RoleService) *RoleHandler {
 // @Tags 角色管理
 // @Accept json
 // @Produce json
-// @Param request body systemServices.RoleCreateRequest true "角色信息"
+// @Param request body requests.RoleCreateRequest true "角色信息"
 // @Success 200 {object} response.Response{data=models.Role}
 // @Failure 400 {object} response.Response
 // @Failure 500 {object} response.Response
 // @Router /system/roles [post]
 func (h *RoleHandler) Create(c *gin.Context) {
-	var req systemServices.RoleCreateRequest
+	var req requests.RoleCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
 		return
@@ -50,14 +51,14 @@ func (h *RoleHandler) Create(c *gin.Context) {
 // @Tags 角色管理
 // @Accept json
 // @Produce json
-// @Param request body systemServices.RoleListParams true "查询条件"
+// @Param request body requests.RoleListParams true "查询条件"
 // @Success 200 {object} response.Response{data=response.PageResponse}
 // @Router /system/roles/list [post]
 func (h *RoleHandler) List(c *gin.Context) {
-	var req systemServices.RoleListParams
+	var req requests.RoleListParams
 	// 允许空的请求体，设置默认值
 	if err := c.ShouldBindJSON(&req); err != nil {
-		req = systemServices.DefaultRoleListParams()
+		req = requests.DefaultRoleListParams()
 	}
 
 	result, err := h.service.List(c.Request.Context(), req)
@@ -103,7 +104,7 @@ func (h *RoleHandler) GetByID(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "角色ID"
-// @Param request body systemServices.RoleUpdateRequest true "角色信息"
+// @Param request body requests.RoleUpdateRequest true "角色信息"
 // @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
 // @Failure 404 {object} response.Response
@@ -115,7 +116,7 @@ func (h *RoleHandler) Update(c *gin.Context) {
 		return
 	}
 
-	var req systemServices.RoleUpdateRequest
+	var req requests.RoleUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
 		return

@@ -4,31 +4,35 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
-import { Button, Space, Spin, Alert, Tag, Empty, Select } from 'antd';
+import { Button, Space, Spin, Alert, Tag, Select } from 'antd';
 import { ArrowLeftOutlined, DesktopOutlined, BuildOutlined } from '@ant-design/icons';
 import { useVisualizationStore } from '@/store/visualizationStore';
 import { floorApi, workstationApi, buildingApi } from '@/lib/opsApi';
 import { handleApiError } from '@/utils/errorHandler';
+import { convertApiWorkstations, calculateWorkstationStats } from '../utils';
 import BuildingModel3D from './BuildingModel3D';
 import FloorPlan3D from './FloorPlan3D';
+
+// ============ 类型定义 ============
 
 interface FloorData {
   id: string;
   name: string;
+  code: string;
   floorNo: string;
   workstationCount: number;
-  status: number; // 0=正常, 1=停用
+  status: number;
 }
 
 interface WorkstationData {
   id: string;
   name: string;
   code: string;
-  status: number; // 0=空闲, 1=占用, 2=维护
-  type: number; // 0=固定, 1=灵活, 2=管理
+  status: number;
+  type: number;
   positionX?: number;
   positionY?: number;
-  rotation?: number; // 旋转角度
+  rotation?: number;
 }
 
 interface BuildingData {
@@ -39,7 +43,10 @@ interface BuildingData {
   status: number;
 }
 
+// ============ 组件 ============
+
 const BuildingView3D: React.FC = () => {
+  // State
   const [loading, setLoading] = useState(true);
   const [buildings, setBuildings] = useState<BuildingData[]>([]);
   const [currentBuilding, setCurrentBuilding] = useState<BuildingData | null>(null);
@@ -50,7 +57,8 @@ const BuildingView3D: React.FC = () => {
 
   const { selectedBuilding, navigateToMap } = useVisualizationStore();
 
-  // 加载楼宇列表
+  // ============ 数据加载 ============
+
   const loadBuildings = useCallback(async () => {
     try {
       const result = await buildingApi.list({
@@ -63,50 +71,52 @@ const BuildingView3D: React.FC = () => {
     }
   }, []);
 
-  // 加载楼层数据
-  const loadFloors = useCallback(async (buildingId?: string) => {
-    const targetBuildingId = buildingId || selectedBuilding?.id;
-    if (!targetBuildingId) return;
+  const loadFloors = useCallback(
+    async (buildingId?: string) => {
+      const targetBuildingId = buildingId || selectedBuilding?.id;
+      if (!targetBuildingId) return;
 
-    try {
-      setLoading(true);
-      const result = await floorApi.list({
-        buildingId: targetBuildingId,
-        current: 1,
-        pageSize: 100,
-      });
+      try {
+        setLoading(true);
+        const result = await floorApi.list({
+          buildingId: targetBuildingId,
+          current: 1,
+          pageSize: 100,
+        });
 
-      const floorList = result.data?.list || [];
+        const floorList = result.data?.list || [];
 
-      // 获取每层楼的工位数量
-      const floorsWithCount = await Promise.all(
-        floorList.map(async (floor: any) => {
-          try {
-            const wsResult = await workstationApi.list({
-              floorCode: floor.id,
-              current: 1,
-              pageSize: 1,
-            });
-            return {
-              ...floor,
-              workstationCount: wsResult.data?.total || 0,
-            };
-          } catch {
-            return {
-              ...floor,
-              workstationCount: 0,
-            };
-          }
-        })
-      );
+        // 获取每层楼的工位数量
+        const floorsWithCount = await Promise.all(
+          floorList.map(async (floor: any) => {
+            try {
+              const wsResult = await workstationApi.list({
+                floorCode: floor.id,
+                current: 1,
+                pageSize: 1,
+              });
+              return {
+                ...floor,
+                workstationCount: wsResult.data?.total || 0,
+              };
+            } catch {
+              return {
+                ...floor,
+                workstationCount: 0,
+              };
+            }
+          })
+        );
 
-      setFloors(floorsWithCount);
-    } catch (error) {
-      handleApiError(error, '加载楼层数据');
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedBuilding]);
+        setFloors(floorsWithCount);
+      } catch (error) {
+        handleApiError(error, '加载楼层数据');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [selectedBuilding]
+  );
 
   useEffect(() => {
     loadBuildings();
@@ -116,10 +126,11 @@ const BuildingView3D: React.FC = () => {
     }
   }, [selectedBuilding, loadBuildings, loadFloors]);
 
-  // 处理楼宇切换
+  // ============ 事件处理 ============
+
   const handleBuildingChange = useCallback(
     async (buildingId: string) => {
-      const building = buildings.find(b => b.id === buildingId);
+      const building = buildings.find((b) => b.id === buildingId);
       if (building) {
         setCurrentBuilding(building);
         setSelectedFloor(null);
@@ -130,7 +141,6 @@ const BuildingView3D: React.FC = () => {
     [buildings, loadFloors]
   );
 
-  // 加载选中楼层的工位数据
   const loadWorkstations = useCallback(async (floor: FloorData) => {
     try {
       setLoadingWorkstations(true);
@@ -140,18 +150,8 @@ const BuildingView3D: React.FC = () => {
         pageSize: 500,
       });
 
-      // 转换工位数据，添加缺失的 code 字段
       const workstationList = result.data?.list || [];
-      const convertedWorkstations: WorkstationData[] = workstationList.map((ws) => ({
-        id: ws.id,
-        name: ws.name,
-        code: ws.name, // 使用 name 作为 code（因为 API 不返回 code 字段）
-        status: ws.status as number,
-        type: ws.type as number,
-        positionX: ws.positionX,
-        positionY: ws.positionY,
-        rotation: 0, // 默认旋转角度
-      }));
+      const convertedWorkstations = convertApiWorkstations(workstationList);
 
       setWorkstations(convertedWorkstations);
     } catch (error) {
@@ -162,7 +162,6 @@ const BuildingView3D: React.FC = () => {
     }
   }, []);
 
-  // 处理楼层点击
   const handleFloorClick = useCallback(
     (floor: FloorData) => {
       setSelectedFloor(floor);
@@ -171,195 +170,345 @@ const BuildingView3D: React.FC = () => {
     [loadWorkstations]
   );
 
-  // 如果没有选中的楼宇，返回地图
+  // ============ 渲染 ============
+
   if (!selectedBuilding) {
-    return (
-      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Alert
-          message="未选择楼宇"
-          description="请先在地图上选择一个楼宇"
-          type="info"
-          showIcon
-          action={
-            <Button type="primary" onClick={navigateToMap}>
-              返回地图
-            </Button>
-          }
-        />
-      </div>
-    );
+    return <NoBuildingSelectedAlert onBackToMap={navigateToMap} />;
   }
 
-  const statusText = selectedBuilding.status === 0 ? '正常' : '停用';
   const statusColor = selectedBuilding.status === 0 ? 'success' : 'default';
+  const statusText = selectedBuilding.status === 0 ? '正常' : '停用';
+  const totalWorkstations = floors.reduce(
+    (sum, f) => sum + (f.workstationCount || 0),
+    0
+  );
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#fff' }}>
+    <div style={styles.container}>
       {/* 顶部导航栏 */}
-      <div
-        style={{
-          background: '#fff',
-          borderBottom: '1px solid #e8e8e8',
-          padding: '12px 24px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          zIndex: 100,
-          boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-        }}
-      >
-        <Space size="large">
-          <Button icon={<ArrowLeftOutlined />} onClick={navigateToMap} type="text">
-            返回地图
-          </Button>
-          <div>
-            <Space>
-              <BuildOutlined style={{ color: '#1890ff' }} />
-              <span style={{ fontSize: 16, fontWeight: 'bold', color: '#262626' }}>{selectedBuilding.name}</span>
-              <Tag color={statusColor}>{statusText}</Tag>
-              {selectedFloor && (
-                <>
-                  <span style={{ color: '#8c8c8c' }}>→</span>
-                  <Tag color="blue">{selectedFloor.name || selectedFloor.floorNo}</Tag>
-                </>
-              )}
-            </Space>
-          </div>
-        </Space>
+      <HeaderBar
+        building={selectedBuilding}
+        floor={selectedFloor}
+        floorCount={floors.length}
+        workstationCount={totalWorkstations}
+        statusColor={statusColor}
+        statusText={statusText}
+      />
 
-        <div style={{ fontSize: 12, color: '#8c8c8c' }}>
-          <Space split={<span style={{ color: '#d9d9d9' }}>|</span>}>
-            <span>{selectedBuilding.cityName || '-'}</span>
-            <span>{floors.length} 层</span>
-            <span>{floors.reduce((sum, f) => sum + (f.workstationCount || 0), 0)} 工位</span>
-          </Space>
-        </div>
-      </div>
-
-      {/* 主内容区：左右分栏 */}
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+      {/* 主内容区 */}
+      <div style={styles.mainContent}>
         {loading ? (
-          <div style={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: '#f5f5f5'
-          }}>
-            <Spin size="large" tip="加载楼层数据..." />
-          </div>
+          <LoadingView />
         ) : (
           <>
             {/* 左侧：3D 楼宇模型 */}
-            <div style={{
-              flex: selectedFloor ? '3' : '1',
-              position: 'relative',
-              background: '#f5f5f5',
-              borderRight: selectedFloor ? '1px solid #e8e8e8' : 'none',
-              transition: 'flex 0.3s ease',
-              minWidth: 0,
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-            }}>
-              {/* 楼宇切换下拉框 */}
-              {buildings.length > 1 && (
-                <div style={{
-                  position: 'absolute',
-                  top: 16,
-                  left: 16,
-                  zIndex: 10,
-                  background: 'rgba(255, 255, 255, 0.95)',
-                  backdropFilter: 'blur(10px)',
-                  borderRadius: 8,
-                  padding: '8px 12px',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                  border: '1px solid #e8e8e8',
-                  minWidth: 200,
-                }}>
-                  <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 4 }}>
-                    切换楼宇
-                  </div>
-                  <Select
-                    style={{ width: '100%' }}
-                    placeholder="选择楼宇"
-                    value={currentBuilding?.id}
-                    onChange={handleBuildingChange}
-                    options={buildings.map(b => ({
-                      label: b.name,
-                      value: b.id,
-                    }))}
-                  />
-                </div>
-              )}
-
-              {/* 3D 楼宇模型 */}
-              <div style={{ height: '100%', width: '100%' }}>
-                <BuildingModel3D floors={floors} onFloorClick={handleFloorClick} selectedFloorId={selectedFloor?.id} />
-              </div>
-            </div>
+            <BuildingPanel
+              floors={floors}
+              buildings={buildings}
+              currentBuilding={currentBuilding}
+              selectedFloorId={selectedFloor?.id}
+              onFloorClick={handleFloorClick}
+              onBuildingChange={handleBuildingChange}
+              onBackToMap={navigateToMap}
+            />
 
             {/* 右侧：工位平面图 */}
             {selectedFloor && (
-              <div style={{
-                flex: '7',
-                display: 'flex',
-                flexDirection: 'column',
-                background: '#fff',
-                minWidth: 0,
-                overflow: 'hidden',
-              }}>
-                {/* 平面图标题 */}
-                <div style={{
-                  padding: '12px 16px',
-                  borderBottom: '1px solid #e8e8e8',
-                  background: '#fafafa',
-                }}>
-                  <Space>
-                    <DesktopOutlined style={{ color: '#1890ff' }} />
-                    <span style={{ fontSize: 14, fontWeight: 'bold', color: '#262626' }}>
-                      {selectedFloor.name || selectedFloor.floorNo} - 工位平面图
-                    </span>
-                    <Tag color="blue">{workstations.length} 个工位</Tag>
-                  </Space>
-                </div>
-
-                {/* 平面图内容 */}
-                <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-                  {loadingWorkstations ? (
-                    <div style={{
-                      height: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}>
-                      <Spin tip="加载工位数据..." />
-                    </div>
-                  ) : workstations.length === 0 ? (
-                    <div style={{
-                      height: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}>
-                      <Empty
-                        image={Empty.PRESENTED_IMAGE_SIMPLE}
-                        description="该楼层暂无工位"
-                      />
-                    </div>
-                  ) : (
-                    <div style={{ height: '100%', width: '100%' }}>
-                      <FloorPlan3D workstations={workstations} />
-                    </div>
-                  )}
-                </div>
-              </div>
+              <FloorPlanPanel
+                floor={selectedFloor}
+                workstations={workstations}
+                loading={loadingWorkstations}
+              />
             )}
           </>
         )}
       </div>
     </div>
   );
+};
+
+// ============ 子组件 ============
+
+interface NoBuildingSelectedAlertProps {
+  onBackToMap: () => void;
+}
+
+const NoBuildingSelectedAlert: React.FC<NoBuildingSelectedAlertProps> = ({
+  onBackToMap,
+}) => (
+  <div style={styles.centerContainer}>
+    <Alert
+      message="未选择楼宇"
+      description="请先在地图上选择一个楼宇"
+      type="info"
+      showIcon
+      action={
+        <Button type="primary" onClick={onBackToMap}>
+          返回地图
+        </Button>
+      }
+    />
+  </div>
+);
+
+interface HeaderBarProps {
+  building: BuildingData;
+  floor: FloorData | null;
+  floorCount: number;
+  workstationCount: number;
+  statusColor: string;
+  statusText: string;
+}
+
+const HeaderBar: React.FC<HeaderBarProps> = ({
+  building,
+  floor,
+  floorCount,
+  workstationCount,
+  statusColor,
+  statusText,
+}) => (
+  <div style={styles.headerBar}>
+    <div>
+      <Space>
+        <BuildOutlined style={{ color: '#1890ff' }} />
+        <span style={styles.headerTitle}>{building.name}</span>
+        <Tag color={statusColor}>{statusText}</Tag>
+        {floor && (
+          <>
+            <span style={styles.headerArrow}>→</span>
+            <Tag color="blue">{floor.name || floor.floorNo}</Tag>
+          </>
+        )}
+      </Space>
+    </div>
+
+    <div style={styles.headerInfo}>
+      <Space split={<span style={styles.splitter}>|</span>}>
+        <span>{building.cityName || '-'}</span>
+        <span>{floorCount} 层</span>
+        <span>{workstationCount} 工位</span>
+      </Space>
+    </div>
+  </div>
+);
+
+interface BuildingPanelProps {
+  floors: FloorData[];
+  buildings: BuildingData[];
+  currentBuilding: BuildingData | null;
+  selectedFloorId: string | undefined;
+  onFloorClick: (floor: FloorData) => void;
+  onBuildingChange: (buildingId: string) => void;
+  onBackToMap: () => void;
+}
+
+const BuildingPanel: React.FC<BuildingPanelProps> = ({
+  floors,
+  buildings,
+  currentBuilding,
+  selectedFloorId,
+  onFloorClick,
+  onBuildingChange,
+  onBackToMap,
+}) => (
+  <div
+    style={{
+      ...styles.buildingPanel,
+      flex: selectedFloorId ? '3' : '1',
+    }}
+  >
+    {/* 楼宇切换下拉框 */}
+    <div style={styles.controlPanel}>
+      <Space direction="vertical" size="small" style={{ width: '100%' }}>
+        <Button
+          icon={<ArrowLeftOutlined />}
+          onClick={onBackToMap}
+          size="small"
+          style={{ width: '100%' }}
+        >
+          返回地图
+        </Button>
+        {buildings.length > 1 && (
+          <>
+            <div style={styles.controlLabel}>切换楼宇</div>
+            <Select
+              style={{ width: '100%' }}
+              placeholder="选择楼宇"
+              value={currentBuilding?.id}
+              onChange={onBuildingChange}
+              options={buildings.map((b) => ({
+                label: b.name,
+                value: b.id,
+              }))}
+            />
+          </>
+        )}
+      </Space>
+    </div>
+
+    {/* 3D 楼宇模型 */}
+    <div style={styles.modelContainer}>
+      <BuildingModel3D
+        floors={floors}
+        onFloorClick={onFloorClick}
+        selectedFloorId={selectedFloorId}
+      />
+    </div>
+  </div>
+);
+
+interface FloorPlanPanelProps {
+  floor: FloorData;
+  workstations: WorkstationData[];
+  loading: boolean;
+}
+
+const FloorPlanPanel: React.FC<FloorPlanPanelProps> = ({
+  floor,
+  workstations,
+  loading,
+}) => (
+  <div style={styles.floorPlanPanel}>
+    {/* 平面图标题 */}
+    <div style={styles.panelHeader}>
+      <Space>
+        <DesktopOutlined style={{ color: '#1890ff' }} />
+        <span style={styles.panelTitle}>
+          {floor.name || floor.floorNo} - 工位平面图
+        </span>
+        <Tag color="blue">{workstations.length} 个工位</Tag>
+      </Space>
+    </div>
+
+    {/* 平面图内容 */}
+    <div style={styles.panelContent}>
+      {loading ? (
+        <LoadingView message="加载工位数据..." />
+      ) : workstations.length === 0 ? (
+        <EmptyView message="该楼层暂无工位" />
+      ) : (
+        <div style={{ height: '100%', width: '100%' }}>
+          <FloorPlan3D workstations={workstations} />
+        </div>
+      )}
+    </div>
+  </div>
+);
+
+const LoadingView: React.FC<{ message?: string }> = ({ message }) => (
+  <div style={styles.centerContainer}>
+    <Spin size="large" tip={message} />
+  </div>
+);
+
+const EmptyView: React.FC<{ message: string }> = ({ message }) => (
+  <div style={styles.centerContainer}>
+    <span style={{ color: '#999' }}>{message}</span>
+  </div>
+);
+
+// ============ 样式 ============
+
+const styles = {
+  container: {
+    height: '100vh',
+    display: 'flex',
+    flexDirection: 'column' as const,
+    overflow: 'hidden',
+    background: '#fff',
+  },
+  centerContainer: {
+    height: '100vh',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerBar: {
+    background: '#fff',
+    borderBottom: '1px solid #e8e8e8',
+    padding: '12px 24px',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    zIndex: 100,
+    boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+  },
+  headerTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#262626',
+  },
+  headerArrow: {
+    color: '#8c8c8c',
+  },
+  headerInfo: {
+    fontSize: 12,
+    color: '#8c8c8c',
+  },
+  splitter: {
+    color: '#d9d9d9',
+  },
+  mainContent: {
+    flex: 1,
+    display: 'flex',
+    overflow: 'hidden',
+  },
+  buildingPanel: {
+    position: 'relative' as const,
+    background: '#f5f5f5',
+    borderRight: '1px solid #e8e8e8',
+    transition: 'flex 0.3s ease',
+    minWidth: 0,
+    overflow: 'hidden',
+    display: 'flex',
+    flexDirection: 'column' as const,
+  },
+  controlPanel: {
+    position: 'absolute' as const,
+    top: 16,
+    left: 16,
+    zIndex: 10,
+    background: 'rgba(255, 255, 255, 0.95)',
+    backdropFilter: 'blur(10px)',
+    borderRadius: 8,
+    padding: '12px',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+    border: '1px solid #e8e8e8',
+    minWidth: 220,
+  },
+  controlLabel: {
+    fontSize: 12,
+    color: '#8c8c8c',
+    marginTop: 4,
+  },
+  modelContainer: {
+    height: '100%',
+    width: '100%',
+  },
+  floorPlanPanel: {
+    flex: '7',
+    display: 'flex',
+    flexDirection: 'column' as const,
+    background: '#fff',
+    minWidth: 0,
+    overflow: 'hidden',
+  },
+  panelHeader: {
+    padding: '12px 16px',
+    borderBottom: '1px solid #e8e8e8',
+    background: '#fafafa',
+  },
+  panelTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#262626',
+  },
+  panelContent: {
+    flex: 1,
+    position: 'relative' as const,
+    overflow: 'hidden',
+  },
 };
 
 export default BuildingView3D;

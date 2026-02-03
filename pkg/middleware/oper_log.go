@@ -2,8 +2,12 @@ package middleware
 
 import (
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils"
 )
 
 // OperLogConfig 操作日志配置
@@ -32,6 +36,17 @@ func DefaultOperLogConfig() *OperLogConfig {
 			"/workorder",
 			"/knowledge",
 			"/ad-domain",
+			// 运维管理模块
+			"/ops/building",
+			"/ops/floor",
+			"/ops/workstation",
+			"/ops/server-room",
+			"/ops/room-device",
+			"/ops/dedicated-line",
+			"/ops/info-point",
+			"/ops/wall",
+			"/ops/door",
+			"/ops/text",
 		},
 		ExcludePaths: []string{
 			"/list",     // 列表查询不记录
@@ -39,18 +54,20 @@ func DefaultOperLogConfig() *OperLogConfig {
 			"/export",   // 导出操作单独处理
 			"/import",   // 导入操作单独处理
 			"/download", // 下载操作不记录
+			"/tree",     // 树形结构查询不记录
 		},
 	}
 }
 
 // OperLogMiddleware 操作日志中间件
 // 自动记录符合条件的操作到数据库
-func OperLogMiddleware(operLogService interface{}, core interface{}) gin.HandlerFunc {
+func OperLogMiddleware(operLogSvc services.OperLogService, core *core.Core) gin.HandlerFunc {
 	config := DefaultOperLogConfig()
 
 	return func(c *gin.Context) {
 		// 记录开始时间
-		c.Set("start_time", c.Request.Context().Value("start_time"))
+		startTime := time.Now()
+		c.Set("start_time", startTime)
 
 		// 处理请求
 		c.Next()
@@ -61,16 +78,55 @@ func OperLogMiddleware(operLogService interface{}, core interface{}) gin.Handler
 		}
 
 		// 从上下文获取操作日志信息（由各个 handler 设置）
-		if title, exists := c.Get("oper_log_title"); exists {
-			if businessType, exists := c.Get("oper_log_business_type"); exists {
-				// 记录操作日志
-				// 这里需要调用 operLogService.RecordFromGinContext
-				// 由于类型转换问题，暂时使用反射或接口调用
-				_ = title
-				_ = businessType
-				// TODO: 实现操作日志记录
-			}
+		title, hasTitle := c.Get("oper_log_title")
+		businessType, hasBusinessType := c.Get("oper_log_business_type")
+
+		// 如果 handler 没有设置，使用默认值
+		if !hasTitle || !hasBusinessType {
+			return
 		}
+
+		// 获取操作信息
+		titleStr, _ := title.(string)
+		businessTypeInt, _ := businessType.(int)
+
+		// 构建方法描述
+		method := getMethodDescription(c.Request.URL.Path, c.Request.Method)
+
+		// 计算耗时
+		costTime := time.Since(startTime).Milliseconds()
+
+		// 获取用户信息
+		username := utils.GetUsernamePtr(c)
+		deptName := utils.GetDeptNameFromDB(c, core.GetDB())
+		clientIP := utils.GetClientIP(c)
+
+		// 确定状态和错误信息
+		status := 0
+		var errorMsg *string
+		if len(c.Errors) > 0 {
+			status = 1
+			errStr := c.Errors.String()
+			errorMsg = &errStr
+		}
+
+		// 异步记录操作日志
+		operLogSvc.RecordAsync(
+			core.GetDB(),
+			titleStr,
+			businessTypeInt,
+			method,
+			c.Request.Method,
+			c.Request.URL.String(),
+			username,
+			deptName,
+			&clientIP,
+			nil, // operParam - 可以后续添加请求参数过滤
+			nil, // jsonResult - 可以后续添加响应结果
+			errorMsg,
+			status,
+			costTime,
+		)
 	}
 }
 
@@ -123,4 +179,24 @@ func GetBusinessType(path, method string) int {
 	default:
 		return 0 // 其它
 	}
+}
+
+// getMethodDescription 获取方法描述
+func getMethodDescription(path, method string) string {
+	var action string
+	switch {
+	case strings.Contains(path, "/add") || strings.Contains(path, "/create"):
+		action = "新增"
+	case strings.Contains(path, "/edit") || strings.Contains(path, "/update"):
+		action = "修改"
+	case strings.Contains(path, "/delete") || strings.Contains(path, "/remove"):
+		action = "删除"
+	case strings.Contains(path, "/export"):
+		action = "导出"
+	case strings.Contains(path, "/import"):
+		action = "导入"
+	default:
+		action = method
+	}
+	return action
 }

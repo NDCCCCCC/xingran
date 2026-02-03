@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
@@ -84,11 +85,11 @@ func (h *MenuHandler) GetTree(c *gin.Context) {
 // @Tags 菜单管理
 // @Accept json
 // @Produce json
-// @Param request body systemServices.MenuListParams true "查询条件"
+// @Param request body requests.MenuListParams true "查询条件"
 // @Success 200 {object} response.Response{data=[]models.Menu}
 // @Router /system/menus/list [post]
 func (h *MenuHandler) List(c *gin.Context) {
-	var req systemServices.MenuListParams
+	var req requests.MenuListParams
 	c.ShouldBindJSON(&req)
 
 	result, err := h.service.List(c.Request.Context(), req)
@@ -130,11 +131,11 @@ func (h *MenuHandler) GetByID(c *gin.Context) {
 // @Tags 菜单管理
 // @Accept json
 // @Produce json
-// @Param request body systemServices.MenuCreateRequest true "菜单信息"
+// @Param request body requests.MenuCreateRequest true "菜单信息"
 // @Success 200 {object} response.Response{data=models.Menu}
 // @Router /system/menus [post]
 func (h *MenuHandler) Create(c *gin.Context) {
-	var req systemServices.MenuCreateRequest
+	var req requests.MenuCreateRequest
 	if !h.bindAndValidate(c, &req) {
 		return
 	}
@@ -154,7 +155,7 @@ func (h *MenuHandler) Create(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "菜单ID"
-// @Param request body systemServices.MenuUpdateRequest true "菜单信息"
+// @Param request body requests.MenuUpdateRequest true "菜单信息"
 // @Success 200 {object} response.Response
 // @Router /system/menus/:id/update [post]
 func (h *MenuHandler) Update(c *gin.Context) {
@@ -163,7 +164,7 @@ func (h *MenuHandler) Update(c *gin.Context) {
 		return
 	}
 
-	var req systemServices.MenuUpdateRequest
+	var req requests.MenuUpdateRequest
 	if !h.bindAndValidate(c, &req) {
 		return
 	}

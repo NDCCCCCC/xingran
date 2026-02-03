@@ -365,7 +365,7 @@ body {
    Header 顶部导航
    ======================================== */
 .ant-layout-header {
-  background: var(--bg-surface) !important;
+  background: var(--sidebar-bg) !important;
   border-bottom: 1px solid var(--border-base) !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
   height: var(--header-height) !important;
@@ -374,7 +374,7 @@ body {
 }
 
 [data-color-mode="dark"] .ant-layout-header {
-  background: var(--bg-surface) !important;
+  background: var(--sidebar-bg) !important;
   border-bottom: 1px solid var(--border-base) !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
 }

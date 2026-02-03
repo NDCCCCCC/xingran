@@ -1,16 +1,52 @@
 /**
  * 百度地图脚本加载器
+ * 支持普通版本和 WebGL 版本
  */
 
-let loadPromise: Promise<void> | null = null;
+let loadGLPromise: Promise<void> | null = null;
+let loadNormalPromise: Promise<void> | null = null;
 
-export const loadBaiduMapScript = (ak: string): Promise<void> => {
-  if (loadPromise) {
-    return loadPromise;
+/**
+ * 加载百度地图 WebGL 版本脚本
+ */
+export function loadBaiduMapGLScript(ak: string): Promise<void> {
+  if (loadGLPromise) {
+    return loadGLPromise;
   }
 
-  loadPromise = new Promise((resolve, reject) => {
-    if (window.BMap) {
+  loadGLPromise = new Promise((resolve, reject) => {
+    if ((window as any).BMapGL) {
+      resolve();
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.type = 'text/javascript';
+    script.src = `https://api.map.baidu.com/api?type=webgl&v=1.0&ak=${ak}&callback=initBMapGL`;
+    script.async = true;
+    script.onerror = () => reject(new Error('百度地图GL脚本加载失败'));
+
+    (window as any).initBMapGL = () => {
+      console.log('✅ 百度地图GL脚本加载成功');
+      resolve();
+    };
+
+    document.head.appendChild(script);
+  });
+
+  return loadGLPromise;
+}
+
+/**
+ * 加载百度地图普通版本脚本
+ */
+export function loadBaiduMapScript(ak: string): Promise<void> {
+  if (loadNormalPromise) {
+    return loadNormalPromise;
+  }
+
+  loadNormalPromise = new Promise((resolve, reject) => {
+    if ((window as any).BMap) {
       resolve();
       return;
     }
@@ -19,21 +55,29 @@ export const loadBaiduMapScript = (ak: string): Promise<void> => {
     script.type = 'text/javascript';
     script.src = `https://api.map.baidu.com/api?v=3.0&ak=${ak}&callback=init`;
     script.async = true;
-    script.onerror = () => {
-      reject(new Error('百度地图脚本加载失败'));
-    };
+    script.onerror = () => reject(new Error('百度地图脚本加载失败'));
 
-    // 设置全局回调函数
     (window as any).init = () => {
+      console.log('✅ 百度地图脚本加载成功');
       resolve();
     };
 
     document.head.appendChild(script);
   });
 
-  return loadPromise;
-};
+  return loadNormalPromise;
+}
 
-export const isBaiduMapLoaded = (): boolean => {
-  return !!(window as any).BMap;
-};
+/**
+ * 检查百度地图是否已加载（任一版本）
+ */
+export function isBaiduMapLoaded(): boolean {
+  return !!(window as any).BMap || !!(window as any).BMapGL;
+}
+
+/**
+ * 检查百度地图 GL 版本是否已加载
+ */
+export function isBaiduMapGLLoaded(): boolean {
+  return !!(window as any).BMapGL;
+}

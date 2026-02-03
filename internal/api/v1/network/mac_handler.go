@@ -1,12 +1,11 @@
 package network
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
 // MACAddressListRequest MAC地址列表请求
@@ -41,16 +40,14 @@ func NewMACHandler(core *core.Core) *MACHandler {
 // List 查询MAC地址列表
 func (h *MACHandler) List(c *gin.Context) {
 	var req MACAddressListRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
 	svc := services.NewMACCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor)
 	macAddrs, total, err := svc.GetMACAddressList(c.Request.Context(), req.Current, req.PageSize,
 		req.DeviceID, req.MACAddress, req.InterfaceName)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "获取MAC地址列表") {
 		return
 	}
 
@@ -60,15 +57,13 @@ func (h *MACHandler) List(c *gin.Context) {
 // Collect 采集单个设备MAC地址
 func (h *MACHandler) Collect(c *gin.Context) {
 	var req MACCollectionRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
 	svc := services.NewMACCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor)
 	result, err := svc.CollectDevice(c.Request.Context(), req.DeviceID)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "采集设备MAC地址") {
 		return
 	}
 
@@ -79,8 +74,7 @@ func (h *MACHandler) Collect(c *gin.Context) {
 func (h *MACHandler) CollectAll(c *gin.Context) {
 	svc := services.NewMACCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor)
 	results, err := svc.CollectAllDevices(c.Request.Context())
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "采集所有设备MAC地址") {
 		return
 	}
 
@@ -91,8 +85,7 @@ func (h *MACHandler) CollectAll(c *gin.Context) {
 func (h *MACHandler) GetStats(c *gin.Context) {
 	svc := services.NewMACCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor)
 	stats, err := svc.GetMACAddressStats(c.Request.Context())
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "获取MAC地址统计") {
 		return
 	}
 
@@ -102,15 +95,13 @@ func (h *MACHandler) GetStats(c *gin.Context) {
 // Clean 清理旧的MAC地址记录
 func (h *MACHandler) Clean(c *gin.Context) {
 	var req CleanOldMACRecordsRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
 	svc := services.NewMACCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor)
 	count, err := svc.CleanOldRecords(c.Request.Context(), req.Days)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "清理旧MAC地址记录") {
 		return
 	}
 

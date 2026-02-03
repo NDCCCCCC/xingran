@@ -29,7 +29,10 @@ func main() {
 	}
 
 	// 初始化核心组件
-	appCore := core.New(cfg)
+	appCore, err := core.New(cfg)
+	if err != nil {
+		log.Fatalf("创建核心模块失败: %v", err)
+	}
 	if err := appCore.Init(); err != nil {
 		log.Fatalf("初始化核心模块失败: %v", err)
 	}

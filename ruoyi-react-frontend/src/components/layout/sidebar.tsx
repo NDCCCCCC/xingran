@@ -27,9 +27,7 @@ const { Sider } = Layout;
 
 type MenuItem = NonNullable<MenuProps['items']>[number];
 
-const getIcon = (iconName?: string | null): React.ReactNode => {
-  return getIconComponent(iconName);
-};
+const getIcon = (iconName?: string | null): React.ReactNode => getIconComponent(iconName);
 
 const convertToMenuItem = (menu: MenuType, parentPath: string = ''): MenuItem => {
   const icon = getIcon(menu.icon);
@@ -99,31 +97,16 @@ const Sidebar = () => {
       .filter((item): item is MenuItem => item !== null);
   }, [menus]);
 
-  // ========================================
-  // 新增：构建菜单路径映射表
-  // ========================================
-  const menuPathMap = useMemo(() => {
-    return buildMenuPathMap(menus);
-  }, [JSON.stringify(menus)]);
+  // 构建菜单路径映射表
+  const menuPathMap = useMemo(() => buildMenuPathMap(menus), [JSON.stringify(menus)]);
 
-  // ========================================
-  // 辅助函数：构建完整的父级菜单链
-  // ========================================
   /**
    * 构建完整的父级菜单链
-   * 确保展开到当前菜单时，所有父级菜单也都展开
-   *
-   * 注意：只返回父级菜单的 key，不包含当前页面路径
+   * 只返回父级菜单的 key，不包含当前页面路径
    * 因为当前页面可能是不可展开的菜单项（menuType === 'C'）
    */
-  function buildParentKeyChain(
-    currentPath: string,
-    menuPathMap: Map<string, any>
-  ): string[] {
-    const normalizePath = (p: string): string => {
-      return p.startsWith('/') ? p.slice(1) : p;
-    };
-
+  function buildParentKeyChain(currentPath: string, menuPathMap: Map<string, any>): string[] {
+    const normalizePath = (p: string): string => p.startsWith('/') ? p.slice(1) : p;
     const normalizedPathname = normalizePath(currentPath);
     const menuInfo = menuPathMap.get(normalizedPathname);
 
@@ -133,53 +116,42 @@ const Sidebar = () => {
 
     const result: string[] = [];
 
-    // 不添加当前菜单的 key，只添加父级菜单
-    // result.push(normalizedPathname);
-
-    // 如果是二级菜单，添加其父级（一级）菜单
+    // 二级菜单：添加其父级（一级）菜单
     if (menuInfo.level === 2 && menuInfo.topLevel) {
       result.push(menuInfo.topLevel);
     }
 
-    // 如果是三级菜单，添加其父级（二级）菜单和祖父级（一级）菜单
+    // 三级菜单：添加其父级（二级）菜单和祖父级（一级）菜单
     if (menuInfo.level === 3) {
       if (menuInfo.secondLevel) {
-        result.push(menuInfo.secondLevel); // 二级
+        result.push(menuInfo.secondLevel);
       }
       if (menuInfo.topLevel) {
-        result.push(menuInfo.topLevel); // 一级
+        result.push(menuInfo.topLevel);
       }
     }
 
     return result;
   }
 
-  // ========================================
-  // 路由变化时更新展开的菜单（防止循环刷新的关键）
-  // ========================================
+  // 路由变化时更新展开的菜单（防止循环刷新）
   useEffect(() => {
     if (!menuPathMap.size || !location.pathname) return;
 
-    // 构建应该展开的父级菜单链
     const parentKeys = buildParentKeyChain(location.pathname, menuPathMap);
 
-    // 设置预期值，标记这是导航触发的变化
     expectedOpenKeysRef.current = parentKeys;
     setOpenKeys(parentKeys);
 
-    // 清除预期值标记（给足够的时间让状态更新完成）
     setTimeout(() => {
       expectedOpenKeysRef.current = null;
     }, NAVIGATION_DELAY);
   }, [location.pathname, menuPathMap]);
 
-  // ========================================
   // 菜单点击处理
-  // ========================================
   const handleMenuClick: MenuProps['onClick'] = (e) => {
     const clickedMenu = findMenuById(menus, e.key);
 
-    // 检查菜单是否停用
     if (clickedMenu && clickedMenu.status !== 0) {
       message.warning('该功能已停用，暂时无法访问');
       return;
@@ -187,19 +159,14 @@ const Sidebar = () => {
 
     // 只有菜单类型（C）才执行导航，目录类型（M）不导航
     if (clickedMenu && clickedMenu.menuType === 'C') {
-      // 从 menuPathMap 中查找该菜单的完整路径
       const menuInfo = menuPathMap.get(clickedMenu.id);
       const fullPath = menuInfo?.fullPath || buildFullPath(clickedMenu);
-
-      // 确保路径以 / 开头
       const navigationPath = fullPath.startsWith('/') ? fullPath : `/${fullPath}`;
       navigate(navigationPath);
     }
   };
 
-  // ========================================
   // 处理菜单展开/收起 - 手风琴效果（支持一级和二级菜单）
-  // ========================================
   const handleOpenChange: MenuProps['onOpenChange'] = (keys) => {
     // 检查是否是导航触发的预期变化（防止循环刷新）
     if (expectedOpenKeysRef.current) {
@@ -214,28 +181,26 @@ const Sidebar = () => {
       }
     }
 
-    // 找出新展开的菜单（keys 中有但 openKeys 中没有的）
     const latestOpenKey = keys.find((key) => !openKeys.includes(key));
 
-    if (latestOpenKey) {
-      const menuLevel = getMenuLevel(latestOpenKey, menuPathMap);
+    if (!latestOpenKey) {
+      setOpenKeys([...keys]);
+      return;
+    }
 
-      if (menuLevel === 1 || latestOpenKey.startsWith('top_')) {
-        // ========================================
-        // 一级菜单：应用手风琴效果
-        // ========================================
-        // 1. 保留新展开的一级菜单
-        // 2. 保留所有非一级菜单（二级和三级菜单）
-        // 3. 移除其他所有一级菜单
+    const menuLevel = getMenuLevel(latestOpenKey, menuPathMap);
+
+    switch (menuLevel) {
+      case 1:
+      case undefined:
+        // 一级菜单或以 top_ 开头的菜单：应用手风琴效果
+        // 保留新展开的一级菜单和所有非一级菜单，移除其他一级菜单
         const nonTopLevelKeys = keys.filter(key => !isTopLevelMenu(key, menuPathMap));
-        const result = [latestOpenKey, ...nonTopLevelKeys];
-        setOpenKeys(result);
+        setOpenKeys([latestOpenKey, ...nonTopLevelKeys]);
+        break;
 
-      } else if (menuLevel === 2) {
-        // ========================================
+      case 2: {
         // 二级菜单：应用手风琴效果（仅在同一一级菜单下）
-        // ========================================
-        // 1. 找出当前二级菜单所属的一级菜单
         const currentTopLevel = menuPathMap.get(latestOpenKey)?.topLevel;
 
         if (!currentTopLevel) {
@@ -243,50 +208,35 @@ const Sidebar = () => {
           return;
         }
 
-        // 2. 保留所有一级菜单
+        // 保留所有一级菜单
         const topLevelKeys = keys.filter(key => isTopLevelMenu(key, menuPathMap));
 
-        // 3. 找出所有与新展开的二级菜单属于同一一级菜单的其他已展开二级菜单
+        // 找出所有与新展开的二级菜单属于同一一级菜单的其他已展开二级菜单
         const sameTopLevelSecondKeys = openKeys.filter(key => {
           if (!isSecondLevelMenu(key, menuPathMap)) return false;
           return isSameTopLevelMenu(key, latestOpenKey, menuPathMap);
         });
 
-        // 4. 需要收起的这些同级二级菜单
-        const keysToClose = sameTopLevelSecondKeys;
-
-        // 5. 构建新的openKeys：
-        //    - 保留所有一级菜单
-        //    - 保留不属于同一一级菜单的其他二级菜单
-        //    - 保留新展开的二级菜单
-        //    - 保留所有三级菜单
-        //    - 移除需要收起的同级二级菜单
+        // 构建新的openKeys
         const result = [
           ...topLevelKeys,
           ...keys.filter(key =>
-            !keysToClose.includes(key) &&
+            !sameTopLevelSecondKeys.includes(key) &&
             (isSecondLevelMenu(key, menuPathMap) || key === latestOpenKey)
           )
         ];
         setOpenKeys(result);
-
-      } else if (menuLevel === 3) {
-        // ========================================
-        // 三级菜单：不应用手风琴效果
-        // ========================================
-        setOpenKeys([...keys]);
-
-      } else {
-        // ========================================
-        // 未知层级：直接应用（降级处理）
-        // ========================================
-        setOpenKeys([...keys]);
+        break;
       }
-    } else {
-      // ========================================
-      // 收起操作：直接应用
-      // ========================================
-      setOpenKeys([...keys]);
+
+      case 3:
+        // 三级菜单：不应用手风琴效果
+        setOpenKeys([...keys]);
+        break;
+
+      default:
+        // 未知层级：直接应用
+        setOpenKeys([...keys]);
     }
   };
 
@@ -375,7 +325,7 @@ const Sidebar = () => {
             display: sidebarCollapsed ? 'none' : 'inline-block',
           }}
         >
-          数字化平台
+          数智化平台
         </h1>
       </div>
 

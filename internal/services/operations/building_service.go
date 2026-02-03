@@ -9,6 +9,11 @@ import (
 	"gorm.io/gorm"
 )
 
+const (
+	// uuidPattern UUID格式正则表达式
+	uuidPattern = `^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`
+)
+
 // BuildingService 楼宇服务接口
 type BuildingService interface {
 	Create(ctx context.Context, building *operations.OpsBuilding) error
@@ -22,6 +27,7 @@ type BuildingService interface {
 type buildingService struct {
 	db            *gorm.DB
 	codeGenerator *CodeGenerator
+	uuidValidator *regexp.Regexp
 }
 
 // NewBuildingService 创建楼宇服务实例
@@ -29,6 +35,7 @@ func NewBuildingService(db *gorm.DB) BuildingService {
 	return &buildingService{
 		db:            db,
 		codeGenerator: NewCodeGenerator(db),
+		uuidValidator: regexp.MustCompile(uuidPattern),
 	}
 }
 
@@ -49,7 +56,9 @@ func (s *buildingService) Update(ctx context.Context, building *operations.OpsBu
 		return err
 	}
 
-	return s.db.WithContext(ctx).Save(building).Error
+	// 使用 Omit 排除 CreatedAt 字段，只更新其他字段
+	// UpdatedAt 会被 GORM 自动更新
+	return s.db.WithContext(ctx).Omit("CreatedAt").Save(building).Error
 }
 
 // Delete 删除楼宇
@@ -69,57 +78,69 @@ func (s *buildingService) GetByID(ctx context.Context, id string) (*operations.O
 
 // List 查询楼宇列表
 func (s *buildingService) List(ctx context.Context, params map[string]interface{}) (*PageResult, error) {
-	var total int64
-	var list []operations.OpsBuilding
-
 	query := s.db.WithContext(ctx).Model(&operations.OpsBuilding{})
 
-	// 添加筛选条件
-	if name, ok := params["name"].(string); ok && name != "" {
-		query = query.Where("name LIKE ?", "%"+name+"%")
-	}
-	if orgId, ok := params["orgId"].(string); ok && orgId != "" {
-		query = query.Where("org_id = ?", orgId)
-	}
-	if status, ok := params["status"].(int); ok {
-		query = query.Where("status = ?", status)
-	}
-	if status, ok := params["status"].(float64); ok {
-		query = query.Where("status = ?", int(status))
-	}
+	// 应用筛选条件
+	query = s.applyFilters(query, params)
 
 	// 获取总数
+	var total int64
 	if err := query.Count(&total).Error; err != nil {
 		return nil, err
 	}
 
-	// 分页
-	current := 1
-	pageSize := 10
-	if c, ok := params["current"].(int); ok {
-		current = c
-	}
-	if c, ok := params["current"].(float64); ok {
-		current = int(c)
-	}
-	if ps, ok := params["pageSize"].(int); ok {
-		pageSize = ps
-	}
-	if ps, ok := params["pageSize"].(float64); ok {
-		pageSize = int(ps)
-	}
+	// 应用分页
+	pagination := extractPagination(params)
+	offset := calculateOffset(pagination)
 
-	offset := (current - 1) * pageSize
-	if err := query.Offset(offset).Limit(pageSize).Order("order_num ASC").Find(&list).Error; err != nil {
+	var list []operations.OpsBuilding
+	if err := query.Offset(offset).Limit(pagination.PageSize).Order("order_num ASC").Find(&list).Error; err != nil {
 		return nil, err
 	}
 
 	return &PageResult{
 		List:     list,
 		Total:    total,
-		Current:  current,
-		PageSize: pageSize,
+		Current:  pagination.Current,
+		PageSize: pagination.PageSize,
 	}, nil
+}
+
+// applyFilters 应用查询筛选条件
+func (s *buildingService) applyFilters(query *gorm.DB, params map[string]interface{}) *gorm.DB {
+	// 名称筛选
+	if name, ok := params["name"].(string); ok && name != "" {
+		query = query.Where("name LIKE ?", "%"+name+"%")
+	}
+
+	// 部门筛选（包含子部门）
+	if orgId, ok := params["orgId"].(string); ok && orgId != "" {
+		query = s.applyDeptFilter(query, orgId)
+	}
+
+	// 状态筛选
+	if status := extractIntParam(params, "status", -1); status >= 0 {
+		query = query.Where("status = ?", status)
+	}
+
+	return query
+}
+
+// applyDeptFilter 应用部门筛选（包含子部门）
+func (s *buildingService) applyDeptFilter(query *gorm.DB, orgId string) *gorm.DB {
+	var deptIDs []string
+
+	// 查询该部门及其所有子部门的ID
+	err := s.db.Table("sys_dept").
+		Where("id = ? OR ancestors LIKE ? OR ancestors LIKE ? OR ancestors = ?",
+			orgId, "%,"+orgId+",%", "%,"+orgId, orgId).
+		Pluck("id", &deptIDs).Error
+
+	if err != nil || len(deptIDs) == 0 {
+		return query.Where("1 = 0")
+	}
+
+	return query.Where("org_id IN ?", deptIDs)
 }
 
 // BatchDelete 批量删除楼宇
@@ -129,14 +150,12 @@ func (s *buildingService) BatchDelete(ctx context.Context, ids []string) error {
 
 // validateOrg 验证机构存在性
 func (s *buildingService) validateOrg(ctx context.Context, orgID string) error {
-	// 如果 org_id 为空，则不需要验证
 	if orgID == "" {
 		return nil
 	}
 
-	// 验证 UUID 格式
-	uuidPattern := regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
-	if !uuidPattern.MatchString(orgID) {
+	// 验证UUID格式
+	if !s.uuidValidator.MatchString(orgID) {
 		return errors.New("所属机构ID格式无效：必须是有效的UUID格式")
 	}
 
@@ -145,16 +164,10 @@ func (s *buildingService) validateOrg(ctx context.Context, orgID string) error {
 	if err := s.db.WithContext(ctx).Table("sys_dept").Where("id = ?", orgID).Count(&count).Error; err != nil {
 		return err
 	}
+
 	if count == 0 {
 		return errors.New("所属机构不存在")
 	}
-	return nil
-}
 
-// PageResult 分页结果
-type PageResult struct {
-	List     interface{} `json:"list"`
-	Total    int64       `json:"total"`
-	Current  int         `json:"current"`
-	PageSize int         `json:"pageSize"`
+	return nil
 }

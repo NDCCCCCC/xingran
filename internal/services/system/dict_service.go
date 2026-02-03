@@ -5,16 +5,17 @@ import (
 	"fmt"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	"gorm.io/gorm"
 )
 
 // DictTypeService 字典类型服务接口
 type DictTypeService interface {
-	Create(ctx context.Context, req *DictTypeCreateRequest) error
-	Update(ctx context.Context, req *DictTypeUpdateRequest) error
+	Create(ctx context.Context, req *requests.DictTypeCreateRequest) error
+	Update(ctx context.Context, req *requests.DictTypeUpdateRequest) error
 	Delete(ctx context.Context, id string) error
 	GetByID(ctx context.Context, id string) (*models.DictType, error)
-	List(ctx context.Context, params DictTypeListParams) (*PageResult, error)
+	List(ctx context.Context, params requests.DictTypeListParams) (*PageResult, error)
 
 	// 新增缓存方法
 	GetAllWithCache(ctx context.Context) ([]*models.DictType, error)
@@ -30,44 +31,9 @@ func NewDictTypeService(db *gorm.DB) DictTypeService {
 	return &dictTypeService{db: db}
 }
 
-// ==================== 请求/响应类型 ====================
-
-// DictTypeListParams 字典类型列表查询参数
-type DictTypeListParams struct {
-	DictName *string
-	DictType *string
-	Status   *int
-	Current  int
-	PageSize int
-}
-
-// DefaultDictTypeListParams 默认列表参数
-func DefaultDictTypeListParams() DictTypeListParams {
-	return DictTypeListParams{
-		Current:  1,
-		PageSize: 10,
-	}
-}
-
-// DictTypeCreateRequest 创建字典类型请求
-type DictTypeCreateRequest struct {
-	DictName string
-	DictType string
-	Status   int
-	Remark   *string
-}
-
-// DictTypeUpdateRequest 更新字典类型请求
-type DictTypeUpdateRequest struct {
-	ID       string
-	DictName string
-	Status   int
-	Remark   *string
-}
-
 // ==================== 服务方法实现 ====================
 
-func (s *dictTypeService) Create(ctx context.Context, req *DictTypeCreateRequest) error {
+func (s *dictTypeService) Create(ctx context.Context, req *requests.DictTypeCreateRequest) error {
 	// 检查字典类型是否已存在
 	var existDict models.DictType
 	if err := s.db.WithContext(ctx).Where("dict_type = ?", req.DictType).First(&existDict).Error; err == nil {
@@ -88,7 +54,7 @@ func (s *dictTypeService) Create(ctx context.Context, req *DictTypeCreateRequest
 	return nil
 }
 
-func (s *dictTypeService) Update(ctx context.Context, req *DictTypeUpdateRequest) error {
+func (s *dictTypeService) Update(ctx context.Context, req *requests.DictTypeUpdateRequest) error {
 	var dictType models.DictType
 	if err := s.db.WithContext(ctx).First(&dictType, "id = ?", req.ID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -142,7 +108,7 @@ func (s *dictTypeService) GetByID(ctx context.Context, id string) (*models.DictT
 	return &dictType, nil
 }
 
-func (s *dictTypeService) List(ctx context.Context, params DictTypeListParams) (*PageResult, error) {
+func (s *dictTypeService) List(ctx context.Context, params requests.DictTypeListParams) (*PageResult, error) {
 	var total int64
 	var list []models.DictType
 
@@ -191,11 +157,11 @@ func (s *dictTypeService) GetAllWithCache(ctx context.Context) ([]*models.DictTy
 
 // DictDataService 字典数据服务接口
 type DictDataService interface {
-	Create(ctx context.Context, req *DictDataCreateRequest) error
-	Update(ctx context.Context, req *DictDataUpdateRequest) error
+	Create(ctx context.Context, req *requests.DictDataCreateRequest) error
+	Update(ctx context.Context, req *requests.DictDataUpdateRequest) error
 	Delete(ctx context.Context, id string) error
 	GetByID(ctx context.Context, id string) (*models.DictData, error)
-	List(ctx context.Context, params DictDataListParams) (*PageResult, error)
+	List(ctx context.Context, params requests.DictDataListParams) (*PageResult, error)
 
 	// 新增缓存方法
 	GetByTypeWithCache(ctx context.Context, dictType string) ([]*models.DictData, error)
@@ -211,42 +177,7 @@ func NewDictDataService(db *gorm.DB) DictDataService {
 	return &dictDataService{db: db}
 }
 
-// DictDataListParams 字典数据列表查询参数
-type DictDataListParams struct {
-	DictType  string
-	DictLabel *string
-	Status    *int
-	Current   int
-	PageSize int
-}
-
-// DictDataCreateRequest 创建字典数据请求
-type DictDataCreateRequest struct {
-	DictSort  int
-	DictLabel string
-	DictValue string
-	DictType  string
-	CssClass  *string
-	ListClass *string
-	IsDefault bool
-	Status    int
-	Remark    *string
-}
-
-// DictDataUpdateRequest 更新字典数据请求
-type DictDataUpdateRequest struct {
-	ID        string
-	DictSort  int
-	DictLabel string
-	DictValue string
-	CssClass  *string
-	ListClass *string
-	IsDefault bool
-	Status    int
-	Remark    *string
-}
-
-func (s *dictDataService) Create(ctx context.Context, req *DictDataCreateRequest) error {
+func (s *dictDataService) Create(ctx context.Context, req *requests.DictDataCreateRequest) error {
 	// 检查字典类型是否存在
 	var dictType models.DictType
 	if err := s.db.WithContext(ctx).Where("dict_type = ?", req.DictType).First(&dictType).Error; err != nil {
@@ -272,7 +203,7 @@ func (s *dictDataService) Create(ctx context.Context, req *DictDataCreateRequest
 	return nil
 }
 
-func (s *dictDataService) Update(ctx context.Context, req *DictDataUpdateRequest) error {
+func (s *dictDataService) Update(ctx context.Context, req *requests.DictDataUpdateRequest) error {
 	var dictData models.DictData
 	if err := s.db.WithContext(ctx).First(&dictData, "id = ?", req.ID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -325,7 +256,7 @@ func (s *dictDataService) GetByID(ctx context.Context, id string) (*models.DictD
 	return &dictData, nil
 }
 
-func (s *dictDataService) List(ctx context.Context, params DictDataListParams) (*PageResult, error) {
+func (s *dictDataService) List(ctx context.Context, params requests.DictDataListParams) (*PageResult, error) {
 	var total int64
 	var list []models.DictData
 

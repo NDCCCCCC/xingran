@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"fmt"
-	"log"
 	"strconv"
 	"sync"
 	"time"
@@ -12,6 +11,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/portcollection"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"golang.org/x/sync/semaphore"
 	"gorm.io/gorm"
 )
@@ -100,7 +100,7 @@ func (s *DeviceMonitorService) loadConfigFromDB() {
 	if err == nil && concurrentConfig.ConfigValue != "" {
 		if concurrent, parseErr := strconv.Atoi(concurrentConfig.ConfigValue); parseErr == nil && concurrent > 0 {
 			s.maxConcurrent = concurrent
-			log.Printf("[设备监控] 从数据库读取并发数配置: %d", s.maxConcurrent)
+			applogger.Infof("[设备监控] 从数据库读取并发数配置: %d", s.maxConcurrent)
 		}
 	}
 
@@ -110,7 +110,7 @@ func (s *DeviceMonitorService) loadConfigFromDB() {
 	if err == nil && timeoutConfig.ConfigValue != "" {
 		if seconds, parseErr := strconv.Atoi(timeoutConfig.ConfigValue); parseErr == nil && seconds > 0 {
 			s.timeout = time.Duration(seconds) * time.Second
-			log.Printf("[设备监控] 从数据库读取超时配置: %v", s.timeout)
+			applogger.Infof("[设备监控] 从数据库读取超时配置: %v", s.timeout)
 		}
 	}
 }
@@ -128,7 +128,7 @@ func (s *DeviceMonitorService) ReloadConfig() {
 	if s.configBackupSvc != nil {
 		s.configBackupSvc.ReloadConfig()
 	}
-	log.Println("[设备监控] 配置已重新加载")
+	applogger.Infof("[设备监控] 配置已重新加载")
 }
 
 // CheckAllDevicesStatus 检查所有设备状态（通过SNMP）
@@ -157,7 +157,7 @@ func (s *DeviceMonitorService) CheckAllDevicesStatus(ctx context.Context) (int, 
 
 			// 获取信号量
 			if err := sem.Acquire(ctx, 1); err != nil {
-				log.Printf("获取信号量失败: %v", err)
+				applogger.Infof("获取信号量失败: %v", err)
 				return
 			}
 			defer sem.Release(1)
@@ -165,7 +165,7 @@ func (s *DeviceMonitorService) CheckAllDevicesStatus(ctx context.Context) (int, 
 			// 检查设备状态
 			isOnline, err := s.CheckDeviceStatus(ctx, device.ID)
 			if err != nil {
-				log.Printf("检查设备状态失败 [%s]: %v", device.IPAddress, err)
+				applogger.Infof("检查设备状态失败 [%s]: %v", device.IPAddress, err)
 				return
 			}
 
@@ -182,7 +182,7 @@ func (s *DeviceMonitorService) CheckAllDevicesStatus(ctx context.Context) (int, 
 
 	wg.Wait()
 
-	log.Printf("设备状态检查完成: 在线 %d, 离线 %d", onlineCount, offlineCount)
+	applogger.Infof("设备状态检查完成: 在线 %d, 离线 %d", onlineCount, offlineCount)
 	return onlineCount, offlineCount, nil
 }
 
@@ -195,12 +195,12 @@ func (s *DeviceMonitorService) CheckDeviceStatus(ctx context.Context, deviceID s
 		return false, fmt.Errorf("查询设备失败: %w", err)
 	}
 
-	log.Printf("[CheckDeviceStatus] 设备: %s (%s), CredentialID: %v", device.IPAddress, device.DeviceName, device.CredentialID)
+	applogger.Infof("[CheckDeviceStatus] 设备: %s (%s), CredentialID: %v", device.IPAddress, device.DeviceName, device.CredentialID)
 
 	// 获取凭证信息
 	credential, err := s.getCredentialForDevice(ctx, &device)
 	if err != nil {
-		log.Printf("[CheckDeviceStatus] 获取凭证失败，使用默认配置: %v", err)
+		applogger.Infof("[CheckDeviceStatus] 获取凭证失败，使用默认配置: %v", err)
 		// 如果没有凭证，使用默认community尝试
 		defaultCommunity := "public"
 		defaultVersion := models.SNMPVersionV2c
@@ -212,9 +212,9 @@ func (s *DeviceMonitorService) CheckDeviceStatus(ctx context.Context, deviceID s
 		if len(credential.SNMPCommunities) > 0 {
 			// 隐藏 SNMP 团体名敏感信息，只显示长度
 			maskedCommunity := maskSensitiveString(credential.SNMPCommunities[0])
-			log.Printf("[CheckDeviceStatus] 使用凭证: Community=%s, Version=%s", maskedCommunity, credential.SNMPVersion)
+			applogger.Infof("[CheckDeviceStatus] 使用凭证: Community=%s, Version=%s", maskedCommunity, credential.SNMPVersion)
 		} else {
-			log.Printf("[CheckDeviceStatus] 凭证没有配置 SNMP Community，跳过检查")
+			applogger.Infof("[CheckDeviceStatus] 凭证没有配置 SNMP Community，跳过检查")
 			return false, nil
 		}
 	}
@@ -249,13 +249,13 @@ func (s *DeviceMonitorService) CheckDeviceStatus(ctx context.Context, deviceID s
 		if err := s.db.WithContext(ctx).Model(&device).Updates(updates).Error; err != nil {
 			return isOnline, fmt.Errorf("更新设备状态失败: %w", err)
 		}
-		log.Printf("设备 [%s] 状态更新: %d -> %d, 最后看到时间: %s", device.IPAddress, device.Status, status, now.Format("2006-01-02 15:04:05"))
+		applogger.Infof("设备 [%s] 状态更新: %d -> %d, 最后看到时间: %s", device.IPAddress, device.Status, status, now.Format("2006-01-02 15:04:05"))
 	} else {
 		// 状态没有改变，只更新最后看到时间
 		if err := s.db.WithContext(ctx).Model(&device).Updates(updates).Error; err != nil {
 			return isOnline, fmt.Errorf("更新设备最后看到时间失败: %w", err)
 		}
-		log.Printf("设备 [%s] 状态未变 (%d)，更新最后看到时间: %s", device.IPAddress, status, now.Format("2006-01-02 15:04:05"))
+		applogger.Infof("设备 [%s] 状态未变 (%d)，更新最后看到时间: %s", device.IPAddress, status, now.Format("2006-01-02 15:04:05"))
 	}
 
 	return isOnline, nil
@@ -265,7 +265,7 @@ func (s *DeviceMonitorService) CheckDeviceStatus(ctx context.Context, deviceID s
 func (s *DeviceMonitorService) pingDeviceViaSNMP(target string, port uint16, community string, version device.SNMPVersion) bool {
 	// 隐藏 SNMP 团体名敏感信息，只显示长度
 	maskedCommunity := maskSensitiveString(community)
-	log.Printf("[SNMP Ping] 开始检查设备: %s:%d, community=%s, version=%v", target, port, maskedCommunity, version)
+	applogger.Infof("[SNMP Ping] 开始检查设备: %s:%d, community=%s, version=%v", target, port, maskedCommunity, version)
 
 	// 创建完整的 SNMP 客户端配置
 	config := &device.SNMPClientConfig{
@@ -280,24 +280,24 @@ func (s *DeviceMonitorService) pingDeviceViaSNMP(target string, port uint16, com
 	defer snmpClient.Close()
 
 	// 尝试获取系统描述
-	log.Printf("[SNMP Ping] 尝试获取系统描述 OID: 1.3.6.1.2.1.1.1.0")
+	applogger.Infof("[SNMP Ping] 尝试获取系统描述 OID: 1.3.6.1.2.1.1.1.0")
 	result, err := snmpClient.Get("1.3.6.1.2.1.1.1.0")
 	if err == nil {
-		log.Printf("[SNMP Ping] 获取系统描述成功: %v", result)
+		applogger.Infof("[SNMP Ping] 获取系统描述成功: %v", result)
 		return true
 	}
-	log.Printf("[SNMP Ping] 获取系统描述失败: %v", err)
+	applogger.Infof("[SNMP Ping] 获取系统描述失败: %v", err)
 
 	// 如果失败，尝试获取系统名称
-	log.Printf("[SNMP Ping] 尝试获取系统名称 OID: 1.3.6.1.2.1.1.5.0")
+	applogger.Infof("[SNMP Ping] 尝试获取系统名称 OID: 1.3.6.1.2.1.1.5.0")
 	result, err = snmpClient.Get("1.3.6.1.2.1.1.5.0")
 	if err == nil {
-		log.Printf("[SNMP Ping] 获取系统名称成功: %v", result)
+		applogger.Infof("[SNMP Ping] 获取系统名称成功: %v", result)
 		return true
 	}
-	log.Printf("[SNMP Ping] 获取系统名称失败: %v", err)
+	applogger.Infof("[SNMP Ping] 获取系统名称失败: %v", err)
 
-	log.Printf("[SNMP Ping] 设备 %s SNMP检查失败", target)
+	applogger.Infof("[SNMP Ping] 设备 %s SNMP检查失败", target)
 	return false
 }
 
@@ -322,7 +322,7 @@ func (s *DeviceMonitorService) CollectAllPortStatus(ctx context.Context) error {
 		}
 	}
 
-	log.Printf("端口状态采集完成: 成功设备=%d/%d, 总端口数=%d", successCount, len(results), totalPorts)
+	applogger.Infof("端口状态采集完成: 成功设备=%d/%d, 总端口数=%d", successCount, len(results), totalPorts)
 	return nil
 }
 
@@ -357,7 +357,7 @@ func (s *DeviceMonitorService) CollectAllMACAddresses(ctx context.Context) error
 		}
 	}
 
-	log.Printf("MAC地址采集完成: 成功设备=%d/%d, 总MAC数=%d", successCount, len(results), totalMACs)
+	applogger.Infof("MAC地址采集完成: 成功设备=%d/%d, 总MAC数=%d", successCount, len(results), totalMACs)
 	return nil
 }
 
@@ -381,7 +381,7 @@ func (s *DeviceMonitorService) BackupAllConfigurations(ctx context.Context) erro
 		return fmt.Errorf("配置备份失败: %w", err)
 	}
 
-	log.Printf("配置备份任务完成")
+	applogger.Infof("配置备份任务完成")
 	return nil
 }
 

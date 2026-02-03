@@ -2,6 +2,8 @@ package operations
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,12 +12,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 )
 
-// 常量定义
 const (
-	geocodeCacheKeyPrefix = "geocode:"
+	geocodeCacheKeyPrefix = "baidu_map:geocode:"
 	defaultCacheTTL       = 30 * time.Minute
 	maxConcurrency        = 5
 	apiTimeout            = 10 * time.Second
@@ -24,9 +26,9 @@ const (
 
 // BaiduGeocodingResponse 百度地图地理编码响应
 type BaiduGeocodingResponse struct {
-	Status  int               `json:"status"`
-	Message string            `json:"message,omitempty"`
-	Result  *GeocodingResult  `json:"result,omitempty"`
+	Status  int              `json:"status"`
+	Message string           `json:"message,omitempty"`
+	Result  *GeocodingResult `json:"result,omitempty"`
 }
 
 // GeocodingResult 地理编码结果
@@ -35,8 +37,8 @@ type GeocodingResult struct {
 		Lng float64 `json:"lng"`
 		Lat float64 `json:"lat"`
 	} `json:"location"`
-	FormattedAddress string `json:"formatted_address"`
-	AddressComponent struct {
+	FormattedAddress  string `json:"formatted_address"`
+	AddressComponent  struct {
 		Province string `json:"province"`
 		City     string `json:"city"`
 		District string `json:"district"`
@@ -52,7 +54,6 @@ type Coordinate struct {
 	Lat float64
 }
 
-// cacheEntry 缓存条目
 type cacheEntry struct {
 	result    *GeocodingResult
 	expiresAt time.Time
@@ -60,10 +61,12 @@ type cacheEntry struct {
 
 // GeocodingService 地理编码服务
 type GeocodingService struct {
-	apiKey     string
-	httpClient *http.Client
-	cache      sync.Map
-	mu         sync.RWMutex
+	apiKey      string
+	httpClient  *http.Client
+	cache       sync.Map
+	redisCache  cache.Cache
+	stats       *CacheStats
+	rateLimiter *RateLimiter
 }
 
 // NewGeocodingService 创建地理编码服务
@@ -73,6 +76,21 @@ func NewGeocodingService(apiKey string) *GeocodingService {
 		httpClient: &http.Client{
 			Timeout: apiTimeout,
 		},
+		stats:       &CacheStats{},
+		rateLimiter: BaiduAPIRateLimiter,
+	}
+}
+
+// NewGeocodingServiceWithCache 创建带Redis缓存的地理编码服务
+func NewGeocodingServiceWithCache(apiKey string, redisCache cache.Cache) *GeocodingService {
+	return &GeocodingService{
+		apiKey: apiKey,
+		httpClient: &http.Client{
+			Timeout: apiTimeout,
+		},
+		redisCache:  redisCache,
+		stats:       &CacheStats{},
+		rateLimiter: BaiduAPIRateLimiter,
 	}
 }
 
@@ -82,23 +100,61 @@ func (s *GeocodingService) Geocode(ctx context.Context, address string) (lng, la
 		return 0, 0, fmt.Errorf("地址不能为空")
 	}
 
-	// 检查缓存
-	if result, ok := s.getFromCache(address); ok {
+	cacheKey := buildCacheKey(address)
+
+	// 检查缓存（内存 -> Redis）
+	if result, found := s.getFromCache(ctx, cacheKey); found {
 		return result.Location.Lng, result.Location.Lat, nil
 	}
 
-	// 调用 API
+	// 检查限流器
+	if !s.rateLimiter.Allow() {
+		s.stats.RecordMiss()
+		return 0, 0, fmt.Errorf("API调用频率超限，请稍后重试")
+	}
+
+	// 调用百度API
 	result, err := s.callGeocodingAPI(ctx, address)
 	if err != nil {
+		s.stats.RecordMiss()
 		return 0, 0, err
 	}
 
-	// 缓存结果
-	s.setCache(address, result)
+	s.stats.RecordAPICall()
 
+	// 缓存结果
+	s.setToCache(ctx, cacheKey, result)
 	logger.Debugf("地址解析成功: %s -> (%f, %f)", address, result.Location.Lng, result.Location.Lat)
 
 	return result.Location.Lng, result.Location.Lat, nil
+}
+
+// getFromCache 从缓存获取结果（内存 -> Redis）
+func (s *GeocodingService) getFromCache(ctx context.Context, cacheKey string) (*GeocodingResult, bool) {
+	// 检查内存缓存
+	if result, ok := s.getFromMemoryCache(cacheKey); ok {
+		s.stats.RecordMemoryHit()
+		return result, true
+	}
+
+	// 检查Redis缓存
+	if s.redisCache != nil {
+		if result, err := s.getFromRedisCache(ctx, cacheKey); err == nil && result != nil {
+			s.stats.RecordRedisHit()
+			s.setToMemoryCache(cacheKey, result)
+			return result, true
+		}
+	}
+
+	return nil, false
+}
+
+// setToCache 设置缓存（内存 + Redis）
+func (s *GeocodingService) setToCache(ctx context.Context, cacheKey string, result *GeocodingResult) {
+	s.setToMemoryCache(cacheKey, result)
+	if s.redisCache != nil {
+		s.setToRedisCache(ctx, cacheKey, result)
+	}
 }
 
 // BatchGeocode 批量地址解析（带并发控制）
@@ -107,17 +163,15 @@ func (s *GeocodingService) BatchGeocode(ctx context.Context, addresses []string)
 	var mu sync.Mutex
 	sem := make(chan struct{}, maxConcurrency)
 	var wg sync.WaitGroup
-	var successCount, failCount int
 
 	for _, addr := range addresses {
 		if addr == "" {
 			continue
 		}
 
-		// 先获取信号量（避免启动过多 goroutine）
 		sem <- struct{}{}
-
 		wg.Add(1)
+
 		go func(address string) {
 			defer wg.Done()
 			defer func() { <-sem }()
@@ -125,68 +179,128 @@ func (s *GeocodingService) BatchGeocode(ctx context.Context, addresses []string)
 			lng, lat, err := s.Geocode(ctx, address)
 			if err != nil {
 				logger.Warnf("地址解析失败: %s, 错误: %v", address, err)
-				failCount++
 				return
 			}
 
 			mu.Lock()
 			results[address] = Coordinate{Lng: lng, Lat: lat}
-			successCount++
 			mu.Unlock()
 		}(addr)
 	}
 
 	wg.Wait()
 
+	successCount := len(results)
+	failCount := len(addresses) - successCount
 	logger.Infof("批量地址解析完成: 成功 %d, 失败 %d", successCount, failCount)
 
-	// 如果所有地址都解析失败，返回错误
-	if len(results) == 0 {
+	if successCount == 0 {
 		return nil, fmt.Errorf("批量地址解析失败")
 	}
 
 	return results, nil
 }
 
-// buildCacheKey 构建缓存键
+// buildCacheKey 构建缓存键（使用MD5哈希）
 func buildCacheKey(address string) string {
-	return geocodeCacheKeyPrefix + address
+	hash := md5.Sum([]byte(address))
+	return geocodeCacheKeyPrefix + hex.EncodeToString(hash[:])
 }
 
-// getFromCache 从缓存获取结果
-func (s *GeocodingService) getFromCache(address string) (*GeocodingResult, bool) {
-	cacheKey := buildCacheKey(address)
-	if val, ok := s.cache.Load(cacheKey); ok {
-		if entry, ok := val.(*cacheEntry); ok {
-			// 检查是否过期
-			if time.Now().Before(entry.expiresAt) {
-				return entry.result, true
-			}
-			// 过期则删除
-			s.cache.Delete(cacheKey)
-		}
+// getFromMemoryCache 从内存缓存获取
+func (s *GeocodingService) getFromMemoryCache(cacheKey string) (*GeocodingResult, bool) {
+	val, ok := s.cache.Load(cacheKey)
+	if !ok {
+		return nil, false
 	}
-	return nil, false
+
+	entry, ok := val.(*cacheEntry)
+	if !ok || time.Now().After(entry.expiresAt) {
+		s.cache.Delete(cacheKey)
+		return nil, false
+	}
+
+	return entry.result, true
 }
 
-// setCache 设置缓存
-func (s *GeocodingService) setCache(address string, result *GeocodingResult) {
-	cacheKey := buildCacheKey(address)
+// setToMemoryCache 设置内存缓存
+func (s *GeocodingService) setToMemoryCache(cacheKey string, result *GeocodingResult) {
 	entry := &cacheEntry{
 		result:    result,
 		expiresAt: time.Now().Add(defaultCacheTTL),
 	}
 	s.cache.Store(cacheKey, entry)
 
-	// 使用定时器清理过期缓存（避免 goroutine 泄漏）
 	time.AfterFunc(defaultCacheTTL, func() {
 		s.cache.Delete(cacheKey)
 	})
 }
 
-// callGeocodingAPI 调用百度地图地理编码 API
+// getFromRedisCache 从Redis缓存获取
+func (s *GeocodingService) getFromRedisCache(ctx context.Context, cacheKey string) (*GeocodingResult, error) {
+	data, err := s.redisCache.Get(ctx, cacheKey)
+	if err != nil || data == "" {
+		return nil, err
+	}
+
+	var result GeocodingResult
+	if err := json.Unmarshal([]byte(data), &result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+// setToRedisCache 设置Redis缓存
+func (s *GeocodingService) setToRedisCache(ctx context.Context, cacheKey string, result *GeocodingResult) {
+	data, err := json.Marshal(result)
+	if err != nil {
+		logger.Warnf("序列化地理编码结果失败: %v", err)
+		return
+	}
+
+	if err := s.redisCache.Set(ctx, cacheKey, string(data), defaultCacheTTL); err != nil {
+		logger.Warnf("保存Redis缓存失败: %v", err)
+	}
+}
+
+// GetStats 获取缓存统计
+func (s *GeocodingService) GetStats() CacheStatsData {
+	return s.stats.GetStats()
+}
+
+// ResetStats 重置缓存统计
+func (s *GeocodingService) ResetStats() {
+	s.stats.Reset()
+}
+
+// InvalidateCache 清除指定地址的缓存
+func (s *GeocodingService) InvalidateCache(ctx context.Context, address string) {
+	cacheKey := buildCacheKey(address)
+	s.cache.Delete(cacheKey)
+	if s.redisCache != nil {
+		_ = s.redisCache.Delete(ctx, cacheKey)
+	}
+}
+
+// ClearAllCache 清除所有缓存
+func (s *GeocodingService) ClearAllCache(ctx context.Context) {
+	s.cache.Range(func(key, _ interface{}) bool {
+		s.cache.Delete(key)
+		return true
+	})
+
+	if s.redisCache != nil {
+		pattern := geocodeCacheKeyPrefix + "*"
+		keys, _ := s.redisCache.Keys(ctx, pattern)
+		if len(keys) > 0 {
+			_ = s.redisCache.MDelete(ctx, keys...)
+		}
+	}
+}
+
+// callGeocodingAPI 调用百度地图地理编码API
 func (s *GeocodingService) callGeocodingAPI(ctx context.Context, address string) (*GeocodingResult, error) {
-	// 构建请求 URL
 	params := url.Values{}
 	params.Set("address", address)
 	params.Set("output", "json")
@@ -194,32 +308,27 @@ func (s *GeocodingService) callGeocodingAPI(ctx context.Context, address string)
 
 	apiURL := fmt.Sprintf("%s?%s", baiduGeocodingAPIURL, params.Encode())
 
-	// 创建请求
 	req, err := http.NewRequestWithContext(ctx, "GET", apiURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("创建请求失败: %w", err)
 	}
 
-	// 发送请求
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("请求失败: %w", err)
 	}
 	defer resp.Body.Close()
 
-	// 读取响应
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("读取响应失败: %w", err)
 	}
 
-	// 解析响应
 	var baiduResp BaiduGeocodingResponse
 	if err := json.Unmarshal(body, &baiduResp); err != nil {
 		return nil, fmt.Errorf("解析响应失败: %w", err)
 	}
 
-	// 检查状态
 	if baiduResp.Status != 0 {
 		return nil, fmt.Errorf("地址解析失败: %s", baiduResp.Message)
 	}

@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
@@ -20,7 +21,7 @@ func NewConfigHandler(service systemServices.ConfigService) *ConfigHandler {
 
 // Create 创建参数配置
 func (h *ConfigHandler) Create(c *gin.Context) {
-	var req systemServices.ConfigCreateRequest
+	var req requests.ConfigCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
 		return
@@ -41,7 +42,7 @@ func (h *ConfigHandler) List(c *gin.Context) {
 		rawReq = make(map[string]interface{})
 	}
 
-	params := systemServices.DefaultConfigListParams()
+	params := requests.DefaultConfigListParams()
 
 	// 处理分页参数
 	if val, ok := rawReq["current"]; ok {
@@ -129,7 +130,7 @@ func (h *ConfigHandler) Update(c *gin.Context) {
 		return
 	}
 
-	var req systemServices.ConfigUpdateRequest
+	var req requests.ConfigUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
 		return

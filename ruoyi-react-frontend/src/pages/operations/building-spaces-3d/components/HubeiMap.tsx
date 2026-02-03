@@ -30,8 +30,8 @@ const MAP_CONFIG = {
   defaultZoom: 8,
   // 最小缩放级别（只能缩小到8级）
   minZoom: 8,
-  // 最大缩放级别（只能放大到9级）
-  maxZoom: 9,
+  // 最大缩放级别（只能放大到10级）
+  maxZoom: 10,
 };
 
 interface HubeiMapProps {
@@ -64,6 +64,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
   const [hoveredBuildings, setHoveredBuildings] = useState<BuildingItem[]>([]);
   const [tooltipPosition, setTooltipPosition] = useState<{ x: number; y: number } | null>(null);
   const [selectedCluster, setSelectedCluster] = useState<ClusterGroup | null>(null);
+  const [currentZoom, setCurrentZoom] = useState(8); // 当前缩放级别
 
   const {
     selectBuilding,
@@ -192,6 +193,16 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
           // 遮罩层添加失败，静默处理
         });
 
+        // 监听缩放变化，根据缩放级别显示不同层级的楼宇
+        const handleZoomEnd = () => {
+          const zoom = map.getZoom();
+          setCurrentZoom(zoom);
+        };
+        map.addEventListener('zoomend', handleZoomEnd);
+
+        // 初始设置当前缩放级别
+        setCurrentZoom(MAP_CONFIG.defaultZoom);
+
         setMapLoaded(true);
         setLoading(false);
       } catch (error) {
@@ -214,11 +225,17 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
     markersRef.current.forEach(marker => map.removeOverlay(marker));
     markersRef.current = [];
 
+    // 根据缩放级别过滤楼宇层级
+    // zoom=8 显示level=1, zoom=9 显示level=1, zoom=10 显示level=1和level=2
+    const filteredBuildings = currentZoom === 10
+      ? buildings // zoom=10 显示所有楼宇
+      : buildings.filter((b) => b.level === 1); // zoom=8/9 只显示一级楼宇
+
     // 聚类阈值（像素）
     const CLUSTER_PIXEL_THRESHOLD = 40; // 40px内视为一个聚类
 
     // 楼宇聚类检测
-    const buildingsWithCoords = buildings.filter((b) => b.longitude && b.latitude);
+    const buildingsWithCoords = filteredBuildings.filter((b) => b.longitude && b.latitude);
     const clusterGroups: ClusterGroup[] = [];
     const processedBuildings = new Set<string>();
 
@@ -274,7 +291,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
     clusterGroups.forEach((cluster) => {
       renderClusterMarker(cluster, map, BMap);
     });
-  }, [mapLoaded, buildings]);
+  }, [mapLoaded, buildings, currentZoom]);
 
   // 渲染聚类标记（单个楼宇或多个楼宇聚类）
   const renderClusterMarker = (cluster: ClusterGroup, map: any, BMap: any) => {
@@ -284,13 +301,22 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
     const point = new BMap.Point(clusterLng, clusterLat);
 
     if (isCluster) {
-      // 聚类标记：显示数字圆圈
-      const size = 36 + Math.min(buildings.length * 2, 20); // 动态大小
+      // 聚类标记：显示数字圆圈 - 使用更醒目的样式
+      const size = 48 + Math.min(buildings.length * 2, 24); // 动态大小，更大更醒目
       const clusterIcon = new BMap.Icon(
         'data:image/svg+xml;base64,' + toBase64(`
           <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-            <circle cx="${size/2}" cy="${size/2}" r="${size/2-2}" fill="#ff4d4f" stroke="#fff" stroke-width="2"/>
-            <text x="${size/2}" y="${size/2 + 6}" text-anchor="middle" fill="white" font-size="${size/3.5}" font-weight="bold">${buildings.length}</text>
+            <defs>
+              <filter id="clusterShadow" x="-50%" y="-50%" width="200%" height="200%">
+                <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="rgba(255, 77, 79, 0.5)" flood-opacity="0.7"/>
+              </filter>
+            </defs>
+            <!-- 外圈阴影圆 -->
+            <circle cx="${size/2}" cy="${size/2}" r="${size/2-1}" fill="rgba(255,77,79,0.1)"/>
+            <!-- 主圆 -->
+            <circle cx="${size/2}" cy="${size/2}" r="${size/2-4}" fill="#ff4d4f" stroke="#fff" stroke-width="3" filter="url(#clusterShadow)"/>
+            <!-- 数字 -->
+            <text x="${size/2}" y="${size/2 + 8}" text-anchor="middle" fill="white" font-size="${size/3}" font-weight="bold">${buildings.length}</text>
           </svg>
         `),
         new BMap.Size(size, size),
@@ -316,22 +342,38 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
       map.addOverlay(marker);
       markersRef.current.push(marker);
     } else {
-      // 单个楼宇标记
+      // 单个楼宇标记 - 使用更醒目的样式
       const building = buildings[0];
-      const colors = building.status === 1
-        ? getMapMarkerColor('building', 1)
-        : getMapMarkerColor('building');
+      const isStopped = building.status === 1;
+
+      // 使用醒目的橙红色作为正常楼宇标记，灰色作为停用楼宇标记
+      const mainColor = isStopped ? '#9e9e9e' : '#ff6b35'; // 橙红色更醒目
+      const borderColor = isStopped ? '#757575' : '#ff4d4f';
+      const shadowColor = isStopped ? 'rgba(0,0,0,0.2)' : 'rgba(255, 107, 53, 0.5)';
+
+      // 获取楼宇名称前两个字，不足则取全名
+      const buildingLabel = building.name ? building.name.slice(0, 2) : '楼宇';
 
       const marker = new BMap.Marker(point, {
         icon: new BMap.Icon(
           'data:image/svg+xml;base64,' + toBase64(`
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28">
-              <rect x="2" y="2" width="24" height="24" rx="4" fill="${'main' in colors ? colors.main : colors.normal}" stroke="${colors.border}" stroke-width="2"/>
-              <text x="14" y="19" text-anchor="middle" fill="white" font-size="12" font-weight="bold">楼</text>
+            <svg xmlns="http://www.w3.org/2000/svg" width="42" height="48" viewBox="0 0 42 48">
+              <defs>
+                <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+                  <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="${shadowColor}" flood-opacity="0.6"/>
+                </filter>
+              </defs>
+              <!-- 楼宇图标底座（水滴形状） -->
+              <path d="M21 4 L21 4 Q21 4 21 4 C9 4 4 14 4 22 C4 32 21 44 21 44 C21 44 38 32 38 22 C38 14 33 4 21 4 Z"
+                fill="${mainColor}" stroke="${borderColor}" stroke-width="3" filter="url(#shadow)"/>
+              <!-- 内部圆圈 -->
+              <circle cx="21" cy="20" r="8" fill="white" opacity="0.3"/>
+              <!-- 楼宇名称前两个字 -->
+              <text x="21" y="25" text-anchor="middle" fill="white" font-size="11" font-weight="bold">${buildingLabel}</text>
             </svg>
           `),
-          new BMap.Size(28, 28),
-          new BMap.Size(14, 28)
+          new BMap.Size(42, 48),
+          new BMap.Size(21, 48)
         ),
       });
 
@@ -368,33 +410,38 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
 
   // 显示单个楼宇信息
   const showBuildingInfo = (building: BuildingItem, map: any, BMap: any) => {
+    const isStopped = building.status === 1;
+    const statusColor = isStopped ? '#9e9e9e' : '#ff6b35';
+    const statusBg = isStopped ? '#f5f5f5' : '#fff2e8';
+
     const content = `
-      <div style="padding: 8px; min-width: 250px;">
-        <h3 style="margin: 0 0 12px 0; font-size: 16px; color: #1890ff;">
+      <div style="padding: 12px; min-width: 260px;">
+        <h3 style="margin: 0 0 12px 0; font-size: 16px; color: #1890ff; border-bottom: 2px solid #1890ff; padding-bottom: 8px;">
           ${building.name}
         </h3>
-        <div style="font-size: 12; color: #666; line-height: 1.8;">
-          <div>📍 ${building.cityName || '未知城市'}</div>
+        <div style="font-size: 13px; color: #666; line-height: 1.8;">
           <div>📌 ${building.address || '暂无地址'}</div>
           <div style="margin-top: 8px;">
-            <span style="color: ${building.status === 1 ? '#ff4d4f' : '#52c41a'}">
-              ● ${building.status === 1 ? '已停用' : '正常'}
+            <span style="display: inline-block; padding: 2px 10px; background: ${statusBg}; color: ${statusColor}; border-radius: 12px; font-size: 12px; font-weight: 500;">
+              ${isStopped ? '⏸ 已停用' : '✓ 正常'}
             </span>
-            <span style="margin-left: 16px;">🏢 ${building.floorCount || 0} 层</span>
-            <span style="margin-left: 16px;">🪑 ${building.workstationCount || 0} 工位</span>
+            <span style="margin-left: 12px;">🏢 ${building.floorCount || 0} 层</span>
+            <span style="margin-left: 12px;">🪑 ${building.workstationCount || 0} 工位</span>
           </div>
         </div>
         <div style="margin-top: 12px; text-align: right;">
           <button
             onclick="window.viewBuildingDetails('${building.id}')"
             style="
-              padding: 6px 16px;
-              background: #1890ff;
+              padding: 6px 18px;
+              background: linear-gradient(135deg, #1890ff, #096dd9);
               color: white;
               border: none;
-              border-radius: 4px;
+              border-radius: 6px;
               cursor: pointer;
-              font-size: 12;
+              font-size: 13px;
+              font-weight: 500;
+              box-shadow: 0 2px 4px rgba(24, 144, 255, 0.3);
             "
           >
             查看详情
@@ -502,7 +549,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
                 {hoveredBuildings[0].name}
               </div>
               <div style={{ fontSize: 11, color: '#666' }}>
-                {hoveredBuildings[0].cityName} · {hoveredBuildings[0].floorCount || 0}层 · {hoveredBuildings[0].workstationCount || 0}工位
+                {hoveredBuildings[0].floorCount || 0}层 · {hoveredBuildings[0].workstationCount || 0}工位
               </div>
             </div>
           ) : (
@@ -544,11 +591,22 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
         }}
       >
         <div style={{ fontWeight: 'bold', marginBottom: 8, fontSize: 14 }}>数据统计</div>
-        <div>楼宇总数: <Badge count={buildings.length} showZero style={{ backgroundColor: '#52c41a' }} /></div>
+        <div>当前缩放: <Badge count={currentZoom} showZero style={{ backgroundColor: '#1890ff' }} /></div>
+        <div>显示层级: <Badge count={currentZoom === 10 ? '全部' : '一级(城市)'} showZero style={{ backgroundColor: currentZoom === 10 ? '#722ed1' : '#13c2c2' }} /></div>
+        <div>一级楼宇: <Badge count={buildings.filter(b => b.level === 1).length} showZero /></div>
+        <div>二级楼宇: <Badge count={buildings.filter(b => b.level === 2).length} showZero /></div>
         <div>有坐标: <Badge count={buildings.filter(b => b.longitude && b.latitude).length} showZero style={{ backgroundColor: buildings.filter(b => b.longitude && b.latitude).length > 0 ? '#52c41a' : '#ff4d4f' }} /></div>
         <div style={{ marginTop: 8, fontSize: 11, color: '#999' }}>
+          <div>👆 滚轮缩放切换层级</div>
           <div>👆 悬停查看简要信息</div>
           <div>🖱️ 点击查看详细信息</div>
+        </div>
+
+        {/* 层级说明 */}
+        <div style={{ marginTop: 8, padding: '8px', background: '#e6f7ff', borderRadius: '4px', border: '1px solid #91d5ff', color: '#096dd9' }}>
+          <div style={{ fontWeight: 'bold', marginBottom: 4 }}>📋 层级说明</div>
+          <div style={{ fontSize: 11 }}>• 缩放级别 8-9: 显示一级楼宇（城市级汇总）</div>
+          <div style={{ fontSize: 11 }}>• 缩放级别 10: 显示全部楼宇（一级+二级）</div>
         </div>
 
         {/* 有坐标的楼宇为 0 时的提示 */}
@@ -664,7 +722,6 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
 
                     {/* 详细信息 */}
                     <div style={{ fontSize: 12, color: '#666', lineHeight: 1.8 }}>
-                      <div>📍 {building.cityName || '未知城市'}</div>
                       <div>📌 {building.address || '暂无地址'}</div>
                       <div style={{ marginTop: 4 }}>
                         <span>🏢 {building.floorCount || 0} 层</span>

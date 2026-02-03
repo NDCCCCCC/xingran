@@ -5,11 +5,12 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	"fmt"
 )
 
@@ -41,7 +42,7 @@ func NewNoticeHandler(
 
 // Create 创建通知公告
 func (h *NoticeHandler) Create(c *gin.Context) {
-	var req systemServices.NoticeCreateRequest
+	var req requests.NoticeCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
 		return
@@ -163,7 +164,7 @@ func (h *NoticeHandler) List(c *gin.Context) {
 		rawReq = make(map[string]interface{})
 	}
 
-	params := systemServices.DefaultNoticeListParams()
+	params := requests.DefaultNoticeListParams()
 
 	// 处理分页参数
 	if val, ok := rawReq["current"]; ok {
@@ -228,7 +229,7 @@ func (h *NoticeHandler) Update(c *gin.Context) {
 		return
 	}
 
-	var req systemServices.NoticeUpdateRequest
+	var req requests.NoticeUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
 		return
@@ -406,7 +407,7 @@ func (h *NoticeHandler) SetChannels(c *gin.Context) {
 		return
 	}
 
-	var req []systemServices.NotificationChannelRequest
+	var req []requests.NotificationChannelRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
 		return

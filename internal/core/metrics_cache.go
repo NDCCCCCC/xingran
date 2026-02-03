@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/pkg/cache"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/pkg/system"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 )
 
 // MetricsCacheService 系统指标缓存服务
@@ -72,7 +72,7 @@ func (s *MetricsCacheService) RefreshMetrics(ctx context.Context) error {
 	// 删除L2缓存
 	if s.core.Cache != nil {
 		if err := s.core.Cache.Delete(ctx, key); err != nil {
-			log.Printf("删除L2缓存失败: %v", err)
+			applogger.Warnf("删除L2缓存失败: %v", err)
 		}
 	}
 
@@ -88,7 +88,7 @@ func (s *MetricsCacheService) RefreshServerInfo(ctx context.Context) error {
 	s.manager.InvalidateCache(key)
 	if s.core.Cache != nil {
 		if err := s.core.Cache.Delete(ctx, key); err != nil {
-			log.Printf("删除服务器信息缓存失败: %v", err)
+			applogger.Warnf("删除服务器信息缓存失败: %v", err)
 		}
 	}
 
@@ -130,7 +130,7 @@ func (s *MetricsCacheService) updateMetricsImmediately(ctx context.Context) erro
 		}
 	}
 
-	log.Printf("系统指标已刷新: CPU=%.1f%%, Memory=%.1f%%",
+	applogger.Warnf("系统指标已刷新: CPU=%.1f%%, Memory=%.1f%%",
 		metricsData.CPUUsage, metricsData.MemoryUsage)
 
 	return nil
@@ -159,32 +159,32 @@ func (s *MetricsCacheService) ClearCache(ctx context.Context) error {
 	// 清空L2缓存
 	if s.core.Cache != nil {
 		if err := s.core.Cache.FlushDB(ctx); err != nil {
-			log.Printf("清空L2缓存失败: %v", err)
+			applogger.Warnf("清空L2缓存失败: %v", err)
 			return err
 		}
 	}
 
-	log.Println("所有指标缓存已清空")
+	applogger.Infof("所有指标缓存已清空")
 	return nil
 }
 
 // PreheatCache 预热缓存
 func (s *MetricsCacheService) PreheatCache(ctx context.Context) error {
-	log.Println("开始预热缓存...")
+	applogger.Infof("开始预热缓存...")
 
 	// 预热系统指标
 	if err := s.updateMetricsImmediately(ctx); err != nil {
-		log.Printf("预热系统指标失败: %v", err)
+		applogger.Warnf("预热系统指标失败: %v", err)
 		return err
 	}
 
 	// 预热服务器信息
 	if _, err := s.GetServerInfo(ctx); err != nil {
-		log.Printf("预热服务器信息失败: %v", err)
+		applogger.Warnf("预热服务器信息失败: %v", err)
 		return err
 	}
 
-	log.Println("缓存预热完成")
+	applogger.Infof("缓存预热完成")
 	return nil
 }
 
@@ -193,7 +193,7 @@ func (s *MetricsCacheService) Stop() {
 	if s.manager != nil {
 		s.manager.Stop()
 	}
-	log.Println("指标缓存服务已停止")
+	applogger.Infof("指标缓存服务已停止")
 }
 
 // getHostname 获取主机名

@@ -1,6 +1,6 @@
 package models
 
-// WorkstationStatus 工位状态枚举
+// 工位状态枚举
 type WorkstationStatus int
 
 const (
@@ -9,7 +9,7 @@ const (
 	WorkstationStatusMaintain  WorkstationStatus = 2 // 维护 - 维修中不可用
 )
 
-// WorkstationType 工位类型枚举
+// 工位类型枚举
 type WorkstationType int
 
 const (
@@ -18,24 +18,53 @@ const (
 	WorkstationTypeManager WorkstationType = 2 // 管理工位
 )
 
-// Workstation 工位模型（增强版，支持运维管理）
+// 桌型枚举
+const (
+	DeskTypeStraight = 0 // 一字型
+	DeskTypeLShape   = 1 // L型
+)
+
+// 默认值常量
+const (
+	DefaultWorkstationRotation = 0    // 默认旋转角度（度）
+	DefaultWorkstationWidth    = 160  // 默认工位宽度（厘米）
+	DefaultWorkstationDepth    = 70   // 默认工位深度（厘米）
+	DefaultWorkstationDeskType = 0    // 默认桌型
+)
+
+// Workstation 工位模型（支持运维管理）
 type Workstation struct {
 	BaseModel
-	WorkstationName string            `gorm:"size:100;not null" json:"name"`
-	DeptID          *string           `gorm:"size:64" json:"deptId,omitempty"`
-	DeptName        *string           `gorm:"size:100" json:"deptName,omitempty"`
-	Location        *string           `gorm:"size:200" json:"location,omitempty"`
-	Floor           *string           `gorm:"size:50" json:"floor,omitempty"`      // 旧字段：楼层字符串
-	FloorID         *string           `gorm:"size:64" json:"floorId,omitempty"`    // 新增：楼层ID（关联ops_floors）
-	FloorName       *string           `gorm:"size:100" json:"floorName,omitempty"` // 新增：楼层名称
-	WorkstationType WorkstationType   `gorm:"default:0" json:"type"`
-	Status          WorkstationStatus `gorm:"default:0" json:"status"`
-	Description     *string           `gorm:"size:500" json:"remark,omitempty"`    // remark 兼容前端
-	UserID          *string           `gorm:"size:64" json:"userId,omitempty"`     // 所属人员ID
-	UserName        *string           `gorm:"size:100" json:"userName,omitempty"`  // 所属人员名称
-	PositionX       *int              `json:"positionX,omitempty"`                 // 平面图X坐标
-	PositionY       *int              `json:"positionY,omitempty"`                 // 平面图Y坐标
-	Rotation        *int              `gorm:"default:0" json:"rotation,omitempty"` // 平面图旋转角度（度），0-360
+
+	// 基本信息
+	WorkstationName string            `gorm:"size:100;not null" json:"name"`                 // 工位名称
+	WorkstationType WorkstationType   `gorm:"default:0" json:"type"`                          // 工位类型
+	Status          WorkstationStatus `gorm:"default:0" json:"status"`                        // 工位状态
+	Description     *string           `gorm:"size:500" json:"remark,omitempty"`               // 备注
+
+	// 组织信息
+	DeptID   *string `gorm:"size:64" json:"deptId,omitempty"`   // 部门ID
+	DeptName *string `gorm:"size:100" json:"deptName,omitempty"` // 部门名称
+
+	// 位置信息
+	Location *string `gorm:"size:200" json:"location,omitempty"` // 位置描述
+	Floor    *string `gorm:"size:50" json:"floor,omitempty"`     // 楼层字符串（旧字段）
+	FloorID  *string `gorm:"size:64" json:"floorId,omitempty"`   // 楼层ID（关联ops_floors）
+	FloorName *string `gorm:"size:100" json:"floorName,omitempty"` // 楼层名称
+
+	// 用户信息
+	UserID   *string `gorm:"size:64" json:"userId,omitempty"`   // 所属人员ID
+	UserName *string `gorm:"size:100" json:"userName,omitempty"` // 所属人员名称
+
+	// 平面图信息
+	PositionX *int `json:"positionX,omitempty"`                 // X坐标
+	PositionY *int `json:"positionY,omitempty"`                 // Y坐标
+	Rotation  *int `gorm:"default:0" json:"rotation,omitempty"` // 旋转角度（度）0-360
+
+	// 尺寸信息（单位：毫米）
+	Width    *int `gorm:"default:160" json:"width,omitempty"`    // 宽度，默认1600mm
+	Depth    *int `gorm:"default:70" json:"depth,omitempty"`     // 深度，默认700mm
+	DeskType *int `gorm:"default:0" json:"deskType,omitempty"`   // 桌型：0=一字型, 1=L型
 }
 
 // TableName 设置表名

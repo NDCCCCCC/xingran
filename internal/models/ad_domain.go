@@ -88,8 +88,8 @@ const (
 // ADGroup AD域用户组
 type ADGroup struct {
 	BaseModel
-	ADConfigID  string       `gorm:"type:uuid;not null;index:idx_ad_group_config,priority:1" json:"adConfigId"`
-	GroupDN     string       `gorm:"size:500;not null" json:"groupDn"`
+	ADConfigID  string       `gorm:"type:uuid;not null;index:idx_ad_group_config,priority:1;uniqueIndex:uni_sys_ad_group_config_dn,priority:1" json:"adConfigId"`
+	GroupDN     string       `gorm:"size:500;not null;uniqueIndex:uni_sys_ad_group_config_dn,priority:2" json:"groupDn"`
 	GroupName   string       `gorm:"size:255;not null" json:"groupName"`
 	GroupScope  ADGroupScope `gorm:"size:50" json:"groupScope,omitempty"`
 	GroupType   ADGroupType  `json:"groupType,omitempty"`
@@ -108,8 +108,8 @@ func (ADGroup) TableName() string {
 // ADUser AD域用户
 type ADUser struct {
 	BaseModel
-	ADConfigID         string     `gorm:"type:uuid;not null;index:idx_ad_user_config,priority:1" json:"adConfigId"`
-	UserDN             string     `gorm:"size:500;not null" json:"userDn"`
+	ADConfigID         string     `gorm:"type:uuid;not null;index:idx_ad_user_config,priority:1;uniqueIndex:uni_sys_ad_user_config_dn,priority:1" json:"adConfigId"`
+	UserDN             string     `gorm:"size:500;not null;uniqueIndex:uni_sys_ad_user_config_dn,priority:2" json:"userDn"`
 	Username           string     `gorm:"size:255;not null;index:idx_ad_user_username" json:"username"`
 	DisplayName        string     `gorm:"size:255" json:"displayName,omitempty"`
 	Email              string     `gorm:"size:255;index:idx_ad_user_email" json:"email,omitempty"`
@@ -192,7 +192,7 @@ type ADSyncLog struct {
 	UserCount    int          `gorm:"default:0" json:"userCount"`
 	ComputerCount int          `gorm:"default:0" json:"computerCount"`
 	ErrorCount   int          `gorm:"default:0" json:"errorCount"`
-	ErrorMsg     string       `gorm:"type:text;column:error_message" json:"errorMessage,omitempty"`
+	ErrorMsg     string       `gorm:"type:text;column:error_msg" json:"errorMessage,omitempty"`
 	CreatedAt    time.Time    `json:"createdAt"`
 }
 
@@ -234,22 +234,17 @@ const (
 	ADPasswordExpired = 0x800000
 )
 
-// IsDisabled 检查账户是否禁用
+// IsDisabledByUAC 检查账户是否禁用
 func (u *ADUser) IsDisabledByUAC() bool {
 	return u.UserAccountControl&ADAccountDisable != 0
 }
 
-// IsLocked 检查账户是否锁定
+// IsLockedByUAC 检查账户是否锁定
 func (u *ADUser) IsLockedByUAC() bool {
 	return u.UserAccountControl&ADLockout != 0
 }
 
-// IsPasswordExpired 检查密码是否过期
+// IsPasswordExpiredByUAC 检查密码是否过期
 func (u *ADUser) IsPasswordExpiredByUAC() bool {
 	return u.UserAccountControl&ADPasswordExpired != 0
-}
-
-// IsDontExpirePassword 检查密码是否永不过期
-func (u *ADUser) IsDontExpirePassword() bool {
-	return u.UserAccountControl&ADDontExpirePassword != 0
 }

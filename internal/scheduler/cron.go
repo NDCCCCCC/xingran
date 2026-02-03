@@ -3,7 +3,6 @@ package scheduler
 import (
 	"context"
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
@@ -11,6 +10,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/websocket"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -147,15 +147,15 @@ type Logger interface {
 type defaultLogger struct{}
 
 func (l *defaultLogger) Infof(format string, args ...interface{}) {
-	log.Printf("[INFO] "+format, args...)
+	applogger.Infof(format, args...)
 }
 
 func (l *defaultLogger) Warnf(format string, args ...interface{}) {
-	log.Printf("[WARN] "+format, args...)
+	applogger.Warnf(format, args...)
 }
 
 func (l *defaultLogger) Errorf(format string, args ...interface{}) {
-	log.Printf("[ERROR] "+format, args...)
+	applogger.Errorf(format, args...)
 }
 
 // Scheduler 定时任务调度器
@@ -559,7 +559,7 @@ func executeNoticePublishTask(ctx context.Context, params map[string]interface{}
 		Where("id = ? AND publish_status = ?", noticeID, models.PublishStatusScheduled).
 		First(&notice).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			log.Printf("通知不存在或已发布: %s", noticeID)
+			applogger.Infof("通知不存在或已发布: %s", noticeID)
 			return nil
 		}
 		return fmt.Errorf("查询通知失败: %w", err)
@@ -573,9 +573,9 @@ func executeNoticePublishTask(ctx context.Context, params map[string]interface{}
 	// 查询对应的 Job，检查任务类型
 	jobName := getNoticeJobName(noticeID)
 	if err := db.Where("job_name = ?", jobName).First(&job).Error; err != nil {
-		log.Printf("警告：未找到对应任务 [%s]", jobName)
+		applogger.Warnf("未找到对应任务 [%s]", jobName)
 	} else if job.MisfirePolicy == models.MisfirePolicyExecuteOnce {
-		log.Printf("检测到一次性任务，执行完成后将删除: %s", jobName)
+		applogger.Infof("检测到一次性任务，执行完成后将删除: %s", jobName)
 	}
 
 	// 处理发布状态：一次性任务更新为已发布
@@ -596,10 +596,10 @@ func executeNoticePublishTask(ctx context.Context, params map[string]interface{}
 	// 发送多渠道通知（邮件、短信、API等）
 	senderService := services.NewNotificationSenderService(db)
 	if err := senderService.SendNotification(ctx, noticeID); err != nil {
-		log.Printf("发送多渠道通知失败: %v", err)
+		applogger.Warnf("发送多渠道通知失败: %v", err)
 	}
 
-	log.Printf("通知发布成功: %s", notice.NoticeTitle)
+	applogger.Infof("通知发布成功: %s", notice.NoticeTitle)
 	return nil
 }
 
@@ -614,7 +614,7 @@ func shouldStopNotice(endDate *string, title, noticeID string, db *gorm.DB) bool
 		return false
 	}
 
-	log.Printf("通知 [%s] 已超过结束时间，停止任务", title)
+	applogger.Infof("通知 [%s] 已超过结束时间，停止任务", title)
 
 	// 删除对应的定时任务
 	jobName := getNoticeJobName(noticeID)
@@ -622,9 +622,9 @@ func shouldStopNotice(endDate *string, title, noticeID string, db *gorm.DB) bool
 		var job models.Job
 		if err := db.Where("job_name = ?", jobName).First(&job).Error; err == nil {
 			if err := GlobalScheduler.RemoveJob(job.ID); err != nil {
-				log.Printf("删除任务失败: %v", err)
+				applogger.Warnf("删除任务失败: %v", err)
 			} else {
-				log.Printf("周期性任务因结束时间已停止: %s", jobName)
+				applogger.Infof("周期性任务因结束时间已停止: %s", jobName)
 			}
 		}
 	}
@@ -639,12 +639,12 @@ func handleTaskLifecycle(job models.Job, jobName, noticeID string) {
 
 	if job.MisfirePolicy == models.MisfirePolicyExecuteOnce {
 		if err := GlobalScheduler.RemoveJob(job.ID); err != nil {
-			log.Printf("删除一次性任务失败: %v", err)
+			applogger.Warnf("删除一次性任务失败: %v", err)
 		} else {
-			log.Printf("一次性任务已自动删除: %s", jobName)
+			applogger.Infof("一次性任务已自动删除: %s", jobName)
 		}
 	} else if job.ID != "" {
-		log.Printf("周期性任务继续执行: %s", jobName)
+		applogger.Infof("周期性任务继续执行: %s", jobName)
 	}
 }
 
@@ -656,7 +656,7 @@ func broadcastNoticeToUsers(db *gorm.DB, noticeID, title string, priority, targe
 
 	targetUserIDs, err := getTargetUserIDs(db, noticeID, targetType)
 	if err != nil {
-		log.Printf("获取目标用户失败: %v", err)
+		applogger.Warnf("获取目标用户失败: %v", err)
 		return
 	}
 
@@ -672,7 +672,7 @@ func broadcastNoticeToUsers(db *gorm.DB, noticeID, title string, priority, targe
 		Timestamp: time.Now().Unix(),
 	}
 	GlobalNoticeHub.BroadcastToUsers(targetUserIDs, message)
-	log.Printf("通知已发布并推送给 %d 个用户: %s", len(targetUserIDs), title)
+	applogger.Infof("通知已发布并推送给 %d 个用户: %s", len(targetUserIDs), title)
 }
 
 // getTargetUserIDs 获取通知的目标用户ID列表
@@ -718,7 +718,7 @@ func executeDutyReminderTask(ctx context.Context, params map[string]interface{})
 		return fmt.Errorf("查询值班配置失败: %w", err)
 	}
 	if !enabled {
-		log.Printf("值班提醒已禁用，跳过执行")
+		applogger.Infof("值班提醒已禁用，跳过执行")
 		return nil
 	}
 
@@ -731,7 +731,7 @@ func executeDutyReminderTask(ctx context.Context, params map[string]interface{})
 
 	// 如果没有值班人员，记录日志并返回
 	if len(members) == 0 {
-		log.Printf("今日暂无值班人员: %s", today)
+		applogger.Infof("今日暂无值班人员: %s", today)
 		return nil
 	}
 
@@ -810,7 +810,7 @@ func sendDutyReminderNotification(members []dutyMember) {
 		Timestamp: time.Now().Unix(),
 	}
 	GlobalNoticeHub.BroadcastToUsers(userIDs, message)
-	log.Printf("值班提醒已发送给 %d 个用户: %s", len(userIDs), memberList)
+	applogger.Infof("值班提醒已发送给 %d 个用户: %s", len(userIDs), memberList)
 }
 
 // formatMemberList 格式化值班人员列表
@@ -907,7 +907,7 @@ func executeDeviceStatusCheckTask(ctx context.Context) error {
 		return fmt.Errorf("设备状态检查失败: %w", err)
 	}
 
-	log.Printf("设备状态检查完成: 在线=%d, 离线=%d", online, offline)
+	applogger.Infof("设备状态检查完成: 在线=%d, 离线=%d", online, offline)
 	return nil
 }
 
@@ -922,7 +922,7 @@ func executeDeviceInfoUpdateTask(ctx context.Context) error {
 		return fmt.Errorf("设备信息更新失败: %w", err)
 	}
 
-	log.Printf("设备信息更新任务已提交")
+	applogger.Infof("设备信息更新任务已提交")
 	return nil
 }
 
@@ -937,7 +937,7 @@ func executePortCollectionTask(ctx context.Context) error {
 		return fmt.Errorf("端口状态采集失败: %w", err)
 	}
 
-	log.Printf("端口状态采集完成")
+	applogger.Infof("端口状态采集完成")
 	return nil
 }
 
@@ -952,7 +952,7 @@ func executeMACCollectionTask(ctx context.Context) error {
 		return fmt.Errorf("MAC地址采集失败: %w", err)
 	}
 
-	log.Printf("MAC地址采集完成")
+	applogger.Infof("MAC地址采集完成")
 	return nil
 }
 
@@ -967,7 +967,7 @@ func executeConfigBackupTask(ctx context.Context) error {
 		return fmt.Errorf("配置备份失败: %w", err)
 	}
 
-	log.Printf("配置备份完成")
+	applogger.Infof("配置备份完成")
 	return nil
 }
 

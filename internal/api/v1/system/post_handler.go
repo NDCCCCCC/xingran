@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
@@ -20,7 +21,7 @@ func NewPostHandler(service systemServices.PostService) *PostHandler {
 
 // Create 创建岗位
 func (h *PostHandler) Create(c *gin.Context) {
-	var req systemServices.PostCreateRequest
+	var req requests.PostCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
 		return
@@ -41,7 +42,7 @@ func (h *PostHandler) List(c *gin.Context) {
 		rawReq = make(map[string]interface{})
 	}
 
-	params := systemServices.DefaultPostListParams()
+	params := requests.DefaultPostListParams()
 
 	// 处理分页参数
 	if val, ok := rawReq["current"]; ok {
@@ -117,7 +118,7 @@ func (h *PostHandler) Update(c *gin.Context) {
 		return
 	}
 
-	var req systemServices.PostUpdateRequest
+	var req requests.PostUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
 		return

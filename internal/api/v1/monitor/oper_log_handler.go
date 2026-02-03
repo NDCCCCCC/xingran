@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	monitorServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/monitor"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
 // OperLogHandler 操作日志处理器
@@ -110,8 +111,8 @@ func (h *OperLogHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.Delete(c.Request.Context(), id); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.service.Delete(c.Request.Context(), id)
+	if !responseHelpers.HandleServiceError(c, err, "删除操作日志") {
 		return
 	}
 
@@ -132,13 +133,12 @@ func (h *OperLogHandler) BatchDelete(c *gin.Context) {
 		IDs []string `json:"ids" binding:"required,min=1"`
 	}
 
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
-	if err := h.service.BatchDelete(c.Request.Context(), req.IDs); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.service.BatchDelete(c.Request.Context(), req.IDs)
+	if !responseHelpers.HandleServiceError(c, err, "批量删除操作日志") {
 		return
 	}
 
@@ -154,8 +154,8 @@ func (h *OperLogHandler) BatchDelete(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Router /monitor/oper-logs/clean [post]
 func (h *OperLogHandler) Clean(c *gin.Context) {
-	if err := h.service.Clean(c.Request.Context()); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.service.Clean(c.Request.Context())
+	if !responseHelpers.HandleServiceError(c, err, "清空操作日志") {
 		return
 	}
 

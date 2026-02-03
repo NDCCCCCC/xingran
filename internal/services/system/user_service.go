@@ -7,6 +7,7 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	"gorm.io/gorm"
 )
 
@@ -25,11 +26,11 @@ type CacheInvalidator interface {
 
 // UserService 用户服务接口
 type UserService interface {
-	Create(ctx context.Context, user *UserCreateRequest) error
-	Update(ctx context.Context, user *UserUpdateRequest) error
+	Create(ctx context.Context, user *requests.UserCreateRequest) error
+	Update(ctx context.Context, user *requests.UserUpdateRequest) error
 	Delete(ctx context.Context, id string) error
 	GetByID(ctx context.Context, id string) (*models.User, error)
-	List(ctx context.Context, params UserListParams) (*PageResult, error)
+	List(ctx context.Context, params requests.UserListParams) (*PageResult, error)
 	BatchDelete(ctx context.Context, ids []string) error
 	UpdateStatus(ctx context.Context, id string, status int) error
 	ResetPassword(ctx context.Context, id string, newPassword string) error
@@ -51,91 +52,6 @@ func NewUserService(db *gorm.DB, pwdManager PasswordManager, cacheInvalidator Ca
 	}
 }
 
-// ==================== 请求/响应类型 ====================
-
-// UserListParams 用户列表查询参数
-type UserListParams struct {
-	Username  *string
-	Nickname  *string
-	Phone     *string
-	Status    *int
-	DeptID    *string
-	BeginTime *string
-	EndTime   *string
-	Current   int
-	PageSize  int
-}
-
-// DefaultUserListParams 默认列表参数
-func DefaultUserListParams() UserListParams {
-	return UserListParams{
-		Current:  1,
-		PageSize: 10,
-	}
-}
-
-// UserCreateRequest 创建用户请求
-type UserCreateRequest struct {
-	Username   string
-	Password   string
-	Nickname   *string
-	EmployeeNo *string
-	Email      *string
-	Phone      *string
-	Gender     models.Gender
-	Status     models.UserStatus
-	DeptID     *string
-	RoleIds    []string
-	PostIds    []string
-	Remark     *string
-}
-
-// ToModel 转换为用户模型
-func (r *UserCreateRequest) ToModel(hashedPassword string) models.User {
-	return models.User{
-		Username:   r.Username,
-		Password:   hashedPassword,
-		Nickname:   r.Nickname,
-		EmployeeNo: r.EmployeeNo,
-		Email:      r.Email,
-		Phone:      r.Phone,
-		Gender:     r.Gender,
-		Status:     r.Status,
-		DeptID:     r.DeptID,
-		Remark:     toStringPtr(r.Remark),
-	}
-}
-
-// UserUpdateRequest 更新用户请求
-type UserUpdateRequest struct {
-	ID         string
-	Nickname   *string
-	EmployeeNo *string
-	Email      *string
-	Phone      *string
-	Gender     models.Gender
-	Status     models.UserStatus
-	DeptID     *string
-	RoleIds    []string
-	PostIds    []string
-	Remark     *string
-}
-
-// ToModel 转换为用户模型
-func (r *UserUpdateRequest) ToModel() models.User {
-	return models.User{
-		BaseModel:  models.BaseModel{ID: r.ID},
-		Nickname:   r.Nickname,
-		EmployeeNo: r.EmployeeNo,
-		Email:      r.Email,
-		Phone:      r.Phone,
-		Gender:     r.Gender,
-		Status:     r.Status,
-		DeptID:     r.DeptID,
-		Remark:     toStringPtr(r.Remark),
-	}
-}
-
 // PageResult 分页结果
 type PageResult struct {
 	List     interface{} `json:"list"`
@@ -147,7 +63,7 @@ type PageResult struct {
 // ==================== 服务方法实现 ====================
 
 // Create 创建用户
-func (s *userService) Create(ctx context.Context, req *UserCreateRequest) error {
+func (s *userService) Create(ctx context.Context, req *requests.UserCreateRequest) error {
 	// 检查用户名是否已存在
 	var count int64
 	if err := s.db.WithContext(ctx).Model(&models.User{}).Where("username = ?", req.Username).Count(&count).Error; err != nil {
@@ -203,7 +119,7 @@ func (s *userService) Create(ctx context.Context, req *UserCreateRequest) error 
 }
 
 // Update 更新用户
-func (s *userService) Update(ctx context.Context, req *UserUpdateRequest) error {
+func (s *userService) Update(ctx context.Context, req *requests.UserUpdateRequest) error {
 	// 检查用户是否存在
 	var user models.User
 	if err := s.db.WithContext(ctx).First(&user, "id = ?", req.ID).Error; err != nil {
@@ -343,7 +259,7 @@ func (s *userService) GetByID(ctx context.Context, id string) (*models.User, err
 }
 
 // List 查询用户列表
-func (s *userService) List(ctx context.Context, params UserListParams) (*PageResult, error) {
+func (s *userService) List(ctx context.Context, params requests.UserListParams) (*PageResult, error) {
 	var total int64
 	var list []models.User
 

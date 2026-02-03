@@ -17,45 +17,52 @@ import type {
   PageResponse,
 } from '@/types';
 
+// ==================== 通用 CRUD 工厂函数 ====================
+
+interface CrudApiConfig {
+  basePath: string;
+}
+
+function createCrudApi<T>(config: CrudApiConfig) {
+  const { basePath } = config;
+
+  return {
+    list: async (params: PageParams & Record<string, unknown>) => {
+      return await post<BaseResponse<PageResponse<T>>>(`${basePath}/list`, params);
+    },
+
+    get: async (id: string) => {
+      return await post<BaseResponse<T>>(`${basePath}/${id}`, {});
+    },
+
+    create: async (data: Partial<T>) => {
+      return await post(basePath, data);
+    },
+
+    update: async (id: string, data: Partial<T>) => {
+      return await post(`${basePath}/${id}/update`, data);
+    },
+
+    delete: async (id: string) => {
+      return await post(`${basePath}/${id}/delete`, {});
+    },
+
+    batch: async (action: string, data: Record<string, unknown>) => {
+      return await post(`${basePath}/batch`, { action, ...data });
+    },
+  };
+}
+
 // ==================== 楼宇管理 ====================
 
 export interface BuildingListParams extends PageParams {
   name?: string;
   code?: string;
   status?: number;
+  orgId?: string;  // 所属机构ID，用于按部门筛选
 }
 
-export const buildingApi = {
-  // 查询楼宇列表
-  list: async (params: BuildingListParams) => {
-    return await post<BaseResponse<PageResponse<Building>>>('/ops/building/list', params);
-  },
-
-  // 获取楼宇详情
-  get: async (id: string) => {
-    return await post<BaseResponse<Building>>('/ops/building/' + id, {});
-  },
-
-  // 创建楼宇
-  create: async (data: Partial<Building>) => {
-    return await post('/ops/building', data);
-  },
-
-  // 更新楼宇
-  update: async (id: string, data: Partial<Building>) => {
-    return await post('/ops/building/' + id + '/update', data);
-  },
-
-  // 删除楼宇
-  delete: async (id: string) => {
-    return await post('/ops/building/' + id + '/delete', {});
-  },
-
-  // 批量操作
-  batch: async (action: string, data: Record<string, unknown>) => {
-    return await post('/ops/building/batch', { action, ...data });
-  },
-};
+export const buildingApi = createCrudApi<Building>({ basePath: '/ops/building' });
 
 // ==================== 楼层管理 ====================
 
@@ -66,34 +73,13 @@ export interface FloorListParams extends PageParams {
   status?: number;
 }
 
+const floorCrudApi = createCrudApi<Floor>({ basePath: '/ops/floor' });
+
 export const floorApi = {
-  list: async (params: FloorListParams) => {
-    return await post<BaseResponse<PageResponse<Floor>>>('/ops/floor/list', params);
-  },
+  ...floorCrudApi,
 
-  get: async (id: string) => {
-    return await post<BaseResponse<Floor>>('/ops/floor/' + id, {});
-  },
-
-  create: async (data: Partial<Floor>) => {
-    return await post('/ops/floor', data);
-  },
-
-  update: async (id: string, data: Partial<Floor>) => {
-    return await post('/ops/floor/' + id + '/update', data);
-  },
-
-  delete: async (id: string) => {
-    return await post('/ops/floor/' + id + '/delete', {});
-  },
-
-  // 获取楼层树
   tree: async () => {
     return await post<BaseResponse<Floor[]>>('/ops/floor/tree', {});
-  },
-
-  batch: async (action: string, data: Record<string, unknown>) => {
-    return await post('/ops/floor/batch', { action, ...data });
   },
 };
 
@@ -106,34 +92,13 @@ export interface WorkstationListParams extends PageParams {
   status?: number;
 }
 
+const workstationCrudApi = createCrudApi<WorkstationOps>({ basePath: '/ops/workstation' });
+
 export const workstationApi = {
-  list: async (params: WorkstationListParams) => {
-    return await post<BaseResponse<PageResponse<WorkstationOps>>>('/ops/workstation/list', params);
-  },
+  ...workstationCrudApi,
 
-  get: async (id: string) => {
-    return await post<BaseResponse<WorkstationOps>>('/ops/workstation/' + id, {});
-  },
-
-  create: async (data: Partial<WorkstationOps>) => {
-    return await post('/ops/workstation', data);
-  },
-
-  update: async (id: string, data: Partial<WorkstationOps>) => {
-    return await post('/ops/workstation/' + id + '/update', data);
-  },
-
-  delete: async (id: string) => {
-    return await post('/ops/workstation/' + id + '/delete', {});
-  },
-
-  // 批量更新位置
   updatePositions: async (items: { id: string; positionX: number; positionY: number }[]) => {
     return await post('/ops/workstation/positions', { items });
-  },
-
-  batch: async (action: string, data: Record<string, unknown>) => {
-    return await post('/ops/workstation/batch', { action, ...data });
   },
 };
 
@@ -146,31 +111,7 @@ export interface ServerRoomListParams extends PageParams {
   status?: number;
 }
 
-export const serverRoomApi = {
-  list: async (params: ServerRoomListParams) => {
-    return await post<BaseResponse<PageResponse<ServerRoom>>>('/ops/serverRoom/list', params);
-  },
-
-  get: async (id: string) => {
-    return await post<BaseResponse<ServerRoom>>('/ops/serverRoom/' + id, {});
-  },
-
-  create: async (data: Partial<ServerRoom>) => {
-    return await post('/ops/serverRoom', data);
-  },
-
-  update: async (id: string, data: Partial<ServerRoom>) => {
-    return await post('/ops/serverRoom/' + id + '/update', data);
-  },
-
-  delete: async (id: string) => {
-    return await post('/ops/serverRoom/' + id + '/delete', {});
-  },
-
-  batch: async (action: string, data: Record<string, unknown>) => {
-    return await post('/ops/serverRoom/batch', { action, ...data });
-  },
-};
+export const serverRoomApi = createCrudApi<ServerRoom>({ basePath: '/ops/serverRoom' });
 
 // ==================== 机房照片管理 ====================
 
@@ -238,31 +179,7 @@ export interface RoomDeviceListParams extends PageParams {
   status?: number;
 }
 
-export const roomDeviceApi = {
-  list: async (params: RoomDeviceListParams) => {
-    return await post<BaseResponse<PageResponse<RoomDevice>>>('/ops/roomDevice/list', params);
-  },
-
-  get: async (id: string) => {
-    return await post<BaseResponse<RoomDevice>>('/ops/roomDevice/' + id, {});
-  },
-
-  create: async (data: Partial<RoomDevice>) => {
-    return await post('/ops/roomDevice', data);
-  },
-
-  update: async (id: string, data: Partial<RoomDevice>) => {
-    return await post('/ops/roomDevice/' + id + '/update', data);
-  },
-
-  delete: async (id: string) => {
-    return await post('/ops/roomDevice/' + id + '/delete', {});
-  },
-
-  batch: async (action: string, data: Record<string, unknown>) => {
-    return await post('/ops/roomDevice/batch', { action, ...data });
-  },
-};
+export const roomDeviceApi = createCrudApi<RoomDevice>({ basePath: '/ops/roomDevice' });
 
 // ==================== 专线管理 ====================
 
@@ -272,31 +189,7 @@ export interface DedicatedLineListParams extends PageParams {
   status?: number;
 }
 
-export const dedicatedLineApi = {
-  list: async (params: DedicatedLineListParams) => {
-    return await post<BaseResponse<PageResponse<DedicatedLine>>>('/ops/dedicatedLine/list', params);
-  },
-
-  get: async (id: string) => {
-    return await post<BaseResponse<DedicatedLine>>('/ops/dedicatedLine/' + id, {});
-  },
-
-  create: async (data: Partial<DedicatedLine>) => {
-    return await post('/ops/dedicatedLine', data);
-  },
-
-  update: async (id: string, data: Partial<DedicatedLine>) => {
-    return await post('/ops/dedicatedLine/' + id + '/update', data);
-  },
-
-  delete: async (id: string) => {
-    return await post('/ops/dedicatedLine/' + id + '/delete', {});
-  },
-
-  batch: async (action: string, data: Record<string, unknown>) => {
-    return await post('/ops/dedicatedLine/batch', { action, ...data });
-  },
-};
+export const dedicatedLineApi = createCrudApi<DedicatedLine>({ basePath: '/ops/dedicatedLine' });
 
 // ==================== 信息点管理 ====================
 
@@ -308,68 +201,60 @@ export interface InfoPointListParams extends PageParams {
   status?: number;
 }
 
-export const infoPointApi = {
-  list: async (params: InfoPointListParams) => {
-    return await post<BaseResponse<PageResponse<InfoPoint>>>('/ops/infoPoint/list', params);
-  },
-
-  get: async (id: string) => {
-    return await post<BaseResponse<InfoPoint>>('/ops/infoPoint/' + id, {});
-  },
-
-  create: async (data: Partial<InfoPoint>) => {
-    return await post('/ops/infoPoint', data);
-  },
-
-  update: async (id: string, data: Partial<InfoPoint>) => {
-    return await post('/ops/infoPoint/' + id + '/update', data);
-  },
-
-  delete: async (id: string) => {
-    return await post('/ops/infoPoint/' + id + '/delete', {});
-  },
-
-  batch: async (action: string, data: Record<string, unknown>) => {
-    return await post('/ops/infoPoint/batch', { action, ...data });
-  },
-};
+export const infoPointApi = createCrudApi<InfoPoint>({ basePath: '/ops/infoPoint' });
 
 // ==================== Excel导入导出 ====================
 
+// 通用文件下载函数
+async function downloadFile(url: string, filename: string): Promise<void> {
+  const token = localStorage.getItem('accessToken');
+  const response = await fetch(url, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`下载失败: ${filename}`);
+  }
+
+  const blob = await response.blob();
+  const blobUrl = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = blobUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  window.URL.revokeObjectURL(blobUrl);
+  document.body.removeChild(a);
+}
+
+// 从响应头提取文件名
+function extractFilenameFromResponse(response: Response, defaultFilename: string): string {
+  const contentDisposition = response.headers.get('content-disposition');
+  if (!contentDisposition) {
+    return defaultFilename;
+  }
+
+  const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+  if (match && match[1]) {
+    return decodeURIComponent(match[1].replace(/['"]/g, ''));
+  }
+
+  return defaultFilename;
+}
+
 export const excelApi = {
-  // 下载模板
   downloadTemplate: async (entityType: string) => {
-    const token = localStorage.getItem('accessToken');
-    const response = await fetch(`/api/v1/ops/${entityType}/template`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('下载模板失败');
-    }
-
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${entityType}_template.xlsx`;
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(a);
+    await downloadFile(`/api/v1/ops/${entityType}/template`, `${entityType}_template.xlsx`);
   },
 
-  // 导入数据
   import: async (entityType: string, file: File) => {
     const formData = new FormData();
     formData.append('file', file);
-
     return await postFormData<BaseResponse<Record<string, unknown>>>(`/ops/${entityType}/import`, formData);
   },
 
-  // 导出数据
   export: async (entityType: string, params: Record<string, unknown> = {}) => {
     const token = localStorage.getItem('accessToken');
     const response = await fetch(`/api/v1/ops/${entityType}/export`, {
@@ -386,29 +271,240 @@ export const excelApi = {
     }
 
     const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
+    const filename = extractFilenameFromResponse(response, `${entityType}_${Date.now()}.xlsx`);
+    const blobUrl = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
-
-    // 从响应头获取文件名
-    const contentDisposition = response.headers.get('content-disposition');
-    let filename = `${entityType}_${Date.now()}.xlsx`;
-    if (contentDisposition) {
-      const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-      if (match && match[1]) {
-        filename = decodeURIComponent(match[1].replace(/['"]/g, ''));
-      }
-    }
-
+    a.href = blobUrl;
     a.download = filename;
     document.body.appendChild(a);
     a.click();
-    window.URL.revokeObjectURL(url);
+    window.URL.revokeObjectURL(blobUrl);
     document.body.removeChild(a);
   },
 
-  // 获取状态选项
   getStatusOptions: async (entityType: string) => {
     return await post<BaseResponse<Array<{ label: string; value: number }>>>(`/ops/${entityType}/status-options`, {});
   },
+};
+
+// ==================== 墙体管理（CAD平面图） ====================
+
+export interface Wall {
+  id: string;
+  floorId: string;
+  type: 'straight' | 'curved' | 'l_shaped' | 'polyline';
+  points: string;
+  thickness: number;
+  height: number;
+  color: string;
+  name?: string;
+  remark?: string;
+}
+
+export interface WallListParams extends PageParams {
+  floorId?: string;
+  type?: string;
+  name?: string;
+}
+
+const wallCrudApi = createCrudApi<Wall>({ basePath: '/ops/walls' });
+
+export const wallApi = {
+  ...wallCrudApi,
+
+  batch: async (action: string, ids: string[]) => {
+    return await post('/ops/walls/batch', { action, ids });
+  },
+};
+
+// ==================== 门管理（CAD平面图） ====================
+
+export interface Door {
+  id: string;
+  floorId: string;
+  wallId?: string;
+  position: string;
+  angle: number;
+  type: 'single' | 'double' | 'sliding' | 'revolving' | 'emergency';
+  direction: 'left' | 'right' | 'double' | 'sliding';
+  width: number;
+  length: number;
+  color: string;
+  name?: string;
+  remark?: string;
+}
+
+export interface DoorListParams extends PageParams {
+  floorId?: string;
+  wallId?: string;
+  type?: string;
+  name?: string;
+}
+
+const doorCrudApi = createCrudApi<Door>({ basePath: '/ops/doors' });
+
+export const doorApi = {
+  ...doorCrudApi,
+
+  batch: async (action: string, ids: string[]) => {
+    return await post('/ops/doors/batch', { action, ids });
+  },
+};
+
+// ==================== 平面图文本管理（CAD平面图） ====================
+
+export interface FloorPlanText {
+  id: string;
+  floorId: string;
+  position: string;
+  content: string;
+  fontSize: number;
+  color: string;
+  fontFamily?: string;
+  fontWeight?: string;
+  fontStyle?: string;
+  angle?: number;
+  remark?: string;
+}
+
+export interface FloorPlanTextListParams extends PageParams {
+  floorId?: string;
+  content?: string;
+}
+
+const floorPlanTextCrudApi = createCrudApi<FloorPlanText>({ basePath: '/ops/floor-plan-texts' });
+
+export const floorPlanTextApi = {
+  ...floorPlanTextCrudApi,
+
+  batch: async (action: string, ids: string[]) => {
+    return await post('/ops/floor-plan-texts/batch', { action, ids });
+  },
+};
+
+// ==================== 地理编码（带缓存） ====================
+
+import { getDualLevelCache } from '@/utils/dualLevelCache';
+
+export interface GeocodeResult {
+  lng: number;
+  lat: number;
+  formattedAddress?: string;
+  addressComponent?: {
+    province: string;
+    city: string;
+    district: string;
+    street: string;
+  };
+  precise?: number;
+  level?: string;
+}
+
+// 缓存键前缀
+const GEOCODE_CACHE_PREFIX = 'geocode_';
+const DEFAULT_CACHE_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7天
+
+/**
+ * 带缓存的地理编码
+ * 优先从缓存获取，缓存未命中时调用后端API
+ */
+export const geocodeWithCache = async (
+  address: string,
+  maxAge = DEFAULT_CACHE_MAX_AGE
+): Promise<GeocodeResult | null> => {
+  if (!address?.trim()) {
+    return null;
+  }
+
+  const cacheKey = `${GEOCODE_CACHE_PREFIX}${address}`;
+  const cache = getDualLevelCache<GeocodeResult>();
+
+  // 尝试从缓存获取
+  const cached = cache.get(cacheKey);
+  if (cached) {
+    console.log('✅ 地理编码缓存命中:', address);
+    return cached;
+  }
+
+  // 调用后端API
+  console.log('🌐 调用后端地理编码API:', address);
+
+  try {
+    const result = await post<BaseResponse<GeocodeResult>>('/ops/building/geocode', { address });
+
+    if (result.code === 0 && result.data) {
+      cache.set(cacheKey, result.data);
+      console.log('💾 地理编码结果已缓存:', address);
+      return result.data;
+    }
+
+    return null;
+  } catch (error) {
+    console.error('❌ 地理编码失败:', error);
+    return null;
+  }
+};
+
+/**
+ * 批量地理编码（带缓存）
+ */
+export const batchGeocodeWithCache = async (
+  addresses: string[]
+): Promise<Map<string, GeocodeResult>> => {
+  const results = new Map<string, GeocodeResult>();
+
+  await Promise.all(
+    addresses.map(async (address) => {
+      const result = await geocodeWithCache(address);
+      if (result) {
+        results.set(address, result);
+      }
+    })
+  );
+
+  return results;
+};
+
+/**
+ * 获取地理编码缓存统计
+ */
+export const getGeocodeStats = () => {
+  const cache = getDualLevelCache<unknown>();
+  const cacheInfo = cache.getStats();
+
+  return {
+    // 直接使用 DualLevelCache 的统计
+    ...cacheInfo,
+    // 兼容旧字段名（apiCalls = misses）
+    apiCalls: cacheInfo.misses,
+    // 保留字段名兼容性
+    cacheSize: cacheInfo.totalSize,
+    memoryCacheSize: cacheInfo.memorySize,
+    storageCacheSize: cacheInfo.storageSize,
+  };
+};
+
+/**
+ * 清除地理编码缓存
+ */
+export const clearGeocodeCache = (address?: string) => {
+  const cache = getDualLevelCache<unknown>();
+
+  if (address) {
+    const cacheKey = `${GEOCODE_CACHE_PREFIX}${address}`;
+    cache.delete(cacheKey);
+    console.log('🗑️ 已清除地址缓存:', address);
+  } else {
+    cache.clear();
+    console.log('🗑️ 已清除所有地理编码缓存');
+  }
+};
+
+/**
+ * 重置地理编码统计
+ */
+export const resetGeocodeStats = () => {
+  const cache = getDualLevelCache<unknown>();
+  cache.resetStats();
+  console.log('🔄 已重置地理编码统计');
 };

@@ -27,13 +27,11 @@ func NewBuildingHandlerWithCore(service opsServices.BuildingService, core *core.
 // Create 创建楼宇
 func (h *BuildingHandler) Create(c *gin.Context) {
 	var building operations.OpsBuilding
-	if err := c.ShouldBindJSON(&building); err != nil {
-		response.Error(c, http.StatusBadRequest, "参数错误: "+err.Error())
+	if !handleJSONBinding(c, &building) {
 		return
 	}
 
-	if err := h.service.Create(c.Request.Context(), &building); err != nil {
-		response.Error(c, http.StatusInternalServerError, "创建失败: "+err.Error())
+	if !handleServiceError(c, h.service.Create(c.Request.Context(), &building), "创建") {
 		return
 	}
 
@@ -43,13 +41,12 @@ func (h *BuildingHandler) Create(c *gin.Context) {
 // List 查询楼宇列表
 func (h *BuildingHandler) List(c *gin.Context) {
 	var params map[string]interface{}
-	if err := c.ShouldBindJSON(&params); err != nil {
-		params = make(map[string]interface{})
+	if !handleJSONBinding(c, &params) {
+		return
 	}
 
 	result, err := h.service.List(c.Request.Context(), params)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "查询失败: "+err.Error())
+	if !handleServiceError(c, err, "查询") {
 		return
 	}
 
@@ -72,14 +69,12 @@ func (h *BuildingHandler) GetByID(c *gin.Context) {
 func (h *BuildingHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	var building operations.OpsBuilding
-	if err := c.ShouldBindJSON(&building); err != nil {
-		response.Error(c, http.StatusBadRequest, "参数错误: "+err.Error())
+	if !handleJSONBinding(c, &building) {
 		return
 	}
 
 	building.ID = id
-	if err := h.service.Update(c.Request.Context(), &building); err != nil {
-		response.Error(c, http.StatusInternalServerError, "更新失败: "+err.Error())
+	if !handleServiceError(c, h.service.Update(c.Request.Context(), &building), "更新") {
 		return
 	}
 
@@ -89,8 +84,7 @@ func (h *BuildingHandler) Update(c *gin.Context) {
 // Delete 删除楼宇
 func (h *BuildingHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
-	if err := h.service.Delete(c.Request.Context(), id); err != nil {
-		response.Error(c, http.StatusInternalServerError, "删除失败: "+err.Error())
+	if !handleServiceError(c, h.service.Delete(c.Request.Context(), id), "删除") {
 		return
 	}
 
@@ -104,15 +98,13 @@ func (h *BuildingHandler) BatchOperation(c *gin.Context) {
 		Action string   `json:"action"`
 	}
 
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "参数错误")
+	if !handleJSONBinding(c, &req) {
 		return
 	}
 
 	switch req.Action {
 	case "delete":
-		if err := h.service.BatchDelete(c.Request.Context(), req.IDs); err != nil {
-			response.Error(c, http.StatusInternalServerError, "批量删除失败")
+		if !handleServiceError(c, h.service.BatchDelete(c.Request.Context(), req.IDs), "批量删除") {
 			return
 		}
 	default:
@@ -153,8 +145,7 @@ type GeocodeResponse struct {
 // @Router /ops/building/geocode [post]
 func (h *BuildingHandler) Geocode(c *gin.Context) {
 	var req GeocodeRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "参数错误: "+err.Error())
+	if !handleJSONBinding(c, &req) {
 		return
 	}
 
@@ -165,8 +156,7 @@ func (h *BuildingHandler) Geocode(c *gin.Context) {
 
 	// 调用地理编码服务
 	lng, lat, err := h.geocodingService.Geocode(c.Request.Context(), req.Address)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "地址解析失败: "+err.Error())
+	if !handleServiceError(c, err, "地址解析") {
 		return
 	}
 

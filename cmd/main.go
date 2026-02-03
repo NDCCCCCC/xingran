@@ -99,7 +99,10 @@ func logStartupInfo(cfg *config.Config) {
 
 // initializeCoreModule 初始化核心模块
 func initializeCoreModule(cfg *config.Config) *core.Core {
-	coreModule := core.New(cfg)
+	coreModule, err := core.New(cfg)
+	if err != nil {
+		applogger.Fatalf("创建核心模块失败: %v", err)
+	}
 	if err := coreModule.Init(); err != nil {
 		applogger.Fatalf("初始化核心模块失败: %v", err)
 	}

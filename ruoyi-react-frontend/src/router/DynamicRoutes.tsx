@@ -12,25 +12,50 @@ import Layout from '@/components/layout';
 import Login from '@/pages/login';
 import { Spin } from 'antd';
 
+// 路由缓存
 let cachedRoutes: MenuRouteConfig[] | null = null;
 let cachedMenusCount = 0;
 
+// 常量定义
+const DASHBOARD_PATH = 'dashboard'
+const PAGES_PREFIX = 'pages/'
+const PAGES_RELATIVE_PREFIX = '../pages/'
+const TSX_EXTENSION = '.tsx'
+
+// 辅助函数
 const hasValidToken = (): boolean => !!localStorage.getItem('accessToken');
 
+const normalizeComponentPath = (componentPath: string): string => {
+  let path = componentPath
+
+  if (path.startsWith(PAGES_PREFIX)) {
+    path = path.slice(PAGES_PREFIX.length)
+  }
+
+  if (!path.endsWith(TSX_EXTENSION)) {
+    path = `${path}${TSX_EXTENSION}`
+  }
+
+  return `${PAGES_RELATIVE_PREFIX}${path}`
+}
+
 const createLazyRoute = (route: MenuRouteConfig) => {
-  const importPath = `../pages/${route.component.slice(6)}.tsx`;
+  const importPath = normalizeComponentPath(route.component);
   const Component = lazy(() => import(/* @vite-ignore */ importPath));
 
-  if (route.path === 'dashboard') {
+  const fallback = <Spin size="large" />;
+  const element = (
+    <Suspense fallback={fallback}>
+      <Component />
+    </Suspense>
+  );
+
+  if (route.path === DASHBOARD_PATH) {
     return (
       <Route
         key={route.path}
-        path="dashboard/*"
-        element={
-          <Suspense fallback={<Spin size="large" />}>
-            <Component />
-          </Suspense>
-        }
+        path={`${DASHBOARD_PATH}/*`}
+        element={element}
       />
     );
   }
@@ -39,11 +64,7 @@ const createLazyRoute = (route: MenuRouteConfig) => {
     <Route
       key={route.path}
       path={route.path}
-      element={
-        <Suspense fallback={<Spin size="large" />}>
-          <Component />
-        </Suspense>
-      }
+      element={element}
     />
   );
 };
@@ -70,6 +91,7 @@ export function DynamicRoutes() {
 
   const isAuthenticated = hasValidToken();
 
+  // 未认证用户路由
   if (!isAuthenticated) {
     return (
       <Routes>
@@ -79,6 +101,7 @@ export function DynamicRoutes() {
     );
   }
 
+  // 已认证用户路由
   return (
     <Routes>
       <Route path="/login" element={<Navigate to="/" replace />} />

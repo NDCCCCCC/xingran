@@ -2,10 +2,27 @@ package operations
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"gorm.io/gorm"
 )
+
+const (
+	workstationTable        = "sys_workstation"
+	floorTable             = "ops_floors"
+	workstationJoinSelect  = "sys_workstation.*, ops_floors.name as floor_name, ops_floors.floor_no as floor_code"
+	workstationJoinClause  = "LEFT JOIN ops_floors ON ops_floors.id = sys_workstation.floor_id::uuid"
+)
+
+// validateTableName 验证表名是否在白名单中，防止 SQL 注入
+func validateTableName(tableName string) bool {
+	allowedTables := map[string]bool{
+		"ops_floors": true,
+		"sys_floors": true,
+	}
+	return allowedTables[tableName]
+}
 
 // WorkstationService 工位服务接口
 type WorkstationService interface {
@@ -28,6 +45,9 @@ type PositionUpdateItem struct {
 	PositionX int    `json:"positionX"`
 	PositionY int    `json:"positionY"`
 	Rotation  *int   `json:"rotation,omitempty"` // 旋转角度（可选）
+	Width     *int   `json:"width,omitempty"`     // 工位宽度（毫米，可选）
+	Depth     *int   `json:"depth,omitempty"`     // 工位深度（毫米，可选）
+	DeskType  *int   `json:"deskType,omitempty"`  // 桌型（可选）：0=一字型, 1=L型
 }
 
 // NewWorkstationService 创建工位服务实例
@@ -47,9 +67,8 @@ func (s *workstationService) Update(ctx context.Context, workstation *models.Wor
 	return s.db.WithContext(ctx).Save(workstation).Error
 }
 
-// Delete 删除工位
 func (s *workstationService) Delete(ctx context.Context, id string) error {
-	return s.db.WithContext(ctx).Delete(&models.Workstation{}, "id = ?", id).Error
+	return s.db.WithContext(ctx).Table(workstationTable).Where("id = ?", id).Delete(&models.Workstation{}).Error
 }
 
 // GetByID 根据ID获取工位
@@ -70,56 +89,40 @@ func (s *workstationService) List(ctx context.Context, params map[string]interfa
 	query := s.db.WithContext(ctx).Model(&models.Workstation{})
 
 	// 添加筛选条件
-	if name, ok := params["name"].(string); ok && name != "" {
+	if name := extractStringParam(params, "name"); name != "" {
 		query = query.Where("sys_workstation.workstation_name LIKE ?", "%"+name+"%")
 	}
-	if floorId, ok := params["floorId"].(string); ok && floorId != "" {
+	if floorId := extractStringParam(params, "floorId"); floorId != "" {
 		query = query.Where("sys_workstation.floor_id = ?", floorId)
 	}
-	if floorCode, ok := params["floorCode"].(string); ok && floorCode != "" {
-		// 通过 JOIN ops_floors 表使用 floor_no 筛选
-		query = query.Where("EXISTS (SELECT 1 FROM ops_floors WHERE ops_floors.id = sys_workstation.floor_id::uuid AND ops_floors.floor_no = ?)", floorCode)
+	if floorCode := extractStringParam(params, "floorCode"); floorCode != "" {
+		// 验证表名是否在白名单中，防止 SQL 注入
+		if !validateTableName(floorTable) {
+			return nil, fmt.Errorf("invalid table name: %s", floorTable)
+		}
+		query = query.Where("EXISTS (SELECT 1 FROM "+floorTable+" WHERE "+floorTable+".id = sys_workstation.floor_id::uuid AND "+floorTable+".floor_no = ?)", floorCode)
 	}
-	if status, ok := params["status"].(int); ok {
+	if status := extractIntParam(params, "status", -1); status >= 0 {
 		query = query.Where("sys_workstation.status = ?", status)
 	}
-	if status, ok := params["status"].(float64); ok {
-		query = query.Where("sys_workstation.status = ?", int(status))
-	}
-	if typeVal, ok := params["type"].(int); ok {
+	if typeVal := extractIntParam(params, "type", -1); typeVal >= 0 {
 		query = query.Where("sys_workstation.workstation_type = ?", typeVal)
-	}
-	if typeVal, ok := params["type"].(float64); ok {
-		query = query.Where("sys_workstation.workstation_type = ?", int(typeVal))
 	}
 
 	// 分页
-	current := 1
-	pageSize := 10
-	if c, ok := params["current"].(int); ok {
-		current = c
-	}
-	if c, ok := params["current"].(float64); ok {
-		current = int(c)
-	}
-	if ps, ok := params["pageSize"].(int); ok {
-		pageSize = ps
-	}
-	if ps, ok := params["pageSize"].(float64); ok {
-		pageSize = int(ps)
-	}
+	pagination := extractPagination(params)
 
 	if err := query.Count(&total).Error; err != nil {
 		return nil, err
 	}
 
-	offset := (current - 1) * pageSize
+	offset := calculateOffset(pagination)
 	// JOIN ops_floors 表获取 floor_name（类型转换：varchar -> uuid）
 	if err := query.
-		Select("sys_workstation.*, ops_floors.name as floor_name, ops_floors.floor_no as floor_code").
-		Joins("LEFT JOIN ops_floors ON ops_floors.id = sys_workstation.floor_id::uuid").
+		Select(workstationJoinSelect).
+		Joins(workstationJoinClause).
 		Offset(offset).
-		Limit(pageSize).
+		Limit(pagination.PageSize).
 		Order("sys_workstation.created_at DESC").
 		Find(&list).Error; err != nil {
 		return nil, err
@@ -128,17 +131,19 @@ func (s *workstationService) List(ctx context.Context, params map[string]interfa
 	return &PageResult{
 		List:     list,
 		Total:    total,
-		Current:  current,
-		PageSize: pageSize,
+		Current:  pagination.Current,
+		PageSize: pagination.PageSize,
 	}, nil
 }
 
-// BatchDelete 批量删除工位
 func (s *workstationService) BatchDelete(ctx context.Context, ids []string) error {
-	return s.db.WithContext(ctx).Delete(&models.Workstation{}, "id IN ?", ids).Error
+	if len(ids) == 0 {
+		return nil
+	}
+	return s.db.WithContext(ctx).Table(workstationTable).Where("id IN ?", ids).Delete(&models.Workstation{}).Error
 }
 
-// BatchUpdatePositions 批量更新工位位置
+// BatchUpdatePositions 批量更新工位位置和尺寸
 func (s *workstationService) BatchUpdatePositions(ctx context.Context, items []PositionUpdateItem) error {
 	if len(items) == 0 {
 		return nil
@@ -150,9 +155,18 @@ func (s *workstationService) BatchUpdatePositions(ctx context.Context, items []P
 				"position_x": item.PositionX,
 				"position_y": item.PositionY,
 			}
-			// 如果提供了 rotation 值，则更新
+
 			if item.Rotation != nil {
 				updates["rotation"] = *item.Rotation
+			}
+			if item.Width != nil {
+				updates["width"] = *item.Width
+			}
+			if item.Depth != nil {
+				updates["depth"] = *item.Depth
+			}
+			if item.DeskType != nil {
+				updates["desk_type"] = *item.DeskType
 			}
 
 			if err := tx.Model(&models.Workstation{}).

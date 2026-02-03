@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 	"gorm.io/gorm"
 )
@@ -14,7 +15,7 @@ type RoomDeviceService interface {
 	Update(ctx context.Context, device *operations.OpsRoomDevice) error
 	Delete(ctx context.Context, id string) error
 	GetByID(ctx context.Context, id string) (*operations.OpsRoomDevice, error)
-	List(ctx context.Context, params map[string]interface{}) (*PageResult, error)
+	List(ctx context.Context, req requests.RoomDeviceListRequest) (*PageResult, error)
 	BatchDelete(ctx context.Context, ids []string) error
 }
 
@@ -62,51 +63,36 @@ func (s *roomDeviceService) GetByID(ctx context.Context, id string) (*operations
 	return &device, nil
 }
 
-// List 查询机房设备列表
-func (s *roomDeviceService) List(ctx context.Context, params map[string]interface{}) (*PageResult, error) {
+// List 查询机房设备列表（类型安全版本）
+func (s *roomDeviceService) List(ctx context.Context, req requests.RoomDeviceListRequest) (*PageResult, error) {
 	var total int64
 	var list []operations.OpsRoomDevice
 
 	query := s.db.WithContext(ctx).Model(&operations.OpsRoomDevice{})
 
-	// 添加筛选条件
-	if name, ok := params["name"].(string); ok && name != "" {
-		query = query.Where("name LIKE ?", "%"+name+"%")
+	// 添加筛选条件 - 类型安全，无需类型断言
+	if req.Name != "" {
+		query = query.Where("name LIKE ?", "%"+req.Name+"%")
 	}
-	if deviceType, ok := params["deviceType"].(string); ok && deviceType != "" {
-		query = query.Where("device_type = ?", deviceType)
+	if req.DeviceType != "" {
+		query = query.Where("device_type = ?", req.DeviceType)
 	}
-	if roomId, ok := params["roomId"].(string); ok && roomId != "" {
-		query = query.Where("room_id = ?", roomId)
+	if req.RoomID != "" {
+		query = query.Where("room_id = ?", req.RoomID)
 	}
-	if status, ok := params["status"].(int); ok {
-		query = query.Where("status = ?", status)
-	}
-	if status, ok := params["status"].(float64); ok {
-		query = query.Where("status = ?", int(status))
+	if req.HasStatus() {
+		query = query.Where("status = ?", req.GetStatus(0))
 	}
 
-	// 分页
-	current := 1
-	pageSize := 10
-	if c, ok := params["current"].(int); ok {
-		current = c
-	}
-	if c, ok := params["current"].(float64); ok {
-		current = int(c)
-	}
-	if ps, ok := params["pageSize"].(int); ok {
-		pageSize = ps
-	}
-	if ps, ok := params["pageSize"].(float64); ok {
-		pageSize = int(ps)
-	}
+	// 分页 - 使用请求结构体的方法
+	offset := req.GetOffset()
+	_, pageSize := req.GetPagination()
+	current, _ := req.GetPagination()
 
 	if err := query.Count(&total).Error; err != nil {
 		return nil, err
 	}
 
-	offset := (current - 1) * pageSize
 	if err := query.Offset(offset).Limit(pageSize).Order("created_at DESC").Find(&list).Error; err != nil {
 		return nil, err
 	}

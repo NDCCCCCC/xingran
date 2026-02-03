@@ -6,17 +6,18 @@ import (
 	"strconv"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	"gorm.io/gorm"
 )
 
 // MenuService 菜单服务接口
 type MenuService interface {
-	Create(ctx context.Context, req *MenuCreateRequest) error
-	Update(ctx context.Context, req *MenuUpdateRequest) error
+	Create(ctx context.Context, req *requests.MenuCreateRequest) error
+	Update(ctx context.Context, req *requests.MenuUpdateRequest) error
 	Delete(ctx context.Context, id string, cascade bool) error
 	GetByID(ctx context.Context, id string) (*models.Menu, error)
 	GetTree(ctx context.Context) ([]models.Menu, error)
-	List(ctx context.Context, params MenuListParams) ([]models.Menu, error)
+	List(ctx context.Context, params requests.MenuListParams) ([]models.Menu, error)
 	BatchDelete(ctx context.Context, ids []string, cascade bool) error
 	UpdateStatus(ctx context.Context, id string, status int) error
 	GetUserMenus(ctx context.Context, userID string) ([]models.Menu, error)
@@ -40,66 +41,10 @@ func NewMenuService(db *gorm.DB) MenuService {
 	return &menuService{db: db}
 }
 
-// ==================== 请求/响应类型 ====================
-
-// MenuListParams 菜单列表查询参数
-type MenuListParams struct {
-	MenuName string
-	Status   string
-}
-
-// MenuCreateRequest 创建菜单请求
-type MenuCreateRequest struct {
-	MenuName  string
-	ParentID  *string
-	OrderNum  int
-	Path      *string
-	Component *string
-	MenuType  models.MenuType
-	Visible   models.VisibleType
-	Status    models.MenuStatus
-	Perms     *string
-	Icon      *string
-	Remark    *string
-}
-
-// ToModel 转换为菜单模型
-func (r *MenuCreateRequest) ToModel() models.Menu {
-	return models.Menu{
-		MenuName:  r.MenuName,
-		ParentID:  normalizeParentID(r.ParentID),
-		OrderNum:  r.OrderNum,
-		Path:      r.Path,
-		Component: r.Component,
-		MenuType:  r.MenuType,
-		Visible:   r.Visible,
-		Status:    r.Status,
-		Perms:     r.Perms,
-		Icon:      r.Icon,
-		Remark:    stringPtrValue(r.Remark),
-	}
-}
-
-// MenuUpdateRequest 更新菜单请求
-type MenuUpdateRequest struct {
-	ID        string
-	MenuName  string
-	ParentID  *string
-	OrderNum  int
-	Path      *string
-	Component *string
-	MenuType  models.MenuType
-	Visible   models.VisibleType
-	Status    models.MenuStatus
-	Perms     *string
-	Icon      *string
-	Remark    *string
-}
-
 // ==================== 服务方法实现 ====================
 
 // Create 创建菜单
-func (s *menuService) Create(ctx context.Context, req *MenuCreateRequest) error {
+func (s *menuService) Create(ctx context.Context, req *requests.MenuCreateRequest) error {
 	// 处理空字符串的 ParentID
 	req.ParentID = normalizeParentID(req.ParentID)
 
@@ -120,7 +65,7 @@ func (s *menuService) Create(ctx context.Context, req *MenuCreateRequest) error 
 }
 
 // Update 更新菜单
-func (s *menuService) Update(ctx context.Context, req *MenuUpdateRequest) error {
+func (s *menuService) Update(ctx context.Context, req *requests.MenuUpdateRequest) error {
 	// 检查菜单是否存在
 	var menu models.Menu
 	if err := s.db.WithContext(ctx).First(&menu, "id = ?", req.ID).Error; err != nil {
@@ -242,7 +187,7 @@ func (s *menuService) GetTree(ctx context.Context) ([]models.Menu, error) {
 }
 
 // List 查询菜单列表
-func (s *menuService) List(ctx context.Context, params MenuListParams) ([]models.Menu, error) {
+func (s *menuService) List(ctx context.Context, params requests.MenuListParams) ([]models.Menu, error) {
 	var menus []models.Menu
 	query := s.db.WithContext(ctx).Model(&models.Menu{})
 

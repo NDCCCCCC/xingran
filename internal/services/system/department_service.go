@@ -5,17 +5,18 @@ import (
 	"fmt"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	"gorm.io/gorm"
 )
 
 // DepartmentService 部门服务接口
 type DepartmentService interface {
-	Create(ctx context.Context, req *DepartmentCreateRequest) error
-	Update(ctx context.Context, req *DepartmentUpdateRequest) error
+	Create(ctx context.Context, req *requests.DepartmentCreateRequest) error
+	Update(ctx context.Context, req *requests.DepartmentUpdateRequest) error
 	Delete(ctx context.Context, id string) error
 	GetByID(ctx context.Context, id string) (*models.Department, error)
 	GetTree(ctx context.Context, includeDisabled bool) ([]*models.Department, error)
-	List(ctx context.Context, params DepartmentListParams) ([]models.Department, error)
+	List(ctx context.Context, params requests.DepartmentListParams) ([]models.Department, error)
 	BatchDelete(ctx context.Context, ids []string) error
 	UpdateStatus(ctx context.Context, id string, status int) error
 	GetRoleDeptIDs(ctx context.Context, roleID string, deptIDs *[]string) error
@@ -37,61 +38,10 @@ func NewDepartmentService(db *gorm.DB) DepartmentService {
 	return &departmentService{db: db}
 }
 
-// ==================== 请求/响应类型 ====================
-
-// DepartmentListParams 部门列表查询参数
-type DepartmentListParams struct {
-	DeptName string
-	Status   string
-}
-
-// DepartmentCreateRequest 创建部门请求
-type DepartmentCreateRequest struct {
-	DeptName      string
-	ParentID      *string
-	OrderNum      int
-	Leader        *string
-	Phone         *string
-	Email         *string
-	IsExternalOrg int `json:"isExternalOrg"`
-	Status        models.DeptStatus
-	Remark        *string
-}
-
-// ToModel 转换为部门模型
-func (r *DepartmentCreateRequest) ToModel(ancestors string) models.Department {
-	return models.Department{
-		DeptName:      r.DeptName,
-		ParentID:      r.ParentID,
-		Ancestors:     ancestors,
-		OrderNum:      r.OrderNum,
-		Leader:        r.Leader,
-		Phone:         r.Phone,
-		Email:         r.Email,
-		IsExternalOrg: r.IsExternalOrg,
-		Status:        r.Status,
-		Remark:        toStringPtr(r.Remark),
-	}
-}
-
-// DepartmentUpdateRequest 更新部门请求
-type DepartmentUpdateRequest struct {
-	ID            string
-	DeptName      string
-	ParentID      *string
-	OrderNum      int
-	Leader        *string
-	Phone         *string
-	Email         *string
-	IsExternalOrg int `json:"isExternalOrg"`
-	Status        models.DeptStatus
-	Remark        *string
-}
-
 // ==================== 服务方法实现 ====================
 
 // Create 创建部门
-func (s *departmentService) Create(ctx context.Context, req *DepartmentCreateRequest) error {
+func (s *departmentService) Create(ctx context.Context, req *requests.DepartmentCreateRequest) error {
 	// 构建祖先链
 	ancestors, err := s.buildAncestors(ctx, req.ParentID)
 	if err != nil {
@@ -115,7 +65,7 @@ func (s *departmentService) Create(ctx context.Context, req *DepartmentCreateReq
 }
 
 // Update 更新部门
-func (s *departmentService) Update(ctx context.Context, req *DepartmentUpdateRequest) error {
+func (s *departmentService) Update(ctx context.Context, req *requests.DepartmentUpdateRequest) error {
 	// 检查部门是否存在
 	var dept models.Department
 	if err := s.db.WithContext(ctx).First(&dept, "id = ?", req.ID).Error; err != nil {
@@ -230,7 +180,7 @@ func (s *departmentService) GetTree(ctx context.Context, includeDisabled bool) (
 }
 
 // List 查询部门列表
-func (s *departmentService) List(ctx context.Context, params DepartmentListParams) ([]models.Department, error) {
+func (s *departmentService) List(ctx context.Context, params requests.DepartmentListParams) ([]models.Department, error) {
 	var depts []models.Department
 	query := s.db.WithContext(ctx).Model(&models.Department{})
 

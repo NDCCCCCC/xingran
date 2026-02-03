@@ -13,15 +13,24 @@ import {
 import { useVisualizationStore } from '@/store/visualizationStore';
 import { workstationApi } from '@/lib/opsApi';
 import { handleApiError } from '@/utils/errorHandler';
+import {
+  convertApiWorkstations,
+  calculateWorkstationStats,
+  getWorkstationStatusText,
+  getWorkstationTypeText,
+  getWorkstationStatusColorCSS,
+  getWorkstationTypeColorCSS,
+} from '../utils';
 import FloorPlan3D from './FloorPlan3D';
 
-// 扩展 Workstation 类型以匹配 FloorPlan3D 的需求
+// ============ 类型定义 ============
+
 interface WorkstationData {
   id: string;
   name: string;
   code: string;
-  status: number; // 0=空闲, 1=占用, 2=维护
-  type: number; // 0=固定, 1=灵活, 2=管理
+  status: number;
+  type: number;
   positionX?: number;
   positionY?: number;
   rotation?: number;
@@ -35,7 +44,10 @@ interface WorkstationStats {
   fixed: number;
 }
 
+// ============ 组件 ============
+
 const FloorView3D: React.FC = () => {
+  // State
   const [loading, setLoading] = useState(true);
   const [workstations, setWorkstations] = useState<WorkstationData[]>([]);
   const [stats, setStats] = useState<WorkstationStats>({
@@ -46,9 +58,11 @@ const FloorView3D: React.FC = () => {
     fixed: 0,
   });
 
-  const { selectedFloor, selectedBuilding, navigateToBuilding, navigateToMap } = useVisualizationStore();
+  const { selectedFloor, selectedBuilding, navigateToBuilding, navigateToMap } =
+    useVisualizationStore();
 
-  // 加载工位数据
+  // ============ 数据加载 ============
+
   const loadWorkstations = useCallback(async () => {
     if (!selectedFloor) return;
 
@@ -61,30 +75,10 @@ const FloorView3D: React.FC = () => {
       });
 
       const workstationList = result.data?.list || [];
-
-      // 转换 Workstation 为 WorkstationData，添加缺失的字段
-      const convertedWorkstations: WorkstationData[] = workstationList.map((ws) => ({
-        id: ws.id,
-        name: ws.name,
-        code: ws.name, // 使用 name 作为 code（因为 API 不返回 code 字段）
-        status: ws.status as number, // WorkstationStatus (0|1) 转换为 number
-        type: ws.type as number, // WorkstationType (0|1) 转换为 number
-        positionX: ws.positionX,
-        positionY: ws.positionY,
-        rotation: 0, // 默认旋转角度
-      }));
+      const convertedWorkstations = convertApiWorkstations(workstationList);
 
       setWorkstations(convertedWorkstations);
-
-      // 计算统计数据
-      const stats: WorkstationStats = {
-        total: workstationList.length,
-        available: workstationList.filter((w) => w.status === 0).length,
-        occupied: workstationList.filter((w) => w.status === 1).length,
-        flexible: workstationList.filter((w) => w.type === 1).length,
-        fixed: workstationList.filter((w) => w.type === 0).length,
-      };
-      setStats(stats);
+      setStats(calculateWorkstationStats(workstationList));
     } catch (error) {
       handleApiError(error, '加载工位数据');
     } finally {
@@ -96,46 +90,19 @@ const FloorView3D: React.FC = () => {
     loadWorkstations();
   }, [loadWorkstations]);
 
-  // 如果没有选中的楼层，返回楼宇
+  // ============ 渲染 ============
+
   if (!selectedFloor) {
-    return (
-      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Alert
-          message="未选择楼层"
-          description="请先选择一个楼层"
-          type="info"
-          showIcon
-          action={
-            <Button type="primary" onClick={() => navigateToMap()}>
-              返回地图
-            </Button>
-          }
-        />
-      </div>
-    );
+    return <NoFloorSelectedAlert onBackToMap={navigateToMap} />;
   }
 
-  const statusText = selectedFloor.status === 0 ? '正常' : '停用';
   const statusColor = selectedFloor.status === 0 ? 'success' : 'default';
+  const statusText = selectedFloor.status === 0 ? '正常' : '停用';
 
   return (
-    <div
-      style={{
-        height: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        padding: 24,
-      }}
-    >
+    <div style={styles.container}>
       <Card
-        style={{
-          width: '100%',
-          maxWidth: 1000,
-          maxHeight: '85vh',
-          overflowY: 'auto',
-        }}
+        style={styles.card}
         title={
           <Space>
             <ApartmentOutlined />
@@ -157,119 +124,227 @@ const FloorView3D: React.FC = () => {
         }
       >
         {loading ? (
-          <div style={{ textAlign: 'center', padding: 40 }}>
-            <Spin />
-          </div>
+          <LoadingView />
         ) : (
           <>
-            <Descriptions column={3} bordered size="small">
-              <Descriptions.Item label="楼层编码">{selectedFloor.code}</Descriptions.Item>
-              <Descriptions.Item label="楼层号">{selectedFloor.floorNo}</Descriptions.Item>
-              <Descriptions.Item label="所属楼宇">{selectedFloor.buildingName}</Descriptions.Item>
-            </Descriptions>
-
-            {/* 工位统计 */}
-            <Card
-              size="small"
-              title={<><DesktopOutlined /> 工位统计</>}
-              style={{ marginTop: 16 }}
-            >
-              <Row gutter={16}>
-                <Col span={6}>
-                  <Card size="small">
-                    <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: 24, fontWeight: 'bold', color: '#1890ff' }}>
-                        {stats.total}
-                      </div>
-                      <div style={{ fontSize: 12, color: '#666' }}>总工位数</div>
-                    </div>
-                  </Card>
-                </Col>
-                <Col span={6}>
-                  <Card size="small">
-                    <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: 24, fontWeight: 'bold', color: '#52c41a' }}>
-                        {stats.available}
-                      </div>
-                      <div style={{ fontSize: 12, color: '#666' }}>空闲工位</div>
-                    </div>
-                  </Card>
-                </Col>
-                <Col span={6}>
-                  <Card size="small">
-                    <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: 24, fontWeight: 'bold', color: '#ff4d4f' }}>
-                        {stats.occupied}
-                      </div>
-                      <div style={{ fontSize: 12, color: '#666' }}>占用工位</div>
-                    </div>
-                  </Card>
-                </Col>
-                <Col span={6}>
-                  <Card size="small">
-                    <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: 24, fontWeight: 'bold', color: '#722ed1' }}>
-                        {stats.flexible}
-                      </div>
-                      <div style={{ fontSize: 12, color: '#666' }}>灵活工位</div>
-                    </div>
-                  </Card>
-                </Col>
-              </Row>
-            </Card>
-
-            {/* 3D 工位平面图 */}
-            <div style={{ marginTop: 24 }}>
-              <FloorPlan3D
-                workstations={workstations}
-                onWorkstationClick={() => {
-                  // 工位点击事件处理
-                }}
-              />
-            </div>
-
-            {/* 工位列表 */}
+            <FloorDescriptions floor={selectedFloor} />
+            <WorkstationStatsCard stats={stats} />
+            <FloorPlan3D
+              workstations={workstations}
+              onWorkstationClick={() => {
+                // 工位点击事件处理
+              }}
+            />
             {workstations.length > 0 && (
-              <div style={{ marginTop: 24 }}>
-                <h4 style={{ marginBottom: 16 }}>
-                  <DesktopOutlined /> 工位列表 ({workstations.length} 个)
-                </h4>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12 }}>
-                  {workstations.map((workstation) => {
-                    const statusColor = workstation.status === 0 ? '#52c41a' : '#ff4d4f';
-                    const typeText = workstation.type === 0 ? '固定' : workstation.type === 1 ? '灵活' : '管理';
-                    const statusText = workstation.status === 0 ? '空闲' : '占用';
-
-                    return (
-                      <Card
-                        key={workstation.id}
-                        size="small"
-                        hoverable
-                        style={{
-                          textAlign: 'center',
-                          borderLeft: `4px solid ${statusColor}`,
-                        }}
-                      >
-                        <div style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 8 }}>
-                          {workstation.name || `工位 ${workstation.code}`}
-                        </div>
-                        <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>
-                          <Tag color={statusColor}>{statusText}</Tag>
-                        </div>
-                        <div style={{ fontSize: 11, color: '#999' }}>
-                          {typeText}
-                        </div>
-                      </Card>
-                    );
-                  })}
-                </div>
-              </div>
+              <WorkstationList workstations={workstations} />
             )}
           </>
         )}
       </Card>
     </div>
   );
+};
+
+// ============ 子组件 ============
+
+interface NoFloorSelectedAlertProps {
+  onBackToMap: () => void;
+}
+
+const NoFloorSelectedAlert: React.FC<NoFloorSelectedAlertProps> = ({
+  onBackToMap,
+}) => (
+  <div style={styles.centerContainer}>
+    <Alert
+      message="未选择楼层"
+      description="请先选择一个楼层"
+      type="info"
+      showIcon
+      action={
+        <Button type="primary" onClick={onBackToMap}>
+          返回地图
+        </Button>
+      }
+    />
+  </div>
+);
+
+const LoadingView: React.FC = () => (
+  <div style={styles.loadingContainer}>
+    <Spin />
+  </div>
+);
+
+interface FloorDescriptionsProps {
+  floor: {
+    code: string;
+    floorNo: string;
+    buildingName?: string;
+  };
+}
+
+const FloorDescriptions: React.FC<FloorDescriptionsProps> = ({ floor }) => (
+  <Descriptions column={3} bordered size="small">
+    <Descriptions.Item label="楼层编码">{floor.code}</Descriptions.Item>
+    <Descriptions.Item label="楼层号">{floor.floorNo}</Descriptions.Item>
+    <Descriptions.Item label="所属楼宇">{floor.buildingName}</Descriptions.Item>
+  </Descriptions>
+);
+
+interface WorkstationStatsCardProps {
+  stats: WorkstationStats;
+}
+
+const WorkstationStatsCard: React.FC<WorkstationStatsCardProps> = ({ stats }) => (
+  <Card size="small" title={<><DesktopOutlined /> 工位统计</>} style={styles.statsCard}>
+    <Row gutter={16}>
+      <Col span={6}>
+        <StatCard value={stats.total} label="总工位数" color="#1890ff" />
+      </Col>
+      <Col span={6}>
+        <StatCard value={stats.available} label="空闲工位" color="#52c41a" />
+      </Col>
+      <Col span={6}>
+        <StatCard value={stats.occupied} label="占用工位" color="#ff4d4f" />
+      </Col>
+      <Col span={6}>
+        <StatCard value={stats.flexible} label="灵活工位" color="#722ed1" />
+      </Col>
+    </Row>
+  </Card>
+);
+
+interface StatCardProps {
+  value: number;
+  label: string;
+  color: string;
+}
+
+const StatCard: React.FC<StatCardProps> = ({ value, label, color }) => (
+  <Card size="small">
+    <div style={styles.statCardContainer}>
+      <div style={{ ...styles.statValue, color }}>{value}</div>
+      <div style={styles.statLabel}>{label}</div>
+    </div>
+  </Card>
+);
+
+interface WorkstationListProps {
+  workstations: WorkstationData[];
+}
+
+const WorkstationList: React.FC<WorkstationListProps> = ({ workstations }) => (
+  <div style={styles.workstationListContainer}>
+    <h4 style={styles.workstationListTitle}>
+      <DesktopOutlined /> 工位列表 ({workstations.length} 个)
+    </h4>
+    <div style={styles.workstationGrid}>
+      {workstations.map((workstation) => (
+        <WorkstationCard key={workstation.id} workstation={workstation} />
+      ))}
+    </div>
+  </div>
+);
+
+interface WorkstationCardProps {
+  workstation: WorkstationData;
+}
+
+const WorkstationCard: React.FC<WorkstationCardProps> = ({ workstation }) => {
+  const statusColor = getWorkstationStatusColorCSS(workstation.status);
+  const typeColor = getWorkstationTypeColorCSS(workstation.type);
+  const statusText = getWorkstationStatusText(workstation.status);
+  const typeText = getWorkstationTypeText(workstation.type);
+
+  return (
+    <Card
+      size="small"
+      hoverable
+      style={{
+        ...styles.workstationCard,
+        borderLeft: `4px solid ${statusColor}`,
+      }}
+    >
+      <div style={styles.workstationName}>
+        {workstation.name || `工位 ${workstation.code}`}
+      </div>
+      <div style={styles.workstationStatus}>
+        <Tag color={statusColor}>{statusText}</Tag>
+      </div>
+      <div style={styles.workstationType}>{typeText}</div>
+    </Card>
+  );
+};
+
+// ============ 样式 ============
+
+const styles = {
+  container: {
+    height: '100vh',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    padding: 24,
+  },
+  centerContainer: {
+    height: '100vh',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  card: {
+    width: '100%',
+    maxWidth: 1000,
+    maxHeight: '85vh',
+    overflowY: 'auto' as const,
+  },
+  loadingContainer: {
+    textAlign: 'center' as const,
+    padding: 40,
+  },
+  statsCard: {
+    marginTop: 16,
+  },
+  statCardContainer: {
+    textAlign: 'center' as const,
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#666',
+  },
+  workstationListContainer: {
+    marginTop: 24,
+  },
+  workstationListTitle: {
+    marginBottom: 16,
+  },
+  workstationGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+    gap: 12,
+  },
+  workstationCard: {
+    textAlign: 'center' as const,
+  },
+  workstationName: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  workstationStatus: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 4,
+  },
+  workstationType: {
+    fontSize: 11,
+    color: '#999',
+  },
 };
 
 export default FloorView3D;

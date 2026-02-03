@@ -1,8 +1,6 @@
 package api
 
 import (
-	"log"
-
 	"github.com/gin-gonic/gin"
 	v1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations"
@@ -19,9 +17,12 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/permission"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 )
 
-// noticeHubAdapter 适配器，将 websocket.NoticeHub 适配为 scheduler.NoticeHub
+const permSystemConfig = "system:config"
+
+// noticeHubAdapter 将 websocket.NoticeHub 适配为 scheduler.NoticeHub 接口
 type noticeHubAdapter struct {
 	hub *websocket.NoticeHub
 }
@@ -32,58 +33,83 @@ func (a *noticeHubAdapter) BroadcastToUsers(userIDs []string, message interface{
 	}
 }
 
-// SetupRouter 设置路由
-func SetupRouter(r *gin.RouterGroup, core *core.Core) {
-	// 添加请求ID中间件
-	r.Use(middleware.RequestID())
-
-	// 创建请求加密器（使用 SM2+SM4 混合加密）
-	// SM4-CBC 加密请求体，SM2 加密 SM4 密钥
+// setupEncryptionMiddlewares 配置请求/响应加密中间件
+func setupEncryptionMiddlewares(r *gin.RouterGroup, core *core.Core) *crypto.RequestEncryptor {
 	var encryptor *crypto.RequestEncryptor
+
 	if core.Config.Security.RequestEncryption.Enabled {
 		sm2PrivateKey, sm2PublicKey := core.JWTManager.GetSM2KeyPair()
 		if sm2PrivateKey != nil && sm2PublicKey != nil {
 			encryptor = crypto.NewRequestEncryptor(sm2PrivateKey, sm2PublicKey)
-			log.Println("请求体加密器已初始化（SM2+SM4 混合加密）")
+			applogger.Infof("请求体加密器已初始化（SM2+SM4 混合加密）")
+
+			decryptionConfig := &middleware.RequestDecryptionConfig{
+				Enabled:           true,
+				ExcludePaths:      core.Config.Security.RequestEncryption.ExcludePaths,
+				RequireEncryption: core.Config.Security.RequestEncryption.RequireEncryption,
+			}
+
+			encryptionConfig := &middleware.ResponseEncryptionConfig{
+				Enabled:      true,
+				ExcludePaths: core.Config.Security.RequestEncryption.ExcludePaths,
+			}
+
+			r.Use(middleware.RequestDecryption(encryptor, decryptionConfig))
+			r.Use(middleware.ResponseEncryption(encryptor, encryptionConfig))
+			applogger.Infof("请求/响应加密中间件已启用")
 		} else {
-			log.Println("警告: SM2 密钥对未配置，无法启用请求体加密")
+			applogger.Warnf("SM2 密钥对未配置，无法启用请求体加密")
 		}
 	}
 
-	// 解密配置
-	decryptionConfig := &middleware.RequestDecryptionConfig{
-		Enabled:           core.Config.Security.RequestEncryption.Enabled,
-		ExcludePaths:      core.Config.Security.RequestEncryption.ExcludePaths,
-		RequireEncryption: core.Config.Security.RequestEncryption.RequireEncryption,
-	}
+	return encryptor
+}
 
-	// 响应加密配置
-	encryptionConfig := &middleware.ResponseEncryptionConfig{
-		Enabled:      core.Config.Security.RequestEncryption.Enabled,
-		ExcludePaths: core.Config.Security.RequestEncryption.ExcludePaths,
-	}
-
-	// 添加请求解密中间件（在认证之前）
-	if encryptor != nil && core.Config.Security.RequestEncryption.Enabled {
-		r.Use(middleware.RequestDecryption(encryptor, decryptionConfig))
-		log.Println("请求体解密中间件已启用")
-	}
-
-	// 添加响应加密中间件（在所有路由之后执行）
-	if encryptor != nil && core.Config.Security.RequestEncryption.Enabled {
-		r.Use(middleware.ResponseEncryption(encryptor, encryptionConfig))
-		log.Println("响应体加密中间件已启用")
-	}
-
-	// 创建并启动通知中心
+// setupNoticeHub 初始化通知中心
+func setupNoticeHub(r *gin.RouterGroup, core *core.Core) *websocket.NoticeHub {
 	noticeHub := websocket.NewNoticeHub()
 	go noticeHub.Run()
-	log.Println("通知中心已启动")
-	// 将 NoticeHub 设置到 Core 中，供其他服务使用
+	applogger.Infof("通知中心已启动")
+
 	core.NoticeHub = noticeHub
-	// 将 NoticeHub 设置到调度器全局变量，供通知发布定时任务使用
-	// 使用适配器将 websocket.NoticeHub 转换为 scheduler.NoticeHub
 	scheduler.SetNoticeHub(&noticeHubAdapter{hub: noticeHub})
+
+	return noticeHub
+}
+
+// registerCRUDRoutes 注册标准CRUD路由
+func registerCRUDRoutes(group *gin.RouterGroup, handler interface{}) {
+	type CRUDHandler interface {
+		List(c *gin.Context)
+		Create(c *gin.Context)
+		GetByID(c *gin.Context)
+		Update(c *gin.Context)
+		Delete(c *gin.Context)
+	}
+
+	type BatchHandler interface {
+		BatchOperation(c *gin.Context)
+	}
+
+	if h, ok := handler.(CRUDHandler); ok {
+		group.POST("/list", h.List)
+		group.POST("/:id", h.GetByID)
+		group.POST("/:id/update", h.Update)
+		group.POST("/:id/delete", h.Delete)
+		group.POST("", h.Create)
+
+		if bh, batchOk := handler.(BatchHandler); batchOk {
+			group.POST("/batch", bh.BatchOperation)
+		}
+	}
+}
+
+// SetupRouter 设置路由
+func SetupRouter(r *gin.RouterGroup, core *core.Core) {
+	r.Use(middleware.RequestID())
+
+	setupEncryptionMiddlewares(r, core)
+	noticeHub := setupNoticeHub(r, core)
 
 	// 系统管理模块
 	system := r.Group("/system")
@@ -96,7 +122,10 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 
 		// 需要认证的接口
 		authorized := system.Group("")
-		authorized.Use(middleware.JWTAuth(core.JWTManager))
+		// 使用带黑名单检查的 JWT 认证中间件
+		authorized.Use(middleware.JWTAuthWithBlacklist(core.JWTManager, core.TokenBlacklistService))
+		// 添加操作日志中间件
+		authorized.Use(middleware.OperLogMiddleware(core.OperLogService, core))
 		{
 			// 个人信息相关接口（所有已登录用户可访问）
 			profile := authorized.Group("/profile")
@@ -118,13 +147,11 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			}
 
 			// 通知配置管理（需要系统配置权限）
-			notificationConfigs := authorized.Group("/settings")
-			notificationConfigs.Use(middleware.RequirePermissions([]string{
-				string(permission.SystemConfig),
-			}, core))
-			{
-				systemV1.SetupNotificationConfigRouter(notificationConfigs, core)
-			}
+		notificationConfigs := authorized.Group("/settings")
+		notificationConfigs.Use(middleware.RequirePermissions([]string{permSystemConfig}, core))
+		{
+			systemV1.SetupNotificationConfigRouter(notificationConfigs, core)
+		}
 
 			// 用户管理
 			users := authorized.Group("/users")
@@ -141,6 +168,13 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 				systemV1.SetupUserRouter(users, core)
 				// Excel导入导出
 				operations.SetupExcelRouter(users, "user", core)
+			}
+
+			// 用户解锁路由（管理员权限）
+			userUnlock := authorized.Group("/user")
+			userUnlock.Use(middleware.RequirePermissions([]string{permSystemConfig}, core))
+			{
+				systemV1.SetupUserUnlockRouter(userUnlock, core)
 			}
 
 			// 角色管理
@@ -286,6 +320,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 	// 网络设备管理模块（统一管理）
 	network := r.Group("/network")
 	network.Use(middleware.JWTAuth(core.JWTManager))
+	// 添加操作日志中间件
+	network.Use(middleware.OperLogMiddleware(core.OperLogService, core))
 	network.Use(middleware.RequirePermissions([]string{
 		"network:device:list",
 		"network:device:add",
@@ -315,6 +351,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 	// 值班管理模块（运维管理）
 	duty := r.Group("/duty")
 	duty.Use(middleware.JWTAuth(core.JWTManager))
+	// 添加操作日志中间件
+	duty.Use(middleware.OperLogMiddleware(core.OperLogService, core))
 	{
 		// 值班池管理
 		dutyPools := duty.Group("/pools")
@@ -345,9 +383,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 
 		// 值班配置管理（所有已登录用户可查看，管理员可修改）
 		dutyConfig := duty.Group("/config")
-		dutyConfig.Use(middleware.RequirePermissions([]string{
-			string(permission.SystemConfig),
-		}, core))
+		dutyConfig.Use(middleware.RequirePermissions([]string{permSystemConfig}, core))
 		{
 			dutyV1.SetupDutyConfigRouter(dutyConfig, core)
 		}
@@ -359,6 +395,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 	// 运维工单管理模块
 	workorder := r.Group("/workorder")
 	workorder.Use(middleware.JWTAuth(core.JWTManager))
+	// 添加操作日志中间件
+	workorder.Use(middleware.OperLogMiddleware(core.OperLogService, core))
 	{
 		// 工单管理
 		orders := workorder.Group("/orders")
@@ -399,9 +437,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 
 		// 工单配置管理（需要系统配置权限）
 		workorderConfig := workorder.Group("/config")
-		workorderConfig.Use(middleware.RequirePermissions([]string{
-			string(permission.SystemConfig),
-		}, core))
+		workorderConfig.Use(middleware.RequirePermissions([]string{permSystemConfig}, core))
 		{
 			workorderV1.SetupWorkOrderConfigRouter(workorderConfig, core)
 		}
@@ -413,6 +449,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 	// 知识库管理模块
 	knowledge := r.Group("/knowledge")
 	knowledge.Use(middleware.JWTAuth(core.JWTManager))
+	// 添加操作日志中间件
+	knowledge.Use(middleware.OperLogMiddleware(core.OperLogService, core))
 	{
 		// 知识库文章管理
 		articles := knowledge.Group("/articles")
@@ -423,7 +461,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			"ops:knowledge:article:delete",
 		}, core))
 		{
-			v1_knowledge.SetupKnowledgeRouter(articles, core)
+			v1_knowledge.SetupArticleRouter(articles, core)
 		}
 
 		// 知识库分类管理
@@ -435,7 +473,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			"ops:knowledge:category:delete",
 		}, core))
 		{
-			v1_knowledge.SetupKnowledgeRouter(knowledgeCategories, core)
+			v1_knowledge.SetupCategoryRouter(knowledgeCategories, core)
 		}
 
 		// 知识库标签管理
@@ -447,11 +485,12 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			"ops:knowledge:tag:delete",
 		}, core))
 		{
-			v1_knowledge.SetupKnowledgeRouter(knowledgeTags, core)
+			v1_knowledge.SetupTagRouter(knowledgeTags, core)
 		}
 
 		// 知识库工单转换（工单转知识库）
-		v1_knowledge.SetupKnowledgeRouter(knowledge.Group("/workorders"), core)
+		workorders := knowledge.Group("/workorders")
+		v1_knowledge.SetupWorkOrderRouter(workorders, core)
 
 		// 知识库搜索和查看（所有已登录用户可访问）
 		v1_knowledge.SetupKnowledgeViewRouter(knowledge.Group("/view"), core)
@@ -460,6 +499,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 	// AD域管理模块
 	adDomain := r.Group("/ad-domain")
 	adDomain.Use(middleware.JWTAuth(core.JWTManager))
+	// 添加操作日志中间件
+	adDomain.Use(middleware.OperLogMiddleware(core.OperLogService, core))
 	{
 		systemV1.SetupADDomainRouter(adDomain, core)
 	}
@@ -467,6 +508,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 	// 运维管理模块（物理资源管理）
 	ops := r.Group("/ops")
 	ops.Use(middleware.JWTAuth(core.JWTManager))
+	// 添加操作日志中间件
+	ops.Use(middleware.OperLogMiddleware(core.OperLogService, core))
 	{
 		// 楼宇管理
 		buildings := ops.Group("/building")
@@ -643,6 +686,75 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 
 			// Excel导入导出
 			operations.SetupExcelRouter(roomDevices, "roomDevice", core)
+		}
+
+		// CAD平面图编辑器（包含墙体、门等元素）
+		// 使用平面图编辑器和墙体、门的权限标识符
+		walls := ops.Group("/walls")
+		walls.Use(middleware.RequirePermissions([]string{
+			"ops:floor-plan:list",
+			"ops:floor-plan:query",
+			"ops:floor-plan:edit",
+			"ops:floor-plan:save",
+			"ops:walls:list",
+			"ops:walls:add",
+			"ops:walls:edit",
+			"ops:walls:delete",
+		}, core))
+		{
+			wallService := opsServices.NewWallService(core.DB.GetDB())
+			wallHandler := operations.NewWallHandler(wallService)
+
+			walls.POST("/list", wallHandler.List)
+			walls.POST("/batch", wallHandler.BatchOperation)
+			walls.POST("/:id", wallHandler.GetByID)
+			walls.POST("/:id/update", wallHandler.Update)
+			walls.POST("/:id/delete", wallHandler.Delete)
+			walls.POST("", wallHandler.Create)
+		}
+
+		// 门管理（CAD平面图）- 使用平面图编辑器和门权限
+		doors := ops.Group("/doors")
+		doors.Use(middleware.RequirePermissions([]string{
+			"ops:floor-plan:list",
+			"ops:floor-plan:query",
+			"ops:floor-plan:edit",
+			"ops:floor-plan:save",
+			"ops:doors:list",
+			"ops:doors:add",
+			"ops:doors:edit",
+			"ops:doors:delete",
+		}, core))
+		{
+			doorService := opsServices.NewDoorService(core.DB.GetDB())
+			doorHandler := operations.NewDoorHandler(doorService)
+
+			doors.POST("/list", doorHandler.List)
+			doors.POST("/batch", doorHandler.BatchOperation)
+			doors.POST("/:id", doorHandler.GetByID)
+			doors.POST("/:id/update", doorHandler.Update)
+			doors.POST("/:id/delete", doorHandler.Delete)
+			doors.POST("", doorHandler.Create)
+		}
+
+		// 平面图文本管理（CAD平面图）
+		texts := ops.Group("/floor-plan-texts")
+		texts.Use(middleware.RequirePermissions([]string{
+			"ops:floor-plan:list",
+			"ops:floor-plan:query",
+			"ops:floor-plan:edit",
+			"ops:floor-plan:save",
+		}, core))
+		{
+			textService := opsServices.NewFloorPlanTextService(core.DB.GetDB())
+			textHandler := operations.NewFloorPlanTextHandler(textService)
+
+			texts.POST("/list", textHandler.List)
+			texts.POST("/batch", textHandler.BatchOperation)
+			texts.POST("/:id", textHandler.GetByID)
+			texts.POST("/:id/update", textHandler.Update)
+			texts.POST("/:id/delete", textHandler.Delete)
+			texts.POST("", textHandler.Create)
 		}
 	}
 }

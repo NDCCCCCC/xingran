@@ -3,8 +3,9 @@ package device
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
+
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 )
 
 // ExecutionConfig 执行配置
@@ -193,21 +194,21 @@ func (e *DeviceExecutor) GetScheduler() *DeviceTaskScheduler {
 func (e *DeviceExecutor) executeWithRetry(ctx context.Context, conn *PooledConnection, command string, stripPrompt bool) (*Response, error) {
 	var lastErr error
 
-	log.Printf("[执行器] executeWithRetry 开始: command='%s', maxRetries=%d", command, e.config.MaxRetries)
+	applogger.Infof("[执行器] executeWithRetry 开始: command='%s', maxRetries=%d", command, e.config.MaxRetries)
 
 	for attempt := 0; attempt <= e.config.MaxRetries; attempt++ {
-		log.Printf("[执行器] 尝试执行命令: command='%s', attempt=%d/%d",
+		applogger.Infof("[执行器] 尝试执行命令: command='%s', attempt=%d/%d",
 			command, attempt+1, e.config.MaxRetries+1)
 
 		if attempt > 0 {
 			// 重试延迟
-			log.Printf("[执行器] 等待重试: command='%s', 尝试=%d/%d, 延迟=%v",
+			applogger.Infof("[执行器] 等待重试: command='%s', 尝试=%d/%d, 延迟=%v",
 				command, attempt, e.config.MaxRetries, e.config.RetryDelay)
 
 			select {
 			case <-time.After(e.config.RetryDelay):
 			case <-ctx.Done():
-				log.Printf("[执行器] 重试被取消: command='%s'", command)
+				applogger.Infof("[执行器] 重试被取消: command='%s'", command)
 				return nil, ctx.Err()
 			}
 		}
@@ -216,42 +217,42 @@ func (e *DeviceExecutor) executeWithRetry(ctx context.Context, conn *PooledConne
 		var response *Response
 		var execErr error
 
-		log.Printf("[执行器] 准备调用 wrapper.SendCommand: command='%s', stripPrompt=%v", command, stripPrompt)
+		applogger.Infof("[执行器] 准备调用 wrapper.SendCommand: command='%s', stripPrompt=%v", command, stripPrompt)
 
 		if e.config.EnablePanicRecovery {
 			func() {
 				defer func() {
 					if r := recover(); r != nil {
-						log.Printf("[执行器] Panic 恢复: command='%s', panic=%v", command, r)
+						applogger.Infof("[执行器] Panic 恢复: command='%s', panic=%v", command, r)
 						execErr = fmt.Errorf("命令执行 panic: %v", r)
 					}
 				}()
 
 				// 注意：conn 已经在 task_scheduler 中获取，直接使用 wrapper
 				response, execErr = conn.wrapper.SendCommand(command, stripPrompt)
-				log.Printf("[执行器] wrapper.SendCommand 返回: command='%s', error=%v", command, execErr)
+				applogger.Infof("[执行器] wrapper.SendCommand 返回: command='%s', error=%v", command, execErr)
 				if execErr == nil && response != nil {
-					log.Printf("[执行器] 命令响应: resultSize=%d", len(response.Result))
+					applogger.Infof("[执行器] 命令响应: resultSize=%d", len(response.Result))
 				}
 			}()
 		} else {
 			// 注意：conn 已经在 task_scheduler 中获取，直接使用 wrapper
 			response, execErr = conn.wrapper.SendCommand(command, stripPrompt)
-			log.Printf("[执行器] wrapper.SendCommand 返回: command='%s', error=%v", command, execErr)
+			applogger.Infof("[执行器] wrapper.SendCommand 返回: command='%s', error=%v", command, execErr)
 		}
 
 		if execErr == nil {
-			log.Printf("[执行器] 命令执行成功: command='%s', 尝试=%d/%d",
+			applogger.Infof("[执行器] 命令执行成功: command='%s', 尝试=%d/%d",
 				command, attempt+1, e.config.MaxRetries+1)
 			return response, nil
 		}
 
 		lastErr = execErr
-		log.Printf("[执行器] 命令执行失败: command='%s', 尝试=%d/%d, error=%v",
+		applogger.Infof("[执行器] 命令执行失败: command='%s', 尝试=%d/%d, error=%v",
 			command, attempt+1, e.config.MaxRetries+1, execErr)
 	}
 
-	log.Printf("[执行器] 所有重试均失败: command='%s'", command)
+	applogger.Infof("[执行器] 所有重试均失败: command='%s'", command)
 	return nil, fmt.Errorf("执行失败，已达最大重试次数: %w", lastErr)
 }
 
@@ -260,20 +261,20 @@ func (e *DeviceExecutor) GetConfig(ctx context.Context, deviceID string) (string
 	var result string
 	var taskErr error
 
-	log.Printf("[执行器] GetConfig 开始: deviceID=%s", deviceID)
+	applogger.Infof("[执行器] GetConfig 开始: deviceID=%s", deviceID)
 
 	// 获取连接池
 	pool := e.scheduler.GetConnectionPool()
-	log.Printf("[执行器] 获取连接池成功")
+	applogger.Infof("[执行器] 获取连接池成功")
 
 	// 获取设备信息以确定厂商
 	device, err := pool.GetDevice(deviceID)
 	if err != nil {
-		log.Printf("[执行器] 获取设备信息失败: deviceID=%s, error=%v", deviceID, err)
+		applogger.Infof("[执行器] 获取设备信息失败: deviceID=%s, error=%v", deviceID, err)
 		return "", fmt.Errorf("获取设备信息失败: %w", err)
 	}
 
-	log.Printf("[执行器] 设备信息获取成功: name=%s, ip=%s, vendor=%s",
+	applogger.Infof("[执行器] 设备信息获取成功: name=%s, ip=%s, vendor=%s",
 		device.DeviceName, device.IPAddress, device.Vendor)
 
 	// 根据厂商选择正确的配置命令
@@ -287,12 +288,12 @@ func (e *DeviceExecutor) GetConfig(ctx context.Context, deviceID string) (string
 		configCommand = "show running-config" // 默认使用 Cisco 风格命令
 	}
 
-	log.Printf("[执行器] 设备 %s (%s), 厂商: %s, 使用命令: %s",
+	applogger.Infof("[执行器] 设备 %s (%s), 厂商: %s, 使用命令: %s",
 		device.DeviceName, device.IPAddress, device.Vendor, configCommand)
 
 	// 生成任务ID
 	taskID := generateTaskID()
-	log.Printf("[执行器] 任务已生成: taskID=%s", taskID)
+	applogger.Infof("[执行器] 任务已生成: taskID=%s", taskID)
 
 	// 创建任务 - 配置备份需要更长的超时时间
 	task := &DeviceTask{
@@ -300,36 +301,36 @@ func (e *DeviceExecutor) GetConfig(ctx context.Context, deviceID string) (string
 		DeviceID: deviceID,
 		Timeout:  3 * time.Minute, // 配置备份使用3分钟超时
 		Execute: func(taskCtx context.Context, conn *PooledConnection) error {
-			log.Printf("[执行器] 任务开始执行: taskID=%s, deviceID=%s", taskID, deviceID)
+			applogger.Infof("[执行器] 任务开始执行: taskID=%s, deviceID=%s", taskID, deviceID)
 			// 根据厂商获取配置命令
 			config, err := e.executeWithRetry(taskCtx, conn, configCommand, true)
 			if err != nil {
-				log.Printf("[执行器] 任务执行失败: taskID=%s, error=%v", taskID, err)
+				applogger.Infof("[执行器] 任务执行失败: taskID=%s, error=%v", taskID, err)
 				return err
 			}
 			result = config.Result
-			log.Printf("[执行器] 任务执行成功: taskID=%s, resultSize=%d", taskID, len(result))
+			applogger.Infof("[执行器] 任务执行成功: taskID=%s, resultSize=%d", taskID, len(result))
 			return nil
 		},
 		Callback: func(err error) {
-			log.Printf("[执行器] 任务回调: taskID=%s, error=%v", taskID, err)
+			applogger.Infof("[执行器] 任务回调: taskID=%s, error=%v", taskID, err)
 			taskErr = err
 		},
 	}
 
-	log.Printf("[执行器] 任务已创建: timeout=%v", task.Timeout)
+	applogger.Infof("[执行器] 任务已创建: timeout=%v", task.Timeout)
 
 	// 提交任务
-	log.Printf("[执行器] 准备提交任务: taskID=%s", taskID)
+	applogger.Infof("[执行器] 准备提交任务: taskID=%s", taskID)
 	if err := e.scheduler.Submit(task); err != nil {
-		log.Printf("[执行器] 任务提交失败: taskID=%s, error=%v", taskID, err)
+		applogger.Infof("[执行器] 任务提交失败: taskID=%s, error=%v", taskID, err)
 		return "", err
 	}
-	log.Printf("[执行器] 任务提交成功: taskID=%s", taskID)
+	applogger.Infof("[执行器] 任务提交成功: taskID=%s", taskID)
 
 	// 等待任务完成 - 使用更长的超时时间
 	waitTimeout := 3 * time.Minute
-	log.Printf("[执行器] 开始等待任务完成: taskID=%s, waitTimeout=%v", taskID, waitTimeout)
+	applogger.Infof("[执行器] 开始等待任务完成: taskID=%s, waitTimeout=%v", taskID, waitTimeout)
 	waitCtx, cancel := context.WithTimeout(ctx, waitTimeout)
 	defer cancel()
 
@@ -341,17 +342,17 @@ func (e *DeviceExecutor) GetConfig(ctx context.Context, deviceID string) (string
 	for {
 		select {
 		case <-waitCtx.Done():
-			log.Printf("[执行器] 等待超时: taskID=%s, pollCount=%d", taskID, pollCount)
+			applogger.Infof("[执行器] 等待超时: taskID=%s, pollCount=%d", taskID, pollCount)
 			return "", fmt.Errorf("任务执行超时: taskID=%s", taskID)
 		case <-ticker.C:
 			pollCount++
 			if pollCount%50 == 0 {
 				// 每5秒打印一次轮询状态
-				log.Printf("[执行器] 轮询中: taskID=%s, pollCount=%d, taskErr=%v, hasResult=%v",
+				applogger.Infof("[执行器] 轮询中: taskID=%s, pollCount=%d, taskErr=%v, hasResult=%v",
 					taskID, pollCount, taskErr, result != "")
 			}
 			if taskErr != nil || result != "" {
-				log.Printf("[执行器] 任务完成: taskID=%s, pollCount=%d, error=%v",
+				applogger.Infof("[执行器] 任务完成: taskID=%s, pollCount=%d, error=%v",
 					taskID, pollCount, taskErr)
 				return result, taskErr
 			}

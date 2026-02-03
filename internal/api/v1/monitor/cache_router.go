@@ -1,18 +1,217 @@
 package monitor
 
 import (
+	"context"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	monitorServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/monitor"
 )
+
+// ==================== 适配器 ====================
+
+// CacheProviderAdapter 缓存提供者适配器
+// 将 core.Core.Cache 适配为 CacheProvider
+type CacheProviderAdapter struct {
+	cache interface {
+		Get(ctx context.Context, key string) (string, error)
+		Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error
+		Delete(ctx context.Context, key string) error
+		Exists(ctx context.Context, key string) (bool, error)
+		Expire(ctx context.Context, key string, ttl time.Duration) error
+		TTL(ctx context.Context, key string) (time.Duration, error)
+		Keys(ctx context.Context, pattern string) ([]string, error)
+		FlushDB(ctx context.Context) error
+	}
+}
+
+// NewCacheProviderAdapter 创建缓存提供者适配器
+func NewCacheProviderAdapter(core *core.Core) monitorServices.CacheProvider {
+	return &CacheProviderAdapter{cache: core.Cache}
+}
+
+func (a *CacheProviderAdapter) Get(ctx context.Context, key string) (string, error) {
+	return a.cache.Get(ctx, key)
+}
+
+func (a *CacheProviderAdapter) Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error {
+	return a.cache.Set(ctx, key, value, ttl)
+}
+
+func (a *CacheProviderAdapter) Delete(ctx context.Context, key string) error {
+	return a.cache.Delete(ctx, key)
+}
+
+func (a *CacheProviderAdapter) Exists(ctx context.Context, key string) (bool, error) {
+	return a.cache.Exists(ctx, key)
+}
+
+func (a *CacheProviderAdapter) Expire(ctx context.Context, key string, ttl time.Duration) error {
+	return a.cache.Expire(ctx, key, ttl)
+}
+
+func (a *CacheProviderAdapter) TTL(ctx context.Context, key string) (time.Duration, error) {
+	return a.cache.TTL(ctx, key)
+}
+
+func (a *CacheProviderAdapter) Keys(ctx context.Context, pattern string) ([]string, error) {
+	return a.cache.Keys(ctx, pattern)
+}
+
+func (a *CacheProviderAdapter) FlushDB(ctx context.Context) error {
+	return a.cache.FlushDB(ctx)
+}
+
+// MultiLevelCacheProviderAdapter 多级缓存适配器
+type MultiLevelCacheProviderAdapter struct {
+	cache interface {
+		KeysByLevel(ctx context.Context, pattern string, level string) ([]string, error)
+	}
+}
+
+// NewMultiLevelCacheProviderAdapter 创建多级缓存适配器
+func NewMultiLevelCacheProviderAdapter(core *core.Core) monitorServices.MultiLevelCacheProvider {
+	type MultiLevelCacheInterface interface {
+		KeysByLevel(ctx context.Context, pattern string, level string) ([]string, error)
+	}
+	if cache, ok := core.Cache.(MultiLevelCacheInterface); ok {
+		return &MultiLevelCacheProviderAdapter{cache: cache}
+	}
+	return nil
+}
+
+func (a *MultiLevelCacheProviderAdapter) KeysByLevel(ctx context.Context, pattern string, level string) ([]string, error) {
+	if a == nil || a.cache == nil {
+		return []string{}, nil
+	}
+	return a.cache.KeysByLevel(ctx, pattern, level)
+}
+
+// DirectRedisProviderAdapter 直接 Redis 访问适配器
+type DirectRedisProviderAdapter struct {
+	cache interface {
+		DirectRedisKeys(ctx context.Context, pattern string) ([]string, error)
+		DirectRedisGet(ctx context.Context, key string) (string, error)
+		DirectRedisTTL(ctx context.Context, key string) (time.Duration, error)
+	}
+}
+
+// NewDirectRedisProviderAdapter 创建直接 Redis 访问适配器
+func NewDirectRedisProviderAdapter(core *core.Core) monitorServices.DirectRedisProvider {
+	type DirectRedisInterface interface {
+		DirectRedisKeys(ctx context.Context, pattern string) ([]string, error)
+		DirectRedisGet(ctx context.Context, key string) (string, error)
+		DirectRedisTTL(ctx context.Context, key string) (time.Duration, error)
+	}
+	if cache, ok := core.Cache.(DirectRedisInterface); ok {
+		return &DirectRedisProviderAdapter{cache: cache}
+	}
+	return nil
+}
+
+func (a *DirectRedisProviderAdapter) DirectRedisKeys(ctx context.Context, pattern string) ([]string, error) {
+	if a == nil || a.cache == nil {
+		return []string{}, nil
+	}
+	return a.cache.DirectRedisKeys(ctx, pattern)
+}
+
+func (a *DirectRedisProviderAdapter) DirectRedisGet(ctx context.Context, key string) (string, error) {
+	if a == nil || a.cache == nil {
+		return "", nil
+	}
+	return a.cache.DirectRedisGet(ctx, key)
+}
+
+func (a *DirectRedisProviderAdapter) DirectRedisTTL(ctx context.Context, key string) (time.Duration, error) {
+	if a == nil || a.cache == nil {
+		return 0, nil
+	}
+	return a.cache.DirectRedisTTL(ctx, key)
+}
+
+// StatsProviderAdapter 统计信息适配器
+type StatsProviderAdapter struct {
+	cache interface {
+		GetStats(ctx context.Context) (map[string]interface{}, error)
+	}
+}
+
+// NewStatsProviderAdapter 创建统计信息适配器
+func NewStatsProviderAdapter(core *core.Core) monitorServices.StatsProvider {
+	type StatsInterface interface {
+		GetStats(ctx context.Context) (map[string]interface{}, error)
+	}
+	if cache, ok := core.Cache.(StatsInterface); ok {
+		return &StatsProviderAdapter{cache: cache}
+	}
+	return nil
+}
+
+func (a *StatsProviderAdapter) GetStats(ctx context.Context) (map[string]interface{}, error) {
+	if a == nil || a.cache == nil {
+		return map[string]interface{}{}, nil
+	}
+	return a.cache.GetStats(ctx)
+}
+
+// CacheConfigProviderAdapter 缓存配置适配器
+type CacheConfigProviderAdapter struct {
+	service *services.CacheConfigService
+}
+
+// NewCacheConfigProviderAdapter 创建缓存配置适配器
+func NewCacheConfigProviderAdapter(service *services.CacheConfigService) monitorServices.CacheConfigProvider {
+	return &CacheConfigProviderAdapter{service: service}
+}
+
+func (a *CacheConfigProviderAdapter) GetConfigInfo() map[string]monitorServices.CacheConfigInfo {
+	configInfoMap := a.service.GetConfigInfo()
+	result := make(map[string]monitorServices.CacheConfigInfo)
+	for k, v := range configInfoMap {
+		result[k] = monitorServices.CacheConfigInfo{
+			Key:         v.Key,
+			Name:        v.Name,
+			Description: v.Description,
+			Category:    v.Category,
+			Min:         v.Min,
+			Max:         v.Max,
+			Default:     v.Default,
+		}
+	}
+	return result
+}
+
+func (a *CacheConfigProviderAdapter) GetAllConfigs(ctx context.Context) map[string]int {
+	return a.service.GetAllConfigs(ctx)
+}
+
+func (a *CacheConfigProviderAdapter) ReloadConfig(ctx context.Context) error {
+	return a.service.ReloadConfig(ctx)
+}
+
+// ==================== 路由设置 ====================
 
 // SetupCacheRouter 设置缓存监控路由
 func SetupCacheRouter(r *gin.RouterGroup, core *core.Core) {
 	// 创建缓存配置服务
 	cacheConfigService := services.NewCacheConfigService(core.DB.GetDB())
 
+	// 创建适配器
+	cacheProvider := NewCacheProviderAdapter(core)
+	configProvider := NewCacheConfigProviderAdapter(cacheConfigService)
+
+	// 创建 CacheService
+	cacheService := monitorServices.NewCacheService(
+		core.DB.GetDB(),
+		cacheProvider,
+		configProvider,
+	)
+
 	// 创建Handler
-	cacheHandler := NewCacheHandler(core, cacheConfigService)
+	cacheHandler := NewCacheHandler(cacheService, core)
 
 	// ==================== 缓存信息路由 ====================
 	r.POST("/cache/list", cacheHandler.GetCacheList)

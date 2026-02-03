@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
 // DiscoveryHandler 设备发现处理器
@@ -63,8 +64,7 @@ func (h *DiscoveryHandler) List(c *gin.Context) {
 // @Router /network/discoveries/create [post]
 func (h *DiscoveryHandler) Create(c *gin.Context) {
 	var req services.DiscoveryRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
@@ -77,8 +77,7 @@ func (h *DiscoveryHandler) Create(c *gin.Context) {
 	req.CreatedBy = userID.(string)
 
 	discoveryID, err := h.discoveryService.CreateDiscoveryTask(c.Request.Context(), &req)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "创建发现任务") {
 		return
 	}
 
@@ -152,8 +151,7 @@ func (h *DiscoveryHandler) Execute(c *gin.Context) {
 	}
 
 	result, err := h.discoveryService.ExecuteDiscovery(c.Request.Context(), id)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "执行发现任务") {
 		return
 	}
 
@@ -176,8 +174,8 @@ func (h *DiscoveryHandler) Cancel(c *gin.Context) {
 		return
 	}
 
-	if err := h.discoveryService.CancelDiscovery(c.Request.Context(), id); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.discoveryService.CancelDiscovery(c.Request.Context(), id)
+	if !responseHelpers.HandleServiceError(c, err, "取消发现任务") {
 		return
 	}
 
@@ -200,8 +198,8 @@ func (h *DiscoveryHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.discoveryService.DeleteDiscovery(c.Request.Context(), id); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.discoveryService.DeleteDiscovery(c.Request.Context(), id)
+	if !responseHelpers.HandleServiceError(c, err, "删除发现任务") {
 		return
 	}
 
@@ -221,13 +219,12 @@ func (h *DiscoveryHandler) BatchDelete(c *gin.Context) {
 	var req struct {
 		DiscoveryIDs []string `json:"discoveryIds" binding:"required,min=1"`
 	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
-	if err := h.discoveryService.BatchDeleteDiscoveries(c.Request.Context(), req.DiscoveryIDs); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.discoveryService.BatchDeleteDiscoveries(c.Request.Context(), req.DiscoveryIDs)
+	if !responseHelpers.HandleServiceError(c, err, "批量删除发现任务") {
 		return
 	}
 

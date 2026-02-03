@@ -8,11 +8,14 @@ import (
 
 	"github.com/go-ldap/ldap/v3"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 const (
 	batchCreateSize      = 100
+	batchUpdateSize      = 200 // 批量更新大小（PostgreSQL 参数限制 65535 / 28 字段 ≈ 2340，保守取 200）
 	onlineThresholdDays = 7
 )
 
@@ -334,7 +337,11 @@ func (s *ComputerService) batchCreate(ctx context.Context, computers []models.AD
 		return nil
 	}
 
+	start := time.Now()
+	applogger.Infof("[电脑同步-batchCreate] 开始批量创建，总数: %d", len(computers))
+
 	for i := 0; i < len(computers); i += batchCreateSize {
+		batchStart := time.Now()
 		end := i + batchCreateSize
 		if end > len(computers) {
 			end = len(computers)
@@ -342,7 +349,11 @@ func (s *ComputerService) batchCreate(ctx context.Context, computers []models.AD
 		if err := s.db.WithContext(ctx).Create(computers[i:end]).Error; err != nil {
 			return fmt.Errorf("批量创建失败: %w", err)
 		}
+		applogger.Infof("[电脑同步-batchCreate] 批次 %d/%d (大小 %d): 耗时 %.2fs",
+			(i/batchCreateSize)+1, (len(computers)+batchCreateSize-1)/batchCreateSize, end-i, time.Since(batchStart).Seconds())
 	}
+
+	applogger.Infof("[电脑同步-batchCreate] 完成，总耗时 %.2fs", time.Since(start).Seconds())
 	return nil
 }
 
@@ -352,12 +363,31 @@ func (s *ComputerService) syncComputers(ctx context.Context, config *models.ADCo
 		return nil
 	}
 
+	totalStart := time.Now()
+	applogger.Infof("[电脑同步] 开始同步电脑设备，LDAP条目数: %d", len(entries))
+
+	// 1. 提取DN列表
+	step1Start := time.Now()
 	computerDNs := extractDNs(entries)
+	applogger.Infof("[电脑同步] 步骤1-提取DN: 耗时 %.2fs, DN数量: %d", time.Since(step1Start).Seconds(), len(computerDNs))
+
+	// 2. 查询已存在的电脑（按DN）
+	step2Start := time.Now()
 	existingComputers := s.queryExistingComputers(ctx, config.ID, computerDNs)
+	applogger.Infof("[电脑同步] 步骤2-查询已存在电脑(DN): 耗时 %.2fs, 找到 %d 条", time.Since(step2Start).Seconds(), len(existingComputers))
+
+	// 3. 查询所有计算机名称（潜在瓶颈！）
+	step3Start := time.Now()
 	existingByName := s.queryAllComputerNames(ctx, config.ID)
+	applogger.Infof("[电脑同步] 步骤3-查询所有计算机名称: 耗时 %.2fs, 找到 %d 条记录", time.Since(step3Start).Seconds(), len(existingByName))
 
+	// 4. 构建映射
+	step4Start := time.Now()
 	existingComputerMap, existingComputerNameMap := s.buildComputerMaps(existingComputers, existingByName)
+	applogger.Infof("[电脑同步] 步骤4-构建映射: 耗时 %.2fs", time.Since(step4Start).Seconds())
 
+	// 5. 处理LDAP条目
+	step5Start := time.Now()
 	var computersToCreate []models.ADComputer
 	computersToUpdate := make(map[string]*models.ADComputer)
 	now := time.Now()
@@ -380,29 +410,73 @@ func (s *ComputerService) syncComputers(ctx context.Context, config *models.ADCo
 
 		s.processComputerEntry(entry, config.ID, parsedDesc, status, now, existingComputerMap, existingComputerNameMap, &computersToCreate, computersToUpdate)
 	}
+	applogger.Infof("[电脑同步] 步骤5-处理条目: 耗时 %.2fs, 待创建: %d, 待更新: %d", time.Since(step5Start).Seconds(), len(computersToCreate), len(computersToUpdate))
 
+	// 6. 批量创建
+	step6Start := time.Now()
 	if err := s.batchCreate(ctx, computersToCreate); err != nil {
 		return err
 	}
+	applogger.Infof("[电脑同步] 步骤6-批量创建: 耗时 %.2fs", time.Since(step6Start).Seconds())
 
-	return s.batchUpdate(ctx, computersToUpdate)
+	// 7. 批量更新
+	step7Start := time.Now()
+	if err := s.batchUpdate(ctx, computersToUpdate); err != nil {
+		return err
+	}
+	applogger.Infof("[电脑同步] 步骤7-批量更新: 耗时 %.2fs", time.Since(step7Start).Seconds())
+
+	applogger.Infof("[电脑同步] 完成同步，总耗时: %.2fs", time.Since(totalStart).Seconds())
+	return nil
 }
 
-// queryExistingComputers 查询已存在的电脑
+// queryExistingComputers 查询已存在的电脑（分批查询以优化性能）
+const batchSize = 500 // 每批查询 500 个 DN，避免 IN 子句过大
+
 func (s *ComputerService) queryExistingComputers(ctx context.Context, configID string, computerDNs []string) []models.ADComputer {
-	var computers []models.ADComputer
-	s.db.WithContext(ctx).
-		Where("ad_config_id = ? AND distinguished_name IN ?", configID, computerDNs).
-		Find(&computers)
-	return computers
+	if len(computerDNs) == 0 {
+		return []models.ADComputer{}
+	}
+
+	// 使用 map 来自动去重
+	dnMap := make(map[string]struct{})
+	for _, dn := range computerDNs {
+		dnMap[dn] = struct{}{}
+	}
+
+	// 将去重后的 DN 转回切片
+	uniqueDNs := make([]string, 0, len(dnMap))
+	for dn := range dnMap {
+		uniqueDNs = append(uniqueDNs, dn)
+	}
+
+	// 分批查询
+	var allComputers []models.ADComputer
+	for i := 0; i < len(uniqueDNs); i += batchSize {
+		end := i + batchSize
+		if end > len(uniqueDNs) {
+			end = len(uniqueDNs)
+		}
+		batch := uniqueDNs[i:end]
+
+		var computers []models.ADComputer
+		s.db.WithContext(ctx).
+			Where("ad_config_id = ? AND distinguished_name IN ?", configID, batch).
+			Find(&computers)
+		allComputers = append(allComputers, computers...)
+	}
+
+	return allComputers
 }
 
 // queryAllComputerNames 查询所有计算机名称
 func (s *ComputerService) queryAllComputerNames(ctx context.Context, configID string) []models.ADComputer {
+	start := time.Now()
 	var computers []models.ADComputer
 	s.db.WithContext(ctx).
 		Where("ad_config_id = ? AND deleted_at IS NULL", configID).
 		Find(&computers)
+	applogger.Infof("[电脑同步-queryAllComputerNames] 查询耗时 %.2fs，返回 %d 条记录", time.Since(start).Seconds(), len(computers))
 	return computers
 }
 
@@ -449,12 +523,48 @@ func (s *ComputerService) processComputerEntry(
 	}
 }
 
-// batchUpdate 批量更新电脑设备
+// batchUpdate 批量更新电脑设备 - 使用 upsert（分批处理）
 func (s *ComputerService) batchUpdate(ctx context.Context, computers map[string]*models.ADComputer) error {
+	if len(computers) == 0 {
+		return nil
+	}
+
+	start := time.Now()
+	applogger.Infof("[电脑同步-batchUpdate] 开始批量更新，总数: %d", len(computers))
+
+	computerSlice := make([]*models.ADComputer, 0, len(computers))
 	for _, computer := range computers {
-		if err := s.db.WithContext(ctx).Save(computer).Error; err != nil {
-			return fmt.Errorf("更新失败: %w", err)
+		computerSlice = append(computerSlice, computer)
+	}
+
+	// 分批处理，避免超过 PostgreSQL 参数限制 (65535)
+	batchCount := 0
+	for i := 0; i < len(computerSlice); i += batchUpdateSize {
+		batchStart := time.Now()
+		end := i + batchUpdateSize
+		if end > len(computerSlice) {
+			end = len(computerSlice)
+		}
+		batch := computerSlice[i:end]
+		if len(batch) > 0 {
+			// 使用数据库中实际的唯一约束 (ad_config_id, computer_name)
+			if err := s.db.WithContext(ctx).Clauses(clause.OnConflict{
+				Columns: []clause.Column{{Name: "ad_config_id"}, {Name: "computer_name"}},
+				DoUpdates: clause.AssignmentColumns([]string{
+					"distinguished_name", "oudn", "original_description", "ip_address",
+					"mac_address", "managed_by", "operating_system", "os_version",
+					"cpu_model", "architecture", "memory_capacity", "hard_disk_capacity",
+					"serial_number", "system_info", "last_logon", "password_last_set",
+					"logon_count", "last_online_time", "status", "updated_at",
+				}),
+			}).Create(batch).Error; err != nil {
+				return fmt.Errorf("批量更新电脑设备失败: %w", err)
+			}
+			batchCount++
+			applogger.Infof("[电脑同步-batchUpdate] 批次 %d (大小 %d): 耗时 %.2fs", batchCount, len(batch), time.Since(batchStart).Seconds())
 		}
 	}
+
+	applogger.Infof("[电脑同步-batchUpdate] 完成，共 %d 批次，总耗时 %.2fs", batchCount, time.Since(start).Seconds())
 	return nil
 }

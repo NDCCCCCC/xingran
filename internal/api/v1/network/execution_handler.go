@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
 // ExecutionHandler 配置执行处理器
@@ -63,8 +64,7 @@ func (h *ExecutionHandler) List(c *gin.Context) {
 // @Router /network/executions/template/execute [post]
 func (h *ExecutionHandler) ExecuteByTemplate(c *gin.Context) {
 	var req services.TemplateExecutionRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
@@ -82,8 +82,7 @@ func (h *ExecutionHandler) ExecuteByTemplate(c *gin.Context) {
 	req.CreatedBy = userID.(string)
 
 	result, err := h.executionService.ExecuteByTemplate(c.Request.Context(), &req)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "执行配置") {
 		return
 	}
 
@@ -131,8 +130,8 @@ func (h *ExecutionHandler) Cancel(c *gin.Context) {
 		return
 	}
 
-	if err := h.executionService.CancelExecution(c.Request.Context(), id); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.executionService.CancelExecution(c.Request.Context(), id)
+	if !responseHelpers.HandleServiceError(c, err, "取消配置执行") {
 		return
 	}
 
@@ -155,8 +154,8 @@ func (h *ExecutionHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.executionService.DeleteExecution(c.Request.Context(), id); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.executionService.DeleteExecution(c.Request.Context(), id)
+	if !responseHelpers.HandleServiceError(c, err, "删除配置执行记录") {
 		return
 	}
 
@@ -176,13 +175,12 @@ func (h *ExecutionHandler) BatchDelete(c *gin.Context) {
 	var req struct {
 		ExecutionIDs []string `json:"executionIds" binding:"required,min=1"`
 	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
-	if err := h.executionService.BatchDeleteExecutions(c.Request.Context(), req.ExecutionIDs); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	err := h.executionService.BatchDeleteExecutions(c.Request.Context(), req.ExecutionIDs)
+	if !responseHelpers.HandleServiceError(c, err, "批量删除配置执行记录") {
 		return
 	}
 

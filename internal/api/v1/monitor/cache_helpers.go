@@ -11,14 +11,23 @@ import (
 
 // ==================== 辅助函数 ====================
 
+// normalizeCacheKey 规范化缓存键，移除 ruoyi: 前缀
+// Redis 缓存使用 ruoyi: 前缀，但用户输入可能包含此前缀
+// 该函数确保返回不带前缀的键名，用于内部操作
+func normalizeCacheKey(key string) string {
+	if strings.HasPrefix(key, "ruoyi:") {
+		return key[6:]
+	}
+	return key
+}
+
 // getCachesFromCache 使用缓存接口获取缓存列表
 func getCachesFromCache(cacheInterface interface {
 	Get(ctx context.Context, key string) (string, error)
 	Keys(ctx context.Context, pattern string) ([]string, error)
 	TTL(ctx context.Context, key string) (time.Duration, error)
 	Exists(ctx context.Context, key string) (bool, error)
-}, req CacheListRequest) ([]models.CacheInfo, error) {
-	ctx := context.Background()
+}, ctx context.Context, req CacheListRequest) ([]models.CacheInfo, error) {
 	pattern := "*"
 	if req.Key != "" {
 		pattern = "*" + req.Key + "*"
@@ -69,9 +78,7 @@ func getCachesFromCache(cacheInterface interface {
 }
 
 // getCachesFromCacheWithLevel 使用缓存接口获取指定层级的缓存列表
-func getCachesFromCacheWithLevel(cacheInterface interface{}, req CacheListRequest) ([]models.CacheInfo, error) {
-	ctx := context.Background()
-
+func getCachesFromCacheWithLevel(cacheInterface interface{}, ctx context.Context, req CacheListRequest) ([]models.CacheInfo, error) {
 	pattern := "*"
 	if req.Key != "" {
 		pattern = "*" + req.Key + "*"

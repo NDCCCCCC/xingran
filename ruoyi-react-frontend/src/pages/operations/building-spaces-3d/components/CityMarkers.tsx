@@ -4,10 +4,10 @@
  */
 
 import { CustomOverlay, InfoWindow } from '@uiw/react-baidu-map';
-import { useState, useCallback } from 'react';
-import type { CityGroup, BuildingItem } from '../types';
-import { getMapMarkerColor } from '@/utils/three/colors';
+import { useState, useCallback, useMemo } from 'react';
 import { EnvironmentOutlined, BuildOutlined } from '@ant-design/icons';
+import type { CityGroup, BuildingItem } from './types';
+import { MARKER_COLORS } from './constants';
 
 interface CityMarkersProps {
   cities: CityGroup[];
@@ -28,36 +28,41 @@ const CityMarkers: React.FC<CityMarkersProps> = ({
     setActiveWindow(null);
   }, []);
 
-  const handleMarkerClick = useCallback(
-    (city: CityGroup) => {
-      onCityClick(city.code);
-      setActiveWindow(city.code);
-    },
-    [onCityClick]
-  );
+  const handleMarkerClick = useCallback((city: CityGroup) => {
+    onCityClick(city.code);
+    setActiveWindow(city.code);
+  }, [onCityClick]);
+
+  const handleBuildingMouseEnter = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    e.currentTarget.style.background = '#f5f5f5';
+  }, []);
+
+  const handleBuildingMouseLeave = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    e.currentTarget.style.background = 'transparent';
+  }, []);
 
   return (
     <>
       {cities.map((city) => {
         const isSelected = selectedCity === city.code;
         const isActive = activeWindow === city.code;
-        const colors = getMapMarkerColor('city');
+        const showMainBuildings = city.buildings.slice(0, 3);
+        const hasMoreBuildings = city.buildings.length > 3;
 
         return (
           <div key={city.code}>
             <CustomOverlay
               position={{ lng: city.center[0], lat: city.center[1] }}
             >
-              {/* 自定义标记样式 */}
               <div
                 onClick={() => handleMarkerClick(city)}
                 style={{
                   width: '32px',
                   height: '32px',
                   borderRadius: '50%',
-                  background: (isSelected && 'selected' in colors ? (colors as any).selected?.main : (colors as any).main) || (colors as any).main,
-                  border: `3px solid ${isSelected && 'selected' in colors ? (colors as any).selected?.border : (colors as any).border}` || (colors as any).border,
-                  boxShadow: `0 2px 8px ${(colors as any).bg}`,
+                  background: isSelected ? MARKER_COLORS.NORMAL.MAIN : MARKER_COLORS.BOUNDARY,
+                  border: `3px solid ${isSelected ? MARKER_COLORS.NORMAL.BORDER : MARKER_COLORS.BOUNDARY}`,
+                  boxShadow: `0 2px 8px ${MARKER_COLORS.NORMAL.SHADOW}`,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -88,7 +93,7 @@ const CityMarkers: React.FC<CityMarkersProps> = ({
                       <div style={{ fontSize: 12, color: '#999', marginBottom: 8 }}>
                         主要楼宇：
                       </div>
-                      {city.buildings.slice(0, 3).map((building) => (
+                      {showMainBuildings.map((building) => (
                         <div
                           key={building.id}
                           style={{
@@ -97,18 +102,14 @@ const CityMarkers: React.FC<CityMarkersProps> = ({
                             borderRadius: '4px',
                             transition: 'background 0.2s',
                           }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = '#f5f5f5';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'transparent';
-                          }}
+                          onMouseEnter={handleBuildingMouseEnter}
+                          onMouseLeave={handleBuildingMouseLeave}
                           onClick={() => onBuildingClick(building)}
                         >
                           📍 {building.name}
                         </div>
                       ))}
-                      {city.buildings.length > 3 && (
+                      {hasMoreBuildings && (
                         <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>
                           ...等 {city.buildings.length} 栋楼宇
                         </div>

@@ -18,6 +18,7 @@ interface MenuPathInfo {
   parentPath?: string;
 }
 
+// 路径翻译映射表
 const PATH_TRANSLATIONS: Record<string, string> = {
   'ops': '运维管理',
   'operations': '运维',
@@ -56,7 +57,7 @@ const PATH_TRANSLATIONS: Record<string, string> = {
   'settings': '设置',
   'profile': '个人中心',
   'duty': '值班',
-};
+}
 
 export class RouteConfigManager {
   private routeMap = new Map<string, MenuPathInfo>();
@@ -117,13 +118,13 @@ export class RouteConfigManager {
     const segments = normalizedPath.split('/').filter(Boolean);
 
     let currentPath = '';
-    for (let i = 0; i < segments.length; i++) {
-      currentPath += (i > 0 ? '/' : '') + segments[i];
+    for (const segment of segments) {
+      currentPath += (currentPath ? '/' : '') + segment;
       const currentInfo = this.routeMap.get(currentPath);
 
       if (currentInfo?.route.meta.title) {
         breadcrumb.push({
-          path: '/' + currentPath,
+          path: `/${currentPath}`,
           title: currentInfo.route.meta.title,
         });
       }
@@ -140,6 +141,8 @@ export class RouteConfigManager {
     this.routeMap.clear();
     this.initialized = false;
   }
+
+  // 私有方法
 
   private buildRouteMap(menus: Menu[]): Map<string, MenuPathInfo> {
     const map = new Map<string, MenuPathInfo>();
@@ -163,7 +166,7 @@ export class RouteConfigManager {
 
         if (fullPath) {
           const normalized = this.normalizePath(fullPath);
-          const pathInfo = {
+          const pathInfo: MenuPathInfo = {
             route,
             fullPath,
             level,
@@ -171,10 +174,10 @@ export class RouteConfigManager {
           };
 
           map.set(normalized, pathInfo);
-          map.set('/' + normalized, pathInfo);
+          map.set(`/${normalized}`, pathInfo);
         }
 
-        if (menu.children && menu.children.length > 0) {
+        if (menu.children?.length > 0) {
           traverse(menu.children, fullPath, level + 1);
         }
       }
@@ -224,23 +227,24 @@ export class RouteConfigManager {
   }
 
   private fallbackBreadcrumb(path: string): BreadcrumbItem[] {
-    const segments = path.split('/').filter(Boolean);
+    const segments = path.split('/').filter(Boolean)
+
     if (segments.length === 0) {
-      return [{ path: '/', title: '首页' }];
+      return [{ path: '/', title: '首页' }]
     }
 
-    const breadcrumb: BreadcrumbItem[] = [];
-    let currentPath = '';
+    const breadcrumb: BreadcrumbItem[] = []
+    let currentPath = ''
 
     for (const segment of segments) {
-      currentPath += '/' + segment;
+      currentPath += `/${segment}`
       breadcrumb.push({
         path: currentPath,
         title: PATH_TRANSLATIONS[segment] || segment,
-      });
+      })
     }
 
-    return breadcrumb;
+    return breadcrumb
   }
 }
 

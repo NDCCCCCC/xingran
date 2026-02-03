@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 	"gorm.io/gorm"
 )
@@ -14,7 +15,7 @@ type ServerRoomService interface {
 	Update(ctx context.Context, room *operations.OpsServerRoom) error
 	Delete(ctx context.Context, id string) error
 	GetByID(ctx context.Context, id string) (*operations.OpsServerRoom, error)
-	List(ctx context.Context, params map[string]interface{}) (*PageResult, error)
+	List(ctx context.Context, req requests.ServerRoomListRequest) (*PageResult, error)
 	BatchDelete(ctx context.Context, ids []string) error
 }
 
@@ -64,48 +65,33 @@ func (s *serverRoomService) GetByID(ctx context.Context, id string) (*operations
 	return &room, nil
 }
 
-// List 查询机房列表
-func (s *serverRoomService) List(ctx context.Context, params map[string]interface{}) (*PageResult, error) {
+// List 查询机房列表（类型安全版本）
+func (s *serverRoomService) List(ctx context.Context, req requests.ServerRoomListRequest) (*PageResult, error) {
 	var total int64
 	var list []operations.OpsServerRoom
 
 	query := s.db.WithContext(ctx).Model(&operations.OpsServerRoom{})
 
-	// 添加筛选条件
-	if name, ok := params["name"].(string); ok && name != "" {
-		query = query.Where("name LIKE ?", "%"+name+"%")
+	// 添加筛选条件 - 类型安全，无需类型断言
+	if req.Name != "" {
+		query = query.Where("name LIKE ?", "%"+req.Name+"%")
 	}
-	if floorId, ok := params["floorId"].(string); ok && floorId != "" {
-		query = query.Where("floor_id = ?", floorId)
+	if req.FloorID != "" {
+		query = query.Where("floor_id = ?", req.FloorID)
 	}
-	if status, ok := params["status"].(int); ok {
-		query = query.Where("status = ?", status)
-	}
-	if status, ok := params["status"].(float64); ok {
-		query = query.Where("status = ?", int(status))
+	if req.HasStatus() {
+		query = query.Where("status = ?", req.GetStatus(0))
 	}
 
-	// 分页
-	current := 1
-	pageSize := 10
-	if c, ok := params["current"].(int); ok {
-		current = c
-	}
-	if c, ok := params["current"].(float64); ok {
-		current = int(c)
-	}
-	if ps, ok := params["pageSize"].(int); ok {
-		pageSize = ps
-	}
-	if ps, ok := params["pageSize"].(float64); ok {
-		pageSize = int(ps)
-	}
+	// 分页 - 使用请求结构体的方法
+	offset := req.GetOffset()
+	_, pageSize := req.GetPagination()
+	current, _ := req.GetPagination()
 
 	if err := query.Count(&total).Error; err != nil {
 		return nil, err
 	}
 
-	offset := (current - 1) * pageSize
 	// JOIN 关联表获取楼宇名称和楼层名称（需要类型转换：varchar -> uuid）
 	if err := query.
 		Select("ops_server_rooms.*, b.name as building_name, f.name as floor_name, f.floor_no").

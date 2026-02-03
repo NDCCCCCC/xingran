@@ -4,6 +4,11 @@ import { message } from 'antd';
 import { useAuthStore } from '@/store/authStore';
 import { generateIV, generateSM4Key, encryptRequestBody, hexToBase64, decryptSM4CBC, base64ToHex } from '@/utils/sm4';
 import { fetchPublicKey, encryptWithSM2, clearPublicKeyCache } from '@/utils/sm2';
+import {
+  handleHttpResponseError,
+  handleNetworkError,
+  handleParseError,
+} from '@/utils/errorHandler';
 
 // SM4 密钥和 IV 存储（用于响应解密）
 // Key: X-Request-ID, Value: { sm4KeyHex: string, ivHex: string }
@@ -190,42 +195,18 @@ api.interceptors.response.use(
     const { response } = error;
 
     if (response) {
-      const { status, data } = response;
-
-      let errorMessage = '请求失败';
-      if (data?.message) {
-        errorMessage = data.message;
-      }
-
-      switch (status) {
-        case 400:
-          if (errorMessage.includes('SM2') || errorMessage.includes('解密')) {
-            console.warn('[API] SM2 解密失败，清除公钥缓存');
-            clearPublicKeyCache();
-          }
-          message.error(errorMessage);
-          break;
-        case 401:
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
-          useAuthStore.getState().logout();
-          window.location.href = '/login';
-          break;
-        case 403:
-        case 404:
-        case 500:
-          message.error(errorMessage);
-          break;
-        default:
-          message.error(errorMessage || '网络错误，请稍后重试');
-      }
+      // 使用统一的 HTTP 响应错误处理
+      const apiError = handleHttpResponseError(response.status, response.data);
+      return Promise.reject(apiError);
     } else if (error.code === 'ECONNABORTED') {
-      message.error('请求超时，请检查网络连接');
+      // 使用统一的网络错误处理
+      const networkError = handleNetworkError(error);
+      return Promise.reject(networkError);
     } else {
-      message.error('网络异常，请检查网络连接');
+      // 其他网络异常
+      const networkError = handleNetworkError(error);
+      return Promise.reject(networkError);
     }
-
-    return Promise.reject(error);
   }
 );
 

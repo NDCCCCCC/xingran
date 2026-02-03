@@ -40,7 +40,7 @@ type TokenPair struct {
 }
 
 // NewJWTManager 创建JWT管理器
-func NewJWTManager(cfg *config.JWTConfig) *JWTManager {
+func NewJWTManager(cfg *config.JWTConfig) (*JWTManager, error) {
 	jwtManager := &JWTManager{
 		secretKey:        cfg.SecretKey,
 		accessKeyExpire:  time.Duration(cfg.AccessKeyExpire) * time.Second,
@@ -55,12 +55,12 @@ func NewJWTManager(cfg *config.JWTConfig) *JWTManager {
 		if cfg.SM2PrivateKey != "" && cfg.SM2PublicKey != "" {
 			privateKey, err := crypto.ParsePrivateKeyFromHex(cfg.SM2PrivateKey)
 			if err != nil {
-				panic(fmt.Sprintf("解析SM2私钥失败: %v", err))
+				return nil, fmt.Errorf("解析SM2私钥失败: %w", err)
 			}
 
 			publicKey, err := crypto.ParsePublicKeyFromHex(cfg.SM2PublicKey)
 			if err != nil {
-				panic(fmt.Sprintf("解析SM2公钥失败: %v", err))
+				return nil, fmt.Errorf("解析SM2公钥失败: %w", err)
 			}
 
 			jwtManager.sm2PrivateKey = privateKey
@@ -69,7 +69,7 @@ func NewJWTManager(cfg *config.JWTConfig) *JWTManager {
 			// 否则生成新的密钥对
 			privateKey, publicKey, err := crypto.GenerateKeyPair()
 			if err != nil {
-				panic(fmt.Sprintf("生成SM2密钥对失败: %v", err))
+				return nil, fmt.Errorf("生成SM2密钥对失败: %w", err)
 			}
 
 			jwtManager.sm2PrivateKey = privateKey
@@ -77,7 +77,7 @@ func NewJWTManager(cfg *config.JWTConfig) *JWTManager {
 		}
 	}
 
-	return jwtManager
+	return jwtManager, nil
 }
 
 // GenerateTokenPair 生成令牌对

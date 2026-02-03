@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import removeConsole from 'vite-plugin-remove-console'
 import path from 'path'
 
 // https://vite.dev/config/
@@ -8,6 +9,8 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    // 生产构建时移除 console 语句
+    removeConsole(),
   ],
   resolve: {
     alias: {
@@ -68,3 +71,4 @@ export default defineConfig({
     // 这样直接访问 /dashboard 等子路由时也能正常工作
   },
 })
+

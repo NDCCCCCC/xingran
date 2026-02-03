@@ -2,12 +2,12 @@ package config
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"strconv"
 	"strings"
 
 	"github.com/spf13/viper"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 )
 
 // Config 应用配置
@@ -106,9 +106,9 @@ func Load() *Config {
 	// 读取配置文件
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			log.Println("配置文件未找到，使用默认配置")
+			applogger.Infof("配置文件未找到，使用默认配置")
 		} else {
-			log.Fatalf("读取配置文件失败: %v", err)
+			applogger.Errorf("读取配置文件失败: %v", err)
 		}
 	}
 
@@ -121,7 +121,7 @@ func Load() *Config {
 
 	var config Config
 	if err := viper.Unmarshal(&config); err != nil {
-		log.Fatalf("解析配置失败: %v", err)
+		applogger.Errorf("解析配置失败: %v", err)
 	}
 
 	// 从环境变量直接读取敏感配置

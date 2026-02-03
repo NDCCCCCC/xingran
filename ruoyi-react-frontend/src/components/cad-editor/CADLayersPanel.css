@@ -1,0 +1,88 @@
+/* CAD Layers Panel Styles */
+
+.cad-layer-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.cad-layer-item:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+/* 行布局 */
+.cad-layer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 24px;
+}
+
+/* 图层名称 */
+.cad-layer-name {
+  font-size: 13px;
+  font-weight: 500;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 图层操作按钮组 */
+.cad-layer-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+/* 图标按钮 */
+.cad-layer-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  color: rgba(0, 0, 0, 0.45);
+  transition: all 0.2s;
+}
+
+.cad-layer-icon-btn:hover {
+  background-color: rgba(0, 0, 0, 0.06);
+  color: rgba(0, 0, 0, 0.88);
+}
+
+.cad-layer-icon-btn:active {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+/* 隐藏状态的按钮样式 */
+.cad-layer-icon-btn-hidden {
+  color: rgba(0, 0, 0, 0.25);
+}
+
+/* 透明度行 */
+.cad-layer-opacity-row {
+  gap: 8px;
+}
+
+.cad-layer-opacity-label {
+  font-size: 11px;
+  color: rgba(0, 0, 0, 0.45);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.cad-layer-opacity-slider {
+  flex: 1;
+  margin: 0;
+}

@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
@@ -20,7 +21,7 @@ func NewDictTypeHandler(service systemServices.DictTypeService) *DictTypeHandler
 
 // Create 创建字典类型
 func (h *DictTypeHandler) Create(c *gin.Context) {
-	var req systemServices.DictTypeCreateRequest
+	var req requests.DictTypeCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
 		return
@@ -41,7 +42,7 @@ func (h *DictTypeHandler) List(c *gin.Context) {
 		rawReq = make(map[string]interface{})
 	}
 
-	params := systemServices.DefaultDictTypeListParams()
+	params := requests.DefaultDictTypeListParams()
 
 	// 处理分页参数
 	if val, ok := rawReq["current"]; ok {
@@ -117,7 +118,7 @@ func (h *DictTypeHandler) Update(c *gin.Context) {
 		return
 	}
 
-	var req systemServices.DictTypeUpdateRequest
+	var req requests.DictTypeUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
 		return
@@ -171,7 +172,7 @@ func NewDictDataHandler(service systemServices.DictDataService) *DictDataHandler
 
 // Create 创建字典数据
 func (h *DictDataHandler) Create(c *gin.Context) {
-	var req systemServices.DictDataCreateRequest
+	var req requests.DictDataCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
 		return
@@ -193,7 +194,7 @@ func (h *DictDataHandler) List(c *gin.Context) {
 		return
 	}
 
-	req := systemServices.DictDataListParams{
+	req := requests.DictDataListParams{
 		Current:  getIntField(rawReq, "current", 1),
 		PageSize: getIntField(rawReq, "pageSize", 10),
 	}
@@ -253,7 +254,7 @@ func (h *DictDataHandler) Update(c *gin.Context) {
 		return
 	}
 
-	var req systemServices.DictDataUpdateRequest
+	var req requests.DictDataUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
 		return

@@ -8,6 +8,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/portcollection"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
 // PortStatusListRequest 端口状态列表请求
@@ -50,8 +51,7 @@ func NewPortHandler(core *core.Core) *PortHandler {
 // List 查询端口状态列表
 func (h *PortHandler) List(c *gin.Context) {
 	var req PortStatusListRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
@@ -66,8 +66,7 @@ func (h *PortHandler) List(c *gin.Context) {
 		Dot1xEnabled:        req.Dot1xEnabled,
 		PortSecurityEnabled: req.PortSecurityEnabled,
 	})
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "获取端口状态列表") {
 		return
 	}
 
@@ -77,15 +76,13 @@ func (h *PortHandler) List(c *gin.Context) {
 // Collect 采集单个设备端口状态
 func (h *PortHandler) Collect(c *gin.Context) {
 	var req PortCollectionRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
 	svc := portcollection.NewPortCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor)
 	result, err := svc.Collection.CollectDevice(c.Request.Context(), req.DeviceID)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "采集设备端口状态") {
 		return
 	}
 
@@ -96,8 +93,7 @@ func (h *PortHandler) Collect(c *gin.Context) {
 func (h *PortHandler) CollectAll(c *gin.Context) {
 	svc := portcollection.NewPortCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor)
 	results, err := svc.Collection.CollectAllDevices(c.Request.Context())
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "采集所有设备端口状态") {
 		return
 	}
 
@@ -108,8 +104,7 @@ func (h *PortHandler) CollectAll(c *gin.Context) {
 func (h *PortHandler) GetStats(c *gin.Context) {
 	svc := portcollection.NewPortCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor)
 	stats, err := svc.Query.GetStats(c.Request.Context())
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "获取端口状态统计") {
 		return
 	}
 
@@ -119,8 +114,7 @@ func (h *PortHandler) GetStats(c *gin.Context) {
 // BatchDelete 批量删除端口状态记录
 func (h *PortHandler) BatchDelete(c *gin.Context) {
 	var req BatchDeletePortRecordsRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
@@ -135,15 +129,13 @@ func (h *PortHandler) BatchDelete(c *gin.Context) {
 // Clean 清理旧的端口状态记录
 func (h *PortHandler) Clean(c *gin.Context) {
 	var req CleanOldPortRecordsRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
 	}
 
 	svc := portcollection.NewPortCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor)
 	count, err := svc.Query.CleanOldRecords(c.Request.Context(), req.Days)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !responseHelpers.HandleServiceError(c, err, "清理旧端口记录") {
 		return
 	}
 

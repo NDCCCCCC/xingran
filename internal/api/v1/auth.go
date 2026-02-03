@@ -9,6 +9,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
@@ -203,7 +204,7 @@ func login(core *core.Core) gin.HandlerFunc {
 
 // logout 用户登出
 // @Summary 用户登出
-// @Description 用户登出接口
+// @Description 用户登出接口，将令牌加入黑名单
 // @Tags 认证
 // @Accept json
 // @Produce json
@@ -212,9 +213,47 @@ func login(core *core.Core) gin.HandlerFunc {
 // @Router /system/auth/logout [post]
 func logout(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// TODO: 实现登出逻辑
-		// 1. 将令牌加入黑名单
-		// 2. 清理用户缓存
+		// 从上下文获取令牌
+		token, exists := c.Get("token")
+		if !exists {
+			response.Success(c, gin.H{
+				"message": "登出成功",
+			})
+			return
+		}
+
+		tokenStr, ok := token.(string)
+		if !ok || tokenStr == "" {
+			response.Success(c, gin.H{
+				"message": "登出成功",
+			})
+			return
+		}
+
+		// 从上下文获取 claims（由 JWT 中间件设置）
+		claimsInterface, exists := c.Get("claims")
+		if !exists {
+			response.Success(c, gin.H{
+				"message": "登出成功",
+			})
+			return
+		}
+
+		// 类型断言获取 claims
+		claims, ok := claimsInterface.(*security.CustomClaims)
+		if !ok {
+			response.Success(c, gin.H{
+				"message": "登出成功",
+			})
+			return
+		}
+
+		// 将令牌加入黑名单
+		expiry := claims.ExpiresAt.Time
+		if err := core.TokenBlacklistService.AddToBlacklist(c.Request.Context(), tokenStr, expiry); err != nil {
+			// 黑名单添加失败不影响登出，但记录警告日志
+			applogger.Warnf("Failed to add token to blacklist: %v", err)
+		}
 
 		response.Success(c, gin.H{
 			"message": "登出成功",

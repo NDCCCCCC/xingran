@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"gorm.io/gorm"
 )
@@ -124,7 +125,7 @@ func (s *departmentCacheService) InvalidateDeptCache(ctx context.Context) error 
 }
 
 // Create 创建部门（带缓存失效）
-func (s *departmentCacheService) Create(ctx context.Context, req *DepartmentCreateRequest) error {
+func (s *departmentCacheService) Create(ctx context.Context, req *requests.DepartmentCreateRequest) error {
 	if err := s.departmentService.Create(ctx, req); err != nil {
 		return err
 	}
@@ -132,7 +133,7 @@ func (s *departmentCacheService) Create(ctx context.Context, req *DepartmentCrea
 }
 
 // Update 更新部门（带缓存失效）
-func (s *departmentCacheService) Update(ctx context.Context, req *DepartmentUpdateRequest) error {
+func (s *departmentCacheService) Update(ctx context.Context, req *requests.DepartmentUpdateRequest) error {
 	if err := s.departmentService.Update(ctx, req); err != nil {
 		return err
 	}
