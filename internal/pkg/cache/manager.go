@@ -13,18 +13,24 @@ import (
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 )
 
+const (
+	// 默认缓存 TTL
+	defaultL1TTL            = 30 * time.Second
+	defaultL2TTL            = 5 * time.Minute
+	metricsUpdateTick       = 30 * time.Second
+	serverInfoUpdateTick    = 30 * time.Minute
+	serverInfoL1TTL         = 5 * time.Minute
+	serverInfoL2TTL         = 30 * time.Minute
+	cleanupTick             = 2 * time.Hour
+)
+
 // MetricsCacheManager 系统指标缓存管理器
 type MetricsCacheManager struct {
-	// L1缓存：内存缓存
-	memoryCache sync.Map
-	// L2缓存：Redis缓存
-	redisCache interface{} // 使用interface{}避免循环引用
-	// 主机名
-	hostname string
-	// 停止信号
-	stopChan chan struct{}
-	// 等待组
-	wg sync.WaitGroup
+	memoryCache sync.Map      // L1缓存：内存缓存
+	redisCache  interface{}   // L2缓存：Redis缓存
+	hostname    string        // 主机名
+	stopChan    chan struct{} // 停止信号
+	wg          sync.WaitGroup // 等待组
 }
 
 // CacheItem 缓存项
@@ -48,8 +54,8 @@ type MetricsData struct {
 
 // NewMetricsCacheManager 创建指标缓存管理器
 func NewMetricsCacheManager(redisCache interface{}) *MetricsCacheManager {
-	hostname, _ := os.Hostname()
-	if hostname == "" {
+	hostname, err := os.Hostname()
+	if hostname == "" || err != nil {
 		hostname = "localhost"
 	}
 
@@ -59,9 +65,7 @@ func NewMetricsCacheManager(redisCache interface{}) *MetricsCacheManager {
 		stopChan:   make(chan struct{}),
 	}
 
-	// 启动后台更新任务
 	manager.startBackgroundTasks()
-
 	return manager
 }
 
@@ -72,23 +76,26 @@ func (m *MetricsCacheManager) getCacheKey(metricType string) string {
 
 // getFromL1 从L1缓存获取
 func (m *MetricsCacheManager) getFromL1(key string) (interface{}, bool) {
-	if item, ok := m.memoryCache.Load(key); ok {
-		cacheItem := item.(*CacheItem)
-		if time.Now().Before(cacheItem.ExpiresAt) {
-			return cacheItem.Value, true
-		}
-		// 过期了，删除
-		m.memoryCache.Delete(key)
+	item, ok := m.memoryCache.Load(key)
+	if !ok {
+		return nil, false
 	}
+
+	cacheItem := item.(*CacheItem)
+	if time.Now().Before(cacheItem.ExpiresAt) {
+		return cacheItem.Value, true
+	}
+
+	// 过期了，删除
+	m.memoryCache.Delete(key)
 	return nil, false
 }
 
 // setToL1 设置到L1缓存
 func (m *MetricsCacheManager) setToL1(key string, value interface{}, ttl time.Duration) {
-	expiresAt := time.Now().Add(ttl)
 	m.memoryCache.Store(key, &CacheItem{
 		Value:     value,
-		ExpiresAt: expiresAt,
+		ExpiresAt: time.Now().Add(ttl),
 	})
 }
 
@@ -154,8 +161,7 @@ func (m *MetricsCacheManager) GetSystemMetrics(ctx context.Context) (*MetricsDat
 	value, err := m.getFromL2(ctx, key)
 	if err == nil {
 		if metrics, ok := value.(*MetricsData); ok {
-			// 回写L1缓存
-			m.setToL1(key, metrics, 30*time.Second)
+			m.setToL1(key, metrics, defaultL1TTL)
 			return metrics, nil
 		}
 	}
@@ -167,8 +173,8 @@ func (m *MetricsCacheManager) GetSystemMetrics(ctx context.Context) (*MetricsDat
 	}
 
 	// 4. 写入缓存
-	m.setToL1(key, metrics, 30*time.Second)
-	m.setToL2(ctx, key, metrics, 5*time.Minute)
+	m.setToL1(key, metrics, defaultL1TTL)
+	m.setToL2(ctx, key, metrics, defaultL2TTL)
 
 	return metrics, nil
 }
@@ -208,8 +214,7 @@ func (m *MetricsCacheManager) GetServerInfo(ctx context.Context) (map[string]int
 	value, err := m.getFromL2(ctx, key)
 	if err == nil {
 		if info, ok := value.(map[string]interface{}); ok {
-			// 回写L1缓存
-			m.setToL1(key, info, 5*time.Minute)
+			m.setToL1(key, info, serverInfoL1TTL)
 			return info, nil
 		}
 	}
@@ -221,8 +226,8 @@ func (m *MetricsCacheManager) GetServerInfo(ctx context.Context) (map[string]int
 	}
 
 	// 4. 写入缓存
-	m.setToL1(key, info, 5*time.Minute)
-	m.setToL2(ctx, key, info, 30*time.Minute)
+	m.setToL1(key, info, serverInfoL1TTL)
+	m.setToL2(ctx, key, info, serverInfoL2TTL)
 
 	return info, nil
 }
@@ -285,10 +290,9 @@ func (m *MetricsCacheManager) startBackgroundTasks() {
 func (m *MetricsCacheManager) updateMetricsPeriodically() {
 	defer m.wg.Done()
 
-	ticker := time.NewTicker(30 * time.Second) // 每30秒更新一次
+	ticker := time.NewTicker(metricsUpdateTick)
 	defer ticker.Stop()
 
-	// 立即执行一次更新
 	m.updateMetrics()
 
 	for {
@@ -313,10 +317,10 @@ func (m *MetricsCacheManager) updateMetrics() {
 	}
 
 	key := m.getCacheKey("metrics:current")
-	m.setToL1(key, metrics, 30*time.Second)
+	m.setToL1(key, metrics, defaultL1TTL)
 
 	if m.redisCache != nil {
-		if err := m.setToL2(ctx, key, metrics, 5*time.Minute); err != nil {
+		if err := m.setToL2(ctx, key, metrics, defaultL2TTL); err != nil {
 			applogger.Warnf("写入L2缓存失败: %v", err)
 		}
 	}
@@ -329,10 +333,9 @@ func (m *MetricsCacheManager) updateMetrics() {
 func (m *MetricsCacheManager) updateServerInfoPeriodically() {
 	defer m.wg.Done()
 
-	ticker := time.NewTicker(30 * time.Minute) // 每30分钟更新一次
+	ticker := time.NewTicker(serverInfoUpdateTick)
 	defer ticker.Stop()
 
-	// 立即执行一次更新
 	m.updateServerInfo()
 
 	for {
@@ -357,10 +360,10 @@ func (m *MetricsCacheManager) updateServerInfo() {
 	}
 
 	key := m.getCacheKey("server:info")
-	m.setToL1(key, info, 5*time.Minute)
+	m.setToL1(key, info, serverInfoL1TTL)
 
 	if m.redisCache != nil {
-		if err := m.setToL2(ctx, key, info, 30*time.Minute); err != nil {
+		if err := m.setToL2(ctx, key, info, serverInfoL2TTL); err != nil {
 			applogger.Warnf("写入L2缓存失败: %v", err)
 		}
 	}
@@ -372,7 +375,7 @@ func (m *MetricsCacheManager) updateServerInfo() {
 func (m *MetricsCacheManager) cleanupExpiredCache() {
 	defer m.wg.Done()
 
-	ticker := time.NewTicker(2 * time.Hour) // 每2小时清理一次
+	ticker := time.NewTicker(cleanupTick)
 	defer ticker.Stop()
 
 	for {
