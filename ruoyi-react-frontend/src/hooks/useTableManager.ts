@@ -1,17 +1,18 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import { Form } from 'antd';
 
 export interface TableManagerOptions {
   pageSize?: number;
   onSuccess?: () => void;
-  // 支持外部传入的分页状态（用于全局分页管理）
-  externalPagination?: {
-    current: number;
-    pageSize: number;
-    setCurrent: (page: number) => void;
-    setPageSize: (size: number) => void;
-    setTotal: (total: number) => void;
-  };
+  externalPagination?: ExternalPagination;
+}
+
+export interface ExternalPagination {
+  current: number;
+  pageSize: number;
+  setCurrent: (page: number) => void;
+  setPageSize: (size: number) => void;
+  setTotal: (total: number) => void;
 }
 
 export interface TableManagerReturn<T> {
@@ -27,7 +28,7 @@ export interface TableManagerReturn<T> {
   editForm: any;
   editModalVisible: boolean;
   editingItem: T | null;
-  // 方法
+  // Setters
   setData: (data: T[]) => void;
   setTotal: (total: number) => void;
   setLoading: (loading: boolean) => void;
@@ -36,6 +37,7 @@ export interface TableManagerReturn<T> {
   setSelectedRowKeys: (keys: React.Key[]) => void;
   setEditModalVisible: (visible: boolean) => void;
   setEditingItem: (item: T | null) => void;
+  // 操作方法
   handleSearch: () => void;
   handleReset: () => void;
   handleRefresh: () => void;
@@ -65,10 +67,25 @@ export function useTableManager<T>(
   const [internalCurrent, setInternalCurrent] = useState(1);
   const [internalPageSize, setInternalPageSize] = useState(defaultPageSize);
 
-  const current = externalPagination?.current ?? internalCurrent;
-  const pageSize = externalPagination?.pageSize ?? internalPageSize;
-  const setCurrent = externalPagination?.setCurrent ?? setInternalCurrent;
-  const setPageSize = externalPagination?.setPageSize ?? setInternalPageSize;
+  const current = useMemo(
+    () => externalPagination?.current ?? internalCurrent,
+    [externalPagination?.current, internalCurrent]
+  );
+
+  const pageSize = useMemo(
+    () => externalPagination?.pageSize ?? internalPageSize,
+    [externalPagination?.pageSize, internalPageSize]
+  );
+
+  const setCurrent = useMemo(
+    () => externalPagination?.setCurrent ?? setInternalCurrent,
+    [externalPagination?.setCurrent]
+  );
+
+  const setPageSize = useMemo(
+    () => externalPagination?.setPageSize ?? setInternalPageSize,
+    [externalPagination?.setPageSize]
+  );
 
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
@@ -80,80 +97,72 @@ export function useTableManager<T>(
 
   // 使用 ref 存储 loadFunction 和 externalPagination，避免依赖导致的循环
   const loadFunctionRef = useRef(loadFunction);
-  loadFunctionRef.current = loadFunction;
-
   const externalPaginationRef = useRef(externalPagination);
+
+  // 使用 ref 存储最新的函数引用，避免依赖导致的循环
+  loadFunctionRef.current = loadFunction;
   externalPaginationRef.current = externalPagination;
 
   const loadData = useCallback(async (params: any = {}) => {
     setLoading(true);
     try {
-      const result = await loadFunctionRef.current({
-        current: params.current || current,
-        pageSize: params.pageSize || pageSize,
+      const requestParams = {
+        current: params.current ?? current,
+        pageSize: params.pageSize ?? pageSize,
         ...params,
-      });
-      setData(result.list || []);
-      const newTotal = result.total || 0;
+      };
+
+      const result = await loadFunctionRef.current(requestParams);
+      setData(result.list ?? []);
+      const newTotal = result.total ?? 0;
       setTotal(newTotal);
-      // 同步 total 到外部分页状态
+
       externalPaginationRef.current?.setTotal?.(newTotal);
-      // eslint-disable-next-line no-useless-catch
     } catch (error) {
-      // 错误由调用方处理
       throw error;
     } finally {
       setLoading(false);
     }
-  }, [current, pageSize]);
+  }, [current, pageSize, setData, setTotal, setLoading]);
 
-  // 搜索
   const handleSearch = useCallback(() => {
     searchForm.validateFields().then((values) => {
       setCurrent(1);
       loadData(values);
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchForm, loadData]);
+  }, [searchForm, setCurrent, loadData]);
 
-  // 重置
   const handleReset = useCallback(() => {
     searchForm.resetFields();
     setCurrent(1);
     loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchForm, loadData]);
+  }, [searchForm, setCurrent, loadData]);
 
-  // 刷新
   const handleRefresh = useCallback(() => {
     loadData();
     onSuccess?.();
   }, [loadData, onSuccess]);
 
-  // 新增
   const handleAdd = useCallback(() => {
     setEditingItem(null);
     editForm.resetFields();
     setEditModalVisible(true);
-  }, [editForm]);
+  }, [editForm, setEditingItem, setEditModalVisible]);
 
-  // 编辑
   const handleEdit = useCallback((item: T) => {
     setEditingItem(item);
     setEditModalVisible(true);
-  }, []);
+  }, [setEditingItem, setEditModalVisible]);
 
-  // 关闭编辑弹窗
   const handleModalClose = useCallback(() => {
     setEditModalVisible(false);
     setEditingItem(null);
     editForm.resetFields();
-  }, [editForm]);
+  }, [setEditModalVisible, setEditingItem, editForm]);
 
-  // 重置选择
   const resetSelection = useCallback(() => {
     setSelectedRowKeys([]);
-  }, []);
+  }, [setSelectedRowKeys]);
 
   return {
     // 状态

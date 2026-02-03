@@ -205,17 +205,19 @@ const InfoPointManagement: FC = () => {
 
   // 加载搜索表单的工位选项（按需加载）
   const loadSearchWorkstationOptions = useCallback(async () => {
-    if (workstationOptions.length > 0) return; // 已加载则跳过
+    if (workstationOptions.length > 0) {
+      return;
+    }
 
     try {
       const wsResult = await workstationApi.list({ current: 1, pageSize: 1000 });
-      const workstations = wsResult.data?.list || [];
+      const workstations = wsResult.data?.list ?? [];
       setWorkstationOptions(
         workstations
           .filter((w: any) => w.id)
           .map((w: any) => ({
             id: w.id,
-            name: w.name || '未命名工位',
+            name: w.name ?? '未命名工位',
           }))
       );
     } catch (error) {
