@@ -17,29 +17,27 @@ let cachedRoutes: MenuRouteConfig[] | null = null;
 let cachedMenusCount = 0;
 
 // 常量定义
-const DASHBOARD_PATH = 'dashboard';
-const PAGES_PREFIX = 'pages/';
-const PAGES_RELATIVE_PREFIX = '../pages/';
-const TSX_EXTENSION = '.tsx';
+const DASHBOARD_PATH = 'dashboard'
+const PAGES_PREFIX = 'pages/'
+const PAGES_RELATIVE_PREFIX = '../pages/'
+const TSX_EXTENSION = '.tsx'
 
 // 辅助函数
 const hasValidToken = (): boolean => !!localStorage.getItem('accessToken');
 
 const normalizeComponentPath = (componentPath: string): string => {
-  let path = componentPath;
+  let path = componentPath
 
-  // 去掉 'pages/' 前缀
   if (path.startsWith(PAGES_PREFIX)) {
-    path = path.slice(PAGES_PREFIX.length);
+    path = path.slice(PAGES_PREFIX.length)
   }
 
-  // 添加 .tsx 扩展名
   if (!path.endsWith(TSX_EXTENSION)) {
-    path = `${path}${TSX_EXTENSION}`;
+    path = `${path}${TSX_EXTENSION}`
   }
 
-  return `${PAGES_RELATIVE_PREFIX}${path}`;
-};
+  return `${PAGES_RELATIVE_PREFIX}${path}`
+}
 
 const createLazyRoute = (route: MenuRouteConfig) => {
   const importPath = normalizeComponentPath(route.component);
@@ -79,12 +77,10 @@ export function DynamicRoutes() {
       return [];
     }
 
-    // 使用缓存的路由配置
     const configs = cachedRoutes && cachedMenusCount === allMenus.length
       ? cachedRoutes
       : RouteGenerator.generate(allMenus);
 
-    // 更新缓存
     if (!cachedRoutes || cachedMenusCount !== allMenus.length) {
       cachedRoutes = configs;
       cachedMenusCount = allMenus.length;

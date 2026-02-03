@@ -57,7 +57,7 @@ const PATH_TRANSLATIONS: Record<string, string> = {
   'settings': '设置',
   'profile': '个人中心',
   'duty': '值班',
-};
+}
 
 export class RouteConfigManager {
   private routeMap = new Map<string, MenuPathInfo>();
@@ -227,24 +227,24 @@ export class RouteConfigManager {
   }
 
   private fallbackBreadcrumb(path: string): BreadcrumbItem[] {
-    const segments = path.split('/').filter(Boolean);
+    const segments = path.split('/').filter(Boolean)
 
     if (segments.length === 0) {
-      return [{ path: '/', title: '首页' }];
+      return [{ path: '/', title: '首页' }]
     }
 
-    const breadcrumb: BreadcrumbItem[] = [];
-    let currentPath = '';
+    const breadcrumb: BreadcrumbItem[] = []
+    let currentPath = ''
 
     for (const segment of segments) {
-      currentPath += `/${segment}`;
+      currentPath += `/${segment}`
       breadcrumb.push({
         path: currentPath,
         title: PATH_TRANSLATIONS[segment] || segment,
-      });
+      })
     }
 
-    return breadcrumb;
+    return breadcrumb
   }
 }
 

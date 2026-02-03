@@ -61,14 +61,6 @@ export const FloorPlanEditorView: FC<FloorPlanEditorViewProps> = ({
   onBuildingChange,
   onFloorChange,
 }) => {
-  // 调试日志 - 详细输出
-  console.log('=== FloorPlanEditorView 调试信息 ===');
-  console.log('selectedDeptId:', selectedDeptId);
-  console.log('selectedBuildingId:', selectedBuildingId);
-  console.log('buildingOptions:', buildingOptions);
-  console.log('floorOptions:', floorOptions);
-  console.log('===================================');
-
   if (!currentFloor || !floorPlanData) {
     return (
       <div

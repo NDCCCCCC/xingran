@@ -245,25 +245,18 @@ const FloorManagement: FC = () => {
       return [];
     }
 
-    console.log('过滤前部门数据:', data);
-
     const filterNodes = (nodes: Department[]): Department[] => {
       return nodes.reduce<Department[]>((acc, node) => {
-        // 先递归过滤子节点
         const filteredChildren = node.children && node.children.length > 0
           ? filterNodes(node.children)
           : [];
 
-        // 判断是否保留该节点：
-        // 1. 当前节点本身是外部机构（isExternalOrg === 1），或者
-        // 2. 该节点的子树中有外部机构部门（需要保留作为路径）
         const isExternal = node.isExternalOrg === 1;
         const hasExternalDescendants = filteredChildren.length > 0;
 
         if (isExternal || hasExternalDescendants) {
           acc.push({
             ...node,
-            // 统一使用过滤后的子节点，不保留原始子节点
             children: filteredChildren.length > 0 ? filteredChildren : undefined,
           });
         }
@@ -272,9 +265,7 @@ const FloorManagement: FC = () => {
       }, []);
     };
 
-    const result = filterNodes(data);
-    console.log('过滤后部门数据:', result);
-    return result;
+    return filterNodes(data);
   }, []);
 
   /**
@@ -301,16 +292,9 @@ const FloorManagement: FC = () => {
   const loadExternalDepartmentTree = useCallback(async () => {
     try {
       const result = await post<BaseResponse<Department[]>>('/system/departments/tree');
-      let deptData = result.data || [];
-
-      // 过滤仅外部机构
-      deptData = filterExternalOrgDepts(deptData);
-
-      // 转换为 TreeSelect 格式
+      const deptData = filterExternalOrgDepts(result.data ?? []);
       const treeData = convertToTreeSelectData(deptData);
       setDepartmentTreeData(treeData);
-
-      console.log('外部机构部门树数据:', treeData);
     } catch (error) {
       console.error('加载外部机构部门树失败:', error);
     }
