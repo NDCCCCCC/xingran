@@ -10,7 +10,6 @@ import { RouteGenerator } from './routeGenerator';
 import type { MenuRouteConfig } from '@/types/menu';
 import Layout from '@/components/layout';
 import Login from '@/pages/login';
-import FloorPlanEditor from '@/pages/operations/floor-plan-editor';
 import { Spin } from 'antd';
 
 // 路由缓存
@@ -19,7 +18,6 @@ let cachedMenusCount = 0;
 
 // 常量定义
 const DASHBOARD_PATH = 'dashboard';
-const FLOOR_PLAN_EDITOR_PATH = 'floor-plan-editor/:floorId';
 const PAGES_PREFIX = 'pages/';
 const PAGES_RELATIVE_PREFIX = '../pages/';
 const TSX_EXTENSION = '.tsx';
@@ -114,15 +112,6 @@ export function DynamicRoutes() {
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route element={<Layout><Outlet /></Layout>}>
         {routeElements}
-        {/* 平面图编辑器路由 - 静态路由，支持楼层ID参数 */}
-        <Route
-          path={FLOOR_PLAN_EDITOR_PATH}
-          element={
-            <Suspense fallback={<Spin size="large" />}>
-              <FloorPlanEditor />
-            </Suspense>
-          }
-        />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Route>
     </Routes>

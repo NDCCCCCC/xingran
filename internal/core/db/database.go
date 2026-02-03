@@ -14,7 +14,6 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 	_ "modernc.org/sqlite"
 )
 
@@ -88,16 +87,7 @@ func createSQLiteConnection(cfg *config.DatabaseConfig) (*gorm.DB, error) {
 
 // createFilteredLogger 创建使用 FilterLogger 的 GORM 配置
 func createFilteredLogger() *FilterLogger {
-	return NewFilterLogger(LogFilterConfig{
-		MinLevel: logger.Silent, // 完全静默 SQL 日志
-		FilterTypes: map[LogType]bool{
-			LogTypeSQL:       true, // 过滤普通 SQL
-			LogTypeSlowQuery: true, // 过滤慢查询
-			LogTypeError:     false, // 保留错误
-			LogTypeNilRecord: true, // 过滤未找到记录
-		},
-		SlowThreshold: 1000,
-	})
+	return NewFilterLogger(DefaultLogFilterConfig)
 }
 
 // createPostgresConnection 创建PostgreSQL连接

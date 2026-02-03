@@ -14,12 +14,8 @@ type LogType int
 const (
 	// LogTypeSQL SQL 查询日志
 	LogTypeSQL LogType = iota
-	// LogTypeSlowQuery 慢查询日志
-	LogTypeSlowQuery
 	// LogTypeError 错误日志
 	LogTypeError
-	// LogTypeNilRecord 未找到记录日志
-	LogTypeNilRecord
 )
 
 // LogFilterConfig 日志过滤配置
@@ -32,14 +28,12 @@ type LogFilterConfig struct {
 	SlowThreshold int
 }
 
-// DefaultLogFilterConfig 默认配置：完全静默
+// DefaultLogFilterConfig 默认配置：完全静默 SQL 日志，保留数据库错误
 var DefaultLogFilterConfig = LogFilterConfig{
 	MinLevel: logger.Silent, // 默认静默
 	FilterTypes: map[LogType]bool{
-		LogTypeSQL:       true, // 过滤普通 SQL
-		LogTypeSlowQuery: true, // 过滤慢查询
-		LogTypeError:     false, // 保留错误
-		LogTypeNilRecord: true, // 过滤未找到记录
+		LogTypeSQL:   true, // 过滤普通 SQL
+		LogTypeError: false, // 保留错误
 	},
 	SlowThreshold: 1000, // 慢查询阈值 1 秒
 }
@@ -73,8 +67,13 @@ func (l *FilterLogger) Warn(ctx context.Context, msg string, data ...interface{}
 	// 完全静默，不输出任何日志
 }
 
-// Error 实现 logger.Interface - 只输出真正的错误
+// Error 实现 logger.Interface - 根据配置输出错误
 func (l *FilterLogger) Error(ctx context.Context, msg string, data ...interface{}) {
+	// 检查配置是否过滤错误日志
+	if l.config.FilterTypes[LogTypeError] {
+		return
+	}
+
 	// 只输出非 ErrRecordNotFound 的错误
 	if len(data) > 0 && data[0] != nil {
 		if err, ok := data[0].(error); ok && err != logger.ErrRecordNotFound {
@@ -83,12 +82,24 @@ func (l *FilterLogger) Error(ctx context.Context, msg string, data ...interface{
 	}
 }
 
-// Trace 实现 logger.Interface，完全过滤所有 SQL 日志
+// Trace 实现 logger.Interface，根据配置过滤 SQL 日志
 func (l *FilterLogger) Trace(ctx context.Context, begin time.Time, fc func() (string, int64), err error) {
-	// 完全不输出 SQL 日志
-	// 只在发生真正的数据库错误（非 ErrRecordNotFound）时才输出
-	if err != nil && err != logger.ErrRecordNotFound {
-		sql, _ := fc()
-		applogger.Errorf("[GORM错误] %s | 耗时: %v | 错误: %v", sql, time.Since(begin), err)
+	// 如果没有错误，检查是否过滤 SQL 日志
+	if err == nil {
+		return
 	}
+
+	// ErrRecordNotFound 不视为需要记录的错误
+	if err == logger.ErrRecordNotFound {
+		return
+	}
+
+	// 检查配置是否过滤错误日志
+	if l.config.FilterTypes[LogTypeError] {
+		return
+	}
+
+	// 记录数据库错误
+	sql, _ := fc()
+	applogger.Errorf("[GORM错误] %s | 耗时: %v | 错误: %v", sql, time.Since(begin), err)
 }

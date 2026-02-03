@@ -321,7 +321,7 @@ func (m *MetricsCacheManager) updateMetrics() {
 		}
 	}
 
-	applogger.Warnf("系统指标已更新: CPU=%.1f%%, Memory=%.1f%%",
+	applogger.Infof("系统指标已更新: CPU=%.1f%%, Memory=%.1f%%",
 		metrics.CPUUsage, metrics.MemoryUsage)
 }
 
@@ -365,7 +365,7 @@ func (m *MetricsCacheManager) updateServerInfo() {
 		}
 	}
 
-	applogger.Warnf("服务器信息已更新: %s", info["hostname"])
+	applogger.Infof("服务器信息已更新: %s", info["hostname"])
 }
 
 // cleanupExpiredCache 清理过期的L1缓存

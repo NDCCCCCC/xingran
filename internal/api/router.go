@@ -486,7 +486,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			"ops:knowledge:article:delete",
 		}, core))
 		{
-			v1_knowledge.SetupKnowledgeRouter(articles, core)
+			v1_knowledge.SetupArticleRouter(articles, core)
 		}
 
 		// 知识库分类管理
@@ -498,7 +498,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			"ops:knowledge:category:delete",
 		}, core))
 		{
-			v1_knowledge.SetupKnowledgeRouter(knowledgeCategories, core)
+			v1_knowledge.SetupCategoryRouter(knowledgeCategories, core)
 		}
 
 		// 知识库标签管理
@@ -510,11 +510,12 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			"ops:knowledge:tag:delete",
 		}, core))
 		{
-			v1_knowledge.SetupKnowledgeRouter(knowledgeTags, core)
+			v1_knowledge.SetupTagRouter(knowledgeTags, core)
 		}
 
 		// 知识库工单转换（工单转知识库）
-		v1_knowledge.SetupKnowledgeRouter(knowledge.Group("/workorders"), core)
+		workorders := knowledge.Group("/workorders")
+		v1_knowledge.SetupWorkOrderRouter(workorders, core)
 
 		// 知识库搜索和查看（所有已登录用户可访问）
 		v1_knowledge.SetupKnowledgeViewRouter(knowledge.Group("/view"), core)

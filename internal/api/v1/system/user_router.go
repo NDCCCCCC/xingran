@@ -41,6 +41,7 @@ func SetupUserRouter(r *gin.RouterGroup, core *core.Core) {
 	)
 	handler := NewUserHandler(userService)
 
+	r.POST("", handler.Create)
 	r.POST("/list", handler.List)
 	r.POST("/batch-delete", handler.BatchDelete)
 	r.POST("/:id", handler.GetByID)

@@ -2,9 +2,9 @@
  * 楼宇管理页面
  */
 
-import { useState, useEffect, useCallback, type FC, type Key } from 'react';
+import { useState, useEffect, useCallback, useRef, type FC, type Key } from 'react';
 import {
-  Table, Button, Space, Modal, Form, Input, InputNumber, Select, TreeSelect, Popconfirm,
+  Table, Button, Space, Modal, Form, Input, InputNumber, Select, Popconfirm,
   Tag, Card, Row, Col, Statistic, Alert, Radio, Spin, Layout,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -54,8 +54,8 @@ const BuildingManagement: FC = () => {
     loading, data: buildings, total, selectedRowKeys,
     searchForm, editForm: buildingForm, editModalVisible: modalVisible,
     editingItem: editingBuilding, setSelectedRowKeys, setEditModalVisible: setModalVisible,
-    setEditingItem: setEditingBuilding, handleSearch: tableHandleSearch,
-    handleReset, handleAdd, handleEdit, handleModalClose, loadData: loadBuildings, resetSelection,
+    setEditingItem: setEditingBuilding, handleSearch: _tableHandleSearch,
+    handleReset: _handleReset, handleAdd, handleEdit, handleModalClose, loadData: loadBuildings, resetSelection,
   } = useTableManager<any>(
     async (params) => {
       const result = await buildingApi.list(params) as { data?: { list: any[]; total: number } };
@@ -72,9 +72,10 @@ const BuildingManagement: FC = () => {
     }
   );
 
-  const loadStatistics = useCallback(async () => {
+  const loadStatistics = useCallback(async (searchParams: Record<string, unknown> = {}) => {
     try {
-      const result = await buildingApi.list({ current: 1, pageSize: 1000 }) as { data?: { list: any[] } };
+      // 获取当前筛选条件下的所有数据，使用大pageSize确保获取完整数据
+      const result = await buildingApi.list({ current: 1, pageSize: 100000, ...searchParams }) as { data?: { list: any[] } };
       const allBuildings = result.data?.list || [];
       setStatistics({
         total: allBuildings.length,
@@ -84,16 +85,22 @@ const BuildingManagement: FC = () => {
     } catch (error) { handleApiError(error, '加载统计数据', false); }
   }, []);
 
+  // 使用 ref 跟踪初始化状态，避免循环请求
+  const isInitialized = useRef(false);
+  const prevPageRef = useRef({ current: 1, pageSize: 10 });
+
   // 部门树选择处理
   const handleDeptSelect = useCallback((selectedKeys: Key[]) => {
+    const searchParams: Record<string, unknown> = {};
     if (selectedKeys.length > 0) {
       setSelectedDeptId(selectedKeys[0] as string);
-      loadBuildings({ orgId: selectedKeys[0] as string });
+      searchParams.orgId = selectedKeys[0] as string;
     } else {
       setSelectedDeptId('');
-      loadBuildings();
     }
-  }, [loadBuildings]);
+    loadBuildings(searchParams);
+    loadStatistics(searchParams);
+  }, [loadBuildings, loadStatistics]);
 
   // 搜索处理（支持部门过滤）
   const handleSearch = useCallback(() => {
@@ -109,32 +116,50 @@ const BuildingManagement: FC = () => {
       searchParams.orgId = selectedDeptId;
     }
     loadBuildings(searchParams);
-  }, [searchForm, selectedDeptId, loadBuildings]);
+    loadStatistics(searchParams);
+  }, [searchForm, selectedDeptId, loadBuildings, loadStatistics]);
 
   // 重置处理（支持部门过滤）
   const handleResetWithDept = useCallback(() => {
     searchForm.resetFields();
+    const searchParams: Record<string, unknown> = {};
     if (selectedDeptId) {
-      loadBuildings({ orgId: selectedDeptId });
-    } else {
-      loadBuildings();
+      searchParams.orgId = selectedDeptId;
     }
-  }, [searchForm, selectedDeptId, loadBuildings]);
+    loadBuildings(searchParams);
+    loadStatistics(searchParams);
+  }, [searchForm, selectedDeptId, loadBuildings, loadStatistics]);
 
   // 刷新处理（支持部门过滤）
   const handleRefresh = useCallback(() => {
+    const searchParams: Record<string, unknown> = {};
     if (selectedDeptId) {
-      loadBuildings({ orgId: selectedDeptId });
-    } else {
-      loadBuildings();
+      searchParams.orgId = selectedDeptId;
     }
-    loadStatistics();
+    loadBuildings(searchParams);
+    loadStatistics(searchParams);
   }, [selectedDeptId, loadBuildings, loadStatistics]);
 
+  // 初始加载和分页变化处理
   useEffect(() => {
-    loadBuildings();
-    loadStatistics();
-    departmentData.loadDepartments();
+    const { current, pageSize } = paginationProps;
+    const prev = prevPageRef.current;
+
+    // 检查分页是否真的发生了变化
+    const pageChanged = prev.current !== current || prev.pageSize !== pageSize;
+
+    if (!isInitialized.current || pageChanged) {
+      isInitialized.current = true;
+      prevPageRef.current = { current, pageSize };
+
+      // 使用 setTimeout 避免同步 setState 导致的循环
+      setTimeout(() => {
+        loadBuildings();
+        loadStatistics();
+        departmentData.loadDepartments();
+      }, 0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paginationProps.current, paginationProps.pageSize]);
 
   // ==================== 楼宇操作函数 ====================
@@ -144,7 +169,7 @@ const BuildingManagement: FC = () => {
       const values = await buildingForm.validateFields();
 
       // 移除不需要发送给后端的字段
-      const { id, createdAt, updatedAt, orgName, ...submitData } = values as any;
+      const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, orgName: _orgName, ...submitData } = values as any;
 
       // 地址解析：如果有地址，自动解析获取经纬度
       if (submitData.address && submitData.address.trim()) {
@@ -169,12 +194,12 @@ const BuildingManagement: FC = () => {
       }
       handleModalClose();
       // 刷新时保持部门筛选状态
+      const searchParams: Record<string, unknown> = {};
       if (selectedDeptId) {
-        loadBuildings({ orgId: selectedDeptId });
-      } else {
-        loadBuildings();
+        searchParams.orgId = selectedDeptId;
       }
-      loadStatistics();
+      loadBuildings(searchParams);
+      loadStatistics(searchParams);
     } catch (error: any) { if (error.errorFields) return; handleApiError(error, '操作'); }
   };
 
@@ -183,12 +208,12 @@ const BuildingManagement: FC = () => {
       await buildingApi.delete(id);
       handleSuccess('删除');
       // 刷新时保持部门筛选状态
+      const searchParams: Record<string, unknown> = {};
       if (selectedDeptId) {
-        loadBuildings({ orgId: selectedDeptId });
-      } else {
-        loadBuildings();
+        searchParams.orgId = selectedDeptId;
       }
-      loadStatistics();
+      loadBuildings(searchParams);
+      loadStatistics(searchParams);
     } catch (error) { handleApiError(error, '删除'); }
   };
 
@@ -199,12 +224,12 @@ const BuildingManagement: FC = () => {
       handleSuccess('批量删除');
       resetSelection();
       // 刷新时保持部门筛选状态
+      const searchParams: Record<string, unknown> = {};
       if (selectedDeptId) {
-        loadBuildings({ orgId: selectedDeptId });
-      } else {
-        loadBuildings();
+        searchParams.orgId = selectedDeptId;
       }
-      loadStatistics();
+      loadBuildings(searchParams);
+      loadStatistics(searchParams);
     } catch (error) { handleApiError(error, '批量删除'); }
   };
 
@@ -240,7 +265,15 @@ const BuildingManagement: FC = () => {
     }
   };
 
-  const handleImportSuccess = () => { loadBuildings(); loadStatistics(); setImportVisible(false); };
+  const handleImportSuccess = () => {
+    const searchParams: Record<string, unknown> = {};
+    if (selectedDeptId) {
+      searchParams.orgId = selectedDeptId;
+    }
+    loadBuildings(searchParams);
+    loadStatistics(searchParams);
+    setImportVisible(false);
+  };
 
   const columns: ColumnsType<Building> = [
     { title: '楼宇名称', dataIndex: 'name', key: 'name', width: 150 },
@@ -340,13 +373,11 @@ const BuildingManagement: FC = () => {
       {/* 右侧内容区 */}
       <Content style={{ padding: '16px', background: '#f0f2f5' }}>
         <div>
-          {total > 10 && (
-            <Row gutter={16} style={{ marginBottom: 16 }}>
-              <Col span={8}><Card><Statistic title="总楼宇数" value={statistics.total} prefix={<CheckCircleOutlined />} /></Card></Col>
-              <Col span={8}><Card><Statistic title="正常楼宇" value={statistics.active} styles={{ content: { color: '#3f8600' } }} prefix={<CheckCircleOutlined />} /></Card></Col>
-              <Col span={8}><Card><Statistic title="停用楼宇" value={statistics.inactive} styles={{ content: { color: '#cf1322' } }} prefix={<StopOutlined />} /></Card></Col>
-            </Row>
-          )}
+          <Row gutter={16} style={{ marginBottom: 16 }}>
+            <Col span={8}><Card><Statistic title="总楼宇数" value={statistics.total} prefix={<CheckCircleOutlined />} /></Card></Col>
+            <Col span={8}><Card><Statistic title="正常楼宇" value={statistics.active} styles={{ content: { color: '#3f8600' } }} prefix={<CheckCircleOutlined />} /></Card></Col>
+            <Col span={8}><Card><Statistic title="停用楼宇" value={statistics.inactive} styles={{ content: { color: '#cf1322' } }} prefix={<StopOutlined />} /></Card></Col>
+          </Row>
           <Card style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>

@@ -2,7 +2,7 @@
  * 机房管理页面
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { FC } from 'react';
 import {
   Table, Button, Space, Modal, Form, Input, Select, Popconfirm,
@@ -107,13 +107,29 @@ const ServerRoomManagement: FC = () => {
     } catch (error) { handleApiError(error, '加载楼层选项', false); }
   }, []);
 
+  // 使用 ref 跟踪初始化状态，避免循环请求
+  const isInitialized = useRef(false);
+  const prevPageRef = useRef({ current: 1, pageSize: 10 });
+
   useEffect(() => {
-    // 使用 setTimeout 避免同步 setState
-    setTimeout(() => {
-      loadServerRooms();
-      loadStatistics();
-      loadBuildingOptions();
-    }, 0);
+    const { current, pageSize } = paginationProps;
+    const prev = prevPageRef.current;
+
+    // 检查分页是否真的发生了变化
+    const pageChanged = prev.current !== current || prev.pageSize !== pageSize;
+
+    if (!isInitialized.current || pageChanged) {
+      isInitialized.current = true;
+      prevPageRef.current = { current, pageSize };
+
+      // 使用 setTimeout 避免同步 setState
+      setTimeout(() => {
+        loadServerRooms();
+        loadStatistics();
+        loadBuildingOptions();
+      }, 0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paginationProps.current, paginationProps.pageSize]);
 
   const handleSave = async () => {

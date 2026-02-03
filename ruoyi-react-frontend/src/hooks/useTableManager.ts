@@ -78,9 +78,12 @@ export function useTableManager<T>(
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingItem, setEditingItem] = useState<T | null>(null);
 
-  // 加载数据（使用 ref 避免 loadFunction 依赖导致的循环）
+  // 使用 ref 存储 loadFunction 和 externalPagination，避免依赖导致的循环
   const loadFunctionRef = useRef(loadFunction);
   loadFunctionRef.current = loadFunction;
+
+  const externalPaginationRef = useRef(externalPagination);
+  externalPaginationRef.current = externalPagination;
 
   const loadData = useCallback(async (params: any = {}) => {
     setLoading(true);
@@ -94,16 +97,15 @@ export function useTableManager<T>(
       const newTotal = result.total || 0;
       setTotal(newTotal);
       // 同步 total 到外部分页状态
-      if (externalPagination?.setTotal) {
-        externalPagination.setTotal(newTotal);
-      }
+      externalPaginationRef.current?.setTotal?.(newTotal);
+      // eslint-disable-next-line no-useless-catch
     } catch (error) {
       // 错误由调用方处理
       throw error;
     } finally {
       setLoading(false);
     }
-  }, [current, pageSize, externalPagination]);
+  }, [current, pageSize]);
 
   // 搜索
   const handleSearch = useCallback(() => {
@@ -111,6 +113,7 @@ export function useTableManager<T>(
       setCurrent(1);
       loadData(values);
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchForm, loadData]);
 
   // 重置
@@ -118,6 +121,7 @@ export function useTableManager<T>(
     searchForm.resetFields();
     setCurrent(1);
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchForm, loadData]);
 
   // 刷新

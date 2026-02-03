@@ -2,18 +2,19 @@
  * 楼层管理页面
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { FC } from 'react';
-import { Table, Button, Space, Card, Alert, message } from 'antd';
-import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
-import type { Floor } from '@/types';
-import { floorApi } from '@/lib/opsApi';
+import { Table, Button, Card, Alert } from 'antd';
+import type { Floor, Department, Building } from '@/types';
+import type { BaseResponse } from '@/types';
+import { floorApi, buildingApi } from '@/lib/opsApi';
+import { post } from '@/lib/api';
 import { useTableManager } from '@/hooks/useTableManager';
 import { usePagination } from '@/hooks/usePagination';
 import { handleApiError, handleSuccess } from '@/utils/errorHandler';
-import ActionButtons from '@/components/shared/ActionButtons';
 import ExcelImport from '@/components/shared/ExcelImport';
 import ExcelExport from '@/components/shared/ExcelExport';
+import type { TreeNode } from '@/components/shared/DepartmentTreeSelect';
 
 // 组件
 import {
@@ -28,10 +29,11 @@ import {
 // Hooks
 import { useFloorPlanEditor } from './useFloorPlanEditor';
 import { useFloorStatistics } from './useFloorStatistics';
-import { useBuildingOptions, type BuildingOption } from './useBuildingOptions';
+import { useBuildingOptions } from './useBuildingOptions';
 
 // 常量和类型
 import type { ViewMode, PageMode } from './constants';
+import type { FloorOption } from './components';
 import { DEFAULT_FORM_VALUES } from './constants';
 
 const FloorManagement: FC = () => {
@@ -51,6 +53,19 @@ const FloorManagement: FC = () => {
 
   // 楼宇选项
   const { buildingOptions, loadBuildingOptions } = useBuildingOptions();
+
+  // 部门树数据状态（仅外部机构）
+  const [departmentTreeData, setDepartmentTreeData] = useState<TreeNode[]>([]);
+
+  // 楼宇选项状态（用于编辑器中的切换）
+  const [buildingOptionsByDept, setBuildingOptionsByDept] = useState<Building[]>([]);
+
+  // 当前选中的部门和楼宇ID（用于编辑器）
+  const [selectedDeptId, setSelectedDeptId] = useState<string>('');
+  const [selectedBuildingId, setSelectedBuildingId] = useState<string>('');
+
+  // 楼层选项状态（用于编辑器中的切换）
+  const [floorOptions, setFloorOptions] = useState<FloorOption[]>([]);
 
   // 统计数据
   const { statistics, loadStatistics } = useFloorStatistics();
@@ -105,14 +120,31 @@ const FloorManagement: FC = () => {
     }
   );
 
+  // 使用 ref 跟踪初始化状态，避免循环请求
+  const isInitialized = useRef(false);
+  const prevPageRef = useRef({ current: 1, pageSize: 10 });
+
   // 初始化加载
   useEffect(() => {
-    setTimeout(() => {
-      loadFloors();
-      loadStatistics();
-      loadBuildingOptions();
-    }, 0);
-  }, [paginationProps.current, paginationProps.pageSize, loadFloors, loadStatistics, loadBuildingOptions]);
+    const { current, pageSize } = paginationProps;
+    const prev = prevPageRef.current;
+
+    // 检查分页是否真的发生了变化
+    const pageChanged = prev.current !== current || prev.pageSize !== pageSize;
+
+    if (!isInitialized.current || pageChanged) {
+      isInitialized.current = true;
+      prevPageRef.current = { current, pageSize };
+
+      setTimeout(() => {
+        loadFloors();
+        loadStatistics();
+        loadBuildingOptions();
+        loadExternalDepartmentTree();
+      }, 0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paginationProps.current, paginationProps.pageSize]);
 
   /**
    * 保存楼层
@@ -206,6 +238,190 @@ const FloorManagement: FC = () => {
   }, [loadFloors, loadStatistics]);
 
   /**
+   * 过滤出外部机构部门（isExternalOrg === 1）
+   */
+  const filterExternalOrgDepts = useCallback((data: Department[]): Department[] => {
+    if (!data || !Array.isArray(data)) {
+      return [];
+    }
+
+    console.log('过滤前部门数据:', data);
+
+    const filterNodes = (nodes: Department[]): Department[] => {
+      return nodes.reduce<Department[]>((acc, node) => {
+        // 先递归过滤子节点
+        const filteredChildren = node.children && node.children.length > 0
+          ? filterNodes(node.children)
+          : [];
+
+        // 判断是否保留该节点：
+        // 1. 当前节点本身是外部机构（isExternalOrg === 1），或者
+        // 2. 该节点的子树中有外部机构部门（需要保留作为路径）
+        const isExternal = node.isExternalOrg === 1;
+        const hasExternalDescendants = filteredChildren.length > 0;
+
+        if (isExternal || hasExternalDescendants) {
+          acc.push({
+            ...node,
+            // 统一使用过滤后的子节点，不保留原始子节点
+            children: filteredChildren.length > 0 ? filteredChildren : undefined,
+          });
+        }
+
+        return acc;
+      }, []);
+    };
+
+    const result = filterNodes(data);
+    console.log('过滤后部门数据:', result);
+    return result;
+  }, []);
+
+  /**
+   * 将部门数据转换为 TreeSelect 需要的格式
+   */
+  const convertToTreeSelectData = useCallback((data: Department[]): TreeNode[] => {
+    if (!data || !Array.isArray(data)) {
+      return [];
+    }
+
+    return data.map(item => ({
+      title: item.deptName,
+      value: item.id,
+      key: item.id,
+      children: item.children && item.children.length > 0
+        ? convertToTreeSelectData(item.children)
+        : undefined,
+    }));
+  }, []);
+
+  /**
+   * 加载外部机构部门树数据
+   */
+  const loadExternalDepartmentTree = useCallback(async () => {
+    try {
+      const result = await post<BaseResponse<Department[]>>('/system/departments/tree');
+      let deptData = result.data || [];
+
+      // 过滤仅外部机构
+      deptData = filterExternalOrgDepts(deptData);
+
+      // 转换为 TreeSelect 格式
+      const treeData = convertToTreeSelectData(deptData);
+      setDepartmentTreeData(treeData);
+
+      console.log('外部机构部门树数据:', treeData);
+    } catch (error) {
+      console.error('加载外部机构部门树失败:', error);
+    }
+  }, [filterExternalOrgDepts, convertToTreeSelectData]);
+
+  /**
+   * 加载指定部门的楼宇选项
+   * 返回楼宇列表以便后续处理
+   */
+  const loadBuildingOptionsByDept = useCallback(async (deptId: string): Promise<Building[]> => {
+    try {
+      const result = await buildingApi.list({ orgId: deptId, current: 1, pageSize: 1000 });
+      const buildings = result.data?.list || [];
+
+      setBuildingOptionsByDept(buildings);
+      return buildings;
+    } catch (error) {
+      console.error('加载楼宇选项失败:', error);
+      return [];
+    }
+  }, []);
+
+  /**
+   * 加载指定楼宇的楼层选项
+   * 返回楼层列表以便后续处理
+   */
+  const loadFloorOptionsByBuilding = useCallback(async (buildingId: string): Promise<FloorOption[]> => {
+    try {
+      const result = await floorApi.list({ buildingId, current: 1, pageSize: 1000 });
+      const floors = result.data?.list || [];
+
+      const options = floors.map((f: Floor) => ({
+        id: f.id,
+        name: f.name,
+        floorNo: f.floorNo,
+      }));
+
+      setFloorOptions(options);
+      return options;
+    } catch (error) {
+      console.error('加载楼层选项失败:', error);
+      return [];
+    }
+  }, []);
+
+  /**
+   * 楼层切换处理
+   */
+  const handleFloorChange = useCallback(
+    async (floorId: string) => {
+      if (!floorId) return;
+
+      try {
+        const result = await floorApi.get(floorId);
+        const newFloor = result.data;
+        if (newFloor) {
+          setCurrentFloor(newFloor);
+          setEditMode(false);
+          await loadFloorPlanData(newFloor.id);
+        }
+      } catch (error) {
+        console.error('加载楼层失败:', error);
+      }
+    },
+    [loadFloorPlanData, setEditMode]
+  );
+
+  /**
+   * 楼宇切换处理
+   * 加载新楼宇的楼层列表，并自动选择第一个楼层
+   */
+  const handleBuildingChange = useCallback(
+    async (buildingId: string) => {
+      if (!buildingId) return;
+
+      setSelectedBuildingId(buildingId);
+
+      // 加载新楼宇的楼层列表
+      const options = await loadFloorOptionsByBuilding(buildingId);
+
+      // 自动选择第一个楼层
+      if (options.length > 0) {
+        await handleFloorChange(options[0].id);
+      }
+    },
+    [loadFloorOptionsByBuilding, handleFloorChange]
+  );
+
+  /**
+   * 部门切换处理
+   * 加载新部门的楼宇列表，并自动选择第一个楼宇和楼层
+   */
+  const handleDepartmentChange = useCallback(
+    async (deptId: string) => {
+      if (!deptId) return;
+
+      setSelectedDeptId(deptId);
+      setSelectedBuildingId('');
+
+      // 加载新部门的楼宇列表
+      const buildings = await loadBuildingOptionsByDept(deptId);
+
+      // 自动选择第一个楼宇
+      if (buildings.length > 0) {
+        await handleBuildingChange(buildings[0].id);
+      }
+    },
+    [loadBuildingOptionsByDept, handleBuildingChange]
+  );
+
+  /**
    * 打开平面图编辑器
    */
   const handleEditFloorPlan = useCallback(
@@ -213,9 +429,29 @@ const FloorManagement: FC = () => {
       setCurrentFloor(floor);
       setPageMode('editor');
       setEditMode(false);
+
+      // 获取楼宇信息以获取部门ID
+      try {
+        const buildingResult = await buildingApi.get(floor.buildingId);
+        const building = buildingResult.data;
+
+        if (building) {
+          setSelectedBuildingId(building.id);
+          setSelectedDeptId(building.orgId);
+
+          // 加载该部门的楼宇列表
+          await loadBuildingOptionsByDept(building.orgId);
+
+          // 加载该楼宇的楼层列表
+          await loadFloorOptionsByBuilding(building.id);
+        }
+      } catch (error) {
+        console.error('加载楼宇信息失败:', error);
+      }
+
       await loadFloorPlanData(floor.id);
     },
-    [loadFloorPlanData, setEditMode]
+    [loadFloorPlanData, setEditMode, loadFloorOptionsByBuilding, loadBuildingOptionsByDept]
   );
 
   /**
@@ -252,10 +488,18 @@ const FloorManagement: FC = () => {
       floorPlanData={floorPlanData}
       loading={floorPlanLoading}
       isEditMode={isEditMode}
+      departmentTreeData={departmentTreeData}
+      buildingOptions={buildingOptionsByDept}
+      floorOptions={floorOptions}
+      selectedDeptId={selectedDeptId}
+      selectedBuildingId={selectedBuildingId}
       onEditModeChange={setEditMode}
       onRefresh={() => loadFloorPlanData(currentFloor?.id || '')}
       onBack={handleBackToList}
       onSave={handleSaveFloorPlan}
+      onDepartmentChange={handleDepartmentChange}
+      onBuildingChange={handleBuildingChange}
+      onFloorChange={handleFloorChange}
     />
   );
 

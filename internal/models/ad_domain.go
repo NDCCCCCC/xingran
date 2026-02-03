@@ -192,7 +192,7 @@ type ADSyncLog struct {
 	UserCount    int          `gorm:"default:0" json:"userCount"`
 	ComputerCount int          `gorm:"default:0" json:"computerCount"`
 	ErrorCount   int          `gorm:"default:0" json:"errorCount"`
-	ErrorMsg     string       `gorm:"type:text;column:error_message" json:"errorMessage,omitempty"`
+	ErrorMsg     string       `gorm:"type:text;column:error_msg" json:"errorMessage,omitempty"`
 	CreatedAt    time.Time    `json:"createdAt"`
 }
 

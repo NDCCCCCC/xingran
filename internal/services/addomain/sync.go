@@ -57,85 +57,67 @@ func (s *SyncService) SyncData(ctx context.Context, config *models.ADConfig, syn
 	config.AdminPassword = decryptPassword(config.AdminPassword)
 
 	// 1. LDAP 连接
-	connStart := time.Now()
 	client := NewLDAPClient(config)
 	if err := client.Connect(); err != nil {
 		s.updateSyncLog(ctx, syncLog.ID, models.ADSyncStatusFailed, 0, 0, 0, 0, err.Error())
 		return nil, fmt.Errorf("连接AD服务器失败: %w", err)
 	}
 	defer client.Close()
-	applogger.Infof("[AD同步] LDAP连接耗时: %v", time.Since(connStart))
 
 	result := &SyncResult{}
 
 	// 2. 搜索和同步 OU
-	searchStart := time.Now()
 	ous, err := client.SearchOUs(config.BaseDN)
 	if err != nil {
 		s.updateSyncLog(ctx, syncLog.ID, models.ADSyncStatusFailed, 0, 0, 0, 0, err.Error())
 		return nil, fmt.Errorf("搜索OU失败: %w", err)
 	}
-	applogger.Infof("[AD同步] LDAP搜索OU耗时: %v, 数量: %d", time.Since(searchStart), len(ous))
 	result.OUCount = len(ous)
 
-	syncStart := time.Now()
 	if err := s.syncOUs(ctx, config, ous); err != nil {
 		s.updateSyncLog(ctx, syncLog.ID, models.ADSyncStatusFailed, result.OUCount, 0, 0, 0, err.Error())
 		return nil, err
 	}
-	applogger.Infof("[AD同步] 同步OU耗时: %v", time.Since(syncStart))
 
 	// 3. 搜索和同步 Group
-	searchStart = time.Now()
 	groups, err := client.SearchGroups(config.BaseDN)
 	if err != nil {
 		s.updateSyncLog(ctx, syncLog.ID, models.ADSyncStatusFailed, result.OUCount, 0, 0, 0, err.Error())
 		return nil, fmt.Errorf("搜索用户组失败: %w", err)
 	}
-	applogger.Infof("[AD同步] LDAP搜索Group耗时: %v, 数量: %d", time.Since(searchStart), len(groups))
 	result.GroupCount = len(groups)
 
-	syncStart = time.Now()
 	if err := s.syncGroups(ctx, config, groups); err != nil {
 		s.updateSyncLog(ctx, syncLog.ID, models.ADSyncStatusFailed, result.OUCount, result.GroupCount, 0, 0, err.Error())
 		return nil, err
 	}
-	applogger.Infof("[AD同步] 同步Group耗时: %v", time.Since(syncStart))
 
 	// 4. 搜索和同步 User
-	searchStart = time.Now()
 	users, err := client.SearchUsers(config.BaseDN)
 	if err != nil {
 		s.updateSyncLog(ctx, syncLog.ID, models.ADSyncStatusFailed, result.OUCount, result.GroupCount, 0, 0, err.Error())
 		return nil, fmt.Errorf("搜索用户失败: %w", err)
 	}
-	applogger.Infof("[AD同步] LDAP搜索User耗时: %v, 数量: %d", time.Since(searchStart), len(users))
 	result.UserCount = len(users)
 
-	syncStart = time.Now()
 	if err := s.syncUsers(ctx, config, users); err != nil {
 		s.updateSyncLog(ctx, syncLog.ID, models.ADSyncStatusFailed, result.OUCount, result.GroupCount, result.UserCount, 0, err.Error())
 		return nil, err
 	}
-	applogger.Infof("[AD同步] 同步User耗时: %v", time.Since(syncStart))
 
 	// 5. 搜索和同步 Computer
 	computerService := NewComputerService(s.db)
-	searchStart = time.Now()
 	computers, err := client.SearchComputers(config.BaseDN)
 	if err != nil {
 		s.updateSyncLog(ctx, syncLog.ID, models.ADSyncStatusFailed, result.OUCount, result.GroupCount, result.UserCount, 0, err.Error())
 		return nil, fmt.Errorf("搜索电脑设备失败: %w", err)
 	}
-	applogger.Infof("[AD同步] LDAP搜索Computer耗时: %v, 数量: %d", time.Since(searchStart), len(computers))
 	result.ComputerCount = len(computers)
 
-	syncStart = time.Now()
 	if err := computerService.syncComputers(ctx, config, computers); err != nil {
 		s.updateSyncLog(ctx, syncLog.ID, models.ADSyncStatusFailed, result.OUCount, result.GroupCount, result.UserCount, result.ComputerCount, err.Error())
 		return nil, err
 	}
-	applogger.Infof("[AD同步] 同步Computer耗时: %v", time.Since(syncStart))
 
 	// 更新配置最后同步时间
 	now := time.Now()
@@ -376,10 +358,9 @@ func (s *SyncService) syncUsers(ctx context.Context, config *models.ADConfig, en
 	}
 
 	totalStart := time.Now()
-	applogger.Infof("[用户同步] 开始同步用户，LDAP条目数: %d", len(entries))
+	applogger.Infof("[用户同步] 开始同步 %d 个用户", len(entries))
 
 	// 1. 提取DN列表
-	step1Start := time.Now()
 	userDNs := make([]string, 0, len(entries))
 	for _, entry := range entries {
 		username := entry.GetAttributeValue("sAMAccountName")
@@ -387,14 +368,12 @@ func (s *SyncService) syncUsers(ctx context.Context, config *models.ADConfig, en
 			userDNs = append(userDNs, entry.DN)
 		}
 	}
-	applogger.Infof("[用户同步] 步骤1-提取DN: 耗时 %.2fs, DN数量: %d", time.Since(step1Start).Seconds(), len(userDNs))
 
 	if len(userDNs) == 0 {
 		return nil
 	}
 
 	// 2. 批量查询已存在的用户（分批查询以优化性能）
-	step2Start := time.Now()
 	var existingUsers []models.ADUser
 	queryBatchSize := 500 // 每批查询 500 个 DN，避免 IN 子句过大
 	for i := 0; i < len(userDNs); i += queryBatchSize {
@@ -407,18 +386,14 @@ func (s *SyncService) syncUsers(ctx context.Context, config *models.ADConfig, en
 		s.db.WithContext(ctx).Where("ad_config_id = ? AND user_dn IN ?", config.ID, batch).Find(&batchUsers)
 		existingUsers = append(existingUsers, batchUsers...)
 	}
-	applogger.Infof("[用户同步] 步骤2-查询已存在用户: 耗时 %.2fs, 找到 %d 条", time.Since(step2Start).Seconds(), len(existingUsers))
 
 	// 3. 创建映射
-	step3Start := time.Now()
 	existingUserMap := make(map[string]*models.ADUser)
 	for i := range existingUsers {
 		existingUserMap[existingUsers[i].UserDN] = &existingUsers[i]
 	}
-	applogger.Infof("[用户同步] 步骤3-构建映射: 耗时 %.2fs", time.Since(step3Start).Seconds())
 
 	// 4. 处理条目
-	step4Start := time.Now()
 	var usersToCreate []models.ADUser
 	usersToUpdate := make(map[string]*models.ADUser)
 	now := time.Now()
@@ -499,10 +474,8 @@ func (s *SyncService) syncUsers(ctx context.Context, config *models.ADConfig, en
 			usersToCreate = append(usersToCreate, newUser)
 		}
 	}
-	applogger.Infof("[用户同步] 步骤4-处理条目: 耗时 %.2fs, 待创建: %d, 待更新: %d", time.Since(step4Start).Seconds(), len(usersToCreate), len(usersToUpdate))
 
 	// 5. 批量创建
-	step5Start := time.Now()
 	if len(usersToCreate) > 0 {
 		batchSize := 500
 		for i := 0; i < len(usersToCreate); i += batchSize {
@@ -515,10 +488,8 @@ func (s *SyncService) syncUsers(ctx context.Context, config *models.ADConfig, en
 			}
 		}
 	}
-	applogger.Infof("[用户同步] 步骤5-批量创建: 耗时 %.2fs", time.Since(step5Start).Seconds())
 
 	// 6. 批量更新
-	step6Start := time.Now()
 	if len(usersToUpdate) > 0 {
 		batchSize := 500
 		usersSlice := make([]*models.ADUser, 0, len(usersToUpdate))
@@ -548,9 +519,9 @@ func (s *SyncService) syncUsers(ctx context.Context, config *models.ADConfig, en
 			}
 		}
 	}
-	applogger.Infof("[用户同步] 步骤6-批量更新: 耗时 %.2fs", time.Since(step6Start).Seconds())
 
-	applogger.Infof("[用户同步] 完成同步，总耗时: %.2fs", time.Since(totalStart).Seconds())
+	applogger.Infof("[用户同步] 完成: 创建 %d 个, 更新 %d 个, 耗时 %.2fs",
+		len(usersToCreate), len(usersToUpdate), time.Since(totalStart).Seconds())
 	return nil
 }
 
