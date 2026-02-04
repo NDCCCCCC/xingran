@@ -26,7 +26,7 @@ import {
   ClockCircleOutlined,
   ApiOutlined,
 } from '@ant-design/icons';
-import type { ConfigExecution, NetworkDevice } from '@/types';
+import type { ConfigExecution, ConfigExecutionDetail, NetworkDevice } from '@/types';
 import { useCommandData, useCommandModals } from './hooks';
 import { getExecutionColumns, deviceColumns } from './columns';
 import { CommandDispatchModal, CommandDetailDrawer } from './modals';
@@ -43,7 +43,7 @@ const CommandDispatch: FC = () => {
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
   const [devices, setDevices] = useState<NetworkDevice[]>([]);
   const [currentExecution, setCurrentExecution] = useState<ConfigExecution | null>(null);
-  const [executionDetails, setExecutionDetails] = useState<any[]>([]);
+  const [executionDetails, setExecutionDetails] = useState<ConfigExecutionDetail[]>([]);
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();

@@ -98,7 +98,7 @@ const MACAddressPage: FC = () => {
       const result = await post('/network/devices/list', {
         current: 1,
         pageSize: 1000,
-      }) as { data?: { list: any[] } };
+      }) as { data?: { list: Record<string, unknown>[] } };
       setDevices(result.data?.list || []);
     } catch (error) {
       console.error('加载设备列表失败:', error);

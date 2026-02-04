@@ -79,7 +79,7 @@ const ConfigExecutionPage: FC = () => {
   };
 
   // 查看详情时加载执行详情
-  const handleViewDetail = async (record: any) => {
+  const handleViewDetail = async (record: unknown) => {
     await loadExecutionDetails(record.id);
     handleViewDetailBase(record);
   };

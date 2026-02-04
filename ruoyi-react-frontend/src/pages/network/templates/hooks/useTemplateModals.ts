@@ -6,6 +6,7 @@
 import { useState, useCallback } from 'react';
 import { message } from 'antd';
 import type { ConfigTemplate } from '@/types';
+import type { FormInstance } from 'antd/es/form';
 import { post } from '@/lib/api';
 import type { TemplateModalState } from '../types';
 
@@ -16,11 +17,11 @@ export interface UseTemplateModalsReturn extends TemplateModalState {
   setEditingTemplate: React.Dispatch<React.SetStateAction<ConfigTemplate | null>>;
   setSelectedRowKeys: React.Dispatch<React.SetStateAction<React.Key[]>>;
   setPreviewContent: React.Dispatch<React.SetStateAction<string>>;
-  setTemplateVariables: React.Dispatch<React.SetStateAction<Record<string, any>>>;
+  setTemplateVariables: React.Dispatch<React.SetStateAction<Record<string, unknown>>>;
 
-  openModal: (record?: ConfigTemplate, editForm?: any) => void;
-  closeModal: (editForm?: any) => void;
-  handleCreate: (editingTemplate: ConfigTemplate | null, editForm: any, onSuccess: () => void) => Promise<void>;
+  openModal: (record?: ConfigTemplate, editForm?: FormInstance<unknown>) => void;
+  closeModal: (editForm?: FormInstance<unknown>) => void;
+  handleCreate: (editingTemplate: ConfigTemplate | null, editForm: FormInstance<unknown>, onSuccess: () => void) => Promise<void>;
   handleDelete: (id: string, onSuccess: () => void) => Promise<void>;
   handleBatchDelete: (selectedRowKeys: React.Key[], onSuccess: () => void) => Promise<void>;
   handlePreview: (id: string) => Promise<void>;
@@ -36,7 +37,7 @@ export function useTemplateModals(): UseTemplateModalsReturn {
   const [editingTemplate, setEditingTemplate] = useState<ConfigTemplate | null>(null);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [previewContent, setPreviewContent] = useState('');
-  const [templateVariables, setTemplateVariables] = useState<Record<string, any>>({});
+  const [templateVariables, setTemplateVariables] = useState<Record<string, unknown>>({});
 
   const handleApiError = useCallback((error: unknown, defaultMessage: string) => {
     if (error && typeof error === 'object' && 'message' in error) {
@@ -50,7 +51,7 @@ export function useTemplateModals(): UseTemplateModalsReturn {
     message.success(msg);
   }, []);
 
-  const openModal = useCallback((record?: ConfigTemplate, editForm?: any) => {
+  const openModal = useCallback((record?: ConfigTemplate, editForm?: FormInstance<unknown>) => {
     if (record && editForm) {
       setEditingTemplate(record);
       editForm.setFieldsValue({
@@ -65,7 +66,7 @@ export function useTemplateModals(): UseTemplateModalsReturn {
     setEditModalVisible(true);
   }, []);
 
-  const closeModal = useCallback((editForm?: any) => {
+  const closeModal = useCallback((editForm?: FormInstance<unknown>) => {
     setEditModalVisible(false);
     if (editForm) {
       editForm.resetFields();
@@ -74,7 +75,7 @@ export function useTemplateModals(): UseTemplateModalsReturn {
   }, []);
 
   const handleCreate = useCallback(
-    async (editingTemplate: ConfigTemplate | null, editForm: any, onSuccess: () => void) => {
+    async (editingTemplate: ConfigTemplate | null, editForm: FormInstance<unknown>, onSuccess: () => void) => {
       try {
         const values = await editForm.validateFields();
         const data = {
@@ -156,7 +157,7 @@ export function useTemplateModals(): UseTemplateModalsReturn {
 
   const handleGetVariables = useCallback(async (id: string) => {
     try {
-      const result = await post(`/network/templates/${id}/variables`, {}) as { data?: { variables?: Record<string, any> } };
+      const result = await post(`/network/templates/${id}/variables`, {}) as { data?: { variables?: Record<string, unknown> } };
       setTemplateVariables(result.data?.variables || {});
       setVariablesModalVisible(true);
     } catch (error) {

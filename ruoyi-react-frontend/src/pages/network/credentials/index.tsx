@@ -74,7 +74,7 @@ const CredentialManagement: FC = () => {
     async (params) => {
       const values = searchForm.getFieldsValue();
       // 映射搜索字段名到API字段名
-      const searchParams: any = {
+      const searchParams: Record<string, unknown> = {
         current: params.current || paginationProps.current,
         pageSize: params.pageSize || paginationProps.pageSize,
       };
@@ -133,7 +133,7 @@ const CredentialManagement: FC = () => {
       async () => {
         const values = await editForm.validateFields();
         // 移除确认密码字段
-        const { confirmPassword, ...data } = values as any;
+        const { confirmPassword, ...data } = values as Record<string, unknown> & { confirmPassword?: string };
         if (editingCredential) {
           await post(`/network/credentials/${editingCredential.id}/update`, data);
           return '更新成功';

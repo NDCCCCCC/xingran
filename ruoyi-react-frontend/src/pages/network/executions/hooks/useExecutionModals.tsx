@@ -5,6 +5,7 @@
 
 import { useState, useCallback } from 'react';
 import { message, Modal } from 'antd';
+import type { FormInstance } from 'antd/es/form';
 import { post } from '@/lib/api';
 import type { ModalState, ExecutionDataState } from '../types';
 
@@ -23,9 +24,9 @@ export interface UseExecutionModalsReturn {
 
   openExecuteModal: () => void;
   handleTemplateChange: (templateId: string) => void;
-  handleExecuteByTemplate: (executeForm: any) => Promise<void>;
+  handleExecuteByTemplate: (executeForm: FormInstance<unknown>) => Promise<void>;
   handleCancelExecution: (id: string) => Promise<void>;
-  handleViewDetail: (record: any) => void;
+  handleViewDetail: (record: Record<string, unknown>) => void;
   handleViewOutput: (output: string) => void;
   closeDetailDrawer: () => void;
   closeVariableModal: () => void;
@@ -64,7 +65,7 @@ export function useExecutionModals(params: UseExecutionModalsParams): UseExecuti
   }, [dataState.templates, setDataState]);
 
   // 通过模板执行配置
-  const handleExecuteByTemplate = useCallback(async (executeForm: any) => {
+  const handleExecuteByTemplate = useCallback(async (executeForm: FormInstance<unknown>) => {
     try {
       const values = await executeForm.validateFields();
       const data = {
@@ -80,7 +81,7 @@ export function useExecutionModals(params: UseExecutionModalsParams): UseExecuti
       setSelectedRowKeys([]);
       setDataState(prev => ({ ...prev, selectedTemplate: null }));
       loadExecutions();
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (error.errorFields) {
         return;
       }
@@ -100,7 +101,7 @@ export function useExecutionModals(params: UseExecutionModalsParams): UseExecuti
   }, [loadExecutions]);
 
   // 查看执行详情
-  const handleViewDetail = useCallback(async (record: any) => {
+  const handleViewDetail = useCallback(async (record: Record<string, unknown>) => {
     // This should be called from the main component with access to loadExecutionDetails
     setModalState(prev => ({ ...prev, detailDrawerVisible: true }));
   }, []);

@@ -35,7 +35,7 @@ export interface UseExecutionDataReturn {
   // 数据加载方法
   loadDevices: () => Promise<void>;
   loadTemplates: () => Promise<void>;
-  loadExecutions: (params?: any) => Promise<void>;
+  loadExecutions: (params?: Record<string, unknown>) => Promise<void>;
   loadExecutionDetails: (executionId: string) => Promise<void>;
   loadStatistics: () => Promise<void>;
   updateStatistics: (executionList: ConfigExecution[]) => void;
@@ -95,7 +95,7 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
   }, []);
 
   // 加载执行记录列表
-  const loadExecutions = useCallback(async (params: any = {}) => {
+  const loadExecutions = useCallback(async (params: Record<string, unknown> = {}) => {
     setExecLoading(true);
     try {
       // 确保参数有有效值，避免 undefined 导致后端验证失败

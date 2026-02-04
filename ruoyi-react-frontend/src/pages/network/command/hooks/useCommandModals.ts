@@ -5,12 +5,13 @@
 
 import { useCallback } from 'react';
 import { message } from 'antd';
+import type { FormInstance } from 'antd/es/form';
 import { post } from '@/lib/api';
 
 export interface UseCommandModalsReturn {
   handleQuickCommand: (
     selectedRowKeys: string[],
-    form: any,
+    form: FormInstance<unknown>,
     onSuccess: () => void
   ) => Promise<void>;
   handleCancelExecution: (id: string, onSuccess: () => void) => Promise<void>;
@@ -18,7 +19,7 @@ export interface UseCommandModalsReturn {
 
 export function useCommandModals(): UseCommandModalsReturn {
   const handleQuickCommand = useCallback(
-    async (selectedRowKeys: string[], form: any, onSuccess: () => void) => {
+    async (selectedRowKeys: string[], form: FormInstance<unknown>, onSuccess: () => void) => {
       try {
         const values = await form.validateFields();
         await post('/network/command/quick', {
@@ -28,7 +29,7 @@ export function useCommandModals(): UseCommandModalsReturn {
         message.success('命令已分发，请查看执行进度');
         form.resetFields();
         onSuccess();
-      } catch (error: any) {
+      } catch (error: unknown) {
         if (error.errorFields) {
           return;
         }

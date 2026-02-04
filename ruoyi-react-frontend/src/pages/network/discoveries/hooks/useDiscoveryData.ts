@@ -16,7 +16,7 @@ export interface UseDiscoveryDataParams {
 
 export interface UseDiscoveryDataReturn {
   discoveries: DeviceDiscovery[];
-  discoveredDevices: any[];
+  discoveredDevices: Record<string, unknown>[];
   departments: Department[];
   loading: boolean;
   total: number;
@@ -25,12 +25,12 @@ export interface UseDiscoveryDataReturn {
   currentDiscovery: DeviceDiscovery | null;
 
   setDiscoveries: React.Dispatch<React.SetStateAction<DeviceDiscovery[]>>;
-  setDiscoveredDevices: React.Dispatch<React.SetStateAction<any[]>>;
+  setDiscoveredDevices: React.Dispatch<React.SetStateAction<Record<string, unknown>[]>>;
   setDepartments: React.Dispatch<React.SetStateAction<Department[]>>;
   setModalState: React.Dispatch<React.SetStateAction<ModalState>>;
   setCurrentDiscovery: React.Dispatch<React.SetStateAction<DeviceDiscovery | null>>;
 
-  loadDiscoveries: (params?: any) => Promise<void>;
+  loadDiscoveries: (params?: Record<string, unknown>) => Promise<void>;
   loadStatistics: () => Promise<void>;
   loadDepartments: () => Promise<void>;
   loadDiscoveryResults: (id: string) => Promise<void>;
@@ -41,7 +41,7 @@ export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDa
   const { current, pageSize } = params;
 
   const [discoveries, setDiscoveries] = useState<DeviceDiscovery[]>([]);
-  const [discoveredDevices, setDiscoveredDevices] = useState<any[]>([]);
+  const [discoveredDevices, setDiscoveredDevices] = useState<Record<string, unknown>[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
@@ -59,7 +59,7 @@ export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDa
   });
   const [currentDiscovery, setCurrentDiscovery] = useState<DeviceDiscovery | null>(null);
 
-  const loadDiscoveries = useCallback(async (params: any = {}) => {
+  const loadDiscoveries = useCallback(async (params: Record<string, unknown> = {}) => {
     setLoading(true);
     try {
       const result = await post<BaseResponse<PageResponse<DeviceDiscovery>>>('/network/discoveries/list', {
@@ -113,7 +113,7 @@ export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDa
 
   const loadDiscoveryResults = useCallback(async (id: string) => {
     try {
-      const result = await post<BaseResponse<{ devices: any[] }>>(`/network/discoveries/${id}/results`, {});
+      const result = await post<BaseResponse<{ devices: Record<string, unknown>[] }>>(`/network/discoveries/${id}/results`, {});
       setDiscoveredDevices(result.data?.devices || []);
     } catch (error) {
       message.error('获取结果失败');

@@ -6,6 +6,7 @@
 import { useState, useCallback } from 'react';
 import { message } from 'antd';
 import type { ConfigTemplate, BaseResponse, PageResponse } from '@/types';
+import type { FormInstance } from 'antd/es/form';
 import { post } from '@/lib/api';
 import type { TemplateStatistics } from '../types';
 
@@ -15,13 +16,13 @@ export interface UseTemplateDataReturn {
   total: number;
   statistics: TemplateStatistics;
 
-  loadTemplates: (params?: any, searchValues?: any) => Promise<void>;
+  loadTemplates: (params?: Record<string, unknown>, searchValues?: Record<string, unknown>) => Promise<void>;
   loadStatistics: () => Promise<void>;
   updateStatistics: (templateList: ConfigTemplate[]) => void;
   handleApiError: (error: unknown, defaultMessage: string) => void;
 }
 
-export function useTemplateData(searchForm: any, setTotal: React.Dispatch<React.SetStateAction<number>>): UseTemplateDataReturn {
+export function useTemplateData(searchForm: FormInstance<unknown>, setTotal: React.Dispatch<React.SetStateAction<number>>): UseTemplateDataReturn {
   const [templates, setTemplates] = useState<ConfigTemplate[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotalLocal] = useState(0);
@@ -41,7 +42,7 @@ export function useTemplateData(searchForm: any, setTotal: React.Dispatch<React.
   }, []);
 
   const loadTemplates = useCallback(
-    async (params: any = {}, searchValues?: any) => {
+    async (params: Record<string, unknown> = {}, searchValues?: Record<string, unknown>) => {
       setLoading(true);
       try {
         const values = searchValues || searchForm.getFieldsValue();

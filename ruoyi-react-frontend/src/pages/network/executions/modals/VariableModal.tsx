@@ -4,12 +4,18 @@
  */
 
 import { Modal, Form, Input } from 'antd';
+import type { FormInstance } from 'antd/es/form';
 import type { ConfigTemplate } from '@/types';
+
+interface TemplateVariable {
+  default?: string;
+  description?: string;
+}
 
 export interface VariableModalProps {
   open: boolean;
   selectedTemplate: ConfigTemplate | null;
-  form: any;
+  form: FormInstance<unknown>;
   onOk: () => void;
   onCancel: () => void;
 }
@@ -30,7 +36,7 @@ export function VariableModal({
       width={600}
     >
       <Form form={form} layout="vertical">
-        {selectedTemplate?.variables && Object.entries(selectedTemplate.variables).map(([key, info]: [string, any]) => (
+        {selectedTemplate?.variables && Object.entries(selectedTemplate.variables).map(([key, info]: [string, TemplateVariable]) => (
           <Form.Item
             key={key}
             name={['templateVariables', key]}

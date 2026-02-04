@@ -4,6 +4,7 @@
 
 import { useState, useCallback } from 'react';
 import type { ConfigBackup, BaseResponse } from '@/types';
+import type { FormInstance } from 'antd/es/form';
 import type { DeviceBackupGroup } from '../types';
 import { post } from '@/lib/api';
 
@@ -21,14 +22,14 @@ interface UseBackupModalsReturn {
   selectedDeviceGroup: DeviceBackupGroup | null;
   backupContent: string;
   openBackupModal: () => void;
-  closeBackupModal: (form?: any) => void;
+  closeBackupModal: (form?: FormInstance<unknown>) => void;
   openRestoreModal: (backup: ConfigBackup) => void;
   closeRestoreModal: () => void;
   openContentDrawer: (backup: ConfigBackup) => Promise<void>;
   closeContentDrawer: () => void;
   openVersionListDrawer: (group: DeviceBackupGroup) => void;
   closeVersionListDrawer: () => void;
-  handleBackup: (form: any) => Promise<void>;
+  handleBackup: (form: FormInstance<unknown>) => Promise<void>;
   handleRestore: () => Promise<void>;
 }
 
@@ -52,7 +53,7 @@ export function useBackupModals(
   }, []);
 
   // 关闭备份弹窗
-  const closeBackupModal = useCallback((form?: any) => {
+  const closeBackupModal = useCallback((form?: FormInstance<unknown>) => {
     setBackupModalVisible(false);
     if (form) {
       form.resetFields();
@@ -103,13 +104,13 @@ export function useBackupModals(
   }, []);
 
   // 创建备份
-  const handleBackup = useCallback(async (form: any) => {
+  const handleBackup = useCallback(async (form: FormInstance<unknown>) => {
     try {
       const values = await form.validateFields();
       await post('/network/backups', values);
       closeBackupModal(form);
       onLoad();
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (error.errorFields) {
         return;
       }

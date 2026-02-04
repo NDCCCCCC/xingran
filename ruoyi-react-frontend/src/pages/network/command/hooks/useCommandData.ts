@@ -23,10 +23,10 @@ export interface UseCommandDataReturn {
   setStatistics: React.Dispatch<React.SetStateAction<CommandStatistics>>;
   setExecutions: React.Dispatch<React.SetStateAction<ConfigExecution[]>>;
 
-  loadExecutions: (params?: any) => Promise<void>;
+  loadExecutions: (params?: Record<string, unknown>) => Promise<void>;
   loadStatistics: () => Promise<void>;
   loadDevices: () => Promise<NetworkDevice[]>;
-  loadExecutionDetails: (executionId: string) => Promise<{ execution: ConfigExecution; details: any[] }>;
+  loadExecutionDetails: (executionId: string) => Promise<{ execution: ConfigExecution; details: Record<string, unknown>[] }>;
 }
 
 export function useCommandData(
@@ -59,7 +59,7 @@ export function useCommandData(
   }, []);
 
   const loadExecutions = useCallback(
-    async (params: any = {}) => {
+    async (params: Record<string, unknown> = {}) => {
       setExecLoading(true);
       setExecLoadingState(true);
       try {
@@ -106,9 +106,9 @@ export function useCommandData(
   }, []);
 
   const loadExecutionDetails = useCallback(
-    async (executionId: string): Promise<{ execution: ConfigExecution; details: any[] }> => {
+    async (executionId: string): Promise<{ execution: ConfigExecution; details: Record<string, unknown>[] }> => {
       try {
-        const result = await post<BaseResponse<ConfigExecution & { details?: any[] }>>(`/network/command/${executionId}`, {});
+        const result = await post<BaseResponse<ConfigExecution & { details?: Record<string, unknown>[] }>>(`/network/command/${executionId}`, {});
         return {
           execution: result.data || {} as ConfigExecution,
           details: result.data?.details || [],

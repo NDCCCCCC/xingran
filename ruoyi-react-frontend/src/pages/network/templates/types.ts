@@ -21,7 +21,7 @@ export interface TemplateModalState {
   editingTemplate: ConfigTemplate | null;
   selectedRowKeys: React.Key[];
   previewContent: string;
-  templateVariables: Record<string, any>;
+  templateVariables: Record<string, string>;
 }
 
 // 选项类型

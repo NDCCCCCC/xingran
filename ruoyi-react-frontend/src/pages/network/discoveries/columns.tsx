@@ -61,7 +61,7 @@ export function getDiscoveryColumns(params: DiscoveryColumnsParams): ColumnsType
       dataIndex: 'status',
       key: 'status',
       width: 100,
-      render: (status: string) => renderStatusTag(status as any),
+      render: (status: string) => renderStatusTag(status as 'pending' | 'running' | 'completed' | 'failed'),
     },
     { title: '开始时间', dataIndex: 'startedAt', key: 'startedAt', width: 180 },
     { title: '完成时间', dataIndex: 'completedAt', key: 'completedAt', width: 180 },

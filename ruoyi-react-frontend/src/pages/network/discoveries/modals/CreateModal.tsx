@@ -4,6 +4,7 @@
  */
 
 import { Modal, Form, Input, InputNumber, Select, Switch } from 'antd';
+import type { FormInstance } from 'antd/es/form';
 import type { Department } from '@/types';
 import { DISCOVERY_TYPE_OPTIONS } from '../constants';
 
@@ -13,7 +14,7 @@ const { TextArea } = Input;
 export interface CreateModalProps {
   open: boolean;
   departments: Department[];
-  onOk: (form: any) => Promise<void>;
+  onOk: (form: FormInstance<unknown>) => Promise<void>;
   onCancel: () => void;
 }
 

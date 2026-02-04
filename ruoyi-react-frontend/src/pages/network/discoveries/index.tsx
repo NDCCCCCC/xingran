@@ -28,6 +28,7 @@ import { parseIPRanges } from './utils';
 import { post } from '@/lib/api';
 import { message } from 'antd';
 import { usePagination } from '@/hooks/usePagination';
+import { isFormValidationError } from '@/utils/errorHandler';
 
 const { Option } = Select;
 
@@ -72,7 +73,7 @@ const DeviceDiscoveryPage: FC = () => {
   };
 
   // 创建发现任务
-  const handleCreate = async (form: any) => {
+  const handleCreate = async (form: FormInstance<unknown>) => {
     try {
       const values = await form.validateFields();
       const ipRangesText = values.ipRanges || '';
@@ -99,8 +100,8 @@ const DeviceDiscoveryPage: FC = () => {
       form.resetFields();
       loadDiscoveries();
       loadStatistics();
-    } catch (error: any) {
-      if (error.errorFields) {
+    } catch (error: unknown) {
+      if (isFormValidationError(error)) {
         return;
       }
       console.error('创建任务失败:', error);
@@ -120,7 +121,7 @@ const DeviceDiscoveryPage: FC = () => {
   };
 
   // 查看发现结果
-  const handleViewResult = async (record: any) => {
+  const handleViewResult = async (record: unknown) => {
     setCurrentDiscovery(record);
     await loadDiscoveryResults(record.id);
     setModalState(prev => ({ ...prev, resultModalVisible: true }));

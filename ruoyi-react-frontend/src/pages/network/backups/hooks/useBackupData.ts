@@ -4,6 +4,7 @@
 
 import { useState, useCallback } from 'react';
 import type { ConfigBackup, BaseResponse, PageResponse } from '@/types';
+import type { FormInstance } from 'antd/es/form';
 import type { DeviceBackupGroup, BackupStatistics } from '../types';
 import { groupBackupsByDevice, calculateStatistics } from '../utils';
 import { post } from '@/lib/api';
@@ -11,7 +12,7 @@ import { post } from '@/lib/api';
 interface UseBackupDataOptions {
   current: number;
   pageSize: number;
-  searchForm: any;
+  searchForm: FormInstance<unknown>;
 }
 
 interface UseBackupDataReturn {
@@ -21,7 +22,7 @@ interface UseBackupDataReturn {
   loading: boolean;
   total: number;
   loadDevices: () => Promise<void>;
-  loadBackups: (params?: any) => Promise<void>;
+  loadBackups: (params?: Record<string, unknown>) => Promise<void>;
   loadStatistics: () => Promise<void>;
 }
 
@@ -55,11 +56,11 @@ export function useBackupData(
   }, []);
 
   // 加载备份列表
-  const loadBackups = useCallback(async (params: any = {}) => {
+  const loadBackups = useCallback(async (params: Record<string, unknown> = {}) => {
     setLoading(true);
     try {
       const values = searchForm.getFieldsValue();
-      const result = await post<BaseResponse<PageResponse<any>>>('/network/backups/list', {
+      const result = await post<BaseResponse<PageResponse<unknown>>>('/network/backups/list', {
         current: params.current || current,
         pageSize: params.pageSize || pageSize,
         ...values,
@@ -83,7 +84,7 @@ export function useBackupData(
   // 加载统计数据
   const loadStatistics = useCallback(async () => {
     try {
-      const result = await post<BaseResponse<PageResponse<any>>>('/network/backups/list', { current: 1, pageSize: 10000 });
+      const result = await post<BaseResponse<PageResponse<unknown>>>('/network/backups/list', { current: 1, pageSize: 10000 });
       const allBackups = result.data?.list || [];
       const stats = calculateStatistics(allBackups);
       setStatistics(stats);

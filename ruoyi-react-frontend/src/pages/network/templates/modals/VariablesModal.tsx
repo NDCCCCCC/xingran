@@ -11,14 +11,19 @@ export interface VariableRow {
   defaultValue: string;
 }
 
+interface TemplateVariable {
+  default?: string;
+  description?: string;
+}
+
 export interface TemplateVariablesModalProps {
   open: boolean;
-  variables: Record<string, any>;
+  variables: Record<string, TemplateVariable>;
   onClose: () => void;
 }
 
 export function TemplateVariablesModal({ open, variables, onClose }: TemplateVariablesModalProps) {
-  const dataSource = Object.entries(variables).map(([key, value]: [string, any]) => ({
+  const dataSource = Object.entries(variables).map(([key, value]: [string, TemplateVariable]) => ({
     key,
     description: value?.description || '-',
     defaultValue: value?.default || '-',
