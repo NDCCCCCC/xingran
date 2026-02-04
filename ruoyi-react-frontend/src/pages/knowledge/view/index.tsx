@@ -26,6 +26,7 @@ import {
   type KnowledgeArticle,
 } from '@/lib/knowledgeApi';
 import { formatDateTime } from '@/utils/datetime';
+import type { UnknownError } from '@/types/common';
 import {
   getKnowledgeCategoryList,
   type KnowledgeCategory,
@@ -124,8 +125,9 @@ const KnowledgeViewPage: FC = () => {
       await likeKnowledgeArticle(id);
       message.success('点赞成功');
       fetchArticles();
-    } catch (error: any) {
-      message.error(error.message || '点赞失败');
+    } catch (error: unknown) {
+      const err = error as UnknownError;
+      message.error(err.message || '点赞失败');
     }
   };
 

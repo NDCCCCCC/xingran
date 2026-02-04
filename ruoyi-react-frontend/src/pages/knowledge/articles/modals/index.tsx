@@ -5,6 +5,7 @@
 
 import { Modal, Form, Input, Select, Row, Col, Space } from 'antd';
 import { EyeOutlined, LikeOutlined } from '@ant-design/icons';
+import type { FormInstance } from 'antd/es/form';
 import type { KnowledgeArticle, KnowledgeCategory, KnowledgeTag } from '@/lib/knowledgeApi';
 import { KnowledgeArticleStatus } from '@/lib/knowledgeApi';
 import { STATUS_OPTIONS } from '../constants';
@@ -18,7 +19,7 @@ export interface EditModalProps {
   categories: KnowledgeCategory[];
   flatCategories: KnowledgeCategory[];
   tags: KnowledgeTag[];
-  onOk: (form: any) => Promise<void>;
+  onOk: (form: FormInstance<unknown>) => Promise<void>;
   onCancel: () => void;
 }
 

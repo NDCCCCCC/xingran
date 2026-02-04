@@ -23,6 +23,7 @@ import { EditModal, PreviewModal } from './modals';
 import { KnowledgeArticleStatus } from '@/lib/knowledgeApi';
 import { message } from 'antd';
 import { usePagination } from '@/hooks/usePagination';
+import { isFormValidationError } from '@/utils/errorHandler';
 
 const { Option } = Select;
 
@@ -34,8 +35,8 @@ const KnowledgeArticlePage: FC = () => {
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
   const [modalVisible, setModalVisible] = useState(false);
   const [previewVisible, setPreviewVisible] = useState(false);
-  const [editingRecord, setEditingRecord] = useState<any | null>(null);
-  const [previewRecord, setPreviewRecord] = useState<any | null>(null);
+  const [editingRecord, setEditingRecord] = useState<KnowledgeArticle | null>(null);
+  const [previewRecord, setPreviewRecord] = useState<KnowledgeArticle | null>(null);
 
   // 数据管理
   const {
@@ -80,7 +81,7 @@ const KnowledgeArticlePage: FC = () => {
           summary: record.summary,
           categoryId: record.categoryId,
           status: record.status,
-          tagIds: record.tags?.map((t: any) => t.id) || [],
+          tagIds: record.tags?.map((t: { id: string }) => t.id) || [],
         });
       }, 0);
       setModalVisible(true);
@@ -121,14 +122,14 @@ const KnowledgeArticlePage: FC = () => {
     try {
       await handleSave(editingRecord, await editForm.validateFields());
       setModalVisible(false);
-    } catch (error: any) {
-      if (error.errorFields) return;
+    } catch (error: unknown) {
+      if (isFormValidationError(error)) return;
       message.error(editingRecord ? '更新失败' : '创建失败');
     }
   };
 
   // 表格分页变化
-  const handleTableChange = (pagination: any) => {
+  const handleTableChange = (pagination: { current: number; pageSize: number }) => {
     setCurrent(pagination.current);
     setPageSize(pagination.pageSize);
     fetchList(pagination.current, pagination.pageSize);

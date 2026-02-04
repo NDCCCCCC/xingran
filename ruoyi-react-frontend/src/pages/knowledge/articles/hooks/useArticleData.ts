@@ -22,6 +22,7 @@ import {
   getAllKnowledgeTags,
   type KnowledgeTag,
 } from '@/lib/knowledgeApi';
+import type { UnknownError } from '@/types/common';
 
 export interface ArticleStatistics {
   total: number;
@@ -55,7 +56,7 @@ export interface UseArticleDataReturn {
   handleDelete: (id: string) => Promise<void>;
   handleLike: (id: string) => Promise<void>;
   handlePublish: (record: KnowledgeArticle) => Promise<void>;
-  handleSave: (editingRecord: KnowledgeArticle | null, values: any) => Promise<void>;
+  handleSave: (editingRecord: KnowledgeArticle | null, values: Record<string, unknown>) => Promise<void>;
 }
 
 export function useArticleData(params: UseArticleDataParams): UseArticleDataReturn {
@@ -139,8 +140,9 @@ export function useArticleData(params: UseArticleDataParams): UseArticleDataRetu
       await deleteKnowledgeArticle(id);
       message.success('删除成功');
       fetchList();
-    } catch (error: any) {
-      message.error(error.message || '删除失败');
+    } catch (error: unknown) {
+      const err = error as UnknownError;
+      message.error(err.message || '删除失败');
     }
   }, [fetchList]);
 
@@ -149,8 +151,9 @@ export function useArticleData(params: UseArticleDataParams): UseArticleDataRetu
       await likeKnowledgeArticle(id);
       message.success('点赞成功');
       fetchList();
-    } catch (error: any) {
-      message.error(error.message || '点赞失败');
+    } catch (error: unknown) {
+      const err = error as UnknownError;
+      message.error(err.message || '点赞失败');
     }
   }, [fetchList]);
 
@@ -159,12 +162,13 @@ export function useArticleData(params: UseArticleDataParams): UseArticleDataRetu
       await updateKnowledgeArticle(record.id, { status: KnowledgeArticleStatus.Published });
       message.success('发布成功');
       fetchList();
-    } catch (error: any) {
-      message.error(error.message || '发布失败');
+    } catch (error: unknown) {
+      const err = error as UnknownError;
+      message.error(err.message || '发布失败');
     }
   }, [fetchList]);
 
-  const handleSave = useCallback(async (editingRecord: KnowledgeArticle | null, values: any) => {
+  const handleSave = useCallback(async (editingRecord: KnowledgeArticle | null, values: Record<string, unknown>) => {
     if (editingRecord) {
       await updateKnowledgeArticle(editingRecord.id, {
         title: values.title,
