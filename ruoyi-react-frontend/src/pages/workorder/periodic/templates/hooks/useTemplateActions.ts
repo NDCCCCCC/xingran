@@ -5,6 +5,7 @@
 
 import { useState, useCallback } from 'react';
 import { message } from 'antd';
+import type { FormInstance } from 'antd/es/form';
 import {
   createPeriodicTemplate,
   updatePeriodicTemplate,
@@ -27,12 +28,12 @@ export interface UseTemplateActionsReturn {
   setEditingRecord: (record: PeriodicWorkOrderTemplate | null) => void;
 
   // 操作方法
-  handleAdd: (editForm: any) => void;
-  handleEdit: (record: PeriodicWorkOrderTemplate, editForm: any) => void;
+  handleAdd: (editForm: FormInstance<unknown>) => void;
+  handleEdit: (record: PeriodicWorkOrderTemplate, editForm: FormInstance<unknown>) => void;
   handleDelete: (id: string) => Promise<void>;
   handleToggleEnabled: (record: PeriodicWorkOrderTemplate) => Promise<void>;
   handleGenerateNow: (id: string) => Promise<void>;
-  handleSave: (editForm: any) => Promise<void>;
+  handleSave: (editForm: FormInstance<unknown>) => Promise<void>;
 }
 
 export function useTemplateActions(params: UseTemplateActionsParams): UseTemplateActionsReturn {
@@ -41,7 +42,7 @@ export function useTemplateActions(params: UseTemplateActionsParams): UseTemplat
   const [editingRecord, setEditingRecord] = useState<PeriodicWorkOrderTemplate | null>(null);
 
   // 新增
-  const handleAdd = useCallback((editForm: any) => {
+  const handleAdd = useCallback((editForm: FormInstance<unknown>) => {
     setEditingRecord(null);
     editForm.resetFields();
     editForm.setFieldsValue({
@@ -53,7 +54,7 @@ export function useTemplateActions(params: UseTemplateActionsParams): UseTemplat
   }, []);
 
   // 编辑
-  const handleEdit = useCallback((record: PeriodicWorkOrderTemplate, editForm: any) => {
+  const handleEdit = useCallback((record: PeriodicWorkOrderTemplate, editForm: FormInstance<unknown>) => {
     setEditingRecord(record);
     setTimeout(() => {
       editForm.setFieldsValue({
@@ -77,7 +78,7 @@ export function useTemplateActions(params: UseTemplateActionsParams): UseTemplat
       await deletePeriodicTemplate(id);
       message.success('删除成功');
       onLoad();
-    } catch (error: any) {
+    } catch (error: unknown) {
       message.error(error.message || '删除失败');
     }
   }, [onLoad]);
@@ -93,7 +94,7 @@ export function useTemplateActions(params: UseTemplateActionsParams): UseTemplat
         message.success('已启用');
       }
       onLoad();
-    } catch (error: any) {
+    } catch (error: unknown) {
       message.error(error.message || '操作失败');
     }
   }, [onLoad]);
@@ -104,13 +105,13 @@ export function useTemplateActions(params: UseTemplateActionsParams): UseTemplat
       await generateWorkOrderNow(id);
       message.success('工单生成成功');
       onLoad();
-    } catch (error: any) {
+    } catch (error: unknown) {
       message.error(error.message || '生成失败');
     }
   }, [onLoad]);
 
   // 保存
-  const handleSave = useCallback(async (editForm: any) => {
+  const handleSave = useCallback(async (editForm: FormInstance<unknown>) => {
     try {
       const values = await editForm.validateFields();
 
@@ -147,7 +148,7 @@ export function useTemplateActions(params: UseTemplateActionsParams): UseTemplat
       }
       setEditingRecord(null);
       onLoad();
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (error.errorFields) {
         return;
       }

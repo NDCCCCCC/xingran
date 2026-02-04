@@ -38,7 +38,7 @@ export interface WorkOrderStats {
 }
 
 export interface UseWorkOrderDataOptions {
-  form: any; // FormInstance
+  form: Record<string, (fieldName: string) => unknown>;
 }
 
 export interface UseWorkOrderDataReturn {

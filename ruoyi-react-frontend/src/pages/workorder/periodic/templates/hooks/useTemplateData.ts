@@ -5,6 +5,7 @@
 
 import { useState, useCallback } from 'react';
 import { message } from 'antd';
+import type { FormInstance } from 'antd/es/form';
 import {
   getPeriodicTemplateList,
   getPeriodicLogs,
@@ -52,7 +53,7 @@ export interface UseTemplateDataReturn {
   setSelectedTemplate: (template: PeriodicWorkOrderTemplate | null) => void;
 }
 
-export function useTemplateData(searchForm: any, current: number, pageSize: number): UseTemplateDataReturn {
+export function useTemplateData(searchForm: FormInstance<unknown>, current: number, pageSize: number): UseTemplateDataReturn {
   const [loading, setLoading] = useState(false);
   const [dataSource, setDataSource] = useState<PeriodicWorkOrderTemplate[]>([]);
   const [total, setTotal] = useState(0);

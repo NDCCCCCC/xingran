@@ -33,8 +33,8 @@ export interface UseWorkOrderActionsReturn {
   handleDelete: (id: string) => Promise<void>;
   handleBatchDelete: (selectedRowKeys: React.Key[]) => Promise<void>;
   handleAssignToTodayDuty: (id: string) => Promise<void>;
-  handleModalOk: (editForm: any, editingRecord: WorkOrder | null, setModalVisible: (visible: boolean) => void) => Promise<void>;
-  handleAddComment: (commentForm: any, commentInternal: boolean, setComments: (comments: any[]) => void) => Promise<void>;
+  handleModalOk: (editForm: { validateFields: () => Promise<Record<string, unknown>> }, editingRecord: WorkOrder | null, setModalVisible: (visible: boolean) => void) => Promise<void>;
+  handleAddComment: (commentForm: { validateFields: () => Promise<Record<string, unknown>>; resetFields: () => void }, commentInternal: boolean, setComments: (comments: unknown[]) => void) => Promise<void>;
   handleStatusChange: (status: number) => Promise<void>;
 }
 
@@ -95,7 +95,7 @@ export function useWorkOrderActions(
   }, [fetchList]);
 
   const handleModalOk = useCallback(async (
-    editForm: any,
+    editForm: { validateFields: () => Promise<Record<string, unknown>> },
     editingRecord: WorkOrder | null,
     setModalVisible: (visible: boolean) => void
   ) => {
@@ -142,9 +142,9 @@ export function useWorkOrderActions(
   }, [fetchList]);
 
   const handleAddComment = useCallback(async (
-    commentForm: any,
+    commentForm: { validateFields: () => Promise<Record<string, unknown>>; resetFields: () => void },
     commentInternal: boolean,
-    setComments: (comments: any[]) => void
+    setComments: (comments: unknown[]) => void
   ) => {
     try {
       const values = await commentForm.validateFields();

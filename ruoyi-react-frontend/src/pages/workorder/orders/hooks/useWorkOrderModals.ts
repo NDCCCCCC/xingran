@@ -4,6 +4,7 @@
 
 import { useState, useCallback } from 'react';
 import type { WorkOrder } from '@/lib/workorderApi';
+import type { FormInstance } from 'antd/es/form';
 
 export interface Comment {
   id: string;
@@ -47,7 +48,7 @@ export interface UseWorkOrderModalsReturn {
   setHistory: (history: HistoryItem[]) => void;
   setCommentInternal: (internal: boolean) => void;
   openAddModal: () => void;
-  openEditModal: (record: WorkOrder, editForm: any) => void;
+  openEditModal: (record: WorkOrder, editForm: FormInstance<unknown>) => void;
   openDetailDrawer: (record: WorkOrder) => Promise<void>;
   closeModals: () => void;
 }
@@ -68,7 +69,7 @@ export function useWorkOrderModals(): UseWorkOrderModalsReturn {
   }, []);
 
   // 打开编辑模态框
-  const openEditModal = useCallback((record: WorkOrder, editForm: any) => {
+  const openEditModal = useCallback((record: WorkOrder, editForm: FormInstance<unknown>) => {
     setEditingRecord(record);
     setModalVisible(true);
     // 在 modal 打开时设置表单值

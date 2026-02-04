@@ -11,6 +11,7 @@ import {
   type WorkOrderCategoryCreateRequest,
   type WorkOrderCategoryUpdateRequest,
 } from '@/lib/workorderApi';
+import { isFormValidationError } from '@/utils/errorHandler';
 
 const { Option } = Select;
 
@@ -18,7 +19,7 @@ const WorkOrderCategoryPage: FC = () => {
   const [editForm] = Form.useForm();
 
   const [categories, setCategories] = useState<WorkOrderCategory[]>([]);
-  const [treeData, setTreeData] = useState<any[]>([]);
+  const [treeData, setTreeData] = useState<Array<{ key: string; title: React.ReactNode; data: WorkOrderCategory; children?: unknown[] }>>([]);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState<WorkOrderCategory | null>(null);
@@ -43,7 +44,7 @@ const WorkOrderCategoryPage: FC = () => {
       setCategories(result.data || []);
 
       // 后端返回的是嵌套结构，直接转换为树形数据
-      const buildTree = (list: WorkOrderCategory[]): any[] => {
+      const buildTree = (list: WorkOrderCategory[]): Array<{ key: string; title: React.ReactNode; data: WorkOrderCategory; children?: unknown[] }> => {
         return list.map((item) => ({
           key: item.id,
           title: (
@@ -135,8 +136,8 @@ const WorkOrderCategoryPage: FC = () => {
       }
       setModalVisible(false);
       fetchList();
-    } catch (error: any) {
-      if (error.errorFields) {
+    } catch (error: unknown) {
+      if (isFormValidationError(error)) {
         return;
       }
       handleApiError(error, editingRecord ? '更新失败' : '创建失败');
@@ -174,7 +175,7 @@ const WorkOrderCategoryPage: FC = () => {
           switcherIcon={<FolderOutlined />}
           treeData={treeData}
           defaultExpandAll
-          titleRender={(node: any) => {
+          titleRender={(node: unknown) => {
             return (
               <div className="flex items-center justify-between w-full pr-4">
                 {node.title}

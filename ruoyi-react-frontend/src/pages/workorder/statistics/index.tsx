@@ -32,7 +32,7 @@ const WorkOrderStatisticsPage: FC = () => {
     fetchStatistics();
   }, []);
 
-  const assigneeColumns: ColumnsType<any> = [
+  const assigneeColumns: ColumnsType<{ assigneeName: string; assigneeId: string; totalCount: number; pendingCount: number; doneCount: number; avgProcessTime: number }> = [
     { title: '处理人', dataIndex: 'assigneeName', key: 'assigneeName' },
     { title: '总工单', dataIndex: 'totalCount', key: 'totalCount' },
     { title: '待处理', dataIndex: 'pendingCount', key: 'pendingCount' },
@@ -45,7 +45,7 @@ const WorkOrderStatisticsPage: FC = () => {
     },
   ];
 
-  const departmentColumns: ColumnsType<any> = [
+  const departmentColumns: ColumnsType<{ deptName: string; deptId: string; totalCount: number; doneCount: number }> = [
     { title: '部门', dataIndex: 'deptName', key: 'deptName' },
     { title: '总工单', dataIndex: 'totalCount', key: 'totalCount' },
     { title: '已完成', dataIndex: 'doneCount', key: 'doneCount' },
