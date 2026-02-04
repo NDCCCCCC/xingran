@@ -9,6 +9,26 @@ import type { Key } from 'antd/es/table/interface';
 import type { Role } from '@/types';
 import { post } from '@/lib/api';
 
+// 菜单树节点类型（后端返回）
+interface MenuTreeNode {
+  id?: string;
+  key?: string;
+  menuName?: string;
+  title?: string;
+  value?: string;
+  children?: MenuTreeNode[];
+}
+
+// 部门树节点类型（后端返回）
+interface DeptTreeNode {
+  id?: string;
+  key?: string;
+  deptName?: string;
+  title?: string;
+  value?: string;
+  children?: DeptTreeNode[];
+}
+
 export interface RoleStatistics {
   total: number;
   active: number;
@@ -45,7 +65,7 @@ export interface UseRoleDataReturn {
   setCurrentDataScope: React.Dispatch<React.SetStateAction<number>>;
 
   // 数据加载方法
-  loadRoles: (params?: any) => Promise<void>;
+  loadRoles: (params?: Record<string, unknown>) => Promise<void>;
   loadStatistics: () => Promise<void>;
   loadMenuTree: () => Promise<void>;
   loadDeptTree: () => Promise<void>;
@@ -71,7 +91,7 @@ export function useRoleData(params: UseRoleDataParams): UseRoleDataReturn {
   const [currentDataScope, setCurrentDataScope] = useState<number>(1);
 
   // 加载角色列表
-  const loadRoles = useCallback(async (params: any = {}) => {
+  const loadRoles = useCallback(async (params: Record<string, unknown> = {}) => {
     setLoading(true);
     try {
       const result = await post('/system/roles/list', {
@@ -115,9 +135,9 @@ export function useRoleData(params: UseRoleDataParams): UseRoleDataReturn {
   // 加载菜单树
   const loadMenuTree = useCallback(async () => {
     try {
-      const result = await post('/system/menus/tree-select') as { data: any[] };
-      const processTreeData = (nodes: any[]): TreeDataNode[] => {
-        return nodes.map((node: any) => ({
+      const result = await post<{ data: MenuTreeNode[] }>('/system/menus/tree-select');
+      const processTreeData = (nodes: MenuTreeNode[]): TreeDataNode[] => {
+        return nodes.map((node) => ({
           key: node.key || node.id,
           title: node.title || node.menuName,
           value: node.value || node.id,
@@ -133,9 +153,9 @@ export function useRoleData(params: UseRoleDataParams): UseRoleDataReturn {
   // 加载部门树
   const loadDeptTree = useCallback(async () => {
     try {
-      const result = await post('/system/departments/tree-select') as { data: any[] };
-      const processTreeData = (nodes: any[]): TreeDataNode[] => {
-        return nodes.map((node: any) => ({
+      const result = await post<{ data: DeptTreeNode[] }>('/system/departments/tree-select');
+      const processTreeData = (nodes: DeptTreeNode[]): TreeDataNode[] => {
+        return nodes.map((node) => ({
           key: node.key || node.id,
           title: node.title || node.deptName,
           value: node.value || node.id,

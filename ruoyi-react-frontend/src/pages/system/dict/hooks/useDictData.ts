@@ -5,6 +5,7 @@
 
 import { useState, useCallback } from 'react';
 import { message } from 'antd';
+import type { FormInstance } from 'antd/es/form';
 import type { DictType, DictData } from '@/types';
 import { post } from '@/lib/api';
 import { handleApiError } from '@/utils/errorHandler';
@@ -27,13 +28,13 @@ export interface UseDictDataReturn {
 
   // 数据操作方法
   setSelectedType: (type: string) => void;
-  loadDictTypes: (params?: any) => Promise<void>;
-  loadDictData: (params?: any) => Promise<void>;
+  loadDictTypes: (params?: Record<string, unknown>) => Promise<void>;
+  loadDictData: (params?: Record<string, unknown>) => Promise<void>;
   loadTypeStatistics: () => Promise<void>;
   loadDataStatistics: () => Promise<void>;
 }
 
-export function useDictData(searchForm: any, dataSearchForm: any, current: number, pageSize: number): UseDictDataReturn {
+export function useDictData(searchForm: FormInstance<unknown>, dataSearchForm: FormInstance<unknown>, current: number, pageSize: number): UseDictDataReturn {
   const [dictTypes, setDictTypes] = useState<DictType[]>([]);
   const [dictDataList, setDictDataList] = useState<DictData[]>([]);
   const [loading, setLoading] = useState(false);
@@ -51,7 +52,7 @@ export function useDictData(searchForm: any, dataSearchForm: any, current: numbe
   });
 
   // 加载字典类型列表
-  const loadDictTypes = useCallback(async (params: any = {}) => {
+  const loadDictTypes = useCallback(async (params: Record<string, unknown> = {}) => {
     setLoading(true);
     try {
       const values = searchForm.getFieldsValue();
@@ -59,7 +60,7 @@ export function useDictData(searchForm: any, dataSearchForm: any, current: numbe
         current: params.current || current,
         pageSize: params.pageSize || pageSize,
         ...values,
-      }) as { data: { list: any[]; total: number } };
+      }) as { data: { list: DictType[]; total: number } };
       setDictTypes(result.data.list);
       setTotal(result.data.total);
     } catch (error) {
@@ -70,7 +71,7 @@ export function useDictData(searchForm: any, dataSearchForm: any, current: numbe
   }, [current, pageSize, searchForm]);
 
   // 加载字典数据列表
-  const loadDictData = useCallback(async (params: any = {}) => {
+  const loadDictData = useCallback(async (params: Record<string, unknown> = {}) => {
     if (!selectedType) {
       message.warning('请先选择字典类型');
       return;
@@ -83,7 +84,7 @@ export function useDictData(searchForm: any, dataSearchForm: any, current: numbe
         pageSize: params.pageSize || pageSize,
         dictType: selectedType,
         ...values,
-      }) as { data: { list: any[]; total: number } };
+      }) as { data: { list: DictType[]; total: number } };
       setDictDataList(result.data.list);
       setTotal(result.data.total);
     } catch (error) {
@@ -96,10 +97,10 @@ export function useDictData(searchForm: any, dataSearchForm: any, current: numbe
   // 加载字典类型统计数据
   const loadTypeStatistics = useCallback(async () => {
     try {
-      const result = await post('/system/dicts/types/list', { current: 1, pageSize: 1000 }) as { data: { list: any[] } };
+      const result = await post<{ data: { list: DictType[] } }>('/system/dicts/types/list', { current: 1, pageSize: 1000 });
       const allTypes = result.data.list || [];
-      const activeCount = allTypes.filter((t: any) => t.status === 0).length;
-      const inactiveCount = allTypes.filter((t: any) => t.status === 1).length;
+      const activeCount = allTypes.filter((t) => t.status === 0).length;
+      const inactiveCount = allTypes.filter((t) => t.status === 1).length;
       setTypeStatistics({
         total: allTypes.length,
         active: activeCount,
@@ -117,10 +118,10 @@ export function useDictData(searchForm: any, dataSearchForm: any, current: numbe
       return;
     }
     try {
-      const result = await post('/system/dicts/data/list', { current: 1, pageSize: 1000, dictType: selectedType }) as { data: { list: any[] } };
+      const result = await post<{ data: { list: DictData[] } }>('/system/dicts/data/list', { current: 1, pageSize: 1000, dictType: selectedType });
       const allData = result.data.list || [];
-      const activeCount = allData.filter((d: any) => d.status === 0).length;
-      const inactiveCount = allData.filter((d: any) => d.status === 1).length;
+      const activeCount = allData.filter((d) => d.status === 0).length;
+      const inactiveCount = allData.filter((d) => d.status === 1).length;
       setDataStatistics({
         total: allData.length,
         active: activeCount,

@@ -35,6 +35,7 @@ import {
   type EmailConfigUpdateRequest,
 } from '@/lib/notificationConfigApi';
 import { usePagination } from '@/hooks/usePagination';
+import { isFormValidationError } from '@/utils/errorHandler';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -65,7 +66,7 @@ const EmailConfigPage: FC = () => {
       const result = await getEmailConfigList({
         page: paginationProps.current,
         pageSize: paginationProps.pageSize,
-      }) as { data: { list: any[]; total: number } };
+      }) as { data: { list: EmailConfig[]; total: number } };
       setConfigs(result.data.list);
       setTotal(result.data.total);
     } catch (error) {
@@ -121,8 +122,8 @@ const EmailConfigPage: FC = () => {
       editForm.resetFields();
       setEditingConfig(null);
       loadConfigs();
-    } catch (error: any) {
-      if (error.errorFields) {
+    } catch (error: unknown) {
+      if (isFormValidationError(error)) {
         return;
       }
       message.error('操作失败: ' + (error.message || '未知错误'));
@@ -161,8 +162,8 @@ const EmailConfigPage: FC = () => {
       await testEmailConfig(values.configId, values.testTo);
       message.success('测试邮件已发送，请查收');
       setTestModalVisible(false);
-    } catch (error: any) {
-      if (error.errorFields) {
+    } catch (error: unknown) {
+      if (isFormValidationError(error)) {
         return;
       }
       message.error('测试失败: ' + (error.message || '未知错误'));

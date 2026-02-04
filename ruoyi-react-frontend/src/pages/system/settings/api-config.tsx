@@ -40,6 +40,7 @@ import {
   type AuthType,
 } from '@/lib/notificationConfigApi';
 import { usePagination } from '@/hooks/usePagination';
+import { isFormValidationError } from '@/utils/errorHandler';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -67,7 +68,7 @@ const APIConfigPage: FC = () => {
         page: paginationProps.current,
         pageSize: paginationProps.pageSize,
         configType: configTypeFilter,
-      }) as { data: { list: any[]; total: number } };
+      }) as { data: { list: APINotificationConfig[]; total: number } };
       setConfigs(result.data.list);
       setTotal(result.data.total);
     } catch (error) {
@@ -120,8 +121,8 @@ const APIConfigPage: FC = () => {
       editForm.resetFields();
       setEditingConfig(null);
       loadConfigs();
-    } catch (error: any) {
-      if (error.errorFields) {
+    } catch (error: unknown) {
+      if (isFormValidationError(error)) {
         return;
       }
       message.error('操作失败: ' + (error.message || '未知错误'));

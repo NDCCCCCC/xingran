@@ -6,13 +6,16 @@
 import type { Department } from '@/types';
 import type { ParentOption } from './types';
 
+// 树节点类型（包含 children 的 Department）
+type DepartmentTreeNode = Department & { children?: DepartmentTreeNode[] };
+
 /** 扁平化树形数据 */
-export function flattenTreeToList(tree: any[]): any[] {
-  const result: any[] = [];
+export function flattenTreeToList(tree: DepartmentTreeNode[]): Department[] {
+  const result: Department[] = [];
   if (!tree || !Array.isArray(tree)) {
     return result;
   }
-  const traverse = (nodes: any[]) => {
+  const traverse = (nodes: DepartmentTreeNode[]) => {
     if (!nodes || !Array.isArray(nodes)) {
       return;
     }
@@ -30,7 +33,7 @@ export function flattenTreeToList(tree: any[]): any[] {
 }
 
 /** 转换为 TreeSelect 所需的树形结构 */
-export function transformToParentTreeOptions(data: any[]): ParentOption[] {
+export function transformToParentTreeOptions(data: DepartmentTreeNode[]): ParentOption[] {
   if (!data || !Array.isArray(data)) {
     return [];
   }
@@ -44,7 +47,7 @@ export function transformToParentTreeOptions(data: any[]): ParentOption[] {
 }
 
 /** 渲染树形表格数据 */
-export function renderTreeData(data: Department[]): any[] {
+export function renderTreeData(data: DepartmentTreeNode[]): DepartmentTreeNode[] {
   if (!data || !Array.isArray(data)) {
     return [];
   }

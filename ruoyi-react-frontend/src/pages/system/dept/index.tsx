@@ -134,7 +134,7 @@ const DepartmentManagement: FC = () => {
       const values = await editForm.validateFields();
 
       // 处理电话和邮箱字段：如果没有选择负责人，则不发送这些字段
-      const submitData: any = {
+      const submitData: Record<string, unknown> = {
         deptName: values.deptName,
         parentId: values.parentId || null,
         orderNum: values.orderNum,

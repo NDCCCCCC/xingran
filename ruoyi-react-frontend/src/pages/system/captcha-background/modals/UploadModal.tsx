@@ -4,6 +4,7 @@
  */
 
 import { Modal, Form, Select, Upload, Input } from 'antd';
+import type { UploadProps } from 'antd/es/upload';
 import { UploadOutlined } from '@ant-design/icons';
 import { SHAPE_OPTIONS, DIFFICULTY_OPTIONS } from '../constants';
 
@@ -13,7 +14,7 @@ const { TextArea } = Input;
 export interface CaptchaUploadModalProps {
   open: boolean;
   uploading: boolean;
-  uploadProps: any;
+  uploadProps: UploadProps;
   onOk: () => Promise<void>;
   onCancel: () => void;
 }

@@ -13,8 +13,8 @@ interface TargetSelectorProps {
   loadingRoles: boolean;
   loadingUsers: boolean;
   onDeptChange: (keys: React.Key[]) => void;
-  onRoleChange: (values: any[]) => void;
-  onUserChange: (values: any[]) => void;
+  onRoleChange: (values: string[]) => void;
+  onUserChange: (values: string[]) => void;
 }
 
 /**
@@ -53,7 +53,7 @@ export const TargetSelector: React.FC<TargetSelectorProps> = ({
               const keys = Array.isArray(checked) ? checked : checked.checked;
               onDeptChange(keys);
             }}
-            treeData={deptTree as any}
+            treeData={deptTree as unknown as { title: string; key: string; children: unknown[] }[]}
             fieldNames={{ title: 'title', key: 'key', children: 'children' }}
           />
         </div>
@@ -97,14 +97,14 @@ export const TargetSelector: React.FC<TargetSelectorProps> = ({
           showSearch
           filterOption={(input, option) => {
             if (!option) return false;
-            const user = users.find((u: any) => u.id === option.value);
+            const user = users.find((u) => u.id === option.value);
             return !!(
               user?.username?.toLowerCase().includes(input.toLowerCase()) ||
               user?.nickname?.toLowerCase().includes(input.toLowerCase())
             );
           }}
           className="w-full"
-          options={users.filter((user: any) => user.id != null).map((user: any) => ({
+          options={users.filter((user) => user.id != null).map((user) => ({
             label: `${user.nickname || user.username} (${user.username})`,
             value: user.id,
           }))}

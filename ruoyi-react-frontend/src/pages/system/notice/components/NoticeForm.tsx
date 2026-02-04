@@ -1,5 +1,6 @@
 import React from 'react';
 import { Form, Input, Select, Button, Modal, Row, Col, Radio, Switch, DatePicker, Checkbox } from 'antd';
+import type { FormInstance } from 'antd/es/form';
 import MDEditor from '@uiw/react-md-editor';
 import '@uiw/react-md-editor/markdown-editor.css';
 import CronSelector from '@/components/CronSelector';
@@ -26,7 +27,7 @@ export interface NoticeFormProps {
   loadingRoles: boolean;
   loadingUsers: boolean;
   markdownContent: string;
-  form: any;
+  form: FormInstance;
   onCancel: () => void;
   onSubmit: () => void;
   onExecutionTypeChange: (type: ExecutionType) => void;
@@ -34,8 +35,8 @@ export interface NoticeFormProps {
   onMarkdownContentChange: (content: string) => void;
   onTargetTypeChange: (value: number) => void;
   onDeptChange: (keys: React.Key[]) => void;
-  onRoleChange: (values: any[]) => void;
-  onUserChange: (values: any[]) => void;
+  onRoleChange: (values: string[]) => void;
+  onUserChange: (values: string[]) => void;
 }
 
 /**
@@ -330,7 +331,7 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
             >
               {isMarkdown ? (
                 <React.Fragment>
-                  {React.createElement(MDEditor as any, {
+                  {React.createElement(MDEditor as unknown as React.ComponentType<{ value: string; onChange: (val: string | undefined) => void; preview?: string; height?: number; 'data-color-mode'?: string }>, {
                     value: markdownContent,
                     onChange: (val: string | undefined) => {
                       const content = val || '';

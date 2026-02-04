@@ -6,9 +6,11 @@
 import { useState, useCallback } from 'react';
 import { message, Upload } from 'antd';
 import type { UploadFile, UploadProps } from 'antd';
+import type { FormInstance } from 'antd/es/form';
 import type { CaptchaBackground, CaptchaBackgroundUpdateRequest } from '@/types/captcha';
 import * as captchaService from '@/services/captcha';
 import { SHAPE_OPTIONS } from '../constants';
+import type { UnknownError } from '@/types/common';
 
 export interface UseCaptchaModalsReturn {
   uploadModalVisible: boolean;
@@ -24,11 +26,11 @@ export interface UseCaptchaModalsReturn {
   setFileList: React.Dispatch<React.SetStateAction<UploadFile[]>>;
   setUploading: React.Dispatch<React.SetStateAction<boolean>>;
 
-  openEditModal: (record: CaptchaBackground, editForm: any) => void;
-  closeUploadModal: (uploadForm: any) => void;
-  closeEditModal: (editForm: any) => void;
-  handleUpload: (fileList: UploadFile[], uploadForm: any, onSuccess: () => void) => Promise<void>;
-  handleUpdate: (editingBg: CaptchaBackground, editForm: any, onSuccess: () => void) => Promise<void>;
+  openEditModal: (record: CaptchaBackground, editForm: FormInstance<unknown>) => void;
+  closeUploadModal: (uploadForm: FormInstance<unknown>) => void;
+  closeEditModal: (editForm: FormInstance<unknown>) => void;
+  handleUpload: (fileList: UploadFile[], uploadForm: FormInstance<unknown>, onSuccess: () => void) => Promise<void>;
+  handleUpdate: (editingBg: CaptchaBackground, editForm: FormInstance<unknown>, onSuccess: () => void) => Promise<void>;
   handleDelete: (id: string, onSuccess: () => void) => Promise<void>;
   handleToggle: (id: string, onSuccess: () => void) => Promise<void>;
   handlePreload: () => Promise<void>;
@@ -63,7 +65,7 @@ export function useCaptchaModals(): UseCaptchaModalsReturn {
     maxCount: 1,
   };
 
-  const openEditModal = useCallback((record: CaptchaBackground, editForm: any) => {
+  const openEditModal = useCallback((record: CaptchaBackground, editForm: FormInstance<unknown>) => {
     setEditingBg(record);
     editForm.setFieldsValue({
       pieceShape: record.pieceShape,
@@ -76,20 +78,20 @@ export function useCaptchaModals(): UseCaptchaModalsReturn {
     setEditModalVisible(true);
   }, []);
 
-  const closeUploadModal = useCallback((uploadForm: any) => {
+  const closeUploadModal = useCallback((uploadForm: FormInstance<unknown>) => {
     setUploadModalVisible(false);
     uploadForm.resetFields();
     setFileList([]);
   }, []);
 
-  const closeEditModal = useCallback((editForm: any) => {
+  const closeEditModal = useCallback((editForm: FormInstance<unknown>) => {
     setEditModalVisible(false);
     editForm.resetFields();
     setEditingBg(null);
   }, []);
 
   const handleUpload = useCallback(
-    async (fileList: UploadFile[], uploadForm: any, onSuccess: () => void) => {
+    async (fileList: UploadFile[], uploadForm: FormInstance<unknown>, onSuccess: () => void) => {
       try {
         const values = await uploadForm.validateFields();
         if (fileList.length === 0) {
@@ -110,8 +112,8 @@ export function useCaptchaModals(): UseCaptchaModalsReturn {
         message.success('上传成功');
         closeUploadModal(uploadForm);
         onSuccess();
-      } catch (error: any) {
-        if (error.errorFields) {
+      } catch (error: unknown) {
+        if (error && typeof error === 'object' && 'errorFields' in error) {
           return;
         }
         message.error('上传失败');
@@ -123,7 +125,7 @@ export function useCaptchaModals(): UseCaptchaModalsReturn {
   );
 
   const handleUpdate = useCallback(
-    async (editingBg: CaptchaBackground, editForm: any, onSuccess: () => void) => {
+    async (editingBg: CaptchaBackground, editForm: FormInstance<unknown>, onSuccess: () => void) => {
       try {
         const values = await editForm.validateFields();
         const updateData: CaptchaBackgroundUpdateRequest = {
@@ -141,8 +143,8 @@ export function useCaptchaModals(): UseCaptchaModalsReturn {
         editForm.resetFields();
         setEditingBg(null);
         onSuccess();
-      } catch (error: any) {
-        if (error.errorFields) {
+      } catch (error: unknown) {
+        if (error && typeof error === 'object' && 'errorFields' in error) {
           return;
         }
         message.error('更新失败');

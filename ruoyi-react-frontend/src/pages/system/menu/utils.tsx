@@ -66,7 +66,7 @@ export function buildParentOptions(tree: Menu[]): ParentOption[] {
 }
 
 /** 渲染树形表格数据 */
-export function renderTreeData(data: Menu[]): any[] {
+export function renderTreeData(data: Menu[]): Menu[] {
   return data.map(item => ({
     ...item,
     key: item.id,

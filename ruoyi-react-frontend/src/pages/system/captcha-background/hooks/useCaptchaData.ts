@@ -5,6 +5,7 @@
 
 import { useState, useCallback } from 'react';
 import type { CaptchaBackground } from '@/types/captcha';
+import type { FormInstance } from 'antd/es/form';
 import * as captchaService from '@/services/captcha';
 import type { CaptchaStatistics } from '../types';
 
@@ -14,18 +15,18 @@ export interface UseCaptchaDataReturn {
   total: number;
   statistics: CaptchaStatistics | null;
 
-  loadBackgrounds: (params?: any, searchValues?: any) => Promise<void>;
+  loadBackgrounds: (params?: Record<string, unknown>, searchValues?: Record<string, unknown>) => Promise<void>;
   loadStatistics: () => Promise<void>;
 }
 
-export function useCaptchaData(searchForm: any, setTotal: React.Dispatch<React.SetStateAction<number>>): UseCaptchaDataReturn {
+export function useCaptchaData(searchForm: FormInstance<unknown>, setTotal: React.Dispatch<React.SetStateAction<number>>): UseCaptchaDataReturn {
   const [backgrounds, setBackgrounds] = useState<CaptchaBackground[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotalLocal] = useState(0);
   const [statistics, setStatistics] = useState<CaptchaStatistics | null>(null);
 
   const loadBackgrounds = useCallback(
-    async (params: any = {}, searchValues?: any) => {
+    async (params: Record<string, unknown> = {}, searchValues?: Record<string, unknown>) => {
       setLoading(true);
       try {
         const values = searchValues || searchForm.getFieldsValue();

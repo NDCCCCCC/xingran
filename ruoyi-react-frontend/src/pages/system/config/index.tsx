@@ -32,7 +32,7 @@ import { formatDateTime } from '@/utils/datetime';
 import { post } from '@/lib/api';
 import { useTableManager } from '@/hooks/useTableManager';
 import { usePagination } from '@/hooks/usePagination';
-import { handleApiError, handleSuccess } from '@/utils/errorHandler';
+import { handleApiError, handleSuccess, isFormValidationError } from '@/utils/errorHandler';
 import ActionButtons from '@/components/shared/ActionButtons';
 
 const { Option } = Select;
@@ -67,7 +67,7 @@ const ConfigManagement: FC = () => {
   } = useTableManager<Config>(
     async (params): Promise<{ list: Config[]; total: number }> => {
       const values = searchForm.getFieldsValue();
-      const result: any = await post('/system/configs/list', {
+      const result = await post<{ list: Config[]; total: number }>('/system/configs/list', {
         current: params.current || paginationProps.current,
         pageSize: params.pageSize || paginationProps.pageSize,
         ...values,
@@ -88,10 +88,10 @@ const ConfigManagement: FC = () => {
   // 加载统计数据
   const loadStatistics = useCallback(async () => {
     try {
-      const result = await post('/system/configs/list', { current: 1, pageSize: 1000 }) as { data: { list: any[] } };
+      const result = await post<{ data: { list: Config[] } }>('/system/configs/list', { current: 1, pageSize: 1000 });
       const allConfigs = result.data.list || [];
-      const activeCount = allConfigs.filter((c: any) => c.configType === 'Y').length;
-      const inactiveCount = allConfigs.filter((c: any) => c.configType === 'N').length;
+      const activeCount = allConfigs.filter((c) => c.configType === 'Y').length;
+      const inactiveCount = allConfigs.filter((c) => c.configType === 'N').length;
       setStatistics({
         total: allConfigs.length,
         active: activeCount,
@@ -122,8 +122,8 @@ const ConfigManagement: FC = () => {
       handleModalClose();
       loadConfigs();
       loadStatistics();
-    } catch (error: any) {
-      if (error.errorFields) {
+    } catch (error: unknown) {
+      if (isFormValidationError(error)) {
         return; // 表单验证错误
       }
       handleApiError(error, '操作');

@@ -18,7 +18,7 @@ export interface UseMenuDataReturn {
   loading: boolean;
 
   // 数据加载方法
-  loadMenus: (searchParams?: any) => Promise<void>;
+  loadMenus: (searchParams?: Record<string, unknown>) => Promise<void>;
 }
 
 export function useMenuData(): UseMenuDataReturn {
@@ -33,7 +33,7 @@ export function useMenuData(): UseMenuDataReturn {
   const [loading, setLoading] = useState(false);
 
   // 加载菜单列表
-  const loadMenus = useCallback(async (searchParams?: any) => {
+  const loadMenus = useCallback(async (searchParams?: Record<string, unknown>) => {
     setLoading(true);
     try {
       const result = await post('/system/menus/tree', searchParams || {}) as { data: Menu[] };

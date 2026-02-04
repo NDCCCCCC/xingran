@@ -4,12 +4,12 @@
 
 import { useState, useCallback } from 'react';
 import type { User } from '@/types';
-import { Form } from 'antd';
+import type { FormInstance } from 'antd/es/form';
 
 export interface UseUserModalsReturn {
   resetPasswordModalVisible: boolean;
   resettingUser: User | null;
-  resetPasswordForm: any;
+  resetPasswordForm: FormInstance<unknown>;
   setResetPasswordModalVisible: (visible: boolean) => void;
   setResettingUser: (user: User | null) => void;
   openResetPasswordModal: (user: User) => void;

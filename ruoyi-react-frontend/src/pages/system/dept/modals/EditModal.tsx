@@ -5,20 +5,20 @@
 
 import { useEffect } from 'react';
 import { Modal, Form, Input, InputNumber, Select, Space, TreeSelect } from 'antd';
-import type { FormInstance } from 'antd';
+import type { FormInstance } from 'antd/es/form';
 import { UserOutlined } from '@ant-design/icons';
-import type { DeptUser, ParentOption } from '../types';
+import type { DeptUser, ParentOption, Department } from '../types';
 import { STATUS_OPTIONS, EXTERNAL_ORG_OPTIONS } from '../constants';
 
 const { Option } = Select;
 
 export interface DeptEditModalProps {
   open: boolean;
-  editingDept: any;
+  editingDept: Department | null;
   parentOptions: ParentOption[];
   deptUsers: DeptUser[];
   loadingUsers: boolean;
-  form: FormInstance;  // 新增：接收外部传入的form实例
+  form: FormInstance<unknown>;
   onOk: () => Promise<void>;
   onCancel: () => void;
   onParentChange: (value: string) => void;

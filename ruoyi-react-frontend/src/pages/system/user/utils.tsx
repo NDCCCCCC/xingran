@@ -21,17 +21,17 @@ interface TreeNode {
 /**
  * 将部门数据转换为 TreeSelect 需要的 treeData 格式
  */
-export function convertDeptTreeData(departments: any[]): TreeNode[] {
+export function convertDeptTreeData(departments: { id: string; deptName: string; children?: unknown[] }[]): TreeNode[] {
   if (!departments || departments.length === 0) {
     return [];
   }
 
-  const convertNodes = (nodes: any[]): TreeNode[] => {
+  const convertNodes = (nodes: { id: string; deptName: string; children?: unknown[] }[]): TreeNode[] => {
     return nodes.map(node => ({
       title: node.deptName,
       value: node.id,
       key: node.id,
-      children: node.children && node.children.length > 0 ? convertNodes(node.children) : undefined,
+      children: node.children && node.children.length > 0 ? convertNodes(node.children as { id: string; deptName: string; children?: unknown[] }[]) : undefined,
     }));
   };
 
@@ -41,13 +41,13 @@ export function convertDeptTreeData(departments: any[]): TreeNode[] {
 /**
  * 渲染树形部门选项（用于普通 Select）
  */
-export function renderDeptTreeOptions(departments: any[]): ReactElement[] {
+export function renderDeptTreeOptions(departments: { id: string; deptName: string; children?: unknown[] }[]): ReactElement[] {
   if (!departments || departments.length === 0) {
     return [<Option key="" value="">暂无部门数据</Option>];
   }
 
   // 递归渲染树形选项
-  const renderOptions = (nodes: any[], level = 0): ReactElement[] => {
+  const renderOptions = (nodes: { id: string; deptName: string; children?: unknown[] }[], level = 0): ReactElement[] => {
     const options: ReactElement[] = [];
 
     nodes.forEach(node => {
@@ -59,7 +59,7 @@ export function renderDeptTreeOptions(departments: any[]): ReactElement[] {
 
       // 递归渲染子部门
       if (node.children && node.children.length > 0) {
-        options.push(...renderOptions(node.children, level + 1));
+        options.push(...renderOptions(node.children as { id: string; deptName: string; children?: unknown[] }[], level + 1));
       }
     });
 

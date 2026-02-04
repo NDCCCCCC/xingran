@@ -244,7 +244,7 @@ const UserManagement: FC = () => {
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
   // 数据加载函数
-  const fetchUsers = useCallback(async (params: any) => {
+  const fetchUsers = useCallback(async (params: { current: number; pageSize: number; [key: string]: unknown }) => {
     const result = await post<BaseResponse<PageResponse<User>>>('/system/users/list', params);
     return { list: result.data.list, total: result.data.total };
   }, []);
@@ -292,7 +292,7 @@ const UserManagement: FC = () => {
   const handleSearch = useCallback(() => {
     const values = searchForm.getFieldsValue();
 
-    const searchParams: any = {};
+    const searchParams: Record<string, unknown> = {};
     Object.keys(values).forEach(key => {
       const value = values[key];
       if (value !== undefined && value !== null && value !== '') {
@@ -324,7 +324,7 @@ const UserManagement: FC = () => {
 
   const handleAddUser = useCallback(() => {
     handleAdd();
-    const defaultValues: any = {
+    const defaultValues: Record<string, unknown> = {
       gender: 0,
       status: 0,
     };
@@ -563,7 +563,7 @@ const UserManagement: FC = () => {
               onChange={(pagination) => {
                 setCurrent(pagination.current);
                 setPageSize(pagination.pageSize);
-                const params: any = {
+                const params: Record<string, unknown> = {
                   current: pagination.current,
                   pageSize: pagination.pageSize,
                 };

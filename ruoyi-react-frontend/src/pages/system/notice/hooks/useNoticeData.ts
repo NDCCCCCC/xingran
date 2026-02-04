@@ -23,7 +23,7 @@ interface UseNoticeDataResult {
   current: number;
   pageSize: number;
   selectedRowKeys: React.Key[];
-  loadNotices: (params?: any) => Promise<void>;
+  loadNotices: (params?: Partial<NoticeListParams>) => Promise<void>;
   handleCreate: (request: CreateNoticeRequest) => Promise<void>;
   handleUpdate: (id: string, request: UpdateNoticeRequest) => Promise<void>;
   handleDelete: (id: string) => Promise<void>;
@@ -48,7 +48,7 @@ export function useNoticeData(): UseNoticeDataResult {
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
   // 加载通知列表
-  const loadNotices = useCallback(async (params: any = {}) => {
+  const loadNotices = useCallback(async (params: Partial<NoticeListParams> = {}) => {
     setLoading(true);
     try {
       const requestParams: NoticeListParams = {

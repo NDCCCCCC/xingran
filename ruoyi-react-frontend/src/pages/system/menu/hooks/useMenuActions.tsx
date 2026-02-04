@@ -7,6 +7,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { Modal, message, Alert, Checkbox } from 'antd';
 import { WarningOutlined } from '@ant-design/icons';
 import type { Menu } from '@/types';
+import type { FormInstance } from 'antd/es/form';
 import { post } from '@/lib/api';
 import type { CheckboxChangeEvent } from 'antd/es/checkbox';
 import { refreshMenuCache } from '@/store/menuStore';
@@ -29,7 +30,7 @@ export interface UseMenuActionsReturn {
   handleEdit: (record: Menu) => void;
   handleDeleteConfirm: (record: Menu) => void;
   handleBatchDelete: () => void;
-  handleSave: (editForm: any) => Promise<void>;
+  handleSave: (editForm: FormInstance<unknown>) => Promise<void>;
   setEditingMenu: (menu: Menu | null) => void;
 }
 
@@ -69,9 +70,20 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
 
       // 静默刷新菜单缓存，不会触发页面跳转
       refreshMenuCache();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('删除菜单失败:', error);
-      const errorMsg = error?.response?.data?.message || error?.message || '删除失败';
+      let errorMsg = '删除失败';
+      if (error && typeof error === 'object') {
+        if ('response' in error && typeof error.response === 'object' && error.response) {
+          if ('data' in error.response && typeof error.response.data === 'object' && error.response.data) {
+            if ('message' in error.response.data && typeof error.response.data.message === 'string') {
+              errorMsg = error.response.data.message;
+            }
+          }
+        } else if ('message' in error && typeof error.message === 'string') {
+          errorMsg = error.message;
+        }
+      }
       message.error(errorMsg);
       throw error; // 重新抛出错误以保持 Modal 打开
     }
@@ -83,7 +95,7 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
 
     // 创建一个可响应状态更新的确认框
     let localCascade = false;
-    let modalInstance: any = null;
+    let modalInstance: { checkboxRef?: React.MutableRefObject<boolean> } | null = null;
 
     const DeleteConfirmContent = () => {
       const [checked, setChecked] = useState(false);
@@ -159,7 +171,7 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
     }
 
     // 创建一个可响应状态更新的确认框
-    let modalInstance: any = null;
+    let modalInstance: { checkboxRef?: React.MutableRefObject<boolean> } | null = null;
 
     const BatchDeleteConfirmContent = () => {
       const [checked, setChecked] = useState(false);
@@ -234,7 +246,7 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
 
           // 静默刷新菜单缓存，不会触发页面跳转
           refreshMenuCache();
-        } catch (error: any) {
+        } catch (error: unknown) {
           console.error('批量删除失败:', error);
           const errorMsg = error?.response?.data?.message || error?.message || '批量删除失败';
           message.error(errorMsg);
@@ -245,7 +257,7 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
   }, [selectedRowKeys, onLoad, setSelectedRowKeys]);
 
   // 保存菜单
-  const handleSave = useCallback(async (editForm: any) => {
+  const handleSave = useCallback(async (editForm: FormInstance<unknown>) => {
     try {
       const values = await editForm.validateFields();
 

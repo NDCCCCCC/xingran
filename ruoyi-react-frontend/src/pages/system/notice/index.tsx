@@ -120,23 +120,23 @@ const NoticeManagement: FC = () => {
         let apiConfigIdValue = undefined;
 
         if (record.channels && record.channels.length > 0) {
-          const channelTypes = record.channels.map((c: any) => c.channelType);
+          const channelTypes = record.channels.map((c: { channelType: string }) => c.channelType);
           setSelectedChannels(channelTypes);
 
           // 恢复 API 配置 ID
-          const apiChannel = record.channels.find((c: any) => c.channelType === 'api');
+          const apiChannel = record.channels.find((c: { channelType: string; apiConfigId?: string }) => c.channelType === 'api');
           if (apiChannel?.apiConfigId) {
             apiConfigIdValue = apiChannel.apiConfigId;
           }
 
           // 恢复自定义邮件地址
-          const emailChannel = record.channels.find((c: any) => c.channelType === 'email');
+          const emailChannel = record.channels.find((c: { channelType: string; customRecipients?: string[] }) => c.channelType === 'email');
           if (emailChannel?.customRecipients && emailChannel.customRecipients.length > 0) {
             customEmailsValue = emailChannel.customRecipients.join(', ');
           }
 
           // 恢复自定义企微用户
-          const apiChannelRecipients = record.channels.find((c: any) => c.channelType === 'api');
+          const apiChannelRecipients = record.channels.find((c: { channelType: string; customRecipients?: string[] }) => c.channelType === 'api');
           if (apiChannelRecipients?.customRecipients && apiChannelRecipients.customRecipients.length > 0) {
             customWeComUsersValue = apiChannelRecipients.customRecipients.join(', ');
           }
@@ -146,9 +146,9 @@ const NoticeManagement: FC = () => {
           ...record,
           publishTime: record.publishTime ? dayjs(record.publishTime) : null,
           targetType: record.targetType ?? 0,
-          targetDepts: record.targets?.filter((t: any) => t.targetType === 'dept').map((t: any) => t.targetId) || [],
-          targetRoles: record.targets?.filter((t: any) => t.targetType === 'role').map((t: any) => t.targetId) || [],
-          targetUsers: record.targets?.filter((t: any) => t.targetType === 'user').map((t: any) => t.targetId) || [],
+          targetDepts: record.targets?.filter((t: { targetType: string }) => t.targetType === 'dept').map((t: { targetId: string }) => t.targetId) || [],
+          targetRoles: record.targets?.filter((t: { targetType: string }) => t.targetType === 'role').map((t: { targetId: string }) => t.targetId) || [],
+          targetUsers: record.targets?.filter((t: { targetType: string }) => t.targetType === 'user').map((t: { targetId: string }) => t.targetId) || [],
           apiConfigId: apiConfigIdValue,
           customEmails: customEmailsValue,
           customWeComUsers: customWeComUsersValue,
@@ -193,7 +193,7 @@ const NoticeManagement: FC = () => {
 
       // 处理执行类型和周期配置
       let executionTypeValue: string | undefined = undefined;
-      let recurrenceConfigValue: any = undefined;
+      let recurrenceConfigValue: { cronExpression?: string; endDate?: string } | undefined = undefined;
 
       if (executionType === 'recurring') {
         executionTypeValue = 'recurring';
@@ -220,9 +220,9 @@ const NoticeManagement: FC = () => {
       };
 
       if (executionType !== 'recurring') {
-        (request as any).publishTime = publishTimeStr;
+        (request as CreateNoticeRequest & { publishTime?: string }).publishTime = publishTimeStr;
       } else {
-        delete (request as any).publishTime;
+        delete (request as CreateNoticeRequest & { publishTime?: string }).publishTime;
       }
 
       // 处理发送渠道配置
@@ -267,7 +267,7 @@ const NoticeManagement: FC = () => {
       }
 
       if (channels.length > 0) {
-        (request as any).channels = channels;
+        (request as CreateNoticeRequest & { channels?: NoticeChannelRequest[] }).channels = channels;
       }
 
       if (editingNotice) {
@@ -335,7 +335,7 @@ const NoticeManagement: FC = () => {
   }, [handleWithdraw, loadNotices, paginationProps]);
 
   // 搜索处理
-  const handleSearch = useCallback((params?: any) => {
+  const handleSearch = useCallback((params?: Record<string, unknown>) => {
     const values = searchForm.getFieldsValue();
     loadNotices({
       ...params,

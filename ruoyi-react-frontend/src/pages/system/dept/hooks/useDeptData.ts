@@ -22,7 +22,7 @@ export interface UseDeptDataReturn {
   setParentOptions: React.Dispatch<React.SetStateAction<ParentOption[]>>;
   setDeptUsers: React.Dispatch<React.SetStateAction<DeptUser[]>>;
 
-  loadDepartments: (searchParams?: any) => Promise<void>;
+  loadDepartments: (searchParams?: Record<string, unknown>) => Promise<void>;
   loadDeptUsers: (deptId: string) => Promise<void>;
 }
 
@@ -39,7 +39,7 @@ export function useDeptData(): UseDeptDataReturn {
     subLevel: 0,
   });
 
-  const loadDepartments = useCallback(async (searchParams?: any) => {
+  const loadDepartments = useCallback(async (searchParams?: Record<string, unknown>) => {
     setLoading(true);
     try {
       const result = await post('/system/departments/tree', searchParams || {}) as { data: Department[] };

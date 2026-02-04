@@ -7,6 +7,7 @@ import { useState, useCallback } from 'react';
 import { message } from 'antd';
 import type { Role } from '@/types';
 import type { Key } from 'antd/es/table/interface';
+import type { FormInstance } from 'antd/es/form';
 import { post } from '@/lib/api';
 
 export interface UseRoleActionsParams {
@@ -22,12 +23,12 @@ export interface UseRoleActionsParams {
 export interface UseRoleActionsReturn {
   editingRole: Role | null;
   editModalVisible: boolean;
-  pendingFormData: any;
+  pendingFormData: Record<string, unknown> | null;
   selectedRowKeys: Key[];
 
   setEditingRole: React.Dispatch<React.SetStateAction<Role | null>>;
   setEditModalVisible: React.Dispatch<React.SetStateAction<boolean>>;
-  setPendingFormData: React.Dispatch<React.SetStateAction<any>>;
+  setPendingFormData: React.Dispatch<React.SetStateAction<Record<string, unknown> | null>>;
   setSelectedRowKeys: React.Dispatch<React.SetStateAction<Key[]>>;
 
   handleAdd: () => void;
@@ -35,9 +36,9 @@ export interface UseRoleActionsReturn {
   handleDelete: (id: string) => Promise<void>;
   handleBatchDelete: (selectedRowKeys: Key[]) => Promise<void>;
   handleUpdateStatus: (id: string, status: number) => Promise<void>;
-  handleSave: (editForm: any) => Promise<void>;
-  handleDataScopeChange: (value: number, editForm: any) => void;
-  handleModalOpenChange: (open: boolean, editForm: any) => void;
+  handleSave: (editForm: FormInstance<unknown>) => Promise<void>;
+  handleDataScopeChange: (value: number, editForm: FormInstance<unknown>) => void;
+  handleModalOpenChange: (open: boolean, editForm: FormInstance<unknown>) => void;
 }
 
 export function useRoleActions(params: UseRoleActionsParams): UseRoleActionsReturn {
@@ -53,7 +54,7 @@ export function useRoleActions(params: UseRoleActionsParams): UseRoleActionsRetu
 
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [editModalVisible, setEditModalVisible] = useState(false);
-  const [pendingFormData, setPendingFormData] = useState<any>(null);
+  const [pendingFormData, setPendingFormData] = useState<Record<string, unknown> | null>(null);
   const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
 
   // 新增角色
@@ -125,7 +126,7 @@ export function useRoleActions(params: UseRoleActionsParams): UseRoleActionsRetu
   }, [loadRoles, loadStatistics]);
 
   // 保存角色
-  const handleSave = useCallback(async (editForm: any) => {
+  const handleSave = useCallback(async (editForm: FormInstance<unknown>) => {
     try {
       const values = await editForm.validateFields();
 
@@ -161,7 +162,7 @@ export function useRoleActions(params: UseRoleActionsParams): UseRoleActionsRetu
   }, [editingRole, loadRoles, loadStatistics]);
 
   // 数据范围变更
-  const handleDataScopeChange = useCallback((value: number, editForm: any) => {
+  const handleDataScopeChange = useCallback((value: number, editForm: FormInstance<unknown>) => {
     // 如果不是自定义数据权限，清空部门权限选择
     if (value !== 2) {
       editForm.setFieldsValue({ deptIds: [] });
@@ -169,7 +170,7 @@ export function useRoleActions(params: UseRoleActionsParams): UseRoleActionsRetu
   }, []);
 
   // Modal 打开后的回调
-  const handleModalOpenChange = useCallback((open: boolean, editForm: any) => {
+  const handleModalOpenChange = useCallback((open: boolean, editForm: FormInstance<unknown>) => {
     if (open && pendingFormData) {
       editForm.setFieldsValue(pendingFormData);
       setPendingFormData(null);

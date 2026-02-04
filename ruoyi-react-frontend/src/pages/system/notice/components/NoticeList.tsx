@@ -32,8 +32,8 @@ export interface NoticeListProps {
   current: number;
   pageSize: number;
   selectedRowKeys: React.Key[];
-  searchForm: any;
-  onSearch: (params?: any) => void;
+  searchForm: FormInstance;
+  onSearch: (params?: Record<string, unknown>) => void;
   onAdd: () => void;
   onEdit: (record: Notice) => void;
   onDelete: (id: string) => void;

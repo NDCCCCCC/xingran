@@ -37,6 +37,7 @@ import type {
 } from '@/types/captcha';
 import * as captchaService from '@/services/captcha';
 import { usePagination } from '@/hooks/usePagination';
+import { isFormValidationError } from '@/utils/errorHandler';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -77,13 +78,13 @@ const CaptchaBackgroundSettingsPage: FC = () => {
   const [editingBg, setEditingBg] = useState<CaptchaBackground | null>(null);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [statistics, setStatistics] = useState<any>(null);
+  const [statistics, setStatistics] = useState<{ totalCount: number; enabledCount: number; disabledCount: number } | null>(null);
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
   // 加载背景图列表
-  const loadBackgrounds = async (params: any = {}) => {
+  const loadBackgrounds = async (params: { current?: number; pageSize?: number } = {}) => {
     setLoading(true);
     try {
       const values = searchForm.getFieldsValue();
@@ -136,8 +137,8 @@ const CaptchaBackgroundSettingsPage: FC = () => {
       setFileList([]);
       loadBackgrounds();
       loadStatistics();
-    } catch (error: any) {
-      if (error.errorFields) {
+    } catch (error: unknown) {
+      if (isFormValidationError(error)) {
         return;
       }
       message.error('上传失败');
@@ -165,8 +166,8 @@ const CaptchaBackgroundSettingsPage: FC = () => {
       editForm.resetFields();
       setEditingBg(null);
       loadBackgrounds();
-    } catch (error: any) {
-      if (error.errorFields) {
+    } catch (error: unknown) {
+      if (isFormValidationError(error)) {
         return;
       }
       message.error('更新失败');

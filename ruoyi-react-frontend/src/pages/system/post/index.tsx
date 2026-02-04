@@ -30,7 +30,7 @@ import type { Post } from '@/types';
 import { post } from '@/lib/api';
 import { useTableManager } from '@/hooks/useTableManager';
 import { usePagination } from '@/hooks/usePagination';
-import { handleApiError, handleSuccess } from '@/utils/errorHandler';
+import { handleApiError, handleSuccess, isFormValidationError } from '@/utils/errorHandler';
 import { createStatusColumn, createDateTimeColumn } from '@/utils/tableHelpers';
 import ActionButtons from '@/components/shared/ActionButtons';
 
@@ -119,8 +119,8 @@ const PostManagement: FC = () => {
       handleModalClose();
       loadPosts();
       loadStatistics();
-    } catch (error: any) {
-      if (error.errorFields) {
+    } catch (error: unknown) {
+      if (isFormValidationError(error)) {
         return; // 表单验证错误
       }
       handleApiError(error, '操作');

@@ -10,12 +10,12 @@ import type { Key } from 'antd/es/table/interface';
 import { formatDateTime } from '@/utils/datetime';
 
 /** 处理树形数据 */
-export function processTreeData(nodes: any[], keyField: string = 'id', titleField: string = 'title'): TreeDataNode[] {
-  return nodes.map((node: any) => ({
-    key: node.key || node[keyField],
-    title: node.title || node[titleField],
-    value: node.value || node[keyField],
-    children: node.children && node.children.length > 0 ? processTreeData(node.children, keyField, titleField) : undefined,
+export function processTreeData(nodes: Record<string, unknown>[], keyField: string = 'id', titleField: string = 'title'): TreeDataNode[] {
+  return nodes.map((node) => ({
+    key: (node.key as string) || (node[keyField] as string),
+    title: (node.title as string) || (node[titleField] as string),
+    value: (node.value as string) || (node[keyField] as string),
+    children: node.children && Array.isArray(node.children) && node.children.length > 0 ? processTreeData(node.children as Record<string, unknown>[], keyField, titleField) : undefined,
   }));
 }
 
