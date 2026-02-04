@@ -124,14 +124,14 @@ function getCacheTableColumns(props: CacheTableColumnsProps): ColumnsType<CacheI
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 180,
-      render: (value: any) => cacheFormatDateTime(value),
+      render: (value: string) => cacheFormatDateTime(value),
     },
     {
       title: '更新时间',
       dataIndex: 'updatedAt',
       key: 'updatedAt',
       width: 180,
-      render: (value: any) => cacheFormatDateTime(value),
+      render: (value: string) => cacheFormatDateTime(value),
     },
     {
       title: '操作',
@@ -223,7 +223,7 @@ const CacheManager: FC = () => {
   const handleOperate = useCallback(async () => {
     try {
       const values = await form.validateFields();
-      await post<BaseResponse<any>>('/monitor/cache/operate', {
+      await post<BaseResponse<unknown>>('/monitor/cache/operate', {
         ...values,
         ttl: values.ttl || undefined
       });
@@ -240,7 +240,7 @@ const CacheManager: FC = () => {
 
   const handleBatchOperate = useCallback(async (operation: string, keys?: string[]) => {
     try {
-      await post<BaseResponse<any>>('/monitor/cache/batch', {
+      await post<BaseResponse<unknown>>('/monitor/cache/batch', {
         keys: keys || [],
         operation
       });
@@ -275,7 +275,7 @@ const CacheManager: FC = () => {
 
   const handleExport = useCallback(async () => {
     try {
-      const result = await post<BaseResponse<any>>('/monitor/cache/export', {
+      const result = await post<BaseResponse<unknown>>('/monitor/cache/export', {
         ...searchForm
       });
 
@@ -335,7 +335,7 @@ const CacheManager: FC = () => {
     fetchMonitor();
   }, [fetchCaches, fetchMonitor]);
 
-  const handleTableChange = useCallback((pagination: any) => {
+  const handleTableChange = useCallback((pagination: { current: number; pageSize: number }) => {
     setCurrent(pagination.current);
     setPageSize(pagination.pageSize);
     fetchCaches();

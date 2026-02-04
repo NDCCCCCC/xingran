@@ -108,7 +108,7 @@ const JobManager: FC = () => {
   };
 
   // 分页变化
-  const handleTableChange = (pagination: any) => {
+  const handleTableChange = (pagination: { current: number; pageSize: number }) => {
     setCurrent(pagination.current);
     setPageSize(pagination.pageSize);
     fetchJobs();

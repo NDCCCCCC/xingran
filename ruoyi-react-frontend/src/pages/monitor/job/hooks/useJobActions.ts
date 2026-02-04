@@ -5,6 +5,7 @@
 
 import { useState, useCallback } from 'react';
 import { message } from 'antd';
+import type { FormInstance } from 'antd/es/form';
 import type { JobInfo } from '../types';
 import { post, put, del, postLongRequest } from '@/lib/api';
 
@@ -29,13 +30,13 @@ export interface UseJobActionsReturn {
   setSelectedJob: React.Dispatch<React.SetStateAction<JobInfo | null>>;
 
   // 操作方法
-  openModal: (record: JobInfo | undefined, form: any) => void;
-  handleSubmit: (form: any) => Promise<void>;
+  openModal: (record: JobInfo | undefined, form: FormInstance<unknown>) => void;
+  handleSubmit: (form: FormInstance<unknown>) => Promise<void>;
   handleDelete: (record: JobInfo) => Promise<void>;
   handleToggleStatus: (record: JobInfo) => Promise<void>;
   handleExecute: (record: JobInfo) => Promise<void>;
   handleViewLogs: (record: JobInfo) => void;
-  handleReset: (setSearchForm: React.Dispatch<React.SetStateAction<any>>, setCurrent: React.Dispatch<React.SetStateAction<number>>, fetchJobs: (params?: any) => void) => void;
+  handleReset: (setSearchForm: React.Dispatch<React.SetStateAction<Record<string, unknown> | null>>, setCurrent: React.Dispatch<React.SetStateAction<number>>, fetchJobs: (params?: Record<string, unknown>) => void) => void;
 }
 
 export function useJobActions(params: UseJobActionsParams): UseJobActionsReturn {
@@ -48,7 +49,7 @@ export function useJobActions(params: UseJobActionsParams): UseJobActionsReturn 
   const [selectedJob, setSelectedJob] = useState<JobInfo | null>(null);
 
   // 打开新增/编辑模态框
-  const openModal = useCallback((record: JobInfo | undefined, form: any) => {
+  const openModal = useCallback((record: JobInfo | undefined, form: FormInstance<unknown>) => {
     if (record) {
       setIsEdit(true);
       setModalTitle('编辑定时任务');
@@ -77,7 +78,7 @@ export function useJobActions(params: UseJobActionsParams): UseJobActionsReturn 
   }, []);
 
   // 提交表单
-  const handleSubmit = useCallback(async (form: any) => {
+  const handleSubmit = useCallback(async (form: FormInstance<unknown>) => {
     try {
       const values = await form.validateFields();
 
@@ -143,9 +144,9 @@ export function useJobActions(params: UseJobActionsParams): UseJobActionsReturn 
 
   // 重置
   const handleReset = useCallback((
-    setSearchForm: React.Dispatch<React.SetStateAction<any>>,
+    setSearchForm: React.Dispatch<React.SetStateAction<Record<string, unknown> | null>>,
     setCurrent: React.Dispatch<React.SetStateAction<number>>,
-    fetchJobs: (params?: any) => void
+    fetchJobs: (params?: Record<string, unknown>) => void
   ) => {
     setSearchForm({
       jobName: '',
