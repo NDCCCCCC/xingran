@@ -10,8 +10,16 @@ import { post } from '@/lib/api';
 import { handleApiError } from '@/utils/errorHandler';
 import type { WorkstationStatistics, FloorOption, UserOption, DeptTreeNode } from '../types';
 
+// 后端返回的部门节点类型
+interface DepartmentNode {
+  id: string;
+  deptName?: string;
+  name?: string;
+  children?: DepartmentNode[];
+}
+
 export interface UseWorkstationDataReturn {
-  loadWorkstations: (params?: any) => Promise<void>;
+  loadWorkstations: (params?: Record<string, unknown>) => Promise<void>;
   loadStatistics: () => Promise<void>;
   loadFloorOptions: () => Promise<void>;
   loadDeptOptions: () => Promise<void>;
@@ -45,7 +53,7 @@ export function useWorkstationData(
       const result = await floorApi.list({ current: 1, pageSize: 1000 });
       const floors = result.data?.list || [];
       setFloorOptions(
-        floors.map((f: any) => ({
+        floors.map((f: Record<string, unknown>) => ({
           id: f.id,
           code: f.code || f.floorNo,
           name: `${f.buildingName || f.buildingCode} - ${f.name || f.floorNo}`,
@@ -59,9 +67,9 @@ export function useWorkstationData(
   const loadDeptOptions = useCallback(async () => {
     try {
       // 后端返回的是树形结构数组，不是分页格式
-      const result = await post('/system/departments/tree', {}) as { data: any[] };
+      const result = await post('/system/departments/tree', {}) as { data: DepartmentNode[] };
       // 构建树形结构数据，使用 fieldNames 指定字段映射
-      const buildTreeData = (depts: any[]): DeptTreeNode[] => {
+      const buildTreeData = (depts: DepartmentNode[]): DeptTreeNode[] => {
         return depts.map((dept) => ({
           title: dept.deptName || dept.name,
           value: dept.id,
@@ -81,13 +89,13 @@ export function useWorkstationData(
   const loadUserOptions = useCallback(
     async (deptId?: string) => {
       try {
-        const params: any = { current: 1, pageSize: 1000 };
+        const params: Record<string, unknown> = { current: 1, pageSize: 1000 };
         if (deptId) {
           params.deptId = deptId;
         }
-        const result = await post('/system/users/list', params) as { data?: { list: any[] } };
+        const result = await post('/system/users/list', params) as { data?: { list: Record<string, unknown>[] } };
         const users = result.data?.list || [];
-        setUserOptions(users.map((u: any) => ({ id: u.id, name: u.username })));
+        setUserOptions(users.map((u: Record<string, unknown>) => ({ id: u.id, name: u.username })));
       } catch (error) {
         handleApiError(error, '加载用户选项', false);
       }
@@ -112,7 +120,7 @@ export function useWorkstationData(
   );
 
   const loadWorkstations = useCallback(
-    async (params?: any) => {
+    async (params?: Record<string, unknown>) => {
       await workstationApi.list(params);
     },
     []

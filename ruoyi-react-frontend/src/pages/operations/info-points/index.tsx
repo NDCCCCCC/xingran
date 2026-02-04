@@ -18,7 +18,7 @@ import type { InfoPoint, DictData } from '@/types';
 import { infoPointApi, workstationApi, buildingApi, floorApi } from '@/lib/opsApi';
 import { useTableManager } from '@/hooks/useTableManager';
 import { usePagination } from '@/hooks/usePagination';
-import { handleApiError, handleSuccess } from '@/utils/errorHandler';
+import { handleApiError, handleSuccess, isFormValidationError } from '@/utils/errorHandler';
 import { createDateTimeColumn } from '@/utils/tableHelpers';
 import ActionButtons from '@/components/shared/ActionButtons';
 import ExcelImport from '@/components/shared/ExcelImport';
@@ -56,6 +56,7 @@ interface CascaderOption {
   label: string;
   children?: CascaderOption[];
   isLeaf?: boolean;
+  floorNo?: string;
 }
 
 const InfoPointManagement: FC = () => {
@@ -118,7 +119,7 @@ const InfoPointManagement: FC = () => {
     try {
       const buildingResult = await buildingApi.list({ current: 1, pageSize: 1000 });
       const buildings = buildingResult.data?.list || [];
-      return buildings.map((b: any) => ({
+      return buildings.map((b: Record<string, unknown>) => ({
         value: b.id,
         label: b.name,
         isLeaf: false, // 表示有子节点需要懒加载
@@ -135,7 +136,7 @@ const InfoPointManagement: FC = () => {
       // 修复：使用 buildingId 而不是 buildingCode
       const floorResult = await floorApi.list({ buildingId, current: 1, pageSize: 1000 });
       const floors = floorResult.data?.list || [];
-      return floors.map((f: any) => ({
+      return floors.map((f: Record<string, unknown>) => ({
         value: f.id,
         label: f.name || f.floorNo,
         isLeaf: false, // 表示有子节点需要懒加载
@@ -153,8 +154,8 @@ const InfoPointManagement: FC = () => {
       const wsResult = await workstationApi.list({ floorCode: floorNo, current: 1, pageSize: 1000 });
       const workstations = wsResult.data?.list || [];
       return workstations
-        .filter((w: any) => w.id)
-        .map((w: any) => ({
+        .filter((w: Record<string, unknown>) => w.id)
+        .map((w: Record<string, unknown>) => ({
           value: w.id,
           label: w.name || '未命名工位',
           isLeaf: true,
@@ -180,7 +181,7 @@ const InfoPointManagement: FC = () => {
       } else if (selectedOptions.length === 2) {
         // 加载工位（第三级）
         const floorId = targetOption.value;
-        const floorNo = (targetOption as any).floorNo;
+        const floorNo = targetOption.floorNo;
         const workstations = await loadWorkstationsForCascader(floorId, floorNo || floorId);
         targetOption.children = workstations;
       }
@@ -214,8 +215,8 @@ const InfoPointManagement: FC = () => {
       const workstations = wsResult.data?.list ?? [];
       setWorkstationOptions(
         workstations
-          .filter((w: any) => w.id)
-          .map((w: any) => ({
+          .filter((w: Record<string, unknown>) => w.id)
+          .map((w: Record<string, unknown>) => ({
             id: w.id,
             name: w.name ?? '未命名工位',
           }))
@@ -229,16 +230,16 @@ const InfoPointManagement: FC = () => {
 
   const loadInfoPointTypeDict = useCallback(async () => {
     try {
-      const result = await post('/system/dicts/data/list', { dictType: 'ops_info_point_type', current: 1, pageSize: 100 }) as { data?: { list: any[] } };
+      const result = await post('/system/dicts/data/list', { dictType: 'ops_info_point_type', current: 1, pageSize: 100 }) as { data?: { list: Record<string, unknown>[] } };
       setInfoPointTypeDict(result.data?.list || []);
     } catch (error) { handleApiError(error, '加载信息点类型字典', false); }
   }, []);
 
   const loadNetworkDevices = useCallback(async () => {
     try {
-      const result = await post('/network/devices/list', { current: 1, pageSize: 1000 }) as { data?: { list: any[] } };
+      const result = await post('/network/devices/list', { current: 1, pageSize: 1000 }) as { data?: { list: Record<string, unknown>[] } };
       const devices = result.data?.list || [];
-      setNetworkDevices(devices.map((d: any) => ({
+      setNetworkDevices(devices.map((d: Record<string, unknown>) => ({
         id: d.id,
         name: d.deviceName,
         ipAddress: d.ipAddress,
@@ -252,9 +253,9 @@ const InfoPointManagement: FC = () => {
       return;
     }
     try {
-      const result = await post('/network/ports/list', { deviceId, current: 1, pageSize: 1000 }) as { data?: { list: any[] } };
+      const result = await post('/network/ports/list', { deviceId, current: 1, pageSize: 1000 }) as { data?: { list: Record<string, unknown>[] } };
       const ports = result.data?.list || [];
-      setDevicePorts(ports.map((p: any) => ({
+      setDevicePorts(ports.map((p: Record<string, unknown>) => ({
         id: p.id,
         portName: p.interfaceName || p.portName || p.name,
         status: p.status,
@@ -305,7 +306,7 @@ const InfoPointManagement: FC = () => {
       handleModalClose();
       loadInfoPoints();
       loadStatistics();
-    } catch (error: any) { if (error.errorFields) return; handleApiError(error, '操作'); }
+    } catch (error: unknown) { if (isFormValidationError(error)) return; handleApiError(error, '操作'); }
   };
 
   const handleDelete = async (id: string) => {
@@ -332,12 +333,12 @@ const InfoPointManagement: FC = () => {
         try {
           // 查询工位详细信息以获取所属楼层
           const wsResult = await workstationApi.get(formValues.workstationId);
-          const workstation = wsResult.data as any;
+          const workstation = wsResult.data as WorkstationOps | undefined;
 
           if (workstation && workstation.floorId) {
             // 查询楼层信息以获取所属楼宇
             const floorResult = await floorApi.get(workstation.floorId);
-            const floor = floorResult.data as any;
+            const floor = floorResult.data as Floor | undefined;
 
             const buildingId = floor?.buildingId || floor?.buildingCode;
             const floorId = workstation.floorId;
@@ -348,7 +349,7 @@ const InfoPointManagement: FC = () => {
               await preloadCascaderPath(buildingId, floorId);
 
               // 构建三级路径: [buildingId, floorId, workstationId]
-              formValues.workstationId = [buildingId, floorId, workstationId] as any;
+              formValues.workstationId = [buildingId, floorId, workstationId] as [string, string, string];
             }
           }
         } catch (error) {
@@ -386,11 +387,11 @@ const InfoPointManagement: FC = () => {
       const workstations = await loadWorkstationsForCascader(floorId, floorNo || floorId);
 
       // 更新楼层节点的 children（工位列表）- 使用类型断言
-      (floors[floorIndex] as any).children = workstations;
+      (floors[floorIndex] as CascaderOption & { children?: CascaderOption[] }).children = workstations;
 
       // 更新楼宇节点的 children（楼层列表）- 使用类型断言
       const updatedOptions = [...cascaderOptions];
-      (updatedOptions[buildingIndex] as any).children = floors;
+      (updatedOptions[buildingIndex] as CascaderOption & { children?: CascaderOption[] }).children = floors;
 
       // 触发重新渲染
       setCascaderOptions(updatedOptions);

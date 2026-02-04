@@ -10,6 +10,7 @@ import type { BuildingItem } from '../types';
 import { useVisualizationStore } from '@/store/visualizationStore';
 import { getMapMarkerColor } from '@/utils/three/colors';
 import { loadBaiduMapScript } from './BaiduMapScript';
+import type { BMapNamespace, BMapMap, BMapPoint, BMapMarker, BMapInfoWindow, BMapPolygon } from '@/types/baidu-map';
 
 // 聚类群组类型
 interface ClusterGroup {
@@ -38,12 +39,6 @@ interface HubeiMapProps {
   buildings: BuildingItem[];
 }
 
-declare global {
-  interface Window {
-    BMap: any;
-  }
-}
-
 // 辅助函数：正确处理包含 Unicode 字符的 base64 编码
 const toBase64 = (str: string): string => {
   try {
@@ -55,10 +50,10 @@ const toBase64 = (str: string): string => {
 
 const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRefLocal = useRef<any>(null);
-  const markersRef = useRef<any[]>([]);
-  const infoWindowRef = useRef<any>(null);
-  const polygonRef = useRef<any>(null);
+  const mapInstanceRefLocal = useRef<BMapMap | null>(null);
+  const markersRef = useRef<BMapMarker[]>([]);
+  const infoWindowRef = useRef<BMapInfoWindow | null>(null);
+  const polygonRef = useRef<BMapPolygon | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [hoveredBuildings, setHoveredBuildings] = useState<BuildingItem[]>([]);
@@ -81,10 +76,10 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
   ];
 
   // 获取湖北省官方边界（使用百度地图 Boundary API）
-  const getOfficialHubeiBoundary = (BMap: any): Promise<string[]> => {
+  const getOfficialHubeiBoundary = (BMap: BMapNamespace): Promise<string[]> => {
     return new Promise((resolve, reject) => {
       const bdary = new BMap.Boundary();
-      bdary.get('湖北省', (rs: any) => {
+      bdary.get('湖北省', (rs: { boundaries?: string[] }) => {
         if (rs.boundaries && rs.boundaries.length > 0) {
           resolve(rs.boundaries);
         } else {
@@ -95,7 +90,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
   };
 
   // 将边界字符串转换为 BMap.Point 数组
-  const parseBoundaryPoints = (boundaryStr: string, BMap: any): any[] => {
+  const parseBoundaryPoints = (boundaryStr: string, BMap: BMapNamespace): BMapPoint[] => {
     return boundaryStr.split(';').map((point: string) => {
       const [lng, lat] = point.split(',').map(Number);
       return new BMap.Point(lng, lat);
@@ -103,7 +98,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
   };
 
   // 添加湖北省边界轮廓（加粗蓝色边线）
-  const addHubeiMask = async (map: any, BMap: any) => {
+  const addHubeiMask = async (map: BMapMap, BMap: BMapNamespace) => {
     try {
       // 获取官方边界
       const boundaries = await getOfficialHubeiBoundary(BMap);
@@ -127,7 +122,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
   };
 
   // 降级方案：使用简化的手动边界
-  const addFallbackMask = (map: any, BMap: any) => {
+  const addFallbackMask = (map: BMapMap, BMap: BMapNamespace) => {
     // 绘制简化边界（只显示边线，无遮罩）
     const points = HUBEI_BOUNDARY.map(coord => new BMap.Point(coord[0], coord[1]));
     const polygon = new BMap.Polygon(points, {
@@ -294,7 +289,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
   }, [mapLoaded, buildings, currentZoom]);
 
   // 渲染聚类标记（单个楼宇或多个楼宇聚类）
-  const renderClusterMarker = (cluster: ClusterGroup, map: any, BMap: any) => {
+  const renderClusterMarker = (cluster: ClusterGroup, map: BMapMap, BMap: BMapNamespace) => {
     const { buildings, clusterLng, clusterLat, centerPixel } = cluster;
     const isCluster = buildings.length > 1;
 
@@ -397,7 +392,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
   };
 
   // 显示悬停提示
-  const showTooltip = (buildings: BuildingItem[], point: any) => {
+  const showTooltip = (buildings: BuildingItem[], point: { x: number; y: number }) => {
     setHoveredBuildings(buildings);
     setTooltipPosition({ x: point.x, y: point.y });
   };
@@ -409,7 +404,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
   };
 
   // 显示单个楼宇信息
-  const showBuildingInfo = (building: BuildingItem, map: any, BMap: any) => {
+  const showBuildingInfo = (building: BuildingItem, map: BMapMap, BMap: BMapNamespace) => {
     const isStopped = building.status === 1;
     const statusColor = isStopped ? '#9e9e9e' : '#ff6b35';
     const statusBg = isStopped ? '#f5f5f5' : '#fff2e8';
@@ -457,7 +452,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
 
   // 全局函数：查看楼宇详情
   useEffect(() => {
-    (window as any).viewBuildingDetails = (buildingId: string) => {
+    window.viewBuildingDetails = (buildingId: string) => {
       const building = buildings.find(b => b.id === buildingId);
       if (building) {
         // 转换 BuildingItem 为 Building 类型，补充缺失字段
@@ -467,12 +462,12 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
           orderNum: 0,
           createdAt: '',
           updatedAt: '',
-        } as any);
+        } as Record<string, unknown>);
       }
     };
 
     return () => {
-      delete (window as any).viewBuildingDetails;
+      delete window.viewBuildingDetails;
     };
   }, [buildings, navigateToBuilding]);
 
@@ -706,7 +701,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
                       orderNum: 0,
                       createdAt: '',
                       updatedAt: '',
-                    } as any);
+                    } as Record<string, unknown>);
                   }}
                 >
                   <div style={{ width: '100%' }}>

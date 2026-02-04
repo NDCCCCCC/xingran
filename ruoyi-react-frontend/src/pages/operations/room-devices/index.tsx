@@ -18,7 +18,7 @@ import type { RoomDevice } from '@/types';
 import { roomDeviceApi, serverRoomApi } from '@/lib/opsApi';
 import { useTableManager } from '@/hooks/useTableManager';
 import { usePagination } from '@/hooks/usePagination';
-import { handleApiError, handleSuccess } from '@/utils/errorHandler';
+import { handleApiError, handleSuccess, isFormValidationError } from '@/utils/errorHandler';
 import { createDateTimeColumn } from '@/utils/tableHelpers';
 import ActionButtons from '@/components/shared/ActionButtons';
 import ExcelImport from '@/components/shared/ExcelImport';
@@ -83,7 +83,7 @@ const RoomDeviceManagement: FC = () => {
     try {
       const result = await serverRoomApi.list({ current: 1, pageSize: 1000 });
       const rooms = result.data?.list || [];
-      setRoomOptions(rooms.map((r: any) => ({ id: r.id, name: r.name })));
+      setRoomOptions(rooms.map((r: Record<string, unknown>) => ({ id: r.id, name: r.name })));
     } catch (error) { handleApiError(error, '加载机房选项', false); }
   }, []);
 
@@ -109,7 +109,7 @@ const RoomDeviceManagement: FC = () => {
       handleModalClose();
       loadDevices();
       loadStatistics();
-    } catch (error: any) { if (error.errorFields) return; handleApiError(error, '操作'); }
+    } catch (error: unknown) { if (isFormValidationError(error)) return; handleApiError(error, '操作'); }
   };
 
   const handleDelete = async (id: string) => {

@@ -5,6 +5,7 @@
 
 import { Modal, Form, Input, InputNumber, Select, Row, Col } from 'antd';
 import type { WorkstationOps } from '@/types';
+import type { DepartmentTreeNode } from '@/types';
 import { DepartmentTreeSelect } from '@/components/shared';
 import { STATUS_OPTIONS, TYPE_OPTIONS } from '../constants';
 
@@ -15,7 +16,7 @@ export interface WorkstationEditModalProps {
   open: boolean;
   editingWorkstation: WorkstationOps | null;
   floorOptions: { id: string; code: string; name: string }[];
-  deptTreeData: any[];
+  deptTreeData: DepartmentTreeNode[];
   userOptions: { id: string; name: string }[];
   onOk: () => Promise<void>;
   onCancel: () => void;

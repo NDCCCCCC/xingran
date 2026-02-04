@@ -11,7 +11,7 @@ import { floorApi, buildingApi } from '@/lib/opsApi';
 import { post } from '@/lib/api';
 import { useTableManager } from '@/hooks/useTableManager';
 import { usePagination } from '@/hooks/usePagination';
-import { handleApiError, handleSuccess } from '@/utils/errorHandler';
+import { handleApiError, handleSuccess, isFormValidationError } from '@/utils/errorHandler';
 import ExcelImport from '@/components/shared/ExcelImport';
 import ExcelExport from '@/components/shared/ExcelExport';
 import type { TreeNode } from '@/components/shared/DepartmentTreeSelect';
@@ -164,8 +164,8 @@ const FloorManagement: FC = () => {
       handleModalClose();
       loadFloors();
       loadStatistics();
-    } catch (error: any) {
-      if (error.errorFields) return;
+    } catch (error: unknown) {
+      if (isFormValidationError(error)) return;
       handleApiError(error, '操作');
     }
   }, [floorForm, editingFloor, handleModalClose, loadFloors, loadStatistics]);
@@ -442,7 +442,7 @@ const FloorManagement: FC = () => {
    * 保存平面图
    */
   const handleSaveFloorPlan = useCallback(
-    async (data: any) => {
+    async (data: Record<string, unknown>) => {
       if (!currentFloor) return;
       await saveFloorPlan(data, currentFloor);
     },

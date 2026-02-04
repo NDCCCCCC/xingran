@@ -28,15 +28,15 @@ const BuildingSpacesPage: React.FC = () => {
       ]);
 
       // 组装带统计的楼宇数据
-      const buildingsWithStats = (buildingResult.data?.list || []).map((b: any) => {
+      const buildingsWithStats = (buildingResult.data?.list || []).map((b: Record<string, unknown>) => {
         // 获取该楼宇的楼层
         const buildingFloors = (floorResult.data?.list || []).filter(
-          (f: any) => f.buildingId === b.id
+          (f: Record<string, unknown>) => f.buildingId === b.id
         );
 
         // 获取该楼宇的所有工位（通过楼层关联）
         const buildingWorkstations = (workstationResult.data?.list || []).filter(
-          (ws: any) => buildingFloors.some((f: any) => f.id === ws.floorId)
+          (ws: Record<string, unknown>) => buildingFloors.some((f: Record<string, unknown>) => f.id === ws.floorId)
         );
 
         return {
@@ -48,9 +48,9 @@ const BuildingSpacesPage: React.FC = () => {
       });
 
       setBuildings(buildingsWithStats);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('加载楼宇数据失败:', error);
-      message.error(error?.message || '加载楼宇数据失败');
+      message.error((error as { message?: string })?.message || '加载楼宇数据失败');
     } finally {
       setLoading(false);
     }

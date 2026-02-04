@@ -6,15 +6,16 @@
 import { useCallback } from 'react';
 import { message } from 'antd';
 import type { WorkstationOps } from '@/types';
+import type { FormInstance } from 'antd/es/form';
 import { workstationApi } from '@/lib/opsApi';
 import { handleSuccess, handleApiError } from '@/utils/errorHandler';
 
 export interface UseWorkstationModalsReturn {
-  openModal: (record?: WorkstationOps, form?: any) => void;
-  closeModal: (form?: any) => void;
+  openModal: (record?: WorkstationOps, form?: FormInstance<unknown>) => void;
+  closeModal: (form?: FormInstance<unknown>) => void;
   handleSave: (
     editingWorkstation: WorkstationOps | null,
-    form: any,
+    form: FormInstance<unknown>,
     onSuccess: () => void
   ) => Promise<void>;
   handleDelete: (id: string, onSuccess: () => void) => Promise<void>;
@@ -28,7 +29,7 @@ export interface UseWorkstationModalsReturn {
 export function useWorkstationModals(
   loadUserOptions?: (deptId?: string) => Promise<void>
 ): UseWorkstationModalsReturn {
-  const openModal = useCallback(async (record?: WorkstationOps, form?: any) => {
+  const openModal = useCallback(async (record?: WorkstationOps, form?: FormInstance<unknown>) => {
     if (record && form) {
       form.setFieldsValue(record);
       // 编辑模式下，如果有部门ID，加载该部门的用户列表
@@ -41,7 +42,7 @@ export function useWorkstationModals(
     }
   }, [loadUserOptions]);
 
-  const closeModal = useCallback((form?: any) => {
+  const closeModal = useCallback((form?: FormInstance<unknown>) => {
     if (form) {
       form.resetFields();
     }
@@ -50,7 +51,7 @@ export function useWorkstationModals(
   const handleSave = useCallback(
     async (
       editingWorkstation: WorkstationOps | null,
-      form: any,
+      form: FormInstance<unknown>,
       onSuccess: () => void
     ) => {
       try {
@@ -64,7 +65,7 @@ export function useWorkstationModals(
         }
         closeModal(form);
         onSuccess();
-      } catch (error: any) {
+      } catch (error: unknown) {
         if (error.errorFields) return;
         handleApiError(error, '操作');
       }

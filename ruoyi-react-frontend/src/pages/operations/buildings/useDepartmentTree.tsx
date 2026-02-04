@@ -13,6 +13,13 @@ interface DepartmentOption {
   children?: DepartmentOption[];
 }
 
+// 后端返回的部门节点类型
+interface DepartmentNode {
+  id: string;
+  deptName: string;
+  children?: DepartmentNode[];
+}
+
 export function useDepartmentTree() {
   const [departments, setDepartments] = useState<DepartmentOption[]>([]);
   const [loading, setLoading] = useState(false);
@@ -21,7 +28,7 @@ export function useDepartmentTree() {
     setLoading(true);
     try {
       const result = await post<BaseResponse<DepartmentOption[]>>('/system/departments/tree', {});
-      const convertToTreeData = (nodes: any[]): DepartmentOption[] => {
+      const convertToTreeData = (nodes: DepartmentNode[]): DepartmentOption[] => {
         return nodes.map(node => ({
           id: node.id,
           deptName: node.deptName,

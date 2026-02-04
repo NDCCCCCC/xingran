@@ -2,6 +2,7 @@
 
 import type { BuildingItem } from './types';
 import { WORKSTATION_STATUS_COLORS } from './constants';
+import type { BMapGLNamespace, BMapPoint } from '@/types/baidu-map';
 
 // ============ 通用辅助函数 ============
 
@@ -34,10 +35,10 @@ export function delay(ms: number): Promise<void> {
  * @param BMapGL 百度地图 GL 构造函数
  * @returns Promise<string[]> 边界坐标数组
  */
-export function getOfficialHubeiBoundary(BMapGL: any): Promise<string[]> {
+export function getOfficialHubeiBoundary(BMapGL: BMapGLNamespace): Promise<string[]> {
   return new Promise((resolve, reject) => {
     const bdary = new BMapGL.Boundary();
-    bdary.get('湖北省', (rs: any) => {
+    bdary.get('湖北省', (rs: { boundaries?: string[] }) => {
       if (rs.boundaries && rs.boundaries.length > 0) {
         resolve(rs.boundaries);
       } else {
@@ -53,7 +54,7 @@ export function getOfficialHubeiBoundary(BMapGL: any): Promise<string[]> {
  * @param BMapGL 百度地图 GL 构造函数
  * @returns BMapGL.Point 数组
  */
-export function parseBoundaryPoints(boundaryStr: string, BMapGL: any): any[] {
+export function parseBoundaryPoints(boundaryStr: string, BMapGL: BMapGLNamespace): BMapPoint[] {
   return boundaryStr.split(';').map((point: string) => {
     const [lng, lat] = point.split(',').map(Number);
     return new BMapGL.Point(lng, lat);
@@ -295,7 +296,14 @@ function getWorkstationLayoutConfig() {
  * @param apiWorkstation API 返回的工位数据
  * @returns 转换后的工位数据
  */
-export function convertApiWorkstation(apiWorkstation: any): {
+export function convertApiWorkstation(apiWorkstation: {
+  id: string;
+  name: string;
+  status: number;
+  type: number;
+  positionX?: number;
+  positionY?: number;
+}): {
   id: string;
   name: string;
   code: string;
@@ -309,8 +317,8 @@ export function convertApiWorkstation(apiWorkstation: any): {
     id: apiWorkstation.id,
     name: apiWorkstation.name,
     code: apiWorkstation.name, // 使用 name 作为 code
-    status: apiWorkstation.status as number,
-    type: apiWorkstation.type as number,
+    status: apiWorkstation.status,
+    type: apiWorkstation.type,
     positionX: apiWorkstation.positionX,
     positionY: apiWorkstation.positionY,
     rotation: 0, // 默认旋转角度
@@ -323,7 +331,14 @@ export function convertApiWorkstation(apiWorkstation: any): {
  * @returns 转换后的工位数据数组
  */
 export function convertApiWorkstations(
-  apiWorkstations: any[]
+  apiWorkstations: Array<{
+    id: string;
+    name: string;
+    status: number;
+    type: number;
+    positionX?: number;
+    positionY?: number;
+  }>
 ): Array<{
   id: string;
   name: string;
@@ -427,7 +442,16 @@ export function animate(
  * @param easingFn 缓动函数
  */
 export function animateViewTransition(
-  map: any,
+  map: {
+    getCenter(): { lng: number; lat: number };
+    getZoom(): number;
+    getTilt(): number;
+    getHeading(): number;
+    setCenter(center: { lng: number; lat: number }): void;
+    setZoom(zoom: number): void;
+    setTilt(tilt: number): void;
+    setHeading(heading: number): void;
+  },
   target: {
     center?: [number, number];
     zoom?: number;

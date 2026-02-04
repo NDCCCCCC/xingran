@@ -21,7 +21,7 @@ export function useBuildingOptions() {
       const buildings = result.data?.list || [];
 
       setBuildingOptions(
-        buildings.map((b: any) => ({
+        buildings.map((b: Record<string, unknown>) => ({
           id: b.id,
           code: b.code,
           name: b.name,

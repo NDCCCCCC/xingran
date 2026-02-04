@@ -4,6 +4,7 @@
 
 import type { BuildingItem } from './types';
 import { MARKER_COLORS, STATUS_TEXT } from './constants';
+import type { BMapPoint } from '@/types/baidu-map';
 
 /**
  * Base64 编码（正确处理 Unicode 字符）
@@ -190,7 +191,7 @@ export function generateBuildingMarkerSVG(
 /**
  * 将边界字符串转换为地图点数组
  */
-export function parseBoundaryPoints<T extends PointConstructor>(
+export function parseBoundaryPoints<T extends new (lng: number, lat: number) => BMapPoint>(
   boundaryStr: string,
   PointClass: T
 ): InstanceType<T>[] {
@@ -198,9 +199,4 @@ export function parseBoundaryPoints<T extends PointConstructor>(
     const [lng, lat] = point.split(',').map(Number);
     return new PointClass(lng, lat);
   });
-}
-
-// 类型定义
-interface PointConstructor {
-  new (lng: number, lat: number): any;
 }

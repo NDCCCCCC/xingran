@@ -5,7 +5,7 @@
 import { useState, useCallback } from 'react';
 import type { Floor } from '@/types';
 import { wallApi, doorApi, workstationApi, floorPlanTextApi } from '@/lib/opsApi';
-import type { FloorPlanData } from '@/components/cad-editor/types';
+import type { FloorPlanData, Wall, Door, TextElement, WorkstationNode } from '@/components/cad-editor/types';
 import { message } from 'antd';
 import { processWorkstations, parseJsonField, stringifyJsonField, isNewElement } from './utils';
 import { DEFAULT_FLOOR_PLAN_CONFIG } from './constants';
@@ -59,7 +59,7 @@ export function useFloorPlanEditor(
       const workstations = workstationsResult.data?.list || [];
 
       // 尝试加载文本元素
-      let texts: any[] = [];
+      let texts: TextElement[] = [];
       try {
         const textsResult = await floorPlanTextApi.list({ floorId, current: 1, pageSize: 1000 });
         texts = textsResult.data?.list || [];
@@ -67,17 +67,17 @@ export function useFloorPlanEditor(
         console.warn('文本元素API不可用，可能需要重启后端服务:', textError);
       }
 
-      const parsedWalls = walls.map((wall: any) => ({
+      const parsedWalls = walls.map((wall: Record<string, unknown>) => ({
         ...wall,
         points: parseJsonField(wall.points),
       }));
 
-      const parsedDoors = doors.map((door: any) => ({
+      const parsedDoors = doors.map((door: Record<string, unknown>) => ({
         ...door,
         position: parseJsonField(door.position),
       }));
 
-      const parsedTexts = texts.map((text: any) => ({
+      const parsedTexts = texts.map((text: Record<string, unknown>) => ({
         ...text,
         position: parseJsonField(text.position),
       }));
@@ -121,7 +121,7 @@ export function useFloorPlanEditor(
   /**
    * 保存墙体
    */
-  const saveWalls = useCallback(async (walls: any[], floorId: string) => {
+  const saveWalls = useCallback(async (walls: Wall[], floorId: string) => {
     for (const wall of walls) {
       const isNew = isNewElement(wall.id, 'wall_');
       const { id: _wallId, ...wallWithoutId } = wall;
@@ -143,7 +143,7 @@ export function useFloorPlanEditor(
   /**
    * 保存门
    */
-  const saveDoors = useCallback(async (doors: any[], floorId: string) => {
+  const saveDoors = useCallback(async (doors: Door[], floorId: string) => {
     for (const door of doors) {
       const isNew = isNewElement(door.id, 'door_');
       const { id: _doorId, ...doorWithoutId } = door;
@@ -164,7 +164,7 @@ export function useFloorPlanEditor(
   /**
    * 保存文本元素
    */
-  const saveTexts = useCallback(async (texts: any[], floorId: string) => {
+  const saveTexts = useCallback(async (texts: TextElement[], floorId: string) => {
     if (texts.length === 0) return;
 
     try {
@@ -191,19 +191,15 @@ export function useFloorPlanEditor(
   /**
    * 保存工位数据
    */
-  const saveWorkstations = useCallback(async (workstations: any[]) => {
+  const saveWorkstations = useCallback(async (workstations: WorkstationNode[]) => {
     const updates = workstations.map((ws) => ({
       id: ws.id,
       positionX: Math.round(ws.x),
       positionY: Math.round(ws.y),
-      rotation: ws.rotation || 0,
-      width: Math.round((ws.width || 160) * 10),
-      depth: Math.round((ws.height || 70) * 10),
-      deskType: ws.type || 0,
     }));
 
     if (updates.length > 0) {
-      await workstationApi.updatePositions(updates as any);
+      await workstationApi.updatePositions(updates);
     }
   }, []);
 

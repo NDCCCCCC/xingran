@@ -15,7 +15,7 @@ export function loadBaiduMapGLScript(ak: string): Promise<void> {
   }
 
   loadGLPromise = new Promise((resolve, reject) => {
-    if ((window as any).BMapGL) {
+    if (window.BMapGL) {
       resolve();
       return;
     }
@@ -26,8 +26,8 @@ export function loadBaiduMapGLScript(ak: string): Promise<void> {
     script.async = true;
     script.onerror = () => reject(new Error('百度地图GL脚本加载失败'));
 
-    (window as any).initBMapGL = () => {
-      console.log('✅ 百度地图GL脚本加载成功');
+    window.initBMapGL = () => {
+      console.log('百度地图GL脚本加载成功');
       resolve();
     };
 
@@ -46,7 +46,7 @@ export function loadBaiduMapScript(ak: string): Promise<void> {
   }
 
   loadNormalPromise = new Promise((resolve, reject) => {
-    if ((window as any).BMap) {
+    if (window.BMap) {
       resolve();
       return;
     }
@@ -57,8 +57,8 @@ export function loadBaiduMapScript(ak: string): Promise<void> {
     script.async = true;
     script.onerror = () => reject(new Error('百度地图脚本加载失败'));
 
-    (window as any).init = () => {
-      console.log('✅ 百度地图脚本加载成功');
+    window.init = () => {
+      console.log('百度地图脚本加载成功');
       resolve();
     };
 
@@ -72,12 +72,12 @@ export function loadBaiduMapScript(ak: string): Promise<void> {
  * 检查百度地图是否已加载（任一版本）
  */
 export function isBaiduMapLoaded(): boolean {
-  return !!(window as any).BMap || !!(window as any).BMapGL;
+  return !!window.BMap || !!window.BMapGL;
 }
 
 /**
  * 检查百度地图 GL 版本是否已加载
  */
 export function isBaiduMapGLLoaded(): boolean {
-  return !!(window as any).BMapGL;
+  return !!window.BMapGL;
 }

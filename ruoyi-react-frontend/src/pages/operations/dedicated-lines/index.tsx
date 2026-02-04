@@ -18,7 +18,7 @@ import type { DedicatedLine, DictData } from '@/types';
 import { dedicatedLineApi, serverRoomApi } from '@/lib/opsApi';
 import { useTableManager } from '@/hooks/useTableManager';
 import { usePagination } from '@/hooks/usePagination';
-import { handleApiError, handleSuccess } from '@/utils/errorHandler';
+import { handleApiError, handleSuccess, isFormValidationError } from '@/utils/errorHandler';
 import { createDateTimeColumn } from '@/utils/tableHelpers';
 import ActionButtons from '@/components/shared/ActionButtons';
 import ExcelImport from '@/components/shared/ExcelImport';
@@ -49,9 +49,9 @@ const DedicatedLineManagement: FC = () => {
 
   const loadServerRooms = useCallback(async () => {
     try {
-      const result = await serverRoomApi.list({ current: 1, pageSize: 1000 }) as { data?: { list: any[] } };
+      const result = await serverRoomApi.list({ current: 1, pageSize: 1000 }) as { data?: { list: Record<string, unknown>[] } };
       const rooms = result.data?.list || [];
-      setServerRooms(rooms.map((r: any) => ({ id: r.id, name: r.name })));
+      setServerRooms(rooms.map((r: Record<string, unknown>) => ({ id: r.id, name: r.name })));
     } catch (error) {
       handleApiError(error, '加载机房列表', false);
     }
@@ -59,7 +59,7 @@ const DedicatedLineManagement: FC = () => {
 
   const loadLineTypeDict = useCallback(async () => {
     try {
-      const result = await post('/system/dicts/data/list', { dictType: 'ops_dedicated_line_type', current: 1, pageSize: 100 }) as { data?: { list: any[] } };
+      const result = await post('/system/dicts/data/list', { dictType: 'ops_dedicated_line_type', current: 1, pageSize: 100 }) as { data?: { list: Record<string, unknown>[] } };
       setLineTypeDict(result.data?.list || []);
     } catch (error) {
       handleApiError(error, '加载专线类型字典', false);
@@ -68,7 +68,7 @@ const DedicatedLineManagement: FC = () => {
 
   const loadIspDict = useCallback(async () => {
     try {
-      const result = await post('/system/dicts/data/list', { dictType: 'ops_isp', current: 1, pageSize: 100 }) as { data?: { list: any[] } };
+      const result = await post('/system/dicts/data/list', { dictType: 'ops_isp', current: 1, pageSize: 100 }) as { data?: { list: Record<string, unknown>[] } };
       setIspDict(result.data?.list || []);
     } catch (error) {
       handleApiError(error, '加载运营商字典', false);
@@ -134,7 +134,7 @@ const DedicatedLineManagement: FC = () => {
       handleModalClose();
       loadLines();
       loadStatistics();
-    } catch (error: any) { if (error.errorFields) return; handleApiError(error, '操作'); }
+    } catch (error: unknown) { if (isFormValidationError(error)) return; handleApiError(error, '操作'); }
   };
 
   const handleDelete = async (id: string) => {

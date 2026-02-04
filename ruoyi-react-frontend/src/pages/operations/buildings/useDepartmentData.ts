@@ -8,6 +8,13 @@ interface DepartmentOption {
   children?: DepartmentOption[];
 }
 
+// 后端返回的部门节点类型
+interface DepartmentNode {
+  id: string;
+  deptName: string;
+  children?: DepartmentNode[];
+}
+
 /**
  * 部门数据管理 Hook
  * 处理部门列表的加载和格式转换
@@ -32,7 +39,7 @@ export function useDepartmentData() {
   }, []);
 
   // 转换为 TreeSelect 需要的格式
-  const convertToTreeData = (nodes: any[]): DepartmentOption[] => {
+  const convertToTreeData = (nodes: DepartmentNode[]): DepartmentOption[] => {
     return nodes.map(node => ({
       id: node.id,
       deptName: node.deptName,

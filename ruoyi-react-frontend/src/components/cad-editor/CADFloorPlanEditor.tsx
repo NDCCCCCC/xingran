@@ -740,10 +740,9 @@ export function CADFloorPlanEditor({
           // 拖动门
           newData.doors = prev.doors.map((d) => {
             if (selectedIds.has(d.id)) {
-              const pos = d.position as any;
               return {
                 ...d,
-                position: { x: pos.x + dx, y: pos.y + dy },
+                position: { x: d.position.x + dx, y: d.position.y + dy },
               };
             }
             return d;
@@ -857,7 +856,7 @@ export function CADFloorPlanEditor({
       for (const door of floorPlanData.doors) {
         const layer = layers.find(l => l.id === 'door');
         if (layer?.locked) continue;
-        const pos = door.position as any;
+        const pos = door.position;
         if (pos.x >= minX && pos.x <= maxX && pos.y >= minY && pos.y <= maxY) {
           newSelectedIds.add(door.id);
         }

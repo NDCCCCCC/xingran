@@ -88,10 +88,10 @@ const BuildingView3D: React.FC = () => {
 
         // 获取每层楼的工位数量
         const floorsWithCount = await Promise.all(
-          floorList.map(async (floor: any) => {
+          floorList.map(async (floor: Record<string, unknown>) => {
             try {
               const wsResult = await workstationApi.list({
-                floorCode: floor.id,
+                floorCode: floor.id as string,
                 current: 1,
                 pageSize: 1,
               });

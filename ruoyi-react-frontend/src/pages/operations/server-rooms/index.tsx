@@ -18,7 +18,7 @@ import type { ServerRoom } from '@/types';
 import { serverRoomApi, buildingApi, floorApi } from '@/lib/opsApi';
 import { useTableManager } from '@/hooks/useTableManager';
 import { usePagination } from '@/hooks/usePagination';
-import { handleApiError, handleSuccess } from '@/utils/errorHandler';
+import { handleApiError, handleSuccess, isFormValidationError } from '@/utils/errorHandler';
 import { createStatusColumn, createDateTimeColumn } from '@/utils/tableHelpers';
 import ActionButtons from '@/components/shared/ActionButtons';
 import ExcelImport from '@/components/shared/ExcelImport';
@@ -91,7 +91,7 @@ const ServerRoomManagement: FC = () => {
     try {
       const result = await buildingApi.list({ current: 1, pageSize: 1000 });
       const buildings = result.data?.list || [];
-      setBuildingOptions(buildings.map((b: any) => ({ id: b.id, code: b.code, name: b.name })));
+      setBuildingOptions(buildings.map((b: Record<string, unknown>) => ({ id: b.id, code: b.code, name: b.name })));
     } catch (error) { handleApiError(error, '加载楼宇选项', false); }
   }, []);
 
@@ -103,7 +103,7 @@ const ServerRoomManagement: FC = () => {
     try {
       const result = await floorApi.list({ current: 1, pageSize: 1000, buildingId });
       const floors = result.data?.list || [];
-      setFloorOptions(floors.map((f: any) => ({ id: f.id, code: f.code, name: f.name, floorNo: f.floorNo })));
+      setFloorOptions(floors.map((f: Record<string, unknown>) => ({ id: f.id, code: f.code, name: f.name, floorNo: f.floorNo })));
     } catch (error) { handleApiError(error, '加载楼层选项', false); }
   }, []);
 
@@ -145,7 +145,7 @@ const ServerRoomManagement: FC = () => {
       handleModalClose();
       loadServerRooms();
       loadStatistics();
-    } catch (error: any) { if (error.errorFields) return; handleApiError(error, '操作'); }
+    } catch (error: unknown) { if (isFormValidationError(error)) return; handleApiError(error, '操作'); }
   };
 
   const handleDelete = async (id: string) => {

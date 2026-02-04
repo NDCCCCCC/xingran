@@ -17,7 +17,7 @@ interface GeocodingFormState {
   geocodingWarning: string | null;
   handleGeocode: (address: string) => Promise<void>;
   resetGeocodingState: () => void;
-  setGeocodingResultFromRecord: (record: any) => void;
+  setGeocodingResultFromRecord: (record: { longitude?: number; latitude?: number; address?: string }) => void;
 }
 
 export function useGeocodingForm(): GeocodingFormState {
@@ -65,7 +65,7 @@ export function useGeocodingForm(): GeocodingFormState {
     setGeocodingLoading(false);
   }, []);
 
-  const setGeocodingResultFromRecord = useCallback((record: any) => {
+  const setGeocodingResultFromRecord = useCallback((record: { longitude?: number; latitude?: number; address?: string }) => {
     if (record?.longitude && record?.latitude) {
       setGeocodingResult({
         longitude: record.longitude,

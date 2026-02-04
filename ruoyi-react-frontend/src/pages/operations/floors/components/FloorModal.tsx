@@ -4,6 +4,7 @@
 
 import type { FC } from 'react';
 import { Modal, Form, Input, InputNumber, Select } from 'antd';
+import type { FormInstance } from 'antd/es/form';
 import type { Floor } from '@/types';
 import type { BuildingOption } from '../useBuildingOptions';
 import { STATUS_OPTIONS, DEFAULT_FORM_VALUES } from '../constants';
@@ -15,7 +16,7 @@ interface FloorModalProps {
   visible: boolean;
   editingFloor: Floor | null;
   buildingOptions: BuildingOption[];
-  form: any;
+  form: FormInstance;
   onOk: () => void;
   onCancel: () => void;
 }

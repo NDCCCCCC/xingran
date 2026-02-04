@@ -20,6 +20,7 @@ import { buildingApi } from '@/lib/opsApi';
 import { useTableManager } from '@/hooks/useTableManager';
 import { usePagination } from '@/hooks/usePagination';
 import { handleApiError, handleSuccess } from '@/utils/errorHandler';
+import { isFormValidationError } from '@/utils/errorHandler';
 import { createStatusColumn, createDateTimeColumn } from '@/utils/tableHelpers';
 import ActionButtons from '@/components/shared/ActionButtons';
 import ExcelImport from '@/components/shared/ExcelImport';
@@ -56,9 +57,9 @@ const BuildingManagement: FC = () => {
     editingItem: editingBuilding, setSelectedRowKeys, setEditModalVisible: setModalVisible,
     setEditingItem: setEditingBuilding, handleSearch: _tableHandleSearch,
     handleReset: _handleReset, handleAdd, handleEdit, handleModalClose, loadData: loadBuildings, resetSelection,
-  } = useTableManager<any>(
+  } = useTableManager<Building>(
     async (params) => {
-      const result = await buildingApi.list(params) as { data?: { list: any[]; total: number } };
+      const result = await buildingApi.list(params) as { data?: { list: Building[]; total: number } };
       return { list: result.data?.list || [], total: result.data?.total || 0 };
     },
     {
@@ -75,12 +76,12 @@ const BuildingManagement: FC = () => {
   const loadStatistics = useCallback(async (searchParams: Record<string, unknown> = {}) => {
     try {
       // 获取当前筛选条件下的所有数据，使用大pageSize确保获取完整数据
-      const result = await buildingApi.list({ current: 1, pageSize: 100000, ...searchParams }) as { data?: { list: any[] } };
+      const result = await buildingApi.list({ current: 1, pageSize: 100000, ...searchParams }) as { data?: { list: Record<string, unknown>[] } };
       const allBuildings = result.data?.list || [];
       setStatistics({
         total: allBuildings.length,
-        active: allBuildings.filter((b: any) => b.status === 0).length,
-        inactive: allBuildings.filter((b: any) => b.status === 1).length,
+        active: allBuildings.filter((b: Building) => b.status === 0).length,
+        inactive: allBuildings.filter((b: Building) => b.status === 1).length,
       });
     } catch (error) { handleApiError(error, '加载统计数据', false); }
   }, []);
@@ -169,7 +170,8 @@ const BuildingManagement: FC = () => {
       const values = await buildingForm.validateFields();
 
       // 移除不需要发送给后端的字段
-      const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, orgName: _orgName, ...submitData } = values as any;
+      type BuildingFormData = Omit<Building, 'id' | 'createdAt' | 'updatedAt'> & { orgName?: string };
+      const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, orgName: _orgName, ...submitData } = values as BuildingFormData;
 
       // 地址解析：如果有地址，自动解析获取经纬度
       if (submitData.address && submitData.address.trim()) {
@@ -200,7 +202,10 @@ const BuildingManagement: FC = () => {
       }
       loadBuildings(searchParams);
       loadStatistics(searchParams);
-    } catch (error: any) { if (error.errorFields) return; handleApiError(error, '操作'); }
+    } catch (error: unknown) {
+      if (isFormValidationError(error)) return;
+      handleApiError(error, '操作');
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -233,7 +238,7 @@ const BuildingManagement: FC = () => {
     } catch (error) { handleApiError(error, '批量删除'); }
   };
 
-  const openModal = (record?: any) => {
+  const openModal = (record?: Building) => {
     geocoding.reset();
 
     if (record) {

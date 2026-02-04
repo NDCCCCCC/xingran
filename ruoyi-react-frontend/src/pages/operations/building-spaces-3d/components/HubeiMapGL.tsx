@@ -40,6 +40,7 @@ import {
   filterBuildingsByZoom,
   animateViewTransition,
 } from '../utils';
+import type { BMapGLNamespace, BMapMap, BMapPoint, BMapMarker, BMapInfoWindow, BMapPolygon } from '@/types/baidu-map';
 
 // ============ 类型定义 ============
 
@@ -55,21 +56,15 @@ interface HubeiMapGLProps {
   buildings: BuildingItem[];
 }
 
-declare global {
-  interface Window {
-    BMapGL: any;
-  }
-}
-
 // ============ 组件 ============
 
 const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
   // Refs
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const markersRef = useRef<any[]>([]);
-  const infoWindowRef = useRef<any>(null);
-  const polygonRef = useRef<any>(null);
+  const mapInstanceRef = useRef<BMapMap | null>(null);
+  const markersRef = useRef<BMapMarker[]>([]);
+  const infoWindowRef = useRef<BMapInfoWindow | null>(null);
+  const polygonRef = useRef<BMapPolygon | null>(null);
 
   // State
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -156,7 +151,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
 
   // ============ 地图控件 ============
 
-  const addMapControls = (map: any) => {
+  const addMapControls = (map: BMapMap) => {
     // 缩放控件
     const zoomControl = new window.BMapGL.ZoomControl({
       anchor: window.BMAPGL_ANCHOR_BOTTOM_RIGHT,
@@ -174,7 +169,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
 
   // ============ 湖北省边界 ============
 
-  const addHubeiMask = async (map: any, BMapGL: any) => {
+  const addHubeiMask = async (map: BMapMap, BMapGL: BMapGLNamespace) => {
     try {
       const boundaries = await getOfficialHubeiBoundary(BMapGL);
       boundaries.forEach((boundaryStr) => {
@@ -185,7 +180,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
           strokeOpacity: 1,
           fillColor: 'transparent',
           fillOpacity: 0,
-        });
+        } as Record<string, unknown>);
         map.addOverlay(polygon);
       });
     } catch (error) {
@@ -194,7 +189,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
     }
   };
 
-  const addFallbackMask = (map: any, BMapGL: any) => {
+  const addFallbackMask = (map: BMapMap, BMapGL: BMapGLNamespace) => {
     const points = HUBEI_BOUNDARY.map(
       (coord) => new BMapGL.Point(coord[0], coord[1])
     );
@@ -326,8 +321,8 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
 
   const renderClusterMarker = (
     cluster: ClusterGroup,
-    map: any,
-    BMapGL: any
+    map: BMapMap,
+    BMapGL: BMapGLNamespace
   ) => {
     const { buildings, clusterLng, clusterLat, centerPixel } = cluster;
     const isCluster = buildings.length > 1;
@@ -426,7 +421,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
     setTooltipPosition(null);
   };
 
-  const showBuildingInfo = (building: BuildingItem, map: any, BMapGL: any) => {
+  const showBuildingInfo = (building: BuildingItem, map: BMapMap, BMapGL: BMapGLNamespace) => {
     const stopped = isBuildingStopped(building);
     const statusColor = stopped
       ? STATUS_TEXT_COLORS.STOPPED
@@ -479,7 +474,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
   // ============ 全局函数 ============
 
   useEffect(() => {
-    (window as any).viewBuildingDetailsGL = (buildingId: string) => {
+    window.viewBuildingDetailsGL = (buildingId: string) => {
       const building = buildings.find((b) => b.id === buildingId);
       if (building) {
         navigateToBuilding({
@@ -488,12 +483,12 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
           orderNum: 0,
           createdAt: '',
           updatedAt: '',
-        } as any);
+        } as Record<string, unknown>);
       }
     };
 
     return () => {
-      delete (window as any).viewBuildingDetailsGL;
+      delete window.viewBuildingDetailsGL;
     };
   }, [buildings, navigateToBuilding]);
 
@@ -596,7 +591,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
               orderNum: 0,
               createdAt: '',
               updatedAt: '',
-            } as any);
+            } as Record<string, unknown>);
           }}
         />
       )}
