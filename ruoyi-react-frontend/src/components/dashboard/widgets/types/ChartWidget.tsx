@@ -6,7 +6,7 @@
 
 import { useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
-import type { EChartsOption } from 'echarts';
+import type { EChartsOption, PieSeriesOption } from 'echarts';
 import type { ChartDisplayConfig, WidgetConfig } from '@/types/dashboard';
 import { BaseWidget } from '../base/BaseWidget';
 import type { BaseWidgetProps } from '../base/BaseWidget';
@@ -159,7 +159,7 @@ function getPieOption(data: Record<string, unknown>, _display: ChartDisplayConfi
 	return {
 		series: [{
 			type: 'pie',
-			data: pieData as any,
+			data: pieData as Array<{ name: string; value: string | number }>,
 			radius: ['40%', '70%'],
 			itemStyle: {
 				borderRadius: 4,

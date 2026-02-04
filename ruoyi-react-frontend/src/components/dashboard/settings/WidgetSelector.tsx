@@ -147,7 +147,7 @@ export const WidgetSelector: React.FC<WidgetSelectorProps> = ({
 					y: 0,
 					...widgetDefaultSizes[values.type as WidgetType],
 				},
-				dataSource: dataSource as any, // 类型断言以匹配后端格式
+				dataSource: dataSource as ApiDataSourceConfig | { api: ApiDataSourceConfig },
 				display: createDisplayConfig(values.type as WidgetType),
 				enabled: true,
 			};

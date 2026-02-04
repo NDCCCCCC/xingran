@@ -28,6 +28,7 @@ import { getProfileInfo, updateProfileInfo, changePassword, uploadAvatar } from 
 import { getMyDutyStats } from '@/lib/dutyApi';
 import type { MyDutyStats } from '@/types';
 import { useAuthStore } from '@/store/authStore';
+import { isFormValidationError } from '@/utils/errorHandler';
 import type { UserProfile } from '@/types';
 import { formatDateTime } from '@/utils/datetime';
 
@@ -83,8 +84,8 @@ const ProfilePage: FC = () => {
       // 更新全局用户信息
       updateUser(values);
       loadProfile();
-    } catch (error: any) {
-      if (error.errorFields) return;
+    } catch (error: unknown) {
+      if (isFormValidationError(error)) return;
       message.error('更新失败');
     }
   };
@@ -117,9 +118,9 @@ const ProfilePage: FC = () => {
         useAuthStore.getState().logout();
         window.location.href = '/login';
       }, 1500);
-    } catch (error: any) {
-      if (error.errorFields) return;
-      if (error?.message?.includes('旧密码错误')) {
+    } catch (error: unknown) {
+      if (isFormValidationError(error)) return;
+      if ((error as { message?: string })?.message?.includes('旧密码错误')) {
         message.error('旧密码错误');
       } else {
         message.error('密码修改失败');

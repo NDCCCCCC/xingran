@@ -8,9 +8,23 @@ import { lazy } from 'react';
 import type { WidgetType } from '@/types/dashboard';
 
 /**
+ * Widget 基础属性
+ */
+export interface BaseWidgetProps {
+	id: string;
+	type: WidgetType;
+	title?: string;
+	size?: {
+		w: number;
+		h: number;
+	};
+	dataSource?: Record<string, unknown>;
+}
+
+/**
  * Widget 组件类型
  */
-export type WidgetComponentType = React.ComponentType<any>;
+export type WidgetComponentType = React.ComponentType<BaseWidgetProps>;
 
 /**
  * Widget 配置接口

@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { message } from 'antd';
+import type { WidgetConfig } from '@/types';
 import {
 	LayoutToolbar,
 	DashboardGrid,
@@ -54,8 +55,8 @@ export const DashboardEdit: React.FC<DashboardEditProps> = ({ dashboardId }) => 
 	}, [dashboardId, fetchDashboard, setViewMode, clearCurrentDashboard]);
 
 	// 处理Widget添加
-	const handleAddWidget = (widgetConfig: unknown) => {
-		addWidget(widgetConfig as any);
+	const handleAddWidget = (widgetConfig: WidgetConfig) => {
+		addWidget(widgetConfig);
 		message.success('Widget添加成功');
 	};
 

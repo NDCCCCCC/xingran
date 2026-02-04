@@ -6,6 +6,7 @@
 
 import { get, post } from '@/lib/api';
 import type { DataSourceConfig, ApiDataSourceConfig, WebSocketDataSourceConfig, StaticDataSourceConfig } from '@/types/dashboard';
+import type { BaseResponse } from '@/types';
 
 /**
  * 数据获取结果
@@ -35,15 +36,15 @@ export class DataFetcher {
 	/**
 	 * 获取数据
 	 */
-	async fetch<T = unknown>(dataSource: any): Promise<DataFetchResult<T>> {
+	async fetch<T = unknown>(dataSource: DataSourceConfig): Promise<DataFetchResult<T>> {
 		// 处理后端返回的包装格式：{ api: { type: 'api', ... } }
-		let unwrappedSource = dataSource;
-		if (dataSource.api) {
-			unwrappedSource = dataSource.api;
-		} else if (dataSource.websocket) {
-			unwrappedSource = dataSource.websocket;
-		} else if (dataSource.static) {
-			unwrappedSource = dataSource.static;
+		let unwrappedSource: Record<string, unknown> = dataSource;
+		if ((dataSource.api as Record<string, unknown> | undefined)?.type === 'api') {
+			unwrappedSource = dataSource.api as Record<string, unknown>;
+		} else if ((dataSource.websocket as Record<string, unknown> | undefined)?.type === 'websocket') {
+			unwrappedSource = dataSource.websocket as Record<string, unknown>;
+		} else if ((dataSource.static as Record<string, unknown> | undefined)?.type === 'static') {
+			unwrappedSource = dataSource.static as Record<string, unknown>;
 		}
 
 		// 根据type属性判断数据源类型
@@ -76,7 +77,7 @@ export class DataFetcher {
 				return cached as DataFetchResult<T>;
 			}
 
-			let response: any;
+			let response: BaseResponse<unknown>;
 
 			// 根据HTTP方法发送请求
 			if (config.method === 'GET') {
@@ -86,7 +87,7 @@ export class DataFetcher {
 			}
 
 			// 提取数据：标准API响应格式为 { code: 0, data: {...} }
-			let actualData: any = response;
+			let actualData: unknown = response;
 
 			// 如果响应有 code 字段，说明是标准API响应
 			if (response && typeof response === 'object' && 'code' in response) {
