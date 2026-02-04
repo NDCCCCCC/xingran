@@ -5,13 +5,23 @@
 /**
  * 通用API响应类型
  */
-export interface BaseResponse<T = any> {
+export interface BaseResponse<T = unknown> {
   code: number;
   message: string;
   data?: T;
   timestamp: number;
   request_id: string;
 }
+
+/**
+ * 空响应类型
+ */
+export type EmptyResponse = BaseResponse<void>;
+
+/**
+ * 分页响应类型
+ */
+export type PaginatedResponse<T> = BaseResponse<PageResponse<T>>;
 
 /**
  * 分页响应类型

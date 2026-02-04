@@ -4,7 +4,7 @@
 
 declare module '@breejs/later' {
   export interface Schedule {
-    schedules: any[];
+    schedules: unknown[];
   }
   export function schedule(cronExpression: string): Schedule;
   export function timeout(expression: string, date?: Date): Date;

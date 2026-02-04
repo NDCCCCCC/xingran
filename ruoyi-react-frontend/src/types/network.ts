@@ -154,7 +154,7 @@ export interface ConfigTemplate {
   vendor?: DeviceVendor;
   deviceType?: DeviceType;
   templateContent: string;
-  variables?: Record<string, any>;
+  variables?: Record<string, string | number | boolean>;
   description?: string;
   isSystem: boolean;
   version: number;

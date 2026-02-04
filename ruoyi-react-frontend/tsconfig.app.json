@@ -16,12 +16,18 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
-    /* Linting - temporarily relaxed for build */
-    "strict": false,
+    /* Type Safety - 渐进式启用严格模式 */
+    "strict": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "noFallthroughCasesInSwitch": false,
-    "noUncheckedSideEffectImports": false,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictPropertyInitialization": false,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
 
     /* Path mapping */
     "baseUrl": ".",
