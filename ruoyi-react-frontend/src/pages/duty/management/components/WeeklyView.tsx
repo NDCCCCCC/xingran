@@ -43,7 +43,7 @@ export const WeeklyView: React.FC<WeeklyViewProps> = ({
         return 'red';
       default:
         // 开发环境下警告未知的 dutyType (仅在控制台可见)
-        if (type && typeof window !== 'undefined' && (window as any).__DEV__) {
+        if (type && typeof window !== 'undefined' && (window as Window & { __DEV__?: boolean }).__DEV__) {
           console.warn(`[WeeklyView] 未知的 dutyType 值: "${type}"`);
         }
         return 'default';

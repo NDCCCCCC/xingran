@@ -3,6 +3,7 @@
  */
 
 import { Modal, Form, Select, DatePicker, message } from 'antd';
+import type { FormInstance } from 'antd/es/form';
 import { BATCH_HOLIDAY_NAME_OPTIONS, MAX_BATCH_DAYS } from '../constants';
 
 const { Option } = Select;
@@ -10,7 +11,7 @@ const { RangePicker } = DatePicker;
 
 interface BatchHolidayModalProps {
   visible: boolean;
-  onOk: (values: any) => Promise<void>;
+  onOk: (values: Record<string, unknown>) => Promise<void>;
   onCancel: () => void;
 }
 

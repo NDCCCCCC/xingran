@@ -4,6 +4,7 @@ import { Card, Form, Switch, Input, TimePicker, Select, Button, message, Space, 
 import { SaveOutlined, ReloadOutlined, BellOutlined, SettingOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { getDutyConfig, updateDutyConfig, type DutyConfig } from '@/lib/dutyApi';
+import { isFormValidationError } from '@/utils/errorHandler';
 
 const DutyConfigPage: FC = () => {
   const [form] = Form.useForm();
@@ -15,7 +16,7 @@ const DutyConfigPage: FC = () => {
     setLoading(true);
     try {
       const result = await getDutyConfig();
-      const configData = result as any; // API响应格式: { code: 0, data: DutyConfig }
+      const configData = result as { code: number; data: DutyConfig };
       setConfig(configData.data);
       form.setFieldsValue({
         reminderEnabled: configData.data.reminderEnabled,
@@ -47,8 +48,8 @@ const DutyConfigPage: FC = () => {
       await updateDutyConfig(data);
       message.success('配置保存成功');
       fetchConfig();
-    } catch (error: any) {
-      if (error.errorFields) return;
+    } catch (error: unknown) {
+      if (isFormValidationError(error)) return;
       message.error('配置保存失败');
     } finally {
       setSaving(false);

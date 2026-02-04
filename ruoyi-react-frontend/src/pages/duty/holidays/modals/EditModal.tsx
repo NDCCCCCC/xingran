@@ -4,6 +4,7 @@
  */
 
 import { Form, Input, InputNumber, Select, Switch, Modal, DatePicker } from 'antd';
+import type { FormInstance } from 'antd/es/form';
 import type { Holiday } from '@/lib/dutyApi';
 import { HOLIDAY_TYPE_OPTIONS } from '../constants';
 import dayjs from 'dayjs';
@@ -17,7 +18,7 @@ export interface HolidayEditModalProps {
   editingRecord: Holiday | null;
   year: number | undefined;
   availableYears: number[];
-  onOk: (form: any) => Promise<void>;
+  onOk: (form: FormInstance<unknown>) => Promise<void>;
   onCancel: () => void;
 }
 

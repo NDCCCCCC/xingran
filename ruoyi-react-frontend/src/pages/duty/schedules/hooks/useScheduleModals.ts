@@ -5,6 +5,7 @@
 
 import { useState, useCallback } from 'react';
 import { Form, message } from 'antd';
+import type { FormInstance } from 'antd/es/form';
 import {
   generateSchedule,
   swapDuty,
@@ -15,8 +16,8 @@ import {
 
 export interface UseScheduleModalsParams {
   onLoad?: () => void;
-  allSchedules: any[];
-  dataSource: any[];
+  allSchedules: unknown[];
+  dataSource: unknown[];
   current: number;
 }
 
@@ -27,9 +28,9 @@ export interface UseScheduleModalsReturn {
   manualModalVisible: boolean;
 
   // 表单实例
-  generateForm: any;
-  swapForm: any;
-  manualForm: any;
+  generateForm: FormInstance<unknown>;
+  swapForm: FormInstance<unknown>;
+  manualForm: FormInstance<unknown>;
 
   // 弹窗控制方法
   openGenerateModal: () => void;
@@ -73,7 +74,7 @@ export function useScheduleModals(params: UseScheduleModalsParams): UseScheduleM
       setGenerateModalVisible(false);
       generateForm.resetFields();
       onLoad?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (error.errorFields) return;
       message.error('生成排班失败');
     }
@@ -92,7 +93,7 @@ export function useScheduleModals(params: UseScheduleModalsParams): UseScheduleM
       setSwapModalVisible(false);
       swapForm.resetFields();
       onLoad?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (error.errorFields) return;
       message.error('调班失败');
     }
@@ -113,7 +114,7 @@ export function useScheduleModals(params: UseScheduleModalsParams): UseScheduleM
       setManualModalVisible(false);
       manualForm.resetFields();
       onLoad?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (error.errorFields) return;
       message.error('手动排班失败');
     }

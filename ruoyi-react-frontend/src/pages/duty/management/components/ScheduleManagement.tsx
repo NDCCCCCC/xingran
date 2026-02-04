@@ -24,7 +24,7 @@ interface ScheduleManagementProps {
   selectedRowKeys: string[];
   pools: DutyPool[];
   users: SimpleUser[];
-  onSearch: (values: any) => void;
+  onSearch: (values: Record<string, unknown>) => void;
   onReset: () => void;
   onPageChange: (page: number, size: number) => void;
   onSelectedChange: (keys: string[]) => void;

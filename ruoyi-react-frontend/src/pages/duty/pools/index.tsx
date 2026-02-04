@@ -19,6 +19,7 @@ import {
   type SimpleUser,
   type SimpleDept,
 } from '@/lib/dutyApi';
+import { isFormValidationError } from '@/utils/errorHandler';
 
 const { Option } = Select;
 
@@ -245,8 +246,8 @@ const DutyPoolPage: FC = () => {
       }
       setModalVisible(false);
       fetchList(paginationProps.current, paginationProps.pageSize);
-    } catch (error: any) {
-      if (error.errorFields) {
+    } catch (error: unknown) {
+      if (isFormValidationError(error)) {
         // 表单验证错误
         return;
       }

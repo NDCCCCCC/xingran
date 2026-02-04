@@ -6,6 +6,7 @@
 import { useState, useCallback } from 'react';
 import { message } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
+import type { FormInstance } from 'antd/es/form';
 import {
   getDutyScheduleList,
   getTodayDuty,
@@ -21,7 +22,7 @@ import {
 export interface UseScheduleDataParams {
   current: number;
   pageSize: number;
-  searchForm: any;
+  searchForm: FormInstance<unknown>;
 }
 
 export interface UseScheduleDataReturn {

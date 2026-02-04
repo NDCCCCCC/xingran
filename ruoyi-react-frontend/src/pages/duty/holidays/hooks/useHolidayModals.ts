@@ -6,6 +6,7 @@
 import { useState, useCallback } from 'react';
 import { message } from 'antd';
 import dayjs from 'dayjs';
+import type { FormInstance } from 'antd/es/form';
 import type { Holiday } from '@/lib/dutyApi';
 import type { BatchHolidayRow, ModalState, BatchState } from '../types';
 import { createHoliday, updateHoliday, deleteHoliday, batchCreateHolidays } from '@/lib/dutyApi';
@@ -27,7 +28,7 @@ export interface UseHolidayModalsReturn {
   handleAdd: () => void;
   handleEdit: (record: Holiday) => void;
   handleDelete: (id: string) => Promise<void>;
-  handleModalOk: (editForm: any) => Promise<void>;
+  handleModalOk: (editForm: FormInstance<unknown>) => Promise<void>;
   handleBatchAdd: () => void;
   addBatchRow: () => void;
   removeBatchRow: (index: number) => void;
@@ -72,7 +73,7 @@ export function useHolidayModals(params: UseHolidayModalsParams): UseHolidayModa
   }, [fetchList]);
 
   // 保存节假日
-  const handleModalOk = useCallback(async (editForm: any) => {
+  const handleModalOk = useCallback(async (editForm: FormInstance<unknown>) => {
     try {
       const values = await editForm.validateFields();
       const data = {
@@ -94,7 +95,7 @@ export function useHolidayModals(params: UseHolidayModalsParams): UseHolidayModa
 
       setModalState(prev => ({ ...prev, modalVisible: false }));
       fetchList();
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (error.errorFields) return;
       message.error(modalState.editingRecord ? '更新失败' : '创建失败');
     }

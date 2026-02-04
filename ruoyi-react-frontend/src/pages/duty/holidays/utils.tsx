@@ -7,7 +7,7 @@ import { message } from 'antd';
 import dayjs from 'dayjs';
 import * as XLSX from 'xlsx';
 import type { ExcelHolidayRow, ExcelImportOptions, HolidayType } from './types';
-import { batchCreateHolidays } from '@/lib/dutyApi';
+import { batchCreateHolidays, type Holiday } from '@/lib/dutyApi';
 
 /** 解析节假日类型 */
 function parseHolidayType(typeStr: string): HolidayType {
@@ -53,7 +53,7 @@ export async function handleExcelImport(
 
     // 从第二行开始解析（跳过表头）
     for (let i = 1; i < jsonData.length; i++) {
-      const row = jsonData[i] as any[];
+      const row = jsonData[i] as unknown[];
       if (!row[0] && !row[1]) continue; // 跳过空行
 
       const dateStr = row[0];
@@ -101,7 +101,7 @@ export async function handleExcelImport(
     }
 
     // 批量创建
-    await batchCreateHolidays(holidays as any);
+    await batchCreateHolidays(holidays as Omit<Holiday, 'id' | 'createdAt' | 'createdBy'>[]);
     message.success(`成功导入 ${holidays.length} 条节假日记录`);
 
     onSuccess?.();

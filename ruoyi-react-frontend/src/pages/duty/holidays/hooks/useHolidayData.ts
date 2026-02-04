@@ -38,7 +38,7 @@ export function useHolidayData(): UseHolidayDataReturn {
         return;
       }
       const result = await getHolidayList(targetYear);
-      const data = result as any;
+      const data = result as { code: number; data: Holiday[] };
       setDataSource(data.data);
       if (y !== undefined) setYear(y);
     } catch (error) {

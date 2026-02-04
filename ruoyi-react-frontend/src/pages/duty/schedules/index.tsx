@@ -144,7 +144,7 @@ function getDutyTableColumns(props: DutyTableColumnsProps): ColumnsType<DutySche
       dataIndex: 'dutyType',
       key: 'dutyType',
       width: 100,
-      render: (type: string) => <Tag color={getDutyTypeColor(type as any)}>{getDutyTypeText(type as any)}</Tag>,
+      render: (type: string) => <Tag color={getDutyTypeColor(type)}>{getDutyTypeText(type)}</Tag>,
     },
     {
       title: '过期状态',
