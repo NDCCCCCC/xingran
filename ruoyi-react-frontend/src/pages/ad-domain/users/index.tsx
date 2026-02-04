@@ -33,6 +33,7 @@ import {
   type ADUser,
   type ADOUNode
 } from '@/lib/adDomainApi';
+import type { UnknownError } from '@/types/common';
 import ActionButtons from '@/components/shared/ActionButtons';
 import { useADConfigs } from '@/hooks/useADConfigs';
 import type { ADConfig } from '@/lib/adDomainApi';
@@ -167,8 +168,9 @@ const ADUserPage: FC = () => {
       message.success('更新成功');
       setEditModalVisible(false);
       fetchUsers();
-    } catch (error: any) {
-      message.error(error.message || '更新失败');
+    } catch (error: unknown) {
+      const err = error as UnknownError;
+      message.error(err.message || '更新失败');
     }
   };
 
@@ -185,8 +187,9 @@ const ADUserPage: FC = () => {
       message.success('移动成功');
       setMoveModalVisible(false);
       fetchUsers();
-    } catch (error: any) {
-      message.error(error.message || '移动失败');
+    } catch (error: unknown) {
+      const err = error as UnknownError;
+      message.error(err.message || '移动失败');
     }
   };
 
@@ -202,13 +205,14 @@ const ADUserPage: FC = () => {
         message.success('启用成功');
       }
       fetchUsers();
-    } catch (error: any) {
-      message.error(error.message || '操作失败');
+    } catch (error: unknown) {
+      const err = error as UnknownError;
+      message.error(err.message || '操作失败');
     }
   };
 
   // 构建TreeSelect所需的数据结构
-  const buildTreeSelectData = (nodes: ADOUNode[]): Array<{ value: string; title: string; children?: Array<any> }> => {
+  const buildTreeSelectData = (nodes: ADOUNode[]): Array<{ value: string; title: string; children?: Array<{ value: string; title: string }> }> => {
     return nodes.map(node => ({
       value: node.dn,
       title: node.name,
@@ -272,7 +276,7 @@ const ADUserPage: FC = () => {
       title: '状态',
       key: 'status',
       width: 200,
-      render: (_: any, user: ADUser) => (
+      render: (_: unknown, user: ADUser) => (
         <Space size="small">
           <Tag color={user.isEnabled ? 'success' : 'default'}>
             {user.isEnabled ? '启用' : '禁用'}
@@ -287,7 +291,7 @@ const ADUserPage: FC = () => {
       key: 'action',
       fixed: 'right',
       width: 100,
-      render: (_: any, user: ADUser) => {
+      render: (_: unknown, user: ADUser) => {
         const actions = [
           {
             key: 'toggle-status',

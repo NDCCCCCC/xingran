@@ -200,7 +200,7 @@ const ADConfigPage: FC = () => {
       key: 'security',
       width: 140,
       minWidth: 120,
-      render: (_: any, record: ADConfig) => (
+      render: (_: unknown, record: ADConfig) => (
         <Space>
           {record.useSsl && <Tag color="blue">SSL</Tag>}
           {record.useTls && <Tag color="green">TLS</Tag>}
@@ -213,7 +213,7 @@ const ADConfigPage: FC = () => {
       key: 'syncEnabled',
       width: 140,
       minWidth: 120,
-      render: (_: any, record: ADConfig) => (
+      render: (_: unknown, record: ADConfig) => (
         <Tag color={record.syncEnabled ? 'success' : 'default'}>
           {record.syncEnabled ? `是 (${record.syncInterval}s)` : '否'}
         </Tag>
@@ -245,7 +245,7 @@ const ADConfigPage: FC = () => {
       key: 'syncResult',
       width: 150,
       minWidth: 130,
-      render: (_: any, record: ADConfig) => {
+      render: (_: unknown, record: ADConfig) => {
         const result = syncProgress[record.id];
         if (!result) return '-';
         return (
@@ -263,7 +263,7 @@ const ADConfigPage: FC = () => {
       width: 250,
       minWidth: 220,
       fixed: 'right' as const,
-      render: (_: any, record: ADConfig) => {
+      render: (_: unknown, record: ADConfig) => {
         const actions = [
           {
             key: 'test',

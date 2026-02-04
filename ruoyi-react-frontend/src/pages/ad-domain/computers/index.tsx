@@ -140,7 +140,7 @@ const ADComputerPage: FC = () => {
   };
 
   // 构建TreeSelect所需的数据结构
-  const buildTreeSelectData = (nodes: ADOUNode[]): Array<{ value: string; title: string; children?: Array<any> }> => {
+  const buildTreeSelectData = (nodes: ADOUNode[]): Array<{ value: string; title: string; children?: Array<{ value: string; title: string }> }> => {
     return nodes.map(node => ({
       value: node.dn,
       title: node.name,
@@ -240,7 +240,7 @@ const ADComputerPage: FC = () => {
       key: 'action',
       fixed: 'right',
       width: 100,
-      render: (_: any, record: ADComputerDetail) => (
+      render: (_: unknown, record: ADComputerDetail) => (
         <Button
           type="link"
           size="small"
