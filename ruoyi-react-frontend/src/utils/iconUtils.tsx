@@ -4,6 +4,11 @@
  */
 
 import * as Icons from '@ant-design/icons';
+import type { ComponentType } from '@ant-design/icons';
+
+// 动态图标访问的类型定义
+type IconName = keyof typeof Icons;
+type IconComponentMap = Record<string, ComponentType<unknown>>;
 
 // ========================================
 // 图标分类（用于图标选择器）
@@ -232,7 +237,7 @@ export function getIconComponent(iconName?: string | null): React.ReactNode {
 
   // 尝试直接匹配
   if (iconKeys.includes(iconName)) {
-    const IconComponent = (Icons as any)[iconName];
+    const IconComponent = (Icons as IconComponentMap)[iconName as IconName];
     return <IconComponent />;
   }
 
@@ -243,7 +248,7 @@ export function getIconComponent(iconName?: string | null): React.ReactNode {
     for (const key of iconKeys) {
       if (key.toLowerCase().includes(mappedName.toLowerCase()) ||
           key.toLowerCase() === mappedName + 'outlined') {
-        const IconComponent = (Icons as any)[key];
+        const IconComponent = (Icons as IconComponentMap)[key as IconName];
         return <IconComponent />;
       }
     }

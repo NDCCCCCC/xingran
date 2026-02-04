@@ -408,11 +408,11 @@ export class DualLevelCache<T> {
 }
 
 // 导出单例实例
-let cacheInstance: DualLevelCache<any> | null = null;
+let cacheInstance: DualLevelCache<unknown> | null = null;
 
 export const getDualLevelCache = <T>(): DualLevelCache<T> => {
   if (!cacheInstance) {
-    cacheInstance = new DualLevelCache<T>();
+    cacheInstance = new DualLevelCache<unknown>();
   }
   return cacheInstance as DualLevelCache<T>;
 };

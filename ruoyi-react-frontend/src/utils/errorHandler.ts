@@ -2,6 +2,27 @@ import { message } from 'antd';
 import { useAuthStore } from '@/store/authStore';
 import { clearPublicKeyCache } from './sm2';
 
+// ============================================================================
+// 向后兼容性重新导出
+// ============================================================================
+// 以下导出仅用于保持向后兼容，支持现有代码从 @/utils/errorHandler 导入。
+//
+// ⚠️ 新代码请直接从定义位置导入：
+//   import { isFormValidationError } from '@/types/common';
+//
+// 这些导出可能在未来版本中移除。
+// ============================================================================
+
+export { isFormValidationError } from '@/types/common';
+export type { FormFieldError } from 'antd';
+
+// 自定义错误类型，带有额外属性
+interface EnhancedError extends Error {
+  status?: number;
+  type?: HttpErrorType;
+  originalError?: unknown;
+}
+
 export interface ErrorResponse {
   response?: {
     data?: {
@@ -42,6 +63,28 @@ export interface ApiResponseData {
 }
 
 /**
+ * 从错误对象中提取错误消息
+ */
+function extractErrorMessage(error: unknown): string {
+  if (typeof error === 'string') {
+    return error;
+  }
+
+  if (error && typeof error === 'object') {
+    const err = error as ErrorResponse;
+    return err?.response?.data?.message
+      ?? err?.response?.data?.msg
+      ?? err?.response?.data?.error
+      ?? err?.message
+      ?? err?.msg
+      ?? err?.error
+      ?? '操作失败';
+  }
+
+  return '操作失败';
+}
+
+/**
  * 统一错误处理工具
  * 提供一致的错误提示和日志记录
  */
@@ -53,33 +96,9 @@ export class ErrorHandler {
    * @param showMessage 是否显示错误提示
    */
   static handleApiError(error: unknown, context: string, showMessage: boolean = true): void {
-    // 获取错误消息
-    let errorMessage = '操作失败';
-
-    // 类型守卫，检查是否为 ErrorResponse 类型
-    if (error && typeof error === 'object') {
-      const err = error as ErrorResponse;
-      if (err?.response?.data?.message) {
-        errorMessage = err.response.data.message;
-      } else if (err?.response?.data?.msg) {
-        errorMessage = err.response.data.msg;
-      } else if (err?.response?.data?.error) {
-        errorMessage = err.response.data.error;
-      } else if (err?.message) {
-        errorMessage = err.message;
-      } else if (err?.msg) {
-        errorMessage = err.msg;
-      } else if (err?.error) {
-        errorMessage = err.error;
-      }
-    } else if (error && typeof error === 'string') {
-      errorMessage = error;
-    }
-
-    // 控制台日志
+    const errorMessage = extractErrorMessage(error);
     console.error(`[${context}]`, error);
 
-    // 显示错误提示
     if (showMessage) {
       message.error(`${context}失败: ${errorMessage}`);
     }
@@ -199,8 +218,8 @@ export function handleHttpResponseError(
   message.error(errorMessage);
 
   const error = new Error(errorMessage);
-  (error as any).status = status;
-  (error as any).type = errorType;
+  (error as EnhancedError).status = status;
+  (error as EnhancedError).type = errorType;
   return error;
 }
 
@@ -209,19 +228,15 @@ export function handleHttpResponseError(
  * @param error 原始错误对象
  * @returns Error 对象
  */
-export function handleNetworkError(error: any): Error {
-  let errorMessage: string;
-
-  if (error.code === 'ECONNABORTED') {
-    errorMessage = '请求超时，请检查网络连接';
-  } else {
-    errorMessage = '网络异常，请检查网络连接';
-  }
+export function handleNetworkError(error: unknown): Error {
+  const errorMessage = (error as { code?: string })?.code === 'ECONNABORTED'
+    ? '请求超时，请检查网络连接'
+    : '网络异常，请检查网络连接';
 
   message.error(errorMessage);
 
   const networkError = new Error(errorMessage);
-  (networkError as any).originalError = error;
+  (networkError as EnhancedError).originalError = error;
   return networkError;
 }
 
@@ -230,14 +245,14 @@ export function handleNetworkError(error: any): Error {
  * @param error 原始错误对象
  * @returns Error 对象
  */
-export function handleParseError(error: any): Error {
+export function handleParseError(error: unknown): Error {
   const errorMessage = '响应解析失败';
 
   message.error(errorMessage);
   console.error('[ErrorHandler] Response parse error:', error);
 
   const parseError = new Error(errorMessage);
-  (parseError as any).originalError = error;
+  (parseError as EnhancedError).originalError = error;
   return parseError;
 }
 
@@ -245,7 +260,7 @@ export function handleParseError(error: any): Error {
  * 根据状态码获取错误类型
  */
 function getErrorTypeByStatus(status: number): HttpErrorType {
-  const statusToTypeMap: Record<number, HttpErrorType> = {
+  const statusToTypeMap: Partial<Record<number, HttpErrorType>> = {
     400: HttpErrorType.BAD_REQUEST,
     401: HttpErrorType.UNAUTHORIZED,
     403: HttpErrorType.FORBIDDEN,
@@ -258,7 +273,7 @@ function getErrorTypeByStatus(status: number): HttpErrorType {
     503: HttpErrorType.SERVICE_UNAVAILABLE,
   };
 
-  return statusToTypeMap[status] || HttpErrorType.INTERNAL_ERROR;
+  return statusToTypeMap[status] ?? HttpErrorType.INTERNAL_ERROR;
 }
 
 /**
@@ -274,4 +289,70 @@ function handleUnauthorized(): void {
 
   // 跳转到登录页
   window.location.href = '/login';
+}
+
+// ==================== 类型安全的异步操作包装 ====================
+
+/**
+ * 异步操作结果类型
+ * 用于替代 try-catch 的类型安全错误处理
+ */
+export type AsyncResult<T> =
+  | { success: true; data: T }
+  | { success: false; error: Error };
+
+/**
+ * 将未知错误转换为 Error 对象
+ */
+function toError(error: unknown): Error {
+  if (error instanceof Error) {
+    return error;
+  }
+  if (typeof error === 'string') {
+    return new Error(error);
+  }
+  return new Error(String(error));
+}
+
+/**
+ * 类型安全的异步包装器
+ * 将可能抛出异常的函数包装为类型安全的 AsyncResult
+ *
+ * @example
+ * const result = await safeAsync(() => await fetchData());
+ * if (result.success) {
+ *   console.log(result.data); // 类型安全，data 是 T 类型
+ * } else {
+ *   console.error(result.error); // error 是 Error 类型
+ * }
+ */
+export async function safeAsync<T>(
+  operation: () => Promise<T>
+): Promise<AsyncResult<T>> {
+  try {
+    const data = await operation();
+    return { success: true, data };
+  } catch (error) {
+    return { success: false, error: toError(error) };
+  }
+}
+
+/**
+ * 同步操作的类型安全包装器
+ *
+ * @example
+ * const result = safeSync(() => JSON.parse(jsonString));
+ * if (result.success) {
+ *   console.log(result.data); // 类型安全的 data
+ * }
+ */
+export function safeSync<T>(
+  operation: () => T
+): AsyncResult<T> {
+  try {
+    const data = operation();
+    return { success: true, data };
+  } catch (error) {
+    return { success: false, error: toError(error) };
+  }
 }

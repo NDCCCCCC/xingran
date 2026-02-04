@@ -33,7 +33,7 @@ const convertToMenuItem = (menu: MenuType, parentPath: string = ''): MenuItem =>
   const icon = getIcon(menu.icon);
 
   if (menu.menuType === 'F' || menu.visible !== 1) {
-    return null as any;
+    return null;
   }
 
   const isDisabled = menu.status !== 0;
@@ -105,7 +105,7 @@ const Sidebar = () => {
    * 只返回父级菜单的 key，不包含当前页面路径
    * 因为当前页面可能是不可展开的菜单项（menuType === 'C'）
    */
-  function buildParentKeyChain(currentPath: string, menuPathMap: Map<string, any>): string[] {
+  function buildParentKeyChain(currentPath: string, menuPathMap: Map<string, { level: number; topLevel?: string; secondLevel?: string }>): string[] {
     const normalizePath = (p: string): string => p.startsWith('/') ? p.slice(1) : p;
     const normalizedPathname = normalizePath(currentPath);
     const menuInfo = menuPathMap.get(normalizedPathname);

@@ -7,7 +7,7 @@ import { useState, useCallback } from 'react';
 import type { FC } from 'react';
 import { Upload, message, Image, Progress, Button, Space } from 'antd';
 import { PlusOutlined, LoadingOutlined } from '@ant-design/icons';
-import type { UploadFile, UploadProps } from 'antd';
+import type { UploadFile, UploadProps, UploadRequestOption } from 'antd';
 
 export interface FileUploadResponse {
   id: string;
@@ -110,7 +110,7 @@ const FileUpload: FC<FileUploadProps> = ({
     message.error('上传失败');
   }, [onUploadError]);
 
-  const customRequest = useCallback((options: any) => {
+  const customRequest = useCallback((options: UploadRequestOption) => {
     const { file, onProgress, onSuccess, onError } = options;
     const formData = new FormData();
     formData.append('file', file);

@@ -6,20 +6,30 @@
  * 文档: https://www.npmjs.com/package/sm-crypto
  */
 
+import { hexToBase64, bytesToHex } from './encoding';
+
+// SM2 模块接口定义
+interface SM2Module {
+	doEncrypt: (msg: string, publicKey: string, cipherMode?: 1 | 0) => string;
+	doDecrypt: (encryptData: string, privateKey: string, cipherMode?: 1 | 0) => string;
+	doSignature: (msg: string, privateKey: string, cipherMode?: 1 | 0) => string;
+	doVerifySignature: (msg: string, signHex: string, publicKey: string, cipherMode?: 1 | 0) => boolean;
+	generateKeyPairHex: () => { publicKey: string; privateKey: string };
+}
+
 // SM2 公钥缓存（十六进制格式）
 let cachedPublicKeyHex: string = '';
 
 // sm2 模块缓存
-let sm2Module: any = null;
+let sm2Module: SM2Module | null = null;
 
 // 获取 sm2 对象（使用动态导入）
-async function getSM2() {
+async function getSM2(): Promise<SM2Module> {
   if (sm2Module) {
     return sm2Module;
   }
 
   try {
-    // 动态导入 sm-crypto 包
     const smCrypto = await import('sm-crypto');
     sm2Module = smCrypto.sm2;
     return sm2Module;
@@ -35,25 +45,19 @@ async function getSM2() {
  * @param forceRefresh 是否强制刷新缓存
  */
 export async function fetchPublicKey(forceRefresh = false): Promise<string> {
-  // 如果已经缓存且不强制刷新，直接返回
   if (!forceRefresh && cachedPublicKeyHex) {
     return cachedPublicKeyHex;
   }
 
-  try {
-    const response = await fetch('/api/v1/system/auth/public-key');
-    const result = await response.json();
+  const response = await fetch('/api/v1/system/auth/public-key');
+  const result = await response.json();
 
-    if (result.code === 0 && result.data?.publicKey) {
-      cachedPublicKeyHex = result.data.publicKey;
-      return cachedPublicKeyHex;
-    } else {
-      throw new Error('获取公钥失败: ' + (result.message || '未知错误'));
-    }
-  } catch (error) {
-    console.error('获取 SM2 公钥失败:', error);
-    throw error;
+  if (result.code === 0 && result.data?.publicKey) {
+    cachedPublicKeyHex = result.data.publicKey;
+    return cachedPublicKeyHex;
   }
+
+  throw new Error('获取公钥失败: ' + (result.message || '未知错误'));
 }
 
 /**
@@ -73,22 +77,9 @@ export async function encryptWithSM2(password: string, publicKeyRaw: string): Pr
     return '';
   }
 
-  try {
-    const sm2 = await getSM2();
-
-    // 使用 sm-crypto 进行 SM2 加密
-    // mode 1 = C1C3C2
-    // 注意：sm-crypto 生成的密文不带 04 前缀（原始格式）
-    // 后端 tjfoc/gmsm 期望带 04 前缀，由后端负责添加
-    const cipherText = sm2.doEncrypt(password, publicKeyRaw, 1);
-
-    // sm-crypto 返回的是十六进制字符串，直接转为 Base64
-    // 后端会添加 04 前缀以兼容 tjfoc/gmsm 格式
-    return hexToBase64(cipherText);
-  } catch (error) {
-    console.error('SM2 加密失败:', error);
-    throw new Error('密码加密失败: ' + error);
-  }
+  const sm2 = await getSM2();
+  const cipherText = sm2.doEncrypt(password, publicKeyRaw, 1);
+  return hexToBase64(cipherText);
 }
 
 /**
@@ -102,54 +93,11 @@ export async function decryptWithSM2(cipherText: string, privateKeyRaw: string):
     return '';
   }
 
-  try {
-    const sm2 = await getSM2();
+  const { base64ToHex } = await import('./encoding');
+  const cipherTextHex = base64ToHex(cipherText);
+  const sm2 = await getSM2();
 
-    // Base64 转十六进制
-    const cipherTextHex = base64ToHex(cipherText);
-
-    // 使用 sm-crypto 解密，mode: 1 = C1C3C2
-    const plainText = sm2.doDecrypt(cipherTextHex, privateKeyRaw, 1);
-
-    return plainText;
-  } catch (error) {
-    console.error('SM2 解密失败:', error);
-    throw new Error('密码解密失败: ' + error);
-  }
-}
-
-/**
- * 十六进制转 Base64
- */
-function hexToBase64(hexString: string): string {
-  // 确保十六进制字符串是偶数长度
-  const paddedHex = hexString.length % 2 === 0
-    ? hexString
-    : '0' + hexString;
-
-  // 转换为字节数组
-  const bytes = [];
-  for (let i = 0; i < paddedHex.length; i += 2) {
-    bytes.push(parseInt(paddedHex.substr(i, 2), 16));
-  }
-
-  // 转换为 Base64
-  return btoa(String.fromCharCode.apply(null, bytes));
-}
-
-/**
- * Base64 转十六进制
- */
-function base64ToHex(base64String: string): string {
-  const binaryString = atob(base64String);
-  let hex = '';
-
-  for (let i = 0; i < binaryString.length; i++) {
-    const byte = binaryString.charCodeAt(i);
-    hex += byte.toString(16).padStart(2, '0');
-  }
-
-  return hex;
+  return sm2.doDecrypt(cipherTextHex, privateKeyRaw, 1);
 }
 
 /**
@@ -216,26 +164,25 @@ export async function generateSM2KeyPair(): Promise<{ privateKey: string; public
  * 将十六进制公钥转换为 PEM 格式
  */
 export function publicKeyToPEM(publicKeyHex: string): string {
-  const binaryString = hexToBinary(publicKeyHex);
+  const binaryString = hexToBytes(publicKeyHex);
   const base64 = btoa(binaryString);
 
-  let pem = '-----BEGIN PUBLIC KEY-----\n';
-  // 每64字符换行
+  const lines: string[] = ['-----BEGIN PUBLIC KEY-----'];
   for (let i = 0; i < base64.length; i += 64) {
-    pem += base64.substring(i, i + 64) + '\n';
+    lines.push(base64.substring(i, i + 64));
   }
-  pem += '-----END OF PUBLIC KEY-----';
+  lines.push('-----END OF PUBLIC KEY-----');
 
-  return pem;
+  return lines.join('\n');
 }
 
 /**
- * 十六进制转二进制字符串
+ * 十六进制转字节字符串
  */
-function hexToBinary(hexString: string): string {
-  const bytes = [];
+function hexToBytes(hexString: string): string {
+  const bytes: string[] = [];
   for (let i = 0; i < hexString.length; i += 2) {
-    bytes.push(parseInt(hexString.substr(i, 2), 16));
+    bytes.push(String.fromCharCode(parseInt(hexString.substr(i, 2), 16)));
   }
-  return String.fromCharCode.apply(null, bytes);
+  return bytes.join('');
 }

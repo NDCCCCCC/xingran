@@ -3,7 +3,7 @@
  * 支持导出条件筛选、数据导出
  */
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import type { FC } from 'react';
 import {
   Button,
@@ -44,7 +44,7 @@ const ExcelExport: FC<ExcelExportProps> = ({
   const [form] = Form.useForm();
   const [exporting, setExporting] = useState(false);
 
-  const handleExport = async () => {
+  const handleExport = useCallback(async () => {
     const values = await form.validateFields();
     setExporting(true);
 
@@ -74,11 +74,11 @@ const ExcelExport: FC<ExcelExportProps> = ({
     } finally {
       setExporting(false);
     }
-  };
+  }, [form, exportUrl, entityName, onClose]);
 
-  const handleReset = () => {
+  const handleReset = useCallback(() => {
     form.resetFields();
-  };
+  }, [form]);
 
   return (
     <Modal
@@ -99,14 +99,12 @@ const ExcelExport: FC<ExcelExportProps> = ({
           </Button>
         </Space>
       }
-      destroyOnHidden
+      destroyOnClose
     >
       <Form
         form={form}
         layout="vertical"
-        initialValues={{
-          status: undefined,
-        }}
+        initialValues={{ status: undefined }}
       >
         <Form.Item label="名称" name="name">
           <Input placeholder="请输入名称关键词（可选）" allowClear />

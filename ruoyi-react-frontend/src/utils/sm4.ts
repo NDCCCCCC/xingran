@@ -6,17 +6,24 @@
  * 文档: https://www.npmjs.com/package/sm-crypto
  */
 
+import { hexToBase64, base64ToHex, arrayBufferToHex, hexToArrayBuffer, generateRandomHex } from './encoding';
+
+// SM4 模块接口定义
+interface SM4Module {
+	encrypt: (msg: string, key: string, options?: { mode: 'cbc' | 'ecb'; iv?: string }) => string;
+	decrypt: (cipherHex: string, key: string, options?: { mode: 'cbc' | 'ecb'; iv?: string }) => string;
+}
+
 // sm4 模块缓存
-let sm4Module: any = null;
+let sm4Module: SM4Module | null = null;
 
 // 获取 sm4 对象（使用动态导入）
-async function getSM4() {
+async function getSM4(): Promise<SM4Module> {
   if (sm4Module) {
     return sm4Module;
   }
 
   try {
-    // 动态导入 sm-crypto 包
     const smCrypto = await import('sm-crypto');
     sm4Module = smCrypto.sm4;
     return sm4Module;
@@ -31,11 +38,7 @@ async function getSM4() {
  * @returns 32字符的十六进制字符串
  */
 export function generateSM4Key(): string {
-  const key = new Uint8Array(16);
-  crypto.getRandomValues(key);
-  return Array.from(key)
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
+  return generateRandomHex(16);
 }
 
 /**
@@ -44,11 +47,7 @@ export function generateSM4Key(): string {
  * @returns 32字符的十六进制字符串
  */
 export function generateIV(): string {
-  const iv = new Uint8Array(16);
-  crypto.getRandomValues(iv);
-  return Array.from(iv)
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
+  return generateRandomHex(16);
 }
 
 /**
@@ -76,19 +75,11 @@ export async function encryptSM4CBC(plaintext: string, keyHex: string, ivHex: st
     return '';
   }
 
-  try {
-    const sm4 = await getSM4();
-
-    // sm-crypto 的 SM4-CBC 加密
-    const cipherHex = sm4.encrypt(plaintext, keyHex, {
-      mode: 'cbc',
-      iv: ivHex,
-    });
-    return cipherHex;
-  } catch (error) {
-    console.error('SM4-CBC 加密失败:', error);
-    throw new Error('SM4 加密失败: ' + error);
-  }
+  const sm4 = await getSM4();
+  return sm4.encrypt(plaintext, keyHex, {
+    mode: 'cbc',
+    iv: ivHex,
+  });
 }
 
 /**
@@ -104,19 +95,11 @@ export async function decryptSM4CBC(cipherHex: string, keyHex: string, ivHex: st
     return '';
   }
 
-  try {
-    const sm4 = await getSM4();
-
-    // sm-crypto 的 SM4-CBC 解密
-    const plaintext = sm4.decrypt(cipherHex, keyHex, {
-      mode: 'cbc',
-      iv: ivHex,
-    });
-    return plaintext;
-  } catch (error) {
-    console.error('SM4-CBC 解密失败:', error);
-    throw new Error('SM4 解密失败: ' + error);
-  }
+  const sm4 = await getSM4();
+  return sm4.decrypt(cipherHex, keyHex, {
+    mode: 'cbc',
+    iv: ivHex,
+  });
 }
 
 /**
@@ -128,7 +111,7 @@ export async function decryptSM4CBC(cipherHex: string, keyHex: string, ivHex: st
  * @param ivHex 初始化向量（十六进制，32字符）
  * @returns 加密后的密文（十六进制字符串）
  */
-export async function encryptRequestBody(data: any, keyHex: string, ivHex: string): Promise<string> {
+export async function encryptRequestBody(data: Record<string, unknown>, keyHex: string, ivHex: string): Promise<string> {
   const jsonStr = JSON.stringify(data);
   return encryptSM4CBC(jsonStr, keyHex, ivHex);
 }
@@ -142,86 +125,9 @@ export async function encryptRequestBody(data: any, keyHex: string, ivHex: strin
  * @param ivHex 初始化向量（十六进制，32字符）
  * @returns 解密后的数据对象
  */
-export async function decryptRequestBody(cipherHex: string, keyHex: string, ivHex: string): Promise<any> {
+export async function decryptRequestBody(cipherHex: string, keyHex: string, ivHex: string): Promise<Record<string, unknown>> {
   const jsonStr = await decryptSM4CBC(cipherHex, keyHex, ivHex);
   return JSON.parse(jsonStr);
-}
-
-/**
- * 十六进制字符串转 Base64
- * @param hexString 十六进制字符串
- * @returns Base64 编码的字符串
- */
-export function hexToBase64(hexString: string): string {
-  // 确保十六进制字符串是偶数长度
-  const paddedHex = hexString.length % 2 === 0
-    ? hexString
-    : '0' + hexString;
-
-  // 转换为字节数组
-  const bytes = [];
-  for (let i = 0; i < paddedHex.length; i += 2) {
-    bytes.push(parseInt(paddedHex.substr(i, 2), 16));
-  }
-
-  // 转换为 Base64
-  return btoa(String.fromCharCode(...bytes));
-}
-
-/**
- * Base64 转十六进制字符串
- * @param base64String Base64 编码的字符串
- * @returns 十六进制字符串
- */
-export function base64ToHex(base64String: string): string {
-  const binaryString = atob(base64String);
-  let hex = '';
-
-  for (let i = 0; i < binaryString.length; i++) {
-    const byte = binaryString.charCodeAt(i);
-    hex += byte.toString(16).padStart(2, '0');
-  }
-
-  return hex;
-}
-
-/**
- * 字节字符串转十六进制字符串
- * 用于将原始字节字符串（如 String.fromCharCode(...bytes)）转换为十六进制
- * @param byteString 原始字节字符串
- * @returns 十六进制字符串
- */
-export function bytesToHex(byteString: string): string {
-  let hex = '';
-  for (let i = 0; i < byteString.length; i++) {
-    const byte = byteString.charCodeAt(i);
-    hex += byte.toString(16).padStart(2, '0');
-  }
-  return hex;
-}
-
-/**
- * ArrayBuffer 转十六进制字符串
- * @param buffer ArrayBuffer
- * @returns 十六进制字符串
- */
-export function arrayBufferToHex(buffer: ArrayBuffer): string {
-  return Array.from(new Uint8Array(buffer))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
-/**
- * 十六进制字符串转 ArrayBuffer
- * @param hexString 十六进制字符串
- * @returns ArrayBuffer
- */
-export function hexToArrayBuffer(hexString: string): ArrayBuffer {
-  const bytes = new Uint8Array(hexString.length / 2);
-  for (let i = 0; i < bytes.length; i++) {
-    bytes[i] = parseInt(hexString.substr(i * 2, 2), 16);
-  }
-  return bytes.buffer;
 }
 
 /**
@@ -236,3 +142,7 @@ export async function isSM4Available(): Promise<boolean> {
     return false;
   }
 }
+
+// 重新导出编码转换函数，保持向后兼容
+export { hexToBase64, base64ToHex, arrayBufferToHex, hexToArrayBuffer };
+

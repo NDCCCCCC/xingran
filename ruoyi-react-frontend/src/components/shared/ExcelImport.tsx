@@ -24,7 +24,7 @@ import {
   CloseCircleOutlined,
   DeleteOutlined,
 } from '@ant-design/icons';
-import type { UploadFile } from 'antd';
+import type { UploadFile, UploadRequestOption } from 'antd';
 
 const { Text } = Typography;
 
@@ -108,7 +108,7 @@ const ExcelImport: FC<ExcelImportProps> = ({
     return true;
   };
 
-  const customRequest = async (options: any) => {
+  const customRequest = async (options: UploadRequestOption) => {
     const { file, onProgress, onSuccess, onError } = options;
     const formData = new FormData();
     formData.append('file', file);

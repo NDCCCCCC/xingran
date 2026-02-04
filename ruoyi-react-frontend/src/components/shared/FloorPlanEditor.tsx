@@ -4,6 +4,7 @@
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Card, Button, Dropdown, Tooltip, message } from 'antd';
+import type { MenuProps } from 'antd';
 import {
   ZoomInOutlined,
   ZoomOutOutlined,
@@ -154,13 +155,17 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === ' ') {
         e.preventDefault();
-        (containerRef.current?.style as any).cursor = 'grab';
+        if (containerRef.current?.style) {
+          (containerRef.current.style as CSSProperties).cursor = 'grab';
+        }
       }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.key === ' ') {
-        (containerRef.current?.style as any).cursor = 'default';
+        if (containerRef.current?.style) {
+          (containerRef.current.style as CSSProperties).cursor = 'default';
+        }
       }
     };
 
@@ -179,7 +184,7 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
   const handleMouseDown = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
     const target = e.target as SVGElement;
     const workstationEl = target.closest('[data-workstation-id]');
-    const spacePressed = (e.nativeEvent as any).code === 'Space';
+    const spacePressed = (e.nativeEvent as KeyboardEvent & { code?: string }).code === 'Space';
 
     if (workstationEl && !spacePressed) {
       const workstationId = workstationEl.getAttribute('data-workstation-id');
@@ -595,7 +600,7 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
     return (
       <Dropdown
         menu={{
-          items: menuItems as any,
+          items: menuItems as MenuProps['items'],
           onClick: ({ key }) => handleMenuAction(key)
         }}
         open={contextMenu.visible}

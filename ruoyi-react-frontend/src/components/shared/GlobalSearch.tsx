@@ -5,7 +5,9 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Modal, Input, List, Typography, Tag, Divider } from 'antd';
+import type { ModalStyles } from 'antd/es/modal';
 import { useNavigate } from 'react-router-dom';
+import type { FC } from 'react';
 import { DASHBOARD, MONITOR_DASHBOARD } from '@/constants/routes';
 import {
   SearchOutlined,
@@ -108,8 +110,6 @@ const searchResults: SearchResult[] = [
     keywords: ['workorder', '工单', '任务', '问题'],
   },
 ];
-
-import type { FC } from 'react';
 
 const GlobalSearch: FC = () => {
   const [visible, setVisible] = useState(false);
@@ -239,7 +239,7 @@ const GlobalSearch: FC = () => {
             borderRadius: 'var(--theme-radius-xl)',
             border: '1px solid var(--theme-border-primary)',
           },
-        } as any}
+        } satisfies ModalStyles}
         closeIcon={null}
         style={{ top: 100 }}
       >

@@ -217,7 +217,7 @@ export class GeocodingCache<T> {
    * 生成缓存键
    * @param params 缓存参数
    */
-  generateKey(params: Record<string, any>): string {
+  generateKey(params: Record<string, unknown>): string {
     // 将参数排序后生成键，确保相同参数生成相同键
     const sortedParams = Object.keys(params)
       .sort()
@@ -327,11 +327,11 @@ export class GeocodingCache<T> {
 }
 
 // 导出单例实例（使用默认配置）
-let cacheInstance: GeocodingCache<any> | null = null;
+let cacheInstance: GeocodingCache<unknown> | null = null;
 
 export const getGeocodingCache = <T>(): GeocodingCache<T> => {
   if (!cacheInstance) {
-    cacheInstance = new GeocodingCache<T>();
+    cacheInstance = new GeocodingCache<unknown>();
   }
   return cacheInstance as GeocodingCache<T>;
 };

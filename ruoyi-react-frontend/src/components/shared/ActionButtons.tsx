@@ -7,6 +7,7 @@
 import { Space, Button, Dropdown } from 'antd';
 import { DownOutlined } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
+import type { FC } from 'react';
 
 export interface ActionButton {
   key: string;
@@ -16,16 +17,16 @@ export interface ActionButton {
   danger?: boolean;
   type?: 'link' | 'text' | 'primary' | 'default' | 'dashed';
   disabled?: boolean;
-  render?: () => React.ReactNode; // 自定义渲染（如 Popconfirm）
+  render?: () => React.ReactNode;
 }
 
 interface ActionButtonsProps {
   actions: ActionButton[];
-  threshold?: number; // 触发下拉菜单的按钮数量阈值，默认为3
+  threshold?: number;
   size?: 'small' | 'middle' | 'large';
 }
 
-const ActionButtons: React.FC<ActionButtonsProps> = ({
+const ActionButtons: FC<ActionButtonsProps> = ({
   actions,
   threshold = 3,
   size = 'small',
@@ -34,7 +35,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
     return null;
   }
 
-  // 如果按钮数量 < 阈值，直接显示所有按钮
+  // 按钮数量 < 阈值，直接显示所有按钮
   if (actions.length < threshold) {
     return (
       <Space size="small">
@@ -44,7 +45,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
               action.render()
             ) : (
               <Button
-                type={action.type || 'link'}
+                type={action.type ?? 'link'}
                 size={size}
                 icon={action.icon}
                 onClick={action.onClick}
@@ -63,7 +64,6 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
   // 按钮数量 >= 阈值，所有按钮都放到下拉菜单中
   const menuItems: MenuProps['items'] = actions.map((action) => {
     if (action.render) {
-      // 对于自定义渲染的按钮（如 Popconfirm），需要特殊处理
       return {
         key: action.key,
         label: (
