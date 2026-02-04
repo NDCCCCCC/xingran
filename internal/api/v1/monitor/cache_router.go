@@ -13,7 +13,7 @@ import (
 // ==================== 适配器 ====================
 
 // CacheProviderAdapter 缓存提供者适配器
-// 将 core.Core.Cache 适配为 CacheProvider
+// 将 core.Core.Cache 适配为 CacheProvider、StatsProvider、MultiLevelCacheProvider 和 DirectRedisProvider
 type CacheProviderAdapter struct {
 	cache interface {
 		Get(ctx context.Context, key string) (string, error)
@@ -25,11 +25,50 @@ type CacheProviderAdapter struct {
 		Keys(ctx context.Context, pattern string) ([]string, error)
 		FlushDB(ctx context.Context) error
 	}
+	statsCache interface {
+		GetStats(ctx context.Context) (map[string]interface{}, error)
+	}
+	multiLevelCache interface {
+		KeysByLevel(ctx context.Context, pattern string, level string) ([]string, error)
+	}
+	directRedis interface {
+		DirectRedisKeys(ctx context.Context, pattern string) ([]string, error)
+		DirectRedisGet(ctx context.Context, key string) (string, error)
+		DirectRedisTTL(ctx context.Context, key string) (time.Duration, error)
+	}
 }
 
 // NewCacheProviderAdapter 创建缓存提供者适配器
 func NewCacheProviderAdapter(core *core.Core) monitorServices.CacheProvider {
-	return &CacheProviderAdapter{cache: core.Cache}
+	adapter := &CacheProviderAdapter{cache: core.Cache}
+
+	// 尝试获取统计功能支持
+	type StatsCacheInterface interface {
+		GetStats(ctx context.Context) (map[string]interface{}, error)
+	}
+	if statsCache, ok := core.Cache.(StatsCacheInterface); ok {
+		adapter.statsCache = statsCache
+	}
+
+	// 尝试获取多级缓存支持
+	type MultiLevelCacheInterface interface {
+		KeysByLevel(ctx context.Context, pattern string, level string) ([]string, error)
+	}
+	if mlc, ok := core.Cache.(MultiLevelCacheInterface); ok {
+		adapter.multiLevelCache = mlc
+	}
+
+	// 尝试获取直接 Redis 访问支持
+	type DirectRedisInterface interface {
+		DirectRedisKeys(ctx context.Context, pattern string) ([]string, error)
+		DirectRedisGet(ctx context.Context, key string) (string, error)
+		DirectRedisTTL(ctx context.Context, key string) (time.Duration, error)
+	}
+	if dr, ok := core.Cache.(DirectRedisInterface); ok {
+		adapter.directRedis = dr
+	}
+
+	return adapter
 }
 
 func (a *CacheProviderAdapter) Get(ctx context.Context, key string) (string, error) {
@@ -64,7 +103,52 @@ func (a *CacheProviderAdapter) FlushDB(ctx context.Context) error {
 	return a.cache.FlushDB(ctx)
 }
 
-// MultiLevelCacheProviderAdapter 多级缓存适配器
+// GetStats 获取缓存统计信息
+// 实现 StatsProvider 接口
+func (a *CacheProviderAdapter) GetStats(ctx context.Context) (map[string]interface{}, error) {
+	if a.statsCache == nil {
+		return nil, monitorServices.ErrCacheStatsUnsupported
+	}
+	return a.statsCache.GetStats(ctx)
+}
+
+// KeysByLevel 按层级获取缓存键
+// 实现 MultiLevelCacheProvider 接口
+func (a *CacheProviderAdapter) KeysByLevel(ctx context.Context, pattern string, level string) ([]string, error) {
+	if a.multiLevelCache == nil {
+		return []string{}, nil
+	}
+	return a.multiLevelCache.KeysByLevel(ctx, pattern, level)
+}
+
+// DirectRedisKeys 直接访问 Redis 获取键列表
+// 实现 DirectRedisProvider 接口
+func (a *CacheProviderAdapter) DirectRedisKeys(ctx context.Context, pattern string) ([]string, error) {
+	if a.directRedis == nil {
+		return []string{}, nil
+	}
+	return a.directRedis.DirectRedisKeys(ctx, pattern)
+}
+
+// DirectRedisGet 直接访问 Redis 获取值
+// 实现 DirectRedisProvider 接口
+func (a *CacheProviderAdapter) DirectRedisGet(ctx context.Context, key string) (string, error) {
+	if a.directRedis == nil {
+		return "", nil
+	}
+	return a.directRedis.DirectRedisGet(ctx, key)
+}
+
+// DirectRedisTTL 直接访问 Redis 获取 TTL
+// 实现 DirectRedisProvider 接口
+func (a *CacheProviderAdapter) DirectRedisTTL(ctx context.Context, key string) (time.Duration, error) {
+	if a.directRedis == nil {
+		return 0, nil
+	}
+	return a.directRedis.DirectRedisTTL(ctx, key)
+}
+
+// MultiLevelCacheProviderAdapter 多级缓存适配器（保留用于兼容性）
 type MultiLevelCacheProviderAdapter struct {
 	cache interface {
 		KeysByLevel(ctx context.Context, pattern string, level string) ([]string, error)

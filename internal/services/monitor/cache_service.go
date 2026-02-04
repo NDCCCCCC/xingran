@@ -237,8 +237,9 @@ func (s *cacheServiceImpl) getCachesFromCacheWithLevel(ctx context.Context, para
 	var err error
 	var useDirectRedis bool
 
-	// 尝试使用直接 Redis 访问
-	if params.Level == "l2" || params.Level == "L2" || params.Level == "all" {
+	// 尝试使用直接 Redis 访问（仅用于查询 L2）
+	// 注意：查询 all 或 l1 时，不使用直接 Redis 访问，以确保获取所有层级的数据
+	if params.Level == "l2" || params.Level == "L2" {
 		if s.directRedis != nil {
 			allRedisKeys, redisErr := s.directRedis.DirectRedisKeys(ctx, pattern)
 			if redisErr == nil && len(allRedisKeys) > 0 {
@@ -254,7 +255,7 @@ func (s *cacheServiceImpl) getCachesFromCacheWithLevel(ctx context.Context, para
 			keys, err = s.multiLevelCache.KeysByLevel(ctx, pattern, "l1")
 		case "l2":
 			keys, err = s.multiLevelCache.KeysByLevel(ctx, pattern, "l2")
-		default:
+		default: // "all" 或其他值
 			keys, err = s.multiLevelCache.KeysByLevel(ctx, pattern, "all")
 		}
 		if err != nil {
@@ -351,6 +352,7 @@ func (s *cacheServiceImpl) getCachesFromSimpleCache(ctx context.Context, params 
 			Type:      "string",
 			Size:      int64(len(value)),
 			TTL:       ttlSeconds,
+			Location:  "l2", // 简单缓存默认为 Redis (L2)
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
 		})
@@ -386,6 +388,7 @@ func (s *cacheServiceImpl) GetCacheInfo(ctx context.Context, key string) (*model
 				Type:      "string",
 				TTL:       ttlSeconds,
 				Size:      int64(len(value)),
+				Location:  "l2", // 默认为 Redis (L2)
 				CreatedAt: time.Now(),
 				UpdatedAt: time.Now(),
 			}, nil
