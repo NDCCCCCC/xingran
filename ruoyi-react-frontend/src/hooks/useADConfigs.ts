@@ -31,7 +31,7 @@ export function useADConfigs(options: UseADConfigsOptions = {}) {
   const fetchConfigs = async () => {
     setLoading(true);
     try {
-      const params: any = { current: 1, pageSize: 100 };
+      const params: Record<string, unknown> = { current: 1, pageSize: 100 };
       if (enabledOnly) {
         params.status = 0; // 0=启用
       }

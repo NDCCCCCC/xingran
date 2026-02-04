@@ -45,7 +45,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
             captchaId: credentials.captchaId,
           };
 
-          const response = await post('/system/auth/login', loginRequest) as { data: { user: any; accessToken: string; refreshToken: string } };
+          const response = await post('/system/auth/login', loginRequest) as { data: { user: User; accessToken: string; refreshToken: string } };
           const { user, accessToken, refreshToken } = response.data;
 
           localStorage.setItem('accessToken', accessToken);

@@ -16,7 +16,7 @@ export const floorApi = {
   list: (params: PageParams) => post<ApiResponse<PageData<Floor>>>('/ops/floors/list', params),
 
   // 获取楼宇-楼层树
-  getTree: () => post<any[]>('/ops/floors/tree'),
+  getTree: () => post<{ id: string; floorName: string; buildingId: string; children?: unknown[] }[]>('/ops/floors/tree'),
 
   // 创建
   create: (data: Omit<Floor, 'id' | 'createdAt' | 'updatedAt'>) =>

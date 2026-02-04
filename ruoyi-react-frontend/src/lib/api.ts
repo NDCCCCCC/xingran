@@ -9,6 +9,19 @@ import {
   handleNetworkError,
   handleParseError,
 } from '@/utils/errorHandler';
+import type { BaseResponse } from '@/types/base';
+
+// 工具函数：生成请求ID
+function generateRequestId(): string {
+  return Date.now().toString(36) + Math.random().toString(36).substring(2);
+}
+
+// 工具函数：生成随机 nonce（防重放）
+function generateNonce(): string {
+  const array = new Uint8Array(16);
+  crypto.getRandomValues(array);
+  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+}
 
 // SM4 密钥和 IV 存储（用于响应解密）
 // Key: X-Request-ID, Value: { sm4KeyHex: string, ivHex: string }
@@ -28,26 +41,24 @@ const ENCRYPTION_BLACKLIST: string[] = [
   '/upload',
 ];
 
-// 创建axios实例
-const api: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://10.62.10.33:9000/api/v1',
-  timeout: 30000, // 默认30秒
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
 // 需要更长超时时间的接口
 const LONG_TIMEOUT_ENDPOINTS: string[] = [
   '/ad-domain/configs/',
 ];
 
+// 创建axios实例
+const api: AxiosInstance = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://10.62.10.33:9000/api/v1',
+  timeout: 30000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
 // 根据接口设置超时时间
 function getTimeout(url: string): number {
-  for (const endpoint of LONG_TIMEOUT_ENDPOINTS) {
-    if (url.includes(endpoint)) {
-      return 35 * 60 * 1000;
-    }
+  if (LONG_TIMEOUT_ENDPOINTS.some(endpoint => url.includes(endpoint))) {
+    return 35 * 60 * 1000;
   }
   return 30000;
 }
@@ -64,19 +75,12 @@ function shouldEncryptRequest(url: string, method: string): boolean {
     return false;
   }
 
-  for (const prefix of ENCRYPTION_BLACKLIST) {
-    if (url.startsWith(prefix)) {
-      return false;
-    }
+  if (ENCRYPTION_BLACKLIST.some(prefix => url.startsWith(prefix))) {
+    return false;
   }
 
   if (ENCRYPTION_WHITELIST.length > 0) {
-    for (const prefix of ENCRYPTION_WHITELIST) {
-      if (url.startsWith(prefix)) {
-        return true;
-      }
-    }
-    return false;
+    return ENCRYPTION_WHITELIST.some(prefix => url.startsWith(prefix));
   }
 
   return true;
@@ -210,39 +214,23 @@ api.interceptors.response.use(
   }
 );
 
-// 生成请求ID
-function generateRequestId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2);
-}
-
-// 生成随机 nonce（防重放）
-function generateNonce(): string {
-  const array = new Uint8Array(16);
-  crypto.getRandomValues(array);
-  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
-}
-
-// 封装GET请求
+// 封装常用请求方法
 export function get<T = unknown>(url: string, params?: unknown): Promise<T> {
   return api.get(url, { params });
 }
 
-// 封装POST请求
 export function post<T = unknown>(url: string, data?: unknown): Promise<T> {
   return api.post(url, data);
 }
 
-// 封装PUT请求
 export function put<T = unknown>(url: string, data?: unknown): Promise<T> {
   return api.put(url, data);
 }
 
-// 封装DELETE请求
 export function del<T = unknown>(url: string): Promise<T> {
   return api.delete(url);
 }
 
-// 封装文件上传
 export function upload<T = unknown>(url: string, file: File): Promise<T> {
   const formData = new FormData();
   formData.append('file', file);
@@ -254,7 +242,6 @@ export function upload<T = unknown>(url: string, file: File): Promise<T> {
   });
 }
 
-// 封装FormData POST请求
 export function postFormData<T = unknown>(url: string, formData: FormData): Promise<T> {
   return api.post(url, formData, {
     headers: {
@@ -263,9 +250,34 @@ export function postFormData<T = unknown>(url: string, formData: FormData): Prom
   });
 }
 
-// 封装长时间运行请求
-export function postLongRequest<T = unknown>(url: string, data?: unknown, timeout: number = 300000): Promise<T> {
+export function postLongRequest<T = unknown>(
+  url: string,
+  data?: unknown,
+  timeout: number = 300000
+): Promise<T> {
   return api.post(url, data, { timeout });
+}
+
+// 类型化 API 函数
+
+export function getTyped<T>(url: string, params?: unknown): Promise<BaseResponse<T>> {
+  return api.get(url, { params });
+}
+
+export function postTyped<T>(url: string, data?: unknown): Promise<BaseResponse<T>> {
+  return api.post(url, data);
+}
+
+export function putTyped<T>(url: string, data?: unknown): Promise<BaseResponse<T>> {
+  return api.put(url, data);
+}
+
+export function patchTyped<T>(url: string, data?: unknown): Promise<BaseResponse<T>> {
+  return api.patch(url, data);
+}
+
+export function deleteTyped<T>(url: string): Promise<BaseResponse<T>> {
+  return api.delete(url);
 }
 
 // 导出axios实例

@@ -110,10 +110,10 @@ export interface APINotificationConfig {
   configType: APIConfigType;
   apiUrl: string;
   apiMethod: string;
-  headers: Record<string, any>;
+  headers: Record<string, string>;
   templateBody: string;
   authType: AuthType;
-  authConfig: Record<string, any>;
+  authConfig: Record<string, string | number | boolean>;
   retryCount: number;
   timeout: number;
   isDefault: boolean;
@@ -135,10 +135,10 @@ export interface APINotificationConfigCreateRequest {
   configType: APIConfigType;
   apiUrl: string;
   apiMethod?: string;
-  headers?: Record<string, any>;
+  headers?: Record<string, string>;
   templateBody?: string;
   authType?: AuthType;
-  authConfig?: Record<string, any>;
+  authConfig?: Record<string, string | number | boolean>;
   retryCount?: number;
   timeout?: number;
   isDefault?: boolean;
@@ -150,10 +150,10 @@ export interface APINotificationConfigUpdateRequest {
   configName?: string;
   apiUrl?: string;
   apiMethod?: string;
-  headers?: Record<string, any>;
+  headers?: Record<string, string>;
   templateBody?: string;
   authType?: AuthType;
-  authConfig?: Record<string, any>;
+  authConfig?: Record<string, string | number | boolean>;
   retryCount?: number;
   timeout?: number;
   isDefault?: boolean;

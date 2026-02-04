@@ -178,7 +178,7 @@ export interface PeriodicWorkOrderTemplate {
   // 关联
   category?: WorkOrderCategory;
   assignee?: SimpleUser;
-  job?: any;
+  job?: { id: string; jobName: string } | null;
   executionLogs?: PeriodicWorkOrderLog[];
   createdAt: string;
   createdBy: string;
@@ -198,7 +198,7 @@ export interface PeriodicWorkOrderLog {
   // 关联
   template?: PeriodicWorkOrderTemplate;
   workOrder?: WorkOrder;
-  job?: any;
+  job?: { id: string; jobName: string } | null;
 }
 
 // ==================== 工单统计相关类型 ====================
@@ -443,7 +443,7 @@ export function getWorkOrderRatings(id: string): Promise<BaseResponse<WorkOrderR
   return post(`/workorder/orders/${id}/ratings`, {});
 }
 
-export function getRatingStatistics(id: string): Promise<BaseResponse<any>> {
+export function getRatingStatistics(id: string): Promise<BaseResponse<{ averageRating: number; ratingCounts: Record<number, number> }>> {
   return post(`/workorder/orders/${id}/rating-statistics`, {});
 }
 

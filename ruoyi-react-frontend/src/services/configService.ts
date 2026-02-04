@@ -72,7 +72,7 @@ class ConfigService {
 	/**
 	 * 数据迁移 - 处理不同版本的配置格式
 	 */
-	migratePreferences(prefs: any): UserPreferences {
+	migratePreferences(prefs: Partial<UserPreferences> | Record<string, unknown>): UserPreferences {
 		const version = prefs.version || 1;
 
 		// 版本 1 → 版本 2（旧数据结构）
@@ -134,15 +134,15 @@ class ConfigService {
 			: defaultThemeConfiguration.style;
 
 		// 验证布局类型是否有效
-		const validLayoutTypes = ['classic', 'hybrid', 'innovative'];
-		const layoutType = backend.layoutType && validLayoutTypes.includes(backend.layoutType)
-			? (backend.layoutType as any)
+		const validLayoutTypes: Array<'classic' | 'hybrid' | 'innovative'> = ['classic', 'hybrid', 'innovative'];
+		const layoutType = backend.layoutType && validLayoutTypes.includes(backend.layoutType as 'classic' | 'hybrid' | 'innovative')
+			? (backend.layoutType as 'classic' | 'hybrid' | 'innovative')
 			: defaultLayoutConfiguration.type;
 
 		// 验证密度模式是否有效
-		const validDensityModes = ['compact', 'comfortable', 'spacious'];
-		const density = backend.layoutDensity && validDensityModes.includes(backend.layoutDensity)
-			? (backend.layoutDensity as any)
+		const validDensityModes: Array<'compact' | 'comfortable' | 'spacious'> = ['compact', 'comfortable', 'spacious'];
+		const density = backend.layoutDensity && validDensityModes.includes(backend.layoutDensity as 'compact' | 'comfortable' | 'spacious')
+			? (backend.layoutDensity as 'compact' | 'comfortable' | 'spacious')
 			: defaultLayoutConfiguration.density;
 
 		// 构建自定义颜色对象（只有存在时才添加）
@@ -184,7 +184,7 @@ class ConfigService {
 	/**
 	 * 从 ColorPicker 颜色对象中提取十六进制字符串
 	 */
-	private extractColorString(color: any): string | undefined {
+	private extractColorString(color: string | { cleared?: boolean; metaColor?: { r: number; g: number; b: number }; toHexString?: () => string } | null | undefined): string | undefined {
 		if (!color) return undefined;
 
 		// 如果已经是字符串，直接返回

@@ -24,7 +24,11 @@ export interface KnowledgeArticle {
   // 关联
   category?: KnowledgeCategory;
   tags?: KnowledgeTag[];
-  sourceWorkOrder?: any;
+  sourceWorkOrder?: {
+    id: string;
+    title: string;
+    workOrderNo?: string;
+  } | null;
   createdAt: string;
   createdBy: string;
   updatedAt?: string;

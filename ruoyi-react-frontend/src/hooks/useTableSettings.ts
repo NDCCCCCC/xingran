@@ -42,7 +42,7 @@ export function useTableSettings(options: UseTableSettingsOptions = {}) {
 	 * 获取 Table props
 	 * 自动集成分页配置
 	 */
-	const getTableProps = <T = any>(): Partial<TableProps<T>> => ({
+	const getTableProps = <T = unknown>(): Partial<TableProps<T>> => ({
 		pagination: pagination.paginationProps,
 	});
 

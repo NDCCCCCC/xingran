@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
 import { Form } from 'antd';
+import type { FormInstance } from 'antd/es/form';
 
 export interface TableManagerOptions {
   pageSize?: number;
@@ -24,8 +25,8 @@ export interface TableManagerReturn<T> {
   pageSize: number;
   selectedRowKeys: React.Key[];
   // 表单
-  searchForm: any;
-  editForm: any;
+  searchForm: FormInstance<unknown>;
+  editForm: FormInstance<unknown>;
   editModalVisible: boolean;
   editingItem: T | null;
   // Setters
@@ -44,7 +45,7 @@ export interface TableManagerReturn<T> {
   handleAdd: () => void;
   handleEdit: (item: T) => void;
   handleModalClose: () => void;
-  loadData: (params?: any) => Promise<void>;
+  loadData: (params?: Record<string, unknown>) => Promise<void>;
   resetSelection: () => void;
 }
 
@@ -53,7 +54,7 @@ export interface TableManagerReturn<T> {
  * 封装表格页面常见的状态和操作
  */
 export function useTableManager<T>(
-  loadFunction: (params: any) => Promise<{ list: T[]; total: number }>,
+  loadFunction: (params: Record<string, unknown>) => Promise<{ list: T[]; total: number }>,
   options: TableManagerOptions = {}
 ): TableManagerReturn<T> {
   const { pageSize: defaultPageSize = 10, onSuccess, externalPagination } = options;
@@ -62,32 +63,17 @@ export function useTableManager<T>(
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<T[]>([]);
   const [total, setTotal] = useState(0);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
-  // 使用外部分页状态或内部状态
+  // 内部分页状态
   const [internalCurrent, setInternalCurrent] = useState(1);
   const [internalPageSize, setInternalPageSize] = useState(defaultPageSize);
 
-  const current = useMemo(
-    () => externalPagination?.current ?? internalCurrent,
-    [externalPagination?.current, internalCurrent]
-  );
-
-  const pageSize = useMemo(
-    () => externalPagination?.pageSize ?? internalPageSize,
-    [externalPagination?.pageSize, internalPageSize]
-  );
-
-  const setCurrent = useMemo(
-    () => externalPagination?.setCurrent ?? setInternalCurrent,
-    [externalPagination?.setCurrent]
-  );
-
-  const setPageSize = useMemo(
-    () => externalPagination?.setPageSize ?? setInternalPageSize,
-    [externalPagination?.setPageSize]
-  );
-
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  // 分页状态（优先使用外部）
+  const current = externalPagination?.current ?? internalCurrent;
+  const pageSize = externalPagination?.pageSize ?? internalPageSize;
+  const setCurrent = externalPagination?.setCurrent ?? setInternalCurrent;
+  const setPageSize = externalPagination?.setPageSize ?? setInternalPageSize;
 
   // 表单状态
   const [searchForm] = Form.useForm();
@@ -95,15 +81,13 @@ export function useTableManager<T>(
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingItem, setEditingItem] = useState<T | null>(null);
 
-  // 使用 ref 存储 loadFunction 和 externalPagination，避免依赖导致的循环
+  // 使用 ref 存储可变引用，避免依赖循环
   const loadFunctionRef = useRef(loadFunction);
   const externalPaginationRef = useRef(externalPagination);
-
-  // 使用 ref 存储最新的函数引用，避免依赖导致的循环
   loadFunctionRef.current = loadFunction;
   externalPaginationRef.current = externalPagination;
 
-  const loadData = useCallback(async (params: any = {}) => {
+  const loadData = useCallback(async (params: Record<string, unknown> = {}) => {
     setLoading(true);
     try {
       const requestParams = {
@@ -116,14 +100,11 @@ export function useTableManager<T>(
       setData(result.list ?? []);
       const newTotal = result.total ?? 0;
       setTotal(newTotal);
-
       externalPaginationRef.current?.setTotal?.(newTotal);
-    } catch (error) {
-      throw error;
     } finally {
       setLoading(false);
     }
-  }, [current, pageSize, setData, setTotal, setLoading]);
+  }, [current, pageSize]);
 
   const handleSearch = useCallback(() => {
     searchForm.validateFields().then((values) => {
@@ -147,22 +128,22 @@ export function useTableManager<T>(
     setEditingItem(null);
     editForm.resetFields();
     setEditModalVisible(true);
-  }, [editForm, setEditingItem, setEditModalVisible]);
+  }, [editForm]);
 
   const handleEdit = useCallback((item: T) => {
     setEditingItem(item);
     setEditModalVisible(true);
-  }, [setEditingItem, setEditModalVisible]);
+  }, []);
 
   const handleModalClose = useCallback(() => {
     setEditModalVisible(false);
     setEditingItem(null);
     editForm.resetFields();
-  }, [setEditModalVisible, setEditingItem, editForm]);
+  }, [editForm]);
 
   const resetSelection = useCallback(() => {
     setSelectedRowKeys([]);
-  }, [setSelectedRowKeys]);
+  }, []);
 
   return {
     // 状态
