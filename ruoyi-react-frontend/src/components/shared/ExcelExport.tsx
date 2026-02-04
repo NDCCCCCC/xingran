@@ -99,7 +99,7 @@ const ExcelExport: FC<ExcelExportProps> = ({
           </Button>
         </Space>
       }
-      destroyOnClose
+      destroyOnHidden
     >
       <Form
         form={form}

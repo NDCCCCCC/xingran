@@ -64,6 +64,14 @@ const FloorManagement: FC = () => {
   const [selectedDeptId, setSelectedDeptId] = useState<string>('');
   const [selectedBuildingId, setSelectedBuildingId] = useState<string>('');
 
+  // 筛选表单使用的部门和楼宇状态
+  const [filterDeptId, setFilterDeptId] = useState<string>('');
+  const [filterBuildingOptions, setFilterBuildingOptions] = useState<Building[]>([]);
+
+  // 模态框使用的部门和楼宇状态
+  const [modalDeptId, setModalDeptId] = useState<string>('');
+  const [modalBuildingOptions, setModalBuildingOptions] = useState<Building[]>([]);
+
   // 楼层选项状态（用于编辑器中的切换）
   const [floorOptions, setFloorOptions] = useState<FloorOption[]>([]);
 
@@ -208,13 +216,31 @@ const FloorManagement: FC = () => {
    * 打开编辑弹窗
    */
   const openModal = useCallback(
-    (record?: Floor) => {
+    async (record?: Floor) => {
       if (record) {
         handleEdit(record);
         floorForm.setFieldsValue(record);
+
+        // 获取楼宇信息以预填充部门和楼宇选项
+        try {
+          const buildingResult = await buildingApi.get(record.buildingId);
+          const building = buildingResult.data;
+
+          if (building) {
+            setModalDeptId(building.orgId);
+            // 加载该部门的楼宇列表
+            const result = await buildingApi.list({ orgId: building.orgId, current: 1, pageSize: 1000 });
+            setModalBuildingOptions(result.data?.list || []);
+          }
+        } catch (error) {
+          console.error('加载楼宇信息失败:', error);
+        }
       } else {
         handleAdd();
         floorForm.setFieldsValue(DEFAULT_FORM_VALUES);
+        // 清空模态框的部门和楼宇选项
+        setModalDeptId('');
+        setModalBuildingOptions([]);
       }
     },
     [handleEdit, handleAdd, floorForm]
@@ -316,6 +342,52 @@ const FloorManagement: FC = () => {
       return [];
     }
   }, []);
+
+  /**
+   * 筛选表单的部门切换处理
+   */
+  const handleFilterDepartmentChange = useCallback(
+    async (deptId: string) => {
+      setFilterDeptId(deptId || '');
+      // 清空楼宇选项
+      setFilterBuildingOptions([]);
+      // 清空表单中的楼宇选择
+      searchForm.setFieldValue('buildingId', undefined);
+
+      if (deptId) {
+        try {
+          const result = await buildingApi.list({ orgId: deptId, current: 1, pageSize: 1000 });
+          setFilterBuildingOptions(result.data?.list || []);
+        } catch (error) {
+          console.error('加载筛选楼宇选项失败:', error);
+        }
+      }
+    },
+    [searchForm]
+  );
+
+  /**
+   * 模态框的部门切换处理
+   */
+  const handleModalDepartmentChange = useCallback(
+    async (deptId: string) => {
+      setModalDeptId(deptId || '');
+      // 清空楼宇选项
+      setModalBuildingOptions([]);
+      // 清空表单中的楼宇选择
+      floorForm.setFieldValue('buildingId', undefined);
+
+      if (deptId) {
+        try {
+          const result = await buildingApi.list({ orgId: deptId, current: 1, pageSize: 1000 });
+          setModalBuildingOptions(result.data?.list || []);
+        } catch (error) {
+          console.error('加载模态框楼宇选项失败:', error);
+        }
+      }
+    },
+    [floorForm]
+  );
 
   /**
    * 加载指定楼宇的楼层选项
@@ -497,6 +569,9 @@ const FloorManagement: FC = () => {
         buildingOptions={buildingOptions}
         viewMode={viewMode}
         loading={loading}
+        departmentTreeData={departmentTreeData}
+        buildingOptionsByDept={filterBuildingOptions}
+        selectedDeptId={filterDeptId}
         onSearch={handleSearch}
         onReset={handleReset}
         onRefresh={handleRefresh}
@@ -505,6 +580,7 @@ const FloorManagement: FC = () => {
         onExport={() => setExportVisible(true)}
         onBatchDelete={handleBatchDelete}
         onAdd={() => openModal()}
+        onDepartmentChange={handleFilterDepartmentChange}
         selectedCount={selectedRowKeys.length}
       />
 
@@ -553,13 +629,19 @@ const FloorManagement: FC = () => {
         visible={modalVisible}
         editingFloor={editingFloor}
         buildingOptions={buildingOptions}
+        departmentTreeData={departmentTreeData}
+        buildingOptionsByDept={modalBuildingOptions}
+        selectedDeptId={modalDeptId}
         form={floorForm}
         onOk={handleSave}
         onCancel={() => {
           setModalVisible(false);
           floorForm.resetFields();
           setEditingFloor(null);
+          setModalDeptId('');
+          setModalBuildingOptions([]);
         }}
+        onDepartmentChange={handleModalDepartmentChange}
       />
 
       <ExcelImport

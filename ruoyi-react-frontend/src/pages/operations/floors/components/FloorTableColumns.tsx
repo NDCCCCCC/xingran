@@ -51,7 +51,7 @@ export function createFloorTableColumns(callbacks: FloorTableColumnCallbacks): C
           },
           {
             key: 'floorPlan',
-            label: '编辑平面图',
+            label: '查看平面图',
             icon: <BgColorsOutlined />,
             onClick: () => onEditFloorPlan(record),
           },

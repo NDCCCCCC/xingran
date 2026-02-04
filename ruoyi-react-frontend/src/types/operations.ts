@@ -30,6 +30,7 @@ export type BuildingStatus = Status;
  */
 export interface Building {
   id: string;
+  orgId: string;  // 所属机构ID
   name: string;
   code: string;
   address?: string;
@@ -55,6 +56,7 @@ export type FloorStatus = Status;
  */
 export interface Floor {
   id: string;
+  buildingId: string;
   buildingCode: string;
   code: string;
   buildingName?: string;

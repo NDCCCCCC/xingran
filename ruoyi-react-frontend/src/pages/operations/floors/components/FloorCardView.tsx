@@ -43,7 +43,7 @@ export const FloorCardView: FC<FloorCardViewProps> = ({
               <BgColorsOutlined
                 key="floorPlan"
                 onClick={() => onEditFloorPlan(floor)}
-                title="编辑平面图"
+                title="查看平面图"
               />,
               <Popconfirm
                 key="delete"

@@ -1,10 +1,7 @@
 import { Tag, Button, Space } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+import type { ColumnsType, ColumnType, ColumnGroupType } from 'antd/es/table';
 import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { formatDateTime } from '@/utils/datetime';
-
-// 泛型类型定义，用于表格辅助函数
-type TableRowData = Record<string, unknown>;
 
 export interface ColumnConfig {
   title: string;
@@ -14,10 +11,13 @@ export interface ColumnConfig {
   align?: 'left' | 'center' | 'right';
 }
 
-export function createStatusColumn<T extends TableRowData = TableRowData>(
+// 使用更宽松的类型约束，同时保持类型安全
+type TableColumn<T> = ColumnGroupType<T> | ColumnType<T>;
+
+export function createStatusColumn<T>(
   field: string = 'status',
   config: Partial<ColumnConfig> = {}
-): ColumnsType<T>[0] {
+): TableColumn<T> {
   return {
     title: '状态',
     dataIndex: field,
@@ -32,10 +32,10 @@ export function createStatusColumn<T extends TableRowData = TableRowData>(
   };
 }
 
-export function createDateTimeColumn<T extends TableRowData = TableRowData>(
+export function createDateTimeColumn<T>(
   field: string = 'createdAt',
   config: Partial<ColumnConfig> = {}
-): ColumnsType<T>[0] {
+): TableColumn<T> {
   return {
     title: '创建时间',
     dataIndex: field,
@@ -46,11 +46,11 @@ export function createDateTimeColumn<T extends TableRowData = TableRowData>(
   };
 }
 
-export function createActionColumn<T extends TableRowData = TableRowData>(
+export function createActionColumn<T>(
   onEdit?: (record: T) => void,
   onDelete?: (record: T) => void,
   extraActions?: (record: T) => React.ReactNode
-): ColumnsType<T>[0] {
+): TableColumn<T> {
   return {
     title: '操作',
     key: 'action',
@@ -74,11 +74,11 @@ export function createActionColumn<T extends TableRowData = TableRowData>(
   };
 }
 
-export function createTagColumn<T extends TableRowData = TableRowData>(
+export function createTagColumn<T>(
   field: string,
   colorMap: Record<string, string> = {},
   labelMap: Record<string, string> = {}
-): ColumnsType<T>[0] {
+): TableColumn<T> {
   return {
     title: field,
     dataIndex: field,
@@ -91,10 +91,10 @@ export function createTagColumn<T extends TableRowData = TableRowData>(
   };
 }
 
-export function createIndexColumn<T extends TableRowData = TableRowData>(
+export function createIndexColumn<T>(
   currentPage: number,
   pageSize: number
-): ColumnsType<T>[0] {
+): TableColumn<T> {
   return {
     title: '序号',
     key: 'index',
