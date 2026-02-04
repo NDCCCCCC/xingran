@@ -2059,6 +2059,7 @@ body {
   min-width: 360px !important;
   flex: 0 0 360px !important;
   border-right: none !important;
+  /* height: calc(100vh - 64px); */
 }
 
 .dept-list-sider .ant-layout-sider-children {
