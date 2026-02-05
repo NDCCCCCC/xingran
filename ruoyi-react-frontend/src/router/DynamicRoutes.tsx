@@ -4,7 +4,7 @@
  */
 
 import { lazy, useMemo, Suspense } from 'react';
-import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useMenuStore } from '@/store/menuStore';
 import { RouteGenerator } from './routeGenerator';
 import type { MenuRouteConfig } from '@/types/menu';
@@ -69,8 +69,23 @@ const createLazyRoute = (route: MenuRouteConfig) => {
   );
 };
 
+function UploadsFallback() {
+  // 对于 /uploads/* 路径，返回 null 让浏览器直接处理静态资源
+  // 这些请求应该由后端服务器或 Vite 代理处理
+  return null;
+}
+
 export function DynamicRoutes() {
   const { allMenus } = useMenuStore();
+  const location = useLocation();
+
+  // 检查是否是上传文件路径
+  const isUploadsPath = location.pathname.startsWith('/uploads/');
+
+  // 如果是上传文件路径，不渲染路由
+  if (isUploadsPath) {
+    return <UploadsFallback />;
+  }
 
   const routeElements = useMemo(() => {
     if (allMenus.length === 0) {

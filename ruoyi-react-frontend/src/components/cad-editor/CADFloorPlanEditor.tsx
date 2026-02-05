@@ -14,7 +14,6 @@ import { EDITOR_CONSTANTS, snapToGrid, checkWorkstationCollision, pointToLineDis
 import type { FloorPlanData, Wall, Door, EditorMode, Layer, Point, WallType, TextElement } from './types';
 import type { WorkstationNode } from '@/components/shared/FloorPlanEditor.types';
 
-// 拖动阈值（像素）：鼠标移动超过此距离才开始拖动
 const DRAG_THRESHOLD = 5;
 
 export interface CADFloorPlanEditorProps {
@@ -24,6 +23,9 @@ export interface CADFloorPlanEditorProps {
   doors?: Door[];
   workstations?: WorkstationNode[];
   texts?: TextElement[];
+  planImageId?: string;       // 平面图图片ID
+  planImageUrl?: string;      // 平面图图片URL
+  layerConfig?: LayerConfig;  // 图层配置
   onSave?: (data: FloorPlanData) => void;
   readOnly?: boolean;
   style?: React.CSSProperties;
@@ -36,6 +38,9 @@ export function CADFloorPlanEditor({
   doors = [],
   workstations = [],
   texts = [],
+  planImageId,
+  planImageUrl,
+  layerConfig,
   onSave,
   readOnly = false,
   style,
@@ -57,6 +62,7 @@ export function CADFloorPlanEditor({
   // 图层状态
   const [layers, setLayers] = useState<Layer[]>([
     { id: 'grid', name: '网格', type: 'grid', visible: true, locked: true, opacity: 1 },
+    { id: 'plan_image', name: '平面图', type: 'plan_image', visible: true, locked: true, opacity: 0.5 },
     { id: 'wall', name: '墙体', type: 'wall', visible: true, locked: false, opacity: 1 },
     { id: 'door', name: '门', type: 'door', visible: true, locked: false, opacity: 1 },
     { id: 'workstation', name: '工位', type: 'workstation', visible: true, locked: false, opacity: 1 },
@@ -73,6 +79,10 @@ export function CADFloorPlanEditor({
     doors,
     workstations,
     texts: texts || [],
+    planImageId,
+    planImageUrl,
+    planImageTransform: { x: 0, y: 0, scale: 1 },
+    layerConfig,
     gridSize: EDITOR_CONSTANTS.DEFAULT_GRID_SIZE,
     showGrid: true,
     snapToGrid: true,
@@ -92,6 +102,23 @@ export function CADFloorPlanEditor({
   const [boxSelectStart, setBoxSelectStart] = useState<Point | null>(null);
   const [boxSelectEnd, setBoxSelectEnd] = useState<Point | null>(null);
   const [editingWallId, setEditingWallId] = useState<string | null>(null);
+
+  // 平面图图片拖拽状态
+  const [isDraggingPlanImage, setIsDraggingPlanImage] = useState(false);
+  const planImageDragStart = useRef<Point | null>(null);
+
+  // 使用 ref 存储 offset 和 scale 的最新值，避免闭包问题
+  const offsetRef = useRef(offset);
+  const scaleRef = useRef(scale);
+
+  // 同步 ref 值
+  useEffect(() => {
+    offsetRef.current = offset;
+  }, [offset]);
+
+  useEffect(() => {
+    scaleRef.current = scale;
+  }, [scale]);
 
   // ==================== 墙体绘制 ====================
   const wallDrawing = useWallDrawing({
@@ -189,37 +216,72 @@ export function CADFloorPlanEditor({
     setOffset({ x: 0, y: 0 });
   }, []);
 
-  // Alt + 鼠标滚轮缩放
+  // 平面图自动隐藏逻辑：当有墙体或门时，默认隐藏平面图
+  useEffect(() => {
+    const hasWallsOrDoors = floorPlanData.walls.length > 0 || floorPlanData.doors.length > 0;
+    const planImageLayer = layers.find(l => l.id === 'plan_image');
+
+    // 如果有图层配置，使用配置值；否则使用默认行为（有内容时隐藏）
+    const autoHide = layerConfig?.planImage?.autoHide !== false;
+
+    if (autoHide && planImageLayer) {
+      setLayers(prev => prev.map(layer =>
+        layer.id === 'plan_image'
+          ? { ...layer, visible: !hasWallsOrDoors }
+          : layer
+      ));
+    }
+  }, [floorPlanData.walls.length, floorPlanData.doors.length, layerConfig?.planImage?.autoHide]);
+
+  // 鼠标滚轮缩放（Shift+滚轮缩放平面图，普通滚轮缩放画布）
   useEffect(() => {
     const svgElement = svgRef.current;
     if (!svgElement) return;
 
     const handleWheel = (e: WheelEvent) => {
-      if (!e.altKey) return;
-
       e.preventDefault();
 
+      // 检测是否在平面图图片上且按住 Shift 键
+      const target = e.target as SVGElement;
+      const isOnPlanImage = target.closest('g[data-plan-image="true"]');
+      const isShiftKey = (e as WheelEvent).shiftKey;
+      const planImageLayer = layers.find((l) => l.id === 'plan_image');
+      const isLayerLocked = planImageLayer?.locked;
+
+      if (isOnPlanImage && isShiftKey && !readOnly && !isLayerLocked && floorPlanData.planImageUrl) {
+        // 缩放平面图图片
+        const delta = e.deltaY > 0 ? -0.1 : 0.1;
+        setFloorPlanData((prev) => ({
+          ...prev,
+          planImageTransform: {
+            ...(prev.planImageTransform || { x: 0, y: 0, scale: 1 }),
+            scale: Math.max(0.1, Math.min(5, (prev.planImageTransform?.scale || 1) + delta)),
+          },
+        }));
+        return;
+      }
+
+      // 否则缩放画布
       const zoomDelta = e.deltaY > 0 ? -EDITOR_CONSTANTS.ZOOM_STEP : EDITOR_CONSTANTS.ZOOM_STEP;
+      const prevScale = scaleRef.current;
+      const newScale = Math.max(
+        EDITOR_CONSTANTS.MIN_SCALE,
+        Math.min(EDITOR_CONSTANTS.MAX_SCALE, prevScale + zoomDelta)
+      );
 
-      setScale((prevScale) => {
-        const newScale = Math.max(
-          EDITOR_CONSTANTS.MIN_SCALE,
-          Math.min(EDITOR_CONSTANTS.MAX_SCALE, prevScale + zoomDelta)
-        );
+      const rect = svgRef.current?.getBoundingClientRect();
+      if (rect) {
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        const currentOffset = offsetRef.current;
+        const canvasX = (mouseX - currentOffset.x) / prevScale;
+        const canvasY = (mouseY - currentOffset.y) / prevScale;
+        const newOffsetX = mouseX - canvasX * newScale;
+        const newOffsetY = mouseY - canvasY * newScale;
+        setOffset({ x: newOffsetX, y: newOffsetY });
+      }
 
-        const rect = svgRef.current?.getBoundingClientRect();
-        if (rect) {
-          const mouseX = e.clientX - rect.left;
-          const mouseY = e.clientY - rect.top;
-          const canvasX = (mouseX - offset.x) / prevScale;
-          const canvasY = (mouseY - offset.y) / prevScale;
-          const newOffsetX = mouseX - canvasX * newScale;
-          const newOffsetY = mouseY - canvasY * newScale;
-          setOffset({ x: newOffsetX, y: newOffsetY });
-        }
-
-        return newScale;
-      });
+      setScale(newScale);
     };
 
     svgElement.addEventListener('wheel', handleWheel, { passive: false });
@@ -227,7 +289,7 @@ export function CADFloorPlanEditor({
     return () => {
       svgElement.removeEventListener('wheel', handleWheel);
     };
-  }, [offset]);
+  }, [readOnly, floorPlanData.planImageUrl, layers]); // 添加 layers 依赖
 
   // ==================== 选择操作 ====================
   const handleSelectElement = useCallback((id: string, type: 'wall' | 'door' | 'workstation' | 'text', addToSelection = false) => {
@@ -682,6 +744,22 @@ export function CADFloorPlanEditor({
     (e: React.MouseEvent) => {
       const point = getCanvasPoint(e.clientX, e.clientY);
 
+      // 拖拽平面图图片
+      if (isDraggingPlanImage && planImageDragStart.current && !readOnly) {
+        const dx = (e.clientX - planImageDragStart.current.x) / scale;
+        const dy = (e.clientY - planImageDragStart.current.y) / scale;
+        setFloorPlanData((prev) => ({
+          ...prev,
+          planImageTransform: {
+            ...(prev.planImageTransform || { x: 0, y: 0, scale: 1 }),
+            x: (prev.planImageTransform?.x || 0) + dx,
+            y: (prev.planImageTransform?.y || 0) + dy,
+          },
+        }));
+        planImageDragStart.current = { x: e.clientX, y: e.clientY };
+        return;
+      }
+
       // 平移画布（Alt+左键或中键）
       if (isDragging && lastMousePos) {
         const dx = e.clientX - lastMousePos.x;
@@ -802,7 +880,7 @@ export function CADFloorPlanEditor({
         wallDrawing.updatePreview(previewPoint, e.shiftKey);
       }
     },
-    [isDragging, lastMousePos, isBoxSelecting, boxSelectStart, draggedElement, mode, wallDrawing, getCanvasPoint, readOnly, selectedIds, findNearbyWallNode, floorPlanData]
+    [isDragging, lastMousePos, isBoxSelecting, boxSelectStart, draggedElement, isDraggingPlanImage, mode, wallDrawing, getCanvasPoint, readOnly, selectedIds, findNearbyWallNode, floorPlanData, scale]
   );
 
   const handleCanvasMouseUp = useCallback(() => {
@@ -817,6 +895,10 @@ export function CADFloorPlanEditor({
     lastElementMouseCanvasPos.current = null;
     dragStartCanvasPos.current = null;
     hasMovedBeyondThreshold.current = false;
+
+    // 清除平面图拖拽状态
+    setIsDraggingPlanImage(false);
+    planImageDragStart.current = null;
 
     // 框选结束，选择框内的元素
     if (wasBoxSelecting && boxSelectStart && boxSelectEnd) {
@@ -1154,6 +1236,44 @@ export function CADFloorPlanEditor({
                   height={floorPlanData.height}
                   fill="url(#grid)"
                 />
+              )}
+
+              {/* 平面图图层 */}
+              {layers.find((l) => l.id === 'plan_image')?.visible && floorPlanData.planImageUrl && (() => {
+                const planImageLayer = layers.find((l) => l.id === 'plan_image');
+                const isLayerLocked = planImageLayer?.locked;
+                return (
+                  <g
+                    data-plan-image="true"
+                    opacity={planImageLayer?.opacity || 0.5}
+                    transform={
+                      floorPlanData.planImageTransform
+                        ? `translate(${floorPlanData.planImageTransform.x}, ${floorPlanData.planImageTransform.y}) scale(${floorPlanData.planImageTransform.scale})`
+                        : undefined
+                    }
+                    style={{
+                      pointerEvents: (readOnly || isLayerLocked) ? 'none' : 'auto',
+                      cursor: (readOnly || isLayerLocked) ? 'default' : (isDraggingPlanImage ? 'grabbing' : 'grab')
+                    }}
+                    onMouseDown={(e) => {
+                      if (e.button === 0 && !readOnly && !isLayerLocked) {
+                        e.stopPropagation();
+                        setIsDraggingPlanImage(true);
+                        planImageDragStart.current = { x: e.clientX, y: e.clientY };
+                      }
+                    }}
+                  >
+                    <image
+                      href={floorPlanData.planImageUrl}
+                      x={0}
+                      y={0}
+                      width={floorPlanData.width}
+                      height={floorPlanData.height}
+                      preserveAspectRatio="xMidYMid meet"
+                    />
+                  </g>
+                );
+              })()}
               )}
 
               {/* 墙体 */}

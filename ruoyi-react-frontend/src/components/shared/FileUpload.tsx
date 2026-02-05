@@ -1,9 +1,4 @@
-/**
- * 文件上传组件
- * 支持单文件/多文件上传、图片预览、上传进度显示
- */
-
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { FC } from 'react';
 import { Upload, message, Image, Progress, Button, Space } from 'antd';
 import { PlusOutlined, LoadingOutlined } from '@ant-design/icons';
@@ -49,9 +44,13 @@ const FileUpload: FC<FileUploadProps> = ({
   onUploadSuccess,
   onUploadError,
 }) => {
-  const [fileList, setFileList] = useState<UploadFile[]>(value);
+  const [fileList, setFileList] = useState<UploadFile[]>(Array.isArray(value) ? value : []);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+
+  useEffect(() => {
+    setFileList(Array.isArray(value) ? value : []);
+  }, [value]);
 
   const handleChange: UploadProps['onChange'] = useCallback(({ fileList: newFileList }) => {
     setFileList(newFileList);
@@ -62,13 +61,13 @@ const FileUpload: FC<FileUploadProps> = ({
     if (!accept) return true;
 
     const acceptTypes = accept.split(',').map(t => t.trim());
+    const fileName = file.name.toLowerCase();
     return acceptTypes.some(type => {
       if (type.startsWith('.')) {
-        return file.name.toLowerCase().endsWith(type.toLowerCase());
+        return fileName.endsWith(type.toLowerCase());
       }
       if (type.endsWith('/*')) {
-        const mimeType = type.split('/')[0];
-        return file.type.startsWith(mimeType + '/');
+        return file.type.startsWith(type.slice(0, -2));
       }
       return file.type === type;
     });
@@ -127,9 +126,14 @@ const FileUpload: FC<FileUploadProps> = ({
 
     xhr.onload = () => {
       if (xhr.status === 200) {
-        const response = JSON.parse(xhr.responseText);
-        handleUploadSuccess(response, file);
-        onSuccess(response, file);
+        const apiResponse = JSON.parse(xhr.responseText);
+        if (apiResponse.code === 0 && apiResponse.data) {
+          handleUploadSuccess(apiResponse.data, file);
+          onSuccess(apiResponse.data, file);
+        } else {
+          const error = new Error(apiResponse.message || '上传失败');
+          handleUploadError(error, file, onError);
+        }
       } else {
         const error = new Error(xhr.responseText || '上传失败');
         handleUploadError(error, file, onError);
@@ -141,7 +145,7 @@ const FileUpload: FC<FileUploadProps> = ({
       handleUploadError(error, file, onError);
     };
 
-    xhr.open('POST', '/system/files/upload', true);
+    xhr.open('POST', '/api/v1/system/files/upload', true);
     const token = localStorage.getItem('accessToken');
     if (token) {
       xhr.setRequestHeader('Authorization', `Bearer ${token}`);
@@ -167,7 +171,7 @@ const FileUpload: FC<FileUploadProps> = ({
   const handleRemove = useCallback(async (file: UploadFile) => {
     if (file.response?.data?.id) {
       try {
-        await fetch(`/system/files/${file.response.data.id}`, {
+        await fetch(`/api/v1/system/files/${file.response.data.id}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
