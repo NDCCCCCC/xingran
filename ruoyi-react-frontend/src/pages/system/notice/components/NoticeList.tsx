@@ -185,7 +185,7 @@ export const NoticeList: React.FC<NoticeListProps> = ({
             danger: true,
             render: () => (
               <Popconfirm title="确认删除?" onConfirm={() => onDelete(record.id)}>
-                <Button type="link" danger icon={<DeleteOutlined />} size="small">
+                <Button type="link" danger ghost icon={<DeleteOutlined />} size="small">
                   删除
                 </Button>
               </Popconfirm>

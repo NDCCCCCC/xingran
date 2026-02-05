@@ -233,7 +233,7 @@ const ConfigManagement: FC = () => {
                 title="确认删除?"
                 onConfirm={() => handleDelete(record.id, record.isSystem)}
               >
-                <Button type="link" danger icon={<DeleteOutlined />} size="small" disabled={record.isSystem === 1}>
+                <Button type="link" danger ghost icon={<DeleteOutlined />} size="small" disabled={record.isSystem === 1}>
                   删除
                 </Button>
               </Popconfirm>

@@ -229,7 +229,7 @@ const APIConfigPage: FC = () => {
             编辑
           </Button>
           <Popconfirm title="确认删除?" onConfirm={() => handleDelete(record.id)}>
-            <Button type="link" size="small" danger icon={<DeleteOutlined />}>
+            <Button type="link" size="small" danger ghost icon={<DeleteOutlined />}>
               删除
             </Button>
           </Popconfirm>

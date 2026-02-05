@@ -279,6 +279,7 @@ const PostManagement: FC = () => {
             {selectedRowKeys.length > 0 && (
               <Button
                 danger
+                ghost
                 icon={<DeleteOutlined />}
                 onClick={handleBatchDelete}
               >

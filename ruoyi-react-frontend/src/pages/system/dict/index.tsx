@@ -490,6 +490,7 @@ const DictManagement: FC = () => {
                       {selectedRowKeys.length > 0 && (
                         <Button
                           danger
+                          ghost
                           icon={<DeleteOutlined />}
                           onClick={() => handleBatchDeleteData(selectedRowKeys, setSelectedRowKeys)}
                         >

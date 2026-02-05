@@ -3,11 +3,12 @@
  * 角色管理工具函数
  */
 
-import { Tag, Space } from 'antd';
+import { Space, Tag } from 'antd';
 import { SafetyCertificateOutlined } from '@ant-design/icons';
 import type { TreeDataNode } from 'antd';
 import type { Key } from 'antd/es/table/interface';
 import { formatDateTime } from '@/utils/datetime';
+import { ModernTag } from '@/components/shared/ModernTag';
 
 /** 处理树形数据 */
 export function processTreeData(nodes: Record<string, unknown>[], keyField: string = 'id', titleField: string = 'title'): TreeDataNode[] {
@@ -21,9 +22,7 @@ export function processTreeData(nodes: Record<string, unknown>[], keyField: stri
 
 /** 渲染状态标签 */
 export function renderStatusTag(status: number) {
-  const color = status === 0 ? 'success' : 'error';
-  const text = status === 0 ? '正常' : '停用';
-  return <Tag color={color}>{text}</Tag>;
+  return <ModernTag status={status === 0 ? 'success' : 'error'}>{status === 0 ? '正常' : '停用'}</ModernTag>;
 }
 
 /** 渲染角色名称 */

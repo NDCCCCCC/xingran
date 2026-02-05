@@ -201,13 +201,16 @@ const RoleManagement: FC = () => {
             <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
               新增角色
             </Button>
-            <Button
-              danger
-              onClick={() => handleBatchDelete(selectedRowKeys)}
-              disabled={selectedRowKeys.length === 0}
-            >
-              批量删除
-            </Button>
+            {selectedRowKeys.length > 0 && (
+              <Button
+                danger
+                ghost
+                icon={<DeleteOutlined />}
+                onClick={() => handleBatchDelete(selectedRowKeys)}
+              >
+                批量删除 ({selectedRowKeys.length})
+              </Button>
+            )}
           </Space>
         </div>
       </Card>

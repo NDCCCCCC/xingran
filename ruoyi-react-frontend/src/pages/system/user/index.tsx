@@ -210,7 +210,7 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
                 okText="确定"
                 cancelText="取消"
               >
-                <Button type="link" danger icon={<DeleteOutlined />} size="small">
+                <Button type="link" danger ghost icon={<DeleteOutlined />} size="small">
                   删除
                 </Button>
               </Popconfirm>
@@ -519,6 +519,7 @@ const UserManagement: FC = () => {
                 {selectedRowKeys.length > 0 && (
                   <Button
                     danger
+                    ghost
                     icon={<DeleteOutlined />}
                     onClick={handleBatchDelete}
                   >

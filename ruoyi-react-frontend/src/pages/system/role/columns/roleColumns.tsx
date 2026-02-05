@@ -3,7 +3,7 @@
  */
 
 import type { ColumnsType } from 'antd/es/table';
-import { EditOutlined, DeleteOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
+import { EditOutlined, DeleteOutlined, StopOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { Popconfirm, Button, Space, Tag } from 'antd';
 import ActionButtons from '@/components/shared/ActionButtons';
 import type { Role } from '@/types';
@@ -63,7 +63,7 @@ export function getRoleColumns(params: GetRoleColumnsParams): ColumnsType<Role> 
           {
             key: 'toggle-status',
             label: record.status === 0 ? '停用' : '启用',
-            icon: record.status === 0 ? <DeleteOutlined /> : <SafetyCertificateOutlined />,
+            icon: record.status === 0 ? <StopOutlined /> : <CheckCircleOutlined />,
             onClick: () => handleUpdateStatus(record.id, record.status === 0 ? 1 : 0),
           },
           {
@@ -78,7 +78,7 @@ export function getRoleColumns(params: GetRoleColumnsParams): ColumnsType<Role> 
                 okText="确定"
                 cancelText="取消"
               >
-                <Button type="link" danger icon={<DeleteOutlined />} size="small">
+                <Button type="link" danger ghost icon={<DeleteOutlined />} size="small">
                   删除
                 </Button>
               </Popconfirm>

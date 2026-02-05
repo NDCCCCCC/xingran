@@ -4,7 +4,7 @@
  */
 
 import type { ColumnsType } from 'antd/es/table';
-import { Button, Space, Tag, Popconfirm } from 'antd';
+import { Space, Tag, Popconfirm, Button } from 'antd';
 import {
   ApartmentOutlined,
   PhoneOutlined,
@@ -15,6 +15,7 @@ import {
 import type { Department } from '@/types';
 import { renderStatusTag, renderExternalOrgTag } from './constants';
 import { formatDateTime } from '@/utils/datetime';
+import ActionButtons from '@/components/shared/ActionButtons';
 
 export interface DeptColumnsParams {
   handleEdit: (record: Department) => void;
@@ -98,29 +99,45 @@ export function getDeptColumns(params: DeptColumnsParams): ColumnsType<Departmen
     {
       title: '操作',
       key: 'action',
-      render: (_: unknown, record: Department) => (
-        <Space size="middle">
-          <Button
-            type="link"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-            disabled={record.accessible === false}
-          >
-            编辑
-          </Button>
-          <Popconfirm
-            title="确定要删除这个部门吗？"
-            onConfirm={() => handleDelete(record.id)}
-            okText="确定"
-            cancelText="取消"
-            disabled={record.accessible === false}
-          >
-            <Button type="link" danger icon={<DeleteOutlined />} disabled={record.accessible === false}>
-              删除
-            </Button>
-          </Popconfirm>
-        </Space>
-      ),
+      render: (_: unknown, record: Department) => {
+        const actions = [
+          {
+            key: 'edit',
+            label: '编辑',
+            icon: <EditOutlined />,
+            onClick: () => handleEdit(record),
+            disabled: record.accessible === false,
+          },
+          {
+            key: 'delete',
+            label: '删除',
+            icon: <DeleteOutlined />,
+            danger: true,
+            disabled: record.accessible === false,
+            render: () => (
+              <Popconfirm
+                title="确定要删除这个部门吗？"
+                onConfirm={() => handleDelete(record.id)}
+                okText="确定"
+                cancelText="取消"
+                disabled={record.accessible === false}
+              >
+                <Button
+                  type="link"
+                  danger
+                  ghost
+                  icon={<DeleteOutlined />}
+                  size="small"
+                  disabled={record.accessible === false}
+                >
+                  删除
+                </Button>
+              </Popconfirm>
+            ),
+          },
+        ];
+        return <ActionButtons actions={actions} />;
+      },
     },
   ];
 }
