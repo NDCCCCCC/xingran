@@ -4,10 +4,12 @@
  * 否则直接显示所有按钮
  */
 
-import { Space, Button, Dropdown } from 'antd';
-import { DownOutlined } from '@ant-design/icons';
+import { Space, Button, Dropdown, Popconfirm } from 'antd';
+import { DownOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import type { FC } from 'react';
+import { DELETE_CONFIRM } from '@/constants/buttonStyles';
+import '@/components/shared/ActionButtons.css';
 
 export interface ActionButton {
   key: string;
@@ -51,6 +53,7 @@ const ActionButtons: FC<ActionButtonsProps> = ({
                 onClick={action.onClick}
                 danger={action.danger}
                 disabled={action.disabled}
+                className={action.danger ? 'action-btn-link-danger' : 'action-btn-link'}
               >
                 {action.label}
               </Button>
@@ -81,12 +84,13 @@ const ActionButtons: FC<ActionButtonsProps> = ({
       danger: action.danger,
       disabled: action.disabled,
       onClick: action.onClick,
+      className: action.danger ? 'action-dropdown-item-danger' : 'action-dropdown-item',
     };
   });
 
   return (
     <Dropdown menu={{ items: menuItems }} trigger={['click']}>
-      <Button type="link" size={size} icon={<DownOutlined />}>
+      <Button type="link" size={size} icon={<DownOutlined />} className="action-btn-link">
         操作
       </Button>
     </Dropdown>
@@ -94,3 +98,67 @@ const ActionButtons: FC<ActionButtonsProps> = ({
 };
 
 export default ActionButtons;
+
+/**
+ * 创建删除按钮 Action 配置
+ * @param id 删除项的 ID
+ * @param handleDelete 删除处理函数
+ * @param options 配置选项
+ * @returns 删除按钮 Action 配置
+ */
+export const createDeleteAction = <T extends string | number>(
+  id: T,
+  handleDelete: (id: T) => void | Promise<void>,
+  options?: {
+    /** 确认框标题 */
+    title?: string;
+    /** 按钮标签 */
+    label?: string;
+    /** 是否禁用 */
+    disabled?: boolean;
+    /** 是否使用 ghost 样式（红色边框+文字） */
+    ghost?: boolean;
+  }
+): ActionButton => ({
+  key: 'delete',
+  label: options?.label || '删除',
+  icon: <DeleteOutlined />,
+  danger: true,
+  disabled: options?.disabled,
+  render: () => (
+    <Popconfirm
+      title={options?.title || DELETE_CONFIRM.title}
+      onConfirm={() => handleDelete(id)}
+      okText={DELETE_CONFIRM.okText}
+      cancelText={DELETE_CONFIRM.cancelText}
+    >
+      <Button
+        type="link"
+        danger
+        ghost={options?.ghost ?? true}
+        icon={<DeleteOutlined />}
+        size="small"
+        disabled={options?.disabled}
+        className="action-btn-link-danger"
+      >
+        {options?.label || '删除'}
+      </Button>
+    </Popconfirm>
+  ),
+});
+
+/**
+ * 创建带自定义渲染的删除按钮 Action 配置
+ * 用于需要完全自定义删除按钮渲染的场景
+ * @param render 自定义渲染函数
+ * @returns 删除按钮 Action 配置
+ */
+export const createCustomDeleteAction = (
+  render: () => React.ReactNode
+): ActionButton => ({
+  key: 'delete',
+  label: '删除',
+  icon: <DeleteOutlined />,
+  danger: true,
+  render,
+});
