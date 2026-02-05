@@ -26,20 +26,16 @@ const (
 	megabyte         = 1024 * 1024
 )
 
-var (
-	imageExtensions = map[string]bool{
-		".jpg": true, ".jpeg": true, ".png": true,
-		".gif": true, ".webp": true, ".bmp": true,
-	}
-)
+var imageExtensions = map[string]bool{
+	".jpg": true, ".jpeg": true, ".png": true,
+	".gif": true, ".webp": true, ".bmp": true,
+}
 
-// FileService 文件服务
 type FileService struct {
 	db            *gorm.DB
 	uploadBaseDir string
 }
 
-// NewFileService 创建文件服务
 func NewFileService(db *gorm.DB) *FileService {
 	return &FileService{
 		db:            db,
@@ -47,21 +43,16 @@ func NewFileService(db *gorm.DB) *FileService {
 	}
 }
 
-// FileValidation 文件验证规则
 type FileValidation struct {
 	MaxSize      int64
 	AllowedExts  map[string]bool
 	AllowedMimes map[string]bool
 }
 
-// ==================== 请求/响应类型 ====================
-
-// UploadFileRequest 上传文件请求
 type UploadFileRequest struct {
 	Category string `form:"category" binding:"required"`
 }
 
-// ListFilesRequest 列出文件请求
 type ListFilesRequest struct {
 	BusinessType string `form:"businessType"`
 	UserID       string `form:"userId"`
@@ -69,14 +60,10 @@ type ListFilesRequest struct {
 	PageSize     int    `form:"pageSize"`
 }
 
-// BatchDeleteRequest 批量删除请求
 type BatchDeleteRequest struct {
 	IDs []string `json:"ids" binding:"required,min=1"`
 }
 
-// ==================== 文件信息接口 ====================
-
-// SysFileInfo 文件信息接口
 type SysFileInfo interface {
 	GetID() string
 	GetFileName() string
@@ -89,14 +76,12 @@ type SysFileInfo interface {
 	GetCreatedAt() time.Time
 }
 
-// FileCategoryConfig 文件分类配置
 type FileCategoryConfig struct {
 	MaxSize           int64    // 最大文件大小（字节）
 	AllowedExts       []string // 允许的扩展名列表
-	ExtractDimensions bool     // 是否提取图片尺寸
+	ExtractDimensions bool
 }
 
-// toFileValidation 转换为FileValidation格式
 func (c *FileCategoryConfig) toFileValidation() *FileValidation {
 	extMap := make(map[string]bool, len(c.AllowedExts))
 	for _, ext := range c.AllowedExts {
@@ -108,7 +93,6 @@ func (c *FileCategoryConfig) toFileValidation() *FileValidation {
 	}
 }
 
-// GetValidationByCategory 根据分类获取验证规则
 func GetValidationByCategory(category string) *FileValidation {
 	config := GetCategoryConfig(category)
 	if config == nil {
@@ -117,7 +101,6 @@ func GetValidationByCategory(category string) *FileValidation {
 	return config.toFileValidation()
 }
 
-// CategoryConfigs 文件分类配置
 var CategoryConfigs = map[string]FileCategoryConfig{
 	"avatar": {
 		MaxSize:           2 * megabyte,
@@ -127,6 +110,11 @@ var CategoryConfigs = map[string]FileCategoryConfig{
 	"room-photo": {
 		MaxSize:           5 * megabyte,
 		AllowedExts:       []string{".jpg", ".jpeg", ".png"},
+		ExtractDimensions: true,
+	},
+	"floor-plan": {
+		MaxSize:           5 * megabyte,
+		AllowedExts:       []string{".jpg", ".jpeg", ".png", ".gif", ".webp"},
 		ExtractDimensions: true,
 	},
 	"image": {
@@ -151,7 +139,6 @@ var CategoryConfigs = map[string]FileCategoryConfig{
 	},
 }
 
-// GetCategoryConfig 获取分类配置，不存在则返回默认图片配置
 func GetCategoryConfig(category string) *FileCategoryConfig {
 	if config, ok := CategoryConfigs[category]; ok {
 		return &config
@@ -160,7 +147,6 @@ func GetCategoryConfig(category string) *FileCategoryConfig {
 	return &defaultConfig
 }
 
-// 默认验证规则（保留向后兼容）
 var (
 	ImageValidation = &FileValidation{
 		MaxSize: 5 * megabyte,
@@ -179,7 +165,6 @@ var (
 	}
 )
 
-// calculateFileHash 计算文件哈希值
 func calculateFileHash(file multipart.File) (string, error) {
 	hash := sha256.New()
 	if _, err := io.Copy(hash, file); err != nil {
@@ -188,7 +173,6 @@ func calculateFileHash(file multipart.File) (string, error) {
 	return hex.EncodeToString(hash.Sum(nil)), nil
 }
 
-// checkExistingFile 检查文件是否已存在
 func (s *FileService) checkExistingFile(ctx context.Context, fileHash string) (*system.SysFile, error) {
 	var existingFile system.SysFile
 	err := s.db.WithContext(ctx).Where("file_hash = ? AND is_deleted = ?", fileHash, false).First(&existingFile).Error
@@ -201,7 +185,6 @@ func (s *FileService) checkExistingFile(ctx context.Context, fileHash string) (*
 	return nil, err
 }
 
-// buildImageMetadata 构建图片元数据
 func buildImageMetadata(width, height int) *string {
 	metaMap := map[string]interface{}{
 		"width":  width,
@@ -212,12 +195,10 @@ func buildImageMetadata(width, height int) *string {
 	return &metaStr
 }
 
-// isImageFile 判断是否为图片文件
 func isImageFile(ext string) bool {
 	return imageExtensions[ext]
 }
 
-// extractImageDimensions 提取图片尺寸
 func extractImageDimensions(filePath string) (int, int, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -233,7 +214,6 @@ func extractImageDimensions(filePath string) (int, int, error) {
 	return img.Width, img.Height, nil
 }
 
-// UploadFile 上传文件
 func (s *FileService) UploadFile(ctx context.Context, file *multipart.FileHeader, category string, userID string, validation *FileValidation) (*system.SysFile, error) {
 	if validation != nil && file.Size > validation.MaxSize {
 		maxSizeMB := validation.MaxSize / megabyte
@@ -320,7 +300,6 @@ func (s *FileService) UploadFile(ctx context.Context, file *multipart.FileHeader
 	return sysFile, nil
 }
 
-// GetFile 获取文件信息
 func (s *FileService) GetFile(ctx context.Context, fileID string) (*system.SysFile, error) {
 	var file system.SysFile
 	if err := s.db.WithContext(ctx).Where("id = ? AND is_deleted = ?", fileID, false).First(&file).Error; err != nil {
@@ -332,7 +311,6 @@ func (s *FileService) GetFile(ctx context.Context, fileID string) (*system.SysFi
 	return &file, nil
 }
 
-// DeleteFile 删除文件（软删除）
 func (s *FileService) DeleteFile(ctx context.Context, fileID string) error {
 	_, err := s.GetFile(ctx, fileID)
 	if err != nil {
@@ -354,7 +332,6 @@ func (s *FileService) DeleteFile(ctx context.Context, fileID string) error {
 	return nil
 }
 
-// BatchDeleteFiles 批量删除文件
 func (s *FileService) BatchDeleteFiles(ctx context.Context, fileIDs []string) error {
 	if len(fileIDs) == 0 {
 		return fmt.Errorf("文件ID列表不能为空")
@@ -373,7 +350,6 @@ func (s *FileService) BatchDeleteFiles(ctx context.Context, fileIDs []string) er
 	return nil
 }
 
-// ListFiles 列出文件
 func (s *FileService) ListFiles(ctx context.Context, businessType string, userID string, offset, limit int) ([]*system.SysFile, int64, error) {
 	var files []*system.SysFile
 	var total int64
@@ -398,17 +374,14 @@ func (s *FileService) ListFiles(ctx context.Context, businessType string, userID
 	return files, total, nil
 }
 
-// GetFilePath 获取文件的物理路径
 func (s *FileService) GetFilePath(file *system.SysFile) string {
 	return filepath.Join(s.uploadBaseDir, file.StoragePath)
 }
 
-// GetFileURL 获取文件的访问URL
 func (s *FileService) GetFileURL(file *system.SysFile) string {
 	return "/uploads/" + file.StoragePath
 }
 
-// LogAccess 记录文件访问日志
 func (s *FileService) LogAccess(ctx context.Context, fileID, actionType, userID, userName, ipAddress string) error {
 	log := &system.SysFileAccessLog{
 		FileID:     fileID,
@@ -421,7 +394,6 @@ func (s *FileService) LogAccess(ctx context.Context, fileID, actionType, userID,
 	return s.db.WithContext(ctx).Create(log).Error
 }
 
-// GetAccessLogs 获取文件访问日志
 func (s *FileService) GetAccessLogs(ctx context.Context, fileID string, offset, limit int) ([]*system.SysFileAccessLog, int64, error) {
 	var logs []*system.SysFileAccessLog
 	var total int64
@@ -439,7 +411,6 @@ func (s *FileService) GetAccessLogs(ctx context.Context, fileID string, offset, 
 	return logs, total, nil
 }
 
-// CleanupDeletedFiles 清理已删除的物理文件（定时任务）
 func (s *FileService) CleanupDeletedFiles(ctx context.Context, days int) (int, error) {
 	cutoffDate := time.Now().AddDate(0, 0, -days)
 	var files []*system.SysFile

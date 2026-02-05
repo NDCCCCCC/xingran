@@ -152,7 +152,7 @@ func setupRoutes(engine *gin.Engine, cfg *config.Config, coreModule *core.Core) 
 	}
 
 	// 静态文件服务
-	engine.Static("/uploads/captcha/backgrounds", "./uploads/captcha/backgrounds")
+	engine.Static("/uploads", "./uploads")
 
 	// API 路由
 	apiRouter := engine.Group("/api/v1")

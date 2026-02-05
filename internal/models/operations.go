@@ -1,41 +1,37 @@
 package models
 
-// 运维管理相关模型
-
-// FloorStatus 楼层状态
 type FloorStatus int
 
 const (
-	FloorStatusNormal  FloorStatus = 0 // 正常
-	FloorStatusStopped FloorStatus = 1 // 停用
+	FloorStatusNormal  FloorStatus = 0
+	FloorStatusStopped FloorStatus = 1
 )
 
-// Floor 楼层模型
 type Floor struct {
 	BaseModel
 	Name         string      `gorm:"size:100;not null" json:"name"`
 	FloorNo      string      `gorm:"size:50;not null" json:"floorNo"`
 	BuildingID   string      `gorm:"size:64;not null" json:"buildingId"`
 	BuildingName *string     `gorm:"size:100" json:"buildingName,omitempty"`
+	Area         *float64    `gorm:"type:decimal(10,2)" json:"area,omitempty"`
+	PlanImageID  *string     `gorm:"size:64" json:"planImageId,omitempty"`
+	PlanImageUrl *string     `gorm:"size:500" json:"planImageUrl,omitempty"`
 	Status       FloorStatus `gorm:"default:0" json:"status"`
 	Remark       *string     `gorm:"size:500" json:"remark,omitempty"`
 	OrderNum     int         `gorm:"default:0" json:"orderNum"`
 }
 
-// TableName 设置表名
 func (Floor) TableName() string {
 	return "ops_floors"
 }
 
-// RoomStatus 机房状态
 type RoomStatus int
 
 const (
-	RoomStatusNormal  RoomStatus = 0 // 正常
-	RoomStatusStopped RoomStatus = 1 // 停用
+	RoomStatusNormal  RoomStatus = 0
+	RoomStatusStopped RoomStatus = 1
 )
 
-// ServerRoom 机房模型
 type ServerRoom struct {
 	BaseModel
 	Name      string     `gorm:"size:100;not null" json:"name"`
@@ -46,35 +42,31 @@ type ServerRoom struct {
 	Remark    *string    `gorm:"size:500" json:"remark,omitempty"`
 }
 
-// TableName 设置表名
 func (ServerRoom) TableName() string {
 	return "ops_server_rooms"
 }
 
-// RoomDeviceStatus 机房设备状态
 type RoomDeviceStatus int
 
 const (
-	RoomDeviceStatusNormal RoomDeviceStatus = 0 // 正常
-	RoomDeviceStatusFault  RoomDeviceStatus = 1 // 故障
-	RoomDeviceStatusScrap  RoomDeviceStatus = 2 // 报废
+	RoomDeviceStatusNormal RoomDeviceStatus = 0
+	RoomDeviceStatusFault  RoomDeviceStatus = 1
+	RoomDeviceStatusScrap  RoomDeviceStatus = 2
 )
 
-// RoomDeviceType 机房设备类型
 type RoomDeviceType string
 
 const (
-	RoomDeviceTypeServer   RoomDeviceType = "server"   // 服务器
-	RoomDeviceTypeStorage  RoomDeviceType = "storage"  // 存储设备
-	RoomDeviceTypeUPS      RoomDeviceType = "ups"      // UPS
-	RoomDeviceTypePDU      RoomDeviceType = "pdu"      // PDU
-	RoomDeviceTypeFirewall RoomDeviceType = "firewall" // 防火墙
-	RoomDeviceTypeKVM      RoomDeviceType = "kvm"      // KVM
-	RoomDeviceTypeCabinet  RoomDeviceType = "cabinet"  // 机柜
-	RoomDeviceTypeOther    RoomDeviceType = "other"    // 其他
+	RoomDeviceTypeServer   RoomDeviceType = "server"
+	RoomDeviceTypeStorage  RoomDeviceType = "storage"
+	RoomDeviceTypeUPS      RoomDeviceType = "ups"
+	RoomDeviceTypePDU      RoomDeviceType = "pdu"
+	RoomDeviceTypeFirewall RoomDeviceType = "firewall"
+	RoomDeviceTypeKVM      RoomDeviceType = "kvm"
+	RoomDeviceTypeCabinet  RoomDeviceType = "cabinet"
+	RoomDeviceTypeOther    RoomDeviceType = "other"
 )
 
-// RoomDevice 机房设备模型
 type RoomDevice struct {
 	BaseModel
 	Name             string           `gorm:"size:100;not null" json:"name"`
@@ -96,7 +88,6 @@ type RoomDevice struct {
 	Remark           *string          `gorm:"size:500" json:"remark,omitempty"`
 }
 
-// TableName 设置表名
 func (RoomDevice) TableName() string {
 	return "ops_room_devices"
 }

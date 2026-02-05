@@ -4,24 +4,19 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
+	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
-// ============= 仪表盘状态枚举 =============
-
-// DashboardStatus 仪表盘状态枚举
 type DashboardStatus int
 
 const (
-	DashboardStatusNormal  DashboardStatus = 0 // 正常
-	DashboardStatusStopped DashboardStatus = 1 // 停用
+	DashboardStatusNormal  DashboardStatus = 0
+	DashboardStatusStopped DashboardStatus = 1
 )
 
-// ============= Widget 位置配置 =============
-
-// WidgetPosition Widget 位置配置
 type WidgetPosition struct {
 	X     int `json:"x"`
 	Y     int `json:"y"`
@@ -33,9 +28,6 @@ type WidgetPosition struct {
 	MaxH  int `json:"maxH,omitempty"`
 }
 
-// ============= 数据源配置 =============
-
-// DataSourceType 数据源类型
 type DataSourceType string
 
 const (
@@ -106,9 +98,6 @@ func (d DataSourceConfig) Value() (driver.Value, error) {
 	return json.Marshal(d)
 }
 
-// ============= 显示配置 =============
-
-// BaseDisplayConfig 显示配置基础
 type BaseDisplayConfig struct {
 	Color           string            `json:"color,omitempty"`
 	BackgroundColor string            `json:"backgroundColor,omitempty"`
@@ -227,9 +216,6 @@ func (d DisplayConfig) Value() (driver.Value, error) {
 	return json.Marshal(d)
 }
 
-// ============= Widget 配置 =============
-
-// WidgetConfig Widget 配置
 type WidgetConfig struct {
 	ID              string           `json:"id" gorm:"primaryKey;size:64"`
 	Type            string           `json:"type" gorm:"size:20;not null"`
@@ -247,9 +233,6 @@ type WidgetConfig struct {
 	UpdatedAt       int64            `json:"updatedAt,omitempty" gorm:"autoUpdateTime:milli"`
 }
 
-// ============= 布局配置 =============
-
-// Columns 响应式列数配置
 type Columns struct {
 	Desktop int `json:"desktop"`
 	Tablet  int `json:"tablet"`
@@ -283,9 +266,6 @@ func (l LayoutConfig) Value() (driver.Value, error) {
 	return json.Marshal(l)
 }
 
-// ============= 仪表盘可见范围枚举 =============
-
-// DashboardScope 仪表盘可见范围
 type DashboardScope string
 
 const (
@@ -294,18 +274,12 @@ const (
 	DashboardScopeGlobal  DashboardScope = "global"  // 全局：全员可见
 )
 
-// ============= Widget 数据过滤配置 =============
-
-// WidgetDataFilter Widget数据过滤配置
 type WidgetDataFilter struct {
-	Enabled      bool              `json:"enabled"`      // 是否启用数据过滤
-	FilterType   string            `json:"filterType"`   // 过滤类型：dept, user, custom
-	FilterConfig map[string]string `json:"filterConfig"` // 过滤配置
+	Enabled      bool              `json:"enabled"`
+	FilterType   string            `json:"filterType"`
+	FilterConfig map[string]string `json:"filterConfig"`
 }
 
-// ============= 仪表盘模型 =============
-
-// TemplateScope 模板作用域
 type TemplateScope string
 
 const (
@@ -338,12 +312,10 @@ type Dashboard struct {
 	Status          DashboardStatus `json:"status" gorm:"default:0;index"`
 }
 
-// TableName 指定表名
 func (Dashboard) TableName() string {
 	return "sys_dashboards"
 }
 
-// BeforeCreate GORM钩子 - 创建前
 func (d *Dashboard) BeforeCreate(tx *gorm.DB) error {
 	if d.ID == "" {
 		d.ID = uuid.New().String()
@@ -351,24 +323,19 @@ func (d *Dashboard) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
-// ============= 仪表盘版本模型 =============
-
-// DashboardVersion 仪表盘版本记录
 type DashboardVersion struct {
-	ID         string       `json:"id" gorm:"primaryKey;size:64"`
-	DashboardID string      `json:"dashboardId" gorm:"size:64;not null;index"`
+	ID         string       `json:"id" gorm:"primaryKey;type:uuid"`
+	DashboardID string      `json:"dashboardId" gorm:"type:uuid;not null;index"`
 	Layout     LayoutConfig `json:"layout" gorm:"type:jsonb;not null"`
 	Comment    string       `json:"comment" gorm:"size:500"`
-	CreatedAt  int64        `json:"createdAt" gorm:"autoCreateTime:milli"`
+	CreatedAt  time.Time    `json:"createdAt" gorm:"autoCreateTime"`
 	CreatedBy  string       `json:"createdBy" gorm:"size:64"`
 }
 
-// TableName 指定表名
 func (DashboardVersion) TableName() string {
 	return "sys_dashboard_versions"
 }
 
-// BeforeCreate GORM钩子 - 创建前
 func (dv *DashboardVersion) BeforeCreate(tx *gorm.DB) error {
 	if dv.ID == "" {
 		dv.ID = uuid.New().String()

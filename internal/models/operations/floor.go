@@ -1,30 +1,70 @@
 package operations
 
 import (
+	"encoding/json"
+
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"gorm.io/gorm"
 )
 
-// FloorStatus 楼层状态枚举
 type FloorStatus int
 
 const (
-	FloorStatusNormal  FloorStatus = 0 // 正常
-	FloorStatusStopped FloorStatus = 1 // 停用
+	FloorStatusNormal  FloorStatus = 0
+	FloorStatusStopped FloorStatus = 1
 )
 
-// OpsFloor 楼层模型
 type OpsFloor struct {
 	models.BaseModel
-	Name         string      `gorm:"size:100;not null" json:"name"`          // 楼层名称
-	FloorNo      string      `gorm:"size:50;not null" json:"floorNo"`        // 楼层编号（如1F, 2F, B1）
-	BuildingID   string      `gorm:"size:64;not null" json:"buildingId"`     // 所属楼宇ID
-	BuildingName *string     `gorm:"size:100" json:"buildingName,omitempty"` // 所属楼宇名称
-	Status       FloorStatus `gorm:"default:0" json:"status"`                // 状态: 0=正常, 1=停用
-	Remark       *string     `gorm:"size:500" json:"remark,omitempty"`       // 备注
-	OrderNum     int         `gorm:"default:0" json:"orderNum"`              // 排序号
+	Name         string      `gorm:"size:100;not null" json:"name"`
+	FloorNo      string      `gorm:"size:50;not null" json:"floorNo"`
+	BuildingID   string      `gorm:"size:64;not null" json:"buildingId"`
+	BuildingName *string     `gorm:"size:100" json:"buildingName,omitempty"`
+	Area         *float64    `gorm:"type:numeric(10,2)" json:"area,omitempty"`
+	Status       FloorStatus `gorm:"default:0" json:"status"`
+	Remark       *string     `gorm:"size:500" json:"-"`
+	Description  *string     `gorm:"-" json:"description,omitempty"`
+	OrderNum     int         `gorm:"default:0" json:"orderNum"`
+	PlanImageID  *string `gorm:"type:uuid" json:"planImageId,omitempty"`
+	PlanImageUrl *string `gorm:"size:500" json:"planImageUrl,omitempty"`
 }
 
-// TableName 指定表名
+func (f *OpsFloor) BeforeSave(tx *gorm.DB) error {
+	f.Remark = f.Description
+	return nil
+}
+
+func (f *OpsFloor) AfterFind(tx *gorm.DB) error {
+	f.Description = f.Remark
+	return nil
+}
+
+func (f OpsFloor) MarshalJSON() ([]byte, error) {
+	type Alias OpsFloor
+	return json.Marshal(&struct {
+		Description *string `json:"description,omitempty"`
+		*Alias
+	}{
+		Description: f.Remark,
+		Alias:      (*Alias)(&f),
+	})
+}
+
+func (f *OpsFloor) UnmarshalJSON(data []byte) error {
+	type Alias OpsFloor
+	aux := &struct {
+		Description *string `json:"description,omitempty"`
+		*Alias
+	}{
+		Alias: (*Alias)(f),
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	f.Remark = aux.Description
+	return nil
+}
+
 func (OpsFloor) TableName() string {
 	return "ops_floors"
 }
