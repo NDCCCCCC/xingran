@@ -312,7 +312,7 @@ const DedicatedLineManagement: FC = () => {
             </Radio.Group>
             <Button icon={<ImportOutlined />} onClick={() => setImportVisible(true)}>导入</Button>
             <Button icon={<ExportOutlined />} onClick={() => setExportVisible(true)}>导出</Button>
-            {selectedRowKeys.length > 0 && <Button danger icon={<DeleteOutlined />} onClick={handleBatchDelete}>批量删除 ({selectedRowKeys.length})</Button>}
+            {selectedRowKeys.length > 0 && <Button danger ghost icon={<DeleteOutlined />} onClick={handleBatchDelete}>批量删除 ({selectedRowKeys.length})</Button>}
             <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>新增专线</Button>
           </Space>
         </div>

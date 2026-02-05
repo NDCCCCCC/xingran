@@ -1,7 +1,3 @@
-/**
- * 楼层管理页面
- */
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { FC } from 'react';
 import { Table, Button, Card, Alert } from 'antd';
@@ -16,7 +12,6 @@ import ExcelImport from '@/components/shared/ExcelImport';
 import ExcelExport from '@/components/shared/ExcelExport';
 import type { TreeNode } from '@/components/shared/DepartmentTreeSelect';
 
-// 组件
 import {
   FloorCardView,
   FloorSearchForm,
@@ -26,59 +21,39 @@ import {
   createFloorTableColumns,
 } from './components';
 
-// Hooks
 import { useFloorPlanEditor } from './useFloorPlanEditor';
 import { useFloorStatistics } from './useFloorStatistics';
 import { useBuildingOptions } from './useBuildingOptions';
 
-// 常量和类型
 import type { ViewMode, PageMode } from './constants';
 import type { FloorOption } from './components';
 import { DEFAULT_FORM_VALUES } from './constants';
 
 const FloorManagement: FC = () => {
-  // 页面模式状态
   const [pageMode, setPageMode] = useState<PageMode>('list');
   const [currentFloor, setCurrentFloor] = useState<Floor | null>(null);
-
-  // 视图模式状态
   const [viewMode, setViewMode] = useState<ViewMode>('table');
-
-  // 弹窗状态
   const [importVisible, setImportVisible] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
 
-  // 分页
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
-
-  // 楼宇选项
   const { buildingOptions, loadBuildingOptions } = useBuildingOptions();
 
-  // 部门树数据状态（仅外部机构）
   const [departmentTreeData, setDepartmentTreeData] = useState<TreeNode[]>([]);
-
-  // 楼宇选项状态（用于编辑器中的切换）
   const [buildingOptionsByDept, setBuildingOptionsByDept] = useState<Building[]>([]);
-
-  // 当前选中的部门和楼宇ID（用于编辑器）
   const [selectedDeptId, setSelectedDeptId] = useState<string>('');
   const [selectedBuildingId, setSelectedBuildingId] = useState<string>('');
+  const [selectedDeptName, setSelectedDeptName] = useState<string>('');
+  const [selectedBuildingName, setSelectedBuildingName] = useState<string>('');
 
-  // 筛选表单使用的部门和楼宇状态
   const [filterDeptId, setFilterDeptId] = useState<string>('');
   const [filterBuildingOptions, setFilterBuildingOptions] = useState<Building[]>([]);
-
-  // 模态框使用的部门和楼宇状态
   const [modalDeptId, setModalDeptId] = useState<string>('');
   const [modalBuildingOptions, setModalBuildingOptions] = useState<Building[]>([]);
-
-  // 楼层选项状态（用于编辑器中的切换）
   const [floorOptions, setFloorOptions] = useState<FloorOption[]>([]);
 
-  // 统计数据
   const { statistics, loadStatistics } = useFloorStatistics();
 
-  // 平面图编辑器
   const {
     floorPlanData,
     floorPlanLoading,
@@ -89,7 +64,6 @@ const FloorManagement: FC = () => {
     resetFloorPlan,
   } = useFloorPlanEditor(currentFloor);
 
-  // 表格管理
   const {
     loading,
     data: floors,
@@ -106,7 +80,6 @@ const FloorManagement: FC = () => {
     handleReset,
     handleAdd,
     handleEdit,
-    handleModalClose,
     loadData: loadFloors,
     resetSelection,
   } = useTableManager<Floor>(
@@ -128,16 +101,12 @@ const FloorManagement: FC = () => {
     }
   );
 
-  // 使用 ref 跟踪初始化状态，避免循环请求
   const isInitialized = useRef(false);
   const prevPageRef = useRef({ current: 1, pageSize: 10 });
 
-  // 初始化加载
   useEffect(() => {
     const { current, pageSize } = paginationProps;
     const prev = prevPageRef.current;
-
-    // 检查分页是否真的发生了变化
     const pageChanged = prev.current !== current || prev.pageSize !== pageSize;
 
     if (!isInitialized.current || pageChanged) {
@@ -151,12 +120,8 @@ const FloorManagement: FC = () => {
         loadExternalDepartmentTree();
       }, 0);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paginationProps.current, paginationProps.pageSize]);
+  }, [paginationProps.current, paginationProps.pageSize, loadFloors, loadStatistics, loadBuildingOptions]);
 
-  /**
-   * 保存楼层
-   */
   const handleSave = useCallback(async () => {
     try {
       const values = await floorForm.validateFields();
@@ -169,18 +134,18 @@ const FloorManagement: FC = () => {
         handleSuccess('创建');
       }
 
-      handleModalClose();
+      setModalVisible(false);
+      setEditingFloor(null);
+      setModalDeptId('');
+      setModalBuildingOptions([]);
       loadFloors();
       loadStatistics();
     } catch (error: unknown) {
       if (isFormValidationError(error)) return;
       handleApiError(error, '操作');
     }
-  }, [floorForm, editingFloor, handleModalClose, loadFloors, loadStatistics]);
+  }, [floorForm, editingFloor, loadFloors, loadStatistics]);
 
-  /**
-   * 删除楼层
-   */
   const handleDelete = useCallback(
     async (id: string) => {
       try {
@@ -195,9 +160,6 @@ const FloorManagement: FC = () => {
     [loadFloors, loadStatistics]
   );
 
-  /**
-   * 批量删除
-   */
   const handleBatchDelete = useCallback(async () => {
     if (selectedRowKeys.length === 0) return;
 
@@ -212,23 +174,18 @@ const FloorManagement: FC = () => {
     }
   }, [selectedRowKeys, resetSelection, loadFloors, loadStatistics]);
 
-  /**
-   * 打开编辑弹窗
-   */
   const openModal = useCallback(
     async (record?: Floor) => {
       if (record) {
         handleEdit(record);
         floorForm.setFieldsValue(record);
 
-        // 获取楼宇信息以预填充部门和楼宇选项
         try {
           const buildingResult = await buildingApi.get(record.buildingId);
           const building = buildingResult.data;
 
           if (building) {
             setModalDeptId(building.orgId);
-            // 加载该部门的楼宇列表
             const result = await buildingApi.list({ orgId: building.orgId, current: 1, pageSize: 1000 });
             setModalBuildingOptions(result.data?.list || []);
           }
@@ -238,7 +195,6 @@ const FloorManagement: FC = () => {
       } else {
         handleAdd();
         floorForm.setFieldsValue(DEFAULT_FORM_VALUES);
-        // 清空模态框的部门和楼宇选项
         setModalDeptId('');
         setModalBuildingOptions([]);
       }
@@ -246,26 +202,17 @@ const FloorManagement: FC = () => {
     [handleEdit, handleAdd, floorForm]
   );
 
-  /**
-   * 导入成功回调
-   */
   const handleImportSuccess = useCallback(() => {
     loadFloors();
     loadStatistics();
     setImportVisible(false);
   }, [loadFloors, loadStatistics]);
 
-  /**
-   * 刷新数据
-   */
   const handleRefresh = useCallback(() => {
     loadFloors();
     loadStatistics();
   }, [loadFloors, loadStatistics]);
 
-  /**
-   * 过滤出外部机构部门（isExternalOrg === 1）
-   */
   const filterExternalOrgDepts = useCallback((data: Department[]): Department[] => {
     if (!data || !Array.isArray(data)) {
       return [];
@@ -294,9 +241,6 @@ const FloorManagement: FC = () => {
     return filterNodes(data);
   }, []);
 
-  /**
-   * 将部门数据转换为 TreeSelect 需要的格式
-   */
   const convertToTreeSelectData = useCallback((data: Department[]): TreeNode[] => {
     if (!data || !Array.isArray(data)) {
       return [];
@@ -312,9 +256,6 @@ const FloorManagement: FC = () => {
     }));
   }, []);
 
-  /**
-   * 加载外部机构部门树数据
-   */
   const loadExternalDepartmentTree = useCallback(async () => {
     try {
       const result = await post<BaseResponse<Department[]>>('/system/departments/tree');
@@ -326,10 +267,6 @@ const FloorManagement: FC = () => {
     }
   }, [filterExternalOrgDepts, convertToTreeSelectData]);
 
-  /**
-   * 加载指定部门的楼宇选项
-   * 返回楼宇列表以便后续处理
-   */
   const loadBuildingOptionsByDept = useCallback(async (deptId: string): Promise<Building[]> => {
     try {
       const result = await buildingApi.list({ orgId: deptId, current: 1, pageSize: 1000 });
@@ -343,15 +280,10 @@ const FloorManagement: FC = () => {
     }
   }, []);
 
-  /**
-   * 筛选表单的部门切换处理
-   */
   const handleFilterDepartmentChange = useCallback(
     async (deptId: string) => {
       setFilterDeptId(deptId || '');
-      // 清空楼宇选项
       setFilterBuildingOptions([]);
-      // 清空表单中的楼宇选择
       searchForm.setFieldValue('buildingId', undefined);
 
       if (deptId) {
@@ -366,15 +298,10 @@ const FloorManagement: FC = () => {
     [searchForm]
   );
 
-  /**
-   * 模态框的部门切换处理
-   */
   const handleModalDepartmentChange = useCallback(
     async (deptId: string) => {
       setModalDeptId(deptId || '');
-      // 清空楼宇选项
       setModalBuildingOptions([]);
-      // 清空表单中的楼宇选择
       floorForm.setFieldValue('buildingId', undefined);
 
       if (deptId) {
@@ -389,10 +316,6 @@ const FloorManagement: FC = () => {
     [floorForm]
   );
 
-  /**
-   * 加载指定楼宇的楼层选项
-   * 返回楼层列表以便后续处理
-   */
   const loadFloorOptionsByBuilding = useCallback(async (buildingId: string): Promise<FloorOption[]> => {
     try {
       const result = await floorApi.list({ buildingId, current: 1, pageSize: 1000 });
@@ -412,9 +335,6 @@ const FloorManagement: FC = () => {
     }
   }, []);
 
-  /**
-   * 楼层切换处理
-   */
   const handleFloorChange = useCallback(
     async (floorId: string) => {
       if (!floorId) return;
@@ -434,71 +354,89 @@ const FloorManagement: FC = () => {
     [loadFloorPlanData, setEditMode]
   );
 
-  /**
-   * 楼宇切换处理
-   * 加载新楼宇的楼层列表，并自动选择第一个楼层
-   */
   const handleBuildingChange = useCallback(
     async (buildingId: string) => {
       if (!buildingId) return;
 
       setSelectedBuildingId(buildingId);
 
-      // 加载新楼宇的楼层列表
+      const building = buildingOptionsByDept.find(b => b.id === buildingId);
+      if (building) {
+        setSelectedBuildingName(building.name);
+      }
+
       const options = await loadFloorOptionsByBuilding(buildingId);
 
-      // 自动选择第一个楼层
       if (options.length > 0) {
         await handleFloorChange(options[0].id);
       }
     },
-    [loadFloorOptionsByBuilding, handleFloorChange]
+    [loadFloorOptionsByBuilding, buildingOptionsByDept, handleFloorChange]
   );
 
-  /**
-   * 部门切换处理
-   * 加载新部门的楼宇列表，并自动选择第一个楼宇和楼层
-   */
   const handleDepartmentChange = useCallback(
     async (deptId: string) => {
       if (!deptId) return;
 
       setSelectedDeptId(deptId);
       setSelectedBuildingId('');
+      setSelectedBuildingName('');
 
-      // 加载新部门的楼宇列表
+      const findDeptName = (nodes: TreeNode[], id: string): string | undefined => {
+        for (const node of nodes) {
+          if (node.value === id) return node.label;
+          if (node.children) {
+            const found = findDeptName(node.children, id);
+            if (found) return found;
+          }
+        }
+        return undefined;
+      };
+      const deptName = findDeptName(departmentTreeData, deptId);
+      if (deptName) {
+        setSelectedDeptName(deptName);
+      }
+
       const buildings = await loadBuildingOptionsByDept(deptId);
 
-      // 自动选择第一个楼宇
       if (buildings.length > 0) {
         await handleBuildingChange(buildings[0].id);
       }
     },
-    [loadBuildingOptionsByDept, handleBuildingChange]
+    [loadBuildingOptionsByDept, departmentTreeData, handleBuildingChange]
   );
 
-  /**
-   * 打开平面图编辑器
-   */
   const handleEditFloorPlan = useCallback(
     async (floor: Floor) => {
       setCurrentFloor(floor);
       setPageMode('editor');
       setEditMode(false);
 
-      // 获取楼宇信息以获取部门ID
       try {
         const buildingResult = await buildingApi.get(floor.buildingId);
         const building = buildingResult.data;
 
         if (building) {
           setSelectedBuildingId(building.id);
+          setSelectedBuildingName(building.name);
           setSelectedDeptId(building.orgId);
 
-          // 加载该部门的楼宇列表
-          await loadBuildingOptionsByDept(building.orgId);
+          const findDeptName = (nodes: TreeNode[], id: string): string | undefined => {
+            for (const node of nodes) {
+              if (node.value === id) return node.label;
+              if (node.children) {
+                const found = findDeptName(node.children, id);
+                if (found) return found;
+              }
+            }
+            return undefined;
+          };
+          const deptName = findDeptName(departmentTreeData, building.orgId);
+          if (deptName) {
+            setSelectedDeptName(deptName);
+          }
 
-          // 加载该楼宇的楼层列表
+          await loadBuildingOptionsByDept(building.orgId);
           await loadFloorOptionsByBuilding(building.id);
         }
       } catch (error) {
@@ -507,12 +445,9 @@ const FloorManagement: FC = () => {
 
       await loadFloorPlanData(floor.id);
     },
-    [loadFloorPlanData, setEditMode, loadFloorOptionsByBuilding, loadBuildingOptionsByDept]
+    [loadFloorPlanData, setEditMode, loadFloorOptionsByBuilding, loadBuildingOptionsByDept, departmentTreeData]
   );
 
-  /**
-   * 保存平面图
-   */
   const handleSaveFloorPlan = useCallback(
     async (data: Record<string, unknown>) => {
       if (!currentFloor) return;
@@ -521,23 +456,18 @@ const FloorManagement: FC = () => {
     [currentFloor, saveFloorPlan]
   );
 
-  /**
-   * 返回列表视图
-   */
   const handleBackToList = useCallback(() => {
     setPageMode('list');
     setCurrentFloor(null);
     resetFloorPlan();
   }, [resetFloorPlan]);
 
-  // 表格列配置
   const columns = createFloorTableColumns({
     onEdit: openModal,
     onEditFloorPlan: handleEditFloorPlan,
     onDelete: handleDelete,
   });
 
-  // 渲染平面图编辑器视图
   const renderFloorPlanEditor = () => (
     <FloorPlanEditorView
       currentFloor={currentFloor}
@@ -548,7 +478,9 @@ const FloorManagement: FC = () => {
       buildingOptions={buildingOptionsByDept}
       floorOptions={floorOptions}
       selectedDeptId={selectedDeptId}
+      selectedDeptName={selectedDeptName}
       selectedBuildingId={selectedBuildingId}
+      selectedBuildingName={selectedBuildingName}
       onEditModeChange={setEditMode}
       onRefresh={() => loadFloorPlanData(currentFloor?.id || '')}
       onBack={handleBackToList}
@@ -559,7 +491,6 @@ const FloorManagement: FC = () => {
     />
   );
 
-  // 渲染列表视图
   const renderListView = () => (
     <div>
       <FloorStatisticsCards statistics={statistics} show={total > 10} />
@@ -572,6 +503,7 @@ const FloorManagement: FC = () => {
         departmentTreeData={departmentTreeData}
         buildingOptionsByDept={filterBuildingOptions}
         selectedDeptId={filterDeptId}
+        disabled={pageMode === 'editor'}
         onSearch={handleSearch}
         onReset={handleReset}
         onRefresh={handleRefresh}
@@ -636,7 +568,6 @@ const FloorManagement: FC = () => {
         onOk={handleSave}
         onCancel={() => {
           setModalVisible(false);
-          floorForm.resetFields();
           setEditingFloor(null);
           setModalDeptId('');
           setModalBuildingOptions([]);

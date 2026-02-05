@@ -42,9 +42,6 @@ export function useFloorPlanEditor(
     setIsEditMode(false);
   }, []);
 
-  /**
-   * 加载平面图数据
-   */
   const loadFloorPlanData = useCallback(async (floorId: string) => {
     setFloorPlanLoading(true);
     try {
@@ -58,7 +55,6 @@ export function useFloorPlanEditor(
       const doors = doorsResult.data?.list || [];
       const workstations = workstationsResult.data?.list || [];
 
-      // 尝试加载文本元素
       let texts: TextElement[] = [];
       try {
         const textsResult = await floorPlanTextApi.list({ floorId, current: 1, pageSize: 1000 });
@@ -93,6 +89,8 @@ export function useFloorPlanEditor(
         doors: parsedDoors,
         workstations: processedWorkstations,
         texts: parsedTexts,
+        planImageId: currentFloor?.planImageId,
+        planImageUrl: currentFloor?.planImageUrl,
         gridSize: DEFAULT_FLOOR_PLAN_CONFIG.GRID_SIZE,
         showGrid: true,
         snapToGrid: true,
@@ -109,6 +107,8 @@ export function useFloorPlanEditor(
         doors: [],
         workstations: [],
         texts: [],
+        planImageId: currentFloor?.planImageId,
+        planImageUrl: currentFloor?.planImageUrl,
         gridSize: DEFAULT_FLOOR_PLAN_CONFIG.GRID_SIZE,
         showGrid: true,
         snapToGrid: true,
@@ -118,9 +118,6 @@ export function useFloorPlanEditor(
     }
   }, [currentFloor]);
 
-  /**
-   * 保存墙体
-   */
   const saveWalls = useCallback(async (walls: Wall[], floorId: string) => {
     for (const wall of walls) {
       const isNew = isNewElement(wall.id, 'wall_');
@@ -140,9 +137,6 @@ export function useFloorPlanEditor(
     }
   }, []);
 
-  /**
-   * 保存门
-   */
   const saveDoors = useCallback(async (doors: Door[], floorId: string) => {
     for (const door of doors) {
       const isNew = isNewElement(door.id, 'door_');
@@ -161,9 +155,6 @@ export function useFloorPlanEditor(
     }
   }, []);
 
-  /**
-   * 保存文本元素
-   */
   const saveTexts = useCallback(async (texts: TextElement[], floorId: string) => {
     if (texts.length === 0) return;
 
@@ -188,9 +179,6 @@ export function useFloorPlanEditor(
     }
   }, []);
 
-  /**
-   * 保存工位数据
-   */
   const saveWorkstations = useCallback(async (workstations: WorkstationNode[]) => {
     const updates = workstations.map((ws) => ({
       id: ws.id,
@@ -203,9 +191,6 @@ export function useFloorPlanEditor(
     }
   }, []);
 
-  /**
-   * 保存平面图
-   */
   const saveFloorPlan = useCallback(async (data: FloorPlanData, floor: Floor) => {
     if (!floor) return;
 

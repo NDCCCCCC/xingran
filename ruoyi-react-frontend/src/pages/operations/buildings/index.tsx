@@ -1,7 +1,3 @@
-/**
- * 楼宇管理页面
- */
-
 import { useState, useEffect, useCallback, useRef, type FC, type Key } from 'react';
 import {
   Table, Button, Space, Modal, Form, Input, InputNumber, Select, Popconfirm,
@@ -320,7 +316,7 @@ const BuildingManagement: FC = () => {
             key: 'delete', label: '删除', icon: <DeleteOutlined />, danger: true,
             render: () => (
               <Popconfirm title="确定要删除这个楼宇吗？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消">
-                <Button type="link" danger icon={<DeleteOutlined />} size="small">删除</Button>
+                <Button type="link" danger ghost icon={<DeleteOutlined />} size="small">删除</Button>
               </Popconfirm>
             ),
           },
@@ -346,7 +342,7 @@ const BuildingManagement: FC = () => {
                 title={
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span>{building.name}</span>
-                    <Tag color={building.status === 0 ? 'success' : 'error'}>{building.status === 0 ? '正常' : '停用'}</Tag>
+                    <Tag color={building.status === 0 ? 'success' : 'error'}>{building.status === 0 ? '正常' : '1'}</Tag>
                   </div>
                 }
                 description={
@@ -400,7 +396,7 @@ const BuildingManagement: FC = () => {
             </Radio.Group>
             <Button icon={<ImportOutlined />} onClick={() => setImportVisible(true)}>导入</Button>
             <Button icon={<ExportOutlined />} onClick={() => setExportVisible(true)}>导出</Button>
-            {selectedRowKeys.length > 0 && <Button danger icon={<DeleteOutlined />} onClick={handleBatchDelete}>批量删除 ({selectedRowKeys.length})</Button>}
+            {selectedRowKeys.length > 0 && <Button danger ghost icon={<DeleteOutlined />} onClick={handleBatchDelete}>批量删除 ({selectedRowKeys.length})</Button>}
             <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>新增楼宇</Button>
           </Space>
         </div>
@@ -460,7 +456,7 @@ const BuildingManagement: FC = () => {
                     ? `${editingBuilding.longitude.toFixed(6)}, ${editingBuilding.latitude.toFixed(6)}`
                     : ''
                 }
-                addonAfter={
+                suffix={
                   geocoding.loading ? (
                     <Spin size="small" />
                   ) : geocoding.result ? (

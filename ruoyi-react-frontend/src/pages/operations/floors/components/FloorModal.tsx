@@ -1,14 +1,12 @@
-/**
- * 楼层编辑弹窗组件
- */
-
-import type { FC } from 'react';
+import { FC, useEffect } from 'react';
 import { Modal, Form, Input, InputNumber, Select } from 'antd';
 import type { FormInstance } from 'antd/es/form';
 import type { Floor, Building } from '@/types';
 import { STATUS_OPTIONS, DEFAULT_FORM_VALUES } from '../constants';
 import { DepartmentTreeSelect } from '@/components/shared/DepartmentTreeSelect';
 import type { TreeNode } from '@/components/shared/DepartmentTreeSelect';
+import FileUpload from '@/components/shared/FileUpload';
+import { useImageUpload } from '@/hooks/useImageUpload';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -16,14 +14,14 @@ const { TextArea } = Input;
 interface FloorModalProps {
   visible: boolean;
   editingFloor: Floor | null;
-  buildingOptions: Building[];  // 当前部门的楼宇选项（未使用，保留兼容性）
-  departmentTreeData: TreeNode[];  // 外部机构部门树数据
-  buildingOptionsByDept: Building[];  // 当前选中的部门的楼宇选项
-  selectedDeptId: string;  // 当前选中的部门ID
+  buildingOptions: Building[];
+  departmentTreeData: TreeNode[];
+  buildingOptionsByDept: Building[];
+  selectedDeptId: string;
   form: FormInstance;
   onOk: () => void;
   onCancel: () => void;
-  onDepartmentChange: (deptId: string) => void;  // 部门切换回调
+  onDepartmentChange: (deptId: string) => void;
 }
 
 export const FloorModal: FC<FloorModalProps> = ({
@@ -38,24 +36,44 @@ export const FloorModal: FC<FloorModalProps> = ({
   onCancel,
   onDepartmentChange,
 }) => {
+  const planImageUpload = useImageUpload({
+    businessType: 'floor-plan',
+    maxSize: 5 * 1024 * 1024,
+  });
+
+  useEffect(() => {
+    if (!visible) return;
+
+    if (editingFloor?.planImageId) {
+      planImageUpload.setInitialValue(editingFloor.planImageId, editingFloor.planImageUrl);
+    } else {
+      planImageUpload.resetUpload();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, editingFloor?.id, editingFloor?.planImageId, editingFloor?.planImageUrl]);
+
   const handleCancel = () => {
     form.resetFields();
+    planImageUpload.resetUpload();
     onCancel();
   };
 
-  // 编辑模式下，禁用部门和楼宇选择
+  const handleOk = async () => {
+    form.setFieldValue('planImageId', planImageUpload.imageId);
+    onOk();
+  };
+
   const isDisabled = !!editingFloor;
 
   return (
     <Modal
       title={editingFloor ? '编辑楼层' : '新增楼层'}
       open={visible}
-      onOk={onOk}
+      onOk={handleOk}
       onCancel={handleCancel}
       width={600}
     >
       <Form form={form} layout="horizontal" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
-        {/* 部门选择器（外部机构）- 仅用于过滤楼宇，不作为表单字段提交 */}
         <Form.Item label="所属机构" required>
           <DepartmentTreeSelect
             placeholder="选择机构"
@@ -67,7 +85,6 @@ export const FloorModal: FC<FloorModalProps> = ({
           />
         </Form.Item>
 
-        {/* 楼宇选择器（根据选择的部门过滤） */}
         <Form.Item
           name="buildingId"
           label="所属楼宇"
@@ -94,12 +111,15 @@ export const FloorModal: FC<FloorModalProps> = ({
         >
           <Input placeholder="请输入楼层号，如：1F" disabled={!!editingFloor} />
         </Form.Item>
+
         <Form.Item name="name" label="楼层名称">
           <Input placeholder="请输入楼层名称" />
         </Form.Item>
+
         <Form.Item name="area" label="面积">
           <InputNumber min={0} placeholder="请输入面积(m²)" style={{ width: '100%' }} />
         </Form.Item>
+
         <Form.Item
           name="status"
           label="状态"
@@ -114,8 +134,23 @@ export const FloorModal: FC<FloorModalProps> = ({
             ))}
           </Select>
         </Form.Item>
+
         <Form.Item name="description" label="描述">
           <TextArea rows={3} placeholder="请输入描述" />
+        </Form.Item>
+
+        <Form.Item label="平面图">
+          <FileUpload
+            category="floor-plan"
+            accept="image/*"
+            maxSize={5 * 1024 * 1024}
+            maxCount={1}
+            listType="picture-card"
+            value={planImageUpload.fileList}
+            onChange={planImageUpload.handleUploadChange}
+            onUploadSuccess={planImageUpload.handleUploadSuccess}
+            onUploadError={planImageUpload.handleUploadError}
+          />
         </Form.Item>
       </Form>
     </Modal>

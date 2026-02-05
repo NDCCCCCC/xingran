@@ -1,7 +1,3 @@
-/**
- * 楼层搜索表单组件
- */
-
 import type { FC } from 'react';
 import { Form, Input, Select, Button, Space, Radio, Card } from 'antd';
 import {
@@ -29,9 +25,10 @@ interface FloorSearchFormProps {
   buildingOptions: Building[];
   viewMode: ViewMode;
   loading: boolean;
-  departmentTreeData: TreeNode[];  // 外部机构部门树数据
-  buildingOptionsByDept: Building[];  // 当前部门的楼宇选项
-  selectedDeptId: string;  // 当前选中的部门ID
+  departmentTreeData: TreeNode[];
+  buildingOptionsByDept: Building[];
+  selectedDeptId: string;
+  disabled?: boolean;
   onSearch: () => void;
   onReset: () => void;
   onRefresh: () => void;
@@ -40,7 +37,7 @@ interface FloorSearchFormProps {
   onExport: () => void;
   onBatchDelete: () => void;
   onAdd: () => void;
-  onDepartmentChange: (deptId: string) => void;  // 部门切换回调
+  onDepartmentChange: (deptId: string) => void;
   selectedCount: number;
 }
 
@@ -52,6 +49,7 @@ export const FloorSearchForm: FC<FloorSearchFormProps> = ({
   departmentTreeData,
   buildingOptionsByDept,
   selectedDeptId,
+  disabled = false,
   onSearch,
   onReset,
   onRefresh,
@@ -74,8 +72,7 @@ export const FloorSearchForm: FC<FloorSearchFormProps> = ({
           gap: '16px',
         }}
       >
-        <Form form={form} layout="inline" style={{ flex: 1, minWidth: 0 }}>
-          {/* 部门选择器（外部机构） */}
+        <Form form={form} layout="inline" style={{ flex: 1, minWidth: 0 }} disabled={disabled}>
           <Form.Item label="所属机构">
             <Space size="small" style={{ display: 'flex', alignItems: 'center' }}>
               <BuildOutlined style={{ color: '#1890ff' }} />
@@ -86,11 +83,11 @@ export const FloorSearchForm: FC<FloorSearchFormProps> = ({
                 value={selectedDeptId}
                 onChange={onDepartmentChange}
                 allowClear
+                disabled={disabled}
               />
             </Space>
           </Form.Item>
 
-          {/* 楼宇选择器（根据选择的部门过滤） */}
           <Form.Item name="buildingId" label="所属楼宇">
             <Select
               placeholder="请选择楼宇"
@@ -98,6 +95,7 @@ export const FloorSearchForm: FC<FloorSearchFormProps> = ({
               style={{ width: 150 }}
               showSearch
               optionFilterProp="children"
+              disabled={disabled}
             >
               {buildingOptionsByDept.map((b) => (
                 <Option key={b.id} value={b.id}>
@@ -108,13 +106,15 @@ export const FloorSearchForm: FC<FloorSearchFormProps> = ({
           </Form.Item>
 
           <Form.Item name="floorNo" label="楼层号">
-            <Input placeholder="请输入楼层号" allowClear style={{ width: 120 }} />
+            <Input placeholder="请输入楼层号" allowClear style={{ width: 120 }} disabled={disabled} />
           </Form.Item>
+
           <Form.Item name="name" label="楼层名称">
-            <Input placeholder="请输入楼层名称" allowClear style={{ width: 150 }} />
+            <Input placeholder="请输入楼层名称" allowClear style={{ width: 150 }} disabled={disabled} />
           </Form.Item>
+
           <Form.Item name="status" label="状态">
-            <Select placeholder="请选择状态" allowClear style={{ width: 120 }}>
+            <Select placeholder="请选择状态" allowClear style={{ width: 120 }} disabled={disabled}>
               {STATUS_OPTIONS.map((opt) => (
                 <Option key={opt.value} value={opt.value}>
                   {opt.label}
@@ -122,6 +122,7 @@ export const FloorSearchForm: FC<FloorSearchFormProps> = ({
               ))}
             </Select>
           </Form.Item>
+
           <Form.Item>
             <Space>
               <Button
@@ -129,16 +130,18 @@ export const FloorSearchForm: FC<FloorSearchFormProps> = ({
                 icon={<SearchOutlined />}
                 onClick={onSearch}
                 loading={loading}
+                disabled={disabled}
               >
                 搜索
               </Button>
-              <Button onClick={onReset}>重置</Button>
+              <Button onClick={onReset} disabled={disabled}>重置</Button>
               <Button icon={<ReloadOutlined />} onClick={onRefresh} loading={loading}>
                 刷新
               </Button>
             </Space>
           </Form.Item>
         </Form>
+
         <Space>
           <Radio.Group
             value={viewMode}

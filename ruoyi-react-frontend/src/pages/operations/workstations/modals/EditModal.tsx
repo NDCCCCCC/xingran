@@ -3,6 +3,7 @@
  * 工位编辑模态框
  */
 
+import { useEffect } from 'react';
 import { Modal, Form, Input, InputNumber, Select, Row, Col } from 'antd';
 import type { WorkstationOps } from '@/types';
 import type { DepartmentTreeNode } from '@/types';
@@ -34,6 +35,18 @@ export function WorkstationEditModal({
   onDeptChange,
 }: WorkstationEditModalProps) {
   const [form] = Form.useForm();
+
+  // 当模态框打开或 editingWorkstation 变化时，设置表单值
+  useEffect(() => {
+    if (open) {
+      if (editingWorkstation) {
+        form.setFieldsValue(editingWorkstation);
+      } else {
+        form.resetFields();
+        form.setFieldsValue({ status: 0, type: 0 });
+      }
+    }
+  }, [open, editingWorkstation, form]);
 
   return (
     <Modal
@@ -106,6 +119,18 @@ export function WorkstationEditModal({
           <Col span={12}>
             <Form.Item name="positionY" label="Y坐标">
               <InputNumber placeholder="Y坐标" style={{ width: '100%' }} />
+            </Form.Item>
+          </Col>
+        </Row>
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item name="width" label="宽度" initialValue={160}>
+              <InputNumber placeholder="宽度" min={50} max={500} style={{ width: '100%' }} />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name="depth" label="深度" initialValue={70}>
+              <InputNumber placeholder="深度" min={30} max={300} style={{ width: '100%' }} />
             </Form.Item>
           </Col>
         </Row>

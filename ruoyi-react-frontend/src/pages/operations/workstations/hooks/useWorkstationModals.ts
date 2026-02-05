@@ -29,16 +29,11 @@ export interface UseWorkstationModalsReturn {
 export function useWorkstationModals(
   loadUserOptions?: (deptId?: string) => Promise<void>
 ): UseWorkstationModalsReturn {
-  const openModal = useCallback(async (record?: WorkstationOps, form?: FormInstance<unknown>) => {
-    if (record && form) {
-      form.setFieldsValue(record);
-      // 编辑模式下，如果有部门ID，加载该部门的用户列表
-      if (record.deptId && loadUserOptions) {
-        await loadUserOptions(record.deptId);
-      }
-    } else if (form) {
-      form.resetFields();
-      form.setFieldsValue({ status: 0, type: 0 });
+  const openModal = useCallback(async (record?: WorkstationOps, _form?: FormInstance<unknown>) => {
+    // 编辑模式下，如果有部门ID，加载该部门的用户列表
+    // 注意：表单初始化现在在 WorkstationEditModal 组件内部通过 useEffect 处理
+    if (record?.deptId && loadUserOptions) {
+      await loadUserOptions(record.deptId);
     }
   }, [loadUserOptions]);
 

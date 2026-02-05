@@ -18,15 +18,15 @@ export function processWorkstations(workstations: WorkstationOps[]): Workstation
 
   workstations.forEach((ws) => {
     if (ws.positionX !== undefined && ws.positionY !== undefined) {
-      // 有位置的工位：使用数据库中的实际值
+      // 有位置的工位：使用数据库中的实际值（直接使用，单位已经是像素）
       withPosition.push({
         id: ws.id,
         code: ws.name,
         name: ws.name,
         x: ws.positionX,
         y: ws.positionY,
-        width: (ws.width || DEFAULT_WIDTH) / 10, // 转换为像素（毫米/10）
-        height: (ws.depth || DEFAULT_DEPTH) / 10,
+        width: ws.width || DEFAULT_WIDTH,
+        height: ws.depth || DEFAULT_DEPTH,
         rotation: ws.rotation || 0,
         type: ws.deskType || 0,
         status: ws.status,
@@ -41,8 +41,8 @@ export function processWorkstations(workstations: WorkstationOps[]): Workstation
     const row = Math.floor(index / ITEMS_PER_ROW);
     const col = index % ITEMS_PER_ROW;
 
-    const wsWidth = (ws.width || DEFAULT_WIDTH) / 10;
-    const wsDepth = (ws.depth || DEFAULT_DEPTH) / 10;
+    const wsWidth = ws.width || DEFAULT_WIDTH;
+    const wsDepth = ws.depth || DEFAULT_DEPTH;
 
     withPosition.push({
       id: ws.id,

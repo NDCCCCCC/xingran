@@ -1,7 +1,3 @@
-/**
- * 楼层平面图编辑器视图组件
- */
-
 import type { FC } from 'react';
 import { Card, Button, Space, Spin, Select } from 'antd';
 import {
@@ -29,11 +25,13 @@ interface FloorPlanEditorViewProps {
   floorPlanData: FloorPlanData | null;
   loading: boolean;
   isEditMode: boolean;
-  departmentTreeData: TreeNode[];  // 外部机构部门树数据
-  buildingOptions: Building[];     // 当前部门的楼宇选项
+  departmentTreeData: TreeNode[];
+  buildingOptions: Building[];
   floorOptions: FloorOption[];
-  selectedDeptId: string;          // 当前选中的部门ID
-  selectedBuildingId: string;      // 当前选中的楼宇ID
+  selectedDeptId: string;
+  selectedDeptName?: string;
+  selectedBuildingId: string;
+  selectedBuildingName?: string;
   onEditModeChange: (edit: boolean) => void;
   onRefresh: () => void;
   onBack: () => void;
@@ -52,7 +50,9 @@ export const FloorPlanEditorView: FC<FloorPlanEditorViewProps> = ({
   buildingOptions,
   floorOptions,
   selectedDeptId,
+  selectedDeptName,
   selectedBuildingId,
+  selectedBuildingName,
   onEditModeChange,
   onRefresh,
   onBack,
@@ -82,10 +82,9 @@ export const FloorPlanEditorView: FC<FloorPlanEditorViewProps> = ({
   return (
     <div style={{ height: 'calc(100vh - 180px)', display: 'flex', flexDirection: 'column' }}>
       <Card
-        title={`${currentFloor.name || `${currentFloor.floorNo}层`} - 平面图编辑`}
+        title={`${selectedDeptName || '机构'} - ${selectedBuildingName || currentFloor?.buildingName || '楼宇'} - ${currentFloor.name || `${currentFloor.floorNo}层`} - 平面图编辑`}
         extra={
           <Space size="middle">
-            {/* 部门选择器（外部机构） */}
             <Space size="small" style={{ display: 'flex', alignItems: 'center' }}>
               <BuildOutlined style={{ color: '#1890ff' }} />
               <DepartmentTreeSelect
@@ -98,7 +97,6 @@ export const FloorPlanEditorView: FC<FloorPlanEditorViewProps> = ({
               />
             </Space>
 
-            {/* 楼宇选择器 */}
             <Space size="small" style={{ display: 'flex', alignItems: 'center' }}>
               <AppstoreOutlined style={{ color: '#722ed1' }} />
               <Select
@@ -115,7 +113,6 @@ export const FloorPlanEditorView: FC<FloorPlanEditorViewProps> = ({
               />
             </Space>
 
-            {/* 楼层选择器 */}
             <Space size="small" style={{ display: 'flex', alignItems: 'center' }}>
               <AppstoreOutlined style={{ color: '#52c41a' }} />
               <Select
@@ -156,6 +153,9 @@ export const FloorPlanEditorView: FC<FloorPlanEditorViewProps> = ({
           doors={floorPlanData.doors}
           workstations={floorPlanData.workstations}
           texts={floorPlanData.texts || []}
+          planImageId={currentFloor.planImageId}
+          planImageUrl={currentFloor.planImageUrl}
+          layerConfig={floorPlanData.layerConfig}
           onSave={onSave}
           readOnly={!isEditMode}
         />
