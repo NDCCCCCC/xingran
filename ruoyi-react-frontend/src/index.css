@@ -1517,6 +1517,39 @@ body {
   background: var(--bg-overlay-hover) !important;
 }
 
+/* 部门树容器滚动条优化 - 只在需要时显示 */
+.dept-tree-container {
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+/* Webkit 浏览器滚动条样式优化 */
+.dept-tree-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dept-tree-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dept-tree-container::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+}
+
+.dept-tree-container::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+/* 暗色模式下的滚动条样式 */
+[data-color-mode="dark"] .dept-tree-container::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-color-mode="dark"] .dept-tree-container::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
 /* ========================================
    Timeline 时间轴
    ======================================== */
@@ -4312,3 +4345,202 @@ html, body {
 }
 
 /* 完成状态：Premium Dark Mode Component Enhancement */
+
+/* ========================================
+   现代化 Tag 样式 - Modern Tag Styles
+   ======================================== */
+
+/* 成功/正常状态 - 绿色系 */
+.modern-tag-success {
+  background-color: #f6ffed !important;
+  border: 1px solid #b7eb8f !important;
+  color: #52c41a !important;
+  border-radius: 6px !important;
+  padding: 2px 10px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: 20px !important;
+}
+
+/* 错误/停用状态 - 红色系 */
+.modern-tag-error {
+  background-color: #fff1f0 !important;
+  border: 1px solid #ffccc7 !important;
+  color: #ff4d4f !important;
+  border-radius: 6px !important;
+  padding: 2px 10px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: 20px !important;
+}
+
+/* 警告状态 - 橙色系 */
+.modern-tag-warning {
+  background-color: #fffbe6 !important;
+  border: 1px solid #ffe58f !important;
+  color: #faad14 !important;
+  border-radius: 6px !important;
+  padding: 2px 10px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: 20px !important;
+}
+
+/* 默认状态 - 灰色系 */
+.modern-tag-default {
+  background-color: #fafafa !important;
+  border: 1px solid #d9d9d9 !important;
+  color: #8c8c8c !important;
+  border-radius: 6px !important;
+  padding: 2px 10px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: 20px !important;
+}
+
+/* 进行中状态 - 蓝色系 */
+.modern-tag-processing {
+  background-color: #e6f7ff !important;
+  border: 1px solid #91d5ff !important;
+  color: #1890ff !important;
+  border-radius: 6px !important;
+  padding: 2px 10px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: 20px !important;
+}
+
+/* 暗色模式下的现代化 Tag 样式 */
+[data-color-mode="dark"] .modern-tag-success {
+  background-color: rgba(82, 196, 26, 0.15) !important;
+  border: 1px solid rgba(82, 196, 26, 0.4) !important;
+  color: #95de64 !important;
+}
+
+[data-color-mode="dark"] .modern-tag-error {
+  background-color: rgba(255, 77, 79, 0.15) !important;
+  border: 1px solid rgba(255, 77, 79, 0.4) !important;
+  color: #ff7875 !important;
+}
+
+[data-color-mode="dark"] .modern-tag-warning {
+  background-color: rgba(250, 173, 20, 0.15) !important;
+  border: 1px solid rgba(250, 173, 20, 0.4) !important;
+  color: #ffc53d !important;
+}
+
+[data-color-mode="dark"] .modern-tag-default {
+  background-color: rgba(140, 140, 140, 0.15) !important;
+  border: 1px solid rgba(140, 140, 140, 0.4) !important;
+  color: #bfbfbf !important;
+}
+
+[data-color-mode="dark"] .modern-tag-processing {
+  background-color: rgba(24, 144, 255, 0.15) !important;
+  border: 1px solid rgba(24, 144, 255, 0.4) !important;
+  color: #69c0ff !important;
+}
+
+/* ========================================
+   操作按钮样式 - Fixed Action Button Styles
+   ======================================== */
+
+/* 表格操作按钮 - 固定黑色/灰色，不受主题色影响 */
+.ant-table .action-btn {
+  color: #262626 !important;
+}
+
+.ant-table .action-btn:hover {
+  color: #000000 !important;
+  background-color: rgba(0, 0, 0, 0.04) !important;
+}
+
+.ant-table .action-btn-danger {
+  color: #ff4d4f !important;
+}
+
+.ant-table .action-btn-danger:hover {
+  color: #cf1322 !important;
+  background-color: rgba(255, 77, 79, 0.1) !important;
+}
+
+/* 暗色模式下的操作按钮 */
+[data-color-mode="dark"] .ant-table .action-btn {
+  color: #d9d9d9 !important;
+}
+
+[data-color-mode="dark"] .ant-table .action-btn:hover {
+  color: #ffffff !important;
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-color-mode="dark"] .ant-table .action-btn-danger {
+  color: #ff7875 !important;
+}
+
+[data-color-mode="dark"] .ant-table .action-btn-danger:hover {
+  color: #ff4d4f !important;
+  background-color: rgba(255, 77, 79, 0.15) !important;
+}
+
+/* 通用链接按钮样式 - 不使用主题色 */
+.ant-btn-link.action-link {
+  color: #262626 !important;
+}
+
+.ant-btn-link.action-link:hover {
+  color: #000000 !important;
+}
+
+.ant-btn-link.action-link-danger {
+  color: #ff4d4f !important;
+}
+
+.ant-btn-link.action-link-danger:hover {
+  color: #cf1322 !important;
+}
+
+/* 暗色模式 */
+[data-color-mode="dark"] .ant-btn-link.action-link {
+  color: #d9d9d9 !important;
+}
+
+[data-color-mode="dark"] .ant-btn-link.action-link:hover {
+  color: #ffffff !important;
+}
+
+[data-color-mode="dark"] .ant-btn-link.action-link-danger {
+  color: #ff7875 !important;
+}
+
+[data-color-mode="dark"] .ant-btn-link.action-link-danger:hover {
+  color: #ff4d4f !important;
+}
+
+/* 表格列标题 - 固定黑色，不受主题色影响 */
+.ant-table th {
+  color: #262626 !important;
+}
+
+.ant-table-thead > tr > th {
+  color: #262626 !important;
+}
+
+/* 暗色模式下的表格列标题 */
+[data-color-mode="dark"] .ant-table th {
+  color: #d9d9d9 !important;
+}
+
+[data-color-mode="dark"] .ant-table-thead > tr > th {
+  color: #d9d9d9 !important;
+}
+
+/* 固定表格内容文字颜色 */
+.ant-table-tbody > tr > td {
+  color: #262626 !important;
+}
+
+/* 暗色模式 */
+[data-color-mode="dark"] .ant-table-tbody > tr > td {
+  color: #e8e8e8 !important;
+}
