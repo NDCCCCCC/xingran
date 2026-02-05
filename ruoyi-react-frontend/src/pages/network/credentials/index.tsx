@@ -397,7 +397,11 @@ const CredentialManagement: FC = () => {
           </Form>
           <Space>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新增</Button>
-            <Button danger icon={<DeleteOutlined />} onClick={handleBatchDelete} disabled={selectedRowKeys.length === 0}>批量删除</Button>
+            {selectedRowKeys.length > 0 && (
+              <Button danger ghost icon={<DeleteOutlined />} onClick={handleBatchDelete}>
+                批量删除 ({selectedRowKeys.length})
+              </Button>
+            )}
           </Space>
         </div>
       </Card>

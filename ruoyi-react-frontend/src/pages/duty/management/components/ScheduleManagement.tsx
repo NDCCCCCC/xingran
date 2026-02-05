@@ -163,7 +163,7 @@ export const ScheduleManagement: React.FC<ScheduleManagementProps> = ({
       width: 80,
       render: (_: unknown, record: DutySchedule) => (
         <Popconfirm title="确定要删除这条排班吗？" onConfirm={() => onDelete(record.id)} okText="确定" cancelText="取消">
-          <Button type="link" size="small" danger icon={<DeleteOutlined />}>
+          <Button type="link" size="small" danger ghost icon={<DeleteOutlined />}>
             删除
           </Button>
         </Popconfirm>

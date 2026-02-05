@@ -342,7 +342,7 @@ const DutyPoolPage: FC = () => {
             编辑
           </Button>
           <Popconfirm title="确定要删除吗？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消">
-            <Button type="link" size="small" danger icon={<DeleteOutlined />}>
+            <Button type="link" size="small" danger ghost icon={<DeleteOutlined />}>
               删除
             </Button>
           </Popconfirm>

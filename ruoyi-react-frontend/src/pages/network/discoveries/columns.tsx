@@ -86,7 +86,7 @@ export function getDiscoveryColumns(params: DiscoveryColumnsParams): ColumnsType
             danger: true,
             render: () => (
               <Popconfirm title="确认删除?" onConfirm={() => handleDelete(record.id)}>
-                <Button type="link" danger icon={<DeleteOutlined />} size="small">
+                <Button type="link" danger ghost icon={<DeleteOutlined />} size="small">
                   删除
                 </Button>
               </Popconfirm>

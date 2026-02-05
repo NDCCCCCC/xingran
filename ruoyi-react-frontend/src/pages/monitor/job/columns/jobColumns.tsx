@@ -131,7 +131,7 @@ export function getJobColumns(params: GetJobColumnsParams): ColumnsType<JobInfo>
                 description="删除后将无法恢复"
                 onConfirm={() => handleDelete(record)}
               >
-                <Button type="link" danger icon={<DeleteOutlined />} size="small">
+                <Button type="link" danger ghost icon={<DeleteOutlined />} size="small">
                   删除
                 </Button>
               </Popconfirm>

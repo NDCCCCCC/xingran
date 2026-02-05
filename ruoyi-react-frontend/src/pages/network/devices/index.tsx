@@ -618,7 +618,11 @@ const DeviceManagement: FC = () => {
               <Space>
                 <Button type="primary" icon={<ThunderboltOutlined />} onClick={openQuickCreateModal}>快速创建</Button>
                 <Button type="default" icon={<PlusOutlined />} onClick={() => openModal()}>手动新增</Button>
-                <Button danger icon={<DeleteOutlined />} onClick={handleBatchDelete} disabled={selectedRowKeys.length === 0}>批量删除 ({selectedRowKeys.length})</Button>
+                {selectedRowKeys.length > 0 && (
+                  <Button danger ghost icon={<DeleteOutlined />} onClick={handleBatchDelete}>
+                    批量删除 ({selectedRowKeys.length})
+                  </Button>
+                )}
               </Space>
             </div>
             {selectedRowKeys.length > 0 && (
