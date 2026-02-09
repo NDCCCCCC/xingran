@@ -3,10 +3,10 @@ package system
 import (
 	"context"
 	"errors"
-	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	addomainServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
@@ -39,7 +39,7 @@ func (h *ADDomainHandler) setDefaultPagination(current, pageSize *int) {
 // requireConfigID 验证配置ID是否为空
 func (h *ADDomainHandler) requireConfigID(id string) error {
 	if id == "" {
-		return errors.New("配置ID不能为空")
+		return apperrors.ParamMissing("配置ID")
 	}
 	return nil
 }
@@ -57,7 +57,7 @@ func (h *ADDomainHandler) ListConfigs(c *gin.Context) {
 
 	list, total, err := h.service.GetADConfigList(c.Request.Context(), req.Status, req.Current, req.PageSize)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -68,7 +68,7 @@ func (h *ADDomainHandler) ListConfigs(c *gin.Context) {
 func (h *ADDomainHandler) CreateConfig(c *gin.Context) {
 	var req addomainServices.ADConfigCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
@@ -76,7 +76,7 @@ func (h *ADDomainHandler) CreateConfig(c *gin.Context) {
 
 	config, err := h.service.CreateADConfig(c.Request.Context(), &req, creatorID)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -92,13 +92,13 @@ func (h *ADDomainHandler) CreateConfig(c *gin.Context) {
 func (h *ADDomainHandler) GetConfig(c *gin.Context) {
 	id := c.Param("id")
 	if err := h.requireConfigID(id); err != nil {
-		response.Error(c, http.StatusBadRequest, err.Error())
+		response.Error(c, err)
 		return
 	}
 
 	config, err := h.service.GetADConfigByID(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusNotFound, "配置不存在")
+		response.Error(c, apperrors.ADConfigNotFound())
 		return
 	}
 
@@ -110,13 +110,13 @@ func (h *ADDomainHandler) GetConfig(c *gin.Context) {
 func (h *ADDomainHandler) UpdateConfig(c *gin.Context) {
 	id := c.Param("id")
 	if err := h.requireConfigID(id); err != nil {
-		response.Error(c, http.StatusBadRequest, err.Error())
+		response.Error(c, err)
 		return
 	}
 
 	var req addomainServices.ADConfigUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
@@ -124,7 +124,7 @@ func (h *ADDomainHandler) UpdateConfig(c *gin.Context) {
 	updaterID := c.GetString("user_id")
 
 	if err := h.service.UpdateADConfig(c.Request.Context(), &req, updaterID); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -136,12 +136,12 @@ func (h *ADDomainHandler) UpdateConfig(c *gin.Context) {
 func (h *ADDomainHandler) DeleteConfig(c *gin.Context) {
 	id := c.Param("id")
 	if err := h.requireConfigID(id); err != nil {
-		response.Error(c, http.StatusBadRequest, err.Error())
+		response.Error(c, err)
 		return
 	}
 
 	if err := h.service.DeleteADConfig(c.Request.Context(), id); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -153,12 +153,12 @@ func (h *ADDomainHandler) DeleteConfig(c *gin.Context) {
 func (h *ADDomainHandler) TestConnection(c *gin.Context) {
 	id := c.Param("id")
 	if err := h.requireConfigID(id); err != nil {
-		response.Error(c, http.StatusBadRequest, err.Error())
+		response.Error(c, err)
 		return
 	}
 
 	if err := h.service.TestADConnection(c.Request.Context(), id); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -169,7 +169,7 @@ func (h *ADDomainHandler) TestConnection(c *gin.Context) {
 func (h *ADDomainHandler) SyncData(c *gin.Context) {
 	id := c.Param("id")
 	if err := h.requireConfigID(id); err != nil {
-		response.Error(c, http.StatusBadRequest, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -188,10 +188,10 @@ func (h *ADDomainHandler) SyncData(c *gin.Context) {
 	result, err := h.service.SyncADData(ctx, id, req.SyncType)
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
-			response.Error(c, http.StatusRequestTimeout, "同步超时，请稍后重试")
+			response.Error(c, apperrors.New(apperrors.CodeServerError, "同步超时，请稍后重试"))
 			return
 		}
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -206,13 +206,13 @@ func (h *ADDomainHandler) GetOUTree(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
 	tree, err := h.service.GetOUTree(c.Request.Context(), req.ConfigID)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -228,7 +228,7 @@ func (h *ADDomainHandler) ListGroups(c *gin.Context) {
 
 	list, total, err := h.service.GetADGroupList(c.Request.Context(), &req)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -237,19 +237,19 @@ func (h *ADDomainHandler) ListGroups(c *gin.Context) {
 
 // GetGroupDetail 获取AD用户组详情
 func (h *ADDomainHandler) GetGroupDetail(c *gin.Context) {
-	response.Error(c, http.StatusNotImplemented, "功能开发中")
+	response.Error(c, apperrors.NotImplemented())
 }
 
 // UpdateGroup 更新AD用户组
 func (h *ADDomainHandler) UpdateGroup(c *gin.Context) {
-	response.Error(c, http.StatusNotImplemented, "功能开发中")
+	response.Error(c, apperrors.NotImplemented())
 }
 
 // GetGroupMembers 获取AD用户组成员
 func (h *ADDomainHandler) GetGroupMembers(c *gin.Context) {
 	groupDN := c.Param("id")
 	if groupDN == "" {
-		response.Error(c, http.StatusBadRequest, "用户组DN不能为空")
+		response.Error(c, apperrors.ParamMissing("用户组DN"))
 		return
 	}
 
@@ -264,7 +264,7 @@ func (h *ADDomainHandler) GetGroupMembers(c *gin.Context) {
 
 	members, total, err := h.service.GetADGroupMembers(c.Request.Context(), req.ConfigID, groupDN, req.Current, req.PageSize)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -280,7 +280,7 @@ func (h *ADDomainHandler) ListUsers(c *gin.Context) {
 
 	list, total, err := h.service.GetADUserList(c.Request.Context(), &req)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -289,7 +289,7 @@ func (h *ADDomainHandler) ListUsers(c *gin.Context) {
 
 // GetUserDetail 获取AD用户详情
 func (h *ADDomainHandler) GetUserDetail(c *gin.Context) {
-	response.Error(c, http.StatusNotImplemented, "功能开发中")
+	response.Error(c, apperrors.NotImplemented())
 }
 
 // UpdateUser 更新AD用户
@@ -297,7 +297,7 @@ func (h *ADDomainHandler) UpdateUser(c *gin.Context) {
 	// 路由格式: /users/:id/update，其中:id是用户ID（数据库中的ID）
 	userID := c.Param("id")
 	if userID == "" {
-		response.Error(c, http.StatusBadRequest, "用户ID不能为空")
+		response.Error(c, apperrors.ParamMissing("用户ID"))
 		return
 	}
 
@@ -306,25 +306,25 @@ func (h *ADDomainHandler) UpdateUser(c *gin.Context) {
 		Update   addomainServices.ADUserUpdateRequest `json:"update"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
 	// 根据userID获取用户的DN
 	user, err := h.service.GetADUserByID(c.Request.Context(), userID)
 	if err != nil {
-		response.Error(c, http.StatusNotFound, "用户不存在")
+		response.Error(c, apperrors.UserNotFound())
 		return
 	}
 
 	config, err := h.service.GetADConfigByID(c.Request.Context(), req.ConfigID)
 	if err != nil {
-		response.Error(c, http.StatusNotFound, "AD配置不存在")
+		response.Error(c, apperrors.ADConfigNotFound())
 		return
 	}
 
 	if err := h.service.UpdateADUser(c.Request.Context(), config, user.UserDN, &req.Update); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -337,7 +337,7 @@ func (h *ADDomainHandler) MoveUser(c *gin.Context) {
 	// 路由格式: /users/:id/move，其中:id是用户ID
 	userID := c.Param("id")
 	if userID == "" {
-		response.Error(c, http.StatusBadRequest, "用户ID不能为空")
+		response.Error(c, apperrors.ParamMissing("用户ID"))
 		return
 	}
 
@@ -348,25 +348,25 @@ func (h *ADDomainHandler) MoveUser(c *gin.Context) {
 		} `json:"move"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
 	// 根据userID获取用户的DN
 	user, err := h.service.GetADUserByID(c.Request.Context(), userID)
 	if err != nil {
-		response.Error(c, http.StatusNotFound, "用户不存在")
+		response.Error(c, apperrors.UserNotFound())
 		return
 	}
 
 	config, err := h.service.GetADConfigByID(c.Request.Context(), req.ConfigID)
 	if err != nil {
-		response.Error(c, http.StatusNotFound, "AD配置不存在")
+		response.Error(c, apperrors.ADConfigNotFound())
 		return
 	}
 
 	if err := h.service.MoveADUser(c.Request.Context(), config, user.UserDN, req.Move.NewOUDN); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -378,7 +378,7 @@ func (h *ADDomainHandler) MoveUser(c *gin.Context) {
 func (h *ADDomainHandler) EnableUser(c *gin.Context) {
 	userID := c.Param("id")
 	if userID == "" {
-		response.Error(c, http.StatusBadRequest, "用户ID不能为空")
+		response.Error(c, apperrors.ParamMissing("用户ID"))
 		return
 	}
 
@@ -386,24 +386,24 @@ func (h *ADDomainHandler) EnableUser(c *gin.Context) {
 		ConfigID string `json:"configId" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
 	user, err := h.service.GetADUserByID(c.Request.Context(), userID)
 	if err != nil {
-		response.Error(c, http.StatusNotFound, "用户不存在")
+		response.Error(c, apperrors.UserNotFound())
 		return
 	}
 
 	config, err := h.service.GetADConfigByID(c.Request.Context(), req.ConfigID)
 	if err != nil {
-		response.Error(c, http.StatusNotFound, "AD配置不存在")
+		response.Error(c, apperrors.ADConfigNotFound())
 		return
 	}
 
 	if err := h.service.EnableADUser(c.Request.Context(), config, user.UserDN); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -415,7 +415,7 @@ func (h *ADDomainHandler) EnableUser(c *gin.Context) {
 func (h *ADDomainHandler) DisableUser(c *gin.Context) {
 	userID := c.Param("id")
 	if userID == "" {
-		response.Error(c, http.StatusBadRequest, "用户ID不能为空")
+		response.Error(c, apperrors.ParamMissing("用户ID"))
 		return
 	}
 
@@ -423,24 +423,24 @@ func (h *ADDomainHandler) DisableUser(c *gin.Context) {
 		ConfigID string `json:"configId" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
 	user, err := h.service.GetADUserByID(c.Request.Context(), userID)
 	if err != nil {
-		response.Error(c, http.StatusNotFound, "用户不存在")
+		response.Error(c, apperrors.UserNotFound())
 		return
 	}
 
 	config, err := h.service.GetADConfigByID(c.Request.Context(), req.ConfigID)
 	if err != nil {
-		response.Error(c, http.StatusNotFound, "AD配置不存在")
+		response.Error(c, apperrors.ADConfigNotFound())
 		return
 	}
 
 	if err := h.service.DisableADUser(c.Request.Context(), config, user.UserDN); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -461,7 +461,7 @@ func (h *ADDomainHandler) ListSyncLogs(c *gin.Context) {
 
 	list, total, err := h.service.GetADSyncLogList(c.Request.Context(), req.ConfigID, req.Current, req.PageSize)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -477,7 +477,7 @@ func (h *ADDomainHandler) ListComputers(c *gin.Context) {
 
 	list, total, err := h.service.GetADComputerList(c.Request.Context(), &req)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -492,13 +492,13 @@ func (h *ADDomainHandler) GetComputerDetail(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
 	detail, err := h.service.GetADComputerByDN(c.Request.Context(), req.ConfigID, req.ComputerDN)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 

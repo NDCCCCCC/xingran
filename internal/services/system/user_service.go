@@ -2,10 +2,10 @@ package system
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	"gorm.io/gorm"
@@ -67,16 +67,16 @@ func (s *userService) Create(ctx context.Context, req *requests.UserCreateReques
 	// 检查用户名是否已存在
 	var count int64
 	if err := s.db.WithContext(ctx).Model(&models.User{}).Where("username = ?", req.Username).Count(&count).Error; err != nil {
-		return fmt.Errorf("检查用户名失败: %w", err)
+		return apperrors.DatabaseError(err)
 	}
 	if count > 0 {
-		return fmt.Errorf("用户名已存在")
+		return apperrors.UserExistsWithUsername(req.Username)
 	}
 
 	// 加密密码
 	hashedPassword, err := s.pwdManager.HashPassword(req.Password)
 	if err != nil {
-		return fmt.Errorf("密码加密失败: %w", err)
+		return apperrors.Wrap(err, apperrors.CodeServerError, "密码加密失败")
 	}
 
 	user := req.ToModel(hashedPassword)
@@ -85,7 +85,7 @@ func (s *userService) Create(ctx context.Context, req *requests.UserCreateReques
 	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// 创建用户
 		if err := tx.Create(&user).Error; err != nil {
-			return fmt.Errorf("创建用户失败: %w", err)
+			return apperrors.DatabaseError(err)
 		}
 
 		// 分配角色
@@ -95,7 +95,7 @@ func (s *userService) Create(ctx context.Context, req *requests.UserCreateReques
 					UserID: user.ID,
 					RoleID: roleID,
 				}).Error; err != nil {
-					return fmt.Errorf("分配角色失败: %w", err)
+					return apperrors.DatabaseError(err)
 				}
 			}
 		}
@@ -107,7 +107,7 @@ func (s *userService) Create(ctx context.Context, req *requests.UserCreateReques
 					UserID: user.ID,
 					PostID: postID,
 				}).Error; err != nil {
-					return fmt.Errorf("分配岗位失败: %w", err)
+					return apperrors.DatabaseError(err)
 				}
 			}
 		}
@@ -124,9 +124,9 @@ func (s *userService) Update(ctx context.Context, req *requests.UserUpdateReques
 	var user models.User
 	if err := s.db.WithContext(ctx).First(&user, "id = ?", req.ID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return fmt.Errorf("用户不存在")
+			return apperrors.UserNotFoundWithID(req.ID)
 		}
-		return fmt.Errorf("查询用户失败: %w", err)
+		return apperrors.DatabaseError(err)
 	}
 
 	// 使用事务更新用户及其关联
@@ -152,12 +152,12 @@ func (s *userService) Update(ctx context.Context, req *requests.UserUpdateReques
 		}
 
 		if err := tx.Save(&user).Error; err != nil {
-			return fmt.Errorf("更新用户失败: %w", err)
+			return apperrors.DatabaseError(err)
 		}
 
 		// 更新角色关联：先删除旧关联，再添加新关联
 		if err := tx.Table("sys_user_role").Where("user_id = ?", req.ID).Delete(&models.UserRole{}).Error; err != nil {
-			return fmt.Errorf("删除用户角色关联失败: %w", err)
+			return apperrors.DatabaseError(err)
 		}
 		if len(req.RoleIds) > 0 {
 			for _, roleID := range req.RoleIds {
@@ -165,14 +165,14 @@ func (s *userService) Update(ctx context.Context, req *requests.UserUpdateReques
 					UserID: req.ID,
 					RoleID: roleID,
 				}).Error; err != nil {
-					return fmt.Errorf("分配角色失败: %w", err)
+					return apperrors.DatabaseError(err)
 				}
 			}
 		}
 
 		// 更新岗位关联：先删除旧关联，再添加新关联
 		if err := tx.Table("sys_user_post").Where("user_id = ?", req.ID).Delete(&models.UserPost{}).Error; err != nil {
-			return fmt.Errorf("删除用户岗位关联失败: %w", err)
+			return apperrors.DatabaseError(err)
 		}
 		if len(req.PostIds) > 0 {
 			for _, postID := range req.PostIds {
@@ -180,7 +180,7 @@ func (s *userService) Update(ctx context.Context, req *requests.UserUpdateReques
 					UserID: req.ID,
 					PostID: postID,
 				}).Error; err != nil {
-					return fmt.Errorf("分配岗位失败: %w", err)
+					return apperrors.DatabaseError(err)
 				}
 			}
 		}
@@ -207,26 +207,26 @@ func (s *userService) Delete(ctx context.Context, id string) error {
 	var user models.User
 	if err := s.db.WithContext(ctx).Where("id = ?", id).First(&user).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return fmt.Errorf("用户不存在")
+			return apperrors.UserNotFoundWithID(id)
 		}
-		return fmt.Errorf("查询用户失败: %w", err)
+		return apperrors.DatabaseError(err)
 	}
 
 	// 使用事务删除用户及其关联数据
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// 删除用户角色关联
 		if err := tx.Table("sys_user_role").Where("user_id = ?", id).Delete(&models.UserRole{}).Error; err != nil {
-			return fmt.Errorf("删除用户角色关联失败: %w", err)
+			return apperrors.DatabaseError(err)
 		}
 
 		// 删除用户岗位关联
 		if err := tx.Table("sys_user_post").Where("user_id = ?", id).Delete(&models.UserPost{}).Error; err != nil {
-			return fmt.Errorf("删除用户岗位关联失败: %w", err)
+			return apperrors.DatabaseError(err)
 		}
 
 		// 软删除用户
 		if err := tx.Delete(&user).Error; err != nil {
-			return fmt.Errorf("删除用户失败: %w", err)
+			return apperrors.DatabaseError(err)
 		}
 
 		return nil
@@ -251,9 +251,9 @@ func (s *userService) GetByID(ctx context.Context, id string) (*models.User, err
 	err := s.db.WithContext(ctx).Preload("Dept").First(&user, "id = ?", id).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return nil, fmt.Errorf("用户不存在")
+			return nil, apperrors.UserNotFoundWithID(id)
 		}
-		return nil, fmt.Errorf("查询用户失败: %w", err)
+		return nil, apperrors.DatabaseError(err)
 	}
 	return &user, nil
 }
@@ -294,7 +294,7 @@ func (s *userService) List(ctx context.Context, params requests.UserListParams) 
 
 	// 统计总数
 	if err := query.Count(&total).Error; err != nil {
-		return nil, fmt.Errorf("统计用户数量失败: %w", err)
+		return nil, apperrors.DatabaseError(err)
 	}
 
 	// 分页查询
@@ -303,7 +303,7 @@ func (s *userService) List(ctx context.Context, params requests.UserListParams) 
 		Order("created_at DESC").
 		Offset(offset).Limit(params.PageSize).
 		Find(&list).Error; err != nil {
-		return nil, fmt.Errorf("查询用户列表失败: %w", err)
+		return nil, apperrors.DatabaseError(err)
 	}
 
 	// 填充用户角色信息
@@ -364,24 +364,24 @@ func (s *userService) List(ctx context.Context, params requests.UserListParams) 
 // BatchDelete 批量删除用户
 func (s *userService) BatchDelete(ctx context.Context, ids []string) error {
 	if len(ids) == 0 {
-		return fmt.Errorf("ids不能为空")
+		return apperrors.ParamMissing("ids")
 	}
 
 	// 使用事务批量删除用户及其关联数据
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// 批量删除用户角色关联
 		if err := tx.Table("sys_user_role").Where("user_id IN ?", ids).Delete(&models.UserRole{}).Error; err != nil {
-			return fmt.Errorf("删除用户角色关联失败: %w", err)
+			return apperrors.DatabaseError(err)
 		}
 
 		// 批量删除用户岗位关联
 		if err := tx.Table("sys_user_post").Where("user_id IN ?", ids).Delete(&models.UserPost{}).Error; err != nil {
-			return fmt.Errorf("删除用户岗位关联失败: %w", err)
+			return apperrors.DatabaseError(err)
 		}
 
 		// 批量软删除用户
 		if err := tx.Where("id IN ?", ids).Delete(&models.User{}).Error; err != nil {
-			return fmt.Errorf("批量删除用户失败: %w", err)
+			return apperrors.DatabaseError(err)
 		}
 
 		return nil
@@ -405,14 +405,14 @@ func (s *userService) UpdateStatus(ctx context.Context, id string, status int) e
 	var user models.User
 	if err := s.db.WithContext(ctx).First(&user, "id = ?", id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return fmt.Errorf("用户不存在")
+			return apperrors.UserNotFoundWithID(id)
 		}
-		return fmt.Errorf("查询用户失败: %w", err)
+		return apperrors.DatabaseError(err)
 	}
 
 	// 更新状态
 	if err := s.db.WithContext(ctx).Model(&user).Update("status", status).Error; err != nil {
-		return fmt.Errorf("更新用户状态失败: %w", err)
+		return apperrors.DatabaseError(err)
 	}
 
 	// 清除用户缓存
@@ -429,20 +429,20 @@ func (s *userService) ResetPassword(ctx context.Context, id string, newPassword 
 	var user models.User
 	if err := s.db.WithContext(ctx).First(&user, "id = ?", id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return fmt.Errorf("用户不存在")
+			return apperrors.UserNotFoundWithID(id)
 		}
-		return fmt.Errorf("查询用户失败: %w", err)
+		return apperrors.DatabaseError(err)
 	}
 
 	// 加密新密码
 	hashedPassword, err := s.pwdManager.HashPassword(newPassword)
 	if err != nil {
-		return fmt.Errorf("密码加密失败: %w", err)
+		return apperrors.Wrap(err, apperrors.CodeServerError, "密码加密失败")
 	}
 
 	// 更新密码
 	if err := s.db.WithContext(ctx).Model(&user).Update("password", hashedPassword).Error; err != nil {
-		return fmt.Errorf("重置密码失败: %w", err)
+		return apperrors.DatabaseError(err)
 	}
 
 	// 清除用户缓存

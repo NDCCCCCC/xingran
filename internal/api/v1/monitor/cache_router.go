@@ -322,4 +322,12 @@ func SetupCacheRouter(r *gin.RouterGroup, core *core.Core) {
 	r.GET("/cache/test", cacheHandler.TestCacheEndpoint)
 	r.GET("/cache/debug/raw-keys", cacheHandler.DebugRawKeys)
 	r.GET("/cache/debug/l1", cacheHandler.DebugL1Cache)
+
+	// ==================== 增强缓存管理路由 ====================
+	enhancedCacheHandler := NewCacheEnhancedHandler(core)
+	r.POST("/cache/stats", enhancedCacheHandler.GetCacheStats)           // 获取缓存统计信息
+	r.POST("/cache/invalidate", enhancedCacheHandler.InvalidateByModule) // 按模块清除缓存
+	r.POST("/cache/invalidate-pattern", enhancedCacheHandler.InvalidateByPattern) // 按模式清除缓存
+	r.POST("/cache/warmup", enhancedCacheHandler.WarmUpCache)             // 执行缓存预热
+	r.POST("/cache/key-info", enhancedCacheHandler.GetKeyInfo)           // 获取缓存键信息
 }

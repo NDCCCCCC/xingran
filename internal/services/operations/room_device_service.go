@@ -2,8 +2,8 @@ package operations
 
 import (
 	"context"
-	"errors"
 
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 	"gorm.io/gorm"
@@ -117,7 +117,7 @@ func (s *roomDeviceService) validateRoom(ctx context.Context, roomID string) err
 		return err
 	}
 	if count == 0 {
-		return errors.New("所属机房不存在")
+		return apperrors.ServerRoomNotFound()
 	}
 	return nil
 }

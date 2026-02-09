@@ -23,6 +23,24 @@ type CacheProvider interface {
 
 	// DeleteByPattern 根据模式删除缓存
 	DeleteByPattern(ctx context.Context, pattern string) error
+
+	// MGet 批量获取缓存
+	MGet(ctx context.Context, keys ...string) (map[string]string, error)
+
+	// MDelete 批量删除缓存
+	MDelete(ctx context.Context, keys ...string) error
+
+	// Exists 检查缓存是否存在
+	Exists(ctx context.Context, key string) (bool, error)
+
+	// SetTTL 设置缓存过期时间
+	SetTTL(ctx context.Context, key string, expiration time.Duration) error
+
+	// GetTTL 获取缓存过期时间
+	GetTTL(ctx context.Context, key string) (time.Duration, error)
+
+	// GetStats 获取缓存统计信息
+	GetStats(ctx context.Context) (*CacheStats, error)
 }
 
 // NoOpCacheProvider 空缓存提供者（用于无缓存场景）
@@ -60,6 +78,49 @@ func setValue(dest interface{}, value interface{}) {
 	if elem.IsValid() && val.IsValid() && val.Type().AssignableTo(elem.Type()) {
 		elem.Set(val)
 	}
+}
+
+// CacheStats 缓存统计信息
+type CacheStats struct {
+	Hits       int64         // 命中次数
+	Misses     int64         // 未命中次数
+	Count      int64         // 缓存项数量
+	MemorySize int64         // 内存占用（字节）
+	HitRate    float64       // 命中率
+	KeyCount   int           // 键数量
+}
+
+// CacheEntry 缓存条目详情
+type CacheEntry struct {
+	Key       string        // 键
+	Value     string        // 值
+	TTL       time.Duration // 剩余存活时间
+	Size      int64         // 大小（字节）
+	CreatedAt time.Time     // 创建时间
+}
+
+func (n *NoOpCacheProvider) MGet(ctx context.Context, keys ...string) (map[string]string, error) {
+	return make(map[string]string), nil
+}
+
+func (n *NoOpCacheProvider) MDelete(ctx context.Context, keys ...string) error {
+	return nil
+}
+
+func (n *NoOpCacheProvider) Exists(ctx context.Context, key string) (bool, error) {
+	return false, nil
+}
+
+func (n *NoOpCacheProvider) SetTTL(ctx context.Context, key string, expiration time.Duration) error {
+	return nil
+}
+
+func (n *NoOpCacheProvider) GetTTL(ctx context.Context, key string) (time.Duration, error) {
+	return 0, nil
+}
+
+func (n *NoOpCacheProvider) GetStats(ctx context.Context) (*CacheStats, error) {
+	return &CacheStats{}, nil
 }
 
 func (n *NoOpCacheProvider) Delete(ctx context.Context, key string) error                { return nil }

@@ -77,7 +77,7 @@ func (h *OperLogHandler) List(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "操作日志ID"
-// @Success 200 {object} response.Response{data=models.OperLog}
+// @Success 200 {object} response.Response
 // @Router /monitor/oper-logs/:id [post]
 func (h *OperLogHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")

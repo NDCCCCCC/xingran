@@ -81,7 +81,7 @@ func (h *TemplateHandler) List(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "模板ID"
-// @Success 200 {object} response.Response{data=models.ConfigTemplate}
+// @Success 200 {object} response.Response
 // @Router /network/templates/:id [post]
 func (h *TemplateHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
@@ -284,7 +284,7 @@ func (h *TemplateHandler) Clone(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "模板ID"
-// @Success 200 {object} response.Response{data=[]models.TemplateVariable}
+// @Success 200 {object} response.Response
 // @Router /network/templates/:id/variables [post]
 func (h *TemplateHandler) GetVariables(c *gin.Context) {
 	id := c.Param("id")

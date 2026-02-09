@@ -1,12 +1,12 @@
 package system
 
 import (
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 )
 
 // NotificationConfigHandler 通知配置处理器
@@ -71,7 +71,7 @@ func (h *NotificationConfigHandler) ListEmailConfigs(c *gin.Context) {
 
 	result, err := h.emailConfigService.List(c.Request.Context(), params)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -96,7 +96,7 @@ func (h *NotificationConfigHandler) GetEmailConfig(c *gin.Context) {
 
 	config, err := h.emailConfigService.GetByID(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -115,7 +115,7 @@ func (h *NotificationConfigHandler) CreateEmailConfig(c *gin.Context) {
 	}
 
 	if err := h.emailConfigService.Create(c.Request.Context(), &req); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -138,7 +138,7 @@ func (h *NotificationConfigHandler) UpdateEmailConfig(c *gin.Context) {
 
 	req.ID = id
 	if err := h.emailConfigService.Update(c.Request.Context(), &req); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -154,7 +154,7 @@ func (h *NotificationConfigHandler) DeleteEmailConfig(c *gin.Context) {
 	}
 
 	if err := h.emailConfigService.Delete(c.Request.Context(), id); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -237,7 +237,7 @@ func (h *NotificationConfigHandler) ListAPINotificationConfigs(c *gin.Context) {
 
 	result, err := h.apiNotificationService.List(c.Request.Context(), params)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -254,7 +254,7 @@ func (h *NotificationConfigHandler) GetAPINotificationConfig(c *gin.Context) {
 
 	config, err := h.apiNotificationService.GetByID(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -270,7 +270,7 @@ func (h *NotificationConfigHandler) CreateAPINotificationConfig(c *gin.Context) 
 	}
 
 	if err := h.apiNotificationService.Create(c.Request.Context(), &req); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -293,7 +293,7 @@ func (h *NotificationConfigHandler) UpdateAPINotificationConfig(c *gin.Context) 
 
 	req.ID = id
 	if err := h.apiNotificationService.Update(c.Request.Context(), &req); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -309,7 +309,7 @@ func (h *NotificationConfigHandler) DeleteAPINotificationConfig(c *gin.Context) 
 	}
 
 	if err := h.apiNotificationService.Delete(c.Request.Context(), id); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 

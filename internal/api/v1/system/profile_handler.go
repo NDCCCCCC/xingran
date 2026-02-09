@@ -1,11 +1,11 @@
 package system
 
 import (
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 )
 
 // ProfileHandler 个人设置处理器
@@ -28,7 +28,7 @@ func (h *ProfileHandler) GetInfo(c *gin.Context) {
 
 	userInfo, err := h.service.GetUserInfo(c.Request.Context(), userID.(string))
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -67,7 +67,7 @@ func (h *ProfileHandler) UpdateInfo(c *gin.Context) {
 	}
 
 	if err := h.service.UpdateUserInfo(c.Request.Context(), userID.(string), updateReq); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -99,7 +99,7 @@ func (h *ProfileHandler) ChangePassword(c *gin.Context) {
 		if err.Error() == "旧密码错误" {
 			response.Error(c, http.StatusBadRequest, "旧密码错误")
 		} else {
-			response.Error(c, http.StatusInternalServerError, err.Error())
+			response.Error(c, err)
 		}
 		return
 	}
@@ -130,7 +130,7 @@ func (h *ProfileHandler) UploadAvatar(c *gin.Context) {
 
 	avatarURL, err := h.service.UploadAvatar(c.Request.Context(), userID.(string), file)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 

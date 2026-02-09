@@ -1,12 +1,12 @@
 package system
 
 import (
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 )
 
 // 常量定义
@@ -67,12 +67,12 @@ func (h *MenuHandler) bindAndValidate(c *gin.Context, req interface{}) bool {
 // @Tags 菜单管理
 // @Accept json
 // @Produce json
-// @Success 200 {object} response.Response{data=[]models.Menu}
+// @Success 200 {object} response.Response
 // @Router /system/menus/tree [post]
 func (h *MenuHandler) GetTree(c *gin.Context) {
 	tree, err := h.service.GetTree(c.Request.Context())
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -86,7 +86,7 @@ func (h *MenuHandler) GetTree(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param request body requests.MenuListParams true "查询条件"
-// @Success 200 {object} response.Response{data=[]models.Menu}
+// @Success 200 {object} response.Response
 // @Router /system/menus/list [post]
 func (h *MenuHandler) List(c *gin.Context) {
 	var req requests.MenuListParams
@@ -94,7 +94,7 @@ func (h *MenuHandler) List(c *gin.Context) {
 
 	result, err := h.service.List(c.Request.Context(), req)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -108,7 +108,7 @@ func (h *MenuHandler) List(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "菜单ID"
-// @Success 200 {object} response.Response{data=models.Menu}
+// @Success 200 {object} response.Response
 // @Router /system/menus/:id [post]
 func (h *MenuHandler) GetByID(c *gin.Context) {
 	id, ok := h.requireID(c)
@@ -118,7 +118,7 @@ func (h *MenuHandler) GetByID(c *gin.Context) {
 
 	menu, err := h.service.GetByID(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -132,7 +132,7 @@ func (h *MenuHandler) GetByID(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param request body requests.MenuCreateRequest true "菜单信息"
-// @Success 200 {object} response.Response{data=models.Menu}
+// @Success 200 {object} response.Response
 // @Router /system/menus [post]
 func (h *MenuHandler) Create(c *gin.Context) {
 	var req requests.MenuCreateRequest
@@ -141,7 +141,7 @@ func (h *MenuHandler) Create(c *gin.Context) {
 	}
 
 	if err := h.service.Create(c.Request.Context(), &req); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -171,7 +171,7 @@ func (h *MenuHandler) Update(c *gin.Context) {
 
 	req.ID = id
 	if err := h.service.Update(c.Request.Context(), &req); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -198,7 +198,7 @@ func (h *MenuHandler) Delete(c *gin.Context) {
 	cascade := c.DefaultQuery("cascade", "false") == "true"
 
 	if err := h.service.Delete(c.Request.Context(), id, cascade); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -225,7 +225,7 @@ func (h *MenuHandler) BatchDelete(c *gin.Context) {
 	}
 
 	if err := h.service.BatchDelete(c.Request.Context(), req.IDs, req.Cascade); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -256,7 +256,7 @@ func (h *MenuHandler) UpdateStatus(c *gin.Context) {
 	}
 
 	if err := h.service.UpdateStatus(c.Request.Context(), id, req.Status); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -269,7 +269,7 @@ func (h *MenuHandler) UpdateStatus(c *gin.Context) {
 // @Tags 菜单管理
 // @Accept json
 // @Produce json
-// @Success 200 {object} response.Response{data=[]models.Menu}
+// @Success 200 {object} response.Response
 // @Router /system/my-menus [post]
 func (h *MenuHandler) GetUserMenus(c *gin.Context) {
 	userID, ok := h.getUserID(c)
@@ -279,7 +279,7 @@ func (h *MenuHandler) GetUserMenus(c *gin.Context) {
 
 	menus, err := h.service.GetUserMenus(c.Request.Context(), userID)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -292,7 +292,7 @@ func (h *MenuHandler) GetUserMenus(c *gin.Context) {
 // @Tags 菜单管理
 // @Accept json
 // @Produce json
-// @Success 200 {object} response.Response{data=[]models.Menu}
+// @Success 200 {object} response.Response
 // @Router /system/my-menus/all [post]
 func (h *MenuHandler) GetAllUserMenus(c *gin.Context) {
 	userID, ok := h.getUserID(c)
@@ -302,7 +302,7 @@ func (h *MenuHandler) GetAllUserMenus(c *gin.Context) {
 
 	menus, err := h.service.GetAllUserMenus(c.Request.Context(), userID)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -325,7 +325,7 @@ func (h *MenuHandler) GetUserPermissions(c *gin.Context) {
 
 	permissions, err := h.service.GetUserPermissions(c.Request.Context(), userID)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 

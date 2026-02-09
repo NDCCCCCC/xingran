@@ -2,10 +2,10 @@ package operations
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"mime/multipart"
 
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
@@ -42,14 +42,14 @@ func NewRoomPhotoService(db *gorm.DB) RoomPhotoService {
 // UploadPhotos 批量上传机房照片
 func (s *roomPhotoService) UploadPhotos(ctx context.Context, roomID string, files []*multipart.FileHeader, primaryIndex int, userID string) ([]*operations.OpsRoomPhoto, error) {
 	if len(files) == 0 {
-		return nil, errors.New("请选择要上传的照片")
+		return nil, apperrors.ParamMissing("照片")
 	}
 
 	// 验证机房是否存在
 	var room operations.OpsServerRoom
 	if err := s.db.WithContext(ctx).Where("id = ?", roomID).First(&room).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return nil, errors.New("机房不存在")
+			return nil, apperrors.ServerRoomNotFound()
 		}
 		return nil, fmt.Errorf("验证机房失败: %w", err)
 	}
@@ -120,7 +120,7 @@ func (s *roomPhotoService) SetPrimary(ctx context.Context, photoID string) error
 	var photo operations.OpsRoomPhoto
 	if err := s.db.WithContext(ctx).Where("id = ?", photoID).First(&photo).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return errors.New("照片不存在")
+			return apperrors.RoomPhotoNotFound()
 		}
 		return fmt.Errorf("查询照片失败: %w", err)
 	}
@@ -148,7 +148,7 @@ func (s *roomPhotoService) SetPrimary(ctx context.Context, photoID string) error
 // UpdateSort 更新照片排序
 func (s *roomPhotoService) UpdateSort(ctx context.Context, photoIDs []string) error {
 	if len(photoIDs) == 0 {
-		return errors.New("照片ID列表不能为空")
+		return apperrors.ParamMissing("照片ID列表")
 	}
 
 	// 使用事务批量更新排序
@@ -176,7 +176,7 @@ func (s *roomPhotoService) UpdateDescription(ctx context.Context, photoID string
 	}
 
 	if result.RowsAffected == 0 {
-		return errors.New("照片不存在")
+		return apperrors.RoomPhotoNotFound()
 	}
 
 	return nil
@@ -188,7 +188,7 @@ func (s *roomPhotoService) DeletePhoto(ctx context.Context, photoID string) erro
 	var photo operations.OpsRoomPhoto
 	if err := s.db.WithContext(ctx).Where("id = ?", photoID).First(&photo).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return errors.New("照片不存在")
+			return apperrors.RoomPhotoNotFound()
 		}
 		return fmt.Errorf("查询照片失败: %w", err)
 	}
@@ -223,7 +223,7 @@ func (s *roomPhotoService) DeletePhoto(ctx context.Context, photoID string) erro
 // BatchDeletePhotos 批量删除照片
 func (s *roomPhotoService) BatchDeletePhotos(ctx context.Context, photoIDs []string) error {
 	if len(photoIDs) == 0 {
-		return errors.New("照片ID列表不能为空")
+		return apperrors.ParamMissing("照片ID列表")
 	}
 
 	for _, photoID := range photoIDs {
@@ -263,7 +263,7 @@ func (s *roomPhotoService) GetPhotoWithFile(ctx context.Context, photoID string)
 	var photo operations.OpsRoomPhoto
 	if err := s.db.WithContext(ctx).Where("id = ?", photoID).First(&photo).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return nil, nil, errors.New("照片不存在")
+			return nil, nil, apperrors.RoomPhotoNotFound()
 		}
 		return nil, nil, fmt.Errorf("查询照片失败: %w", err)
 	}

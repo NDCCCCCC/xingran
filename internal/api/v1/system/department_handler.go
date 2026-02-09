@@ -1,12 +1,12 @@
 package system
 
 import (
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"gorm.io/gorm"
 )
 
@@ -39,7 +39,7 @@ func (h *DepartmentHandler) GetDB() (*gorm.DB, error) {
 // @Accept json
 // @Produce json
 // @Param request body requests.DepartmentListParams false "查询条件"
-// @Success 200 {object} response.Response{data=[]models.Department}
+// @Success 200 {object} response.Response
 // @Router /system/departments/tree [post]
 func (h *DepartmentHandler) GetTree(c *gin.Context) {
 	var req requests.DepartmentListParams
@@ -49,7 +49,7 @@ func (h *DepartmentHandler) GetTree(c *gin.Context) {
 
 	tree, err := h.service.GetTreeWithFilter(c.Request.Context(), true, req)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -63,7 +63,7 @@ func (h *DepartmentHandler) GetTree(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param request body requests.DepartmentListParams true "查询条件"
-// @Success 200 {object} response.Response{data=[]models.Department}
+// @Success 200 {object} response.Response
 // @Router /system/departments/list [post]
 func (h *DepartmentHandler) List(c *gin.Context) {
 	var req requests.DepartmentListParams
@@ -73,7 +73,7 @@ func (h *DepartmentHandler) List(c *gin.Context) {
 
 	result, err := h.service.List(c.Request.Context(), req)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -87,7 +87,7 @@ func (h *DepartmentHandler) List(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "部门ID"
-// @Success 200 {object} response.Response{data=models.Department}
+// @Success 200 {object} response.Response
 // @Router /system/departments/:id [post]
 func (h *DepartmentHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
@@ -98,7 +98,7 @@ func (h *DepartmentHandler) GetByID(c *gin.Context) {
 
 	dept, err := h.service.GetByID(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -112,7 +112,7 @@ func (h *DepartmentHandler) GetByID(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param request body requests.DepartmentCreateRequest true "部门信息"
-// @Success 200 {object} response.Response{data=models.Department}
+// @Success 200 {object} response.Response
 // @Router /system/departments [post]
 func (h *DepartmentHandler) Create(c *gin.Context) {
 	var req requests.DepartmentCreateRequest
@@ -122,7 +122,7 @@ func (h *DepartmentHandler) Create(c *gin.Context) {
 	}
 
 	if err := h.service.Create(c.Request.Context(), &req); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -154,7 +154,7 @@ func (h *DepartmentHandler) Update(c *gin.Context) {
 
 	req.ID = id
 	if err := h.service.Update(c.Request.Context(), &req); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -178,7 +178,7 @@ func (h *DepartmentHandler) Delete(c *gin.Context) {
 	}
 
 	if err := h.service.Delete(c.Request.Context(), id); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -205,7 +205,7 @@ func (h *DepartmentHandler) BatchDelete(c *gin.Context) {
 	}
 
 	if err := h.service.BatchDelete(c.Request.Context(), req.IDs); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -238,7 +238,7 @@ func (h *DepartmentHandler) UpdateStatus(c *gin.Context) {
 	}
 
 	if err := h.service.UpdateStatus(c.Request.Context(), id, req.Status); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -281,7 +281,7 @@ func (h *DepartmentHandler) RoleDeptTreeSelect(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "部门ID"
-// @Success 200 {object} response.Response{data=[]User}
+// @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
 // @Failure 500 {object} response.Response
 // @Router /system/departments/{id}/users [get]

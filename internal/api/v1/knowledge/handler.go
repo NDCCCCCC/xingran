@@ -1,9 +1,8 @@
 package knowledge
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
@@ -42,7 +41,7 @@ func (h *ArticleHandler) List(c *gin.Context) {
 
 	list, total, err := h.service.GetKnowledgeArticleList(c.Request.Context(), &req)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -56,12 +55,12 @@ func (h *ArticleHandler) List(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "文章ID"
-// @Success 200 {object} response.Response{data=models.KnowledgeArticle}
+// @Success 200 {object} response.Response
 // @Router /knowledge/articles/:id [post]
 func (h *ArticleHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "文章ID不能为空")
+		response.Error(c, apperrors.ParamMissing("文章ID"))
 		return
 	}
 
@@ -70,7 +69,7 @@ func (h *ArticleHandler) GetByID(c *gin.Context) {
 
 	article, err := h.service.GetKnowledgeArticle(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusNotFound, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -84,24 +83,24 @@ func (h *ArticleHandler) GetByID(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param request body services.KnowledgeArticleCreateRequest true "文章信息"
-// @Success 200 {object} response.Response{data=models.KnowledgeArticle}
+// @Success 200 {object} response.Response
 // @Router /knowledge/articles [post]
 func (h *ArticleHandler) Create(c *gin.Context) {
 	var req services.KnowledgeArticleCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
 	userID, exists := c.Get("user_id")
 	if !exists {
-		response.Error(c, http.StatusUnauthorized, "未找到用户信息")
+		response.Error(c, apperrors.Unauthorized())
 		return
 	}
 
 	article, err := h.service.CreateKnowledgeArticle(c.Request.Context(), &req, userID.(string))
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -121,24 +120,24 @@ func (h *ArticleHandler) Create(c *gin.Context) {
 func (h *ArticleHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "文章ID不能为空")
+		response.Error(c, apperrors.ParamMissing("文章ID"))
 		return
 	}
 
 	var req services.KnowledgeArticleUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
 	userID, exists := c.Get("user_id")
 	if !exists {
-		response.Error(c, http.StatusUnauthorized, "未找到用户信息")
+		response.Error(c, apperrors.Unauthorized())
 		return
 	}
 
 	if err := h.service.UpdateKnowledgeArticle(c.Request.Context(), id, &req, userID.(string)); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -157,12 +156,12 @@ func (h *ArticleHandler) Update(c *gin.Context) {
 func (h *ArticleHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "文章ID不能为空")
+		response.Error(c, apperrors.ParamMissing("文章ID"))
 		return
 	}
 
 	if err := h.service.DeleteKnowledgeArticle(c.Request.Context(), id); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -177,30 +176,30 @@ func (h *ArticleHandler) Delete(c *gin.Context) {
 // @Produce json
 // @Param id path string true "工单ID"
 // @Param request body services.ConvertWorkOrderToArticleRequest true "文章信息"
-// @Success 200 {object} response.Response{data=models.KnowledgeArticle}
+// @Success 200 {object} response.Response
 // @Router /knowledge/workorders/:id [post]
 func (h *ArticleHandler) ConvertFromWorkOrder(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "工单ID不能为空")
+		response.Error(c, apperrors.ParamMissing("工单ID"))
 		return
 	}
 
 	var req services.ConvertWorkOrderToArticleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
 	userID, exists := c.Get("user_id")
 	if !exists {
-		response.Error(c, http.StatusUnauthorized, "未找到用户信息")
+		response.Error(c, apperrors.Unauthorized())
 		return
 	}
 
 	article, err := h.service.ConvertWorkOrderToArticle(c.Request.Context(), id, &req, userID.(string))
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -231,7 +230,7 @@ func (h *ArticleHandler) Search(c *gin.Context) {
 
 	articles, total, err := h.service.SearchKnowledgeArticles(c.Request.Context(), &req)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -253,12 +252,12 @@ func (h *ArticleHandler) Search(c *gin.Context) {
 func (h *ArticleHandler) Like(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "文章ID不能为空")
+		response.Error(c, apperrors.ParamMissing("文章ID"))
 		return
 	}
 
 	if err := h.service.IncrementLikeCount(c.Request.Context(), id); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -284,7 +283,7 @@ func NewCategoryHandler(service *services.KnowledgeService) *CategoryHandler {
 // @Accept json
 // @Produce json
 // @Param request body services.KnowledgeCategoryListRequest true "查询条件"
-// @Success 200 {object} response.Response{data=[]models.KnowledgeCategory}
+// @Success 200 {object} response.Response
 // @Router /knowledge/categories/list [post]
 func (h *CategoryHandler) List(c *gin.Context) {
 	var req services.KnowledgeCategoryListRequest
@@ -295,7 +294,7 @@ func (h *CategoryHandler) List(c *gin.Context) {
 
 	categories, err := h.service.GetKnowledgeCategoryList(c.Request.Context(), &req)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -309,18 +308,18 @@ func (h *CategoryHandler) List(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "分类ID"
-// @Success 200 {object} response.Response{data=models.KnowledgeCategory}
+// @Success 200 {object} response.Response
 // @Router /knowledge/categories/:id [post]
 func (h *CategoryHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "分类ID不能为空")
+		response.Error(c, apperrors.ParamMissing("分类ID"))
 		return
 	}
 
 	category, err := h.service.GetKnowledgeCategory(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusNotFound, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -334,24 +333,24 @@ func (h *CategoryHandler) GetByID(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param request body services.KnowledgeCategoryCreateRequest true "分类信息"
-// @Success 200 {object} response.Response{data=models.KnowledgeCategory}
+// @Success 200 {object} response.Response
 // @Router /knowledge/categories [post]
 func (h *CategoryHandler) Create(c *gin.Context) {
 	var req services.KnowledgeCategoryCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
 	userID, exists := c.Get("user_id")
 	if !exists {
-		response.Error(c, http.StatusUnauthorized, "未找到用户信息")
+		response.Error(c, apperrors.Unauthorized())
 		return
 	}
 
 	category, err := h.service.CreateKnowledgeCategory(c.Request.Context(), &req, userID.(string))
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -371,24 +370,24 @@ func (h *CategoryHandler) Create(c *gin.Context) {
 func (h *CategoryHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "分类ID不能为空")
+		response.Error(c, apperrors.ParamMissing("分类ID"))
 		return
 	}
 
 	var req services.KnowledgeCategoryUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
 	userID, exists := c.Get("user_id")
 	if !exists {
-		response.Error(c, http.StatusUnauthorized, "未找到用户信息")
+		response.Error(c, apperrors.Unauthorized())
 		return
 	}
 
 	if err := h.service.UpdateKnowledgeCategory(c.Request.Context(), id, &req, userID.(string)); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -407,12 +406,12 @@ func (h *CategoryHandler) Update(c *gin.Context) {
 func (h *CategoryHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "分类ID不能为空")
+		response.Error(c, apperrors.ParamMissing("分类ID"))
 		return
 	}
 
 	if err := h.service.DeleteKnowledgeCategory(c.Request.Context(), id); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -437,12 +436,12 @@ func NewTagHandler(service *services.KnowledgeService) *TagHandler {
 // @Tags 知识库标签
 // @Accept json
 // @Produce json
-// @Success 200 {object} response.Response{data=[]models.KnowledgeTag}
+// @Success 200 {object} response.Response
 // @Router /knowledge/tags/all [post]
 func (h *TagHandler) GetAll(c *gin.Context) {
 	tags, err := h.service.GetAllTags(c.Request.Context())
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -456,20 +455,20 @@ func (h *TagHandler) GetAll(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param request body object{tagName=string} true "标签名称"
-// @Success 200 {object} response.Response{data=models.KnowledgeTag}
+// @Success 200 {object} response.Response
 // @Router /knowledge/tags [post]
 func (h *TagHandler) Create(c *gin.Context) {
 	var req struct {
 		TagName string `json:"tagName" binding:"required,max=50"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
 	tag, err := h.service.CreateTag(c.Request.Context(), req.TagName)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -489,7 +488,7 @@ func (h *TagHandler) Create(c *gin.Context) {
 func (h *TagHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "标签ID不能为空")
+		response.Error(c, apperrors.ParamMissing("标签ID"))
 		return
 	}
 
@@ -497,12 +496,12 @@ func (h *TagHandler) Update(c *gin.Context) {
 		TagName string `json:"tagName" binding:"required,max=50"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
 	if err := h.service.UpdateTag(c.Request.Context(), id, req.TagName); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -521,12 +520,12 @@ func (h *TagHandler) Update(c *gin.Context) {
 func (h *TagHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "标签ID不能为空")
+		response.Error(c, apperrors.ParamMissing("标签ID"))
 		return
 	}
 
 	if err := h.service.DeleteTag(c.Request.Context(), id); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 

@@ -44,14 +44,22 @@ type DatabaseConfig struct {
 
 // CacheConfig 缓存配置
 type CacheConfig struct {
-	Type        string `mapstructure:"type"` // redis, memory
-	Host        string `mapstructure:"host"`
-	Port        int    `mapstructure:"port"`
-	Password    string `mapstructure:"password"`
-	DB          int    `mapstructure:"db"`
-	PoolSize    int    `mapstructure:"pool_size"`
-	MaxSize     int    `mapstructure:"max_size"`
-	CleanupTime int    `mapstructure:"cleanup_time"`
+	Type             string `mapstructure:"type"` // redis, memory
+	Host             string `mapstructure:"host"`
+	Port             int    `mapstructure:"port"`
+	Password         string `mapstructure:"password"`
+	DB               int    `mapstructure:"db"`
+	PoolSize         int    `mapstructure:"pool_size"`
+	MaxSize          int    `mapstructure:"max_size"`
+	CleanupTime      int    `mapstructure:"cleanup_time"`
+	WarmUpEnabled    bool   `mapstructure:"warm_up_enabled"` // 是否启用缓存预热
+	// 重试配置
+	RetryEnabled      bool    `mapstructure:"retry_enabled"`       // 是否启用L2缓存写入重试
+	RetryMaxRetries   int     `mapstructure:"retry_max_retries"`   // 最大重试次数
+	RetryInitialDelay int     `mapstructure:"retry_initial_delay"` // 初始延迟(毫秒)
+	RetryMaxDelay     int     `mapstructure:"retry_max_delay"`     // 最大延迟(毫秒)
+	RetryBackoffFactor float64 `mapstructure:"retry_backoff_factor"` // 退避因子
+	RetryWorkerCount  int     `mapstructure:"retry_worker_count"`  // 重试工作协程数
 }
 
 // JWTConfig JWT配置

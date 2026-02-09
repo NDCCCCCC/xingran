@@ -29,6 +29,14 @@ cache:
   pool_size: 10
   max_size: 1000
   cleanup_time: 600  # 清理间隔（秒）
+  warm_up_enabled: false  # 是否启用缓存预热（默认禁用）
+  # L2缓存写入重试配置
+  retry_enabled: true  # 是否启用L2缓存写入重试（默认启用）
+  retry_max_retries: 3  # 最大重试次数
+  retry_initial_delay: 50  # 初始延迟（毫秒）
+  retry_max_delay: 2000  # 最大延迟（毫秒）
+  retry_backoff_factor: 2.0  # 退避因子
+  retry_worker_count: 3  # 重试工作协程数
 
 # JWT配置
 jwt:

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 )
 
 const (
@@ -86,6 +87,7 @@ func Success(c *gin.Context, data ...interface{}) {
 func Error(c *gin.Context, err interface{}, message ...string) {
 	appErr := toAppError(err)
 
+	// 如果提供了自定义消息，覆盖默认消息
 	if len(message) > 0 {
 		appErr.Message = message[0]
 	}
@@ -94,6 +96,24 @@ func Error(c *gin.Context, err interface{}, message ...string) {
 		Code:      appErr.Code,
 		Message:   appErr.Message,
 		Data:      nil,
+		Timestamp: time.Now().Unix(),
+		RequestID: getRequestID(c),
+	})
+}
+
+// ErrorWithData 错误响应（带数据）
+func ErrorWithData(c *gin.Context, err interface{}, data interface{}, message ...string) {
+	appErr := toAppError(err)
+
+	// 如果提供了自定义消息，覆盖默认消息
+	if len(message) > 0 {
+		appErr.Message = message[0]
+	}
+
+	c.JSON(appErr.HTTPStatus, Response{
+		Code:      appErr.Code,
+		Message:   appErr.Message,
+		Data:      data,
 		Timestamp: time.Now().Unix(),
 		RequestID: getRequestID(c),
 	})
@@ -120,6 +140,20 @@ func toAppError(err interface{}) *AppError {
 	switch e := err.(type) {
 	case *AppError:
 		return e
+	case *apperrors.AppError:
+		// 新的错误类型转换
+		return &AppError{
+			Code:       int(e.Code),
+			Message:    e.Message,
+			HTTPStatus: e.GetHTTPStatus(),
+		}
+	case apperrors.ErrorCode:
+		// 直接使用错误码
+		return &AppError{
+			Code:       int(e),
+			Message:    e.DefaultMessage(),
+			HTTPStatus: e.DefaultHTTPStatus(),
+		}
 	case int:
 		return &AppError{
 			Code:       e,
@@ -133,6 +167,15 @@ func toAppError(err interface{}) *AppError {
 			HTTPStatus: http.StatusInternalServerError,
 		}
 	case error:
+		// 检查是否是新的AppError类型
+		if appErr := apperrors.GetAppError(e); appErr != nil {
+			return &AppError{
+				Code:       int(appErr.Code),
+				Message:    appErr.Message,
+				HTTPStatus: appErr.GetHTTPStatus(),
+			}
+		}
+		// 普通错误
 		return &AppError{
 			Code:       defaultServerErrorCode,
 			Message:    e.Error(),

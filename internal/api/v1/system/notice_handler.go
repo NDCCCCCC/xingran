@@ -1,7 +1,6 @@
 package system
 
 import (
-	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -11,6 +10,7 @@ import (
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"fmt"
 )
 
@@ -59,7 +59,7 @@ func (h *NoticeHandler) Create(c *gin.Context) {
 
 	notice, err := h.service.Create(c.Request.Context(), &req, userID.(string), usernameStr)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -197,7 +197,7 @@ func (h *NoticeHandler) List(c *gin.Context) {
 
 	result, err := h.service.List(c.Request.Context(), params)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -214,7 +214,7 @@ func (h *NoticeHandler) GetByID(c *gin.Context) {
 
 	notice, err := h.service.GetByID(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -236,7 +236,7 @@ func (h *NoticeHandler) Update(c *gin.Context) {
 	}
 
 	if err := h.service.Update(c.Request.Context(), id, &req); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -293,7 +293,7 @@ func (h *NoticeHandler) Delete(c *gin.Context) {
 	}
 
 	if err := h.service.Delete(c.Request.Context(), id); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -318,7 +318,7 @@ func (h *NoticeHandler) BatchDelete(c *gin.Context) {
 	}
 
 	if err := h.service.BatchDelete(c.Request.Context(), req.IDs); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -343,7 +343,7 @@ func (h *NoticeHandler) GetStatistics(c *gin.Context) {
 
 	stats, err := h.service.GetStatistics(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -359,7 +359,7 @@ func (h *NoticeHandler) Publish(c *gin.Context) {
 	}
 
 	if err := h.channelService.PublishAndSendNotice(c.Request.Context(), id); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -375,7 +375,7 @@ func (h *NoticeHandler) Withdraw(c *gin.Context) {
 	}
 
 	if err := h.service.Withdraw(c.Request.Context(), id); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -392,7 +392,7 @@ func (h *NoticeHandler) GetChannels(c *gin.Context) {
 
 	channels, err := h.channelService.GetNotificationChannels(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -424,7 +424,7 @@ func (h *NoticeHandler) SetChannels(c *gin.Context) {
 	}
 
 	if err := h.channelService.SetNotificationChannels(c.Request.Context(), id, channels); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 

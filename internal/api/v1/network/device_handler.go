@@ -90,7 +90,7 @@ func (h *DeviceHandler) List(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "设备ID"
-// @Success 200 {object} response.Response{data=models.NetworkDevice}
+// @Success 200 {object} response.Response
 // @Router /network/devices/{id} [post]
 func (h *DeviceHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
@@ -115,7 +115,7 @@ func (h *DeviceHandler) GetByID(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param request body services.CreateDeviceRequest true "设备信息"
-// @Success 200 {object} response.Response{data=models.NetworkDevice}
+// @Success 200 {object} response.Response
 // @Router /network/devices [post]
 func (h *DeviceHandler) Create(c *gin.Context) {
 	var req services.CreateDeviceRequest

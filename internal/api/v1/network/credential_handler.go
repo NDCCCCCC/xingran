@@ -70,7 +70,7 @@ func (h *CredentialHandler) List(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "凭证ID"
-// @Success 200 {object} response.Response{data=models.AuthCredential}
+// @Success 200 {object} response.Response
 // @Router /network/credentials/:id [post]
 func (h *CredentialHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
@@ -95,7 +95,7 @@ func (h *CredentialHandler) GetByID(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param request body services.CreateCredentialRequest true "凭证信息"
-// @Success 200 {object} response.Response{data=models.AuthCredential}
+// @Success 200 {object} response.Response
 // @Router /network/credentials [post]
 func (h *CredentialHandler) Create(c *gin.Context) {
 	var req services.CreateCredentialRequest
@@ -233,7 +233,7 @@ func (h *CredentialHandler) SetDefault(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "凭证ID"
-// @Success 200 {object} response.Response{data=[]models.NetworkDevice}
+// @Success 200 {object} response.Response
 // @Router /network/credentials/:id/devices [post]
 func (h *CredentialHandler) GetDevicesByCredential(c *gin.Context) {
 	id := c.Param("id")

@@ -1,9 +1,8 @@
 package scheduler
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	schedulerServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/scheduler"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/common"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
@@ -34,7 +33,7 @@ func NewJobHandler(
 // @Accept json
 // @Produce json
 // @Param request body schedulerServices.JobCreateRequest true "任务信息"
-// @Success 200 {object} response.Response{data=models.Job}
+// @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
 // @Failure 500 {object} response.Response
 // @Router /monitor/jobs [post]
@@ -59,7 +58,7 @@ func (h *JobHandler) Create(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param request body schedulerServices.JobListParams false "查询参数"
-// @Success 200 {object} response.Response{data=response.PageData}
+// @Success 200 {object} response.Response{data=response.PageResponse}
 // @Failure 400 {object} response.Response
 // @Failure 500 {object} response.Response
 // @Router /monitor/jobs/list [post]
@@ -110,7 +109,7 @@ func (h *JobHandler) List(c *gin.Context) {
 
 	result, err := h.jobService.List(c.Request.Context(), params)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -124,7 +123,7 @@ func (h *JobHandler) List(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "任务ID"
-// @Success 200 {object} response.Response{data=models.Job}
+// @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
 // @Failure 404 {object} response.Response
 // @Failure 500 {object} response.Response
@@ -132,17 +131,13 @@ func (h *JobHandler) List(c *gin.Context) {
 func (h *JobHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "任务ID不能为空")
+		response.Error(c, apperrors.ParamMissing("任务ID"))
 		return
 	}
 
 	job, err := h.jobService.GetByID(c.Request.Context(), id)
 	if err != nil {
-		if err.Error() == "定时任务不存在" {
-			response.Error(c, http.StatusNotFound, err.Error())
-		} else {
-			response.Error(c, http.StatusInternalServerError, err.Error())
-		}
+		response.Error(c, err)
 		return
 	}
 
@@ -165,7 +160,7 @@ func (h *JobHandler) GetByID(c *gin.Context) {
 func (h *JobHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "任务ID不能为空")
+		response.Error(c, apperrors.ParamMissing("任务ID"))
 		return
 	}
 
@@ -198,16 +193,13 @@ func (h *JobHandler) Update(c *gin.Context) {
 func (h *JobHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "任务ID不能为空")
+		response.Error(c, apperrors.ParamMissing("任务ID"))
 		return
 	}
 
 	err := h.jobService.Delete(c.Request.Context(), id)
-	if err != nil && err.Error() == "定时任务不存在" {
-		response.Error(c, http.StatusNotFound, err.Error())
-		return
-	}
-	if !responseHelpers.HandleServiceError(c, err, "删除定时任务") {
+	if err != nil {
+		response.Error(c, err)
 		return
 	}
 
@@ -230,7 +222,7 @@ func (h *JobHandler) Delete(c *gin.Context) {
 func (h *JobHandler) UpdateStatus(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "任务ID不能为空")
+		response.Error(c, apperrors.ParamMissing("任务ID"))
 		return
 	}
 
@@ -269,7 +261,7 @@ func (h *JobHandler) UpdateStatus(c *gin.Context) {
 func (h *JobHandler) Execute(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "任务ID不能为空")
+		response.Error(c, apperrors.ParamMissing("任务ID"))
 		return
 	}
 
@@ -288,7 +280,7 @@ func (h *JobHandler) Execute(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param request body schedulerServices.JobLogListParams false "查询参数"
-// @Success 200 {object} response.Response{data=response.PageData}
+// @Success 200 {object} response.Response{data=response.PageResponse}
 // @Failure 400 {object} response.Response
 // @Failure 500 {object} response.Response
 // @Router /monitor/jobs/logs/list [post]
@@ -345,7 +337,7 @@ func (h *JobHandler) ListLogs(c *gin.Context) {
 
 	result, err := h.jobLogService.List(c.Request.Context(), params)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 

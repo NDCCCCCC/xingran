@@ -3,9 +3,9 @@ package monitor
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"time"
 
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
@@ -118,7 +118,7 @@ type CacheConfigCategory struct {
 // @Accept json
 // @Produce json
 // @Param request body CacheListRequest false "查询参数"
-// @Success 200 {object} response.Response{data=[]models.CacheInfo}
+// @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
 // @Failure 500 {object} response.Response
 // @Router /monitor/cache/list [post]
@@ -141,7 +141,7 @@ func (h *CacheHandler) GetCacheList(c *gin.Context) {
 
 	caches, total, err := h.cacheService.GetCacheList(c.Request.Context(), params)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "获取缓存列表失败: "+err.Error())
+		response.Error(c, apperrors.CacheOperationFailed(err))
 		return
 	}
 
@@ -155,7 +155,7 @@ func (h *CacheHandler) GetCacheList(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param key path string true "缓存键"
-// @Success 200 {object} response.Response{data=models.CacheInfo}
+// @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
 // @Failure 404 {object} response.Response
 // @Failure 500 {object} response.Response
@@ -163,16 +163,16 @@ func (h *CacheHandler) GetCacheList(c *gin.Context) {
 func (h *CacheHandler) GetCacheInfo(c *gin.Context) {
 	key := c.Param("key")
 	if key == "" {
-		response.Error(c, http.StatusBadRequest, ErrMsgCacheKeyRequired)
+		response.Error(c, apperrors.ParamMissing("key"))
 		return
 	}
 
 	cacheInfo, err := h.cacheService.GetCacheInfo(c.Request.Context(), key)
 	if err != nil {
 		if err == monitorServices.ErrCacheNotFound {
-			response.Error(c, http.StatusNotFound, "缓存不存在")
+			response.Error(c, apperrors.CacheKeyNotFound())
 		} else {
-			response.Error(c, http.StatusInternalServerError, "获取缓存详情失败: "+err.Error())
+			response.Error(c, apperrors.CacheOperationFailed(err))
 		}
 		return
 	}
@@ -196,7 +196,7 @@ func (h *CacheHandler) GetCacheInfo(c *gin.Context) {
 func (h *CacheHandler) OperateCache(c *gin.Context) {
 	var req CacheOperateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, ErrMsgInvalidParams)
+		response.Error(c, apperrors.ParamError())
 		return
 	}
 
@@ -209,7 +209,7 @@ func (h *CacheHandler) OperateCache(c *gin.Context) {
 
 	result, err := h.cacheService.OperateCache(c.Request.Context(), params)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "操作缓存失败: "+err.Error())
+		response.Error(c, apperrors.CacheOperationFailed(err))
 		return
 	}
 
@@ -255,12 +255,12 @@ func (h *CacheHandler) saveCacheOperationLog(req CacheOperateRequest, result int
 func (h *CacheHandler) BatchOperateCache(c *gin.Context) {
 	var req CacheBatchRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, ErrMsgInvalidParams)
+		response.Error(c, apperrors.ParamError())
 		return
 	}
 
 	if len(req.Keys) == 0 {
-		response.Error(c, http.StatusBadRequest, "缓存键列表不能为空")
+		response.Error(c, apperrors.ParamMissing("缓存键列表"))
 		return
 	}
 
@@ -271,7 +271,7 @@ func (h *CacheHandler) BatchOperateCache(c *gin.Context) {
 
 	results, err := h.cacheService.BatchOperateCache(c.Request.Context(), params)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "批量操作缓存失败: "+err.Error())
+		response.Error(c, apperrors.CacheOperationFailed(err))
 		return
 	}
 
@@ -289,7 +289,7 @@ func (h *CacheHandler) BatchOperateCache(c *gin.Context) {
 // @Router /monitor/cache/clear [post]
 func (h *CacheHandler) ClearCache(c *gin.Context) {
 	if err := h.cacheService.ClearCache(c.Request.Context()); err != nil {
-		response.Error(c, http.StatusInternalServerError, "清空缓存失败: "+err.Error())
+		response.Error(c, apperrors.CacheOperationFailed(err))
 		return
 	}
 
@@ -305,7 +305,7 @@ func (h *CacheHandler) ClearCache(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param request body CacheStatsRequest false "查询参数"
-// @Success 200 {object} response.Response{data=[]models.CacheStats}
+// @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
 // @Failure 500 {object} response.Response
 // @Router /monitor/cache/stats/list [post]
@@ -326,7 +326,7 @@ func (h *CacheHandler) GetCacheStats(c *gin.Context) {
 
 	statsList, total, err := h.cacheService.GetCacheStats(c.Request.Context(), params)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "获取缓存统计失败: "+err.Error())
+		response.Error(c, apperrors.CacheOperationFailed(err))
 		return
 	}
 
@@ -345,7 +345,7 @@ func (h *CacheHandler) GetCacheStats(c *gin.Context) {
 func (h *CacheHandler) GetCacheMonitor(c *gin.Context) {
 	monitor, err := h.cacheService.GetCacheMonitor(c.Request.Context())
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "获取监控数据失败: "+err.Error())
+		response.Error(c, apperrors.ServerError(err))
 		return
 	}
 
@@ -373,7 +373,7 @@ func (h *CacheHandler) ExportCache(c *gin.Context) {
 
 	caches, err := h.cacheService.ExportCache(c.Request.Context(), params)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "导出缓存数据失败: "+err.Error())
+		response.Error(c, apperrors.CacheOperationFailed(err))
 		return
 	}
 
@@ -399,7 +399,7 @@ func (h *CacheHandler) ExportCache(c *gin.Context) {
 func (h *CacheHandler) GetCacheConfigs(c *gin.Context) {
 	configInfoMap, currentValues, err := h.cacheService.GetCacheConfigs(c.Request.Context())
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "获取缓存配置失败: "+err.Error())
+		response.Error(c, apperrors.CacheOperationFailed(err))
 		return
 	}
 
@@ -444,15 +444,15 @@ func (h *CacheHandler) GetCacheConfigs(c *gin.Context) {
 func (h *CacheHandler) UpdateCacheConfig(c *gin.Context) {
 	var req UpdateCacheConfigRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, ErrMsgInvalidParams)
+		response.Error(c, apperrors.ParamError())
 		return
 	}
 
 	if err := h.cacheService.UpdateCacheConfig(c.Request.Context(), req.Key, req.Value); err != nil {
 		if err == monitorServices.ErrInvalidConfigKey {
-			response.Error(c, http.StatusBadRequest, ErrMsgInvalidConfigKey)
+			response.Error(c, apperrors.ParamInvalid("配置键"))
 		} else {
-			response.Error(c, http.StatusInternalServerError, "更新配置失败: "+err.Error())
+			response.Error(c, apperrors.CacheOperationFailed(err))
 		}
 		return
 	}
@@ -470,7 +470,7 @@ func (h *CacheHandler) UpdateCacheConfig(c *gin.Context) {
 // @Router /monitor/cache/config/reload [post]
 func (h *CacheHandler) ReloadCacheConfigs(c *gin.Context) {
 	if err := h.cacheService.ReloadCacheConfigs(c.Request.Context()); err != nil {
-		response.Error(c, http.StatusInternalServerError, "重新加载配置失败: "+err.Error())
+		response.Error(c, apperrors.CacheOperationFailed(err))
 		return
 	}
 
@@ -488,7 +488,7 @@ func (h *CacheHandler) ReloadCacheConfigs(c *gin.Context) {
 // @Router /monitor/cache/test [get]
 func (h *CacheHandler) TestCacheEndpoint(c *gin.Context) {
 	if h.core == nil || h.core.DataCacheService == nil {
-		response.Error(c, http.StatusInternalServerError, "DataCacheService 未初始化")
+		response.Error(c, apperrors.ServerError(fmt.Errorf("DataCacheService 未初始化")))
 		return
 	}
 
@@ -498,7 +498,7 @@ func (h *CacheHandler) TestCacheEndpoint(c *gin.Context) {
 
 	err := h.core.DataCacheService.Set(c.Request.Context(), testKey, testValue, 5*time.Minute)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "写入缓存失败: "+err.Error())
+		response.Error(c, apperrors.CacheOperationFailed(err))
 		return
 	}
 
@@ -506,7 +506,7 @@ func (h *CacheHandler) TestCacheEndpoint(c *gin.Context) {
 	var result gin.H
 	err = h.core.DataCacheService.Get(c.Request.Context(), testKey, &result)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "读取缓存失败: "+err.Error())
+		response.Error(c, apperrors.CacheOperationFailed(err))
 		return
 	}
 
@@ -526,7 +526,7 @@ func (h *CacheHandler) TestCacheEndpoint(c *gin.Context) {
 // DebugRawKeys 调试端点：直接查询Redis中的所有原始键
 func (h *CacheHandler) DebugRawKeys(c *gin.Context) {
 	if h.core == nil || h.core.Cache == nil {
-		response.Error(c, http.StatusInternalServerError, "缓存服务未初始化")
+		response.Error(c, apperrors.ServerError(fmt.Errorf("缓存服务未初始化")))
 		return
 	}
 
@@ -546,7 +546,7 @@ func (h *CacheHandler) DebugRawKeys(c *gin.Context) {
 // DebugL1Cache 调试端点：检查L1缓存状态和命中率
 func (h *CacheHandler) DebugL1Cache(c *gin.Context) {
 	if h.core == nil || h.core.Cache == nil {
-		response.Error(c, http.StatusInternalServerError, "缓存服务未初始化")
+		response.Error(c, apperrors.ServerError(fmt.Errorf("缓存服务未初始化")))
 		return
 	}
 
@@ -559,13 +559,13 @@ func (h *CacheHandler) DebugL1Cache(c *gin.Context) {
 
 	cacheWithStats, ok := h.core.Cache.(StatsProvider)
 	if !ok {
-		response.Error(c, http.StatusInternalServerError, "缓存不支持统计信息")
+		response.Error(c, apperrors.ServerError(fmt.Errorf("缓存不支持统计信息")))
 		return
 	}
 
 	stats, err := cacheWithStats.GetStats(ctx)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "获取缓存统计失败")
+		response.Error(c, apperrors.CacheOperationFailed(fmt.Errorf("获取缓存统计失败")))
 		return
 	}
 

@@ -2,8 +2,8 @@ package operations
 
 import (
 	"context"
-	"errors"
 
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 	"gorm.io/gorm"
@@ -124,7 +124,7 @@ func (s *serverRoomService) validateFloor(ctx context.Context, floorID string) e
 		return err
 	}
 	if count == 0 {
-		return errors.New("所属楼层不存在")
+		return apperrors.FloorNotFound()
 	}
 	return nil
 }

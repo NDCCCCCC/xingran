@@ -2,11 +2,11 @@ package system
 
 import (
 	"errors"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 )
 
 // 定义错误类型（与服务层共享）
@@ -83,7 +83,7 @@ func (h *DashboardHandler) handleServiceError(c *gin.Context, err error) bool {
 	case errors.Is(err, systemServices.ErrPermissionDenied):
 		response.Error(c, http.StatusForbidden, ErrMsgPermissionDenied)
 	default:
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 	}
 	return true
 }
@@ -106,7 +106,7 @@ func (h *DashboardHandler) requireID(c *gin.Context) (string, bool) {
 // @Tags 仪表盘管理
 // @Accept json
 // @Produce json
-// @Success 200 {object} response.Response{data=models.Dashboard}
+// @Success 200 {object} response.Response
 // @Router /system/dashboards/default [get]
 func (h *DashboardHandler) GetDefault(c *gin.Context) {
 	userCtx, ok := h.requireUserContext(c)
@@ -162,7 +162,7 @@ func (h *DashboardHandler) List(c *gin.Context) {
 		userCtx.DataScope,
 	)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -176,7 +176,7 @@ func (h *DashboardHandler) List(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "仪表盘ID"
-// @Success 200 {object} response.Response{data=models.Dashboard}
+// @Success 200 {object} response.Response
 // @Router /system/dashboards/:id [get]
 func (h *DashboardHandler) GetByID(c *gin.Context) {
 	id, ok := h.requireID(c)
@@ -200,7 +200,7 @@ func (h *DashboardHandler) GetByID(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param request body systemServices.CreateDashboardRequest true "仪表盘信息"
-// @Success 200 {object} response.Response{data=models.Dashboard}
+// @Success 200 {object} response.Response
 // @Router /system/dashboards [post]
 func (h *DashboardHandler) Create(c *gin.Context) {
 	userCtx, ok := h.requireUserContext(c)
@@ -223,7 +223,7 @@ func (h *DashboardHandler) Create(c *gin.Context) {
 		req,
 	)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -300,7 +300,7 @@ func (h *DashboardHandler) Delete(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "仪表盘ID"
-// @Success 200 {object} response.Response{data=models.Dashboard}
+// @Success 200 {object} response.Response
 // @Router /system/dashboards/:id/duplicate [post]
 func (h *DashboardHandler) Duplicate(c *gin.Context) {
 	userCtx, ok := h.requireUserContext(c)
@@ -315,7 +315,7 @@ func (h *DashboardHandler) Duplicate(c *gin.Context) {
 
 	dashboard, err := h.service.DuplicateDashboard(c.Request.Context(), userCtx.UserID, id)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -359,7 +359,7 @@ func (h *DashboardHandler) SetDefault(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param request body object{scope=string} false "模板范围"
-// @Success 200 {object} response.Response{data=[]models.Dashboard}
+// @Success 200 {object} response.Response
 // @Router /system/dashboards/templates [post]
 func (h *DashboardHandler) GetTemplates(c *gin.Context) {
 	var req struct {
@@ -374,7 +374,7 @@ func (h *DashboardHandler) GetTemplates(c *gin.Context) {
 
 	templates, err := h.service.GetTemplates(c.Request.Context(), scope)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -389,7 +389,7 @@ func (h *DashboardHandler) GetTemplates(c *gin.Context) {
 // @Produce json
 // @Param id path string true "模板ID"
 // @Param request body object{name=string} true "仪表盘名称"
-// @Success 200 {object} response.Response{data=models.Dashboard}
+// @Success 200 {object} response.Response
 // @Router /system/dashboards/templates/:id/create [post]
 func (h *DashboardHandler) CreateFromTemplate(c *gin.Context) {
 	userCtx, ok := h.requireUserContext(c)
@@ -412,7 +412,7 @@ func (h *DashboardHandler) CreateFromTemplate(c *gin.Context) {
 
 	dashboard, err := h.service.CreateFromTemplate(c.Request.Context(), userCtx.UserID, templateID, req.Name)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -428,7 +428,7 @@ func (h *DashboardHandler) CreateFromTemplate(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "仪表盘ID"
-// @Success 200 {object} response.Response{data=[]models.DashboardVersion}
+// @Success 200 {object} response.Response
 // @Router /system/dashboards/:id/versions [get]
 func (h *DashboardHandler) GetVersions(c *gin.Context) {
 	id, ok := h.requireID(c)
@@ -438,7 +438,7 @@ func (h *DashboardHandler) GetVersions(c *gin.Context) {
 
 	versions, err := h.service.GetVersions(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -453,7 +453,7 @@ func (h *DashboardHandler) GetVersions(c *gin.Context) {
 // @Produce json
 // @Param id path string true "仪表盘ID"
 // @Param request body object{comment=string} false "版本备注"
-// @Success 200 {object} response.Response{data=models.DashboardVersion}
+// @Success 200 {object} response.Response
 // @Router /system/dashboards/:id/versions [post]
 func (h *DashboardHandler) CreateVersion(c *gin.Context) {
 	userCtx, ok := h.requireUserContext(c)
@@ -473,7 +473,7 @@ func (h *DashboardHandler) CreateVersion(c *gin.Context) {
 
 	version, err := h.service.CreateVersion(c.Request.Context(), userCtx.UserID, id, req.Comment)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -505,7 +505,7 @@ func (h *DashboardHandler) RestoreVersion(c *gin.Context) {
 
 	err := h.service.RestoreVersion(c.Request.Context(), userCtx.UserID, dashboardID, versionID)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -531,7 +531,7 @@ func (h *DashboardHandler) Export(c *gin.Context) {
 
 	config, err := h.service.ExportDashboard(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -545,7 +545,7 @@ func (h *DashboardHandler) Export(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param request body object{config=string} true "仪表盘配置"
-// @Success 200 {object} response.Response{data=models.Dashboard}
+// @Success 200 {object} response.Response
 // @Router /system/dashboards/import [post]
 func (h *DashboardHandler) Import(c *gin.Context) {
 	userCtx, ok := h.requireUserContext(c)
@@ -563,7 +563,7 @@ func (h *DashboardHandler) Import(c *gin.Context) {
 
 	dashboard, err := h.service.ImportDashboard(c.Request.Context(), userCtx.UserID, req.Config)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -579,7 +579,7 @@ func (h *DashboardHandler) Import(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "Widget ID"
-// @Param request body object{endpoint=string,params=map} false "端点和参数"
+// @Param request body object false "端点和参数"
 // @Success 200 {object} response.Response{data=interface{}}
 // @Router /system/dashboards/widgets/:id/data [post]
 func (h *DashboardHandler) GetWidgetData(c *gin.Context) {
@@ -597,7 +597,7 @@ func (h *DashboardHandler) GetWidgetData(c *gin.Context) {
 
 	data, err := h.service.GetWidgetData(c.Request.Context(), widgetID, req.Endpoint, req.Params)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -624,7 +624,7 @@ func (h *DashboardHandler) GetBatchWidgetData(c *gin.Context) {
 
 	data, err := h.service.GetBatchWidgetData(c.Request.Context(), req.WidgetIds)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -649,7 +649,7 @@ func (h *DashboardHandler) GetAvailableEndpoints(c *gin.Context) {
 
 	endpoints, err := h.service.GetUserAccessibleEndpoints(c.Request.Context(), userCtx.UserID)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -706,7 +706,7 @@ func (h *DashboardHandler) GetUserEndpointsWithFilter(c *gin.Context) {
 
 	categories, err := h.service.GetUserAccessibleEndpoints(c.Request.Context(), userCtx.UserID)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 

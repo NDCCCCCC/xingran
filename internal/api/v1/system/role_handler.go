@@ -1,12 +1,12 @@
 package system
 
 import (
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 )
 
 // RoleHandler 角色处理器
@@ -26,7 +26,7 @@ func NewRoleHandler(service systemServices.RoleService) *RoleHandler {
 // @Accept json
 // @Produce json
 // @Param request body requests.RoleCreateRequest true "角色信息"
-// @Success 200 {object} response.Response{data=models.Role}
+// @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
 // @Failure 500 {object} response.Response
 // @Router /system/roles [post]
@@ -38,7 +38,7 @@ func (h *RoleHandler) Create(c *gin.Context) {
 	}
 
 	if err := h.service.Create(c.Request.Context(), &req); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -63,7 +63,7 @@ func (h *RoleHandler) List(c *gin.Context) {
 
 	result, err := h.service.List(c.Request.Context(), req)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -77,7 +77,7 @@ func (h *RoleHandler) List(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "角色ID"
-// @Success 200 {object} response.Response{data=models.Role}
+// @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
 // @Failure 404 {object} response.Response
 // @Router /system/roles/:id [post]
@@ -90,7 +90,7 @@ func (h *RoleHandler) GetByID(c *gin.Context) {
 
 	role, err := h.service.GetByID(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -124,7 +124,7 @@ func (h *RoleHandler) Update(c *gin.Context) {
 
 	req.ID = id
 	if err := h.service.Update(c.Request.Context(), &req); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -149,7 +149,7 @@ func (h *RoleHandler) Delete(c *gin.Context) {
 	}
 
 	if err := h.service.Delete(c.Request.Context(), id); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -176,7 +176,7 @@ func (h *RoleHandler) BatchDelete(c *gin.Context) {
 	}
 
 	if err := h.service.BatchDelete(c.Request.Context(), req.IDs); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -209,7 +209,7 @@ func (h *RoleHandler) UpdateStatus(c *gin.Context) {
 	}
 
 	if err := h.service.UpdateStatus(c.Request.Context(), id, req.Status); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -222,12 +222,12 @@ func (h *RoleHandler) UpdateStatus(c *gin.Context) {
 // @Tags 角色管理
 // @Accept json
 // @Produce json
-// @Success 200 {object} response.Response{data=[]models.Role}
+// @Success 200 {object} response.Response
 // @Router /system/roles/all [post]
 func (h *RoleHandler) GetAllEnabled(c *gin.Context) {
 	roles, err := h.service.GetAllEnabled(c.Request.Context())
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 

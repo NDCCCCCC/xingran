@@ -1,12 +1,12 @@
 package system
 
 import (
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 )
 
 // DictTypeHandler 字典类型处理器
@@ -28,7 +28,7 @@ func (h *DictTypeHandler) Create(c *gin.Context) {
 	}
 
 	if err := h.service.Create(c.Request.Context(), &req); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -86,7 +86,7 @@ func (h *DictTypeHandler) List(c *gin.Context) {
 
 	result, err := h.service.List(c.Request.Context(), params)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -103,7 +103,7 @@ func (h *DictTypeHandler) GetByID(c *gin.Context) {
 
 	dictType, err := h.service.GetByID(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -126,7 +126,7 @@ func (h *DictTypeHandler) Update(c *gin.Context) {
 
 	req.ID = id
 	if err := h.service.Update(c.Request.Context(), &req); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -142,7 +142,7 @@ func (h *DictTypeHandler) Delete(c *gin.Context) {
 	}
 
 	if err := h.service.Delete(c.Request.Context(), id); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -153,7 +153,7 @@ func (h *DictTypeHandler) Delete(c *gin.Context) {
 func (h *DictTypeHandler) GetAll(c *gin.Context) {
 	dictTypes, err := h.service.GetAllWithCache(c.Request.Context())
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -179,7 +179,7 @@ func (h *DictDataHandler) Create(c *gin.Context) {
 	}
 
 	if err := h.service.Create(c.Request.Context(), &req); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -222,7 +222,7 @@ func (h *DictDataHandler) List(c *gin.Context) {
 
 	result, err := h.service.List(c.Request.Context(), req)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -239,7 +239,7 @@ func (h *DictDataHandler) GetByID(c *gin.Context) {
 
 	dictData, err := h.service.GetByID(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -262,7 +262,7 @@ func (h *DictDataHandler) Update(c *gin.Context) {
 
 	req.ID = id
 	if err := h.service.Update(c.Request.Context(), &req); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -278,7 +278,7 @@ func (h *DictDataHandler) Delete(c *gin.Context) {
 	}
 
 	if err := h.service.Delete(c.Request.Context(), id); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 

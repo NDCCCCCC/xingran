@@ -2,8 +2,8 @@ package operations
 
 import (
 	"context"
-	"errors"
 
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 	"gorm.io/gorm"
 )
@@ -207,7 +207,7 @@ func (s *floorService) BatchDelete(ctx context.Context, ids []string) error {
 
 func (s *floorService) validateBuilding(ctx context.Context, buildingID string) error {
 	if buildingID == "" {
-		return errors.New("所属楼宇ID不能为空")
+		return apperrors.ParamMissing("所属楼宇ID")
 	}
 
 	var count int64
@@ -215,7 +215,7 @@ func (s *floorService) validateBuilding(ctx context.Context, buildingID string) 
 		return err
 	}
 	if count == 0 {
-		return errors.New("所属楼宇不存在")
+		return apperrors.BuildingNotFound()
 	}
 	return nil
 }

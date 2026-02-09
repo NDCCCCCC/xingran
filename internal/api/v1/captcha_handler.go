@@ -35,7 +35,7 @@ func SetupCaptchaRouter(r *gin.RouterGroup, core *core.Core) {
 // @Tags 认证
 // @Accept json
 // @Produce json
-// @Success 200 {object} response.Response{data=captcha.CaptchaResponse}
+// @Success 200 {object} response.Response
 // @Router /system/auth/captcha [post]
 func getCaptcha(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {

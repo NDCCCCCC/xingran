@@ -20,6 +20,59 @@ func NewCacheAdapter(c cache.Cache) CacheProvider {
 	return &CacheAdapter{cache: c}
 }
 
+// adaptCacheStats 将 pkg/cache 统计信息适配为 system.CacheStats
+func adaptCacheStats(stats map[string]interface{}) *CacheStats {
+	if stats == nil {
+		return &CacheStats{}
+	}
+
+	result := &CacheStats{}
+
+	// 从 map 中提取统计信息，使用类型断言
+	if v, ok := stats["hits"]; ok {
+		switch val := v.(type) {
+		case int64:
+			result.Hits = val
+		case int:
+			result.Hits = int64(val)
+		}
+	}
+
+	if v, ok := stats["misses"]; ok {
+		switch val := v.(type) {
+		case int64:
+			result.Misses = val
+		case int:
+			result.Misses = int64(val)
+		}
+	}
+
+	if v, ok := stats["count"]; ok {
+		switch val := v.(type) {
+		case int64:
+			result.Count = val
+		case int:
+			result.Count = int64(val)
+		}
+	}
+
+	if v, ok := stats["key_count"]; ok {
+		switch val := v.(type) {
+		case int:
+			result.KeyCount = val
+		case int64:
+			result.KeyCount = int(val)
+		}
+	}
+
+	// 计算命中率
+	if result.Hits > 0 || result.Misses > 0 {
+		result.HitRate = float64(result.Hits) / float64(result.Hits+result.Misses)
+	}
+
+	return result
+}
+
 // GetOrSet 获取缓存，如果不存在则执行查询函数并缓存结果
 func (a *CacheAdapter) GetOrSet(
 	ctx context.Context,
@@ -88,4 +141,68 @@ func (a *CacheAdapter) DeleteByPattern(ctx context.Context, pattern string) erro
 	}
 
 	return nil
+}
+
+// MGet 批量获取缓存
+func (a *CacheAdapter) MGet(ctx context.Context, keys ...string) (map[string]string, error) {
+	if len(keys) == 0 {
+		return make(map[string]string), nil
+	}
+
+	values, err := a.cache.MGet(ctx, keys...)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[string]string, len(keys))
+	for i, key := range keys {
+		if i < len(values) && values[i] != "" {
+			result[key] = values[i]
+		}
+	}
+
+	return result, nil
+}
+
+// MDelete 批量删除缓存
+func (a *CacheAdapter) MDelete(ctx context.Context, keys ...string) error {
+	if len(keys) == 0 {
+		return nil
+	}
+	return a.cache.MDelete(ctx, keys...)
+}
+
+// Exists 检查缓存是否存在
+func (a *CacheAdapter) Exists(ctx context.Context, key string) (bool, error) {
+	return a.cache.Exists(ctx, key)
+}
+
+// SetTTL 设置缓存过期时间
+func (a *CacheAdapter) SetTTL(ctx context.Context, key string, expiration time.Duration) error {
+	return a.cache.Expire(ctx, key, expiration)
+}
+
+// GetTTL 获取缓存过期时间
+func (a *CacheAdapter) GetTTL(ctx context.Context, key string) (time.Duration, error) {
+	return a.cache.TTL(ctx, key)
+}
+
+// GetStats 获取缓存统计信息
+func (a *CacheAdapter) GetStats(ctx context.Context) (*CacheStats, error) {
+	// 使用 MGetJSON 或其他方式获取统计信息
+	// 这里返回基本统计，具体实现可根据底层缓存类型扩展
+	stats := map[string]interface{}{
+		"hits":     0,
+		"misses":   0,
+		"count":    0,
+		"key_count": 0,
+	}
+
+	// 尝试获取键数量
+	if keys, err := a.cache.Keys(ctx, "*"); err == nil {
+		stats["key_count"] = len(keys)
+		stats["count"] = int64(len(keys))
+	}
+
+	return adaptCacheStats(stats), nil
 }

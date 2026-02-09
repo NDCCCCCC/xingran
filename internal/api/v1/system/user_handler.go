@@ -1,9 +1,8 @@
 package system
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
@@ -26,19 +25,19 @@ func NewUserHandler(service systemServices.UserService) *UserHandler {
 // @Accept json
 // @Produce json
 // @Param request body requests.UserCreateRequest true "用户信息"
-// @Success 200 {object} response.Response{data=models.User}
+// @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
 // @Failure 500 {object} response.Response
 // @Router /system/users [post]
 func (h *UserHandler) Create(c *gin.Context) {
 	var req requests.UserCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
 	if err := h.service.Create(c.Request.Context(), &req); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -69,7 +68,7 @@ func (h *UserHandler) List(c *gin.Context) {
 
 	result, err := h.service.List(c.Request.Context(), params)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -83,20 +82,20 @@ func (h *UserHandler) List(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "用户ID"
-// @Success 200 {object} response.Response{data=models.User}
+// @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
 // @Failure 404 {object} response.Response
 // @Router /system/users/:id [post]
 func (h *UserHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "用户ID不能为空")
+		response.Error(c, apperrors.ParamMissing("用户ID"))
 		return
 	}
 
 	user, err := h.service.GetByID(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -118,19 +117,19 @@ func (h *UserHandler) GetByID(c *gin.Context) {
 func (h *UserHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "用户ID不能为空")
+		response.Error(c, apperrors.ParamMissing("用户ID"))
 		return
 	}
 
 	var req requests.UserUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
 	req.ID = id
 	if err := h.service.Update(c.Request.Context(), &req); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -150,12 +149,12 @@ func (h *UserHandler) Update(c *gin.Context) {
 func (h *UserHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "用户ID不能为空")
+		response.Error(c, apperrors.ParamMissing("用户ID"))
 		return
 	}
 
 	if err := h.service.Delete(c.Request.Context(), id); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -177,12 +176,12 @@ func (h *UserHandler) BatchDelete(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
 	if err := h.service.BatchDelete(c.Request.Context(), req.IDs); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -202,7 +201,7 @@ func (h *UserHandler) BatchDelete(c *gin.Context) {
 func (h *UserHandler) UpdateStatus(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "用户ID不能为空")
+		response.Error(c, apperrors.ParamMissing("用户ID"))
 		return
 	}
 
@@ -210,12 +209,12 @@ func (h *UserHandler) UpdateStatus(c *gin.Context) {
 		Status int `json:"status" binding:"min=0,max=1"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
 	if err := h.service.UpdateStatus(c.Request.Context(), id, req.Status); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -234,14 +233,14 @@ func (h *UserHandler) UpdateStatus(c *gin.Context) {
 func (h *UserHandler) ResetPassword(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "用户ID不能为空")
+		response.Error(c, apperrors.ParamMissing("用户ID"))
 		return
 	}
 
 	// 默认密码为123456
 	defaultPassword := "123456"
 	if err := h.service.ResetPassword(c.Request.Context(), id, defaultPassword); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 

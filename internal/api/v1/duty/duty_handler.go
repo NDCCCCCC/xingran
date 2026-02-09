@@ -2,10 +2,10 @@ package duty
 
 import (
 	"fmt"
-	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
@@ -41,7 +41,7 @@ func (h *DutyHandler) ListPools(c *gin.Context) {
 
 	pools, total, err := h.service.GetDutyPoolList(c.Request.Context(), &req)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -61,7 +61,7 @@ func (h *DutyHandler) ListPools(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param request body services.DutyPoolCreateRequest true "值班池信息"
-// @Success 200 {object} response.Response{data=models.DutyPool}
+// @Success 200 {object} response.Response
 // @Router /duty/pools [post]
 func (h *DutyHandler) CreatePool(c *gin.Context) {
 	var req services.DutyPoolCreateRequest
@@ -85,18 +85,18 @@ func (h *DutyHandler) CreatePool(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "值班池ID"
-// @Success 200 {object} response.Response{data=models.DutyPool}
+// @Success 200 {object} response.Response
 // @Router /duty/pools/{id} [post]
 func (h *DutyHandler) GetPoolByID(c *gin.Context) {
 	poolID := c.Param("id")
 	if poolID == "" {
-		response.Error(c, http.StatusBadRequest, "值班池ID不能为空")
+		response.Error(c, apperrors.ParamMissing("值班池ID"))
 		return
 	}
 
 	pool, err := h.service.GetDutyPoolByID(c.Request.Context(), poolID)
 	if err != nil {
-		response.Error(c, http.StatusNotFound, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -116,7 +116,7 @@ func (h *DutyHandler) GetPoolByID(c *gin.Context) {
 func (h *DutyHandler) UpdatePool(c *gin.Context) {
 	poolID := c.Param("id")
 	if poolID == "" {
-		response.Error(c, http.StatusBadRequest, "值班池ID不能为空")
+		response.Error(c, apperrors.ParamMissing("值班池ID"))
 		return
 	}
 
@@ -148,7 +148,7 @@ func (h *DutyHandler) UpdatePool(c *gin.Context) {
 func (h *DutyHandler) DeletePool(c *gin.Context) {
 	poolID := c.Param("id")
 	if poolID == "" {
-		response.Error(c, http.StatusBadRequest, "值班池ID不能为空")
+		response.Error(c, apperrors.ParamMissing("值班池ID"))
 		return
 	}
 
@@ -179,7 +179,7 @@ func (h *DutyHandler) ListSchedules(c *gin.Context) {
 
 	schedules, total, err := h.service.GetDutyScheduleList(c.Request.Context(), &req)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -230,7 +230,7 @@ func (h *DutyHandler) GenerateSchedule(c *gin.Context) {
 func (h *DutyHandler) GetTodayDuty(c *gin.Context) {
 	members, err := h.service.GetTodayDuty(c.Request.Context())
 	if err != nil {
-		response.Error(c, http.StatusNotFound, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -271,28 +271,28 @@ func (h *DutyHandler) GetMonthlySchedule(c *gin.Context) {
 	}
 
 	if yearStr == "" || monthStr == "" {
-		response.Error(c, http.StatusBadRequest, "年份和月份参数不能为空")
+		response.Error(c, apperrors.ParamMissing("年份和月份参数"))
 		return
 	}
 
 	var year, month int
 	if _, err := fmt.Sscanf(yearStr, "%d", &year); err != nil {
-		response.Error(c, http.StatusBadRequest, "年份格式错误")
+		response.Error(c, apperrors.ParamInvalid("年份"))
 		return
 	}
 	if _, err := fmt.Sscanf(monthStr, "%d", &month); err != nil {
-		response.Error(c, http.StatusBadRequest, "月份格式错误")
+		response.Error(c, apperrors.ParamInvalid("月份"))
 		return
 	}
 
 	if month < 1 || month > 12 {
-		response.Error(c, http.StatusBadRequest, "月份必须在1-12之间")
+		response.Error(c, apperrors.ParamInvalid("月份"))
 		return
 	}
 
 	schedule, err := h.service.GetMonthlyDutySchedule(c.Request.Context(), year, month)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -359,7 +359,7 @@ func (h *DutyHandler) ManualDuty(c *gin.Context) {
 func (h *DutyHandler) DeleteSchedule(c *gin.Context) {
 	scheduleID := c.Param("id")
 	if scheduleID == "" {
-		response.Error(c, http.StatusBadRequest, "排班记录ID不能为空")
+		response.Error(c, apperrors.ParamMissing("排班记录ID"))
 		return
 	}
 
@@ -434,7 +434,7 @@ func (h *DutyHandler) ListHolidays(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param request body object true "节假日信息"
-// @Success 200 {object} response.Response{data=models.Holiday}
+// @Success 200 {object} response.Response
 // @Router /duty/holidays [post]
 func (h *DutyHandler) CreateHoliday(c *gin.Context) {
 	var req struct {
@@ -451,7 +451,7 @@ func (h *DutyHandler) CreateHoliday(c *gin.Context) {
 
 	date, err := time.Parse("2006-01-02", req.HolidayDate)
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "日期格式错误")
+		response.Error(c, apperrors.ParamInvalid("日期"))
 		return
 	}
 
@@ -488,7 +488,7 @@ func (h *DutyHandler) CreateHoliday(c *gin.Context) {
 func (h *DutyHandler) UpdateHoliday(c *gin.Context) {
 	holidayID := c.Param("id")
 	if holidayID == "" {
-		response.Error(c, http.StatusBadRequest, "节假日ID不能为空")
+		response.Error(c, apperrors.ParamMissing("节假日ID"))
 		return
 	}
 
@@ -500,13 +500,13 @@ func (h *DutyHandler) UpdateHoliday(c *gin.Context) {
 		Remark      string `json:"remark"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
 	// 这里需要从数据库获取原有的holiday记录
 	// 为了简化，我们暂时跳过这个功能
-	response.Error(c, http.StatusNotImplemented, "功能待实现")
+	response.Error(c, apperrors.NotImplemented())
 }
 
 // DeleteHoliday 删除节假日
@@ -521,7 +521,7 @@ func (h *DutyHandler) UpdateHoliday(c *gin.Context) {
 func (h *DutyHandler) DeleteHoliday(c *gin.Context) {
 	holidayID := c.Param("id")
 	if holidayID == "" {
-		response.Error(c, http.StatusBadRequest, "节假日ID不能为空")
+		response.Error(c, apperrors.ParamMissing("节假日ID"))
 		return
 	}
 
@@ -563,7 +563,7 @@ func (h *DutyHandler) BatchCreateHolidays(c *gin.Context) {
 	for i, h := range req.Holidays {
 		date, err := time.Parse("2006-01-02", h.HolidayDate)
 		if err != nil {
-			response.Error(c, http.StatusBadRequest, fmt.Sprintf("第%d条记录的日期格式错误", i+1))
+			response.Error(c, apperrors.ParamInvalid(fmt.Sprintf("第%d条记录的日期", i+1)))
 			return
 		}
 
@@ -600,7 +600,7 @@ func (h *DutyHandler) BatchCreateHolidays(c *gin.Context) {
 func (h *DutyHandler) GetHolidayYears(c *gin.Context) {
 	years, err := h.service.GetHolidayYears(c.Request.Context())
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -615,12 +615,12 @@ func (h *DutyHandler) GetHolidayYears(c *gin.Context) {
 // @Tags 值班管理
 // @Accept json
 // @Produce json
-// @Success 200 {object} response.Response{data=models.DutyConfig}
+// @Success 200 {object} response.Response
 // @Router /duty/config [post]
 func (h *DutyHandler) GetConfig(c *gin.Context) {
 	config, err := h.service.GetDutyConfig(c.Request.Context())
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -666,13 +666,13 @@ func (h *DutyHandler) GetMyStats(c *gin.Context) {
 	// 从上下文获取当前用户ID
 	userID, exists := c.Get("user_id")
 	if !exists {
-		response.Error(c, http.StatusUnauthorized, "未登录")
+		response.Error(c, apperrors.Unauthorized())
 		return
 	}
 
 	stats, err := h.service.GetMyDutyStats(c.Request.Context(), userID.(string))
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 

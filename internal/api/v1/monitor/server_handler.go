@@ -30,7 +30,7 @@ func NewServerHandler(serverService monitorServices.ServerService) *ServerHandle
 // @Accept json
 // @Produce json
 // @Param request body object false "查询参数"
-// @Success 200 {object} response.Response{data=[]models.ServerInfo}
+// @Success 200 {object} response.Response
 // @Router /monitor/server-info/list [post]
 func (h *ServerHandler) GetServerInfo(c *gin.Context) {
 	var req struct {
@@ -145,7 +145,7 @@ func (h *ServerHandler) SaveSystemMetrics(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param request body object false "查询参数"
-// @Success 200 {object} response.Response{data=[]models.SystemMetrics}
+// @Success 200 {object} response.Response
 // @Router /monitor/server-metrics/history [post]
 func (h *ServerHandler) GetSystemMetricsHistory(c *gin.Context) {
 	var req struct {

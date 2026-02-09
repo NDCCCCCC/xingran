@@ -14,6 +14,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/scheduler"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/websocket"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
@@ -47,6 +48,7 @@ type Core struct {
 	// 缓存服务（用于 System 模块）
 	DataCacheService   *services.DataCacheService   // 通用数据缓存服务
 	CacheConfigService *services.CacheConfigService // 缓存配置服务
+	CacheManager       *system.CacheManager         // 缓存管理器（增强功能）
 
 	// API端点元数据服务
 	APIMetadata        *config.APIMetadataConfig    // API元数据配置
@@ -152,7 +154,16 @@ func (c *Core) Init() error {
 		c.DataCacheService = services.NewDataCacheService(c.Cache)
 		c.DataCacheService.SetCacheConfig(c.CacheConfigService)
 
-		applogger.Infof("缓存服务初始化完成")
+		// 初始化缓存管理器（增强功能）
+		// 缓存预热功能默认禁用，可通过配置启用
+		cacheManagerEnabled := c.Config.Cache.WarmUpEnabled
+		c.CacheManager = system.NewCacheManager(
+			system.NewCacheAdapter(c.Cache),
+			"ruoyi", // 缓存键前缀
+			cacheManagerEnabled,
+		)
+
+		applogger.Infof("缓存服务初始化完成（预热功能: %v）", cacheManagerEnabled)
 	}
 
 	// 7. 初始化系统指标缓存服务
@@ -362,6 +373,24 @@ func (c *Core) initCache() (cache.Cache, error) {
 
 		// 创建多级缓存：L1(内存) -> L2(Redis)
 		// 先查内存缓存，命中则返回；未命中则查Redis缓存
+		if c.Config.Cache.RetryEnabled {
+			// 创建带重试的多级缓存
+			retryConfig := &cache.RetryConfig{
+				MaxRetries:     c.Config.Cache.RetryMaxRetries,
+				InitialDelay:   time.Duration(c.Config.Cache.RetryInitialDelay) * time.Millisecond,
+				MaxDelay:       time.Duration(c.Config.Cache.RetryMaxDelay) * time.Millisecond,
+				BackoffFactor:  c.Config.Cache.RetryBackoffFactor,
+				RetryableCheck: cache.IsRetryableError,
+			}
+			workerCount := c.Config.Cache.RetryWorkerCount
+			if workerCount <= 0 {
+				workerCount = 3 // 默认3个工作协程
+			}
+			multiLevelCache := cache.NewMultiLevelCacheWithRetry(memoryCache, redisCache, retryConfig, workerCount)
+			applogger.Infof("缓存重试功能已启用: 最大重试次数=%d, 工作协程数=%d", retryConfig.MaxRetries, workerCount)
+			return multiLevelCache, nil
+		}
+
 		return cache.NewMultiLevelCache(memoryCache, redisCache), nil
 	} else {
 		// 创建纯内存缓存

@@ -1,11 +1,11 @@
 package system
 
 import (
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 )
 
 // SettingsHandler 系统设置处理器

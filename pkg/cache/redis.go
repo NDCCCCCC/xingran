@@ -468,15 +468,31 @@ func contains(slice []string, item string) bool {
 // ==================== MultiLevelCache 多级缓存 ====================
 
 type MultiLevelCache struct {
-	l1Cache Cache // 本地缓存
-	l2Cache Cache // Redis缓存
+	l1Cache        Cache             // 本地缓存
+	l2Cache        Cache             // Redis缓存
+	retryWorker    *AsyncRetryWorker // 异步重试工作器
+	retryEnabled   bool              // 是否启用重试
 }
 
-// NewMultiLevelCache 创建多级缓存
+// NewMultiLevelCache 创建多级缓存（不带重试）
 func NewMultiLevelCache(l1, l2 Cache) *MultiLevelCache {
 	return &MultiLevelCache{
-		l1Cache: l1,
-		l2Cache: l2,
+		l1Cache:     l1,
+		l2Cache:     l2,
+		retryEnabled: false,
+	}
+}
+
+// NewMultiLevelCacheWithRetry 创建带重试的多级缓存
+func NewMultiLevelCacheWithRetry(l1, l2 Cache, retryConfig *RetryConfig, workerCount int) *MultiLevelCache {
+	worker := NewAsyncRetryWorker(retryConfig, workerCount)
+	worker.Start()
+
+	return &MultiLevelCache{
+		l1Cache:     l1,
+		l2Cache:     l2,
+		retryWorker: worker,
+		retryEnabled: true,
 	}
 }
 
@@ -500,15 +516,31 @@ func (m *MultiLevelCache) Set(ctx context.Context, key string, value interface{}
 		return err
 	}
 
-	// L2 缓存异步写入（使用 Redis 客户端默认的 writeTimeout）
-	go func() {
-		l2Ctx := context.Background()
-		if err := m.l2Cache.Set(l2Ctx, key, value, expiration); err != nil {
-			logger.Warnf("[MultiLevelCache] L2缓存写入失败: %v", err)
-		}
-	}()
+	// L2 缓存异步写入
+	go m.asyncSetL2(ctx, key, value, expiration)
 
 	return nil
+}
+
+// asyncSetL2 异步设置L2缓存（带重试机制）
+func (m *MultiLevelCache) asyncSetL2(ctx context.Context, key string, value interface{}, expiration time.Duration) {
+	l2Ctx := context.Background()
+	err := m.l2Cache.Set(l2Ctx, key, value, expiration)
+
+	if err != nil {
+		// 写入失败，根据配置决定是否重试
+		if m.retryEnabled && m.retryWorker != nil {
+			// 将重试任务加入队列
+			enqueued := m.retryWorker.Enqueue(ctx, m.l2Cache, key, value, expiration)
+			if !enqueued {
+				logger.Warnf("[MultiLevelCache] L2缓存写入失败且重试队列已满: key=%s, error=%v", key, err)
+			} else {
+				logger.Debugf("[MultiLevelCache] L2缓存写入失败，已加入重试队列: key=%s, error=%v", key, err)
+			}
+		} else {
+			logger.Warnf("[MultiLevelCache] L2缓存写入失败（重试未启用）: key=%s, error=%v", key, err)
+		}
+	}
 }
 
 func (m *MultiLevelCache) Delete(ctx context.Context, key string) error {
@@ -517,6 +549,11 @@ func (m *MultiLevelCache) Delete(ctx context.Context, key string) error {
 }
 
 func (m *MultiLevelCache) Close() error {
+	// 先停止重试工作器
+	if m.retryWorker != nil {
+		m.retryWorker.Stop()
+	}
+
 	if err := m.l1Cache.Close(); err != nil {
 		return err
 	}
@@ -625,6 +662,40 @@ func (m *MultiLevelCache) mergeKeys(l1, l2 []string) []string {
 		result = append(result, k)
 	}
 	return result
+}
+
+// ==================== 重试相关方法 ====================
+
+// GetRetryStats 获取重试统计信息
+func (m *MultiLevelCache) GetRetryStats() map[string]interface{} {
+	if !m.retryEnabled || m.retryWorker == nil {
+		return map[string]interface{}{
+			"retry_enabled": false,
+			"message":       "重试功能未启用",
+		}
+	}
+
+	stats := m.retryWorker.GetStats()
+	stats["retry_enabled"] = true
+	return stats
+}
+
+// IsRetryEnabled 返回重试是否启用
+func (m *MultiLevelCache) IsRetryEnabled() bool {
+	return m.retryEnabled
+}
+
+// EnableRetry 启用重试功能（运行时启用，需要重新创建缓存实例）
+func (m *MultiLevelCache) EnableRetry(retryConfig *RetryConfig, workerCount int) {
+	if m.retryEnabled {
+		logger.Warnf("[MultiLevelCache] 重试功能已启用，跳过")
+		return
+	}
+
+	m.retryWorker = NewAsyncRetryWorker(retryConfig, workerCount)
+	m.retryWorker.Start()
+	m.retryEnabled = true
+	logger.Infof("[MultiLevelCache] 重试功能已启用")
 }
 
 // MGetJSON 批量获取JSON对象

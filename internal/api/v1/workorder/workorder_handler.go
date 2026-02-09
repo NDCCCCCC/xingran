@@ -1,9 +1,8 @@
 package workorder
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/workorder"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
@@ -69,7 +68,7 @@ func (h *WorkOrderHandler) GetMyPending(c *gin.Context) {
 
 	userID, exists := c.Get("user_id")
 	if !exists {
-		response.Error(c, http.StatusUnauthorized, "用户未登录")
+		response.Error(c, apperrors.Unauthorized())
 		return
 	}
 
@@ -91,18 +90,18 @@ func (h *WorkOrderHandler) GetMyPending(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "工单ID"
-// @Success 200 {object} response.Response{data=models.WorkOrder}
+// @Success 200 {object} response.Response
 // @Router /workorder/orders/{id} [post]
 func (h *WorkOrderHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "工单ID不能为空")
+		response.Error(c, apperrors.ParamMissing("工单ID"))
 		return
 	}
 
 	workOrder, err := h.service.Base.GetByID(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusNotFound, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -116,7 +115,7 @@ func (h *WorkOrderHandler) GetByID(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param request body workorder.CreateRequest true "工单信息"
-// @Success 200 {object} response.Response{data=models.WorkOrder}
+// @Success 200 {object} response.Response
 // @Router /workorder/orders [post]
 func (h *WorkOrderHandler) Create(c *gin.Context) {
 	var req workorder.CreateRequest
@@ -146,7 +145,7 @@ func (h *WorkOrderHandler) Create(c *gin.Context) {
 func (h *WorkOrderHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "工单ID不能为空")
+		response.Error(c, apperrors.ParamMissing("工单ID"))
 		return
 	}
 
@@ -178,7 +177,7 @@ func (h *WorkOrderHandler) Update(c *gin.Context) {
 func (h *WorkOrderHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "工单ID不能为空")
+		response.Error(c, apperrors.ParamMissing("工单ID"))
 		return
 	}
 
@@ -233,7 +232,7 @@ func (h *WorkOrderHandler) BatchDelete(c *gin.Context) {
 func (h *WorkOrderHandler) Assign(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "工单ID不能为空")
+		response.Error(c, apperrors.ParamMissing("工单ID"))
 		return
 	}
 
@@ -263,7 +262,7 @@ func (h *WorkOrderHandler) Assign(c *gin.Context) {
 func (h *WorkOrderHandler) AssignToTodayDuty(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "工单ID不能为空")
+		response.Error(c, apperrors.ParamMissing("工单ID"))
 		return
 	}
 
@@ -294,7 +293,7 @@ func (h *WorkOrderHandler) AssignToTodayDuty(c *gin.Context) {
 func (h *WorkOrderHandler) UpdateStatus(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "工单ID不能为空")
+		response.Error(c, apperrors.ParamMissing("工单ID"))
 		return
 	}
 
@@ -321,12 +320,12 @@ func (h *WorkOrderHandler) UpdateStatus(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "工单ID"
-// @Success 200 {object} response.Response{data=[]models.WorkOrderComment}
+// @Success 200 {object} response.Response
 // @Router /workorder/orders/{id}/comments [post]
 func (h *WorkOrderHandler) GetComments(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "工单ID不能为空")
+		response.Error(c, apperrors.ParamMissing("工单ID"))
 		return
 	}
 
@@ -351,7 +350,7 @@ func (h *WorkOrderHandler) GetComments(c *gin.Context) {
 func (h *WorkOrderHandler) AddComment(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "工单ID不能为空")
+		response.Error(c, apperrors.ParamMissing("工单ID"))
 		return
 	}
 
@@ -383,7 +382,7 @@ func (h *WorkOrderHandler) AddComment(c *gin.Context) {
 func (h *WorkOrderHandler) GetHistory(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "工单ID不能为空")
+		response.Error(c, apperrors.ParamMissing("工单ID"))
 		return
 	}
 
@@ -455,18 +454,18 @@ func (h *WorkOrderHandler) GetEnabledCategories(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "分类ID"
-// @Success 200 {object} response.Response{data=models.WorkOrderCategory}
+// @Success 200 {object} response.Response
 // @Router /workorder/categories/{id} [post]
 func (h *WorkOrderHandler) GetCategoryByID(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "分类ID不能为空")
+		response.Error(c, apperrors.ParamMissing("分类ID"))
 		return
 	}
 
 	category, err := h.service.Category.GetByID(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusNotFound, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -480,7 +479,7 @@ func (h *WorkOrderHandler) GetCategoryByID(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param request body models.WorkOrderCategory true "分类信息"
-// @Success 200 {object} response.Response{data=models.WorkOrderCategory}
+// @Success 200 {object} response.Response
 // @Router /workorder/categories [post]
 func (h *WorkOrderHandler) CreateCategory(c *gin.Context) {
 	var req models.WorkOrderCategory
@@ -510,7 +509,7 @@ func (h *WorkOrderHandler) CreateCategory(c *gin.Context) {
 func (h *WorkOrderHandler) UpdateCategory(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "分类ID不能为空")
+		response.Error(c, apperrors.ParamMissing("分类ID"))
 		return
 	}
 
@@ -541,7 +540,7 @@ func (h *WorkOrderHandler) UpdateCategory(c *gin.Context) {
 func (h *WorkOrderHandler) DeleteCategory(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "分类ID不能为空")
+		response.Error(c, apperrors.ParamMissing("分类ID"))
 		return
 	}
 
@@ -619,7 +618,7 @@ func (h *WorkOrderHandler) CreatePeriodic(c *gin.Context) {
 func (h *WorkOrderHandler) UpdatePeriodic(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "模板ID不能为空")
+		response.Error(c, apperrors.ParamMissing("模板ID"))
 		return
 	}
 
@@ -649,7 +648,7 @@ func (h *WorkOrderHandler) UpdatePeriodic(c *gin.Context) {
 func (h *WorkOrderHandler) DeletePeriodic(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "模板ID不能为空")
+		response.Error(c, apperrors.ParamMissing("模板ID"))
 		return
 	}
 

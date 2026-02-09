@@ -2,9 +2,9 @@ package operations
 
 import (
 	"context"
-	"errors"
 	"regexp"
 
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 	"gorm.io/gorm"
@@ -153,7 +153,7 @@ func (s *buildingServiceTypeSafe) validateOrg(ctx context.Context, orgID string)
 
 	// 验证UUID格式
 	if !s.uuidValidator.MatchString(orgID) {
-		return errors.New("所属机构ID格式无效：必须是有效的UUID格式")
+		return apperrors.BuildingOrgInvalidWithMsg("所属机构ID格式无效：必须是有效的UUID格式")
 	}
 
 	// 验证机构是否存在
@@ -163,7 +163,7 @@ func (s *buildingServiceTypeSafe) validateOrg(ctx context.Context, orgID string)
 	}
 
 	if count == 0 {
-		return errors.New("所属机构不存在")
+		return apperrors.BuildingOrgInvalidWithMsg("所属机构不存在")
 	}
 
 	return nil

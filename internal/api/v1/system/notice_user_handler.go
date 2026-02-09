@@ -1,12 +1,12 @@
 package system
 
 import (
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"gorm.io/gorm"
 )
 
@@ -95,14 +95,14 @@ func (h *NoticeUserHandler) GetMyNotices(c *gin.Context) {
 
 	notices, total, err := h.noticeService.GetUserNotices(c.Request.Context(), userID, req.Current, req.PageSize, req.Status)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
 	// 获取用户已读的通知ID列表
 	readMap, err := h.getReadNoticeIDs(userID)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -134,7 +134,7 @@ func (h *NoticeUserHandler) GetMyNoticeDetail(c *gin.Context) {
 	// 获取通知详情
 	notice, err := h.noticeService.GetNoticeByID(c.Request.Context(), noticeID)
 	if err != nil {
-		response.Error(c, http.StatusNotFound, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -171,7 +171,7 @@ func (h *NoticeUserHandler) MarkNoticeRead(c *gin.Context) {
 
 	clientIP := c.ClientIP()
 	if err := h.noticeService.MarkNoticeRead(c.Request.Context(), noticeID, userID, clientIP); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -186,7 +186,7 @@ func (h *NoticeUserHandler) MarkAllNoticesRead(c *gin.Context) {
 	}
 
 	if err := h.noticeService.MarkAllNoticesRead(c.Request.Context(), userID); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -202,7 +202,7 @@ func (h *NoticeUserHandler) GetUnreadCount(c *gin.Context) {
 
 	count, err := h.noticeService.GetUnreadCount(c.Request.Context(), userID)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -223,7 +223,7 @@ func (h *NoticeUserHandler) IgnoreNotice(c *gin.Context) {
 	}
 
 	if err := h.noticeService.IgnoreNotice(c.Request.Context(), noticeID, userID); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 
@@ -250,7 +250,7 @@ func (h *NoticeUserHandler) UnignoreNotice(c *gin.Context) {
 			response.Success(c, gin.H{"message": "通知已显示"})
 			return
 		}
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, err)
 		return
 	}
 

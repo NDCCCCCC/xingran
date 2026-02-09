@@ -12,7 +12,7 @@ func SetupDepartmentRouter(r *gin.RouterGroup, core *core.Core) {
 	// 创建缓存提供者适配器
 	var cacheProvider systemServices.CacheProvider
 	if core.DataCacheService != nil {
-		cacheProvider = NewDataCacheAdapter(core.DataCacheService)
+		cacheProvider = NewDataCacheAdapter(core.DataCacheService, core.Cache)
 	} else {
 		cacheProvider = &systemServices.NoOpCacheProvider{}
 	}

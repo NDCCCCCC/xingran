@@ -74,7 +74,7 @@ func (h *LoginLogHandler) List(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "登录日志ID"
-// @Success 200 {object} response.Response{data=models.LoginLog}
+// @Success 200 {object} response.Response
 // @Router /monitor/login-logs/:id [post]
 func (h *LoginLogHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
