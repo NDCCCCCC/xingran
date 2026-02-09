@@ -154,25 +154,6 @@ const ServerRoomManagement: FC = () => {
     loadBuildingOptions(selectedDeptId || undefined);
   }, [selectedDeptId, loadServerRooms, loadBuildingOptions]);
 
-  const loadFloorOptions = useCallback(async (buildingId: string) => {
-    if (!buildingId) {
-      setFloorOptions([]);
-      return;
-    }
-    try {
-      const result = await floorApi.list({ current: 1, pageSize: 1000, buildingId });
-      const floors = result.data?.list || [];
-      setFloorOptions(floors.map((f: Record<string, unknown>) => ({
-        id: f.id as string,
-        code: f.code as string,
-        name: f.name as string,
-        floorNo: f.floorNo as string,
-      })));
-    } catch (error) {
-      handleApiError(error, '加载楼层选项', false);
-    }
-  }, []);
-
   // 清空楼宇筛选
   useEffect(() => {
     searchForm.setFieldValue('buildingCode', undefined);
