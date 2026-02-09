@@ -102,22 +102,6 @@ const ServerRoomManagement: FC = () => {
     }
   }, []);
 
-  // 统一的数据刷新函数
-  const refreshData = useCallback(() => {
-    loadServerRooms();
-    loadStatistics().then(setStatistics);
-  }, [loadServerRooms, loadStatistics]);
-
-  // 初始化加载
-  useEffect(() => {
-    loadStatistics().then(setStatistics);
-  }, [loadStatistics]);
-
-  useEffect(() => {
-    loadServerRooms();
-    loadBuildingOptions(selectedDeptId || undefined);
-  }, [selectedDeptId, loadServerRooms, loadBuildingOptions]);
-
   const loadBuildingOptions = useCallback(async (orgId?: string) => {
     try {
       const params: Record<string, unknown> = { current: 1, pageSize: 1000 };
@@ -134,6 +118,41 @@ const ServerRoomManagement: FC = () => {
       handleApiError(error, '加载楼宇选项', false);
     }
   }, []);
+
+  const loadFloorOptions = useCallback(async (buildingId: string) => {
+    if (!buildingId) {
+      setFloorOptions([]);
+      return;
+    }
+    try {
+      const result = await floorApi.list({ current: 1, pageSize: 1000, buildingId });
+      const floors = result.data?.list || [];
+      setFloorOptions(floors.map((f: Record<string, unknown>) => ({
+        id: f.id as string,
+        code: f.code as string,
+        name: f.name as string,
+        floorNo: f.floorNo as string,
+      })));
+    } catch (error) {
+      handleApiError(error, '加载楼层选项', false);
+    }
+  }, []);
+
+  // 统一的数据刷新函数
+  const refreshData = useCallback(() => {
+    loadServerRooms();
+    loadStatistics().then(setStatistics);
+  }, [loadServerRooms, loadStatistics]);
+
+  // 初始化加载
+  useEffect(() => {
+    loadStatistics().then(setStatistics);
+  }, [loadStatistics]);
+
+  useEffect(() => {
+    loadServerRooms();
+    loadBuildingOptions(selectedDeptId || undefined);
+  }, [selectedDeptId, loadServerRooms, loadBuildingOptions]);
 
   const loadFloorOptions = useCallback(async (buildingId: string) => {
     if (!buildingId) {
