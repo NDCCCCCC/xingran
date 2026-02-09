@@ -12,7 +12,6 @@ export interface StatisticItem {
   value: number;
   prefix?: ReactNode;
   styles?: { content?: { color?: string } };
-  valueStyle?: React.CSSProperties;
 }
 
 interface StatisticsCardsProps {
@@ -49,7 +48,6 @@ export const StatisticsCards: FC<StatisticsCardsProps> = ({
               value={item.value}
               prefix={item.prefix}
               styles={item.styles}
-              valueStyle={item.valueStyle}
             />
           </Card>
         </Col>

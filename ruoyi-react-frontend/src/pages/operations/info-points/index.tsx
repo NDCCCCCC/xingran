@@ -570,7 +570,7 @@ const InfoPointManagement: FC = () => {
                   allowClear
                   style={{ width: 150 }}
                   disabled={!selectedDeptId}
-                  onDropdownVisibleChange={(open) => {
+                  onOpenChange={(open) => {
                     if (open) loadSearchWorkstationOptions();
                   }}
                   showSearch
