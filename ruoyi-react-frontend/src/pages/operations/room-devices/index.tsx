@@ -98,22 +98,6 @@ const RoomDeviceManagement: FC = () => {
     }
   }, []);
 
-  // 统一的数据刷新函数
-  const refreshData = useCallback(() => {
-    loadDevices();
-    loadStatistics().then(setStatistics);
-  }, [loadDevices, loadStatistics]);
-
-  // 初始化加载
-  useEffect(() => {
-    loadStatistics().then(setStatistics);
-  }, [loadStatistics]);
-
-  useEffect(() => {
-    loadDevices();
-    loadRoomOptions(selectedDeptId || undefined);
-  }, [selectedDeptId, loadDevices, loadRoomOptions]);
-
   const loadRoomOptions = useCallback(async (orgId?: string) => {
     try {
       const params: Record<string, unknown> = { current: 1, pageSize: 1000 };
@@ -130,6 +114,22 @@ const RoomDeviceManagement: FC = () => {
       handleApiError(error, '加载机房选项', false);
     }
   }, []);
+
+  // 统一的数据刷新函数
+  const refreshData = useCallback(() => {
+    loadDevices();
+    loadStatistics().then(setStatistics);
+  }, [loadDevices, loadStatistics]);
+
+  // 初始化加载
+  useEffect(() => {
+    loadStatistics().then(setStatistics);
+  }, [loadStatistics]);
+
+  useEffect(() => {
+    loadDevices();
+    loadRoomOptions(selectedDeptId || undefined);
+  }, [selectedDeptId, loadDevices, loadRoomOptions]);
 
   const handleSave = async () => {
     try {
