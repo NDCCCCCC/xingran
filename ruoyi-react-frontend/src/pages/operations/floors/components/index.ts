@@ -7,5 +7,4 @@ export { FloorSearchForm } from './FloorSearchForm';
 export { FloorModal } from './FloorModal';
 export { FloorPlanEditorView } from './FloorPlanEditorView';
 export type { FloorOption } from './FloorPlanEditorView';
-export { FloorStatisticsCards } from './FloorStatisticsCards';
 export { createFloorTableColumns } from './FloorTableColumns';

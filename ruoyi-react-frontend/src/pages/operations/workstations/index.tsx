@@ -2,41 +2,25 @@
  * 工位管理页面
  */
 
-import { useEffect, useState } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { FC } from 'react';
 import {
-  Table,
-  Button,
-  Space,
-  Form,
-  Input,
-  Select,
-  Card,
-  Row,
-  Col,
-  Statistic,
-  Alert,
-  Radio,
+  Table, Button, Space, Form, Input, Select, Card, Row, Col,
+  Statistic, Alert, Radio, Layout,
 } from 'antd';
 import {
-  PlusOutlined,
-  SearchOutlined,
-  ReloadOutlined,
-  CheckCircleOutlined,
-  StopOutlined,
-  AppstoreOutlined,
-  TableOutlined,
-  ImportOutlined,
-  ExportOutlined,
-  DeleteOutlined,
-  BgColorsOutlined,
-  DesktopOutlined,
+  PlusOutlined, SearchOutlined, ReloadOutlined, CheckCircleOutlined,
+  StopOutlined, AppstoreOutlined, TableOutlined, ImportOutlined,
+  ExportOutlined, DeleteOutlined, BgColorsOutlined, DesktopOutlined,
 } from '@ant-design/icons';
 import type { WorkstationOps } from '@/types';
 import { useTableManager } from '@/hooks/useTableManager';
 import { usePagination } from '@/hooks/usePagination';
+import { useSidebarDeptFilter } from '@/hooks/useSidebarDeptFilter';
 import ExcelImport from '@/components/shared/ExcelImport';
 import ExcelExport from '@/components/shared/ExcelExport';
+import { DeptSidebar } from '@/components/operations/DeptSidebar';
+import { StatisticsCards } from '@/components/operations/StatisticsCards';
 import { useWorkstationData, useWorkstationModals, useWorkstationView } from './hooks';
 import { getWorkstationColumns } from './columns';
 import { WorkstationEditModal } from './modals';
@@ -45,9 +29,17 @@ import { STATUS_OPTIONS, TYPE_OPTIONS } from './constants';
 import type { WorkstationStatistics, FloorOption, UserOption, DeptTreeNode } from './types';
 
 const { Option } = Select;
+const { Content } = Layout;
+
+interface Statistics {
+  total: number;
+  available: number;
+  occupied: number;
+  maintain: number;
+}
 
 const WorkstationManagement: FC = () => {
-  const [statistics, setStatistics] = useState<WorkstationStatistics>({
+  const [statistics, setStatistics] = useState<Statistics>({
     total: 0,
     available: 0,
     occupied: 0,
@@ -59,8 +51,11 @@ const WorkstationManagement: FC = () => {
   const [deptTreeData, setDeptTreeData] = useState<DeptTreeNode[]>([]);
   const [userOptions, setUserOptions] = useState<UserOption[]>([]);
 
-  // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+  const { selectedDeptId, handleDeptSelect } = useSidebarDeptFilter({
+    searchForm: undefined,
+    clearFieldNames: ['floorId'],
+  });
 
   const {
     loading,
@@ -84,7 +79,10 @@ const WorkstationManagement: FC = () => {
   } = useTableManager<WorkstationOps>(
     async (params) => {
       const { workstationApi } = await import('@/lib/opsApi');
-      const result = await workstationApi.list(params) as { data?: { list: WorkstationOps[]; total: number } };
+      const searchParams = selectedDeptId
+        ? { ...params, orgId: selectedDeptId }
+        : params;
+      const result = await workstationApi.list(searchParams) as { data?: { list: WorkstationOps[]; total: number } };
       return { list: result.data?.list || [], total: result.data?.total || 0 };
     },
     {
@@ -98,7 +96,7 @@ const WorkstationManagement: FC = () => {
     }
   );
 
-  const { loadStatistics, loadFloorOptions, loadDeptOptions, loadUserOptions } = useWorkstationData(
+  const { loadStatistics: loadStatisticsFromHook, loadFloorOptions, loadDeptOptions, loadUserOptions } = useWorkstationData(
     setStatistics,
     setFloorOptions,
     setDeptTreeData,
@@ -119,22 +117,27 @@ const WorkstationManagement: FC = () => {
     handleFloorPlanEdit,
   } = useWorkstationView(floorOptions);
 
-  useEffect(() => {
-    // 使用 setTimeout 避免同步 setState
-    setTimeout(() => {
-      loadWorkstations();
-      loadStatistics();
-      loadFloorOptions();
-      loadDeptOptions();
-      loadUserOptions();
-    }, 0);
-  }, [paginationProps.current, paginationProps.pageSize]);
-
-  // 操作成功后刷新
-  const handleSuccess = () => {
+  const refreshData = useCallback(() => {
     loadWorkstations();
-    loadStatistics();
-  };
+    loadStatisticsFromHook();
+  }, [loadWorkstations, loadStatisticsFromHook]);
+
+  // 初始化加载
+  useEffect(() => {
+    loadStatisticsFromHook();
+    loadFloorOptions();
+    loadDeptOptions();
+    loadUserOptions();
+  }, [loadStatisticsFromHook, loadFloorOptions, loadDeptOptions, loadUserOptions]);
+
+  useEffect(() => {
+    loadWorkstations();
+    loadFloorOptions();
+  }, [selectedDeptId, loadWorkstations, loadFloorOptions]);
+
+  const handleSuccess = useCallback(() => {
+    refreshData();
+  }, [refreshData]);
 
   const columns = getWorkstationColumns({
     handleEdit: (record: WorkstationOps) => {
@@ -148,11 +151,10 @@ const WorkstationManagement: FC = () => {
     loadUserOptions(deptId);
   };
 
-  const handleImportSuccess = () => {
-    loadWorkstations();
-    loadStatistics();
+  const handleImportSuccess = useCallback(() => {
+    refreshData();
     setImportVisible(false);
-  };
+  }, [refreshData]);
 
   const renderCurrentView = () => {
     if (viewMode === 'table') {
@@ -201,186 +203,153 @@ const WorkstationManagement: FC = () => {
   };
 
   return (
-    <div>
-      {total > 10 && (
-        <Row gutter={16} style={{ marginBottom: 16 }}>
-          <Col span={6}>
-            <Card>
-              <Statistic title="总工位数" value={statistics.total} prefix={<DesktopOutlined />} />
-            </Card>
-          </Col>
-          <Col span={6}>
-            <Card>
-              <Statistic
-                title="空闲"
-                value={statistics.available}
-                styles={{ content: { color: '#52c41a' } }}
-                prefix={<CheckCircleOutlined />}
-              />
-            </Card>
-          </Col>
-          <Col span={6}>
-            <Card>
-              <Statistic
-                title="占用"
-                value={statistics.occupied}
-                styles={{ content: { color: '#ff4d4f' } }}
-                prefix={<StopOutlined />}
-              />
-            </Card>
-          </Col>
-          <Col span={6}>
-            <Card>
-              <Statistic
-                title="维护"
-                value={statistics.maintain}
-                styles={{ content: { color: '#faad14' } }}
-                valueStyle={{ color: '#faad14' }}
-              />
-            </Card>
-          </Col>
-        </Row>
-      )}
-      <Card style={{ marginBottom: 16 }}>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            flexWrap: 'wrap',
-            gap: '16px',
-          }}
-        >
-          <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
-            <Form.Item name="floorId" label="所属楼层">
-              <Select placeholder="请选择楼层" allowClear style={{ width: 150 }}>
-                {floorOptions.map((f) => (
-                  <Option key={f.id} value={f.id}>
-                    {f.name}
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
-            <Form.Item name="name" label="工位名称">
-              <Input placeholder="请输入工位名称" allowClear style={{ width: 150 }} />
-            </Form.Item>
-            <Form.Item name="status" label="状态">
-              <Select placeholder="请选择状态" allowClear style={{ width: 120 }}>
-                {STATUS_OPTIONS.map((opt) => (
-                  <Option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
-            <Form.Item>
-              <Space>
-                <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
-                  搜索
-                </Button>
-                <Button onClick={handleReset}>重置</Button>
-                <Button
-                  icon={<ReloadOutlined />}
-                  onClick={() => {
-                    loadWorkstations();
-                    loadStatistics();
-                  }}
-                >
-                  刷新
-                </Button>
-              </Space>
-            </Form.Item>
-          </Form>
-          <Space>
-            <Radio.Group value={viewMode} onChange={(e) => setViewMode(e.target.value)} buttonStyle="solid">
-              <Radio.Button value="table">
-                <TableOutlined /> 表格
-              </Radio.Button>
-              <Radio.Button value="card">
-                <AppstoreOutlined /> 卡片
-              </Radio.Button>
-              <Radio.Button value="floorplan">
-                <BgColorsOutlined /> 平面图
-              </Radio.Button>
-            </Radio.Group>
-            <Button icon={<ImportOutlined />} onClick={() => setImportVisible(true)}>
-              导入
-            </Button>
-            <Button icon={<ExportOutlined />} onClick={() => setExportVisible(true)}>
-              导出
-            </Button>
-            {selectedRowKeys.length > 0 && (
-              <Button
-                danger
-                icon={<DeleteOutlined />}
-                onClick={() => handleBatchDelete(selectedRowKeys, handleSuccess, resetSelection)}
-              >
-                批量删除 ({selectedRowKeys.length})
+    <Layout style={{ background: '#f0f2f5', minHeight: 'calc(100vh - 64px)' }}>
+      <DeptSidebar selectedDeptId={selectedDeptId} onSelect={handleDeptSelect} />
+      <Content style={{ padding: '16px', background: '#f0f2f5' }}>
+        <StatisticsCards
+          show={total > 10}
+          items={[
+            { title: '总工位数', value: statistics.total, prefix: <DesktopOutlined /> },
+            { title: '空闲', value: statistics.available, styles: { content: { color: '#52c41a' } }, prefix: <CheckCircleOutlined /> },
+            { title: '占用', value: statistics.occupied, styles: { content: { color: '#ff4d4f' } }, prefix: <StopOutlined /> },
+            { title: '维护', value: statistics.maintain, styles: { content: { color: '#faad14' } }, valueStyle: { color: '#faad14' } },
+          ]}
+        />
+        <Card style={{ marginBottom: 16 }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              flexWrap: 'wrap',
+              gap: '16px',
+            }}
+          >
+            <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
+              <Form.Item name="floorId" label="所属楼层">
+                <Select placeholder="请选择楼层" allowClear style={{ width: 150 }}>
+                  {floorOptions.map((f) => (
+                    <Option key={f.id} value={f.id}>
+                      {f.name}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+              <Form.Item name="name" label="工位名称">
+                <Input placeholder="请输入工位名称" allowClear style={{ width: 150 }} />
+              </Form.Item>
+              <Form.Item name="status" label="状态">
+                <Select placeholder="请选择状态" allowClear style={{ width: 120 }}>
+                  {STATUS_OPTIONS.map((opt) => (
+                    <Option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+              <Form.Item>
+                <Space>
+                  <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+                    搜索
+                  </Button>
+                  <Button onClick={handleReset}>重置</Button>
+                  <Button icon={<ReloadOutlined />} onClick={refreshData}>
+                    刷新
+                  </Button>
+                </Space>
+              </Form.Item>
+            </Form>
+            <Space>
+              <Radio.Group value={viewMode} onChange={(e) => setViewMode(e.target.value)} buttonStyle="solid">
+                <Radio.Button value="table">
+                  <TableOutlined /> 表格
+                </Radio.Button>
+                <Radio.Button value="card">
+                  <AppstoreOutlined /> 卡片
+                </Radio.Button>
+                <Radio.Button value="floorplan">
+                  <BgColorsOutlined /> 平面图
+                </Radio.Button>
+              </Radio.Group>
+              <Button icon={<ImportOutlined />} onClick={() => setImportVisible(true)}>
+                导入
               </Button>
-            )}
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => {
-                handleAdd();
-                openModal(undefined, workstationForm);
-              }}
-            >
-              新增工位
-            </Button>
-          </Space>
-        </div>
-        {selectedRowKeys.length > 0 && (
-          <Alert
-            message={
-              <span>
-                已选择 <strong>{selectedRowKeys.length}</strong> 个工位，
+              <Button icon={<ExportOutlined />} onClick={() => setExportVisible(true)}>
+                导出
+              </Button>
+              {selectedRowKeys.length > 0 && (
                 <Button
-                  type="link"
-                  size="small"
-                  onClick={() => setSelectedRowKeys([])}
-                  style={{ padding: 0 }}
+                  danger
+                  icon={<DeleteOutlined />}
+                  onClick={() => handleBatchDelete(selectedRowKeys, handleSuccess, resetSelection)}
                 >
-                  取消选择
+                  批量删除 ({selectedRowKeys.length})
                 </Button>
-              </span>
-            }
-            type="info"
-            showIcon
-            style={{ marginTop: 12 }}
-          />
-        )}
-      </Card>
-      <Card>{renderCurrentView()}</Card>
-      <WorkstationEditModal
-        open={modalVisible}
-        editingWorkstation={editingWorkstation}
-        floorOptions={floorOptions}
-        deptTreeData={deptTreeData}
-        userOptions={userOptions}
-        onOk={async () => {
-          await handleSave(editingWorkstation, workstationForm, handleSuccess);
-        }}
-        onCancel={() => {
-          setModalVisible(false);
-          closeModal(workstationForm);
-        }}
-        onDeptChange={handleDeptChange}
-      />
-      <ExcelImport
-        entityType="workstation"
-        entityName="工位"
-        visible={importVisible}
-        onClose={() => setImportVisible(false)}
-        onImportSuccess={handleImportSuccess}
-      />
-      <ExcelExport
-        entityType="workstation"
-        entityName="工位"
-        visible={exportVisible}
-        onClose={() => setExportVisible(false)}
-      />
-    </div>
+              )}
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => {
+                  handleAdd();
+                  openModal(undefined, workstationForm);
+                }}
+              >
+                新增工位
+              </Button>
+            </Space>
+          </div>
+          {selectedRowKeys.length > 0 && (
+            <Alert
+              message={
+                <span>
+                  已选择 <strong>{selectedRowKeys.length}</strong> 个工位，
+                  <Button
+                    type="link"
+                    size="small"
+                    onClick={() => setSelectedRowKeys([])}
+                    style={{ padding: 0 }}
+                  >
+                    取消选择
+                  </Button>
+                </span>
+              }
+              type="info"
+              showIcon
+              style={{ marginTop: 12 }}
+            />
+          )}
+        </Card>
+        <Card>{renderCurrentView()}</Card>
+        <WorkstationEditModal
+          open={modalVisible}
+          editingWorkstation={editingWorkstation}
+          floorOptions={floorOptions}
+          deptTreeData={deptTreeData}
+          userOptions={userOptions}
+          onOk={async () => {
+            await handleSave(editingWorkstation, workstationForm, handleSuccess);
+          }}
+          onCancel={() => {
+            setModalVisible(false);
+            closeModal(workstationForm);
+          }}
+          onDeptChange={handleDeptChange}
+        />
+        <ExcelImport
+          entityType="workstation"
+          entityName="工位"
+          visible={importVisible}
+          onClose={() => setImportVisible(false)}
+          onImportSuccess={handleImportSuccess}
+        />
+        <ExcelExport
+          entityType="workstation"
+          entityName="工位"
+          visible={exportVisible}
+          onClose={() => setExportVisible(false)}
+        />
+      </Content>
+    </Layout>
   );
 };
 

@@ -1,3 +1,7 @@
+/**
+ * 楼层搜索表单组件
+ */
+
 import type { FC } from 'react';
 import { Form, Input, Select, Button, Space, Radio, Card } from 'antd';
 import {
@@ -9,14 +13,11 @@ import {
   ExportOutlined,
   PlusOutlined,
   DeleteOutlined,
-  BuildOutlined,
 } from '@ant-design/icons';
 import type { FormInstance } from 'antd/es/form';
 import type { ViewMode } from '../constants';
 import { STATUS_OPTIONS } from '../constants';
 import type { Building } from '@/types';
-import { DepartmentTreeSelect } from '@/components/shared/DepartmentTreeSelect';
-import type { TreeNode } from '@/components/shared/DepartmentTreeSelect';
 
 const { Option } = Select;
 
@@ -25,7 +26,6 @@ interface FloorSearchFormProps {
   buildingOptions: Building[];
   viewMode: ViewMode;
   loading: boolean;
-  departmentTreeData: TreeNode[];
   buildingOptionsByDept: Building[];
   selectedDeptId: string;
   disabled?: boolean;
@@ -37,7 +37,7 @@ interface FloorSearchFormProps {
   onExport: () => void;
   onBatchDelete: () => void;
   onAdd: () => void;
-  onDepartmentChange: (deptId: string) => void;
+  onBuildingChange?: (buildingId: string) => void;
   selectedCount: number;
 }
 
@@ -46,7 +46,6 @@ export const FloorSearchForm: FC<FloorSearchFormProps> = ({
   buildingOptions,
   viewMode,
   loading,
-  departmentTreeData,
   buildingOptionsByDept,
   selectedDeptId,
   disabled = false,
@@ -58,7 +57,7 @@ export const FloorSearchForm: FC<FloorSearchFormProps> = ({
   onExport,
   onBatchDelete,
   onAdd,
-  onDepartmentChange,
+  onBuildingChange,
   selectedCount,
 }) => {
   return (
@@ -73,29 +72,15 @@ export const FloorSearchForm: FC<FloorSearchFormProps> = ({
         }}
       >
         <Form form={form} layout="inline" style={{ flex: 1, minWidth: 0 }} disabled={disabled}>
-          <Form.Item label="所属机构">
-            <Space size="small" style={{ display: 'flex', alignItems: 'center' }}>
-              <BuildOutlined style={{ color: '#1890ff' }} />
-              <DepartmentTreeSelect
-                style={{ width: 180 }}
-                placeholder="选择机构"
-                treeData={departmentTreeData}
-                value={selectedDeptId}
-                onChange={onDepartmentChange}
-                allowClear
-                disabled={disabled}
-              />
-            </Space>
-          </Form.Item>
-
           <Form.Item name="buildingId" label="所属楼宇">
             <Select
-              placeholder="请选择楼宇"
+              placeholder="请先选择部门"
               allowClear
               style={{ width: 150 }}
               showSearch
               optionFilterProp="children"
-              disabled={disabled}
+              disabled={disabled || !selectedDeptId}
+              onChange={(value) => onBuildingChange?.(value)}
             >
               {buildingOptionsByDept.map((b) => (
                 <Option key={b.id} value={b.id}>
