@@ -584,3 +584,180 @@ To run migrations manually:
 # Migrations are versioned and auto-applied via gorm-auto-migrate
 # Check `internal/core/db/migrations/` for available migrations
 ```
+
+### Compilation & Build Verification
+
+**CRITICAL:** Always run `go build ./...` after modifying Go files to catch compilation errors immediately. Fix errors iteratively rather than attempting bulk fixes across multiple files.
+
+```bash
+# After any Go code changes, run full build check
+go build ./...
+
+# If errors occur, fix one file completely, then re-build
+# Do NOT attempt to fix multiple files at once
+```
+
+This prevents cascading compilation errors and makes it easier to identify which changes actually matter.
+
+---
+
+## Frontend/React Best Practices
+
+### useEffect Dependencies
+
+**CRITICAL:** For TypeScript React components, ensure useEffect dependencies are stable (use useMemo/useCallback) to prevent infinite API request loops. Common pattern: objects/arrays in useEffect cause re-renders.
+
+```typescript
+// ❌ WRONG - unstable object reference causes infinite loop
+useEffect(() => {
+  fetchData({ page: 1, size: 10 });
+}, [{ page: 1, size: 10 }]); // Object recreated on every render
+
+// ✅ CORRECT - memoize the params object
+const params = useMemo(() => ({ page: 1, size: 10 }), []);
+useEffect(() => {
+  fetchData(params);
+}, [params]);
+
+// ✅ CORRECT - use primitive values
+useEffect(() => {
+  fetchData({ page, pageSize });
+}, [page, pageSize]); // Primitives are stable
+```
+
+**Before deploying React changes, check all useEffect hooks:**
+1. Are objects/arrays in dependencies memoized?
+2. Could any dependency change on every render?
+3. Add temporary `console.log('effect triggered')` to verify effect doesn't run excessively.
+
+---
+
+## Debugging & Bug Fixing
+
+### Scope Constrainment
+
+**CRITICAL:** When fixing bugs, start with the specific reported issue before expanding scope. Do not proactively 'fix' unreported issues across other modules unless explicitly requested.
+
+1. Describe exact symptom and expected behavior
+2. Specify "fix only this issue, don't touch other files"
+3. After verification, explicitly ask for refactor if needed
+4. Review each file changed and ask "was this change necessary?"
+
+This prevents over-engineering and reduces the risk of introducing new bugs while fixing unrelated issues.
+
+### Autonomous Debugging Protocol
+
+For systematic bug investigation and resolution, follow this autonomous workflow:
+
+**Template prompt:**
+
+```
+Investigate and fix the bug described as [symptom/error message]. Follow this autonomous debugging protocol:
+1) Use Grep to search codebase for related error patterns and log outputs
+2) Identify the root cause by examining stack traces and code flow
+3) Create a minimal reproduction case using the actual application (use chrome-devtools click tool if it's a UI bug)
+4) Implement a targeted fix that addresses the root cause without touching unrelated code
+5) Run existing tests to verify the fix doesn't break anything
+6) If tests fail, iteratively refine the fix until all tests pass
+7) Summarize the root cause, fix applied, and test results
+
+Do not ask for confirmation during this process—proceed autonomously and report results when complete.
+```
+
+**Key principles:**
+- Search for patterns first, don't guess
+- Reproduce the issue before fixing
+- Fix only the root cause, not symptoms
+- Validate with tests, not assumptions
+- Report comprehensive summary at the end
+
+---
+
+## Git Workflow
+
+### Commit Process
+
+**CRITICAL:** Before making git commits, ask for explicit user confirmation. Do not autonomously commit uncommitted changes.
+
+1. **Before committing any changes:**
+   - `go build ./...` (or `npm run build`)
+   - `go test ./...` (or `npm test`)
+   - Check for any console warnings
+   - Only if all pass, then proceed with git operations
+
+2. **Ask for confirmation:**
+   - Show the diff of changes
+   - Ask "Should I commit these changes?"
+   - Wait for explicit user approval before running `git commit`
+
+---
+
+## Using Agents for Codebase Exploration
+
+For complex multi-file changes, use the Task tool with specialized agents to systematically explore dependencies and related code before making changes.
+
+**When to use agents:**
+- Making schema changes that affect multiple files
+- Refactoring across modules
+- Finding all usages of a specific pattern
+- Exploring unfamiliar code areas
+
+**Example prompts:**
+
+```
+# Before modifying a model
+"Use an agent to explore all files that import the Computer model before making schema changes"
+
+# Before refactoring configuration
+"Use an agent to find all places where Excel templates are configured"
+
+# For API changes
+"Use an agent to find all handlers and services that use the UserService interface"
+```
+
+This prevents unintended breakage and ensures comprehensive understanding of impact scope.
+
+### Parallel Development Approach
+
+For complex full-stack features, use a parallel development approach to work on multiple layers simultaneously:
+
+**Template prompt:**
+
+```
+Implement the [feature name] using a parallel development approach. Break down the work into 4 independent tracks:
+1) Backend: API endpoints and business logic
+2) Database: migrations and models
+3) Frontend: UI components and forms
+4) Testing: unit and integration tests
+
+Work on these tracks simultaneously, using Write to create stub interfaces for dependencies. Every 10 minutes, sync progress by checking if any track is blocked on another. When all tracks are complete, run a full integration test. Use Glob to find all related files first, then create a parallel execution plan in TodoWrite before starting.
+```
+
+**Benefits:**
+- Reduces feature delivery time by working on independent tracks in parallel
+- Identifies dependencies and blocking issues early through periodic syncs
+- Ensures comprehensive coverage across all architectural layers
+
+### Test-Driven Refactoring Pipeline
+
+For code quality improvements while maintaining test coverage, use this autonomous refactoring workflow:
+
+**Template prompt:**
+
+```
+I want you to autonomously refactor the [module/component] to improve code quality while maintaining 100% test coverage. Start by running the full test suite and capturing baseline results. Then:
+1) Identify 3-5 refactoring opportunities through static analysis
+2) Implement changes incrementally (one improvement at a time)
+3) After each change, immediately run the relevant tests
+4) If tests fail, analyze the failure and either fix the refactor or update the test if the behavior change is intentional
+5) Continue until all improvements are complete
+
+Use TodoWrite to track progress. Ask for my approval only before starting and for final review.
+```
+
+**Key principles:**
+- Establish baseline test coverage before any changes
+- Make incremental improvements, not bulk refactors
+- Test after every single change
+- Fail fast - fix issues immediately
+- Continuous verification prevents regression debt
