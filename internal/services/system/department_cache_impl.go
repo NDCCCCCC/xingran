@@ -10,14 +10,12 @@ import (
 	"gorm.io/gorm"
 )
 
-// departmentCacheService 部门缓存服务
 type departmentCacheService struct {
 	*departmentService
 	cache CacheProvider
 	CacheServiceBase
 }
 
-// NewDepartmentServiceWithCache 创建带缓存的部门服务
 func NewDepartmentServiceWithCache(
 	db *gorm.DB,
 	cache CacheProvider,
@@ -31,8 +29,15 @@ func NewDepartmentServiceWithCache(
 	}
 }
 
-// GetTree 获取部门树（覆盖基础方法，使用缓存）
 func (s *departmentCacheService) GetTree(ctx context.Context, includeDisabled bool) ([]*models.Department, error) {
+	return s.GetTreeWithFilter(ctx, includeDisabled, requests.DepartmentListParams{})
+}
+
+func (s *departmentCacheService) GetTreeWithFilter(ctx context.Context, includeDisabled bool, params requests.DepartmentListParams) ([]*models.Department, error) {
+	if params.DeptName != "" || params.Status != nil {
+		return s.departmentService.GetTreeWithFilter(ctx, includeDisabled, params)
+	}
+
 	cacheKey := services.GetDeptTreeKey()
 	if includeDisabled {
 		cacheKey += ":all"
@@ -48,24 +53,10 @@ func (s *departmentCacheService) GetTree(ctx context.Context, includeDisabled bo
 	return result, err
 }
 
-// GetTreeWithCache 获取部门树（带缓存）- 保留以兼容性
 func (s *departmentCacheService) GetTreeWithCache(ctx context.Context, includeDisabled bool) ([]*models.Department, error) {
-	cacheKey := services.GetDeptTreeKey()
-	if includeDisabled {
-		cacheKey += ":all"
-	}
-	var result []*models.Department
-
-	expiration := s.GetExpiration(services.CacheConfigDeptTree, 30*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		return s.queryTree(ctx, includeDisabled)
-	})
-
-	return result, err
+	return s.GetTree(ctx, includeDisabled)
 }
 
-// queryTree 查询部门树
 func (s *departmentCacheService) queryTree(ctx context.Context, includeDisabled bool) ([]*models.Department, error) {
 	var depts []models.Department
 	query := s.db.WithContext(ctx).Model(&models.Department{})
@@ -78,13 +69,11 @@ func (s *departmentCacheService) queryTree(ctx context.Context, includeDisabled 
 		return nil, err
 	}
 
-	// 填充负责人信息
 	s.departmentService.fillLeaderInfo(ctx, depts)
 
 	return s.departmentService.buildDeptTree(depts, nil), nil
 }
 
-// GetSelectDataWithCache 获取选择器数据（带缓存）
 func (s *departmentCacheService) GetSelectDataWithCache(ctx context.Context) ([]*models.Department, error) {
 	cacheKey := services.CacheKeyDeptTreeSelect
 	var result []*models.Department
@@ -98,7 +87,6 @@ func (s *departmentCacheService) GetSelectDataWithCache(ctx context.Context) ([]
 	return result, err
 }
 
-// querySelectData 查询选择器数据
 func (s *departmentCacheService) querySelectData(ctx context.Context) ([]*models.Department, error) {
 	var depts []models.Department
 	if err := s.db.WithContext(ctx).
@@ -108,13 +96,11 @@ func (s *departmentCacheService) querySelectData(ctx context.Context) ([]*models
 		return nil, err
 	}
 
-	// 填充负责人信息
 	s.departmentService.fillLeaderInfo(ctx, depts)
 
 	return s.departmentService.buildDeptTree(depts, nil), nil
 }
 
-// InvalidateDeptCache 失效部门缓存
 func (s *departmentCacheService) InvalidateDeptCache(ctx context.Context) error {
 	InvalidateCacheByPattern(ctx, s.cache, []string{
 		services.CacheKeyDeptTree + "*",
@@ -124,7 +110,6 @@ func (s *departmentCacheService) InvalidateDeptCache(ctx context.Context) error 
 	return nil
 }
 
-// Create 创建部门（带缓存失效）
 func (s *departmentCacheService) Create(ctx context.Context, req *requests.DepartmentCreateRequest) error {
 	if err := s.departmentService.Create(ctx, req); err != nil {
 		return err
@@ -132,7 +117,6 @@ func (s *departmentCacheService) Create(ctx context.Context, req *requests.Depar
 	return s.InvalidateDeptCache(ctx)
 }
 
-// Update 更新部门（带缓存失效）
 func (s *departmentCacheService) Update(ctx context.Context, req *requests.DepartmentUpdateRequest) error {
 	if err := s.departmentService.Update(ctx, req); err != nil {
 		return err
@@ -140,7 +124,6 @@ func (s *departmentCacheService) Update(ctx context.Context, req *requests.Depar
 	return s.InvalidateDeptCache(ctx)
 }
 
-// Delete 删除部门（带缓存失效）
 func (s *departmentCacheService) Delete(ctx context.Context, id string) error {
 	if err := s.departmentService.Delete(ctx, id); err != nil {
 		return err
@@ -148,7 +131,6 @@ func (s *departmentCacheService) Delete(ctx context.Context, id string) error {
 	return s.InvalidateDeptCache(ctx)
 }
 
-// BatchDelete 批量删除部门（带缓存失效）
 func (s *departmentCacheService) BatchDelete(ctx context.Context, ids []string) error {
 	if err := s.departmentService.BatchDelete(ctx, ids); err != nil {
 		return err
@@ -156,7 +138,6 @@ func (s *departmentCacheService) BatchDelete(ctx context.Context, ids []string) 
 	return s.InvalidateDeptCache(ctx)
 }
 
-// UpdateStatus 更新部门状态（带缓存失效）
 func (s *departmentCacheService) UpdateStatus(ctx context.Context, id string, status int) error {
 	if err := s.departmentService.UpdateStatus(ctx, id, status); err != nil {
 		return err
@@ -164,7 +145,6 @@ func (s *departmentCacheService) UpdateStatus(ctx context.Context, id string, st
 	return s.InvalidateDeptCache(ctx)
 }
 
-// GetDB 获取数据库连接
 func (s *departmentCacheService) GetDB() *gorm.DB {
 	return s.departmentService.GetDB()
 }

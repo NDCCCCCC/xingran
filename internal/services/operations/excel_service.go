@@ -18,7 +18,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// ExcelService Excel导入导出服务
 type ExcelService struct {
 	db                *gorm.DB
 	pwdManager        *security.PasswordManager
@@ -28,7 +27,6 @@ type ExcelService struct {
 	geocoding         *GeocodingService
 }
 
-// NewExcelService 创建Excel服务
 func NewExcelService(db *gorm.DB, pwdManager *security.PasswordManager, cache system.CacheProvider, geocoding *GeocodingService) *ExcelService {
 	return &ExcelService{
 		db:                db,
@@ -40,7 +38,6 @@ func NewExcelService(db *gorm.DB, pwdManager *security.PasswordManager, cache sy
 	}
 }
 
-// ImportError 导入错误
 type ImportError struct {
 	Row   int    `json:"row"`
 	Field string `json:"field"`
@@ -48,11 +45,11 @@ type ImportError struct {
 	Error string `json:"error"`
 }
 
-// ImportResult 导入结果
 type ImportResult struct {
-	Success int           `json:"success"`
-	Failed  int           `json:"failed"`
-	Errors  []ImportError `json:"errors"`
+	Inserted int           `json:"inserted"`
+	Updated  int           `json:"updated"`
+	Failed   int           `json:"failed"`
+	Errors   []ImportError `json:"errors"`
 }
 
 // GenerateTemplate 生成Excel模板
@@ -70,9 +67,7 @@ func (s *ExcelService) GenerateTemplate(entityType string) (*excelize.File, erro
 	}
 	f.SetActiveSheet(index)
 
-	// 删除默认的 Sheet1
 	if deleteErr := f.DeleteSheet("Sheet1"); deleteErr != nil {
-		// 忽略删除失败（比如 Sheet1 不存在的情况）
 		logger.Debugf("删除默认Sheet1失败: %v", deleteErr)
 	}
 
@@ -94,16 +89,13 @@ func (s *ExcelService) GenerateTemplate(entityType string) (*excelize.File, erro
 	return f, nil
 }
 
-// getExampleValue 获取示例值
 func (s *ExcelService) getExampleValue(col ExcelColumn) string {
-	// 优先使用选项的第一个Label（用于枚举类型，如状态）
 	if col.Options != nil {
 		for _, v := range col.Options {
-			return v // 返回Label（如"正常"、"停用"），而不是Value
+			return v
 		}
 	}
 
-	// 根据字段类型返回默认示例
 	switch col.Field {
 	case "name":
 		return "示例A"
@@ -151,14 +143,12 @@ func (s *ExcelService) getExampleValue(col ExcelColumn) string {
 		return "zhangsan@example.com"
 	case "orderNum":
 		return "1"
-	// 机房相关
 	case "buildingId":
 		return "（请填写所属楼宇名称）"
 	case "floorId":
 		return "（请填写所在楼层名称）"
 	case "roomId":
 		return "（请填写所在机房名称）"
-	// 机房设备相关
 	case "vendor":
 		return "戴尔"
 	case "model":
@@ -205,7 +195,6 @@ func (s *ExcelService) getExampleValue(col ExcelColumn) string {
 	case "remark":
 		return "备注信息"
 	default:
-		// 非必填字段可以不显示示例，必填字段显示通用示例
 		if col.Required {
 			return "示例"
 		}
@@ -213,14 +202,12 @@ func (s *ExcelService) getExampleValue(col ExcelColumn) string {
 	}
 }
 
-// ImportData 导入Excel数据（增强版：支持引用解析和批量Upsert）
 func (s *ExcelService) ImportData(ctx context.Context, entityType string, file *multipart.FileHeader, userID string) (*ImportResult, error) {
 	config, exists := GetExcelConfig(entityType)
 	if !exists {
 		return nil, fmt.Errorf("不支持的实体类型: %s", entityType)
 	}
 
-	// 打开Excel文件
 	src, err := file.Open()
 	if err != nil {
 		return nil, fmt.Errorf("打开文件失败: %w", err)
@@ -233,7 +220,6 @@ func (s *ExcelService) ImportData(ctx context.Context, entityType string, file *
 	}
 	defer f.Close()
 
-	// 获取所有行数据
 	rows, err := f.GetRows(config.SheetName)
 	if err != nil {
 		return nil, fmt.Errorf("读取数据失败: %w", err)
@@ -247,7 +233,6 @@ func (s *ExcelService) ImportData(ctx context.Context, entityType string, file *
 		Errors: make([]ImportError, 0),
 	}
 
-	// 阶段1：收集所有行数据和引用解析请求
 	var validRecords []map[string]interface{}
 	var allRefRequests []ReferenceRequest
 
@@ -257,12 +242,10 @@ func (s *ExcelService) ImportData(ctx context.Context, entityType string, file *
 		}
 		row := rows[rowNum-1]
 
-		// 跳过空行
 		if isEmptyRow(row) {
 			continue
 		}
 
-		// 验证并解析数据（不立即保存）
 		data, validationErrors := s.validateAndParseRow(ctx, row, rowNum, config, userID)
 		if len(validationErrors) > 0 {
 			result.Failed++
@@ -279,48 +262,37 @@ func (s *ExcelService) ImportData(ctx context.Context, entityType string, file *
 		validRecords = append(validRecords, data)
 	}
 
-	// 阶段2：批量解析所有引用（性能优化）
 	if len(allRefRequests) > 0 {
 		refResults, err := s.referenceResolver.ResolveBatch(ctx, allRefRequests)
 		if err != nil {
-			// 引用解析失败，记录错误但继续处理
 			logger.Warnf("批量解析引用失败: %v", err)
 		}
 
-		// 应用引用解析结果到所有记录
 		for _, data := range validRecords {
 			s.applyReferenceResults(data, refResults, config)
 		}
 	}
 
-	// 阶段2.5：批量解析地址获取经纬度（仅针对楼宇类型）
 	if entityType == "building" && s.geocoding != nil {
 		s.batchGeocodeBuildings(ctx, validRecords)
 	}
 
-	// 阶段2.55：预处理部门记录，移除重复的科室编码（针对部门类型）
 	if entityType == "department" {
-		// 对于科室编码和部门编码相同的记录，移除 deptCode 字段
-		// 这样这些记录不会被当作科室创建，只创建部门
 		for i := range validRecords {
 			deptCode, _ := validRecords[i]["departmentCode"].(string)
 			sectionCode, _ := validRecords[i]["deptCode"].(string)
 			if deptCode != "" && sectionCode == deptCode {
-				// 科室编码与部门编码相同，移除科室编码字段
 				delete(validRecords[i], "deptCode")
 			}
 		}
 	}
 
-	// 阶段2.6：处理三层部门结构（仅针对部门类型）
 	if entityType == "department" {
 		validRecords, result = s.processThreeLevelDepartments(ctx, validRecords, result, config)
 	}
 
-	// 阶段3：批量Upsert到数据库
 	upserter := NewBatchUpsert(s.db, config)
 	if len(validRecords) > 0 {
-		// 将记录转换为适合Upsert的格式（处理字段名映射）
 		records := s.prepareRecordsForUpsert(validRecords, config)
 
 		inserted, updated, err := upserter.Upsert(ctx, records)
@@ -328,10 +300,10 @@ func (s *ExcelService) ImportData(ctx context.Context, entityType string, file *
 			return nil, fmt.Errorf("批量保存数据失败: %w", err)
 		}
 
-		result.Success = inserted + updated
+		result.Inserted = inserted
+		result.Updated = updated
 
-		// 阶段4：清理缓存
-		if result.Success > 0 && len(config.CachePatterns) > 0 {
+		if (inserted + updated) > 0 && len(config.CachePatterns) > 0 {
 			if cacheErr := s.cacheInvalidator.InvalidateByEntityType(ctx, entityType, config.CachePatterns); cacheErr != nil {
 				logger.Warnf("[%s] 清理缓存失败: %v", entityType, cacheErr)
 			}
@@ -341,7 +313,6 @@ func (s *ExcelService) ImportData(ctx context.Context, entityType string, file *
 	return result, nil
 }
 
-// extractReferenceRequests 提取引用解析请求
 func (s *ExcelService) extractReferenceRequests(
 	data map[string]interface{},
 	config ExcelConfig,
@@ -362,8 +333,6 @@ func (s *ExcelService) extractReferenceRequests(
 	return requests
 }
 
-// applyReferenceResults 应用引用解析结果
-// 将用户填写的名称/编码替换为数据库中的ID
 func (s *ExcelService) applyReferenceResults(
 	data map[string]interface{},
 	refResults map[string]string,
@@ -389,23 +358,16 @@ func (s *ExcelService) applyReferenceResults(
 	}
 }
 
-// getTargetFieldForReference 根据引用配置获取目标字段名
-// 例如：orgName -> orgId, buildingName -> buildingId
 func (s *ExcelService) getTargetFieldForReference(currentField string) string {
-	// 如果字段名以Name结尾，替换为Id
 	if strings.HasSuffix(currentField, "Name") {
 		return strings.TrimSuffix(currentField, "Name") + "Id"
 	}
-	// 如果字段名以Code结尾，同样处理
 	if strings.HasSuffix(currentField, "Code") {
 		return strings.TrimSuffix(currentField, "Code") + "Id"
 	}
-	// 默认返回原字段名
 	return currentField
 }
 
-// prepareRecordsForUpsert 准备用于批量Upsert的记录
-// 处理字段名映射和特殊字段
 func (s *ExcelService) prepareRecordsForUpsert(
 	records []map[string]interface{},
 	config ExcelConfig,
@@ -416,20 +378,16 @@ func (s *ExcelService) prepareRecordsForUpsert(
 		preparedRecord := make(map[string]interface{})
 
 		for _, col := range config.Columns {
-			// 跳过没有DBField的字段（这些是临时处理字段，不应写入数据库）
 			if col.DBField == "" {
 				continue
 			}
 
 			if value, exists := record[col.Field]; exists {
-				// 映射字段名（处理数据库列名和JSON标签的差异）
 				dbFieldName := s.getDBFieldName(col)
 				preparedRecord[dbFieldName] = value
 			}
 		}
 
-		// 保留动态添加的特殊字段（parent_id, ancestors）
-		// 这些字段在三级部门结构处理中被设置，必须保留
 		if parentID, exists := record["parent_id"]; exists && parentID != nil {
 			preparedRecord["parent_id"] = parentID
 		}
@@ -437,8 +395,7 @@ func (s *ExcelService) prepareRecordsForUpsert(
 			preparedRecord["ancestors"] = ancestors
 		}
 
-		// 添加公共字段
-		preparedRecord["id"] = generateUUID() // 生成UUID
+		preparedRecord["id"] = generateUUID()
 		preparedRecord["updated_at"] = time.Now()
 		preparedRecord["created_at"] = time.Now()
 
@@ -448,23 +405,17 @@ func (s *ExcelService) prepareRecordsForUpsert(
 	return prepared
 }
 
-// generateUUID 生成UUID
 func generateUUID() string {
 	return uuid.New().String()
 }
 
-// getDBFieldName 获取数据库字段名（配置驱动）
-// 优先使用配置的DBField，如果没有配置则使用字段名本身
 func (s *ExcelService) getDBFieldName(col ExcelColumn) string {
-	// 如果配置了DBField，优先使用配置
 	if col.DBField != "" {
 		return col.DBField
 	}
-	// 否则使用字段名本身
 	return col.Field
 }
 
-// isEmptyRow 检查是否为空行
 func isEmptyRow(row []string) bool {
 	for _, cell := range row {
 		if strings.TrimSpace(cell) != "" {
@@ -474,7 +425,6 @@ func isEmptyRow(row []string) bool {
 	return true
 }
 
-// validateAndParseRow 验证并解析行数据
 func (s *ExcelService) validateAndParseRow(ctx context.Context, row []string, rowNum int, config ExcelConfig, _ string) (map[string]interface{}, []ImportError) {
 	data := make(map[string]interface{})
 	errors := make([]ImportError, 0)
@@ -503,7 +453,6 @@ func (s *ExcelService) validateAndParseRow(ctx context.Context, row []string, ro
 			continue
 		}
 
-		// 验证长度
 		if col.MaxLength > 0 && len(value) > col.MaxLength {
 			errors = append(errors, ImportError{
 				Row:   rowNum,
@@ -514,7 +463,6 @@ func (s *ExcelService) validateAndParseRow(ctx context.Context, row []string, ro
 			continue
 		}
 
-		// 验证格式（Pattern）
 		if col.Pattern != "" {
 			matched, regexErr := regexp.MatchString(col.Pattern, value)
 			if regexErr != nil {
@@ -552,7 +500,6 @@ func (s *ExcelService) validateAndParseRow(ctx context.Context, row []string, ro
 		data[col.Field] = parsedValue
 	}
 
-	// 验证唯一性（如果在配置中指定）
 	if len(errors) == 0 {
 		uniqueErrors := s.validateUniqueness(ctx, config, data, rowNum)
 		errors = append(errors, uniqueErrors...)
@@ -561,20 +508,16 @@ func (s *ExcelService) validateAndParseRow(ctx context.Context, row []string, ro
 	return data, errors
 }
 
-// parseFieldValue 解析字段值
 func (s *ExcelService) parseFieldValue(col ExcelColumn, value string) (interface{}, error) {
 	if col.Options != nil {
-		// 枚举值映射
 		for k, v := range col.Options {
 			if v == value {
 				return k, nil
 			}
 		}
-		// 尝试直接使用值
 		return value, nil
 	}
 
-	// 数值类型
 	switch col.Field {
 	case "totalFloors", "capacity", "rackCount", "positionU", "heightU", "powerConsumption":
 		return strconv.Atoi(value)
@@ -585,13 +528,15 @@ func (s *ExcelService) parseFieldValue(col ExcelColumn, value string) (interface
 	return value, nil
 }
 
-// validateUniqueness 验证唯一性
 func (s *ExcelService) validateUniqueness(ctx context.Context, config ExcelConfig, data map[string]interface{}, rowNum int) []ImportError {
 	errors := make([]ImportError, 0)
 
 	for _, col := range config.Columns {
+		if col.UpsertKey {
+			continue
+		}
+
 		if col.Unique {
-			// 获取数据库字段名（重要：必须使用DBField而不是Field）
 			dbField := s.getDBFieldName(col)
 			code, ok := data[col.Field]
 			if !ok {
@@ -620,8 +565,12 @@ func (s *ExcelService) validateUniqueness(ctx context.Context, config ExcelConfi
 	return errors
 }
 
-// ExportData 导出数据到Excel
 func (s *ExcelService) ExportData(ctx context.Context, entityType string, params map[string]interface{}) (*excelize.File, error) {
+	if _, exists := GetExportConfig(entityType); exists {
+		exportService := NewExcelExportService(s.db)
+		return exportService.ExportData(ctx, entityType, params)
+	}
+
 	config, exists := GetExcelConfig(entityType)
 	if !exists {
 		return nil, fmt.Errorf("不支持的实体类型: %s", entityType)
@@ -635,7 +584,6 @@ func (s *ExcelService) ExportData(ctx context.Context, entityType string, params
 	}
 	f.SetActiveSheet(index)
 
-	// 删除默认的 Sheet1
 	if deleteErr := f.DeleteSheet("Sheet1"); deleteErr != nil {
 		logger.Debugf("删除默认Sheet1失败: %v", deleteErr)
 	}
@@ -664,23 +612,26 @@ func (s *ExcelService) ExportData(ctx context.Context, entityType string, params
 	return f, nil
 }
 
-// queryData 查询数据
 func (s *ExcelService) queryData(_ context.Context, config ExcelConfig, params map[string]interface{}) ([]map[string]interface{}, error) {
-	// 构建查询
 	query := s.db.Table(config.TableName).Where("deleted_at IS NULL")
 
-	// 应用过滤条件
+	nameField := "name"
+	codeField := "code"
+	if config.TableName == "sys_dept" {
+		nameField = "dept_name"
+		codeField = "dept_code"
+	}
+
 	if name, ok := params["name"]; ok && name != "" {
-		query = query.Where("name LIKE ?", "%"+name.(string)+"%")
+		query = query.Where(nameField+" LIKE ?", "%"+name.(string)+"%")
 	}
 	if code, ok := params["code"]; ok && code != "" {
-		query = query.Where("code LIKE ?", "%"+code.(string)+"%")
+		query = query.Where(codeField+" LIKE ?", "%"+code.(string)+"%")
 	}
 	if status, ok := params["status"]; ok && status != nil {
 		query = query.Where("status = ?", status)
 	}
 
-	// 执行查询
 	var data []map[string]interface{}
 	if err := query.Find(&data).Error; err != nil {
 		return nil, err
@@ -689,21 +640,23 @@ func (s *ExcelService) queryData(_ context.Context, config ExcelConfig, params m
 	return data, nil
 }
 
-// formatCellValue 格式化单元格值
 func (s *ExcelService) formatCellValue(col ExcelColumn, row map[string]interface{}) string {
-	value := row[col.Field]
+	fieldKey := col.Field
+	if col.DBField != "" {
+		fieldKey = col.DBField
+	}
+
+	value := row[fieldKey]
 	if value == nil {
 		return ""
 	}
 
-	// 枚举值转换
 	if col.Options != nil {
 		if str, ok := col.Options[value]; ok {
 			return str
 		}
 	}
 
-	// 日期格式
 	if col.Field == "createdAt" || col.Field == "updatedAt" {
 		if t, ok := value.(time.Time); ok {
 			return t.Format("2006-01-02 15:04:05")
@@ -713,7 +666,6 @@ func (s *ExcelService) formatCellValue(col ExcelColumn, row map[string]interface
 	return fmt.Sprintf("%v", value)
 }
 
-// createHeaderStyle 创建表头样式
 func createHeaderStyle(f *excelize.File) (int, error) {
 	return f.NewStyle(&excelize.Style{
 		Font:      &excelize.Font{Bold: true, Size: 11},
@@ -728,7 +680,6 @@ func createHeaderStyle(f *excelize.File) (int, error) {
 	})
 }
 
-// writeHeaders 写入表头
 func (s *ExcelService) writeHeaders(f *excelize.File, sheetName string, columns []ExcelColumn, headerStyle int) {
 	for i, col := range columns {
 		cell, _ := excelize.CoordinatesToCellName(i+1, 1)
@@ -737,7 +688,6 @@ func (s *ExcelService) writeHeaders(f *excelize.File, sheetName string, columns 
 	}
 }
 
-// writeExampleData 写入示例数据
 func (s *ExcelService) writeExampleData(f *excelize.File, sheetName string, columns []ExcelColumn) {
 	for i, col := range columns {
 		cell, _ := excelize.CoordinatesToCellName(i+1, 2)
@@ -746,7 +696,6 @@ func (s *ExcelService) writeExampleData(f *excelize.File, sheetName string, colu
 	}
 }
 
-// setColumnWidths 设置列宽
 func (s *ExcelService) setColumnWidths(f *excelize.File, sheetName string, columns []ExcelColumn) {
 	for i, col := range columns {
 		colWidth := 15.0
@@ -759,7 +708,6 @@ func (s *ExcelService) setColumnWidths(f *excelize.File, sheetName string, colum
 	}
 }
 
-// writeDataRows 写入数据行
 func (s *ExcelService) writeDataRows(f *excelize.File, sheetName string, columns []ExcelColumn, data []map[string]interface{}) {
 	for i, row := range data {
 		for j, col := range columns {
@@ -770,14 +718,11 @@ func (s *ExcelService) writeDataRows(f *excelize.File, sheetName string, columns
 	}
 }
 
-// geocodingTask 地理编码任务
 type geocodingTask struct {
 	address string
 	index   int
 }
 
-// batchGeocodeBuildings 批量解析楼宇地址获取经纬度
-// 仅解析有地址但无经纬度的记录
 func (s *ExcelService) batchGeocodeBuildings(ctx context.Context, records []map[string]interface{}) {
 	// 收集需要解析的任务
 	tasks := s.collectGeocodingTasks(records)
@@ -793,7 +738,6 @@ func (s *ExcelService) batchGeocodeBuildings(ctx context.Context, records []map[
 	logger.Infof("批量地址解析完成: 成功 %d, 失败 %d", successCount, failCount)
 }
 
-// collectGeocodingTasks 收集需要地理编码的任务
 func (s *ExcelService) collectGeocodingTasks(records []map[string]interface{}) []geocodingTask {
 	var tasks []geocodingTask
 
@@ -803,7 +747,6 @@ func (s *ExcelService) collectGeocodingTasks(records []map[string]interface{}) [
 			continue
 		}
 
-		// 跳过已有经纬度的记录
 		if s.hasCoordinates(record) {
 			continue
 		}
@@ -817,14 +760,12 @@ func (s *ExcelService) collectGeocodingTasks(records []map[string]interface{}) [
 	return tasks
 }
 
-// hasCoordinates 检查记录是否已有经纬度
 func (s *ExcelService) hasCoordinates(record map[string]interface{}) bool {
 	_, hasLng := record["longitude"]
 	_, hasLat := record["latitude"]
 	return hasLng && hasLat
 }
 
-// executeGeocodingTasks 执行地理编码任务
 func (s *ExcelService) executeGeocodingTasks(
 	ctx context.Context,
 	tasks []geocodingTask,
@@ -866,9 +807,6 @@ func (s *ExcelService) executeGeocodingTasks(
 	return successCount, failCount
 }
 
-// processThreeLevelDepartments 处理三层部门结构（部门组 -> 部门 -> 科室）
-// 每条记录代表一个科室，需要确保其上级部门和部门组存在
-// 返回过滤后的有效记录和更新后的结果对象
 func (s *ExcelService) processThreeLevelDepartments(
 	ctx context.Context,
 	records []map[string]interface{},

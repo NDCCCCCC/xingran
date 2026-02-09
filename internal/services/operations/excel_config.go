@@ -5,44 +5,19 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 )
 
-// Excel导入常用常量
 const (
-	// 状态值
-	StatusNormal = "正常"
-	StatusStopped = "停用"
-	StatusFault = "故障"
-	StatusDisabled = "停用"
-
-	// 工位类型
+	StatusNormal      = "正常"
+	StatusStopped     = "停用"
+	StatusFault       = "故障"
+	StatusDisabled    = "停用"
 	WorkstationTypeFixed  = "固定工位"
 	WorkstationTypeHotDesk = "灵活工位"
 	WorkstationTypeManager = "管理工位"
-
-	// 工位状态
 	WorkstationStatusAvailable = "空闲"
 	WorkstationStatusOccupied  = "占用"
 	WorkstationStatusMaintain  = "维护"
 )
 
-// ExcelOption Excel选项值
-type ExcelOption struct {
-	Value interface{}
-	Label string
-}
-
-// ExcelOptionsMap 选项映射类型
-type ExcelOptionsMap map[interface{}]string
-
-// ToOptionMap 将 ExcelOption 列表转换为映射
-func ToOptionMap(opts []ExcelOption) ExcelOptionsMap {
-	result := make(ExcelOptionsMap, len(opts))
-	for _, opt := range opts {
-		result[opt.Value] = opt.Label
-	}
-	return result
-}
-
-// ExcelColumn Excel列配置
 type ExcelColumn struct {
 	Field     string
 	Header    string
@@ -51,13 +26,12 @@ type ExcelColumn struct {
 	MinLength int
 	MaxLength int
 	Pattern   string
-	Options   ExcelOptionsMap
+	Options   map[interface{}]string
 	Reference string   // 引用配置，格式："table.field"，用于名称到ID的转换
 	UpsertKey bool     // 是否作为Upsert的唯一键（用于判断重复记录）
 	DBField   string   // 数据库字段名（可选，如果与Field不同，例如 workstationName -> workstation_name）
 }
 
-// ExcelConfig Excel配置
 type ExcelConfig struct {
 	SheetName      string
 	TableName      string
@@ -70,7 +44,6 @@ type ExcelConfig struct {
 	PartialUpdate  bool      // 是否启用部分更新（只更新有值的字段）
 }
 
-// ExcelConfigs 所有Excel配置映射
 var ExcelConfigs = map[string]ExcelConfig{
 	"department": {
 		SheetName:  "部门列表",
@@ -93,24 +66,6 @@ var ExcelConfigs = map[string]ExcelConfig{
 			{Field: "email", Header: "邮箱", MaxLength: 100},
 			{Field: "orderNum", Header: "显示顺序", DBField: "order_num"},
 			{Field: "isExternalOrg", Header: "是否外部机构", Options: map[interface{}]string{int(0): "否", int(1): "是"}, DBField: "is_external_org"},
-			{Field: "status", Header: "状态", Options: map[interface{}]string{int(0): "正常", int(1): "停用"}},
-			{Field: "remark", Header: "备注", MaxLength: 500},
-		},
-	},
-	"user": {
-		SheetName:  "用户列表",
-		TableName:  "sys_user",
-		EntityName: "用户",
-		HasHeader:  true,
-		StartRow:   2,
-		Columns: []ExcelColumn{
-			{Field: "username", Header: "用户名", Required: true, Unique: true, MaxLength: 64},
-			{Field: "nickname", Header: "用户昵称", MaxLength: 64},
-			{Field: "employeeNo", Header: "工号", MaxLength: 64},
-			{Field: "email", Header: "邮箱", MaxLength: 128},
-			{Field: "phone", Header: "手机号", MaxLength: 32},
-			{Field: "gender", Header: "性别", Options: map[interface{}]string{int(0): "男", int(1): "女", int(2): "未知"}},
-			{Field: "deptCode", Header: "部门编码", Reference: "sys_dept.dept_code", DBField: "dept_id"},
 			{Field: "status", Header: "状态", Options: map[interface{}]string{int(0): "正常", int(1): "停用"}},
 			{Field: "remark", Header: "备注", MaxLength: 500},
 		},
@@ -252,13 +207,11 @@ var ExcelConfigs = map[string]ExcelConfig{
 	},
 }
 
-// GetExcelConfig 获取指定实体的Excel配置
 func GetExcelConfig(entityType string) (ExcelConfig, bool) {
 	config, exists := ExcelConfigs[entityType]
 	return config, exists
 }
 
-// GetAllEntityTypes 获取所有支持导入导出的实体类型
 func GetAllEntityTypes() []string {
 	types := make([]string, 0, len(ExcelConfigs))
 	for t := range ExcelConfigs {

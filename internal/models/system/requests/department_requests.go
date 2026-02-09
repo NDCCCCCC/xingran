@@ -4,13 +4,11 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 )
 
-// DepartmentListParams 部门列表查询参数
 type DepartmentListParams struct {
 	DeptName string `json:"deptName"`
-	Status   string `json:"status"`
+	Status   *int   `json:"status"`
 }
 
-// DepartmentCreateRequest 创建部门请求
 type DepartmentCreateRequest struct {
 	DeptName      string              `json:"deptName" binding:"required"`
 	ParentID      *string             `json:"parentId"`
@@ -23,7 +21,6 @@ type DepartmentCreateRequest struct {
 	Remark        *string             `json:"remark"`
 }
 
-// ToModel 转换为部门模型
 func (r *DepartmentCreateRequest) ToModel(ancestors string) models.Department {
 	return models.Department{
 		DeptName:      r.DeptName,
@@ -39,7 +36,6 @@ func (r *DepartmentCreateRequest) ToModel(ancestors string) models.Department {
 	}
 }
 
-// DepartmentUpdateRequest 更新部门请求
 type DepartmentUpdateRequest struct {
 	ID            string              `json:"id" binding:"required"`
 	DeptName      string              `json:"deptName" binding:"required"`

@@ -23,20 +23,17 @@ func SetupExcelRouter(r *gin.RouterGroup, entityType string, core *core.Core) {
 	r.GET("/template", downloadTemplate(entityType, core))
 }
 
-// getExcelService 获取Excel服务实例（公共函数，减少重复代码）
 func getExcelService(core *core.Core) *opsServices.ExcelService {
 	cacheProvider := system.NewCacheAdapter(core.Cache)
 	geocodingService := opsServices.NewGeocodingService(core.Config.Baidu.MapAK)
 	return opsServices.NewExcelService(core.DB.GetDB(), core.PwdManager, cacheProvider, geocodingService)
 }
 
-// generateExcelFilename 生成Excel文件名
 func generateExcelFilename(entityType, fileSuffix string) string {
 	timestamp := time.Now().Format("20060102_150405")
 	return fmt.Sprintf("%s_%s_%s.xlsx", entityType, fileSuffix, timestamp)
 }
 
-// writeExcelResponse 写入Excel响应
 func writeExcelResponse(c *gin.Context, file *excelize.File, filename string) error {
 	var buf bytes.Buffer
 	if _, err := file.WriteTo(&buf); err != nil {
@@ -81,9 +78,10 @@ func importData(entityType string, core *core.Core) gin.HandlerFunc {
 		}
 
 		response.Success(c, gin.H{
-			"success": result.Success,
-			"failed":  result.Failed,
-			"errors":  result.Errors,
+			"inserted": result.Inserted,
+			"updated":  result.Updated,
+			"failed":   result.Failed,
+			"errors":   result.Errors,
 		})
 	}
 }
@@ -97,7 +95,6 @@ func exportData(entityType string, core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		// 构建查询参数
 		params := make(map[string]interface{})
 		if req.Name != "" {
 			params["name"] = req.Name
@@ -109,7 +106,6 @@ func exportData(entityType string, core *core.Core) gin.HandlerFunc {
 			params["status"] = req.Status
 		}
 
-		// 调用服务导出数据
 		excelService := getExcelService(core)
 		file, err := excelService.ExportData(c.Request.Context(), entityType, params)
 		if err != nil {
@@ -117,7 +113,6 @@ func exportData(entityType string, core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		// 使用辅助函数写入响应
 		filename := generateExcelFilename(entityType, "export")
 		if err := writeExcelResponse(c, file, filename); err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
@@ -142,24 +137,11 @@ func downloadTemplate(entityType string, core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		// 使用辅助函数写入响应
 		filename := generateExcelFilename(entityType, "template")
 		if err := writeExcelResponse(c, file, filename); err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 		}
 	}
-}
-
-// ImportWithService 使用特定服务导入数据（已废弃，使用通用的 importData）
-func ImportWithService(entityType string, core *core.Core) gin.HandlerFunc {
-	// 直接使用通用的导入处理
-	return importData(entityType, core)
-}
-
-// ExportWithService 使用特定服务导出数据（已废弃，使用通用的 exportData）
-func ExportWithService(entityType string, core *core.Core) gin.HandlerFunc {
-	// 直接使用通用的导出处理
-	return exportData(entityType, core)
 }
 
 // BatchOperationRequest 批量操作请求

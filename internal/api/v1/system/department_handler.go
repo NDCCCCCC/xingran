@@ -16,9 +16,7 @@ type DepartmentHandler struct {
 	db      *gorm.DB
 }
 
-// NewDepartmentHandler 创建部门处理器实例
 func NewDepartmentHandler(service systemServices.DepartmentService) *DepartmentHandler {
-	// 尝试从service获取db连接
 	var db *gorm.DB
 	if svc, ok := service.(interface{ GetDB() *gorm.DB }); ok {
 		db = svc.GetDB()
@@ -36,14 +34,20 @@ func (h *DepartmentHandler) GetDB() (*gorm.DB, error) {
 
 // GetTree 获取部门树
 // @Summary 获取部门树
-// @Description 获取部门树形结构
+// @Description 获取部门树形结构，支持按名称和状态筛选
 // @Tags 部门管理
 // @Accept json
 // @Produce json
+// @Param request body requests.DepartmentListParams false "查询条件"
 // @Success 200 {object} response.Response{data=[]models.Department}
 // @Router /system/departments/tree [post]
 func (h *DepartmentHandler) GetTree(c *gin.Context) {
-	tree, err := h.service.GetTree(c.Request.Context(), true)
+	var req requests.DepartmentListParams
+	if err := c.ShouldBindJSON(&req); err != nil {
+		req = requests.DepartmentListParams{}
+	}
+
+	tree, err := h.service.GetTreeWithFilter(c.Request.Context(), true, req)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -64,7 +68,6 @@ func (h *DepartmentHandler) GetTree(c *gin.Context) {
 func (h *DepartmentHandler) List(c *gin.Context) {
 	var req requests.DepartmentListParams
 	if err := c.ShouldBindJSON(&req); err != nil {
-		// 允许空请求
 		req = requests.DepartmentListParams{}
 	}
 
@@ -260,7 +263,6 @@ func (h *DepartmentHandler) RoleDeptTreeSelect(c *gin.Context) {
 		return
 	}
 
-	// 查询角色已关联的部门ID
 	var deptIDs []string
 	if err := h.service.GetRoleDeptIDs(c.Request.Context(), roleID, &deptIDs); err != nil {
 		response.Error(c, http.StatusInternalServerError, "查询角色部门关联失败: "+err.Error())
@@ -290,14 +292,12 @@ func (h *DepartmentHandler) GetUsers(c *gin.Context) {
 		return
 	}
 
-	// 直接查询数据库（因为service未导出GetDB方法）
 	db, err := h.GetDB()
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, "获取数据库连接失败")
 		return
 	}
 
-	// 查询该部门的用户
 	var users []struct {
 		ID       string  `gorm:"column:id" json:"id"`
 		Username string  `gorm:"column:username" json:"username"`

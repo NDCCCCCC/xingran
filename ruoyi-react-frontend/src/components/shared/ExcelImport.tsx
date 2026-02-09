@@ -1,8 +1,3 @@
-/**
- * Excel导入组件
- * 支持模板下载、文件上传、导入结果显示
- */
-
 import { useState } from 'react';
 import type { FC } from 'react';
 import {
@@ -36,7 +31,8 @@ export interface ImportError {
 }
 
 export interface ImportResult {
-  success: number;
+  inserted: number;
+  updated: number;
   failed: number;
   errors?: ImportError[];
 }
@@ -81,13 +77,12 @@ const ExcelImport: FC<ExcelImportProps> = ({
       const filename = `${entityName}_模板.xlsx`;
       await downloadFile(response, filename);
       message.success('模板下载成功');
-    } catch (error) {
+    } catch {
       message.error('下载模板失败');
     }
   };
 
   const beforeUpload = (file: File) => {
-    // 文件类型验证
     const validTypes = [
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'application/vnd.ms-excel',
@@ -98,7 +93,6 @@ const ExcelImport: FC<ExcelImportProps> = ({
       return Upload.LIST_IGNORE;
     }
 
-    // 文件大小验证（10MB）
     const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
       message.error('文件大小不能超过 10MB');
@@ -137,10 +131,14 @@ const ExcelImport: FC<ExcelImportProps> = ({
           onSuccess(response, file);
 
           if (response.data.failed === 0) {
-            message.success(`导入成功！共 ${response.data.success} 条数据`);
+            message.success(
+              `导入成功！新增 ${response.data.inserted} 条，更新 ${response.data.updated} 条`
+            );
             onImportSuccess?.();
           } else {
-            message.warning(`导入完成！成功 ${response.data.success} 条，失败 ${response.data.failed} 条`);
+            message.warning(
+              `导入完成！新增 ${response.data.inserted} 条，更新 ${response.data.updated} 条，失败 ${response.data.failed} 条`
+            );
           }
         } else {
           throw new Error(xhr.responseText || '导入失败');
@@ -160,9 +158,9 @@ const ExcelImport: FC<ExcelImportProps> = ({
         xhr.setRequestHeader('Authorization', `Bearer ${token}`);
       }
       xhr.send(formData);
-    } catch (error) {
+    } catch {
       setImporting(false);
-      onError(error);
+      onError(new Error('导入失败'));
       message.error('导入失败');
     }
   };
@@ -286,7 +284,12 @@ const ExcelImport: FC<ExcelImportProps> = ({
               <Space size="large">
                 <div>
                   <Tag color="success" icon={<CheckCircleOutlined />}>
-                    成功: {importResult.success}
+                    新增: {importResult.inserted}
+                  </Tag>
+                </div>
+                <div>
+                  <Tag color="processing" icon={<CheckCircleOutlined />}>
+                    更新: {importResult.updated}
                   </Tag>
                 </div>
                 {importResult.failed > 0 && (
