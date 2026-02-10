@@ -8,6 +8,7 @@ type FloorListRequest struct {
 	Name            string     `json:"name"`       // 楼层名称（模糊查询）
 	Code            string     `json:"code"`       // 楼层编码
 	FloorNo         string     `json:"floorNo"`    // 楼层号
+	OrgID           string     `json:"orgId"`      // 所属机构ID（关联部门）
 }
 
 // FloorBatchOperationRequest 楼层批量操作请求

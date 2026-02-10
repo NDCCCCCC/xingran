@@ -90,6 +90,10 @@ func (s *floorService) List(ctx context.Context, params map[string]interface{}) 
 	if buildingId, ok := params["buildingId"].(string); ok && buildingId != "" {
 		query = query.Where("ops_floors.building_id = ?", buildingId)
 	}
+	if orgId, ok := params["orgId"].(string); ok && orgId != "" {
+		// 通过关联楼宇的 orgId 筛选（使用 EXISTS 子查询避免 JOIN 冲突）
+		query = query.Where("EXISTS (SELECT 1 FROM ops_buildings b WHERE b.id::text = ops_floors.building_id AND b.org_id = ? AND b.deleted_at IS NULL)", orgId)
+	}
 
 	current := 1
 	pageSize := 10
