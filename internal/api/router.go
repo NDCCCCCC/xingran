@@ -13,6 +13,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/scheduler"
 	opsServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
+	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/websocket"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
@@ -545,7 +546,19 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			"ops:floor:delete",
 		}, core))
 		{
-			floorService := opsServices.NewFloorService(core.DB.GetDB())
+			// 创建带缓存的楼层服务
+			var floorService opsServices.FloorService
+			if core.DataCacheService != nil {
+				// 创建缓存提供者（NewCacheProvider 已处理 nil 情况）
+				cacheProvider := systemServices.NewCacheProvider(core.DataCacheService)
+				floorService = opsServices.NewFloorServiceWithCache(
+					core.DB.GetDB(),
+					cacheProvider,
+					core.CacheConfigService,
+				)
+			} else {
+				floorService = opsServices.NewFloorService(core.DB.GetDB())
+			}
 			floorHandler := operations.NewFloorHandler(floorService)
 
 			// 注意：更具体的路由要放在前面，避免被通用路由匹配
