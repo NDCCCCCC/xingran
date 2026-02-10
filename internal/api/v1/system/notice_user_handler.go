@@ -4,7 +4,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"gorm.io/gorm"
@@ -12,12 +12,12 @@ import (
 
 // NoticeUserHandler 用户通知处理器
 type NoticeUserHandler struct {
-	noticeService *services.NoticeService
+	noticeService systemServices.NoticeCacheService
 	db            *gorm.DB
 }
 
 // NewNoticeUserHandler 创建用户通知处理器实例
-func NewNoticeUserHandler(noticeService *services.NoticeService, db *gorm.DB) *NoticeUserHandler {
+func NewNoticeUserHandler(noticeService systemServices.NoticeCacheService, db *gorm.DB) *NoticeUserHandler {
 	return &NoticeUserHandler{
 		noticeService: noticeService,
 		db:            db,

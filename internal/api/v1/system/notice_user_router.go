@@ -3,12 +3,23 @@ package system
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 )
+
+// getNoticeCacheService 获取通知缓存服务
+func getNoticeCacheService(core *core.Core) systemServices.NoticeCacheService {
+	var cacheProvider systemServices.CacheProvider
+	if core.DataCacheService != nil {
+		cacheProvider = systemServices.NewCacheProvider(core.DataCacheService)
+	} else {
+		cacheProvider = &systemServices.NoOpCacheProvider{}
+	}
+	return systemServices.NewNoticeServiceWithCache(core.GetDB(), cacheProvider, core.CacheConfigService)
+}
 
 // SetupNoticeUserRouter 设置用户端通知路由（所有已登录用户可访问，无需额外权限）
 func SetupNoticeUserRouter(r *gin.RouterGroup, core *core.Core) {
-	noticeService := services.NewNoticeService(core.DB.GetDB())
+	noticeService := getNoticeCacheService(core)
 	handler := NewNoticeUserHandler(noticeService, core.DB.GetDB())
 
 	// 通知查询

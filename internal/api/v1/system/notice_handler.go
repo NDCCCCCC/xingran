@@ -16,7 +16,7 @@ import (
 
 // NoticeHandler 通知公告处理器
 type NoticeHandler struct {
-	service          systemServices.NoticeService
+	service          systemServices.NoticeCacheService
 	channelService   systemServices.NotificationChannelService
 	schedulerService SchedulerService
 }
@@ -29,7 +29,7 @@ type SchedulerService interface {
 
 // NewNoticeHandler 创建通知公告处理器实例
 func NewNoticeHandler(
-	service systemServices.NoticeService,
+	service systemServices.NoticeCacheService,
 	channelService systemServices.NotificationChannelService,
 	schedulerSvc SchedulerService,
 ) *NoticeHandler {
@@ -243,7 +243,7 @@ func (h *NoticeHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	notice, err := h.service.GetByID(c.Request.Context(), id)
+	notice, err := h.service.GetNoticeByID(c.Request.Context(), id)
 	if err != nil {
 		response.Error(c, err)
 		return

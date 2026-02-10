@@ -9,8 +9,8 @@ import (
 
 // SetupNoticeRouter 设置通知公告路由
 func SetupNoticeRouter(r *gin.RouterGroup, core *core.Core) {
-	// 创建通知公告服务
-	noticeService := systemServices.NewNoticeService(core.DB.GetDB())
+	// 创建通知缓存服务
+	noticeService := getNoticeCacheService(core)
 	channelService := systemServices.NewNotificationChannelService(core.DB.GetDB())
 
 	// 创建调度器服务适配器

@@ -69,6 +69,10 @@ const (
 	// 工单管理缓存时间配置
 	CacheConfigWorkorderMyPending  = "cache.workorder.my_pending"  // 待办工单缓存时间（分钟）
 	CacheConfigWorkorderStatistics = "cache.workorder.statistics" // 统计数据缓存时间（分钟）
+
+	// 通知公告缓存时间配置
+	CacheConfigNoticeMyNotices   = "cache.notice.my_notices"   // 我的通知列表缓存时间（分钟）
+	CacheConfigNoticeUnreadCount = "cache.notice.unread_count" // 未读数量缓存时间（分钟）
 )
 
 // CacheConfigService 缓存配置服务
@@ -185,11 +189,21 @@ func (s *CacheConfigService) setDefaultsIfNeeded(_ context.Context) {
 		CacheConfigDutyHolidays:    60,
 		CacheConfigWorkorderMyPending: 2,
 		CacheConfigWorkorderStatistics: 5,
+		CacheConfigNoticeMyNotices:     1,
+		CacheConfigNoticeUnreadCount:   0, // 30秒，但配置单位是分钟，所以这里用0表示30秒的特殊处理
 	}
 
 	for key, minutes := range defaults {
 		if _, exists := s.configs[key]; !exists {
-			s.configs[key] = time.Duration(minutes) * time.Minute
+			// 特殊处理：0表示30秒
+			var duration time.Duration
+			if minutes == 0 && key == CacheConfigNoticeUnreadCount {
+				duration = 30 * time.Second
+			} else {
+				duration = time.Duration(minutes) * time.Minute
+			}
+			s.configs[key] = duration
+
 			// 同时写入数据库
 			var count int64
 			s.db.Model(&models.Config{}).Where("config_key = ?", key).Count(&count)
@@ -544,6 +558,24 @@ func (s *CacheConfigService) GetConfigInfo() map[string]ConfigInfo {
 			Min:         1,
 			Max:         30,
 			Default:     5,
+		},
+		CacheConfigNoticeMyNotices: {
+			Key:         CacheConfigNoticeMyNotices,
+			Name:        "我的通知缓存时间",
+			Description: "用户通知列表数据的缓存时间（分钟）",
+			Category:    "通知公告",
+			Min:         0,
+			Max:         5,
+			Default:     1,
+		},
+		CacheConfigNoticeUnreadCount: {
+			Key:         CacheConfigNoticeUnreadCount,
+			Name:        "未读通知数量缓存时间",
+			Description: "用户未读通知数量数据的缓存时间（分钟）",
+			Category:    "通知公告",
+			Min:         0,
+			Max:         2,
+			Default:     0, // 特殊：0表示30秒
 		},
 	}
 }
