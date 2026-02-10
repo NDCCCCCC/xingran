@@ -4,7 +4,7 @@
  */
 
 import { useCallback } from 'react';
-import type { WorkstationOps } from '@/types';
+import type { WorkstationOps, Floor } from '@/types';
 import { workstationApi, floorApi } from '@/lib/opsApi';
 import { post } from '@/lib/api';
 import { handleApiError } from '@/utils/errorHandler';
@@ -21,7 +21,7 @@ interface DepartmentNode {
 export interface UseWorkstationDataReturn {
   loadWorkstations: (params?: Record<string, unknown>) => Promise<void>;
   loadStatistics: () => Promise<void>;
-  loadFloorOptions: () => Promise<void>;
+  loadFloorOptions: (orgId?: string) => Promise<void>;
   loadDeptOptions: () => Promise<void>;
   loadUserOptions: (deptId?: string) => Promise<void>;
   loadFloorPlanWorkstations: (floorCode: string) => Promise<WorkstationOps[]>;
@@ -48,15 +48,19 @@ export function useWorkstationData(
     }
   }, [setStatistics]);
 
-  const loadFloorOptions = useCallback(async () => {
+  const loadFloorOptions = useCallback(async (orgId?: string) => {
     try {
-      const result = await floorApi.list({ current: 1, pageSize: 1000 });
+      const params: { current: number; pageSize: number; orgId?: string } = { current: 1, pageSize: 1000 };
+      if (orgId) {
+        params.orgId = orgId;
+      }
+      const result = await floorApi.list(params);
       const floors = result.data?.list || [];
       setFloorOptions(
-        floors.map((f: Record<string, unknown>) => ({
+        floors.map((f: Floor) => ({
           id: f.id,
-          code: f.code || f.floorNo,
-          name: `${f.buildingName || f.buildingCode} - ${f.name || f.floorNo}`,
+          code: f.code || String(f.floorNo),
+          name: `${(f as Record<string, unknown>).buildingName || (f as Record<string, unknown>).buildingCode} - ${f.name || f.floorNo}`,
         }))
       );
     } catch (error) {
@@ -95,7 +99,7 @@ export function useWorkstationData(
         }
         const result = await post('/system/users/list', params) as { data?: { list: Record<string, unknown>[] } };
         const users = result.data?.list || [];
-        setUserOptions(users.map((u: Record<string, unknown>) => ({ id: u.id, name: u.username })));
+        setUserOptions(users.map((u: Record<string, unknown>) => ({ id: String(u.id), name: String(u.username) })));
       } catch (error) {
         handleApiError(error, '加载用户选项', false);
       }
@@ -121,7 +125,7 @@ export function useWorkstationData(
 
   const loadWorkstations = useCallback(
     async (params?: Record<string, unknown>) => {
-      await workstationApi.list(params);
+      await workstationApi.list(params || {});
     },
     []
   );

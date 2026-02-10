@@ -71,6 +71,7 @@ export interface FloorListParams extends PageParams {
   floorNo?: string;
   name?: string;
   status?: number;
+  orgId?: string;  // 所属机构ID，用于按部门筛选
 }
 
 const floorCrudApi = createCrudApi<Floor>({ basePath: '/ops/floor' });

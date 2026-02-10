@@ -27,6 +27,7 @@ import { WorkstationEditModal } from './modals';
 import { WorkstationCardView, WorkstationFloorPlanView } from './views';
 import { STATUS_OPTIONS, TYPE_OPTIONS } from './constants';
 import type { WorkstationStatistics, FloorOption, UserOption, DeptTreeNode } from './types';
+import { workstationApi } from '@/lib/opsApi';
 
 const { Option } = Select;
 const { Content } = Layout;
@@ -87,8 +88,8 @@ const WorkstationManagement: FC = () => {
     },
     {
       externalPagination: {
-        current: paginationProps.current,
-        pageSize: paginationProps.pageSize,
+        current: paginationProps.current ?? 1,
+        pageSize: paginationProps.pageSize ?? 10,
         setCurrent,
         setPageSize,
         setTotal,
@@ -132,7 +133,7 @@ const WorkstationManagement: FC = () => {
 
   useEffect(() => {
     loadWorkstations();
-    loadFloorOptions();
+    loadFloorOptions(selectedDeptId);
   }, [selectedDeptId, loadWorkstations, loadFloorOptions]);
 
   const handleSuccess = useCallback(() => {
@@ -193,8 +194,11 @@ const WorkstationManagement: FC = () => {
         onFloorChange={handleFloorChangeForPlan}
         onPositionUpdate={handlePositionUpdate}
         onEdit={(ws) => {
-          handleFloorPlanEdit(ws, () => {
-            openModal(undefined, workstationForm);
+          // 从完整工位列表中找到对应的数据
+          const fullWorkstation = workstations.find(w => w.id === ws.id);
+          handleFloorPlanEdit(ws, (record) => {
+            // 优先使用完整工位数据，如果没有则使用平面图节点数据
+            openModal(fullWorkstation || record, workstationForm);
           });
         }}
         onCloseFloorPlan={() => setViewMode('table')}
@@ -326,8 +330,24 @@ const WorkstationManagement: FC = () => {
           floorOptions={floorOptions}
           deptTreeData={deptTreeData}
           userOptions={userOptions}
-          onOk={async () => {
-            await handleSave(editingWorkstation, workstationForm, handleSuccess);
+          onOk={async (values) => {
+            try {
+              // 直接使用传递来的表单值
+              if (editingWorkstation) {
+                await workstationApi.update(editingWorkstation.id, values);
+                handleSuccess('更新');
+              } else {
+                await workstationApi.create(values);
+                handleSuccess('创建');
+              }
+              // 成功后关闭模态框并刷新
+              closeModal(workstationForm);
+              setModalVisible(false);
+              handleSuccess();
+            } catch (error) {
+              // 失败时不关闭模态框
+              throw error;
+            }
           }}
           onCancel={() => {
             setModalVisible(false);
