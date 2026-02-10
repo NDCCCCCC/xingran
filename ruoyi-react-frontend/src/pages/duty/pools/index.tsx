@@ -260,7 +260,7 @@ const DutyPoolPage: FC = () => {
       title: '序号',
       key: 'index',
       width: 60,
-      render: (_: unknown, __: unknown, index: number) => (paginationProps.current - 1) * paginationProps.pageSize + index + 1,
+      render: (_: unknown, __: unknown, index: number) => ((paginationProps.current ?? 1) - 1) * (paginationProps.pageSize ?? 10) + index + 1,
     },
     {
       title: '值班池名称',
@@ -416,9 +416,11 @@ const DutyPoolPage: FC = () => {
           scroll={{ x: 1200 }}
           pagination={paginationProps}
           onChange={(pagination) => {
-            setCurrent(pagination.current);
-            setPageSize(pagination.pageSize);
-            fetchList(pagination.current, pagination.pageSize);
+            const current = pagination.current ?? 1;
+            const pageSize = pagination.pageSize ?? 10;
+            setCurrent(current);
+            setPageSize(pageSize);
+            fetchList(current, pageSize);
           }}
         />
       </Card>

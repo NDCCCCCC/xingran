@@ -75,7 +75,7 @@ export function useScheduleModals(params: UseScheduleModalsParams): UseScheduleM
       generateForm.resetFields();
       onLoad?.();
     } catch (error: unknown) {
-      if (error.errorFields) return;
+      if (error && typeof error === 'object' && 'errorFields' in error) return;
       message.error('生成排班失败');
     }
   }, [generateForm, onLoad]);
@@ -94,7 +94,7 @@ export function useScheduleModals(params: UseScheduleModalsParams): UseScheduleM
       swapForm.resetFields();
       onLoad?.();
     } catch (error: unknown) {
-      if (error.errorFields) return;
+      if (error && typeof error === 'object' && 'errorFields' in error) return;
       message.error('调班失败');
     }
   }, [swapForm, onLoad]);
@@ -115,7 +115,7 @@ export function useScheduleModals(params: UseScheduleModalsParams): UseScheduleM
       manualForm.resetFields();
       onLoad?.();
     } catch (error: unknown) {
-      if (error.errorFields) return;
+      if (error && typeof error === 'object' && 'errorFields' in error) return;
       message.error('手动排班失败');
     }
   }, [manualForm, onLoad]);

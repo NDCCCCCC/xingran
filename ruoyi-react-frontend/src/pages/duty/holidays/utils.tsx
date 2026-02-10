@@ -71,7 +71,7 @@ export async function handleExcelImport(
         formattedDate = `${date.y}-${String(date.m).padStart(2, '0')}-${String(date.d).padStart(2, '0')}`;
       } else {
         // 字符串日期，尝试多种格式
-        const parsed = dayjs(dateStr);
+        const parsed = dayjs(dateStr as string);
         if (!parsed.isValid()) {
           message.error(`第 ${i + 1} 行：日期格式不正确 - ${dateStr}`);
           return;
@@ -83,15 +83,15 @@ export async function handleExcelImport(
       const holidayType = typeof typeStr === 'string' ? parseHolidayType(typeStr) : 'legal';
 
       // 解析是否休息
-      const isOffday = parseIsOffday(isOffdayStr);
+      const isOffday = parseIsOffday(isOffdayStr as string | number | boolean);
 
       holidays.push({
         holidayDate: formattedDate,
-        holidayName: name || '节假日',
+        holidayName: (name as string) || '节假日',
         isOffday,
         holidayType,
         year: Number(year),
-        remark,
+        remark: remark as string | undefined,
       });
     }
 

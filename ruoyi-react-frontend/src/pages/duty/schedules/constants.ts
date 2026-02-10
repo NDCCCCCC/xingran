@@ -27,7 +27,7 @@ export const DUTY_STATUS_CONFIG: Record<number, { text: string; color: string }>
 };
 
 /** 获取值班类型颜色 */
-export function getDutyTypeColor(type: DutyType): BadgeProps['color'] {
+export function getDutyTypeColor(type: DutyType | string): BadgeProps['color'] {
   switch (type) {
     case 'weekday':
       return 'blue';
@@ -41,7 +41,7 @@ export function getDutyTypeColor(type: DutyType): BadgeProps['color'] {
 }
 
 /** 获取值班类型显示文本 */
-export function getDutyTypeText(type: DutyType): string {
+export function getDutyTypeText(type: DutyType | string): string {
   const option = DUTY_TYPE_OPTIONS.find(opt => opt.value === type);
   return option?.label || type;
 }

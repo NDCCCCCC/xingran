@@ -75,7 +75,14 @@ export function useHolidayModals(params: UseHolidayModalsParams): UseHolidayModa
   // 保存节假日
   const handleModalOk = useCallback(async (editForm: FormInstance<unknown>) => {
     try {
-      const values = await editForm.validateFields();
+      const values = await editForm.validateFields() as {
+        holidayDate: dayjs.Dayjs;
+        holidayName: string;
+        isOffday: boolean;
+        holidayType: 'legal' | 'workday' | 'custom';
+        year: number;
+        remark?: string;
+      };
       const data = {
         holidayDate: values.holidayDate.format('YYYY-MM-DD'),
         holidayName: values.holidayName,
@@ -96,7 +103,7 @@ export function useHolidayModals(params: UseHolidayModalsParams): UseHolidayModa
       setModalState(prev => ({ ...prev, modalVisible: false }));
       fetchList();
     } catch (error: unknown) {
-      if (error.errorFields) return;
+      if (error && typeof error === 'object' && 'errorFields' in error) return;
       message.error(modalState.editingRecord ? '更新失败' : '创建失败');
     }
   }, [modalState.editingRecord, fetchList]);

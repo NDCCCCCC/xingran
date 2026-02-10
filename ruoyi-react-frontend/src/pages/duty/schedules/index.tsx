@@ -224,7 +224,7 @@ const DutySchedulePage: FC = () => {
     fetchUsers,
     fetchWeeklyDuty,
     setCurrentWeekStart,
-  } = useScheduleData({ current: paginationProps.current, pageSize: paginationProps.pageSize, searchForm: form });
+  } = useScheduleData({ current: paginationProps.current ?? 1, pageSize: paginationProps.pageSize ?? 10, searchForm: form });
 
   // 使用周视图 Hook
   const { handlePrevWeek, handleNextWeek, handleTodayWeek } = useWeekView(
@@ -254,12 +254,12 @@ const DutySchedulePage: FC = () => {
     handleBatchDelete,
   } = useScheduleModals({
     onLoad: () => {
-      fetchList(paginationProps.current, paginationProps.pageSize);
+      fetchList(paginationProps.current ?? 1, paginationProps.pageSize ?? 10);
       fetchAllSchedules();
     },
     allSchedules,
     dataSource,
-    current: paginationProps.current,
+    current: paginationProps.current ?? 1,
   });
 
   // 初始化加载
@@ -304,7 +304,7 @@ const DutySchedulePage: FC = () => {
   };
 
   // 表格列
-  const columns = getDutyTableColumns({ current: paginationProps.current, pageSize: paginationProps.pageSize, handleDelete });
+  const columns = getDutyTableColumns({ current: paginationProps.current ?? 1, pageSize: paginationProps.pageSize ?? 10, handleDelete });
 
   return (
     <div className="p-6">

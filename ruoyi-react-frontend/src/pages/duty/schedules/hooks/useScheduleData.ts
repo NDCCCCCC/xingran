@@ -58,13 +58,19 @@ export function useScheduleData(params: UseScheduleDataParams): UseScheduleDataR
   const [currentWeekStart, setCurrentWeekStart] = useState<Dayjs>(dayjs().startOf('week'));
 
   // 获取排班列表
-  const fetchList = useCallback(async (page?: number, pageSize?: number) => {
+  const fetchList = useCallback(async (page?: number, size?: number) => {
     setLoading(true);
     try {
-      const values = searchForm.getFieldsValue();
+      const values = searchForm.getFieldsValue() as {
+        poolId?: string;
+        userId?: string;
+        dateRange?: [Dayjs, Dayjs];
+        dutyType?: string;
+        expired?: number;
+      };
       const result = await getDutyScheduleList({
         current: page ?? current,
-        pageSize: pageSize ?? pageSize,
+        pageSize: size ?? pageSize,
         poolId: values.poolId,
         userId: values.userId,
         startDate: values.dateRange?.[0]?.format('YYYY-MM-DD'),

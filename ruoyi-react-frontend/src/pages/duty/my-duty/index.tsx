@@ -128,8 +128,8 @@ const MyDutyPage: FC = () => {
 
   // 分页变化
   const handleTableChange = (pagination: TablePaginationConfig) => {
-    setCurrent(pagination.current);
-    setPageSize(pagination.pageSize);
+    setCurrent(pagination.current ?? 1);
+    setPageSize(pagination.pageSize ?? 10);
     loadSchedules();
   };
 
