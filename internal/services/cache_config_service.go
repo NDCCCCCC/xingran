@@ -73,6 +73,11 @@ const (
 	// 通知公告缓存时间配置
 	CacheConfigNoticeMyNotices   = "cache.notice.my_notices"   // 我的通知列表缓存时间（分钟）
 	CacheConfigNoticeUnreadCount = "cache.notice.unread_count" // 未读数量缓存时间（分钟）
+
+	// 网络设备缓存时间配置
+	CacheConfigNetworkDeviceStatistics = "cache.network_device.statistics" // 设备统计数据缓存时间（分钟）
+	CacheConfigNetworkDeviceDept       = "cache.network_device.dept"       // 部门设备列表缓存时间（分钟）
+	CacheConfigNetworkDeviceCredential = "cache.network_device.credential" // 凭证设备列表缓存时间（分钟）
 )
 
 // CacheConfigService 缓存配置服务
@@ -215,14 +220,17 @@ func (s *CacheConfigService) setDefaultsIfNeeded(_ context.Context) {
 		CacheConfigWorkorderMyPending: 2,
 		CacheConfigWorkorderStatistics: 5,
 		CacheConfigNoticeMyNotices:     1,
-		CacheConfigNoticeUnreadCount:   0, // 30秒，但配置单位是分钟，所以这里用0表示30秒的特殊处理
+		CacheConfigNoticeUnreadCount:   0, // 30秒
+		CacheConfigNetworkDeviceStatistics: 3,
+		CacheConfigNetworkDeviceDept:       5,
+		CacheConfigNetworkDeviceCredential: 5,
 	}
 
 	for key, minutes := range defaults {
 		if _, exists := s.configs[key]; !exists {
 			// 特殊处理：0表示30秒
 			var duration time.Duration
-			if minutes == 0 && key == CacheConfigNoticeUnreadCount {
+			if minutes == 0 && (key == CacheConfigNoticeUnreadCount) {
 				duration = 30 * time.Second
 			} else {
 				duration = time.Duration(minutes) * time.Minute
@@ -601,6 +609,33 @@ func (s *CacheConfigService) GetConfigInfo() map[string]ConfigInfo {
 			Min:         0,
 			Max:         2,
 			Default:     0, // 特殊：0表示30秒
+		},
+		CacheConfigNetworkDeviceStatistics: {
+			Key:         CacheConfigNetworkDeviceStatistics,
+			Name:        "设备统计缓存时间",
+			Description: "网络设备统计数据（在线/离线/未知数量等）的缓存时间（分钟）",
+			Category:    "网络设备",
+			Min:         1,
+			Max:         10,
+			Default:     3,
+		},
+		CacheConfigNetworkDeviceDept: {
+			Key:         CacheConfigNetworkDeviceDept,
+			Name:        "部门设备列表缓存时间",
+			Description: "按部门筛选的网络设备列表数据的缓存时间（分钟）",
+			Category:    "网络设备",
+			Min:         1,
+			Max:         15,
+			Default:     5,
+		},
+		CacheConfigNetworkDeviceCredential: {
+			Key:         CacheConfigNetworkDeviceCredential,
+			Name:        "凭证设备列表缓存时间",
+			Description: "按凭证筛选的网络设备列表数据的缓存时间（分钟）",
+			Category:    "网络设备",
+			Min:         1,
+			Max:         15,
+			Default:     5,
 		},
 	}
 }
