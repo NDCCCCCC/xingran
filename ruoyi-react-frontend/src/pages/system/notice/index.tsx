@@ -236,7 +236,7 @@ const NoticeManagement: FC = () => {
       // 邮件通知渠道
       if (selectedChannels.includes('email')) {
         const emailRecipients = values.customEmails?.trim()
-          ? values.customEmails.split(',').map(e => e.trim()).filter(e => e)
+          ? values.customEmails.split(',').map((e: string) => e.trim()).filter((e: string) => e)
           : undefined;
         channels.push({
           channelType: 'email',
@@ -252,7 +252,7 @@ const NoticeManagement: FC = () => {
           return;
         }
         const weComRecipients = values.customWeComUsers?.trim()
-          ? values.customWeComUsers.split(',').map(u => u.trim()).filter(u => u)
+          ? values.customWeComUsers.split(',').map((u: string) => u.trim()).filter((u: string) => u)
           : undefined;
         channels.push({
           channelType: 'api',
@@ -361,8 +361,8 @@ const NoticeManagement: FC = () => {
         notices={notices}
         loading={loading}
         total={total}
-        current={paginationProps.current}
-        pageSize={paginationProps.pageSize}
+        current={paginationProps.current ?? 1}
+        pageSize={paginationProps.pageSize ?? 10}
         selectedRowKeys={selectedRowKeys}
         searchForm={searchForm}
         onSearch={handleSearch}

@@ -128,19 +128,19 @@ export function useRoleActions(params: UseRoleActionsParams): UseRoleActionsRetu
   // 保存角色
   const handleSave = useCallback(async (editForm: FormInstance<unknown>) => {
     try {
-      const values = await editForm.validateFields();
+      const values = await editForm.validateFields() as Record<string, unknown>;
 
       const roleData = {
-        roleName: values.roleName,
-        roleKey: values.roleKey,
-        roleSort: parseInt(values.roleSort) || 0,
-        dataScope: values.dataScope || 1,
+        roleName: values.roleName as string,
+        roleKey: values.roleKey as string,
+        roleSort: parseInt(String(values.roleSort)) || 0,
+        dataScope: (values.dataScope as number) || 1,
         menuCheckStrictly: true,
         deptCheckStrictly: true,
-        status: parseInt(values.status) || 0,
-        remark: values.remark,
-        menuIds: values.menuIds || [],
-        deptIds: values.deptIds || [],
+        status: parseInt(String(values.status)) || 0,
+        remark: values.remark as string,
+        menuIds: (values.menuIds as string[]) || [],
+        deptIds: (values.deptIds as string[]) || [],
       };
 
       if (editingRole) {

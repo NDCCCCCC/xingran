@@ -244,9 +244,9 @@ const UserManagement: FC = () => {
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
   // 数据加载函数
-  const fetchUsers = useCallback(async (params: { current: number; pageSize: number; [key: string]: unknown }) => {
+  const fetchUsers = useCallback(async (params: Record<string, unknown>) => {
     const result = await post<BaseResponse<PageResponse<User>>>('/system/users/list', params);
-    return { list: result.data.list, total: result.data.total };
+    return { list: result.data?.list || [], total: result.data?.total || 0 };
   }, []);
 
   // 使用 useTableManager 管理表格状态
@@ -268,8 +268,8 @@ const UserManagement: FC = () => {
     fetchUsers,
     {
       externalPagination: {
-        current: paginationProps.current,
-        pageSize: paginationProps.pageSize,
+        current: paginationProps.current ?? 1,
+        pageSize: paginationProps.pageSize ?? 10,
         setCurrent,
         setPageSize,
         setTotal,
@@ -290,7 +290,7 @@ const UserManagement: FC = () => {
   // ==================== 事件处理 ====================
 
   const handleSearch = useCallback(() => {
-    const values = searchForm.getFieldsValue();
+    const values = searchForm.getFieldsValue() as Record<string, unknown>;
 
     const searchParams: Record<string, unknown> = {};
     Object.keys(values).forEach(key => {
@@ -383,7 +383,7 @@ const UserManagement: FC = () => {
 
   const handleSave = useCallback(async () => {
     try {
-      const values = await editForm.validateFields();
+      const values = await editForm.validateFields() as Record<string, unknown>;
 
       if (values.gender !== undefined) {
         values.gender = Number(values.gender);
@@ -409,7 +409,7 @@ const UserManagement: FC = () => {
 
   const handleSaveResetPassword = useCallback(async () => {
     try {
-      const values = await resetPasswordForm.validateFields();
+      const values = await resetPasswordForm.validateFields() as { password: string };
 
       await post(`/system/users/${resettingUser!.id}/reset-password`, {
         password: values.password,
@@ -562,11 +562,11 @@ const UserManagement: FC = () => {
               loading={loading}
               pagination={paginationProps}
               onChange={(pagination) => {
-                setCurrent(pagination.current);
-                setPageSize(pagination.pageSize);
+                setCurrent(pagination.current ?? 1);
+                setPageSize(pagination.pageSize ?? 10);
                 const params: Record<string, unknown> = {
-                  current: pagination.current,
-                  pageSize: pagination.pageSize,
+                  current: pagination.current ?? 1,
+                  pageSize: pagination.pageSize ?? 10,
                 };
                 if (selectedDeptId) {
                   params.deptId = selectedDeptId;

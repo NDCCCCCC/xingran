@@ -47,7 +47,7 @@ export function transformToParentTreeOptions(data: DepartmentTreeNode[]): Parent
 }
 
 /** 渲染树形表格数据 */
-export function renderTreeData(data: DepartmentTreeNode[]): DepartmentTreeNode[] {
+export function renderTreeData(data: DepartmentTreeNode[]): (DepartmentTreeNode & { key: string })[] {
   if (!data || !Array.isArray(data)) {
     return [];
   }
@@ -55,5 +55,5 @@ export function renderTreeData(data: DepartmentTreeNode[]): DepartmentTreeNode[]
     ...item,
     key: item.id,
     children: item.children && item.children.length > 0 ? renderTreeData(item.children) : undefined,
-  }));
+  })) as (DepartmentTreeNode & { key: string })[];
 }

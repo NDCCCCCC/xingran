@@ -259,7 +259,7 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
   // 保存菜单
   const handleSave = useCallback(async (editForm: FormInstance<unknown>) => {
     try {
-      const values = await editForm.validateFields();
+      const values = await editForm.validateFields() as Record<string, unknown>;
 
       // 转换Switch状态值
       // visible: true->1(显示), false->0(隐藏)

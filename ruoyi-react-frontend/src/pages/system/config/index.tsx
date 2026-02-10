@@ -66,18 +66,18 @@ const ConfigManagement: FC = () => {
     handleModalClose,
   } = useTableManager<Config>(
     async (params): Promise<{ list: Config[]; total: number }> => {
-      const values = searchForm.getFieldsValue();
-      const result = await post<{ list: Config[]; total: number }>('/system/configs/list', {
+      const values = searchForm.getFieldsValue() as Record<string, unknown>;
+      const result = await post<{ data?: { list: Config[]; total: number } }>('/system/configs/list', {
         current: params.current || paginationProps.current,
         pageSize: params.pageSize || paginationProps.pageSize,
         ...values,
       });
-      return result.data;
+      return result.data || { list: [], total: 0 };
     },
     {
       externalPagination: {
-        current: paginationProps.current,
-        pageSize: paginationProps.pageSize,
+        current: paginationProps.current ?? 1,
+        pageSize: paginationProps.pageSize ?? 10,
         setCurrent,
         setPageSize,
         setTotal,
@@ -367,11 +367,11 @@ const ConfigManagement: FC = () => {
           rowKey="id"
           pagination={paginationProps}
           onChange={(pagination) => {
-            setCurrent(pagination.current);
-            setPageSize(pagination.pageSize);
+            setCurrent(pagination.current ?? 1);
+            setPageSize(pagination.pageSize ?? 10);
             loadConfigs({
-              current: pagination.current,
-              pageSize: pagination.pageSize,
+              current: pagination.current ?? 1,
+              pageSize: pagination.pageSize ?? 10,
             });
           }}
         />

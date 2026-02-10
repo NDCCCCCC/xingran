@@ -291,7 +291,7 @@ const DepartmentManagement: FC = () => {
         entityType="department"
         entityName="部门"
         exportUrl="/api/v1/system/departments/export"
-        statusOptions={STATUS_OPTIONS}
+        statusOptions={STATUS_OPTIONS as { value: number; label: string }[]}
         visible={exportVisible}
         onClose={() => setExportVisible(false)}
       />

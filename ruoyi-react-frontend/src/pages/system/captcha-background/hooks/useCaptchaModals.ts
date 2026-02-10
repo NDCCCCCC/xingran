@@ -12,6 +12,23 @@ import * as captchaService from '@/services/captcha';
 import { SHAPE_OPTIONS } from '../constants';
 import type { UnknownError } from '@/types/common';
 
+// 表单字段类型
+interface UploadFormValues {
+  pieceShape: string;
+  difficultyLevel: number;
+  allowedShapes: string[];
+  remark?: string;
+}
+
+interface EditFormValues {
+  pieceShape: string;
+  difficultyLevel: number;
+  allowedShapes: string[];
+  status: number;
+  sortOrder: number;
+  remark?: string;
+}
+
 export interface UseCaptchaModalsReturn {
   uploadModalVisible: boolean;
   editModalVisible: boolean;
@@ -101,12 +118,13 @@ export function useCaptchaModals(): UseCaptchaModalsReturn {
 
         setUploading(true);
         const file = fileList[0].originFileObj as File;
+        const formValues = values as UploadFormValues;
 
         await captchaService.uploadCaptchaBackground(file, {
-          pieceShape: values.pieceShape,
-          difficultyLevel: values.difficultyLevel,
-          allowedShapes: values.allowedShapes,
-          remark: values.remark,
+          pieceShape: formValues.pieceShape,
+          difficultyLevel: formValues.difficultyLevel,
+          allowedShapes: formValues.allowedShapes,
+          remark: formValues.remark,
         });
 
         message.success('上传成功');
@@ -127,7 +145,7 @@ export function useCaptchaModals(): UseCaptchaModalsReturn {
   const handleUpdate = useCallback(
     async (editingBg: CaptchaBackground, editForm: FormInstance<unknown>, onSuccess: () => void) => {
       try {
-        const values = await editForm.validateFields();
+        const values = await editForm.validateFields() as EditFormValues;
         const updateData: CaptchaBackgroundUpdateRequest = {
           pieceShape: values.pieceShape,
           difficultyLevel: values.difficultyLevel,
