@@ -8,17 +8,18 @@ import (
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	dutyServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/duty"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
 // DutyHandler 值班管理处理器
 type DutyHandler struct {
-	service *services.DutyService
+	service dutyServices.DutyCacheService
 }
 
 // NewDutyHandler 创建值班管理处理器实例
-func NewDutyHandler(service *services.DutyService) *DutyHandler {
+func NewDutyHandler(service dutyServices.DutyCacheService) *DutyHandler {
 	return &DutyHandler{service: service}
 }
 

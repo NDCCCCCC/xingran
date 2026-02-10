@@ -3,12 +3,13 @@ package duty
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	dutyServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/duty"
+	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 )
 
 // SetupDutyPoolsRouter 设置值班池路由
 func SetupDutyPoolsRouter(r *gin.RouterGroup, core *core.Core) {
-	service := services.NewDutyService(core.DB.GetDB())
+	service := createDutyService(core)
 	handler := NewDutyHandler(service)
 
 	r.POST("/list", handler.ListPools)
@@ -20,7 +21,7 @@ func SetupDutyPoolsRouter(r *gin.RouterGroup, core *core.Core) {
 
 // SetupDutySchedulesRouter 设置排班路由
 func SetupDutySchedulesRouter(r *gin.RouterGroup, core *core.Core) {
-	service := services.NewDutyService(core.DB.GetDB())
+	service := createDutyService(core)
 	handler := NewDutyHandler(service)
 
 	r.POST("/list", handler.ListSchedules)
@@ -35,7 +36,7 @@ func SetupDutySchedulesRouter(r *gin.RouterGroup, core *core.Core) {
 
 // SetupDutyHolidaysRouter 设置节假日路由
 func SetupDutyHolidaysRouter(r *gin.RouterGroup, core *core.Core) {
-	service := services.NewDutyService(core.DB.GetDB())
+	service := createDutyService(core)
 	handler := NewDutyHandler(service)
 
 	r.POST("/list", handler.ListHolidays)
@@ -48,7 +49,7 @@ func SetupDutyHolidaysRouter(r *gin.RouterGroup, core *core.Core) {
 
 // SetupDutyConfigRouter 设置值班配置路由
 func SetupDutyConfigRouter(r *gin.RouterGroup, core *core.Core) {
-	service := services.NewDutyService(core.DB.GetDB())
+	service := createDutyService(core)
 	handler := NewDutyHandler(service)
 
 	r.POST("", handler.GetConfig)
@@ -57,8 +58,24 @@ func SetupDutyConfigRouter(r *gin.RouterGroup, core *core.Core) {
 
 // SetupMyDutyRouter 设置我的值班路由
 func SetupMyDutyRouter(r *gin.RouterGroup, core *core.Core) {
-	service := services.NewDutyService(core.DB.GetDB())
+	service := createDutyService(core)
 	handler := NewDutyHandler(service)
 
 	r.POST("/stats", handler.GetMyStats)
+}
+
+// createDutyService 创建值班服务（带缓存）
+func createDutyService(core *core.Core) dutyServices.DutyCacheService {
+	var cacheProvider systemServices.CacheProvider
+	if core.DataCacheService != nil {
+		cacheProvider = systemServices.NewCacheProvider(core.DataCacheService)
+	} else {
+		cacheProvider = &systemServices.NoOpCacheProvider{}
+	}
+
+	return dutyServices.NewDutyServiceWithCache(
+		core.DB.GetDB(),
+		cacheProvider,
+		core.CacheConfigService,
+	)
 }
