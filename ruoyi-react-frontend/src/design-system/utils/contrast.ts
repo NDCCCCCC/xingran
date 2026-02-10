@@ -138,8 +138,12 @@ export function validateThemeColors(colors: {
 
 	for (const textKey of textColors) {
 		for (const bgKey of bgColors) {
-			const fg = colors[textKey.split('.')[0]][textKey.split('.')[1]];
-			const bg = colors[bgKey.split('.')[0]][bgKey.split('.')[1]];
+			const textCategory = textKey.split('.')[0] as 'text' | 'background';
+			const textColorKey = textKey.split('.')[1] as 'primary' | 'secondary' | 'tertiary';
+			const bgCategory = bgKey.split('.')[0] as 'text' | 'background';
+			const bgColorKey = bgKey.split('.')[1] as 'primary' | 'secondary' | 'tertiary';
+			const fg = colors[textCategory][textColorKey];
+			const bg = colors[bgCategory][bgColorKey];
 
 			const contrast = calculateContrast(fg, bg);
 			results.push({

@@ -7,7 +7,7 @@ import type { ViewState } from './FloorPlanEditor.types';
 import { DEFAULT_SCALE, MIN_SCALE, MAX_SCALE, GRID_SIZE } from './FloorPlanEditor.constants';
 
 interface UsePanZoomOptions {
-  containerRef: React.RefObject<SVGSVGElement>;
+  containerRef: React.RefObject<SVGSVGElement | null>;
 }
 
 interface UsePanZoomReturn {

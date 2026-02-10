@@ -2,7 +2,21 @@ import { useState, useCallback, useEffect } from 'react';
 import type { FC } from 'react';
 import { Upload, message, Image, Progress, Button, Space } from 'antd';
 import { PlusOutlined, LoadingOutlined } from '@ant-design/icons';
-import type { UploadFile, UploadProps, UploadRequestOption } from 'antd';
+import type { UploadFile, UploadProps } from 'antd';
+
+// 自定义 UploadRequestOption 类型定义
+export interface UploadRequestOption {
+  action?: string;
+  data?: Record<string, unknown> | ((file: UploadFile) => Record<string, unknown>);
+  filename?: string;
+  file: File | Blob | UploadFile | string;
+  headers?: Record<string, string>;
+  method?: 'POST' | 'PUT' | 'post' | 'put';
+  onError?: (error: Error) => void;
+  onProgress?: (percent: { percent: number }) => void;
+  onSuccess?: (response: unknown) => void;
+  withCredentials?: boolean;
+}
 
 export interface FileUploadResponse {
   id: string;
@@ -11,6 +25,7 @@ export interface FileUploadResponse {
   fileType: string;
   extension: string;
   url: string;
+  storagePath?: string;
   width?: number;
   height?: number;
   metadata?: string;
@@ -52,7 +67,7 @@ const FileUpload: FC<FileUploadProps> = ({
     setFileList(Array.isArray(value) ? value : []);
   }, [value]);
 
-  const handleChange: UploadProps['onChange'] = useCallback(({ fileList: newFileList }) => {
+  const handleChange: UploadProps['onChange'] = useCallback(({ fileList: newFileList }: { fileList: UploadFile[] }) => {
     setFileList(newFileList);
     onChange?.(newFileList);
   }, [onChange]);
@@ -87,32 +102,51 @@ const FileUpload: FC<FileUploadProps> = ({
     return true;
   }, [maxSize, isFileTypeAccepted]);
 
-  const handleUploadProgress = useCallback((e: ProgressEvent, file: UploadFile, onProgress: (progress: { percent: number }, file: UploadFile) => void) => {
-    if (e.lengthComputable) {
-      const percent = Math.round((e.loaded / e.total) * 100);
-      setUploadProgress(percent);
-      onProgress({ percent }, file);
-    }
-  }, []);
-
-  const handleUploadSuccess = useCallback((response: unknown, file: UploadFile) => {
+  const handleUploadSuccess = useCallback((response: unknown, uploadFile: UploadFile) => {
     setUploading(false);
     setUploadProgress(100);
-    onUploadSuccess?.(file, response as FileUploadResponse);
+    onUploadSuccess?.(uploadFile, response as FileUploadResponse);
     message.success('上传成功');
   }, [onUploadSuccess]);
 
-  const handleUploadError = useCallback((error: Error, file: UploadFile, onError: (error: Error) => void) => {
+  const handleUploadError = useCallback((error: Error, uploadFile: UploadFile) => {
     setUploading(false);
-    onError(error);
-    onUploadError?.(file, error);
+    onUploadError?.(uploadFile, error);
     message.error('上传失败');
   }, [onUploadError]);
 
   const customRequest = useCallback((options: UploadRequestOption) => {
     const { file, onProgress, onSuccess, onError } = options;
+
+    // 获取原始文件对象 - 处理 Ant Design 6.x 的 UploadRequestFile 类型
+    let rawFile: File | Blob | null = null;
+    let uploadFile: UploadFile;
+
+    if (file instanceof File || file instanceof Blob) {
+      rawFile = file;
+      uploadFile = file instanceof File
+        ? { originFileObj: file, name: file.name, uid: Date.now().toString() } as UploadFile
+        : { originFileObj: file as File, name: 'blob', uid: Date.now().toString() } as UploadFile;
+    } else if (typeof file === 'string') {
+      // file 是字符串（URL）的情况，不应该发生在这里
+      onError?.(new Error('不支持URL类型的文件'));
+      return;
+    } else if (typeof file === 'object' && file !== null && 'originFileObj' in file) {
+      // file 是 UploadFile 对象
+      uploadFile = file as UploadFile;
+      rawFile = (file as UploadFile).originFileObj || null;
+    } else {
+      onError?.(new Error('无法获取文件'));
+      return;
+    }
+
+    if (!rawFile) {
+      onError?.(new Error('无法获取文件'));
+      return;
+    }
+
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('file', rawFile);
     if (category) {
       formData.append('category', category);
     }
@@ -122,27 +156,36 @@ const FileUpload: FC<FileUploadProps> = ({
 
     const xhr = new XMLHttpRequest();
 
-    xhr.upload.onprogress = (e) => handleUploadProgress(e, file, onProgress);
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) {
+        const percent = Math.round((e.loaded / e.total) * 100);
+        setUploadProgress(percent);
+        onProgress({ percent });
+      }
+    };
 
     xhr.onload = () => {
       if (xhr.status === 200) {
         const apiResponse = JSON.parse(xhr.responseText);
         if (apiResponse.code === 0 && apiResponse.data) {
-          handleUploadSuccess(apiResponse.data, file);
-          onSuccess(apiResponse.data, file);
+          handleUploadSuccess(apiResponse.data, uploadFile);
+          onSuccess?.(apiResponse.data);
         } else {
           const error = new Error(apiResponse.message || '上传失败');
-          handleUploadError(error, file, onError);
+          handleUploadError(error, uploadFile);
+          onError?.(error);
         }
       } else {
         const error = new Error(xhr.responseText || '上传失败');
-        handleUploadError(error, file, onError);
+        handleUploadError(error, uploadFile);
+        onError?.(error);
       }
     };
 
     xhr.onerror = () => {
       const error = new Error('网络错误');
-      handleUploadError(error, file, onError);
+      handleUploadError(error, uploadFile);
+      onError?.(error);
     };
 
     xhr.open('POST', '/api/v1/system/files/upload', true);
@@ -151,7 +194,7 @@ const FileUpload: FC<FileUploadProps> = ({
       xhr.setRequestHeader('Authorization', `Bearer ${token}`);
     }
     xhr.send(formData);
-  }, [category, handleUploadProgress, handleUploadSuccess, handleUploadError]);
+  }, [category, handleUploadSuccess, handleUploadError]);
 
   const uploadButton = (
     <div>
@@ -188,7 +231,7 @@ const FileUpload: FC<FileUploadProps> = ({
     fileList,
     onChange: handleChange,
     beforeUpload,
-    customRequest,
+    customRequest: customRequest as any, // eslint-disable-line @typescript-eslint/no-explicit-any
     accept,
     maxCount,
     disabled: disabled || uploading,

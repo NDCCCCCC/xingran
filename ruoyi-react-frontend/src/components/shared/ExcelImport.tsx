@@ -19,7 +19,8 @@ import {
   CloseCircleOutlined,
   DeleteOutlined,
 } from '@ant-design/icons';
-import type { UploadFile, UploadRequestOption } from 'antd';
+import type { UploadFile } from 'antd';
+import type { UploadRequestOption } from './FileUpload';
 
 const { Text } = Typography;
 
@@ -104,8 +105,28 @@ const ExcelImport: FC<ExcelImportProps> = ({
 
   const customRequest = async (options: UploadRequestOption) => {
     const { file, onProgress, onSuccess, onError } = options;
+
+    // 获取原始文件对象 - 处理 Ant Design 6.x 的 UploadRequestFile 类型
+    let rawFile: File | Blob | null = null;
+
+    if (file instanceof File || file instanceof Blob) {
+      rawFile = file;
+    } else if (typeof file === 'string') {
+      // file 是字符串（URL）的情况，不应该发生在这里
+      onError?.(new Error('不支持URL类型的文件'));
+      return;
+    } else if (typeof file === 'object' && file !== null && 'originFileObj' in file) {
+      // file 是 UploadFile 对象
+      rawFile = (file as UploadFile).originFileObj || null;
+    }
+
+    if (!rawFile) {
+      onError?.(new Error('无法获取文件'));
+      return;
+    }
+
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('file', rawFile);
 
     setImporting(true);
     setUploadProgress(0);
@@ -115,10 +136,10 @@ const ExcelImport: FC<ExcelImportProps> = ({
       const xhr = new XMLHttpRequest();
 
       xhr.upload.onprogress = (e) => {
-        if (e.lengthComputable) {
+        if (e.lengthComputable && onProgress) {
           const percent = Math.round((e.loaded / e.total) * 100);
           setUploadProgress(percent);
-          onProgress({ percent }, file);
+          onProgress({ percent });
         }
       };
 
@@ -128,7 +149,7 @@ const ExcelImport: FC<ExcelImportProps> = ({
           setImporting(false);
           setUploadProgress(100);
           setImportResult(response.data);
-          onSuccess(response, file);
+          onSuccess?.(response);
 
           if (response.data.failed === 0) {
             message.success(
@@ -148,7 +169,7 @@ const ExcelImport: FC<ExcelImportProps> = ({
       xhr.onerror = () => {
         setImporting(false);
         const error = new Error('网络错误');
-        onError(error);
+        onError?.(error);
         message.error('导入失败');
       };
 
@@ -160,7 +181,7 @@ const ExcelImport: FC<ExcelImportProps> = ({
       xhr.send(formData);
     } catch {
       setImporting(false);
-      onError(new Error('导入失败'));
+      onError?.(new Error('导入失败'));
       message.error('导入失败');
     }
   };
@@ -241,7 +262,7 @@ const ExcelImport: FC<ExcelImportProps> = ({
               fileList={fileList}
               onChange={({ fileList: newFileList }) => setFileList(newFileList)}
               beforeUpload={beforeUpload}
-              customRequest={customRequest}
+              customRequest={customRequest as any}
               accept=".xlsx"
               maxCount={1}
               disabled={importing}

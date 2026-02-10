@@ -12,7 +12,7 @@ import type { FC } from 'react';
 export type StatusType = 'success' | 'error' | 'warning' | 'default' | 'processing';
 
 /** 状态标签配置 */
-const STATUS_CONFIG: Record<StatusType, { className: string; icon?: FC; label: string }> = {
+const STATUS_CONFIG: Record<StatusType, { className: string; icon?: FC<{ style?: React.CSSProperties }>; label: string }> = {
   success: { className: 'modern-tag-success', icon: CheckCircleOutlined, label: '正常' },
   error: { className: 'modern-tag-error', icon: StopOutlined, label: '停用' },
   warning: { className: 'modern-tag-warning', icon: ClockCircleOutlined, label: '警告' },

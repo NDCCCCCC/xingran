@@ -3,6 +3,7 @@
  */
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import type { CSSProperties } from 'react';
 import { Card, Button, Dropdown, Tooltip, message } from 'antd';
 import type { MenuProps } from 'antd';
 import {
@@ -184,13 +185,14 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
   const handleMouseDown = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
     const target = e.target as SVGElement;
     const workstationEl = target.closest('[data-workstation-id]');
-    const spacePressed = (e.nativeEvent as KeyboardEvent & { code?: string }).code === 'Space';
+    // 检查是否按下了空格键（通过全局状态或事件）
+    const spacePressed = (e.nativeEvent as MouseEvent & { code?: string }).code === 'Space';
 
     if (workstationEl && !spacePressed) {
       const workstationId = workstationEl.getAttribute('data-workstation-id');
       const workstation = workstations.find(w => w.id === workstationId);
 
-      if (workstation && workstation.status === 0) {
+      if (workstation && workstation.status === 0 && workstationId) {
         handleStartDrag(workstationId, e.clientX, e.clientY, workstation.x, workstation.y);
         setSelectedId(workstationId);
       }

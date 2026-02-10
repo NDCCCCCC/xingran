@@ -34,7 +34,7 @@ const DeptTree: FC<DeptTreeProps> = ({
     const parentKeys: Key[] = [];
     const traverse = (nodes: DataNode[]) => {
       for (const node of nodes) {
-        if (node.children?.length > 0) {
+        if (node.children && node.children.length > 0) {
           parentKeys.push(node.key);
           traverse(node.children);
         }
@@ -104,7 +104,7 @@ const DeptTree: FC<DeptTreeProps> = ({
     return data.map(item => ({
       title: item.deptName,
       key: item.id,
-      children: item.children?.length > 0 ? transformToTreeData(item.children) : undefined,
+      children: item.children && item.children.length > 0 ? transformToTreeData(item.children) : undefined,
       isLeaf: !item.children || item.children.length === 0,
     }));
   };
