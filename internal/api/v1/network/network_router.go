@@ -4,6 +4,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	networkServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/network"
+	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
 )
 
@@ -11,14 +13,24 @@ import (
 func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 	db := core.DB.GetDB()
 
+	// 创建缓存提供者
+	var cacheProvider systemServices.CacheProvider
+	if core.DataCacheService != nil {
+		cacheProvider = systemServices.NewCacheProvider(core.DataCacheService)
+	} else {
+		cacheProvider = &systemServices.NoOpCacheProvider{}
+	}
+
 	// 创建授权凭证服务
 	credentialService := services.NewAuthCredentialService(db, core.SM4Cipher)
 
-	// 创建网络设备服务
-	deviceService := services.NewNetworkDeviceService(
+	// 创建网络设备服务（带缓存）
+	deviceService := networkServices.NewServiceWithCache(
 		db,
 		core.DeviceDiscoveryService,
 		core.DeviceInfoCollectionService,
+		cacheProvider,
+		core.CacheConfigService,
 	)
 
 	// 创建其他服务

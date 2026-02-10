@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	networkServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/network"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
@@ -11,11 +12,11 @@ import (
 
 // DeviceHandler 网络设备处理器
 type DeviceHandler struct {
-	deviceService *services.NetworkDeviceService
+	deviceService networkServices.CacheService
 }
 
 // NewDeviceHandler 创建网络设备处理器实例
-func NewDeviceHandler(deviceService *services.NetworkDeviceService) *DeviceHandler {
+func NewDeviceHandler(deviceService networkServices.CacheService) *DeviceHandler {
 	return &DeviceHandler{deviceService: deviceService}
 }
 
