@@ -8,8 +8,21 @@ import (
 
 // SetupConfigRouter 设置参数配置路由
 func SetupConfigRouter(r *gin.RouterGroup, core *core.Core) {
-	// 创建参数配置服务
-	configService := systemServices.NewConfigService(core.DB.GetDB())
+	// 创建缓存提供者
+	cacheProvider := systemServices.NewCacheProvider(core.DataCacheService)
+
+	// 创建带缓存的参数配置服务
+	var configService systemServices.ConfigService
+	if core.DataCacheService != nil {
+		configService = systemServices.NewConfigServiceWithCache(
+			core.DB.GetDB(),
+			cacheProvider,
+			core.CacheConfigService,
+		)
+	} else {
+		configService = systemServices.NewConfigService(core.DB.GetDB())
+	}
+
 	configHandler := NewConfigHandler(configService)
 
 	// 参数配置路由
