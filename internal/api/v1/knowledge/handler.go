@@ -3,17 +3,18 @@ package knowledge
 import (
 	"github.com/gin-gonic/gin"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
+	knowledgeServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/knowledge"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
 // ArticleHandler 知识库文章处理器
 type ArticleHandler struct {
-	service *services.KnowledgeService
+	service knowledgeServices.KnowledgeCacheService
 }
 
 // NewArticleHandler 创建文章处理器实例
-func NewArticleHandler(service *services.KnowledgeService) *ArticleHandler {
+func NewArticleHandler(service knowledgeServices.KnowledgeCacheService) *ArticleHandler {
 	return &ArticleHandler{service: service}
 }
 
@@ -268,11 +269,11 @@ func (h *ArticleHandler) Like(c *gin.Context) {
 
 // CategoryHandler 知识库分类处理器
 type CategoryHandler struct {
-	service *services.KnowledgeService
+	service knowledgeServices.KnowledgeCacheService
 }
 
 // NewCategoryHandler 创建分类处理器实例
-func NewCategoryHandler(service *services.KnowledgeService) *CategoryHandler {
+func NewCategoryHandler(service knowledgeServices.KnowledgeCacheService) *CategoryHandler {
 	return &CategoryHandler{service: service}
 }
 
@@ -422,11 +423,11 @@ func (h *CategoryHandler) Delete(c *gin.Context) {
 
 // TagHandler 知识库标签处理器
 type TagHandler struct {
-	service *services.KnowledgeService
+	service knowledgeServices.KnowledgeCacheService
 }
 
 // NewTagHandler 创建标签处理器实例
-func NewTagHandler(service *services.KnowledgeService) *TagHandler {
+func NewTagHandler(service knowledgeServices.KnowledgeCacheService) *TagHandler {
 	return &TagHandler{service: service}
 }
 

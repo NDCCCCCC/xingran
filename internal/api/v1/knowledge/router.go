@@ -3,12 +3,13 @@ package knowledge
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	knowledgeServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/knowledge"
+	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 )
 
 // SetupArticleRouter 设置知识库文章路由
 func SetupArticleRouter(r *gin.RouterGroup, core *core.Core) {
-	knowledgeService := services.NewKnowledgeService(core.DB.GetDB())
+	knowledgeService := createKnowledgeService(core)
 	articleHandler := NewArticleHandler(knowledgeService)
 
 	r.POST("/list", articleHandler.List)
@@ -22,7 +23,7 @@ func SetupArticleRouter(r *gin.RouterGroup, core *core.Core) {
 
 // SetupCategoryRouter 设置知识库分类路由
 func SetupCategoryRouter(r *gin.RouterGroup, core *core.Core) {
-	knowledgeService := services.NewKnowledgeService(core.DB.GetDB())
+	knowledgeService := createKnowledgeService(core)
 	categoryHandler := NewCategoryHandler(knowledgeService)
 
 	r.POST("/list", categoryHandler.List)
@@ -34,7 +35,7 @@ func SetupCategoryRouter(r *gin.RouterGroup, core *core.Core) {
 
 // SetupTagRouter 设置知识库标签路由
 func SetupTagRouter(r *gin.RouterGroup, core *core.Core) {
-	knowledgeService := services.NewKnowledgeService(core.DB.GetDB())
+	knowledgeService := createKnowledgeService(core)
 	tagHandler := NewTagHandler(knowledgeService)
 
 	r.POST("/all", tagHandler.GetAll)
@@ -45,7 +46,7 @@ func SetupTagRouter(r *gin.RouterGroup, core *core.Core) {
 
 // SetupWorkOrderRouter 设置工单转知识库路由
 func SetupWorkOrderRouter(r *gin.RouterGroup, core *core.Core) {
-	knowledgeService := services.NewKnowledgeService(core.DB.GetDB())
+	knowledgeService := createKnowledgeService(core)
 	articleHandler := NewArticleHandler(knowledgeService)
 
 	r.POST("/:id", articleHandler.ConvertFromWorkOrder)
@@ -53,7 +54,7 @@ func SetupWorkOrderRouter(r *gin.RouterGroup, core *core.Core) {
 
 // SetupKnowledgeViewRouter 设置知识库查看路由（无需权限）
 func SetupKnowledgeViewRouter(r *gin.RouterGroup, core *core.Core) {
-	knowledgeService := services.NewKnowledgeService(core.DB.GetDB())
+	knowledgeService := createKnowledgeService(core)
 
 	articleHandler := NewArticleHandler(knowledgeService)
 	categoryHandler := NewCategoryHandler(knowledgeService)
@@ -71,4 +72,20 @@ func SetupKnowledgeViewRouter(r *gin.RouterGroup, core *core.Core) {
 		categories.POST("/list", categoryHandler.List)
 		categories.POST("/:id", categoryHandler.GetByID)
 	}
+}
+
+// createKnowledgeService 创建知识库服务（带缓存）
+func createKnowledgeService(core *core.Core) knowledgeServices.KnowledgeCacheService {
+	var cacheProvider systemServices.CacheProvider
+	if core.DataCacheService != nil {
+		cacheProvider = systemServices.NewCacheProvider(core.DataCacheService)
+	} else {
+		cacheProvider = &systemServices.NoOpCacheProvider{}
+	}
+
+	return knowledgeServices.NewKnowledgeServiceWithCache(
+		core.DB.GetDB(),
+		cacheProvider,
+		core.CacheConfigService,
+	)
 }
