@@ -8,7 +8,7 @@ RuoYi-Next is a modern enterprise permission management system based on the RuoY
 
 **Tech Stack:**
 - Backend: Go 1.24, Gin, GORM, PostgreSQL 18, Redis 7.4
-- Frontend: React 19, TypeScript 5, Vite 7, Ant Design 6, Zustand 5
+- Frontend: React 19.2, TypeScript 5.9, Vite 7.2, Ant Design 6.1, Zustand 5.0
 - Security: SM2/SM3/SM4 national cryptography algorithms
 
 ---
@@ -54,6 +54,16 @@ npm run preview
 
 # Lint code
 npm run lint
+npm run lint:fix     # Auto-fix lint issues
+
+# Type checking
+npm run type-check
+npm run type-check:strict
+
+# Testing
+npm run test
+npm run test:ui      # Interactive test UI
+npm run test:coverage
 ```
 
 ### Configuration
@@ -61,6 +71,17 @@ npm run lint
 - Backend config: `configs/config.yaml`, `configs/config.dev.yaml`, `configs/config.prod.yaml`
 - Frontend env: `ruoyi-react-frontend/.env.development`
 - Environment variables: `.env` (DB_HOST, DB_PASSWORD, REDIS_URL, etc.)
+
+### Swagger Documentation
+
+```bash
+# Generate Swagger docs
+./scripts/generate_swagger.bat   # Windows
+./scripts/generate_swagger.sh    # Linux/Mac
+
+# Access Swagger UI after starting server
+# http://localhost:9000/swagger/index.html
+```
 
 **Important Config Values:**
 - `server.mode`: "debug" (dev) or "release" (production)
@@ -559,6 +580,21 @@ go test -v -run TestBatchUpsert
 
 # Run with verbose output
 go test -v .
+```
+
+### Running Frontend Tests
+
+```bash
+cd ruoyi-react-frontend
+
+# Run all tests
+npm run test
+
+# Run specific test file
+npx vitest run src/utils/errorHandler.test.ts
+
+# Run in watch mode
+npm run test -- --watch
 ```
 
 ### Building
