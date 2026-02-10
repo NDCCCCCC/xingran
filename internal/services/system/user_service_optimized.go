@@ -13,17 +13,15 @@ import (
 
 // userServiceOptimized 优化后的用户服务实现，解决N+1查询问题
 type userServiceOptimized struct {
-	db              *gorm.DB
-	pwdManager      PasswordManager
-	cacheInvalidator CacheInvalidator
+	db         *gorm.DB
+	pwdManager PasswordManager
 }
 
 // NewUserServiceOptimized 创建优化后的用户服务实例
-func NewUserServiceOptimized(db *gorm.DB, pwdManager PasswordManager, cacheInvalidator CacheInvalidator) UserService {
+func NewUserServiceOptimized(db *gorm.DB, pwdManager PasswordManager) UserService {
 	return &userServiceOptimized{
-		db:              db,
-		pwdManager:      pwdManager,
-		cacheInvalidator: cacheInvalidator,
+		db:         db,
+		pwdManager: pwdManager,
 	}
 }
 
@@ -300,12 +298,6 @@ func (s *userServiceOptimized) Update(ctx context.Context, req *requests.UserUpd
 		return err
 	}
 
-	// 清除用户相关缓存
-	if s.cacheInvalidator != nil {
-		_ = s.cacheInvalidator.InvalidateUserCache(ctx, req.ID)
-		_ = s.cacheInvalidator.InvalidateUserPostCache(ctx, req.ID)
-	}
-
 	return nil
 }
 
@@ -342,12 +334,6 @@ func (s *userServiceOptimized) Delete(ctx context.Context, id string) error {
 
 	if err != nil {
 		return err
-	}
-
-	// 清除用户缓存
-	if s.cacheInvalidator != nil {
-		_ = s.cacheInvalidator.InvalidateUserCache(ctx, id)
-		_ = s.cacheInvalidator.InvalidateUserPostCache(ctx, id)
 	}
 
 	return nil
@@ -396,11 +382,6 @@ func (s *userServiceOptimized) BatchDelete(ctx context.Context, ids []string) er
 		return err
 	}
 
-	// 清除所有用户缓存
-	if s.cacheInvalidator != nil {
-		_ = s.cacheInvalidator.InvalidateAllUserCache(ctx)
-	}
-
 	return nil
 }
 
@@ -418,11 +399,6 @@ func (s *userServiceOptimized) UpdateStatus(ctx context.Context, id string, stat
 	// 更新状态
 	if err := s.db.WithContext(ctx).Model(&user).Update("status", status).Error; err != nil {
 		return fmt.Errorf("更新用户状态失败: %w", err)
-	}
-
-	// 清除用户缓存
-	if s.cacheInvalidator != nil {
-		_ = s.cacheInvalidator.InvalidateUserCache(ctx, id)
 	}
 
 	return nil
@@ -448,11 +424,6 @@ func (s *userServiceOptimized) ResetPassword(ctx context.Context, id string, new
 	// 更新密码
 	if err := s.db.WithContext(ctx).Model(&user).Update("password", hashedPassword).Error; err != nil {
 		return fmt.Errorf("重置密码失败: %w", err)
-	}
-
-	// 清除用户缓存
-	if s.cacheInvalidator != nil {
-		_ = s.cacheInvalidator.InvalidateUserCache(ctx, id)
 	}
 
 	return nil

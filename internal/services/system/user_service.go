@@ -17,13 +17,6 @@ type PasswordManager interface {
 	VerifyPassword(password, hash string) (bool, error)
 }
 
-// CacheInvalidator 缓存失效接口
-type CacheInvalidator interface {
-	InvalidateUserCache(ctx context.Context, userID string) error
-	InvalidateAllUserCache(ctx context.Context) error
-	InvalidateUserPostCache(ctx context.Context, userID string) error
-}
-
 // UserService 用户服务接口
 type UserService interface {
 	Create(ctx context.Context, user *requests.UserCreateRequest) error
@@ -38,17 +31,15 @@ type UserService interface {
 
 // userService 用户服务实现
 type userService struct {
-	db              *gorm.DB
-	pwdManager      PasswordManager
-	cacheInvalidator CacheInvalidator
+	db         *gorm.DB
+	pwdManager PasswordManager
 }
 
 // NewUserService 创建用户服务实例
-func NewUserService(db *gorm.DB, pwdManager PasswordManager, cacheInvalidator CacheInvalidator) UserService {
+func NewUserService(db *gorm.DB, pwdManager PasswordManager) UserService {
 	return &userService{
-		db:              db,
-		pwdManager:      pwdManager,
-		cacheInvalidator: cacheInvalidator,
+		db:         db,
+		pwdManager: pwdManager,
 	}
 }
 
@@ -192,12 +183,6 @@ func (s *userService) Update(ctx context.Context, req *requests.UserUpdateReques
 		return err
 	}
 
-	// 清除用户相关缓存
-	if s.cacheInvalidator != nil {
-		_ = s.cacheInvalidator.InvalidateUserCache(ctx, req.ID)
-		_ = s.cacheInvalidator.InvalidateUserPostCache(ctx, req.ID)
-	}
-
 	return nil
 }
 
@@ -234,12 +219,6 @@ func (s *userService) Delete(ctx context.Context, id string) error {
 
 	if err != nil {
 		return err
-	}
-
-	// 清除用户缓存
-	if s.cacheInvalidator != nil {
-		_ = s.cacheInvalidator.InvalidateUserCache(ctx, id)
-		_ = s.cacheInvalidator.InvalidateUserPostCache(ctx, id)
 	}
 
 	return nil
@@ -391,11 +370,6 @@ func (s *userService) BatchDelete(ctx context.Context, ids []string) error {
 		return err
 	}
 
-	// 清除所有用户缓存
-	if s.cacheInvalidator != nil {
-		_ = s.cacheInvalidator.InvalidateAllUserCache(ctx)
-	}
-
 	return nil
 }
 
@@ -413,11 +387,6 @@ func (s *userService) UpdateStatus(ctx context.Context, id string, status int) e
 	// 更新状态
 	if err := s.db.WithContext(ctx).Model(&user).Update("status", status).Error; err != nil {
 		return apperrors.DatabaseError(err)
-	}
-
-	// 清除用户缓存
-	if s.cacheInvalidator != nil {
-		_ = s.cacheInvalidator.InvalidateUserCache(ctx, id)
 	}
 
 	return nil
@@ -443,11 +412,6 @@ func (s *userService) ResetPassword(ctx context.Context, id string, newPassword 
 	// 更新密码
 	if err := s.db.WithContext(ctx).Model(&user).Update("password", hashedPassword).Error; err != nil {
 		return apperrors.DatabaseError(err)
-	}
-
-	// 清除用户缓存
-	if s.cacheInvalidator != nil {
-		_ = s.cacheInvalidator.InvalidateUserCache(ctx, id)
 	}
 
 	return nil
