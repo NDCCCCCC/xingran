@@ -44,7 +44,7 @@ const iconMap: Record<string, React.ComponentType> = {
 	UsergroupAddOutlined,
 };
 
-interface EndpointSelectorProps extends Omit<SelectProps, 'options' | 'children'> {
+interface EndpointSelectorProps extends Omit<SelectProps<any>, 'options' | 'children' | 'onChange'> {
 	/** 选中的端点路由 */
 	value?: string;
 	/** 变化回调 */

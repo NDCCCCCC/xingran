@@ -31,7 +31,7 @@ export interface BaseWidgetProps {
 	loading?: boolean;
 
 	/** 错误信息 */
-	error?: string;
+	error?: string | null;
 
 	/** 子元素 */
 	children: ReactNode;

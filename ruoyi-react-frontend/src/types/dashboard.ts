@@ -130,11 +130,15 @@ export interface StaticDataSourceConfig {
 
 /**
  * 数据源配置（联合类型）
+ * 支持直接的数据源配置或包装格式（后端期望的格式）
  */
 export type DataSourceConfig =
 	| ApiDataSourceConfig
 	| WebSocketDataSourceConfig
-	| StaticDataSourceConfig;
+	| StaticDataSourceConfig
+	| { api: ApiDataSourceConfig }
+	| { websocket: WebSocketDataSourceConfig }
+	| { static: StaticDataSourceConfig };
 
 /**
  * 显示配置基础接口

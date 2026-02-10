@@ -37,25 +37,15 @@ export class DataFetcher {
 	 * 获取数据
 	 */
 	async fetch<T = unknown>(dataSource: DataSourceConfig): Promise<DataFetchResult<T>> {
-		// 处理后端返回的包装格式：{ api: { type: 'api', ... } }
-		let unwrappedSource: Record<string, unknown> = dataSource;
-		if ((dataSource.api as Record<string, unknown> | undefined)?.type === 'api') {
-			unwrappedSource = dataSource.api as Record<string, unknown>;
-		} else if ((dataSource.websocket as Record<string, unknown> | undefined)?.type === 'websocket') {
-			unwrappedSource = dataSource.websocket as Record<string, unknown>;
-		} else if ((dataSource.static as Record<string, unknown> | undefined)?.type === 'static') {
-			unwrappedSource = dataSource.static as Record<string, unknown>;
+		// 使用类型守卫判断数据源类型
+		if ('type' in dataSource && dataSource.type === 'api') {
+			return this.fetchFromAPI(dataSource as ApiDataSourceConfig);
 		}
-
-		// 根据type属性判断数据源类型
-		if (unwrappedSource.type === 'api') {
-			return this.fetchFromAPI(unwrappedSource as ApiDataSourceConfig);
+		if ('type' in dataSource && dataSource.type === 'websocket') {
+			return this.fetchFromWebSocket(dataSource as WebSocketDataSourceConfig);
 		}
-		if (unwrappedSource.type === 'websocket') {
-			return this.fetchFromWebSocket(unwrappedSource as WebSocketDataSourceConfig);
-		}
-		if (unwrappedSource.type === 'static') {
-			return this.fetchStatic(unwrappedSource as StaticDataSourceConfig);
+		if ('type' in dataSource && dataSource.type === 'static') {
+			return this.fetchStatic(dataSource as StaticDataSourceConfig);
 		}
 
 		return {

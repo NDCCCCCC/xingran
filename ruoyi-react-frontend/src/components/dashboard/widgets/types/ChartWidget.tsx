@@ -142,9 +142,10 @@ function getPieOption(data: Record<string, unknown>, _display: ChartDisplayConfi
 		try {
 			const parsed = typeof item === 'string' ? JSON.parse(item) : item;
 			if (typeof parsed === 'object' && parsed !== null) {
+				const rawValue = (parsed as Record<string, unknown>).value ?? 0;
 				return {
 					name: String((parsed as Record<string, unknown>).name ?? `项${index + 1}`),
-					value: (parsed as Record<string, unknown>).value ?? 0,
+					value: typeof rawValue === 'number' ? rawValue : Number(rawValue) || 0,
 				};
 			}
 		} catch {
@@ -152,14 +153,14 @@ function getPieOption(data: Record<string, unknown>, _display: ChartDisplayConfi
 		}
 		return {
 			name: `项${index + 1}`,
-			value: item,
+			value: typeof item === 'number' ? item : Number(item) || 0,
 		};
 	});
 
 	return {
 		series: [{
 			type: 'pie',
-			data: pieData as Array<{ name: string; value: string | number }>,
+			data: pieData,
 			radius: ['40%', '70%'],
 			itemStyle: {
 				borderRadius: 4,

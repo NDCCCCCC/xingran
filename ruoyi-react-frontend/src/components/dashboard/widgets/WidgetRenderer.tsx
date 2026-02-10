@@ -39,7 +39,7 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({ widget, onEdit, 
 	// 直接渲染Widget组件
 	return (
 		<Suspense fallback={<Spin />}>
-			<WidgetComponent {...componentProps} />
+			<WidgetComponent {...componentProps as any} />
 		</Suspense>
 	);
 };

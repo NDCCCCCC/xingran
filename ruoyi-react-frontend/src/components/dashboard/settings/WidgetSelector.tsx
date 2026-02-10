@@ -147,7 +147,7 @@ export const WidgetSelector: React.FC<WidgetSelectorProps> = ({
 					y: 0,
 					...widgetDefaultSizes[values.type as WidgetType],
 				},
-				dataSource: dataSource as ApiDataSourceConfig | { api: ApiDataSourceConfig },
+				dataSource: dataSource,
 				display: createDisplayConfig(values.type as WidgetType),
 				enabled: true,
 			};

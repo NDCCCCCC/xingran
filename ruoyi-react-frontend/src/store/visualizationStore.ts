@@ -164,7 +164,7 @@ export const useVisualizationStore = create<VisualizationState>()(
           set((state) => ({
             mapState: {
               ...state.mapState,
-              center: [building.longitude, building.latitude],
+              center: [building.longitude as number, building.latitude as number],
               zoom: 14,
               showLevel: 2,
             },
