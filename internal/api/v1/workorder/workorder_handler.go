@@ -11,11 +11,11 @@ import (
 
 // WorkOrderHandler 工单管理处理器
 type WorkOrderHandler struct {
-	service *workorder.WorkOrderService
+	service workorder.WorkOrderCacheService
 }
 
 // NewWorkOrderHandler 创建工单管理处理器实例
-func NewWorkOrderHandler(service *workorder.WorkOrderService) *WorkOrderHandler {
+func NewWorkOrderHandler(service workorder.WorkOrderCacheService) *WorkOrderHandler {
 	return &WorkOrderHandler{service: service}
 }
 
@@ -36,7 +36,7 @@ func (h *WorkOrderHandler) List(c *gin.Context) {
 		// 允许空请求体，使用默认值
 	}
 
-	list, total, err := h.service.Base.GetList(c.Request.Context(), &req)
+	list, total, err := h.service.GetList(c.Request.Context(), &req)
 	if !responseHelpers.HandleServiceError(c, err, "获取工单列表") {
 		return
 	}
@@ -72,7 +72,7 @@ func (h *WorkOrderHandler) GetMyPending(c *gin.Context) {
 		return
 	}
 
-	list, total, err := h.service.Base.GetMyPending(c.Request.Context(), &req, userID.(string))
+	list, total, err := h.service.GetMyPending(c.Request.Context(), &req, userID.(string))
 	if !responseHelpers.HandleServiceError(c, err, "获取待办工单") {
 		return
 	}
@@ -99,7 +99,7 @@ func (h *WorkOrderHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	workOrder, err := h.service.Base.GetByID(c.Request.Context(), id)
+	workOrder, err := h.service.GetByID(c.Request.Context(), id)
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -124,7 +124,7 @@ func (h *WorkOrderHandler) Create(c *gin.Context) {
 	}
 
 	userID, _ := c.Get("user_id")
-	workOrder, err := h.service.Base.Create(c.Request.Context(), &req, userID.(string))
+	workOrder, err := h.service.Create(c.Request.Context(), &req, userID.(string))
 	if !responseHelpers.HandleServiceError(c, err, "创建工单") {
 		return
 	}
@@ -157,7 +157,7 @@ func (h *WorkOrderHandler) Update(c *gin.Context) {
 	req.ID = id
 	userID, _ := c.Get("user_id")
 
-	err := h.service.Base.Update(c.Request.Context(), &req, userID.(string))
+	err := h.service.Update(c.Request.Context(), &req, userID.(string))
 	if !responseHelpers.HandleServiceError(c, err, "更新工单") {
 		return
 	}
@@ -181,7 +181,7 @@ func (h *WorkOrderHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	err := h.service.Base.Delete(c.Request.Context(), id)
+	err := h.service.Delete(c.Request.Context(), id)
 	if !responseHelpers.HandleServiceError(c, err, "删除工单") {
 		return
 	}
@@ -206,7 +206,7 @@ func (h *WorkOrderHandler) BatchDelete(c *gin.Context) {
 		return
 	}
 
-	err := h.service.Base.BatchDelete(c.Request.Context(), req.IDs)
+	err := h.service.BatchDelete(c.Request.Context(), req.IDs)
 	if !responseHelpers.HandleServiceError(c, err, "批量删除工单") {
 		return
 	}
@@ -242,7 +242,7 @@ func (h *WorkOrderHandler) Assign(c *gin.Context) {
 	}
 
 	userID, _ := c.Get("user_id")
-	err := h.service.Assignment.Assign(c.Request.Context(), id, &req, userID.(string))
+	err := h.service.Assignment().Assign(c.Request.Context(), id, &req, userID.(string))
 	if !responseHelpers.HandleServiceError(c, err, "分配工单") {
 		return
 	}
@@ -267,7 +267,7 @@ func (h *WorkOrderHandler) AssignToTodayDuty(c *gin.Context) {
 	}
 
 	userID, _ := c.Get("user_id")
-	err := h.service.Assignment.AssignToTodayDuty(c.Request.Context(), id, userID.(string))
+	err := h.service.Assignment().AssignToTodayDuty(c.Request.Context(), id, userID.(string))
 	// 当没有值班人员时，静默处理，不显示错误
 	if err != nil && err.Error() == "今天没有值班人员" {
 		response.Success(c, gin.H{"message": "今天没有值班人员，工单未分配"})
@@ -303,7 +303,7 @@ func (h *WorkOrderHandler) UpdateStatus(c *gin.Context) {
 	}
 
 	userID, _ := c.Get("user_id")
-	err := h.service.Assignment.UpdateStatus(c.Request.Context(), id, &req, userID.(string))
+	err := h.service.Assignment().UpdateStatus(c.Request.Context(), id, &req, userID.(string))
 	if !responseHelpers.HandleServiceError(c, err, "更新状态") {
 		return
 	}
@@ -329,7 +329,7 @@ func (h *WorkOrderHandler) GetComments(c *gin.Context) {
 		return
 	}
 
-	comments, err := h.service.Comment.GetList(c.Request.Context(), id)
+	comments, err := h.service.Comment().GetList(c.Request.Context(), id)
 	if !responseHelpers.HandleServiceError(c, err, "获取评论") {
 		return
 	}
@@ -360,7 +360,7 @@ func (h *WorkOrderHandler) AddComment(c *gin.Context) {
 	}
 
 	userID, _ := c.Get("user_id")
-	err := h.service.Comment.Add(c.Request.Context(), id, &req, userID.(string))
+	err := h.service.Comment().Add(c.Request.Context(), id, &req, userID.(string))
 	if !responseHelpers.HandleServiceError(c, err, "添加评论") {
 		return
 	}
@@ -386,7 +386,7 @@ func (h *WorkOrderHandler) GetHistory(c *gin.Context) {
 		return
 	}
 
-	workOrder, err := h.service.Base.GetByID(c.Request.Context(), id)
+	workOrder, err := h.service.GetByID(c.Request.Context(), id)
 	if !responseHelpers.HandleServiceError(c, err, "获取工单历史") {
 		return
 	}
@@ -403,7 +403,7 @@ func (h *WorkOrderHandler) GetHistory(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Router /workorder/statistics [post]
 func (h *WorkOrderHandler) GetStatistics(c *gin.Context) {
-	stats, err := h.service.Statistics.Get(c.Request.Context())
+	stats, err := h.service.GetStatistics(c.Request.Context())
 	if !responseHelpers.HandleServiceError(c, err, "获取统计数据") {
 		return
 	}
@@ -422,7 +422,7 @@ func (h *WorkOrderHandler) GetStatistics(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Router /workorder/categories/list [post]
 func (h *WorkOrderHandler) ListCategories(c *gin.Context) {
-	categories, err := h.service.Category.GetTree(c.Request.Context())
+	categories, err := h.service.Category().GetTree(c.Request.Context())
 	if !responseHelpers.HandleServiceError(c, err, "获取分类列表") {
 		return
 	}
@@ -439,7 +439,7 @@ func (h *WorkOrderHandler) ListCategories(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Router /workorder/categories/enabled [post]
 func (h *WorkOrderHandler) GetEnabledCategories(c *gin.Context) {
-	categories, err := h.service.Category.GetEnabled(c.Request.Context())
+	categories, err := h.service.Category().GetEnabled(c.Request.Context())
 	if !responseHelpers.HandleServiceError(c, err, "获取启用的分类") {
 		return
 	}
@@ -463,7 +463,7 @@ func (h *WorkOrderHandler) GetCategoryByID(c *gin.Context) {
 		return
 	}
 
-	category, err := h.service.Category.GetByID(c.Request.Context(), id)
+	category, err := h.service.Category().GetByID(c.Request.Context(), id)
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -488,7 +488,7 @@ func (h *WorkOrderHandler) CreateCategory(c *gin.Context) {
 	}
 
 	userID, _ := c.Get("user_id")
-	err := h.service.Category.Create(c.Request.Context(), &req, userID.(string))
+	err := h.service.Category().Create(c.Request.Context(), &req, userID.(string))
 	if !responseHelpers.HandleServiceError(c, err, "创建分类") {
 		return
 	}
@@ -520,7 +520,7 @@ func (h *WorkOrderHandler) UpdateCategory(c *gin.Context) {
 	req.ID = id
 
 	userID, _ := c.Get("user_id")
-	err := h.service.Category.Update(c.Request.Context(), &req, userID.(string))
+	err := h.service.Category().Update(c.Request.Context(), &req, userID.(string))
 	if !responseHelpers.HandleServiceError(c, err, "更新分类") {
 		return
 	}
@@ -544,7 +544,7 @@ func (h *WorkOrderHandler) DeleteCategory(c *gin.Context) {
 		return
 	}
 
-	err := h.service.Category.Delete(c.Request.Context(), id)
+	err := h.service.Category().Delete(c.Request.Context(), id)
 	if !responseHelpers.HandleServiceError(c, err, "删除分类") {
 		return
 	}
@@ -568,7 +568,7 @@ func (h *WorkOrderHandler) ListPeriodic(c *gin.Context) {
 		// 允许空请求体
 	}
 
-	list, total, err := h.service.Periodic.GetTemplateList(c.Request.Context(), &req)
+	list, total, err := h.service.Periodic().GetTemplateList(c.Request.Context(), &req)
 	if !responseHelpers.HandleServiceError(c, err, "获取周期性工单模板") {
 		return
 	}
@@ -597,7 +597,7 @@ func (h *WorkOrderHandler) CreatePeriodic(c *gin.Context) {
 	}
 
 	userID, _ := c.Get("user_id")
-	template, err := h.service.Periodic.CreateTemplate(c.Request.Context(), &req, userID.(string))
+	template, err := h.service.Periodic().CreateTemplate(c.Request.Context(), &req, userID.(string))
 	if !responseHelpers.HandleServiceError(c, err, "创建周期性工单模板") {
 		return
 	}
@@ -628,7 +628,7 @@ func (h *WorkOrderHandler) UpdatePeriodic(c *gin.Context) {
 	}
 
 	userID, _ := c.Get("user_id")
-	err := h.service.Periodic.UpdateTemplate(c.Request.Context(), id, &req, userID.(string))
+	err := h.service.Periodic().UpdateTemplate(c.Request.Context(), id, &req, userID.(string))
 	if !responseHelpers.HandleServiceError(c, err, "更新周期性工单模板") {
 		return
 	}
@@ -652,7 +652,7 @@ func (h *WorkOrderHandler) DeletePeriodic(c *gin.Context) {
 		return
 	}
 
-	err := h.service.Periodic.DeleteTemplate(c.Request.Context(), id)
+	err := h.service.Periodic().DeleteTemplate(c.Request.Context(), id)
 	if !responseHelpers.HandleServiceError(c, err, "删除周期性工单模板") {
 		return
 	}
@@ -671,7 +671,7 @@ func (h *WorkOrderHandler) DeletePeriodic(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Router /workorder/config [post]
 func (h *WorkOrderHandler) GetConfig(c *gin.Context) {
-	config, err := h.service.Config.Get(c.Request.Context())
+	config, err := h.service.Config().Get(c.Request.Context())
 	if !responseHelpers.HandleServiceError(c, err, "获取配置") {
 		return
 	}
@@ -694,7 +694,7 @@ func (h *WorkOrderHandler) UpdateConfig(c *gin.Context) {
 		return
 	}
 
-	err := h.service.Config.Update(c.Request.Context(), &req)
+	err := h.service.Config().Update(c.Request.Context(), &req)
 	if !responseHelpers.HandleServiceError(c, err, "更新配置") {
 		return
 	}

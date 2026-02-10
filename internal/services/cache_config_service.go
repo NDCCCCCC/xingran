@@ -65,6 +65,10 @@ const (
 	CacheConfigDutyToday    = "cache.duty.today"    // 今日值班缓存时间（分钟）
 	CacheConfigDutyMonthly  = "cache.duty.monthly"  // 月度排班缓存时间（分钟）
 	CacheConfigDutyHolidays = "cache.duty.holidays" // 节假日数据缓存时间（分钟）
+
+	// 工单管理缓存时间配置
+	CacheConfigWorkorderMyPending  = "cache.workorder.my_pending"  // 待办工单缓存时间（分钟）
+	CacheConfigWorkorderStatistics = "cache.workorder.statistics" // 统计数据缓存时间（分钟）
 )
 
 // CacheConfigService 缓存配置服务
@@ -179,6 +183,8 @@ func (s *CacheConfigService) setDefaultsIfNeeded(_ context.Context) {
 		CacheConfigDutyToday:       5,
 		CacheConfigDutyMonthly:     30,
 		CacheConfigDutyHolidays:    60,
+		CacheConfigWorkorderMyPending: 2,
+		CacheConfigWorkorderStatistics: 5,
 	}
 
 	for key, minutes := range defaults {
@@ -520,6 +526,24 @@ func (s *CacheConfigService) GetConfigInfo() map[string]ConfigInfo {
 			Min:         10,
 			Max:         180,
 			Default:     60,
+		},
+		CacheConfigWorkorderMyPending: {
+			Key:         CacheConfigWorkorderMyPending,
+			Name:        "待办工单缓存时间",
+			Description: "用户待办工单列表数据的缓存时间（分钟）",
+			Category:    "工单管理",
+			Min:         1,
+			Max:         10,
+			Default:     2,
+		},
+		CacheConfigWorkorderStatistics: {
+			Key:         CacheConfigWorkorderStatistics,
+			Name:        "工单统计缓存时间",
+			Description: "工单统计数据（各状态数量、待处理数量等）的缓存时间（分钟）",
+			Category:    "工单管理",
+			Min:         1,
+			Max:         30,
+			Default:     5,
 		},
 	}
 }
