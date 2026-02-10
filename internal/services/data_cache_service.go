@@ -96,6 +96,63 @@ func (s *DataCacheService) DeleteByPattern(ctx context.Context, pattern string) 
 	return nil
 }
 
+// MGet 批量获取缓存
+func (s *DataCacheService) MGet(ctx context.Context, keys ...string) (map[string]string, error) {
+	values, err := s.cache.MGet(ctx, keys...)
+	if err != nil {
+		return nil, fmt.Errorf("批量获取缓存失败: %w", err)
+	}
+	result := make(map[string]string, len(keys))
+	for i, key := range keys {
+		if i < len(values) && values[i] != "" {
+			result[key] = values[i]
+		}
+	}
+	return result, nil
+}
+
+// MDelete 批量删除缓存
+func (s *DataCacheService) MDelete(ctx context.Context, keys ...string) error {
+	return s.cache.MDelete(ctx, keys...)
+}
+
+// Exists 检查缓存是否存在
+func (s *DataCacheService) Exists(ctx context.Context, key string) (bool, error) {
+	return s.cache.Exists(ctx, key)
+}
+
+// SetTTL 设置缓存过期时间
+func (s *DataCacheService) SetTTL(ctx context.Context, key string, expiration time.Duration) error {
+	return s.cache.Expire(ctx, key, expiration)
+}
+
+// GetTTL 获取缓存过期时间
+func (s *DataCacheService) GetTTL(ctx context.Context, key string) (time.Duration, error) {
+	return s.cache.TTL(ctx, key)
+}
+
+// GetStats 获取缓存统计信息
+func (s *DataCacheService) GetStats(ctx context.Context) (*CacheStats, error) {
+	// 返回基本统计信息
+	stats := &CacheStats{}
+	if keys, err := s.cache.Keys(ctx, "*"); err == nil {
+		stats.KeyCount = len(keys)
+		stats.Count = int64(len(keys))
+	}
+	return stats, nil
+}
+
+// CacheStats 缓存统计信息
+type CacheStats struct {
+	Hits        int64                  // 命中次数
+	Misses      int64                  // 未命中次数
+	Count       int64                  // 缓存项数量
+	MemorySize  int64                  // 内存占用（字节）
+	HitRate     float64                // 命中率
+	KeyCount    int                    // 键数量
+	ExtendedStats map[string]interface{} // 扩展统计
+}
+
 // ==================== 缓存键构建器 ====================
 
 // CacheKeyBuilder 缓存键构建器
@@ -174,4 +231,14 @@ func GetUserByIDKey(userID string) string {
 // GetUserByUsernameKey 获取用户名缓存键
 func GetUserByUsernameKey(username string) string {
 	return fmt.Sprintf("%s:%s", CacheKeyUserByUsername, username)
+}
+
+// GetUserRolesKey 获取用户角色缓存键
+func GetUserRolesKey(userID string) string {
+	return fmt.Sprintf("%s:%s", CacheKeyUserRoles, userID)
+}
+
+// GetUserPermissionsKey 获取用户权限缓存键
+func GetUserPermissionsKey(userID string) string {
+	return fmt.Sprintf("%s:%s", CacheKeyUserPermissions, userID)
 }

@@ -28,8 +28,12 @@ const (
 	CacheConfigDictData = "cache.dict.data" // 字典数据缓存时间（分钟）
 
 	// 用户缓存时间配置
-	CacheConfigUserList = "cache.user.list" // 用户列表缓存时间（分钟）
-	CacheConfigUserByID = "cache.user.byid" // 用户详情缓存时间（分钟）
+	CacheConfigUserList      = "cache.user.list"       // 用户列表缓存时间（分钟）
+	CacheConfigUserByID      = "cache.user.byid"       // 用户详情缓存时间（分钟）
+	CacheConfigUserByUsername = "cache.user.byusername" // 用户名查询缓存时间（分钟）
+	CacheConfigUserByDept     = "cache.user.bydept"    // 用户部门缓存时间（分钟）
+	CacheConfigUserRoles      = "cache.user.roles"     // 用户角色缓存时间（分钟）
+	CacheConfigUserPosts      = "cache.user.posts"     // 用户岗位缓存时间（分钟）
 
 	// 菜单缓存时间配置
 	CacheConfigMenuTree   = "cache.menu.tree"   // 菜单树缓存时间（分钟）
@@ -39,6 +43,28 @@ const (
 	// 岗位缓存时间配置
 	CacheConfigPostAll     = "cache.post.all"     // 所有岗位缓存时间（分钟）
 	CacheConfigPostEnabled = "cache.post.enabled" // 启用岗位缓存时间（分钟）
+
+	// 系统配置缓存时间配置
+	CacheConfigConfigAll  = "cache.config.all"  // 所有配置缓存时间（分钟）
+	CacheConfigConfigByID  = "cache.config.byid"  // 配置详情缓存时间（分钟）
+	CacheConfigConfigByKey = "cache.config.bykey" // 配置键查询缓存时间（分钟）
+
+	// 用户设置缓存时间配置
+	CacheConfigSettingsUser = "cache.settings.user" // 用户设置缓存时间（分钟）
+
+	// 运维管理缓存时间配置
+	CacheConfigFloorTree     = "cache.floor.tree"     // 楼层树缓存时间（分钟）
+	CacheConfigFloorBuilding = "cache.floor.building" // 楼宇楼层列表缓存时间（分钟）
+
+	// 知识库缓存时间配置
+	CacheConfigKBCategory = "cache.kb.category" // 知识库分类树缓存时间（分钟）
+	CacheConfigKBTags     = "cache.kb.tags"     // 知识库标签列表缓存时间（分钟）
+	CacheConfigKBArticle  = "cache.kb.article"  // 知识库文章详情缓存时间（分钟）
+
+	// 值班管理缓存时间配置
+	CacheConfigDutyToday    = "cache.duty.today"    // 今日值班缓存时间（分钟）
+	CacheConfigDutyMonthly  = "cache.duty.monthly"  // 月度排班缓存时间（分钟）
+	CacheConfigDutyHolidays = "cache.duty.holidays" // 节假日数据缓存时间（分钟）
 )
 
 // CacheConfigService 缓存配置服务
@@ -123,20 +149,36 @@ func (s *CacheConfigService) LoadConfigs(ctx context.Context) error {
 // setDefaultsIfNeeded 设置默认配置
 func (s *CacheConfigService) setDefaultsIfNeeded(_ context.Context) {
 	defaults := map[string]int{
-		CacheConfigDeptTree:    30,
-		CacheConfigDeptList:    30,
-		CacheConfigDeptSelect:  30,
-		CacheConfigRoleMenus:   30,
-		CacheConfigRoleDepts:   30,
-		CacheConfigDictType:    60,
-		CacheConfigDictData:    30,
-		CacheConfigUserList:    10,
-		CacheConfigUserByID:    30,
-		CacheConfigMenuTree:    30,
-		CacheConfigMenuRouter:  30,
-		CacheConfigMenuAll:     30,
-		CacheConfigPostAll:     30,
-		CacheConfigPostEnabled: 30,
+		CacheConfigDeptTree:        30,
+		CacheConfigDeptList:        30,
+		CacheConfigDeptSelect:      30,
+		CacheConfigRoleMenus:       30,
+		CacheConfigRoleDepts:       30,
+		CacheConfigDictType:        60,
+		CacheConfigDictData:        30,
+		CacheConfigUserList:        10,
+		CacheConfigUserByID:        30,
+		CacheConfigUserByUsername:  30,
+		CacheConfigUserByDept:      10,
+		CacheConfigUserRoles:       30,
+		CacheConfigUserPosts:       30,
+		CacheConfigMenuTree:        30,
+		CacheConfigMenuRouter:      30,
+		CacheConfigMenuAll:         30,
+		CacheConfigPostAll:         30,
+		CacheConfigPostEnabled:     30,
+		CacheConfigConfigAll:       30,
+		CacheConfigConfigByID:      30,
+		CacheConfigConfigByKey:     30,
+		CacheConfigSettingsUser:    15,
+		CacheConfigFloorTree:       30,
+		CacheConfigFloorBuilding:   15,
+		CacheConfigKBCategory:      30,
+		CacheConfigKBTags:          30,
+		CacheConfigKBArticle:       10,
+		CacheConfigDutyToday:       5,
+		CacheConfigDutyMonthly:     30,
+		CacheConfigDutyHolidays:    60,
 	}
 
 	for key, minutes := range defaults {
@@ -290,6 +332,42 @@ func (s *CacheConfigService) GetConfigInfo() map[string]ConfigInfo {
 			Max:         120,
 			Default:     30,
 		},
+		CacheConfigUserByUsername: {
+			Key:         CacheConfigUserByUsername,
+			Name:        "用户名查询缓存时间",
+			Description: "用户名查询数据的缓存时间（分钟）",
+			Category:    "用户管理",
+			Min:         5,
+			Max:         120,
+			Default:     30,
+		},
+		CacheConfigUserByDept: {
+			Key:         CacheConfigUserByDept,
+			Name:        "用户部门缓存时间",
+			Description: "用户部门列表数据的缓存时间（分钟）",
+			Category:    "用户管理",
+			Min:         5,
+			Max:         60,
+			Default:     10,
+		},
+		CacheConfigUserRoles: {
+			Key:         CacheConfigUserRoles,
+			Name:        "用户角色缓存时间",
+			Description: "用户角色数据的缓存时间（分钟）",
+			Category:    "用户管理",
+			Min:         5,
+			Max:         120,
+			Default:     30,
+		},
+		CacheConfigUserPosts: {
+			Key:         CacheConfigUserPosts,
+			Name:        "用户岗位缓存时间",
+			Description: "用户岗位数据的缓存时间（分钟）",
+			Category:    "用户管理",
+			Min:         5,
+			Max:         120,
+			Default:     30,
+		},
 		CacheConfigMenuTree: {
 			Key:         CacheConfigMenuTree,
 			Name:        "菜单树缓存时间",
@@ -334,6 +412,114 @@ func (s *CacheConfigService) GetConfigInfo() map[string]ConfigInfo {
 			Min:         5,
 			Max:         120,
 			Default:     30,
+		},
+		CacheConfigConfigAll: {
+			Key:         CacheConfigConfigAll,
+			Name:        "所有配置缓存时间",
+			Description: "所有系统配置数据的缓存时间（分钟）",
+			Category:    "系统配置",
+			Min:         10,
+			Max:         120,
+			Default:     30,
+		},
+		CacheConfigConfigByID: {
+			Key:         CacheConfigConfigByID,
+			Name:        "配置详情缓存时间",
+			Description: "单个配置详情数据的缓存时间（分钟）",
+			Category:    "系统配置",
+			Min:         5,
+			Max:         60,
+			Default:     30,
+		},
+		CacheConfigConfigByKey: {
+			Key:         CacheConfigConfigByKey,
+			Name:        "配置键查询缓存时间",
+			Description: "按配置键查询数据的缓存时间（分钟）",
+			Category:    "系统配置",
+			Min:         5,
+			Max:         60,
+			Default:     30,
+		},
+		CacheConfigSettingsUser: {
+			Key:         CacheConfigSettingsUser,
+			Name:        "用户设置缓存时间",
+			Description: "用户个人设置数据的缓存时间（分钟）",
+			Category:    "用户设置",
+			Min:         5,
+			Max:         60,
+			Default:     15,
+		},
+		CacheConfigFloorTree: {
+			Key:         CacheConfigFloorTree,
+			Name:        "楼层树缓存时间",
+			Description: "楼层树结构数据的缓存时间（分钟）",
+			Category:    "运维管理",
+			Min:         5,
+			Max:         60,
+			Default:     30,
+		},
+		CacheConfigFloorBuilding: {
+			Key:         CacheConfigFloorBuilding,
+			Name:        "楼宇楼层列表缓存时间",
+			Description: "按楼宇分组的楼层列表数据缓存时间（分钟）",
+			Category:    "运维管理",
+			Min:         5,
+			Max:         60,
+			Default:     15,
+		},
+		CacheConfigKBCategory: {
+			Key:         CacheConfigKBCategory,
+			Name:        "知识库分类树缓存时间",
+			Description: "知识库分类树结构数据的缓存时间（分钟）",
+			Category:    "知识库",
+			Min:         5,
+			Max:         60,
+			Default:     30,
+		},
+		CacheConfigKBTags: {
+			Key:         CacheConfigKBTags,
+			Name:        "知识库标签列表缓存时间",
+			Description: "知识库标签列表数据的缓存时间（分钟）",
+			Category:    "知识库",
+			Min:         5,
+			Max:         60,
+			Default:     30,
+		},
+		CacheConfigKBArticle: {
+			Key:         CacheConfigKBArticle,
+			Name:        "知识库文章详情缓存时间",
+			Description: "知识库文章详情数据的缓存时间（分钟）",
+			Category:    "知识库",
+			Min:         5,
+			Max:         30,
+			Default:     10,
+		},
+		CacheConfigDutyToday: {
+			Key:         CacheConfigDutyToday,
+			Name:        "今日值班缓存时间",
+			Description: "今日值班人员数据的缓存时间（分钟）",
+			Category:    "值班管理",
+			Min:         1,
+			Max:         15,
+			Default:     5,
+		},
+		CacheConfigDutyMonthly: {
+			Key:         CacheConfigDutyMonthly,
+			Name:        "月度排班缓存时间",
+			Description: "月度值班排班数据的缓存时间（分钟）",
+			Category:    "值班管理",
+			Min:         5,
+			Max:         60,
+			Default:     30,
+		},
+		CacheConfigDutyHolidays: {
+			Key:         CacheConfigDutyHolidays,
+			Name:        "节假日数据缓存时间",
+			Description: "节假日数据列表的缓存时间（分钟）",
+			Category:    "值班管理",
+			Min:         10,
+			Max:         180,
+			Default:     60,
 		},
 	}
 }
