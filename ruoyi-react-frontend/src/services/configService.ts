@@ -73,54 +73,56 @@ class ConfigService {
 	 * 数据迁移 - 处理不同版本的配置格式
 	 */
 	migratePreferences(prefs: Partial<UserPreferences> | Record<string, unknown>): UserPreferences {
-		const version = prefs.version || 1;
+		// 使用类型断言访问旧版本属性
+		const legacyPrefs = prefs as Record<string, unknown>;
+		const version = (legacyPrefs.version as number) || 1;
 
 		// 版本 1 → 版本 2（旧数据结构）
 		if (version === 1) {
 			// 验证主题样式
 			const validThemeStyles = ['minimal', 'glassmorphism', 'neumorphism', 'flat2.0', 'luxury-quiet'];
-			const themeStyle = prefs.themeStyle && validThemeStyles.includes(prefs.themeStyle)
-				? prefs.themeStyle
+			const themeStyle = legacyPrefs.themeStyle && validThemeStyles.includes(legacyPrefs.themeStyle as string)
+				? legacyPrefs.themeStyle as string
 				: defaultThemeConfiguration.style;
 
 			// 验证布局类型
 			const validLayoutTypes = ['classic', 'hybrid', 'innovative'];
-			const layoutType = prefs.layoutType && validLayoutTypes.includes(prefs.layoutType)
-				? prefs.layoutType
+			const layoutType = legacyPrefs.layoutType && validLayoutTypes.includes(legacyPrefs.layoutType as string)
+				? legacyPrefs.layoutType as 'classic' | 'hybrid' | 'innovative'
 				: defaultLayoutConfiguration.type;
 
 			// 验证密度模式
 			const validDensityModes = ['compact', 'comfortable', 'spacious'];
-			const density = prefs.density && validDensityModes.includes(prefs.density)
-				? prefs.density
+			const density = legacyPrefs.density && validDensityModes.includes(legacyPrefs.density as string)
+				? legacyPrefs.density as 'compact' | 'comfortable' | 'spacious'
 				: defaultLayoutConfiguration.density;
 
 			const partial: Partial<UserPreferences> = {
 				version: 2,
 				theme: {
-					mode: prefs.theme === 'dark' ? 'dark' : 'light',
-					style: themeStyle,
+					mode: legacyPrefs.theme === 'dark' ? 'dark' : 'light',
+					style: themeStyle as ThemeStyle,
 				},
 				layout: {
 					type: layoutType,
 					sidebar: {
-						collapsed: prefs.sidebarCollapsed,
-						width: prefs.sidebarWidth,
-						collapsedWidth: prefs.sidebarCollapsedWidth,
+						collapsed: Boolean(legacyPrefs.sidebarCollapsed),
+						width: typeof legacyPrefs.sidebarWidth === 'number' ? legacyPrefs.sidebarWidth as number : undefined,
+						collapsedWidth: typeof legacyPrefs.sidebarCollapsedWidth === 'number' ? legacyPrefs.sidebarCollapsedWidth as number : undefined,
 					},
 					density: density,
 				},
 				data: {
-					defaultPageSize: prefs.pageSize,
+					defaultPageSize: typeof legacyPrefs.pageSize === 'number' ? legacyPrefs.pageSize as number : undefined,
 					pageSizeOptions: [10, 20, 50, 100],
 				},
-				language: prefs.language,
+				language: legacyPrefs.language as 'zh-CN' | 'en-US' | undefined,
 			};
 			return this.normalizePreferences(partial);
 		}
 
 		// 版本 2（当前版本）
-		return this.normalizePreferences(prefs);
+		return this.normalizePreferences(prefs as Partial<UserPreferences>);
 	}
 
 	/**

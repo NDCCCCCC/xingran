@@ -100,7 +100,19 @@ export function useWorkOrderActions(
     setModalVisible: (visible: boolean) => void
   ) => {
     try {
-      const values = await editForm.validateFields();
+      const rawValues = await editForm.validateFields();
+      const values = rawValues as {
+        title: string;
+        categoryId: string;
+        type: WorkOrderType;
+        priority: WorkOrderPriority;
+        description?: string;
+        solution?: string;
+        deptId?: string;
+        assigneeId?: string;
+        expectedResolveAt?: string;
+        isAutoAssigned?: boolean;
+      };
 
       if (editingRecord) {
         const updateData: WorkOrderUpdateRequest = {
@@ -147,7 +159,8 @@ export function useWorkOrderActions(
     setComments: (comments: unknown[]) => void
   ) => {
     try {
-      const values = await commentForm.validateFields();
+      const rawValues = await commentForm.validateFields();
+      const values = rawValues as { content: string };
       if (!selectedRecord) return;
 
       await addWorkOrderComment(selectedRecord.id, {

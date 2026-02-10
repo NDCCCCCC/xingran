@@ -173,12 +173,13 @@ const WorkOrderCategoryPage: FC = () => {
         <Tree
           showLine
           switcherIcon={<FolderOutlined />}
-          treeData={treeData}
+          treeData={treeData as unknown as (import('antd/es/tree').DataNode)[]}
           defaultExpandAll
           titleRender={(node: unknown) => {
+            const treeNode = node as { title?: React.ReactNode; data?: WorkOrderCategory };
             return (
               <div className="flex items-center justify-between w-full pr-4">
-                {node.title}
+                {treeNode.title}
                 <Space size="small">
                   <Button
                     type="link"
@@ -186,7 +187,7 @@ const WorkOrderCategoryPage: FC = () => {
                     icon={<PlusOutlined />}
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleAdd(node.data.id);
+                      handleAdd(treeNode.data?.id || '');
                     }}
                   >
                     新增子分类
@@ -197,7 +198,7 @@ const WorkOrderCategoryPage: FC = () => {
                     icon={<EditOutlined />}
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleEdit(node.data);
+                      handleEdit(treeNode.data);
                     }}
                   >
                     编辑
@@ -206,7 +207,7 @@ const WorkOrderCategoryPage: FC = () => {
                     title="确定要删除吗？"
                     onConfirm={(e) => {
                       e?.stopPropagation();
-                      handleDelete(node.data.id);
+                      handleDelete(treeNode.data?.id || '');
                     }}
                     okText="确定"
                     cancelText="取消"

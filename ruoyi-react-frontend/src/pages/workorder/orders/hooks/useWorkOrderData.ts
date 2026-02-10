@@ -81,21 +81,21 @@ export function useWorkOrderData(
   const [categories, setCategories] = useState<WorkOrderCategory[]>([]);
 
   // 获取列表数据
-  const fetchList = useCallback(async (page?: number, pageSize?: number) => {
+  const fetchList = useCallback(async (page?: number, size?: number) => {
     setLoading(true);
     try {
-      const values = form.getFieldsValue();
+      const values = form.getFieldsValue() as Record<string, unknown>;
       const params: WorkOrderListParams = {
         current: page ?? current,
-        pageSize: pageSize ?? pageSize,
-        workOrderNo: values.workOrderNo,
-        title: values.title,
-        categoryId: values.categoryId,
-        type: values.type,
-        priority: values.priority,
-        status: values.status,
-        assigneeId: values.assigneeId,
-        deptId: values.deptId,
+        pageSize: size ?? pageSize,
+        workOrderNo: values.workOrderNo as string,
+        title: values.title as string,
+        categoryId: values.categoryId as string,
+        type: values.type as string,
+        priority: values.priority as number,
+        status: values.status as number,
+        assigneeId: values.assigneeId as string,
+        deptId: values.deptId as string,
       };
 
       const result = await getWorkOrderList(params);

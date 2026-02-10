@@ -21,9 +21,9 @@ export interface UseImageUploadReturn {
   imageUrl: string | undefined;
   handleUploadChange: (fileList: UploadFile[]) => void;
   handleUploadSuccess: (file: UploadFile, response: FileUploadResponse) => void;
-  handleUploadError: (file: UploadFile, error: Error) => void;
+  handleUploadError: (file: UploadFile, error: unknown) => void;
   resetUpload: () => void;
-  setInitialValue: (fileId: string, fileUrl: string) => void;
+  setInitialValue: (fileId: string, fileUrl?: string) => void;
 }
 
 const DEFAULT_MAX_SIZE = 5 * 1024 * 1024;
@@ -57,10 +57,10 @@ export function useImageUpload(options: UseImageUploadOptions = {}): UseImageUpl
     onSuccess?.(response.id, `/uploads/${response.storagePath || ''}`);
   }, [onSuccess]);
 
-  const handleUploadError = useCallback((file: UploadFile, error: Error) => {
+  const handleUploadError = useCallback((_file: UploadFile, error: unknown) => {
     setUploading(false);
     message.error('图片上传失败');
-    onError?.(error);
+    onError?.(error instanceof Error ? error : new Error(String(error)));
   }, [onError]);
 
   const resetUpload = useCallback(() => {

@@ -327,7 +327,7 @@ export function disableADUser(id: string, configId: string): Promise<BaseRespons
 // ==================== 同步日志 API ====================
 
 export function getADSyncLogs(
-  configId: string,
+  configId: string | undefined,
   params: { current?: number; pageSize?: number } = {}
 ): Promise<BaseResponse<PageResponse<ADSyncLog>>> {
   return post('/ad-domain/logs/list', {

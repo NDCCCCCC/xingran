@@ -177,8 +177,8 @@ export class RouteConfigManager {
           map.set(`/${normalized}`, pathInfo);
         }
 
-        if (menu.children?.length > 0) {
-          traverse(menu.children, fullPath, level + 1);
+        if ((menu.children?.length ?? 0) > 0) {
+          traverse(menu.children ?? [], fullPath, level + 1);
         }
       }
     };

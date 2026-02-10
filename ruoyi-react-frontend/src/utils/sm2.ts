@@ -8,13 +8,15 @@
 
 import { hexToBase64, bytesToHex } from './encoding';
 
-// SM2 模块接口定义
+// SM2 模块接口定义（与 sm-crypto 实际签名匹配）
 interface SM2Module {
-	doEncrypt: (msg: string, publicKey: string, cipherMode?: 1 | 0) => string;
-	doDecrypt: (encryptData: string, privateKey: string, cipherMode?: 1 | 0) => string;
-	doSignature: (msg: string, privateKey: string, cipherMode?: 1 | 0) => string;
-	doVerifySignature: (msg: string, signHex: string, publicKey: string, cipherMode?: 1 | 0) => boolean;
+	doEncrypt: (msg: string, publicKey: string, cipherMode: 0 | 1) => string;
+	doDecrypt: (encryptData: string, privateKey: string, cipherMode: 0 | 1) => string;
+	doSignature: (msg: string, privateKey: string, hash?: boolean) => string;
+	doVerifySignature: (msg: string, signHex: string, publicKey: string, hash?: boolean) => boolean;
 	generateKeyPairHex: () => { publicKey: string; privateKey: string };
+	verifyPublicKey: (publicKey: string) => boolean;
+	comparePublicKeyHex: (publicKey1: string, publicKey2: string) => number;
 }
 
 // SM2 公钥缓存（十六进制格式）
@@ -31,7 +33,7 @@ async function getSM2(): Promise<SM2Module> {
 
   try {
     const smCrypto = await import('sm-crypto');
-    sm2Module = smCrypto.sm2;
+    sm2Module = smCrypto.sm2 as SM2Module;
     return sm2Module;
   } catch (error) {
     console.error('[SM2] 加载 sm-crypto 失败:', error);

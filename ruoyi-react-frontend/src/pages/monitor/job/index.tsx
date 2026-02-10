@@ -54,8 +54,8 @@ const JobManager: FC = () => {
     fetchJobLogs,
   } = useJobData({
     searchForm,
-    current: paginationProps.current,
-    pageSize: paginationProps.pageSize,
+    current: paginationProps.current ?? 1,
+    pageSize: paginationProps.pageSize ?? 10,
   });
 
   // 使用操作管理 Hook
@@ -108,9 +108,9 @@ const JobManager: FC = () => {
   };
 
   // 分页变化
-  const handleTableChange = (pagination: { current: number; pageSize: number }) => {
-    setCurrent(pagination.current);
-    setPageSize(pagination.pageSize);
+  const handleTableChange = (pagination: { current?: number; pageSize?: number }) => {
+    setCurrent(pagination.current ?? 1);
+    setPageSize(pagination.pageSize ?? 10);
     fetchJobs();
   };
 
@@ -178,8 +178,8 @@ const JobManager: FC = () => {
           loading={loading}
           pagination={paginationProps}
           onChange={(pagination) => {
-            setCurrent(pagination.current);
-            setPageSize(pagination.pageSize);
+            setCurrent(pagination.current ?? 1);
+            setPageSize(pagination.pageSize ?? 10);
             fetchJobs();
           }}
           scroll={{ x: 1500 }}

@@ -131,7 +131,7 @@ const ADComputerPage: FC = () => {
     try {
       const res = await getADComputerDetail(selectedConfig, computer.distinguishedName);
       if (res.code === 0) {
-        setSelectedComputer(res.data);
+        setSelectedComputer(res.data ?? null);
         setDetailModalVisible(true);
       }
     } catch (error) {

@@ -20,7 +20,7 @@ import {
 import { useArticleData } from './hooks';
 import { getArticleColumns } from './columns';
 import { EditModal, PreviewModal } from './modals';
-import { KnowledgeArticleStatus } from '@/lib/knowledgeApi';
+import { KnowledgeArticleStatus, type KnowledgeArticle } from '@/lib/knowledgeApi';
 import { message } from 'antd';
 import { usePagination } from '@/hooks/usePagination';
 import { isFormValidationError } from '@/utils/errorHandler';
@@ -55,13 +55,13 @@ const KnowledgeArticlePage: FC = () => {
     handlePublish,
     handleSave,
   } = useArticleData({
-    current: paginationProps.current,
-    pageSize: paginationProps.pageSize,
+    current: paginationProps.current ?? 1,
+    pageSize: paginationProps.pageSize ?? 10,
   });
 
   // 初始化加载
   useEffect(() => {
-    fetchList(paginationProps.current, paginationProps.pageSize);
+    fetchList(paginationProps.current ?? 1, paginationProps.pageSize ?? 10);
     fetchCategories();
     fetchTags();
   }, [paginationProps.current, paginationProps.pageSize]);
@@ -89,14 +89,14 @@ const KnowledgeArticlePage: FC = () => {
     handlePublish,
     handleLike,
     handleDelete,
-    current: paginationProps.current,
-    pageSize: paginationProps.pageSize,
+    current: paginationProps.current ?? 1,
+    pageSize: paginationProps.pageSize ?? 10,
   });
 
   // 搜索
   const handleSearch = () => {
     setCurrent(1);
-    fetchList(1, paginationProps.pageSize);
+    fetchList(1, paginationProps.pageSize ?? 10);
   };
 
   // 重置
@@ -129,10 +129,12 @@ const KnowledgeArticlePage: FC = () => {
   };
 
   // 表格分页变化
-  const handleTableChange = (pagination: { current: number; pageSize: number }) => {
-    setCurrent(pagination.current);
-    setPageSize(pagination.pageSize);
-    fetchList(pagination.current, pagination.pageSize);
+  const handleTableChange = (pagination: { current?: number; pageSize?: number }) => {
+    const current = pagination.current ?? 1;
+    const pageSize = pagination.pageSize ?? 10;
+    setCurrent(current);
+    setPageSize(pageSize);
+    fetchList(current, pageSize);
   };
 
   return (

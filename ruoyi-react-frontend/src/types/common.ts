@@ -3,7 +3,14 @@
  * 用于支持 TypeScript 严格模式迁移
  */
 
-import type { FormInstance, FormFieldError } from 'antd';
+import type { FormInstance } from 'antd';
+
+// FormFieldError 类型定义（Ant Design 6 已移除此导出）
+export interface FormFieldError {
+  name: (string | number)[];
+  errors: string[];
+  warnings?: string[];
+}
 
 // ==================== 表单类型 ====================
 

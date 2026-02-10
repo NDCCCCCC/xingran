@@ -14,7 +14,7 @@ import { clearPublicKeyCache } from './sm2';
 // ============================================================================
 
 export { isFormValidationError } from '@/types/common';
-export type { FormFieldError } from 'antd';
+export type { FormFieldError } from '@/types/common';
 
 // 自定义错误类型，带有额外属性
 interface EnhancedError extends Error {

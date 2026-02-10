@@ -79,7 +79,8 @@ export function useTemplateActions(params: UseTemplateActionsParams): UseTemplat
       message.success('删除成功');
       onLoad();
     } catch (error: unknown) {
-      message.error(error.message || '删除失败');
+      const err = error instanceof Error ? error.message : '删除失败';
+      message.error(err);
     }
   }, [onLoad]);
 
@@ -95,7 +96,8 @@ export function useTemplateActions(params: UseTemplateActionsParams): UseTemplat
       }
       onLoad();
     } catch (error: unknown) {
-      message.error(error.message || '操作失败');
+      const err = error instanceof Error ? error.message : '操作失败';
+      message.error(err);
     }
   }, [onLoad]);
 
@@ -106,14 +108,26 @@ export function useTemplateActions(params: UseTemplateActionsParams): UseTemplat
       message.success('工单生成成功');
       onLoad();
     } catch (error: unknown) {
-      message.error(error.message || '生成失败');
+      const err = error instanceof Error ? error.message : '生成失败';
+      message.error(err);
     }
   }, [onLoad]);
 
   // 保存
   const handleSave = useCallback(async (editForm: FormInstance<unknown>) => {
     try {
-      const values = await editForm.validateFields();
+      const values = await editForm.validateFields() as {
+        templateName: string;
+        workOrderTitle: string;
+        description?: string;
+        categoryId: string;
+        type: string;
+        priority: number;
+        cronExpression: string;
+        assignType: string;
+        assignTargetId: string;
+        notifyAssignee: boolean;
+      };
 
       if (editingRecord) {
         const updateData: UpdatePeriodicTemplateRequest = {
@@ -149,7 +163,7 @@ export function useTemplateActions(params: UseTemplateActionsParams): UseTemplat
       setEditingRecord(null);
       onLoad();
     } catch (error: unknown) {
-      if (error.errorFields) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
         return;
       }
       message.error(editingRecord ? '更新失败' : '创建失败');

@@ -275,7 +275,7 @@ const CacheManager: FC = () => {
 
   const handleExport = useCallback(async () => {
     try {
-      const result = await post<BaseResponse<unknown>>('/monitor/cache/export', {
+      const result = await post<BaseResponse<unknown[]>>('/monitor/cache/export', {
         ...searchForm
       });
 
@@ -531,8 +531,8 @@ const CacheManager: FC = () => {
                 loading={loading}
                 pagination={paginationProps}
                 onChange={(pagination) => {
-                  setCurrent(pagination.current);
-                  setPageSize(pagination.pageSize);
+                  setCurrent(pagination.current ?? 1);
+                  setPageSize(pagination.pageSize ?? 10);
                   fetchCaches();
                 }}
               />

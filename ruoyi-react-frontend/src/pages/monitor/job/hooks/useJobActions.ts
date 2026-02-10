@@ -6,7 +6,7 @@
 import { useState, useCallback } from 'react';
 import { message } from 'antd';
 import type { FormInstance } from 'antd/es/form';
-import type { JobInfo } from '../types';
+import type { JobInfo, SearchFormState } from '../types';
 import { post, put, del, postLongRequest } from '@/lib/api';
 
 export interface UseJobActionsParams {
@@ -36,7 +36,7 @@ export interface UseJobActionsReturn {
   handleToggleStatus: (record: JobInfo) => Promise<void>;
   handleExecute: (record: JobInfo) => Promise<void>;
   handleViewLogs: (record: JobInfo) => void;
-  handleReset: (setSearchForm: React.Dispatch<React.SetStateAction<Record<string, unknown> | null>>, setCurrent: React.Dispatch<React.SetStateAction<number>>, fetchJobs: (params?: Record<string, unknown>) => void) => void;
+  handleReset: (setSearchForm: React.Dispatch<React.SetStateAction<SearchFormState>>, setCurrent: (page: number) => void, fetchJobs: () => Promise<void>) => void;
 }
 
 export function useJobActions(params: UseJobActionsParams): UseJobActionsReturn {
@@ -80,7 +80,7 @@ export function useJobActions(params: UseJobActionsParams): UseJobActionsReturn 
   // 提交表单
   const handleSubmit = useCallback(async (form: FormInstance<unknown>) => {
     try {
-      const values = await form.validateFields();
+      const values = await form.validateFields() as { id?: string } & Record<string, unknown>;
 
       if (isEdit) {
         await put(`/monitor/jobs/${values.id}`, values);
@@ -144,9 +144,9 @@ export function useJobActions(params: UseJobActionsParams): UseJobActionsReturn 
 
   // 重置
   const handleReset = useCallback((
-    setSearchForm: React.Dispatch<React.SetStateAction<Record<string, unknown> | null>>,
-    setCurrent: React.Dispatch<React.SetStateAction<number>>,
-    fetchJobs: (params?: Record<string, unknown>) => void
+    setSearchForm: React.Dispatch<React.SetStateAction<SearchFormState>>,
+    setCurrent: (page: number) => void,
+    fetchJobs: () => Promise<void>
   ) => {
     setSearchForm({
       jobName: '',
@@ -154,11 +154,7 @@ export function useJobActions(params: UseJobActionsParams): UseJobActionsReturn 
       status: undefined
     });
     setCurrent(1);
-    fetchJobs({
-      jobName: '',
-      jobGroup: '',
-      status: undefined
-    });
+    fetchJobs();
   }, []);
 
   return {

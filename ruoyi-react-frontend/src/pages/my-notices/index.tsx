@@ -261,8 +261,8 @@ const MyNoticesPage: FC = () => {
           rowKey="id"
           pagination={paginationProps}
           onChange={(pagination) => {
-            setCurrent(pagination.current);
-            setPageSize(pagination.pageSize);
+            setCurrent(pagination.current ?? 1);
+            setPageSize(pagination.pageSize ?? 10);
             loadNotices();
           }}
           onRow={(record) => ({

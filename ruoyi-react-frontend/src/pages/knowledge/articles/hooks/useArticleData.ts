@@ -169,25 +169,19 @@ export function useArticleData(params: UseArticleDataParams): UseArticleDataRetu
   }, [fetchList]);
 
   const handleSave = useCallback(async (editingRecord: KnowledgeArticle | null, values: Record<string, unknown>) => {
+    const articleData = {
+      title: values.title as string,
+      content: values.content as string,
+      summary: values.summary as string | undefined,
+      categoryId: values.categoryId as string,
+      status: values.status as number | undefined,
+      tagIds: values.tagIds as string[] | undefined,
+    };
     if (editingRecord) {
-      await updateKnowledgeArticle(editingRecord.id, {
-        title: values.title,
-        content: values.content,
-        summary: values.summary,
-        categoryId: values.categoryId,
-        status: values.status,
-        tagIds: values.tagIds,
-      });
+      await updateKnowledgeArticle(editingRecord.id, articleData);
       message.success('更新成功');
     } else {
-      await createKnowledgeArticle({
-        title: values.title,
-        content: values.content,
-        summary: values.summary,
-        categoryId: values.categoryId,
-        status: values.status,
-        tagIds: values.tagIds,
-      });
+      await createKnowledgeArticle(articleData);
       message.success('创建成功');
     }
     fetchList();

@@ -6,7 +6,25 @@
 
 import { useEffect, useCallback, useRef } from 'react';
 import { useDashboardStore } from '@/store/dashboardStore';
-import type { WidgetConfig, WebSocketDataSourceConfig } from '@/types/dashboard';
+import type { WidgetConfig, WebSocketDataSourceConfig, DataSourceConfig } from '@/types/dashboard';
+
+// 类型守卫：检查 dataSource 是否有直接的 type 属性
+function hasDataSourceType(ds: DataSourceConfig): ds is WebSocketDataSourceConfig {
+	return 'type' in ds && (ds as { type: string }).type === 'websocket';
+}
+
+// 类型守卫：检查是否为 WebSocket 数据源
+function isWebSocketDataSource(ds: DataSourceConfig): ds is WebSocketDataSourceConfig {
+	if ('type' in ds) {
+		const typed = ds as { type: string };
+		return typed.type === 'websocket';
+	}
+	// 检查包装格式 { websocket: WebSocketDataSourceConfig }
+	if ('websocket' in ds) {
+		return true;
+	}
+	return false;
+}
 
 interface UseRealtimeUpdatesOptions {
 	/** 是否启用 */
@@ -55,9 +73,8 @@ export function useRealtimeUpdates(
 
 				// 订阅所有WebSocket数据源的Widget
 				widgets.forEach((widget) => {
-					if (widget.dataSource.type === 'websocket') {
-						const wsConfig = widget.dataSource as WebSocketDataSourceConfig;
-						const channel = wsConfig.channel;
+					if (isWebSocketDataSource(widget.dataSource)) {
+						const channel = widget.dataSource.channel;
 						if (!subscribedChannelsRef.current.has(channel)) {
 							ws.send(JSON.stringify({
 								action: 'subscribe',
@@ -128,9 +145,8 @@ export function useRealtimeUpdates(
 	const refreshSubscriptions = useCallback(() => {
 		if (wsRef.current?.readyState === WebSocket.OPEN) {
 			widgets.forEach((widget) => {
-				if (widget.dataSource.type === 'websocket') {
-					const wsConfig = widget.dataSource as WebSocketDataSourceConfig;
-					const channel = wsConfig.channel;
+				if (isWebSocketDataSource(widget.dataSource)) {
+					const channel = widget.dataSource.channel;
 					wsRef.current?.send(JSON.stringify({
 						action: 'subscribe',
 						channel,
@@ -148,7 +164,7 @@ export function useRealtimeUpdates(
 		}
 
 		// 过滤出需要WebSocket的Widget
-		const wsWidgets = widgets.filter(w => w.dataSource.type === 'websocket');
+		const wsWidgets = widgets.filter(w => isWebSocketDataSource(w.dataSource));
 
 		if (wsWidgets.length === 0) {
 			return;

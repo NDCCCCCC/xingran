@@ -352,8 +352,8 @@ const ServerMonitor: FC = () => {
           loading={loading}
           pagination={paginationProps}
           onChange={(pagination) => {
-            setCurrent(pagination.current);
-            setPageSize(pagination.pageSize);
+            setCurrent(pagination.current ?? 1);
+            setPageSize(pagination.pageSize ?? 10);
             fetchServers();
           }}
         />

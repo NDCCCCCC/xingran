@@ -4,11 +4,16 @@
  */
 
 import * as Icons from '@ant-design/icons';
-import type { ComponentType } from '@ant-design/icons';
+import type { ComponentType } from 'react';
 
 // 动态图标访问的类型定义
 type IconName = keyof typeof Icons;
 type IconComponentMap = Record<string, ComponentType<unknown>>;
+
+// 过滤掉非组件的导出（如 createFromIconfontCN）
+const iconComponentKeys = Object.keys(Icons).filter(
+  key => typeof (Icons as Record<string, unknown>)[key] === 'function' || key !== 'createFromIconfontCN'
+);
 
 // ========================================
 // 图标分类（用于图标选择器）
@@ -232,13 +237,17 @@ export const fullIconNameMap: Record<string, string> = {
 export function getIconComponent(iconName?: string | null): React.ReactNode {
   if (!iconName) return undefined;
 
-  // 获取所有导出的图标
-  const iconKeys = Object.keys(Icons);
+  // 获取所有导出的图标组件（过滤掉工具函数）
+  const iconKeys = Object.keys(Icons).filter(
+    key => key !== 'createFromIconfontCN' && key !== 'default'
+  );
 
   // 尝试直接匹配
   if (iconKeys.includes(iconName)) {
-    const IconComponent = (Icons as IconComponentMap)[iconName as IconName];
-    return <IconComponent />;
+    const IconComponent = (Icons as unknown as IconComponentMap)[iconName];
+    if (IconComponent) {
+      return <IconComponent />;
+    }
   }
 
   // 尝试通过 fullIconNameMap 映射
@@ -248,8 +257,10 @@ export function getIconComponent(iconName?: string | null): React.ReactNode {
     for (const key of iconKeys) {
       if (key.toLowerCase().includes(mappedName.toLowerCase()) ||
           key.toLowerCase() === mappedName + 'outlined') {
-        const IconComponent = (Icons as IconComponentMap)[key as IconName];
-        return <IconComponent />;
+        const IconComponent = (Icons as unknown as IconComponentMap)[key];
+        if (IconComponent) {
+          return <IconComponent />;
+        }
       }
     }
   }
