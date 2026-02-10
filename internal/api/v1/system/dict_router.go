@@ -9,12 +9,7 @@ import (
 // SetupDictRouter 设置字典路由
 func SetupDictRouter(r *gin.RouterGroup, core *core.Core) {
 	// 创建缓存提供者适配器
-	var cacheProvider systemServices.CacheProvider
-	if core.DataCacheService != nil {
-		cacheProvider = NewDataCacheAdapter(core.DataCacheService, core.Cache)
-	} else {
-		cacheProvider = &systemServices.NoOpCacheProvider{}
-	}
+	cacheProvider := systemServices.NewCacheProvider(core.DataCacheService)
 
 	// 创建带缓存的字典类型服务
 	var dictTypeService systemServices.DictTypeService

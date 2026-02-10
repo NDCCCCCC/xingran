@@ -51,11 +51,13 @@ type Core struct {
 	CacheManager       *system.CacheManager         // 缓存管理器（增强功能）
 
 	// System 模块服务（用于缓存预热）
-	UserService  system.UserService
-	RoleService  system.RoleService
-	MenuService  system.MenuService
-	DeptService system.DepartmentService
-	PostService  system.PostService
+	UserService     system.UserService
+	RoleService     system.RoleService
+	MenuService     system.MenuService
+	DeptService    system.DepartmentService
+	PostService    system.PostService
+	ConfigService  system.ConfigService
+	SettingsService system.SettingsService
 
 	// API端点元数据服务
 	APIMetadata        *config.APIMetadataConfig    // API元数据配置
@@ -466,51 +468,19 @@ func (c *Core) initAPIEndpointService() error {
 func (c *Core) initSystemServicesForWarmUp() {
 	db := c.GetDB()
 
-	// 创建缓存失效器适配器
-	cacheInvalidator := &systemCacheInvalidator{cache: c.Cache}
+	// 创建缓存提供者
+	cacheProvider := system.NewCacheProvider(c.DataCacheService)
 
-	// UserService 需要特殊的构造函数参数
-	c.UserService = system.NewUserService(db, c.PwdManager, cacheInvalidator)
-	c.RoleService = system.NewRoleService(db)
-	c.MenuService = system.NewMenuService(db)
-	c.DeptService = system.NewDepartmentService(db)
-	c.PostService = system.NewPostService(db)
+	// 统一创建带缓存的服务（与 Router 中的逻辑保持一致）
+	c.UserService = system.NewUserServiceWithCache(db, cacheProvider, c.CacheConfigService, c.PwdManager)
+	c.RoleService = system.NewRoleServiceWithCache(db, cacheProvider, c.CacheConfigService)
+	c.MenuService = system.NewMenuServiceWithCache(db, cacheProvider, c.CacheConfigService)
+	c.DeptService = system.NewDepartmentServiceWithCache(db, cacheProvider, c.CacheConfigService)
+	c.PostService = system.NewPostServiceWithCache(db, cacheProvider, c.CacheConfigService)
+	c.ConfigService = system.NewConfigServiceWithCache(db, cacheProvider, c.CacheConfigService)
+	c.SettingsService = system.NewSettingsServiceWithCache(db, cacheProvider, c.CacheConfigService)
 
 	applogger.Infof("System 服务初始化完成（用于缓存预热）")
-}
-
-// systemCacheInvalidator 适配器，让 Cache 实现 CacheInvalidator 接口
-type systemCacheInvalidator struct {
-	cache cache.Cache
-}
-
-// InvalidateUserCache 清除指定用户缓存
-func (s *systemCacheInvalidator) InvalidateUserCache(ctx context.Context, userID string) error {
-	return s.cache.Delete(ctx, "user:id:"+userID)
-}
-
-// InvalidateAllUserCache 清除所有用户缓存
-func (s *systemCacheInvalidator) InvalidateAllUserCache(ctx context.Context) error {
-	return s.invalidateByPattern(ctx, "user:*")
-}
-
-// InvalidateUserPostCache 清除用户岗位缓存
-func (s *systemCacheInvalidator) InvalidateUserPostCache(ctx context.Context, userID string) error {
-	return s.cache.Delete(ctx, "user:posts:"+userID)
-}
-
-// invalidateByPattern 根据模式删除缓存的辅助方法
-func (s *systemCacheInvalidator) invalidateByPattern(ctx context.Context, pattern string) error {
-	// 获取匹配的键
-	keys, err := s.cache.Keys(ctx, pattern)
-	if err != nil {
-		return fmt.Errorf("查询缓存键失败: %w", err)
-	}
-	// 批量删除
-	if len(keys) > 0 {
-		return s.cache.MDelete(ctx, keys...)
-	}
-	return nil
 }
 
 // performCacheWarmUp 执行缓存预热

@@ -9,12 +9,7 @@ import (
 // SetupMenuRouter 设置菜单路由
 func SetupMenuRouter(r *gin.RouterGroup, core *core.Core) {
 	// 创建缓存提供者适配器
-	var cacheProvider systemServices.CacheProvider
-	if core.DataCacheService != nil {
-		cacheProvider = NewDataCacheAdapter(core.DataCacheService, core.Cache)
-	} else {
-		cacheProvider = &systemServices.NoOpCacheProvider{}
-	}
+	cacheProvider := systemServices.NewCacheProvider(core.DataCacheService)
 
 	// 创建带缓存的菜单服务
 	var menuService systemServices.MenuService
@@ -48,12 +43,7 @@ func SetupMenuRouter(r *gin.RouterGroup, core *core.Core) {
 // 路径：/system/my-menus/*
 func SetupUserMenuRouter(r *gin.RouterGroup, core *core.Core) {
 	// 创建缓存提供者适配器
-	var cacheProvider systemServices.CacheProvider
-	if core.DataCacheService != nil {
-		cacheProvider = NewDataCacheAdapter(core.DataCacheService, core.Cache)
-	} else {
-		cacheProvider = &systemServices.NoOpCacheProvider{}
-	}
+	cacheProvider := systemServices.NewCacheProvider(core.DataCacheService)
 
 	// 创建带缓存的菜单服务
 	var menuService systemServices.MenuService

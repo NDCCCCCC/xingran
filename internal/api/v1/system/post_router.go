@@ -9,12 +9,7 @@ import (
 // SetupPostRouter 设置岗位路由
 func SetupPostRouter(r *gin.RouterGroup, core *core.Core) {
 	// 创建缓存提供者适配器
-	var cacheProvider systemServices.CacheProvider
-	if core.DataCacheService != nil {
-		cacheProvider = NewDataCacheAdapter(core.DataCacheService, core.Cache)
-	} else {
-		cacheProvider = &systemServices.NoOpCacheProvider{}
-	}
+	cacheProvider := systemServices.NewCacheProvider(core.DataCacheService)
 
 	// 创建带缓存的岗位服务
 	var postService systemServices.PostService
