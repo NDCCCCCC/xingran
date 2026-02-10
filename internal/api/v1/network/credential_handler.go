@@ -1,13 +1,12 @@
 package network
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 )
 
 // CredentialHandler 授权凭证处理器
@@ -50,7 +49,7 @@ func (h *CredentialHandler) List(c *gin.Context) {
 
 	credentials, total, err := h.credentialService.List(c.Request.Context(), &req)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, apperrors.InternalServerError(err))
 		return
 	}
 
@@ -75,13 +74,13 @@ func (h *CredentialHandler) List(c *gin.Context) {
 func (h *CredentialHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "凭证ID不能为空")
+		response.Error(c, apperrors.ParamMissing("凭证ID"))
 		return
 	}
 
 	credential, err := h.credentialService.GetByID(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, apperrors.InternalServerError(err))
 		return
 	}
 
@@ -127,7 +126,7 @@ func (h *CredentialHandler) Create(c *gin.Context) {
 func (h *CredentialHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "凭证ID不能为空")
+		response.Error(c, apperrors.ParamMissing("凭证ID"))
 		return
 	}
 
@@ -161,7 +160,7 @@ func (h *CredentialHandler) Update(c *gin.Context) {
 func (h *CredentialHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "凭证ID不能为空")
+		response.Error(c, apperrors.ParamMissing("凭证ID"))
 		return
 	}
 
@@ -213,7 +212,7 @@ func (h *CredentialHandler) BatchDelete(c *gin.Context) {
 func (h *CredentialHandler) SetDefault(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "凭证ID不能为空")
+		response.Error(c, apperrors.ParamMissing("凭证ID"))
 		return
 	}
 
@@ -238,7 +237,7 @@ func (h *CredentialHandler) SetDefault(c *gin.Context) {
 func (h *CredentialHandler) GetDevicesByCredential(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "凭证ID不能为空")
+		response.Error(c, apperrors.ParamMissing("凭证ID"))
 		return
 	}
 

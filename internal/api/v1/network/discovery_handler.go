@@ -1,12 +1,11 @@
 package network
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 )
 
 // DiscoveryHandler 设备发现处理器
@@ -39,7 +38,7 @@ func (h *DiscoveryHandler) List(c *gin.Context) {
 
 	tasks, total, err := h.discoveryService.GetDiscoveryList(c.Request.Context(), current, pageSize)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, apperrors.InternalServerError(err))
 		return
 	}
 
@@ -96,13 +95,13 @@ func (h *DiscoveryHandler) Create(c *gin.Context) {
 func (h *DiscoveryHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "任务ID不能为空")
+		response.Error(c, apperrors.ParamMissing("任务ID"))
 		return
 	}
 
 	task, err := h.discoveryService.GetDiscoveryByID(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusNotFound, err.Error())
+		response.Error(c, apperrors.NotFound(err.Error()))
 		return
 	}
 
@@ -121,13 +120,13 @@ func (h *DiscoveryHandler) GetByID(c *gin.Context) {
 func (h *DiscoveryHandler) GetResults(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "任务ID不能为空")
+		response.Error(c, apperrors.ParamMissing("任务ID"))
 		return
 	}
 
 	devices, err := h.discoveryService.GetDiscoveryResults(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, apperrors.InternalServerError(err))
 		return
 	}
 
@@ -146,7 +145,7 @@ func (h *DiscoveryHandler) GetResults(c *gin.Context) {
 func (h *DiscoveryHandler) Execute(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "任务ID不能为空")
+		response.Error(c, apperrors.ParamMissing("任务ID"))
 		return
 	}
 
@@ -170,7 +169,7 @@ func (h *DiscoveryHandler) Execute(c *gin.Context) {
 func (h *DiscoveryHandler) Cancel(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "任务ID不能为空")
+		response.Error(c, apperrors.ParamMissing("任务ID"))
 		return
 	}
 
@@ -194,7 +193,7 @@ func (h *DiscoveryHandler) Cancel(c *gin.Context) {
 func (h *DiscoveryHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "任务ID不能为空")
+		response.Error(c, apperrors.ParamMissing("任务ID"))
 		return
 	}
 
@@ -246,14 +245,14 @@ func (h *DiscoveryHandler) BatchDelete(c *gin.Context) {
 func (h *DiscoveryHandler) ImportDevices(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "任务ID不能为空")
+		response.Error(c, apperrors.ParamMissing("任务ID"))
 		return
 	}
 
 	userID, _ := c.Get("user_id")
 	count, err := h.discoveryService.ImportDiscoveredDevices(c.Request.Context(), id, nil, userID.(string))
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, apperrors.InternalServerError(err))
 		return
 	}
 

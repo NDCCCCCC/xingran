@@ -24,7 +24,7 @@ func NewSettingsHandler(service systemServices.SettingsService) *SettingsHandler
 // @Tags 系统设置
 // @Accept json
 // @Produce json
-// @Success 200 {object} response.Response{data=systemServices.UserPreferences}
+// @Success 200 {object} response.Response{data=object{theme=string,themeStyle=string,layoutType=string,layoutDensity=string,sidebarWidth=int,sidebarCollapsedWidth=int,sidebarCollapsed=bool,pageSize=int,customPrimaryColor=string,customSidebarColor=string,language=string}}
 // @Failure 401 {object} response.Response
 // @Failure 500 {object} response.Response
 // @Router /system/settings/preferences [get]
@@ -50,7 +50,7 @@ func (h *SettingsHandler) GetUserPreferences(c *gin.Context) {
 // @Tags 系统设置
 // @Accept json
 // @Produce json
-// @Param request body systemServices.UserPreferences true "用户设置"
+// @Param request body object{theme=string,themeStyle=string,layoutType=string,layoutDensity=string,sidebarWidth=int,sidebarCollapsedWidth=int,sidebarCollapsed=bool,pageSize=int,customPrimaryColor=string,customSidebarColor=string,language=string} true "用户设置"
 // @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
 // @Failure 401 {object} response.Response
@@ -65,7 +65,7 @@ func (h *SettingsHandler) UpdateUserPreferences(c *gin.Context) {
 
 	var req systemServices.UserPreferences
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 

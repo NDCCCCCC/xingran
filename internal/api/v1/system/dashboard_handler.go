@@ -14,15 +14,6 @@ var (
 	ErrUnauthorized = errors.New("unauthorized")
 )
 
-// 常量定义
-const (
-	ErrMsgUnauthorized      = "未授权"
-	ErrMsgDashboardNotFound = "仪表盘不存在"
-	ErrMsgPermissionDenied  = "权限不足"
-	ErrMsgInvalidParams     = "请求参数错误"
-	ErrMsgIDRequired        = "ID不能为空"
-)
-
 // UserContext 用户上下文信息
 type UserContext struct {
 	UserID     string
@@ -65,7 +56,7 @@ func (h *DashboardHandler) getUserContext(c *gin.Context) (*UserContext, error) 
 func (h *DashboardHandler) requireUserContext(c *gin.Context) (*UserContext, bool) {
 	ctx, err := h.getUserContext(c)
 	if err != nil {
-		response.Error(c, http.StatusUnauthorized, ErrMsgUnauthorized)
+		response.Error(c, apperrors.Unauthorized())
 		return nil, false
 	}
 	return ctx, true
@@ -77,14 +68,8 @@ func (h *DashboardHandler) handleServiceError(c *gin.Context, err error) bool {
 		return false
 	}
 
-	switch {
-	case errors.Is(err, systemServices.ErrDashboardNotFound):
-		response.Error(c, http.StatusNotFound, ErrMsgDashboardNotFound)
-	case errors.Is(err, systemServices.ErrPermissionDenied):
-		response.Error(c, http.StatusForbidden, ErrMsgPermissionDenied)
-	default:
-		response.Error(c, err)
-	}
+	// 直接返回apperror，因为服务层已经使用了统一错误处理
+	response.Error(c, err)
 	return true
 }
 
@@ -92,7 +77,7 @@ func (h *DashboardHandler) handleServiceError(c *gin.Context, err error) bool {
 func (h *DashboardHandler) requireID(c *gin.Context) (string, bool) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, ErrMsgIDRequired)
+		response.Error(c, apperrors.ParamMissing("ID"))
 		return "", false
 	}
 	return id, true
@@ -121,7 +106,7 @@ func (h *DashboardHandler) GetDefault(c *gin.Context) {
 		userCtx.DataScope,
 	)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "获取默认仪表盘失败")
+		response.Error(c, apperrors.InternalServerErrorWithMsg("获取默认仪表盘失败"))
 		return
 	}
 
@@ -139,13 +124,13 @@ func (h *DashboardHandler) GetDefault(c *gin.Context) {
 // @Tags 仪表盘管理
 // @Accept json
 // @Produce json
-// @Param request body systemServices.DashboardListParams true "查询条件"
-// @Success 200 {object} response.Response{data=systemServices.DashboardListResponse}
+// @Param request body object{current=int,pageSize=int,keyword=string,isTemplate=bool,status=int} true "查询条件"
+// @Success 200 {object} response.Response{data=object{list=[]object,total=int,current=int,pageSize=int}}
 // @Router /system/dashboards/list [post]
 func (h *DashboardHandler) List(c *gin.Context) {
 	var req systemServices.DashboardListParams
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, ErrMsgInvalidParams+": "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
@@ -186,7 +171,7 @@ func (h *DashboardHandler) GetByID(c *gin.Context) {
 
 	dashboard, err := h.service.GetDashboard(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusNotFound, ErrMsgDashboardNotFound)
+		response.Error(c, apperrors.DashboardNotFound())
 		return
 	}
 
@@ -199,7 +184,7 @@ func (h *DashboardHandler) GetByID(c *gin.Context) {
 // @Tags 仪表盘管理
 // @Accept json
 // @Produce json
-// @Param request body systemServices.CreateDashboardRequest true "仪表盘信息"
+// @Param request body object{name=string,description=string,layout=object,refreshInterval=int,isTemplate=bool,templateScope=string,scope=string,deptId=string,isSystem=bool} true "仪表盘信息"
 // @Success 200 {object} response.Response
 // @Router /system/dashboards [post]
 func (h *DashboardHandler) Create(c *gin.Context) {
@@ -210,7 +195,7 @@ func (h *DashboardHandler) Create(c *gin.Context) {
 
 	var req systemServices.CreateDashboardRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, ErrMsgInvalidParams+": "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
@@ -237,7 +222,7 @@ func (h *DashboardHandler) Create(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "仪表盘ID"
-// @Param request body systemServices.UpdateDashboardRequest true "仪表盘信息"
+// @Param request body object{name=string,description=string,layout=object,refreshInterval=int,status=int} true "仪表盘信息"
 // @Success 200 {object} response.Response
 // @Router /system/dashboards/:id/update [post]
 func (h *DashboardHandler) Update(c *gin.Context) {
@@ -253,7 +238,7 @@ func (h *DashboardHandler) Update(c *gin.Context) {
 
 	var req systemServices.UpdateDashboardRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, ErrMsgInvalidParams+": "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
@@ -406,7 +391,7 @@ func (h *DashboardHandler) CreateFromTemplate(c *gin.Context) {
 		Name string `json:"name" binding:"required,min=1,max=100"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, ErrMsgInvalidParams+": "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
@@ -499,7 +484,7 @@ func (h *DashboardHandler) RestoreVersion(c *gin.Context) {
 	dashboardID := c.Param("id")
 	versionID := c.Param("versionId")
 	if dashboardID == "" || versionID == "" {
-		response.Error(c, http.StatusBadRequest, "仪表盘ID和版本ID不能为空")
+		response.Error(c, apperrors.ParamMissing("仪表盘ID和版本ID"))
 		return
 	}
 
@@ -557,7 +542,7 @@ func (h *DashboardHandler) Import(c *gin.Context) {
 		Config string `json:"config" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, ErrMsgInvalidParams+": "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
@@ -585,7 +570,7 @@ func (h *DashboardHandler) Import(c *gin.Context) {
 func (h *DashboardHandler) GetWidgetData(c *gin.Context) {
 	widgetID := c.Param("id")
 	if widgetID == "" {
-		response.Error(c, http.StatusBadRequest, "Widget ID不能为空")
+		response.Error(c, apperrors.ParamMissing("Widget ID"))
 		return
 	}
 
@@ -618,7 +603,7 @@ func (h *DashboardHandler) GetBatchWidgetData(c *gin.Context) {
 		WidgetIds []string `json:"widgetIds" binding:"required,min=1"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, ErrMsgInvalidParams+": "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
@@ -674,13 +659,13 @@ func (h *DashboardHandler) ValidateEndpoint(c *gin.Context) {
 	method := c.Query("method")
 
 	if route == "" || method == "" {
-		response.Error(c, http.StatusBadRequest, "端点路径和请求方法不能为空")
+		response.Error(c, apperrors.ParamMissing("端点路径和请求方法"))
 		return
 	}
 
 	endpoint, err := h.service.ValidateEndpoint(route, method)
 	if err != nil {
-		response.Error(c, http.StatusNotFound, "端点不存在")
+		response.Error(c, apperrors.NotFound("端点不存在"))
 		return
 	}
 

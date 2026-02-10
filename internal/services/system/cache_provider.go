@@ -82,12 +82,13 @@ func setValue(dest interface{}, value interface{}) {
 
 // CacheStats 缓存统计信息
 type CacheStats struct {
-	Hits       int64         // 命中次数
-	Misses     int64         // 未命中次数
-	Count      int64         // 缓存项数量
-	MemorySize int64         // 内存占用（字节）
-	HitRate    float64       // 命中率
-	KeyCount   int           // 键数量
+	Hits        int64                  // 命中次数
+	Misses      int64                  // 未命中次数
+	Count       int64                  // 缓存项数量
+	MemorySize  int64                  // 内存占用（字节）
+	HitRate     float64                // 命中率
+	KeyCount    int                    // 键数量
+	ExtendedStats map[string]interface{} // 扩展统计（L2Writer、RetryWorker等）
 }
 
 // CacheEntry 缓存条目详情

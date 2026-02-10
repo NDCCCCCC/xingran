@@ -1,13 +1,12 @@
 package network
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"gorm.io/gorm"
 )
 
@@ -105,13 +104,13 @@ func (h *CommandHandler) QuickCommand(c *gin.Context) {
 func (h *CommandHandler) GetExecutionResult(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "执行ID不能为空")
+		response.Error(c, apperrors.ParamMissing("执行ID"))
 		return
 	}
 
 	result, err := h.commandService.GetExecutionResult(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, apperrors.InternalServerError(err))
 		return
 	}
 
@@ -138,7 +137,7 @@ func (h *CommandHandler) List(c *gin.Context) {
 
 	executions, total, err := h.commandService.GetExecutionList(c.Request.Context(), current, pageSize)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, apperrors.InternalServerError(err))
 		return
 	}
 
@@ -165,20 +164,20 @@ func (h *CommandHandler) List(c *gin.Context) {
 func (h *CommandHandler) GetDeviceExecutionDetail(c *gin.Context) {
 	executionID := c.Param("id")
 	if executionID == "" {
-		response.Error(c, http.StatusBadRequest, "执行ID不能为空")
+		response.Error(c, apperrors.ParamMissing("执行ID"))
 		return
 	}
 
 	deviceID := c.Param("deviceId")
 	if deviceID == "" {
-		response.Error(c, http.StatusBadRequest, "设备ID不能为空")
+		response.Error(c, apperrors.ParamMissing("设备ID"))
 		return
 	}
 
 	var detail models.ConfigExecutionDetail
 	if err := h.db.Where("execution_id = ? AND device_id = ?", executionID, deviceID).
 		First(&detail).Error; err != nil {
-		response.Error(c, http.StatusNotFound, "执行明细不存在")
+		response.Error(c, apperrors.NotFound("执行明细不存在"))
 		return
 	}
 

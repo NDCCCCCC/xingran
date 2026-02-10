@@ -1,13 +1,12 @@
 package operations
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 	opsServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 )
 
 type DedicatedLineHandler struct {
@@ -19,6 +18,16 @@ func NewDedicatedLineHandler(service opsServices.DedicatedLineService) *Dedicate
 }
 
 // Create 创建专线
+// @Summary 创建专线
+// @Description 创建新的专线信息
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param request body operations.OpsDedicatedLine true "专线信息"
+// @Success 200 {object} response.Response{data=operations.OpsDedicatedLine}
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/dedicatedLine [post]
 func (h *DedicatedLineHandler) Create(c *gin.Context) {
 	var line operations.OpsDedicatedLine
 	if !handleJSONBinding(c, &line) {
@@ -33,6 +42,16 @@ func (h *DedicatedLineHandler) Create(c *gin.Context) {
 }
 
 // List 查询专线列表（类型安全版本）
+// @Summary 查询专线列表
+// @Description 分页查询专线列表，支持按条件筛选
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param request body requests.DedicatedLineListRequest true "查询参数"
+// @Success 200 {object} response.Response{data=object{list=[]operations.OpsDedicatedLine,total=int}}
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/dedicatedLine/list [post]
 func (h *DedicatedLineHandler) List(c *gin.Context) {
 	var req requests.DedicatedLineListRequest
 	if !handleJSONBinding(c, &req) {
@@ -41,7 +60,7 @@ func (h *DedicatedLineHandler) List(c *gin.Context) {
 
 	result, err := h.service.List(c.Request.Context(), req)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "查询失败: "+err.Error())
+		response.Error(c, apperrors.InternalServerErrorWithMsg("查询失败"))
 		return
 	}
 
@@ -49,11 +68,21 @@ func (h *DedicatedLineHandler) List(c *gin.Context) {
 }
 
 // GetByID 获取专线详情
+// @Summary 获取专线详情
+// @Description 根据ID获取专线详细信息
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param id path string true "专线ID"
+// @Success 200 {object} response.Response{data=operations.OpsDedicatedLine}
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Router /ops/dedicatedLine/{id} [post]
 func (h *DedicatedLineHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
 	line, err := h.service.GetByID(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusNotFound, "专线不存在")
+		response.Error(c, apperrors.DedicatedLineNotFound())
 		return
 	}
 
@@ -61,6 +90,18 @@ func (h *DedicatedLineHandler) GetByID(c *gin.Context) {
 }
 
 // Update 更新专线
+// @Summary 更新专线
+// @Description 更新专线信息
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param id path string true "专线ID"
+// @Param request body operations.OpsDedicatedLine true "专线信息"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/dedicatedLine/{id}/update [post]
 func (h *DedicatedLineHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	var line operations.OpsDedicatedLine
@@ -77,6 +118,17 @@ func (h *DedicatedLineHandler) Update(c *gin.Context) {
 }
 
 // Delete 删除专线
+// @Summary 删除专线
+// @Description 根据ID删除专线
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param id path string true "专线ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/dedicatedLine/{id}/delete [post]
 func (h *DedicatedLineHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
 	if !handleServiceError(c, h.service.Delete(c.Request.Context(), id), "删除") {
@@ -87,6 +139,16 @@ func (h *DedicatedLineHandler) Delete(c *gin.Context) {
 }
 
 // BatchOperation 批量操作（类型安全版本）
+// @Summary 批量操作
+// @Description 对专线进行批量操作，如批量删除
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param request body requests.DedicatedLineBatchOperationRequest true "批量操作参数"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/dedicatedLine/batch [post]
 func (h *DedicatedLineHandler) BatchOperation(c *gin.Context) {
 	var req requests.DedicatedLineBatchOperationRequest
 	if !handleJSONBinding(c, &req) {
@@ -99,7 +161,7 @@ func (h *DedicatedLineHandler) BatchOperation(c *gin.Context) {
 			return
 		}
 	default:
-		response.Error(c, http.StatusBadRequest, "不支持的操作")
+		response.Error(c, apperrors.InvalidOperation("不支持的操作"))
 		return
 	}
 

@@ -189,20 +189,60 @@ func (a *CacheAdapter) GetTTL(ctx context.Context, key string) (time.Duration, e
 
 // GetStats 获取缓存统计信息
 func (a *CacheAdapter) GetStats(ctx context.Context) (*CacheStats, error) {
-	// 使用 MGetJSON 或其他方式获取统计信息
-	// 这里返回基本统计，具体实现可根据底层缓存类型扩展
-	stats := map[string]interface{}{
-		"hits":     0,
-		"misses":   0,
-		"count":    0,
+	// 基础统计
+	statsMap := map[string]interface{}{
+		"hits":      0,
+		"misses":    0,
+		"count":     0,
 		"key_count": 0,
+	}
+
+	// 尝试获取底层缓存的完整统计（如果支持）
+	type cacheWithStats interface {
+		GetStats(ctx context.Context) (map[string]interface{}, error)
+	}
+	if cacheWithStats, ok := a.cache.(cacheWithStats); ok {
+		if stats, err := cacheWithStats.GetStats(ctx); err == nil {
+			statsMap = stats
+		}
 	}
 
 	// 尝试获取键数量
 	if keys, err := a.cache.Keys(ctx, "*"); err == nil {
-		stats["key_count"] = len(keys)
-		stats["count"] = int64(len(keys))
+		statsMap["key_count"] = len(keys)
+		statsMap["count"] = int64(len(keys))
 	}
 
-	return adaptCacheStats(stats), nil
+	// 适配基础统计
+	result := adaptCacheStats(statsMap)
+
+	// 添加扩展统计（L2Writer、RetryWorker等）
+	result.ExtendedStats = extractExtendedStats(statsMap)
+
+	return result, nil
+}
+
+// extractExtendedStats 提取扩展统计信息（L2Writer、RetryWorker等）
+func extractExtendedStats(statsMap map[string]interface{}) map[string]interface{} {
+	extended := make(map[string]interface{})
+
+	// 提取 L2Writer 统计
+	if l2WriterStats, ok := statsMap["l2_writer"].(map[string]interface{}); ok {
+		extended["l2_writer"] = l2WriterStats
+	}
+
+	// 提取 RetryWorker 统计
+	if retryStats, ok := statsMap["retry_worker"].(map[string]interface{}); ok {
+		extended["retry_worker"] = retryStats
+	}
+
+	// 提取 L1/L2 统计
+	if l1Stats, ok := statsMap["l1"].(map[string]interface{}); ok {
+		extended["l1"] = l1Stats
+	}
+	if l2Stats, ok := statsMap["l2"].(map[string]interface{}); ok {
+		extended["l2"] = l2Stats
+	}
+
+	return extended
 }

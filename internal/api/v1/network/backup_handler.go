@@ -1,10 +1,10 @@
 package network
 
 import (
-	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
@@ -51,7 +51,7 @@ func (h *BackupHandler) List(c *gin.Context) {
 
 	backups, total, err := h.backupService.GetBackupList(c.Request.Context(), current, pageSize, deviceID)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, apperrors.InternalServerError(err))
 		return
 	}
 
@@ -88,7 +88,7 @@ func (h *BackupHandler) Create(c *gin.Context) {
 	// 查询设备名称
 	var netDevice models.NetworkDevice
 	if err := h.db.Where("id = ?", req.DeviceID).First(&netDevice).Error; err != nil {
-		response.Error(c, http.StatusNotFound, "设备不存在")
+		response.Error(c, apperrors.NetworkDeviceNotFound())
 		return
 	}
 
@@ -120,13 +120,13 @@ func (h *BackupHandler) Create(c *gin.Context) {
 func (h *BackupHandler) GetContent(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "备份ID不能为空")
+		response.Error(c, apperrors.ParamMissing("备份ID"))
 		return
 	}
 
 	content, err := h.backupService.GetBackupContent(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, apperrors.InternalServerError(err))
 		return
 	}
 
@@ -170,7 +170,7 @@ func (h *BackupHandler) GetContentFromBody(c *gin.Context) {
 func (h *BackupHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "备份ID不能为空")
+		response.Error(c, apperrors.ParamMissing("备份ID"))
 		return
 	}
 
@@ -252,7 +252,7 @@ func (h *BackupHandler) Diff(c *gin.Context) {
 func (h *BackupHandler) Restore(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "备份ID不能为空")
+		response.Error(c, apperrors.ParamMissing("备份ID"))
 		return
 	}
 
@@ -330,19 +330,19 @@ func (h *BackupHandler) GetByVersion(c *gin.Context) {
 	versionStr := c.Query("version")
 
 	if deviceID == "" || versionStr == "" {
-		response.Error(c, http.StatusBadRequest, "设备ID和版本号不能为空")
+		response.Error(c, apperrors.BadRequest("设备ID和版本号不能为空"))
 		return
 	}
 
 	version, err := strconv.Atoi(versionStr)
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "版本号格式错误")
+		response.Error(c, apperrors.BadRequest("版本号格式错误"))
 		return
 	}
 
 	var backup models.ConfigBackup
 	if err := h.db.Where("device_id = ? AND version = ?", deviceID, version).First(&backup).Error; err != nil {
-		response.Error(c, http.StatusNotFound, "备份记录不存在")
+		response.Error(c, apperrors.BackupNotFound())
 		return
 	}
 
@@ -361,7 +361,7 @@ func (h *BackupHandler) GetByVersion(c *gin.Context) {
 func (h *BackupHandler) GetHistory(c *gin.Context) {
 	deviceID := c.Query("deviceId")
 	if deviceID == "" {
-		response.Error(c, http.StatusBadRequest, "设备ID不能为空")
+		response.Error(c, apperrors.ParamMissing("设备ID"))
 		return
 	}
 

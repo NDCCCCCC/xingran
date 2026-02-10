@@ -72,6 +72,9 @@ type CacheConfig struct {
 	// 内存缓存配置
 	MaxSize     int           `yaml:"max_size"`
 	CleanupTime time.Duration `yaml:"cleanup_time"`
+
+	// L2写入Worker配置
+	L2Writer *L2WriterConfig `yaml:"l2_writer"`
 }
 
 // CacheItem 缓存项

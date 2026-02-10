@@ -1,13 +1,12 @@
 package operations
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
 	operationsmodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 	opsServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 )
 
 type WallHandler struct {
@@ -18,6 +17,17 @@ func NewWallHandler(service opsServices.WallService) *WallHandler {
 	return &WallHandler{service: service}
 }
 
+// Create 创建墙体
+// @Summary 创建墙体
+// @Description 创建新的墙体信息
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param request body object{floorId=string,type=string,points=string,thickness=int,height=float64,color=string,name=string,remark=string} true "墙体信息"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/walls [post]
 func (h *WallHandler) Create(c *gin.Context) {
 	var wall operationsmodels.Wall
 	if !handleJSONBinding(c, &wall) {
@@ -31,6 +41,17 @@ func (h *WallHandler) Create(c *gin.Context) {
 	response.Success(c, wall)
 }
 
+// List 查询墙体列表
+// @Summary 查询墙体列表
+// @Description 分页查询墙体列表，支持按条件筛选
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param request body requests.WallListRequest true "查询参数"
+// @Success 200 {object} response.Response{data=object{list=[]object,total=int}}
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/walls/list [post]
 func (h *WallHandler) List(c *gin.Context) {
 	var req requests.WallListRequest
 	if !handleJSONBinding(c, &req) {
@@ -45,17 +66,41 @@ func (h *WallHandler) List(c *gin.Context) {
 	response.Success(c, result)
 }
 
+// GetByID 获取墙体详情
+// @Summary 获取墙体详情
+// @Description 根据ID获取墙体详细信息
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param id path string true "墙体ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Router /ops/walls/{id} [post]
 func (h *WallHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
 	wall, err := h.service.GetByID(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusNotFound, "墙体不存在")
+		response.Error(c, apperrors.WallNotFound())
 		return
 	}
 
 	response.Success(c, wall)
 }
 
+// Update 更新墙体
+// @Summary 更新墙体
+// @Description 更新墙体信息
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param id path string true "墙体ID"
+// @Param request body object{floorId=string,type=string,points=string,thickness=int,height=float64,color=string,name=string,remark=string} true "墙体信息"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/walls/{id}/update [post]
 func (h *WallHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	var wall operationsmodels.Wall
@@ -71,6 +116,18 @@ func (h *WallHandler) Update(c *gin.Context) {
 	response.Success(c, nil)
 }
 
+// Delete 删除墙体
+// @Summary 删除墙体
+// @Description 根据ID删除墙体
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param id path string true "墙体ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/walls/{id}/delete [post]
 func (h *WallHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
 	if !handleServiceError(c, h.service.Delete(c.Request.Context(), id), "删除") {
@@ -80,6 +137,17 @@ func (h *WallHandler) Delete(c *gin.Context) {
 	response.Success(c, nil)
 }
 
+// BatchOperation 批量操作
+// @Summary 批量操作
+// @Description 对墙体进行批量操作，如批量删除
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param request body requests.WallBatchOperationRequest true "批量操作参数"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/walls/batch [post]
 func (h *WallHandler) BatchOperation(c *gin.Context) {
 	var req requests.WallBatchOperationRequest
 	if !handleJSONBinding(c, &req) {
@@ -87,7 +155,7 @@ func (h *WallHandler) BatchOperation(c *gin.Context) {
 	}
 
 	if req.Action != "delete" {
-		response.Error(c, http.StatusBadRequest, "不支持的操作: "+req.Action)
+		response.Error(c, apperrors.InvalidOperationWithMsg("不支持的操作: "+req.Action))
 		return
 	}
 

@@ -33,7 +33,7 @@ func NewRoleHandler(service systemServices.RoleService) *RoleHandler {
 func (h *RoleHandler) Create(c *gin.Context) {
 	var req requests.RoleCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
@@ -84,7 +84,7 @@ func (h *RoleHandler) List(c *gin.Context) {
 func (h *RoleHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "角色ID不能为空")
+		response.Error(c, apperrors.ParamMissing("角色ID"))
 		return
 	}
 
@@ -112,13 +112,13 @@ func (h *RoleHandler) GetByID(c *gin.Context) {
 func (h *RoleHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "角色ID不能为空")
+		response.Error(c, apperrors.ParamMissing("角色ID"))
 		return
 	}
 
 	var req requests.RoleUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
@@ -144,7 +144,7 @@ func (h *RoleHandler) Update(c *gin.Context) {
 func (h *RoleHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "角色ID不能为空")
+		response.Error(c, apperrors.ParamMissing("角色ID"))
 		return
 	}
 
@@ -171,7 +171,7 @@ func (h *RoleHandler) BatchDelete(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
@@ -196,7 +196,7 @@ func (h *RoleHandler) BatchDelete(c *gin.Context) {
 func (h *RoleHandler) UpdateStatus(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "角色ID不能为空")
+		response.Error(c, apperrors.ParamMissing("角色ID"))
 		return
 	}
 
@@ -204,7 +204,7 @@ func (h *RoleHandler) UpdateStatus(c *gin.Context) {
 		Status int `json:"status" binding:"min=0,max=1"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 

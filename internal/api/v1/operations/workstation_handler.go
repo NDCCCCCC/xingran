@@ -1,12 +1,11 @@
 package operations
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	opsServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 )
 
 type WorkstationHandler struct {
@@ -18,6 +17,16 @@ func NewWorkstationHandler(service opsServices.WorkstationService) *WorkstationH
 }
 
 // Create 创建工位
+// @Summary 创建工位
+// @Description 创建新的工位信息
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param request body models.Workstation true "工位信息"
+// @Success 200 {object} response.Response{data=models.Workstation}
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/workstation [post]
 func (h *WorkstationHandler) Create(c *gin.Context) {
 	var workstation models.Workstation
 	if !handleJSONBinding(c, &workstation) {
@@ -32,6 +41,16 @@ func (h *WorkstationHandler) Create(c *gin.Context) {
 }
 
 // List 查询工位列表
+// @Summary 查询工位列表
+// @Description 分页查询工位列表，支持按条件筛选
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param request body object{current=int,pageSize=int,name=string,floorId=string} true "查询参数"
+// @Success 200 {object} response.Response{data=object{list=[]models.Workstation,total=int}}
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/workstation/list [post]
 func (h *WorkstationHandler) List(c *gin.Context) {
 	var params map[string]interface{}
 	if err := c.ShouldBindJSON(&params); err != nil {
@@ -40,7 +59,7 @@ func (h *WorkstationHandler) List(c *gin.Context) {
 
 	result, err := h.service.List(c.Request.Context(), params)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "查询失败: "+err.Error())
+		response.Error(c, apperrors.InternalServerErrorWithMsg("查询失败"))
 		return
 	}
 
@@ -48,11 +67,21 @@ func (h *WorkstationHandler) List(c *gin.Context) {
 }
 
 // GetByID 获取工位详情
+// @Summary 获取工位详情
+// @Description 根据ID获取工位详细信息
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param id path string true "工位ID"
+// @Success 200 {object} response.Response{data=models.Workstation}
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Router /ops/workstation/{id} [post]
 func (h *WorkstationHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
 	workstation, err := h.service.GetByID(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusNotFound, "工位不存在")
+		response.Error(c, apperrors.WorkstationNotFound())
 		return
 	}
 
@@ -60,6 +89,18 @@ func (h *WorkstationHandler) GetByID(c *gin.Context) {
 }
 
 // Update 更新工位
+// @Summary 更新工位
+// @Description 更新工位信息
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param id path string true "工位ID"
+// @Param request body models.Workstation true "工位信息"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/workstation/{id}/update [post]
 func (h *WorkstationHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	var workstation models.Workstation
@@ -76,6 +117,17 @@ func (h *WorkstationHandler) Update(c *gin.Context) {
 }
 
 // Delete 删除工位
+// @Summary 删除工位
+// @Description 根据ID删除工位
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param id path string true "工位ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/workstation/{id}/delete [post]
 func (h *WorkstationHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
 	if !handleServiceError(c, h.service.Delete(c.Request.Context(), id), "删除") {
@@ -86,6 +138,16 @@ func (h *WorkstationHandler) Delete(c *gin.Context) {
 }
 
 // BatchOperation 批量操作
+// @Summary 批量操作
+// @Description 对工位进行批量操作，如批量删除
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param request body object{ids=[]string,action=string} true "批量操作参数"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/workstation/batch [post]
 func (h *WorkstationHandler) BatchOperation(c *gin.Context) {
 	var req struct {
 		IDs    []string `json:"ids"`
@@ -102,7 +164,7 @@ func (h *WorkstationHandler) BatchOperation(c *gin.Context) {
 			return
 		}
 	default:
-		response.Error(c, http.StatusBadRequest, "不支持的操作")
+		response.Error(c, apperrors.InvalidOperation("不支持的操作"))
 		return
 	}
 
@@ -110,6 +172,16 @@ func (h *WorkstationHandler) BatchOperation(c *gin.Context) {
 }
 
 // BatchUpdatePositions 批量更新工位位置
+// @Summary 批量更新工位位置
+// @Description 批量更新工位的位置坐标信息
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param request body object{items=[]object{id=string,x=float64,y=float64}} true "位置更新参数"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/workstation/positions [post]
 func (h *WorkstationHandler) BatchUpdatePositions(c *gin.Context) {
 	var req struct {
 		Items []opsServices.PositionUpdateItem `json:"items" binding:"required"`

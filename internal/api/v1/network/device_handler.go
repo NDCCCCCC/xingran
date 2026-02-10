@@ -1,13 +1,12 @@
 package network
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 )
 
 // DeviceHandler 网络设备处理器
@@ -70,7 +69,7 @@ func (h *DeviceHandler) List(c *gin.Context) {
 
 	devices, total, err := h.deviceService.List(c.Request.Context(), &req)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, apperrors.InternalServerError(err))
 		return
 	}
 
@@ -95,13 +94,13 @@ func (h *DeviceHandler) List(c *gin.Context) {
 func (h *DeviceHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "设备ID不能为空")
+		response.Error(c, apperrors.ParamMissing("设备ID"))
 		return
 	}
 
 	device, err := h.deviceService.GetByID(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, apperrors.InternalServerError(err))
 		return
 	}
 
@@ -147,7 +146,7 @@ func (h *DeviceHandler) Create(c *gin.Context) {
 func (h *DeviceHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "设备ID不能为空")
+		response.Error(c, apperrors.ParamMissing("设备ID"))
 		return
 	}
 
@@ -181,7 +180,7 @@ func (h *DeviceHandler) Update(c *gin.Context) {
 func (h *DeviceHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "设备ID不能为空")
+		response.Error(c, apperrors.ParamMissing("设备ID"))
 		return
 	}
 

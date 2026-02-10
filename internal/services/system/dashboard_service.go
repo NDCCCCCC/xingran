@@ -3,21 +3,15 @@ package system
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"gorm.io/gorm"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
-)
-
-// 定义错误类型（与handler层共享）
-var (
-	ErrDashboardNotFound = errors.New("dashboard not found")
-	ErrPermissionDenied  = errors.New("permission denied")
 )
 
 // DashboardService 仪表盘服务接口
@@ -131,14 +125,14 @@ const (
 func (s *DashboardServiceImpl) getDashboardWithOwner(ctx context.Context, id, ownerID string) (*models.Dashboard, error) {
 	var dashboard models.Dashboard
 	if err := s.db.WithContext(ctx).Where("id = ?", id).First(&dashboard).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrDashboardNotFound
+		if err == gorm.ErrRecordNotFound {
+			return nil, apperrors.DashboardNotFound()
 		}
 		return nil, fmt.Errorf("failed to fetch dashboard: %w", err)
 	}
 
 	if !dashboard.IsTemplate && dashboard.OwnerID != ownerID {
-		return nil, ErrPermissionDenied
+		return nil, apperrors.PermissionDenied()
 	}
 
 	return &dashboard, nil
@@ -243,8 +237,8 @@ func (s *DashboardServiceImpl) GetDashboard(ctx context.Context, id string) (*mo
 
 	// 从数据库查询
 	if err := s.db.WithContext(ctx).Where("id = ?", id).First(&dashboard).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, fmt.Errorf("dashboard not found")
+		if err == gorm.ErrRecordNotFound {
+			return nil, apperrors.DashboardNotFound()
 		}
 		return nil, fmt.Errorf("failed to fetch dashboard: %w", err)
 	}
@@ -473,7 +467,7 @@ func (s *DashboardServiceImpl) RestoreVersion(ctx context.Context, userID string
 	if err := s.db.WithContext(ctx).
 		Where("id = ? AND dashboard_id = ?", versionID, dashboardID).
 		First(&version).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if err == gorm.ErrRecordNotFound {
 			return fmt.Errorf("version not found")
 		}
 		return fmt.Errorf("failed to fetch version: %w", err)
@@ -606,7 +600,7 @@ func (s *DashboardServiceImpl) GetAccessibleDefaultDashboard(ctx context.Context
 		}
 	}
 
-	if !errors.Is(err, gorm.ErrRecordNotFound) {
+	if err != gorm.ErrRecordNotFound {
 		return nil, err
 	}
 
@@ -621,7 +615,7 @@ func (s *DashboardServiceImpl) GetAccessibleDefaultDashboard(ctx context.Context
 		return &systemDashboard, nil
 	}
 
-	if errors.Is(err, gorm.ErrRecordNotFound) {
+	if err == gorm.ErrRecordNotFound {
 		return nil, nil // 无可用仪表盘
 	}
 

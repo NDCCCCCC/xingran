@@ -1,9 +1,8 @@
 package monitor
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	monitorServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/monitor"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
@@ -60,7 +59,7 @@ func (h *LoginLogHandler) List(c *gin.Context) {
 
 	result, err := h.service.List(c.Request.Context(), params)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, apperrors.InternalServerError(err))
 		return
 	}
 
@@ -79,13 +78,13 @@ func (h *LoginLogHandler) List(c *gin.Context) {
 func (h *LoginLogHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "ID不能为空")
+		response.Error(c, apperrors.ParamMissing("ID"))
 		return
 	}
 
 	loginLog, err := h.service.GetByID(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, apperrors.InternalServerError(err))
 		return
 	}
 
@@ -104,12 +103,12 @@ func (h *LoginLogHandler) GetByID(c *gin.Context) {
 func (h *LoginLogHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "ID不能为空")
+		response.Error(c, apperrors.ParamMissing("ID"))
 		return
 	}
 
 	if err := h.service.Delete(c.Request.Context(), id); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, apperrors.InternalServerError(err))
 		return
 	}
 
@@ -131,12 +130,12 @@ func (h *LoginLogHandler) BatchDelete(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
 	if err := h.service.BatchDelete(c.Request.Context(), req.IDs); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, apperrors.InternalServerError(err))
 		return
 	}
 
@@ -153,7 +152,7 @@ func (h *LoginLogHandler) BatchDelete(c *gin.Context) {
 // @Router /monitor/login-logs/clean [post]
 func (h *LoginLogHandler) Clean(c *gin.Context) {
 	if err := h.service.Clean(c.Request.Context()); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, apperrors.InternalServerError(err))
 		return
 	}
 
@@ -172,7 +171,7 @@ func (h *LoginLogHandler) Clean(c *gin.Context) {
 func (h *LoginLogHandler) UnlockUser(c *gin.Context) {
 	username := c.Param("username")
 	if username == "" {
-		response.Error(c, http.StatusBadRequest, "用户名不能为空")
+		response.Error(c, apperrors.ParamMissing("用户名"))
 		return
 	}
 

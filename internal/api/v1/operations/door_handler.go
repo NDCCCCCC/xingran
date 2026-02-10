@@ -1,13 +1,12 @@
 package operations
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
 	operationsmodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 	opsServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 )
 
 type DoorHandler struct {
@@ -18,6 +17,17 @@ func NewDoorHandler(service opsServices.DoorService) *DoorHandler {
 	return &DoorHandler{service: service}
 }
 
+// Create 创建门
+// @Summary 创建门
+// @Description 创建新的门信息
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param request body object{floorId=string,wallId=string,position=string,angle=int,type=string,direction=string,width=int,length=int,color=string,name=string,remark=string} true "门信息"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/doors [post]
 func (h *DoorHandler) Create(c *gin.Context) {
 	var door operationsmodels.Door
 	if !handleJSONBinding(c, &door) {
@@ -31,6 +41,17 @@ func (h *DoorHandler) Create(c *gin.Context) {
 	response.Success(c, door)
 }
 
+// List 查询门列表
+// @Summary 查询门列表
+// @Description 分页查询门列表，支持按条件筛选
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param request body requests.DoorListRequest true "查询参数"
+// @Success 200 {object} response.Response{data=object{list=[]object,total=int}}
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/doors/list [post]
 func (h *DoorHandler) List(c *gin.Context) {
 	var req requests.DoorListRequest
 	if !handleJSONBinding(c, &req) {
@@ -45,17 +66,41 @@ func (h *DoorHandler) List(c *gin.Context) {
 	response.Success(c, result)
 }
 
+// GetByID 获取门详情
+// @Summary 获取门详情
+// @Description 根据ID获取门详细信息
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param id path string true "门ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Router /ops/doors/{id} [post]
 func (h *DoorHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
 	door, err := h.service.GetByID(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusNotFound, "门不存在")
+		response.Error(c, apperrors.DoorNotFound())
 		return
 	}
 
 	response.Success(c, door)
 }
 
+// Update 更新门
+// @Summary 更新门
+// @Description 更新门信息
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param id path string true "门ID"
+// @Param request body object{floorId=string,wallId=string,position=string,angle=int,type=string,direction=string,width=int,length=int,color=string,name=string,remark=string} true "门信息"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/doors/{id}/update [post]
 func (h *DoorHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	var door operationsmodels.Door
@@ -71,6 +116,18 @@ func (h *DoorHandler) Update(c *gin.Context) {
 	response.Success(c, nil)
 }
 
+// Delete 删除门
+// @Summary 删除门
+// @Description 根据ID删除门
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param id path string true "门ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/doors/{id}/delete [post]
 func (h *DoorHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
 	if !handleServiceError(c, h.service.Delete(c.Request.Context(), id), "删除") {
@@ -80,6 +137,17 @@ func (h *DoorHandler) Delete(c *gin.Context) {
 	response.Success(c, nil)
 }
 
+// BatchOperation 批量操作
+// @Summary 批量操作
+// @Description 对门进行批量操作，如批量删除
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param request body requests.DoorBatchOperationRequest true "批量操作参数"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/doors/batch [post]
 func (h *DoorHandler) BatchOperation(c *gin.Context) {
 	var req requests.DoorBatchOperationRequest
 	if !handleJSONBinding(c, &req) {
@@ -87,7 +155,7 @@ func (h *DoorHandler) BatchOperation(c *gin.Context) {
 	}
 
 	if req.Action != "delete" {
-		response.Error(c, http.StatusBadRequest, "不支持的操作: "+req.Action)
+		response.Error(c, apperrors.InvalidOperationWithMsg("不支持的操作: "+req.Action))
 		return
 	}
 

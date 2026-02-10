@@ -1,13 +1,12 @@
 package operations
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 	opsServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 )
 
 type BuildingHandler struct {
@@ -25,6 +24,16 @@ func NewBuildingHandlerWithCore(service opsServices.BuildingService, core *core.
 }
 
 // Create 创建楼宇
+// @Summary 创建楼宇
+// @Description 创建新的楼宇信息
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param request body operations.OpsBuilding true "楼宇信息"
+// @Success 200 {object} response.Response{data=operations.OpsBuilding}
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/building [post]
 func (h *BuildingHandler) Create(c *gin.Context) {
 	var building operations.OpsBuilding
 	if !handleJSONBinding(c, &building) {
@@ -39,6 +48,16 @@ func (h *BuildingHandler) Create(c *gin.Context) {
 }
 
 // List 查询楼宇列表
+// @Summary 查询楼宇列表
+// @Description 分页查询楼宇列表，支持按条件筛选
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param request body object{current=int,pageSize=int,name=string,orgId=string,status=int} true "查询参数"
+// @Success 200 {object} response.Response{data=object{list=[]operations.OpsBuilding,total=int}}
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/building/list [post]
 func (h *BuildingHandler) List(c *gin.Context) {
 	var params map[string]interface{}
 	if !handleJSONBinding(c, &params) {
@@ -54,11 +73,21 @@ func (h *BuildingHandler) List(c *gin.Context) {
 }
 
 // GetByID 获取楼宇详情
+// @Summary 获取楼宇详情
+// @Description 根据ID获取楼宇详细信息
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param id path string true "楼宇ID"
+// @Success 200 {object} response.Response{data=operations.OpsBuilding}
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Router /ops/building/{id} [post]
 func (h *BuildingHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
 	building, err := h.service.GetByID(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusNotFound, "楼宇不存在")
+		response.Error(c, apperrors.BuildingNotFound())
 		return
 	}
 
@@ -66,6 +95,18 @@ func (h *BuildingHandler) GetByID(c *gin.Context) {
 }
 
 // Update 更新楼宇
+// @Summary 更新楼宇
+// @Description 更新楼宇信息
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param id path string true "楼宇ID"
+// @Param request body operations.OpsBuilding true "楼宇信息"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/building/{id}/update [post]
 func (h *BuildingHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	var building operations.OpsBuilding
@@ -82,6 +123,17 @@ func (h *BuildingHandler) Update(c *gin.Context) {
 }
 
 // Delete 删除楼宇
+// @Summary 删除楼宇
+// @Description 根据ID删除楼宇
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param id path string true "楼宇ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/building/{id}/delete [post]
 func (h *BuildingHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
 	if !handleServiceError(c, h.service.Delete(c.Request.Context(), id), "删除") {
@@ -92,6 +144,16 @@ func (h *BuildingHandler) Delete(c *gin.Context) {
 }
 
 // BatchOperation 批量操作
+// @Summary 批量操作
+// @Description 对楼宇进行批量操作，如批量删除
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param request body object{ids=[]string,action=string} true "批量操作参数"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/building/batch [post]
 func (h *BuildingHandler) BatchOperation(c *gin.Context) {
 	var req struct {
 		IDs    []string `json:"ids"`
@@ -108,7 +170,7 @@ func (h *BuildingHandler) BatchOperation(c *gin.Context) {
 			return
 		}
 	default:
-		response.Error(c, http.StatusBadRequest, "不支持的操作")
+		response.Error(c, apperrors.InvalidOperation("不支持的操作"))
 		return
 	}
 
@@ -150,7 +212,7 @@ func (h *BuildingHandler) Geocode(c *gin.Context) {
 	}
 
 	if req.Address == "" {
-		response.Error(c, http.StatusBadRequest, "地址不能为空")
+		response.Error(c, apperrors.ParamMissing("地址"))
 		return
 	}
 

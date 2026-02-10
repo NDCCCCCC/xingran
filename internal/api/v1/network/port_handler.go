@@ -1,14 +1,13 @@
 package network
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/portcollection"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 )
 
 // PortStatusListRequest 端口状态列表请求
@@ -49,6 +48,16 @@ func NewPortHandler(core *core.Core) *PortHandler {
 }
 
 // List 查询端口状态列表
+// @Summary 查询端口状态列表
+// @Description 分页查询端口状态列表，支持按设备ID、接口名称、状态筛选
+// @Tags 网络设备管理
+// @Accept json
+// @Produce json
+// @Param request body PortStatusListRequest true "查询条件"
+// @Success 200 {object} response.Response{data=response.PageResponse}
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /network/port/list [post]
 func (h *PortHandler) List(c *gin.Context) {
 	var req PortStatusListRequest
 	if !responseHelpers.HandleJSONBinding(c, &req) {
@@ -74,6 +83,16 @@ func (h *PortHandler) List(c *gin.Context) {
 }
 
 // Collect 采集单个设备端口状态
+// @Summary 采集单个设备端口状态
+// @Description 连接指定设备并采集其端口状态信息
+// @Tags 网络设备管理
+// @Accept json
+// @Produce json
+// @Param request body PortCollectionRequest true "采集请求"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /network/port/collect [post]
 func (h *PortHandler) Collect(c *gin.Context) {
 	var req PortCollectionRequest
 	if !responseHelpers.HandleJSONBinding(c, &req) {
@@ -90,6 +109,14 @@ func (h *PortHandler) Collect(c *gin.Context) {
 }
 
 // CollectAll 采集所有设备端口状态
+// @Summary 采集所有设备端口状态
+// @Description 连接所有已配置的网络设备并采集端口状态信息
+// @Tags 网络设备管理
+// @Accept json
+// @Produce json
+// @Success 200 {object} response.Response{data=[]interface{}}
+// @Failure 500 {object} response.Response
+// @Router /network/port/collect-all [post]
 func (h *PortHandler) CollectAll(c *gin.Context) {
 	svc := portcollection.NewPortCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor)
 	results, err := svc.Collection.CollectAllDevices(c.Request.Context())
@@ -101,6 +128,14 @@ func (h *PortHandler) CollectAll(c *gin.Context) {
 }
 
 // GetStats 获取端口状态统计信息
+// @Summary 获取端口状态统计信息
+// @Description 获取端口状态的统计信息，包括总数、按状态分组等
+// @Tags 网络设备管理
+// @Accept json
+// @Produce json
+// @Success 200 {object} response.Response{data=map[string]interface{}}
+// @Failure 500 {object} response.Response
+// @Router /network/port/stats [post]
 func (h *PortHandler) GetStats(c *gin.Context) {
 	svc := portcollection.NewPortCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor)
 	stats, err := svc.Query.GetStats(c.Request.Context())
@@ -112,6 +147,16 @@ func (h *PortHandler) GetStats(c *gin.Context) {
 }
 
 // BatchDelete 批量删除端口状态记录
+// @Summary 批量删除端口状态记录
+// @Description 批量删除指定的端口状态记录
+// @Tags 网络设备管理
+// @Accept json
+// @Produce json
+// @Param request body BatchDeletePortRecordsRequest true "删除请求"
+// @Success 200 {object} response.Response{data=map[string]interface{}}
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /network/port/batch-delete [post]
 func (h *PortHandler) BatchDelete(c *gin.Context) {
 	var req BatchDeletePortRecordsRequest
 	if !responseHelpers.HandleJSONBinding(c, &req) {
@@ -119,7 +164,7 @@ func (h *PortHandler) BatchDelete(c *gin.Context) {
 	}
 
 	if err := h.core.DB.GetDB().Delete(&models.DevicePortStatus{}, req.IDs).Error; err != nil {
-		response.Error(c, http.StatusInternalServerError, "批量删除失败: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeServerError, "批量删除失败"))
 		return
 	}
 
@@ -127,6 +172,16 @@ func (h *PortHandler) BatchDelete(c *gin.Context) {
 }
 
 // Clean 清理旧的端口状态记录
+// @Summary 清理旧的端口状态记录
+// @Description 删除指定天数之前的端口状态记录
+// @Tags 网络设备管理
+// @Accept json
+// @Produce json
+// @Param request body CleanOldPortRecordsRequest true "清理请求"
+// @Success 200 {object} response.Response{data=map[string]interface{}}
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /network/port/clean [post]
 func (h *PortHandler) Clean(c *gin.Context) {
 	var req CleanOldPortRecordsRequest
 	if !responseHelpers.HandleJSONBinding(c, &req) {

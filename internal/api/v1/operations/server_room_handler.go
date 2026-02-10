@@ -1,13 +1,12 @@
 package operations
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 	opsServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 )
 
 type ServerRoomHandler struct {
@@ -19,6 +18,16 @@ func NewServerRoomHandler(service opsServices.ServerRoomService) *ServerRoomHand
 }
 
 // Create 创建机房
+// @Summary 创建机房
+// @Description 创建新的机房信息
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param request body operations.OpsServerRoom true "机房信息"
+// @Success 200 {object} response.Response{data=operations.OpsServerRoom}
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/serverRoom [post]
 func (h *ServerRoomHandler) Create(c *gin.Context) {
 	var room operations.OpsServerRoom
 	if !handleJSONBinding(c, &room) {
@@ -33,6 +42,16 @@ func (h *ServerRoomHandler) Create(c *gin.Context) {
 }
 
 // List 查询机房列表（类型安全版本）
+// @Summary 查询机房列表
+// @Description 分页查询机房列表，支持按条件筛选
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param request body requests.ServerRoomListRequest true "查询参数"
+// @Success 200 {object} response.Response{data=object{list=[]operations.OpsServerRoom,total=int}}
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/serverRoom/list [post]
 func (h *ServerRoomHandler) List(c *gin.Context) {
 	var req requests.ServerRoomListRequest
 	if !handleJSONBinding(c, &req) {
@@ -41,7 +60,7 @@ func (h *ServerRoomHandler) List(c *gin.Context) {
 
 	result, err := h.service.List(c.Request.Context(), req)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "查询失败: "+err.Error())
+		response.Error(c, apperrors.InternalServerErrorWithMsg("查询失败"))
 		return
 	}
 
@@ -49,11 +68,21 @@ func (h *ServerRoomHandler) List(c *gin.Context) {
 }
 
 // GetByID 获取机房详情
+// @Summary 获取机房详情
+// @Description 根据ID获取机房详细信息
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param id path string true "机房ID"
+// @Success 200 {object} response.Response{data=operations.OpsServerRoom}
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Router /ops/serverRoom/{id} [post]
 func (h *ServerRoomHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
 	room, err := h.service.GetByID(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusNotFound, "机房不存在")
+		response.Error(c, apperrors.ServerRoomNotFound())
 		return
 	}
 
@@ -61,6 +90,18 @@ func (h *ServerRoomHandler) GetByID(c *gin.Context) {
 }
 
 // Update 更新机房
+// @Summary 更新机房
+// @Description 更新机房信息
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param id path string true "机房ID"
+// @Param request body operations.OpsServerRoom true "机房信息"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/serverRoom/{id}/update [post]
 func (h *ServerRoomHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	var room operations.OpsServerRoom
@@ -77,6 +118,17 @@ func (h *ServerRoomHandler) Update(c *gin.Context) {
 }
 
 // Delete 删除机房
+// @Summary 删除机房
+// @Description 根据ID删除机房
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param id path string true "机房ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/serverRoom/{id}/delete [post]
 func (h *ServerRoomHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
 	if !handleServiceError(c, h.service.Delete(c.Request.Context(), id), "删除") {
@@ -87,6 +139,16 @@ func (h *ServerRoomHandler) Delete(c *gin.Context) {
 }
 
 // BatchOperation 批量操作（类型安全版本）
+// @Summary 批量操作
+// @Description 对机房进行批量操作，如批量删除
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param request body requests.ServerRoomBatchOperationRequest true "批量操作参数"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/serverRoom/batch [post]
 func (h *ServerRoomHandler) BatchOperation(c *gin.Context) {
 	var req requests.ServerRoomBatchOperationRequest
 	if !handleJSONBinding(c, &req) {
@@ -99,7 +161,7 @@ func (h *ServerRoomHandler) BatchOperation(c *gin.Context) {
 			return
 		}
 	default:
-		response.Error(c, http.StatusBadRequest, "不支持的操作")
+		response.Error(c, apperrors.InvalidOperation("不支持的操作"))
 		return
 	}
 

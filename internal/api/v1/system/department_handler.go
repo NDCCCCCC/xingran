@@ -1,6 +1,7 @@
 package system
 
 import (
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
@@ -92,7 +93,7 @@ func (h *DepartmentHandler) List(c *gin.Context) {
 func (h *DepartmentHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "部门ID不能为空")
+		response.Error(c, apperrors.ParamMissing("部门ID"))
 		return
 	}
 
@@ -117,7 +118,7 @@ func (h *DepartmentHandler) GetByID(c *gin.Context) {
 func (h *DepartmentHandler) Create(c *gin.Context) {
 	var req requests.DepartmentCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
@@ -142,13 +143,13 @@ func (h *DepartmentHandler) Create(c *gin.Context) {
 func (h *DepartmentHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "部门ID不能为空")
+		response.Error(c, apperrors.ParamMissing("部门ID"))
 		return
 	}
 
 	var req requests.DepartmentUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
@@ -173,7 +174,7 @@ func (h *DepartmentHandler) Update(c *gin.Context) {
 func (h *DepartmentHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "部门ID不能为空")
+		response.Error(c, apperrors.ParamMissing("部门ID"))
 		return
 	}
 
@@ -200,7 +201,7 @@ func (h *DepartmentHandler) BatchDelete(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
@@ -225,7 +226,7 @@ func (h *DepartmentHandler) BatchDelete(c *gin.Context) {
 func (h *DepartmentHandler) UpdateStatus(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "部门ID不能为空")
+		response.Error(c, apperrors.ParamMissing("部门ID"))
 		return
 	}
 
@@ -233,7 +234,7 @@ func (h *DepartmentHandler) UpdateStatus(c *gin.Context) {
 		Status int `json:"status" binding:"min=0,max=1"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
@@ -259,13 +260,13 @@ func (h *DepartmentHandler) UpdateStatus(c *gin.Context) {
 func (h *DepartmentHandler) RoleDeptTreeSelect(c *gin.Context) {
 	roleID := c.Param("roleId")
 	if roleID == "" {
-		response.Error(c, http.StatusBadRequest, "角色ID不能为空")
+		response.Error(c, apperrors.ParamMissing("角色ID"))
 		return
 	}
 
 	var deptIDs []string
 	if err := h.service.GetRoleDeptIDs(c.Request.Context(), roleID, &deptIDs); err != nil {
-		response.Error(c, http.StatusInternalServerError, "查询角色部门关联失败: "+err.Error())
+		response.Error(c, apperrors.InternalServerErrorWithMsg("查询角色部门关联失败"))
 		return
 	}
 
@@ -288,13 +289,13 @@ func (h *DepartmentHandler) RoleDeptTreeSelect(c *gin.Context) {
 func (h *DepartmentHandler) GetUsers(c *gin.Context) {
 	deptID := c.Param("id")
 	if deptID == "" {
-		response.Error(c, http.StatusBadRequest, "部门ID不能为空")
+		response.Error(c, apperrors.ParamMissing("部门ID"))
 		return
 	}
 
 	db, err := h.GetDB()
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "获取数据库连接失败")
+		response.Error(c, apperrors.InternalServerErrorWithMsg("获取数据库连接失败"))
 		return
 	}
 
@@ -314,7 +315,7 @@ func (h *DepartmentHandler) GetUsers(c *gin.Context) {
 		Find(&users).Error
 
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "查询部门用户失败: "+err.Error())
+		response.Error(c, apperrors.InternalServerErrorWithMsg("查询部门用户失败"))
 		return
 	}
 

@@ -3,15 +3,12 @@ package services
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
 )
-
-// ErrCacheNotFound 缓存不存在错误
-var ErrCacheNotFound = errors.New("cache not found")
 
 // DataCacheService 数据缓存服务
 type DataCacheService struct {
@@ -44,7 +41,7 @@ func (s *DataCacheService) Get(ctx context.Context, key string, dest interface{}
 		return fmt.Errorf("获取缓存失败: %w", err)
 	}
 	if data == "" {
-		return ErrCacheNotFound
+		return apperrors.CacheKeyNotFound()
 	}
 	return json.Unmarshal([]byte(data), dest)
 }

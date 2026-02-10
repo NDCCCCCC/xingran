@@ -20,10 +20,20 @@ func NewDictTypeHandler(service systemServices.DictTypeService) *DictTypeHandler
 }
 
 // Create 创建字典类型
+// @Summary 创建字典类型
+// @Description 创建新的字典类型
+// @Tags 字典管理
+// @Accept json
+// @Produce json
+// @Param request body object{dictName=string,dictType=string,status=int,remark=string} true "字典类型信息"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/dict-types [post]
 func (h *DictTypeHandler) Create(c *gin.Context) {
 	var req requests.DictTypeCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
@@ -36,6 +46,16 @@ func (h *DictTypeHandler) Create(c *gin.Context) {
 }
 
 // List 查询字典类型列表
+// @Summary 查询字典类型列表
+// @Description 查询字典类型列表，支持多条件筛选和分页
+// @Tags 字典管理
+// @Accept json
+// @Produce json
+// @Param request body object{dictName=string,dictType=string,status=int,current=int,pageSize=int} true "查询条件"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/dict-types/list [post]
 func (h *DictTypeHandler) List(c *gin.Context) {
 	var rawReq map[string]interface{}
 	if err := c.ShouldBindJSON(&rawReq); err != nil {
@@ -94,10 +114,21 @@ func (h *DictTypeHandler) List(c *gin.Context) {
 }
 
 // GetByID 获取字典类型详情
+// @Summary 获取字典类型详情
+// @Description 根据字典类型ID获取详细信息
+// @Tags 字典管理
+// @Accept json
+// @Produce json
+// @Param id path string true "字典类型ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/dict-types/:id [post]
 func (h *DictTypeHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "字典类型ID不能为空")
+		response.Error(c, apperrors.ParamMissing("字典类型ID"))
 		return
 	}
 
@@ -111,16 +142,28 @@ func (h *DictTypeHandler) GetByID(c *gin.Context) {
 }
 
 // Update 更新字典类型
+// @Summary 更新字典类型
+// @Description 更新字典类型信息
+// @Tags 字典管理
+// @Accept json
+// @Produce json
+// @Param id path string true "字典类型ID"
+// @Param request body object{dictName=string,dictType=string,status=int,remark=string} true "字典类型信息"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/dict-types/:id/update [post]
 func (h *DictTypeHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "字典类型ID不能为空")
+		response.Error(c, apperrors.ParamMissing("字典类型ID"))
 		return
 	}
 
 	var req requests.DictTypeUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
@@ -134,10 +177,21 @@ func (h *DictTypeHandler) Update(c *gin.Context) {
 }
 
 // Delete 删除字典类型
+// @Summary 删除字典类型
+// @Description 删除指定的字典类型
+// @Tags 字典管理
+// @Accept json
+// @Produce json
+// @Param id path string true "字典类型ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/dict-types/:id/delete [post]
 func (h *DictTypeHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "字典类型ID不能为空")
+		response.Error(c, apperrors.ParamMissing("字典类型ID"))
 		return
 	}
 
@@ -150,6 +204,14 @@ func (h *DictTypeHandler) Delete(c *gin.Context) {
 }
 
 // GetAll 获取所有字典类型（使用缓存）
+// @Summary 获取所有字典类型
+// @Description 获取所有字典类型列表（使用缓存）
+// @Tags 字典管理
+// @Accept json
+// @Produce json
+// @Success 200 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/dict-types/all [post]
 func (h *DictTypeHandler) GetAll(c *gin.Context) {
 	dictTypes, err := h.service.GetAllWithCache(c.Request.Context())
 	if err != nil {
@@ -171,10 +233,20 @@ func NewDictDataHandler(service systemServices.DictDataService) *DictDataHandler
 }
 
 // Create 创建字典数据
+// @Summary 创建字典数据
+// @Description 创建新的字典数据
+// @Tags 字典管理
+// @Accept json
+// @Produce json
+// @Param request body object{dictType=string,dictLabel=string,dictValue=string,dictSort=int,status=int,remark=string} true "字典数据信息"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/dict-data [post]
 func (h *DictDataHandler) Create(c *gin.Context) {
 	var req requests.DictDataCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
@@ -187,10 +259,20 @@ func (h *DictDataHandler) Create(c *gin.Context) {
 }
 
 // List 查询字典数据列表
+// @Summary 查询字典数据列表
+// @Description 查询字典数据列表，支持多条件筛选和分页
+// @Tags 字典管理
+// @Accept json
+// @Produce json
+// @Param request body object{dictType=string,dictLabel=string,status=int,current=int,pageSize=int} true "查询条件"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/dict-data/list [post]
 func (h *DictDataHandler) List(c *gin.Context) {
 	var rawReq map[string]interface{}
 	if err := c.ShouldBindJSON(&rawReq); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误")
+		response.Error(c, apperrors.ParamError())
 		return
 	}
 
@@ -230,10 +312,21 @@ func (h *DictDataHandler) List(c *gin.Context) {
 }
 
 // GetByID 获取字典数据详情
+// @Summary 获取字典数据详情
+// @Description 根据字典数据ID获取详细信息
+// @Tags 字典管理
+// @Accept json
+// @Produce json
+// @Param id path string true "字典数据ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/dict-data/:id [post]
 func (h *DictDataHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "字典数据ID不能为空")
+		response.Error(c, apperrors.ParamMissing("字典数据ID"))
 		return
 	}
 
@@ -247,16 +340,28 @@ func (h *DictDataHandler) GetByID(c *gin.Context) {
 }
 
 // Update 更新字典数据
+// @Summary 更新字典数据
+// @Description 更新字典数据信息
+// @Tags 字典管理
+// @Accept json
+// @Produce json
+// @Param id path string true "字典数据ID"
+// @Param request body object{dictType=string,dictLabel=string,dictValue=string,dictSort=int,status=int,remark=string} true "字典数据信息"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/dict-data/:id/update [post]
 func (h *DictDataHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "字典数据ID不能为空")
+		response.Error(c, apperrors.ParamMissing("字典数据ID"))
 		return
 	}
 
 	var req requests.DictDataUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
@@ -270,10 +375,21 @@ func (h *DictDataHandler) Update(c *gin.Context) {
 }
 
 // Delete 删除字典数据
+// @Summary 删除字典数据
+// @Description 删除指定的字典数据
+// @Tags 字典管理
+// @Accept json
+// @Produce json
+// @Param id path string true "字典数据ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/dict-data/:id/delete [post]
 func (h *DictDataHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "字典数据ID不能为空")
+		response.Error(c, apperrors.ParamMissing("字典数据ID"))
 		return
 	}
 

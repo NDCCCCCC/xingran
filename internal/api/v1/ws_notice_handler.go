@@ -7,6 +7,8 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	gorilla_ws "github.com/ruoyi-next/ruoyi-go-backend/internal/websocket"
 )
 
@@ -35,7 +37,7 @@ func SetupNoticeWebSocketRouter(r *gin.RouterGroup, hub *gorilla_ws.NoticeHub, c
 		// 验证token并获取user_id
 		claims, err := core.JWTManager.ValidateToken(token)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "未授权"})
+			response.Error(c, apperrors.Unauthorized())
 			return
 		}
 

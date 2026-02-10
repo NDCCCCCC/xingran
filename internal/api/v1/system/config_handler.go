@@ -20,6 +20,16 @@ func NewConfigHandler(service systemServices.ConfigService) *ConfigHandler {
 }
 
 // Create 创建参数配置
+// @Summary 创建参数配置
+// @Description 创建新的系统参数配置
+// @Tags 配置管理
+// @Accept json
+// @Produce json
+// @Param request body object{configName=string,configKey=string,configValue=string,configType=string,remark=string} true "配置信息"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/configs [post]
 func (h *ConfigHandler) Create(c *gin.Context) {
 	var req requests.ConfigCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -36,6 +46,16 @@ func (h *ConfigHandler) Create(c *gin.Context) {
 }
 
 // List 查询参数配置列表
+// @Summary 查询参数配置列表
+// @Description 查询系统参数配置列表，支持多条件筛选和分页
+// @Tags 配置管理
+// @Accept json
+// @Produce json
+// @Param request body object{configName=string,configKey=string,configType=string,beginTime=string,endTime=string,current=int,pageSize=int} true "查询条件"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/configs/list [post]
 func (h *ConfigHandler) List(c *gin.Context) {
 	var rawReq map[string]interface{}
 	if err := c.ShouldBindJSON(&rawReq); err != nil {
@@ -89,6 +109,17 @@ func (h *ConfigHandler) List(c *gin.Context) {
 }
 
 // GetByID 获取参数配置详情
+// @Summary 获取参数配置详情
+// @Description 根据配置ID获取参数配置详细信息
+// @Tags 配置管理
+// @Accept json
+// @Produce json
+// @Param id path string true "配置ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/configs/:id [post]
 func (h *ConfigHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -106,6 +137,17 @@ func (h *ConfigHandler) GetByID(c *gin.Context) {
 }
 
 // GetByKey 根据键获取参数配置
+// @Summary 根据键获取参数配置
+// @Description 根据配置键获取参数配置值
+// @Tags 配置管理
+// @Accept json
+// @Produce json
+// @Param configKey path string true "配置键"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/configs/key/:configKey [post]
 func (h *ConfigHandler) GetByKey(c *gin.Context) {
 	configKey := c.Param("configKey")
 	if configKey == "" {
@@ -123,6 +165,18 @@ func (h *ConfigHandler) GetByKey(c *gin.Context) {
 }
 
 // Update 更新参数配置
+// @Summary 更新参数配置
+// @Description 更新参数配置信息
+// @Tags 配置管理
+// @Accept json
+// @Produce json
+// @Param id path string true "配置ID"
+// @Param request body object{configName=string,configKey=string,configValue=string,configType=string,remark=string} true "配置信息"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/configs/:id/update [post]
 func (h *ConfigHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -146,6 +200,17 @@ func (h *ConfigHandler) Update(c *gin.Context) {
 }
 
 // Delete 删除参数配置
+// @Summary 删除参数配置
+// @Description 删除指定的参数配置
+// @Tags 配置管理
+// @Accept json
+// @Produce json
+// @Param id path string true "配置ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/configs/:id/delete [post]
 func (h *ConfigHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -162,6 +227,16 @@ func (h *ConfigHandler) Delete(c *gin.Context) {
 }
 
 // BatchDelete 批量删除参数配置
+// @Summary 批量删除参数配置
+// @Description 批量删除多个参数配置
+// @Tags 配置管理
+// @Accept json
+// @Produce json
+// @Param request body object{ids=[]string} true "配置ID列表"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/configs/batch [post]
 func (h *ConfigHandler) BatchDelete(c *gin.Context) {
 	var req struct {
 		IDs []string `json:"ids" binding:"required,min=1"`
@@ -180,6 +255,14 @@ func (h *ConfigHandler) BatchDelete(c *gin.Context) {
 }
 
 // RefreshCache 刷新参数缓存
+// @Summary 刷新参数缓存
+// @Description 刷新系统参数配置缓存
+// @Tags 配置管理
+// @Accept json
+// @Produce json
+// @Success 200 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/configs/refresh-cache [post]
 func (h *ConfigHandler) RefreshCache(c *gin.Context) {
 	if err := h.service.RefreshCache(c.Request.Context()); err != nil {
 		response.Error(c, err)

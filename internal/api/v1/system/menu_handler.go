@@ -31,7 +31,7 @@ func NewMenuHandler(service systemServices.MenuService) *MenuHandler {
 func (h *MenuHandler) requireID(c *gin.Context) (string, bool) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, ErrMsgMenuIDRequired)
+		response.Error(c, apperrors.ParamMissing("菜单ID"))
 		return "", false
 	}
 	return id, true
@@ -41,12 +41,12 @@ func (h *MenuHandler) requireID(c *gin.Context) (string, bool) {
 func (h *MenuHandler) getUserID(c *gin.Context) (string, bool) {
 	userID, exists := c.Get("user_id")
 	if !exists {
-		response.Error(c, http.StatusUnauthorized, ErrMsgUnauthorized)
+		response.Error(c, apperrors.Unauthorized())
 		return "", false
 	}
 	userIDStr, ok := userID.(string)
 	if !ok {
-		response.Error(c, http.StatusUnauthorized, ErrMsgUnauthorized)
+		response.Error(c, apperrors.Unauthorized())
 		return "", false
 	}
 	return userIDStr, true
@@ -55,7 +55,7 @@ func (h *MenuHandler) getUserID(c *gin.Context) (string, bool) {
 // bindAndValidate 绑定并验证请求参数
 func (h *MenuHandler) bindAndValidate(c *gin.Context, req interface{}) bool {
 	if err := c.ShouldBindJSON(req); err != nil {
-		response.Error(c, http.StatusBadRequest, ErrMsgInvalidParams+": "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return false
 	}
 	return true
@@ -346,14 +346,14 @@ func (h *MenuHandler) GetUserPermissions(c *gin.Context) {
 func (h *MenuHandler) RoleMenuTreeSelect(c *gin.Context) {
 	roleID := c.Param("roleId")
 	if roleID == "" {
-		response.Error(c, http.StatusBadRequest, ErrMsgRoleIDRequired)
+		response.Error(c, apperrors.ParamMissing("角色ID"))
 		return
 	}
 
 	// 查询角色已关联的菜单ID
 	var menuIDs []string
 	if err := h.service.GetRoleMenuIDs(c.Request.Context(), roleID, &menuIDs); err != nil {
-		response.Error(c, http.StatusInternalServerError, "查询角色菜单关联失败: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeServerError, "查询角色菜单关联失败"))
 		return
 	}
 

@@ -140,6 +140,10 @@ func ParamError() *AppError {
 	return New(CodeParamError, CodeParamError.DefaultMessage())
 }
 
+func BadRequest(msg string) *AppError {
+	return New(CodeParamError, msg)
+}
+
 func ParamMissing(field string) *AppError {
 	msg := CodeParamMissing.DefaultMessage()
 	if field != "" {
@@ -196,8 +200,32 @@ func PermissionDeniedWithMsg(msg string) *AppError {
 	return New(CodePermissionDenied, msg)
 }
 
+func Forbidden() *AppError {
+	return New(CodePermissionDenied, CodePermissionDenied.DefaultMessage())
+}
+
 func ServerError(err error) *AppError {
 	return Wrap(err, CodeServerError, CodeServerError.DefaultMessage())
+}
+
+func InternalServerError(err error) *AppError {
+	return Wrap(err, CodeServerError, CodeServerError.DefaultMessage())
+}
+
+func InternalServerErrorWithMsg(msg string) *AppError {
+	return New(CodeServerError, msg)
+}
+
+func NotFound(msg string) *AppError {
+	return New(CodeRecordNotFound, msg)
+}
+
+func InvalidOperation(msg string) *AppError {
+	return New(CodeParamInvalid, "不支持的操作: "+msg)
+}
+
+func InvalidOperationWithMsg(msg string) *AppError {
+	return New(CodeParamInvalid, msg)
 }
 
 func NotImplemented() *AppError {
@@ -466,6 +494,10 @@ func ServerRoomExists() *AppError {
 
 func ServerRoomHasServers() *AppError {
 	return New(CodeServerRoomHasServers, CodeServerRoomHasServers.DefaultMessage())
+}
+
+func RoomDeviceNotFound() *AppError {
+	return New(CodeRoomDeviceNotFound, CodeRoomDeviceNotFound.DefaultMessage())
 }
 
 func InfoPointNotFound() *AppError {

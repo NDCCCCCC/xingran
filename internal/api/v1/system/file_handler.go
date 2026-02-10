@@ -18,6 +18,17 @@ func NewFileHandler(service *systemServices.FileService) *FileHandler {
 }
 
 // Upload 上传文件
+// @Summary 上传文件
+// @Description 上传文件到服务器
+// @Tags 文件管理
+// @Accept multipart/form-data
+// @Produce json
+// @Param category formData string true "文件分类"
+// @Param file formData file true "文件"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/files/upload [post]
 func (h *FileHandler) Upload(c *gin.Context) {
 	userID := utils.GetUserID(c)
 	if userID == "" {
@@ -51,6 +62,17 @@ func (h *FileHandler) Upload(c *gin.Context) {
 }
 
 // GetByID 获取文件信息
+// @Summary 获取文件信息
+// @Description 根据文件ID获取文件详细信息
+// @Tags 文件管理
+// @Accept json
+// @Produce json
+// @Param id path string true "文件ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/files/:id [get]
 func (h *FileHandler) GetByID(c *gin.Context) {
 	fileID := c.Param("id")
 	if fileID == "" {
@@ -68,6 +90,17 @@ func (h *FileHandler) GetByID(c *gin.Context) {
 }
 
 // Delete 删除文件
+// @Summary 删除文件
+// @Description 删除指定的文件
+// @Tags 文件管理
+// @Accept json
+// @Produce json
+// @Param id path string true "文件ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/files/:id [delete]
 func (h *FileHandler) Delete(c *gin.Context) {
 	fileID := c.Param("id")
 	if fileID == "" {
@@ -84,6 +117,19 @@ func (h *FileHandler) Delete(c *gin.Context) {
 }
 
 // List 列出文件
+// @Summary 列出文件
+// @Description 查询文件列表，支持分页
+// @Tags 文件管理
+// @Accept json
+// @Produce json
+// @Param page query int false "页码" default(1)
+// @Param pageSize query int false "每页数量" default(10)
+// @Param businessType query string false "业务类型"
+// @Param userId query string false "用户ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/files [get]
 func (h *FileHandler) List(c *gin.Context) {
 	var req systemServices.ListFilesRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -108,6 +154,16 @@ func (h *FileHandler) List(c *gin.Context) {
 }
 
 // BatchDelete 批量删除文件
+// @Summary 批量删除文件
+// @Description 批量删除多个文件
+// @Tags 文件管理
+// @Accept json
+// @Produce json
+// @Param request body object{ids=[]string} true "文件ID列表"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/files/batch [post]
 func (h *FileHandler) BatchDelete(c *gin.Context) {
 	var req systemServices.BatchDeleteRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

@@ -45,6 +45,16 @@ func (h *ADDomainHandler) requireConfigID(id string) error {
 }
 
 // ListConfigs 查询AD配置列表
+// @Summary 查询AD配置列表
+// @Description 查询AD域配置列表，支持按状态筛选和分页
+// @Tags AD域管理
+// @Accept json
+// @Produce json
+// @Param request body object{status=int,current=int,pageSize=int} true "查询条件"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/ad-domain/configs/list [post]
 func (h *ADDomainHandler) ListConfigs(c *gin.Context) {
 	var req struct {
 		Status   *int `json:"status,omitempty"`
@@ -65,6 +75,16 @@ func (h *ADDomainHandler) ListConfigs(c *gin.Context) {
 }
 
 // CreateConfig 创建AD配置
+// @Summary 创建AD配置
+// @Description 创建新的AD域配置
+// @Tags AD域管理
+// @Accept json
+// @Produce json
+// @Param request body object{configName=string,ldapServer=string,ldapPort=int,adminDN=string,adminPassword=string,useSSL=bool,useStartTLS=bool,baseDN=string,userSearchBase=string,userSearchFilter=string,groupSearchBase=string,groupSearchFilter=string,syncInterval=int,autoSync=bool,status=int} true "AD配置信息"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/ad-domain/configs [post]
 func (h *ADDomainHandler) CreateConfig(c *gin.Context) {
 	var req addomainServices.ADConfigCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -89,6 +109,17 @@ func (h *ADDomainHandler) CreateConfig(c *gin.Context) {
 }
 
 // GetConfig 获取AD配置详情
+// @Summary 获取AD配置详情
+// @Description 根据配置ID获取AD域配置详细信息
+// @Tags AD域管理
+// @Accept json
+// @Produce json
+// @Param id path string true "配置ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/ad-domain/configs/:id [get]
 func (h *ADDomainHandler) GetConfig(c *gin.Context) {
 	id := c.Param("id")
 	if err := h.requireConfigID(id); err != nil {
@@ -107,6 +138,18 @@ func (h *ADDomainHandler) GetConfig(c *gin.Context) {
 }
 
 // UpdateConfig 更新AD配置
+// @Summary 更新AD配置
+// @Description 更新AD域配置信息
+// @Tags AD域管理
+// @Accept json
+// @Produce json
+// @Param id path string true "配置ID"
+// @Param request body object{configName=string,ldapServer=string,ldapPort=int,adminDN=string,adminPassword=string,useSSL=bool,useStartTLS=bool,baseDN=string,userSearchBase=string,userSearchFilter=string,groupSearchBase=string,groupSearchFilter=string,syncInterval=int,autoSync=bool,status=int} true "AD配置信息"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/ad-domain/configs/:id/update [post]
 func (h *ADDomainHandler) UpdateConfig(c *gin.Context) {
 	id := c.Param("id")
 	if err := h.requireConfigID(id); err != nil {
@@ -133,6 +176,17 @@ func (h *ADDomainHandler) UpdateConfig(c *gin.Context) {
 }
 
 // DeleteConfig 删除AD配置
+// @Summary 删除AD配置
+// @Description 删除指定的AD域配置
+// @Tags AD域管理
+// @Accept json
+// @Produce json
+// @Param id path string true "配置ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/ad-domain/configs/:id/delete [post]
 func (h *ADDomainHandler) DeleteConfig(c *gin.Context) {
 	id := c.Param("id")
 	if err := h.requireConfigID(id); err != nil {
@@ -150,6 +204,16 @@ func (h *ADDomainHandler) DeleteConfig(c *gin.Context) {
 }
 
 // TestConnection 测试AD连接
+// @Summary 测试AD连接
+// @Description 测试AD域服务器连接是否正常
+// @Tags AD域管理
+// @Accept json
+// @Produce json
+// @Param id path string true "配置ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/ad-domain/configs/:id/test [post]
 func (h *ADDomainHandler) TestConnection(c *gin.Context) {
 	id := c.Param("id")
 	if err := h.requireConfigID(id); err != nil {
@@ -166,6 +230,17 @@ func (h *ADDomainHandler) TestConnection(c *gin.Context) {
 }
 
 // SyncData 同步AD数据
+// @Summary 同步AD数据
+// @Description 从AD域同步用户、用户组等数据到系统
+// @Tags AD域管理
+// @Accept json
+// @Produce json
+// @Param id path string true "配置ID"
+// @Param request body object{syncType=string} true "同步类型(full/incremental)"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/ad-domain/configs/:id/sync [post]
 func (h *ADDomainHandler) SyncData(c *gin.Context) {
 	id := c.Param("id")
 	if err := h.requireConfigID(id); err != nil {
@@ -200,6 +275,16 @@ func (h *ADDomainHandler) SyncData(c *gin.Context) {
 }
 
 // GetOUTree 获取OU树形结构
+// @Summary 获取OU树形结构
+// @Description 获取AD域的组织单元(OU)树形结构
+// @Tags AD域管理
+// @Accept json
+// @Produce json
+// @Param request body object{configId=string} true "配置ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/ad-domain/ou/tree [post]
 func (h *ADDomainHandler) GetOUTree(c *gin.Context) {
 	var req struct {
 		ConfigID string `json:"configId" binding:"required"`
@@ -220,6 +305,16 @@ func (h *ADDomainHandler) GetOUTree(c *gin.Context) {
 }
 
 // ListGroups 查询AD用户组列表
+// @Summary 查询AD用户组列表
+// @Description 查询AD域用户组列表，支持分页
+// @Tags AD域管理
+// @Accept json
+// @Produce json
+// @Param request body object{configId=string,groupName=string,current=int,pageSize=int} true "查询条件"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/ad-domain/groups/list [post]
 func (h *ADDomainHandler) ListGroups(c *gin.Context) {
 	var req addomainServices.ADGroupListRequest
 	c.ShouldBindJSON(&req)
@@ -236,16 +331,47 @@ func (h *ADDomainHandler) ListGroups(c *gin.Context) {
 }
 
 // GetGroupDetail 获取AD用户组详情
+// @Summary 获取AD用户组详情
+// @Description 根据用户组DN获取AD用户组详细信息
+// @Tags AD域管理
+// @Accept json
+// @Produce json
+// @Param id path string true "用户组DN"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/ad-domain/groups/:id [get]
 func (h *ADDomainHandler) GetGroupDetail(c *gin.Context) {
 	response.Error(c, apperrors.NotImplemented())
 }
 
 // UpdateGroup 更新AD用户组
+// @Summary 更新AD用户组
+// @Description 更新AD域用户组信息
+// @Tags AD域管理
+// @Accept json
+// @Produce json
+// @Param id path string true "用户组DN"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/ad-domain/groups/:id/update [post]
 func (h *ADDomainHandler) UpdateGroup(c *gin.Context) {
 	response.Error(c, apperrors.NotImplemented())
 }
 
 // GetGroupMembers 获取AD用户组成员
+// @Summary 获取AD用户组成员
+// @Description 获取AD域用户组的成员列表
+// @Tags AD域管理
+// @Accept json
+// @Produce json
+// @Param id path string true "用户组DN"
+// @Param request body object{configId=string,current=int,pageSize=int} true "查询条件"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/ad-domain/groups/:id/members [post]
 func (h *ADDomainHandler) GetGroupMembers(c *gin.Context) {
 	groupDN := c.Param("id")
 	if groupDN == "" {
@@ -272,6 +398,16 @@ func (h *ADDomainHandler) GetGroupMembers(c *gin.Context) {
 }
 
 // ListUsers 查询AD用户列表
+// @Summary 查询AD用户列表
+// @Description 查询AD域用户列表，支持分页
+// @Tags AD域管理
+// @Accept json
+// @Produce json
+// @Param request body object{configId=string,username=string,email=string,current=int,pageSize=int} true "查询条件"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/ad-domain/users/list [post]
 func (h *ADDomainHandler) ListUsers(c *gin.Context) {
 	var req addomainServices.ADUserListRequest
 	c.ShouldBindJSON(&req)
@@ -288,11 +424,32 @@ func (h *ADDomainHandler) ListUsers(c *gin.Context) {
 }
 
 // GetUserDetail 获取AD用户详情
+// @Summary 获取AD用户详情
+// @Description 根据用户ID获取AD域用户详细信息
+// @Tags AD域管理
+// @Accept json
+// @Produce json
+// @Param id path string true "用户ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/ad-domain/users/:id [get]
 func (h *ADDomainHandler) GetUserDetail(c *gin.Context) {
 	response.Error(c, apperrors.NotImplemented())
 }
 
 // UpdateUser 更新AD用户
+// @Summary 更新AD用户
+// @Description 更新AD域用户信息
+// @Tags AD域管理
+// @Accept json
+// @Produce json
+// @Param id path string true "用户ID"
+// @Param request body object{configId=string,update=object{email=string,phone=string,displayName=string}} true "更新信息"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/ad-domain/users/:id/update [post]
 func (h *ADDomainHandler) UpdateUser(c *gin.Context) {
 	// 路由格式: /users/:id/update，其中:id是用户ID（数据库中的ID）
 	userID := c.Param("id")
@@ -333,6 +490,17 @@ func (h *ADDomainHandler) UpdateUser(c *gin.Context) {
 }
 
 // MoveUser 移动AD用户到新OU
+// @Summary 移动AD用户到新OU
+// @Description 将AD域用户移动到新的组织单元(OU)
+// @Tags AD域管理
+// @Accept json
+// @Produce json
+// @Param id path string true "用户ID"
+// @Param request body object{configId=string,move=object{newOuDn=string}} true "移动信息"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/ad-domain/users/:id/move [post]
 func (h *ADDomainHandler) MoveUser(c *gin.Context) {
 	// 路由格式: /users/:id/move，其中:id是用户ID
 	userID := c.Param("id")
@@ -375,6 +543,17 @@ func (h *ADDomainHandler) MoveUser(c *gin.Context) {
 }
 
 // EnableUser 启用AD用户
+// @Summary 启用AD用户
+// @Description 启用AD域用户账号
+// @Tags AD域管理
+// @Accept json
+// @Produce json
+// @Param id path string true "用户ID"
+// @Param request body object{configId=string} true "配置ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/ad-domain/users/:id/enable [post]
 func (h *ADDomainHandler) EnableUser(c *gin.Context) {
 	userID := c.Param("id")
 	if userID == "" {
@@ -412,6 +591,17 @@ func (h *ADDomainHandler) EnableUser(c *gin.Context) {
 }
 
 // DisableUser 禁用AD用户
+// @Summary 禁用AD用户
+// @Description 禁用AD域用户账号
+// @Tags AD域管理
+// @Accept json
+// @Produce json
+// @Param id path string true "用户ID"
+// @Param request body object{configId=string} true "配置ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/ad-domain/users/:id/disable [post]
 func (h *ADDomainHandler) DisableUser(c *gin.Context) {
 	userID := c.Param("id")
 	if userID == "" {
@@ -449,6 +639,16 @@ func (h *ADDomainHandler) DisableUser(c *gin.Context) {
 }
 
 // ListSyncLogs 查询AD同步日志列表
+// @Summary 查询AD同步日志列表
+// @Description 查询AD域数据同步日志列表
+// @Tags AD域管理
+// @Accept json
+// @Produce json
+// @Param request body object{configId=string,current=int,pageSize=int} true "查询条件"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/ad-domain/sync-logs/list [post]
 func (h *ADDomainHandler) ListSyncLogs(c *gin.Context) {
 	var req struct {
 		ConfigID string `json:"configId,omitempty"`
@@ -469,6 +669,16 @@ func (h *ADDomainHandler) ListSyncLogs(c *gin.Context) {
 }
 
 // ListComputers 查询AD电脑设备列表
+// @Summary 查询AD电脑设备列表
+// @Description 查询AD域电脑设备列表，支持分页
+// @Tags AD域管理
+// @Accept json
+// @Produce json
+// @Param request body object{configId=string,computerName=string,current=int,pageSize=int} true "查询条件"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/ad-domain/computers/list [post]
 func (h *ADDomainHandler) ListComputers(c *gin.Context) {
 	var req addomainServices.ComputerListRequest
 	c.ShouldBindJSON(&req)
@@ -485,6 +695,16 @@ func (h *ADDomainHandler) ListComputers(c *gin.Context) {
 }
 
 // GetComputerDetail 获取AD电脑设备详情
+// @Summary 获取AD电脑设备详情
+// @Description 根据电脑DN获取AD域电脑设备详细信息
+// @Tags AD域管理
+// @Accept json
+// @Produce json
+// @Param request body object{configId=string,computerDn=string} true "查询条件"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/ad-domain/computers/detail [post]
 func (h *ADDomainHandler) GetComputerDetail(c *gin.Context) {
 	var req struct {
 		ConfigID    string `json:"configId" binding:"required"`

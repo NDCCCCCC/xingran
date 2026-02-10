@@ -1,12 +1,11 @@
 package network
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 )
 
 // ExecutionHandler 配置执行处理器
@@ -39,7 +38,7 @@ func (h *ExecutionHandler) List(c *gin.Context) {
 
 	executions, total, err := h.executionService.GetExecutionList(c.Request.Context(), current, pageSize)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, apperrors.InternalServerError(err))
 		return
 	}
 
@@ -101,13 +100,13 @@ func (h *ExecutionHandler) ExecuteByTemplate(c *gin.Context) {
 func (h *ExecutionHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "执行ID不能为空")
+		response.Error(c, apperrors.ParamMissing("执行ID"))
 		return
 	}
 
 	result, err := h.executionService.GetExecutionResult(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, apperrors.InternalServerError(err))
 		return
 	}
 
@@ -126,7 +125,7 @@ func (h *ExecutionHandler) GetByID(c *gin.Context) {
 func (h *ExecutionHandler) Cancel(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "执行ID不能为空")
+		response.Error(c, apperrors.ParamMissing("执行ID"))
 		return
 	}
 
@@ -150,7 +149,7 @@ func (h *ExecutionHandler) Cancel(c *gin.Context) {
 func (h *ExecutionHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "执行ID不能为空")
+		response.Error(c, apperrors.ParamMissing("执行ID"))
 		return
 	}
 

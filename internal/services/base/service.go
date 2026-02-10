@@ -2,9 +2,9 @@ package base
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"gorm.io/gorm"
 )
 
@@ -137,20 +137,10 @@ func (r *GORMRepository[T]) List(ctx context.Context, query *Query) (*PageResult
 // BatchDelete 批量删除
 func (r *GORMRepository[T]) BatchDelete(ctx context.Context, ids []string) error {
 	if len(ids) == 0 {
-		return errors.New("ids不能为空")
+		return apperrors.BadRequest("ids不能为空")
 	}
 	return r.db.WithContext(ctx).Delete(new(T), "id IN ?", ids).Error
 }
-
-// ServiceErrors 定义业务错误
-var (
-	ErrRecordNotFound    = errors.New("记录不存在")
-	ErrDuplicateRecord   = errors.New("记录已存在")
-	ErrInvalidParameter  = errors.New("参数错误")
-	ErrOperationFailed   = errors.New("操作失败")
-	ErrPermissionDenied  = errors.New("权限不足")
-	ErrDependencyNotFound = errors.New("依赖资源不存在")
-)
 
 // WrapError 包装错误信息
 func WrapError(err error, message string) error {
@@ -162,10 +152,10 @@ func WrapError(err error, message string) error {
 
 // IsNotFound 判断是否为记录不存在错误
 func IsNotFound(err error) bool {
-	return errors.Is(err, gorm.ErrRecordNotFound) || errors.Is(err, ErrRecordNotFound)
+	return err == gorm.ErrRecordNotFound || apperrors.IsAppError(err) && apperrors.GetAppError(err).GetCode() == apperrors.CodeRecordNotFound
 }
 
 // IsDuplicate 判断是否为重复记录错误
 func IsDuplicate(err error) bool {
-	return errors.Is(err, ErrDuplicateRecord)
+	return apperrors.IsAppError(err) && apperrors.GetAppError(err).GetCode() == apperrors.CodeRecordExists
 }

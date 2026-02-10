@@ -1,14 +1,13 @@
 package operations
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 	opsServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 )
 
 // BuildingHandlerTypeSafe 楼宇处理器（类型安全版本）
@@ -65,7 +64,7 @@ func (h *BuildingHandlerTypeSafe) GetByID(c *gin.Context) {
 	id := c.Param("id")
 	building, err := h.service.GetByID(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusNotFound, "楼宇不存在")
+		response.Error(c, apperrors.BuildingNotFound())
 		return
 	}
 
@@ -113,7 +112,7 @@ func (h *BuildingHandlerTypeSafe) BatchOperation(c *gin.Context) {
 			return
 		}
 	default:
-		response.Error(c, http.StatusBadRequest, "不支持的操作")
+		response.Error(c, apperrors.InvalidOperation("不支持的操作"))
 		return
 	}
 
@@ -129,7 +128,7 @@ func (h *BuildingHandlerTypeSafe) Geocode(c *gin.Context) {
 	}
 
 	if req.Address == "" {
-		response.Error(c, http.StatusBadRequest, "地址不能为空")
+		response.Error(c, apperrors.ParamMissing("地址"))
 		return
 	}
 

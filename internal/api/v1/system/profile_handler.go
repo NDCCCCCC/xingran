@@ -19,10 +19,19 @@ func NewProfileHandler(service systemServices.ProfileService) *ProfileHandler {
 }
 
 // GetInfo 获取当前用户个人信息
+// @Summary 获取个人信息
+// @Description 获取当前登录用户的个人信息
+// @Tags 个人设置
+// @Accept json
+// @Produce json
+// @Success 200 {object} response.Response
+// @Failure 401 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/profile/info [get]
 func (h *ProfileHandler) GetInfo(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
-		response.Error(c, http.StatusUnauthorized, "未授权")
+		response.Error(c, apperrors.Unauthorized())
 		return
 	}
 
@@ -45,16 +54,27 @@ type ProfileInfoRequest struct {
 }
 
 // UpdateInfo 更新个人信息
+// @Summary 更新个人信息
+// @Description 更新当前登录用户的个人信息
+// @Tags 个人设置
+// @Accept json
+// @Produce json
+// @Param request body object{nickname=string,email=string,phone=string,gender=int,remark=string} true "个人信息"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 401 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/profile/info/update [post]
 func (h *ProfileHandler) UpdateInfo(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
-		response.Error(c, http.StatusUnauthorized, "未授权")
+		response.Error(c, apperrors.Unauthorized())
 		return
 	}
 
 	var req ProfileInfoRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
@@ -81,23 +101,34 @@ type ChangePasswordRequest struct {
 }
 
 // ChangePassword 修改密码
+// @Summary 修改密码
+// @Description 修改当前登录用户的密码
+// @Tags 个人设置
+// @Accept json
+// @Produce json
+// @Param request body object{oldPassword=string,newPassword=string} true "密码信息"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 401 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/profile/change-password [post]
 func (h *ProfileHandler) ChangePassword(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
-		response.Error(c, http.StatusUnauthorized, "未授权")
+		response.Error(c, apperrors.Unauthorized())
 		return
 	}
 
 	var req ChangePasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
 	if err := h.service.ChangePassword(c.Request.Context(), userID.(string), req.OldPassword, req.NewPassword); err != nil {
 		// 根据错误类型返回不同的错误码
 		if err.Error() == "旧密码错误" {
-			response.Error(c, http.StatusBadRequest, "旧密码错误")
+			response.Error(c, apperrors.BadRequest("旧密码错误"))
 		} else {
 			response.Error(c, err)
 		}
@@ -108,23 +139,34 @@ func (h *ProfileHandler) ChangePassword(c *gin.Context) {
 }
 
 // UploadAvatar 上传头像
+// @Summary 上传头像
+// @Description 上传用户头像
+// @Tags 个人设置
+// @Accept multipart/form-data
+// @Produce json
+// @Param file formData file true "头像文件"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 401 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/profile/avatar/upload [post]
 func (h *ProfileHandler) UploadAvatar(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
-		response.Error(c, http.StatusUnauthorized, "未授权")
+		response.Error(c, apperrors.Unauthorized())
 		return
 	}
 
 	// 解析表单，获取文件
 	file, err := c.FormFile("file")
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "文件上传失败")
+		response.Error(c, apperrors.BadRequest("文件上传失败"))
 		return
 	}
 
 	// 验证文件大小（最大 2MB）
 	if file.Size > 2*1024*1024 {
-		response.Error(c, http.StatusBadRequest, "文件大小不能超过 2MB")
+		response.Error(c, apperrors.BadRequest("文件大小不能超过 2MB"))
 		return
 	}
 

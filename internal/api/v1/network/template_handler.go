@@ -1,9 +1,8 @@
 package network
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
@@ -61,7 +60,7 @@ func (h *TemplateHandler) List(c *gin.Context) {
 
 	templates, total, err := h.templateService.List(c.Request.Context(), &req)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, apperrors.InternalServerError(err))
 		return
 	}
 
@@ -86,13 +85,13 @@ func (h *TemplateHandler) List(c *gin.Context) {
 func (h *TemplateHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "模板ID不能为空")
+		response.Error(c, apperrors.ParamMissing("模板ID"))
 		return
 	}
 
 	template, err := h.templateService.GetByID(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, apperrors.InternalServerError(err))
 		return
 	}
 
@@ -138,7 +137,7 @@ func (h *TemplateHandler) Create(c *gin.Context) {
 func (h *TemplateHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "模板ID不能为空")
+		response.Error(c, apperrors.ParamMissing("模板ID"))
 		return
 	}
 
@@ -172,7 +171,7 @@ func (h *TemplateHandler) Update(c *gin.Context) {
 func (h *TemplateHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "模板ID不能为空")
+		response.Error(c, apperrors.ParamMissing("模板ID"))
 		return
 	}
 
@@ -225,7 +224,7 @@ func (h *TemplateHandler) BatchDelete(c *gin.Context) {
 func (h *TemplateHandler) Preview(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "模板ID不能为空")
+		response.Error(c, apperrors.ParamMissing("模板ID"))
 		return
 	}
 
@@ -236,7 +235,7 @@ func (h *TemplateHandler) Preview(c *gin.Context) {
 
 	result, err := h.templateService.Preview(c.Request.Context(), id, variables)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, apperrors.InternalServerError(err))
 		return
 	}
 
@@ -256,7 +255,7 @@ func (h *TemplateHandler) Preview(c *gin.Context) {
 func (h *TemplateHandler) Clone(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "模板ID不能为空")
+		response.Error(c, apperrors.ParamMissing("模板ID"))
 		return
 	}
 
@@ -289,13 +288,13 @@ func (h *TemplateHandler) Clone(c *gin.Context) {
 func (h *TemplateHandler) GetVariables(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "模板ID不能为空")
+		response.Error(c, apperrors.ParamMissing("模板ID"))
 		return
 	}
 
 	variables, err := h.templateService.GetVariables(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, apperrors.InternalServerError(err))
 		return
 	}
 

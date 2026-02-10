@@ -1,13 +1,12 @@
 package operations
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
 	operationsmodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 	opsServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 )
 
 type FloorPlanTextHandler struct {
@@ -19,6 +18,16 @@ func NewFloorPlanTextHandler(service opsServices.FloorPlanTextService) *FloorPla
 }
 
 // Create 创建平面图文本
+// @Summary 创建平面图文本
+// @Description 创建新的平面图文本信息
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param request body object{floorId=string,text=string,position=object,fontSize=int,fontFamily=string,color=string,backgroundColor=string,bold=bool,italic=bool} true "平面图文本信息"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/floor-plan-texts [post]
 func (h *FloorPlanTextHandler) Create(c *gin.Context) {
 	var text operationsmodels.FloorPlanText
 	if !handleJSONBinding(c, &text) {
@@ -33,6 +42,16 @@ func (h *FloorPlanTextHandler) Create(c *gin.Context) {
 }
 
 // List 查询平面图文本列表（类型安全版本）
+// @Summary 查询平面图文本列表
+// @Description 分页查询平面图文本列表，支持按条件筛选
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param request body requests.FloorPlanTextListRequest true "查询参数"
+// @Success 200 {object} response.Response{data=object{list=[]object,total=int}}
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/floor-plan-texts/list [post]
 func (h *FloorPlanTextHandler) List(c *gin.Context) {
 	var req requests.FloorPlanTextListRequest
 	if !handleJSONBinding(c, &req) {
@@ -41,7 +60,7 @@ func (h *FloorPlanTextHandler) List(c *gin.Context) {
 
 	result, err := h.service.List(c.Request.Context(), req)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "查询失败: "+err.Error())
+		response.Error(c, apperrors.InternalServerErrorWithMsg("查询失败"))
 		return
 	}
 
@@ -49,11 +68,21 @@ func (h *FloorPlanTextHandler) List(c *gin.Context) {
 }
 
 // GetByID 获取平面图文本详情
+// @Summary 获取平面图文本详情
+// @Description 根据ID获取平面图文本详细信息
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param id path string true "平面图文本ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Router /ops/floor-plan-texts/{id} [post]
 func (h *FloorPlanTextHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
 	text, err := h.service.GetByID(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusNotFound, "文本不存在")
+		response.Error(c, apperrors.FloorPlanTextNotFound())
 		return
 	}
 
@@ -61,6 +90,18 @@ func (h *FloorPlanTextHandler) GetByID(c *gin.Context) {
 }
 
 // Update 更新平面图文本
+// @Summary 更新平面图文本
+// @Description 更新平面图文本信息
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param id path string true "平面图文本ID"
+// @Param request body object{floorId=string,text=string,position=object,fontSize=int,fontFamily=string,color=string,backgroundColor=string,bold=bool,italic=bool} true "平面图文本信息"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/floor-plan-texts/{id}/update [post]
 func (h *FloorPlanTextHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	var text operationsmodels.FloorPlanText
@@ -77,6 +118,17 @@ func (h *FloorPlanTextHandler) Update(c *gin.Context) {
 }
 
 // Delete 删除平面图文本
+// @Summary 删除平面图文本
+// @Description 根据ID删除平面图文本
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param id path string true "平面图文本ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/floor-plan-texts/{id}/delete [post]
 func (h *FloorPlanTextHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
 	if !handleServiceError(c, h.service.Delete(c.Request.Context(), id), "删除") {
@@ -87,6 +139,16 @@ func (h *FloorPlanTextHandler) Delete(c *gin.Context) {
 }
 
 // BatchOperation 批量操作（类型安全版本）
+// @Summary 批量操作
+// @Description 对平面图文本进行批量操作，如批量删除
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param request body requests.FloorPlanTextBatchOperationRequest true "批量操作参数"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/floor-plan-texts/batch [post]
 func (h *FloorPlanTextHandler) BatchOperation(c *gin.Context) {
 	var req requests.FloorPlanTextBatchOperationRequest
 	if !handleJSONBinding(c, &req) {
@@ -99,7 +161,7 @@ func (h *FloorPlanTextHandler) BatchOperation(c *gin.Context) {
 			return
 		}
 	default:
-		response.Error(c, http.StatusBadRequest, "不支持的操作")
+		response.Error(c, apperrors.InvalidOperation("不支持的操作"))
 		return
 	}
 

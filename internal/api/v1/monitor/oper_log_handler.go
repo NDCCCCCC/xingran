@@ -1,9 +1,8 @@
 package monitor
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	monitorServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/monitor"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
@@ -63,7 +62,7 @@ func (h *OperLogHandler) List(c *gin.Context) {
 
 	result, err := h.service.List(c.Request.Context(), params)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, apperrors.InternalServerError(err))
 		return
 	}
 
@@ -82,13 +81,13 @@ func (h *OperLogHandler) List(c *gin.Context) {
 func (h *OperLogHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "ID不能为空")
+		response.Error(c, apperrors.ParamMissing("ID"))
 		return
 	}
 
 	operLog, err := h.service.GetByID(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, apperrors.InternalServerError(err))
 		return
 	}
 
@@ -107,7 +106,7 @@ func (h *OperLogHandler) GetByID(c *gin.Context) {
 func (h *OperLogHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "ID不能为空")
+		response.Error(c, apperrors.ParamMissing("ID"))
 		return
 	}
 

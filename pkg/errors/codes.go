@@ -113,6 +113,7 @@ const (
 	CodeServerRoomNotFound ErrorCode = 3100 // 机房不存在
 	CodeServerRoomExists   ErrorCode = 3101 // 机房已存在
 	CodeServerRoomHasServers ErrorCode = 3102 // 机房存在服务器
+	CodeRoomDeviceNotFound ErrorCode = 3110 // 机房设备不存在
 
 	// 信息点相关 3130-3159
 	CodeInfoPointNotFound ErrorCode = 3130 // 信息点不存在
@@ -183,6 +184,8 @@ func (c ErrorCode) DefaultHTTPStatus() int {
 	switch {
 	case c == CodeSuccess:
 		return http.StatusOK
+	case c == CodeRoomDeviceNotFound:
+		return http.StatusNotFound
 	case c >= 1000 && c < 1020:
 		return http.StatusBadRequest
 	case c >= 1020 && c < 1030:
@@ -347,6 +350,8 @@ func (c ErrorCode) DefaultMessage() string {
 		return "机房已存在"
 	case CodeServerRoomHasServers:
 		return "机房存在服务器"
+	case CodeRoomDeviceNotFound:
+		return "机房设备不存在"
 	case CodeInfoPointNotFound:
 		return "信息点不存在"
 	case CodeInfoPointExists:

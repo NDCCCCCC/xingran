@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
 	"github.com/spf13/viper"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 )
@@ -53,6 +54,8 @@ type CacheConfig struct {
 	MaxSize          int    `mapstructure:"max_size"`
 	CleanupTime      int    `mapstructure:"cleanup_time"`
 	WarmUpEnabled    bool   `mapstructure:"warm_up_enabled"` // 是否启用缓存预热
+	// L2写入Worker配置
+	L2Writer         *cache.L2WriterConfig `mapstructure:"l2_writer"` // L2写入Worker Pool配置
 	// 重试配置
 	RetryEnabled      bool    `mapstructure:"retry_enabled"`       // 是否启用L2缓存写入重试
 	RetryMaxRetries   int     `mapstructure:"retry_max_retries"`   // 最大重试次数

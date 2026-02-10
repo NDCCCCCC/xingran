@@ -32,7 +32,7 @@ func NewJobHandler(
 // @Tags 定时任务管理
 // @Accept json
 // @Produce json
-// @Param request body schedulerServices.JobCreateRequest true "任务信息"
+// @Param request body object{jobName=string,jobGroup=string,invokeTarget=string,cronExpression=string,misfirePolicy=string,concurrent=bool,remark=string} true "任务信息"
 // @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
 // @Failure 500 {object} response.Response
@@ -57,7 +57,7 @@ func (h *JobHandler) Create(c *gin.Context) {
 // @Tags 定时任务管理
 // @Accept json
 // @Produce json
-// @Param request body schedulerServices.JobListParams false "查询参数"
+// @Param request body object{current=int,pageSize=int,jobName=string,jobGroup=string,status=int} false "查询参数"
 // @Success 200 {object} response.Response{data=response.PageResponse}
 // @Failure 400 {object} response.Response
 // @Failure 500 {object} response.Response
@@ -151,7 +151,7 @@ func (h *JobHandler) GetByID(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "任务ID"
-// @Param request body schedulerServices.JobUpdateRequest true "任务信息"
+// @Param request body object{jobName=string,jobGroup=string,invokeTarget=string,cronExpression=string,misfirePolicy=string,concurrent=bool,remark=string} true "任务信息"
 // @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
 // @Failure 404 {object} response.Response
@@ -279,7 +279,7 @@ func (h *JobHandler) Execute(c *gin.Context) {
 // @Tags 定时任务管理
 // @Accept json
 // @Produce json
-// @Param request body schedulerServices.JobLogListParams false "查询参数"
+// @Param request body object{current=int,pageSize=int,jobName=string,jobGroup=string,status=int,startTime=string,endTime=string} false "查询参数"
 // @Success 200 {object} response.Response{data=response.PageResponse}
 // @Failure 400 {object} response.Response
 // @Failure 500 {object} response.Response

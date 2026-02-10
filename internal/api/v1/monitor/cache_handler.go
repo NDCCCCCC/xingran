@@ -524,6 +524,14 @@ func (h *CacheHandler) TestCacheEndpoint(c *gin.Context) {
 }
 
 // DebugRawKeys 调试端点：直接查询Redis中的所有原始键
+// @Summary 调试原始缓存键
+// @Description 查询Redis中所有原始键和ruoyi前缀的键，用于调试
+// @Tags 监控管理
+// @Accept json
+// @Produce json
+// @Success 200 {object} response.Response{data=map[string]interface{}}
+// @Failure 500 {object} response.Response
+// @Router /monitor/cache/debug/raw-keys [post]
 func (h *CacheHandler) DebugRawKeys(c *gin.Context) {
 	if h.core == nil || h.core.Cache == nil {
 		response.Error(c, apperrors.ServerError(fmt.Errorf("缓存服务未初始化")))
@@ -544,6 +552,14 @@ func (h *CacheHandler) DebugRawKeys(c *gin.Context) {
 }
 
 // DebugL1Cache 调试端点：检查L1缓存状态和命中率
+// @Summary 调试L1缓存状态
+// @Description 检查L1缓存的统计信息、命中率和键数量，用于诊断缓存问题
+// @Tags 监控管理
+// @Accept json
+// @Produce json
+// @Success 200 {object} response.Response{data=map[string]interface{}}
+// @Failure 500 {object} response.Response
+// @Router /monitor/cache/debug/l1 [post]
 func (h *CacheHandler) DebugL1Cache(c *gin.Context) {
 	if h.core == nil || h.core.Cache == nil {
 		response.Error(c, apperrors.ServerError(fmt.Errorf("缓存服务未初始化")))

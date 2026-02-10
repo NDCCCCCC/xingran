@@ -1,10 +1,10 @@
 package monitor
 
 import (
-	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	monitorServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/monitor"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
@@ -55,7 +55,7 @@ func (h *ServerHandler) GetServerInfo(c *gin.Context) {
 		PageSize: req.PageSize,
 	})
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, apperrors.InternalServerError(err))
 		return
 	}
 
@@ -114,7 +114,7 @@ func (h *ServerHandler) SaveSystemMetrics(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误")
+		response.Error(c, apperrors.BadRequest("请求参数错误"))
 		return
 	}
 
@@ -181,7 +181,7 @@ func (h *ServerHandler) GetSystemMetricsHistory(c *gin.Context) {
 		PageSize:  req.PageSize,
 	})
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, apperrors.InternalServerError(err))
 		return
 	}
 

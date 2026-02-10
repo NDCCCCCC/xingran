@@ -41,7 +41,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -67,7 +67,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.DutyConfig"
+                            "$ref": "#/definitions/models.DutyConfig"
                         }
                     }
                 ],
@@ -75,7 +75,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -109,7 +109,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -143,7 +143,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -177,7 +177,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -200,7 +200,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -232,7 +232,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -273,7 +273,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -296,7 +296,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -322,7 +322,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services.DutyPoolCreateRequest"
+                            "$ref": "#/definitions/services.DutyPoolCreateRequest"
                         }
                     }
                 ],
@@ -330,7 +330,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -355,7 +355,7 @@ const docTemplate = `{
                         "name": "request",
                         "in": "body",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services.DutyPoolListRequest"
+                            "$ref": "#/definitions/services.DutyPoolListRequest"
                         }
                     }
                 ],
@@ -365,13 +365,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.PageResponse"
+                                            "$ref": "#/definitions/response.PageResponse"
                                         }
                                     }
                                 }
@@ -407,7 +407,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -439,7 +439,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -472,7 +472,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services.DutyPoolUpdateRequest"
+                            "$ref": "#/definitions/services.DutyPoolUpdateRequest"
                         }
                     }
                 ],
@@ -480,7 +480,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -514,7 +514,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -540,7 +540,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services.GenerateScheduleRequest"
+                            "$ref": "#/definitions/services.GenerateScheduleRequest"
                         }
                     }
                 ],
@@ -548,7 +548,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -573,7 +573,7 @@ const docTemplate = `{
                         "name": "request",
                         "in": "body",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services.DutyScheduleListRequest"
+                            "$ref": "#/definitions/services.DutyScheduleListRequest"
                         }
                     }
                 ],
@@ -583,13 +583,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.PageResponse"
+                                            "$ref": "#/definitions/response.PageResponse"
                                         }
                                     }
                                 }
@@ -619,7 +619,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services.ManualDutyRequest"
+                            "$ref": "#/definitions/services.ManualDutyRequest"
                         }
                     }
                 ],
@@ -627,7 +627,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -664,7 +664,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -690,7 +690,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services.SwapDutyRequest"
+                            "$ref": "#/definitions/services.SwapDutyRequest"
                         }
                     }
                 ],
@@ -698,7 +698,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -721,7 +721,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -753,7 +753,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -779,7 +779,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services.KnowledgeArticleCreateRequest"
+                            "$ref": "#/definitions/services.KnowledgeArticleCreateRequest"
                         }
                     }
                 ],
@@ -787,7 +787,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -819,7 +819,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -851,7 +851,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -883,7 +883,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -916,7 +916,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services.KnowledgeArticleUpdateRequest"
+                            "$ref": "#/definitions/services.KnowledgeArticleUpdateRequest"
                         }
                     }
                 ],
@@ -924,7 +924,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -950,7 +950,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services.KnowledgeArticleListRequest"
+                            "$ref": "#/definitions/services.KnowledgeArticleListRequest"
                         }
                     }
                 ],
@@ -960,13 +960,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.PageResponse"
+                                            "$ref": "#/definitions/response.PageResponse"
                                         }
                                     }
                                 }
@@ -996,7 +996,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services.SearchKnowledgeRequest"
+                            "$ref": "#/definitions/services.SearchKnowledgeRequest"
                         }
                     }
                 ],
@@ -1006,7 +1006,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
@@ -1042,7 +1042,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services.KnowledgeCategoryCreateRequest"
+                            "$ref": "#/definitions/services.KnowledgeCategoryCreateRequest"
                         }
                     }
                 ],
@@ -1050,7 +1050,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1082,7 +1082,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1114,7 +1114,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1147,7 +1147,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services.KnowledgeCategoryUpdateRequest"
+                            "$ref": "#/definitions/services.KnowledgeCategoryUpdateRequest"
                         }
                     }
                 ],
@@ -1155,7 +1155,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1181,7 +1181,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services.KnowledgeCategoryListRequest"
+                            "$ref": "#/definitions/services.KnowledgeCategoryListRequest"
                         }
                     }
                 ],
@@ -1189,7 +1189,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1228,7 +1228,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1260,7 +1260,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1306,7 +1306,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1329,7 +1329,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1362,7 +1362,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services.ConvertWorkOrderToArticleRequest"
+                            "$ref": "#/definitions/services.ConvertWorkOrderToArticleRequest"
                         }
                     }
                 ],
@@ -1370,7 +1370,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1396,7 +1396,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_api_v1_monitor.CacheBatchRequest"
+                            "$ref": "#/definitions/monitor.CacheBatchRequest"
                         }
                     }
                 ],
@@ -1406,7 +1406,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
@@ -1423,13 +1423,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1452,13 +1452,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1483,7 +1483,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
@@ -1491,7 +1491,7 @@ const docTemplate = `{
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/internal_api_v1_monitor.CacheConfigCategory"
+                                                "$ref": "#/definitions/monitor.CacheConfigCategory"
                                             }
                                         }
                                     }
@@ -1520,7 +1520,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_api_v1_monitor.UpdateCacheConfigRequest"
+                            "$ref": "#/definitions/monitor.UpdateCacheConfigRequest"
                         }
                     }
                 ],
@@ -1528,7 +1528,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1551,7 +1551,91 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/monitor/cache/debug/l1": {
+            "post": {
+                "description": "检查L1缓存的统计信息、命中率和键数量，用于诊断缓存问题",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "监控管理"
+                ],
+                "summary": "调试L1缓存状态",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "additionalProperties": true
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/monitor/cache/debug/raw-keys": {
+            "post": {
+                "description": "查询Redis中所有原始键和ruoyi前缀的键，用于调试",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "监控管理"
+                ],
+                "summary": "调试原始缓存键",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "additionalProperties": true
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1576,7 +1660,7 @@ const docTemplate = `{
                         "name": "request",
                         "in": "body",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_v1_monitor.CacheListRequest"
+                            "$ref": "#/definitions/monitor.CacheListRequest"
                         }
                     }
                 ],
@@ -1586,7 +1670,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
@@ -1602,7 +1686,7 @@ const docTemplate = `{
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1628,7 +1712,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_api_v1_monitor.InvalidateByModuleRequest"
+                            "$ref": "#/definitions/monitor.InvalidateByModuleRequest"
                         }
                     }
                 ],
@@ -1636,7 +1720,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1662,7 +1746,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_api_v1_monitor.InvalidateByPatternRequest"
+                            "$ref": "#/definitions/monitor.InvalidateByPatternRequest"
                         }
                     }
                 ],
@@ -1670,7 +1754,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1696,7 +1780,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_api_v1_monitor.GetKeyInfoRequest"
+                            "$ref": "#/definitions/monitor.GetKeyInfoRequest"
                         }
                     }
                 ],
@@ -1706,13 +1790,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/internal_api_v1_monitor.GetKeyInfoResponse"
+                                            "$ref": "#/definitions/monitor.GetKeyInfoResponse"
                                         }
                                     }
                                 }
@@ -1741,7 +1825,7 @@ const docTemplate = `{
                         "name": "request",
                         "in": "body",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_v1_monitor.CacheListRequest"
+                            "$ref": "#/definitions/monitor.CacheListRequest"
                         }
                     }
                 ],
@@ -1749,19 +1833,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1786,7 +1870,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
@@ -1803,7 +1887,7 @@ const docTemplate = `{
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1829,7 +1913,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_api_v1_monitor.CacheOperateRequest"
+                            "$ref": "#/definitions/monitor.CacheOperateRequest"
                         }
                     }
                 ],
@@ -1839,7 +1923,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
@@ -1853,13 +1937,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1884,7 +1968,7 @@ const docTemplate = `{
                         "name": "body",
                         "in": "body",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_v1_monitor.GetStatsRequest"
+                            "$ref": "#/definitions/monitor.GetStatsRequest"
                         }
                     }
                 ],
@@ -1894,13 +1978,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/internal_api_v1_monitor.GetStatsResponse"
+                                            "$ref": "#/definitions/monitor.GetStatsResponse"
                                         }
                                     }
                                 }
@@ -1929,7 +2013,7 @@ const docTemplate = `{
                         "name": "request",
                         "in": "body",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_v1_monitor.CacheStatsRequest"
+                            "$ref": "#/definitions/monitor.CacheStatsRequest"
                         }
                     }
                 ],
@@ -1937,19 +2021,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1990,7 +2074,7 @@ const docTemplate = `{
                         "name": "body",
                         "in": "body",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_v1_monitor.WarmUpCacheRequest"
+                            "$ref": "#/definitions/monitor.WarmUpCacheRequest"
                         }
                     }
                 ],
@@ -2000,13 +2084,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/internal_api_v1_monitor.WarmUpCacheResponse"
+                                            "$ref": "#/definitions/monitor.WarmUpCacheResponse"
                                         }
                                     }
                                 }
@@ -2042,25 +2126,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -2086,7 +2170,30 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services_scheduler.JobCreateRequest"
+                            "type": "object",
+                            "properties": {
+                                "concurrent": {
+                                    "type": "boolean"
+                                },
+                                "cronExpression": {
+                                    "type": "string"
+                                },
+                                "invokeTarget": {
+                                    "type": "string"
+                                },
+                                "jobGroup": {
+                                    "type": "string"
+                                },
+                                "jobName": {
+                                    "type": "string"
+                                },
+                                "misfirePolicy": {
+                                    "type": "string"
+                                },
+                                "remark": {
+                                    "type": "string"
+                                }
+                            }
                         }
                     }
                 ],
@@ -2094,19 +2201,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -2131,7 +2238,24 @@ const docTemplate = `{
                         "name": "request",
                         "in": "body",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services_scheduler.JobListParams"
+                            "type": "object",
+                            "properties": {
+                                "current": {
+                                    "type": "integer"
+                                },
+                                "jobGroup": {
+                                    "type": "string"
+                                },
+                                "jobName": {
+                                    "type": "string"
+                                },
+                                "pageSize": {
+                                    "type": "integer"
+                                },
+                                "status": {
+                                    "type": "integer"
+                                }
+                            }
                         }
                     }
                 ],
@@ -2141,13 +2265,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.PageResponse"
+                                            "$ref": "#/definitions/response.PageResponse"
                                         }
                                     }
                                 }
@@ -2157,13 +2281,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -2200,19 +2324,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -2237,7 +2361,30 @@ const docTemplate = `{
                         "name": "request",
                         "in": "body",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services_scheduler.JobLogListParams"
+                            "type": "object",
+                            "properties": {
+                                "current": {
+                                    "type": "integer"
+                                },
+                                "endTime": {
+                                    "type": "string"
+                                },
+                                "jobGroup": {
+                                    "type": "string"
+                                },
+                                "jobName": {
+                                    "type": "string"
+                                },
+                                "pageSize": {
+                                    "type": "integer"
+                                },
+                                "startTime": {
+                                    "type": "string"
+                                },
+                                "status": {
+                                    "type": "integer"
+                                }
+                            }
                         }
                     }
                 ],
@@ -2247,13 +2394,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.PageResponse"
+                                            "$ref": "#/definitions/response.PageResponse"
                                         }
                                     }
                                 }
@@ -2263,13 +2410,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -2301,25 +2448,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -2351,25 +2498,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -2401,25 +2548,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -2461,25 +2608,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -2512,7 +2659,30 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services_scheduler.JobUpdateRequest"
+                            "type": "object",
+                            "properties": {
+                                "concurrent": {
+                                    "type": "boolean"
+                                },
+                                "cronExpression": {
+                                    "type": "string"
+                                },
+                                "invokeTarget": {
+                                    "type": "string"
+                                },
+                                "jobGroup": {
+                                    "type": "string"
+                                },
+                                "jobName": {
+                                    "type": "string"
+                                },
+                                "misfirePolicy": {
+                                    "type": "string"
+                                },
+                                "remark": {
+                                    "type": "string"
+                                }
+                            }
                         }
                     }
                 ],
@@ -2520,25 +2690,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -2570,7 +2740,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -2602,7 +2772,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -2644,7 +2814,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -2667,7 +2837,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -2693,7 +2863,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_api_v1_monitor.LoginLogListRequest"
+                            "$ref": "#/definitions/monitor.LoginLogListRequest"
                         }
                     }
                 ],
@@ -2703,13 +2873,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.PageResponse"
+                                            "$ref": "#/definitions/response.PageResponse"
                                         }
                                     }
                                 }
@@ -2745,7 +2915,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -2777,7 +2947,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -2809,7 +2979,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -2851,7 +3021,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -2874,7 +3044,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -2900,7 +3070,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_api_v1_monitor.OperLogListRequest"
+                            "$ref": "#/definitions/monitor.OperLogListRequest"
                         }
                     }
                 ],
@@ -2910,13 +3080,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.PageResponse"
+                                            "$ref": "#/definitions/response.PageResponse"
                                         }
                                     }
                                 }
@@ -2953,7 +3123,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -2978,7 +3148,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
@@ -3022,7 +3192,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -3056,7 +3226,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -3104,7 +3274,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -3138,7 +3308,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
@@ -3180,7 +3350,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -3222,7 +3392,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -3267,7 +3437,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -3309,7 +3479,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -3350,7 +3520,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
@@ -3402,7 +3572,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -3434,7 +3604,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -3481,13 +3651,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.PageResponse"
+                                            "$ref": "#/definitions/response.PageResponse"
                                         }
                                     }
                                 }
@@ -3514,7 +3684,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -3553,7 +3723,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -3585,7 +3755,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -3624,7 +3794,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -3650,7 +3820,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services.DispatchRequest"
+                            "$ref": "#/definitions/services.DispatchRequest"
                         }
                     }
                 ],
@@ -3658,7 +3828,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -3702,13 +3872,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.PageResponse"
+                                            "$ref": "#/definitions/response.PageResponse"
                                         }
                                     }
                                 }
@@ -3757,7 +3927,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -3783,7 +3953,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services.CreateCredentialRequest"
+                            "$ref": "#/definitions/services.CreateCredentialRequest"
                         }
                     }
                 ],
@@ -3791,7 +3961,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -3823,7 +3993,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -3855,7 +4025,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -3887,7 +4057,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -3919,7 +4089,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -3952,7 +4122,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services.UpdateCredentialRequest"
+                            "$ref": "#/definitions/services.UpdateCredentialRequest"
                         }
                     }
                 ],
@@ -3960,7 +4130,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -4002,7 +4172,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -4028,7 +4198,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services.ListCredentialRequest"
+                            "$ref": "#/definitions/services.ListCredentialRequest"
                         }
                     }
                 ],
@@ -4038,13 +4208,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.PageResponse"
+                                            "$ref": "#/definitions/response.PageResponse"
                                         }
                                     }
                                 }
@@ -4074,7 +4244,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services.CreateDeviceRequest"
+                            "$ref": "#/definitions/services.CreateDeviceRequest"
                         }
                     }
                 ],
@@ -4082,7 +4252,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -4116,7 +4286,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -4142,7 +4312,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services.ListDeviceRequest"
+                            "$ref": "#/definitions/services.ListDeviceRequest"
                         }
                     }
                 ],
@@ -4152,13 +4322,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.PageResponse"
+                                            "$ref": "#/definitions/response.PageResponse"
                                         }
                                     }
                                 }
@@ -4194,7 +4364,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -4226,7 +4396,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -4259,7 +4429,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services.UpdateDeviceRequest"
+                            "$ref": "#/definitions/services.UpdateDeviceRequest"
                         }
                     }
                 ],
@@ -4267,7 +4437,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -4299,7 +4469,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -4331,7 +4501,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -4363,7 +4533,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -4395,7 +4565,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -4427,7 +4597,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -4459,7 +4629,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -4501,7 +4671,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -4527,7 +4697,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services.DiscoveryRequest"
+                            "$ref": "#/definitions/services.DiscoveryRequest"
                         }
                     }
                 ],
@@ -4535,7 +4705,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -4579,13 +4749,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.PageResponse"
+                                            "$ref": "#/definitions/response.PageResponse"
                                         }
                                     }
                                 }
@@ -4621,7 +4791,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -4653,7 +4823,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -4685,7 +4855,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -4727,7 +4897,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -4771,13 +4941,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.PageResponse"
+                                            "$ref": "#/definitions/response.PageResponse"
                                         }
                                     }
                                 }
@@ -4807,7 +4977,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services.TemplateExecutionRequest"
+                            "$ref": "#/definitions/services.TemplateExecutionRequest"
                         }
                     }
                 ],
@@ -4815,7 +4985,560 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/network/mac/clean": {
+            "post": {
+                "description": "删除指定天数之前的MAC地址记录",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "网络设备管理"
+                ],
+                "summary": "清理旧的MAC地址记录",
+                "parameters": [
+                    {
+                        "description": "清理请求",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/network.CleanOldMACRecordsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "additionalProperties": true
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/network/mac/collect": {
+            "post": {
+                "description": "连接指定设备并采集其MAC地址信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "网络设备管理"
+                ],
+                "summary": "采集单个设备MAC地址",
+                "parameters": [
+                    {
+                        "description": "采集请求",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/network.MACCollectionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/network/mac/collect-all": {
+            "post": {
+                "description": "连接所有已配置的网络设备并采集MAC地址信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "网络设备管理"
+                ],
+                "summary": "采集所有设备MAC地址",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {}
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/network/mac/list": {
+            "post": {
+                "description": "分页查询MAC地址列表，支持按设备ID、MAC地址、接口名称筛选",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "网络设备管理"
+                ],
+                "summary": "查询MAC地址列表",
+                "parameters": [
+                    {
+                        "description": "查询条件",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/network.MACAddressListRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/response.PageResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/network/mac/stats": {
+            "post": {
+                "description": "获取MAC地址的统计信息，包括总数、按设备分组等",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "网络设备管理"
+                ],
+                "summary": "获取MAC地址统计信息",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "additionalProperties": true
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/network/port/batch-delete": {
+            "post": {
+                "description": "批量删除指定的端口状态记录",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "网络设备管理"
+                ],
+                "summary": "批量删除端口状态记录",
+                "parameters": [
+                    {
+                        "description": "删除请求",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/network.BatchDeletePortRecordsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "additionalProperties": true
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/network/port/clean": {
+            "post": {
+                "description": "删除指定天数之前的端口状态记录",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "网络设备管理"
+                ],
+                "summary": "清理旧的端口状态记录",
+                "parameters": [
+                    {
+                        "description": "清理请求",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/network.CleanOldPortRecordsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "additionalProperties": true
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/network/port/collect": {
+            "post": {
+                "description": "连接指定设备并采集其端口状态信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "网络设备管理"
+                ],
+                "summary": "采集单个设备端口状态",
+                "parameters": [
+                    {
+                        "description": "采集请求",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/network.PortCollectionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/network/port/collect-all": {
+            "post": {
+                "description": "连接所有已配置的网络设备并采集端口状态信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "网络设备管理"
+                ],
+                "summary": "采集所有设备端口状态",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {}
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/network/port/list": {
+            "post": {
+                "description": "分页查询端口状态列表，支持按设备ID、接口名称、状态筛选",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "网络设备管理"
+                ],
+                "summary": "查询端口状态列表",
+                "parameters": [
+                    {
+                        "description": "查询条件",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/network.PortStatusListRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/response.PageResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/network/port/stats": {
+            "post": {
+                "description": "获取端口状态的统计信息，包括总数、按状态分组等",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "网络设备管理"
+                ],
+                "summary": "获取端口状态统计信息",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "additionalProperties": true
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -4841,7 +5564,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services.CreateTemplateRequest"
+                            "$ref": "#/definitions/services.CreateTemplateRequest"
                         }
                     }
                 ],
@@ -4849,7 +5572,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -4881,7 +5604,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -4930,7 +5653,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -4962,7 +5685,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -5008,7 +5731,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
@@ -5051,7 +5774,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services.UpdateTemplateRequest"
+                            "$ref": "#/definitions/services.UpdateTemplateRequest"
                         }
                     }
                 ],
@@ -5059,7 +5782,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -5091,7 +5814,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -5133,7 +5856,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -5159,7 +5882,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services.ListTemplateRequest"
+                            "$ref": "#/definitions/services.ListTemplateRequest"
                         }
                     }
                 ],
@@ -5169,17 +5892,132 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.PageResponse"
+                                            "$ref": "#/definitions/response.PageResponse"
                                         }
                                     }
                                 }
                             ]
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/building": {
+            "post": {
+                "description": "创建新的楼宇信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "创建楼宇",
+                "parameters": [
+                    {
+                        "description": "楼宇信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/operations.OpsBuilding"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/operations.OpsBuilding"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/building/batch": {
+            "post": {
+                "description": "对楼宇进行批量操作，如批量删除",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "批量操作",
+                "parameters": [
+                    {
+                        "description": "批量操作参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "action": {
+                                    "type": "string"
+                                },
+                                "ids": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -5205,7 +6043,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_api_v1_operations.GeocodeRequest"
+                            "$ref": "#/definitions/operations.GeocodeRequest"
                         }
                     }
                 ],
@@ -5215,13 +6053,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/internal_api_v1_operations.GeocodeResponse"
+                                            "$ref": "#/definitions/operations.GeocodeResponse"
                                         }
                                     }
                                 }
@@ -5231,13 +6069,4830 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/building/list": {
+            "post": {
+                "description": "分页查询楼宇列表，支持按条件筛选",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "查询楼宇列表",
+                "parameters": [
+                    {
+                        "description": "查询参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "current": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "orgId": {
+                                    "type": "string"
+                                },
+                                "pageSize": {
+                                    "type": "integer"
+                                },
+                                "status": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "list": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/definitions/operations.OpsBuilding"
+                                                    }
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/building/{id}": {
+            "post": {
+                "description": "根据ID获取楼宇详细信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "获取楼宇详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "楼宇ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/operations.OpsBuilding"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/building/{id}/delete": {
+            "post": {
+                "description": "根据ID删除楼宇",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "删除楼宇",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "楼宇ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/building/{id}/update": {
+            "post": {
+                "description": "更新楼宇信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "更新楼宇",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "楼宇ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "楼宇信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/operations.OpsBuilding"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/dedicatedLine": {
+            "post": {
+                "description": "创建新的专线信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "创建专线",
+                "parameters": [
+                    {
+                        "description": "专线信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/operations.OpsDedicatedLine"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/operations.OpsDedicatedLine"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/dedicatedLine/batch": {
+            "post": {
+                "description": "对专线进行批量操作，如批量删除",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "批量操作",
+                "parameters": [
+                    {
+                        "description": "批量操作参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.DedicatedLineBatchOperationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/dedicatedLine/list": {
+            "post": {
+                "description": "分页查询专线列表，支持按条件筛选",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "查询专线列表",
+                "parameters": [
+                    {
+                        "description": "查询参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.DedicatedLineListRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "list": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/definitions/operations.OpsDedicatedLine"
+                                                    }
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/dedicatedLine/{id}": {
+            "post": {
+                "description": "根据ID获取专线详细信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "获取专线详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "专线ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/operations.OpsDedicatedLine"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/dedicatedLine/{id}/delete": {
+            "post": {
+                "description": "根据ID删除专线",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "删除专线",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "专线ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/dedicatedLine/{id}/update": {
+            "post": {
+                "description": "更新专线信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "更新专线",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "专线ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "专线信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/operations.OpsDedicatedLine"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/doors": {
+            "post": {
+                "description": "创建新的门信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "创建门",
+                "parameters": [
+                    {
+                        "description": "门信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "angle": {
+                                    "type": "integer"
+                                },
+                                "color": {
+                                    "type": "string"
+                                },
+                                "direction": {
+                                    "type": "string"
+                                },
+                                "floorId": {
+                                    "type": "string"
+                                },
+                                "length": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "position": {
+                                    "type": "string"
+                                },
+                                "remark": {
+                                    "type": "string"
+                                },
+                                "type": {
+                                    "type": "string"
+                                },
+                                "wallId": {
+                                    "type": "string"
+                                },
+                                "width": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/doors/batch": {
+            "post": {
+                "description": "对门进行批量操作，如批量删除",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "批量操作",
+                "parameters": [
+                    {
+                        "description": "批量操作参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.DoorBatchOperationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/doors/list": {
+            "post": {
+                "description": "分页查询门列表，支持按条件筛选",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "查询门列表",
+                "parameters": [
+                    {
+                        "description": "查询参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.DoorListRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "list": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/doors/{id}": {
+            "post": {
+                "description": "根据ID获取门详细信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "获取门详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "门ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/doors/{id}/delete": {
+            "post": {
+                "description": "根据ID删除门",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "删除门",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "门ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/doors/{id}/update": {
+            "post": {
+                "description": "更新门信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "更新门",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "门ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "门信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "angle": {
+                                    "type": "integer"
+                                },
+                                "color": {
+                                    "type": "string"
+                                },
+                                "direction": {
+                                    "type": "string"
+                                },
+                                "floorId": {
+                                    "type": "string"
+                                },
+                                "length": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "position": {
+                                    "type": "string"
+                                },
+                                "remark": {
+                                    "type": "string"
+                                },
+                                "type": {
+                                    "type": "string"
+                                },
+                                "wallId": {
+                                    "type": "string"
+                                },
+                                "width": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/floor": {
+            "post": {
+                "description": "创建新的楼层信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "创建楼层",
+                "parameters": [
+                    {
+                        "description": "楼层信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/operations.OpsFloor"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/operations.OpsFloor"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/floor-plan-texts": {
+            "post": {
+                "description": "创建新的平面图文本信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "创建平面图文本",
+                "parameters": [
+                    {
+                        "description": "平面图文本信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "backgroundColor": {
+                                    "type": "string"
+                                },
+                                "bold": {
+                                    "type": "boolean"
+                                },
+                                "color": {
+                                    "type": "string"
+                                },
+                                "floorId": {
+                                    "type": "string"
+                                },
+                                "fontFamily": {
+                                    "type": "string"
+                                },
+                                "fontSize": {
+                                    "type": "integer"
+                                },
+                                "italic": {
+                                    "type": "boolean"
+                                },
+                                "position": {
+                                    "type": "object"
+                                },
+                                "text": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/floor-plan-texts/batch": {
+            "post": {
+                "description": "对平面图文本进行批量操作，如批量删除",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "批量操作",
+                "parameters": [
+                    {
+                        "description": "批量操作参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.FloorPlanTextBatchOperationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/floor-plan-texts/list": {
+            "post": {
+                "description": "分页查询平面图文本列表，支持按条件筛选",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "查询平面图文本列表",
+                "parameters": [
+                    {
+                        "description": "查询参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.FloorPlanTextListRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "list": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/floor-plan-texts/{id}": {
+            "post": {
+                "description": "根据ID获取平面图文本详细信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "获取平面图文本详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "平面图文本ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/floor-plan-texts/{id}/delete": {
+            "post": {
+                "description": "根据ID删除平面图文本",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "删除平面图文本",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "平面图文本ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/floor-plan-texts/{id}/update": {
+            "post": {
+                "description": "更新平面图文本信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "更新平面图文本",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "平面图文本ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "平面图文本信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "backgroundColor": {
+                                    "type": "string"
+                                },
+                                "bold": {
+                                    "type": "boolean"
+                                },
+                                "color": {
+                                    "type": "string"
+                                },
+                                "floorId": {
+                                    "type": "string"
+                                },
+                                "fontFamily": {
+                                    "type": "string"
+                                },
+                                "fontSize": {
+                                    "type": "integer"
+                                },
+                                "italic": {
+                                    "type": "boolean"
+                                },
+                                "position": {
+                                    "type": "object"
+                                },
+                                "text": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/floor/batch": {
+            "post": {
+                "description": "对楼层进行批量操作，如批量删除",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "批量操作",
+                "parameters": [
+                    {
+                        "description": "批量操作参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "action": {
+                                    "type": "string"
+                                },
+                                "ids": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/floor/list": {
+            "post": {
+                "description": "分页查询楼层列表，支持按条件筛选",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "查询楼层列表",
+                "parameters": [
+                    {
+                        "description": "查询参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "buildingId": {
+                                    "type": "string"
+                                },
+                                "current": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "pageSize": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "list": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/definitions/operations.OpsFloor"
+                                                    }
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/floor/tree": {
+            "post": {
+                "description": "获取楼宇和楼层的树形结构数据",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "获取楼宇-楼层树",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/floor/{id}": {
+            "post": {
+                "description": "根据ID获取楼层详细信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "获取楼层详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "楼层ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/operations.OpsFloor"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/floor/{id}/delete": {
+            "post": {
+                "description": "根据ID删除楼层",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "删除楼层",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "楼层ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/floor/{id}/update": {
+            "post": {
+                "description": "更新楼层信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "更新楼层",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "楼层ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "楼层信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/operations.OpsFloor"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/infoPoint": {
+            "post": {
+                "description": "创建新的信息点",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "创建信息点",
+                "parameters": [
+                    {
+                        "description": "信息点",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/operations.OpsInfoPoint"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/operations.OpsInfoPoint"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/infoPoint/batch": {
+            "post": {
+                "description": "对信息点进行批量操作，如批量删除",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "批量操作",
+                "parameters": [
+                    {
+                        "description": "批量操作参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.InfoPointBatchOperationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/infoPoint/list": {
+            "post": {
+                "description": "分页查询信息点列表，支持按条件筛选",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "查询信息点列表",
+                "parameters": [
+                    {
+                        "description": "查询参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.InfoPointListRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "list": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/definitions/operations.OpsInfoPoint"
+                                                    }
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/infoPoint/{id}": {
+            "post": {
+                "description": "根据ID获取信息点详细信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "获取信息点详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "信息点ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/operations.OpsInfoPoint"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/infoPoint/{id}/delete": {
+            "post": {
+                "description": "根据ID删除信息点",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "删除信息点",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "信息点ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/infoPoint/{id}/update": {
+            "post": {
+                "description": "更新信息点信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "更新信息点",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "信息点ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "信息点",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/operations.OpsInfoPoint"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/roomDevice": {
+            "post": {
+                "description": "创建新的机房设备信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "创建机房设备",
+                "parameters": [
+                    {
+                        "description": "机房设备信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/operations.OpsRoomDevice"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/operations.OpsRoomDevice"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/roomDevice/batch": {
+            "post": {
+                "description": "对机房设备进行批量操作，如批量删除",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "批量操作",
+                "parameters": [
+                    {
+                        "description": "批量操作参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.RoomDeviceBatchOperationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/roomDevice/list": {
+            "post": {
+                "description": "分页查询机房设备列表，支持按条件筛选",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "查询机房设备列表",
+                "parameters": [
+                    {
+                        "description": "查询参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.RoomDeviceListRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "list": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/definitions/operations.OpsRoomDevice"
+                                                    }
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/roomDevice/{id}": {
+            "post": {
+                "description": "根据ID获取机房设备详细信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "获取机房设备详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "机房设备ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/operations.OpsRoomDevice"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/roomDevice/{id}/delete": {
+            "post": {
+                "description": "根据ID删除机房设备",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "删除机房设备",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "机房设备ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/roomDevice/{id}/update": {
+            "post": {
+                "description": "更新机房设备信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "更新机房设备",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "机房设备ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "机房设备信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/operations.OpsRoomDevice"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/serverRoom": {
+            "post": {
+                "description": "创建新的机房信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "创建机房",
+                "parameters": [
+                    {
+                        "description": "机房信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/operations.OpsServerRoom"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/operations.OpsServerRoom"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/serverRoom/batch": {
+            "post": {
+                "description": "对机房进行批量操作，如批量删除",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "批量操作",
+                "parameters": [
+                    {
+                        "description": "批量操作参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.ServerRoomBatchOperationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/serverRoom/list": {
+            "post": {
+                "description": "分页查询机房列表，支持按条件筛选",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "查询机房列表",
+                "parameters": [
+                    {
+                        "description": "查询参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.ServerRoomListRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "list": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/definitions/operations.OpsServerRoom"
+                                                    }
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/serverRoom/{id}": {
+            "post": {
+                "description": "根据ID获取机房详细信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "获取机房详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "机房ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/operations.OpsServerRoom"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/serverRoom/{id}/delete": {
+            "post": {
+                "description": "根据ID删除机房",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "删除机房",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "机房ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/serverRoom/{id}/update": {
+            "post": {
+                "description": "更新机房信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "更新机房",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "机房ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "机房信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/operations.OpsServerRoom"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/walls": {
+            "post": {
+                "description": "创建新的墙体信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "创建墙体",
+                "parameters": [
+                    {
+                        "description": "墙体信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "color": {
+                                    "type": "string"
+                                },
+                                "floorId": {
+                                    "type": "string"
+                                },
+                                "height": {
+                                    "type": "number",
+                                    "format": "float64"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "points": {
+                                    "type": "string"
+                                },
+                                "remark": {
+                                    "type": "string"
+                                },
+                                "thickness": {
+                                    "type": "integer"
+                                },
+                                "type": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/walls/batch": {
+            "post": {
+                "description": "对墙体进行批量操作，如批量删除",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "批量操作",
+                "parameters": [
+                    {
+                        "description": "批量操作参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.WallBatchOperationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/walls/list": {
+            "post": {
+                "description": "分页查询墙体列表，支持按条件筛选",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "查询墙体列表",
+                "parameters": [
+                    {
+                        "description": "查询参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.WallListRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "list": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/walls/{id}": {
+            "post": {
+                "description": "根据ID获取墙体详细信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "获取墙体详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "墙体ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/walls/{id}/delete": {
+            "post": {
+                "description": "根据ID删除墙体",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "删除墙体",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "墙体ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/walls/{id}/update": {
+            "post": {
+                "description": "更新墙体信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "更新墙体",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "墙体ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "墙体信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "color": {
+                                    "type": "string"
+                                },
+                                "floorId": {
+                                    "type": "string"
+                                },
+                                "height": {
+                                    "type": "number",
+                                    "format": "float64"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "points": {
+                                    "type": "string"
+                                },
+                                "remark": {
+                                    "type": "string"
+                                },
+                                "thickness": {
+                                    "type": "integer"
+                                },
+                                "type": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/workstation": {
+            "post": {
+                "description": "创建新的工位信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "创建工位",
+                "parameters": [
+                    {
+                        "description": "工位信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.Workstation"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.Workstation"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/workstation/batch": {
+            "post": {
+                "description": "对工位进行批量操作，如批量删除",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "批量操作",
+                "parameters": [
+                    {
+                        "description": "批量操作参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "action": {
+                                    "type": "string"
+                                },
+                                "ids": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/workstation/list": {
+            "post": {
+                "description": "分页查询工位列表，支持按条件筛选",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "查询工位列表",
+                "parameters": [
+                    {
+                        "description": "查询参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "current": {
+                                    "type": "integer"
+                                },
+                                "floorId": {
+                                    "type": "string"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "pageSize": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "list": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/definitions/models.Workstation"
+                                                    }
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/workstation/positions": {
+            "post": {
+                "description": "批量更新工位的位置坐标信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "批量更新工位位置",
+                "parameters": [
+                    {
+                        "description": "位置更新参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "items": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "id": {
+                                                "type": "string"
+                                            },
+                                            "x": {
+                                                "type": "number",
+                                                "format": "float64"
+                                            },
+                                            "y": {
+                                                "type": "number",
+                                                "format": "float64"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/workstation/{id}": {
+            "post": {
+                "description": "根据ID获取工位详细信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "获取工位详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "工位ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.Workstation"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/workstation/{id}/delete": {
+            "post": {
+                "description": "根据ID删除工位",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "删除工位",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "工位ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/workstation/{id}/update": {
+            "post": {
+                "description": "更新工位信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "更新工位",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "工位ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "工位信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.Workstation"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/ad-domain/computers/detail": {
+            "post": {
+                "description": "根据电脑DN获取AD域电脑设备详细信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AD域管理"
+                ],
+                "summary": "获取AD电脑设备详情",
+                "parameters": [
+                    {
+                        "description": "查询条件",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "computerDn": {
+                                    "type": "string"
+                                },
+                                "configId": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/ad-domain/computers/list": {
+            "post": {
+                "description": "查询AD域电脑设备列表，支持分页",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AD域管理"
+                ],
+                "summary": "查询AD电脑设备列表",
+                "parameters": [
+                    {
+                        "description": "查询条件",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "computerName": {
+                                    "type": "string"
+                                },
+                                "configId": {
+                                    "type": "string"
+                                },
+                                "current": {
+                                    "type": "integer"
+                                },
+                                "pageSize": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/ad-domain/configs": {
+            "post": {
+                "description": "创建新的AD域配置",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AD域管理"
+                ],
+                "summary": "创建AD配置",
+                "parameters": [
+                    {
+                        "description": "AD配置信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "adminDN": {
+                                    "type": "string"
+                                },
+                                "adminPassword": {
+                                    "type": "string"
+                                },
+                                "autoSync": {
+                                    "type": "boolean"
+                                },
+                                "baseDN": {
+                                    "type": "string"
+                                },
+                                "configName": {
+                                    "type": "string"
+                                },
+                                "groupSearchBase": {
+                                    "type": "string"
+                                },
+                                "groupSearchFilter": {
+                                    "type": "string"
+                                },
+                                "ldapPort": {
+                                    "type": "integer"
+                                },
+                                "ldapServer": {
+                                    "type": "string"
+                                },
+                                "status": {
+                                    "type": "integer"
+                                },
+                                "syncInterval": {
+                                    "type": "integer"
+                                },
+                                "useSSL": {
+                                    "type": "boolean"
+                                },
+                                "useStartTLS": {
+                                    "type": "boolean"
+                                },
+                                "userSearchBase": {
+                                    "type": "string"
+                                },
+                                "userSearchFilter": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/ad-domain/configs/:id": {
+            "get": {
+                "description": "根据配置ID获取AD域配置详细信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AD域管理"
+                ],
+                "summary": "获取AD配置详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "配置ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/ad-domain/configs/:id/delete": {
+            "post": {
+                "description": "删除指定的AD域配置",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AD域管理"
+                ],
+                "summary": "删除AD配置",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "配置ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/ad-domain/configs/:id/sync": {
+            "post": {
+                "description": "从AD域同步用户、用户组等数据到系统",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AD域管理"
+                ],
+                "summary": "同步AD数据",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "配置ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "同步类型(full/incremental)",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "syncType": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/ad-domain/configs/:id/test": {
+            "post": {
+                "description": "测试AD域服务器连接是否正常",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AD域管理"
+                ],
+                "summary": "测试AD连接",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "配置ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/ad-domain/configs/:id/update": {
+            "post": {
+                "description": "更新AD域配置信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AD域管理"
+                ],
+                "summary": "更新AD配置",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "配置ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "AD配置信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "adminDN": {
+                                    "type": "string"
+                                },
+                                "adminPassword": {
+                                    "type": "string"
+                                },
+                                "autoSync": {
+                                    "type": "boolean"
+                                },
+                                "baseDN": {
+                                    "type": "string"
+                                },
+                                "configName": {
+                                    "type": "string"
+                                },
+                                "groupSearchBase": {
+                                    "type": "string"
+                                },
+                                "groupSearchFilter": {
+                                    "type": "string"
+                                },
+                                "ldapPort": {
+                                    "type": "integer"
+                                },
+                                "ldapServer": {
+                                    "type": "string"
+                                },
+                                "status": {
+                                    "type": "integer"
+                                },
+                                "syncInterval": {
+                                    "type": "integer"
+                                },
+                                "useSSL": {
+                                    "type": "boolean"
+                                },
+                                "useStartTLS": {
+                                    "type": "boolean"
+                                },
+                                "userSearchBase": {
+                                    "type": "string"
+                                },
+                                "userSearchFilter": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/ad-domain/configs/list": {
+            "post": {
+                "description": "查询AD域配置列表，支持按状态筛选和分页",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AD域管理"
+                ],
+                "summary": "查询AD配置列表",
+                "parameters": [
+                    {
+                        "description": "查询条件",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "current": {
+                                    "type": "integer"
+                                },
+                                "pageSize": {
+                                    "type": "integer"
+                                },
+                                "status": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/ad-domain/groups/:id": {
+            "get": {
+                "description": "根据用户组DN获取AD用户组详细信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AD域管理"
+                ],
+                "summary": "获取AD用户组详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "用户组DN",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/ad-domain/groups/:id/members": {
+            "post": {
+                "description": "获取AD域用户组的成员列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AD域管理"
+                ],
+                "summary": "获取AD用户组成员",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "用户组DN",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "查询条件",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "configId": {
+                                    "type": "string"
+                                },
+                                "current": {
+                                    "type": "integer"
+                                },
+                                "pageSize": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/ad-domain/groups/:id/update": {
+            "post": {
+                "description": "更新AD域用户组信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AD域管理"
+                ],
+                "summary": "更新AD用户组",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "用户组DN",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/ad-domain/groups/list": {
+            "post": {
+                "description": "查询AD域用户组列表，支持分页",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AD域管理"
+                ],
+                "summary": "查询AD用户组列表",
+                "parameters": [
+                    {
+                        "description": "查询条件",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "configId": {
+                                    "type": "string"
+                                },
+                                "current": {
+                                    "type": "integer"
+                                },
+                                "groupName": {
+                                    "type": "string"
+                                },
+                                "pageSize": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/ad-domain/ou/tree": {
+            "post": {
+                "description": "获取AD域的组织单元(OU)树形结构",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AD域管理"
+                ],
+                "summary": "获取OU树形结构",
+                "parameters": [
+                    {
+                        "description": "配置ID",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "configId": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/ad-domain/sync-logs/list": {
+            "post": {
+                "description": "查询AD域数据同步日志列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AD域管理"
+                ],
+                "summary": "查询AD同步日志列表",
+                "parameters": [
+                    {
+                        "description": "查询条件",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "configId": {
+                                    "type": "string"
+                                },
+                                "current": {
+                                    "type": "integer"
+                                },
+                                "pageSize": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/ad-domain/users/:id": {
+            "get": {
+                "description": "根据用户ID获取AD域用户详细信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AD域管理"
+                ],
+                "summary": "获取AD用户详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "用户ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/ad-domain/users/:id/disable": {
+            "post": {
+                "description": "禁用AD域用户账号",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AD域管理"
+                ],
+                "summary": "禁用AD用户",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "用户ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "配置ID",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "configId": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/ad-domain/users/:id/enable": {
+            "post": {
+                "description": "启用AD域用户账号",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AD域管理"
+                ],
+                "summary": "启用AD用户",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "用户ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "配置ID",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "configId": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/ad-domain/users/:id/move": {
+            "post": {
+                "description": "将AD域用户移动到新的组织单元(OU)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AD域管理"
+                ],
+                "summary": "移动AD用户到新OU",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "用户ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "移动信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "configId": {
+                                    "type": "string"
+                                },
+                                "move": {
+                                    "type": "object",
+                                    "properties": {
+                                        "newOuDn": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/ad-domain/users/:id/update": {
+            "post": {
+                "description": "更新AD域用户信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AD域管理"
+                ],
+                "summary": "更新AD用户",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "用户ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "更新信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "configId": {
+                                    "type": "string"
+                                },
+                                "update": {
+                                    "type": "object",
+                                    "properties": {
+                                        "displayName": {
+                                            "type": "string"
+                                        },
+                                        "email": {
+                                            "type": "string"
+                                        },
+                                        "phone": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/ad-domain/users/list": {
+            "post": {
+                "description": "查询AD域用户列表，支持分页",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AD域管理"
+                ],
+                "summary": "查询AD用户列表",
+                "parameters": [
+                    {
+                        "description": "查询条件",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "configId": {
+                                    "type": "string"
+                                },
+                                "current": {
+                                    "type": "integer"
+                                },
+                                "email": {
+                                    "type": "string"
+                                },
+                                "pageSize": {
+                                    "type": "integer"
+                                },
+                                "username": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -5260,7 +10915,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -5285,7 +10940,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
@@ -5321,7 +10976,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
@@ -5358,7 +11013,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_api_v1.SliderVerifyRequest"
+                            "$ref": "#/definitions/v1.SliderVerifyRequest"
                         }
                     }
                 ],
@@ -5368,7 +11023,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
@@ -5405,7 +11060,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_api_v1.LoginRequest"
+                            "$ref": "#/definitions/v1.LoginRequest"
                         }
                     }
                 ],
@@ -5415,13 +11070,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/internal_api_v1.LoginResponse"
+                                            "$ref": "#/definitions/v1.LoginResponse"
                                         }
                                     }
                                 }
@@ -5431,7 +11086,7 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -5459,7 +11114,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -5484,7 +11139,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
@@ -5536,13 +11191,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/internal_api_v1.LoginResponse"
+                                            "$ref": "#/definitions/v1.LoginResponse"
                                         }
                                     }
                                 }
@@ -5552,7 +11207,448 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/configs": {
+            "post": {
+                "description": "创建新的系统参数配置",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "配置管理"
+                ],
+                "summary": "创建参数配置",
+                "parameters": [
+                    {
+                        "description": "配置信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "configKey": {
+                                    "type": "string"
+                                },
+                                "configName": {
+                                    "type": "string"
+                                },
+                                "configType": {
+                                    "type": "string"
+                                },
+                                "configValue": {
+                                    "type": "string"
+                                },
+                                "remark": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/configs/:id": {
+            "post": {
+                "description": "根据配置ID获取参数配置详细信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "配置管理"
+                ],
+                "summary": "获取参数配置详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "配置ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/configs/:id/delete": {
+            "post": {
+                "description": "删除指定的参数配置",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "配置管理"
+                ],
+                "summary": "删除参数配置",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "配置ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/configs/:id/update": {
+            "post": {
+                "description": "更新参数配置信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "配置管理"
+                ],
+                "summary": "更新参数配置",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "配置ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "配置信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "configKey": {
+                                    "type": "string"
+                                },
+                                "configName": {
+                                    "type": "string"
+                                },
+                                "configType": {
+                                    "type": "string"
+                                },
+                                "configValue": {
+                                    "type": "string"
+                                },
+                                "remark": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/configs/batch": {
+            "post": {
+                "description": "批量删除多个参数配置",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "配置管理"
+                ],
+                "summary": "批量删除参数配置",
+                "parameters": [
+                    {
+                        "description": "配置ID列表",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "ids": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/configs/key/:configKey": {
+            "post": {
+                "description": "根据配置键获取参数配置值",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "配置管理"
+                ],
+                "summary": "根据键获取参数配置",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "配置键",
+                        "name": "configKey",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/configs/list": {
+            "post": {
+                "description": "查询系统参数配置列表，支持多条件筛选和分页",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "配置管理"
+                ],
+                "summary": "查询参数配置列表",
+                "parameters": [
+                    {
+                        "description": "查询条件",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "beginTime": {
+                                    "type": "string"
+                                },
+                                "configKey": {
+                                    "type": "string"
+                                },
+                                "configName": {
+                                    "type": "string"
+                                },
+                                "configType": {
+                                    "type": "string"
+                                },
+                                "current": {
+                                    "type": "integer"
+                                },
+                                "endTime": {
+                                    "type": "string"
+                                },
+                                "pageSize": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/configs/refresh-cache": {
+            "post": {
+                "description": "刷新系统参数配置缓存",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "配置管理"
+                ],
+                "summary": "刷新参数缓存",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -5578,7 +11674,36 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services_system.CreateDashboardRequest"
+                            "type": "object",
+                            "properties": {
+                                "deptId": {
+                                    "type": "string"
+                                },
+                                "description": {
+                                    "type": "string"
+                                },
+                                "isSystem": {
+                                    "type": "boolean"
+                                },
+                                "isTemplate": {
+                                    "type": "boolean"
+                                },
+                                "layout": {
+                                    "type": "object"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "refreshInterval": {
+                                    "type": "integer"
+                                },
+                                "scope": {
+                                    "type": "string"
+                                },
+                                "templateScope": {
+                                    "type": "string"
+                                }
+                            }
                         }
                     }
                 ],
@@ -5586,7 +11711,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -5618,7 +11743,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -5648,7 +11773,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -5680,7 +11805,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -5714,7 +11839,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
@@ -5756,7 +11881,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -5789,7 +11914,24 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services_system.UpdateDashboardRequest"
+                            "type": "object",
+                            "properties": {
+                                "description": {
+                                    "type": "string"
+                                },
+                                "layout": {
+                                    "type": "object"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "refreshInterval": {
+                                    "type": "integer"
+                                },
+                                "status": {
+                                    "type": "integer"
+                                }
+                            }
                         }
                     }
                 ],
@@ -5797,7 +11939,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -5829,7 +11971,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -5872,7 +12014,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -5911,7 +12053,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -5934,7 +12076,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -5959,7 +12101,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
@@ -5992,7 +12134,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -6025,7 +12167,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
@@ -6076,7 +12218,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
@@ -6125,7 +12267,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -6151,7 +12293,24 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services_system.DashboardListParams"
+                            "type": "object",
+                            "properties": {
+                                "current": {
+                                    "type": "integer"
+                                },
+                                "isTemplate": {
+                                    "type": "boolean"
+                                },
+                                "keyword": {
+                                    "type": "string"
+                                },
+                                "pageSize": {
+                                    "type": "integer"
+                                },
+                                "status": {
+                                    "type": "integer"
+                                }
+                            }
                         }
                     }
                 ],
@@ -6161,13 +12320,30 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services_system.DashboardListResponse"
+                                            "type": "object",
+                                            "properties": {
+                                                "current": {
+                                                    "type": "integer"
+                                                },
+                                                "list": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "pageSize": {
+                                                    "type": "integer"
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -6209,7 +12385,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -6255,7 +12431,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -6297,7 +12473,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
@@ -6349,7 +12525,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
@@ -6386,7 +12562,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models_system_requests.DepartmentCreateRequest"
+                            "$ref": "#/definitions/requests.DepartmentCreateRequest"
                         }
                     }
                 ],
@@ -6394,7 +12570,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -6426,7 +12602,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -6458,7 +12634,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -6504,7 +12680,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -6537,7 +12713,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models_system_requests.DepartmentUpdateRequest"
+                            "$ref": "#/definitions/requests.DepartmentUpdateRequest"
                         }
                     }
                 ],
@@ -6545,7 +12721,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -6587,7 +12763,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -6613,7 +12789,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models_system_requests.DepartmentListParams"
+                            "$ref": "#/definitions/requests.DepartmentListParams"
                         }
                     }
                 ],
@@ -6621,7 +12797,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -6655,7 +12831,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
@@ -6679,13 +12855,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -6710,7 +12886,7 @@ const docTemplate = `{
                         "name": "request",
                         "in": "body",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models_system_requests.DepartmentListParams"
+                            "$ref": "#/definitions/requests.DepartmentListParams"
                         }
                     }
                 ],
@@ -6718,7 +12894,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -6750,19 +12926,918 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/dict-data": {
+            "post": {
+                "description": "创建新的字典数据",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "字典管理"
+                ],
+                "summary": "创建字典数据",
+                "parameters": [
+                    {
+                        "description": "字典数据信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "dictLabel": {
+                                    "type": "string"
+                                },
+                                "dictSort": {
+                                    "type": "integer"
+                                },
+                                "dictType": {
+                                    "type": "string"
+                                },
+                                "dictValue": {
+                                    "type": "string"
+                                },
+                                "remark": {
+                                    "type": "string"
+                                },
+                                "status": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/dict-data/:id": {
+            "post": {
+                "description": "根据字典数据ID获取详细信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "字典管理"
+                ],
+                "summary": "获取字典数据详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "字典数据ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/dict-data/:id/delete": {
+            "post": {
+                "description": "删除指定的字典数据",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "字典管理"
+                ],
+                "summary": "删除字典数据",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "字典数据ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/dict-data/:id/update": {
+            "post": {
+                "description": "更新字典数据信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "字典管理"
+                ],
+                "summary": "更新字典数据",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "字典数据ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "字典数据信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "dictLabel": {
+                                    "type": "string"
+                                },
+                                "dictSort": {
+                                    "type": "integer"
+                                },
+                                "dictType": {
+                                    "type": "string"
+                                },
+                                "dictValue": {
+                                    "type": "string"
+                                },
+                                "remark": {
+                                    "type": "string"
+                                },
+                                "status": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/dict-data/list": {
+            "post": {
+                "description": "查询字典数据列表，支持多条件筛选和分页",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "字典管理"
+                ],
+                "summary": "查询字典数据列表",
+                "parameters": [
+                    {
+                        "description": "查询条件",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "current": {
+                                    "type": "integer"
+                                },
+                                "dictLabel": {
+                                    "type": "string"
+                                },
+                                "dictType": {
+                                    "type": "string"
+                                },
+                                "pageSize": {
+                                    "type": "integer"
+                                },
+                                "status": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/dict-types": {
+            "post": {
+                "description": "创建新的字典类型",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "字典管理"
+                ],
+                "summary": "创建字典类型",
+                "parameters": [
+                    {
+                        "description": "字典类型信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "dictName": {
+                                    "type": "string"
+                                },
+                                "dictType": {
+                                    "type": "string"
+                                },
+                                "remark": {
+                                    "type": "string"
+                                },
+                                "status": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/dict-types/:id": {
+            "post": {
+                "description": "根据字典类型ID获取详细信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "字典管理"
+                ],
+                "summary": "获取字典类型详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "字典类型ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/dict-types/:id/delete": {
+            "post": {
+                "description": "删除指定的字典类型",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "字典管理"
+                ],
+                "summary": "删除字典类型",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "字典类型ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/dict-types/:id/update": {
+            "post": {
+                "description": "更新字典类型信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "字典管理"
+                ],
+                "summary": "更新字典类型",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "字典类型ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "字典类型信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "dictName": {
+                                    "type": "string"
+                                },
+                                "dictType": {
+                                    "type": "string"
+                                },
+                                "remark": {
+                                    "type": "string"
+                                },
+                                "status": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/dict-types/all": {
+            "post": {
+                "description": "获取所有字典类型列表（使用缓存）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "字典管理"
+                ],
+                "summary": "获取所有字典类型",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/dict-types/list": {
+            "post": {
+                "description": "查询字典类型列表，支持多条件筛选和分页",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "字典管理"
+                ],
+                "summary": "查询字典类型列表",
+                "parameters": [
+                    {
+                        "description": "查询条件",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "current": {
+                                    "type": "integer"
+                                },
+                                "dictName": {
+                                    "type": "string"
+                                },
+                                "dictType": {
+                                    "type": "string"
+                                },
+                                "pageSize": {
+                                    "type": "integer"
+                                },
+                                "status": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/files": {
+            "get": {
+                "description": "查询文件列表，支持分页",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "文件管理"
+                ],
+                "summary": "列出文件",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "页码",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "每页数量",
+                        "name": "pageSize",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "业务类型",
+                        "name": "businessType",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "用户ID",
+                        "name": "userId",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/files/:id": {
+            "get": {
+                "description": "根据文件ID获取文件详细信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "文件管理"
+                ],
+                "summary": "获取文件信息",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "文件ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "删除指定的文件",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "文件管理"
+                ],
+                "summary": "删除文件",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "文件ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/files/batch": {
+            "post": {
+                "description": "批量删除多个文件",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "文件管理"
+                ],
+                "summary": "批量删除文件",
+                "parameters": [
+                    {
+                        "description": "文件ID列表",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "ids": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/files/upload": {
+            "post": {
+                "description": "上传文件到服务器",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "文件管理"
+                ],
+                "summary": "上传文件",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "文件分类",
+                        "name": "category",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "文件",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -6788,7 +13863,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models_system_requests.MenuCreateRequest"
+                            "$ref": "#/definitions/requests.MenuCreateRequest"
                         }
                     }
                 ],
@@ -6796,7 +13871,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -6828,7 +13903,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -6867,7 +13942,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -6913,7 +13988,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -6946,7 +14021,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models_system_requests.MenuUpdateRequest"
+                            "$ref": "#/definitions/requests.MenuUpdateRequest"
                         }
                     }
                 ],
@@ -6954,7 +14029,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -6999,7 +14074,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -7025,7 +14100,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models_system_requests.MenuListParams"
+                            "$ref": "#/definitions/requests.MenuListParams"
                         }
                     }
                 ],
@@ -7033,7 +14108,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -7067,7 +14142,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
@@ -7091,13 +14166,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -7120,7 +14195,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -7143,7 +14218,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -7166,7 +14241,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -7191,7 +14266,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
@@ -7205,6 +14280,2322 @@ const docTemplate = `{
                                     }
                                 }
                             ]
+                        }
+                    }
+                }
+            }
+        },
+        "/system/my-notices": {
+            "get": {
+                "description": "获取当前登录用户的通知列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "通知公告"
+                ],
+                "summary": "获取我的通知列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "all",
+                        "description": "阅读状态(read/unread/all)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "页码",
+                        "name": "current",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "每页数量",
+                        "name": "pageSize",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/my-notices/:id": {
+            "get": {
+                "description": "获取通知详情并自动标记为已读",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "通知公告"
+                ],
+                "summary": "获取我的通知详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "通知ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/my-notices/:id/ignore": {
+            "post": {
+                "description": "忽略指定通知",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "通知公告"
+                ],
+                "summary": "忽略通知",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "通知ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/my-notices/:id/read": {
+            "post": {
+                "description": "标记指定通知为已读状态",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "通知公告"
+                ],
+                "summary": "标记通知已读",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "通知ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/my-notices/:id/unignore": {
+            "post": {
+                "description": "取消忽略指定通知",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "通知公告"
+                ],
+                "summary": "取消忽略通知",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "通知ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/my-notices/read-all": {
+            "post": {
+                "description": "将所有通知标记为已读状态",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "通知公告"
+                ],
+                "summary": "全部标记已读",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/my-notices/unread-count": {
+            "get": {
+                "description": "获取当前用户的未读通知数量",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "通知公告"
+                ],
+                "summary": "获取未读数量",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/notices": {
+            "post": {
+                "description": "创建新的通知公告",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "通知公告"
+                ],
+                "summary": "创建通知公告",
+                "parameters": [
+                    {
+                        "description": "通知公告信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "channels": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "apiConfigId": {
+                                                "type": "string"
+                                            },
+                                            "channelType": {
+                                                "type": "string"
+                                            },
+                                            "customRecipients": {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "emailConfigId": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                },
+                                "executionType": {
+                                    "type": "string"
+                                },
+                                "noticeContent": {
+                                    "type": "string"
+                                },
+                                "noticeTitle": {
+                                    "type": "string"
+                                },
+                                "noticeType": {
+                                    "type": "string"
+                                },
+                                "publishTime": {
+                                    "type": "string"
+                                },
+                                "recurrenceConfig": {
+                                    "type": "object",
+                                    "properties": {
+                                        "cronExpression": {
+                                            "type": "string"
+                                        },
+                                        "endDate": {
+                                            "type": "string"
+                                        }
+                                    }
+                                },
+                                "status": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/notices/:id": {
+            "post": {
+                "description": "根据通知公告ID获取详细信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "通知公告"
+                ],
+                "summary": "获取通知公告详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "通知公告ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/notices/:id/channels": {
+            "get": {
+                "description": "获取通知公告的发送渠道配置",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "通知公告"
+                ],
+                "summary": "获取通知渠道配置",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "通知公告ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "设置通知公告的发送渠道配置",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "通知公告"
+                ],
+                "summary": "设置通知渠道配置",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "通知公告ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "渠道配置列表",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "apiConfigId": {
+                                    "type": "string"
+                                },
+                                "channelType": {
+                                    "type": "string"
+                                },
+                                "customRecipients": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                },
+                                "emailConfigId": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/notices/:id/delete": {
+            "post": {
+                "description": "删除指定的通知公告",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "通知公告"
+                ],
+                "summary": "删除通知公告",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "通知公告ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/notices/:id/publish": {
+            "post": {
+                "description": "发布通知公告",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "通知公告"
+                ],
+                "summary": "发布通知",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "通知公告ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/notices/:id/statistics": {
+            "get": {
+                "description": "获取通知公告的阅读统计信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "通知公告"
+                ],
+                "summary": "获取通知阅读统计",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "通知公告ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/notices/:id/update": {
+            "post": {
+                "description": "更新通知公告信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "通知公告"
+                ],
+                "summary": "更新通知公告",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "通知公告ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "通知公告信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "channels": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "apiConfigId": {
+                                                "type": "string"
+                                            },
+                                            "channelType": {
+                                                "type": "string"
+                                            },
+                                            "customRecipients": {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "emailConfigId": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                },
+                                "noticeContent": {
+                                    "type": "string"
+                                },
+                                "noticeTitle": {
+                                    "type": "string"
+                                },
+                                "noticeType": {
+                                    "type": "string"
+                                },
+                                "publishTime": {
+                                    "type": "string"
+                                },
+                                "status": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/notices/:id/withdraw": {
+            "post": {
+                "description": "撤回已发布的通知公告",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "通知公告"
+                ],
+                "summary": "撤回通知",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "通知公告ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/notices/batch": {
+            "post": {
+                "description": "批量删除多个通知公告",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "通知公告"
+                ],
+                "summary": "批量删除通知公告",
+                "parameters": [
+                    {
+                        "description": "通知公告ID列表",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "ids": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/notices/cron-expressions": {
+            "get": {
+                "description": "获取常用的Cron表达式列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "通知公告"
+                ],
+                "summary": "获取常用Cron表达式",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/notices/list": {
+            "post": {
+                "description": "查询通知公告列表，支持多条件筛选和分页",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "通知公告"
+                ],
+                "summary": "查询通知公告列表",
+                "parameters": [
+                    {
+                        "description": "查询条件",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "createTime": {
+                                    "type": "string"
+                                },
+                                "current": {
+                                    "type": "integer"
+                                },
+                                "noticeTitle": {
+                                    "type": "string"
+                                },
+                                "noticeType": {
+                                    "type": "string"
+                                },
+                                "pageSize": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/notification-configs/api": {
+            "post": {
+                "description": "创建新的API通知配置",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "通知配置"
+                ],
+                "summary": "创建API通知配置",
+                "parameters": [
+                    {
+                        "description": "API通知配置信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "apiUrl": {
+                                    "type": "string"
+                                },
+                                "bodyTemplate": {
+                                    "type": "string"
+                                },
+                                "configName": {
+                                    "type": "string"
+                                },
+                                "configType": {
+                                    "type": "string"
+                                },
+                                "headers": {
+                                    "type": "object"
+                                },
+                                "method": {
+                                    "type": "string"
+                                },
+                                "status": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/notification-configs/api/:id": {
+            "get": {
+                "description": "根据配置ID获取API通知配置详细信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "通知配置"
+                ],
+                "summary": "获取API通知配置详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "配置ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/notification-configs/api/:id/delete": {
+            "post": {
+                "description": "删除指定的API通知配置",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "通知配置"
+                ],
+                "summary": "删除API通知配置",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "配置ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/notification-configs/api/:id/update": {
+            "post": {
+                "description": "更新API通知配置信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "通知配置"
+                ],
+                "summary": "更新API通知配置",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "配置ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "API通知配置信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "apiUrl": {
+                                    "type": "string"
+                                },
+                                "bodyTemplate": {
+                                    "type": "string"
+                                },
+                                "configName": {
+                                    "type": "string"
+                                },
+                                "configType": {
+                                    "type": "string"
+                                },
+                                "headers": {
+                                    "type": "object"
+                                },
+                                "method": {
+                                    "type": "string"
+                                },
+                                "status": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/notification-configs/api/list": {
+            "post": {
+                "description": "查询API通知配置列表，支持配置类型和状态筛选",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "通知配置"
+                ],
+                "summary": "查询API通知配置列表",
+                "parameters": [
+                    {
+                        "description": "查询条件",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "configType": {
+                                    "type": "string"
+                                },
+                                "current": {
+                                    "type": "integer"
+                                },
+                                "pageSize": {
+                                    "type": "integer"
+                                },
+                                "status": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/notification-configs/email": {
+            "post": {
+                "description": "创建新的邮箱配置",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "通知配置"
+                ],
+                "summary": "创建邮箱配置",
+                "parameters": [
+                    {
+                        "description": "邮箱配置信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "configName": {
+                                    "type": "string"
+                                },
+                                "encryption": {
+                                    "type": "string"
+                                },
+                                "fromEmail": {
+                                    "type": "string"
+                                },
+                                "fromName": {
+                                    "type": "string"
+                                },
+                                "host": {
+                                    "type": "string"
+                                },
+                                "password": {
+                                    "type": "string"
+                                },
+                                "port": {
+                                    "type": "integer"
+                                },
+                                "status": {
+                                    "type": "integer"
+                                },
+                                "username": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/notification-configs/email/:id": {
+            "get": {
+                "description": "根据配置ID获取邮箱配置详细信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "通知配置"
+                ],
+                "summary": "获取邮箱配置详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "配置ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/notification-configs/email/:id/delete": {
+            "post": {
+                "description": "删除指定的邮箱配置",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "通知配置"
+                ],
+                "summary": "删除邮箱配置",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "配置ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/notification-configs/email/:id/test": {
+            "post": {
+                "description": "测试邮箱配置是否正常工作",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "通知配置"
+                ],
+                "summary": "测试邮箱配置",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "配置ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "测试收件人地址",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "testTo": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/notification-configs/email/:id/update": {
+            "post": {
+                "description": "更新邮箱配置信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "通知配置"
+                ],
+                "summary": "更新邮箱配置",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "配置ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "邮箱配置信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "configName": {
+                                    "type": "string"
+                                },
+                                "encryption": {
+                                    "type": "string"
+                                },
+                                "fromEmail": {
+                                    "type": "string"
+                                },
+                                "fromName": {
+                                    "type": "string"
+                                },
+                                "host": {
+                                    "type": "string"
+                                },
+                                "password": {
+                                    "type": "string"
+                                },
+                                "port": {
+                                    "type": "integer"
+                                },
+                                "status": {
+                                    "type": "integer"
+                                },
+                                "username": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/notification-configs/email/list": {
+            "post": {
+                "description": "查询邮箱配置列表，支持状态筛选和分页",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "通知配置"
+                ],
+                "summary": "查询邮箱配置列表",
+                "parameters": [
+                    {
+                        "description": "查询条件",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "current": {
+                                    "type": "integer"
+                                },
+                                "pageSize": {
+                                    "type": "integer"
+                                },
+                                "status": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/posts": {
+            "post": {
+                "description": "创建新的岗位",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "岗位管理"
+                ],
+                "summary": "创建岗位",
+                "parameters": [
+                    {
+                        "description": "岗位信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "postCode": {
+                                    "type": "string"
+                                },
+                                "postName": {
+                                    "type": "string"
+                                },
+                                "postSort": {
+                                    "type": "integer"
+                                },
+                                "remark": {
+                                    "type": "string"
+                                },
+                                "status": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/posts/:id": {
+            "post": {
+                "description": "根据岗位ID获取详细信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "岗位管理"
+                ],
+                "summary": "获取岗位详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "岗位ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/posts/:id/delete": {
+            "post": {
+                "description": "删除指定的岗位",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "岗位管理"
+                ],
+                "summary": "删除岗位",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "岗位ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/posts/:id/update": {
+            "post": {
+                "description": "更新岗位信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "岗位管理"
+                ],
+                "summary": "更新岗位",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "岗位ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "岗位信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "postCode": {
+                                    "type": "string"
+                                },
+                                "postName": {
+                                    "type": "string"
+                                },
+                                "postSort": {
+                                    "type": "integer"
+                                },
+                                "remark": {
+                                    "type": "string"
+                                },
+                                "status": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/posts/all": {
+            "post": {
+                "description": "获取所有岗位列表（使用缓存）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "岗位管理"
+                ],
+                "summary": "获取所有岗位",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/posts/batch": {
+            "post": {
+                "description": "批量删除多个岗位",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "岗位管理"
+                ],
+                "summary": "批量删除岗位",
+                "parameters": [
+                    {
+                        "description": "岗位ID列表",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "ids": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/posts/enabled": {
+            "post": {
+                "description": "获取所有启用状态的岗位列表（使用缓存）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "岗位管理"
+                ],
+                "summary": "获取启用的岗位",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/posts/list": {
+            "post": {
+                "description": "查询岗位列表，支持多条件筛选和分页",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "岗位管理"
+                ],
+                "summary": "查询岗位列表",
+                "parameters": [
+                    {
+                        "description": "查询条件",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "current": {
+                                    "type": "integer"
+                                },
+                                "pageSize": {
+                                    "type": "integer"
+                                },
+                                "postCode": {
+                                    "type": "string"
+                                },
+                                "postName": {
+                                    "type": "string"
+                                },
+                                "status": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/profile/avatar/upload": {
+            "post": {
+                "description": "上传用户头像",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "个人设置"
+                ],
+                "summary": "上传头像",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "头像文件",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/profile/change-password": {
+            "post": {
+                "description": "修改当前登录用户的密码",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "个人设置"
+                ],
+                "summary": "修改密码",
+                "parameters": [
+                    {
+                        "description": "密码信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "newPassword": {
+                                    "type": "string"
+                                },
+                                "oldPassword": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/profile/info": {
+            "get": {
+                "description": "获取当前登录用户的个人信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "个人设置"
+                ],
+                "summary": "获取个人信息",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/profile/info/update": {
+            "post": {
+                "description": "更新当前登录用户的个人信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "个人设置"
+                ],
+                "summary": "更新个人信息",
+                "parameters": [
+                    {
+                        "description": "个人信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "email": {
+                                    "type": "string"
+                                },
+                                "gender": {
+                                    "type": "integer"
+                                },
+                                "nickname": {
+                                    "type": "string"
+                                },
+                                "phone": {
+                                    "type": "string"
+                                },
+                                "remark": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -7230,7 +16621,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models_system_requests.RoleCreateRequest"
+                            "$ref": "#/definitions/requests.RoleCreateRequest"
                         }
                     }
                 ],
@@ -7238,19 +16629,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -7282,19 +16673,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -7326,13 +16717,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -7378,7 +16769,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -7411,7 +16802,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models_system_requests.RoleUpdateRequest"
+                            "$ref": "#/definitions/requests.RoleUpdateRequest"
                         }
                     }
                 ],
@@ -7419,19 +16810,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -7454,7 +16845,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -7496,7 +16887,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -7522,7 +16913,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models_system_requests.RoleListParams"
+                            "$ref": "#/definitions/requests.RoleListParams"
                         }
                     }
                 ],
@@ -7532,13 +16923,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.PageResponse"
+                                            "$ref": "#/definitions/response.PageResponse"
                                         }
                                     }
                                 }
@@ -7567,13 +16958,48 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services_system.UserPreferences"
+                                            "type": "object",
+                                            "properties": {
+                                                "customPrimaryColor": {
+                                                    "type": "string"
+                                                },
+                                                "customSidebarColor": {
+                                                    "type": "string"
+                                                },
+                                                "language": {
+                                                    "type": "string"
+                                                },
+                                                "layoutDensity": {
+                                                    "type": "string"
+                                                },
+                                                "layoutType": {
+                                                    "type": "string"
+                                                },
+                                                "pageSize": {
+                                                    "type": "integer"
+                                                },
+                                                "sidebarCollapsed": {
+                                                    "type": "boolean"
+                                                },
+                                                "sidebarCollapsedWidth": {
+                                                    "type": "integer"
+                                                },
+                                                "sidebarWidth": {
+                                                    "type": "integer"
+                                                },
+                                                "theme": {
+                                                    "type": "string"
+                                                },
+                                                "themeStyle": {
+                                                    "type": "string"
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -7583,13 +17009,13 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -7613,7 +17039,42 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services_system.UserPreferences"
+                            "type": "object",
+                            "properties": {
+                                "customPrimaryColor": {
+                                    "type": "string"
+                                },
+                                "customSidebarColor": {
+                                    "type": "string"
+                                },
+                                "language": {
+                                    "type": "string"
+                                },
+                                "layoutDensity": {
+                                    "type": "string"
+                                },
+                                "layoutType": {
+                                    "type": "string"
+                                },
+                                "pageSize": {
+                                    "type": "integer"
+                                },
+                                "sidebarCollapsed": {
+                                    "type": "boolean"
+                                },
+                                "sidebarCollapsedWidth": {
+                                    "type": "integer"
+                                },
+                                "sidebarWidth": {
+                                    "type": "integer"
+                                },
+                                "theme": {
+                                    "type": "string"
+                                },
+                                "themeStyle": {
+                                    "type": "string"
+                                }
+                            }
                         }
                     }
                 ],
@@ -7621,25 +17082,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -7670,7 +17131,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_api_v1_system.UnlockUserRequest"
+                            "$ref": "#/definitions/system.UnlockUserRequest"
                         }
                     }
                 ],
@@ -7678,7 +17139,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -7704,7 +17165,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models_system_requests.UserCreateRequest"
+                            "$ref": "#/definitions/requests.UserCreateRequest"
                         }
                     }
                 ],
@@ -7712,19 +17173,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -7756,19 +17217,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -7800,13 +17261,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -7838,7 +17299,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -7884,7 +17345,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -7917,7 +17378,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models_system_requests.UserUpdateRequest"
+                            "$ref": "#/definitions/requests.UserUpdateRequest"
                         }
                     }
                 ],
@@ -7925,19 +17386,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -7979,7 +17440,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -8005,7 +17466,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models_system_requests.UserListParams"
+                            "$ref": "#/definitions/requests.UserListParams"
                         }
                     }
                 ],
@@ -8015,13 +17476,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.PageResponse"
+                                            "$ref": "#/definitions/response.PageResponse"
                                         }
                                     }
                                 }
@@ -8051,7 +17512,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.WorkOrderCategory"
+                            "$ref": "#/definitions/models.WorkOrderCategory"
                         }
                     }
                 ],
@@ -8059,7 +17520,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -8082,7 +17543,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -8105,7 +17566,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -8137,7 +17598,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -8169,7 +17630,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -8202,7 +17663,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.WorkOrderCategory"
+                            "$ref": "#/definitions/models.WorkOrderCategory"
                         }
                     }
                 ],
@@ -8210,7 +17671,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -8233,7 +17694,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -8259,7 +17720,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.WorkOrderConfig"
+                            "$ref": "#/definitions/models.WorkOrderConfig"
                         }
                     }
                 ],
@@ -8267,7 +17728,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -8293,7 +17754,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services_workorder.CreateRequest"
+                            "$ref": "#/definitions/workorder.CreateRequest"
                         }
                     }
                 ],
@@ -8301,7 +17762,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -8335,7 +17796,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -8360,7 +17821,7 @@ const docTemplate = `{
                         "name": "request",
                         "in": "body",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services_workorder.ListRequest"
+                            "$ref": "#/definitions/workorder.ListRequest"
                         }
                     }
                 ],
@@ -8370,13 +17831,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.PageResponse"
+                                            "$ref": "#/definitions/response.PageResponse"
                                         }
                                     }
                                 }
@@ -8405,7 +17866,7 @@ const docTemplate = `{
                         "name": "request",
                         "in": "body",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services_workorder.GetMyPendingRequest"
+                            "$ref": "#/definitions/workorder.GetMyPendingRequest"
                         }
                     }
                 ],
@@ -8413,7 +17874,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -8445,7 +17906,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -8478,7 +17939,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services_workorder.AssignRequest"
+                            "$ref": "#/definitions/workorder.AssignRequest"
                         }
                     }
                 ],
@@ -8486,7 +17947,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -8518,7 +17979,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -8551,7 +18012,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services_workorder.AddRequest"
+                            "$ref": "#/definitions/workorder.AddRequest"
                         }
                     }
                 ],
@@ -8559,7 +18020,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -8591,7 +18052,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -8623,7 +18084,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -8656,7 +18117,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services_workorder.UpdateStatusRequest"
+                            "$ref": "#/definitions/workorder.UpdateStatusRequest"
                         }
                     }
                 ],
@@ -8664,7 +18125,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -8697,7 +18158,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services_workorder.UpdateRequest"
+                            "$ref": "#/definitions/workorder.UpdateRequest"
                         }
                     }
                 ],
@@ -8705,7 +18166,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -8731,7 +18192,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services_workorder.CreateTemplateRequest"
+                            "$ref": "#/definitions/workorder.CreateTemplateRequest"
                         }
                     }
                 ],
@@ -8739,7 +18200,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -8762,7 +18223,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -8794,7 +18255,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -8827,7 +18288,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_services_workorder.UpdateTemplateRequest"
+                            "$ref": "#/definitions/workorder.UpdateTemplateRequest"
                         }
                     }
                 ],
@@ -8835,7 +18296,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -8858,7 +18319,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -8866,236 +18327,44 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.ApiDataSourceConfig": {
+        "internal_api_v1_monitor.CacheConfigInfo": {
             "type": "object",
             "properties": {
-                "body": {
-                    "type": "object",
-                    "additionalProperties": true
-                },
-                "endpoint": {
+                "category": {
+                    "description": "配置分类",
                     "type": "string"
                 },
-                "method": {
+                "default": {
+                    "description": "默认值（分钟）",
+                    "type": "integer"
+                },
+                "description": {
+                    "description": "配置说明",
                     "type": "string"
                 },
-                "params": {
-                    "type": "object",
-                    "additionalProperties": true
-                },
-                "transform": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.DataTransformConfig"
-                },
-                "type": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.DataSourceType"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.ChartDisplayConfig": {
-            "type": "object",
-            "properties": {
-                "backgroundColor": {
+                "key": {
+                    "description": "配置键",
                     "type": "string"
                 },
-                "chartType": {
-                    "type": "string"
+                "max": {
+                    "description": "最大值（分钟）",
+                    "type": "integer"
                 },
-                "className": {
-                    "type": "string"
+                "min": {
+                    "description": "最小值（分钟）",
+                    "type": "integer"
                 },
-                "color": {
-                    "type": "string"
-                },
-                "colors": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "seriesField": {
-                    "type": "string"
-                },
-                "showArea": {
-                    "type": "boolean"
-                },
-                "showBorder": {
-                    "type": "boolean"
-                },
-                "showLabels": {
-                    "type": "boolean"
-                },
-                "showLegend": {
-                    "type": "boolean"
-                },
-                "smooth": {
-                    "type": "boolean"
-                },
-                "style": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "string"
-                    }
-                },
-                "title": {
-                    "type": "string"
-                },
-                "transparent": {
-                    "type": "boolean"
-                },
-                "type": {
-                    "type": "string"
-                },
-                "xField": {
-                    "type": "string"
-                },
-                "yField": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.ColorThreshold": {
-            "type": "object",
-            "properties": {
-                "color": {
+                "name": {
+                    "description": "配置名称",
                     "type": "string"
                 },
                 "value": {
+                    "description": "当前值（分钟）",
                     "type": "integer"
                 }
             }
         },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.Columns": {
-            "type": "object",
-            "properties": {
-                "desktop": {
-                    "type": "integer"
-                },
-                "mobile": {
-                    "type": "integer"
-                },
-                "tablet": {
-                    "type": "integer"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.Dashboard": {
-            "type": "object",
-            "properties": {
-                "createdAt": {
-                    "type": "string"
-                },
-                "createdBy": {
-                    "type": "string"
-                },
-                "deletedAt": {
-                    "$ref": "#/definitions/gorm.DeletedAt"
-                },
-                "deptId": {
-                    "description": "关联部门（scope=dept时使用）",
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "isDefault": {
-                    "type": "boolean"
-                },
-                "isSystem": {
-                    "description": "系统仪表盘标识",
-                    "type": "boolean"
-                },
-                "isTemplate": {
-                    "type": "boolean"
-                },
-                "layout": {
-                    "description": "布局相关",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.LayoutConfig"
-                        }
-                    ]
-                },
-                "name": {
-                    "type": "string"
-                },
-                "ownerDeptId": {
-                    "description": "创建者部门",
-                    "type": "string"
-                },
-                "ownerId": {
-                    "type": "string"
-                },
-                "refreshInterval": {
-                    "type": "integer"
-                },
-                "scope": {
-                    "description": "权限相关",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.DashboardScope"
-                        }
-                    ]
-                },
-                "status": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.DashboardStatus"
-                },
-                "templateScope": {
-                    "description": "模板相关",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.TemplateScope"
-                        }
-                    ]
-                },
-                "updatedAt": {
-                    "type": "string"
-                },
-                "updatedBy": {
-                    "type": "string"
-                },
-                "version": {
-                    "type": "integer"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.DashboardScope": {
-            "type": "string",
-            "enum": [
-                "private",
-                "dept",
-                "global"
-            ],
-            "x-enum-comments": {
-                "DashboardScopeDept": "部门：本部门可见",
-                "DashboardScopeGlobal": "全局：全员可见",
-                "DashboardScopePrivate": "私有：仅创建者可见"
-            },
-            "x-enum-descriptions": [
-                "私有：仅创建者可见",
-                "部门：本部门可见",
-                "全局：全员可见"
-            ],
-            "x-enum-varnames": [
-                "DashboardScopePrivate",
-                "DashboardScopeDept",
-                "DashboardScopeGlobal"
-            ]
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.DashboardStatus": {
-            "type": "integer",
-            "enum": [
-                0,
-                1
-            ],
-            "x-enum-varnames": [
-                "DashboardStatusNormal",
-                "DashboardStatusStopped"
-            ]
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.DataScope": {
+        "models.DataScope": {
             "type": "integer",
             "enum": [
                 1,
@@ -9126,54 +18395,7 @@ const docTemplate = `{
                 "DataScopeSelf"
             ]
         },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.DataSourceConfig": {
-            "type": "object",
-            "properties": {
-                "api": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.ApiDataSourceConfig"
-                },
-                "static": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.StaticDataSourceConfig"
-                },
-                "websocket": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.WebSocketDataSourceConfig"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.DataSourceType": {
-            "type": "string",
-            "enum": [
-                "api",
-                "websocket",
-                "static"
-            ],
-            "x-enum-varnames": [
-                "DataSourceTypeAPI",
-                "DataSourceTypeWebSocket",
-                "DataSourceTypeStatic"
-            ]
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.DataTransformConfig": {
-            "type": "object",
-            "properties": {
-                "aggregate": {
-                    "type": "string"
-                },
-                "expression": {
-                    "type": "string"
-                },
-                "groupBy": {
-                    "type": "string"
-                },
-                "limit": {
-                    "type": "integer"
-                },
-                "orderBy": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.OrderByConfig"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.DeptStatus": {
+        "models.DeptStatus": {
             "type": "integer",
             "enum": [
                 0,
@@ -9192,7 +18414,7 @@ const docTemplate = `{
                 "DeptStatusStop"
             ]
         },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.DeviceStatus": {
+        "models.DeviceStatus": {
             "type": "integer",
             "enum": [
                 0,
@@ -9215,7 +18437,7 @@ const docTemplate = `{
                 "DeviceStatusUnknown"
             ]
         },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.DeviceType": {
+        "models.DeviceType": {
             "type": "string",
             "enum": [
                 "router",
@@ -9246,7 +18468,7 @@ const docTemplate = `{
                 "DeviceTypeLoadBalancer"
             ]
         },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.DeviceVendor": {
+        "models.DeviceVendor": {
             "type": "string",
             "enum": [
                 "huawei",
@@ -9273,7 +18495,7 @@ const docTemplate = `{
                 "VendorMaipu"
             ]
         },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.DiscoveryType": {
+        "models.DiscoveryType": {
             "type": "string",
             "enum": [
                 "snmp",
@@ -9292,69 +18514,10 @@ const docTemplate = `{
                 "DiscoveryTypeScan"
             ]
         },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.DisplayConfig": {
-            "type": "object",
-            "properties": {
-                "chart": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.ChartDisplayConfig"
-                },
-                "list": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.ListDisplayConfig"
-                },
-                "progress": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.ProgressDisplayConfig"
-                },
-                "statCard": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.StatCardDisplayConfig"
-                },
-                "table": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.TableDisplayConfig"
-                }
-            }
+        "models.DutyConfig": {
+            "type": "object"
         },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.DutyConfig": {
-            "type": "object",
-            "properties": {
-                "beforeReminderMinutes": {
-                    "description": "提前提醒分钟数（0=当天提醒）",
-                    "type": "integer"
-                },
-                "createdAt": {
-                    "type": "string"
-                },
-                "createdBy": {
-                    "type": "string"
-                },
-                "deletedAt": {
-                    "$ref": "#/definitions/gorm.DeletedAt"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "reminderChannels": {
-                    "description": "提醒渠道（websocket,email,sms，逗号分隔）",
-                    "type": "string"
-                },
-                "reminderEnabled": {
-                    "description": "是否启用值班提醒",
-                    "type": "boolean"
-                },
-                "reminderTime": {
-                    "description": "提醒时间 HH:mm格式",
-                    "type": "string"
-                },
-                "updatedAt": {
-                    "type": "string"
-                },
-                "updatedBy": {
-                    "type": "string"
-                },
-                "version": {
-                    "type": "integer"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.ExecutionStrategy": {
+        "models.ExecutionStrategy": {
             "type": "string",
             "enum": [
                 "parallel",
@@ -9373,7 +18536,7 @@ const docTemplate = `{
                 "ExecutionStrategySerial"
             ]
         },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.Gender": {
+        "models.Gender": {
             "type": "integer",
             "enum": [
                 0,
@@ -9396,7 +18559,7 @@ const docTemplate = `{
                 "GenderSecret"
             ]
         },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.IPRange": {
+        "models.IPRange": {
             "type": "object",
             "properties": {
                 "endIp": {
@@ -9409,84 +18572,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.LayoutConfig": {
-            "type": "object",
-            "properties": {
-                "columns": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.Columns"
-                },
-                "draggable": {
-                    "type": "boolean"
-                },
-                "margin": {
-                    "description": "[horizontal, vertical]",
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "resizable": {
-                    "type": "boolean"
-                },
-                "rowHeight": {
-                    "type": "integer"
-                },
-                "widgets": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.WidgetConfig"
-                    }
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.ListDisplayConfig": {
-            "type": "object",
-            "properties": {
-                "backgroundColor": {
-                    "type": "string"
-                },
-                "className": {
-                    "type": "string"
-                },
-                "color": {
-                    "type": "string"
-                },
-                "descriptionField": {
-                    "type": "string"
-                },
-                "iconField": {
-                    "type": "string"
-                },
-                "maxItems": {
-                    "type": "integer"
-                },
-                "showBorder": {
-                    "type": "boolean"
-                },
-                "showIndex": {
-                    "type": "boolean"
-                },
-                "style": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "string"
-                    }
-                },
-                "timeField": {
-                    "type": "string"
-                },
-                "titleField": {
-                    "type": "string"
-                },
-                "transparent": {
-                    "type": "boolean"
-                },
-                "type": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.MenuStatus": {
+        "models.MenuStatus": {
             "type": "integer",
             "enum": [
                 0,
@@ -9505,7 +18591,7 @@ const docTemplate = `{
                 "MenuStatusStop"
             ]
         },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.MenuType": {
+        "models.MenuType": {
             "type": "string",
             "enum": [
                 "M",
@@ -9528,56 +18614,7 @@ const docTemplate = `{
                 "MenuTypeButton"
             ]
         },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.MisfirePolicy": {
-            "type": "integer",
-            "enum": [
-                0,
-                1,
-                2,
-                3
-            ],
-            "x-enum-comments": {
-                "MisfirePolicyDefault": "默认策略",
-                "MisfirePolicyDiscard": "放弃执行",
-                "MisfirePolicyExecuteOnce": "执行一次",
-                "MisfirePolicyImmediately": "立即执行"
-            },
-            "x-enum-descriptions": [
-                "默认策略",
-                "立即执行",
-                "执行一次",
-                "放弃执行"
-            ],
-            "x-enum-varnames": [
-                "MisfirePolicyDefault",
-                "MisfirePolicyImmediately",
-                "MisfirePolicyExecuteOnce",
-                "MisfirePolicyDiscard"
-            ]
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.OrderByConfig": {
-            "type": "object",
-            "properties": {
-                "direction": {
-                    "type": "string"
-                },
-                "field": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.PaginationConfig": {
-            "type": "object",
-            "properties": {
-                "enabled": {
-                    "type": "boolean"
-                },
-                "pageSize": {
-                    "type": "integer"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.PeriodicWorkOrderAssignType": {
+        "models.PeriodicWorkOrderAssignType": {
             "type": "string",
             "enum": [
                 "manual",
@@ -9600,48 +18637,7 @@ const docTemplate = `{
                 "PeriodicAssignTypeRotation"
             ]
         },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.ProgressDisplayConfig": {
-            "type": "object",
-            "properties": {
-                "backgroundColor": {
-                    "type": "string"
-                },
-                "className": {
-                    "type": "string"
-                },
-                "color": {
-                    "type": "string"
-                },
-                "colorThresholds": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.ColorThreshold"
-                    }
-                },
-                "progressType": {
-                    "type": "string"
-                },
-                "showBorder": {
-                    "type": "boolean"
-                },
-                "style": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "string"
-                    }
-                },
-                "target": {
-                    "type": "integer"
-                },
-                "transparent": {
-                    "type": "boolean"
-                },
-                "type": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.ProtocolType": {
+        "models.ProtocolType": {
             "type": "string",
             "enum": [
                 "ssh",
@@ -9660,7 +18656,7 @@ const docTemplate = `{
                 "ProtocolTypeTelnet"
             ]
         },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.RoleStatus": {
+        "models.RoleStatus": {
             "type": "integer",
             "enum": [
                 0,
@@ -9679,7 +18675,7 @@ const docTemplate = `{
                 "RoleStatusDisabled"
             ]
         },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.SNMPVersion": {
+        "models.SNMPVersion": {
             "type": "string",
             "enum": [
                 "v1",
@@ -9702,149 +18698,7 @@ const docTemplate = `{
                 "SNMPVersionV3"
             ]
         },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.StatCardDisplayConfig": {
-            "type": "object",
-            "properties": {
-                "backgroundColor": {
-                    "type": "string"
-                },
-                "className": {
-                    "type": "string"
-                },
-                "color": {
-                    "type": "string"
-                },
-                "decimals": {
-                    "type": "integer"
-                },
-                "icon": {
-                    "type": "string"
-                },
-                "iconColor": {
-                    "type": "string"
-                },
-                "percentage": {
-                    "type": "boolean"
-                },
-                "prefix": {
-                    "type": "string"
-                },
-                "showBorder": {
-                    "type": "boolean"
-                },
-                "showTrend": {
-                    "type": "boolean"
-                },
-                "style": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "string"
-                    }
-                },
-                "suffix": {
-                    "type": "string"
-                },
-                "transparent": {
-                    "type": "boolean"
-                },
-                "type": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.StaticDataSourceConfig": {
-            "type": "object",
-            "properties": {
-                "data": {},
-                "type": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.DataSourceType"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.TableColumnConfig": {
-            "type": "object",
-            "properties": {
-                "align": {
-                    "type": "string"
-                },
-                "dataIndex": {
-                    "type": "string"
-                },
-                "render": {
-                    "type": "string"
-                },
-                "sortable": {
-                    "type": "boolean"
-                },
-                "title": {
-                    "type": "string"
-                },
-                "width": {
-                    "type": "integer"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.TableDisplayConfig": {
-            "type": "object",
-            "properties": {
-                "backgroundColor": {
-                    "type": "string"
-                },
-                "bordered": {
-                    "type": "boolean"
-                },
-                "className": {
-                    "type": "string"
-                },
-                "color": {
-                    "type": "string"
-                },
-                "columns": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.TableColumnConfig"
-                    }
-                },
-                "pagination": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.PaginationConfig"
-                },
-                "rowHeight": {
-                    "type": "integer"
-                },
-                "showBorder": {
-                    "type": "boolean"
-                },
-                "size": {
-                    "type": "string"
-                },
-                "style": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "string"
-                    }
-                },
-                "transparent": {
-                    "type": "boolean"
-                },
-                "type": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.TemplateScope": {
-            "type": "string",
-            "enum": [
-                "global",
-                "dept",
-                "personal"
-            ],
-            "x-enum-varnames": [
-                "TemplateScopeGlobal",
-                "TemplateScopeDept",
-                "TemplateScopePersonal"
-            ]
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.TemplateType": {
+        "models.TemplateType": {
             "type": "string",
             "enum": [
                 "init",
@@ -9867,7 +18721,7 @@ const docTemplate = `{
                 "TemplateTypeBackup"
             ]
         },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.TemplateVariable": {
+        "models.TemplateVariable": {
             "type": "object",
             "properties": {
                 "defaultValue": {
@@ -9899,7 +18753,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.UserStatus": {
+        "models.UserStatus": {
             "type": "integer",
             "enum": [
                 0,
@@ -9918,7 +18772,7 @@ const docTemplate = `{
                 "UserStatusDisabled"
             ]
         },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.VisibleType": {
+        "models.VisibleType": {
             "type": "integer",
             "enum": [
                 1,
@@ -9937,184 +18791,10 @@ const docTemplate = `{
                 "VisibleHidden"
             ]
         },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.WebSocketDataSourceConfig": {
-            "type": "object",
-            "properties": {
-                "channel": {
-                    "type": "string"
-                },
-                "transform": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.DataTransformConfig"
-                },
-                "type": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.DataSourceType"
-                }
-            }
+        "models.WorkOrderCategory": {
+            "type": "object"
         },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.WidgetConfig": {
-            "type": "object",
-            "properties": {
-                "createdAt": {
-                    "type": "integer"
-                },
-                "dataFilter": {
-                    "description": "数据权限过滤",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.WidgetDataFilter"
-                        }
-                    ]
-                },
-                "dataSource": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.DataSourceConfig"
-                },
-                "display": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.DisplayConfig"
-                },
-                "enabled": {
-                    "type": "boolean"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "position": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.WidgetPosition"
-                },
-                "refreshInterval": {
-                    "type": "integer"
-                },
-                "title": {
-                    "type": "string"
-                },
-                "type": {
-                    "type": "string"
-                },
-                "updatedAt": {
-                    "type": "integer"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.WidgetDataFilter": {
-            "type": "object",
-            "properties": {
-                "enabled": {
-                    "type": "boolean"
-                },
-                "filterConfig": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "string"
-                    }
-                },
-                "filterType": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.WidgetPosition": {
-            "type": "object",
-            "properties": {
-                "h": {
-                    "type": "integer"
-                },
-                "maxH": {
-                    "type": "integer"
-                },
-                "maxW": {
-                    "type": "integer"
-                },
-                "minH": {
-                    "type": "integer"
-                },
-                "minW": {
-                    "type": "integer"
-                },
-                "w": {
-                    "type": "integer"
-                },
-                "x": {
-                    "type": "integer"
-                },
-                "y": {
-                    "type": "integer"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.WorkOrderCategory": {
-            "type": "object",
-            "properties": {
-                "categoryName": {
-                    "type": "string"
-                },
-                "children": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.WorkOrderCategory"
-                    }
-                },
-                "createdAt": {
-                    "type": "string"
-                },
-                "createdBy": {
-                    "type": "string"
-                },
-                "deletedAt": {
-                    "$ref": "#/definitions/gorm.DeletedAt"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "parent": {
-                    "description": "关联",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.WorkOrderCategory"
-                        }
-                    ]
-                },
-                "parentId": {
-                    "type": "string"
-                },
-                "sortOrder": {
-                    "type": "integer"
-                },
-                "status": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.WorkOrderCategoryStatus"
-                },
-                "updatedAt": {
-                    "type": "string"
-                },
-                "updatedBy": {
-                    "type": "string"
-                },
-                "version": {
-                    "type": "integer"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.WorkOrderCategoryStatus": {
-            "type": "integer",
-            "enum": [
-                0,
-                1
-            ],
-            "x-enum-comments": {
-                "WorkOrderCategoryStatusDisabled": "停用",
-                "WorkOrderCategoryStatusEnabled": "启用"
-            },
-            "x-enum-descriptions": [
-                "启用",
-                "停用"
-            ],
-            "x-enum-varnames": [
-                "WorkOrderCategoryStatusEnabled",
-                "WorkOrderCategoryStatusDisabled"
-            ]
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.WorkOrderConfig": {
+        "models.WorkOrderConfig": {
             "type": "object",
             "properties": {
                 "allowUserClose": {
@@ -10168,7 +18848,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.WorkOrderPriority": {
+        "models.WorkOrderPriority": {
             "type": "integer",
             "enum": [
                 0,
@@ -10195,7 +18875,7 @@ const docTemplate = `{
                 "WorkOrderPriorityUrgent"
             ]
         },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.WorkOrderStatus": {
+        "models.WorkOrderStatus": {
             "type": "integer",
             "enum": [
                 0,
@@ -10226,7 +18906,7 @@ const docTemplate = `{
                 "WorkOrderStatusRejected"
             ]
         },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models.WorkOrderType": {
+        "models.WorkOrderType": {
             "type": "string",
             "enum": [
                 "fault",
@@ -10257,2021 +18937,10 @@ const docTemplate = `{
                 "WorkOrderTypeQuestion"
             ]
         },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models_system_requests.DepartmentCreateRequest": {
-            "type": "object",
-            "required": [
-                "deptName"
-            ],
-            "properties": {
-                "deptName": {
-                    "type": "string"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "isExternalOrg": {
-                    "type": "integer"
-                },
-                "leader": {
-                    "type": "string"
-                },
-                "orderNum": {
-                    "type": "integer"
-                },
-                "parentId": {
-                    "type": "string"
-                },
-                "phone": {
-                    "type": "string"
-                },
-                "remark": {
-                    "type": "string"
-                },
-                "status": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.DeptStatus"
-                }
-            }
+        "models.Workstation": {
+            "type": "object"
         },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models_system_requests.DepartmentListParams": {
-            "type": "object",
-            "properties": {
-                "deptName": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "integer"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models_system_requests.DepartmentUpdateRequest": {
-            "type": "object",
-            "required": [
-                "deptName",
-                "id"
-            ],
-            "properties": {
-                "deptName": {
-                    "type": "string"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "isExternalOrg": {
-                    "type": "integer"
-                },
-                "leader": {
-                    "type": "string"
-                },
-                "orderNum": {
-                    "type": "integer"
-                },
-                "parentId": {
-                    "type": "string"
-                },
-                "phone": {
-                    "type": "string"
-                },
-                "remark": {
-                    "type": "string"
-                },
-                "status": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.DeptStatus"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models_system_requests.MenuCreateRequest": {
-            "type": "object",
-            "required": [
-                "menuName"
-            ],
-            "properties": {
-                "component": {
-                    "type": "string"
-                },
-                "icon": {
-                    "type": "string"
-                },
-                "menuName": {
-                    "type": "string"
-                },
-                "menuType": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.MenuType"
-                },
-                "orderNum": {
-                    "type": "integer"
-                },
-                "parentId": {
-                    "type": "string"
-                },
-                "path": {
-                    "type": "string"
-                },
-                "perms": {
-                    "type": "string"
-                },
-                "remark": {
-                    "type": "string"
-                },
-                "status": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.MenuStatus"
-                },
-                "visible": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.VisibleType"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models_system_requests.MenuListParams": {
-            "type": "object",
-            "properties": {
-                "menuName": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models_system_requests.MenuUpdateRequest": {
-            "type": "object",
-            "required": [
-                "id",
-                "menuName"
-            ],
-            "properties": {
-                "component": {
-                    "type": "string"
-                },
-                "icon": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "menuName": {
-                    "type": "string"
-                },
-                "menuType": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.MenuType"
-                },
-                "orderNum": {
-                    "type": "integer"
-                },
-                "parentId": {
-                    "type": "string"
-                },
-                "path": {
-                    "type": "string"
-                },
-                "perms": {
-                    "type": "string"
-                },
-                "remark": {
-                    "type": "string"
-                },
-                "status": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.MenuStatus"
-                },
-                "visible": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.VisibleType"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models_system_requests.RoleCreateRequest": {
-            "type": "object",
-            "required": [
-                "roleKey",
-                "roleName"
-            ],
-            "properties": {
-                "dataScope": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.DataScope"
-                },
-                "deptCheckStrictly": {
-                    "type": "boolean"
-                },
-                "deptIds": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "menuCheckStrictly": {
-                    "type": "boolean"
-                },
-                "menuIds": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "remark": {
-                    "type": "string"
-                },
-                "roleKey": {
-                    "type": "string"
-                },
-                "roleName": {
-                    "type": "string"
-                },
-                "roleSort": {
-                    "type": "integer"
-                },
-                "status": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.RoleStatus"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models_system_requests.RoleListParams": {
-            "type": "object",
-            "properties": {
-                "current": {
-                    "type": "integer"
-                },
-                "pageSize": {
-                    "type": "integer"
-                },
-                "roleKey": {
-                    "type": "string"
-                },
-                "roleName": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models_system_requests.RoleUpdateRequest": {
-            "type": "object",
-            "required": [
-                "id",
-                "roleKey",
-                "roleName"
-            ],
-            "properties": {
-                "dataScope": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.DataScope"
-                },
-                "deptCheckStrictly": {
-                    "type": "boolean"
-                },
-                "deptIds": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "id": {
-                    "type": "string"
-                },
-                "menuCheckStrictly": {
-                    "type": "boolean"
-                },
-                "menuIds": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "remark": {
-                    "type": "string"
-                },
-                "roleKey": {
-                    "type": "string"
-                },
-                "roleName": {
-                    "type": "string"
-                },
-                "roleSort": {
-                    "type": "integer"
-                },
-                "status": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.RoleStatus"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models_system_requests.UserCreateRequest": {
-            "type": "object",
-            "required": [
-                "password",
-                "username"
-            ],
-            "properties": {
-                "deptId": {
-                    "type": "string"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "employeeNo": {
-                    "type": "string"
-                },
-                "gender": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.Gender"
-                },
-                "nickname": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string"
-                },
-                "phone": {
-                    "type": "string"
-                },
-                "postIds": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "remark": {
-                    "type": "string"
-                },
-                "roleIds": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "status": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.UserStatus"
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models_system_requests.UserListParams": {
-            "type": "object",
-            "properties": {
-                "beginTime": {
-                    "type": "string"
-                },
-                "current": {
-                    "type": "integer"
-                },
-                "deptId": {
-                    "type": "string"
-                },
-                "endTime": {
-                    "type": "string"
-                },
-                "nickname": {
-                    "type": "string"
-                },
-                "pageSize": {
-                    "type": "integer"
-                },
-                "phone": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "integer"
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_models_system_requests.UserUpdateRequest": {
-            "type": "object",
-            "required": [
-                "id"
-            ],
-            "properties": {
-                "deptId": {
-                    "type": "string"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "employeeNo": {
-                    "type": "string"
-                },
-                "gender": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.Gender"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "nickname": {
-                    "type": "string"
-                },
-                "phone": {
-                    "type": "string"
-                },
-                "postIds": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "remark": {
-                    "type": "string"
-                },
-                "roleIds": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "status": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.UserStatus"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services.ConvertWorkOrderToArticleRequest": {
-            "type": "object",
-            "required": [
-                "categoryId",
-                "content",
-                "title"
-            ],
-            "properties": {
-                "categoryId": {
-                    "type": "string"
-                },
-                "content": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "integer"
-                },
-                "summary": {
-                    "type": "string"
-                },
-                "tagIds": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "title": {
-                    "type": "string",
-                    "maxLength": 200
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services.CreateCredentialRequest": {
-            "type": "object",
-            "properties": {
-                "createdBy": {
-                    "type": "string"
-                },
-                "credentialName": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "enablePassword": {
-                    "type": "string"
-                },
-                "isDefault": {
-                    "type": "boolean"
-                },
-                "password": {
-                    "type": "string"
-                },
-                "protocolType": {
-                    "description": "SSH 或 Telnet",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.ProtocolType"
-                        }
-                    ]
-                },
-                "snmpcommunities": {
-                    "description": "多个 SNMP Community",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "snmpversion": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.SNMPVersion"
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services.CreateDeviceRequest": {
-            "type": "object",
-            "properties": {
-                "createdBy": {
-                    "type": "string"
-                },
-                "credentialID": {
-                    "type": "string"
-                },
-                "deptID": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "deviceName": {
-                    "type": "string"
-                },
-                "deviceType": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.DeviceType"
-                },
-                "ipaddress": {
-                    "type": "string"
-                },
-                "location": {
-                    "type": "string"
-                },
-                "model": {
-                    "type": "string"
-                },
-                "port": {
-                    "type": "integer"
-                },
-                "snmpport": {
-                    "type": "integer"
-                },
-                "status": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.DeviceStatus"
-                },
-                "vendor": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.DeviceVendor"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services.CreateTemplateRequest": {
-            "type": "object",
-            "properties": {
-                "createdBy": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "deviceType": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.DeviceType"
-                },
-                "isSystem": {
-                    "type": "boolean"
-                },
-                "templateCode": {
-                    "type": "string"
-                },
-                "templateContent": {
-                    "type": "string"
-                },
-                "templateName": {
-                    "type": "string"
-                },
-                "templateType": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.TemplateType"
-                },
-                "variables": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.TemplateVariable"
-                    }
-                },
-                "vendor": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.DeviceVendor"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services.DiscoveryRequest": {
-            "type": "object",
-            "properties": {
-                "autoImport": {
-                    "type": "boolean"
-                },
-                "createdBy": {
-                    "type": "string"
-                },
-                "discoveryType": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.DiscoveryType"
-                },
-                "groupID": {
-                    "type": "string"
-                },
-                "ipranges": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.IPRange"
-                    }
-                },
-                "snmpcommunities": {
-                    "description": "多个 SNMP Community（推荐使用）",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "snmpcommunity": {
-                    "description": "保留兼容性",
-                    "type": "string"
-                },
-                "snmpport": {
-                    "type": "integer"
-                },
-                "taskName": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services.DispatchRequest": {
-            "type": "object",
-            "properties": {
-                "commandContent": {
-                    "type": "string"
-                },
-                "concurrency": {
-                    "type": "integer"
-                },
-                "createdBy": {
-                    "type": "string"
-                },
-                "deviceIDs": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "executionName": {
-                    "type": "string"
-                },
-                "executionStrategy": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.ExecutionStrategy"
-                },
-                "timeout": {
-                    "type": "integer"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services.DutyPoolCreateRequest": {
-            "type": "object",
-            "required": [
-                "memberIds",
-                "poolName"
-            ],
-            "properties": {
-                "dailyCount": {
-                    "type": "integer",
-                    "maximum": 10,
-                    "minimum": 1
-                },
-                "deptId": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "memberIds": {
-                    "type": "array",
-                    "minItems": 1,
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "poolName": {
-                    "type": "string",
-                    "maxLength": 100
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services.DutyPoolListRequest": {
-            "type": "object",
-            "properties": {
-                "current": {
-                    "type": "integer"
-                },
-                "deptId": {
-                    "type": "string"
-                },
-                "pageSize": {
-                    "type": "integer"
-                },
-                "poolName": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "integer"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services.DutyPoolUpdateRequest": {
-            "type": "object",
-            "required": [
-                "memberIds",
-                "poolName"
-            ],
-            "properties": {
-                "dailyCount": {
-                    "type": "integer",
-                    "maximum": 10,
-                    "minimum": 1
-                },
-                "deptId": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "memberIds": {
-                    "type": "array",
-                    "minItems": 1,
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "poolName": {
-                    "type": "string",
-                    "maxLength": 100
-                },
-                "status": {
-                    "description": "使用指针类型，未提供时为nil",
-                    "type": "integer"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services.DutyScheduleListRequest": {
-            "type": "object",
-            "properties": {
-                "current": {
-                    "type": "integer"
-                },
-                "dutyType": {
-                    "type": "string"
-                },
-                "endDate": {
-                    "description": "YYYY-MM-DD",
-                    "type": "string"
-                },
-                "expired": {
-                    "description": "过期状态：0=未过期，1=已过期，不传=全部",
-                    "type": "integer"
-                },
-                "pageSize": {
-                    "type": "integer"
-                },
-                "poolId": {
-                    "type": "string"
-                },
-                "startDate": {
-                    "description": "YYYY-MM-DD",
-                    "type": "string"
-                },
-                "status": {
-                    "type": "integer"
-                },
-                "userId": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services.GenerateScheduleRequest": {
-            "type": "object",
-            "required": [
-                "dutyType",
-                "endDate",
-                "poolId",
-                "startDate"
-            ],
-            "properties": {
-                "clearExists": {
-                    "description": "是否清除已有排班",
-                    "type": "boolean"
-                },
-                "dutyType": {
-                    "description": "值班类型：工作日/周末/节假日",
-                    "type": "string",
-                    "enum": [
-                        "weekday",
-                        "weekend",
-                        "holiday"
-                    ]
-                },
-                "endDate": {
-                    "description": "YYYY-MM-DD",
-                    "type": "string"
-                },
-                "poolId": {
-                    "type": "string"
-                },
-                "startDate": {
-                    "description": "YYYY-MM-DD",
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services.KnowledgeArticleCreateRequest": {
-            "type": "object",
-            "required": [
-                "categoryId",
-                "content",
-                "title"
-            ],
-            "properties": {
-                "categoryId": {
-                    "type": "string"
-                },
-                "content": {
-                    "type": "string"
-                },
-                "sourceWorkOrderId": {
-                    "description": "来源工单ID（用于工单转知识库）",
-                    "type": "string"
-                },
-                "status": {
-                    "type": "integer"
-                },
-                "summary": {
-                    "type": "string"
-                },
-                "tagIds": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "title": {
-                    "type": "string",
-                    "maxLength": 200
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services.KnowledgeArticleListRequest": {
-            "type": "object",
-            "properties": {
-                "categoryId": {
-                    "type": "string"
-                },
-                "createdBy": {
-                    "type": "string"
-                },
-                "current": {
-                    "type": "integer"
-                },
-                "pageSize": {
-                    "type": "integer"
-                },
-                "status": {
-                    "type": "integer"
-                },
-                "tagId": {
-                    "type": "string"
-                },
-                "title": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services.KnowledgeArticleUpdateRequest": {
-            "type": "object",
-            "properties": {
-                "categoryId": {
-                    "type": "string"
-                },
-                "content": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "integer"
-                },
-                "summary": {
-                    "type": "string"
-                },
-                "tagIds": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "title": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services.KnowledgeCategoryCreateRequest": {
-            "type": "object",
-            "required": [
-                "categoryName"
-            ],
-            "properties": {
-                "categoryName": {
-                    "type": "string",
-                    "maxLength": 100
-                },
-                "description": {
-                    "type": "string"
-                },
-                "parentId": {
-                    "type": "string"
-                },
-                "sortOrder": {
-                    "type": "integer"
-                },
-                "status": {
-                    "type": "integer"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services.KnowledgeCategoryListRequest": {
-            "type": "object",
-            "properties": {
-                "parentId": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "integer"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services.KnowledgeCategoryUpdateRequest": {
-            "type": "object",
-            "properties": {
-                "categoryName": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "parentId": {
-                    "type": "string"
-                },
-                "sortOrder": {
-                    "type": "integer"
-                },
-                "status": {
-                    "type": "integer"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services.ListCredentialRequest": {
-            "type": "object",
-            "properties": {
-                "credentialName": {
-                    "type": "string"
-                },
-                "current": {
-                    "type": "integer"
-                },
-                "pageSize": {
-                    "type": "integer"
-                },
-                "protocolType": {
-                    "description": "改为协议类型过滤",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.ProtocolType"
-                        }
-                    ]
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services.ListDeviceRequest": {
-            "type": "object",
-            "properties": {
-                "current": {
-                    "type": "integer"
-                },
-                "deptID": {
-                    "type": "string"
-                },
-                "deviceName": {
-                    "type": "string"
-                },
-                "deviceType": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.DeviceType"
-                },
-                "ip": {
-                    "type": "string"
-                },
-                "pageSize": {
-                    "type": "integer"
-                },
-                "status": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.DeviceStatus"
-                },
-                "vendor": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.DeviceVendor"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services.ListTemplateRequest": {
-            "type": "object",
-            "properties": {
-                "current": {
-                    "type": "integer"
-                },
-                "deviceType": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.DeviceType"
-                },
-                "isSystem": {
-                    "type": "boolean"
-                },
-                "pageSize": {
-                    "type": "integer"
-                },
-                "templateName": {
-                    "type": "string"
-                },
-                "templateType": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.TemplateType"
-                },
-                "vendor": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.DeviceVendor"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services.ManualDutyRequest": {
-            "type": "object",
-            "required": [
-                "dutyDate",
-                "dutyType",
-                "poolId",
-                "userIds"
-            ],
-            "properties": {
-                "dutyDate": {
-                    "description": "YYYY-MM-DD",
-                    "type": "string"
-                },
-                "dutyType": {
-                    "type": "string",
-                    "enum": [
-                        "weekday",
-                        "weekend",
-                        "holiday"
-                    ]
-                },
-                "poolId": {
-                    "type": "string"
-                },
-                "reason": {
-                    "type": "string"
-                },
-                "userIds": {
-                    "type": "array",
-                    "minItems": 1,
-                    "items": {
-                        "type": "string"
-                    }
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services.SearchKnowledgeRequest": {
-            "type": "object",
-            "properties": {
-                "categoryId": {
-                    "type": "string"
-                },
-                "keyword": {
-                    "type": "string"
-                },
-                "pageNum": {
-                    "description": "页码，从0开始",
-                    "type": "integer"
-                },
-                "pageSize": {
-                    "description": "每页大小，默认100",
-                    "type": "integer"
-                },
-                "tagId": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services.SwapDutyRequest": {
-            "type": "object",
-            "required": [
-                "fromScheduleId",
-                "toScheduleId"
-            ],
-            "properties": {
-                "fromScheduleId": {
-                    "description": "原排班ID",
-                    "type": "string"
-                },
-                "reason": {
-                    "type": "string"
-                },
-                "toScheduleId": {
-                    "description": "目标排班ID",
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services.TemplateExecutionRequest": {
-            "type": "object",
-            "properties": {
-                "concurrency": {
-                    "type": "integer"
-                },
-                "createdBy": {
-                    "type": "string"
-                },
-                "deviceIDs": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "executionName": {
-                    "type": "string"
-                },
-                "executionStrategy": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.ExecutionStrategy"
-                },
-                "templateID": {
-                    "type": "string"
-                },
-                "templateVariables": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "string"
-                    }
-                },
-                "timeout": {
-                    "type": "integer"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services.UpdateCredentialRequest": {
-            "type": "object",
-            "properties": {
-                "credentialName": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "enablePassword": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "isDefault": {
-                    "type": "boolean"
-                },
-                "password": {
-                    "type": "string"
-                },
-                "protocolType": {
-                    "description": "SSH 或 Telnet",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.ProtocolType"
-                        }
-                    ]
-                },
-                "snmpcommunities": {
-                    "description": "多个 SNMP Community",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "snmpversion": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.SNMPVersion"
-                },
-                "updatedBy": {
-                    "type": "string"
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services.UpdateDeviceRequest": {
-            "type": "object",
-            "properties": {
-                "credentialID": {
-                    "type": "string"
-                },
-                "deptID": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "deviceName": {
-                    "type": "string"
-                },
-                "deviceType": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.DeviceType"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "ipaddress": {
-                    "type": "string"
-                },
-                "location": {
-                    "type": "string"
-                },
-                "model": {
-                    "type": "string"
-                },
-                "port": {
-                    "type": "integer"
-                },
-                "snmpport": {
-                    "type": "integer"
-                },
-                "status": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.DeviceStatus"
-                },
-                "updatedBy": {
-                    "type": "string"
-                },
-                "vendor": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.DeviceVendor"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services.UpdateTemplateRequest": {
-            "type": "object",
-            "properties": {
-                "description": {
-                    "type": "string"
-                },
-                "deviceType": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.DeviceType"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "templateContent": {
-                    "type": "string"
-                },
-                "templateName": {
-                    "type": "string"
-                },
-                "templateType": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.TemplateType"
-                },
-                "updatedBy": {
-                    "type": "string"
-                },
-                "variables": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.TemplateVariable"
-                    }
-                },
-                "vendor": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.DeviceVendor"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services_scheduler.JobCreateRequest": {
-            "type": "object",
-            "properties": {
-                "concurrent": {
-                    "type": "boolean"
-                },
-                "cronExpression": {
-                    "type": "string"
-                },
-                "invokeTarget": {
-                    "type": "string"
-                },
-                "jobGroup": {
-                    "type": "string"
-                },
-                "jobName": {
-                    "type": "string"
-                },
-                "misfirePolicy": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.MisfirePolicy"
-                },
-                "remark": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services_scheduler.JobListParams": {
-            "type": "object",
-            "properties": {
-                "current": {
-                    "type": "integer"
-                },
-                "jobGroup": {
-                    "type": "string"
-                },
-                "jobName": {
-                    "type": "string"
-                },
-                "pageSize": {
-                    "type": "integer"
-                },
-                "status": {
-                    "type": "integer"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services_scheduler.JobLogListParams": {
-            "type": "object",
-            "properties": {
-                "current": {
-                    "type": "integer"
-                },
-                "endTime": {
-                    "type": "string"
-                },
-                "jobGroup": {
-                    "type": "string"
-                },
-                "jobName": {
-                    "type": "string"
-                },
-                "pageSize": {
-                    "type": "integer"
-                },
-                "startTime": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "integer"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services_scheduler.JobUpdateRequest": {
-            "type": "object",
-            "properties": {
-                "concurrent": {
-                    "type": "boolean"
-                },
-                "cronExpression": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "invokeTarget": {
-                    "type": "string"
-                },
-                "jobGroup": {
-                    "type": "string"
-                },
-                "jobName": {
-                    "type": "string"
-                },
-                "misfirePolicy": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.MisfirePolicy"
-                },
-                "remark": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services_system.CreateDashboardRequest": {
-            "type": "object",
-            "required": [
-                "layout",
-                "name"
-            ],
-            "properties": {
-                "deptId": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string",
-                    "maxLength": 500
-                },
-                "isSystem": {
-                    "type": "boolean"
-                },
-                "isTemplate": {
-                    "type": "boolean"
-                },
-                "layout": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.LayoutConfig"
-                },
-                "name": {
-                    "type": "string",
-                    "maxLength": 100,
-                    "minLength": 1
-                },
-                "refreshInterval": {
-                    "type": "integer",
-                    "maximum": 3600,
-                    "minimum": 0
-                },
-                "scope": {
-                    "description": "权限相关",
-                    "enum": [
-                        "private",
-                        "dept",
-                        "global"
-                    ],
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.DashboardScope"
-                        }
-                    ]
-                },
-                "templateScope": {
-                    "enum": [
-                        "global",
-                        "dept",
-                        "personal"
-                    ],
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.TemplateScope"
-                        }
-                    ]
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services_system.DashboardListParams": {
-            "type": "object",
-            "required": [
-                "current",
-                "pageSize"
-            ],
-            "properties": {
-                "current": {
-                    "type": "integer",
-                    "minimum": 1
-                },
-                "isTemplate": {
-                    "type": "boolean"
-                },
-                "keyword": {
-                    "type": "string"
-                },
-                "pageSize": {
-                    "type": "integer",
-                    "maximum": 100,
-                    "minimum": 1
-                },
-                "status": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.DashboardStatus"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services_system.DashboardListResponse": {
-            "type": "object",
-            "properties": {
-                "current": {
-                    "type": "integer"
-                },
-                "list": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.Dashboard"
-                    }
-                },
-                "pageSize": {
-                    "type": "integer"
-                },
-                "total": {
-                    "type": "integer"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services_system.UpdateDashboardRequest": {
-            "type": "object",
-            "properties": {
-                "description": {
-                    "type": "string",
-                    "maxLength": 500
-                },
-                "layout": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.LayoutConfig"
-                },
-                "name": {
-                    "type": "string",
-                    "maxLength": 100,
-                    "minLength": 1
-                },
-                "refreshInterval": {
-                    "type": "integer",
-                    "maximum": 3600,
-                    "minimum": 0
-                },
-                "status": {
-                    "maximum": 1,
-                    "minimum": 0,
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.DashboardStatus"
-                        }
-                    ]
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services_system.UserPreferences": {
-            "type": "object",
-            "required": [
-                "language",
-                "pageSize",
-                "theme"
-            ],
-            "properties": {
-                "customPrimaryColor": {
-                    "description": "自定义颜色（可选）",
-                    "type": "string"
-                },
-                "customSidebarColor": {
-                    "type": "string"
-                },
-                "language": {
-                    "description": "语言",
-                    "type": "string",
-                    "enum": [
-                        "zh-CN",
-                        "en-US"
-                    ]
-                },
-                "layoutDensity": {
-                    "type": "string",
-                    "enum": [
-                        "compact",
-                        "comfortable",
-                        "spacious"
-                    ]
-                },
-                "layoutType": {
-                    "description": "布局",
-                    "type": "string",
-                    "enum": [
-                        "classic",
-                        "hybrid",
-                        "innovative"
-                    ]
-                },
-                "pageSize": {
-                    "description": "数据",
-                    "type": "integer",
-                    "maximum": 100,
-                    "minimum": 5
-                },
-                "sidebarCollapsed": {
-                    "type": "boolean"
-                },
-                "sidebarCollapsedWidth": {
-                    "type": "integer",
-                    "maximum": 100,
-                    "minimum": 40
-                },
-                "sidebarWidth": {
-                    "type": "integer",
-                    "maximum": 400,
-                    "minimum": 100
-                },
-                "theme": {
-                    "description": "主题",
-                    "type": "string",
-                    "enum": [
-                        "light",
-                        "dark"
-                    ]
-                },
-                "themeStyle": {
-                    "type": "string",
-                    "enum": [
-                        "minimal",
-                        "glassmorphism",
-                        "neumorphism",
-                        "flat2.0",
-                        "luxury-quiet"
-                    ]
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services_workorder.AddRequest": {
-            "type": "object",
-            "required": [
-                "content"
-            ],
-            "properties": {
-                "content": {
-                    "type": "string"
-                },
-                "isInternal": {
-                    "type": "boolean"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services_workorder.AssignRequest": {
-            "type": "object",
-            "required": [
-                "assigneeId"
-            ],
-            "properties": {
-                "assigneeId": {
-                    "type": "string"
-                },
-                "remark": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services_workorder.CreateRequest": {
-            "type": "object",
-            "required": [
-                "categoryId",
-                "title",
-                "type"
-            ],
-            "properties": {
-                "assigneeId": {
-                    "description": "手动指定处理人",
-                    "type": "string"
-                },
-                "attachmentIds": {
-                    "type": "string"
-                },
-                "categoryId": {
-                    "type": "string"
-                },
-                "deptId": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "expectedResolveAt": {
-                    "description": "YYYY-MM-DD HH:mm:ss",
-                    "type": "string"
-                },
-                "priority": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.WorkOrderPriority"
-                },
-                "title": {
-                    "type": "string",
-                    "maxLength": 200
-                },
-                "type": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.WorkOrderType"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services_workorder.CreateTemplateRequest": {
-            "type": "object",
-            "required": [
-                "categoryId",
-                "cronExpression",
-                "templateName",
-                "type",
-                "workOrderTitle"
-            ],
-            "properties": {
-                "assignTargetId": {
-                    "type": "string"
-                },
-                "assignType": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.PeriodicWorkOrderAssignType"
-                },
-                "categoryId": {
-                    "type": "string"
-                },
-                "cronExpression": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "notifyAssignee": {
-                    "type": "boolean"
-                },
-                "priority": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.WorkOrderPriority"
-                },
-                "templateName": {
-                    "type": "string",
-                    "maxLength": 100
-                },
-                "type": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.WorkOrderType"
-                },
-                "workOrderTitle": {
-                    "type": "string",
-                    "maxLength": 200
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services_workorder.GetMyPendingRequest": {
-            "type": "object",
-            "properties": {
-                "limit": {
-                    "description": "限制返回数量，默认5",
-                    "type": "integer"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services_workorder.ListRequest": {
-            "type": "object",
-            "properties": {
-                "assigneeId": {
-                    "type": "string"
-                },
-                "categoryId": {
-                    "type": "string"
-                },
-                "current": {
-                    "type": "integer"
-                },
-                "deptId": {
-                    "type": "string"
-                },
-                "endDate": {
-                    "type": "string"
-                },
-                "pageSize": {
-                    "type": "integer"
-                },
-                "priority": {
-                    "type": "integer"
-                },
-                "startDate": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "integer"
-                },
-                "submitterId": {
-                    "type": "string"
-                },
-                "title": {
-                    "type": "string"
-                },
-                "type": {
-                    "type": "string"
-                },
-                "workOrderNo": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services_workorder.UpdateRequest": {
-            "type": "object",
-            "required": [
-                "id"
-            ],
-            "properties": {
-                "assigneeId": {
-                    "type": "string"
-                },
-                "attachmentIds": {
-                    "type": "string"
-                },
-                "categoryId": {
-                    "type": "string"
-                },
-                "closedAt": {
-                    "type": "string"
-                },
-                "deptId": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "expectedResolveAt": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "priority": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.WorkOrderPriority"
-                },
-                "resolvedAt": {
-                    "type": "string"
-                },
-                "solution": {
-                    "type": "string"
-                },
-                "status": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.WorkOrderStatus"
-                },
-                "title": {
-                    "type": "string"
-                },
-                "type": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.WorkOrderType"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services_workorder.UpdateStatusRequest": {
-            "type": "object",
-            "required": [
-                "status"
-            ],
-            "properties": {
-                "remark": {
-                    "type": "string"
-                },
-                "solution": {
-                    "type": "string"
-                },
-                "status": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.WorkOrderStatus"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_internal_services_workorder.UpdateTemplateRequest": {
-            "type": "object",
-            "properties": {
-                "assignTargetId": {
-                    "type": "string"
-                },
-                "assignType": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.PeriodicWorkOrderAssignType"
-                },
-                "categoryId": {
-                    "type": "string"
-                },
-                "cronExpression": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "isEnabled": {
-                    "type": "boolean"
-                },
-                "notifyAssignee": {
-                    "type": "boolean"
-                },
-                "priority": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.WorkOrderPriority"
-                },
-                "templateName": {
-                    "type": "string"
-                },
-                "type": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.WorkOrderType"
-                },
-                "workOrderTitle": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_pkg_response.PageResponse": {
-            "type": "object",
-            "properties": {
-                "current": {
-                    "description": "当前页",
-                    "type": "integer"
-                },
-                "list": {
-                    "description": "数据列表"
-                },
-                "pageSize": {
-                    "description": "每页大小",
-                    "type": "integer"
-                },
-                "total": {
-                    "description": "总数",
-                    "type": "integer"
-                }
-            }
-        },
-        "github_com_ruoyi-next_ruoyi-go-backend_pkg_response.Response": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "description": "业务状态码",
-                    "type": "integer"
-                },
-                "data": {
-                    "description": "数据"
-                },
-                "message": {
-                    "description": "消息",
-                    "type": "string"
-                },
-                "request_id": {
-                    "description": "请求ID",
-                    "type": "string"
-                },
-                "timestamp": {
-                    "description": "时间戳",
-                    "type": "integer"
-                }
-            }
-        },
-        "gorm.DeletedAt": {
-            "type": "object",
-            "properties": {
-                "time": {
-                    "type": "string"
-                },
-                "valid": {
-                    "description": "Valid is true if Time is not NULL",
-                    "type": "boolean"
-                }
-            }
-        },
-        "internal_api_v1.LoginRequest": {
-            "type": "object",
-            "required": [
-                "password",
-                "username"
-            ],
-            "properties": {
-                "captcha": {
-                    "type": "string"
-                },
-                "captchaId": {
-                    "type": "string"
-                },
-                "encryptedPassword": {
-                    "description": "EncryptedPassword 表示密码是否已加密（SM2）",
-                    "type": "boolean"
-                },
-                "password": {
-                    "type": "string"
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "internal_api_v1.LoginResponse": {
-            "type": "object",
-            "properties": {
-                "accessToken": {
-                    "type": "string"
-                },
-                "expiresIn": {
-                    "type": "integer"
-                },
-                "refreshToken": {
-                    "type": "string"
-                },
-                "tokenType": {
-                    "type": "string"
-                },
-                "user": {
-                    "$ref": "#/definitions/internal_api_v1.UserInfo"
-                }
-            }
-        },
-        "internal_api_v1.SliderVerifyRequest": {
-            "type": "object",
-            "required": [
-                "captchaId",
-                "token",
-                "xPos"
-            ],
-            "properties": {
-                "captchaId": {
-                    "type": "string"
-                },
-                "token": {
-                    "type": "string"
-                },
-                "xPos": {
-                    "type": "integer"
-                }
-            }
-        },
-        "internal_api_v1.UserInfo": {
-            "type": "object",
-            "properties": {
-                "createTime": {
-                    "type": "string"
-                },
-                "deptName": {
-                    "type": "string"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "gender": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.Gender"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "nickname": {
-                    "type": "string"
-                },
-                "roles": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "status": {
-                    "$ref": "#/definitions/github_com_ruoyi-next_ruoyi-go-backend_internal_models.UserStatus"
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "internal_api_v1_monitor.CacheBatchRequest": {
+        "monitor.CacheBatchRequest": {
             "type": "object",
             "required": [
                 "keys",
@@ -12293,7 +18962,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_v1_monitor.CacheConfigCategory": {
+        "monitor.CacheConfigCategory": {
             "type": "object",
             "properties": {
                 "configs": {
@@ -12309,44 +18978,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_v1_monitor.CacheConfigInfo": {
-            "type": "object",
-            "properties": {
-                "category": {
-                    "description": "配置分类",
-                    "type": "string"
-                },
-                "default": {
-                    "description": "默认值（分钟）",
-                    "type": "integer"
-                },
-                "description": {
-                    "description": "配置说明",
-                    "type": "string"
-                },
-                "key": {
-                    "description": "配置键",
-                    "type": "string"
-                },
-                "max": {
-                    "description": "最大值（分钟）",
-                    "type": "integer"
-                },
-                "min": {
-                    "description": "最小值（分钟）",
-                    "type": "integer"
-                },
-                "name": {
-                    "description": "配置名称",
-                    "type": "string"
-                },
-                "value": {
-                    "description": "当前值（分钟）",
-                    "type": "integer"
-                }
-            }
-        },
-        "internal_api_v1_monitor.CacheListRequest": {
+        "monitor.CacheListRequest": {
             "type": "object",
             "properties": {
                 "current": {
@@ -12367,7 +18999,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_v1_monitor.CacheOperateRequest": {
+        "monitor.CacheOperateRequest": {
             "type": "object",
             "required": [
                 "key",
@@ -12396,7 +19028,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_v1_monitor.CacheStatsRequest": {
+        "monitor.CacheStatsRequest": {
             "type": "object",
             "properties": {
                 "cacheType": {
@@ -12420,7 +19052,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_v1_monitor.GetKeyInfoRequest": {
+        "monitor.GetKeyInfoRequest": {
             "type": "object",
             "required": [
                 "key"
@@ -12432,7 +19064,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_v1_monitor.GetKeyInfoResponse": {
+        "monitor.GetKeyInfoResponse": {
             "type": "object",
             "properties": {
                 "exists": {
@@ -12457,7 +19089,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_v1_monitor.GetStatsRequest": {
+        "monitor.GetStatsRequest": {
             "type": "object",
             "properties": {
                 "module": {
@@ -12466,7 +19098,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_v1_monitor.GetStatsResponse": {
+        "monitor.GetStatsResponse": {
             "type": "object",
             "properties": {
                 "count": {
@@ -12512,7 +19144,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_v1_monitor.InvalidateByModuleRequest": {
+        "monitor.InvalidateByModuleRequest": {
             "type": "object",
             "required": [
                 "module"
@@ -12528,7 +19160,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_v1_monitor.InvalidateByPatternRequest": {
+        "monitor.InvalidateByPatternRequest": {
             "type": "object",
             "required": [
                 "pattern"
@@ -12540,7 +19172,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_v1_monitor.LoginLogListRequest": {
+        "monitor.LoginLogListRequest": {
             "type": "object",
             "properties": {
                 "beginTime": {
@@ -12569,7 +19201,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_v1_monitor.OperLogListRequest": {
+        "monitor.OperLogListRequest": {
             "type": "object",
             "properties": {
                 "beginTime": {
@@ -12601,7 +19233,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_v1_monitor.UpdateCacheConfigRequest": {
+        "monitor.UpdateCacheConfigRequest": {
             "type": "object",
             "required": [
                 "key",
@@ -12620,7 +19252,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_v1_monitor.WarmUpCacheRequest": {
+        "monitor.WarmUpCacheRequest": {
             "type": "object",
             "properties": {
                 "modules": {
@@ -12632,7 +19264,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_v1_monitor.WarmUpCacheResponse": {
+        "monitor.WarmUpCacheResponse": {
             "type": "object",
             "properties": {
                 "errors": {
@@ -12652,7 +19284,125 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_v1_operations.GeocodeRequest": {
+        "network.BatchDeletePortRecordsRequest": {
+            "type": "object",
+            "required": [
+                "ids"
+            ],
+            "properties": {
+                "ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "network.CleanOldMACRecordsRequest": {
+            "type": "object",
+            "required": [
+                "days"
+            ],
+            "properties": {
+                "days": {
+                    "type": "integer",
+                    "maximum": 365,
+                    "minimum": 1
+                }
+            }
+        },
+        "network.CleanOldPortRecordsRequest": {
+            "type": "object",
+            "required": [
+                "days"
+            ],
+            "properties": {
+                "days": {
+                    "type": "integer",
+                    "maximum": 365,
+                    "minimum": 1
+                }
+            }
+        },
+        "network.MACAddressListRequest": {
+            "type": "object",
+            "properties": {
+                "current": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "deviceId": {
+                    "type": "string"
+                },
+                "interfaceName": {
+                    "type": "string"
+                },
+                "macAddress": {
+                    "type": "string"
+                },
+                "pageSize": {
+                    "type": "integer",
+                    "maximum": 100,
+                    "minimum": 1
+                }
+            }
+        },
+        "network.MACCollectionRequest": {
+            "type": "object",
+            "required": [
+                "deviceId"
+            ],
+            "properties": {
+                "deviceId": {
+                    "type": "string"
+                }
+            }
+        },
+        "network.PortCollectionRequest": {
+            "type": "object",
+            "required": [
+                "deviceId"
+            ],
+            "properties": {
+                "deviceId": {
+                    "type": "string"
+                }
+            }
+        },
+        "network.PortStatusListRequest": {
+            "type": "object",
+            "properties": {
+                "adminStatus": {
+                    "type": "string"
+                },
+                "current": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "deviceId": {
+                    "type": "string"
+                },
+                "dot1xEnabled": {
+                    "type": "boolean"
+                },
+                "interfaceName": {
+                    "type": "string"
+                },
+                "operStatus": {
+                    "type": "string"
+                },
+                "pageSize": {
+                    "type": "integer",
+                    "maximum": 1000,
+                    "minimum": 1
+                },
+                "portSecurityEnabled": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "operations.GeocodeRequest": {
             "type": "object",
             "required": [
                 "address"
@@ -12666,7 +19416,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_v1_operations.GeocodeResponse": {
+        "operations.GeocodeResponse": {
             "type": "object",
             "properties": {
                 "city": {
@@ -12692,13 +19442,2058 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_v1_system.UnlockUserRequest": {
+        "operations.OpsBuilding": {
+            "type": "object"
+        },
+        "operations.OpsDedicatedLine": {
+            "type": "object"
+        },
+        "operations.OpsFloor": {
+            "type": "object"
+        },
+        "operations.OpsInfoPoint": {
+            "type": "object"
+        },
+        "operations.OpsRoomDevice": {
+            "type": "object"
+        },
+        "operations.OpsServerRoom": {
+            "type": "object"
+        },
+        "requests.DedicatedLineBatchOperationRequest": {
+            "type": "object",
+            "required": [
+                "action",
+                "ids"
+            ],
+            "properties": {
+                "action": {
+                    "description": "操作类型：delete=删除",
+                    "type": "string"
+                },
+                "ids": {
+                    "description": "要操作的ID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "requests.DedicatedLineListRequest": {
+            "type": "object",
+            "properties": {
+                "carrierContactName": {
+                    "description": "运营商联系人",
+                    "type": "string"
+                },
+                "current": {
+                    "description": "当前页码",
+                    "type": "integer"
+                },
+                "destDeviceName": {
+                    "description": "目的设备名称",
+                    "type": "string"
+                },
+                "destRoomName": {
+                    "description": "目的机房名称",
+                    "type": "string"
+                },
+                "pageSize": {
+                    "description": "每页数量",
+                    "type": "integer"
+                },
+                "sourceDeviceName": {
+                    "description": "源设备名称",
+                    "type": "string"
+                },
+                "sourceRoomName": {
+                    "description": "源机房名称",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "状态（0=正常/启用 1=停用/禁用）",
+                    "type": "integer"
+                }
+            }
+        },
+        "requests.DepartmentCreateRequest": {
+            "type": "object",
+            "required": [
+                "deptName"
+            ],
+            "properties": {
+                "deptName": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "isExternalOrg": {
+                    "type": "integer"
+                },
+                "leader": {
+                    "type": "string"
+                },
+                "orderNum": {
+                    "type": "integer"
+                },
+                "parentId": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "remark": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/models.DeptStatus"
+                }
+            }
+        },
+        "requests.DepartmentListParams": {
+            "type": "object",
+            "properties": {
+                "deptName": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                }
+            }
+        },
+        "requests.DepartmentUpdateRequest": {
+            "type": "object",
+            "required": [
+                "deptName",
+                "id"
+            ],
+            "properties": {
+                "deptName": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "isExternalOrg": {
+                    "type": "integer"
+                },
+                "leader": {
+                    "type": "string"
+                },
+                "orderNum": {
+                    "type": "integer"
+                },
+                "parentId": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "remark": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/models.DeptStatus"
+                }
+            }
+        },
+        "requests.DoorBatchOperationRequest": {
+            "type": "object",
+            "required": [
+                "action",
+                "ids"
+            ],
+            "properties": {
+                "action": {
+                    "description": "操作类型：delete=删除",
+                    "type": "string"
+                },
+                "ids": {
+                    "description": "要操作的ID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "requests.DoorListRequest": {
+            "type": "object",
+            "properties": {
+                "current": {
+                    "description": "当前页码",
+                    "type": "integer"
+                },
+                "doorType": {
+                    "description": "门类型",
+                    "type": "string"
+                },
+                "floorId": {
+                    "description": "楼层ID",
+                    "type": "string"
+                },
+                "pageSize": {
+                    "description": "每页数量",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "状态（0=正常/启用 1=停用/禁用）",
+                    "type": "integer"
+                }
+            }
+        },
+        "requests.FloorPlanTextBatchOperationRequest": {
+            "type": "object",
+            "required": [
+                "action",
+                "ids"
+            ],
+            "properties": {
+                "action": {
+                    "description": "操作类型：delete=删除",
+                    "type": "string"
+                },
+                "ids": {
+                    "description": "要操作的ID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "requests.FloorPlanTextListRequest": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "description": "文字内容（模糊查询）",
+                    "type": "string"
+                },
+                "current": {
+                    "description": "当前页码",
+                    "type": "integer"
+                },
+                "floorId": {
+                    "description": "楼层ID",
+                    "type": "string"
+                },
+                "pageSize": {
+                    "description": "每页数量",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "状态（0=正常/启用 1=停用/禁用）",
+                    "type": "integer"
+                }
+            }
+        },
+        "requests.InfoPointBatchOperationRequest": {
+            "type": "object",
+            "required": [
+                "action",
+                "ids"
+            ],
+            "properties": {
+                "action": {
+                    "description": "操作类型：delete=删除",
+                    "type": "string"
+                },
+                "ids": {
+                    "description": "要操作的ID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "requests.InfoPointListRequest": {
+            "type": "object",
+            "properties": {
+                "current": {
+                    "description": "当前页码",
+                    "type": "integer"
+                },
+                "floorId": {
+                    "description": "楼层ID",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "点位名称（模糊查询）",
+                    "type": "string"
+                },
+                "pageSize": {
+                    "description": "每页数量",
+                    "type": "integer"
+                },
+                "pointType": {
+                    "description": "点位类型",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "状态（0=正常/启用 1=停用/禁用）",
+                    "type": "integer"
+                },
+                "workId": {
+                    "description": "工位ID",
+                    "type": "string"
+                }
+            }
+        },
+        "requests.MenuCreateRequest": {
+            "type": "object",
+            "required": [
+                "menuName"
+            ],
+            "properties": {
+                "component": {
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "menuName": {
+                    "type": "string"
+                },
+                "menuType": {
+                    "$ref": "#/definitions/models.MenuType"
+                },
+                "orderNum": {
+                    "type": "integer"
+                },
+                "parentId": {
+                    "type": "string"
+                },
+                "path": {
+                    "type": "string"
+                },
+                "perms": {
+                    "type": "string"
+                },
+                "remark": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/models.MenuStatus"
+                },
+                "visible": {
+                    "$ref": "#/definitions/models.VisibleType"
+                }
+            }
+        },
+        "requests.MenuListParams": {
+            "type": "object",
+            "properties": {
+                "menuName": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "requests.MenuUpdateRequest": {
+            "type": "object",
+            "required": [
+                "id",
+                "menuName"
+            ],
+            "properties": {
+                "component": {
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "menuName": {
+                    "type": "string"
+                },
+                "menuType": {
+                    "$ref": "#/definitions/models.MenuType"
+                },
+                "orderNum": {
+                    "type": "integer"
+                },
+                "parentId": {
+                    "type": "string"
+                },
+                "path": {
+                    "type": "string"
+                },
+                "perms": {
+                    "type": "string"
+                },
+                "remark": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/models.MenuStatus"
+                },
+                "visible": {
+                    "$ref": "#/definitions/models.VisibleType"
+                }
+            }
+        },
+        "requests.RoleCreateRequest": {
+            "type": "object",
+            "required": [
+                "roleKey",
+                "roleName"
+            ],
+            "properties": {
+                "dataScope": {
+                    "$ref": "#/definitions/models.DataScope"
+                },
+                "deptCheckStrictly": {
+                    "type": "boolean"
+                },
+                "deptIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "menuCheckStrictly": {
+                    "type": "boolean"
+                },
+                "menuIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "remark": {
+                    "type": "string"
+                },
+                "roleKey": {
+                    "type": "string"
+                },
+                "roleName": {
+                    "type": "string"
+                },
+                "roleSort": {
+                    "type": "integer"
+                },
+                "status": {
+                    "$ref": "#/definitions/models.RoleStatus"
+                }
+            }
+        },
+        "requests.RoleListParams": {
+            "type": "object",
+            "properties": {
+                "current": {
+                    "type": "integer"
+                },
+                "pageSize": {
+                    "type": "integer"
+                },
+                "roleKey": {
+                    "type": "string"
+                },
+                "roleName": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "requests.RoleUpdateRequest": {
+            "type": "object",
+            "required": [
+                "id",
+                "roleKey",
+                "roleName"
+            ],
+            "properties": {
+                "dataScope": {
+                    "$ref": "#/definitions/models.DataScope"
+                },
+                "deptCheckStrictly": {
+                    "type": "boolean"
+                },
+                "deptIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "menuCheckStrictly": {
+                    "type": "boolean"
+                },
+                "menuIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "remark": {
+                    "type": "string"
+                },
+                "roleKey": {
+                    "type": "string"
+                },
+                "roleName": {
+                    "type": "string"
+                },
+                "roleSort": {
+                    "type": "integer"
+                },
+                "status": {
+                    "$ref": "#/definitions/models.RoleStatus"
+                }
+            }
+        },
+        "requests.RoomDeviceBatchOperationRequest": {
+            "type": "object",
+            "required": [
+                "action",
+                "ids"
+            ],
+            "properties": {
+                "action": {
+                    "description": "操作类型：delete=删除",
+                    "type": "string"
+                },
+                "ids": {
+                    "description": "要操作的ID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "requests.RoomDeviceListRequest": {
+            "type": "object",
+            "properties": {
+                "current": {
+                    "description": "当前页码",
+                    "type": "integer"
+                },
+                "deviceType": {
+                    "description": "设备类型",
+                    "type": "string"
+                },
+                "ipAddress": {
+                    "description": "IP地址",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "设备名称（模糊查询）",
+                    "type": "string"
+                },
+                "pageSize": {
+                    "description": "每页数量",
+                    "type": "integer"
+                },
+                "roomId": {
+                    "description": "机房ID",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "状态（0=正常/启用 1=停用/禁用）",
+                    "type": "integer"
+                }
+            }
+        },
+        "requests.ServerRoomBatchOperationRequest": {
+            "type": "object",
+            "required": [
+                "action",
+                "ids"
+            ],
+            "properties": {
+                "action": {
+                    "description": "操作类型：delete=删除",
+                    "type": "string"
+                },
+                "ids": {
+                    "description": "要操作的ID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "requests.ServerRoomListRequest": {
+            "type": "object",
+            "properties": {
+                "current": {
+                    "description": "当前页码",
+                    "type": "integer"
+                },
+                "floorId": {
+                    "description": "楼层ID",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "机房名称（模糊查询）",
+                    "type": "string"
+                },
+                "pageSize": {
+                    "description": "每页数量",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "状态（0=正常/启用 1=停用/禁用）",
+                    "type": "integer"
+                }
+            }
+        },
+        "requests.UserCreateRequest": {
+            "type": "object",
+            "required": [
+                "password",
+                "username"
+            ],
+            "properties": {
+                "deptId": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "employeeNo": {
+                    "type": "string"
+                },
+                "gender": {
+                    "$ref": "#/definitions/models.Gender"
+                },
+                "nickname": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "postIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "remark": {
+                    "type": "string"
+                },
+                "roleIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "status": {
+                    "$ref": "#/definitions/models.UserStatus"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "requests.UserListParams": {
+            "type": "object",
+            "properties": {
+                "beginTime": {
+                    "type": "string"
+                },
+                "current": {
+                    "type": "integer"
+                },
+                "deptId": {
+                    "type": "string"
+                },
+                "endTime": {
+                    "type": "string"
+                },
+                "nickname": {
+                    "type": "string"
+                },
+                "pageSize": {
+                    "type": "integer"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "requests.UserUpdateRequest": {
+            "type": "object",
+            "required": [
+                "id"
+            ],
+            "properties": {
+                "deptId": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "employeeNo": {
+                    "type": "string"
+                },
+                "gender": {
+                    "$ref": "#/definitions/models.Gender"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "nickname": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "postIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "remark": {
+                    "type": "string"
+                },
+                "roleIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "status": {
+                    "$ref": "#/definitions/models.UserStatus"
+                }
+            }
+        },
+        "requests.WallBatchOperationRequest": {
+            "type": "object",
+            "required": [
+                "action",
+                "ids"
+            ],
+            "properties": {
+                "action": {
+                    "description": "操作类型：delete=删除",
+                    "type": "string"
+                },
+                "ids": {
+                    "description": "要操作的ID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "requests.WallListRequest": {
+            "type": "object",
+            "properties": {
+                "current": {
+                    "description": "当前页码",
+                    "type": "integer"
+                },
+                "floorId": {
+                    "description": "楼层ID",
+                    "type": "string"
+                },
+                "pageSize": {
+                    "description": "每页数量",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "状态（0=正常/启用 1=停用/禁用）",
+                    "type": "integer"
+                },
+                "wallType": {
+                    "description": "墙类型",
+                    "type": "string"
+                }
+            }
+        },
+        "response.PageResponse": {
+            "type": "object",
+            "properties": {
+                "current": {
+                    "description": "当前页",
+                    "type": "integer"
+                },
+                "list": {
+                    "description": "数据列表"
+                },
+                "pageSize": {
+                    "description": "每页大小",
+                    "type": "integer"
+                },
+                "total": {
+                    "description": "总数",
+                    "type": "integer"
+                }
+            }
+        },
+        "response.Response": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "description": "业务状态码",
+                    "type": "integer"
+                },
+                "data": {
+                    "description": "数据"
+                },
+                "message": {
+                    "description": "消息",
+                    "type": "string"
+                },
+                "request_id": {
+                    "description": "请求ID",
+                    "type": "string"
+                },
+                "timestamp": {
+                    "description": "时间戳",
+                    "type": "integer"
+                }
+            }
+        },
+        "services.ConvertWorkOrderToArticleRequest": {
+            "type": "object",
+            "required": [
+                "categoryId",
+                "content",
+                "title"
+            ],
+            "properties": {
+                "categoryId": {
+                    "type": "string"
+                },
+                "content": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "summary": {
+                    "type": "string"
+                },
+                "tagIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "title": {
+                    "type": "string",
+                    "maxLength": 200
+                }
+            }
+        },
+        "services.CreateCredentialRequest": {
+            "type": "object",
+            "properties": {
+                "createdBy": {
+                    "type": "string"
+                },
+                "credentialName": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "enablePassword": {
+                    "type": "string"
+                },
+                "isDefault": {
+                    "type": "boolean"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "protocolType": {
+                    "description": "SSH 或 Telnet",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.ProtocolType"
+                        }
+                    ]
+                },
+                "snmpcommunities": {
+                    "description": "多个 SNMP Community",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "snmpversion": {
+                    "$ref": "#/definitions/models.SNMPVersion"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.CreateDeviceRequest": {
+            "type": "object",
+            "properties": {
+                "createdBy": {
+                    "type": "string"
+                },
+                "credentialID": {
+                    "type": "string"
+                },
+                "deptID": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "deviceName": {
+                    "type": "string"
+                },
+                "deviceType": {
+                    "$ref": "#/definitions/models.DeviceType"
+                },
+                "ipaddress": {
+                    "type": "string"
+                },
+                "location": {
+                    "type": "string"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "port": {
+                    "type": "integer"
+                },
+                "snmpport": {
+                    "type": "integer"
+                },
+                "status": {
+                    "$ref": "#/definitions/models.DeviceStatus"
+                },
+                "vendor": {
+                    "$ref": "#/definitions/models.DeviceVendor"
+                }
+            }
+        },
+        "services.CreateTemplateRequest": {
+            "type": "object",
+            "properties": {
+                "createdBy": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "deviceType": {
+                    "$ref": "#/definitions/models.DeviceType"
+                },
+                "isSystem": {
+                    "type": "boolean"
+                },
+                "templateCode": {
+                    "type": "string"
+                },
+                "templateContent": {
+                    "type": "string"
+                },
+                "templateName": {
+                    "type": "string"
+                },
+                "templateType": {
+                    "$ref": "#/definitions/models.TemplateType"
+                },
+                "variables": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.TemplateVariable"
+                    }
+                },
+                "vendor": {
+                    "$ref": "#/definitions/models.DeviceVendor"
+                }
+            }
+        },
+        "services.DiscoveryRequest": {
+            "type": "object",
+            "properties": {
+                "autoImport": {
+                    "type": "boolean"
+                },
+                "createdBy": {
+                    "type": "string"
+                },
+                "discoveryType": {
+                    "$ref": "#/definitions/models.DiscoveryType"
+                },
+                "groupID": {
+                    "type": "string"
+                },
+                "ipranges": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.IPRange"
+                    }
+                },
+                "snmpcommunities": {
+                    "description": "多个 SNMP Community（推荐使用）",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "snmpcommunity": {
+                    "description": "保留兼容性",
+                    "type": "string"
+                },
+                "snmpport": {
+                    "type": "integer"
+                },
+                "taskName": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.DispatchRequest": {
+            "type": "object",
+            "properties": {
+                "commandContent": {
+                    "type": "string"
+                },
+                "concurrency": {
+                    "type": "integer"
+                },
+                "createdBy": {
+                    "type": "string"
+                },
+                "deviceIDs": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "executionName": {
+                    "type": "string"
+                },
+                "executionStrategy": {
+                    "$ref": "#/definitions/models.ExecutionStrategy"
+                },
+                "timeout": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.DutyPoolCreateRequest": {
+            "type": "object",
+            "required": [
+                "memberIds",
+                "poolName"
+            ],
+            "properties": {
+                "dailyCount": {
+                    "type": "integer",
+                    "maximum": 10,
+                    "minimum": 1
+                },
+                "deptId": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "memberIds": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "poolName": {
+                    "type": "string",
+                    "maxLength": 100
+                }
+            }
+        },
+        "services.DutyPoolListRequest": {
+            "type": "object",
+            "properties": {
+                "current": {
+                    "type": "integer"
+                },
+                "deptId": {
+                    "type": "string"
+                },
+                "pageSize": {
+                    "type": "integer"
+                },
+                "poolName": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.DutyPoolUpdateRequest": {
+            "type": "object",
+            "required": [
+                "memberIds",
+                "poolName"
+            ],
+            "properties": {
+                "dailyCount": {
+                    "type": "integer",
+                    "maximum": 10,
+                    "minimum": 1
+                },
+                "deptId": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "memberIds": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "poolName": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "status": {
+                    "description": "使用指针类型，未提供时为nil",
+                    "type": "integer"
+                }
+            }
+        },
+        "services.DutyScheduleListRequest": {
+            "type": "object",
+            "properties": {
+                "current": {
+                    "type": "integer"
+                },
+                "dutyType": {
+                    "type": "string"
+                },
+                "endDate": {
+                    "description": "YYYY-MM-DD",
+                    "type": "string"
+                },
+                "expired": {
+                    "description": "过期状态：0=未过期，1=已过期，不传=全部",
+                    "type": "integer"
+                },
+                "pageSize": {
+                    "type": "integer"
+                },
+                "poolId": {
+                    "type": "string"
+                },
+                "startDate": {
+                    "description": "YYYY-MM-DD",
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "userId": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.GenerateScheduleRequest": {
+            "type": "object",
+            "required": [
+                "dutyType",
+                "endDate",
+                "poolId",
+                "startDate"
+            ],
+            "properties": {
+                "clearExists": {
+                    "description": "是否清除已有排班",
+                    "type": "boolean"
+                },
+                "dutyType": {
+                    "description": "值班类型：工作日/周末/节假日",
+                    "type": "string",
+                    "enum": [
+                        "weekday",
+                        "weekend",
+                        "holiday"
+                    ]
+                },
+                "endDate": {
+                    "description": "YYYY-MM-DD",
+                    "type": "string"
+                },
+                "poolId": {
+                    "type": "string"
+                },
+                "startDate": {
+                    "description": "YYYY-MM-DD",
+                    "type": "string"
+                }
+            }
+        },
+        "services.KnowledgeArticleCreateRequest": {
+            "type": "object",
+            "required": [
+                "categoryId",
+                "content",
+                "title"
+            ],
+            "properties": {
+                "categoryId": {
+                    "type": "string"
+                },
+                "content": {
+                    "type": "string"
+                },
+                "sourceWorkOrderId": {
+                    "description": "来源工单ID（用于工单转知识库）",
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "summary": {
+                    "type": "string"
+                },
+                "tagIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "title": {
+                    "type": "string",
+                    "maxLength": 200
+                }
+            }
+        },
+        "services.KnowledgeArticleListRequest": {
+            "type": "object",
+            "properties": {
+                "categoryId": {
+                    "type": "string"
+                },
+                "createdBy": {
+                    "type": "string"
+                },
+                "current": {
+                    "type": "integer"
+                },
+                "pageSize": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "tagId": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.KnowledgeArticleUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "categoryId": {
+                    "type": "string"
+                },
+                "content": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "summary": {
+                    "type": "string"
+                },
+                "tagIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.KnowledgeCategoryCreateRequest": {
+            "type": "object",
+            "required": [
+                "categoryName"
+            ],
+            "properties": {
+                "categoryName": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "description": {
+                    "type": "string"
+                },
+                "parentId": {
+                    "type": "string"
+                },
+                "sortOrder": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.KnowledgeCategoryListRequest": {
+            "type": "object",
+            "properties": {
+                "parentId": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.KnowledgeCategoryUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "categoryName": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "parentId": {
+                    "type": "string"
+                },
+                "sortOrder": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.ListCredentialRequest": {
+            "type": "object",
+            "properties": {
+                "credentialName": {
+                    "type": "string"
+                },
+                "current": {
+                    "type": "integer"
+                },
+                "pageSize": {
+                    "type": "integer"
+                },
+                "protocolType": {
+                    "description": "改为协议类型过滤",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.ProtocolType"
+                        }
+                    ]
+                }
+            }
+        },
+        "services.ListDeviceRequest": {
+            "type": "object",
+            "properties": {
+                "current": {
+                    "type": "integer"
+                },
+                "deptID": {
+                    "type": "string"
+                },
+                "deviceName": {
+                    "type": "string"
+                },
+                "deviceType": {
+                    "$ref": "#/definitions/models.DeviceType"
+                },
+                "ip": {
+                    "type": "string"
+                },
+                "pageSize": {
+                    "type": "integer"
+                },
+                "status": {
+                    "$ref": "#/definitions/models.DeviceStatus"
+                },
+                "vendor": {
+                    "$ref": "#/definitions/models.DeviceVendor"
+                }
+            }
+        },
+        "services.ListTemplateRequest": {
+            "type": "object",
+            "properties": {
+                "current": {
+                    "type": "integer"
+                },
+                "deviceType": {
+                    "$ref": "#/definitions/models.DeviceType"
+                },
+                "isSystem": {
+                    "type": "boolean"
+                },
+                "pageSize": {
+                    "type": "integer"
+                },
+                "templateName": {
+                    "type": "string"
+                },
+                "templateType": {
+                    "$ref": "#/definitions/models.TemplateType"
+                },
+                "vendor": {
+                    "$ref": "#/definitions/models.DeviceVendor"
+                }
+            }
+        },
+        "services.ManualDutyRequest": {
+            "type": "object",
+            "required": [
+                "dutyDate",
+                "dutyType",
+                "poolId",
+                "userIds"
+            ],
+            "properties": {
+                "dutyDate": {
+                    "description": "YYYY-MM-DD",
+                    "type": "string"
+                },
+                "dutyType": {
+                    "type": "string",
+                    "enum": [
+                        "weekday",
+                        "weekend",
+                        "holiday"
+                    ]
+                },
+                "poolId": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "userIds": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "services.SearchKnowledgeRequest": {
+            "type": "object",
+            "properties": {
+                "categoryId": {
+                    "type": "string"
+                },
+                "keyword": {
+                    "type": "string"
+                },
+                "pageNum": {
+                    "description": "页码，从0开始",
+                    "type": "integer"
+                },
+                "pageSize": {
+                    "description": "每页大小，默认100",
+                    "type": "integer"
+                },
+                "tagId": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.SwapDutyRequest": {
+            "type": "object",
+            "required": [
+                "fromScheduleId",
+                "toScheduleId"
+            ],
+            "properties": {
+                "fromScheduleId": {
+                    "description": "原排班ID",
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "toScheduleId": {
+                    "description": "目标排班ID",
+                    "type": "string"
+                }
+            }
+        },
+        "services.TemplateExecutionRequest": {
+            "type": "object",
+            "properties": {
+                "concurrency": {
+                    "type": "integer"
+                },
+                "createdBy": {
+                    "type": "string"
+                },
+                "deviceIDs": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "executionName": {
+                    "type": "string"
+                },
+                "executionStrategy": {
+                    "$ref": "#/definitions/models.ExecutionStrategy"
+                },
+                "templateID": {
+                    "type": "string"
+                },
+                "templateVariables": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "timeout": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.UpdateCredentialRequest": {
+            "type": "object",
+            "properties": {
+                "credentialName": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "enablePassword": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "isDefault": {
+                    "type": "boolean"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "protocolType": {
+                    "description": "SSH 或 Telnet",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.ProtocolType"
+                        }
+                    ]
+                },
+                "snmpcommunities": {
+                    "description": "多个 SNMP Community",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "snmpversion": {
+                    "$ref": "#/definitions/models.SNMPVersion"
+                },
+                "updatedBy": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.UpdateDeviceRequest": {
+            "type": "object",
+            "properties": {
+                "credentialID": {
+                    "type": "string"
+                },
+                "deptID": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "deviceName": {
+                    "type": "string"
+                },
+                "deviceType": {
+                    "$ref": "#/definitions/models.DeviceType"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "ipaddress": {
+                    "type": "string"
+                },
+                "location": {
+                    "type": "string"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "port": {
+                    "type": "integer"
+                },
+                "snmpport": {
+                    "type": "integer"
+                },
+                "status": {
+                    "$ref": "#/definitions/models.DeviceStatus"
+                },
+                "updatedBy": {
+                    "type": "string"
+                },
+                "vendor": {
+                    "$ref": "#/definitions/models.DeviceVendor"
+                }
+            }
+        },
+        "services.UpdateTemplateRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "deviceType": {
+                    "$ref": "#/definitions/models.DeviceType"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "templateContent": {
+                    "type": "string"
+                },
+                "templateName": {
+                    "type": "string"
+                },
+                "templateType": {
+                    "$ref": "#/definitions/models.TemplateType"
+                },
+                "updatedBy": {
+                    "type": "string"
+                },
+                "variables": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.TemplateVariable"
+                    }
+                },
+                "vendor": {
+                    "$ref": "#/definitions/models.DeviceVendor"
+                }
+            }
+        },
+        "system.UnlockUserRequest": {
             "type": "object",
             "required": [
                 "username"
             ],
             "properties": {
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "v1.LoginRequest": {
+            "type": "object",
+            "required": [
+                "password",
+                "username"
+            ],
+            "properties": {
+                "captcha": {
+                    "type": "string"
+                },
+                "captchaId": {
+                    "type": "string"
+                },
+                "encryptedPassword": {
+                    "description": "EncryptedPassword 表示密码是否已加密（SM2）",
+                    "type": "boolean"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "v1.LoginResponse": {
+            "type": "object",
+            "properties": {
+                "accessToken": {
+                    "type": "string"
+                },
+                "expiresIn": {
+                    "type": "integer"
+                },
+                "refreshToken": {
+                    "type": "string"
+                },
+                "tokenType": {
+                    "type": "string"
+                },
+                "user": {
+                    "$ref": "#/definitions/v1.UserInfo"
+                }
+            }
+        },
+        "v1.SliderVerifyRequest": {
+            "type": "object",
+            "required": [
+                "captchaId",
+                "token",
+                "xPos"
+            ],
+            "properties": {
+                "captchaId": {
+                    "type": "string"
+                },
+                "token": {
+                    "type": "string"
+                },
+                "xPos": {
+                    "type": "integer"
+                }
+            }
+        },
+        "v1.UserInfo": {
+            "type": "object",
+            "properties": {
+                "createTime": {
+                    "type": "string"
+                },
+                "deptName": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "gender": {
+                    "$ref": "#/definitions/models.Gender"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "nickname": {
+                    "type": "string"
+                },
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "status": {
+                    "$ref": "#/definitions/models.UserStatus"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "workorder.AddRequest": {
+            "type": "object",
+            "required": [
+                "content"
+            ],
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "isInternal": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "workorder.AssignRequest": {
+            "type": "object",
+            "required": [
+                "assigneeId"
+            ],
+            "properties": {
+                "assigneeId": {
+                    "type": "string"
+                },
+                "remark": {
+                    "type": "string"
+                }
+            }
+        },
+        "workorder.CreateRequest": {
+            "type": "object",
+            "required": [
+                "categoryId",
+                "title",
+                "type"
+            ],
+            "properties": {
+                "assigneeId": {
+                    "description": "手动指定处理人",
+                    "type": "string"
+                },
+                "attachmentIds": {
+                    "type": "string"
+                },
+                "categoryId": {
+                    "type": "string"
+                },
+                "deptId": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "expectedResolveAt": {
+                    "description": "YYYY-MM-DD HH:mm:ss",
+                    "type": "string"
+                },
+                "priority": {
+                    "$ref": "#/definitions/models.WorkOrderPriority"
+                },
+                "title": {
+                    "type": "string",
+                    "maxLength": 200
+                },
+                "type": {
+                    "$ref": "#/definitions/models.WorkOrderType"
+                }
+            }
+        },
+        "workorder.CreateTemplateRequest": {
+            "type": "object",
+            "required": [
+                "categoryId",
+                "cronExpression",
+                "templateName",
+                "type",
+                "workOrderTitle"
+            ],
+            "properties": {
+                "assignTargetId": {
+                    "type": "string"
+                },
+                "assignType": {
+                    "$ref": "#/definitions/models.PeriodicWorkOrderAssignType"
+                },
+                "categoryId": {
+                    "type": "string"
+                },
+                "cronExpression": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "notifyAssignee": {
+                    "type": "boolean"
+                },
+                "priority": {
+                    "$ref": "#/definitions/models.WorkOrderPriority"
+                },
+                "templateName": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "type": {
+                    "$ref": "#/definitions/models.WorkOrderType"
+                },
+                "workOrderTitle": {
+                    "type": "string",
+                    "maxLength": 200
+                }
+            }
+        },
+        "workorder.GetMyPendingRequest": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "description": "限制返回数量，默认5",
+                    "type": "integer"
+                }
+            }
+        },
+        "workorder.ListRequest": {
+            "type": "object",
+            "properties": {
+                "assigneeId": {
+                    "type": "string"
+                },
+                "categoryId": {
+                    "type": "string"
+                },
+                "current": {
+                    "type": "integer"
+                },
+                "deptId": {
+                    "type": "string"
+                },
+                "endDate": {
+                    "type": "string"
+                },
+                "pageSize": {
+                    "type": "integer"
+                },
+                "priority": {
+                    "type": "integer"
+                },
+                "startDate": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "submitterId": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "workOrderNo": {
+                    "type": "string"
+                }
+            }
+        },
+        "workorder.UpdateRequest": {
+            "type": "object",
+            "required": [
+                "id"
+            ],
+            "properties": {
+                "assigneeId": {
+                    "type": "string"
+                },
+                "attachmentIds": {
+                    "type": "string"
+                },
+                "categoryId": {
+                    "type": "string"
+                },
+                "closedAt": {
+                    "type": "string"
+                },
+                "deptId": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "expectedResolveAt": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "priority": {
+                    "$ref": "#/definitions/models.WorkOrderPriority"
+                },
+                "resolvedAt": {
+                    "type": "string"
+                },
+                "solution": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/models.WorkOrderStatus"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/definitions/models.WorkOrderType"
+                }
+            }
+        },
+        "workorder.UpdateStatusRequest": {
+            "type": "object",
+            "required": [
+                "status"
+            ],
+            "properties": {
+                "remark": {
+                    "type": "string"
+                },
+                "solution": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/models.WorkOrderStatus"
+                }
+            }
+        },
+        "workorder.UpdateTemplateRequest": {
+            "type": "object",
+            "properties": {
+                "assignTargetId": {
+                    "type": "string"
+                },
+                "assignType": {
+                    "$ref": "#/definitions/models.PeriodicWorkOrderAssignType"
+                },
+                "categoryId": {
+                    "type": "string"
+                },
+                "cronExpression": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "isEnabled": {
+                    "type": "boolean"
+                },
+                "notifyAssignee": {
+                    "type": "boolean"
+                },
+                "priority": {
+                    "$ref": "#/definitions/models.WorkOrderPriority"
+                },
+                "templateName": {
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/definitions/models.WorkOrderType"
+                },
+                "workOrderTitle": {
                     "type": "string"
                 }
             }

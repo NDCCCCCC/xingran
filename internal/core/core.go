@@ -50,6 +50,13 @@ type Core struct {
 	CacheConfigService *services.CacheConfigService // 缓存配置服务
 	CacheManager       *system.CacheManager         // 缓存管理器（增强功能）
 
+	// System 模块服务（用于缓存预热）
+	UserService  system.UserService
+	RoleService  system.RoleService
+	MenuService  system.MenuService
+	DeptService system.DepartmentService
+	PostService  system.PostService
+
 	// API端点元数据服务
 	APIMetadata        *config.APIMetadataConfig    // API元数据配置
 	APIEndpointService *services.APIEndpointService // API端点服务
@@ -164,6 +171,14 @@ func (c *Core) Init() error {
 		)
 
 		applogger.Infof("缓存服务初始化完成（预热功能: %v）", cacheManagerEnabled)
+
+		// 初始化 System 模块服务（用于缓存预热）
+		c.initSystemServicesForWarmUp()
+
+		// 执行缓存预热（异步执行，不阻塞启动）
+		if cacheManagerEnabled {
+			go c.performCacheWarmUp(context.Background())
+		}
 	}
 
 	// 7. 初始化系统指标缓存服务
@@ -386,12 +401,41 @@ func (c *Core) initCache() (cache.Cache, error) {
 			if workerCount <= 0 {
 				workerCount = 3 // 默认3个工作协程
 			}
-			multiLevelCache := cache.NewMultiLevelCacheWithRetry(memoryCache, redisCache, retryConfig, workerCount)
+
+			// 解析L2Writer配置
+			l2WriterConfig := cache.DefaultL2WriterConfig()
+			if c.Config.Cache.L2Writer != nil {
+				l2WriterConfig = &cache.L2WriterConfig{
+					WorkerCount:         c.Config.Cache.L2Writer.WorkerCount,
+					QueueSize:           c.Config.Cache.L2Writer.QueueSize,
+					EnqueueTimeout:      c.Config.Cache.L2Writer.EnqueueTimeout,
+					WriteTimeout:        c.Config.Cache.L2Writer.WriteTimeout,
+					FallbackWriteTimeout: c.Config.Cache.L2Writer.FallbackWriteTimeout,
+				}
+			}
+
+			multiLevelCache := cache.NewMultiLevelCacheWithRetryAndWriter(memoryCache, redisCache, retryConfig, workerCount, l2WriterConfig)
 			applogger.Infof("缓存重试功能已启用: 最大重试次数=%d, 工作协程数=%d", retryConfig.MaxRetries, workerCount)
+			applogger.Infof("L2写入Worker已启用: worker数量=%d, 队列大小=%d, 降级超时=%v",
+				l2WriterConfig.WorkerCount, l2WriterConfig.QueueSize, l2WriterConfig.FallbackWriteTimeout)
 			return multiLevelCache, nil
 		}
 
-		return cache.NewMultiLevelCache(memoryCache, redisCache), nil
+		// 不启用重试时，也启用L2Writer
+		l2WriterConfig := cache.DefaultL2WriterConfig()
+		if c.Config.Cache.L2Writer != nil {
+			l2WriterConfig = &cache.L2WriterConfig{
+				WorkerCount:         c.Config.Cache.L2Writer.WorkerCount,
+				QueueSize:           c.Config.Cache.L2Writer.QueueSize,
+				EnqueueTimeout:      c.Config.Cache.L2Writer.EnqueueTimeout,
+				WriteTimeout:        c.Config.Cache.L2Writer.WriteTimeout,
+				FallbackWriteTimeout: c.Config.Cache.L2Writer.FallbackWriteTimeout,
+			}
+		}
+		multiLevelCache := cache.NewMultiLevelCacheWithWriter(memoryCache, redisCache, l2WriterConfig)
+		applogger.Infof("L2写入Worker已启用: worker数量=%d, 队列大小=%d, 降级超时=%v",
+			l2WriterConfig.WorkerCount, l2WriterConfig.QueueSize, l2WriterConfig.FallbackWriteTimeout)
+		return multiLevelCache, nil
 	} else {
 		// 创建纯内存缓存
 		// 容量：配置中指定的大小，过期时间：配置中指定的清理时间
@@ -416,4 +460,77 @@ func (c *Core) initAPIEndpointService() error {
 	)
 
 	return nil
+}
+
+// initSystemServicesForWarmUp 初始化 System 模块服务（用于缓存预热）
+func (c *Core) initSystemServicesForWarmUp() {
+	db := c.GetDB()
+
+	// 创建缓存失效器适配器
+	cacheInvalidator := &systemCacheInvalidator{cache: c.Cache}
+
+	// UserService 需要特殊的构造函数参数
+	c.UserService = system.NewUserService(db, c.PwdManager, cacheInvalidator)
+	c.RoleService = system.NewRoleService(db)
+	c.MenuService = system.NewMenuService(db)
+	c.DeptService = system.NewDepartmentService(db)
+	c.PostService = system.NewPostService(db)
+
+	applogger.Infof("System 服务初始化完成（用于缓存预热）")
+}
+
+// systemCacheInvalidator 适配器，让 Cache 实现 CacheInvalidator 接口
+type systemCacheInvalidator struct {
+	cache cache.Cache
+}
+
+// InvalidateUserCache 清除指定用户缓存
+func (s *systemCacheInvalidator) InvalidateUserCache(ctx context.Context, userID string) error {
+	return s.cache.Delete(ctx, "user:id:"+userID)
+}
+
+// InvalidateAllUserCache 清除所有用户缓存
+func (s *systemCacheInvalidator) InvalidateAllUserCache(ctx context.Context) error {
+	return s.invalidateByPattern(ctx, "user:*")
+}
+
+// InvalidateUserPostCache 清除用户岗位缓存
+func (s *systemCacheInvalidator) InvalidateUserPostCache(ctx context.Context, userID string) error {
+	return s.cache.Delete(ctx, "user:posts:"+userID)
+}
+
+// invalidateByPattern 根据模式删除缓存的辅助方法
+func (s *systemCacheInvalidator) invalidateByPattern(ctx context.Context, pattern string) error {
+	// 获取匹配的键
+	keys, err := s.cache.Keys(ctx, pattern)
+	if err != nil {
+		return fmt.Errorf("查询缓存键失败: %w", err)
+	}
+	// 批量删除
+	if len(keys) > 0 {
+		return s.cache.MDelete(ctx, keys...)
+	}
+	return nil
+}
+
+// performCacheWarmUp 执行缓存预热
+func (c *Core) performCacheWarmUp(ctx context.Context) {
+	// 等待一小段时间，确保服务已完全启动
+	time.Sleep(2 * time.Second)
+
+	applogger.Infof("开始执行缓存预热...")
+
+	warmUpFuncs := map[string]system.WarmUpFunc{
+		"user": system.WarmUpUserCache(c.UserService),
+		"role": system.WarmUpRoleCache(c.RoleService),
+		"menu": system.WarmUpMenuCache(c.MenuService),
+		"dept": system.WarmUpDeptCache(c.DeptService),
+		"post": system.WarmUpPostCache(c.PostService),
+	}
+
+	if err := c.CacheManager.WarmUp(ctx, warmUpFuncs); err != nil {
+		applogger.Warnf("缓存预热失败: %v", err)
+	} else {
+		applogger.Infof("缓存预热成功完成")
+	}
 }

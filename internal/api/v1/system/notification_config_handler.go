@@ -32,6 +32,16 @@ func NewNotificationConfigHandler(
 // ============= 邮箱配置 Handler =============
 
 // ListEmailConfigs 查询邮箱配置列表
+// @Summary 查询邮箱配置列表
+// @Description 查询邮箱配置列表，支持状态筛选和分页
+// @Tags 通知配置
+// @Accept json
+// @Produce json
+// @Param request body object{status=int,current=int,pageSize=int} true "查询条件"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/notification-configs/email/list [post]
 func (h *NotificationConfigHandler) ListEmailConfigs(c *gin.Context) {
 	var rawReq map[string]interface{}
 	if err := c.ShouldBindJSON(&rawReq); err != nil {
@@ -87,10 +97,21 @@ func (h *NotificationConfigHandler) ListEmailConfigs(c *gin.Context) {
 }
 
 // GetEmailConfig 获取邮箱配置详情
+// @Summary 获取邮箱配置详情
+// @Description 根据配置ID获取邮箱配置详细信息
+// @Tags 通知配置
+// @Accept json
+// @Produce json
+// @Param id path string true "配置ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/notification-configs/email/:id [get]
 func (h *NotificationConfigHandler) GetEmailConfig(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "配置ID不能为空")
+		response.Error(c, apperrors.ParamMissing("配置ID"))
 		return
 	}
 
@@ -107,10 +128,20 @@ func (h *NotificationConfigHandler) GetEmailConfig(c *gin.Context) {
 }
 
 // CreateEmailConfig 创建邮箱配置
+// @Summary 创建邮箱配置
+// @Description 创建新的邮箱配置
+// @Tags 通知配置
+// @Accept json
+// @Produce json
+// @Param request body object{configName=string,host=string,port=int,username=string,password=string,fromEmail=string,fromName=string,encryption=string,status=int} true "邮箱配置信息"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/notification-configs/email [post]
 func (h *NotificationConfigHandler) CreateEmailConfig(c *gin.Context) {
 	var req systemServices.EmailConfigCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
@@ -123,16 +154,28 @@ func (h *NotificationConfigHandler) CreateEmailConfig(c *gin.Context) {
 }
 
 // UpdateEmailConfig 更新邮箱配置
+// @Summary 更新邮箱配置
+// @Description 更新邮箱配置信息
+// @Tags 通知配置
+// @Accept json
+// @Produce json
+// @Param id path string true "配置ID"
+// @Param request body object{configName=string,host=string,port=int,username=string,password=string,fromEmail=string,fromName=string,encryption=string,status=int} true "邮箱配置信息"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/notification-configs/email/:id/update [post]
 func (h *NotificationConfigHandler) UpdateEmailConfig(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "配置ID不能为空")
+		response.Error(c, apperrors.ParamMissing("配置ID"))
 		return
 	}
 
 	var req systemServices.EmailConfigUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
@@ -146,10 +189,21 @@ func (h *NotificationConfigHandler) UpdateEmailConfig(c *gin.Context) {
 }
 
 // DeleteEmailConfig 删除邮箱配置
+// @Summary 删除邮箱配置
+// @Description 删除指定的邮箱配置
+// @Tags 通知配置
+// @Accept json
+// @Produce json
+// @Param id path string true "配置ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/notification-configs/email/:id/delete [post]
 func (h *NotificationConfigHandler) DeleteEmailConfig(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "配置ID不能为空")
+		response.Error(c, apperrors.ParamMissing("配置ID"))
 		return
 	}
 
@@ -162,10 +216,21 @@ func (h *NotificationConfigHandler) DeleteEmailConfig(c *gin.Context) {
 }
 
 // TestEmailConfig 测试邮箱配置
+// @Summary 测试邮箱配置
+// @Description 测试邮箱配置是否正常工作
+// @Tags 通知配置
+// @Accept json
+// @Produce json
+// @Param id path string true "配置ID"
+// @Param request body object{testTo=string} true "测试收件人地址"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/notification-configs/email/:id/test [post]
 func (h *NotificationConfigHandler) TestEmailConfig(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "配置ID不能为空")
+		response.Error(c, apperrors.ParamMissing("配置ID"))
 		return
 	}
 
@@ -173,7 +238,7 @@ func (h *NotificationConfigHandler) TestEmailConfig(c *gin.Context) {
 		TestTo string `json:"testTo" binding:"required,email"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
@@ -186,13 +251,23 @@ func (h *NotificationConfigHandler) TestEmailConfig(c *gin.Context) {
 		if result.Error != nil {
 			errMsg += ": " + result.Error.Error()
 		}
-		response.Error(c, http.StatusInternalServerError, errMsg)
+		response.Error(c, apperrors.InternalServerErrorWithMsg(errMsg))
 	}
 }
 
 // ============= API通知配置 Handler =============
 
 // ListAPINotificationConfigs 查询API通知配置列表
+// @Summary 查询API通知配置列表
+// @Description 查询API通知配置列表，支持配置类型和状态筛选
+// @Tags 通知配置
+// @Accept json
+// @Produce json
+// @Param request body object{configType=string,status=int,current=int,pageSize=int} true "查询条件"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/notification-configs/api/list [post]
 func (h *NotificationConfigHandler) ListAPINotificationConfigs(c *gin.Context) {
 	var rawReq map[string]interface{}
 	if err := c.ShouldBindJSON(&rawReq); err != nil {
@@ -245,10 +320,21 @@ func (h *NotificationConfigHandler) ListAPINotificationConfigs(c *gin.Context) {
 }
 
 // GetAPINotificationConfig 获取API通知配置详情
+// @Summary 获取API通知配置详情
+// @Description 根据配置ID获取API通知配置详细信息
+// @Tags 通知配置
+// @Accept json
+// @Produce json
+// @Param id path string true "配置ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/notification-configs/api/:id [get]
 func (h *NotificationConfigHandler) GetAPINotificationConfig(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "配置ID不能为空")
+		response.Error(c, apperrors.ParamMissing("配置ID"))
 		return
 	}
 
@@ -262,10 +348,20 @@ func (h *NotificationConfigHandler) GetAPINotificationConfig(c *gin.Context) {
 }
 
 // CreateAPINotificationConfig 创建API通知配置
+// @Summary 创建API通知配置
+// @Description 创建新的API通知配置
+// @Tags 通知配置
+// @Accept json
+// @Produce json
+// @Param request body object{configName=string,configType=string,apiUrl=string,method=string,headers=object,bodyTemplate=string,status=int} true "API通知配置信息"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/notification-configs/api [post]
 func (h *NotificationConfigHandler) CreateAPINotificationConfig(c *gin.Context) {
 	var req systemServices.APINotificationConfigCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
@@ -278,16 +374,28 @@ func (h *NotificationConfigHandler) CreateAPINotificationConfig(c *gin.Context) 
 }
 
 // UpdateAPINotificationConfig 更新API通知配置
+// @Summary 更新API通知配置
+// @Description 更新API通知配置信息
+// @Tags 通知配置
+// @Accept json
+// @Produce json
+// @Param id path string true "配置ID"
+// @Param request body object{configName=string,configType=string,apiUrl=string,method=string,headers=object,bodyTemplate=string,status=int} true "API通知配置信息"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/notification-configs/api/:id/update [post]
 func (h *NotificationConfigHandler) UpdateAPINotificationConfig(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "配置ID不能为空")
+		response.Error(c, apperrors.ParamMissing("配置ID"))
 		return
 	}
 
 	var req systemServices.APINotificationConfigUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
@@ -301,10 +409,21 @@ func (h *NotificationConfigHandler) UpdateAPINotificationConfig(c *gin.Context) 
 }
 
 // DeleteAPINotificationConfig 删除API通知配置
+// @Summary 删除API通知配置
+// @Description 删除指定的API通知配置
+// @Tags 通知配置
+// @Accept json
+// @Produce json
+// @Param id path string true "配置ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/notification-configs/api/:id/delete [post]
 func (h *NotificationConfigHandler) DeleteAPINotificationConfig(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "配置ID不能为空")
+		response.Error(c, apperrors.ParamMissing("配置ID"))
 		return
 	}
 

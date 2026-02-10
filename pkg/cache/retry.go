@@ -2,12 +2,15 @@ package cache
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
+	"net"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/redis/go-redis/v9"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 )
 
@@ -123,9 +126,11 @@ func RetryWithContext(ctx context.Context, config *RetryConfig, fn func() error)
 	for attempt := 0; attempt <= config.MaxRetries; attempt++ {
 		if attempt > 0 {
 			// 等待后重试
+			timer := time.NewTimer(delay)
 			select {
-			case <-time.After(delay):
+			case <-timer.C:
 			case <-ctx.Done():
+				timer.Stop()
 				return ctx.Err()
 			}
 		}
@@ -157,34 +162,120 @@ func RetryWithContext(ctx context.Context, config *RetryConfig, fn func() error)
 	return fmt.Errorf("重试%d次后仍失败: %w", config.MaxRetries, lastErr)
 }
 
+// retryablePattern 可重试错误模式定义
+// 使用完整短语避免误判（如单独使用"timeout"会匹配"operation timeout exceeded"）
+type retryablePattern struct {
+	pattern  string
+	exact    bool // true=精确匹配, false=包含匹配
+}
+
+// retryablePatterns 可重试错误模式列表
+// 提取为常量，便于维护和扩展
+var retryablePatterns = []retryablePattern{
+	// 网络连接错误 - 使用完整短语避免误判
+	{pattern: "connection refused", exact: false},
+	{pattern: "connection reset by peer", exact: false},
+	{pattern: "broken pipe", exact: false},
+
+	// 超时错误 - 使用完整短语，避免"timeout"单独匹配
+	{pattern: "i/o timeout", exact: false},
+	{pattern: "read: connection timed out", exact: false},
+	{pattern: "write: connection timed out", exact: false},
+	{pattern: "dial tcp: timeout", exact: false},
+	{pattern: "context deadline exceeded", exact: true},
+
+	// 网络不可达错误
+	{pattern: "network is unreachable", exact: false},
+	{pattern: "no route to host", exact: false},
+	{pattern: "host is unreachable", exact: false},
+
+	// 连接关闭错误
+	{pattern: "use of closed network connection", exact: true},
+
+	// EOF 仅在网络相关场景重试（避免误判业务EOF）
+	{pattern: "unexpected EOF", exact: false},
+
+	// Redis 特定错误
+	{pattern: "LOADING Redis is loading", exact: false},
+	{pattern: "READONLY You can't write", exact: false},
+	{pattern: "CLUSTERDOWN", exact: false},
+	{pattern: "MASTERDOWN", exact: false},
+}
+
+// nonRetryablePatterns 明确不重试的错误模式
+var nonRetryablePatterns = []retryablePattern{
+	{pattern: "ERR value is not an integer", exact: true},
+	{pattern: "ERR wrong number of arguments", exact: true},
+	{pattern: "ERR syntax error", exact: true},
+	{pattern: "NOPERM", exact: false}, // 权限错误不重试
+	{pattern: "AUTH", exact: false},   // 认证错误不重试
+}
+
 // IsRetryableError 判断错误是否可重试
+// 优先级：net.Error检查 > Redis Nil检查 > 精确模式匹配 > 包含模式匹配
 func IsRetryableError(err error) bool {
 	if err == nil {
 		return false
 	}
 
-	errStr := err.Error()
-	// 可重试的错误模式
-	retryablePatterns := []string{
-		"connection refused",
-		"connection reset",
-		"broken pipe",
-		"timeout",
-		"i/o timeout",
-		"network is unreachable",
-		"no route to host",
-		"connection timed out",
-		"EOF",
-		"use of closed network connection",
+	// 1. 检查 redis.Nil - 键不存在不应重试
+	if errors.Is(err, redis.Nil) {
+		return false
 	}
 
-	for _, pattern := range retryablePatterns {
-		if strings.Contains(errStr, pattern) {
-			return true
+	// 2. 检查 net.Error 接口 - 超时和临时网络错误应重试
+	var netErr net.Error
+	if errors.As(err, &netErr) {
+		return netErr.Timeout() || netErr.Temporary()
+	}
+
+	// 3. 先检查明确不重试的模式（避免误判）
+	errStr := err.Error()
+	for _, pattern := range nonRetryablePatterns {
+		if pattern.exact {
+			if errStr == pattern.pattern {
+				return false
+			}
+		} else {
+			if strings.Contains(errStr, pattern.pattern) {
+				return false
+			}
 		}
 	}
 
+	// 4. 检查可重试的模式
+	for _, pattern := range retryablePatterns {
+		if pattern.exact {
+			if errStr == pattern.pattern {
+				return true
+			}
+		} else {
+			if strings.Contains(errStr, pattern.pattern) {
+				return true
+			}
+		}
+	}
+
+	// 5. 默认情况下未知错误不重试（保守策略）
 	return false
+}
+
+// GetRetryablePatterns 获取可重试错误模式（用于测试和调试）
+func GetRetryablePatterns() []string {
+	patterns := make([]string, len(retryablePatterns))
+	for i, p := range retryablePatterns {
+		patterns[i] = p.pattern
+	}
+	return patterns
+}
+
+// SetRetryablePatterns 设置可重试错误模式（用于自定义配置）
+// 注意：这会替换默认模式列表，需谨慎使用
+func SetRetryablePatterns(patterns []string) {
+	retryablePatterns = make([]retryablePattern, len(patterns))
+	for i, p := range patterns {
+		retryablePatterns[i] = retryablePattern{pattern: p, exact: false}
+	}
 }
 
 // AsyncRetryWorker 异步重试工作器
@@ -198,12 +289,12 @@ type AsyncRetryWorker struct {
 }
 
 type retryWork struct {
-	ctx      context.Context
-	key      string
-	value    interface{}
-	expiration time.Duration
-	cache    Cache
-	attempt  int
+	ctx         context.Context
+	key         string
+	value       interface{}
+	expiration  time.Duration
+	cache       Cache
+	attempt     int
 }
 
 // NewAsyncRetryWorker 创建异步重试工作器
@@ -276,11 +367,11 @@ func (w *AsyncRetryWorker) processWork(workerID int, work retryWork) {
 func (w *AsyncRetryWorker) Enqueue(ctx context.Context, cache Cache, key string, value interface{}, expiration time.Duration) bool {
 	select {
 	case w.workQueue <- retryWork{
-		ctx:        ctx,
-		key:        key,
-		value:      value,
-		expiration: expiration,
-		cache:      cache,
+		ctx:         ctx,
+		key:         key,
+		value:       value,
+		expiration:  expiration,
+		cache:       cache,
 	}:
 		return true
 	case <-ctx.Done():

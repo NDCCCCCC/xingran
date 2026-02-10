@@ -50,7 +50,7 @@ func getUserID(c *gin.Context) (string, bool) {
 func requireUserID(c *gin.Context) (string, bool) {
 	userID, exists := getUserID(c)
 	if !exists {
-		response.Error(c, http.StatusUnauthorized, "未授权")
+		response.Error(c, apperrors.Unauthorized())
 		return "", false
 	}
 	return userID, true
@@ -75,6 +75,18 @@ func (h *NoticeUserHandler) getReadNoticeIDs(userID string) (map[string]bool, er
 }
 
 // GetMyNotices 获取我的通知列表
+// @Summary 获取我的通知列表
+// @Description 获取当前登录用户的通知列表
+// @Tags 通知公告
+// @Accept json
+// @Produce json
+// @Param status query string false "阅读状态(read/unread/all)" default(all)
+// @Param current query int false "页码" default(1)
+// @Param pageSize query int false "每页数量" default(10)
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/my-notices [get]
 func (h *NoticeUserHandler) GetMyNotices(c *gin.Context) {
 	userID, ok := requireUserID(c)
 	if !ok {
@@ -119,6 +131,17 @@ func (h *NoticeUserHandler) GetMyNotices(c *gin.Context) {
 }
 
 // GetMyNoticeDetail 获取我的通知详情（自动标记已读）
+// @Summary 获取我的通知详情
+// @Description 获取通知详情并自动标记为已读
+// @Tags 通知公告
+// @Accept json
+// @Produce json
+// @Param id path string true "通知ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/my-notices/:id [get]
 func (h *NoticeUserHandler) GetMyNoticeDetail(c *gin.Context) {
 	userID, ok := requireUserID(c)
 	if !ok {
@@ -127,7 +150,7 @@ func (h *NoticeUserHandler) GetMyNoticeDetail(c *gin.Context) {
 
 	noticeID := c.Param("id")
 	if noticeID == "" {
-		response.Error(c, http.StatusBadRequest, "通知ID不能为空")
+		response.Error(c, apperrors.ParamMissing("通知ID"))
 		return
 	}
 
@@ -157,6 +180,16 @@ func (h *NoticeUserHandler) GetMyNoticeDetail(c *gin.Context) {
 }
 
 // MarkNoticeRead 标记通知已读
+// @Summary 标记通知已读
+// @Description 标记指定通知为已读状态
+// @Tags 通知公告
+// @Accept json
+// @Produce json
+// @Param id path string true "通知ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/my-notices/:id/read [post]
 func (h *NoticeUserHandler) MarkNoticeRead(c *gin.Context) {
 	userID, ok := requireUserID(c)
 	if !ok {
@@ -165,7 +198,7 @@ func (h *NoticeUserHandler) MarkNoticeRead(c *gin.Context) {
 
 	noticeID := c.Param("id")
 	if noticeID == "" {
-		response.Error(c, http.StatusBadRequest, "通知ID不能为空")
+		response.Error(c, apperrors.ParamMissing("通知ID"))
 		return
 	}
 
@@ -179,6 +212,14 @@ func (h *NoticeUserHandler) MarkNoticeRead(c *gin.Context) {
 }
 
 // MarkAllNoticesRead 全部标记已读
+// @Summary 全部标记已读
+// @Description 将所有通知标记为已读状态
+// @Tags 通知公告
+// @Accept json
+// @Produce json
+// @Success 200 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/my-notices/read-all [post]
 func (h *NoticeUserHandler) MarkAllNoticesRead(c *gin.Context) {
 	userID, ok := requireUserID(c)
 	if !ok {
@@ -194,6 +235,14 @@ func (h *NoticeUserHandler) MarkAllNoticesRead(c *gin.Context) {
 }
 
 // GetUnreadCount 获取未读数量
+// @Summary 获取未读数量
+// @Description 获取当前用户的未读通知数量
+// @Tags 通知公告
+// @Accept json
+// @Produce json
+// @Success 200 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/my-notices/unread-count [get]
 func (h *NoticeUserHandler) GetUnreadCount(c *gin.Context) {
 	userID, ok := requireUserID(c)
 	if !ok {
@@ -210,6 +259,16 @@ func (h *NoticeUserHandler) GetUnreadCount(c *gin.Context) {
 }
 
 // IgnoreNotice 忽略通知
+// @Summary 忽略通知
+// @Description 忽略指定通知
+// @Tags 通知公告
+// @Accept json
+// @Produce json
+// @Param id path string true "通知ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/my-notices/:id/ignore [post]
 func (h *NoticeUserHandler) IgnoreNotice(c *gin.Context) {
 	userID, ok := requireUserID(c)
 	if !ok {
@@ -218,7 +277,7 @@ func (h *NoticeUserHandler) IgnoreNotice(c *gin.Context) {
 
 	noticeID := c.Param("id")
 	if noticeID == "" {
-		response.Error(c, http.StatusBadRequest, "通知ID不能为空")
+		response.Error(c, apperrors.ParamMissing("通知ID"))
 		return
 	}
 
@@ -231,6 +290,16 @@ func (h *NoticeUserHandler) IgnoreNotice(c *gin.Context) {
 }
 
 // UnignoreNotice 取消忽略通知
+// @Summary 取消忽略通知
+// @Description 取消忽略指定通知
+// @Tags 通知公告
+// @Accept json
+// @Produce json
+// @Param id path string true "通知ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/my-notices/:id/unignore [post]
 func (h *NoticeUserHandler) UnignoreNotice(c *gin.Context) {
 	userID, ok := requireUserID(c)
 	if !ok {
@@ -239,7 +308,7 @@ func (h *NoticeUserHandler) UnignoreNotice(c *gin.Context) {
 
 	noticeID := c.Param("id")
 	if noticeID == "" {
-		response.Error(c, http.StatusBadRequest, "通知ID不能为空")
+		response.Error(c, apperrors.ParamMissing("通知ID"))
 		return
 	}
 

@@ -41,17 +41,27 @@ func NewNoticeHandler(
 }
 
 // Create 创建通知公告
+// @Summary 创建通知公告
+// @Description 创建新的通知公告
+// @Tags 通知公告
+// @Accept json
+// @Produce json
+// @Param request body object{noticeTitle=string,noticeType=string,noticeContent=string,status=int,publishTime=string,executionType=string,recurrenceConfig=object{cronExpression=string,endDate=string},channels=[]object{channelType=string,emailConfigId=string,apiConfigId=string,customRecipients=[]string}} true "通知公告信息"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/notices [post]
 func (h *NoticeHandler) Create(c *gin.Context) {
 	var req requests.NoticeCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
 	// 获取当前用户信息
 	userID, exists := c.Get("user_id")
 	if !exists {
-		response.Error(c, http.StatusUnauthorized, "未授权")
+		response.Error(c, apperrors.Unauthorized())
 		return
 	}
 	username, _ := c.Get("username")
@@ -84,7 +94,7 @@ func (h *NoticeHandler) Create(c *gin.Context) {
 			}
 		}
 		if err := h.channelService.SetNotificationChannels(c.Request.Context(), notice.ID, channels); err != nil {
-			response.Error(c, http.StatusInternalServerError, "设置发送渠道失败: "+err.Error())
+			response.Error(c, apperrors.InternalServerErrorWithMsg("设置发送渠道失败"))
 			return
 		}
 	}
@@ -99,7 +109,7 @@ func (h *NoticeHandler) Create(c *gin.Context) {
 		if executionType == "recurring" && req.RecurrenceConfig != nil {
 			// 周期性执行，直接使用 Cron 表达式
 			if req.RecurrenceConfig.CronExpression == nil || *req.RecurrenceConfig.CronExpression == "" {
-				response.Error(c, http.StatusBadRequest, "Cron表达式不能为空")
+				response.Error(c, apperrors.ParamMissing("Cron表达式"))
 				return
 			}
 			cronExpr = *req.RecurrenceConfig.CronExpression
@@ -129,7 +139,7 @@ func (h *NoticeHandler) Create(c *gin.Context) {
 
 		if err := h.schedulerService.AddJob(job); err != nil {
 			// 任务创建失败，返回错误
-			response.Error(c, http.StatusInternalServerError, "创建定时任务失败: "+err.Error())
+			response.Error(c, apperrors.InternalServerErrorWithMsg("创建定时任务失败"))
 			return
 		}
 
@@ -150,7 +160,7 @@ func (h *NoticeHandler) Create(c *gin.Context) {
 		}
 	} else if executionType == "recurring" || (req.PublishTime != nil && req.PublishTime.After(time.Now())) {
 		// 需要定时任务但调度器不可用
-		response.Error(c, http.StatusInternalServerError, "调度器不可用，无法创建定时任务")
+		response.Error(c, apperrors.InternalServerErrorWithMsg("调度器不可用，无法创建定时任务"))
 		return
 	}
 
@@ -158,6 +168,16 @@ func (h *NoticeHandler) Create(c *gin.Context) {
 }
 
 // List 查询通知公告列表
+// @Summary 查询通知公告列表
+// @Description 查询通知公告列表，支持多条件筛选和分页
+// @Tags 通知公告
+// @Accept json
+// @Produce json
+// @Param request body object{noticeTitle=string,noticeType=string,createTime=string,current=int,pageSize=int} true "查询条件"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/notices/list [post]
 func (h *NoticeHandler) List(c *gin.Context) {
 	var rawReq map[string]interface{}
 	if err := c.ShouldBindJSON(&rawReq); err != nil {
@@ -205,10 +225,21 @@ func (h *NoticeHandler) List(c *gin.Context) {
 }
 
 // GetByID 获取通知公告详情
+// @Summary 获取通知公告详情
+// @Description 根据通知公告ID获取详细信息
+// @Tags 通知公告
+// @Accept json
+// @Produce json
+// @Param id path string true "通知公告ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/notices/:id [post]
 func (h *NoticeHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "通知公告ID不能为空")
+		response.Error(c, apperrors.ParamMissing("通知公告ID"))
 		return
 	}
 
@@ -222,16 +253,28 @@ func (h *NoticeHandler) GetByID(c *gin.Context) {
 }
 
 // Update 更新通知公告
+// @Summary 更新通知公告
+// @Description 更新通知公告信息
+// @Tags 通知公告
+// @Accept json
+// @Produce json
+// @Param id path string true "通知公告ID"
+// @Param request body object{noticeTitle=string,noticeType=string,noticeContent=string,status=int,publishTime=string,channels=[]object{channelType=string,emailConfigId=string,apiConfigId=string,customRecipients=[]string}} true "通知公告信息"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/notices/:id/update [post]
 func (h *NoticeHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "通知公告ID不能为空")
+		response.Error(c, apperrors.ParamMissing("通知公告ID"))
 		return
 	}
 
 	var req requests.NoticeUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
@@ -252,7 +295,7 @@ func (h *NoticeHandler) Update(c *gin.Context) {
 			}
 		}
 		if err := h.channelService.SetNotificationChannels(c.Request.Context(), id, channels); err != nil {
-			response.Error(c, http.StatusInternalServerError, "设置发送渠道失败: "+err.Error())
+			response.Error(c, apperrors.InternalServerErrorWithMsg("设置发送渠道失败"))
 			return
 		}
 	}
@@ -276,7 +319,7 @@ func (h *NoticeHandler) Update(c *gin.Context) {
 			Remark:         strPtr(fmt.Sprintf("通知定时发布: %s", title)),
 		}
 		if err := h.schedulerService.AddJob(job); err != nil {
-			response.Error(c, http.StatusInternalServerError, "创建定时任务失败: "+err.Error())
+			response.Error(c, apperrors.InternalServerErrorWithMsg("创建定时任务失败"))
 			return
 		}
 	}
@@ -285,10 +328,21 @@ func (h *NoticeHandler) Update(c *gin.Context) {
 }
 
 // Delete 删除通知公告
+// @Summary 删除通知公告
+// @Description 删除指定的通知公告
+// @Tags 通知公告
+// @Accept json
+// @Produce json
+// @Param id path string true "通知公告ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/notices/:id/delete [post]
 func (h *NoticeHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "通知公告ID不能为空")
+		response.Error(c, apperrors.ParamMissing("通知公告ID"))
 		return
 	}
 
@@ -308,12 +362,22 @@ func (h *NoticeHandler) Delete(c *gin.Context) {
 }
 
 // BatchDelete 批量删除通知公告
+// @Summary 批量删除通知公告
+// @Description 批量删除多个通知公告
+// @Tags 通知公告
+// @Accept json
+// @Produce json
+// @Param request body object{ids=[]string} true "通知公告ID列表"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/notices/batch [post]
 func (h *NoticeHandler) BatchDelete(c *gin.Context) {
 	var req struct {
 		IDs []string `json:"ids" binding:"required,min=1"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
@@ -334,10 +398,21 @@ func (h *NoticeHandler) BatchDelete(c *gin.Context) {
 }
 
 // GetStatistics 获取通知阅读统计
+// @Summary 获取通知阅读统计
+// @Description 获取通知公告的阅读统计信息
+// @Tags 通知公告
+// @Accept json
+// @Produce json
+// @Param id path string true "通知公告ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/notices/:id/statistics [get]
 func (h *NoticeHandler) GetStatistics(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "通知公告ID不能为空")
+		response.Error(c, apperrors.ParamMissing("通知公告ID"))
 		return
 	}
 
@@ -351,10 +426,20 @@ func (h *NoticeHandler) GetStatistics(c *gin.Context) {
 }
 
 // Publish 发布通知
+// @Summary 发布通知
+// @Description 发布通知公告
+// @Tags 通知公告
+// @Accept json
+// @Produce json
+// @Param id path string true "通知公告ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/notices/:id/publish [post]
 func (h *NoticeHandler) Publish(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "通知公告ID不能为空")
+		response.Error(c, apperrors.ParamMissing("通知公告ID"))
 		return
 	}
 
@@ -367,10 +452,20 @@ func (h *NoticeHandler) Publish(c *gin.Context) {
 }
 
 // Withdraw 撤回/取消发布通知
+// @Summary 撤回通知
+// @Description 撤回已发布的通知公告
+// @Tags 通知公告
+// @Accept json
+// @Produce json
+// @Param id path string true "通知公告ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/notices/:id/withdraw [post]
 func (h *NoticeHandler) Withdraw(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "通知公告ID不能为空")
+		response.Error(c, apperrors.ParamMissing("通知公告ID"))
 		return
 	}
 
@@ -383,10 +478,21 @@ func (h *NoticeHandler) Withdraw(c *gin.Context) {
 }
 
 // GetChannels 获取通知的发送渠道配置
+// @Summary 获取通知渠道配置
+// @Description 获取通知公告的发送渠道配置
+// @Tags 通知公告
+// @Accept json
+// @Produce json
+// @Param id path string true "通知公告ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/notices/:id/channels [get]
 func (h *NoticeHandler) GetChannels(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "通知公告ID不能为空")
+		response.Error(c, apperrors.ParamMissing("通知公告ID"))
 		return
 	}
 
@@ -400,16 +506,27 @@ func (h *NoticeHandler) GetChannels(c *gin.Context) {
 }
 
 // SetChannels 设置通知的发送渠道配置
+// @Summary 设置通知渠道配置
+// @Description 设置通知公告的发送渠道配置
+// @Tags 通知公告
+// @Accept json
+// @Produce json
+// @Param id path string true "通知公告ID"
+// @Param request body object{channelType=string,emailConfigId=string,apiConfigId=string,customRecipients=[]string} true "渠道配置列表"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/notices/:id/channels [post]
 func (h *NoticeHandler) SetChannels(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "通知公告ID不能为空")
+		response.Error(c, apperrors.ParamMissing("通知公告ID"))
 		return
 	}
 
 	var req []requests.NotificationChannelRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
@@ -432,6 +549,14 @@ func (h *NoticeHandler) SetChannels(c *gin.Context) {
 }
 
 // GetCronExpressions 获取常用Cron表达式列表
+// @Summary 获取常用Cron表达式
+// @Description 获取常用的Cron表达式列表
+// @Tags 通知公告
+// @Accept json
+// @Produce json
+// @Success 200 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/notices/cron-expressions [get]
 func (h *NoticeHandler) GetCronExpressions(c *gin.Context) {
 	expressions := services.GetCommonCronExpressions()
 	response.Success(c, expressions)

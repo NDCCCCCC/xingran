@@ -16,12 +16,12 @@ func FixMenuPathsHandler(c *gin.Context, core *core.Core) {
 	var userCenterID string
 	err := db.Raw("SELECT id FROM sys_menu WHERE menu_name = '用户中心' AND parent_id IS NULL LIMIT 1").Scan(&userCenterID).Error
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "用户中心菜单不存在")
+		response.Error(c, apperrors.InternalServerErrorWithMsg("用户中心菜单不存在"))
 		return
 	}
 
 	if userCenterID == "" {
-		response.Error(c, http.StatusNotFound, "用户中心父菜单不存在")
+		response.Error(c, apperrors.NotFound("用户中心父菜单不存在"))
 		return
 	}
 

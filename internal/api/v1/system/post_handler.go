@@ -20,10 +20,20 @@ func NewPostHandler(service systemServices.PostService) *PostHandler {
 }
 
 // Create 创建岗位
+// @Summary 创建岗位
+// @Description 创建新的岗位
+// @Tags 岗位管理
+// @Accept json
+// @Produce json
+// @Param request body object{postCode=string,postName=string,postSort=int,status=int,remark=string} true "岗位信息"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/posts [post]
 func (h *PostHandler) Create(c *gin.Context) {
 	var req requests.PostCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
@@ -36,6 +46,16 @@ func (h *PostHandler) Create(c *gin.Context) {
 }
 
 // List 查询岗位列表
+// @Summary 查询岗位列表
+// @Description 查询岗位列表，支持多条件筛选和分页
+// @Tags 岗位管理
+// @Accept json
+// @Produce json
+// @Param request body object{postCode=string,postName=string,status=int,current=int,pageSize=int} true "查询条件"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/posts/list [post]
 func (h *PostHandler) List(c *gin.Context) {
 	var rawReq map[string]interface{}
 	if err := c.ShouldBindJSON(&rawReq); err != nil {
@@ -94,10 +114,21 @@ func (h *PostHandler) List(c *gin.Context) {
 }
 
 // GetByID 获取岗位详情
+// @Summary 获取岗位详情
+// @Description 根据岗位ID获取详细信息
+// @Tags 岗位管理
+// @Accept json
+// @Produce json
+// @Param id path string true "岗位ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/posts/:id [post]
 func (h *PostHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "岗位ID不能为空")
+		response.Error(c, apperrors.ParamMissing("岗位ID"))
 		return
 	}
 
@@ -111,16 +142,28 @@ func (h *PostHandler) GetByID(c *gin.Context) {
 }
 
 // Update 更新岗位
+// @Summary 更新岗位
+// @Description 更新岗位信息
+// @Tags 岗位管理
+// @Accept json
+// @Produce json
+// @Param id path string true "岗位ID"
+// @Param request body object{postCode=string,postName=string,postSort=int,status=int,remark=string} true "岗位信息"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/posts/:id/update [post]
 func (h *PostHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "岗位ID不能为空")
+		response.Error(c, apperrors.ParamMissing("岗位ID"))
 		return
 	}
 
 	var req requests.PostUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
@@ -134,10 +177,21 @@ func (h *PostHandler) Update(c *gin.Context) {
 }
 
 // Delete 删除岗位
+// @Summary 删除岗位
+// @Description 删除指定的岗位
+// @Tags 岗位管理
+// @Accept json
+// @Produce json
+// @Param id path string true "岗位ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/posts/:id/delete [post]
 func (h *PostHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "岗位ID不能为空")
+		response.Error(c, apperrors.ParamMissing("岗位ID"))
 		return
 	}
 
@@ -150,13 +204,23 @@ func (h *PostHandler) Delete(c *gin.Context) {
 }
 
 // BatchDelete 批量删除岗位
+// @Summary 批量删除岗位
+// @Description 批量删除多个岗位
+// @Tags 岗位管理
+// @Accept json
+// @Produce json
+// @Param request body object{ids=[]string} true "岗位ID列表"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/posts/batch [post]
 func (h *PostHandler) BatchDelete(c *gin.Context) {
 	var req struct {
 		IDs []string `json:"ids" binding:"required,min=1"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
@@ -169,6 +233,14 @@ func (h *PostHandler) BatchDelete(c *gin.Context) {
 }
 
 // GetAll 获取所有岗位（使用缓存）
+// @Summary 获取所有岗位
+// @Description 获取所有岗位列表（使用缓存）
+// @Tags 岗位管理
+// @Accept json
+// @Produce json
+// @Success 200 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/posts/all [post]
 func (h *PostHandler) GetAll(c *gin.Context) {
 	posts, err := h.service.GetAllWithCache(c.Request.Context())
 	if err != nil {
@@ -180,6 +252,14 @@ func (h *PostHandler) GetAll(c *gin.Context) {
 }
 
 // GetAllEnabled 获取启用的岗位（使用缓存）
+// @Summary 获取启用的岗位
+// @Description 获取所有启用状态的岗位列表（使用缓存）
+// @Tags 岗位管理
+// @Accept json
+// @Produce json
+// @Success 200 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/posts/enabled [post]
 func (h *PostHandler) GetAllEnabled(c *gin.Context) {
 	posts, err := h.service.GetEnabledWithCache(c.Request.Context())
 	if err != nil {

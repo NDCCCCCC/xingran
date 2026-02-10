@@ -1,9 +1,8 @@
 package monitor
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
@@ -40,13 +39,13 @@ type GetStatsResponse struct {
 // @Router /monitor/cache/stats [post]
 func (h *CacheEnhancedHandler) GetCacheStats(c *gin.Context) {
 	if h.core.CacheManager == nil {
-		response.Error(c, http.StatusServiceUnavailable, "缓存管理器未初始化")
+		response.Error(c, apperrors.InternalServerErrorWithMsg("缓存管理器未初始化"))
 		return
 	}
 
 	stats, err := h.core.CacheManager.GetStats(c.Request.Context())
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "获取缓存统计失败")
+		response.Error(c, apperrors.InternalServerErrorWithMsg("获取缓存统计失败"))
 		return
 	}
 
@@ -72,19 +71,19 @@ type InvalidateByModuleRequest struct {
 // @Router /monitor/cache/invalidate [post]
 func (h *CacheEnhancedHandler) InvalidateByModule(c *gin.Context) {
 	if h.core.CacheManager == nil {
-		response.Error(c, http.StatusServiceUnavailable, "缓存管理器未初始化")
+		response.Error(c, apperrors.InternalServerErrorWithMsg("缓存管理器未初始化"))
 		return
 	}
 
 	var req InvalidateByModuleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误")
+		response.Error(c, apperrors.BadRequest("请求参数错误"))
 		return
 	}
 
 	err := h.core.CacheManager.InvalidateByModule(c.Request.Context(), req.Module, req.KeyType)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "清除缓存失败")
+		response.Error(c, apperrors.InternalServerErrorWithMsg("清除缓存失败"))
 		return
 	}
 
@@ -107,19 +106,19 @@ type InvalidateByPatternRequest struct {
 // @Router /monitor/cache/invalidate-pattern [post]
 func (h *CacheEnhancedHandler) InvalidateByPattern(c *gin.Context) {
 	if h.core.CacheManager == nil {
-		response.Error(c, http.StatusServiceUnavailable, "缓存管理器未初始化")
+		response.Error(c, apperrors.InternalServerErrorWithMsg("缓存管理器未初始化"))
 		return
 	}
 
 	var req InvalidateByPatternRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误")
+		response.Error(c, apperrors.BadRequest("请求参数错误"))
 		return
 	}
 
 	err := h.core.CacheManager.InvalidateByPattern(c.Request.Context(), req.Pattern)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "清除缓存失败")
+		response.Error(c, apperrors.InternalServerErrorWithMsg("清除缓存失败"))
 		return
 	}
 
@@ -149,14 +148,14 @@ type WarmUpCacheResponse struct {
 // @Router /monitor/cache/warmup [post]
 func (h *CacheEnhancedHandler) WarmUpCache(c *gin.Context) {
 	if h.core.CacheManager == nil {
-		response.Error(c, http.StatusServiceUnavailable, "缓存管理器未初始化")
+		response.Error(c, apperrors.InternalServerErrorWithMsg("缓存管理器未初始化"))
 		return
 	}
 
 	// 注意：预热功能需要在路由注册时传入相应的服务实例
 	// 这里提供一个框架，实际使用时需要根据具体的服务实例构建预热函数
 
-	response.Error(c, http.StatusNotImplemented, "预热功能需要配合具体服务实现，请使用 InvalidateByModule 清除缓存后让系统自动重建")
+	response.Error(c, apperrors.NotImplemented())
 }
 
 // GetKeyInfoRequest 获取缓存键信息请求
@@ -184,19 +183,19 @@ type GetKeyInfoResponse struct {
 // @Router /monitor/cache/key-info [post]
 func (h *CacheEnhancedHandler) GetKeyInfo(c *gin.Context) {
 	if h.core.CacheManager == nil {
-		response.Error(c, http.StatusServiceUnavailable, "缓存管理器未初始化")
+		response.Error(c, apperrors.InternalServerErrorWithMsg("缓存管理器未初始化"))
 		return
 	}
 
 	var req GetKeyInfoRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误")
+		response.Error(c, apperrors.BadRequest("请求参数错误"))
 		return
 	}
 
 	exists, err := h.core.CacheManager.Exists(c.Request.Context(), req.Key)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "查询缓存失败")
+		response.Error(c, apperrors.InternalServerErrorWithMsg("查询缓存失败"))
 		return
 	}
 

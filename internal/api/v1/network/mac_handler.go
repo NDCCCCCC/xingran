@@ -38,6 +38,16 @@ func NewMACHandler(core *core.Core) *MACHandler {
 }
 
 // List 查询MAC地址列表
+// @Summary 查询MAC地址列表
+// @Description 分页查询MAC地址列表，支持按设备ID、MAC地址、接口名称筛选
+// @Tags 网络设备管理
+// @Accept json
+// @Produce json
+// @Param request body MACAddressListRequest true "查询条件"
+// @Success 200 {object} response.Response{data=response.PageResponse}
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /network/mac/list [post]
 func (h *MACHandler) List(c *gin.Context) {
 	var req MACAddressListRequest
 	if !responseHelpers.HandleJSONBinding(c, &req) {
@@ -55,6 +65,16 @@ func (h *MACHandler) List(c *gin.Context) {
 }
 
 // Collect 采集单个设备MAC地址
+// @Summary 采集单个设备MAC地址
+// @Description 连接指定设备并采集其MAC地址信息
+// @Tags 网络设备管理
+// @Accept json
+// @Produce json
+// @Param request body MACCollectionRequest true "采集请求"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /network/mac/collect [post]
 func (h *MACHandler) Collect(c *gin.Context) {
 	var req MACCollectionRequest
 	if !responseHelpers.HandleJSONBinding(c, &req) {
@@ -71,6 +91,14 @@ func (h *MACHandler) Collect(c *gin.Context) {
 }
 
 // CollectAll 采集所有设备MAC地址
+// @Summary 采集所有设备MAC地址
+// @Description 连接所有已配置的网络设备并采集MAC地址信息
+// @Tags 网络设备管理
+// @Accept json
+// @Produce json
+// @Success 200 {object} response.Response{data=[]interface{}}
+// @Failure 500 {object} response.Response
+// @Router /network/mac/collect-all [post]
 func (h *MACHandler) CollectAll(c *gin.Context) {
 	svc := services.NewMACCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor)
 	results, err := svc.CollectAllDevices(c.Request.Context())
@@ -82,6 +110,14 @@ func (h *MACHandler) CollectAll(c *gin.Context) {
 }
 
 // GetStats 获取MAC地址统计信息
+// @Summary 获取MAC地址统计信息
+// @Description 获取MAC地址的统计信息，包括总数、按设备分组等
+// @Tags 网络设备管理
+// @Accept json
+// @Produce json
+// @Success 200 {object} response.Response{data=map[string]interface{}}
+// @Failure 500 {object} response.Response
+// @Router /network/mac/stats [post]
 func (h *MACHandler) GetStats(c *gin.Context) {
 	svc := services.NewMACCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor)
 	stats, err := svc.GetMACAddressStats(c.Request.Context())
@@ -93,6 +129,16 @@ func (h *MACHandler) GetStats(c *gin.Context) {
 }
 
 // Clean 清理旧的MAC地址记录
+// @Summary 清理旧的MAC地址记录
+// @Description 删除指定天数之前的MAC地址记录
+// @Tags 网络设备管理
+// @Accept json
+// @Produce json
+// @Param request body CleanOldMACRecordsRequest true "清理请求"
+// @Success 200 {object} response.Response{data=map[string]interface{}}
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /network/mac/clean [post]
 func (h *MACHandler) Clean(c *gin.Context) {
 	var req CleanOldMACRecordsRequest
 	if !responseHelpers.HandleJSONBinding(c, &req) {
