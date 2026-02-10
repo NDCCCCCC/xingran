@@ -194,7 +194,7 @@ export function generateBuildingMarkerSVG(
 export function parseBoundaryPoints<T extends new (lng: number, lat: number) => BMapPoint>(
   boundaryStr: string,
   PointClass: T
-): InstanceType<T>[] {
+): BMapPoint[] {
   return boundaryStr.split(';').map((point) => {
     const [lng, lat] = point.split(',').map(Number);
     return new PointClass(lng, lat);

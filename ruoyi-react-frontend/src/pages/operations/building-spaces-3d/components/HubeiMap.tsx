@@ -62,7 +62,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
   const [currentZoom, setCurrentZoom] = useState(8); // 当前缩放级别
 
   const {
-    selectBuilding,
+    clearSelection,
     navigateToBuilding,
   } = useVisualizationStore();
 
@@ -153,13 +153,18 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
         if (!mapRef.current) return;
 
         // 创建地图实例
-        const map = new window.BMap.Map(mapRef.current, {
+        const BMap = window.BMap as any;
+        if (!BMap) {
+          message.error('百度地图加载失败');
+          return;
+        }
+        const map = new BMap.Map(mapRef.current, {
           enableMapClick: false,
         });
         mapInstanceRefLocal.current = map;
 
         // 设置中心点和缩放级别
-        const point = new window.BMap.Point(MAP_CONFIG.center[0], MAP_CONFIG.center[1]);
+        const point = new BMap.Point(MAP_CONFIG.center[0], MAP_CONFIG.center[1]);
         map.centerAndZoom(point, MAP_CONFIG.defaultZoom);
 
         // 限制缩放级别
@@ -171,11 +176,11 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
         map.enableDoubleClickZoom(true);
 
         // 添加地图控件
-        map.addControl(new window.BMap.NavigationControl());
-        map.addControl(new window.BMap.ScaleControl());
+        map.addControl(new BMap.NavigationControl());
+        map.addControl(new BMap.ScaleControl());
 
         // 创建信息窗口实例
-        infoWindowRef.current = new window.BMap.InfoWindow('', {
+        infoWindowRef.current = new BMap.InfoWindow('', {
           width: 280,
           height: 0,
           title: '',
@@ -184,7 +189,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
         });
 
         // 添加湖北省遮罩层（异步加载边界数据）
-        addHubeiMask(map, window.BMap).catch(() => {
+        addHubeiMask(map, BMap).catch(() => {
           // 遮罩层添加失败，静默处理
         });
 
@@ -214,7 +219,8 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
     if (!mapInstanceRefLocal.current || !mapLoaded) return;
 
     const map = mapInstanceRefLocal.current;
-    const BMap = window.BMap;
+    const BMap = window.BMap as any;
+    if (!BMap) return;
 
     // 清除现有标记
     markersRef.current.forEach(marker => map.removeOverlay(marker));
@@ -268,8 +274,8 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
       const avgPixelY = pixels.reduce((sum, p) => sum + p.y, 0) / pixels.length;
 
       // 将像素中心转换回经纬度
-      const centerPoint = map.pixelToPointToOverlayPixel?.(new BMap.Pixel(avgPixelX, avgPixelY))
-        || map.overlayPixelToPoint(new BMap.Pixel(avgPixelX, avgPixelY));
+      const centerPoint = (map as any).pixelToPoint?.(new BMap.Pixel(avgPixelX, avgPixelY))
+        || { lng: building.longitude!, lat: building.latitude! };
 
       const cluster: ClusterGroup = {
         buildings: overlappedBuildings,
@@ -289,7 +295,8 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
   }, [mapLoaded, buildings, currentZoom]);
 
   // 渲染聚类标记（单个楼宇或多个楼宇聚类）
-  const renderClusterMarker = (cluster: ClusterGroup, map: BMapMap, BMap: BMapNamespace) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const renderClusterMarker = (cluster: ClusterGroup, map: any, BMap: any) => {
     const { buildings, clusterLng, clusterLat, centerPixel } = cluster;
     const isCluster = buildings.length > 1;
 
@@ -404,7 +411,8 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
   };
 
   // 显示单个楼宇信息
-  const showBuildingInfo = (building: BuildingItem, map: BMapMap, BMap: BMapNamespace) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const showBuildingInfo = (building: BuildingItem, map: any, BMap: any) => {
     const isStopped = building.status === 1;
     const statusColor = isStopped ? '#9e9e9e' : '#ff6b35';
     const statusBg = isStopped ? '#f5f5f5' : '#fff2e8';
@@ -445,7 +453,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
       </div>
     `;
 
-    infoWindowRef.current.setContent(content);
+    infoWindowRef.current?.setContent(content);
     const point = new BMap.Point(building.longitude!, building.latitude!);
     map.openInfoWindow(infoWindowRef.current, point);
   };
@@ -457,12 +465,17 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
       if (building) {
         // 转换 BuildingItem 为 Building 类型，补充缺失字段
         navigateToBuilding({
-          ...building,
-          orgId: '', // 这些字段在地图视图中不需要
-          orderNum: 0,
+          id: building.id,
+          orgId: '',
+          name: building.name,
+          code: building.code || '',
+          address: building.address,
+          longitude: building.longitude,
+          latitude: building.latitude,
+          status: (building.status ?? 0) as 0 | 1,
           createdAt: '',
           updatedAt: '',
-        } as Record<string, unknown>);
+        });
       }
     };
 
@@ -515,7 +528,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
         ref={mapRef}
         style={{ height: '100vh', width: '100%' }}
         onClick={() => {
-          selectBuilding(null);
+          clearSelection();
         }}
       />
 
@@ -696,12 +709,17 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
                     setSelectedCluster(null);
                     // 转换 BuildingItem 为 Building 类型
                     navigateToBuilding({
-                      ...building,
+                      id: building.id,
                       orgId: '',
-                      orderNum: 0,
+                      name: building.name,
+                      code: building.code || '',
+                      address: building.address,
+                      longitude: building.longitude,
+                      latitude: building.latitude,
+                      status: (building.status ?? 0) as 0 | 1,
                       createdAt: '',
                       updatedAt: '',
-                    } as Record<string, unknown>);
+                    });
                   }}
                 >
                   <div style={{ width: '100%' }}>

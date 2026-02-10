@@ -1,4 +1,5 @@
-import { FC, useEffect } from 'react';
+import { useEffect } from 'react';
+import type { FC } from 'react';
 import { Modal, Form, Input, InputNumber, Select } from 'antd';
 import type { FormInstance } from 'antd/es/form';
 import type { Floor, Building } from '@/types';
@@ -45,7 +46,7 @@ export const FloorModal: FC<FloorModalProps> = ({
     if (!visible) return;
 
     if (editingFloor?.planImageId) {
-      planImageUpload.setInitialValue(editingFloor.planImageId, editingFloor.planImageUrl);
+      planImageUpload.setInitialValue(editingFloor.planImageId, editingFloor.planImageUrl ?? undefined);
     } else {
       planImageUpload.resetUpload();
     }

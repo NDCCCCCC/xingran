@@ -73,8 +73,8 @@ const RoomDeviceManagement: FC = () => {
     },
     {
       externalPagination: {
-        current: paginationProps.current,
-        pageSize: paginationProps.pageSize,
+        current: paginationProps.current ?? 1,
+        pageSize: paginationProps.pageSize ?? 10,
         setCurrent,
         setPageSize,
         setTotal,

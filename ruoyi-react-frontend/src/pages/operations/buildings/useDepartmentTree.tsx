@@ -32,7 +32,7 @@ export function useDepartmentTree() {
         return nodes.map(node => ({
           id: node.id,
           deptName: node.deptName,
-          children: node.children?.length > 0 ? convertToTreeData(node.children) : undefined,
+          children: (node.children?.length ?? 0) > 0 ? convertToTreeData(node.children!) : undefined,
         }));
       };
       setDepartments(convertToTreeData(result.data || []));
@@ -49,8 +49,8 @@ export function useDepartmentTree() {
     const flattenDeptsToMap = (nodes: DepartmentOption[]) => {
       nodes.forEach(node => {
         map.set(node.id, node.deptName);
-        if (node.children?.length > 0) {
-          flattenDeptsToMap(node.children);
+        if ((node.children?.length ?? 0) > 0) {
+          flattenDeptsToMap(node.children!);
         }
       });
     };

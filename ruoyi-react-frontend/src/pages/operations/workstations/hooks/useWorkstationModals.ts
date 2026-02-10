@@ -31,10 +31,11 @@ export function useWorkstationModals(
 ): UseWorkstationModalsReturn {
   const openModal = useCallback(async (record?: WorkstationOps, _form?: FormInstance<unknown>) => {
     // 编辑模式下，如果有部门ID，加载该部门的用户列表
-    // 注意：表单初始化现在在 WorkstationEditModal 组件内部通过 useEffect 处理
+    // 返回 record 以便调用者使用
     if (record?.deptId && loadUserOptions) {
       await loadUserOptions(record.deptId);
     }
+    return record;
   }, [loadUserOptions]);
 
   const closeModal = useCallback((form?: FormInstance<unknown>) => {

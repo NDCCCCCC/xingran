@@ -80,9 +80,9 @@ export function useWorkstationView(floorOptions: FloorOption[]): UseWorkstationV
   );
 
   const handleFloorPlanEdit = useCallback(
-    (workstation: WorkstationNode, openModal: () => void) => {
-      openModal();
-      // TODO: 加载完整工位数据并填充表单
+    (workstation: WorkstationNode, openModal: (record?: WorkstationNode) => void) => {
+      // 传入完整的工位数据，确保表单能正确填充
+      openModal(workstation);
     },
     []
   );

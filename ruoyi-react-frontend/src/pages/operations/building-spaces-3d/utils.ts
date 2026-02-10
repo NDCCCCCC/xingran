@@ -479,7 +479,10 @@ export function animateViewTransition(
     if (target.center) {
       const lng = startState.center.lng + (target.center[0] - startState.center.lng) * eased;
       const lat = startState.center.lat + (target.center[1] - startState.center.lat) * eased;
-      map.setCenter(new window.BMapGL.Point(lng, lat));
+      const BMapGL = window.BMapGL as any;
+      if (BMapGL) {
+        map.setCenter(new BMapGL.Point(lng, lat));
+      }
     }
 
     if (target.zoom !== undefined) {

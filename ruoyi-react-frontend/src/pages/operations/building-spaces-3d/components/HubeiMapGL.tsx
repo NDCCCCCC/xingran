@@ -76,7 +76,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
   const [is3DMode, setIs3DMode] = useState(false);
   const [currentTilt, setCurrentTilt] = useState(0);
 
-  const { selectBuilding, navigateToBuilding } = useVisualizationStore();
+  const { clearSelection, navigateToBuilding } = useVisualizationStore();
 
   // ============ 地图初始化 ============
 
@@ -95,14 +95,20 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
 
         if (!mapRef.current) return;
 
-        const map = new window.BMapGL.Map(mapRef.current, {
+        const BMapGL = window.BMapGL as any;
+        if (!BMapGL) {
+          message.error('百度地图GL加载失败');
+          return;
+        }
+
+        const map = new BMapGL.Map(mapRef.current, {
           enableMapClick: false,
           showControls: false,
         });
         mapInstanceRef.current = map;
 
         // 设置中心点和缩放级别
-        const point = new window.BMapGL.Point(MAP_CONFIG.CENTER[0], MAP_CONFIG.CENTER[1]);
+        const point = new BMapGL.Point(MAP_CONFIG.CENTER[0], MAP_CONFIG.CENTER[1]);
         map.centerAndZoom(point, MAP_CONFIG.DEFAULT_ZOOM);
 
         // 限制缩放级别
@@ -120,7 +126,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
         addMapControls(map);
 
         // 创建信息窗口
-        infoWindowRef.current = new window.BMapGL.InfoWindow('', {
+        infoWindowRef.current = new BMapGL.InfoWindow('', {
           width: 280,
           height: 0,
           title: '',
@@ -129,7 +135,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
         });
 
         // 添加湖北省边界
-        addHubeiMask(map, window.BMapGL).catch(() => {
+        addHubeiMask(map, BMapGL).catch(() => {
           // 静默处理
         });
 
@@ -151,28 +157,31 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
 
   // ============ 地图控件 ============
 
-  const addMapControls = (map: BMapMap) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const addMapControls = (map: any) => {
+    const BMapGL = window.BMapGL as any;
     // 缩放控件
-    const zoomControl = new window.BMapGL.ZoomControl({
+    const zoomControl = new BMapGL.ZoomControl({
       anchor: window.BMAPGL_ANCHOR_BOTTOM_RIGHT,
-      offset: new window.BMapGL.Size(20, 50),
+      offset: new BMapGL.Size(20, 50),
     });
     map.addControl(zoomControl);
 
     // 比例尺控件
-    const scaleControl = new window.BMapGL.ScaleControl({
+    const scaleControl = new BMapGL.ScaleControl({
       anchor: window.BMAPGL_ANCHOR_BOTTOM_LEFT,
-      offset: new window.BMapGL.Size(80, 30),
+      offset: new BMapGL.Size(80, 30),
     });
     map.addControl(scaleControl);
   };
 
   // ============ 湖北省边界 ============
 
-  const addHubeiMask = async (map: BMapMap, BMapGL: BMapGLNamespace) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const addHubeiMask = async (map: any, BMapGL: any) => {
     try {
       const boundaries = await getOfficialHubeiBoundary(BMapGL);
-      boundaries.forEach((boundaryStr) => {
+      boundaries.forEach((boundaryStr: string) => {
         const points = parseBoundaryPoints(boundaryStr, BMapGL);
         const polygon = new BMapGL.Polygon(points, {
           strokeColor: '#1890ff',
@@ -180,7 +189,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
           strokeOpacity: 1,
           fillColor: 'transparent',
           fillOpacity: 0,
-        } as Record<string, unknown>);
+        });
         map.addOverlay(polygon);
       });
     } catch (error) {
@@ -189,7 +198,8 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
     }
   };
 
-  const addFallbackMask = (map: BMapMap, BMapGL: BMapGLNamespace) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const addFallbackMask = (map: any, BMapGL: any) => {
     const points = HUBEI_BOUNDARY.map(
       (coord) => new BMapGL.Point(coord[0], coord[1])
     );
@@ -214,7 +224,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
     setIs3DMode(!is3DMode);
 
     animateViewTransition(
-      map,
+      map as any,
       { tilt: targetTilt },
       ANIMATION_DURATION.TOGGLE_3D,
       EASING_FUNCTIONS.easeInOutCubic
@@ -231,7 +241,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
     setCurrentTilt(0);
 
     animateViewTransition(
-      map,
+      map as any,
       {
         center: MAP_CONFIG.CENTER,
         zoom: MAP_CONFIG.DEFAULT_ZOOM,
@@ -249,7 +259,8 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
     if (!mapInstanceRef.current || !mapLoaded) return;
 
     const map = mapInstanceRef.current;
-    const BMapGL = window.BMapGL;
+    const BMapGL = window.BMapGL as any;
+    if (!BMapGL) return;
 
     // 清除现有标记
     markersRef.current.forEach((marker) => map.removeOverlay(marker));
@@ -299,8 +310,8 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
 
       const avgPixel = averagePixelPosition(pixels);
       const centerPoint =
-        map.pixelToPointToOverlayPixel?.(new BMapGL.Pixel(avgPixel.x, avgPixel.y)) ||
-        map.overlayPixelToPoint(new BMapGL.Pixel(avgPixel.x, avgPixel.y));
+        (map as any).pixelToPoint?.(new BMapGL.Pixel(avgPixel.x, avgPixel.y)) ||
+        { lng: building.longitude!, lat: building.latitude! };
 
       const cluster: ClusterGroup = {
         buildings: overlappedBuildings,
@@ -319,10 +330,11 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
     });
   }, [mapLoaded, buildings, currentZoom]);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const renderClusterMarker = (
     cluster: ClusterGroup,
-    map: BMapMap,
-    BMapGL: BMapGLNamespace
+    map: any,
+    BMapGL: any
   ) => {
     const { buildings, clusterLng, clusterLat, centerPixel } = cluster;
     const isCluster = buildings.length > 1;
@@ -421,7 +433,8 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
     setTooltipPosition(null);
   };
 
-  const showBuildingInfo = (building: BuildingItem, map: BMapMap, BMapGL: BMapGLNamespace) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const showBuildingInfo = (building: BuildingItem, map: any, BMapGL: any) => {
     const stopped = isBuildingStopped(building);
     const statusColor = stopped
       ? STATUS_TEXT_COLORS.STOPPED
@@ -466,7 +479,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
       </div>
     `;
 
-    infoWindowRef.current.setContent(content);
+    infoWindowRef.current?.setContent(content);
     const point = new BMapGL.Point(building.longitude!, building.latitude!);
     map.openInfoWindow(infoWindowRef.current, point);
   };
@@ -478,12 +491,17 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
       const building = buildings.find((b) => b.id === buildingId);
       if (building) {
         navigateToBuilding({
-          ...building,
+          id: building.id,
           orgId: '',
-          orderNum: 0,
+          name: building.name,
+          code: building.code || '',
+          address: building.address,
+          longitude: building.longitude,
+          latitude: building.latitude,
+          status: (building.status ?? 0) as 0 | 1,
           createdAt: '',
           updatedAt: '',
-        } as Record<string, unknown>);
+        });
       }
     };
 
@@ -537,7 +555,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
       <div
         ref={mapRef}
         style={{ height: '100vh', width: '100%' }}
-        onClick={() => selectBuilding(null)}
+        onClick={() => clearSelection()}
       />
 
       {/* 3D模式切换按钮 */}
@@ -586,12 +604,17 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
           onBuildingClick={(building) => {
             setSelectedCluster(null);
             navigateToBuilding({
-              ...building,
+              id: building.id,
               orgId: '',
-              orderNum: 0,
+              name: building.name,
+              code: building.code || '',
+              address: building.address,
+              longitude: building.longitude,
+              latitude: building.latitude,
+              status: (building.status ?? 0) as 0 | 1,
               createdAt: '',
               updatedAt: '',
-            } as Record<string, unknown>);
+            });
           }}
         />
       )}

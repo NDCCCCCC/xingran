@@ -78,7 +78,7 @@ const DedicatedLineManagement: FC = () => {
   const loadLineTypeDict = useCallback(async () => {
     try {
       const result = await post('/system/dicts/data/list', { dictType: 'ops_dedicated_line_type', current: 1, pageSize: 100 }) as { data?: { list: Record<string, unknown>[] } };
-      setLineTypeDict(result.data?.list || []);
+      setLineTypeDict((result.data?.list || []) as unknown as DictData[]);
     } catch (error) {
       handleApiError(error, '加载专线类型字典', false);
     }
@@ -87,7 +87,7 @@ const DedicatedLineManagement: FC = () => {
   const loadIspDict = useCallback(async () => {
     try {
       const result = await post('/system/dicts/data/list', { dictType: 'ops_isp', current: 1, pageSize: 100 }) as { data?: { list: Record<string, unknown>[] } };
-      setIspDict(result.data?.list || []);
+      setIspDict((result.data?.list || []) as unknown as DictData[]);
     } catch (error) {
       handleApiError(error, '加载运营商字典', false);
     }
@@ -107,8 +107,8 @@ const DedicatedLineManagement: FC = () => {
     },
     {
       externalPagination: {
-        current: paginationProps.current,
-        pageSize: paginationProps.pageSize,
+        current: paginationProps.current ?? 1,
+        pageSize: paginationProps.pageSize ?? 10,
         setCurrent,
         setPageSize,
         setTotal,
@@ -150,7 +150,7 @@ const DedicatedLineManagement: FC = () => {
 
   const handleSave = async () => {
     try {
-      const values = await lineForm.validateFields();
+      const values = await lineForm.validateFields() as Partial<DedicatedLine>;
       if (editingLine) {
         await dedicatedLineApi.update(editingLine.id, values);
         handleSuccess('更新');

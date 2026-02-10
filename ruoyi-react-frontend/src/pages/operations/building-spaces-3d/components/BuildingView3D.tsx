@@ -8,6 +8,7 @@ import { Button, Space, Spin, Alert, Tag, Select } from 'antd';
 import { ArrowLeftOutlined, DesktopOutlined, BuildOutlined } from '@ant-design/icons';
 import { useVisualizationStore } from '@/store/visualizationStore';
 import { floorApi, workstationApi, buildingApi } from '@/lib/opsApi';
+import type { Floor } from '@/types/operations';
 import { handleApiError } from '@/utils/errorHandler';
 import { convertApiWorkstations, calculateWorkstationStats } from '../utils';
 import BuildingModel3D from './BuildingModel3D';
@@ -88,20 +89,28 @@ const BuildingView3D: React.FC = () => {
 
         // 获取每层楼的工位数量
         const floorsWithCount = await Promise.all(
-          floorList.map(async (floor: Record<string, unknown>) => {
+          floorList.map(async (floor: Floor) => {
             try {
               const wsResult = await workstationApi.list({
-                floorCode: floor.id as string,
+                floorCode: floor.id,
                 current: 1,
                 pageSize: 1,
               });
               return {
-                ...floor,
+                id: floor.id,
+                name: floor.name || '',
+                code: floor.code,
+                floorNo: String(floor.floorNo),
+                status: floor.status,
                 workstationCount: wsResult.data?.total || 0,
               };
             } catch {
               return {
-                ...floor,
+                id: floor.id,
+                name: floor.name || '',
+                code: floor.code,
+                floorNo: String(floor.floorNo),
+                status: floor.status,
                 workstationCount: 0,
               };
             }

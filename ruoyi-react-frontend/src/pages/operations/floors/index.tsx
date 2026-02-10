@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { FC } from 'react';
 import { Table, Button, Card, Alert, Layout } from 'antd';
 import type { Floor, Building } from '@/types';
+import type { FloorPlanData } from '@/components/cad-editor/types';
 import { floorApi, buildingApi } from '@/lib/opsApi';
 import { useTableManager } from '@/hooks/useTableManager';
 import { usePagination } from '@/hooks/usePagination';
@@ -104,8 +105,8 @@ const FloorManagement: FC = () => {
     },
     {
       externalPagination: {
-        current: paginationProps.current,
-        pageSize: paginationProps.pageSize,
+        current: paginationProps.current ?? 1,
+        pageSize: paginationProps.pageSize ?? 10,
         setCurrent,
         setPageSize,
         setTotal,
@@ -126,7 +127,7 @@ const FloorManagement: FC = () => {
 
   const handleSave = useCallback(async () => {
     try {
-      const values = await floorForm.validateFields();
+      const values = await floorForm.validateFields() as Partial<Floor>;
 
       if (editingFloor) {
         await floorApi.update(editingFloor.id, values);
@@ -291,8 +292,8 @@ const FloorManagement: FC = () => {
 
       const options = floors.map((f: Floor) => ({
         id: f.id,
-        name: f.name,
-        floorNo: f.floorNo,
+        name: f.name || '',
+        floorNo: Number(f.floorNo) || 0,
       }));
 
       setFloorOptions(options);
@@ -378,7 +379,8 @@ const FloorManagement: FC = () => {
           setSelectedBuildingName(building.name);
           setSelectedDeptIdForEditor(building.orgId);
 
-          setSelectedDeptName(building.orgName || '');
+          const buildingData = building as unknown as Record<string, unknown>;
+          setSelectedDeptName((buildingData.orgName as string) || '');
 
           await loadBuildingOptionsByDept(building.orgId);
           await loadFloorOptionsByBuilding(building.id);
@@ -393,7 +395,7 @@ const FloorManagement: FC = () => {
   );
 
   const handleSaveFloorPlan = useCallback(
-    async (data: Record<string, unknown>) => {
+    async (data: FloorPlanData) => {
       if (!currentFloor) return;
       await saveFloorPlan(data, currentFloor);
     },
@@ -457,7 +459,7 @@ const FloorManagement: FC = () => {
 
         <FloorSearchForm
           form={searchForm}
-          buildingOptions={buildingOptions}
+          buildingOptions={buildingOptions as unknown as Building[]}
           viewMode={viewMode}
           loading={loading}
           buildingOptionsByDept={filterBuildingOptions}
@@ -521,7 +523,7 @@ const FloorManagement: FC = () => {
           editingFloor={editingFloor}
           buildingOptions={buildingOptions}
           departmentTreeData={[]}
-          buildingOptionsByDept={modalBuildingOptions}
+          buildingOptionsByDept={modalBuildingOptions as unknown as Building[]}
           selectedDeptId={modalDeptId}
           form={floorForm}
           onOk={handleSave}

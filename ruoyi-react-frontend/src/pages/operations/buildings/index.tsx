@@ -60,8 +60,8 @@ const BuildingManagement: FC = () => {
     },
     {
       externalPagination: {
-        current: paginationProps.current,
-        pageSize: paginationProps.pageSize,
+        current: paginationProps.current ?? 1,
+        pageSize: paginationProps.pageSize ?? 10,
         setCurrent,
         setPageSize,
         setTotal,
@@ -76,8 +76,8 @@ const BuildingManagement: FC = () => {
       const allBuildings = result.data?.list || [];
       setStatistics({
         total: allBuildings.length,
-        active: allBuildings.filter((b: Building) => b.status === 0).length,
-        inactive: allBuildings.filter((b: Building) => b.status === 1).length,
+        active: allBuildings.filter((b: Record<string, unknown>) => b.status === 0).length,
+        inactive: allBuildings.filter((b: Record<string, unknown>) => b.status === 1).length,
       });
     } catch (error) { handleApiError(error, '加载统计数据', false); }
   }, []);
@@ -101,7 +101,7 @@ const BuildingManagement: FC = () => {
 
   // 搜索处理（支持部门过滤）
   const handleSearch = useCallback(() => {
-    const values = searchForm.getFieldsValue();
+    const values = searchForm.getFieldsValue() as Record<string, unknown>;
     const searchParams: Record<string, unknown> = {};
     Object.keys(values).forEach(key => {
       const value = values[key];
@@ -147,7 +147,7 @@ const BuildingManagement: FC = () => {
 
     if (!isInitialized.current || pageChanged) {
       isInitialized.current = true;
-      prevPageRef.current = { current, pageSize };
+      prevPageRef.current = { current: current ?? 1, pageSize: pageSize ?? 10 };
 
       // 使用 setTimeout 避免同步 setState 导致的循环
       setTimeout(() => {
@@ -163,15 +163,14 @@ const BuildingManagement: FC = () => {
 
   const handleSave = async () => {
     try {
-      const values = await buildingForm.validateFields();
+      const values = await buildingForm.validateFields() as Record<string, unknown>;
 
       // 移除不需要发送给后端的字段
-      type BuildingFormData = Omit<Building, 'id' | 'createdAt' | 'updatedAt'> & { orgName?: string };
-      const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, orgName: _orgName, ...submitData } = values as BuildingFormData;
+      const { orgName: _orgName, ...submitData } = values;
 
       // 地址解析：如果有地址，自动解析获取经纬度
-      if (submitData.address && submitData.address.trim()) {
-        const coords = await geocoding.resolveAddress(submitData.address);
+      if (submitData.address && String(submitData.address).trim()) {
+        const coords = await geocoding.resolveAddress(String(submitData.address));
         if (coords) {
           submitData.longitude = coords.longitude;
           submitData.latitude = coords.latitude;
@@ -240,16 +239,17 @@ const BuildingManagement: FC = () => {
     if (record) {
       handleEdit(record);
       // 只设置表单中实际需要的字段，排除时间字段等不需要的
+      const recordData = record as unknown as Record<string, unknown>;
       const formValues = {
         name: record.name,
         orgId: record.orgId,
-        level: record.level ?? 2,
+        level: (recordData.level as number) ?? 2,
         address: record.address,
         longitude: record.longitude,
         latitude: record.latitude,
         totalFloors: record.totalFloors,
         status: record.status,
-        remark: record.remark,
+        remark: recordData.remark as string,
       };
       buildingForm.setFieldsValue(formValues);
 

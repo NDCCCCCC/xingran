@@ -3,7 +3,7 @@
  * 工位编辑模态框
  */
 
-import { useEffect } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import { Modal, Form, Input, InputNumber, Select, Row, Col } from 'antd';
 import type { WorkstationOps } from '@/types';
 import type { DepartmentTreeNode } from '@/types';
@@ -19,7 +19,7 @@ export interface WorkstationEditModalProps {
   floorOptions: { id: string; code: string; name: string }[];
   deptTreeData: DepartmentTreeNode[];
   userOptions: { id: string; name: string }[];
-  onOk: () => Promise<void>;
+  onOk: (values: Record<string, unknown>) => Promise<void>;
   onCancel: () => void;
   onDeptChange: (deptId: string) => void;
 }
@@ -35,17 +35,40 @@ export function WorkstationEditModal({
   onDeptChange,
 }: WorkstationEditModalProps) {
   const [form] = Form.useForm();
+  const prevEditingWorkstationRef = useRef<WorkstationOps | null>(null);
+  const isMountedRef = useRef(true);
 
-  // 当模态框打开或 editingWorkstation 变化时，设置表单值
-  useEffect(() => {
+  // 使用 useLayoutEffect 在 DOM 更新前同步设置表单值
+  // 避免 useEffect 的延迟导致表单被其他逻辑重置
+  useLayoutEffect(() => {
+    isMountedRef.current = true;
+
     if (open) {
-      if (editingWorkstation) {
-        form.setFieldsValue(editingWorkstation);
+      if (editingWorkstation && editingWorkstation.id) {
+        // 编辑模式：设置表单值为编辑数据
+        // 只设置已定义的字段，避免覆盖用户输入
+        const valuesToSet = Object.fromEntries(
+          Object.entries(editingWorkstation).filter(([_, v]) => v !== undefined)
+        );
+        form.setFieldsValue(valuesToSet);
+        prevEditingWorkstationRef.current = editingWorkstation;
       } else {
+        // 新增模式：重置表单并设置默认值
         form.resetFields();
         form.setFieldsValue({ status: 0, type: 0 });
+        prevEditingWorkstationRef.current = null;
       }
+    } else {
+      // 模态框关闭时重置表单（仅在组件仍然挂载时）
+      if (isMountedRef.current) {
+        form.resetFields();
+      }
+      prevEditingWorkstationRef.current = null;
     }
+
+    return () => {
+      isMountedRef.current = false;
+    };
   }, [open, editingWorkstation, form]);
 
   return (
@@ -53,7 +76,15 @@ export function WorkstationEditModal({
       title={editingWorkstation ? '编辑工位' : '新增工位'}
       open={open}
       onOk={async () => {
-        await onOk();
+        try {
+          // 验证表单并获取值
+          const values = await form.validateFields();
+          // 将表单值传递给父组件的 onOk 处理
+          await onOk(values);
+        } catch (error) {
+          // 表单验证失败，不关闭模态框
+          throw error;
+        }
       }}
       onCancel={() => {
         onCancel();

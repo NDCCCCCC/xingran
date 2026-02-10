@@ -14,7 +14,7 @@ import {
   CheckCircleOutlined, StopOutlined, AppstoreOutlined, TableOutlined,
   ImportOutlined, ExportOutlined,
 } from '@ant-design/icons';
-import type { ServerRoom } from '@/types';
+import type { ServerRoom, Building, Floor } from '@/types';
 import { serverRoomApi, buildingApi, floorApi } from '@/lib/opsApi';
 import { useTableManager } from '@/hooks/useTableManager';
 import { usePagination } from '@/hooks/usePagination';
@@ -78,8 +78,8 @@ const ServerRoomManagement: FC = () => {
     },
     {
       externalPagination: {
-        current: paginationProps.current,
-        pageSize: paginationProps.pageSize,
+        current: paginationProps.current ?? 1,
+        pageSize: paginationProps.pageSize ?? 10,
         setCurrent,
         setPageSize,
         setTotal,
@@ -108,11 +108,11 @@ const ServerRoomManagement: FC = () => {
       if (orgId) params.orgId = orgId;
       const result = await buildingApi.list(params);
       const buildings = result.data?.list || [];
-      setBuildingOptions(buildings.map((b: Record<string, unknown>) => ({
-        id: b.id as string,
-        code: b.code as string,
-        name: b.name as string,
-        orgId: b.orgId as string,
+      setBuildingOptions(buildings.map((b: Building) => ({
+        id: b.id,
+        code: b.code,
+        name: b.name,
+        orgId: b.orgId,
       })));
     } catch (error) {
       handleApiError(error, '加载楼宇选项', false);
@@ -127,11 +127,11 @@ const ServerRoomManagement: FC = () => {
     try {
       const result = await floorApi.list({ current: 1, pageSize: 1000, buildingId });
       const floors = result.data?.list || [];
-      setFloorOptions(floors.map((f: Record<string, unknown>) => ({
-        id: f.id as string,
-        code: f.code as string,
-        name: f.name as string,
-        floorNo: f.floorNo as string,
+      setFloorOptions(floors.map((f: Floor) => ({
+        id: f.id,
+        code: f.code,
+        name: f.name || '',
+        floorNo: String(f.floorNo),
       })));
     } catch (error) {
       handleApiError(error, '加载楼层选项', false);
@@ -161,7 +161,7 @@ const ServerRoomManagement: FC = () => {
 
   const handleSave = async () => {
     try {
-      const values = await serverRoomForm.validateFields();
+      const values = await serverRoomForm.validateFields() as Partial<ServerRoom>;
       if (editingServerRoom) {
         await serverRoomApi.update(editingServerRoom.id, values);
         handleSuccess('更新');

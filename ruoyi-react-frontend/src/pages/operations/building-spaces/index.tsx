@@ -28,15 +28,15 @@ const BuildingSpacesPage: React.FC = () => {
       ]);
 
       // 组装带统计的楼宇数据
-      const buildingsWithStats = (buildingResult.data?.list || []).map((b: Record<string, unknown>) => {
+      const buildingsWithStats = ((buildingResult.data?.list || []) as unknown as Record<string, unknown>[]).map((b) => {
         // 获取该楼宇的楼层
-        const buildingFloors = (floorResult.data?.list || []).filter(
-          (f: Record<string, unknown>) => f.buildingId === b.id
+        const buildingFloors = ((floorResult.data?.list || []) as unknown as Record<string, unknown>[]).filter(
+          (f) => f.buildingId === b.id
         );
 
         // 获取该楼宇的所有工位（通过楼层关联）
-        const buildingWorkstations = (workstationResult.data?.list || []).filter(
-          (ws: Record<string, unknown>) => buildingFloors.some((f: Record<string, unknown>) => f.id === ws.floorId)
+        const buildingWorkstations = ((workstationResult.data?.list || []) as unknown as Record<string, unknown>[]).filter(
+          (ws) => buildingFloors.some((f) => f.id === ws.floorId)
         );
 
         return {
@@ -44,7 +44,7 @@ const BuildingSpacesPage: React.FC = () => {
           floors: buildingFloors,
           totalFloors: buildingFloors.length,
           totalWorkstations: buildingWorkstations.length
-        } as Building;
+        } as unknown as Building;
       });
 
       setBuildings(buildingsWithStats);
