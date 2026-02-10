@@ -67,7 +67,12 @@ export function useExecutionModals(params: UseExecutionModalsParams): UseExecuti
   // 通过模板执行配置
   const handleExecuteByTemplate = useCallback(async (executeForm: FormInstance<unknown>) => {
     try {
-      const values = await executeForm.validateFields();
+      const formValues = await executeForm.validateFields();
+      const values = formValues as {
+        executionName: string;
+        templateId: string;
+        templateVariables?: Record<string, unknown>;
+      };
       const data = {
         executionName: values.executionName,
         templateId: values.templateId,
@@ -82,7 +87,7 @@ export function useExecutionModals(params: UseExecutionModalsParams): UseExecuti
       setDataState(prev => ({ ...prev, selectedTemplate: null }));
       loadExecutions();
     } catch (error: unknown) {
-      if (error.errorFields) {
+      if ((error as { errorFields?: unknown }).errorFields) {
         return;
       }
       message.error('创建执行任务失败');

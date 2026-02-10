@@ -22,7 +22,7 @@ export interface UseTemplateDataReturn {
   handleApiError: (error: unknown, defaultMessage: string) => void;
 }
 
-export function useTemplateData(searchForm: FormInstance<unknown>, setTotal: React.Dispatch<React.SetStateAction<number>>): UseTemplateDataReturn {
+export function useTemplateData(searchForm: FormInstance<unknown>, setTotal: (total: number) => void): UseTemplateDataReturn {
   const [templates, setTemplates] = useState<ConfigTemplate[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotalLocal] = useState(0);
@@ -45,11 +45,11 @@ export function useTemplateData(searchForm: FormInstance<unknown>, setTotal: Rea
     async (params: Record<string, unknown> = {}, searchValues?: Record<string, unknown>) => {
       setLoading(true);
       try {
-        const values = searchValues || searchForm.getFieldsValue();
+        const formValues = searchValues ?? (searchForm.getFieldsValue() as Record<string, unknown>);
         const result = await post<BaseResponse<PageResponse<ConfigTemplate>>>('/network/templates/list', {
           current: params.current || 1,
           pageSize: params.pageSize || 10,
-          ...values,
+          ...formValues,
         });
         setTemplates(result.data?.list || []);
         setTotalLocal(result.data?.total || 0);

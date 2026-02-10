@@ -13,8 +13,8 @@ interface UseBackupDiffReturn {
   diffResult: DiffResult | null;
   compareBackup1: ConfigBackup | null;
   compareBackup2: ConfigBackup | null;
-  leftScrollRef: React.RefObject<HTMLDivElement>;
-  rightScrollRef: React.RefObject<HTMLDivElement>;
+  leftScrollRef: React.RefObject<HTMLDivElement | null>;
+  rightScrollRef: React.RefObject<HTMLDivElement | null>;
   openDiffModal: (backup1: ConfigBackup, backup2: ConfigBackup) => Promise<void>;
   closeDiffModal: () => void;
   handleLeftScroll: (e: UIEvent<HTMLDivElement>) => void;

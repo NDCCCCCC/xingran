@@ -7,11 +7,6 @@ import { Modal, Form, Input } from 'antd';
 import type { FormInstance } from 'antd/es/form';
 import type { ConfigTemplate } from '@/types';
 
-interface TemplateVariable {
-  default?: string;
-  description?: string;
-}
-
 export interface VariableModalProps {
   open: boolean;
   selectedTemplate: ConfigTemplate | null;
@@ -36,14 +31,13 @@ export function VariableModal({
       width={600}
     >
       <Form form={form} layout="vertical">
-        {selectedTemplate?.variables && Object.entries(selectedTemplate.variables).map(([key, info]: [string, TemplateVariable]) => (
+        {selectedTemplate?.variables && Object.entries(selectedTemplate.variables).map(([key, defaultValue]) => (
           <Form.Item
             key={key}
             name={['templateVariables', key]}
             label={key}
-            extra={info?.description || ''}
           >
-            <Input placeholder={`默认值: ${info?.default || '-'}`} />
+            <Input placeholder={`默认值: ${String(defaultValue)}`} />
           </Form.Item>
         ))}
       </Form>

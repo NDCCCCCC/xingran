@@ -23,14 +23,14 @@ export function useCommandModals(): UseCommandModalsReturn {
       try {
         const values = await form.validateFields();
         await post('/network/command/quick', {
-          ...values,
+          ...(values as Record<string, unknown>),
           deviceIds: selectedRowKeys,
         });
         message.success('命令已分发，请查看执行进度');
         form.resetFields();
         onSuccess();
       } catch (error: unknown) {
-        if (error.errorFields) {
+        if ((error as { errorFields?: unknown }).errorFields) {
           return;
         }
         message.error('分发失败');

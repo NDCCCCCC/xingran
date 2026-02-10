@@ -77,9 +77,10 @@ export function useTemplateModals(): UseTemplateModalsReturn {
   const handleCreate = useCallback(
     async (editingTemplate: ConfigTemplate | null, editForm: FormInstance<unknown>, onSuccess: () => void) => {
       try {
-        const values = await editForm.validateFields();
+        const formValues = await editForm.validateFields();
+        const values = formValues as Record<string, unknown> & { variables?: string };
         const data = {
-          ...values,
+          ...(values as Record<string, unknown>),
           variables: values.variables ? JSON.parse(values.variables) : undefined,
         };
         if (editingTemplate) {

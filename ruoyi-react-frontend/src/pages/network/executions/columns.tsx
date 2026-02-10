@@ -128,7 +128,7 @@ export function getDetailColumns(params: DetailColumnsParams): ColumnsType<Confi
       width: 100,
       render: (_, record) => (
         record.outputReceived ? (
-          <Button type="link" size="small" onClick={() => handleViewOutput(record.outputReceived)}>
+          <Button type="link" size="small" onClick={() => handleViewOutput(record.outputReceived ?? '')}>
             查看
           </Button>
         ) : '-'

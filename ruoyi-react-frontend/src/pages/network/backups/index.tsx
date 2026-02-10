@@ -77,7 +77,7 @@ const ConfigBackupPage: FC = () => {
     loadDevices,
     loadBackups,
     loadStatistics,
-  } = useBackupData({ current: paginationProps.current, pageSize: paginationProps.pageSize, searchForm });
+  } = useBackupData({ current: paginationProps.current ?? 1, pageSize: paginationProps.pageSize ?? 10, searchForm });
 
   const {
     diffModalVisible,
@@ -390,7 +390,7 @@ const ConfigBackupPage: FC = () => {
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 180,
-      render: (value: unknown) => formatDateTime(value),
+      render: (value: string | Date | null | undefined) => formatDateTime(value),
     },
     {
       title: '操作',
@@ -507,11 +507,11 @@ const ConfigBackupPage: FC = () => {
           scroll={{ x: 1200 }}
           pagination={paginationProps}
           onChange={(pagination) => {
-            setCurrent(pagination.current);
-            setPageSize(pagination.pageSize);
+            setCurrent(pagination.current ?? 1);
+            setPageSize(pagination.pageSize ?? 10);
             loadBackups({
-              current: pagination.current,
-              pageSize: pagination.pageSize,
+              current: pagination.current ?? 1,
+              pageSize: pagination.pageSize ?? 10,
             });
           }}
         />

@@ -263,8 +263,8 @@ const DeviceManagement: FC = () => {
     {
       pageSize: 10,
       externalPagination: {
-        current: paginationProps.current,
-        pageSize: paginationProps.pageSize,
+        current: paginationProps.current ?? 1,
+        pageSize: paginationProps.pageSize ?? 10,
         setCurrent,
         setPageSize,
         setTotal,
@@ -661,11 +661,11 @@ const DeviceManagement: FC = () => {
               scroll={{ x: 1600 }}
               pagination={paginationProps}
               onChange={(pagination) => {
-                setCurrent(pagination.current);
-                setPageSize(pagination.pageSize);
+                setCurrent(pagination.current ?? 1);
+                setPageSize(pagination.pageSize ?? 10);
                 const params: Record<string, number | string> = {
-                  current: pagination.current,
-                  pageSize: pagination.pageSize,
+                  current: pagination.current ?? 1,
+                  pageSize: pagination.pageSize ?? 10,
                 };
                 if (selectedDeptId) {
                   params.deptId = selectedDeptId;

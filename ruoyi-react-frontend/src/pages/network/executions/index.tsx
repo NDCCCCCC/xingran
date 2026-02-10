@@ -25,6 +25,7 @@ import { getExecutionColumns, getDetailColumns } from './columns';
 import { ConfigExecuteModal, VariableModal, DetailDrawer } from './modals';
 import { STATUS_OPTIONS } from './constants';
 import { usePagination } from '@/hooks/usePagination';
+import type { ConfigExecution } from '@/types';
 
 const { Option } = Select;
 
@@ -47,8 +48,8 @@ const ConfigExecutionPage: FC = () => {
     loadStatistics,
   } = useExecutionData({
     current: 1, // 未使用，保留默认值
-    pageSize: paginationProps.pageSize,
-    execCurrent: paginationProps.current,
+    pageSize: paginationProps.pageSize ?? 10,
+    execCurrent: paginationProps.current ?? 1,
   });
 
   // 模态框和操作管理
@@ -79,9 +80,9 @@ const ConfigExecutionPage: FC = () => {
   };
 
   // 查看详情时加载执行详情
-  const handleViewDetail = async (record: unknown) => {
+  const handleViewDetail = async (record: ConfigExecution) => {
     await loadExecutionDetails(record.id);
-    handleViewDetailBase(record);
+    handleViewDetailBase(record as unknown as Record<string, unknown>);
   };
 
   // 表格列
@@ -217,11 +218,11 @@ const ConfigExecutionPage: FC = () => {
           scroll={{ x: 1400 }}
           pagination={paginationProps}
           onChange={(pagination) => {
-            setCurrent(pagination.current);
-            setPageSize(pagination.pageSize);
+            setCurrent(pagination.current ?? 1);
+            setPageSize(pagination.pageSize ?? 10);
             loadExecutions({
-              current: pagination.current,
-              pageSize: pagination.pageSize,
+              current: pagination.current ?? 1,
+              pageSize: pagination.pageSize ?? 10,
             });
           }}
         />

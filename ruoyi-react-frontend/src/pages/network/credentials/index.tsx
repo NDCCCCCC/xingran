@@ -72,27 +72,27 @@ const CredentialManagement: FC = () => {
     handleModalClose,
   } = useTableManager<AuthCredential>(
     async (params) => {
-      const values = searchForm.getFieldsValue();
+      const formValues = searchForm.getFieldsValue() as Record<string, unknown>;
       // 映射搜索字段名到API字段名
       const searchParams: Record<string, unknown> = {
-        current: params.current || paginationProps.current,
-        pageSize: params.pageSize || paginationProps.pageSize,
+        current: params.current ?? 1,
+        pageSize: params.pageSize ?? 10,
       };
-      if (values.searchCredentialName) {
-        searchParams.credentialName = values.searchCredentialName;
+      if (formValues.searchCredentialName) {
+        searchParams.credentialName = formValues.searchCredentialName;
       }
-      if (values.searchProtocolType) {
-        searchParams.protocolType = values.searchProtocolType;
+      if (formValues.searchProtocolType) {
+        searchParams.protocolType = formValues.searchProtocolType;
       }
       const result = await post<BaseResponse<PageResponse<AuthCredential>>>('/network/credentials/list', searchParams);
       // 更新统计数据
       updateStatistics(result.data?.list || []);
-      return result.data;
+      return { list: result.data?.list || [], total: result.data?.total || 0 };
     },
     {
       externalPagination: {
-        current: paginationProps.current,
-        pageSize: paginationProps.pageSize,
+        current: paginationProps.current ?? 1,
+        pageSize: paginationProps.pageSize ?? 10,
         setCurrent,
         setPageSize,
         setTotal,
@@ -131,9 +131,10 @@ const CredentialManagement: FC = () => {
   const handleCreate = async () => {
     await withErrorHandling(
       async () => {
-        const values = await editForm.validateFields();
+        const formValues = await editForm.validateFields();
+        const values = formValues as Record<string, unknown> & { confirmPassword?: string };
         // 移除确认密码字段
-        const { confirmPassword, ...data } = values as Record<string, unknown> & { confirmPassword?: string };
+        const { confirmPassword, ...data } = values;
         if (editingCredential) {
           await post(`/network/credentials/${editingCredential.id}/update`, data);
           return '更新成功';
@@ -420,11 +421,11 @@ const CredentialManagement: FC = () => {
           scroll={{ x: 1400 }}
           pagination={paginationProps}
           onChange={(pagination) => {
-            setCurrent(pagination.current);
-            setPageSize(pagination.pageSize);
+            setCurrent(pagination.current ?? 1);
+            setPageSize(pagination.pageSize ?? 10);
             loadCredentials({
-              current: pagination.current,
-              pageSize: pagination.pageSize,
+              current: pagination.current ?? 1,
+              pageSize: pagination.pageSize ?? 10,
             });
           }}
         />

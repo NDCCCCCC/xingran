@@ -58,8 +58,8 @@ const CommandDispatch: FC = () => {
     loadDevices,
     loadExecutionDetails,
   } = useCommandData(setExecLoading, {
-    current: paginationProps.current,
-    pageSize: paginationProps.pageSize,
+    current: paginationProps.current ?? 1,
+    pageSize: paginationProps.pageSize ?? 10,
   });
 
   // 同步 total 到全局分页状态
@@ -84,7 +84,7 @@ const CommandDispatch: FC = () => {
   const handleViewDetail = async (record: ConfigExecution) => {
     const { execution, details } = await loadExecutionDetails(record.id);
     setCurrentExecution(execution);
-    setExecutionDetails(details);
+    setExecutionDetails(details as unknown as ConfigExecutionDetail[]);
     setDetailDrawerVisible(true);
   };
 
@@ -212,11 +212,11 @@ const CommandDispatch: FC = () => {
           scroll={{ x: 1400 }}
           pagination={paginationProps}
           onChange={(pagination) => {
-            setCurrent(pagination.current);
-            setPageSize(pagination.pageSize);
+            setCurrent(pagination.current ?? 1);
+            setPageSize(pagination.pageSize ?? 10);
             loadExecutions({
-              current: pagination.current,
-              pageSize: pagination.pageSize,
+              current: pagination.current ?? 1,
+              pageSize: pagination.pageSize ?? 10,
             });
           }}
         />

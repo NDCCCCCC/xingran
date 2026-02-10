@@ -27,8 +27,10 @@ import { STATUS_OPTIONS } from './constants';
 import { parseIPRanges } from './utils';
 import { post } from '@/lib/api';
 import { message } from 'antd';
+import type { FormInstance } from 'antd/es/form';
 import { usePagination } from '@/hooks/usePagination';
 import { isFormValidationError } from '@/utils/errorHandler';
+import type { DeviceDiscovery, NetworkDevice } from '@/types';
 
 const { Option } = Select;
 
@@ -54,8 +56,8 @@ const DeviceDiscoveryPage: FC = () => {
     loadDepartments,
     loadDiscoveryResults,
   } = useDiscoveryData({
-    current: paginationProps.current,
-    pageSize: paginationProps.pageSize,
+    current: paginationProps.current ?? 1,
+    pageSize: paginationProps.pageSize ?? 10,
   });
 
   // 轮询管理
@@ -75,7 +77,16 @@ const DeviceDiscoveryPage: FC = () => {
   // 创建发现任务
   const handleCreate = async (form: FormInstance<unknown>) => {
     try {
-      const values = await form.validateFields();
+      const formValues = await form.validateFields();
+      const values = formValues as {
+        ipRanges?: string;
+        taskName: string;
+        discoveryType: string;
+        snmpCommunity?: string;
+        snmpPort?: number;
+        groupId?: string;
+        autoImport?: boolean;
+      };
       const ipRangesText = values.ipRanges || '';
       const ipRanges = parseIPRanges(ipRangesText);
 
@@ -121,9 +132,9 @@ const DeviceDiscoveryPage: FC = () => {
   };
 
   // 查看发现结果
-  const handleViewResult = async (record: unknown) => {
+  const handleViewResult = async (record: DeviceDiscovery) => {
     setCurrentDiscovery(record);
-    await loadDiscoveryResults(record.id);
+    await loadDiscoveryResults((record as DeviceDiscovery).id);
     setModalState(prev => ({ ...prev, resultModalVisible: true }));
   };
 

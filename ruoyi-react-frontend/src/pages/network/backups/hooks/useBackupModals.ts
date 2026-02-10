@@ -111,10 +111,10 @@ export function useBackupModals(
       closeBackupModal(form);
       onLoad();
     } catch (error: unknown) {
-      if (error.errorFields) {
+      if ((error as { errorFields?: unknown }).errorFields) {
         return;
       }
-      console.error('创建备份失败:', error);
+      console.error('创建备份失败:', (error as Error).message);
     }
   }, [closeBackupModal, onLoad]);
 

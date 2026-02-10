@@ -58,10 +58,11 @@ const MACAddressPage: FC = () => {
     handleRefresh,
   } = useTableManager<DeviceMACAddress>(
     async (params) => {
-      const values = searchForm.getFieldsValue();
+      const formValues = searchForm.getFieldsValue();
+      const values = formValues as Record<string, unknown>;
       const result = await post('/network/mac/list', {
-        current: params.current || paginationProps.current,
-        pageSize: params.pageSize || paginationProps.pageSize,
+        current: params.current ?? paginationProps.current ?? 1,
+        pageSize: params.pageSize ?? paginationProps.pageSize ?? 10,
         ...values,
       }) as { data: { list: DeviceMACAddress[]; total: number } };
       // 更新统计数据
@@ -70,8 +71,8 @@ const MACAddressPage: FC = () => {
     },
     {
       externalPagination: {
-        current: paginationProps.current,
-        pageSize: paginationProps.pageSize,
+        current: paginationProps.current ?? 1,
+        pageSize: paginationProps.pageSize ?? 10,
         setCurrent,
         setPageSize,
         setTotal,
@@ -98,7 +99,7 @@ const MACAddressPage: FC = () => {
       const result = await post('/network/devices/list', {
         current: 1,
         pageSize: 1000,
-      }) as { data?: { list: Record<string, unknown>[] } };
+      }) as { data?: { list: NetworkDevice[] } };
       setDevices(result.data?.list || []);
     } catch (error) {
       console.error('加载设备列表失败:', error);
@@ -269,11 +270,11 @@ const MACAddressPage: FC = () => {
           scroll={{ x: 1200 }}
           pagination={paginationProps}
           onChange={(pagination) => {
-            setCurrent(pagination.current);
-            setPageSize(pagination.pageSize);
+            setCurrent(pagination.current ?? 1);
+            setPageSize(pagination.pageSize ?? 10);
             loadMACAddresses({
-              current: pagination.current,
-              pageSize: pagination.pageSize,
+              current: pagination.current ?? 1,
+              pageSize: pagination.pageSize ?? 10,
             });
           }}
         />

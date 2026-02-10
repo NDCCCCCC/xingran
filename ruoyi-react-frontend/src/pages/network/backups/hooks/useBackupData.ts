@@ -59,8 +59,8 @@ export function useBackupData(
   const loadBackups = useCallback(async (params: Record<string, unknown> = {}) => {
     setLoading(true);
     try {
-      const values = searchForm.getFieldsValue();
-      const result = await post<BaseResponse<PageResponse<unknown>>>('/network/backups/list', {
+      const values = searchForm.getFieldsValue() as Record<string, unknown>;
+      const result = await post<BaseResponse<PageResponse<ConfigBackup>>>('/network/backups/list', {
         current: params.current || current,
         pageSize: params.pageSize || pageSize,
         ...values,
@@ -84,7 +84,7 @@ export function useBackupData(
   // 加载统计数据
   const loadStatistics = useCallback(async () => {
     try {
-      const result = await post<BaseResponse<PageResponse<unknown>>>('/network/backups/list', { current: 1, pageSize: 10000 });
+      const result = await post<BaseResponse<PageResponse<ConfigBackup>>>('/network/backups/list', { current: 1, pageSize: 10000 });
       const allBackups = result.data?.list || [];
       const stats = calculateStatistics(allBackups);
       setStatistics(stats);

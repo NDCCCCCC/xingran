@@ -68,10 +68,11 @@ const PortStatusPage: FC = () => {
     handleRefresh,
   } = useTableManager<DevicePortStatus>(
     async (params) => {
-      const values = searchForm.getFieldsValue();
+      const formValues = searchForm.getFieldsValue();
+      const values = formValues as Record<string, unknown>;
       const result = await post('/network/ports/list', {
-        current: params.current || paginationProps.current,
-        pageSize: params.pageSize || paginationProps.pageSize,
+        current: params.current ?? paginationProps.current ?? 1,
+        pageSize: params.pageSize ?? paginationProps.pageSize ?? 10,
         ...values,
         // 如果从设备页面跳转过来，强制使用 URL 中的 deviceId
         ...(isFromDevice ? { deviceId: deviceIdFromUrl } : {}),
@@ -82,8 +83,8 @@ const PortStatusPage: FC = () => {
     },
     {
       externalPagination: {
-        current: paginationProps.current,
-        pageSize: paginationProps.pageSize,
+        current: paginationProps.current ?? 1,
+        pageSize: paginationProps.pageSize ?? 10,
         setCurrent,
         setPageSize,
         setTotal,
@@ -126,7 +127,7 @@ const PortStatusPage: FC = () => {
       const result = await post('/network/devices/list', {
         current: 1,
         pageSize: 1000,
-      }) as { data?: { list: Record<string, unknown>[] } };
+      }) as { data?: { list: NetworkDevice[] } };
       setDevices(result.data?.list || []);
     } catch (error) {
       console.error('加载设备列表失败:', error);
@@ -422,11 +423,11 @@ const PortStatusPage: FC = () => {
           scroll={{ x: 1400 }}
           pagination={paginationProps}
           onChange={(pagination) => {
-            setCurrent(pagination.current);
-            setPageSize(pagination.pageSize);
+            setCurrent(pagination.current ?? 1);
+            setPageSize(pagination.pageSize ?? 10);
             loadPortStatus({
-              current: pagination.current,
-              pageSize: pagination.pageSize,
+              current: pagination.current ?? 1,
+              pageSize: pagination.pageSize ?? 10,
             });
           }}
           expandable={{
