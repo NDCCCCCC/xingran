@@ -46,14 +46,15 @@ interface WorkstationOption {
 
 interface NetworkDeviceOption {
   id: string;
-  name: string;
+  deviceName: string;
   ipAddress: string;
 }
 
 interface DevicePortOption {
   id: string;
-  portName: string;
-  status: string;
+  interfaceName: string;
+  adminStatus?: string;
+  description?: string;
 }
 
 interface CascaderOption {
@@ -107,8 +108,8 @@ const InfoPointManagement: FC = () => {
     },
     {
       externalPagination: {
-        current: paginationProps.current,
-        pageSize: paginationProps.pageSize,
+        current: paginationProps.current ?? 1,
+        pageSize: paginationProps.pageSize ?? 10,
         setCurrent,
         setPageSize,
         setTotal,
@@ -300,10 +301,10 @@ const InfoPointManagement: FC = () => {
 
   const handleSave = async () => {
     try {
-      const values = await infoPointForm.validateFields();
+      const values = await infoPointForm.validateFields() as Record<string, unknown>;
 
       if (Array.isArray(values.workstationId)) {
-        values.workstationId = values.workstationId[values.workstationId.length - 1];
+        values.workstationId = (values.workstationId as unknown[])[values.workstationId.length - 1];
       }
 
       if (editingInfoPoint) {
@@ -644,16 +645,18 @@ const InfoPointManagement: FC = () => {
                     filterOption={(input, option) => {
                       const device = networkDevices.find(d => d.id === option?.value);
                       if (!device) return false;
-                      const searchText = `${device.name} ${device.ipAddress}`.toLowerCase();
+                      const deviceName = device.deviceName || '';
+                      const searchText = `${deviceName} ${device.ipAddress}`.toLowerCase();
                       return searchText.includes(input.toLowerCase());
                     }}
                     optionLabelProp="label"
                   >
                     {networkDevices.map(d => {
-                      const fullName = `${d.name} (${d.ipAddress})`;
-                      const displayName = `${truncateDeviceName(d.name)} (${d.ipAddress})`;
+                      const deviceName = d.deviceName || '未命名设备';
+                      const fullName = `${deviceName} (${d.ipAddress})`;
+                      const displayName = deviceName.length > 12 ? `${deviceName.substring(0, 12)}... (${d.ipAddress})` : fullName;
                       return (
-                        <Option key={d.id} value={d.id} label={displayName} name={d.name}>
+                        <Option key={d.id} value={d.id} label={deviceName}>
                           <Tooltip title={fullName} placement="right">
                             <span>{displayName}</span>
                           </Tooltip>
@@ -673,12 +676,16 @@ const InfoPointManagement: FC = () => {
                     filterOption={(input, option) =>
                       (option?.label as string)?.toString().toLowerCase().includes(input.toLowerCase())
                     }
+                    optionLabelProp="label"
                   >
-                    {devicePorts.map(p => (
-                      <Option key={p.id} value={p.id}>
-                        {p.portName}
-                      </Option>
-                    ))}
+                    {devicePorts.map(p => {
+                      const displayLabel = p.interfaceName || p.id || '未命名端口';
+                      return (
+                        <Option key={p.id} value={p.id} label={displayLabel}>
+                          {displayLabel}
+                        </Option>
+                      );
+                    })}
                   </Select>
                 </Form.Item>
               </Col>
