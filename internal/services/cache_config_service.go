@@ -122,7 +122,14 @@ func (s *CacheConfigService) LoadConfigs(ctx context.Context) error {
 			logger.Warnf("[CACHE_CONFIG] 解析配置失败 [%s=%s]: %v，将使用默认值", config.ConfigKey, config.ConfigValue, err)
 			// 如果解析失败，检查是否有默认值，如果有则修复数据库
 			if info, ok := configInfo[config.ConfigKey]; ok {
-				s.configs[config.ConfigKey] = time.Duration(info.Default) * time.Minute
+				var duration time.Duration
+				// 特殊处理：未读通知数量缓存，默认值为 0 表示 30 秒
+				if config.ConfigKey == CacheConfigNoticeUnreadCount && info.Default == 0 {
+					duration = 30 * time.Second
+				} else {
+					duration = time.Duration(info.Default) * time.Minute
+				}
+				s.configs[config.ConfigKey] = duration
 				// 修复数据库中的值
 				s.db.Model(&models.Config{}).Where("config_key = ?", config.ConfigKey).
 					Update("config_value", strconv.Itoa(info.Default))
@@ -131,20 +138,38 @@ func (s *CacheConfigService) LoadConfigs(ctx context.Context) error {
 			continue
 		}
 
+		// 特殊处理：未读通知数量缓存，值为 0 表示 30 秒
+		var duration time.Duration
+		if config.ConfigKey == CacheConfigNoticeUnreadCount && minutes == 0 {
+			duration = 30 * time.Second
+		} else {
+			duration = time.Duration(minutes) * time.Minute
+		}
+		s.configs[config.ConfigKey] = duration
+
 		// 验证配置值是否在有效范围内
 		if info, ok := configInfo[config.ConfigKey]; ok {
-			if minutes < info.Min || minutes > info.Max {
+			// 特殊处理：未读通知数量缓存的 0 值表示 30 秒，是有效的
+			if config.ConfigKey == CacheConfigNoticeUnreadCount && minutes == 0 {
+				// 跳过验证，duration 已经设置为 30 秒
+			} else if minutes < info.Min || minutes > info.Max {
 				logger.Warnf("[CACHE_CONFIG] 配置值超出范围 [%s=%d]，范围：%d-%d，将重置为默认值",
 					config.ConfigKey, minutes, info.Min, info.Max)
-				minutes = info.Default
+				// 重新计算 duration
+				if config.ConfigKey == CacheConfigNoticeUnreadCount && info.Default == 0 {
+					duration = 30 * time.Second
+				} else {
+					duration = time.Duration(info.Default) * time.Minute
+				}
+				s.configs[config.ConfigKey] = duration
 				// 修复数据库中的值
 				s.db.Model(&models.Config{}).Where("config_key = ?", config.ConfigKey).
 					Update("config_value", strconv.Itoa(info.Default))
+				continue
 			}
 		}
 
-		s.configs[config.ConfigKey] = time.Duration(minutes) * time.Minute
-		logger.Infof("[CACHE_CONFIG] 加载配置: %s = %d 分钟", config.ConfigKey, minutes)
+		logger.Infof("[CACHE_CONFIG] 加载配置: %s = %v", config.ConfigKey, duration)
 	}
 
 	// 如果配置为空，使用默认值并写入数据库
