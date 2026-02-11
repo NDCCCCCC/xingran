@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import {
   Button,
   Table,
@@ -9,7 +9,6 @@ import {
   Switch,
   Space,
   message,
-  Popconfirm,
   Card,
   Tag
 } from 'antd';
@@ -290,18 +289,15 @@ const ADConfigPage: FC = () => {
             label: '删除',
             icon: <DeleteOutlined />,
             danger: true,
-            render: () => (
-              <Popconfirm
-                title="确定删除此配置吗？"
-                onConfirm={() => handleDelete(record.id)}
-                okText="确定"
-                cancelText="取消"
-              >
-                <Button type="link" danger ghost icon={<DeleteOutlined />} size="small">
-                  删除
-                </Button>
-              </Popconfirm>
-            ),
+            onClick: () => {
+              Modal.confirm({
+                title: '确定删除此配置吗？',
+                okText: '确定',
+                cancelText: '取消',
+                okButtonProps: { danger: true },
+                onOk: () => handleDelete(record.id),
+              });
+            },
           },
         ];
 
@@ -424,3 +420,4 @@ const ADConfigPage: FC = () => {
 };
 
 export default ADConfigPage;
+

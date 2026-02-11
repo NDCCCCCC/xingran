@@ -11,7 +11,6 @@ import {
   Form,
   message,
   Drawer,
-  Popconfirm
 } from 'antd';
 import {
   ReloadOutlined,
@@ -303,16 +302,23 @@ const ADGroupPage: FC = () => {
       title: '操作',
       key: 'action',
       render: (_: unknown, record: ADUser) => (
-        <Popconfirm
-          title="确定移除该成员吗？"
-          onConfirm={() => handleRemoveMember(record.userDn)}
-          okText="确定"
-          cancelText="取消"
+        <Button
+          type="link"
+          size="small"
+          danger
+          icon={<MinusCircleOutlined />}
+          onClick={() => {
+            Modal.confirm({
+              title: '确定移除该成员吗？',
+              okText: '确定',
+              cancelText: '取消',
+              okButtonProps: { danger: true },
+              onOk: () => handleRemoveMember(record.userDn),
+            });
+          }}
         >
-          <Button type="link" size="small" danger icon={<MinusCircleOutlined />}>
-            移除
-          </Button>
-        </Popconfirm>
+          移除
+        </Button>
       ),
     },
   ];
