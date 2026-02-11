@@ -400,8 +400,8 @@ const WorkOrderPage: FC = () => {
     handleEdit,
     handleAssignToTodayDuty,
     handleDelete,
-    current: paginationProps.current,
-    pageSize: paginationProps.pageSize,
+    current: paginationProps.current ?? 1,
+    pageSize: paginationProps.pageSize ?? 10,
   }), [openDetailDrawer, handleEdit, handleAssignToTodayDuty, handleDelete, paginationProps]);
 
   // 分类树 - 使用 useMemo 避免重复构建

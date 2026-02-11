@@ -73,7 +73,7 @@ export function useTemplateData(searchForm: FormInstance<unknown>, current: numb
   const fetchList = useCallback(async (page?: number, pageSize?: number) => {
     setLoading(true);
     try {
-      const values = searchForm.getFieldsValue();
+      const values = searchForm.getFieldsValue() as { title?: string; isEnabled?: boolean };
       const result = await getPeriodicTemplateList({
         current: page ?? current,
         pageSize: pageSize ?? pageSize,

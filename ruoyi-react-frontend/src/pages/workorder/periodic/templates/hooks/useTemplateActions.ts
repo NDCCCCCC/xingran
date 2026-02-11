@@ -16,6 +16,8 @@ import {
   type PeriodicWorkOrderTemplate,
   type CreatePeriodicTemplateRequest,
   type UpdatePeriodicTemplateRequest,
+  WorkOrderType,
+  PeriodicAssignType,
 } from '@/lib/workorderApi';
 
 export interface UseTemplateActionsParams {
@@ -135,10 +137,10 @@ export function useTemplateActions(params: UseTemplateActionsParams): UseTemplat
           workOrderTitle: values.workOrderTitle,
           description: values.description,
           categoryId: values.categoryId,
-          type: values.type,
+          type: values.type as WorkOrderType,
           priority: values.priority,
           cronExpression: values.cronExpression,
-          assignType: values.assignType,
+          assignType: values.assignType as PeriodicAssignType,
           assignTargetId: values.assignTargetId,
           notifyAssignee: values.notifyAssignee,
         };
@@ -150,10 +152,10 @@ export function useTemplateActions(params: UseTemplateActionsParams): UseTemplat
           workOrderTitle: values.workOrderTitle,
           description: values.description,
           categoryId: values.categoryId,
-          type: values.type,
+          type: values.type as WorkOrderType,
           priority: values.priority,
           cronExpression: values.cronExpression,
-          assignType: values.assignType,
+          assignType: values.assignType as PeriodicAssignType,
           assignTargetId: values.assignTargetId,
           notifyAssignee: values.notifyAssignee,
         };

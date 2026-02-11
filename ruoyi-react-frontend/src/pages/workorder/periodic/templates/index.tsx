@@ -91,15 +91,15 @@ function getTemplateTableColumns(props: TemplateTableColumnsProps): ColumnsType<
       dataIndex: 'type',
       key: 'type',
       width: 80,
-      render: (type) => TYPE_CONFIG[type]?.text || type,
+      render: (type: string) => TYPE_CONFIG[type as keyof typeof TYPE_CONFIG]?.text || type,
     },
     {
       title: '优先级',
       dataIndex: 'priority',
       key: 'priority',
       width: 80,
-      render: (priority) => (
-        <Tag color={PRIORITY_CONFIG[priority]?.color}>{PRIORITY_CONFIG[priority]?.text}</Tag>
+      render: (priority: number) => (
+        <Tag color={PRIORITY_CONFIG[priority as keyof typeof PRIORITY_CONFIG]?.color}>{PRIORITY_CONFIG[priority as keyof typeof PRIORITY_CONFIG]?.text}</Tag>
       ),
     },
     {
@@ -113,7 +113,7 @@ function getTemplateTableColumns(props: TemplateTableColumnsProps): ColumnsType<
       dataIndex: 'assignType',
       key: 'assignType',
       width: 120,
-      render: (type) => ASSIGN_TYPE_CONFIG[type]?.text || type,
+      render: (type: string) => ASSIGN_TYPE_CONFIG[type as keyof typeof ASSIGN_TYPE_CONFIG]?.text || type,
     },
     {
       title: '下次执行',
@@ -236,7 +236,7 @@ const PeriodicTemplatePage: FC = () => {
     fetchDutyPools,
     fetchLogs,
     setSelectedTemplate,
-  } = useTemplateData(form, paginationProps.current, paginationProps.pageSize);
+  } = useTemplateData(form, paginationProps.current ?? 1, paginationProps.pageSize ?? 10);
 
   // 使用操作管理 Hook
   const {
@@ -301,8 +301,8 @@ const PeriodicTemplatePage: FC = () => {
 
   // 表格列
   const columns = getTemplateTableColumns({
-    current: paginationProps.current,
-    pageSize: paginationProps.pageSize,
+    current: paginationProps.current ?? 1,
+    pageSize: paginationProps.pageSize ?? 10,
     handleEdit: handleOpenEditModal,
     handleToggleEnabled,
     handleGenerateNow,

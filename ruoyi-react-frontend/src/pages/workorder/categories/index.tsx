@@ -198,7 +198,9 @@ const WorkOrderCategoryPage: FC = () => {
                     icon={<EditOutlined />}
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleEdit(treeNode.data);
+                      if (treeNode.data) {
+                        handleEdit(treeNode.data);
+                      }
                     }}
                   >
                     编辑

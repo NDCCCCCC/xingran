@@ -4,6 +4,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { message } from 'antd';
+import type { FormInstance } from 'antd/es/form';
 import {
   getWorkOrderList,
   getUserList,
@@ -38,7 +39,7 @@ export interface WorkOrderStats {
 }
 
 export interface UseWorkOrderDataOptions {
-  form: Record<string, (fieldName: string) => unknown>;
+  form: FormInstance;
 }
 
 export interface UseWorkOrderDataReturn {
