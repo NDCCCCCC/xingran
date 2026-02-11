@@ -1,7 +1,7 @@
 import type { WorkstationNode } from '@/components/shared/FloorPlanEditor.types';
 import type { Point, Size } from '@/utils/cad/geometry';
 
-export type { Point, Size };
+export type { Point, Size, WorkstationNode };
 
 export type WallType = 'straight' | 'curved' | 'l_shaped' | 'polyline';
 

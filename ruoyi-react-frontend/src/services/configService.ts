@@ -107,13 +107,13 @@ class ConfigService {
 					type: layoutType,
 					sidebar: {
 						collapsed: Boolean(legacyPrefs.sidebarCollapsed),
-						width: typeof legacyPrefs.sidebarWidth === 'number' ? legacyPrefs.sidebarWidth as number : undefined,
-						collapsedWidth: typeof legacyPrefs.sidebarCollapsedWidth === 'number' ? legacyPrefs.sidebarCollapsedWidth as number : undefined,
+						width: typeof legacyPrefs.sidebarWidth === 'number' ? (legacyPrefs.sidebarWidth as number) : defaultLayoutConfiguration.sidebar.width,
+						collapsedWidth: typeof legacyPrefs.sidebarCollapsedWidth === 'number' ? (legacyPrefs.sidebarCollapsedWidth as number) : defaultLayoutConfiguration.sidebar.collapsedWidth,
 					},
 					density: density,
 				},
 				data: {
-					defaultPageSize: typeof legacyPrefs.pageSize === 'number' ? legacyPrefs.pageSize as number : undefined,
+					defaultPageSize: typeof legacyPrefs.pageSize === 'number' ? (legacyPrefs.pageSize as number) : defaultDataConfiguration.defaultPageSize,
 					pageSizeOptions: [10, 20, 50, 100],
 				},
 				language: legacyPrefs.language as 'zh-CN' | 'en-US' | undefined,
