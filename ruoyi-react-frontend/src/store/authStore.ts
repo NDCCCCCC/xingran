@@ -95,6 +95,10 @@ export const useAuthStore = create<AuthStore>()(
 				// 清除菜单
 				useMenuStore.getState().clearMenus();
 
+				// 清除保存的最后访问路径
+				const { clearLastPath } = await import('@/router/DynamicRoutes');
+				clearLastPath();
+
 				set({
 					user: null,
 					isAuthenticated: false,

@@ -3,7 +3,7 @@
  * 根据后端菜单数据动态生成路由配置
  */
 
-import { lazy, useMemo, Suspense } from 'react';
+import { lazy, useMemo, Suspense, useEffect, useState } from 'react';
 import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useMenuStore } from '@/store/menuStore';
 import { useAuthStore } from '@/store/authStore';
@@ -12,6 +12,39 @@ import type { MenuRouteConfig } from '@/types/menu';
 import Layout from '@/components/layout';
 import Login from '@/pages/login';
 import { Spin } from 'antd';
+
+// sessionStorage key for storing last visited path
+const LAST_PATH_KEY = 'ruoyi_last_visited_path';
+
+// Get last visited path from sessionStorage
+export const getLastPath = (): string | null => {
+  try {
+    return sessionStorage.getItem(LAST_PATH_KEY);
+  } catch {
+    return null;
+  }
+};
+
+// Save current path to sessionStorage
+export const saveLastPath = (path: string): void => {
+  try {
+    // 保存所有路径，除了 /login
+    if (path && path !== '/login') {
+      sessionStorage.setItem(LAST_PATH_KEY, path);
+    }
+  } catch {
+    // Ignore sessionStorage errors
+  }
+};
+
+// Clear last path (for logout)
+export const clearLastPath = (): void => {
+  try {
+    sessionStorage.removeItem(LAST_PATH_KEY);
+  } catch {
+    // Ignore sessionStorage errors
+  }
+};
 
 // 路由缓存
 let cachedRoutes: MenuRouteConfig[] | null = null;
@@ -93,13 +126,8 @@ export function DynamicRoutes() {
   const { isAuthenticated, initialized } = useAuthStore();
   const location = useLocation();
 
-  // 检查是否是上传文件路径
-  const isUploadsPath = location.pathname.startsWith('/uploads/');
-
-  // 如果是上传文件路径，不渲染路由
-  if (isUploadsPath) {
-    return <UploadsFallback />;
-  }
+  // 使用 state 来保存上次访问的路径
+  const [lastPath, setLastPath] = useState<string | null>(() => getLastPath());
 
   const routeElements = useMemo(() => {
     if (allMenus.length === 0) {
@@ -117,6 +145,24 @@ export function DynamicRoutes() {
 
     return configs.map(createLazyRoute).filter(Boolean);
   }, [allMenus.length]);
+
+  // 保存当前路径到 sessionStorage
+  useEffect(() => {
+    if (isAuthenticated && location.pathname) {
+      // 保存到 sessionStorage
+      saveLastPath(location.pathname);
+      // 同时更新 state
+      setLastPath(location.pathname);
+    }
+  }, [location.pathname, isAuthenticated]);
+
+  // 检查是否是上传文件路径
+  const isUploadsPath = location.pathname.startsWith('/uploads/');
+
+  // 如果是上传文件路径，不渲染路由
+  if (isUploadsPath) {
+    return <UploadsFallback />;
+  }
 
   // 初始化中，显示 loading
   if (!initialized) {
@@ -137,7 +183,7 @@ export function DynamicRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<Navigate to="/" replace />} />
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/" element={<Navigate to={lastPath || '/dashboard'} replace />} />
       <Route element={<Layout><Outlet /></Layout>}>
         {routeElements}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
