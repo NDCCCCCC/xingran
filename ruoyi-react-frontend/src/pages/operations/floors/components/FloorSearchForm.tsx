@@ -147,7 +147,7 @@ export const FloorSearchForm: FC<FloorSearchFormProps> = ({
             导出
           </Button>
           {selectedCount > 0 && (
-            <Button danger icon={<DeleteOutlined />} onClick={onBatchDelete}>
+            <Button icon={<DeleteOutlined />} onClick={onBatchDelete} style={{ color: '#ff4d4f' }}>
               批量删除 ({selectedCount})
             </Button>
           )}

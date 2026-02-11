@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 工位管理页面
  */
 
@@ -286,8 +286,7 @@ const WorkstationManagement: FC = () => {
               </Button>
               {selectedRowKeys.length > 0 && (
                 <Button
-                  danger
-                  icon={<DeleteOutlined />}
+                  icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }}
                   onClick={() => handleBatchDelete(selectedRowKeys, handleSuccess, resetSelection)}
                 >
                   批量删除 ({selectedRowKeys.length})
@@ -377,3 +376,4 @@ const WorkstationManagement: FC = () => {
 };
 
 export default WorkstationManagement;
+

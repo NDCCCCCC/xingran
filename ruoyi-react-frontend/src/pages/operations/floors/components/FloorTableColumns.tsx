@@ -3,7 +3,7 @@
  */
 
 import type { ColumnsType } from 'antd/es/table';
-import { Popconfirm, Button } from 'antd';
+import { Modal, Button } from 'antd';
 import { EditOutlined, DeleteOutlined, BgColorsOutlined } from '@ant-design/icons';
 import type { Floor } from '@/types';
 import { createStatusColumn, createDateTimeColumn } from '@/utils/tableHelpers';
@@ -60,18 +60,15 @@ export function createFloorTableColumns(callbacks: FloorTableColumnCallbacks): C
             label: '删除',
             icon: <DeleteOutlined />,
             danger: true,
-            render: () => (
-              <Popconfirm
-                title="确定要删除这个楼层吗？"
-                onConfirm={() => onDelete(record.id)}
-                okText="确定"
-                cancelText="取消"
-              >
-                <Button type="link" danger ghost icon={<DeleteOutlined />} size="small">
-                  删除
-                </Button>
-              </Popconfirm>
-            ),
+            onClick: () => {
+              Modal.confirm({
+                title: '确定要删除这个楼层吗？',
+                okText: '确定',
+                cancelText: '取消',
+                okButtonProps: { danger: true },
+                onOk: () => onDelete(record.id),
+              });
+            },
           },
         ];
         return <ActionButtons actions={actions} />;

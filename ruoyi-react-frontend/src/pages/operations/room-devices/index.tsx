@@ -1,11 +1,11 @@
-/**
+﻿/**
  * 机房设备管理页面
  */
 
 import { useState, useCallback, useEffect } from 'react';
 import type { FC } from 'react';
 import {
-  Table, Button, Space, Modal, Form, Input, InputNumber, Select, Popconfirm,
+  Table, Button, Space, Modal, Form, Input, InputNumber, Select,
   Tag, Card, Row, Col, Alert, Radio, DatePicker, Layout,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -237,11 +237,15 @@ const RoomDeviceManagement: FC = () => {
           { key: 'edit', label: '编辑', icon: <EditOutlined />, onClick: () => openModal(record) },
           {
             key: 'delete', label: '删除', icon: <DeleteOutlined />, danger: true,
-            render: () => (
-              <Popconfirm title="确定要删除这个设备吗？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消">
-                <Button type="link" danger icon={<DeleteOutlined />} size="small">删除</Button>
-              </Popconfirm>
-            ),
+            onClick: () => {
+              Modal.confirm({
+                title: '确定要删除这个设备吗？',
+                okText: '确定',
+                cancelText: '取消',
+                okButtonProps: { danger: true },
+                onOk: () => handleDelete(record.id),
+              });
+            },
           },
         ];
         return <ActionButtons actions={actions} />;
@@ -259,9 +263,19 @@ const RoomDeviceManagement: FC = () => {
               hoverable
               actions={[
                 <EditOutlined key="edit" onClick={() => openModal(device)} />,
-                <Popconfirm key="delete" title="确定要删除这个设备吗？" onConfirm={() => handleDelete(device.id)} okText="确定" cancelText="取消">
-                  <DeleteOutlined style={{ color: '#ff4d4f' }} />
-                </Popconfirm>,
+                <DeleteOutlined
+                  key="delete"
+                  style={{ color: '#ff4d4f' }}
+                  onClick={() => {
+                    Modal.confirm({
+                      title: '确定要删除这个设备吗？',
+                      okText: '确定',
+                      cancelText: '取消',
+                      okButtonProps: { danger: true },
+                      onOk: () => handleDelete(device.id),
+                    });
+                  }}
+                />,
               ]}
             >
               <Card.Meta
@@ -354,7 +368,7 @@ const RoomDeviceManagement: FC = () => {
               </Radio.Group>
               <Button icon={<ImportOutlined />} onClick={() => setImportVisible(true)}>导入</Button>
               <Button icon={<ExportOutlined />} onClick={() => setExportVisible(true)}>导出</Button>
-              {selectedRowKeys.length > 0 && <Button danger ghost icon={<DeleteOutlined />} onClick={handleBatchDelete}>批量删除 ({selectedRowKeys.length})</Button>}
+              {selectedRowKeys.length > 0 && <Button icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }} onClick={handleBatchDelete}>批量删除 ({selectedRowKeys.length})</Button>}
               <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>新增设备</Button>
             </Space>
           </div>
@@ -464,3 +478,4 @@ const RoomDeviceManagement: FC = () => {
 };
 
 export default RoomDeviceManagement;
+

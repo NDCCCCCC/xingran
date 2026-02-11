@@ -1,11 +1,11 @@
-/**
+﻿/**
  * 信息点管理页面
  */
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import type { FC } from 'react';
 import {
-  Table, Button, Space, Modal, Form, Input, Select, Popconfirm,
+  Table, Button, Space, Modal, Form, Input, Select,
   Tag, Card, Row, Col, Alert, Radio, Cascader, Tooltip, Layout,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -499,11 +499,15 @@ const InfoPointManagement: FC = () => {
           { key: 'edit', label: '编辑', icon: <EditOutlined />, onClick: () => openModal(record) },
           {
             key: 'delete', label: '删除', icon: <DeleteOutlined />, danger: true,
-            render: () => (
-              <Popconfirm title="确定要删除这个信息点吗？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消">
-                <Button type="link" danger icon={<DeleteOutlined />} size="small">删除</Button>
-              </Popconfirm>
-            ),
+            onClick: () => {
+              Modal.confirm({
+                title: '确定要删除这个信息点吗？',
+                okText: '确定',
+                cancelText: '取消',
+                okButtonProps: { danger: true },
+                onOk: () => handleDelete(record.id),
+              });
+            },
           },
         ];
         return <ActionButtons actions={actions} />;
@@ -521,9 +525,19 @@ const InfoPointManagement: FC = () => {
               hoverable
               actions={[
                 <EditOutlined key="edit" onClick={() => openModal(infoPoint)} />,
-                <Popconfirm key="delete" title="确定要删除这个信息点吗？" onConfirm={() => handleDelete(infoPoint.id)} okText="确定" cancelText="取消">
-                  <DeleteOutlined style={{ color: '#ff4d4f' }} />
-                </Popconfirm>,
+                <DeleteOutlined
+                  key="delete"
+                  style={{ color: '#ff4d4f' }}
+                  onClick={() => {
+                    Modal.confirm({
+                      title: '确定要删除这个信息点吗？',
+                      okText: '确定',
+                      cancelText: '取消',
+                      okButtonProps: { danger: true },
+                      onOk: () => handleDelete(infoPoint.id),
+                    });
+                  }}
+                />,
               ]}
             >
               <Card.Meta
@@ -602,7 +616,7 @@ const InfoPointManagement: FC = () => {
               </Radio.Group>
               <Button icon={<ImportOutlined />} onClick={() => setImportVisible(true)}>导入</Button>
               <Button icon={<ExportOutlined />} onClick={() => setExportVisible(true)}>导出</Button>
-              {selectedRowKeys.length > 0 && <Button danger ghost icon={<DeleteOutlined />} onClick={handleBatchDelete}>批量删除 ({selectedRowKeys.length})</Button>}
+              {selectedRowKeys.length > 0 && <Button icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }} onClick={handleBatchDelete}>批量删除 ({selectedRowKeys.length})</Button>}
               <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>新增信息点</Button>
             </Space>
           </div>
@@ -702,3 +716,4 @@ const InfoPointManagement: FC = () => {
 };
 
 export default InfoPointManagement;
+

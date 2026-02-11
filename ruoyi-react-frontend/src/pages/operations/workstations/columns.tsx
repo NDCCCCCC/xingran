@@ -4,7 +4,7 @@
  */
 
 import type { ColumnsType } from 'antd/es/table';
-import { Button, Space, Popconfirm } from 'antd';
+import { Modal } from 'antd';
 import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { WorkstationOps } from '@/types';
 import ActionButtons from '@/components/shared/ActionButtons';
@@ -54,18 +54,15 @@ export function getWorkstationColumns(params: WorkstationColumnsParams): Columns
             label: '删除',
             icon: <DeleteOutlined />,
             danger: true,
-            render: () => (
-              <Popconfirm
-                title="确定要删除这个工位吗？"
-                onConfirm={() => handleDelete(record.id)}
-                okText="确定"
-                cancelText="取消"
-              >
-                <Button type="link" danger icon={<DeleteOutlined />} size="small">
-                  删除
-                </Button>
-              </Popconfirm>
-            ),
+            onClick: () => {
+              Modal.confirm({
+                title: '确定要删除这个工位吗？',
+                okText: '确定',
+                cancelText: '取消',
+                okButtonProps: { danger: true },
+                onOk: () => handleDelete(record.id),
+              });
+            },
           },
         ];
         return <ActionButtons actions={actions} />;

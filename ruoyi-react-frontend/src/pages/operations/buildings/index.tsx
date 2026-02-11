@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useRef, type FC, type Key } from 'react';
+﻿import { useState, useEffect, useCallback, useRef, type FC, type Key } from 'react';
 import {
-  Table, Button, Space, Modal, Form, Input, InputNumber, Select, Popconfirm,
+  Table, Button, Space, Modal, Form, Input, InputNumber, Select,
   Tag, Card, Row, Col, Statistic, Alert, Radio, Spin, Layout,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -314,11 +314,15 @@ const BuildingManagement: FC = () => {
           { key: 'edit', label: '编辑', icon: <EditOutlined />, onClick: () => openModal(record) },
           {
             key: 'delete', label: '删除', icon: <DeleteOutlined />, danger: true,
-            render: () => (
-              <Popconfirm title="确定要删除这个楼宇吗？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消">
-                <Button type="link" danger ghost icon={<DeleteOutlined />} size="small">删除</Button>
-              </Popconfirm>
-            ),
+            onClick: () => {
+              Modal.confirm({
+                title: '确定要删除这个楼宇吗？',
+                okText: '确定',
+                cancelText: '取消',
+                okButtonProps: { danger: true },
+                onOk: () => handleDelete(record.id),
+              });
+            },
           },
         ];
         return <ActionButtons actions={actions} />;
@@ -334,9 +338,19 @@ const BuildingManagement: FC = () => {
           <Col key={building.id} xs={24} sm={12} md={8} lg={6}>
             <Card hoverable actions={[
               <EditOutlined key="edit" onClick={() => openModal(building)} />,
-              <Popconfirm key="delete" title="确定要删除这个楼宇吗？" onConfirm={() => handleDelete(building.id)} okText="确定" cancelText="取消">
-                <DeleteOutlined style={{ color: '#ff4d4f' }} />
-              </Popconfirm>,
+              <DeleteOutlined
+                key="delete"
+                style={{ color: '#ff4d4f' }}
+                onClick={() => {
+                  Modal.confirm({
+                    title: '确定要删除这个楼宇吗？',
+                    okText: '确定',
+                    cancelText: '取消',
+                    okButtonProps: { danger: true },
+                    onOk: () => handleDelete(building.id),
+                  });
+                }}
+              />,
             ]}>
               <Card.Meta
                 title={
@@ -396,7 +410,7 @@ const BuildingManagement: FC = () => {
             </Radio.Group>
             <Button icon={<ImportOutlined />} onClick={() => setImportVisible(true)}>导入</Button>
             <Button icon={<ExportOutlined />} onClick={() => setExportVisible(true)}>导出</Button>
-            {selectedRowKeys.length > 0 && <Button danger ghost icon={<DeleteOutlined />} onClick={handleBatchDelete}>批量删除 ({selectedRowKeys.length})</Button>}
+            {selectedRowKeys.length > 0 && <Button icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }} onClick={handleBatchDelete}>批量删除 ({selectedRowKeys.length})</Button>}
             <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>新增楼宇</Button>
           </Space>
         </div>
@@ -511,3 +525,4 @@ const BuildingManagement: FC = () => {
 };
 
 export default BuildingManagement;
+
