@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import type { FC } from 'react';
-import { Button, Form, Input, Modal, InputNumber, Select, Space, Tag, message, Popconfirm, Card, Tree, Radio } from 'antd';
+import { Button, Form, Input, Modal, InputNumber, Select, Space, Tag, message, Card, Tree, Radio } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined, FolderOutlined } from '@ant-design/icons';
 import {
   getWorkOrderCategoryList,
@@ -205,25 +205,23 @@ const WorkOrderCategoryPage: FC = () => {
                   >
                     编辑
                   </Button>
-                  <Popconfirm
-                    title="确定要删除吗？"
-                    onConfirm={(e) => {
-                      e?.stopPropagation();
-                      handleDelete(treeNode.data?.id || '');
+                  <Button
+                    type="link"
+                    size="small"
+                    icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      Modal.confirm({
+                        title: '确定要删除吗？',
+                        okText: '确定',
+                        cancelText: '取消',
+                        okButtonProps: { danger: true },
+                        onOk: () => handleDelete(treeNode.data?.id || ''),
+                      });
                     }}
-                    okText="确定"
-                    cancelText="取消"
                   >
-                    <Button
-                      type="link"
-                      size="small"
-                      danger
-                      icon={<DeleteOutlined />}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      删除
-                    </Button>
-                  </Popconfirm>
+                    删除
+                  </Button>
                 </Space>
               </div>
             );
@@ -290,3 +288,4 @@ const WorkOrderCategoryPage: FC = () => {
 };
 
 export default WorkOrderCategoryPage;
+
