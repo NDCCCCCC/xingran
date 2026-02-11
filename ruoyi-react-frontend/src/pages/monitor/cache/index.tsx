@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Cache 缓存管理页面
  */
 
@@ -155,7 +155,7 @@ function getCacheTableColumns(props: CacheTableColumnsProps): ColumnsType<CacheI
                 title="确定要删除这个缓存吗？"
                 onConfirm={() => handleBatchOperate('del', [record.key])}
               >
-                <Button type="link" danger ghost icon={<DeleteOutlined />} size="small">
+                <Button type="link" icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }} size="small">
                   删除
                 </Button>
               </Popconfirm>
@@ -503,7 +503,7 @@ const CacheManager: FC = () => {
                 <Button icon={<ExportOutlined />} onClick={handleExport}>
                   导出
                 </Button>
-                <Button danger icon={<DeleteOutlined />} onClick={handleClearAll}>
+                <Button icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }} onClick={handleClearAll}>
                   清空
                 </Button>
               </Space>
@@ -816,3 +816,4 @@ const CacheManager: FC = () => {
 };
 
 export default CacheManager;
+

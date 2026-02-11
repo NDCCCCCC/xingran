@@ -2,7 +2,7 @@
  * 定时任务表格列定义
  */
 
-import { Space, Button, Tooltip, Tag, Popconfirm } from 'antd';
+import { Space, Button, Tooltip, Tag, Modal } from 'antd';
 import {
   PlayCircleOutlined,
   PauseCircleOutlined,
@@ -125,17 +125,16 @@ export function getJobColumns(params: GetJobColumnsParams): ColumnsType<JobInfo>
             label: '删除',
             icon: <DeleteOutlined />,
             danger: true,
-            render: () => (
-              <Popconfirm
-                title="确定要删除这个任务吗？"
-                description="删除后将无法恢复"
-                onConfirm={() => handleDelete(record)}
-              >
-                <Button type="link" danger ghost icon={<DeleteOutlined />} size="small">
-                  删除
-                </Button>
-              </Popconfirm>
-            ),
+            onClick: () => {
+              Modal.confirm({
+                title: '确定要删除这个任务吗？',
+                content: '删除后将无法恢复',
+                okText: '确定',
+                cancelText: '取消',
+                okButtonProps: { danger: true },
+                onOk: () => handleDelete(record),
+              });
+            },
           },
         ];
 
