@@ -92,7 +92,7 @@ export function HolidayBatchModal({
                   />
                 </td>
                 <td className="border p-2 text-center">
-                  <Button type="link" danger size="small" onClick={() => onRemoveRow(index)}>
+                  <Button type="link" size="small" style={{ color: '#ff4d4f' }} onClick={() => onRemoveRow(index)}>
                     删除
                   </Button>
                 </td>

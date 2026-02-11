@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Select, Table, Button, Space, Tag, Upload, Popconfirm } from 'antd';
+import { Card, Select, Table, Button, Space, Tag, Upload, Modal } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
   PlusOutlined,
@@ -112,9 +112,22 @@ export const HolidayManagement: React.FC<HolidayManagementProps> = ({
       render: (_: unknown, record: Holiday) => (
         <Space size="small">
           <Button type="link" size="small" onClick={() => onEdit(record)}>编辑</Button>
-          <Popconfirm title="确定删除?" onConfirm={() => onDelete(record.id)} okText="确定" cancelText="取消">
-            <Button type="link" size="small" danger>删除</Button>
-          </Popconfirm>
+          <Button
+            type="link"
+            size="small"
+            danger
+            onClick={() => {
+              Modal.confirm({
+                title: '确定删除?',
+                okText: '确定',
+                cancelText: '取消',
+                okButtonProps: { danger: true },
+                onOk: () => onDelete(record.id),
+              });
+            }}
+          >
+            删除
+          </Button>
         </Space>
       ),
     },

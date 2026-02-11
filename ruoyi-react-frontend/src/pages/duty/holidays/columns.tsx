@@ -4,7 +4,7 @@
  */
 
 import type { ColumnsType } from 'antd/es/table';
-import { Button, Space, Tag, Popconfirm } from 'antd';
+import { Button, Space, Tag, Modal } from 'antd';
 import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { Holiday } from '@/lib/dutyApi';
 import { WEEKDAY_TEXTS } from './constants';
@@ -87,11 +87,22 @@ export function getHolidayColumns(params: HolidayColumnsParams): ColumnsType<Hol
           <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
             编辑
           </Button>
-          <Popconfirm title="确定要删除吗？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消">
-            <Button type="link" size="small" danger ghost icon={<DeleteOutlined />}>
-              删除
-            </Button>
-          </Popconfirm>
+          <Button
+            type="link"
+            size="small"
+            icon={<DeleteOutlined />}
+            onClick={() => {
+              Modal.confirm({
+                title: '确定要删除吗？',
+                okText: '确定',
+                cancelText: '取消',
+                okButtonProps: { danger: true },
+                onOk: () => handleDelete(record.id),
+              });
+            }}
+          >
+            删除
+          </Button>
         </Space>
       ),
     },

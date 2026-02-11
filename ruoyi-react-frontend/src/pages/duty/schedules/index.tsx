@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 值班排班管理页面
  * Duty Schedule Management Page
  */
@@ -12,7 +12,6 @@ import {
   Modal,
   Input,
   message,
-  Popconfirm,
   Card,
   Space,
   Tag,
@@ -189,11 +188,23 @@ function getDutyTableColumns(props: DutyTableColumnsProps): ColumnsType<DutySche
       width: 100,
       fixed: 'right',
       render: (_: unknown, record: DutySchedule) => (
-        <Popconfirm title="确定要删除这条排班吗？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消">
-          <Button type="link" size="small" danger ghost icon={<DeleteOutlined />}>
-            删除
-          </Button>
-        </Popconfirm>
+        <Button
+          type="link"
+          size="small"
+          icon={<DeleteOutlined />}
+          style={{ color: '#ff4d4f' }}
+          onClick={() => {
+            Modal.confirm({
+              title: '确定要删除这条排班吗？',
+              okText: '确定',
+              cancelText: '取消',
+              okButtonProps: { danger: true },
+              onOk: () => handleDelete(record.id),
+            });
+          }}
+        >
+          删除
+        </Button>
       ),
     },
   ];
@@ -470,16 +481,21 @@ const DutySchedulePage: FC = () => {
               手动排班
             </Button>
             {selectedRowKeys.length > 0 && (
-              <Popconfirm
-                title="确定要批量删除选中的排班记录吗？"
-                onConfirm={() => handleBatchDelete(selectedRowKeys, setSelectedRowKeys)}
-                okText="确定"
-                cancelText="取消"
+              <Button
+                icon={<DeleteOutlined />}
+                style={{ color: '#ff4d4f' }}
+                onClick={() => {
+                  Modal.confirm({
+                    title: '确定要批量删除选中的排班记录吗？',
+                    okText: '确定',
+                    cancelText: '取消',
+                    okButtonProps: { danger: true },
+                    onOk: () => handleBatchDelete(selectedRowKeys, setSelectedRowKeys),
+                  });
+                }}
               >
-                <Button danger icon={<DeleteOutlined />}>
-                  批量删除 ({selectedRowKeys.length})
-                </Button>
-              </Popconfirm>
+                批量删除 ({selectedRowKeys.length})
+              </Button>
             )}
           </Space>
         </div>
@@ -690,3 +706,4 @@ const DutySchedulePage: FC = () => {
 };
 
 export default DutySchedulePage;
+

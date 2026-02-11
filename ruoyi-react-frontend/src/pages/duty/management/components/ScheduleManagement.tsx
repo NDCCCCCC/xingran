@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Form, Select, Table, Button, Space, Popconfirm, Tag, DatePicker } from 'antd';
+import { Card, Form, Select, Table, Button, Space, Modal, Tag, DatePicker } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
   PlusOutlined,
@@ -162,11 +162,23 @@ export const ScheduleManagement: React.FC<ScheduleManagementProps> = ({
       key: 'action',
       width: 80,
       render: (_: unknown, record: DutySchedule) => (
-        <Popconfirm title="确定要删除这条排班吗？" onConfirm={() => onDelete(record.id)} okText="确定" cancelText="取消">
-          <Button type="link" size="small" danger ghost icon={<DeleteOutlined />}>
-            删除
-          </Button>
-        </Popconfirm>
+        <Button
+          type="link"
+          size="small"
+          danger
+          icon={<DeleteOutlined />}
+          onClick={() => {
+            Modal.confirm({
+              title: '确定要删除这条排班吗？',
+              okText: '确定',
+              cancelText: '取消',
+              okButtonProps: { danger: true },
+              onOk: () => onDelete(record.id),
+            });
+          }}
+        >
+          删除
+        </Button>
       ),
     },
   ];
@@ -228,16 +240,22 @@ export const ScheduleManagement: React.FC<ScheduleManagementProps> = ({
             手动排班
           </Button>
           {selectedRowKeys.length > 0 && (
-            <Popconfirm
-              title="确定要批量删除选中的排班记录吗？"
-              onConfirm={onBatchDelete}
-              okText="确定"
-              cancelText="取消"
+            <Button
+              size="small"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() => {
+                Modal.confirm({
+                  title: '确定要批量删除选中的排班记录吗？',
+                  okText: '确定',
+                  cancelText: '取消',
+                  okButtonProps: { danger: true },
+                  onOk: onBatchDelete,
+                });
+              }}
             >
-              <Button size="small" danger icon={<DeleteOutlined />}>
-                批量删除 ({selectedRowKeys.length})
-              </Button>
-            </Popconfirm>
+              批量删除 ({selectedRowKeys.length})
+            </Button>
           )}
         </Space>
       </div>

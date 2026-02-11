@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import type { FC } from 'react';
-import { Button, Form, Input, Select, Table, Modal, InputNumber, Space, Tag, message, Popconfirm, Card, Statistic, Row, Col } from 'antd';
+import { Button, Form, Input, Select, Table, Modal, InputNumber, Space, Tag, message, Card, Statistic, Row, Col } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, ReloadOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { formatDateTime } from '@/utils/datetime';
@@ -341,11 +341,23 @@ const DutyPoolPage: FC = () => {
           <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
             编辑
           </Button>
-          <Popconfirm title="确定要删除吗？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消">
-            <Button type="link" size="small" danger ghost icon={<DeleteOutlined />}>
-              删除
-            </Button>
-          </Popconfirm>
+          <Button
+            type="link"
+            size="small"
+            icon={<DeleteOutlined />}
+            style={{ color: '#ff4d4f' }}
+            onClick={() => {
+              Modal.confirm({
+                title: '确定要删除吗？',
+                okText: '确定',
+                cancelText: '取消',
+                okButtonProps: { danger: true },
+                onOk: () => handleDelete(record.id),
+              });
+            }}
+          >
+            删除
+          </Button>
         </Space>
       ),
     },
@@ -498,3 +510,4 @@ const DutyPoolPage: FC = () => {
 };
 
 export default DutyPoolPage;
+
