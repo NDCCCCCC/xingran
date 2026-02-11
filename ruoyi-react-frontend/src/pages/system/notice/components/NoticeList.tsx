@@ -1,4 +1,4 @@
-import { Table, Card, Form, Input, Select, Button, Space, Alert, Popconfirm, Tag } from 'antd';
+import { Table, Card, Form, Input, Select, Button, Space, Alert, Modal, Tag } from 'antd';
 import type { FormInstance } from 'antd';
 import {
   PlusOutlined,
@@ -165,13 +165,15 @@ export const NoticeList: React.FC<NoticeListProps> = ({
             key: 'withdraw',
             label: '撤回',
             danger: true,
-            render: () => (
-              <Popconfirm title="确认撤回该通知? 撤回后通知将退回到草稿状态" onConfirm={() => onWithdraw(record.id)}>
-                <Button type="link" danger size="small">
-                  撤回
-                </Button>
-              </Popconfirm>
-            ),
+            onClick: () => {
+              Modal.confirm({
+                title: '确认撤回该通知? 撤回后通知将退回到草稿状态',
+                okText: '确定',
+                cancelText: '取消',
+                okButtonProps: { danger: true },
+                onOk: () => onWithdraw(record.id),
+              });
+            },
           }] : []),
           {
             key: 'edit',
@@ -184,13 +186,15 @@ export const NoticeList: React.FC<NoticeListProps> = ({
             label: '删除',
             icon: <DeleteOutlined />,
             danger: true,
-            render: () => (
-              <Popconfirm title="确认删除?" onConfirm={() => onDelete(record.id)}>
-                <Button type="link" danger ghost icon={<DeleteOutlined />} size="small">
-                  删除
-                </Button>
-              </Popconfirm>
-            ),
+            onClick: () => {
+              Modal.confirm({
+                title: '确认删除?',
+                okText: '确定',
+                cancelText: '取消',
+                okButtonProps: { danger: true },
+                onOk: () => onDelete(record.id),
+              });
+            },
           },
         ];
 

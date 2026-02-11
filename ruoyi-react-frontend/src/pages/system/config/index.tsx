@@ -1,4 +1,4 @@
-import type { FC } from 'react';
+﻿import type { FC } from 'react';
 import { useState, useCallback, useEffect } from 'react';
 import {
   Table,
@@ -233,7 +233,7 @@ const ConfigManagement: FC = () => {
                 title="确认删除?"
                 onConfirm={() => handleDelete(record.id, record.isSystem)}
               >
-                <Button type="link" danger ghost icon={<DeleteOutlined />} size="small" disabled={record.isSystem === 1}>
+                <Button type="link" icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }} size="small" disabled={record.isSystem === 1}>
                   删除
                 </Button>
               </Popconfirm>
@@ -314,8 +314,7 @@ const ConfigManagement: FC = () => {
           <Space>
             {selectedRowKeys.length > 0 && (
               <Button
-                danger
-                icon={<DeleteOutlined />}
+                icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }}
                 onClick={handleBatchDelete}
               >
                 批量删除 ({selectedRowKeys.length})
@@ -417,3 +416,4 @@ const ConfigManagement: FC = () => {
 };
 
 export default ConfigManagement;
+

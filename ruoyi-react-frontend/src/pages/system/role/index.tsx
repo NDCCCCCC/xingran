@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 角色管理页面
  * Role Management Page
  */
@@ -203,9 +203,7 @@ const RoleManagement: FC = () => {
             </Button>
             {selectedRowKeys.length > 0 && (
               <Button
-                danger
-                ghost
-                icon={<DeleteOutlined />}
+                icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }}
                 onClick={() => handleBatchDelete(selectedRowKeys)}
               >
                 批量删除 ({selectedRowKeys.length})
@@ -359,3 +357,4 @@ const RoleManagement: FC = () => {
 };
 
 export default RoleManagement;
+

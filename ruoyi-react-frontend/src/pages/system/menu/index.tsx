@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 系统菜单管理页面
  * System Menu Management Page
  */
@@ -129,8 +129,7 @@ function getMenuTableColumns(props: MenuTableColumnsProps): ColumnsType<Menu> {
           </Button>
           <Button
             type="link"
-            danger
-            icon={<DeleteOutlined />}
+            icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }}
             onClick={() => handleDeleteConfirm(record)}
           >
             删除
@@ -299,8 +298,7 @@ const MenuManagement: FC = () => {
           <Space>
             {selectedRowKeys.length > 0 && (
               <Button
-                danger
-                icon={<DeleteOutlined />}
+                icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }}
                 onClick={handleBatchDelete}
               >
                 批量删除 ({selectedRowKeys.length})
@@ -470,3 +468,4 @@ const MenuManagement: FC = () => {
 };
 
 export default MenuManagement;
+

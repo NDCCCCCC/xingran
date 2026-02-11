@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 系统字典管理页面
  * System Dictionary Management Page
  */
@@ -20,7 +20,6 @@ import {
   InputNumber,
   Switch,
   Alert,
-  Popconfirm,
 } from 'antd';
 import {
   PlusOutlined,
@@ -112,13 +111,15 @@ function getDictTypeTableColumns(props: DictTypeTableColumnsProps): ColumnsType<
             label: '删除',
             icon: <DeleteOutlined />,
             danger: true,
-            render: () => (
-              <Popconfirm title="确认删除?" onConfirm={() => handleDeleteType(record.id)}>
-                <Button type="link" danger icon={<DeleteOutlined />} size="small">
-                  删除
-                </Button>
-              </Popconfirm>
-            ),
+            onClick: () => {
+              Modal.confirm({
+                title: '确认删除?',
+                okText: '确定',
+                cancelText: '取消',
+                okButtonProps: { danger: true },
+                onOk: () => handleDeleteType(record.id),
+              });
+            },
           },
         ];
 
@@ -176,13 +177,15 @@ function getDictDataTableColumns(props: DictDataTableColumnsProps): ColumnsType<
             label: '删除',
             icon: <DeleteOutlined />,
             danger: true,
-            render: () => (
-              <Popconfirm title="确认删除?" onConfirm={() => handleDeleteData(record.id)}>
-                <Button type="link" danger icon={<DeleteOutlined />} size="small">
-                  删除
-                </Button>
-              </Popconfirm>
-            ),
+            onClick: () => {
+              Modal.confirm({
+                title: '确认删除?',
+                okText: '确定',
+                cancelText: '取消',
+                okButtonProps: { danger: true },
+                onOk: () => handleDeleteData(record.id),
+              });
+            },
           },
         ];
 
@@ -355,8 +358,7 @@ const DictManagement: FC = () => {
                     <Space>
                       {selectedRowKeys.length > 0 && (
                         <Button
-                          danger
-                          icon={<DeleteOutlined />}
+                          icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }}
                           onClick={() => handleBatchDeleteType(selectedRowKeys, setSelectedRowKeys)}
                         >
                           批量删除 ({selectedRowKeys.length})
@@ -489,9 +491,7 @@ const DictManagement: FC = () => {
                     <Space>
                       {selectedRowKeys.length > 0 && (
                         <Button
-                          danger
-                          ghost
-                          icon={<DeleteOutlined />}
+                          icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }}
                           onClick={() => handleBatchDeleteData(selectedRowKeys, setSelectedRowKeys)}
                         >
                           批量删除 ({selectedRowKeys.length})
@@ -621,3 +621,4 @@ const DictManagement: FC = () => {
 };
 
 export default DictManagement;
+

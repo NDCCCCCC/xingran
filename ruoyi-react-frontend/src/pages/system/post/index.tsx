@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import type { FC } from 'react';
 import {
   Table,
@@ -197,7 +197,7 @@ const PostManagement: FC = () => {
                 okText="确定"
                 cancelText="取消"
               >
-                <Button type="link" danger icon={<DeleteOutlined />} size="small">
+                <Button type="link" icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }} size="small">
                   删除
                 </Button>
               </Popconfirm>
@@ -278,9 +278,7 @@ const PostManagement: FC = () => {
           <Space>
             {selectedRowKeys.length > 0 && (
               <Button
-                danger
-                ghost
-                icon={<DeleteOutlined />}
+                icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }}
                 onClick={handleBatchDelete}
               >
                 批量删除 ({selectedRowKeys.length})
@@ -367,3 +365,4 @@ const PostManagement: FC = () => {
 };
 
 export default PostManagement;
+

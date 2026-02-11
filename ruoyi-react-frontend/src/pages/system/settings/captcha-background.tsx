@@ -10,7 +10,6 @@ import {
   Select,
   Upload,
   message,
-  Popconfirm,
   Tag,
   Image,
   Statistic,
@@ -330,11 +329,23 @@ const CaptchaBackgroundSettingsPage: FC = () => {
           >
             {record.status === 1 ? '禁用' : '启用'}
           </Button>
-          <Popconfirm title="确认删除?" onConfirm={() => handleDelete(record.id)}>
-            <Button type="link" size="small" danger ghost icon={<DeleteOutlined />}>
-              删除
-            </Button>
-          </Popconfirm>
+          <Button
+            type="link"
+            size="small"
+            danger
+            icon={<DeleteOutlined />}
+            onClick={() => {
+              Modal.confirm({
+                title: '确认删除?',
+                okText: '确定',
+                cancelText: '取消',
+                okButtonProps: { danger: true },
+                onOk: () => handleDelete(record.id),
+              });
+            }}
+          >
+            删除
+          </Button>
         </Space>
       ),
     },

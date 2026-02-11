@@ -4,7 +4,7 @@
  */
 
 import type { ColumnsType } from 'antd/es/table';
-import { Space, Tag, Popconfirm, Button } from 'antd';
+import { Space, Tag, Modal } from 'antd';
 import {
   ApartmentOutlined,
   PhoneOutlined,
@@ -114,26 +114,15 @@ export function getDeptColumns(params: DeptColumnsParams): ColumnsType<Departmen
             icon: <DeleteOutlined />,
             danger: true,
             disabled: record.accessible === false,
-            render: () => (
-              <Popconfirm
-                title="确定要删除这个部门吗？"
-                onConfirm={() => handleDelete(record.id)}
-                okText="确定"
-                cancelText="取消"
-                disabled={record.accessible === false}
-              >
-                <Button
-                  type="link"
-                  danger
-                  ghost
-                  icon={<DeleteOutlined />}
-                  size="small"
-                  disabled={record.accessible === false}
-                >
-                  删除
-                </Button>
-              </Popconfirm>
-            ),
+            onClick: () => {
+              Modal.confirm({
+                title: '确定要删除这个部门吗？',
+                okText: '确定',
+                cancelText: '取消',
+                okButtonProps: { danger: true },
+                onOk: () => handleDelete(record.id),
+              });
+            },
           },
         ];
         return <ActionButtons actions={actions} />;
