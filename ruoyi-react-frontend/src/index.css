@@ -1227,6 +1227,11 @@ body {
   border-color: var(--theme-primary) !important;
 }
 
+/* Checkbox indeterminate 状态（部分选中）- 跟随主题色 */
+.ant-checkbox-indeterminate .ant-checkbox-inner::after {
+  background-color: var(--theme-primary) !important;
+}
+
 [data-color-mode="dark"] .ant-radio-inner,
 [data-color-mode="dark"] .ant-checkbox-inner {
   background: var(--input-bg) !important;

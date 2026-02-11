@@ -12,7 +12,6 @@ import {
   Input,
   Select,
   TreeSelect,
-  Popconfirm,
   Tag,
   Avatar,
   Card,
@@ -203,18 +202,15 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
             label: '删除',
             icon: <DeleteOutlined />,
             danger: true,
-            render: () => (
-              <Popconfirm
-                title="确定要删除这个用户吗？"
-                onConfirm={() => handleDelete(record.id)}
-                okText="确定"
-                cancelText="取消"
-              >
-                <Button type="link" danger ghost icon={<DeleteOutlined />} size="small">
-                  删除
-                </Button>
-              </Popconfirm>
-            ),
+            onClick: () => {
+              Modal.confirm({
+                title: '确定要删除这个用户吗？',
+                okText: '确定',
+                cancelText: '取消',
+                okButtonProps: { danger: true },
+                onOk: () => handleDelete(record.id),
+              });
+            },
           },
         ];
 
@@ -518,10 +514,11 @@ const UserManagement: FC = () => {
               <Space>
                 {selectedRowKeys.length > 0 && (
                   <Button
-                    danger
-                    ghost
                     icon={<DeleteOutlined />}
                     onClick={handleBatchDelete}
+                    style={{
+                      color: '#ff4d4f',
+                    }}
                   >
                     批量删除 ({selectedRowKeys.length})
                   </Button>
