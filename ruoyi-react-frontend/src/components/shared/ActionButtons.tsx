@@ -51,7 +51,6 @@ const ActionButtons: FC<ActionButtonsProps> = ({
                 size={size}
                 icon={action.icon}
                 onClick={action.onClick}
-                danger={action.danger}
                 disabled={action.disabled}
                 className={action.danger ? 'action-btn-link-danger' : 'action-btn-link'}
               >
