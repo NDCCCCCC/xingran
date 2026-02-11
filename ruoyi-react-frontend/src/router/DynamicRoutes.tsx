@@ -6,6 +6,7 @@
 import { lazy, useMemo, Suspense } from 'react';
 import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useMenuStore } from '@/store/menuStore';
+import { useAuthStore } from '@/store/authStore';
 import { RouteGenerator } from './routeGenerator';
 import type { MenuRouteConfig } from '@/types/menu';
 import Layout from '@/components/layout';
@@ -21,9 +22,6 @@ const DASHBOARD_PATH = 'dashboard'
 const PAGES_PREFIX = 'pages/'
 const PAGES_RELATIVE_PREFIX = '../pages/'
 const TSX_EXTENSION = '.tsx'
-
-// 辅助函数
-const hasValidToken = (): boolean => !!localStorage.getItem('accessToken');
 
 const normalizeComponentPath = (componentPath: string): string => {
   let path = componentPath
@@ -75,8 +73,24 @@ function UploadsFallback() {
   return null;
 }
 
+function InitializingFallback() {
+  return (
+    <div style={{
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      height: '100vh',
+      fontSize: '16px',
+      color: '#999'
+    }}>
+      <Spin size="large" tip="加载中..." />
+    </div>
+  );
+}
+
 export function DynamicRoutes() {
   const { allMenus } = useMenuStore();
+  const { isAuthenticated, initialized } = useAuthStore();
   const location = useLocation();
 
   // 检查是否是上传文件路径
@@ -104,7 +118,10 @@ export function DynamicRoutes() {
     return configs.map(createLazyRoute).filter(Boolean);
   }, [allMenus.length]);
 
-  const isAuthenticated = hasValidToken();
+  // 初始化中，显示 loading
+  if (!initialized) {
+    return <InitializingFallback />;
+  }
 
   // 未认证用户路由
   if (!isAuthenticated) {
