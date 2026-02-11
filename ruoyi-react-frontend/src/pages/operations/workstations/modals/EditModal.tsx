@@ -6,7 +6,7 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { Modal, Form, Input, InputNumber, Select, Row, Col } from 'antd';
 import type { WorkstationOps } from '@/types';
-import type { DepartmentTreeNode } from '@/types';
+import type { DeptTreeNode } from '../types';
 import { DepartmentTreeSelect } from '@/components/shared';
 import { STATUS_OPTIONS, TYPE_OPTIONS } from '../constants';
 
@@ -17,7 +17,7 @@ export interface WorkstationEditModalProps {
   open: boolean;
   editingWorkstation: WorkstationOps | null;
   floorOptions: { id: string; code: string; name: string }[];
-  deptTreeData: DepartmentTreeNode[];
+  deptTreeData: DeptTreeNode[];
   userOptions: { id: string; name: string }[];
   onOk: (values: Record<string, unknown>) => Promise<void>;
   onCancel: () => void;

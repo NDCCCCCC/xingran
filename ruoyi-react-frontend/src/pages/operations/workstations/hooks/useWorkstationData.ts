@@ -60,7 +60,7 @@ export function useWorkstationData(
         floors.map((f: Floor) => ({
           id: f.id,
           code: f.code || String(f.floorNo),
-          name: `${(f as Record<string, unknown>).buildingName || (f as Record<string, unknown>).buildingCode} - ${f.name || f.floorNo}`,
+          name: `${(f as unknown as Record<string, unknown>).buildingName || (f as unknown as Record<string, unknown>).buildingCode} - ${f.name || f.floorNo}`,
         }))
       );
     } catch (error) {
@@ -75,7 +75,7 @@ export function useWorkstationData(
       // 构建树形结构数据，使用 fieldNames 指定字段映射
       const buildTreeData = (depts: DepartmentNode[]): DeptTreeNode[] => {
         return depts.map((dept) => ({
-          title: dept.deptName || dept.name,
+          title: dept.deptName || dept.name || '',
           value: dept.id,
           key: dept.id,
           children:

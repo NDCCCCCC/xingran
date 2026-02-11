@@ -350,7 +350,7 @@ const InfoPointManagement: FC = () => {
 
     if (record) {
       handleEdit(record);
-      const formValues = { ...record };
+      const formValues = { ...record } as Record<string, unknown>;
 
       // 处理 workstationId：将单个字符串转换为三级路径数组
       if (formValues.workstationId && typeof formValues.workstationId === 'string') {
@@ -373,7 +373,7 @@ const InfoPointManagement: FC = () => {
               await preloadCascaderPath(buildingId, floorId);
 
               // 构建三级路径: [buildingId, floorId, workstationId]
-              formValues.workstationId = [buildingId, floorId, workstationId] as [string, string, string];
+              formValues.workstationId = [buildingId, floorId, workstationId];
             }
           }
         } catch (error) {

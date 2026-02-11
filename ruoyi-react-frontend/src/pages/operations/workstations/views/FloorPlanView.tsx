@@ -134,7 +134,7 @@ export function WorkstationFloorPlanView({
                     size="small"
                     hoverable
                     style={{ cursor: 'pointer' }}
-                    onClick={() => fullWorkstation && onEdit(fullWorkstation)}
+                    onClick={() => ws && onEdit(ws)}
                     bodyStyle={{ padding: '12px' }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>

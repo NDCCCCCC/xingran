@@ -55,7 +55,7 @@ export function useFloorPlanEditor(
       const doors = doorsResult.data?.list || [];
       const workstations = workstationsResult.data?.list || [];
 
-      let texts: TextElement[] = [];
+      let texts: unknown[] = [];
       try {
         const textsResult = await floorPlanTextApi.list({ floorId, current: 1, pageSize: 1000 });
         texts = textsResult.data?.list || [];
@@ -63,20 +63,29 @@ export function useFloorPlanEditor(
         console.warn('文本元素API不可用，可能需要重启后端服务:', textError);
       }
 
-      const parsedWalls = walls.map((wall: Record<string, unknown>) => ({
-        ...wall,
-        points: parseJsonField(wall.points),
-      }));
+      const parsedWalls = walls.map((wall) => {
+        const w = wall as unknown as Record<string, unknown>;
+        return {
+          ...wall,
+          points: parseJsonField(w.points),
+        } as Wall;
+      });
 
-      const parsedDoors = doors.map((door: Record<string, unknown>) => ({
-        ...door,
-        position: parseJsonField(door.position),
-      }));
+      const parsedDoors = doors.map((door) => {
+        const d = door as unknown as Record<string, unknown>;
+        return {
+          ...door,
+          position: parseJsonField(d.position),
+        } as Door;
+      });
 
-      const parsedTexts = texts.map((text: Record<string, unknown>) => ({
-        ...text,
-        position: parseJsonField(text.position),
-      }));
+      const parsedTexts = texts.map((text) => {
+        const t = text as unknown as Record<string, unknown>;
+        return {
+          ...(t as object),
+          position: parseJsonField(t.position),
+        } as TextElement;
+      });
 
       const processedWorkstations = processWorkstations(workstations);
 

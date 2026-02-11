@@ -104,11 +104,11 @@ const RoomDeviceManagement: FC = () => {
       if (orgId) params.orgId = orgId;
       const result = await serverRoomApi.list(params);
       const rooms = result.data?.list || [];
-      setRoomOptions(rooms.map((r: Record<string, unknown>) => ({
-        id: r.id as string,
-        name: r.name as string,
-        buildingId: r.buildingId as string,
-        orgId: r.orgId as string,
+      setRoomOptions(rooms.map((r) => ({
+        id: r.id,
+        name: r.name,
+        buildingId: r.buildingId,
+        orgId: (r as unknown as { orgId?: string }).orgId || '',
       })));
     } catch (error) {
       handleApiError(error, '加载机房选项', false);
@@ -135,10 +135,10 @@ const RoomDeviceManagement: FC = () => {
     try {
       const values = await deviceForm.validateFields();
       if (editingDevice) {
-        await roomDeviceApi.update(editingDevice.id, values);
+        await roomDeviceApi.update(editingDevice.id, values as Partial<RoomDevice>);
         handleSuccess('更新');
       } else {
-        await roomDeviceApi.create(values);
+        await roomDeviceApi.create(values as Partial<RoomDevice>);
         handleSuccess('创建');
       }
       handleModalClose();

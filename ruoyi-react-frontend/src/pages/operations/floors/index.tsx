@@ -521,7 +521,7 @@ const FloorManagement: FC = () => {
         <FloorModal
           visible={modalVisible}
           editingFloor={editingFloor}
-          buildingOptions={buildingOptions}
+          buildingOptions={buildingOptions as unknown as Building[]}
           departmentTreeData={[]}
           buildingOptionsByDept={modalBuildingOptions as unknown as Building[]}
           selectedDeptId={modalDeptId}

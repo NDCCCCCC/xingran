@@ -5,6 +5,7 @@
 import { useState, useCallback } from 'react';
 import { buildingApi } from '@/lib/opsApi';
 import { handleApiError } from '@/utils/errorHandler';
+import type { Building } from '@/types/operations';
 
 export interface BuildingOption {
   id: string;
@@ -21,10 +22,10 @@ export function useBuildingOptions() {
       const buildings = result.data?.list || [];
 
       setBuildingOptions(
-        buildings.map((b: Record<string, unknown>) => ({
-          id: b.id,
-          code: b.code,
-          name: b.name,
+        buildings.map((b: Building) => ({
+          id: String(b.id ?? ''),
+          code: String(b.code ?? ''),
+          name: String(b.name ?? ''),
         }))
       );
     } catch (error) {

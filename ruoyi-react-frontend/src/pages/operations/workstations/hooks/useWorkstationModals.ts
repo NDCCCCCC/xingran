@@ -53,16 +53,16 @@ export function useWorkstationModals(
       try {
         const values = await form.validateFields();
         if (editingWorkstation) {
-          await workstationApi.update(editingWorkstation.id, values);
+          await workstationApi.update(editingWorkstation.id, values as Partial<WorkstationOps>);
           handleSuccess('更新');
         } else {
-          await workstationApi.create(values);
+          await workstationApi.create(values as Partial<WorkstationOps>);
           handleSuccess('创建');
         }
         closeModal(form);
         onSuccess();
       } catch (error: unknown) {
-        if (error.errorFields) return;
+        if ((error as { errorFields?: unknown }).errorFields) return;
         handleApiError(error, '操作');
       }
     },

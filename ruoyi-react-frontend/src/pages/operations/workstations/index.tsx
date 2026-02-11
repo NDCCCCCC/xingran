@@ -21,6 +21,7 @@ import ExcelImport from '@/components/shared/ExcelImport';
 import ExcelExport from '@/components/shared/ExcelExport';
 import { DeptSidebar } from '@/components/operations/DeptSidebar';
 import { StatisticsCards } from '@/components/operations/StatisticsCards';
+import { handleSuccess as showSuccessMessage } from '@/utils/errorHandler';
 import { useWorkstationData, useWorkstationModals, useWorkstationView } from './hooks';
 import { getWorkstationColumns } from './columns';
 import { WorkstationEditModal } from './modals';
@@ -196,9 +197,11 @@ const WorkstationManagement: FC = () => {
         onEdit={(ws) => {
           // 从完整工位列表中找到对应的数据
           const fullWorkstation = workstations.find(w => w.id === ws.id);
-          handleFloorPlanEdit(ws, (record) => {
-            // 优先使用完整工位数据，如果没有则使用平面图节点数据
-            openModal(fullWorkstation || record, workstationForm);
+          handleFloorPlanEdit(ws, () => {
+            // 优先使用完整工位数据，如果没有则使用平面图节点数据转换
+            if (fullWorkstation) {
+              openModal(fullWorkstation, workstationForm);
+            }
           });
         }}
         onCloseFloorPlan={() => setViewMode('table')}
@@ -335,10 +338,10 @@ const WorkstationManagement: FC = () => {
               // 直接使用传递来的表单值
               if (editingWorkstation) {
                 await workstationApi.update(editingWorkstation.id, values);
-                handleSuccess('更新');
+                showSuccessMessage('更新');
               } else {
                 await workstationApi.create(values);
-                handleSuccess('创建');
+                showSuccessMessage('创建');
               }
               // 成功后关闭模态框并刷新
               closeModal(workstationForm);
