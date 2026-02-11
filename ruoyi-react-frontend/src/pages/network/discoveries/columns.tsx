@@ -4,7 +4,7 @@
  */
 
 import type { ColumnsType } from 'antd/es/table';
-import { Button, Tag, Progress, Popconfirm } from 'antd';
+import { Button, Tag, Progress, Modal } from 'antd';
 import { EyeOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { DeviceDiscovery, NetworkDevice } from '@/types';
 import { DISCOVERY_TYPE_OPTIONS, STATUS_CONFIG, renderStatusTag } from './constants';
@@ -84,13 +84,15 @@ export function getDiscoveryColumns(params: DiscoveryColumnsParams): ColumnsType
             label: '删除',
             icon: <DeleteOutlined />,
             danger: true,
-            render: () => (
-              <Popconfirm title="确认删除?" onConfirm={() => handleDelete(record.id)}>
-                <Button type="link" danger ghost icon={<DeleteOutlined />} size="small">
-                  删除
-                </Button>
-              </Popconfirm>
-            ),
+            onClick: () => {
+              Modal.confirm({
+                title: '确认删除?',
+                okText: '确定',
+                cancelText: '取消',
+                okButtonProps: { danger: true },
+                onOk: () => handleDelete(record.id),
+              });
+            },
           },
         ];
         return <ActionButtons actions={actions} />;

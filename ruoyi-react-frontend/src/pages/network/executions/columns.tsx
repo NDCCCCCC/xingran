@@ -4,7 +4,7 @@
  */
 
 import type { ColumnsType } from 'antd/es/table';
-import { Button, Tag, Progress, Tooltip, Popconfirm } from 'antd';
+import { Button, Tag, Progress, Tooltip, Modal } from 'antd';
 import { EyeOutlined, StopOutlined } from '@ant-design/icons';
 import type { NetworkDevice, ConfigExecution, ConfigExecutionDetail } from '@/types';
 import { formatDateTime } from '@/utils/datetime';
@@ -89,13 +89,15 @@ export function getExecutionColumns(params: ExecutionColumnsParams): ColumnsType
               label: '取消',
               icon: <StopOutlined />,
               danger: true,
-              render: () => (
-                <Popconfirm title="确认取消执行?" onConfirm={() => handleCancelExecution(record.id)}>
-                  <Button type="link" danger icon={<StopOutlined />} size="small">
-                    取消
-                  </Button>
-                </Popconfirm>
-              ),
+              onClick: () => {
+                Modal.confirm({
+                  title: '确认取消执行?',
+                  okText: '确定',
+                  cancelText: '取消',
+                  okButtonProps: { danger: true },
+                  onOk: () => handleCancelExecution(record.id),
+                });
+              },
             },
           ] : []),
         ];

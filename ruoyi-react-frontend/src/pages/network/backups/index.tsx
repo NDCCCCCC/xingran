@@ -19,7 +19,6 @@ import {
   Card,
   Tag,
   Drawer,
-  Popconfirm,
   Row,
   Col,
   Statistic,
@@ -409,13 +408,15 @@ const ConfigBackupPage: FC = () => {
             key: 'restore',
             label: '恢复',
             icon: <DownloadOutlined />,
-            render: () => (
-              <Popconfirm title="确认恢复到此版本?" onConfirm={() => handleRestore(record)}>
-                <Button type="link" icon={<DownloadOutlined />} size="small">
-                  恢复
-                </Button>
-              </Popconfirm>
-            ),
+            onClick: () => {
+              Modal.confirm({
+                title: '确认恢复到此版本?',
+                okText: '确定',
+                cancelText: '取消',
+                okButtonProps: { danger: true },
+                onOk: () => handleRestore(record),
+              });
+            },
           },
         ];
 

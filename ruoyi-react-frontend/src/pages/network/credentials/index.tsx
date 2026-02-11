@@ -1,4 +1,4 @@
-import type { FC } from 'react';
+﻿import type { FC } from 'react';
 import {
   Table,
   Button,
@@ -7,7 +7,6 @@ import {
   Form,
   Input,
   Select,
-  Popconfirm,
   Tag,
   Card,
   Row,
@@ -322,13 +321,15 @@ const CredentialManagement: FC = () => {
             label: '删除',
             icon: <DeleteOutlined />,
             danger: true,
-            render: () => (
-              <Popconfirm title="确认删除?" onConfirm={() => handleDelete(record.id)}>
-                <Button type="link" danger icon={<DeleteOutlined />} size="small">
-                  删除
-                </Button>
-              </Popconfirm>
-            ),
+            onClick: () => {
+              Modal.confirm({
+                title: '确认删除?',
+                okText: '确定',
+                cancelText: '取消',
+                okButtonProps: { danger: true },
+                onOk: () => handleDelete(record.id),
+              });
+            },
           },
         ];
         return <ActionButtons actions={actions} />;
@@ -399,7 +400,7 @@ const CredentialManagement: FC = () => {
           <Space>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新增</Button>
             {selectedRowKeys.length > 0 && (
-              <Button danger ghost icon={<DeleteOutlined />} onClick={handleBatchDelete}>
+              <Button icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }} onClick={handleBatchDelete}>
                 批量删除 ({selectedRowKeys.length})
               </Button>
             )}
@@ -513,3 +514,4 @@ const CredentialManagement: FC = () => {
 };
 
 export default CredentialManagement;
+

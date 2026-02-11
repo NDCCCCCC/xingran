@@ -1,4 +1,4 @@
-/**
+﻿/**
  * NetworkDevice 设备管理页面
  */
 
@@ -13,7 +13,6 @@ import {
   Input,
   InputNumber,
   Select,
-  Popconfirm,
   Tag,
   Card,
   Row,
@@ -176,13 +175,15 @@ function getDeviceTableColumns(props: DeviceTableColumnsProps): ColumnsType<Netw
             label: '删除',
             icon: <DeleteOutlined />,
             danger: true,
-            render: () => (
-              <Popconfirm title="确认删除?" onConfirm={() => handleDelete(record.id)}>
-                <Button type="link" danger icon={<DeleteOutlined />} size="small">
-                  删除
-                </Button>
-              </Popconfirm>
-            ),
+            onClick: () => {
+              Modal.confirm({
+                title: '确认删除?',
+                okText: '确定',
+                cancelText: '取消',
+                okButtonProps: { danger: true },
+                onOk: () => handleDelete(record.id),
+              });
+            },
           },
         ];
 
@@ -619,7 +620,7 @@ const DeviceManagement: FC = () => {
                 <Button type="primary" icon={<ThunderboltOutlined />} onClick={openQuickCreateModal}>快速创建</Button>
                 <Button type="default" icon={<PlusOutlined />} onClick={() => openModal()}>手动新增</Button>
                 {selectedRowKeys.length > 0 && (
-                  <Button danger ghost icon={<DeleteOutlined />} onClick={handleBatchDelete}>
+                  <Button icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }} onClick={handleBatchDelete}>
                     批量删除 ({selectedRowKeys.length})
                   </Button>
                 )}
@@ -890,3 +891,4 @@ const DeviceManagement: FC = () => {
 };
 
 export default DeviceManagement;
+

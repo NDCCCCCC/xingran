@@ -402,7 +402,7 @@ const PortStatusPage: FC = () => {
             <Button icon={<CloudSyncOutlined />} onClick={handleCollectAll} loading={collecting}>
               采集所有设备
             </Button>
-            <Button danger icon={<DeleteOutlined />} onClick={handleBatchDelete} disabled={selectedRowKeys.length === 0}>
+            <Button icon={<DeleteOutlined />} onClick={handleBatchDelete} disabled={selectedRowKeys.length === 0} style={{ color: '#ff4d4f' }}>
               批量删除 ({selectedRowKeys.length})
             </Button>
           </Space>
