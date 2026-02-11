@@ -55,11 +55,11 @@ export function useDictData(searchForm: FormInstance<unknown>, dataSearchForm: F
   const loadDictTypes = useCallback(async (params: Record<string, unknown> = {}) => {
     setLoading(true);
     try {
-      const values = searchForm.getFieldsValue();
+      const values = searchForm.getFieldsValue() as Record<string, unknown>;
       const result = await post('/system/dicts/types/list', {
         current: params.current || current,
         pageSize: params.pageSize || pageSize,
-        ...values,
+        ...(values as object),
       }) as { data: { list: DictType[]; total: number } };
       setDictTypes(result.data.list);
       setTotal(result.data.total);
@@ -78,13 +78,13 @@ export function useDictData(searchForm: FormInstance<unknown>, dataSearchForm: F
     }
     setLoading(true);
     try {
-      const values = dataSearchForm.getFieldsValue();
+      const values = dataSearchForm.getFieldsValue() as Record<string, unknown>;
       const result = await post('/system/dicts/data/list', {
         current: params.current || current,
         pageSize: params.pageSize || pageSize,
         dictType: selectedType,
-        ...values,
-      }) as { data: { list: DictType[]; total: number } };
+        ...(values as object),
+      }) as { data: { list: DictData[]; total: number } };
       setDictDataList(result.data.list);
       setTotal(result.data.total);
     } catch (error) {

@@ -1,4 +1,5 @@
 import { Spin, Tree, Checkbox, Select } from 'antd';
+import type { DataNode } from 'antd/es/tree';
 import type { Target } from '../hooks/useTargetSelector';
 
 interface TargetSelectorProps {
@@ -53,7 +54,7 @@ export const TargetSelector: React.FC<TargetSelectorProps> = ({
               const keys = Array.isArray(checked) ? checked : checked.checked;
               onDeptChange(keys);
             }}
-            treeData={deptTree as unknown as { title: string; key: string; children: unknown[] }[]}
+            treeData={deptTree as DataNode[]}
             fieldNames={{ title: 'title', key: 'key', children: 'children' }}
           />
         </div>
@@ -67,8 +68,8 @@ export const TargetSelector: React.FC<TargetSelectorProps> = ({
     return (
       <Spin spinning={loadingRoles}>
         <Checkbox.Group
-          value={targetRoles}
-          onChange={onRoleChange}
+          value={targetRoles as string[]}
+          onChange={(values) => onRoleChange(values as string[])}
           className="w-full"
         >
           <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto">
@@ -91,8 +92,8 @@ export const TargetSelector: React.FC<TargetSelectorProps> = ({
       <Spin spinning={loadingUsers}>
         <Select
           mode="multiple"
-          value={targetUsers}
-          onChange={onUserChange}
+          value={targetUsers as string[]}
+          onChange={(values) => onUserChange(values as string[])}
           placeholder="请选择用户"
           showSearch
           filterOption={(input, option) => {

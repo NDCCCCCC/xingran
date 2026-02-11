@@ -375,7 +375,7 @@ const CaptchaBackgroundSettingsPage: FC = () => {
           </Col>
           <Col span={6}>
             <Card>
-              <Statistic title="总使用次数" value={statistics.totalUsage} />
+              <Statistic title="总使用次数" value={(statistics as { totalCount: number; enabledCount: number; disabledCount: number; totalUsage?: number }).totalUsage ?? 0} />
             </Card>
           </Col>
         </Row>
@@ -441,8 +441,8 @@ const CaptchaBackgroundSettingsPage: FC = () => {
         rowKey="id"
         pagination={paginationProps}
         onChange={(pagination) => {
-          setCurrent(pagination.current);
-          setPageSize(pagination.pageSize);
+          setCurrent(pagination.current ?? 1);
+          setPageSize(pagination.pageSize ?? 10);
           loadBackgrounds();
         }}
         scroll={{ x: 1200 }}

@@ -219,7 +219,7 @@ const DictManagement: FC = () => {
     loadDictData,
     loadTypeStatistics,
     loadDataStatistics,
-  } = useDictData(searchForm, dataSearchForm, paginationProps.current, paginationProps.pageSize);
+  } = useDictData(searchForm, dataSearchForm, paginationProps.current ?? 1, paginationProps.pageSize ?? 10);
 
   // 使用操作管理 Hook
   const {

@@ -125,7 +125,7 @@ const APIConfigPage: FC = () => {
       if (isFormValidationError(error)) {
         return;
       }
-      message.error('操作失败: ' + (error.message || '未知错误'));
+      message.error('操作失败: ' + ((error as Error).message || '未知错误'));
     } finally {
       setSubmitting(false);
     }
@@ -280,8 +280,8 @@ const APIConfigPage: FC = () => {
           scroll={{ x: 1200 }}
           pagination={paginationProps}
           onChange={(pagination) => {
-            setCurrent(pagination.current);
-            setPageSize(pagination.pageSize);
+            setCurrent(pagination.current ?? 1);
+            setPageSize(pagination.pageSize ?? 10);
             loadConfigs();
           }}
         />

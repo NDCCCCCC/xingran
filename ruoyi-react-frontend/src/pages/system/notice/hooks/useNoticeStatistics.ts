@@ -30,9 +30,12 @@ export function useNoticeStatistics(): UseNoticeStatisticsResult {
     try {
       const result = await getNoticeList({ current: 1, pageSize: 1000 });
       const allNotices = result.data?.list || [];
-      const publishedCount = allNotices.filter((n: Record<string, unknown>) => n.publishStatus === 1).length;
-      const draftCount = allNotices.filter((n: Record<string, unknown>) => n.publishStatus === 0 || n.publishStatus === 2).length;
-      const scheduledCount = allNotices.filter((n: Record<string, unknown>) => n.publishStatus === 3).length;
+      const publishedCount = allNotices.filter((n) => (n as { publishStatus: number }).publishStatus === 1).length;
+      const draftCount = allNotices.filter((n) => {
+        const status = (n as { publishStatus: number }).publishStatus;
+        return status === 0 || status === 2;
+      }).length;
+      const scheduledCount = allNotices.filter((n) => (n as { publishStatus: number }).publishStatus === 3).length;
       setStatistics({
         total: allNotices.length,
         published: publishedCount,

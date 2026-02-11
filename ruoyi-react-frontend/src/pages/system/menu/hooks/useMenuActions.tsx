@@ -12,6 +12,13 @@ import { post } from '@/lib/api';
 import type { CheckboxChangeEvent } from 'antd/es/checkbox';
 import { refreshMenuCache } from '@/store/menuStore';
 
+// 扩展 Modal 实例类型以支持 checkboxRef
+interface ModalInstanceWithCheckbox {
+  destroy: () => void;
+  update: (configUpdate: Record<string, unknown>) => void;
+  checkboxRef?: React.MutableRefObject<boolean>;
+}
+
 export interface UseMenuActionsParams {
   onLoad: () => void;
   selectedRowKeys: string[];
@@ -95,7 +102,7 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
 
     // 创建一个可响应状态更新的确认框
     let localCascade = false;
-    let modalInstance: { checkboxRef?: React.MutableRefObject<boolean> } | null = null;
+    let modalInstance: ModalInstanceWithCheckbox | null = null;
 
     const DeleteConfirmContent = () => {
       const [checked, setChecked] = useState(false);
@@ -157,10 +164,10 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
       cancelText: '取消',
       onOk: () => {
         // 从 modalInstance 获取最新的 checkbox 状态
-        const cascadeValue = modalInstance.checkboxRef?.current || false;
+        const cascadeValue = modalInstance?.checkboxRef?.current || false;
         return handleDelete(record.id, cascadeValue);
       },
-    });
+    }) as unknown as ModalInstanceWithCheckbox;
   }, [handleDelete]);
 
   // 批量删除菜单
@@ -171,7 +178,7 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
     }
 
     // 创建一个可响应状态更新的确认框
-    let modalInstance: { checkboxRef?: React.MutableRefObject<boolean> } | null = null;
+    let modalInstance: ModalInstanceWithCheckbox | null = null;
 
     const BatchDeleteConfirmContent = () => {
       const [checked, setChecked] = useState(false);
@@ -229,7 +236,7 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
       onOk: async () => {
         try {
           // 从 modalInstance 获取最新的 checkbox 状态
-          const cascadeValue = modalInstance.checkboxRef?.current || false;
+          const cascadeValue = modalInstance?.checkboxRef?.current || false;
           const result = await post('/system/menus/batch-delete', {
             ids: selectedRowKeys,
             cascade: cascadeValue,
@@ -248,12 +255,13 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
           refreshMenuCache();
         } catch (error: unknown) {
           console.error('批量删除失败:', error);
-          const errorMsg = error?.response?.data?.message || error?.message || '批量删除失败';
+          const err = error as { response?: { data?: { message?: string } }; message?: string };
+          const errorMsg = err?.response?.data?.message || err?.message || '批量删除失败';
           message.error(errorMsg);
           throw error; // 重新抛出错误以保持 Modal 打开
         }
       },
-    });
+    }) as unknown as ModalInstanceWithCheckbox;
   }, [selectedRowKeys, onLoad, setSelectedRowKeys]);
 
   // 保存菜单

@@ -254,10 +254,11 @@ const DepartmentManagement: FC = () => {
           expandable={{
             expandedRowKeys: expandedRowKeys,
             onExpand: (expanded, record) => {
+              const recordKey = (record as Department & { key: string }).key;
               if (expanded) {
-                setExpandedRowKeys([...expandedRowKeys, record.key]);
+                setExpandedRowKeys([...expandedRowKeys, recordKey]);
               } else {
-                setExpandedRowKeys(expandedRowKeys.filter(k => k !== record.key));
+                setExpandedRowKeys(expandedRowKeys.filter(k => k !== recordKey));
               }
             },
             childrenColumnName: 'children',
@@ -291,7 +292,7 @@ const DepartmentManagement: FC = () => {
         entityType="department"
         entityName="部门"
         exportUrl="/api/v1/system/departments/export"
-        statusOptions={STATUS_OPTIONS as { value: number; label: string }[]}
+        statusOptions={STATUS_OPTIONS as unknown as { value: number; label: string }[]}
         visible={exportVisible}
         onClose={() => setExportVisible(false)}
       />

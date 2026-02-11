@@ -63,8 +63,8 @@ const RoleManagement: FC = () => {
     loadMenuTree,
     loadDeptTree,
   } = useRoleData({
-    current: paginationProps.current,
-    pageSize: paginationProps.pageSize,
+    current: paginationProps.current ?? 1,
+    pageSize: paginationProps.pageSize ?? 10,
   });
 
   // 使用操作管理 Hook

@@ -7,7 +7,7 @@ import { useState, useCallback } from 'react';
 import { message, Upload } from 'antd';
 import type { UploadFile, UploadProps } from 'antd';
 import type { FormInstance } from 'antd/es/form';
-import type { CaptchaBackground, CaptchaBackgroundUpdateRequest } from '@/types/captcha';
+import type { CaptchaBackground, CaptchaBackgroundUpdateRequest, PieceShape, DifficultyLevel, CaptchaBackgroundStatus } from '@/types/captcha';
 import * as captchaService from '@/services/captcha';
 import { SHAPE_OPTIONS } from '../constants';
 import type { UnknownError } from '@/types/common';
@@ -147,10 +147,10 @@ export function useCaptchaModals(): UseCaptchaModalsReturn {
       try {
         const values = await editForm.validateFields() as EditFormValues;
         const updateData: CaptchaBackgroundUpdateRequest = {
-          pieceShape: values.pieceShape,
-          difficultyLevel: values.difficultyLevel,
+          pieceShape: values.pieceShape as PieceShape | undefined,
+          difficultyLevel: values.difficultyLevel as DifficultyLevel | undefined,
           allowedShapes: values.allowedShapes,
-          status: values.status,
+          status: values.status as CaptchaBackgroundStatus | undefined,
           sortOrder: values.sortOrder,
           remark: values.remark,
         };

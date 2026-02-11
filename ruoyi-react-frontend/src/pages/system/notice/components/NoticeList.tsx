@@ -1,4 +1,5 @@
 import { Table, Card, Form, Input, Select, Button, Space, Alert, Popconfirm, Tag } from 'antd';
+import type { FormInstance } from 'antd';
 import {
   PlusOutlined,
   EditOutlined,

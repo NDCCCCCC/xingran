@@ -138,9 +138,9 @@ export function useRoleData(params: UseRoleDataParams): UseRoleDataReturn {
       const result = await post<{ data: MenuTreeNode[] }>('/system/menus/tree-select');
       const processTreeData = (nodes: MenuTreeNode[]): TreeDataNode[] => {
         return nodes.map((node) => ({
-          key: node.key || node.id,
-          title: node.title || node.menuName,
-          value: node.value || node.id,
+          key: node.key || node.id || '',
+          title: node.title || node.menuName || '',
+          value: node.value || node.id || '',
           children: node.children && node.children.length > 0 ? processTreeData(node.children) : undefined,
         }));
       };
@@ -156,9 +156,9 @@ export function useRoleData(params: UseRoleDataParams): UseRoleDataReturn {
       const result = await post<{ data: DeptTreeNode[] }>('/system/departments/tree-select');
       const processTreeData = (nodes: DeptTreeNode[]): TreeDataNode[] => {
         return nodes.map((node) => ({
-          key: node.key || node.id,
-          title: node.title || node.deptName,
-          value: node.value || node.id,
+          key: node.key || node.id || '',
+          title: node.title || node.deptName || '',
+          value: node.value || node.id || '',
           children: node.children && node.children.length > 0 ? processTreeData(node.children) : undefined,
         }));
       };

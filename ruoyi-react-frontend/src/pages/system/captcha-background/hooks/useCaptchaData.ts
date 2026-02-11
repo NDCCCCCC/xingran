@@ -19,7 +19,7 @@ export interface UseCaptchaDataReturn {
   loadStatistics: () => Promise<void>;
 }
 
-export function useCaptchaData(searchForm: FormInstance<unknown>, setTotal: React.Dispatch<React.SetStateAction<number>>): UseCaptchaDataReturn {
+export function useCaptchaData(searchForm: FormInstance<unknown>, setTotal: (total: number) => void): UseCaptchaDataReturn {
   const [backgrounds, setBackgrounds] = useState<CaptchaBackground[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotalLocal] = useState(0);
@@ -29,11 +29,11 @@ export function useCaptchaData(searchForm: FormInstance<unknown>, setTotal: Reac
     async (params: Record<string, unknown> = {}, searchValues?: Record<string, unknown>) => {
       setLoading(true);
       try {
-        const values = searchValues || searchForm.getFieldsValue();
+        const values = searchValues || searchForm.getFieldsValue() as Record<string, unknown>;
         const result = await captchaService.getCaptchaBackgroundList({
-          current: params.current || 1,
-          pageSize: params.pageSize || 10,
-          ...values,
+          current: (params.current as number) || 1,
+          pageSize: (params.pageSize as number) || 10,
+          ...(values as object),
         });
         setBackgrounds(result.items);
         setTotalLocal(result.total);
