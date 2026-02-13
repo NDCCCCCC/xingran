@@ -21,7 +21,7 @@ import {
 } from '@ant-design/icons';
 import type { UploadFile } from 'antd';
 import type { UploadRequestOption } from './FileUpload';
-import { getTokenManager } from '@/store/authStore';
+import { getAuthHeaders } from '@/utils/authHelpers';
 
 const { Text } = Typography;
 
@@ -65,13 +65,8 @@ const ExcelImport: FC<ExcelImportProps> = ({
 
   const handleDownloadTemplate = async () => {
     try {
-      const tokenManager = getTokenManager();
-      const token = await tokenManager.getAccessToken();
-      const response = await fetch(templateUrl, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+      const headers = await getAuthHeaders();
+      const response = await fetch(templateUrl, { headers });
 
       if (!response.ok) {
         throw new Error('下载模板失败');
@@ -176,10 +171,9 @@ const ExcelImport: FC<ExcelImportProps> = ({
       };
 
       xhr.open('POST', importUrl, true);
-      const tokenManager = getTokenManager();
-      const token = await tokenManager.getAccessToken();
-      if (token) {
-        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      const headers = await getAuthHeaders();
+      if (headers['Authorization']) {
+        xhr.setRequestHeader('Authorization', headers['Authorization']);
       }
       xhr.send(formData);
     } catch {
