@@ -105,8 +105,6 @@ func (s *ExcelService) getExampleValue(col ExcelColumn) string {
 		return "示例楼宇A"
 	case "floorName":
 		return "示例楼层1F"
-	case "workstationName", "roomName":
-		return "示例工位001"
 	case "code", "buildingCode", "workstationCode", "deviceCode":
 		return "B001"
 	case "deptCode", "parentDeptCode":
@@ -271,6 +269,9 @@ func (s *ExcelService) ImportData(ctx context.Context, entityType string, file *
 		for _, data := range validRecords {
 			s.applyReferenceResults(data, refResults, config)
 		}
+
+		// 验证必填的引用字段是否成功解析
+		validRecords = s.validateReferenceFields(validRecords, config, result)
 	}
 
 	if entityType == "building" && s.geocoding != nil {
@@ -382,7 +383,14 @@ func (s *ExcelService) prepareRecordsForUpsert(
 				continue
 			}
 
-			if value, exists := record[col.Field]; exists {
+			// 首先尝试原始字段名
+			value, exists := record[col.Field]
+			// 如果找不到且是引用字段，尝试解析后的字段名（如 buildingId）
+			if !exists && col.Reference != "" {
+				resolvedField := s.getTargetFieldForReference(col.Field)
+				value, exists = record[resolvedField]
+			}
+			if exists {
 				dbFieldName := s.getDBFieldName(col)
 				preparedRecord[dbFieldName] = value
 			}
@@ -414,6 +422,48 @@ func (s *ExcelService) getDBFieldName(col ExcelColumn) string {
 		return col.DBField
 	}
 	return col.Field
+}
+
+// validateReferenceFields 验证必填的引用字段是否成功解析
+func (s *ExcelService) validateReferenceFields(
+	records []map[string]interface{},
+	config ExcelConfig,
+	result *ImportResult,
+) []map[string]interface{} {
+	validated := make([]map[string]interface{}, 0, len(records))
+
+	for i, data := range records {
+		valid := true
+		for _, col := range config.Columns {
+			// 只验证必填的引用字段
+			if !col.Required || col.Reference == "" {
+				continue
+			}
+
+			// 获取目标字段名（如 buildingId）
+			targetField := s.getTargetFieldForReference(col.Field)
+
+			// 检查目标字段是否有值
+			if val, exists := data[targetField]; !exists || val == nil || val == "" {
+				// 必填引用字段解析失败
+				result.Failed++
+				result.Errors = append(result.Errors, ImportError{
+					Row:   config.StartRow + i + 1, // 实际 Excel 行号（i 从 0 开始，StartRow 从 2 开始）
+					Field:  col.Header,
+					Value:  fmt.Sprintf("%v", data[col.Field]),
+					Error: fmt.Sprintf("引用的 %s 不存在", col.Header),
+				})
+				valid = false
+				break
+			}
+		}
+
+		if valid {
+			validated = append(validated, data)
+		}
+	}
+
+	return validated
 }
 
 func isEmptyRow(row []string) bool {
@@ -610,6 +660,58 @@ func (s *ExcelService) ExportData(ctx context.Context, entityType string, params
 	})
 
 	return f, nil
+}
+
+// queryFloorTemplateData 查询楼层模板数据
+// 返回楼宇及其楼层的实际数据（按名称排序）
+func (s *ExcelService) queryFloorTemplateData(query *gorm.DB) ([]map[string]interface{}, error) {
+	// 查询所有正常状态的楼宇和楼层
+	type BuildingResult struct {
+		ID   string
+		Name string
+	}
+	type FloorResult struct {
+		ID        string
+		Name      string
+		BuildingID string
+		FloorNo   string
+		Status    int
+	}
+
+	var buildings []BuildingResult
+	err := query.Table("ops_buildings").
+		Where("deleted_at IS NULL AND status = ?", 0).
+		Order("name ASC"). // 按名称排序
+		Find(&buildings).Error
+	if err != nil {
+		return nil, err
+	}
+
+	var data []map[string]interface{}
+	for _, b := range buildings {
+		// 查询每个楼宇下的楼层
+		var floors []FloorResult
+		err := query.Table("ops_floors").
+			Where("building_id = ? AND deleted_at IS NULL AND status = ?", b.ID, 0).
+			Order("floor_no ASC"). // 按楼层号排序
+			Find(&floors).Error
+		if err != nil {
+			return nil, err
+			}
+
+		// 为每个楼层创建记录，使用名称字段
+		for _, f := range floors {
+			data = append(data, map[string]interface{}{
+				"name":         f.Name,
+				"floorNo":      f.FloorNo,
+				"buildingName": b.Name, // 使用实际的楼宇名称
+				"Status":       f.Status, // 修复字段名
+				"remark":       "",
+			})
+		}
+	}
+
+	return data, nil
 }
 
 func (s *ExcelService) queryData(_ context.Context, config ExcelConfig, params map[string]interface{}) ([]map[string]interface{}, error) {

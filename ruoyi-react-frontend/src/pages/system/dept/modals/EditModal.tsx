@@ -81,6 +81,14 @@ export function DeptEditModal({
           <Input />
         </Form.Item>
         <Form.Item
+          name="deptCode"
+          label="部门编码"
+          rules={[{ required: true, message: '请输入部门编码' }]}
+          tooltip="部门编码用于唯一标识部门，在Excel导入时作为关联键"
+        >
+          <Input placeholder="请输入部门编码，如：DEV、TECH" />
+        </Form.Item>
+        <Form.Item
           name="orderNum"
           label="显示顺序"
           rules={[{ required: true, message: '请输入显示顺序' }]}

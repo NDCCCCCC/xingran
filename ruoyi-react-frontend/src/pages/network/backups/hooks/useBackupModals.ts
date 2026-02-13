@@ -75,7 +75,7 @@ export function useBackupModals(
   // 打开内容抽屉
   const openContentDrawer = useCallback(async (backup: ConfigBackup) => {
     try {
-      const result = await post<BaseResponse<{ content: string }>>('/network/backups/content', { id: backup.id });
+      const result = await post<{ content: string }>('/network/backups/content', { id: backup.id });
       setBackupContent(result.data?.content || '');
       setSelectedBackup(backup);
       setContentDrawerVisible(true);

@@ -36,6 +36,11 @@ func (m *MockCacheProvider) DeleteByPattern(ctx context.Context, pattern string)
 	return args.Error(0)
 }
 
+func (m *MockCacheProvider) Exists(ctx context.Context, key string) (bool, error) {
+	args := m.Called(ctx, key)
+	return args.Bool(0), args.Error(1)
+}
+
 // TestCacheInvalidator_InvalidateByEntityType 测试按实体类型清理缓存
 func TestCacheInvalidator_InvalidateByEntityType(t *testing.T) {
 	mockCache := new(MockCacheProvider)

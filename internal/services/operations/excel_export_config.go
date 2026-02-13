@@ -149,7 +149,7 @@ func GetExportConfig(entityType string) (ExcelExportConfig, bool) {
 				{Field: "buildingName", Header: "所属楼宇",
 					Join: &JoinConfig{Table: "ops_buildings", LeftField: "building_id",
 						RightField: "id", SelectField: "name", As: "buildingName"}},
-				{Field: "floorNumber", Header: "楼层号", DBField: "floor_number"},
+				{Field: "floorNo", Header: "楼层号", DBField: "floor_no"}, // 使用 floor_no 与 GORM 模型字段名一致
 				{Field: "area", Header: "面积(㎡)", DBField: "area"},
 				{Field: "status", Header: "状态", DBField: "status",
 					Options: map[interface{}]string{int(0): "正常", int(1): "停用"}},

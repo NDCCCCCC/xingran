@@ -108,7 +108,7 @@ const RoomDeviceManagement: FC = () => {
         id: r.id,
         name: r.name,
         buildingId: r.buildingId,
-        orgId: (r as unknown as { orgId?: string }).orgId || '',
+        orgId: r.orgId || '',
       })));
     } catch (error) {
       handleApiError(error, '加载机房选项', false);

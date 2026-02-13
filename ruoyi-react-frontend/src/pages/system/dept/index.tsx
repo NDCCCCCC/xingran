@@ -119,6 +119,7 @@ const DepartmentManagement: FC = () => {
 
       const submitData: Record<string, unknown> = {
         deptName: values.deptName,
+        deptCode: values.deptCode,
         parentId: values.parentId || null,
         orderNum: values.orderNum,
         status: values.status,
@@ -292,7 +293,7 @@ const DepartmentManagement: FC = () => {
         entityType="department"
         entityName="部门"
         exportUrl="/api/v1/system/departments/export"
-        statusOptions={STATUS_OPTIONS as unknown as { value: number; label: string }[]}
+        statusOptions={[...STATUS_OPTIONS]}
         visible={exportVisible}
         onClose={() => setExportVisible(false)}
       />

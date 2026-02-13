@@ -2,18 +2,9 @@ import { post } from '@/lib/api';
 import type { PageParams } from '@/types/base';
 import type { PageData, Building } from '@/types/operations';
 
-// API响应包装类型
-interface ApiResponse<T> {
-  code: number;
-  message: string;
-  data: T;
-  timestamp: number;
-  request_id: string;
-}
-
 export const buildingApi = {
-  // 列表查询
-  list: (params: PageParams) => post<ApiResponse<PageData<Building>>>('/ops/buildings/list', params),
+  // 列表查询 - post 返回 Promise<BaseResponse<T>>，T 即 PageData<Building>
+  list: (params: PageParams) => post<PageData<Building>>('/ops/buildings/list', params),
 
   // 创建
   create: (data: Omit<Building, 'id' | 'createdAt' | 'updatedAt'>) =>

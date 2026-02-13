@@ -67,7 +67,7 @@ const ConfigManagement: FC = () => {
   } = useTableManager<Config>(
     async (params): Promise<{ list: Config[]; total: number }> => {
       const values = searchForm.getFieldsValue() as Record<string, unknown>;
-      const result = await post<{ data?: { list: Config[]; total: number } }>('/system/configs/list', {
+      const result = await post<{ list: Config[]; total: number }>('/system/configs/list', {
         current: params.current || paginationProps.current,
         pageSize: params.pageSize || paginationProps.pageSize,
         ...values,
@@ -88,10 +88,10 @@ const ConfigManagement: FC = () => {
   // 加载统计数据
   const loadStatistics = useCallback(async () => {
     try {
-      const result = await post<{ data: { list: Config[] } }>('/system/configs/list', { current: 1, pageSize: 1000 });
-      const allConfigs = result.data.list || [];
-      const activeCount = allConfigs.filter((c) => c.configType === 'Y').length;
-      const inactiveCount = allConfigs.filter((c) => c.configType === 'N').length;
+      const result = await post<{ list: Config[] }>('/system/configs/list', { current: 1, pageSize: 1000 });
+      const allConfigs = result.data?.list || [];
+      const activeCount = allConfigs.filter((c: Config) => c.configType === 'Y').length;
+      const inactiveCount = allConfigs.filter((c: Config) => c.configType === 'N').length;
       setStatistics({
         total: allConfigs.length,
         active: activeCount,

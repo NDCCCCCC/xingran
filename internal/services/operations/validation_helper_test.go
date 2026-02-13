@@ -8,6 +8,7 @@ import (
 
 	operationsmodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -47,27 +48,28 @@ func TestValidator_ValidateFloor(t *testing.T) {
 	}
 
 	tests := []struct {
-		name      string
-		floorID   string
-		wantError error
+		name         string
+		floorID      string
+		wantErrorCode apperrors.ErrorCode
 	}{
 		{
-			name:      "存在的楼层",
-			floorID:   floor.ID,
-			wantError: nil,
+			name:         "存在的楼层",
+			floorID:      floor.ID,
+			wantErrorCode: 0, // 无错误
 		},
 		{
-			name:      "不存在的楼层",
-			floorID:   "non-existent-floor",
-			wantError: ErrFloorNotFound,
+			name:         "不存在的楼层",
+			floorID:      "non-existent-floor",
+			wantErrorCode: apperrors.CodeFloorNotFound,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := validator.ValidateFloor(ctx, tt.floorID)
-			if err != tt.wantError {
-				t.Errorf("ValidateFloor() error = %v, wantError %v", err, tt.wantError)
+			gotCode := apperrors.GetErrorCode(err)
+			if gotCode != tt.wantErrorCode {
+				t.Errorf("ValidateFloor() error code = %v, wantErrorCode %v", gotCode, tt.wantErrorCode)
 			}
 		})
 	}
@@ -97,27 +99,28 @@ func TestValidator_ValidateWall(t *testing.T) {
 	}
 
 	tests := []struct {
-		name      string
-		wallID    string
-		wantError error
+		name         string
+		wallID       string
+		wantErrorCode apperrors.ErrorCode
 	}{
 		{
-			name:      "存在的墙体",
-			wallID:    wall.ID,
-			wantError: nil,
+			name:         "存在的墙体",
+			wallID:       wall.ID,
+			wantErrorCode: 0, // 无错误
 		},
 		{
-			name:      "不存在的墙体",
-			wallID:    "non-existent-wall",
-			wantError: ErrWallNotFound,
+			name:         "不存在的墙体",
+			wallID:       "non-existent-wall",
+			wantErrorCode: apperrors.CodeWallNotFound,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := validator.ValidateWall(ctx, tt.wallID)
-			if err != tt.wantError {
-				t.Errorf("ValidateWall() error = %v, wantError %v", err, tt.wantError)
+			gotCode := apperrors.GetErrorCode(err)
+			if gotCode != tt.wantErrorCode {
+				t.Errorf("ValidateWall() error code = %v, wantErrorCode %v", gotCode, tt.wantErrorCode)
 			}
 		})
 	}
@@ -145,27 +148,28 @@ func TestValidator_ValidateDoor(t *testing.T) {
 	}
 
 	tests := []struct {
-		name      string
-		doorID    string
-		wantError error
+		name         string
+		doorID       string
+		wantErrorCode apperrors.ErrorCode
 	}{
 		{
-			name:      "存在的门",
-			doorID:    door.ID,
-			wantError: nil,
+			name:         "存在的门",
+			doorID:       door.ID,
+			wantErrorCode: 0, // 无错误
 		},
 		{
-			name:      "不存在的门",
-			doorID:    "non-existent-door",
-			wantError: ErrDoorNotFound,
+			name:         "不存在的门",
+			doorID:       "non-existent-door",
+			wantErrorCode: apperrors.CodeDoorNotFound,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := validator.ValidateDoor(ctx, tt.doorID)
-			if err != tt.wantError {
-				t.Errorf("ValidateDoor() error = %v, wantError %v", err, tt.wantError)
+			gotCode := apperrors.GetErrorCode(err)
+			if gotCode != tt.wantErrorCode {
+				t.Errorf("ValidateDoor() error code = %v, wantErrorCode %v", gotCode, tt.wantErrorCode)
 			}
 		})
 	}

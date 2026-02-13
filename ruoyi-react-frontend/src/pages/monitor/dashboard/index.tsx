@@ -53,7 +53,7 @@ const Dashboard: FC = () => {
   // 获取服务器指标
   const fetchServerMetrics = useCallback(async () => {
     try {
-      const result = await post<BaseResponse<ServerMetrics>>('/monitor/server-metrics/current', {});
+      const result = await post<ServerMetrics>('/monitor/server-metrics/current', {});
       setMetrics(result.data || null);
     } catch (error) {
       console.error('获取服务器指标失败:', error);
@@ -63,7 +63,7 @@ const Dashboard: FC = () => {
   // 获取服务器列表
   const fetchServerList = useCallback(async () => {
     try {
-      const result = await post<BaseResponse<PageResponse<SystemInfo>>>('/monitor/server-info/list', {
+      const result = await post<PageResponse<SystemInfo>>('/monitor/server-info/list', {
         current: 1,
         pageSize: 10
       });
@@ -76,7 +76,7 @@ const Dashboard: FC = () => {
   // 获取最近登录日志
   const fetchRecentLogs = useCallback(async () => {
     try {
-      const result = await post<BaseResponse<PageResponse<LoginLog>>>('/monitor/login-logs/list', {
+      const result = await post<PageResponse<LoginLog>>('/monitor/login-logs/list', {
         current: 1,
         pageSize: 5
       });

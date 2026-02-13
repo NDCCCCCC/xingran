@@ -2,20 +2,17 @@
  * 运维管理相关类型
  */
 
-import type { Status } from './base';
+import type { Status, PageResponse } from './base';
 
-export interface PageData<T> {
-  list: T[];
-  total: number;
-  current: number;
-  pageSize: number;
-}
+// 统一使用 base.ts 中的 PageResponse 类型
+export type PageData<T> = PageResponse<T>;
 
 export type BuildingStatus = Status;
 
 export interface Building {
   id: string;
   orgId: string;
+  orgName?: string;
   name: string;
   code: string;
   address?: string;
@@ -24,6 +21,8 @@ export interface Building {
   description?: string;
   longitude?: number;
   latitude?: number;
+  level?: number;
+  remark?: string;
   status: BuildingStatus;
   createdAt: string;
   updatedAt: string;
@@ -56,6 +55,9 @@ export interface WorkstationOps {
   id: string;
   floorId: string;
   floorName?: string;
+  floorCode?: string;         // 楼层编号
+  buildingId?: string;         // 楼宇ID
+  buildingName?: string;       // 楼宇名称
   name: string;
   type: WorkstationOpsType;
   status: WorkstationOpsStatus;
@@ -89,6 +91,7 @@ export interface ServerRoom {
   powerCapacity?: number;
   remark?: string;
   status: RoomStatus;
+  orgId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -179,6 +182,9 @@ export interface InfoPoint {
   id: string;
   workstationId: string;
   workstationName?: string;
+  floorName?: string;        // 楼层名称
+  buildingId?: string;       // 楼宇ID
+  buildingName?: string;       // 楼宇名称
   name: string;
   infoPointType: InfoPointType;
   deviceId?: string;

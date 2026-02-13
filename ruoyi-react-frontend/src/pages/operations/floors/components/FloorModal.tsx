@@ -12,12 +12,15 @@ import { useImageUpload } from '@/hooks/useImageUpload';
 const { Option } = Select;
 const { TextArea } = Input;
 
+// 楼宇选项基础类型（只需要 id 和 name）
+type BuildingOptionBase = Pick<Building, 'id' | 'name'>;
+
 interface FloorModalProps {
   visible: boolean;
   editingFloor: Floor | null;
-  buildingOptions: Building[];
+  buildingOptions: BuildingOptionBase[];
   departmentTreeData: TreeNode[];
-  buildingOptionsByDept: Building[];
+  buildingOptionsByDept: BuildingOptionBase[];
   selectedDeptId: string;
   form: FormInstance;
   onOk: () => void;

@@ -77,8 +77,8 @@ const DedicatedLineManagement: FC = () => {
 
   const loadLineTypeDict = useCallback(async () => {
     try {
-      const result = await post('/system/dicts/data/list', { dictType: 'ops_dedicated_line_type', current: 1, pageSize: 100 }) as { data?: { list: Record<string, unknown>[] } };
-      setLineTypeDict((result.data?.list || []) as unknown as DictData[]);
+      const result = await post<{ list: DictData[] }>('/system/dicts/data/list', { dictType: 'ops_dedicated_line_type', current: 1, pageSize: 100 });
+      setLineTypeDict(result.data?.list || []);
     } catch (error) {
       handleApiError(error, '加载专线类型字典', false);
     }
@@ -86,8 +86,8 @@ const DedicatedLineManagement: FC = () => {
 
   const loadIspDict = useCallback(async () => {
     try {
-      const result = await post('/system/dicts/data/list', { dictType: 'ops_isp', current: 1, pageSize: 100 }) as { data?: { list: Record<string, unknown>[] } };
-      setIspDict((result.data?.list || []) as unknown as DictData[]);
+      const result = await post<{ list: DictData[] }>('/system/dicts/data/list', { dictType: 'ops_isp', current: 1, pageSize: 100 });
+      setIspDict(result.data?.list || []);
     } catch (error) {
       handleApiError(error, '加载运营商字典', false);
     }

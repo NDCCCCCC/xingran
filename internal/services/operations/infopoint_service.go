@@ -101,16 +101,16 @@ func (s *infoPointService) List(ctx context.Context, req requests.InfoPointListR
 
 	// 添加筛选条件 - 类型安全，无需类型断言
 	if req.Name != "" {
-		query = query.Where("name LIKE ?", "%"+req.Name+"%")
+		query = query.Where("ops_info_points.name LIKE ?", "%"+req.Name+"%")
 	}
 	if req.WorkID != "" {
-		query = query.Where("workstation_id = ?", req.WorkID)
+		query = query.Where("ops_info_points.workstation_id = ?", req.WorkID)
 	}
 	if req.PointType != "" {
-		query = query.Where("info_point_type = ?", req.PointType)
+		query = query.Where("ops_info_points.info_point_type = ?", req.PointType)
 	}
 	if req.HasStatus() {
-		query = query.Where("status = ?", req.GetStatus(0))
+		query = query.Where("ops_info_points.status = ?", req.GetStatus(0))
 	}
 
 	// 分页 - 使用请求结构体的方法
@@ -122,14 +122,23 @@ func (s *infoPointService) List(ctx context.Context, req requests.InfoPointListR
 		return nil, err
 	}
 
-	if err := query.Offset(offset).Limit(pageSize).Order("created_at DESC").Find(&list).Error; err != nil {
+	// JOIN 楼宇和楼层表获取关联信息（需要类型转换：floor_id/building_id是varchar，而floors/buildings的id是UUID）
+	if err := query.
+		Select("ops_info_points.*, ops_floors.name as floor_name, ops_buildings.name as building_name, ops_buildings.id as building_id, sys_workstation.workstation_name").
+		Joins("LEFT JOIN sys_workstation ON sys_workstation.id::text = ops_info_points.workstation_id").
+		Joins("LEFT JOIN ops_floors ON ops_floors.id = sys_workstation.floor_id::uuid").
+		Joins("LEFT JOIN ops_buildings ON ops_buildings.id = sys_workstation.building_id::uuid").
+		Offset(offset).
+		Limit(pageSize).
+		Order("ops_info_points.created_at DESC").
+		Find(&list).Error; err != nil {
 		return nil, err
 	}
 
 	return &PageResult{
 		List:     list,
 		Total:    total,
-		Current:  current,
+		Current: current,
 		PageSize: pageSize,
 	}, nil
 }

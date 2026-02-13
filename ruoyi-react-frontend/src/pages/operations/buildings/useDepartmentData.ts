@@ -26,7 +26,7 @@ export function useDepartmentData() {
   const loadDepartments = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await post<BaseResponse<DepartmentOption[]>>(
+      const result = await post<DepartmentOption[]>(
         '/system/departments/tree',
         {}
       );

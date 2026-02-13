@@ -28,11 +28,11 @@ function createCrudApi<T>(config: CrudApiConfig) {
 
   return {
     list: async (params: PageParams & Record<string, unknown>) => {
-      return await post<BaseResponse<PageResponse<T>>>(`${basePath}/list`, params);
+      return await post<PageResponse<T>>(`${basePath}/list`, params);
     },
 
     get: async (id: string) => {
-      return await post<BaseResponse<T>>(`${basePath}/${id}`, {});
+      return await post<T>(`${basePath}/${id}`, {});
     },
 
     create: async (data: Partial<T>) => {
@@ -80,7 +80,7 @@ export const floorApi = {
   ...floorCrudApi,
 
   tree: async () => {
-    return await post<BaseResponse<Floor[]>>('/ops/floor/tree', {});
+    return await post<Floor[]>('/ops/floor/tree', {});
   },
 };
 
@@ -119,12 +119,12 @@ export const serverRoomApi = createCrudApi<ServerRoom>({ basePath: '/ops/serverR
 export const roomPhotoApi = {
   // 获取机房照片列表
   list: async (roomId: string) => {
-    return await post<BaseResponse<RoomPhoto[]>>(`/ops/rooms/photos/list/${roomId}`, {});
+    return await post<RoomPhoto[]>(`/ops/rooms/photos/list/${roomId}`, {});
   },
 
   // 获取照片详情
   get: async (photoId: string) => {
-    return await post<BaseResponse<RoomPhoto>>(`/ops/rooms/photos/${photoId}`, {});
+    return await post<RoomPhoto>(`/ops/rooms/photos/${photoId}`, {});
   },
 
   // 上传照片
@@ -161,12 +161,12 @@ export const roomPhotoApi = {
 
   // 获取主图
   getPrimary: async (roomId: string) => {
-    return await post<BaseResponse<RoomPhoto>>(`/ops/rooms/photos/primary?roomId=${roomId}`, {});
+    return await post<RoomPhoto>(`/ops/rooms/photos/primary?roomId=${roomId}`, {});
   },
 
   // 统计数量
   count: async (roomId: string) => {
-    return await post<BaseResponse<{ count: number }>>(`/ops/rooms/photos/count?roomId=${roomId}`, {});
+    return await post<{ count: number }>(`/ops/rooms/photos/count?roomId=${roomId}`, {});
   },
 };
 
@@ -284,7 +284,7 @@ export const excelApi = {
   },
 
   getStatusOptions: async (entityType: string) => {
-    return await post<BaseResponse<Array<{ label: string; value: number }>>>(`/ops/${entityType}/status-options`, {});
+    return await post<Array<{ label: string; value: number }>>(`/ops/${entityType}/status-options`, {});
   },
 };
 
@@ -431,7 +431,7 @@ export const geocodeWithCache = async (
   console.log('🌐 调用后端地理编码API:', address);
 
   try {
-    const result = await post<BaseResponse<GeocodeResult>>('/ops/building/geocode', { address });
+    const result = await post<GeocodeResult>('/ops/building/geocode', { address });
 
     if (result.code === 0 && result.data) {
       cache.set(cacheKey, result.data);

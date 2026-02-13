@@ -74,7 +74,7 @@ const ServerMonitor: FC = () => {
   const fetchServers = async () => {
     setLoading(true);
     try {
-      const result = await post<BaseResponse<PageResponse<ServerInfo>>>('/monitor/server-info/list', {
+      const result = await post<PageResponse<ServerInfo>>('/monitor/server-info/list', {
         ...searchForm,
         current: paginationProps.current,
         pageSize: paginationProps.pageSize
@@ -94,7 +94,7 @@ const ServerMonitor: FC = () => {
   const fetchServerDetail = async (server: ServerInfo) => {
     try {
       // 获取历史指标数据
-      const result = await post<BaseResponse<PageResponse<ServerMetrics>>>('/monitor/server-metrics/history', {
+      const result = await post<PageResponse<ServerMetrics>>('/monitor/server-metrics/history', {
         serverId: server.id,
         startTime: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 最近24小时
         endTime: new Date().toISOString(),

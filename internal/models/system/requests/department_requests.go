@@ -11,6 +11,7 @@ type DepartmentListParams struct {
 
 type DepartmentCreateRequest struct {
 	DeptName      string              `json:"deptName" binding:"required"`
+	DeptCode      string              `json:"deptCode" binding:"required"`
 	ParentID      *string             `json:"parentId"`
 	OrderNum      int                 `json:"orderNum"`
 	Leader        *string             `json:"leader"`
@@ -24,6 +25,7 @@ type DepartmentCreateRequest struct {
 func (r *DepartmentCreateRequest) ToModel(ancestors string) models.Department {
 	return models.Department{
 		DeptName:      r.DeptName,
+		DeptCode:      r.DeptCode,
 		ParentID:      r.ParentID,
 		Ancestors:     ancestors,
 		OrderNum:      r.OrderNum,
@@ -39,6 +41,7 @@ func (r *DepartmentCreateRequest) ToModel(ancestors string) models.Department {
 type DepartmentUpdateRequest struct {
 	ID            string              `json:"id" binding:"required"`
 	DeptName      string              `json:"deptName" binding:"required"`
+	DeptCode      string              `json:"deptCode" binding:"required"`
 	ParentID      *string             `json:"parentId"`
 	OrderNum      int                 `json:"orderNum"`
 	Leader        *string             `json:"leader"`

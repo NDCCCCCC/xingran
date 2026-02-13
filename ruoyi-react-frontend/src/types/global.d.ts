@@ -21,15 +21,23 @@ declare module 'sm-crypto' {
 }
 
 declare module '@uiw/react-md-editor' {
+  import React from 'react';
+
   export interface MDEditorProps {
     value?: string;
     onChange?: (value: string | undefined) => void;
     preview?: 'live' | 'edit' | 'full';
     height?: number;
-    dataColorMode?: 'light' | 'dark';
     visibleDragBar?: boolean;
   }
-  export const MDEditor: React.FC<MDEditorProps>;
+
+  const MDEditor: React.FC<MDEditorProps>;
+  export default MDEditor;
+}
+
+declare module '@uiw/react-md-editor/markdown-editor.css' {
+  const content: string;
+  export default content;
 }
 
 // 扩展 CSSProperties 类型

@@ -75,7 +75,7 @@ const DeptTree: FC<DeptTreeProps> = ({
   const loadDeptTree = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await post<BaseResponse<Department[]>>('/system/departments/tree');
+      const result = await post<Department[]>('/system/departments/tree');
       let deptData = result.data || [];
 
       if (externalOnly) {

@@ -330,19 +330,16 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
               rules={[{ required: true, message: '请输入公告内容' }]}
             >
               {isMarkdown ? (
-                <React.Fragment>
-                  {React.createElement(MDEditor as unknown as React.ComponentType<{ value: string; onChange: (val: string | undefined) => void; preview?: string; height?: number; 'data-color-mode'?: string }>, {
-                    value: markdownContent,
-                    onChange: (val: string | undefined) => {
-                      const content = val || '';
-                      onMarkdownContentChange(content);
-                      form.setFieldValue('noticeContent', content);
-                    },
-                    preview: 'live',
-                    height: 400,
-                    'data-color-mode': 'light',
-                  })}
-                </React.Fragment>
+                <MDEditor
+                  value={markdownContent}
+                  onChange={(val) => {
+                    const content = val || '';
+                    onMarkdownContentChange(content);
+                    form.setFieldValue('noticeContent', content);
+                  }}
+                  preview="live"
+                  height={400}
+                />
               ) : (
                 <TextArea
                   rows={10}

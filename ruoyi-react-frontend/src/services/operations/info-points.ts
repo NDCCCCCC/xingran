@@ -2,18 +2,9 @@ import { post } from '@/lib/api';
 import type { PageParams } from '@/types/base';
 import type { PageData, InfoPoint } from '@/types/operations';
 
-// API响应包装类型
-interface ApiResponse<T> {
-  code: number;
-  message: string;
-  data: T;
-  timestamp: number;
-  request_id: string;
-}
-
 export const infoPointApi = {
-  // 列表查询
-  list: (params: PageParams) => post<ApiResponse<PageData<InfoPoint>>>('/ops/info-points/list', params),
+  // 列表查询 - post 返回 Promise<BaseResponse<T>>，T 即 PageData<InfoPoint>
+  list: (params: PageParams) => post<PageData<InfoPoint>>('/ops/info-points/list', params),
 
   // 创建
   create: (data: Omit<InfoPoint, 'id' | 'createdAt' | 'updatedAt'>) =>

@@ -5,7 +5,7 @@
 import { useState, useCallback } from 'react';
 import { post } from '@/lib/api';
 import { handleApiError } from '@/utils/errorHandler';
-import type { BaseResponse, PageResponse } from '@/types';
+import type { PageResponse } from '@/types';
 
 export interface UserStatistics {
   total: number;
@@ -52,10 +52,10 @@ export function useUserData(): UseUserDataReturn {
   // 加载统计数据
   const loadStatistics = useCallback(async () => {
     try {
-      const result = await post<BaseResponse<PageResponse<User>>>('/system/users/list', { current: 1, pageSize: 1000 });
+      const result = await post<PageResponse<User>>('/system/users/list', { current: 1, pageSize: 1000 });
       const allUsers = result.data?.list || [];
-      const activeCount = allUsers.filter((u) => u.status === 0).length;
-      const inactiveCount = allUsers.filter((u) => u.status === 1).length;
+      const activeCount = allUsers.filter((u: User) => u.status === 0).length;
+      const inactiveCount = allUsers.filter((u: User) => u.status === 1).length;
       setStatistics({
         total: allUsers.length,
         active: activeCount,
@@ -69,7 +69,7 @@ export function useUserData(): UseUserDataReturn {
   // 加载角色列表
   const loadRoles = useCallback(async () => {
     try {
-      const result = await post<BaseResponse<Role[]>>('/system/roles/all');
+      const result = await post<Role[]>('/system/roles/all');
       setRoles(result.data || []);
     } catch (error) {
       handleApiError(error, '加载角色列表', false);
@@ -79,7 +79,7 @@ export function useUserData(): UseUserDataReturn {
   // 加载部门列表
   const loadDepartments = useCallback(async () => {
     try {
-      const result = await post<BaseResponse<Department[]>>('/system/departments/tree');
+      const result = await post<Department[]>('/system/departments/tree');
       setDepartments(result.data || []);
     } catch (error) {
       handleApiError(error, '加载部门列表', false);

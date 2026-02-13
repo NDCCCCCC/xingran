@@ -324,13 +324,13 @@ type NoticeInfo struct {
 
 // ConfigInfo 配置信息
 type ConfigInfo struct {
-	ID         string             `json:"id" example:"config-uuid"`                       // 配置ID
-	ConfigName string             `json:"configName" example:"主框架页-默认皮肤样式名称"`     // 参数名称
-	ConfigKey  string             `json:"configKey" example:"sys.index.skinName"`         // 参数键名
-	ConfigKey  string             `json:"configValue" example:"skin-blue"`                // 参数键值
-	ConfigType models.ConfigType  `json:"configType" example:"Y"`                         // 系统内置：Y=是，N=否
-	IsSystem   models.ConfigIsSystem `json:"isSystem" example:"0"`                         // 是否系统内置：0=否，1=是
-	Remark     string             `json:"remark" example:"主框架页默认皮肤样式"`             // 备注
-	CreatedAt  time.Time          `json:"createdAt" example:"2024-01-01T12:00:00Z"`      // 创建时间
-	UpdatedAt  time.Time          `json:"updatedAt" example:"2024-01-01T12:00:00Z"`      // 更新时间
+	ID          string             `json:"id" example:"config-uuid"`                       // 配置ID
+	ConfigName  string             `json:"configName" example:"主框架页-默认皮肤样式名称"`     // 参数名称
+	ConfigKey   string             `json:"configKey" example:"sys.index.skinName"`         // 参数键名
+	ConfigValue string             `json:"configValue" example:"skin-blue"`                // 参数键值
+	ConfigType  models.ConfigType  `json:"configType" example:"Y"`                         // 系统内置：Y=是，N=否
+	IsSystem    models.ConfigIsSystem `json:"isSystem" example:"0"`                         // 是否系统内置：0=否，1=是
+	Remark      string             `json:"remark" example:"主框架页默认皮肤样式"`             // 备注
+	CreatedAt   time.Time          `json:"createdAt" example:"2024-01-01T12:00:00Z"`      // 创建时间
+	UpdatedAt   time.Time          `json:"updatedAt" example:"2024-01-01T12:00:00Z"`      // 更新时间
 }

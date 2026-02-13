@@ -64,25 +64,23 @@ export function useFloorPlanEditor(
       }
 
       const parsedWalls = walls.map((wall) => {
-        const w = wall as unknown as Record<string, unknown>;
         return {
           ...wall,
-          points: parseJsonField(w.points),
-        } as Wall;
+          points: parseJsonField(wall.points),
+        } as unknown as Wall;
       });
 
       const parsedDoors = doors.map((door) => {
-        const d = door as unknown as Record<string, unknown>;
         return {
           ...door,
-          position: parseJsonField(d.position),
-        } as Door;
+          position: parseJsonField(door.position),
+        } as unknown as Door;
       });
 
       const parsedTexts = texts.map((text) => {
-        const t = text as unknown as Record<string, unknown>;
+        const t = text as Record<string, unknown>;
         return {
-          ...(t as object),
+          ...t,
           position: parseJsonField(t.position),
         } as TextElement;
       });

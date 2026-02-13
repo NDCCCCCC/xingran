@@ -38,8 +38,8 @@ export function useBackupDiff(): UseBackupDiffReturn {
     try {
       // 获取两个备份的内容
       const [result1, result2] = await Promise.all([
-        post<BaseResponse<{ content: string }>>('/network/backups/content', { id: backup1.id }),
-        post<BaseResponse<{ content: string }>>('/network/backups/content', { id: backup2.id }),
+        post<{ content: string }>('/network/backups/content', { id: backup1.id }),
+        post<{ content: string }>('/network/backups/content', { id: backup2.id }),
       ]);
 
       const content1 = result1.data?.content || '';

@@ -83,7 +83,7 @@ const CredentialManagement: FC = () => {
       if (formValues.searchProtocolType) {
         searchParams.protocolType = formValues.searchProtocolType;
       }
-      const result = await post<BaseResponse<PageResponse<AuthCredential>>>('/network/credentials/list', searchParams);
+      const result = await post<PageResponse<AuthCredential>>('/network/credentials/list', searchParams);
       // 更新统计数据
       updateStatistics(result.data?.list || []);
       return { list: result.data?.list || [], total: result.data?.total || 0 };
@@ -102,7 +102,7 @@ const CredentialManagement: FC = () => {
   // 加载统计数据
   const loadStatistics = async () => {
     try {
-      const result = await post<BaseResponse<PageResponse<AuthCredential>>>('/network/credentials/list', { current: 1, pageSize: 10000 });
+      const result = await post<PageResponse<AuthCredential>>('/network/credentials/list', { current: 1, pageSize: 10000 });
       const allCredentials = result.data?.list || [];
       updateStatistics(allCredentials);
     } catch (error) {

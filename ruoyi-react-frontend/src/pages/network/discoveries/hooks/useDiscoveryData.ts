@@ -62,7 +62,7 @@ export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDa
   const loadDiscoveries = useCallback(async (params: Record<string, unknown> = {}) => {
     setLoading(true);
     try {
-      const result = await post<BaseResponse<PageResponse<DeviceDiscovery>>>('/network/discoveries/list', {
+      const result = await post<PageResponse<DeviceDiscovery>>('/network/discoveries/list', {
         current: params.current || current,
         pageSize: params.pageSize || pageSize,
       });
@@ -78,7 +78,7 @@ export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDa
 
   const loadStatistics = useCallback(async () => {
     try {
-      const result = await post<BaseResponse<PageResponse<DeviceDiscovery>>>('/network/discoveries/list', { current: 1, pageSize: 10000 });
+      const result = await post<PageResponse<DeviceDiscovery>>('/network/discoveries/list', { current: 1, pageSize: 10000 });
       const allDiscoveries = result.data?.list || [];
       updateStatistics(allDiscoveries);
     } catch (error) {
@@ -104,7 +104,7 @@ export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDa
 
   const loadDepartments = useCallback(async () => {
     try {
-      const result = await post<BaseResponse<PageResponse<Department>>>('/system/departments/list', { current: 1, pageSize: 1000 });
+      const result = await post<PageResponse<Department>>('/system/departments/list', { current: 1, pageSize: 1000 });
       setDepartments(result.data?.list || []);
     } catch (error) {
       console.error('加载部门列表失败:', error);
@@ -113,7 +113,7 @@ export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDa
 
   const loadDiscoveryResults = useCallback(async (id: string) => {
     try {
-      const result = await post<BaseResponse<{ devices: Record<string, unknown>[] }>>(`/network/discoveries/${id}/results`, {});
+      const result = await post<{ devices: Record<string, unknown>[] }>(`/network/discoveries/${id}/results`, {});
       setDiscoveredDevices(result.data?.devices || []);
     } catch (error) {
       message.error('获取结果失败');

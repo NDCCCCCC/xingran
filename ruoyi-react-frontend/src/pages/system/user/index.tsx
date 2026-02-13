@@ -36,7 +36,7 @@ import {
 } from '@ant-design/icons';
 import type { User } from '@/types';
 import { post } from '@/lib/api';
-import type { BaseResponse, PageResponse } from '@/types';
+import type { PageResponse } from '@/types';
 import DeptTree from '@/components/DeptTree';
 import { useTableManager } from '@/hooks/useTableManager';
 import { usePagination } from '@/hooks/usePagination';
@@ -241,7 +241,7 @@ const UserManagement: FC = () => {
 
   // 数据加载函数
   const fetchUsers = useCallback(async (params: Record<string, unknown>) => {
-    const result = await post<BaseResponse<PageResponse<User>>>('/system/users/list', params);
+    const result = await post<PageResponse<User>>('/system/users/list', params);
     return { list: result.data?.list || [], total: result.data?.total || 0 };
   }, []);
 
@@ -639,15 +639,12 @@ const UserManagement: FC = () => {
               mode="multiple"
               placeholder="请选择角色"
               allowClear
-              optionFilterProp="children"
+              optionFilterProp="label"
               showSearch
-              filterOption={(input, option) =>
-                (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
-              }
               className="user-form-input"
             >
               {roles.map(role => (
-                <Option key={role.id} value={role.id}>
+                <Option key={role.id} value={role.id} label={role.roleName}>
                   {role.roleName}
                 </Option>
               ))}

@@ -468,6 +468,22 @@ const InfoPointManagement: FC = () => {
       render: (type) => <Tag>{getInfoPointTypeText(type)}</Tag>,
     },
     {
+      title: '所属楼宇',
+      dataIndex: 'buildingName',
+      key: 'buildingName',
+      width: 120,
+      ellipsis: { showTitle: false },
+      render: (text) => text || '-',
+    },
+    {
+      title: '所属楼层',
+      dataIndex: 'floorName',
+      key: 'floorName',
+      width: 120,
+      ellipsis: { showTitle: false },
+      render: (text) => text || '-',
+    },
+    {
       title: '所属工位',
       dataIndex: 'workstationName',
       key: 'workstationName',
@@ -478,8 +494,8 @@ const InfoPointManagement: FC = () => {
         return <Tooltip title={name}>{name || '-'}</Tooltip>;
       },
     },
-    { title: '所属设备', dataIndex: 'deviceName', key: 'deviceName', width: 180, ellipsis: { showTitle: false }, render: (v) => v || '-' },
-    { title: '所属端口', dataIndex: 'portName', key: 'portName', width: 180, ellipsis: { showTitle: false }, render: (v) => v || '-' },
+    { title: '所属设备', dataIndex: 'deviceName', key: 'deviceName', width: 150, ellipsis: { showTitle: false }, render: (v) => v || '-' },
+    { title: '所属端口', dataIndex: 'portName', key: 'portName', width: 150, ellipsis: { showTitle: false }, render: (v) => v || '-' },
     {
       title: '状态',
       dataIndex: 'status',

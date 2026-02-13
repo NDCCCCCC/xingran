@@ -239,17 +239,16 @@ const BuildingManagement: FC = () => {
     if (record) {
       handleEdit(record);
       // 只设置表单中实际需要的字段，排除时间字段等不需要的
-      const recordData = record as unknown as Record<string, unknown>;
       const formValues = {
         name: record.name,
         orgId: record.orgId,
-        level: (recordData.level as number) ?? 2,
+        level: record.level ?? 2,
         address: record.address,
         longitude: record.longitude,
         latitude: record.latitude,
         totalFloors: record.totalFloors,
         status: record.status,
-        remark: recordData.remark as string,
+        remark: record.remark,
       };
       buildingForm.setFieldsValue(formValues);
 

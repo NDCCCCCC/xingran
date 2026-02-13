@@ -94,13 +94,13 @@ var ExcelConfigs = map[string]ExcelConfig{
 		HasHeader:  true,
 		StartRow:   2,
 		CachePatterns: []string{"floor:*", "floors:*"},
-		UniqueKeys:    []string{"buildingId", "floorNo"}, // 按楼宇+楼层号判断重复
+		UniqueKeys:    []string{"building_id", "floor_no"}, // 按楼宇+楼层号判断重复（使用数据库字段名）
 		Columns: []ExcelColumn{
-			{Field: "name", Header: "楼层名称", Required: true, MaxLength: 100},
-			{Field: "floorNo", Header: "楼层号", Required: true, MaxLength: 50, UpsertKey: true},
-			{Field: "buildingName", Header: "所属楼宇名称", Required: true, MaxLength: 100, Reference: "ops_buildings.name", DBField: "building_id"}, // 用户提供楼宇名称，自动转换为buildingId
-			{Field: "status", Header: "状态", Options: map[interface{}]string{int(operations.FloorStatusNormal): "正常", int(operations.FloorStatusStopped): "停用"}},
-			{Field: "remark", Header: "备注", MaxLength: 500},
+			{Field: "name", Header: "楼层名称", Required: true, MaxLength: 100, DBField: "name"},
+			{Field: "floorNo", Header: "楼层号", Required: true, MaxLength: 50, DBField: "floor_no"},
+			{Field: "buildingName", Header: "所属楼宇名称", Required: true, MaxLength: 100, Reference: "ops_buildings.name", DBField: "building_id"},
+			{Field: "status", Header: "状态", Options: map[interface{}]string{int(operations.FloorStatusNormal): "正常", int(operations.FloorStatusStopped): "停用"}, DBField: "status"},
+			{Field: "remark", Header: "备注", MaxLength: 500, DBField: "remark"},
 		},
 	},
 	"workstation": {

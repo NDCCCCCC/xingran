@@ -49,6 +49,15 @@ func (s *departmentService) Create(ctx context.Context, req *requests.Department
 		return fmt.Errorf("同级部门名称已存在")
 	}
 
+	// 检查部门编码是否已存在
+	if req.DeptCode != "" {
+		if exists, err := s.checkDeptCodeExists(ctx, req.DeptCode, ""); err != nil {
+			return fmt.Errorf("检查部门编码失败: %w", err)
+		} else if exists {
+			return fmt.Errorf("部门编码已存在")
+		}
+	}
+
 	dept := req.ToModel(ancestors)
 
 	if err := s.db.WithContext(ctx).Create(&dept).Error; err != nil {
@@ -83,7 +92,17 @@ func (s *departmentService) Update(ctx context.Context, req *requests.Department
 		return fmt.Errorf("同级部门名称已存在")
 	}
 
+	// 检查部门编码是否已存在（如果修改了编码）
+	if req.DeptCode != "" && req.DeptCode != dept.DeptCode {
+		if exists, err := s.checkDeptCodeExists(ctx, req.DeptCode, req.ID); err != nil {
+			return fmt.Errorf("检查部门编码失败: %w", err)
+		} else if exists {
+			return fmt.Errorf("部门编码已存在")
+		}
+	}
+
 	dept.DeptName = req.DeptName
+	dept.DeptCode = req.DeptCode
 	dept.ParentID = req.ParentID
 	dept.OrderNum = req.OrderNum
 	dept.Leader = req.Leader
@@ -450,4 +469,18 @@ func splitAncestors(ancestors string) []string {
 	}
 
 	return result
+}
+
+func (s *departmentService) checkDeptCodeExists(ctx context.Context, deptCode string, excludeID string) (bool, error) {
+	var count int64
+	query := s.db.WithContext(ctx).Model(&models.Department{}).Where("dept_code = ?", deptCode)
+
+	if excludeID != "" {
+		query = query.Where("id != ?", excludeID)
+	}
+
+	if err := query.Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }

@@ -46,11 +46,11 @@ func (b *BatchUpsert) standardUpsert(
 ) (int, int, error) {
 	// 构建冲突处理列
 	conflictColumns := b.buildConflictColumns()
-
-	// 构建需要更新的列
+	// 获取需要更新的列
 	updateColumns := b.buildUpdateColumns()
 
-	// 执行批量Upsert
+	// 执行批量Upsert（显式指定更新列）
+	// 注意：使用 Table() + map 切片时，UpdateAll: true 不生效，必须显式指定列
 	result := b.db.WithContext(ctx).
 		Table(b.config.TableName).
 		Clauses(clause.OnConflict{
@@ -80,6 +80,12 @@ func (b *BatchUpsert) partialUpsert(
 	// 提取所有冲突键值
 	var conflictKeys []string
 	keyField := conflictColumns[0].Name // 通常只有一个冲突键
+
+	// 验证字段名安全性（防止 SQL 注入）
+	if !isValidFieldName(keyField) {
+		return 0, 0, fmt.Errorf("无效的字段名: %s", keyField)
+	}
+
 	for _, record := range records {
 		if val, ok := record[keyField]; ok && val != nil {
 			if strVal, ok := val.(string); ok && strVal != "" {
@@ -240,13 +246,13 @@ func (b *BatchUpsert) buildUpdateColumns() []string {
 	conflictFields := b.collectConflictFields()
 
 	for _, col := range b.config.Columns {
-		// 跳过没有DBField的字段（临时处理字段，不应写入数据库）
-		if col.DBField == "" {
+		// 获取数据库字段名（如果DBField为空，使用Field本身）
+		dbField := b.getDBFieldName(col)
+
+		// 跳过没有有效字段名的（临时处理字段，不应写入数据库）
+		if dbField == "" {
 			continue
 		}
-
-		// 获取数据库字段名
-		dbField := b.getDBFieldName(col)
 
 		// 跳过ID、创建时间、冲突检测列和引用字段
 		if b.shouldSkipFromUpdate(dbField, col, conflictFields) {
@@ -269,8 +275,20 @@ func (b *BatchUpsert) getDBFieldName(col ExcelColumn) string {
 }
 
 // collectConflictFields 收集所有冲突检测字段
+// 优化版本：预先建立字段映射避免嵌套循环
 func (b *BatchUpsert) collectConflictFields() map[string]bool {
 	conflictFields := make(map[string]bool)
+
+	// 建立字段名到列配置的映射（避免嵌套循环）
+	fieldToCol := make(map[string]ExcelColumn)
+	for _, col := range b.config.Columns {
+		dbField := b.getDBFieldName(col)
+		fieldToCol[dbField] = col
+		if col.DBField != "" {
+			fieldToCol[col.DBField] = col
+		}
+		fieldToCol[col.Field] = col
+	}
 
 	// 收集UpsertKey字段（使用数据库字段名）
 	for _, col := range b.config.Columns {
@@ -280,9 +298,12 @@ func (b *BatchUpsert) collectConflictFields() map[string]bool {
 		}
 	}
 
-	// 收集UniqueKeys字段
+	// 收集UniqueKeys字段（从映射中快速查找）
 	for _, key := range b.config.UniqueKeys {
-		conflictFields[key] = true
+		if col, exists := fieldToCol[key]; exists {
+			dbField := b.getDBFieldName(col)
+			conflictFields[dbField] = true
+		}
 	}
 
 	return conflictFields
@@ -296,10 +317,40 @@ func (b *BatchUpsert) shouldSkipFromUpdate(field string, col ExcelColumn, confli
 	}
 
 	// 排除引用字段（仅用于解析，不在数据库中存储）
+	// 但如果配置了 DBField 且 DBField != Field，说明这是要更新的目标字段，不应跳过
 	if col.Reference != "" {
-		return true
+		// 如果没有配置 DBField，或者 DBField == Field（相同），说明是原始引用字段，应该跳过
+		if col.DBField == "" || col.DBField == col.Field {
+			return true
+		}
 	}
 
 	// 排除冲突检测字段
 	return conflictFields[field]
+}
+
+// isValidFieldName 验证字段名是否安全（防止 SQL 注入）
+// 只允许字母、数字和下划线，且必须以字母开头
+func isValidFieldName(field string) bool {
+	if field == "" {
+		return false
+	}
+
+	for i, r := range field {
+		if i == 0 && !isAlpha(r) {
+			return false // 第一个字符必须是字母
+		}
+		if !isAlphaNum(r) && r != '_' {
+			return false // 只允许字母、数字和下划线
+		}
+	}
+	return true
+}
+
+func isAlpha(r rune) bool {
+	return (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z')
+}
+
+func isAlphaNum(r rune) bool {
+	return isAlpha(r) || (r >= '0' && r <= '9')
 }

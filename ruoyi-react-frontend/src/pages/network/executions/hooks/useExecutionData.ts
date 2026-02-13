@@ -69,7 +69,7 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
   // 加载设备列表
   const loadDevices = useCallback(async () => {
     try {
-      const result = await post<BaseResponse<PageResponse<NetworkDevice>>>('/network/devices/list', {
+      const result = await post<PageResponse<NetworkDevice>>('/network/devices/list', {
         current: 1,
         pageSize: 1000,
         status: 0, // 只显示在线设备
@@ -83,7 +83,7 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
   // 加载模板列表
   const loadTemplates = useCallback(async () => {
     try {
-      const result = await post<BaseResponse<PageResponse<ConfigTemplate>>>('/network/templates/list', {
+      const result = await post<PageResponse<ConfigTemplate>>('/network/templates/list', {
         current: 1,
         pageSize: 1000,
         templateType: 'config',
@@ -102,7 +102,7 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
       const requestCurrent = params.current ?? execCurrent ?? 1;
       const requestPageSize = params.pageSize ?? pageSize ?? 10;
 
-      const result = await post<BaseResponse<PageResponse<ConfigExecution>>>('/network/executions/list', {
+      const result = await post<PageResponse<ConfigExecution>>('/network/executions/list', {
         current: requestCurrent,
         pageSize: requestPageSize,
       });
@@ -120,7 +120,7 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
   // 加载统计数据
   const loadStatistics = useCallback(async () => {
     try {
-      const result = await post<BaseResponse<PageResponse<ConfigExecution>>>('/network/executions/list', { current: 1, pageSize: 100 });
+      const result = await post<PageResponse<ConfigExecution>>('/network/executions/list', { current: 1, pageSize: 100 });
       const allExecutions = result.data?.list || [];
       updateStatistics(allExecutions);
     } catch (error) {
@@ -146,7 +146,7 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
   // 加载执行明细
   const loadExecutionDetails = useCallback(async (executionId: string) => {
     try {
-      const result = await post<BaseResponse<ConfigExecution>>(`/network/executions/${executionId}`, {});
+      const result = await post<ConfigExecution>(`/network/executions/${executionId}`, {});
       setDataState(prev => ({
         ...prev,
         currentExecution: result.data || null,

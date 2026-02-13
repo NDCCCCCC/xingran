@@ -21,6 +21,7 @@ import {
 } from '@ant-design/icons';
 import type { UploadFile } from 'antd';
 import type { UploadRequestOption } from './FileUpload';
+import { getTokenManager } from '@/store/authStore';
 
 const { Text } = Typography;
 
@@ -64,7 +65,8 @@ const ExcelImport: FC<ExcelImportProps> = ({
 
   const handleDownloadTemplate = async () => {
     try {
-      const token = localStorage.getItem('accessToken');
+      const tokenManager = getTokenManager();
+      const token = await tokenManager.getAccessToken();
       const response = await fetch(templateUrl, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -174,7 +176,8 @@ const ExcelImport: FC<ExcelImportProps> = ({
       };
 
       xhr.open('POST', importUrl, true);
-      const token = localStorage.getItem('accessToken');
+      const tokenManager = getTokenManager();
+      const token = await tokenManager.getAccessToken();
       if (token) {
         xhr.setRequestHeader('Authorization', `Bearer ${token}`);
       }

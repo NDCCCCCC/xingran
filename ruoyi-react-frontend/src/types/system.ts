@@ -106,6 +106,7 @@ export interface Menu {
 export interface Department {
   id: string;
   deptName: string;
+  deptCode: string;
   parentId?: string;
   ancestors: string;
   orderNum: number;

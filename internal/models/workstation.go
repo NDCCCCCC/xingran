@@ -45,6 +45,8 @@ type Workstation struct {
 	// 组织信息
 	DeptID   *string `gorm:"size:64" json:"deptId,omitempty"`   // 部门ID
 	DeptName *string `gorm:"size:100" json:"deptName,omitempty"` // 部门名称
+	BuildingID *string `gorm:"size:64" json:"buildingId,omitempty"`  // 楼宇ID
+	BuildingName *string `gorm:"size:100" json:"buildingName,omitempty"` // 楼宇名称
 
 	// 位置信息
 	Location *string `gorm:"size:200" json:"location,omitempty"` // 位置描述

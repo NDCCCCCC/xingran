@@ -6,7 +6,7 @@ import { useState, useCallback, useEffect } from 'react';
 import type { FC } from 'react';
 import {
   Table, Button, Space, Form, Input, Select, Card, Row, Col,
-  Statistic, Alert, Radio, Layout,
+  Statistic, Alert, Radio, Layout, Cascader,
 } from 'antd';
 import {
   PlusOutlined, SearchOutlined, ReloadOutlined, CheckCircleOutlined,
@@ -28,6 +28,14 @@ import { WorkstationEditModal } from './modals';
 import { WorkstationCardView, WorkstationFloorPlanView } from './views';
 import { STATUS_OPTIONS, TYPE_OPTIONS } from './constants';
 import type { WorkstationStatistics, FloorOption, UserOption, DeptTreeNode } from './types';
+
+// Cascader 选项类型
+type CascaderOption = {
+  value: string;
+  label: string;
+  children?: CascaderOption[];
+  isLeaf?: boolean;
+};
 import { workstationApi } from '@/lib/opsApi';
 
 const { Option } = Select;
@@ -52,6 +60,10 @@ const WorkstationManagement: FC = () => {
   const [floorOptions, setFloorOptions] = useState<FloorOption[]>([]);
   const [deptTreeData, setDeptTreeData] = useState<DeptTreeNode[]>([]);
   const [userOptions, setUserOptions] = useState<UserOption[]>([]);
+
+  // Cascader 懒加载状态
+  const [cascaderOptions, setCascaderOptions] = useState<CascaderOption[]>([]);
+  const [loadingCascader, setLoadingCascader] = useState(false);
 
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
   const { selectedDeptId, handleDeptSelect } = useSidebarDeptFilter({
@@ -132,10 +144,13 @@ const WorkstationManagement: FC = () => {
     loadUserOptions();
   }, [loadStatisticsFromHook, loadFloorOptions, loadDeptOptions, loadUserOptions]);
 
+  // 部门变化时重新加载数据（使用 useCallback 稳定依赖）
   useEffect(() => {
     loadWorkstations();
-    loadFloorOptions(selectedDeptId);
-  }, [selectedDeptId, loadWorkstations, loadFloorOptions]);
+    if (selectedDeptId) {
+      loadFloorOptions(selectedDeptId);
+    }
+  }, [selectedDeptId]);
 
   const handleSuccess = useCallback(() => {
     refreshData();
@@ -143,8 +158,7 @@ const WorkstationManagement: FC = () => {
 
   const columns = getWorkstationColumns({
     handleEdit: (record: WorkstationOps) => {
-      handleEdit(record);
-      openModal(record, workstationForm);
+      handleOpenModal(record);
     },
     handleDelete: (id: string) => handleDelete(id, handleSuccess),
   });
@@ -152,6 +166,146 @@ const WorkstationManagement: FC = () => {
   const handleDeptChange = (deptId: string) => {
     loadUserOptions(deptId);
   };
+
+  // ==================== Cascader 级联选择相关函数 ====================
+
+  // 加载楼宇列表（级联第一级）
+  const loadBuildingsForCascader = useCallback(async (orgId?: string) => {
+    try {
+      const params: Record<string, unknown> = { current: 1, pageSize: 1000 };
+      if (orgId) {
+        params.orgId = orgId;
+      }
+      const { buildingApi } = await import('@/lib/opsApi');
+      const buildingResult = await buildingApi.list(params);
+      const buildings = buildingResult.data?.list || [];
+      return buildings.map((b: { id: string; name: string }) => ({
+        value: b.id,
+        label: b.name,
+        isLeaf: false,
+      }));
+    } catch (error) {
+      console.error('加载楼宇列表失败:', error);
+      return [];
+    }
+  }, []);
+
+  // 加载楼层列表（级联第二级）
+  const loadFloorsForCascader = useCallback(async (buildingId: string) => {
+    try {
+      const { floorApi } = await import('@/lib/opsApi');
+      const floorResult = await floorApi.list({ buildingId, current: 1, pageSize: 1000 });
+      const floors = floorResult.data?.list || [];
+      return floors.map((f) => ({
+        value: f.id,
+        label: f.name || f.floorNo || '',
+        isLeaf: true,
+      }));
+    } catch (error) {
+      console.error('加载楼层列表失败:', error);
+      return [];
+    }
+  }, []);
+
+  // Cascader 懒加载处理函数
+  const handleCascaderLoadData = useCallback(async (selectedOptions: CascaderOption[]) => {
+    const targetOption = selectedOptions[selectedOptions.length - 1];
+
+    setLoadingCascader(true);
+
+    try {
+      if (selectedOptions.length === 1) {
+        // 加载楼层（第二级）
+        const buildingId = targetOption.value;
+        const floors = await loadFloorsForCascader(buildingId);
+        targetOption.children = floors;
+      }
+
+      // 触发重新渲染
+      setCascaderOptions([...cascaderOptions]);
+    } finally {
+      setLoadingCascader(false);
+    }
+  }, [cascaderOptions, loadFloorsForCascader]);
+
+  // 初始化 Cascader 选项（加载楼宇列表）
+  const initCascaderOptions = useCallback(async () => {
+    setLoadingCascader(true);
+    try {
+      const buildings = await loadBuildingsForCascader(selectedDeptId || undefined);
+      setCascaderOptions(buildings);
+    } finally {
+      setLoadingCascader(false);
+    }
+  }, [loadBuildingsForCascader, selectedDeptId]);
+
+  // 预加载 Cascader 路径数据（用于编辑回显）
+  const preloadCascaderPath = useCallback(async (buildingId: string, floorId: string) => {
+    try {
+      // 找到对应的楼宇节点
+      const buildingIndex = cascaderOptions.findIndex(b => b.value === buildingId);
+      if (buildingIndex === -1) return;
+
+      // 加载该楼宇下的楼层列表
+      const floors = await loadFloorsForCascader(buildingId);
+
+      // 更新楼宇节点的 children（楼层列表）
+      const updatedOptions = [...cascaderOptions];
+      (updatedOptions[buildingIndex] as typeof cascaderOptions[0] & { children?: typeof cascaderOptions }).children = floors;
+
+      // 触发重新渲染
+      setCascaderOptions(updatedOptions);
+    } catch (error) {
+      console.error('预加载 Cascader 路径失败:', error);
+    }
+  }, [cascaderOptions, loadFloorsForCascader]);
+
+  // 打开编辑模态框时初始化 Cascader
+  const handleOpenModal = useCallback(async (record?: WorkstationOps) => {
+    // 初始化 Cascader 选项（加载楼宇列表）
+    await initCascaderOptions();
+
+    if (record) {
+      handleEdit(record);
+
+      // 编辑模式：需要预加载级联路径数据
+      if (record.floorId) {
+        try {
+          // 查询楼层信息以获取所属楼宇
+          const { floorApi } = await import('@/lib/opsApi');
+          const floorResult = await floorApi.get(record.floorId);
+          const floor = floorResult.data;
+
+          const buildingId = floor?.buildingId || floor?.buildingCode;
+          const floorId = record.floorId;
+
+          if (buildingId && floorId) {
+            // 预加载 Cascader 路径数据，确保回显时能找到匹配的节点
+            await preloadCascaderPath(buildingId, floorId);
+
+            // 设置表单值为二级路径: [buildingId, floorId]
+            workstationForm.setFieldsValue({
+              ...record,
+              floorId: [buildingId, floorId],
+            });
+          } else {
+            workstationForm.setFieldsValue(record);
+          }
+        } catch (error) {
+          console.error('获取楼层信息失败:', error);
+          workstationForm.setFieldsValue(record);
+        }
+      } else {
+        workstationForm.setFieldsValue(record);
+      }
+    } else {
+      // 新增模式
+      handleAdd();
+      workstationForm.setFieldsValue({ status: 0, type: 0 });
+    }
+
+    setModalVisible(true);
+  }, [initCascaderOptions, preloadCascaderPath, handleEdit, handleAdd, workstationForm, setModalVisible]);
 
   const handleImportSuccess = useCallback(() => {
     refreshData();
@@ -177,8 +331,7 @@ const WorkstationManagement: FC = () => {
         <WorkstationCardView
           workstations={workstations}
           onEdit={(record) => {
-            handleEdit(record);
-            openModal(record, workstationForm);
+            handleOpenModal(record);
           }}
           onDelete={(id) => handleDelete(id, handleSuccess)}
         />
@@ -195,14 +348,7 @@ const WorkstationManagement: FC = () => {
         onFloorChange={handleFloorChangeForPlan}
         onPositionUpdate={handlePositionUpdate}
         onEdit={(ws) => {
-          // 从完整工位列表中找到对应的数据
-          const fullWorkstation = workstations.find(w => w.id === ws.id);
-          handleFloorPlanEdit(ws, () => {
-            // 优先使用完整工位数据，如果没有则使用平面图节点数据转换
-            if (fullWorkstation) {
-              openModal(fullWorkstation, workstationForm);
-            }
-          });
+          handleOpenModal(workstations.find(w => w.id === ws.id));
         }}
         onCloseFloorPlan={() => setViewMode('table')}
       />
@@ -296,8 +442,7 @@ const WorkstationManagement: FC = () => {
                 type="primary"
                 icon={<PlusOutlined />}
                 onClick={() => {
-                  handleAdd();
-                  openModal(undefined, workstationForm);
+                  handleOpenModal(undefined);
                 }}
               >
                 新增工位
@@ -329,17 +474,24 @@ const WorkstationManagement: FC = () => {
         <WorkstationEditModal
           open={modalVisible}
           editingWorkstation={editingWorkstation}
-          floorOptions={floorOptions}
           deptTreeData={deptTreeData}
           userOptions={userOptions}
+          cascaderOptions={cascaderOptions}
+          loadingCascader={loadingCascader}
+          handleCascaderLoadData={handleCascaderLoadData}
           onOk={async (values) => {
             try {
-              // 直接使用传递来的表单值
+              // 处理级联选择返回的 floorId（可能是数组）
+              const submitValues = { ...values };
+              if (Array.isArray(submitValues.floorId)) {
+                submitValues.floorId = submitValues.floorId[submitValues.floorId.length - 1];
+              }
+
               if (editingWorkstation) {
-                await workstationApi.update(editingWorkstation.id, values);
+                await workstationApi.update(editingWorkstation.id, submitValues);
                 showSuccessMessage('更新');
               } else {
-                await workstationApi.create(values);
+                await workstationApi.create(submitValues);
                 showSuccessMessage('创建');
               }
               // 成功后关闭模态框并刷新

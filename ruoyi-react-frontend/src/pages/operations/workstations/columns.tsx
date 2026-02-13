@@ -22,11 +22,20 @@ export function getWorkstationColumns(params: WorkstationColumnsParams): Columns
   return [
     { title: '工位名称', dataIndex: 'name', key: 'name', width: 150 },
     {
+      title: '所属楼宇',
+      dataIndex: 'buildingName',
+      key: 'buildingName',
+      width: 120,
+      ellipsis: true,
+      render: (text) => text || '-',
+    },
+    {
       title: '所属楼层',
       dataIndex: 'floorName',
       key: 'floorName',
-      width: 150,
-      render: (_: unknown, record: WorkstationOps) => record.floorName || record.floorId,
+      width: 120,
+      ellipsis: true,
+      render: (text) => text || '-',
     },
     {
       title: '工位类型',

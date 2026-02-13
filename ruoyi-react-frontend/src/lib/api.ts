@@ -330,23 +330,24 @@ api.interceptors.response.use(
 );
 
 // 封装常用请求方法
-export function get<T = unknown>(url: string, params?: unknown): Promise<T> {
+// 注意：这些方法返回 Promise<BaseResponse<T>>，其中 T 是响应中 data 字段的类型
+export function get<T = unknown>(url: string, params?: unknown): Promise<BaseResponse<T>> {
 	return api.get(url, { params });
 }
 
-export function post<T = unknown>(url: string, data?: unknown): Promise<T> {
+export function post<T = unknown>(url: string, data?: unknown): Promise<BaseResponse<T>> {
 	return api.post(url, data);
 }
 
-export function put<T = unknown>(url: string, data?: unknown): Promise<T> {
+export function put<T = unknown>(url: string, data?: unknown): Promise<BaseResponse<T>> {
 	return api.put(url, data);
 }
 
-export function del<T = unknown>(url: string): Promise<T> {
+export function del<T = unknown>(url: string): Promise<BaseResponse<T>> {
 	return api.delete(url);
 }
 
-export function upload<T = unknown>(url: string, file: File): Promise<T> {
+export function upload<T = unknown>(url: string, file: File): Promise<BaseResponse<T>> {
 	const formData = new FormData();
 	formData.append('file', file);
 
@@ -357,7 +358,7 @@ export function upload<T = unknown>(url: string, file: File): Promise<T> {
 	});
 }
 
-export function postFormData<T = unknown>(url: string, formData: FormData): Promise<T> {
+export function postFormData<T = unknown>(url: string, formData: FormData): Promise<BaseResponse<T>> {
 	return api.post(url, formData, {
 		headers: {
 			'Content-Type': 'multipart/form-data',
@@ -373,27 +374,15 @@ export function postLongRequest<T = unknown>(
 	return api.post(url, data, { timeout });
 }
 
-// 类型化 API 函数
+// 类型化 API 函数（别名，与上方函数相同，保留向后兼容）
+// 推荐直接使用 get/post/put/del，它们已返回 BaseResponse<T>
 
-export function getTyped<T>(url: string, params?: unknown): Promise<BaseResponse<T>> {
-	return api.get(url, { params });
-}
-
-export function postTyped<T>(url: string, data?: unknown): Promise<BaseResponse<T>> {
-	return api.post(url, data);
-}
-
-export function putTyped<T>(url: string, data?: unknown): Promise<BaseResponse<T>> {
-	return api.put(url, data);
-}
-
-export function patchTyped<T>(url: string, data?: unknown): Promise<BaseResponse<T>> {
-	return api.patch(url, data);
-}
-
-export function deleteTyped<T>(url: string): Promise<BaseResponse<T>> {
-	return api.delete(url);
-}
+export const getTyped = get;
+export const postTyped = post;
+export const putTyped = put;
+export const patchTyped = <T = unknown>(url: string, data?: unknown): Promise<BaseResponse<T>> =>
+	api.patch(url, data);
+export const deleteTyped = del;
 
 // 导出axios实例
 export { api };

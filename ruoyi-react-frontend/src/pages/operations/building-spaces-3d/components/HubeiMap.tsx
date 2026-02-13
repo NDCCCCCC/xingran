@@ -10,7 +10,7 @@ import type { BuildingItem } from '../types';
 import { useVisualizationStore } from '@/store/visualizationStore';
 import { getMapMarkerColor } from '@/utils/three/colors';
 import { loadBaiduMapScript } from './BaiduMapScript';
-import type { BMapNamespace, BMapMap, BMapPoint, BMapMarker, BMapInfoWindow, BMapPolygon } from '@/types/baidu-map';
+import { getBMap, type BMapNamespace, type BMapMap, type BMapMarker, type BMapInfoWindow, type BMapPolygon, type BMapPoint } from '@/types/baidu-map';
 
 // 聚类群组类型
 interface ClusterGroup {
@@ -153,7 +153,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
         if (!mapRef.current) return;
 
         // 创建地图实例
-        const BMap = window.BMap as any;
+        const BMap = getBMap();
         if (!BMap) {
           message.error('百度地图加载失败');
           return;
@@ -219,7 +219,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
     if (!mapInstanceRefLocal.current || !mapLoaded) return;
 
     const map = mapInstanceRefLocal.current;
-    const BMap = window.BMap as any;
+    const BMap = getBMap();
     if (!BMap) return;
 
     // 清除现有标记
@@ -274,7 +274,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
       const avgPixelY = pixels.reduce((sum, p) => sum + p.y, 0) / pixels.length;
 
       // 将像素中心转换回经纬度
-      const centerPoint = (map as any).pixelToPoint?.(new BMap.Pixel(avgPixelX, avgPixelY))
+      const centerPoint = map.pixelToPoint?.(new BMap.Pixel(avgPixelX, avgPixelY))
         || { lng: building.longitude!, lat: building.latitude! };
 
       const cluster: ClusterGroup = {
@@ -295,8 +295,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
   }, [mapLoaded, buildings, currentZoom]);
 
   // 渲染聚类标记（单个楼宇或多个楼宇聚类）
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const renderClusterMarker = (cluster: ClusterGroup, map: any, BMap: any) => {
+  const renderClusterMarker = (cluster: ClusterGroup, map: BMapMap, BMap: BMapNamespace) => {
     const { buildings, clusterLng, clusterLat, centerPixel } = cluster;
     const isCluster = buildings.length > 1;
 
@@ -411,8 +410,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
   };
 
   // 显示单个楼宇信息
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const showBuildingInfo = (building: BuildingItem, map: any, BMap: any) => {
+  const showBuildingInfo = (building: BuildingItem, map: BMapMap, BMap: BMapNamespace) => {
     const isStopped = building.status === 1;
     const statusColor = isStopped ? '#9e9e9e' : '#ff6b35';
     const statusBg = isStopped ? '#f5f5f5' : '#fff2e8';
@@ -455,7 +453,9 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
 
     infoWindowRef.current?.setContent(content);
     const point = new BMap.Point(building.longitude!, building.latitude!);
-    map.openInfoWindow(infoWindowRef.current, point);
+    if (infoWindowRef.current) {
+      map.openInfoWindow(infoWindowRef.current, point);
+    }
   };
 
   // 全局函数：查看楼宇详情

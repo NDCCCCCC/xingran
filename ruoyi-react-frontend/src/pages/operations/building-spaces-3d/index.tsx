@@ -41,8 +41,20 @@ const BuildingSpaces3D: React.FC = () => {
     try {
       setLoading(true);
       const result = await buildingApi.list({ current: 1, pageSize: PAGE_SIZE });
+      // 后端返回的 Building 类型转换为 BuildingItem，补充缺失字段
       const buildingList = result.data?.list || [];
-      setBuildings(buildingList as unknown as BuildingItem[]);
+      setBuildings(buildingList.map(b => ({
+        id: b.id,
+        name: b.name,
+        code: b.code,
+        cityCode: '',
+        cityName: '',
+        address: b.address || '',
+        longitude: b.longitude,
+        latitude: b.latitude,
+        level: 2 as const,
+        status: b.status,
+      })));
     } catch (error) {
       handleApiError(error, '加载楼宇数据');
     } finally {

@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import type { ConfigExecution, NetworkDevice, BaseResponse, PageResponse } from '@/types';
+import type { ConfigExecution, ConfigExecutionDetail, NetworkDevice, BaseResponse, PageResponse } from '@/types';
 import { post } from '@/lib/api';
 import type { CommandStatistics } from '../types';
 
@@ -26,7 +26,7 @@ export interface UseCommandDataReturn {
   loadExecutions: (params?: Record<string, unknown>) => Promise<void>;
   loadStatistics: () => Promise<void>;
   loadDevices: () => Promise<NetworkDevice[]>;
-  loadExecutionDetails: (executionId: string) => Promise<{ execution: ConfigExecution; details: Record<string, unknown>[] }>;
+  loadExecutionDetails: (executionId: string) => Promise<{ execution: ConfigExecution; details: ConfigExecutionDetail[] }>;
 }
 
 export function useCommandData(
@@ -63,7 +63,7 @@ export function useCommandData(
       setExecLoading(true);
       setExecLoadingState(true);
       try {
-        const result = await post<BaseResponse<PageResponse<ConfigExecution>>>('/network/command/list', {
+        const result = await post<PageResponse<ConfigExecution>>('/network/command/list', {
           current: params.current || current,
           pageSize: params.pageSize || pageSize,
         });
@@ -83,7 +83,7 @@ export function useCommandData(
 
   const loadStatistics = useCallback(async () => {
     try {
-      const result = await post<BaseResponse<PageResponse<ConfigExecution>>>('/network/command/list', { current: 1, pageSize: 10000 });
+      const result = await post<PageResponse<ConfigExecution>>('/network/command/list', { current: 1, pageSize: 10000 });
       const allExecutions = result.data?.list || [];
       updateStatistics(allExecutions);
     } catch (error) {
@@ -93,7 +93,7 @@ export function useCommandData(
 
   const loadDevices = useCallback(async (): Promise<NetworkDevice[]> => {
     try {
-      const result = await post<BaseResponse<PageResponse<NetworkDevice>>>('/network/devices/list', {
+      const result = await post<PageResponse<NetworkDevice>>('/network/devices/list', {
         current: 1,
         pageSize: 1000,
         status: 0,
@@ -106,9 +106,9 @@ export function useCommandData(
   }, []);
 
   const loadExecutionDetails = useCallback(
-    async (executionId: string): Promise<{ execution: ConfigExecution; details: Record<string, unknown>[] }> => {
+    async (executionId: string): Promise<{ execution: ConfigExecution; details: ConfigExecutionDetail[] }> => {
       try {
-        const result = await post<BaseResponse<ConfigExecution & { details?: Record<string, unknown>[] }>>(`/network/command/${executionId}`, {});
+        const result = await post<ConfigExecution>(`/network/command/${executionId}`, {});
         return {
           execution: result.data || {} as ConfigExecution,
           details: result.data?.details || [],

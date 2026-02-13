@@ -2,6 +2,7 @@ package operations
 
 import (
 	"context"
+	"time"
 
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
@@ -45,12 +46,32 @@ func (s *floorService) Create(ctx context.Context, floor *operations.OpsFloor) e
 }
 
 func (s *floorService) Update(ctx context.Context, floor *operations.OpsFloor) error {
+	// 保存旧的 buildingID 用于后续同步
+	oldBuildingID := floor.BuildingID
+
 	if floor.BuildingID != "" {
 		if err := s.validateBuilding(ctx, floor.BuildingID); err != nil {
 			return err
 		}
 	}
-	return s.db.WithContext(ctx).Save(floor).Error
+
+	// 保存楼层（这会触发 updateBuildingFloorCount）
+	if err := s.db.WithContext(ctx).Save(floor).Error; err != nil {
+		return err
+	}
+
+	// 如果楼宇ID发生了变化，同步更新相关工位的 building_id
+	if oldBuildingID != "" && floor.BuildingID != "" && oldBuildingID != floor.BuildingID {
+		// 异步同步工位 building_id（非阻塞，避免影响主流程性能）
+		// 使用带超时的衍生上下文，避免长时间运行
+		go func() {
+			syncCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			s.syncWorkstationBuildingID(syncCtx, floor.ID, floor.BuildingID)
+		}()
+	}
+
+	return nil
 }
 
 func (s *floorService) Delete(ctx context.Context, id string) error {
@@ -230,4 +251,21 @@ func (s *floorService) updateBuildingFloorCount(ctx context.Context, buildingID 
 		return err
 	}
 	return s.db.WithContext(ctx).Model(&operations.OpsBuilding{}).Where("id = ?", buildingID).Update("total_floors", count).Error
+}
+
+// syncWorkstationBuildingID 同步更新工位的楼宇ID
+// 当楼层所属楼宇变更时，更新该楼层下所有工位的 building_id
+func (s *floorService) syncWorkstationBuildingID(ctx context.Context, floorID string, newBuildingID string) error {
+	// 更新该楼层下所有工位的 building_id
+	sql := `
+		UPDATE sys_workstation
+		SET building_id = ?
+		WHERE floor_id = ?
+			AND (building_id IS NULL OR building_id != ?);
+	`
+	if err := s.db.WithContext(ctx).Exec(sql, newBuildingID, floorID, floorID).Error; err != nil {
+		return err
+	}
+
+	return nil
 }

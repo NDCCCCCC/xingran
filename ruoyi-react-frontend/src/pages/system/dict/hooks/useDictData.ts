@@ -97,10 +97,10 @@ export function useDictData(searchForm: FormInstance<unknown>, dataSearchForm: F
   // 加载字典类型统计数据
   const loadTypeStatistics = useCallback(async () => {
     try {
-      const result = await post<{ data: { list: DictType[] } }>('/system/dicts/types/list', { current: 1, pageSize: 1000 });
-      const allTypes = result.data.list || [];
-      const activeCount = allTypes.filter((t) => t.status === 0).length;
-      const inactiveCount = allTypes.filter((t) => t.status === 1).length;
+      const result = await post<{ list: DictType[] }>('/system/dicts/types/list', { current: 1, pageSize: 1000 });
+      const allTypes = result.data?.list || [];
+      const activeCount = allTypes.filter((t: DictType) => t.status === 0).length;
+      const inactiveCount = allTypes.filter((t: DictType) => t.status === 1).length;
       setTypeStatistics({
         total: allTypes.length,
         active: activeCount,
@@ -118,10 +118,10 @@ export function useDictData(searchForm: FormInstance<unknown>, dataSearchForm: F
       return;
     }
     try {
-      const result = await post<{ data: { list: DictData[] } }>('/system/dicts/data/list', { current: 1, pageSize: 1000, dictType: selectedType });
-      const allData = result.data.list || [];
-      const activeCount = allData.filter((d) => d.status === 0).length;
-      const inactiveCount = allData.filter((d) => d.status === 1).length;
+      const result = await post<{ list: DictData[] }>('/system/dicts/data/list', { current: 1, pageSize: 1000, dictType: selectedType });
+      const allData = result.data?.list || [];
+      const activeCount = allData.filter((d: DictData) => d.status === 0).length;
+      const inactiveCount = allData.filter((d: DictData) => d.status === 1).length;
       setDataStatistics({
         total: allData.length,
         active: activeCount,

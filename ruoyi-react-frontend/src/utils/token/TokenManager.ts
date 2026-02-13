@@ -9,7 +9,8 @@
  * 4. 处理刷新失败
  */
 
-import type { SecureTokenStorage, TokenMeta, TokenRefreshResponse, TokenRefreshError } from './SecureTokenStorage';
+import type { SecureTokenStorage, TokenMeta, TokenRefreshResponse } from './SecureTokenStorage';
+import { TokenRefreshError } from './SecureTokenStorage';
 
 /**
  * Token 刷新锁（防止并发刷新）
@@ -82,9 +83,7 @@ export class TokenManager {
 		const token = this.storage.getAccessToken();
 
 		if (!token) {
-			const error = new Error('No access token available') as any;
-			error.code = 'INVALID_TOKEN';
-			throw error;
+			throw new TokenRefreshError('No access token available', 'INVALID_TOKEN');
 		}
 
 		// 检查是否需要刷新
@@ -142,9 +141,7 @@ export class TokenManager {
 		const refreshToken = await this.storage.getRefreshToken();
 
 		if (!refreshToken) {
-			const error = new Error('No refresh token available') as any;
-			error.code = 'INVALID_TOKEN';
-			throw error;
+			throw new TokenRefreshError('No refresh token available', 'INVALID_TOKEN');
 		}
 
 		try {
@@ -164,22 +161,17 @@ export class TokenManager {
 				refreshToken: newRefreshToken,
 				expiresIn,
 			};
-		} catch (error: any) {
+		} catch (error: unknown) {
 			console.error('[TokenManager] 刷新 Token 失败:', error);
 
 			// 根据错误类型分类
-			if (error.response?.status === 401) {
-				const refreshError = new Error('Refresh token expired') as any;
-				refreshError.code = 'INVALID_TOKEN';
-				throw refreshError;
-			} else if (error.code === 'NETWORK_ERROR') {
-				const refreshError = new Error('Network error during refresh') as any;
-				refreshError.code = 'NETWORK_ERROR';
-				throw refreshError;
+			const axiosError = error as { response?: { status?: number }; code?: string };
+			if (axiosError.response?.status === 401) {
+				throw new TokenRefreshError('Refresh token expired', 'INVALID_TOKEN');
+			} else if (axiosError.code === 'NETWORK_ERROR') {
+				throw new TokenRefreshError('Network error during refresh', 'NETWORK_ERROR');
 			} else {
-				const refreshError = new Error('Server error during refresh') as any;
-				refreshError.code = 'SERVER_ERROR';
-				throw refreshError;
+				throw new TokenRefreshError('Server error during refresh', 'SERVER_ERROR');
 			}
 		}
 	}

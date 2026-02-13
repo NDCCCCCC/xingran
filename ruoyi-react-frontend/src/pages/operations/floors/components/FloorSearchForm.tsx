@@ -21,12 +21,15 @@ import type { Building } from '@/types';
 
 const { Option } = Select;
 
+// 楼宇选项基础类型（只需要 id 和 name）
+type BuildingOptionBase = Pick<Building, 'id' | 'name'>;
+
 interface FloorSearchFormProps {
   form: FormInstance;
-  buildingOptions: Building[];
+  buildingOptions: BuildingOptionBase[];
   viewMode: ViewMode;
   loading: boolean;
-  buildingOptionsByDept: Building[];
+  buildingOptionsByDept: BuildingOptionBase[];
   selectedDeptId: string;
   disabled?: boolean;
   onSearch: () => void;

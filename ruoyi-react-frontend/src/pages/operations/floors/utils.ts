@@ -63,13 +63,16 @@ export function processWorkstations(workstations: WorkstationOps[]): Workstation
 
 /**
  * 解析JSON字段
+ * 当解析失败时返回原值（类型可能不匹配，需要调用方处理）
  */
 export function parseJsonField<T>(value: string | T): T {
   if (typeof value === 'string') {
     try {
       return JSON.parse(value) as T;
     } catch {
-      return value as unknown as T;
+      // JSON解析失败，返回原字符串作为T类型
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return value as any;
     }
   }
   return value;

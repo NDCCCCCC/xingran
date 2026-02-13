@@ -26,7 +26,7 @@ export interface UseExecutionModalsReturn {
   handleTemplateChange: (templateId: string) => void;
   handleExecuteByTemplate: (executeForm: FormInstance<unknown>) => Promise<void>;
   handleCancelExecution: (id: string) => Promise<void>;
-  handleViewDetail: (record: Record<string, unknown>) => void;
+  handleViewDetail: (record: { id: string }) => void;
   handleViewOutput: (output: string) => void;
   closeDetailDrawer: () => void;
   closeVariableModal: () => void;

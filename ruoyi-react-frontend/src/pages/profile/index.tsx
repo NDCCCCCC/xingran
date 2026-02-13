@@ -25,8 +25,7 @@ import {
   CalendarOutlined,
 } from '@ant-design/icons';
 import { getProfileInfo, updateProfileInfo, changePassword, uploadAvatar } from '@/lib/profileApi';
-import { getMyDutyStats } from '@/lib/dutyApi';
-import type { MyDutyStats } from '@/types';
+import { getMyDutyStats, type MyDutyStats } from '@/lib/dutyApi';
 import { useAuthStore } from '@/store/authStore';
 import { isFormValidationError } from '@/utils/errorHandler';
 import type { UserProfile } from '@/types';
@@ -59,7 +58,7 @@ const ProfilePage: FC = () => {
     setDutyStatsLoading(true);
     try {
       const result = await getMyDutyStats();
-      setDutyStats((result as unknown as MyDutyStats) || null);
+      setDutyStats(result.data || null);
     } catch (error) {
       console.error('加载值班统计失败', error);
     } finally {

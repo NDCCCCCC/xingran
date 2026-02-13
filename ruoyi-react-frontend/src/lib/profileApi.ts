@@ -11,29 +11,33 @@ import type { BackendUserPreferences } from '@/types/config';
 /**
  * 获取当前用户个人信息
  */
-export function getProfileInfo(): Promise<UserProfile> {
-  return get<UserProfile>('/system/profile/info');
+export async function getProfileInfo(): Promise<UserProfile> {
+  const response = await get<UserProfile>('/system/profile/info');
+  return response.data!;
 }
 
 /**
  * 更新个人信息
  */
-export function updateProfileInfo(data: UpdateProfileRequest): Promise<{ message: string }> {
-  return put('/system/profile/info', data);
+export async function updateProfileInfo(data: UpdateProfileRequest): Promise<{ message: string }> {
+  const response = await put<{ message: string }>('/system/profile/info', data);
+  return response.data!;
 }
 
 /**
  * 修改密码
  */
-export function changePassword(data: ChangePasswordRequest): Promise<{ message: string }> {
-  return post('/system/profile/change-password', data);
+export async function changePassword(data: ChangePasswordRequest): Promise<{ message: string }> {
+  const response = await post<{ message: string }>('/system/profile/change-password', data);
+  return response.data!;
 }
 
 /**
  * 上传头像
  */
-export function uploadAvatar(file: File): Promise<{ avatar: string; message: string }> {
-  return upload('/system/profile/avatar', file);
+export async function uploadAvatar(file: File): Promise<{ avatar: string; message: string }> {
+  const response = await upload<{ avatar: string; message: string }>('/system/profile/avatar', file);
+  return response.data!;
 }
 
 // ==================== 系统设置 API ====================
@@ -43,8 +47,8 @@ export function uploadAvatar(file: File): Promise<{ avatar: string; message: str
  * 注意：后端返回的是 BackendUserPreferences 格式（扁平结构）
  */
 export async function getUserPreferences(): Promise<BackendUserPreferences> {
-  const response = await get<{ data: BackendUserPreferences }>('/system/settings/preferences');
-  return response.data;
+  const response = await get<BackendUserPreferences>('/system/settings/preferences');
+  return response.data!;
 }
 
 /**
@@ -52,6 +56,6 @@ export async function getUserPreferences(): Promise<BackendUserPreferences> {
  * 注意：后端接收的是 BackendUserPreferences 格式（扁平结构）
  */
 export async function updateUserPreferences(data: BackendUserPreferences): Promise<{ message: string }> {
-  const response = await put<{ data: { message: string } }>('/system/settings/preferences', data);
-  return response.data;
+  const response = await put<{ message: string }>('/system/settings/preferences', data);
+  return response.data!;
 }

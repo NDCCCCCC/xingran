@@ -6,25 +6,14 @@
 
 import { lazy } from 'react';
 import type { WidgetType } from '@/types/dashboard';
+import {
+	asWidgetComponent,
+	type WidgetBaseProps,
+	type WidgetComponentType,
+} from '@/types/widgets/helpers';
 
-/**
- * Widget 基础属性
- */
-export interface BaseWidgetProps {
-	id: string;
-	type: WidgetType;
-	title?: string;
-	size?: {
-		w: number;
-		h: number;
-	};
-	dataSource?: Record<string, unknown>;
-}
-
-/**
- * Widget 组件类型
- */
-export type WidgetComponentType = React.ComponentType<BaseWidgetProps>;
+// 重新导出类型以保持向后兼容
+export type { WidgetBaseProps as BaseWidgetProps, WidgetComponentType };
 
 /**
  * Widget 配置接口
@@ -68,7 +57,9 @@ export const widgetRegistry: Record<WidgetType, WidgetConfig> = {
 		description: '显示单个关键指标的数值卡片',
 		icon: '🔢',
 		defaultSize: { w: 6, h: 3 },
-		component: lazy(() => import('../types/StatCardWidget').then(m => ({ default: m.StatCardWidget as unknown as WidgetComponentType }))),
+		component: lazy(() => import('../types/StatCardWidget').then(m => ({
+			default: asWidgetComponent(m.StatCardWidget)
+		}))),
 		supportsDataSource: true,
 		supportedDataSources: ['api', 'websocket', 'static'],
 	},
@@ -78,7 +69,9 @@ export const widgetRegistry: Record<WidgetType, WidgetConfig> = {
 		description: '支持折线图、柱状图、饼图等多种图表类型',
 		icon: '📊',
 		defaultSize: { w: 12, h: 6 },
-		component: lazy(() => import('../types/ChartWidget').then(m => ({ default: m.ChartWidget as unknown as WidgetComponentType }))),
+		component: lazy(() => import('../types/ChartWidget').then(m => ({
+			default: asWidgetComponent(m.ChartWidget)
+		}))),
 		supportsDataSource: true,
 		supportedDataSources: ['api', 'websocket', 'static'],
 	},
@@ -88,7 +81,9 @@ export const widgetRegistry: Record<WidgetType, WidgetConfig> = {
 		description: '以表格形式展示数据列表',
 		icon: '📋',
 		defaultSize: { w: 24, h: 8 },
-		component: lazy(() => import('../types/TableWidget').then(m => ({ default: m.TableWidget as unknown as WidgetComponentType }))),
+		component: lazy(() => import('../types/TableWidget').then(m => ({
+			default: asWidgetComponent(m.TableWidget)
+		}))),
 		supportsDataSource: true,
 		supportedDataSources: ['api', 'websocket', 'static'],
 	},
@@ -98,7 +93,9 @@ export const widgetRegistry: Record<WidgetType, WidgetConfig> = {
 		description: '以简洁的列表形式展示数据',
 		icon: '📝',
 		defaultSize: { w: 8, h: 6 },
-		component: lazy(() => import('../types/ListWidget').then(m => ({ default: m.ListWidget as unknown as WidgetComponentType }))),
+		component: lazy(() => import('../types/ListWidget').then(m => ({
+			default: asWidgetComponent(m.ListWidget)
+		}))),
 		supportsDataSource: true,
 		supportedDataSources: ['api', 'websocket', 'static'],
 	},
@@ -108,7 +105,9 @@ export const widgetRegistry: Record<WidgetType, WidgetConfig> = {
 		description: '以进度条形式展示百分比或完成度',
 		icon: '📊',
 		defaultSize: { w: 6, h: 4 },
-		component: lazy(() => import('../types/ProgressWidget').then(m => ({ default: m.ProgressWidget as unknown as WidgetComponentType }))),
+		component: lazy(() => import('../types/ProgressWidget').then(m => ({
+			default: asWidgetComponent(m.ProgressWidget)
+		}))),
 		supportsDataSource: true,
 		supportedDataSources: ['api', 'websocket', 'static'],
 	},
@@ -118,7 +117,9 @@ export const widgetRegistry: Record<WidgetType, WidgetConfig> = {
 		description: '圆形指标仪表盘',
 		icon: '🎯',
 		defaultSize: { w: 6, h: 4 },
-		component: lazy(() => import('../types/MetricWidget').then(m => ({ default: m.MetricWidget as unknown as WidgetComponentType }))),
+		component: lazy(() => import('../types/MetricWidget').then(m => ({
+			default: asWidgetComponent(m.MetricWidget)
+		}))),
 		supportsDataSource: true,
 		supportedDataSources: ['api', 'websocket', 'static'],
 	},

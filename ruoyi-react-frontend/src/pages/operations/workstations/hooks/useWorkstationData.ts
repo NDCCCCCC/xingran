@@ -57,10 +57,10 @@ export function useWorkstationData(
       const result = await floorApi.list(params);
       const floors = result.data?.list || [];
       setFloorOptions(
-        floors.map((f: Floor) => ({
+        floors.map((f) => ({
           id: f.id,
           code: f.code || String(f.floorNo),
-          name: `${(f as unknown as Record<string, unknown>).buildingName || (f as unknown as Record<string, unknown>).buildingCode} - ${f.name || f.floorNo}`,
+          name: `${f.buildingName || f.buildingCode} - ${f.name || f.floorNo}`,
         }))
       );
     } catch (error) {

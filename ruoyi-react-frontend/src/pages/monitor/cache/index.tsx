@@ -192,7 +192,7 @@ const CacheManager: FC = () => {
   const fetchCaches = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await post<BaseResponse<PageResponse<CacheInfo>>>('/monitor/cache/list', {
+      const result = await post<PageResponse<CacheInfo>>('/monitor/cache/list', {
         ...searchForm,
         current: paginationProps.current,
         pageSize: paginationProps.pageSize
@@ -210,7 +210,7 @@ const CacheManager: FC = () => {
 
   const fetchMonitor = useCallback(async () => {
     try {
-      const result = await post<BaseResponse<CacheMonitor>>('/monitor/cache/monitor', {});
+      const result = await post<CacheMonitor>('/monitor/cache/monitor', {});
       setMonitor(result.data || null);
     } catch (error) {
       console.error('获取监控数据失败:', error);
@@ -223,7 +223,7 @@ const CacheManager: FC = () => {
   const handleOperate = useCallback(async () => {
     try {
       const values = await form.validateFields();
-      await post<BaseResponse<unknown>>('/monitor/cache/operate', {
+      await post<unknown>('/monitor/cache/operate', {
         ...values,
         ttl: values.ttl || undefined
       });
@@ -240,7 +240,7 @@ const CacheManager: FC = () => {
 
   const handleBatchOperate = useCallback(async (operation: string, keys?: string[]) => {
     try {
-      await post<BaseResponse<unknown>>('/monitor/cache/batch', {
+      await post<unknown>('/monitor/cache/batch', {
         keys: keys || [],
         operation
       });
@@ -275,7 +275,7 @@ const CacheManager: FC = () => {
 
   const handleExport = useCallback(async () => {
     try {
-      const result = await post<BaseResponse<unknown[]>>('/monitor/cache/export', {
+      const result = await post<unknown[]>('/monitor/cache/export', {
         ...searchForm
       });
 
@@ -289,7 +289,7 @@ const CacheManager: FC = () => {
 
   const handleViewDetail = useCallback(async (key: string) => {
     try {
-      const result = await get<BaseResponse<CacheInfo>>(`/monitor/cache/${key}`);
+      const result = await get<CacheInfo>(`/monitor/cache/${key}`);
 
       Modal.info({
         title: '缓存详情',

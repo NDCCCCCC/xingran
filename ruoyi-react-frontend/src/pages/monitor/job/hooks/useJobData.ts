@@ -53,7 +53,7 @@ export function useJobData(params: UseJobDataParams): UseJobDataReturn {
         pageSize
       };
 
-      const result = await post<BaseResponse<PageResponse<JobInfo>>>('/monitor/jobs/list', cleanedParams);
+      const result = await post<PageResponse<JobInfo>>('/monitor/jobs/list', cleanedParams);
 
       setJobs(result.data?.list || []);
       setTotal(result.data?.total || 0);
@@ -67,7 +67,7 @@ export function useJobData(params: UseJobDataParams): UseJobDataReturn {
   // 获取任务日志
   const fetchJobLogs = useCallback(async (jobName?: string, jobGroup?: string) => {
     try {
-      const result = await post<BaseResponse<PageResponse<JobLog>>>('/monitor/jobs/logs/list', {
+      const result = await post<PageResponse<JobLog>>('/monitor/jobs/logs/list', {
         jobName: jobName || '',
         jobGroup: jobGroup || '',
         current: 1,

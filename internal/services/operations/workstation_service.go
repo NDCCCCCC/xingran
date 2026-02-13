@@ -11,13 +11,16 @@ import (
 const (
 	workstationTable        = "sys_workstation"
 	floorTable             = "ops_floors"
-	workstationJoinSelect  = "sys_workstation.*, ops_floors.name as floor_name, ops_floors.floor_no as floor_code"
-	workstationJoinClause  = "LEFT JOIN ops_floors ON ops_floors.id = sys_workstation.floor_id::uuid"
+	buildingTable          = "ops_buildings"
+	workstationJoinSelect  = "sys_workstation.*, ops_floors.name as floor_name, ops_floors.floor_no as floor_code, ops_buildings.name as building_name, ops_buildings.id as building_id"
+	workstationJoinClause  = "LEFT JOIN ops_floors ON ops_floors.id = sys_workstation.floor_id::uuid LEFT JOIN ops_buildings ON ops_buildings.id = ops_floors.building_id::uuid"
 )
 
 // validateTableName 验证表名是否在白名单中，防止 SQL 注入
 func validateTableName(tableName string) bool {
 	allowedTables := map[string]bool{
+		"ops_buildings": true,
+		"sys_buildings": true,
 		"ops_floors": true,
 		"sys_floors": true,
 	}

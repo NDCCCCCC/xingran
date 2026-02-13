@@ -60,7 +60,7 @@ export function useDeviceData(
   // 加载统计数据
   const loadStatistics = useCallback(async () => {
     try {
-      const result = await post<BaseResponse<PageResponse<NetworkDevice>>>('/network/devices/list', { current: 1, pageSize: 10000 });
+      const result = await post<PageResponse<NetworkDevice>>('/network/devices/list', { current: 1, pageSize: 10000 });
       updateStatistics(result.data?.list || []);
     } catch (error) {
       handleApiError(error, '加载统计数据', false);
@@ -70,7 +70,7 @@ export function useDeviceData(
   // 加载部门列表（树形结构）
   const loadDepartments = useCallback(async () => {
     try {
-      const result = await post<BaseResponse<Department[]>>('/system/departments/tree', {});
+      const result = await post<Department[]>('/system/departments/tree', {});
       setDepartments(result.data || []);
     } catch (error) {
       handleApiError(error, '加载部门列表', false);
@@ -81,7 +81,7 @@ export function useDeviceData(
   // 加载授权凭证列表
   const loadCredentials = useCallback(async () => {
     try {
-      const result = await post<BaseResponse<PageResponse<AuthCredential>>>('/network/credentials/list', { current: 1, pageSize: 1000 });
+      const result = await post<PageResponse<AuthCredential>>('/network/credentials/list', { current: 1, pageSize: 1000 });
       setCredentials(result.data?.list || []);
     } catch (error) {
       handleApiError(error, '加载授权凭证列表', false);

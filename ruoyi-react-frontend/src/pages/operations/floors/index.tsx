@@ -379,8 +379,7 @@ const FloorManagement: FC = () => {
           setSelectedBuildingName(building.name);
           setSelectedDeptIdForEditor(building.orgId);
 
-          const buildingData = building as unknown as Record<string, unknown>;
-          setSelectedDeptName((buildingData.orgName as string) || '');
+          setSelectedDeptName(building.orgName || '');
 
           await loadBuildingOptionsByDept(building.orgId);
           await loadFloorOptionsByBuilding(building.id);
@@ -459,7 +458,7 @@ const FloorManagement: FC = () => {
 
         <FloorSearchForm
           form={searchForm}
-          buildingOptions={buildingOptions as unknown as Building[]}
+          buildingOptions={buildingOptions}
           viewMode={viewMode}
           loading={loading}
           buildingOptionsByDept={filterBuildingOptions}
@@ -521,9 +520,9 @@ const FloorManagement: FC = () => {
         <FloorModal
           visible={modalVisible}
           editingFloor={editingFloor}
-          buildingOptions={buildingOptions as unknown as Building[]}
+          buildingOptions={buildingOptions}
           departmentTreeData={[]}
-          buildingOptionsByDept={modalBuildingOptions as unknown as Building[]}
+          buildingOptionsByDept={modalBuildingOptions}
           selectedDeptId={modalDeptId}
           form={floorForm}
           onOk={handleSave}

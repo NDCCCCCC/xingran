@@ -40,7 +40,7 @@ import {
   filterBuildingsByZoom,
   animateViewTransition,
 } from '../utils';
-import type { BMapGLNamespace, BMapMap, BMapPoint, BMapMarker, BMapInfoWindow, BMapPolygon } from '@/types/baidu-map';
+import { getBMapGL, type BMapGLNamespace, type BMapMap, type BMapMapGL, type BMapMarker, type BMapInfoWindow, type BMapPolygon } from '@/types/baidu-map';
 
 // ============ 类型定义 ============
 
@@ -61,7 +61,7 @@ interface HubeiMapGLProps {
 const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
   // Refs
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<BMapMap | null>(null);
+  const mapInstanceRef = useRef<BMapMapGL | null>(null);
   const markersRef = useRef<BMapMarker[]>([]);
   const infoWindowRef = useRef<BMapInfoWindow | null>(null);
   const polygonRef = useRef<BMapPolygon | null>(null);
@@ -95,7 +95,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
 
         if (!mapRef.current) return;
 
-        const BMapGL = window.BMapGL as any;
+        const BMapGL = getBMapGL();
         if (!BMapGL) {
           message.error('百度地图GL加载失败');
           return;
@@ -157,19 +157,20 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
 
   // ============ 地图控件 ============
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const addMapControls = (map: any) => {
-    const BMapGL = window.BMapGL as any;
+  const addMapControls = (map: BMapMapGL) => {
+    const BMapGL = getBMapGL();
+    if (!BMapGL) return;
+
     // 缩放控件
     const zoomControl = new BMapGL.ZoomControl({
-      anchor: window.BMAPGL_ANCHOR_BOTTOM_RIGHT,
+      anchor: window.BMAPGL_ANCHOR_BOTTOM_RIGHT ?? 0,
       offset: new BMapGL.Size(20, 50),
     });
     map.addControl(zoomControl);
 
     // 比例尺控件
     const scaleControl = new BMapGL.ScaleControl({
-      anchor: window.BMAPGL_ANCHOR_BOTTOM_LEFT,
+      anchor: window.BMAPGL_ANCHOR_BOTTOM_LEFT ?? 0,
       offset: new BMapGL.Size(80, 30),
     });
     map.addControl(scaleControl);
@@ -177,8 +178,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
 
   // ============ 湖北省边界 ============
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const addHubeiMask = async (map: any, BMapGL: any) => {
+  const addHubeiMask = async (map: BMapMapGL, BMapGL: BMapGLNamespace) => {
     try {
       const boundaries = await getOfficialHubeiBoundary(BMapGL);
       boundaries.forEach((boundaryStr: string) => {
@@ -198,8 +198,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
     }
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const addFallbackMask = (map: any, BMapGL: any) => {
+  const addFallbackMask = (map: BMapMapGL, BMapGL: BMapGLNamespace) => {
     const points = HUBEI_BOUNDARY.map(
       (coord) => new BMapGL.Point(coord[0], coord[1])
     );
@@ -224,7 +223,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
     setIs3DMode(!is3DMode);
 
     animateViewTransition(
-      map as any,
+      map,
       { tilt: targetTilt },
       ANIMATION_DURATION.TOGGLE_3D,
       EASING_FUNCTIONS.easeInOutCubic
@@ -241,7 +240,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
     setCurrentTilt(0);
 
     animateViewTransition(
-      map as any,
+      map,
       {
         center: MAP_CONFIG.CENTER,
         zoom: MAP_CONFIG.DEFAULT_ZOOM,
@@ -259,7 +258,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
     if (!mapInstanceRef.current || !mapLoaded) return;
 
     const map = mapInstanceRef.current;
-    const BMapGL = window.BMapGL as any;
+    const BMapGL = getBMapGL();
     if (!BMapGL) return;
 
     // 清除现有标记
@@ -310,7 +309,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
 
       const avgPixel = averagePixelPosition(pixels);
       const centerPoint =
-        (map as any).pixelToPoint?.(new BMapGL.Pixel(avgPixel.x, avgPixel.y)) ||
+        map.pixelToPoint?.(new BMapGL.Pixel(avgPixel.x, avgPixel.y)) ||
         { lng: building.longitude!, lat: building.latitude! };
 
       const cluster: ClusterGroup = {
@@ -330,11 +329,10 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
     });
   }, [mapLoaded, buildings, currentZoom]);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const renderClusterMarker = (
     cluster: ClusterGroup,
-    map: any,
-    BMapGL: any
+    map: BMapMapGL,
+    BMapGL: BMapGLNamespace
   ) => {
     const { buildings, clusterLng, clusterLat, centerPixel } = cluster;
     const isCluster = buildings.length > 1;
@@ -433,8 +431,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
     setTooltipPosition(null);
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const showBuildingInfo = (building: BuildingItem, map: any, BMapGL: any) => {
+  const showBuildingInfo = (building: BuildingItem, map: BMapMapGL, BMapGL: BMapGLNamespace) => {
     const stopped = isBuildingStopped(building);
     const statusColor = stopped
       ? STATUS_TEXT_COLORS.STOPPED
@@ -481,7 +478,10 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
 
     infoWindowRef.current?.setContent(content);
     const point = new BMapGL.Point(building.longitude!, building.latitude!);
-    map.openInfoWindow(infoWindowRef.current, point);
+    const infoWindow = infoWindowRef.current;
+    if (infoWindow) {
+      map.openInfoWindow(infoWindow, point);
+    }
   };
 
   // ============ 全局函数 ============

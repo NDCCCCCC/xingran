@@ -2,18 +2,9 @@ import { post } from '@/lib/api';
 import type { PageParams } from '@/types/base';
 import type { PageData, DedicatedLine } from '@/types/operations';
 
-// API响应包装类型
-interface ApiResponse<T> {
-  code: number;
-  message: string;
-  data: T;
-  timestamp: number;
-  request_id: string;
-}
-
 export const dedicatedLineApi = {
-  // 列表查询
-  list: (params: PageParams) => post<ApiResponse<PageData<DedicatedLine>>>('/ops/dedicated-lines/list', params),
+  // 列表查询 - post 返回 Promise<BaseResponse<T>>，T 即 PageData<DedicatedLine>
+  list: (params: PageParams) => post<PageData<DedicatedLine>>('/ops/dedicated-lines/list', params),
 
   // 创建
   create: (data: Omit<DedicatedLine, 'id' | 'createdAt' | 'updatedAt'>) =>

@@ -27,7 +27,7 @@ export function useDepartmentTree() {
   const loadDepartments = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await post<BaseResponse<DepartmentOption[]>>('/system/departments/tree', {});
+      const result = await post<DepartmentOption[]>('/system/departments/tree', {});
       const convertToTreeData = (nodes: DepartmentNode[]): DepartmentOption[] => {
         return nodes.map(node => ({
           id: node.id,

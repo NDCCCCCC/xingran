@@ -40,8 +40,8 @@ const TargetSelector: FC<TargetSelectorProps> = ({
   const loadDeptTree = async () => {
     setLoading(true);
     try {
-      const response: { list: DeptTreeNode[] } = await get('/system/departments/tree');
-      setDeptTree(response.list || []);
+      const response = await get<DeptTreeNode[]>('/system/departments/tree');
+      setDeptTree(response.data || []);
     } catch (error) {
       console.error('加载部门树失败:', error);
       message.error('加载部门树失败');
@@ -54,8 +54,8 @@ const TargetSelector: FC<TargetSelectorProps> = ({
   const loadRoles = async () => {
     setLoading(true);
     try {
-      const response: { list: RoleOption[] } = await post('/system/roles/all', {});
-      setRoles(response.list || []);
+      const response = await post<RoleOption[]>('/system/roles/all', {});
+      setRoles(response.data || []);
     } catch (error) {
       console.error('加载角色列表失败:', error);
       message.error('加载角色列表失败');
@@ -68,12 +68,12 @@ const TargetSelector: FC<TargetSelectorProps> = ({
   const loadUsers = async (search = '') => {
     setLoading(true);
     try {
-      const response: { list: UserOption[] } = await post('/system/users/list', {
+      const response = await post<{ list: UserOption[] }>('/system/users/list', {
         username: search || undefined,
         current: 1,
         pageSize: 50,
       });
-      setUsers(response.list || []);
+      setUsers(response.data?.list || []);
     } catch (error) {
       console.error('加载用户列表失败:', error);
       message.error('加载用户列表失败');

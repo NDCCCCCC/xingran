@@ -254,7 +254,7 @@ const DeviceManagement: FC = () => {
   } = useTableManager<NetworkDevice>(
     async (params) => {
       const values = searchForm.getFieldsValue();
-      const result = await post<BaseResponse<PageResponse<NetworkDevice>>>('/network/devices/list', {
+      const result = await post<PageResponse<NetworkDevice>>('/network/devices/list', {
         ...values,
         ...params,
       });
@@ -293,13 +293,13 @@ const DeviceManagement: FC = () => {
       setProbing(true);
       setProbeResult(null);
 
-      const result = await post('/network/devices/discover', {
+      const result = await post<ProbeResult>('/network/devices/discover', {
         ipAddress: values.ipAddress,
         credentialId: values.credentialId,
-      }) as ProbeResult;
+      });
 
-      if (result?.success) {
-        setProbeResult(result);
+      if (result.data?.success) {
+        setProbeResult(result.data);
         handleSuccess('设备探测');
       } else {
         handleApiError(result?.message || '探测失败', '探测');

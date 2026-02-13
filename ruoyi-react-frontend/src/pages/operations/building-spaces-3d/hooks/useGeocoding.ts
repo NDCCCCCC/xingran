@@ -62,7 +62,7 @@ export const useGeocoding = () => {
         }
 
         // 缓存未命中，调用后端 API
-        const response = await post<{ data?: GeocodingResponse }>('/ops/building/geocode', {
+        const response = await post<GeocodingResponse>('/ops/building/geocode', {
           address: address.trim(),
           city: city || '',
         });

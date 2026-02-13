@@ -37,6 +37,15 @@ interface AuthState {
 	initialized: boolean; // 是否已尝试从存储恢复
 }
 
+interface AuthActions {
+	login: (credentials: LoginRequest) => Promise<void>;
+	logout: () => Promise<void>;
+	updateUser: (userData: Partial<User>) => void;
+	loadMenusAfterLogin: () => Promise<void>;
+	getTokenManager: () => TokenManager;
+	initializeFromStorage: () => Promise<void>;
+}
+
 type AuthStore = AuthState & AuthActions;
 
 export const useAuthStore = create<AuthStore>()(

@@ -46,7 +46,7 @@ export function useTemplateData(searchForm: FormInstance<unknown>, setTotal: (to
       setLoading(true);
       try {
         const formValues = searchValues ?? (searchForm.getFieldsValue() as Record<string, unknown>);
-        const result = await post<BaseResponse<PageResponse<ConfigTemplate>>>('/network/templates/list', {
+        const result = await post<PageResponse<ConfigTemplate>>('/network/templates/list', {
           current: params.current || 1,
           pageSize: params.pageSize || 10,
           ...formValues,
@@ -66,7 +66,7 @@ export function useTemplateData(searchForm: FormInstance<unknown>, setTotal: (to
 
   const loadStatistics = useCallback(async () => {
     try {
-      const result = await post<BaseResponse<PageResponse<ConfigTemplate>>>('/network/templates/list', { current: 1, pageSize: 10000 });
+      const result = await post<PageResponse<ConfigTemplate>>('/network/templates/list', { current: 1, pageSize: 10000 });
       const allTemplates = result.data?.list || [];
       updateStatistics(allTemplates);
     } catch (error) {

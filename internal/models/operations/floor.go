@@ -17,9 +17,9 @@ const (
 type OpsFloor struct {
 	models.BaseModel
 	Name         string      `gorm:"size:100;not null" json:"name"`
-	FloorNo      string      `gorm:"size:50;not null" json:"floorNo"`
-	BuildingID   string      `gorm:"size:64;not null" json:"buildingId"`
-	BuildingName *string     `gorm:"size:100" json:"buildingName,omitempty"`
+	FloorNo      string      `gorm:"column:floor_no;size:50;not null" json:"floorNo"`
+	BuildingID   string      `gorm:"column:building_id;size:64;not null" json:"buildingId"`
+	BuildingName *string     `gorm:"column:building_name;size:100" json:"buildingName,omitempty"`
 	Area         *float64    `gorm:"type:numeric(10,2)" json:"area,omitempty"`
 	Status       FloorStatus `gorm:"default:0" json:"status"`
 	Remark       *string     `gorm:"size:500" json:"-"`

@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect } from 'react';
 import type { FC } from 'react';
 import { Button, Form, Input, Modal, InputNumber, Select, Space, Tag, message, Card, Tree, Radio } from 'antd';
+import type { DataNode } from 'antd/es/tree';
 import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined, FolderOutlined } from '@ant-design/icons';
 import {
   getWorkOrderCategoryList,
@@ -19,7 +20,7 @@ const WorkOrderCategoryPage: FC = () => {
   const [editForm] = Form.useForm();
 
   const [categories, setCategories] = useState<WorkOrderCategory[]>([]);
-  const [treeData, setTreeData] = useState<Array<{ key: string; title: React.ReactNode; data: WorkOrderCategory; children?: unknown[] }>>([]);
+  const [treeData, setTreeData] = useState<DataNode[]>([]);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState<WorkOrderCategory | null>(null);
@@ -44,7 +45,7 @@ const WorkOrderCategoryPage: FC = () => {
       setCategories(result.data || []);
 
       // 后端返回的是嵌套结构，直接转换为树形数据
-      const buildTree = (list: WorkOrderCategory[]): Array<{ key: string; title: React.ReactNode; data: WorkOrderCategory; children?: unknown[] }> => {
+      const buildTree = (list: WorkOrderCategory[]): DataNode[] => {
         return list.map((item) => ({
           key: item.id,
           title: (
@@ -173,13 +174,13 @@ const WorkOrderCategoryPage: FC = () => {
         <Tree
           showLine
           switcherIcon={<FolderOutlined />}
-          treeData={treeData as unknown as (import('antd/es/tree').DataNode)[]}
+          treeData={treeData}
           defaultExpandAll
-          titleRender={(node: unknown) => {
-            const treeNode = node as { title?: React.ReactNode; data?: WorkOrderCategory };
+          titleRender={(node: DataNode & { data?: WorkOrderCategory }) => {
+            const title = typeof node.title === 'function' ? node.title(node) : node.title;
             return (
               <div className="flex items-center justify-between w-full pr-4">
-                {treeNode.title}
+                {title}
                 <Space size="small">
                   <Button
                     type="link"
@@ -187,7 +188,7 @@ const WorkOrderCategoryPage: FC = () => {
                     icon={<PlusOutlined />}
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleAdd(treeNode.data?.id || '');
+                      handleAdd(node.data?.id || '');
                     }}
                   >
                     新增子分类
@@ -198,8 +199,8 @@ const WorkOrderCategoryPage: FC = () => {
                     icon={<EditOutlined />}
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (treeNode.data) {
-                        handleEdit(treeNode.data);
+                      if (node.data) {
+                        handleEdit(node.data);
                       }
                     }}
                   >
@@ -216,7 +217,7 @@ const WorkOrderCategoryPage: FC = () => {
                         okText: '确定',
                         cancelText: '取消',
                         okButtonProps: { danger: true },
-                        onOk: () => handleDelete(treeNode.data?.id || ''),
+                        onOk: () => handleDelete(node.data?.id || ''),
                       });
                     }}
                   >

@@ -48,7 +48,7 @@ export function useTargetSelector(): UseTargetSelectorResult {
         deptName: string;
         children?: DeptNode[];
       }
-      const response: { data: { list: DeptNode[] } } = await get('/system/departments/tree');
+      const response = await get<DeptNode[]>('/system/departments/tree');
       const convertTree = (nodes: DeptNode[]): Target[] => {
         return nodes.map(node => ({
           ...node,
@@ -58,7 +58,7 @@ export function useTargetSelector(): UseTargetSelectorResult {
           children: node.children ? convertTree(node.children) : undefined,
         }));
       };
-      setDeptTree(convertTree(response.data?.list || []));
+      setDeptTree(convertTree(response.data || []));
     } catch (error) {
       console.error('加载部门树失败:', error);
     } finally {
@@ -70,7 +70,7 @@ export function useTargetSelector(): UseTargetSelectorResult {
   const loadRoles = useCallback(async () => {
     setLoadingRoles(true);
     try {
-      const response: { data: Target[] } = await post('/system/roles/all', {});
+      const response = await post<Target[]>('/system/roles/all', {});
       setRoles(response.data || []);
     } catch (error) {
       console.error('加载角色列表失败:', error);
@@ -83,7 +83,7 @@ export function useTargetSelector(): UseTargetSelectorResult {
   const loadUsers = useCallback(async () => {
     setLoadingUsers(true);
     try {
-      const response: { data: { list: Target[] } } = await post('/system/users/list', { current: 1, pageSize: 100 });
+      const response = await post<{ list: Target[] }>('/system/users/list', { current: 1, pageSize: 100 });
       setUsers(response.data?.list || []);
     } catch (error) {
       console.error('加载用户列表失败:', error);

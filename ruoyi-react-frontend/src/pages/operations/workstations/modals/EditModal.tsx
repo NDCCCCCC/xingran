@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useLayoutEffect, useRef } from 'react';
-import { Modal, Form, Input, InputNumber, Select, Row, Col } from 'antd';
+import { Modal, Form, Input, InputNumber, Select, Row, Col, Cascader } from 'antd';
 import type { WorkstationOps } from '@/types';
 import type { DeptTreeNode } from '../types';
 import { DepartmentTreeSelect } from '@/components/shared';
@@ -13,12 +13,22 @@ import { STATUS_OPTIONS, TYPE_OPTIONS } from '../constants';
 const { Option } = Select;
 const { TextArea } = Input;
 
+// Cascader 选项类型
+type CascaderOption = {
+  value: string;
+  label: string;
+  children?: CascaderOption[];
+  isLeaf?: boolean;
+};
+
 export interface WorkstationEditModalProps {
   open: boolean;
   editingWorkstation: WorkstationOps | null;
-  floorOptions: { id: string; code: string; name: string }[];
   deptTreeData: DeptTreeNode[];
   userOptions: { id: string; name: string }[];
+  cascaderOptions: CascaderOption[];
+  loadingCascader: boolean;
+  handleCascaderLoadData: (selectedOptions: CascaderOption[]) => Promise<void> | void;
   onOk: (values: Record<string, unknown>) => Promise<void>;
   onCancel: () => void;
   onDeptChange: (deptId: string) => void;
@@ -27,9 +37,11 @@ export interface WorkstationEditModalProps {
 export function WorkstationEditModal({
   open,
   editingWorkstation,
-  floorOptions,
   deptTreeData,
   userOptions,
+  cascaderOptions,
+  loadingCascader,
+  handleCascaderLoadData,
   onOk,
   onCancel,
   onDeptChange,
@@ -39,24 +51,19 @@ export function WorkstationEditModal({
   const isMountedRef = useRef(true);
 
   // 使用 useLayoutEffect 在 DOM 更新前同步设置表单值
-  // 避免 useEffect 的延迟导致表单被其他逻辑重置
+  // 注意：表单值已在父组件的 handleOpenModal 中设置，这里只需处理新增模式
   useLayoutEffect(() => {
     isMountedRef.current = true;
 
     if (open) {
-      if (editingWorkstation && editingWorkstation.id) {
-        // 编辑模式：设置表单值为编辑数据
-        // 只设置已定义的字段，避免覆盖用户输入
-        const valuesToSet = Object.fromEntries(
-          Object.entries(editingWorkstation).filter(([_, v]) => v !== undefined)
-        );
-        form.setFieldsValue(valuesToSet);
-        prevEditingWorkstationRef.current = editingWorkstation;
-      } else {
+      if (!editingWorkstation || !editingWorkstation.id) {
         // 新增模式：重置表单并设置默认值
         form.resetFields();
         form.setFieldsValue({ status: 0, type: 0 });
         prevEditingWorkstationRef.current = null;
+      } else {
+        // 编辑模式：表单值已在父组件中设置，这里只需更新引用
+        prevEditingWorkstationRef.current = editingWorkstation;
       }
     } else {
       // 模态框关闭时重置表单（仅在组件仍然挂载时）
@@ -95,13 +102,14 @@ export function WorkstationEditModal({
     >
       <Form form={form} layout="horizontal" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
         <Form.Item name="floorId" label="所属楼层" rules={[{ required: true, message: '请选择所属楼层' }]}>
-          <Select placeholder="请选择所属楼层">
-            {floorOptions.map((f) => (
-              <Option key={f.id} value={f.id}>
-                {f.name}
-              </Option>
-            ))}
-          </Select>
+          <Cascader
+            options={cascaderOptions}
+            loadData={handleCascaderLoadData}
+            loading={loadingCascader}
+            placeholder="请先选择楼宇，再选择楼层"
+            changeOnSelect
+            showSearch={{ filter: (inputValue, path) => path.some(option => option.label?.toLowerCase().includes(inputValue.toLowerCase())) }}
+          />
         </Form.Item>
         <Form.Item name="name" label="工位名称" rules={[{ required: true, message: '请输入工位名称' }]}>
           <Input placeholder="请输入工位名称" />

@@ -135,7 +135,7 @@ export function useRoleData(params: UseRoleDataParams): UseRoleDataReturn {
   // 加载菜单树
   const loadMenuTree = useCallback(async () => {
     try {
-      const result = await post<{ data: MenuTreeNode[] }>('/system/menus/tree-select');
+      const result = await post<MenuTreeNode[]>('/system/menus/tree-select');
       const processTreeData = (nodes: MenuTreeNode[]): TreeDataNode[] => {
         return nodes.map((node) => ({
           key: node.key || node.id || '',
@@ -144,7 +144,7 @@ export function useRoleData(params: UseRoleDataParams): UseRoleDataReturn {
           children: node.children && node.children.length > 0 ? processTreeData(node.children) : undefined,
         }));
       };
-      setMenuTree(processTreeData(result.data));
+      setMenuTree(processTreeData(result.data || []));
     } catch (error) {
       console.error('加载菜单树失败:', error);
     }
@@ -153,7 +153,7 @@ export function useRoleData(params: UseRoleDataParams): UseRoleDataReturn {
   // 加载部门树
   const loadDeptTree = useCallback(async () => {
     try {
-      const result = await post<{ data: DeptTreeNode[] }>('/system/departments/tree-select');
+      const result = await post<DeptTreeNode[]>('/system/departments/tree-select');
       const processTreeData = (nodes: DeptTreeNode[]): TreeDataNode[] => {
         return nodes.map((node) => ({
           key: node.key || node.id || '',
@@ -162,7 +162,7 @@ export function useRoleData(params: UseRoleDataParams): UseRoleDataReturn {
           children: node.children && node.children.length > 0 ? processTreeData(node.children) : undefined,
         }));
       };
-      setDeptTree(processTreeData(result.data));
+      setDeptTree(processTreeData(result.data || []));
     } catch (error) {
       console.error('加载部门树失败:', error);
     }

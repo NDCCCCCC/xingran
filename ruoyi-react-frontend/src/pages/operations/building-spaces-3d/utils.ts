@@ -2,7 +2,7 @@
 
 import type { BuildingItem } from './types';
 import { WORKSTATION_STATUS_COLORS } from './constants';
-import type { BMapGLNamespace, BMapPoint } from '@/types/baidu-map';
+import { getBMapGL, type BMapGLNamespace, type BMapPoint } from '@/types/baidu-map';
 
 // ============ 通用辅助函数 ============
 
@@ -447,7 +447,7 @@ export function animateViewTransition(
     getZoom(): number;
     getTilt(): number;
     getHeading(): number;
-    setCenter(center: { lng: number; lat: number }): void;
+    setCenter(center: BMapPoint): void;
     setZoom(zoom: number): void;
     setTilt(tilt: number): void;
     setHeading(heading: number): void;
@@ -479,7 +479,7 @@ export function animateViewTransition(
     if (target.center) {
       const lng = startState.center.lng + (target.center[0] - startState.center.lng) * eased;
       const lat = startState.center.lat + (target.center[1] - startState.center.lat) * eased;
-      const BMapGL = window.BMapGL as any;
+      const BMapGL = getBMapGL();
       if (BMapGL) {
         map.setCenter(new BMapGL.Point(lng, lat));
       }

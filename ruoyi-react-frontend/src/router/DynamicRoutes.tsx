@@ -122,12 +122,21 @@ function InitializingFallback() {
 }
 
 export function DynamicRoutes() {
-  const { allMenus } = useMenuStore();
+  const { allMenus, fetchAll } = useMenuStore();
   const { isAuthenticated, initialized } = useAuthStore();
   const location = useLocation();
 
   // 使用 state 来保存上次访问的路径
   const [lastPath, setLastPath] = useState<string | null>(() => getLastPath());
+
+  // 当用户已认证但菜单未加载时，自动加载菜单
+  useEffect(() => {
+    if (isAuthenticated && initialized && allMenus.length === 0) {
+      fetchAll().catch((error) => {
+        console.error('Failed to load menus after refresh:', error);
+      });
+    }
+  }, [isAuthenticated, initialized, allMenus.length, fetchAll]);
 
   const routeElements = useMemo(() => {
     if (allMenus.length === 0) {

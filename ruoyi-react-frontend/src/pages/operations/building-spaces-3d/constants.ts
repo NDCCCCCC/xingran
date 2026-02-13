@@ -10,7 +10,7 @@ export const MAP_CONFIG = {
   /** 湖北省中心点 */
   CENTER: [114.305393, 30.593099] as [number, number],
   /** 默认缩放级别（显示整个湖北省） */
-  DEFAULT_ZOOM: 8,
+  DEFAULT_ZOOM: 8 as number,
   /** 最小缩放级别 */
   MIN_ZOOM: 8,
   /** 最大缩放级别 */
