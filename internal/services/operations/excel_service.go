@@ -664,50 +664,37 @@ func (s *ExcelService) ExportData(ctx context.Context, entityType string, params
 
 // queryFloorTemplateData 查询楼层模板数据
 // 返回楼宇及其楼层的实际数据（按名称排序）
+// 使用 JOIN 查询避免 N+1 问题
 func (s *ExcelService) queryFloorTemplateData(query *gorm.DB) ([]map[string]interface{}, error) {
-	// 查询所有正常状态的楼宇和楼层
-	type BuildingResult struct {
-		ID   string
-		Name string
-	}
-	type FloorResult struct {
-		ID        string
-		Name      string
-		BuildingID string
-		FloorNo   string
-		Status    int
+	type FloorWithBuilding struct {
+		FloorName   string
+		FloorNo     string
+		BuildingName string
+		Status      int
 	}
 
-	var buildings []BuildingResult
-	err := query.Table("ops_buildings").
-		Where("deleted_at IS NULL AND status = ?", 0).
-		Order("name ASC"). // 按名称排序
-		Find(&buildings).Error
+	var results []FloorWithBuilding
+	err := query.Table("ops_floors").
+		Select("ops_floors.name as floor_name, floor_no, ops_buildings.name as building_name, ops_floors.status").
+		Joins("JOIN ops_buildings ON ops_buildings.id = ops_floors.building_id").
+		Where("ops_floors.deleted_at IS NULL AND ops_floors.status = ?", 0).
+		Where("ops_buildings.deleted_at IS NULL AND ops_buildings.status = ?", 0).
+		Order("building_name ASC, floor_no ASC").
+		Find(&results).Error
+
 	if err != nil {
 		return nil, err
 	}
 
-	var data []map[string]interface{}
-	for _, b := range buildings {
-		// 查询每个楼宇下的楼层
-		var floors []FloorResult
-		err := query.Table("ops_floors").
-			Where("building_id = ? AND deleted_at IS NULL AND status = ?", b.ID, 0).
-			Order("floor_no ASC"). // 按楼层号排序
-			Find(&floors).Error
-		if err != nil {
-			return nil, err
-			}
-
-		// 为每个楼层创建记录，使用名称字段
-		for _, f := range floors {
-			data = append(data, map[string]interface{}{
-				"name":         f.Name,
-				"floorNo":      f.FloorNo,
-				"buildingName": b.Name, // 使用实际的楼宇名称
-				"Status":       f.Status, // 修复字段名
-				"remark":       "",
-			})
+	// 预分配容量以提高性能
+	data := make([]map[string]interface{}, len(results))
+	for i, r := range results {
+		data[i] = map[string]interface{}{
+			"name":         r.FloorName,
+			"floorNo":      r.FloorNo,
+			"buildingName": r.BuildingName,
+			"Status":       r.Status,
+			"remark":       "",
 		}
 	}
 
