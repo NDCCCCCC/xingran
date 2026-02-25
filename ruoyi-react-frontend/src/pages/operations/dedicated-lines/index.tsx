@@ -341,20 +341,20 @@ const DedicatedLineManagement: FC = () => {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
             <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
               <Form.Item name="name" label="专线名称">
-                <Input placeholder="请输入专线名称" allowClear style={{ width: 150 }} />
+                <Input placeholder="请输入专线名称" allowClear className="user-form-input" style={{ width: 150 }} />
               </Form.Item>
               <Form.Item name="lineType" label="专线类型">
-                <Select placeholder="请选择类型" allowClear style={{ width: 130 }}>
+                <Select placeholder="请选择类型" allowClear className="user-form-input" style={{ width: 130 }}>
                   {lineTypeDict.map(d => <Option key={d.dictValue} value={d.dictValue}>{d.dictLabel}</Option>)}
                 </Select>
               </Form.Item>
               <Form.Item name="isp" label="运营商">
-                <Select placeholder="请选择运营商" allowClear style={{ width: 120 }}>
+                <Select placeholder="请选择运营商" allowClear className="user-form-input" style={{ width: 120 }}>
                   {ispDict.map(d => <Option key={d.dictValue} value={d.dictValue}>{d.dictLabel}</Option>)}
                 </Select>
               </Form.Item>
               <Form.Item name="status" label="状态">
-                <Select placeholder="请选择状态" allowClear style={{ width: 100 }}>
+                <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 100 }}>
                   <Option value={0}>正常</Option>
                   <Option value={1}>故障</Option>
                   <Option value={2}>停用</Option>

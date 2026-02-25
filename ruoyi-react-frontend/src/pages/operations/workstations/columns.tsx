@@ -38,6 +38,22 @@ export function getWorkstationColumns(params: WorkstationColumnsParams): Columns
       render: (text) => text || '-',
     },
     {
+      title: '所属部门',
+      dataIndex: 'deptName',
+      key: 'deptName',
+      width: 120,
+      ellipsis: true,
+      render: (text) => text || '-',
+    },
+    {
+      title: '所属用户',
+      dataIndex: 'userName',
+      key: 'userName',
+      width: 100,
+      ellipsis: true,
+      render: (text) => text || '-',
+    },
+    {
       title: '工位类型',
       dataIndex: 'type',
       key: 'type',

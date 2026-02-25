@@ -111,12 +111,17 @@ func (s *workstationService) List(ctx context.Context, params map[string]interfa
 	if typeVal := extractIntParam(params, "type", -1); typeVal >= 0 {
 		query = query.Where("sys_workstation.workstation_type = ?", typeVal)
 	}
-	// 通过关联楼宇的 orgId 筛选部门
+	// 通过关联楼宇的 orgId 筛选部门（包含子部门）
 	if orgId := extractStringParam(params, "orgId"); orgId != "" {
 		// 工位 -> 楼层 -> 楼宇，通过楼宇的 org_id 筛选
+		// 支持查询该部门及其所有子部门的工位
 		// 使用 EXISTS 子查询避免与现有 JOIN 冲突
-		// 注意：需要类型转换，因为 ops_floors.building_id 是 varchar，而 ops_buildings.id 是 uuid
-		query = query.Where("EXISTS (SELECT 1 FROM ops_floors f JOIN ops_buildings b ON b.id = f.building_id::uuid WHERE f.id::text = sys_workstation.floor_id AND b.org_id = ? AND b.deleted_at IS NULL)", orgId)
+		// 注意：需要类型转换
+		// - ops_floors.building_id 是 varchar，ops_buildings.id 是 uuid
+		// - ops_buildings.org_id 是 varchar，sys_dept.id 是 uuid
+	// - 将两边都转为 text 进行比较，避免类型不匹配
+		// 查询该部门及其所有子部门：ancestors 包含该部门ID，或 ID 等于该部门ID
+		query = query.Where("EXISTS (SELECT 1 FROM ops_floors f JOIN ops_buildings b ON b.id = f.building_id::uuid JOIN sys_dept d ON d.id::text = b.org_id WHERE f.id::text = sys_workstation.floor_id AND (b.org_id = ? OR d.ancestors LIKE ? OR d.ancestors = ?) AND b.deleted_at IS NULL)", orgId, "%,"+orgId, orgId)
 	}
 
 	// 分页

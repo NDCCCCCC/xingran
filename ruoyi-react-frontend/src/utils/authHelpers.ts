@@ -30,17 +30,17 @@ export async function getAccessToken(): Promise<string> {
  * @param options - fetch 选项（可选）
  * @returns 添加了认证头的 fetch 选项
  */
-export async function withAuth<T extends RequestInit = RequestInit>(
+export async function withAuth(
   url: string,
-  options?: T
-): Promise<[string, T]> {
+  options?: RequestInit
+): Promise<[string, RequestInit]> {
   const headers = await getAuthHeaders();
-  const mergedOptions: T = {
+  const mergedOptions: RequestInit = {
     ...options,
     headers: {
       ...(options?.headers as Record<string, string>),
       ...headers,
-    } as T['headers'],
+    },
   };
 
   return [url, mergedOptions];

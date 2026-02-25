@@ -8,8 +8,15 @@ RuoYi-Next is a modern enterprise permission management system based on the RuoY
 
 **Tech Stack:**
 - Backend: Go 1.24, Gin, GORM, PostgreSQL 18, Redis 7.4
-- Frontend: React 19.2, TypeScript 5.9, Vite 7.2, Ant Design 6.1, Zustand 5.0
+- Frontend: React 19.2, TypeScript 5.9, Vite 7.2, Ant Design 6.1, Zustand 5.0, Three.js (3D visualization)
 - Security: SM2/SM3/SM4 national cryptography algorithms
+
+**Important Files:**
+- 详细架构文档: `docs/项目概述和架构设计.md`
+- 开发规范: `docs/开发规范.md`
+- API响应规范: `docs/API响应规范.md`
+- 安全设计: `docs/安全和认证设计（国密）.md`
+- 数据库设计: `docs/数据库设计.md`
 
 ---
 
@@ -188,23 +195,37 @@ pkg/                 # Public packages (reusable)
 ```
 src/
 ├── pages/           # Route pages (organized by module)
+│   ├── system/      # User, Role, Dept, Menu, Dict, Post, Config, Notice
+│   ├── operations/  # Building, Floor, Workstation, ServerRoom, DedicatedLine
+│   ├── monitor/     # Server monitoring, cache monitoring
+│   └── ...
 ├── components/      # Reusable components
+│   ├── layout/      # Layout components (HybridLayout, Sidebar, Header)
+│   ├── three/       # 3D visualization components (Three.js)
+│   └── ...
 ├── store/           # Zustand state stores (7 stores)
 ├── hooks/           # Custom React hooks
-├── services/        # API service layer
-├── utils/           # Utilities (sm2.ts, sm4.ts, etc.)
+├── lib/             # API clients
+│   ├── api.ts       # Core API client with encryption and token refresh
+│   └── opsApi.ts    # Operations module CRUD API factory
+├── utils/           # Utilities (sm2.ts, sm4.ts, authHelpers.ts, etc.)
 ├── types/           # TypeScript definitions
 └── design-system/   # Design tokens and theme
 ```
 
 **State Management (Zustand):**
-- `authStore` - Authentication state
+- `authStore` - Authentication state (includes TokenManager for auto-refresh)
 - `layoutStore` - Layout preferences
 - `menuStore` - Menu navigation
 - `noticeStore` - Notifications
 - `settingsStore` - User settings
 - `tabsStore` - Tab navigation
 - `themeStore` - Theme (light/dark)
+
+**3D Visualization (Three.js):**
+- Location: `src/components/three/`, floor plan editor components
+- Dependencies: `@react-three/fiber`, `@react-three/drei`, `three`
+- Usage: Building/floor 3D visualization, CAD-style floor plan editor
 
 ---
 
@@ -255,6 +276,42 @@ const users = result.data.list; // Direct access
 // ❌ WRONG - don't use api instance directly
 const response = await api.post('/system/users/list', params);
 if (response.data.code === 0) { } // Manual check unnecessary
+```
+
+**For operations module (楼宇/楼层/工位/机房), use opsApi.ts:**
+
+```typescript
+// ✅ CORRECT - use opsApi for CRUD operations
+import { buildingApi, floorApi, workstationApi, excelApi } from '@/lib/opsApi';
+
+// List buildings with pagination
+const result = await buildingApi.list({ current: 1, pageSize: 10, name: '测试' });
+const buildings = result.data.list;
+
+// Create/update/delete
+await buildingApi.create({ name: 'New Building', ... });
+await buildingApi.update(id, { name: 'Updated Name' });
+await buildingApi.delete(id);
+
+// Excel operations
+await excelApi.downloadTemplate('building');
+await excelApi.import('building', file);
+await excelApi.export('building', { status: 0 });
+
+// ❌ WRONG - don't use raw post for operations module
+await post('/ops/building/list', params); // Use buildingApi.list instead
+```
+
+**Token management with authHelpers:**
+
+```typescript
+// ✅ CORRECT - use authHelpers for token access
+import { getAccessToken } from '@/utils/authHelpers';
+const token = await getAccessToken();
+
+// For Excel import component
+import { getAuthHeaders } from '@/utils/authHelpers';
+const headers = await getAuthHeaders();
 ```
 
 ### Pagination Convention
@@ -552,6 +609,10 @@ func GetDictDataByTypeKey(dictType string) string {
 - **Cache prefix confusion**: User input may include `ruoyi:` prefix from UI, always strip before cache operations
 - **UUID validation**: When validating org_id, check format first to avoid PostgreSQL type errors
 - **Frontend API calls**: Use wrapped functions in `@/lib/api.ts`, NOT raw axios
+- **Operations module API**: Use `@/lib/opsApi.ts` for building/floor/workstation CRUD
+- **Token refresh**: Frontend uses TokenManager in authStore for automatic token refresh
+- **Request encryption**: Frontend encrypts POST/PUT/PATCH requests with SM2+SM4 (configurable via `VITE_ENABLE_REQUEST_ENCRYPTION`)
+- **Temporary files**: Root-level `temp_*.go` and `test_*.go` files cause `main redeclared` errors - delete them before building
 
 ### Testing
 
@@ -634,6 +695,20 @@ go build ./...
 ```
 
 This prevents cascading compilation errors and makes it easier to identify which changes actually matter.
+
+### Temporary Files Cleanup
+
+**IMPORTANT:** Temporary test files in the project root (e.g., `temp_*.go`, `test_import.go`) can cause compilation errors due to multiple `main` function declarations. These files should be deleted or moved outside the project:
+
+```bash
+# Check for problematic temporary files
+ls temp_*.go test_*.go 2>/dev/null
+
+# Remove them if they exist and are not needed
+rm -f temp_*.go test_import.go
+```
+
+These files are typically created for debugging and should not be committed to version control.
 
 ---
 

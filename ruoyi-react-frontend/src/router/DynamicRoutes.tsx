@@ -188,6 +188,11 @@ export function DynamicRoutes() {
     );
   }
 
+  // 已认证用户但菜单未加载完成，显示 loading（避免跳转到 dashboard）
+  if (allMenus.length === 0) {
+    return <InitializingFallback />;
+  }
+
   // 已认证用户路由
   return (
     <Routes>

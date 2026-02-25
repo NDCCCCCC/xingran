@@ -80,13 +80,21 @@ const HybridLayout: FC<HybridLayoutProps> = ({ children }) => {
         if (existingTab.title !== title) {
           updateTab(DASHBOARD_KEY, { title });
         }
+        // 强制确保仪表盘标签是固定状态
+        if (!existingTab.pinned || existingTab.closable) {
+          updateTab(DASHBOARD_KEY, {
+            pinned: true,
+            closable: false,
+          });
+        }
       } else {
+        // 仪表盘标签始终固定，不可关闭
         addTab({
           key: DASHBOARD_KEY,
           title: title,
           path: '/dashboard',
-          closable: true,
-          pinned: false,
+          closable: false,
+          pinned: true,
         });
       }
 
@@ -104,6 +112,32 @@ const HybridLayout: FC<HybridLayoutProps> = ({ children }) => {
     }
   }, [location.pathname, addTab, updateTab, getDashboardTitle]);
 
+  // 初始化时修复仪表盘标签状态
+  useEffect(() => {
+    const state = useTabsStore.getState();
+    const dashboardTab = state.tabs.find(t => t.key === DASHBOARD_KEY);
+
+    // 强制修复仪表盘标签状态，确保始终固定且不可关闭
+    if (dashboardTab && (dashboardTab.closable || !dashboardTab.pinned)) {
+      state.updateTab(DASHBOARD_KEY, {
+        pinned: true,
+        closable: false,
+      });
+    }
+
+    // 如果不存在仪表盘标签，创建一个
+    if (!dashboardTab) {
+      state.addTab({
+        key: DASHBOARD_KEY,
+        title: PAGE_TITLES.DASHBOARD,
+        path: '/dashboard',
+        closable: false,
+        pinned: true,
+      });
+    }
+  }, []);
+
+  // 路由配置初始化后更新标签标题和固定状态
   useEffect(() => {
     if (!routeConfigManager.isInitialized()) {
       return;
@@ -112,6 +146,9 @@ const HybridLayout: FC<HybridLayoutProps> = ({ children }) => {
     const state = useTabsStore.getState();
 
     state.tabs.forEach(tab => {
+      // 跳过仪表盘标签，其状态已在初始化时强制设置
+      if (tab.key === DASHBOARD_KEY) return;
+
       const newTitle = getTitleByPath(tab.path);
       const newMeta = routeConfigManager.getRouteMeta(tab.path);
 

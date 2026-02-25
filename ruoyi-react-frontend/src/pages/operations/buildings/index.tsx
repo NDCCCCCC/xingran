@@ -395,9 +395,9 @@ const BuildingManagement: FC = () => {
           <Card style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
-            <Form.Item name="name" label="楼宇名称"><Input placeholder="请输入楼宇名称" allowClear style={{ width: 150 }} /></Form.Item>
+            <Form.Item name="name" label="楼宇名称"><Input placeholder="请输入楼宇名称" allowClear className="user-form-input" style={{ width: 150 }} /></Form.Item>
             <Form.Item name="status" label="状态">
-              <Select placeholder="请选择状态" allowClear style={{ width: 120 }}><Option value={0}>正常</Option><Option value={1}>停用</Option></Select>
+              <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 120 }}><Option value={0}>正常</Option><Option value={1}>停用</Option></Select>
             </Form.Item>
             <Form.Item>
               <Space><Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>搜索</Button><Button onClick={handleResetWithDept}>重置</Button><Button icon={<ReloadOutlined />} onClick={handleRefresh}>刷新</Button></Space>

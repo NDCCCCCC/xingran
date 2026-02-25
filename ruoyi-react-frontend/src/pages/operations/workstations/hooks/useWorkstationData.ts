@@ -4,7 +4,7 @@
  */
 
 import { useCallback } from 'react';
-import type { WorkstationOps, Floor } from '@/types';
+import type { WorkstationOps } from '@/types';
 import { workstationApi, floorApi } from '@/lib/opsApi';
 import { post } from '@/lib/api';
 import { handleApiError } from '@/utils/errorHandler';
@@ -15,11 +15,11 @@ interface DepartmentNode {
   id: string;
   deptName?: string;
   name?: string;
+  isExternalOrg?: number;
   children?: DepartmentNode[];
 }
 
 export interface UseWorkstationDataReturn {
-  loadWorkstations: (params?: Record<string, unknown>) => Promise<void>;
   loadStatistics: (orgId?: string) => Promise<void>;
   loadFloorOptions: (orgId?: string) => Promise<void>;
   loadDeptOptions: () => Promise<void>;
@@ -35,17 +35,14 @@ export function useWorkstationData(
 ): UseWorkstationDataReturn {
   const loadStatistics = useCallback(async (orgId?: string) => {
     try {
-      const baseParams: { current: number; pageSize: number; orgId?: string } = { current: 1, pageSize: 1 };
-      if (orgId) {
-        baseParams.orgId = orgId;
-      }
+      const baseParams = { current: 1, pageSize: 1, ...(orgId && { orgId }) };
 
-      // 并发请求：总数（不带 status 筛选）和各状态的计数
+      // 并发请求各状态的计数
       const [totalResult, availableResult, occupiedResult, maintainResult] = await Promise.all([
-        workstationApi.list(baseParams),                        // 获取总数
-        workstationApi.list({ ...baseParams, status: 0 }),      // 空闲
-        workstationApi.list({ ...baseParams, status: 1 }),      // 占用
-        workstationApi.list({ ...baseParams, status: 2 }),      // 维护
+        workstationApi.list(baseParams),
+        workstationApi.list({ ...baseParams, status: 0 }),
+        workstationApi.list({ ...baseParams, status: 1 }),
+        workstationApi.list({ ...baseParams, status: 2 }),
       ]);
 
       setStatistics({
@@ -61,10 +58,7 @@ export function useWorkstationData(
 
   const loadFloorOptions = useCallback(async (orgId?: string) => {
     try {
-      const params: { current: number; pageSize: number; orgId?: string } = { current: 1, pageSize: 1000 };
-      if (orgId) {
-        params.orgId = orgId;
-      }
+      const params = { current: 1, pageSize: 1000, ...(orgId && { orgId }) };
       const result = await floorApi.list(params);
       const floors = result.data?.list || [];
       setFloorOptions(
@@ -79,70 +73,75 @@ export function useWorkstationData(
     }
   }, [setFloorOptions]);
 
+  // 递归筛选外部机构部门
+  const filterExternalOrgDepts = useCallback((nodes: DepartmentNode[]): DepartmentNode[] => {
+    return nodes.reduce<DepartmentNode[]>((acc, node) => {
+      const filteredChildren = node.children?.length
+        ? filterExternalOrgDepts(node.children)
+        : [];
+
+      if (node.isExternalOrg === 1 || filteredChildren.length > 0) {
+        acc.push({
+          ...node,
+          children: filteredChildren.length > 0 ? filteredChildren : undefined,
+        });
+      }
+
+      return acc;
+    }, []);
+  }, []);
+
+  // 构建树形结构数据
+  const buildTreeData = useCallback((depts: DepartmentNode[]): DeptTreeNode[] => {
+    return depts.map((dept) => ({
+      title: dept.deptName || dept.name || '',
+      value: dept.id,
+      key: dept.id,
+      children: dept.children?.length ? buildTreeData(dept.children) : undefined,
+    }));
+  }, []);
+
   const loadDeptOptions = useCallback(async () => {
     try {
-      // 后端返回的是树形结构数组，不是分页格式
       const result = await post('/system/departments/tree', {}) as { data: DepartmentNode[] };
-      // 构建树形结构数据，使用 fieldNames 指定字段映射
-      const buildTreeData = (depts: DepartmentNode[]): DeptTreeNode[] => {
-        return depts.map((dept) => ({
-          title: dept.deptName || dept.name || '',
-          value: dept.id,
-          key: dept.id,
-          children:
-            dept.children && dept.children.length > 0 ? buildTreeData(dept.children) : undefined,
-        }));
-      };
-      // 数据直接在 result.data 中，不是 result.data.list
       const deptList = Array.isArray(result.data) ? result.data : [];
-      setDeptTreeData(buildTreeData(deptList));
+      const externalDepts = filterExternalOrgDepts(deptList);
+      setDeptTreeData(buildTreeData(externalDepts));
     } catch (error) {
       handleApiError(error, '加载部门选项', false);
     }
-  }, [setDeptTreeData]);
+  }, [setDeptTreeData, filterExternalOrgDepts, buildTreeData]);
 
-  const loadUserOptions = useCallback(
-    async (deptId?: string) => {
-      try {
-        const params: Record<string, unknown> = { current: 1, pageSize: 1000 };
-        if (deptId) {
-          params.deptId = deptId;
-        }
-        const result = await post('/system/users/list', params) as { data?: { list: Record<string, unknown>[] } };
-        const users = result.data?.list || [];
-        setUserOptions(users.map((u: Record<string, unknown>) => ({ id: String(u.id), name: String(u.username) })));
-      } catch (error) {
-        handleApiError(error, '加载用户选项', false);
-      }
-    },
-    [setUserOptions]
-  );
+  const loadUserOptions = useCallback(async (deptId?: string) => {
+    try {
+      const params = { current: 1, pageSize: 1000, ...(deptId && { deptId }) };
+      const result = await post('/system/users/list', params) as { data?: { list: Record<string, unknown>[] } };
+      const users = result.data?.list || [];
+      setUserOptions(
+        users.map((u: Record<string, unknown>) => ({
+          id: String(u.id),
+          name: String(u.username),
+        }))
+      );
+    } catch (error) {
+      handleApiError(error, '加载用户选项', false);
+    }
+  }, [setUserOptions]);
 
-  const loadFloorPlanWorkstations = useCallback(
-    async (floorCode: string): Promise<WorkstationOps[]> => {
-      if (!floorCode) {
-        return [];
-      }
-      try {
-        const result = await workstationApi.list({ floorCode, current: 1, pageSize: 1000 });
-        return result.data?.list || [];
-      } catch (error) {
-        handleApiError(error, '加载平面图数据', false);
-        return [];
-      }
-    },
-    []
-  );
-
-  const loadWorkstations = useCallback(
-    async (params?: Record<string, unknown>) => {
-      await workstationApi.list(params || {});
-    },
-    []
-  );
+  const loadFloorPlanWorkstations = useCallback(async (floorCode: string): Promise<WorkstationOps[]> => {
+    if (!floorCode) {
+      return [];
+    }
+    try {
+      const result = await workstationApi.list({ floorCode, current: 1, pageSize: 1000 });
+      return result.data?.list || [];
+    } catch (error) {
+      handleApiError(error, '加载平面图数据', false);
+      return [];
+    }
+  }, []);
 
   return {
-    loadWorkstations,
     loadStatistics,
     loadFloorOptions,
     loadDeptOptions,

@@ -599,6 +599,7 @@ const InfoPointManagement: FC = () => {
                 <Select
                   placeholder="请先选择部门"
                   allowClear
+                  className="user-form-input"
                   style={{ width: 150 }}
                   disabled={!selectedDeptId}
                   onOpenChange={(open) => {
@@ -613,14 +614,14 @@ const InfoPointManagement: FC = () => {
                   {workstationOptions.filter(w => w.id).map(w => <Option key={w.id} value={w.id}>{w.name}</Option>)}
                 </Select>
               </Form.Item>
-              <Form.Item name="name" label="信息点名称"><Input placeholder="请输入信息点名称" allowClear style={{ width: 150 }} /></Form.Item>
+              <Form.Item name="name" label="信息点名称"><Input placeholder="请输入信息点名称" allowClear className="user-form-input" style={{ width: 150 }} /></Form.Item>
               <Form.Item name="infoPointType" label="信息点类型">
-                <Select placeholder="请选择类型" allowClear style={{ width: 120 }}>
+                <Select placeholder="请选择类型" allowClear className="user-form-input" style={{ width: 120 }}>
                   {infoPointTypeDict.map(d => <Option key={d.dictValue} value={d.dictValue}>{d.dictLabel}</Option>)}
                 </Select>
               </Form.Item>
               <Form.Item name="status" label="状态">
-                <Select placeholder="请选择状态" allowClear style={{ width: 100 }}><Option value={0}>正常</Option><Option value={1}>故障</Option><Option value={2}>停用</Option></Select>
+                <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 100 }}><Option value={0}>正常</Option><Option value={1}>故障</Option><Option value={2}>停用</Option></Select>
               </Form.Item>
               <Form.Item>
                 <Space><Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>搜索</Button><Button onClick={handleReset}>重置</Button><Button icon={<ReloadOutlined />} onClick={refreshData}>刷新</Button></Space>

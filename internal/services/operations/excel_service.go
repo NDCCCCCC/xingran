@@ -261,13 +261,34 @@ func (s *ExcelService) ImportData(ctx context.Context, entityType string, file *
 	}
 
 	if len(allRefRequests) > 0 {
-		refResults, err := s.referenceResolver.ResolveBatch(ctx, allRefRequests)
+		// 第一阶段：解析独立的引用（无依赖的引用）
+		independentRefs, dependentRefs := s.splitReferencesByDependency(allRefRequests, config)
+
+		refResults, err := s.referenceResolver.ResolveBatch(ctx, independentRefs)
 		if err != nil {
-			logger.Warnf("批量解析引用失败: %v", err)
+			logger.Warnf("批量解析独立引用失败: %v", err)
 		}
 
+		// 应用独立引用的解析结果
 		for _, data := range validRecords {
 			s.applyReferenceResults(data, refResults, config)
+		}
+
+		// 第二阶段：批量解析依赖引用（按依赖条件分组处理）
+		if len(dependentRefs) > 0 {
+			// 按依赖条件分组批量解析
+			dependentResults := s.resolveDependentReferencesBatch(ctx, validRecords, dependentRefs, config)
+			logger.Infof("依赖引用解析完成，解析到 %d 条结果", len(dependentResults))
+			// 批量应用依赖引用的解析结果
+			for _, data := range validRecords {
+				s.applyDependentReferenceResults(data, dependentResults, config)
+			}
+			// 调试：打印前3条记录的解析状态
+			for i := 0; i < len(validRecords) && i < 3; i++ {
+				data := validRecords[i]
+				logger.Infof("记录 %d: floorName=%v, floor_id=%v, buildingName=%v, building_id=%v",
+					i, data["floorName"], data["floor_id"], data["buildingName"], data["building_id"])
+			}
 		}
 
 		// 验证必填的引用字段是否成功解析
@@ -346,8 +367,9 @@ func (s *ExcelService) applyReferenceResults(
 			if value, ok := data[col.Field].(string); ok && value != "" {
 				key := resolver.makeKey(col.Reference, value)
 				if id, exists := refResults[key]; exists {
-					// 将名称/编码替换为ID，并映射到正确的字段
-					targetField := s.getTargetFieldForReference(col.Field)
+					// 将名称/编码替换为ID
+					// 优先使用配置的 DBField，否则使用自动转换的字段名
+					targetField := s.getTargetFieldForReference(col)
 					data[targetField] = id
 					// 删除原始的名称字段（避免数据冗余）
 					delete(data, col.Field)
@@ -359,14 +381,323 @@ func (s *ExcelService) applyReferenceResults(
 	}
 }
 
-func (s *ExcelService) getTargetFieldForReference(currentField string) string {
-	if strings.HasSuffix(currentField, "Name") {
-		return strings.TrimSuffix(currentField, "Name") + "Id"
+// getTargetFieldForReference 获取引用字段解析后的目标字段名
+// 如果配置了 DBField，直接使用 DBField
+// 否则根据字段名后缀自动转换（如 buildingName -> buildingId）
+func (s *ExcelService) getTargetFieldForReference(col ExcelColumn) string {
+	// 优先使用配置的 DBField（对于引用字段，DBField 通常指向最终的数据库字段，如 building_id）
+	if col.DBField != "" {
+		return col.DBField
 	}
-	if strings.HasSuffix(currentField, "Code") {
-		return strings.TrimSuffix(currentField, "Code") + "Id"
+
+	// 如果没有配置 DBField，使用自动转换规则
+	field := col.Field
+	if strings.HasSuffix(field, "Name") {
+		return strings.TrimSuffix(field, "Name") + "Id"
 	}
-	return currentField
+	if strings.HasSuffix(field, "Code") {
+		return strings.TrimSuffix(field, "Code") + "Id"
+	}
+	return field
+}
+
+// splitReferencesByDependency 将引用请求分为独立引用和依赖引用
+func (s *ExcelService) splitReferencesByDependency(
+	refs []ReferenceRequest,
+	config ExcelConfig,
+) (independent, dependent []ReferenceRequest) {
+	for _, ref := range refs {
+		isDependent := false
+		for _, col := range config.Columns {
+			if col.Reference == ref.Reference && col.DependsOn != "" {
+				isDependent = true
+				break
+			}
+		}
+		if isDependent {
+			dependent = append(dependent, ref)
+		} else {
+			independent = append(independent, ref)
+		}
+	}
+	return independent, dependent
+}
+
+// extractResolvedIDs 从已解析的数据中提取 ID 映射
+// 返回格式：{"building_id": "xxx-uuid"} （字段名 -> ID）
+// 用于依赖引用的解析（如 floorName 需要 building_id 条件）
+func (s *ExcelService) extractResolvedIDs(
+	records []map[string]interface{},
+	config ExcelConfig,
+) map[string]string {
+	resolvedIDs := make(map[string]string)
+
+	for _, record := range records {
+		for _, col := range config.Columns {
+			if col.Reference != "" && col.DependsOn == "" {
+				// 这是一个独立的引用字段，获取其解析后的 ID
+				targetField := s.getTargetFieldForReference(col)
+				if id, exists := record[targetField]; exists {
+					if idStr, ok := id.(string); ok && idStr != "" {
+						// 存储到 resolvedIDs 中，键是 DBField（目标数据库字段名）
+						// 例如：building_id -> "xxx-uuid"
+						resolvedIDs[targetField] = idStr
+					}
+				}
+			}
+		}
+	}
+
+	return resolvedIDs
+}
+
+// applyDependentReferenceResults 应用依赖引用的解析结果
+func (s *ExcelService) applyDependentReferenceResults(
+	data map[string]interface{},
+	refResults map[string]string,
+	config ExcelConfig,
+) {
+	resolver := &referenceResolverImpl{}
+
+	for _, col := range config.Columns {
+		if col.Reference != "" && col.DependsOn != "" {
+			if value, ok := data[col.Field].(string); ok && value != "" {
+				key := resolver.makeKey(col.Reference, value)
+				if id, exists := refResults[key]; exists {
+					// 将名称/编码替换为ID
+					targetField := s.getTargetFieldForReference(col)
+					data[targetField] = id
+					// 删除原始的名称字段（避免数据冗余）
+					delete(data, col.Field)
+				} else {
+					logger.Debugf("依赖引用解析失败: %s=%s (依赖 %s)", col.Reference, value, col.DependsOn)
+				}
+			}
+		}
+	}
+}
+
+// resolveDependentReferencesForRecord 为单条记录解析依赖引用
+// 返回该记录的依赖引用解析结果
+func (s *ExcelService) resolveDependentReferencesForRecord(
+	ctx context.Context,
+	data map[string]interface{},
+	dependentRefs []ReferenceRequest,
+	config ExcelConfig,
+) map[string]string {
+	result := make(map[string]string)
+
+	for _, ref := range dependentRefs {
+		// 找到对应的列配置
+		var col ExcelColumn
+		for _, c := range config.Columns {
+			if c.Reference == ref.Reference {
+				col = c
+				break
+			}
+		}
+
+		if col.DependsOn == "" {
+			continue
+		}
+
+		// 获取依赖字段的解析结果（如从 building_id 获取楼宇ID）
+		dependsOnTargetField := s.getTargetFieldForReferenceByName(col.DependsOn, config)
+		if dependsOnTargetField == "" {
+			logger.Debugf("找不到依赖字段的目标字段: %s", col.DependsOn)
+			continue
+		}
+
+		dependencyID, exists := data[dependsOnTargetField]
+		if !exists || dependencyID == nil || dependencyID == "" {
+			logger.Debugf("依赖字段未解析: %s -> %s", col.DependsOn, dependsOnTargetField)
+			continue
+		}
+
+		dependencyIDStr, ok := dependencyID.(string)
+		if !ok || dependencyIDStr == "" {
+			continue
+		}
+
+		// 构建查询条件
+		conditions := map[string]string{
+			dependsOnTargetField: dependencyIDStr,
+		}
+
+		// 使用带条件的解析
+		id, err := s.referenceResolver.ResolveSingleWithCondition(ctx, ref, conditions)
+		if err != nil {
+			logger.Debugf("依赖引用解析失败: %s=%s (条件: %s=%s): %v", col.Reference, ref.Value, dependsOnTargetField, dependencyIDStr, err)
+			continue
+		}
+
+		key := (&referenceResolverImpl{}).makeKey(col.Reference, ref.Value)
+		result[key] = id
+	}
+
+	return result
+}
+
+// resolveDependentReferencesBatch 批量解析依赖引用
+// 将记录按依赖条件分组，每组条件只执行一次批量查询
+// 例如：对于工位导入，按 building_id 分组，每个楼宇只查询一次所有楼层
+func (s *ExcelService) resolveDependentReferencesBatch(
+	ctx context.Context,
+	records []map[string]interface{},
+	dependentRefs []ReferenceRequest,
+	config ExcelConfig,
+) map[string]string {
+	result := make(map[string]string)
+
+	if len(dependentRefs) == 0 || len(records) == 0 {
+		return result
+	}
+
+	// 找到所有依赖字段的配置（可能有多个字段有依赖关系）
+	depCols := make([]ExcelColumn, 0)
+	for _, c := range config.Columns {
+		if c.DependsOn != "" {
+			depCols = append(depCols, c)
+		}
+	}
+
+	if len(depCols) == 0 {
+		return result
+	}
+
+	logger.Infof("开始批量解析依赖引用，共有 %d 个依赖字段配置，%d 条记录", len(depCols), len(records))
+
+	// 对每个依赖字段进行处理（如 floorName 依赖 buildingName）
+	for depColIdx, depCol := range depCols {
+		logger.Infof("处理依赖字段 %d/%d: %s (依赖: %s, 引用: %s)", depColIdx+1, len(depCols), depCol.Field, depCol.DependsOn, depCol.Reference)
+
+		// 按依赖ID值分组记录（如按 building_id 分组）
+		groups := s.groupRecordsByDependencyID(records, depCol, config)
+		logger.Infof("  按 %s 分组，共 %d 个组", s.getTargetFieldForReference(depCol), len(groups))
+
+		// 为每组（每个楼宇）执行一次批量查询
+		for depID, groupRecords := range groups {
+			// 提取该组中所有记录的待解析值（该楼宇的所有楼层名称，去重）
+			valueToRecords := s.extractDependentValues(groupRecords, depCol, config)
+			logger.Infof("  组 %s: 共 %d 条记录，%d 个唯一值", depID, len(groupRecords), len(valueToRecords))
+
+			if len(valueToRecords) == 0 {
+				continue
+			}
+
+			// 构建查询条件（如 {"building_id": "xxx-uuid"}）
+			conditions := map[string]string{
+				s.getTargetFieldForReferenceByName(depCol.DependsOn, config): depID,
+			}
+
+			// 执行批量查询：一次查询该楼宇的所有楼层
+			idMap, err := s.referenceResolver.ResolveBatchWithCondition(ctx, depCol.Reference, valueToRecords, conditions)
+			if err != nil {
+				logger.Warnf("批量解析依赖引用失败 [%s, 条件: %s=%s]: %v", depCol.Reference, s.getTargetFieldForReferenceByName(depCol.DependsOn, config), depID, err)
+				continue
+			}
+			logger.Infof("  批量查询成功，返回 %d 条结果", len(idMap))
+
+			// 将解析结果应用到该组所有记录
+			successCount := 0
+			for _, record := range groupRecords {
+				if value, exists := record[depCol.Field]; exists && value != nil {
+					if valueStr, ok := value.(string); ok && valueStr != "" {
+						// 使用批量查询的结果
+						if id, found := idMap[valueStr]; found {
+							key := (&referenceResolverImpl{}).makeKey(depCol.Reference, valueStr)
+							result[key] = id
+							// 同时更新记录中的目标字段
+							targetField := s.getTargetFieldForReference(depCol)
+							record[targetField] = id
+							successCount++
+						} else {
+							logger.Warnf("依赖引用解析失败: %s=%s (条件: %s=%s)", depCol.Reference, valueStr, s.getTargetFieldForReferenceByName(depCol.DependsOn, config), depID)
+						}
+					}
+				}
+			}
+			logger.Infof("  组 %s: 成功应用 %d 条结果", depID, successCount)
+		}
+	}
+
+	logger.Infof("依赖引用批量解析完成，总共解析 %d 条结果", len(result))
+	return result
+}
+
+// groupRecordsByDependencyID 按依赖ID值分组记录
+// 返回：{ "building-id-1": [record1, record2, ...], "building-id-2": [...] }
+// 对于 floorName (依赖 buildingName)，按 building_id 分组
+func (s *ExcelService) groupRecordsByDependencyID(
+	records []map[string]interface{},
+	depCol ExcelColumn,
+	config ExcelConfig,
+) map[string][]map[string]interface{} {
+	groups := make(map[string][]map[string]interface{})
+
+	// 获取被依赖的字段配置（如 floorName 依赖 buildingName，则获取 buildingName 的配置）
+	dependsOnCol := s.getColumnByName(depCol.DependsOn, config)
+	if dependsOnCol.Field == "" {
+		logger.Warnf("找不到被依赖的字段配置: %s", depCol.DependsOn)
+		return groups
+	}
+
+	// 获取被依赖字段的目标字段（如 buildingName -> building_id）
+	depTargetField := s.getTargetFieldForReference(dependsOnCol)
+
+	logger.Infof("按 %s (从 %s 解析) 分组记录", depTargetField, dependsOnCol.Field)
+
+	for _, record := range records {
+		if depID, exists := record[depTargetField]; exists && depID != nil {
+			if depIDStr, ok := depID.(string); ok && depIDStr != "" {
+				groups[depIDStr] = append(groups[depIDStr], record)
+			}
+		}
+	}
+
+	return groups
+}
+
+// extractDependentValues 提取一组记录中所有待解析的依赖引用值
+// 对于指定的依赖列，提取所有唯一值（如所有楼层名称）
+func (s *ExcelService) extractDependentValues(
+	records []map[string]interface{},
+	depCol ExcelColumn,
+	config ExcelConfig,
+) []string {
+	valueSet := make(map[string]bool)
+
+	for _, record := range records {
+		if value, ok := record[depCol.Field].(string); ok && value != "" {
+			valueSet[value] = true
+		}
+	}
+
+	values := make([]string, 0, len(valueSet))
+	for v := range valueSet {
+		values = append(values, v)
+	}
+	return values
+}
+
+// getTargetFieldForReferenceByName 根据字段名获取其解析后的目标字段名
+func (s *ExcelService) getTargetFieldForReferenceByName(fieldName string, config ExcelConfig) string {
+	for _, col := range config.Columns {
+		if col.Field == fieldName {
+			return s.getTargetFieldForReference(col)
+		}
+	}
+	return ""
+}
+
+// getColumnByName 根据字段名获取列配置
+func (s *ExcelService) getColumnByName(fieldName string, config ExcelConfig) ExcelColumn {
+	for _, col := range config.Columns {
+		if col.Field == fieldName {
+			return col
+		}
+	}
+	return ExcelColumn{}
 }
 
 func (s *ExcelService) prepareRecordsForUpsert(
@@ -383,13 +714,20 @@ func (s *ExcelService) prepareRecordsForUpsert(
 				continue
 			}
 
-			// 首先尝试原始字段名
-			value, exists := record[col.Field]
-			// 如果找不到且是引用字段，尝试解析后的字段名（如 buildingId）
-			if !exists && col.Reference != "" {
-				resolvedField := s.getTargetFieldForReference(col.Field)
+			var value interface{}
+			var exists bool
+
+			// 对于引用字段，只使用解析后的值（不使用原始值）
+			if col.Reference != "" {
+				// 引用字段：优先使用解析后的字段（如 floor_id）
+				resolvedField := s.getTargetFieldForReference(col)
 				value, exists = record[resolvedField]
+				// 如果解析后的字段不存在，说明引用解析失败，不使用原始值
+			} else {
+				// 非引用字段：直接使用原始值
+				value, exists = record[col.Field]
 			}
+
 			if exists {
 				dbFieldName := s.getDBFieldName(col)
 				preparedRecord[dbFieldName] = value
@@ -432,6 +770,8 @@ func (s *ExcelService) validateReferenceFields(
 ) []map[string]interface{} {
 	validated := make([]map[string]interface{}, 0, len(records))
 
+	logger.Infof("开始验证必填引用字段，共 %d 条记录", len(records))
+
 	for i, data := range records {
 		valid := true
 		for _, col := range config.Columns {
@@ -441,11 +781,12 @@ func (s *ExcelService) validateReferenceFields(
 			}
 
 			// 获取目标字段名（如 buildingId）
-			targetField := s.getTargetFieldForReference(col.Field)
+			targetField := s.getTargetFieldForReference(col)
 
 			// 检查目标字段是否有值
 			if val, exists := data[targetField]; !exists || val == nil || val == "" {
 				// 必填引用字段解析失败
+				logger.Infof("记录 %d 验证失败: %s (原始值: %v, 目标字段: %s=%v)", i, col.Field, data[col.Field], targetField, val)
 				result.Failed++
 				result.Errors = append(result.Errors, ImportError{
 					Row:   config.StartRow + i + 1, // 实际 Excel 行号（i 从 0 开始，StartRow 从 2 开始）
@@ -463,6 +804,7 @@ func (s *ExcelService) validateReferenceFields(
 		}
 	}
 
+	logger.Infof("引用字段验证完成，成功 %d 条，失败 %d 条", len(validated), result.Failed)
 	return validated
 }
 

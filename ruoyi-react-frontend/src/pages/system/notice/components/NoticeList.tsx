@@ -108,6 +108,35 @@ export const NoticeList: React.FC<NoticeListProps> = ({
       render: (type: number) => <span className="text-gray-500">{TARGET_TYPE_LABELS[type as TargetType]}</span>,
     },
     {
+      title: '接收范围详情',
+      dataIndex: 'targets',
+      key: 'targets',
+      width: 150,
+      ellipsis: true,
+      render: (targets?: { targetType: string; targetName?: string }[]) => {
+        if (!targets || targets.length === 0) {
+          return <span className="text-gray-400">-</span>;
+        }
+        // 显示前3个目标，超出显示"等N个"
+        const displayTargets = targets.slice(0, 3);
+        const remainingCount = targets.length - 3;
+        return (
+          <span className="text-gray-600" title={targets.map(t => t.targetName || t.targetType).join(', ')}>
+            {displayTargets.map(t => t.targetName || t.targetType).join(', ')}
+            {remainingCount > 0 && <span className="text-gray-400"> 等 {targets.length} 个</span>}
+          </span>
+        );
+      },
+    },
+    {
+      title: '创建者',
+      dataIndex: 'createdByName',
+      key: 'createdByName',
+      width: 100,
+      ellipsis: true,
+      render: (name?: string) => <span className="text-gray-600">{name || '-'}</span>,
+    },
+    {
       title: '发布状态',
       dataIndex: 'publishStatus',
       key: 'publishStatus',

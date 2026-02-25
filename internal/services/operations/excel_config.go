@@ -28,6 +28,7 @@ type ExcelColumn struct {
 	Pattern   string
 	Options   map[interface{}]string
 	Reference string   // 引用配置，格式："table.field"，用于名称到ID的转换
+	DependsOn string   // 依赖字段：该字段的引用解析依赖于另一个字段的解析结果（如 floorName 依赖 buildingName）
 	UpsertKey bool     // 是否作为Upsert的唯一键（用于判断重复记录）
 	DBField   string   // 数据库字段名（可选，如果与Field不同，例如 workstationName -> workstation_name）
 }
@@ -113,7 +114,8 @@ var ExcelConfigs = map[string]ExcelConfig{
 		UniqueKeys:    []string{"floorName", "name"}, // 按楼层+工位名称判断重复
 		Columns: []ExcelColumn{
 			{Field: "name", Header: "工位名称", Required: true, MaxLength: 100, DBField: "workstation_name"},
-			{Field: "floorName", Header: "所属楼层名称", Required: true, MaxLength: 100, Reference: "ops_floors.name", DBField: "floor_id"}, // 用户提供楼层名称，自动转换为floorId
+			{Field: "buildingName", Header: "所属楼宇", MaxLength: 100, Reference: "ops_buildings.name", DBField: "building_id"}, // Excel列名：所属楼宇
+			{Field: "floorName", Header: "所属楼层名称", Required: true, MaxLength: 100, Reference: "ops_floors.name", DBField: "floor_id", DependsOn: "buildingName"}, // 依赖 buildingName 的解析结果
 			{Field: "workstationType", Header: "工位类型", DBField: "workstation_type", Options: map[interface{}]string{int(models.WorkstationTypeFixed): "固定工位", int(models.WorkstationTypeHotDesk): "灵活工位", int(models.WorkstationTypeManager): "管理工位"}},
 			{Field: "status", Header: "状态", Options: map[interface{}]string{int(models.WorkstationStatusAvailable): "空闲", int(models.WorkstationStatusOccupied): "占用", int(models.WorkstationStatusMaintain): "维护"}},
 			{Field: "remark", Header: "备注", MaxLength: 500, DBField: "description"},

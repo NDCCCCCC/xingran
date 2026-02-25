@@ -79,6 +79,7 @@ export const FloorSearchForm: FC<FloorSearchFormProps> = ({
             <Select
               placeholder="请先选择部门"
               allowClear
+              className="user-form-input"
               style={{ width: 150 }}
               showSearch
               optionFilterProp="children"
@@ -94,15 +95,15 @@ export const FloorSearchForm: FC<FloorSearchFormProps> = ({
           </Form.Item>
 
           <Form.Item name="floorNo" label="楼层号">
-            <Input placeholder="请输入楼层号" allowClear style={{ width: 120 }} disabled={disabled} />
+            <Input placeholder="请输入楼层号" allowClear className="user-form-input" style={{ width: 120 }} disabled={disabled} />
           </Form.Item>
 
           <Form.Item name="name" label="楼层名称">
-            <Input placeholder="请输入楼层名称" allowClear style={{ width: 150 }} disabled={disabled} />
+            <Input placeholder="请输入楼层名称" allowClear className="user-form-input" style={{ width: 150 }} disabled={disabled} />
           </Form.Item>
 
           <Form.Item name="status" label="状态">
-            <Select placeholder="请选择状态" allowClear style={{ width: 120 }} disabled={disabled}>
+            <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 120 }} disabled={disabled}>
               {STATUS_OPTIONS.map((opt) => (
                 <Option key={opt.value} value={opt.value}>
                   {opt.label}

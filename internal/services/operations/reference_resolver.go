@@ -12,7 +12,11 @@ import (
 // 将Excel中用户填写的名称/编码转换为数据库中的ID
 type ReferenceResolver interface {
 	ResolveBatch(ctx context.Context, refs []ReferenceRequest) (map[string]string, error)
+	ResolveBatchWithDependencies(ctx context.Context, refs []ReferenceRequest, resolvedIDs map[string]string) (map[string]string, error)
 	ResolveSingle(ctx context.Context, ref ReferenceRequest) (string, error)
+	ResolveSingleWithCondition(ctx context.Context, ref ReferenceRequest, conditions map[string]string) (string, error)
+	// ResolveBatchWithCondition 批量解析引用值，使用相同的条件（如按楼宇分组查询楼层）
+	ResolveBatchWithCondition(ctx context.Context, refType string, values []string, conditions map[string]string) (map[string]string, error)
 }
 
 // ReferenceRequest 引用解析请求
@@ -114,6 +118,90 @@ func (r *referenceResolverImpl) ResolveSingle(
 	return result.ID, nil
 }
 
+// ResolveBatchWithDependencies 批量解析引用值，支持依赖条件
+// resolvedIDs 包含已解析的字段值（如 buildingName -> building_id）
+func (r *referenceResolverImpl) ResolveBatchWithDependencies(
+	ctx context.Context,
+	refs []ReferenceRequest,
+	resolvedIDs map[string]string,
+) (map[string]string, error) {
+	if len(refs) == 0 {
+		return make(map[string]string), nil
+	}
+
+	result := make(map[string]string)
+	var firstErr error
+
+	for _, req := range refs {
+		table, field := r.parseReference(req.Reference)
+		if table == "" || field == "" {
+			return nil, fmt.Errorf("无效的引用配置: %s", req.Reference)
+		}
+
+		// 使用带条件查询的方式
+		id, err := r.ResolveSingleWithCondition(ctx, req, resolvedIDs)
+		if err != nil {
+			if firstErr == nil {
+				firstErr = err
+			}
+			continue
+		}
+
+		key := r.makeKey(req.Reference, req.Value)
+		result[key] = id
+	}
+
+	return result, firstErr
+}
+
+// ResolveSingleWithCondition 单个引用解析，支持额外的查询条件
+// conditions 格式：{"building_id": "xxx"} 表示只查询指定楼宇下的记录
+func (r *referenceResolverImpl) ResolveSingleWithCondition(
+	ctx context.Context,
+	ref ReferenceRequest,
+	conditions map[string]string,
+) (string, error) {
+	table, field := r.parseReference(ref.Reference)
+	if table == "" || field == "" {
+		return "", fmt.Errorf("无效的引用配置: %s", ref.Reference)
+	}
+
+	var result struct {
+		ID string `gorm:"column:id"`
+	}
+
+	query := r.db.WithContext(ctx).
+		Table(table).
+		Select("id").
+		Where(field+" = ?", ref.Value).
+		Where("deleted_at IS NULL")
+
+	// 添加额外的查询条件
+	for condField, condValue := range conditions {
+		query = query.Where(condField+" = ?", condValue)
+	}
+
+	err := query.First(&result).Error
+
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			// 构建详细的错误信息
+			conditionInfo := ""
+			if len(conditions) > 0 {
+				parts := make([]string, 0, len(conditions))
+				for k, v := range conditions {
+					parts = append(parts, fmt.Sprintf("%s=%s", k, v))
+				}
+				conditionInfo = fmt.Sprintf(" (条件: %s)", strings.Join(parts, ", "))
+			}
+			return "", fmt.Errorf("引用记录不存在 [%s.%s = %s%s]", table, field, ref.Value, conditionInfo)
+		}
+		return "", fmt.Errorf("引用解析失败 [%s.%s = %s]: %w", table, field, ref.Value, err)
+	}
+
+	return result.ID, nil
+}
+
 // groupByReference 按引用类型分组
 func (r *referenceResolverImpl) groupByReference(
 	refs []ReferenceRequest,
@@ -190,4 +278,56 @@ func (r *referenceResolverImpl) batchQueryIDs(
 // makeKey 生成缓存键，格式："reference:value"
 func (r *referenceResolverImpl) makeKey(ref, value string) string {
 	return ref + ":" + value
+}
+
+// ResolveBatchWithCondition 批量解析引用值，使用相同的条件
+// refType: 引用类型，如 "ops_floors.name"
+// values: 待解析的值列表（楼层名称列表）
+// conditions: 查询条件（如 {"building_id": "xxx-uuid"}）
+// 返回: value -> id 映射
+func (r *referenceResolverImpl) ResolveBatchWithCondition(
+	ctx context.Context,
+	refType string,
+	values []string,
+	conditions map[string]string,
+) (map[string]string, error) {
+	if len(values) == 0 {
+		return make(map[string]string), nil
+	}
+
+	table, field := r.parseReference(refType)
+	if table == "" || field == "" {
+		return nil, fmt.Errorf("无效的引用配置: %s", refType)
+	}
+
+	type Result struct {
+		ID    string `gorm:"column:id"`
+		Value string `gorm:"column:value"`
+	}
+
+	var results []Result
+
+	query := r.db.WithContext(ctx).
+		Table(table).
+		Select("id, "+field+" as value").
+		Where(field+" IN ?", values).
+		Where("deleted_at IS NULL")
+
+	// 添加额外的查询条件
+	for condField, condValue := range conditions {
+		query = query.Where(condField+" = ?", condValue)
+	}
+
+	err := query.Find(&results).Error
+	if err != nil {
+		return nil, fmt.Errorf("批量查询失败 [%s.%s]: %w", table, field, err)
+	}
+
+	// 转换为 value -> id 映射
+	idMap := make(map[string]string)
+	for _, r := range results {
+		idMap[r.Value] = r.ID
+	}
+
+	return idMap, nil
 }

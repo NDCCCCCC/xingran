@@ -32,6 +32,10 @@ interface TabsActions {
 type TabsStore = TabsState & TabsActions;
 
 const MAX_TABS = 50;
+const DASHBOARD_KEY = '/dashboard';
+
+// 检查是否为仪表盘标签
+const isDashboardTab = (key: string): boolean => key === DASHBOARD_KEY;
 
 export const useTabsStore = create<TabsStore>()(
 	persist(
@@ -45,11 +49,30 @@ export const useTabsStore = create<TabsStore>()(
 			addTab: (tab: TabItem) => {
 				const { tabs, history } = get();
 
+				// 仪表盘标签始终固定，不可关闭
+				if (isDashboardTab(tab.key)) {
+					tab.pinned = true;
+					tab.closable = false;
+				}
+
 				// 检查是否已存在
 				const existingTab = tabs.find((t) => t.key === tab.key);
 				if (existingTab) {
-					// 如果已存在，激活它
+					// 如果已存在，激活它，并确保状态正确
 					set({ activeTab: tab.key });
+					// 对于仪表盘标签，确保始终是固定状态
+					if (isDashboardTab(tab.key) && (!existingTab.pinned || existingTab.closable)) {
+						const updatedTabs = tabs.map((t) =>
+							t.key === tab.key ? { ...t, pinned: true, closable: false } : t
+						);
+						// 重新排序：固定标签在前
+						const sortedTabs = updatedTabs.sort((a, b) => {
+							if (a.pinned && !b.pinned) return -1;
+							if (!a.pinned && b.pinned) return 1;
+							return 0;
+						});
+						set({ tabs: sortedTabs });
+					}
 					return;
 				}
 
@@ -60,8 +83,14 @@ export const useTabsStore = create<TabsStore>()(
 					if (closableTab) {
 						const newTabs = tabs.filter((t) => t.key !== closableTab.key);
 						const newHistory = history.filter((key) => key !== closableTab.key);
+						// 排序：固定标签在前，非固定标签在后
+						const sortedTabs = [...newTabs, tab].sort((a, b) => {
+							if (a.pinned && !b.pinned) return -1;
+							if (!a.pinned && b.pinned) return 1;
+							return 0;
+						});
 						set({
-							tabs: [...newTabs, tab],
+							tabs: sortedTabs,
 							activeTab: tab.key,
 							history: [...newHistory, tab.key],
 						});
@@ -69,8 +98,15 @@ export const useTabsStore = create<TabsStore>()(
 					return;
 				}
 
+				// 排序：固定标签在前，非固定标签在后
+				const sortedTabs = [...tabs, tab].sort((a, b) => {
+					if (a.pinned && !b.pinned) return -1;
+					if (!a.pinned && b.pinned) return 1;
+					return 0;
+				});
+
 				set({
-					tabs: [...tabs, tab],
+					tabs: sortedTabs,
 					activeTab: tab.key,
 					history: [...history, tab.key],
 				});
@@ -78,6 +114,9 @@ export const useTabsStore = create<TabsStore>()(
 
 			// 移除标签
 			removeTab: (key: string) => {
+				// 不允许移除仪表盘标签
+				if (isDashboardTab(key)) return;
+
 				const { tabs, activeTab, history } = get();
 
 				// 不允许移除固定的标签
@@ -181,20 +220,42 @@ export const useTabsStore = create<TabsStore>()(
 			// 更新标签
 			updateTab: (key: string, updates: Partial<TabItem>) => {
 				const { tabs } = get();
+
+				// 对于仪表盘标签，强制设置为不可关闭且固定
+				const finalUpdates = isDashboardTab(key)
+					? { ...updates, pinned: true, closable: false }
+					: updates;
+
 				const newTabs = tabs.map((t) =>
-					t.key === key ? { ...t, ...updates } : t
+					t.key === key ? { ...t, ...finalUpdates } : t
 				);
 
-				set({ tabs: newTabs });
+				// 如果更新了 pinned 状态，需要重新排序
+				const updatedTab = newTabs.find(t => t.key === key);
+				if (updatedTab && 'pinned' in updates) {
+					// 重新排序：固定标签在前，非固定标签在后
+					const sortedTabs = newTabs.sort((a, b) => {
+						if (a.pinned && !b.pinned) return -1;
+						if (!a.pinned && b.pinned) return 1;
+						return 0;
+					});
+					set({ tabs: sortedTabs });
+				} else {
+					set({ tabs: newTabs });
+				}
 			},
 
 			// 固定标签
 			pinTab: (key: string) => {
+				// 仪表盘标签始终固定，不需要手动固定
+				if (isDashboardTab(key)) return;
 				get().updateTab(key, { pinned: true, closable: false });
 			},
 
 			// 取消固定标签
 			unpinTab: (key: string) => {
+				// 不允许取消仪表盘标签的固定状态
+				if (isDashboardTab(key)) return;
 				get().updateTab(key, { pinned: false, closable: true });
 			},
 

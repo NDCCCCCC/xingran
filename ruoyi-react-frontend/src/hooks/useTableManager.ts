@@ -132,8 +132,9 @@ export function useTableManager<T>(
 
   const handleEdit = useCallback((item: T) => {
     setEditingItem(item);
+    editForm.setFieldsValue(item);
     setEditModalVisible(true);
-  }, []);
+  }, [editForm]);
 
   const handleModalClose = useCallback(() => {
     setEditModalVisible(false);

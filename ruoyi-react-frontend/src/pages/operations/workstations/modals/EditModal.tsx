@@ -3,8 +3,9 @@
  * 工位编辑模态框
  */
 
-import { useEffect, useLayoutEffect, useRef } from 'react';
+import { useLayoutEffect } from 'react';
 import { Modal, Form, Input, InputNumber, Select, Row, Col, Cascader } from 'antd';
+import type { FormInstance } from 'antd';
 import type { WorkstationOps } from '@/types';
 import type { DeptTreeNode } from '../types';
 import { DepartmentTreeSelect } from '@/components/shared';
@@ -23,6 +24,7 @@ type CascaderOption = {
 
 export interface WorkstationEditModalProps {
   open: boolean;
+  form: FormInstance;
   editingWorkstation: WorkstationOps | null;
   deptTreeData: DeptTreeNode[];
   userOptions: { id: string; name: string }[];
@@ -32,10 +34,12 @@ export interface WorkstationEditModalProps {
   onOk: (values: Record<string, unknown>) => Promise<void>;
   onCancel: () => void;
   onDeptChange: (deptId: string) => void;
+  onOrgChange: (orgId: string) => void;
 }
 
 export function WorkstationEditModal({
   open,
+  form,
   editingWorkstation,
   deptTreeData,
   userOptions,
@@ -45,34 +49,14 @@ export function WorkstationEditModal({
   onOk,
   onCancel,
   onDeptChange,
+  onOrgChange,
 }: WorkstationEditModalProps) {
-  const [form] = Form.useForm();
-  const prevEditingWorkstationRef = useRef<WorkstationOps | null>(null);
-  const isMountedRef = useRef(true);
-
-  // 使用 useLayoutEffect 在 DOM 更新前同步设置表单值
-  // 注意：表单值已在父组件的 handleOpenModal 中设置，这里只需处理新增模式
+  // 仅在新增模式下重置表单（编辑模式的值由父组件设置）
   useLayoutEffect(() => {
-    isMountedRef.current = true;
-
-    if (open) {
-      if (!editingWorkstation || !editingWorkstation.id) {
-        // 新增模式：重置表单并设置默认值
-        form.resetFields();
-        form.setFieldsValue({ status: 0, type: 0 });
-        prevEditingWorkstationRef.current = null;
-      } else {
-        // 编辑模式：表单值已在父组件中设置，这里只需更新引用
-        prevEditingWorkstationRef.current = editingWorkstation;
-      }
-    } else {
-      // 模态框关闭时，不需要重置表单，因为 Form 会随着 Modal 卸载
-      prevEditingWorkstationRef.current = null;
+    if (open && !editingWorkstation?.id) {
+      form.resetFields();
+      form.setFieldsValue({ status: 0, type: 0 });
     }
-
-    return () => {
-      isMountedRef.current = false;
-    };
   }, [open, editingWorkstation, form]);
 
   return (
@@ -98,6 +82,17 @@ export function WorkstationEditModal({
       destroyOnHidden
     >
       <Form form={form} layout="horizontal" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
+        <Form.Item name="orgId" label="所属机构" rules={[{ required: true, message: '请选择所属机构' }]}>
+          <DepartmentTreeSelect
+            treeData={deptTreeData}
+            placeholder="请选择机构"
+            onChange={(value) => {
+              // 当机构变化时，清空楼宇-楼层选择并重新加载楼宇
+              form.setFieldsValue({ floorId: undefined });
+              onOrgChange(value);
+            }}
+          />
+        </Form.Item>
         <Form.Item name="floorId" label="所属楼层" rules={[{ required: true, message: '请选择所属楼层' }]}>
           <Cascader
             options={cascaderOptions}
@@ -125,6 +120,7 @@ export function WorkstationEditModal({
             <Form.Item name="deptId" label="所属部门">
               <DepartmentTreeSelect
                 treeData={deptTreeData}
+                placeholder="请选择部门"
                 onChange={() => {
                   // 当部门变化时，清空用户选择并重新加载用户
                   form.setFieldsValue({ userId: undefined });
