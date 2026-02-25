@@ -224,10 +224,19 @@ func (b *BatchUpsert) buildConflictColumns() []clause.Column {
 		}
 	}
 
-	// 其次使用配置的UniqueKeys
+	// 其次使用配置的UniqueKeys（需要转换为数据库字段名）
 	if len(columns) == 0 && len(b.config.UniqueKeys) > 0 {
 		for _, key := range b.config.UniqueKeys {
-			columns = append(columns, clause.Column{Name: key})
+			// 在Columns配置中查找对应的字段定义
+			for _, col := range b.config.Columns {
+				if col.Field == key {
+					dbField := b.getDBFieldName(col)
+					if dbField != "" {
+						columns = append(columns, clause.Column{Name: dbField})
+					}
+					break
+				}
+			}
 		}
 	}
 
@@ -312,7 +321,7 @@ func (b *BatchUpsert) collectConflictFields() map[string]bool {
 // shouldSkipFromUpdate 判断字段是否应该从更新中排除
 func (b *BatchUpsert) shouldSkipFromUpdate(field string, col ExcelColumn, conflictFields map[string]bool) bool {
 	// 排除ID和创建时间字段
-	if field == "id" || field == "createdAt" || field == "created_at" {
+	if field == "id" || field == "createdAt" || field == "created_at" || field == "updatedAt" || field == "updated_at" {
 		return true
 	}
 

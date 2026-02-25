@@ -26,6 +26,7 @@ import {
 import { useFloorPlanEditor } from './useFloorPlanEditor';
 import { useFloorStatistics } from './useFloorStatistics';
 import { useBuildingOptions } from './useBuildingOptions';
+import { useDepartmentData } from '../buildings/useDepartmentData';
 import type { ViewMode, PageMode } from './constants';
 import type { FloorOption } from './components';
 import { DEFAULT_FORM_VALUES } from './constants';
@@ -41,6 +42,7 @@ const FloorManagement: FC = () => {
 
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
   const { buildingOptions, loadBuildingOptions } = useBuildingOptions();
+  const departmentData = useDepartmentData();
 
   const { selectedDeptId, handleDeptSelect } = useSidebarDeptFilter({
     searchForm: undefined,
@@ -119,7 +121,8 @@ const FloorManagement: FC = () => {
     loadFloors();
     loadStatistics();
     loadBuildingOptions();
-  }, [loadFloors, loadStatistics, loadBuildingOptions]);
+    departmentData.loadDepartments();
+  }, [loadFloors, loadStatistics, loadBuildingOptions, departmentData.loadDepartments]);
 
   useEffect(() => {
     loadFloors();
@@ -521,7 +524,7 @@ const FloorManagement: FC = () => {
           visible={modalVisible}
           editingFloor={editingFloor}
           buildingOptions={buildingOptions}
-          departmentTreeData={[]}
+          departments={departmentData.departments}
           buildingOptionsByDept={modalBuildingOptions}
           selectedDeptId={modalDeptId}
           form={floorForm}

@@ -133,8 +133,8 @@ const WorkstationManagement: FC = () => {
 
   const refreshData = useCallback(() => {
     loadWorkstations();
-    loadStatisticsFromHook();
-  }, [loadWorkstations, loadStatisticsFromHook]);
+    loadStatisticsFromHook(selectedDeptId || undefined);
+  }, [loadWorkstations, loadStatisticsFromHook, selectedDeptId]);
 
   // 初始化加载
   useEffect(() => {
@@ -147,10 +147,11 @@ const WorkstationManagement: FC = () => {
   // 部门变化时重新加载数据（使用 useCallback 稳定依赖）
   useEffect(() => {
     loadWorkstations();
+    loadStatisticsFromHook(selectedDeptId || undefined);
     if (selectedDeptId) {
       loadFloorOptions(selectedDeptId);
     }
-  }, [selectedDeptId]);
+  }, [selectedDeptId, loadWorkstations, loadStatisticsFromHook, loadFloorOptions]);
 
   const handleSuccess = useCallback(() => {
     refreshData();
@@ -365,7 +366,7 @@ const WorkstationManagement: FC = () => {
             { title: '总工位数', value: statistics.total, prefix: <DesktopOutlined /> },
             { title: '空闲', value: statistics.available, styles: { content: { color: '#52c41a' } }, prefix: <CheckCircleOutlined /> },
             { title: '占用', value: statistics.occupied, styles: { content: { color: '#ff4d4f' } }, prefix: <StopOutlined /> },
-            { title: '维护', value: statistics.maintain, styles: { content: { color: '#faad14' } }, valueStyle: { color: '#faad14' } },
+            { title: '维护', value: statistics.maintain, styles: { content: { color: '#faad14' } }, prefix: <StopOutlined /> },
           ]}
         />
         <Card style={{ marginBottom: 16 }}>

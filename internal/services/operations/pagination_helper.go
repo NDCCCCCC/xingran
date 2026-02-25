@@ -11,8 +11,8 @@ const (
 	DefaultPageSize = 10
 	// MinPageSize 最小每页数量
 	MinPageSize = 10
-	// MaxPageSize 最大每页数量
-	MaxPageSize = 100
+	// MaxPageSize 最大每页数量（用于统计数据等场景）
+	MaxPageSize = 10000
 )
 
 // PaginationParams 分页参数

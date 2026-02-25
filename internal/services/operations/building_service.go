@@ -78,7 +78,7 @@ func (s *buildingService) GetByID(ctx context.Context, id string) (*operations.O
 
 // List 查询楼宇列表
 func (s *buildingService) List(ctx context.Context, params map[string]interface{}) (*PageResult, error) {
-	query := s.db.WithContext(ctx).Model(&operations.OpsBuilding{})
+	query := s.db.WithContext(ctx).Table("ops_buildings")
 
 	// 应用筛选条件
 	query = s.applyFilters(query, params)

@@ -4,8 +4,7 @@ import { Modal, Form, Input, InputNumber, Select } from 'antd';
 import type { FormInstance } from 'antd/es/form';
 import type { Floor, Building } from '@/types';
 import { STATUS_OPTIONS, DEFAULT_FORM_VALUES } from '../constants';
-import { DepartmentTreeSelect } from '@/components/shared/DepartmentTreeSelect';
-import type { TreeNode } from '@/components/shared/DepartmentTreeSelect';
+import { DepartmentTreeSelect, type Department } from '@/components/shared/DepartmentTreeSelect';
 import FileUpload from '@/components/shared/FileUpload';
 import { useImageUpload } from '@/hooks/useImageUpload';
 
@@ -19,7 +18,7 @@ interface FloorModalProps {
   visible: boolean;
   editingFloor: Floor | null;
   buildingOptions: BuildingOptionBase[];
-  departmentTreeData: TreeNode[];
+  departments: Department[];
   buildingOptionsByDept: BuildingOptionBase[];
   selectedDeptId: string;
   form: FormInstance;
@@ -32,7 +31,7 @@ export const FloorModal: FC<FloorModalProps> = ({
   visible,
   editingFloor,
   buildingOptions,
-  departmentTreeData,
+  departments,
   buildingOptionsByDept,
   selectedDeptId,
   form,
@@ -69,6 +68,9 @@ export const FloorModal: FC<FloorModalProps> = ({
 
   const isDisabled = !!editingFloor;
 
+  // 合并楼宇选项：优先使用部门特定选项，如果为空则使用全部选项
+  const effectiveBuildingOptions = buildingOptionsByDept.length > 0 ? buildingOptionsByDept : buildingOptions;
+
   return (
     <Modal
       title={editingFloor ? '编辑楼层' : '新增楼层'}
@@ -81,7 +83,7 @@ export const FloorModal: FC<FloorModalProps> = ({
         <Form.Item label="所属机构" required>
           <DepartmentTreeSelect
             placeholder="选择机构"
-            treeData={departmentTreeData}
+            departments={departments}
             value={selectedDeptId}
             onChange={onDepartmentChange}
             allowClear={!isDisabled}
@@ -100,7 +102,7 @@ export const FloorModal: FC<FloorModalProps> = ({
             showSearch
             optionFilterProp="children"
           >
-            {buildingOptionsByDept.map((b) => (
+            {effectiveBuildingOptions.map((b) => (
               <Option key={b.id} value={b.id}>
                 {b.name}
               </Option>

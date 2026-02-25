@@ -20,7 +20,7 @@ interface DepartmentNode {
 
 export interface UseWorkstationDataReturn {
   loadWorkstations: (params?: Record<string, unknown>) => Promise<void>;
-  loadStatistics: () => Promise<void>;
+  loadStatistics: (orgId?: string) => Promise<void>;
   loadFloorOptions: (orgId?: string) => Promise<void>;
   loadDeptOptions: () => Promise<void>;
   loadUserOptions: (deptId?: string) => Promise<void>;
@@ -33,15 +33,26 @@ export function useWorkstationData(
   setDeptTreeData: React.Dispatch<React.SetStateAction<DeptTreeNode[]>>,
   setUserOptions: React.Dispatch<React.SetStateAction<UserOption[]>>
 ): UseWorkstationDataReturn {
-  const loadStatistics = useCallback(async () => {
+  const loadStatistics = useCallback(async (orgId?: string) => {
     try {
-      const result = await workstationApi.list({ current: 1, pageSize: 1000 });
-      const allWorkstations = result.data?.list || [];
+      const baseParams: { current: number; pageSize: number; orgId?: string } = { current: 1, pageSize: 1 };
+      if (orgId) {
+        baseParams.orgId = orgId;
+      }
+
+      // 并发请求：总数（不带 status 筛选）和各状态的计数
+      const [totalResult, availableResult, occupiedResult, maintainResult] = await Promise.all([
+        workstationApi.list(baseParams),                        // 获取总数
+        workstationApi.list({ ...baseParams, status: 0 }),      // 空闲
+        workstationApi.list({ ...baseParams, status: 1 }),      // 占用
+        workstationApi.list({ ...baseParams, status: 2 }),      // 维护
+      ]);
+
       setStatistics({
-        total: allWorkstations.length,
-        available: allWorkstations.filter((w: WorkstationOps) => w.status === 0).length,
-        occupied: allWorkstations.filter((w: WorkstationOps) => w.status === 1).length,
-        maintain: allWorkstations.filter((w: WorkstationOps) => w.status === 2).length,
+        total: totalResult.data?.total || 0,
+        available: availableResult.data?.total || 0,
+        occupied: occupiedResult.data?.total || 0,
+        maintain: maintainResult.data?.total || 0,
       });
     } catch (error) {
       handleApiError(error, '加载统计数据', false);

@@ -91,6 +91,7 @@ export interface WorkstationListParams extends PageParams {
   workstationCode?: string;
   name?: string;
   status?: number;
+  orgId?: string;  // 所属机构ID，用于按部门筛选
 }
 
 const workstationCrudApi = createCrudApi<WorkstationOps>({ basePath: '/ops/workstation' });

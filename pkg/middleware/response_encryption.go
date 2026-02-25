@@ -58,6 +58,15 @@ func ResponseEncryption(encryptor *crypto.RequestEncryptor, config *ResponseEncr
 			return
 		}
 
+		// 调试日志：记录所有请求路径（用于排查加密问题）
+		if c.Request.URL.Path != "/api/v1/ad-domain/configs/list" {
+			applogger.WithFields(map[string]interface{}{
+				"path":         c.Request.URL.Path,
+				"method":       c.Request.Method,
+				"excluded":     isExcludedPath(c.Request.URL.Path, config.ExcludePaths),
+			}).Debug("响应加密中间件：处理请求")
+		}
+
 		// 只加密成功响应（状态码 200-299）
 		// 使用自定义 Writer 捕获响应
 		blw := &responseWriter{

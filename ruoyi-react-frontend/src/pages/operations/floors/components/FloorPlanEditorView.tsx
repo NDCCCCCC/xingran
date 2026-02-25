@@ -25,7 +25,7 @@ interface FloorPlanEditorViewProps {
   floorPlanData: FloorPlanData | null;
   loading: boolean;
   isEditMode: boolean;
-  departmentTreeData: TreeNode[];
+  departmentTreeData?: TreeNode[];
   buildingOptions: Building[];
   floorOptions: FloorOption[];
   selectedDeptId: string;

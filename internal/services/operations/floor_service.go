@@ -40,6 +40,35 @@ func (s *floorService) Create(ctx context.Context, floor *operations.OpsFloor) e
 		return err
 	}
 	if err := s.db.WithContext(ctx).Create(floor).Error; err != nil {
+		// 检查是否是唯一约束错误（同一楼宇下楼层号重复）
+		if isDuplicateKeyError(err) {
+			// 检查是否存在被软删除的记录
+			var softDeletedFloor operations.OpsFloor
+			err := s.db.WithContext(ctx).Unscoped().Where("building_id = ? AND floor_no = ? AND deleted_at IS NOT NULL",
+				floor.BuildingID, floor.FloorNo).First(&softDeletedFloor).Error
+
+			if err == nil && softDeletedFloor.ID != "" {
+				// 存在被软删除的记录，恢复它
+				recoverErr := s.db.WithContext(ctx).Exec(`
+					UPDATE ops_floors
+					SET name = ?, area = ?, status = ?, remark = ?,
+							plan_image_id = ?, plan_image_url = ?,
+							deleted_at = NULL, updated_at = NOW()
+					WHERE id = ?
+				`, floor.Name, floor.Area, floor.Status, floor.Remark,
+					floor.PlanImageID, floor.PlanImageUrl, softDeletedFloor.ID).Error
+
+				if recoverErr != nil {
+					return apperrors.Wrap(recoverErr, apperrors.CodeServerError, "恢复楼层失败")
+				}
+				// 将恢复的 ID 赋值给 floor，以便后续更新
+				floor.ID = softDeletedFloor.ID
+				return s.updateBuildingFloorCount(ctx, floor.BuildingID)
+			}
+
+			// 不存在被软删除的记录，返回真正错误
+			return apperrors.Wrap(err, apperrors.CodeParamError, "该楼宇已存在此楼层号")
+		}
 		return err
 	}
 	return s.updateBuildingFloorCount(ctx, floor.BuildingID)
@@ -268,4 +297,52 @@ func (s *floorService) syncWorkstationBuildingID(ctx context.Context, floorID st
 	}
 
 	return nil
+}
+
+// isDuplicateKeyError 检查是否是 PostgreSQL 唯一约束错误
+func isDuplicateKeyError(err error) bool {
+	if err == nil {
+		return false
+	}
+	// PostgreSQL 唯一约束错误码是 23505
+	// 错误消息包含 "duplicate key" 或 "unique constraint"
+	errMsg := err.Error()
+	return containsIgnoreCase(errMsg, "duplicate key") ||
+		containsIgnoreCase(errMsg, "unique constraint") ||
+		containsIgnoreCase(errMsg, "23505")
+}
+
+// containsIgnoreCase 不区分大小写检查子串
+func containsIgnoreCase(s, substr string) bool {
+	return len(s) >= len(substr) &&
+		(s == substr ||
+		 len(s) > len(substr) && (
+			s[:len(substr)] == substr ||
+			s[len(s)-len(substr):] == substr ||
+		 indexOfIgnoreCase(s, substr) >= 0))
+}
+
+// indexOfIgnoreCase 不区分大小写查找子串位置
+func indexOfIgnoreCase(s, substr string) int {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		match := true
+		for j := 0; j < len(substr); j++ {
+			c1 := s[i+j]
+			c2 := substr[j]
+			if c1 >= 'A' && c1 <= 'Z' {
+				c1 = c1 + 32
+			}
+			if c2 >= 'A' && c2 <= 'Z' {
+				c2 = c2 + 32
+			}
+			if c1 != c2 {
+				match = false
+				break
+			}
+		}
+		if match {
+			return i
+		}
+	}
+	return -1
 }

@@ -110,13 +110,13 @@ var ExcelConfigs = map[string]ExcelConfig{
 		HasHeader:  true,
 		StartRow:   2,
 		CachePatterns: []string{"workstation:*", "workstations:*"},
-		UniqueKeys:    []string{"floorId", "workstationName"}, // 按楼层+工位名称判断重复
+		UniqueKeys:    []string{"floorName", "name"}, // 按楼层+工位名称判断重复
 		Columns: []ExcelColumn{
-			{Field: "name", Header: "工位名称", Required: true, MaxLength: 100, UpsertKey: true, DBField: "workstation_name"},
+			{Field: "name", Header: "工位名称", Required: true, MaxLength: 100, DBField: "workstation_name"},
 			{Field: "floorName", Header: "所属楼层名称", Required: true, MaxLength: 100, Reference: "ops_floors.name", DBField: "floor_id"}, // 用户提供楼层名称，自动转换为floorId
-			{Field: "workstationType", Header: "工位类型", Options: map[interface{}]string{int(models.WorkstationTypeFixed): "固定工位", int(models.WorkstationTypeHotDesk): "灵活工位", int(models.WorkstationTypeManager): "管理工位"}},
+			{Field: "workstationType", Header: "工位类型", DBField: "workstation_type", Options: map[interface{}]string{int(models.WorkstationTypeFixed): "固定工位", int(models.WorkstationTypeHotDesk): "灵活工位", int(models.WorkstationTypeManager): "管理工位"}},
 			{Field: "status", Header: "状态", Options: map[interface{}]string{int(models.WorkstationStatusAvailable): "空闲", int(models.WorkstationStatusOccupied): "占用", int(models.WorkstationStatusMaintain): "维护"}},
-			{Field: "remark", Header: "备注", MaxLength: 500},
+			{Field: "remark", Header: "备注", MaxLength: 500, DBField: "description"},
 		},
 	},
 	"serverRoom": {
@@ -144,7 +144,7 @@ var ExcelConfigs = map[string]ExcelConfig{
 		Columns: []ExcelColumn{
 			{Field: "name", Header: "设备名称", Required: true, MaxLength: 100},
 			{Field: "deviceCode", Header: "设备编码", Required: true, Unique: true, MaxLength: 50},
-			{Field: "deviceType", Header: "设备类型", Options: map[interface{}]string{string(operations.DeviceTypeServer): "服务器", string(operations.DeviceTypeStorage): "存储设备", string(operations.DeviceTypeUPS): "UPS", string(operations.DeviceTypePDU): "PDU", string(operations.DeviceTypeFirewall): "防火墙", string(operations.DeviceTypeKVM): "KVM", string(operations.DeviceTypeCabinet): "机柜", string(operations.DeviceTypeOther): "其他"}},
+			{Field: "deviceType", Header: "设备类型", DBField: "device_type", Options: map[interface{}]string{string(operations.DeviceTypeServer): "服务器", string(operations.DeviceTypeStorage): "存储设备", string(operations.DeviceTypeUPS): "UPS", string(operations.DeviceTypePDU): "PDU", string(operations.DeviceTypeFirewall): "防火墙", string(operations.DeviceTypeKVM): "KVM", string(operations.DeviceTypeCabinet): "机柜", string(operations.DeviceTypeOther): "其他"}},
 			{Field: "vendor", Header: "厂商", MaxLength: 100},
 			{Field: "model", Header: "型号", MaxLength: 100},
 			{Field: "serialNumber", Header: "序列号", MaxLength: 100},

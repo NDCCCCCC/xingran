@@ -202,8 +202,73 @@ api.interceptors.response.use(
 	async (response: AxiosResponse) => {
 		let { data } = response;
 
+		const url = response.config.url || '';
+		const responseHeaders = response.headers || {};
+
+		// 检查后端响应加密标志
+		const isResponseEncrypted = responseHeaders['x-response-encrypted'] === 'true' || responseHeaders['X-Response-Encrypted'] === 'true';
+
+		// 检查请求体加密的响应（前端发起的加密请求，后端会加密响应）
 		const isEncrypted = !!(data && data.encrypted && data.data && data.iv);
 
+		// 如果响应被加密但没有 encrypted 标志，说明是后端中间件自动加密的
+		const needsBackendDecryption = isResponseEncrypted && !data?.encrypted;
+
+		// 调试日志：记录楼宇列表接口的响应
+		if (url.includes('/ops/building/list')) {
+			console.log('[API Response] 楼宇列表响应:', {
+				url,
+				hasData: !!data,
+				dataType: typeof data,
+				isEncrypted,
+				isResponseEncrypted,
+				needsBackendDecryption,
+				dataKeys: typeof data === 'object' ? Object.keys(data) : 'N/A',
+				rawData: data,
+				responseHeaders: Object.keys(responseHeaders),
+			});
+		}
+
+		// 处理后端中间件自动加密的响应（需要解密）
+		if (needsBackendDecryption) {
+			console.warn('[API Response] 检测到后端加密响应，尝试解密...');
+			try {
+				const requestId = responseHeaders['x-request-id'] || responseHeaders['X-Request-ID'] || '';
+
+				if (!data?.data || !data?.iv) {
+					console.error('[Response Decryption] 后端加密响应缺少必要字段');
+					message.error('响应解密失败：格式错误');
+					return Promise.reject(new Error('Missing encrypted data fields'));
+				}
+
+				const encryptedDataBase64 = data.data;
+				const ivBase64 = data.iv;
+
+				// 使用请求时存储的密钥解密
+				const keyInfo = encryptionKeyStore.get(requestId);
+				if (!keyInfo) {
+					console.error('[Response Decryption] 找不到请求的加密密钥:', requestId);
+					message.error('响应解密失败：找不到加密密钥');
+					return Promise.reject(new Error('Encryption keys not found'));
+				}
+
+				const encryptedDataHex = base64ToHex(encryptedDataBase64);
+				const ivHex = base64ToHex(ivBase64);
+
+				const decryptedJson = await decryptSM4CBC(encryptedDataHex, keyInfo.sm4KeyHex, ivHex);
+				data = JSON.parse(decryptedJson);
+
+				console.log('[API Response] 后端加密响应解密成功:', { url, decryptedData: data });
+
+				encryptionKeyStore.delete(requestId);
+			} catch (error) {
+				console.error('[Response Decryption] 后端加密响应解密失败:', error);
+				message.error('响应解密失败: ' + (error as Error).message);
+				return Promise.reject(error);
+			}
+		}
+
+		// 处理前端发起加密请求的响应（原有逻辑）
 		if (isEncrypted) {
 			try {
 				const requestId = response.config.headers.get('X-Request-ID') as string;

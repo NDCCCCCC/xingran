@@ -66,10 +66,7 @@ export function WorkstationEditModal({
         prevEditingWorkstationRef.current = editingWorkstation;
       }
     } else {
-      // 模态框关闭时重置表单（仅在组件仍然挂载时）
-      if (isMountedRef.current) {
-        form.resetFields();
-      }
+      // 模态框关闭时，不需要重置表单，因为 Form 会随着 Modal 卸载
       prevEditingWorkstationRef.current = null;
     }
 
