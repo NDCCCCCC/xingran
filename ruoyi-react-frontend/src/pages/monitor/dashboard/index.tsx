@@ -50,74 +50,65 @@ const Dashboard: FC = () => {
   const [loading, setLoading] = useState(false);
   const isInitialMount = useRef(true);
 
-  // 获取服务器指标
-  const fetchServerMetrics = useCallback(async () => {
-    try {
-      const result = await post<ServerMetrics>('/monitor/server-metrics/current', {});
-      setMetrics(result.data || null);
-    } catch (error) {
-      console.error('获取服务器指标失败:', error);
-    }
-  }, []);
-
-  // 获取服务器列表
-  const fetchServerList = useCallback(async () => {
-    try {
-      const result = await post<PageResponse<SystemInfo>>('/monitor/server-info/list', {
-        current: 1,
-        pageSize: 10
-      });
-      setServers(result.data?.list || []);
-    } catch (error) {
-      console.error('获取服务器列表失败:', error);
-    }
-  }, []);
-
-  // 获取最近登录日志
-  const fetchRecentLogs = useCallback(async () => {
-    try {
-      const result = await post<PageResponse<LoginLog>>('/monitor/login-logs/list', {
-        current: 1,
-        pageSize: 5
-      });
-      setRecentLogs(result.data?.list || []);
-    } catch (error) {
-      console.error('获取登录日志失败:', error);
-    }
-  }, []);
-
-  // 刷新数据
-  const refreshData = useCallback(async () => {
+  // 刷新数据 - 直接定义，避免 useCallback 的依赖问题
+  // 遵循 Vercel React Best Practices: 将事件处理逻辑直接放在事件处理器中
+  const refreshData = async () => {
     // 不是初始加载时才显示 loading
     if (!isInitialMount.current) {
       setLoading(true);
     }
-    await Promise.all([
-      fetchServerMetrics(),
-      fetchServerList(),
-      fetchRecentLogs()
-    ]);
-    setLoading(false);
-  }, [fetchServerMetrics, fetchServerList, fetchRecentLogs]);
+    try {
+      const [metricsResult, serversResult, logsResult] = await Promise.all([
+        post<ServerMetrics>('/monitor/server-metrics/current', {}),
+        post<PageResponse<SystemInfo>>('/monitor/server-info/list', { current: 1, pageSize: 10 }),
+        post<PageResponse<LoginLog>>('/monitor/login-logs/list', { current: 1, pageSize: 5 })
+      ]);
+      setMetrics(metricsResult.data || null);
+      setServers(serversResult.data?.list || []);
+      setRecentLogs(logsResult.data?.list || []);
+    } catch (error) {
+      console.error('刷新数据失败:', error);
+    } finally {
+      setLoading(false);
+      isInitialMount.current = false;
+    }
+  };
 
   useEffect(() => {
-    // 初始加载 - 使用 setTimeout 避免同步 setState
-    setTimeout(() => {
-      Promise.all([
-        fetchServerMetrics(),
-        fetchServerList(),
-        fetchRecentLogs()
-      ]).finally(() => {
-        isInitialMount.current = false;
+    // 初始加载
+    // 遵循 Vercel React Best Practices: 移除不必要的 setTimeout，直接并行加载数据
+    let isMounted = true;
+
+    Promise.all([
+      post<ServerMetrics>('/monitor/server-metrics/current', {}),
+      post<PageResponse<SystemInfo>>('/monitor/server-info/list', { current: 1, pageSize: 10 }),
+      post<PageResponse<LoginLog>>('/monitor/login-logs/list', { current: 1, pageSize: 5 })
+    ])
+      .then(([metricsResult, serversResult, logsResult]) => {
+        if (isMounted) {
+          setMetrics(metricsResult.data || null);
+          setServers(serversResult.data?.list || []);
+          setRecentLogs(logsResult.data?.list || []);
+          isInitialMount.current = false;
+        }
+      })
+      .catch(error => {
+        console.error('初始加载失败:', error);
+        if (isMounted) {
+          isInitialMount.current = false;
+        }
       });
-    }, 0);
 
     // 设置定时刷新（每30秒）
-    const interval = setInterval(refreshData, 30000);
+    const interval = setInterval(() => {
+      refreshData();
+    }, 30000);
 
-    return () => clearInterval(interval);
-
-  }, [fetchServerMetrics, fetchServerList, fetchRecentLogs, refreshData]);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []); // 空依赖数组 - 只在组件挂载时执行一次
 
   // 格式化内存大小
   const formatMemorySize = (bytes: number): string => {

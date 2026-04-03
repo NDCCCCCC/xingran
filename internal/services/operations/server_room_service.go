@@ -73,14 +73,18 @@ func (s *serverRoomService) List(ctx context.Context, req requests.ServerRoomLis
 	query := s.db.WithContext(ctx).Model(&operations.OpsServerRoom{})
 
 	// 添加筛选条件 - 类型安全，无需类型断言
+	// 注意：使用表前缀避免与 JOIN 的表产生列名歧义
 	if req.Name != "" {
-		query = query.Where("name LIKE ?", "%"+req.Name+"%")
+		query = query.Where("ops_server_rooms.name LIKE ?", "%"+req.Name+"%")
+	}
+	if req.BuildingID != "" {
+		query = query.Where("ops_server_rooms.building_id = ?", req.BuildingID)
 	}
 	if req.FloorID != "" {
-		query = query.Where("floor_id = ?", req.FloorID)
+		query = query.Where("ops_server_rooms.floor_id = ?", req.FloorID)
 	}
 	if req.HasStatus() {
-		query = query.Where("status = ?", req.GetStatus(0))
+		query = query.Where("ops_server_rooms.status = ?", req.GetStatus(0))
 	}
 
 	// 分页 - 使用请求结构体的方法

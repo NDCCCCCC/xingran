@@ -10,8 +10,8 @@ export type PageMode = 'list' | 'editor';
 export const WORKSTATION_LAYOUT = {
   DEFAULT_WIDTH: 160,
   DEFAULT_DEPTH: 70,
-  GAP: 20,
-  ITEMS_PER_ROW: 10,
+  GAP: 120,
+  ITEMS_PER_ROW: 5,
   START_X: 100,
   START_Y: 100,
 } as const;

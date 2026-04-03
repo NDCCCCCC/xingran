@@ -192,7 +192,7 @@ export interface UserNoticeListParams {
 /**
  * WebSocket 消息类型
  */
-export type WebSocketMessageType = 'new_notice' | 'ping' | 'pong';
+export type WebSocketMessageType = 'new_notice' | 'ping' | 'pong' | 'rpa_progress' | 'rpa_completed' | 'rpa_failed';
 
 /**
  * WebSocket 通知消息
@@ -208,6 +208,8 @@ export interface WebSocketNoticeMessage {
     createdAt: string;
   } | null;
   timestamp: number;
+  // RPA 进度消息支持
+  content?: string; // JSON 字符串格式的 RPA 进度数据
 }
 
 /**

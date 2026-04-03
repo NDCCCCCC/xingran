@@ -1,5 +1,9 @@
 import { create } from 'zustand';
 import type { NoticeListItem, WebSocketNoticeMessage } from '@/types/notice';
+import type { RPAProgressMessage } from '@/types/rpa';
+
+// RPA 进度回调类型
+type RPAProgressCallback = (message: RPAProgressMessage) => void;
 
 interface NoticeState {
   // 未读数量
@@ -10,6 +14,8 @@ interface NoticeState {
   loading: boolean;
   // WebSocket 连接状态
   wsConnected: boolean;
+  // RPA 进度事件监听器集合
+  rpaProgressListeners: Set<RPAProgressCallback>;
 }
 
 interface NoticeActions {
@@ -31,6 +37,8 @@ interface NoticeActions {
   setWsConnected: (connected: boolean) => void;
   // 处理 WebSocket 消息
   handleWsMessage: (message: WebSocketNoticeMessage) => void;
+  // RPA 进度事件订阅
+  onRPAProgress: (callback: (message: RPAProgressMessage) => void) => () => void;
   // 重置状态
   reset: () => void;
 }
@@ -40,6 +48,7 @@ const initialState: NoticeState = {
   notifications: [],
   loading: false,
   wsConnected: false,
+  rpaProgressListeners: new Set(),
 };
 
 export const useNoticeStore = create<NoticeState & NoticeActions>()((set, get) => ({
@@ -108,6 +117,7 @@ export const useNoticeStore = create<NoticeState & NoticeActions>()((set, get) =
 
   // 处理 WebSocket 消息
   handleWsMessage: (message: WebSocketNoticeMessage) => {
+    // 处理新通知
     if (message.type === 'new_notice' && message.data) {
       const { noticeId, noticeTitle, noticeType, priority, createdAt } = message.data;
       get().addNotification({
@@ -119,10 +129,56 @@ export const useNoticeStore = create<NoticeState & NoticeActions>()((set, get) =
         createdAt,
       });
     }
+
+    // 处理 RPA 进度消息
+    if (
+      message.type === 'rpa_progress' ||
+      message.type === 'rpa_completed' ||
+      message.type === 'rpa_failed'
+    ) {
+      try {
+        let progressData: RPAProgressMessage;
+
+        // 尝试从 content 字段解析
+        if (message.content) {
+          progressData = JSON.parse(message.content);
+        } else if (message.data && typeof message.data === 'object' && 'executionId' in message.data) {
+          // 从 data 字段解析
+          progressData = message.data as unknown as RPAProgressMessage;
+        } else {
+          return;
+        }
+
+        // 触发所有 RPA 进度监听器
+        get().rpaProgressListeners.forEach((callback) => {
+          try {
+            callback(progressData);
+          } catch (error) {
+            console.error('[RPA Progress] Callback error:', error);
+          }
+        });
+      } catch (error) {
+        console.error('[RPA Progress] Parse error:', error);
+      }
+    }
+  },
+
+  // RPA 进度事件订阅
+  onRPAProgress: (callback: RPAProgressCallback) => {
+    const listeners = get().rpaProgressListeners;
+    listeners.add(callback);
+
+    // 返回取消订阅函数
+    return () => {
+      listeners.delete(callback);
+    };
   },
 
   // 重置状态
   reset: () => {
-    set(initialState);
+    set({
+      ...initialState,
+      rpaProgressListeners: new Set(), // 保持空 Set 而不是重置引用
+    });
   },
 }));

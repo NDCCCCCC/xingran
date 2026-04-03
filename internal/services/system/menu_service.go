@@ -139,23 +139,25 @@ func (s *menuService) Delete(ctx context.Context, id string, cascade bool) error
 }
 
 // deleteChildrenRecursive 递归删除所有子菜单
+// 遵循 Go 最佳实践：使用 WITH RECURSIVE CTE 批量删除，避免 N+1 问题
 func (s *menuService) deleteChildrenRecursive(ctx context.Context, parentID string) error {
-	// 查找所有子菜单
-	var children []models.Menu
-	if err := s.db.WithContext(ctx).Where("parent_id = ?", parentID).Find(&children).Error; err != nil {
-		return err
-	}
+	// 使用 PostgreSQL WITH RECURSIVE CTE 查找所有后代菜单
+	// 然后一次性删除，而不是递归逐个删除
+	sql := `
+		WITH RECURSIVE descendant_ids AS (
+			-- 起始菜单的子菜单
+			SELECT id FROM sys_menu WHERE parent_id = ?
+			UNION ALL
+			-- 递归查找子菜单的子菜单
+			SELECT m.id FROM sys_menu m
+			INNER JOIN descendant_ids d ON m.parent_id = d.id
+		)
+		DELETE FROM sys_menu
+		WHERE id IN (SELECT id FROM descendant_ids)
+	`
 
-	// 递归删除每个子菜单及其子菜单
-	for _, child := range children {
-		// 先递归删除该子菜单的子菜单
-		if err := s.deleteChildrenRecursive(ctx, child.ID); err != nil {
-			return err
-		}
-		// 删除该子菜单
-		if err := s.db.WithContext(ctx).Delete(&child).Error; err != nil {
-			return err
-		}
+	if err := s.db.WithContext(ctx).Exec(sql, parentID).Error; err != nil {
+		return fmt.Errorf("批量删除子菜单失败: %w", err)
 	}
 
 	return nil

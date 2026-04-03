@@ -98,7 +98,7 @@ func (r *referenceResolverImpl) ResolveSingle(
 	}
 
 	var result struct {
-		ID string `gorm:"column:id"`
+		ID string `gorm:"column:id;type:uuid"`
 	}
 
 	err := r.db.WithContext(ctx).
@@ -167,7 +167,7 @@ func (r *referenceResolverImpl) ResolveSingleWithCondition(
 	}
 
 	var result struct {
-		ID string `gorm:"column:id"`
+		ID string `gorm:"column:id;type:uuid"`
 	}
 
 	query := r.db.WithContext(ctx).
@@ -248,7 +248,7 @@ func (r *referenceResolverImpl) batchQueryIDs(
 	}
 
 	type Result struct {
-		ID    string `gorm:"column:id"`
+		ID    string `gorm:"column:id;type:uuid"`
 		Value string `gorm:"column:value"`
 	}
 
@@ -301,7 +301,7 @@ func (r *referenceResolverImpl) ResolveBatchWithCondition(
 	}
 
 	type Result struct {
-		ID    string `gorm:"column:id"`
+		ID    string `gorm:"column:id;type:uuid"`
 		Value string `gorm:"column:value"`
 	}
 

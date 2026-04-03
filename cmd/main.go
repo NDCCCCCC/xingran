@@ -17,6 +17,9 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+
+	// 添加 pprof 支持，仅用于性能分析
+	_ "net/http/pprof"
 )
 
 const (
@@ -145,6 +148,25 @@ func setupRoutes(engine *gin.Engine, cfg *config.Config, coreModule *core.Core) 
 			"time":   time.Now().Format(time.RFC3339),
 		})
 	})
+
+	// pprof 性能分析端点（仅调试/开发环境）
+	// 遵循 Go 最佳实践：在生产环境禁用 pprof
+	if cfg.Server.Mode != "release" {
+		// 注册 pprof 端点到默认的 ServeMux
+		// pprof 端点包括：
+		//   /debug/pprof/         - pprof 首页
+		//   /debug/pprof/goroutine - goroutine 堆栈
+		//   /debug/pprof/heap      - 堆内存采样
+		//   /debug/pprof/threadcreate - 线程创建堆栈
+		//   /debug/pprof/block     - 阻塞堆栈
+		//   /debug/pprof/mutex     - 互斥锁堆栈
+		//   /debug/pprof/profile   - CPU profile
+		//   /debug/pprof/trace     - 执行 trace
+		//   /debug/pprof/cmdline   - 命令行
+		//   /debug/pprof/symbol    - 符号表
+		engine.GET("/debug/pprof/*any", gin.WrapH(http.DefaultServeMux))
+		applogger.Infof("pprof 性能分析端点已启用: http://localhost:%d/debug/pprof/", cfg.Server.Port)
+	}
 
 	// Swagger 文档（仅非生产环境）
 	if cfg.Server.Mode != "release" {

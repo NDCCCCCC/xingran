@@ -5,7 +5,7 @@
  * 自动从用户配置读取默认分页大小
  */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useSettingsStore } from '@/store/settingsStore';
 import type { TablePaginationConfig } from 'antd/es/table';
 
@@ -57,12 +57,19 @@ export function usePagination(options: UsePaginationOptions = {}): UsePagination
 	const [pageSize, setPageSize] = useState(defaultPageSize);
 	const [total, setTotal] = useState(0);
 
-	// 处理分页变化
+	// 使用 ref 存储最新的 onChange 回调，避免 handlePageChange 依赖变化
+	// 遵循 Vercel React Best Practices: rerender-defer-reads
+	const onChangeRef = useRef(options.onChange);
+	useEffect(() => {
+		onChangeRef.current = options.onChange;
+	}, [options.onChange]);
+
+	// 处理分页变化 - 空依赖数组，回调通过 ref 访问
 	const handlePageChange = useCallback((page: number, size: number) => {
 		setCurrent(page);
 		setPageSize(size);
-		options.onChange?.(page, size);
-	}, [options]);
+		onChangeRef.current?.(page, size);
+	}, []);
 
 	// 重置
 	const reset = useCallback(() => {

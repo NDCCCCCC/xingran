@@ -81,9 +81,73 @@ security:
       - "/api/v1/system/auth/login"       # 登录接口已有密码加密
       - "/api/v1/upload/*"                # 文件上传
       - "/api/v1/captcha/*"               # 验证码
+      - "/api/v1/rpa/workers/register"   # RPA Worker 注册
+      - "/api/v1/rpa/workers/*/heartbeat"  # RPA Worker 心跳
+      - "/api/v1/rpa/workers/progress"  # RPA Worker 进度上报
     require_encryption: false  # 是否强制要求加密（渐进式启用：先设为 false，验证后设为 true）
 
 # 百度地图配置
 # 环境变量: BAIDU_MAP_AK
 baidu:
   map_ak: "31jIJbkkaQHV6pNXbrQmnOoSrynzalC8"
+
+# RPA 配置
+rpa:
+  enabled: true
+
+  # AI 配置（混合模式）
+  ai:
+    # 脚本生成模型（文本模型）
+    generator:
+      enabled: true
+      api_key: ""  # 通过环境变量 RPA_AI_GENERATOR_KEY 配置
+      base_url: "" # 通过环境变量 RPA_AI_GENERATOR_URL 配置，OpenAI 兼容 API
+      model: "gpt-4o-mini" # 推荐: 快速便宜
+      max_tokens: 4000
+
+    # AI Agent 模型（视觉模型，必需）
+    agent:
+      enabled: true
+      api_key: "" # 通过环境变量 RPA_AI_AGENT_KEY 配置
+      base_url: "" # 通过环境变量 RPA_AI_AGENT_URL 配置，支持 Vision 的模型
+      model: "gpt-4o" # 推荐: gpt-4o, claude-3-5-sonnet-20241022
+      max_tokens: 8000
+      # 备选模型: claude-3-5-sonnet-20241022, gemini-2.0-flash
+
+    # 降级策略
+    fallback:
+      max_retries: 3        # 选择器失败后重试次数
+      enable_agent: true    # 启用 AI Agent 降级
+      timeout: 30s          # AI 请求超时
+
+  # Worker 配置
+  worker:
+    min_workers: 2
+    max_workers: 10
+    heartbeat_interval: 30s
+    task_timeout: 300s
+
+  # 自动扩缩容配置
+  scaling:
+    enabled: true              # 是否启用自动扩缩容
+    check_interval: 30s        # 监控检查间隔
+    min_workers: 2             # 最小 Worker 数量
+    max_workers: 10            # 最大 Worker 数量
+    scale_up_threshold: 0.7    # 扩容阈值（队列/容量比例，0-1）
+    scale_down_cooldown: 5m    # 缩容冷却时间
+    scale_up_limit: 3          # 单次扩容上限
+    enable_mock_docker: true   # 是否使用模拟 Docker 客户端（测试模式）
+
+    # Docker 配置
+    docker:
+      docker_host: ""         # Docker 主机地址（空值使用 localhost）
+      docker_port: 2375       # Docker API 端口
+      container_name: "rpa-worker"  # 容器名称前缀
+      image_name: "rpa-worker:latest"  # Worker 镜像名称
+      network_name: "bridge"  # Docker 网络名称
+
+  # 存储配置
+  storage:
+    downloads_dir: "./uploads/rpa/downloads"
+    screenshots_dir: "./uploads/rpa/screenshots"
+    max_retained_days: 7

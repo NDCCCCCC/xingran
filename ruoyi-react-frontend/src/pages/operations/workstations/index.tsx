@@ -268,29 +268,39 @@ const WorkstationManagement: FC = () => {
     }
 
     try {
-      const { floorApi } = await import('@/lib/opsApi');
+      const { floorApi, buildingApi } = await import('@/lib/opsApi');
       const floorResult = await floorApi.get(record.floorId);
       const floor = floorResult.data;
-      const buildingId = floor?.buildingId || floor?.buildingCode;
-      const orgId = record.deptId;
+      const buildingId = floor?.buildingId;
 
-      if (orgId && buildingId) {
-        await preloadCascaderPath(orgId, buildingId);
-        workstationForm.setFieldsValue({
-          ...record,
-          orgId,
-          floorId: [buildingId, record.floorId],
-        });
-      } else if (buildingId) {
-        workstationForm.setFieldsValue({
-          ...record,
-          floorId: [buildingId, record.floorId],
-        });
-      } else {
+      if (!buildingId) {
         workstationForm.setFieldsValue(record);
+        return;
+      }
+
+      // 获取楼宇信息以获取 orgId
+      const buildingResult = await buildingApi.get(buildingId);
+      const building = buildingResult.data;
+      const orgId = building?.orgId;
+
+      if (orgId) {
+        await preloadCascaderPath(orgId, buildingId);
+        // 等待 React 状态更新和 Cascader 重新渲染
+        setTimeout(() => {
+          workstationForm.setFieldsValue({
+            ...record,
+            orgId,
+            floorId: [buildingId, record.floorId],
+          });
+        }, 0);
+      } else {
+        workstationForm.setFieldsValue({
+          ...record,
+          floorId: [buildingId, record.floorId],
+        });
       }
     } catch (error) {
-      console.error('获取楼层信息失败:', error);
+      console.error('获取楼层或楼宇信息失败:', error);
       workstationForm.setFieldsValue(record);
     }
   }, [preloadCascaderPath, workstationForm]);
@@ -476,7 +486,7 @@ const WorkstationManagement: FC = () => {
           open={modalVisible}
           form={workstationForm}
           editingWorkstation={editingWorkstation}
-          deptTreeData={deptTreeData.length > 0 ? (deptTreeData[0]?.children || deptTreeData) : []}
+          deptTreeData={deptTreeData}
           userOptions={userOptions}
           cascaderOptions={cascaderOptions}
           loadingCascader={loadingCascader}

@@ -141,7 +141,10 @@ const DedicatedLineManagement: FC = () => {
   // 初始化加载
   useEffect(() => {
     loadStatistics().then(setStatistics);
-  }, [loadStatistics]);
+    // 加载字典数据
+    loadLineTypeDict();
+    loadIspDict();
+  }, [loadStatistics, loadLineTypeDict, loadIspDict]);
 
   useEffect(() => {
     loadLines();

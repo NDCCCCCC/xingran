@@ -500,6 +500,10 @@ func RoomDeviceNotFound() *AppError {
 	return New(CodeRoomDeviceNotFound, CodeRoomDeviceNotFound.DefaultMessage())
 }
 
+func DeviceCodeAlreadyExists() *AppError {
+	return New(CodeRoomDeviceCodeExists, CodeRoomDeviceCodeExists.DefaultMessage())
+}
+
 func InfoPointNotFound() *AppError {
 	return New(CodeInfoPointNotFound, CodeInfoPointNotFound.DefaultMessage())
 }

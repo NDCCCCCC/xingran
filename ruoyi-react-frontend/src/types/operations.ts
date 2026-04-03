@@ -122,10 +122,10 @@ export type RoomDeviceStatus = 0 | 1 | 2;
 
 export interface RoomDevice {
   id: string;
-  roomCode: string;
+  roomId: string;
   roomName?: string;
   deviceCode: string;
-  deviceName: string;
+  name: string;
   deviceType: RoomDeviceType;
   vendor?: string;
   model?: string;
@@ -137,7 +137,9 @@ export interface RoomDevice {
   purchaseDate?: string;
   warrantyDate?: string;
   status: RoomDeviceStatus;
-  description?: string;
+  responsibleId?: string;
+  responsibleName?: string;
+  remark?: string;
   createdAt: string;
   updatedAt: string;
 }

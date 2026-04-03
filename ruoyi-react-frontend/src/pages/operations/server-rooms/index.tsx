@@ -2,7 +2,7 @@
  * 机房管理页面
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { FC } from 'react';
 import {
   Table, Button, Space, Modal, Form, Input, Select,
@@ -35,14 +35,12 @@ type ViewMode = 'table' | 'card';
 
 interface BuildingOption {
   id: string;
-  code: string;
   name: string;
   orgId: string;
 }
 
 interface FloorOption {
   id: string;
-  code: string;
   name: string;
   floorNo: string;
 }
@@ -62,7 +60,17 @@ const ServerRoomManagement: FC = () => {
   const [statistics, setStatistics] = useState<Statistics>({ total: 0, active: 0, inactive: 0 });
 
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
-  const { selectedDeptId, handleDeptSelect } = useSidebarDeptFilter();
+
+  // 使用 ref 存储最新的 selectedDeptId，避免 loadFunction 闭包值不更新的问题
+  const selectedDeptIdRef = useRef<string>('');
+
+  // 简单的部门 ID 状态和设置函数
+  const [selectedDeptId, setSelectedDeptId] = useState<string>('');
+
+  // 更新 ref 的值
+  useEffect(() => {
+    selectedDeptIdRef.current = selectedDeptId;
+  }, [selectedDeptId]);
 
   const {
     loading, data: serverRooms, total, selectedRowKeys,
@@ -70,9 +78,12 @@ const ServerRoomManagement: FC = () => {
     editingItem: editingServerRoom, setSelectedRowKeys, setEditModalVisible: setModalVisible,
     setEditingItem: setEditingServerRoom, handleSearch,
     handleReset, handleAdd, handleEdit, handleModalClose, loadData: loadServerRooms, resetSelection,
+    setData, setLoading,
   } = useTableManager<ServerRoom>(
     async (params) => {
-      const searchParams = selectedDeptId ? { ...params, orgId: selectedDeptId } : params;
+      // 使用 ref 的值而不是闭包的值
+      const currentDeptId = selectedDeptIdRef.current;
+      const searchParams = currentDeptId ? { ...params, orgId: currentDeptId } : params;
       const result = await serverRoomApi.list(searchParams);
       return { list: result.data?.list || [], total: result.data?.total || 0 };
     },
@@ -110,7 +121,6 @@ const ServerRoomManagement: FC = () => {
       const buildings = result.data?.list || [];
       setBuildingOptions(buildings.map((b: Building) => ({
         id: b.id,
-        code: b.code,
         name: b.name,
         orgId: b.orgId,
       })));
@@ -129,7 +139,6 @@ const ServerRoomManagement: FC = () => {
       const floors = result.data?.list || [];
       setFloorOptions(floors.map((f: Floor) => ({
         id: f.id,
-        code: f.code,
         name: f.name || '',
         floorNo: String(f.floorNo),
       })));
@@ -149,15 +158,54 @@ const ServerRoomManagement: FC = () => {
     loadStatistics().then(setStatistics);
   }, [loadStatistics]);
 
-  useEffect(() => {
-    loadServerRooms();
-    loadBuildingOptions(selectedDeptId || undefined);
-  }, [selectedDeptId, loadServerRooms, loadBuildingOptions]);
-
   // 清空楼宇筛选
   useEffect(() => {
-    searchForm.setFieldValue('buildingCode', undefined);
+    searchForm.setFieldValue('buildingId', undefined);
   }, [selectedDeptId, searchForm]);
+
+  // 当部门变化时，重新加载数据
+  // 使用 ref 存储上一次的部门 ID，避免初始渲染时执行
+  const prevDeptIdRef = useRef<string>('');
+  useEffect(() => {
+    // 跳过初始渲染（prevDeptIdRef 初始为空字符串，selectedDeptId 初始也为空字符串）
+    if (selectedDeptId === prevDeptIdRef.current && prevDeptIdRef.current === '') {
+      prevDeptIdRef.current = selectedDeptId;
+      return;
+    }
+    prevDeptIdRef.current = selectedDeptId;
+
+    const loadByDept = async () => {
+      try {
+        setLoading(true);
+        // 使用 ref 的值，因为状态更新可能是异步的
+        const deptId = selectedDeptIdRef.current;
+        const params: Record<string, unknown> = { current: 1, pageSize: paginationProps.pageSize ?? 10 };
+        if (deptId) {
+          params.orgId = deptId;
+        }
+        const result = await serverRoomApi.list(params);
+        setData(result.data?.list || []);
+        setTotal(result.data?.total || 0);
+      } catch (error) {
+        handleApiError(error, '加载数据', false);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadByDept();
+    loadBuildingOptions(selectedDeptId || undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDeptId, paginationProps.pageSize]);
+
+  // 创建 handleDeptSelect 函数供 DeptSidebar 使用
+  const handleDeptSelect = useCallback(
+    (selectedKeys: unknown[], info: { selected: boolean; node: { key?: string } }) => {
+      const deptId = (info.node.key as string) || '';
+      selectedDeptIdRef.current = deptId;
+      setSelectedDeptId(deptId);
+    },
+    []
+  );
 
   const handleSave = async () => {
     try {
@@ -325,10 +373,10 @@ const ServerRoomManagement: FC = () => {
         <Card style={{ marginBottom: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
             <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
-              <Form.Item name="buildingCode" label="所在楼宇">
+              <Form.Item name="buildingId" label="所在楼宇">
                 <Select
                   placeholder="请先选择部门"
-                  options={buildingOptions.map(b => ({ label: b.name, value: b.code }))}
+                  options={buildingOptions.map(b => ({ label: b.name, value: b.id }))}
                   disabled={!selectedDeptId}
                 />
               </Form.Item>

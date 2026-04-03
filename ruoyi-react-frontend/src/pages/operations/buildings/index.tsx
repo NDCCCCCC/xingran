@@ -462,6 +462,7 @@ const BuildingManagement: FC = () => {
             <Form.Item label="经纬度">
               <Input
                 disabled
+                placeholder="经纬度（保存时根据地址自动解析）"
                 value={
                   geocoding.result
                     ? `${geocoding.result.longitude?.toFixed(6)}, ${geocoding.result.latitude?.toFixed(6)}`
@@ -469,14 +470,6 @@ const BuildingManagement: FC = () => {
                     ? `${editingBuilding.longitude.toFixed(6)}, ${editingBuilding.latitude.toFixed(6)}`
                     : ''
                 }
-                suffix={
-                  geocoding.loading ? (
-                    <Spin size="small" />
-                  ) : geocoding.result ? (
-                    <CheckCircleOutlined style={{ color: '#52c41a' }} />
-                  ) : null
-                }
-                placeholder="经纬度（保存时根据地址自动解析）"
               />
             </Form.Item>
           )}

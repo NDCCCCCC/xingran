@@ -105,12 +105,13 @@ export function useWorkstationData(
     try {
       const result = await post('/system/departments/tree', {}) as { data: DepartmentNode[] };
       const deptList = Array.isArray(result.data) ? result.data : [];
-      const externalDepts = filterExternalOrgDepts(deptList);
-      setDeptTreeData(buildTreeData(externalDepts));
+      // 加载所有部门（包括内部部门和外部机构），不进行过滤
+      // 工位的 orgId 可能指向任何部门
+      setDeptTreeData(buildTreeData(deptList));
     } catch (error) {
       handleApiError(error, '加载部门选项', false);
     }
-  }, [setDeptTreeData, filterExternalOrgDepts, buildTreeData]);
+  }, [setDeptTreeData, buildTreeData]);
 
   const loadUserOptions = useCallback(async (deptId?: string) => {
     try {

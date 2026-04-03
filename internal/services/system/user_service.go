@@ -5,9 +5,9 @@ import (
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
-	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"gorm.io/gorm"
 )
 
@@ -80,26 +80,32 @@ func (s *userService) Create(ctx context.Context, req *requests.UserCreateReques
 		}
 
 		// 分配角色
+		// 遵循 Go 最佳实践：使用批量插入避免 N+1 问题
 		if len(req.RoleIds) > 0 {
-			for _, roleID := range req.RoleIds {
-				if err := tx.Table("sys_user_role").Create(&models.UserRole{
+			userRoles := make([]models.UserRole, len(req.RoleIds))
+			for i, roleID := range req.RoleIds {
+				userRoles[i] = models.UserRole{
 					UserID: user.ID,
 					RoleID: roleID,
-				}).Error; err != nil {
-					return apperrors.DatabaseError(err)
 				}
+			}
+			if err := tx.Create(&userRoles).Error; err != nil {
+				return apperrors.DatabaseError(err)
 			}
 		}
 
 		// 分配岗位
+		// 遵循 Go 最佳实践：使用批量插入避免 N+1 问题
 		if len(req.PostIds) > 0 {
-			for _, postID := range req.PostIds {
-				if err := tx.Table("sys_user_post").Create(&models.UserPost{
+			userPosts := make([]models.UserPost, len(req.PostIds))
+			for i, postID := range req.PostIds {
+				userPosts[i] = models.UserPost{
 					UserID: user.ID,
 					PostID: postID,
-				}).Error; err != nil {
-					return apperrors.DatabaseError(err)
 				}
+			}
+			if err := tx.Create(&userPosts).Error; err != nil {
+				return apperrors.DatabaseError(err)
 			}
 		}
 
@@ -147,32 +153,38 @@ func (s *userService) Update(ctx context.Context, req *requests.UserUpdateReques
 		}
 
 		// 更新角色关联：先删除旧关联，再添加新关联
+		// 遵循 Go 最佳实践：使用批量插入避免 N+1 问题
 		if err := tx.Table("sys_user_role").Where("user_id = ?", req.ID).Delete(&models.UserRole{}).Error; err != nil {
 			return apperrors.DatabaseError(err)
 		}
 		if len(req.RoleIds) > 0 {
-			for _, roleID := range req.RoleIds {
-				if err := tx.Table("sys_user_role").Create(&models.UserRole{
+			userRoles := make([]models.UserRole, len(req.RoleIds))
+			for i, roleID := range req.RoleIds {
+				userRoles[i] = models.UserRole{
 					UserID: req.ID,
 					RoleID: roleID,
-				}).Error; err != nil {
-					return apperrors.DatabaseError(err)
 				}
+			}
+			if err := tx.Create(&userRoles).Error; err != nil {
+				return apperrors.DatabaseError(err)
 			}
 		}
 
 		// 更新岗位关联：先删除旧关联，再添加新关联
+		// 遵循 Go 最佳实践：使用批量插入避免 N+1 问题
 		if err := tx.Table("sys_user_post").Where("user_id = ?", req.ID).Delete(&models.UserPost{}).Error; err != nil {
 			return apperrors.DatabaseError(err)
 		}
 		if len(req.PostIds) > 0 {
-			for _, postID := range req.PostIds {
-				if err := tx.Table("sys_user_post").Create(&models.UserPost{
+			userPosts := make([]models.UserPost, len(req.PostIds))
+			for i, postID := range req.PostIds {
+				userPosts[i] = models.UserPost{
 					UserID: req.ID,
 					PostID: postID,
-				}).Error; err != nil {
-					return apperrors.DatabaseError(err)
 				}
+			}
+			if err := tx.Create(&userPosts).Error; err != nil {
+				return apperrors.DatabaseError(err)
 			}
 		}
 

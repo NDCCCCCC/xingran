@@ -63,7 +63,7 @@ type PaginationParams struct {
 
 // BatchDeleteRequest 批量删除请求
 type BatchDeleteRequest struct {
-	IDs []string `json:"ids" binding:"required,min=1" example:"[""uuid1"",""uuid2""]"` // 要删除的ID列表
+	IDs []string `json:"ids" binding:"required,min=1" example:"uuid1,uuid2"` // 要删除的ID列表
 }
 
 // UpdateStatusRequest 更新状态请求

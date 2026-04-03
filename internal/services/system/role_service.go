@@ -364,33 +364,39 @@ func (s *roleService) assignRoleMenusAndDepts(tx *gorm.DB, roleID string, menuId
 		}
 	}
 
-	// 使用 ON CONFLICT DO NOTHING 插入菜单权限（忽略已存在的记录）
+	// 使用 ON CONFLICT DO NOTHING 批量插入菜单权限（忽略已存在的记录）
+	// 遵循 Go 最佳实践：使用批量插入避免 N+1 问题
 	if len(menuIds) > 0 {
-		for _, menuID := range menuIds {
-			if err := tx.Table("sys_role_menu").Clauses(clause.OnConflict{
-				Columns:   []clause.Column{{Name: "role_id"}, {Name: "menu_id"}},
-				DoNothing: true,
-			}).Create(&models.RoleMenu{
+		roleMenus := make([]models.RoleMenu, len(menuIds))
+		for i, menuID := range menuIds {
+			roleMenus[i] = models.RoleMenu{
 				RoleID: roleID,
 				MenuID: menuID,
-			}).Error; err != nil {
-				return fmt.Errorf("分配菜单权限失败: %w", err)
 			}
+		}
+		if err := tx.Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "role_id"}, {Name: "menu_id"}},
+			DoNothing: true,
+		}).Create(&roleMenus).Error; err != nil {
+			return fmt.Errorf("批量分配菜单权限失败: %w", err)
 		}
 	}
 
-	// 使用 ON CONFLICT DO NOTHING 插入部门权限（忽略已存在的记录）
+	// 使用 ON CONFLICT DO NOTHING 批量插入部门权限（忽略已存在的记录）
+	// 遵循 Go 最佳实践：使用批量插入避免 N+1 问题
 	if len(deptIds) > 0 {
-		for _, deptID := range deptIds {
-			if err := tx.Table("sys_role_dept").Clauses(clause.OnConflict{
-				Columns:   []clause.Column{{Name: "role_id"}, {Name: "dept_id"}},
-				DoNothing: true,
-			}).Create(&models.RoleDept{
+		roleDepts := make([]models.RoleDept, len(deptIds))
+		for i, deptID := range deptIds {
+			roleDepts[i] = models.RoleDept{
 				RoleID: roleID,
 				DeptID: deptID,
-			}).Error; err != nil {
-				return fmt.Errorf("分配部门权限失败: %w", err)
 			}
+		}
+		if err := tx.Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "role_id"}, {Name: "dept_id"}},
+			DoNothing: true,
+		}).Create(&roleDepts).Error; err != nil {
+			return fmt.Errorf("批量分配部门权限失败: %w", err)
 		}
 	}
 

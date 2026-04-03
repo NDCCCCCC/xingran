@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"gorm.io/gorm"
 )
 
@@ -145,6 +145,11 @@ func (s *floorService) List(ctx context.Context, params map[string]interface{}) 
 		query = query.Where("EXISTS (SELECT 1 FROM ops_buildings b WHERE b.id::text = ops_floors.building_id AND b.org_id = ? AND b.deleted_at IS NULL)", orgId)
 	}
 
+	// 状态筛选
+	if status := extractIntParam(params, "status", -1); status >= 0 {
+		query = query.Where("ops_floors.status = ?", status)
+	}
+
 	current := 1
 	pageSize := 10
 	if c, ok := params["current"].(int); ok {
@@ -247,15 +252,29 @@ func (s *floorService) BatchDelete(ctx context.Context, ids []string) error {
 		return err
 	}
 
-	buildingIDMap := make(map[string]bool)
-	for _, floor := range floors {
-		buildingIDMap[floor.BuildingID] = true
+	// 遵循 Go 最佳实践：使用子查询批量更新，避免 N+1 问题
+	// 不再循环调用 updateBuildingFloorCount，而是一次性更新所有相关楼宇
+	sql := `
+		UPDATE ops_buildings
+		SET total_floors = (
+			SELECT COUNT(*)
+			FROM ops_floors
+			WHERE ops_floors.building_id = ops_buildings.id
+				AND ops_floors.deleted_at IS NULL
+		)
+		WHERE id IN (
+			SELECT DISTINCT building_id
+			FROM ops_floors
+			WHERE building_id IN (
+				SELECT building_id FROM ops_floors WHERE id IN ?
+			)
+		)
+	`
+
+	if err := s.db.WithContext(ctx).Exec(sql, ids).Error; err != nil {
+		return err
 	}
-	for buildingID := range buildingIDMap {
-		if err := s.updateBuildingFloorCount(ctx, buildingID); err != nil {
-			return err
-		}
-	}
+
 	return nil
 }
 
@@ -316,10 +335,9 @@ func isDuplicateKeyError(err error) bool {
 func containsIgnoreCase(s, substr string) bool {
 	return len(s) >= len(substr) &&
 		(s == substr ||
-		 len(s) > len(substr) && (
-			s[:len(substr)] == substr ||
-			s[len(s)-len(substr):] == substr ||
-		 indexOfIgnoreCase(s, substr) >= 0))
+			len(s) > len(substr) && (s[:len(substr)] == substr ||
+				s[len(s)-len(substr):] == substr ||
+				indexOfIgnoreCase(s, substr) >= 0))
 }
 
 // indexOfIgnoreCase 不区分大小写查找子串位置

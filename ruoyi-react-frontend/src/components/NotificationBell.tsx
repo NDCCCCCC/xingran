@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import type { FC, MouseEvent } from 'react';
 import { Badge, Dropdown, Empty, Spin, Tag, Avatar, message } from 'antd';
 import { BellOutlined, DeleteOutlined } from '@ant-design/icons';
@@ -29,27 +29,24 @@ const NotificationBell: FC = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const hasLoadedRef = useRef(false);
 
-  // 加载通知列表
-  const loadNotifications = useCallback(async () => {
-    try {
-      const response = await getNotificationList({ current: 1, pageSize: 10 });
-      setNotifications(response.data?.list || []);
-    } catch (error) {
-      console.error('加载通知列表失败:', error);
-    }
-  }, [setNotifications]); // setNotifications 是稳定的引用
-
   // 下拉框打开时加载通知列表（只加载一次）
+  // 遵循 Vercel React Best Practices: 直接在 useEffect 中调用 API，避免不必要的 useCallback
   useEffect(() => {
     if (dropdownOpen && notifications.length === 0 && !hasLoadedRef.current) {
-      loadNotifications();
+      getNotificationList({ current: 1, pageSize: 10 })
+        .then(response => {
+          setNotifications(response.data?.list || []);
+        })
+        .catch(error => {
+          console.error('加载通知列表失败:', error);
+        });
       hasLoadedRef.current = true;
     }
     // 当下拉框关闭时，重置加载标记，以便下次打开时可以重新加载
     if (!dropdownOpen) {
       hasLoadedRef.current = false;
     }
-  }, [dropdownOpen, notifications.length]);
+  }, [dropdownOpen, notifications.length, setNotifications]);
 
   // 点击通知项
   const handleClickNotification = async (notice: NoticeListItem) => {

@@ -20,6 +20,7 @@ type Config struct {
 	Security SecurityConfig `mapstructure:"security"`
 	Log      LogConfig      `mapstructure:"log"`
 	Baidu    BaiduConfig    `mapstructure:"baidu"`
+	RPA      RPAConfig      `mapstructure:"rpa"`
 }
 
 // ServerConfig 服务器配置
@@ -104,6 +105,84 @@ type BaiduConfig struct {
 	MapAK string `mapstructure:"map_ak"` // 百度地图API Key
 }
 
+// RPAConfig RPA配置
+type RPAConfig struct {
+	Enabled bool             `mapstructure:"enabled"` // 是否启用RPA功能
+	AI      RPAAIConfig      `mapstructure:"ai"`      // AI配置
+	Worker  RPAWorkerConfig  `mapstructure:"worker"`  // Worker配置
+	Scaling RPAScalingConfig `mapstructure:"scaling"` // 扩缩容配置
+	Storage RPAStorageConfig `mapstructure:"storage"` // 存储配置
+}
+
+// RPAAIConfig RPA AI配置
+type RPAAIConfig struct {
+	Generator RPAAIGeneratorConfig `mapstructure:"generator"` // 脚本生成模型配置
+	Agent     RPAAIAgentConfig     `mapstructure:"agent"`     // AI Agent模型配置
+	Fallback  RPAAIFallbackConfig  `mapstructure:"fallback"`  // 降级策略配置
+}
+
+// RPAAIGeneratorConfig 脚本生成模型配置
+type RPAAIGeneratorConfig struct {
+	Enabled   bool   `mapstructure:"enabled"`   // 是否启用
+	APIKey    string `mapstructure:"api_key"`   // API密钥
+	BaseURL   string `mapstructure:"base_url"`  // API基础URL（OpenAI兼容）
+	Model     string `mapstructure:"model"`     // 模型名称
+	MaxTokens int    `mapstructure:"max_tokens"` // 最大token数
+}
+
+// RPAAIAgentConfig AI Agent模型配置
+type RPAAIAgentConfig struct {
+	Enabled   bool   `mapstructure:"enabled"`   // 是否启用
+	APIKey    string `mapstructure:"api_key"`   // API密钥
+	BaseURL   string `mapstructure:"base_url"`  // API基础URL（OpenAI兼容）
+	Model     string `mapstructure:"model"`     // 模型名称
+	MaxTokens int    `mapstructure:"max_tokens"` // 最大token数
+}
+
+// RPAAIFallbackConfig AI降级策略配置
+type RPAAIFallbackConfig struct {
+	MaxRetries  int    `mapstructure:"max_retries"`  // 最大重试次数
+	EnableAgent bool   `mapstructure:"enable_agent"` // 是否启用AI Agent降级
+	Timeout     string `mapstructure:"timeout"`      // 请求超时时间
+}
+
+// RPAWorkerConfig RPA Worker配置
+type RPAWorkerConfig struct {
+	MinWorkers         int    `mapstructure:"min_workers"`          // 最小Worker数量
+	MaxWorkers         int    `mapstructure:"max_workers"`          // 最大Worker数量
+	HeartbeatInterval  string `mapstructure:"heartbeat_interval"`   // 心跳间隔
+	TaskTimeout        string `mapstructure:"task_timeout"`         // 任务超时时间
+}
+
+// RPAStorageConfig RPA存储配置
+type RPAStorageConfig struct {
+	DownloadsDir    string `mapstructure:"downloads_dir"`    // 下载文件目录
+	ScreenshotsDir  string `mapstructure:"screenshots_dir"`  // 截图目录
+	MaxRetainedDays int    `mapstructure:"max_retained_days"` // 最大保留天数
+}
+
+// RPAScalingConfig RPA扩缩容配置
+type RPAScalingConfig struct {
+	Enabled           bool          `mapstructure:"enabled"`             // 是否启用自动扩缩容
+	CheckInterval     string        `mapstructure:"check_interval"`      // 监控检查间隔
+	MinWorkers        int           `mapstructure:"min_workers"`         // 最小 Worker 数量
+	MaxWorkers        int           `mapstructure:"max_workers"`         // 最大 Worker 数量
+	ScaleUpThreshold  float64       `mapstructure:"scale_up_threshold"`  // 扩容阈值
+	ScaleDownCooldown string        `mapstructure:"scale_down_cooldown"` // 缩容冷却时间
+	ScaleUpLimit      int           `mapstructure:"scale_up_limit"`      // 单次扩容上限
+	EnableMockDocker  bool          `mapstructure:"enable_mock_docker"`  // 是否使用模拟 Docker 客户端
+	Docker            DockerConfig  `mapstructure:"docker"`              // Docker 配置
+}
+
+// DockerConfig Docker 配置
+type DockerConfig struct {
+	DockerHost    string `mapstructure:"docker_host"`    // Docker 主机地址
+	DockerPort    int    `mapstructure:"docker_port"`    // Docker API 端口
+	ContainerName string `mapstructure:"container_name"` // 容器名称前缀
+	ImageName     string `mapstructure:"image_name"`     // 镜像名称
+	NetworkName   string `mapstructure:"network_name"`   // 网络名称
+}
+
 // Load 加载配置
 func Load() *Config {
 	viper.SetConfigName("config")
@@ -144,6 +223,11 @@ func Load() *Config {
 	overrideFromEnv(&config.JWT.SecretKey, "JWT_SECRET")
 	overrideFromEnv(&config.Security.SM4Key, "SM4_KEY")
 	overrideFromEnv(&config.Baidu.MapAK, "BAIDU_MAP_AK")
+	// RPA AI 配置
+	overrideFromEnv(&config.RPA.AI.Generator.APIKey, "RPA_AI_GENERATOR_KEY")
+	overrideFromEnv(&config.RPA.AI.Generator.BaseURL, "RPA_AI_GENERATOR_URL")
+	overrideFromEnv(&config.RPA.AI.Agent.APIKey, "RPA_AI_AGENT_KEY")
+	overrideFromEnv(&config.RPA.AI.Agent.BaseURL, "RPA_AI_AGENT_URL")
 
 	// 数值类型环境变量
 	if port := os.Getenv("DB_PORT"); port != "" {

@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
@@ -166,12 +168,61 @@ func NewCacheKeyBuilder(prefix string) *CacheKeyBuilder {
 }
 
 // Build 构建缓存键
+// 遵循 Go 最佳实践：使用 strings.Builder 避免循环中的多次内存分配
 func (b *CacheKeyBuilder) Build(params ...interface{}) string {
-	key := b.prefix
-	for _, p := range params {
-		key += ":" + fmt.Sprintf("%v", p)
+	if len(params) == 0 {
+		return b.prefix
 	}
-	return key
+
+	// 预分配容量：前缀长度 + (参数数量 * (1个冒号 + 平均16字符))
+	var sb strings.Builder
+	sb.Grow(len(b.prefix) + len(params)*17)
+	sb.WriteString(b.prefix)
+
+	for _, p := range params {
+		sb.WriteByte(':')
+		// 使用类型断言进行更高效的类型转换
+		// 注意：需要按具体类型断言，而不是使用逗号分隔的类型列表
+		switch v := p.(type) {
+		case string:
+			sb.WriteString(v)
+		case int:
+			sb.WriteString(strconv.FormatInt(int64(v), 10))
+		case int8:
+			sb.WriteString(strconv.FormatInt(int64(v), 10))
+		case int16:
+			sb.WriteString(strconv.FormatInt(int64(v), 10))
+		case int32:
+			sb.WriteString(strconv.FormatInt(int64(v), 10))
+		case int64:
+			sb.WriteString(strconv.FormatInt(v, 10))
+		case uint:
+			sb.WriteString(strconv.FormatUint(uint64(v), 10))
+		case uint8:
+			sb.WriteString(strconv.FormatUint(uint64(v), 10))
+		case uint16:
+			sb.WriteString(strconv.FormatUint(uint64(v), 10))
+		case uint32:
+			sb.WriteString(strconv.FormatUint(uint64(v), 10))
+		case uint64:
+			sb.WriteString(strconv.FormatUint(v, 10))
+		case float32:
+			sb.WriteString(strconv.FormatFloat(float64(v), 'f', -1, 64))
+		case float64:
+			sb.WriteString(strconv.FormatFloat(v, 'f', -1, 64))
+		case bool:
+			if v {
+				sb.WriteString("true")
+			} else {
+				sb.WriteString("false")
+			}
+		default:
+			// 对于其他类型，回退到 fmt.Sprintf
+			sb.WriteString(fmt.Sprintf("%v", v))
+		}
+	}
+
+	return sb.String()
 }
 
 // ==================== 预定义的缓存键 ====================

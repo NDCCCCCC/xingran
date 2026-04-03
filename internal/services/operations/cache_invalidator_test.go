@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -39,6 +40,37 @@ func (m *MockCacheProvider) DeleteByPattern(ctx context.Context, pattern string)
 func (m *MockCacheProvider) Exists(ctx context.Context, key string) (bool, error) {
 	args := m.Called(ctx, key)
 	return args.Bool(0), args.Error(1)
+}
+
+func (m *MockCacheProvider) MGet(ctx context.Context, keys ...string) (map[string]string, error) {
+	args := m.Called(ctx, keys)
+	if args.Get(0) == nil {
+		return make(map[string]string), args.Error(1)
+	}
+	return args.Get(0).(map[string]string), args.Error(1)
+}
+
+func (m *MockCacheProvider) MDelete(ctx context.Context, keys ...string) error {
+	args := m.Called(ctx, keys)
+	return args.Error(0)
+}
+
+func (m *MockCacheProvider) SetTTL(ctx context.Context, key string, expiration time.Duration) error {
+	args := m.Called(ctx, key, expiration)
+	return args.Error(0)
+}
+
+func (m *MockCacheProvider) GetTTL(ctx context.Context, key string) (time.Duration, error) {
+	args := m.Called(ctx, key)
+	return time.Duration(args.Int(0)), args.Error(1)
+}
+
+func (m *MockCacheProvider) GetStats(ctx context.Context) (*system.CacheStats, error) {
+	args := m.Called(ctx)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*system.CacheStats), args.Error(1)
 }
 
 // TestCacheInvalidator_InvalidateByEntityType 测试按实体类型清理缓存

@@ -4,7 +4,7 @@
  * 提供仪表盘的操作按钮和工具
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useRef, useEffect } from 'react';
 import {
 	EditOutlined,
 	EyeOutlined,
@@ -54,23 +54,32 @@ export const LayoutToolbar: React.FC<LayoutToolbarProps> = ({
 		currentDashboard,
 	} = useDashboardStore();
 
-	// 切换视图模式
+	// 使用 ref 存储最新的 viewMode 和 setViewMode，遵循 Vercel React Best Practices: rerender-defer-reads
+	const viewModeRef = useRef(viewMode);
+	const setViewModeRef = useRef(setViewMode);
+	useEffect(() => {
+		viewModeRef.current = viewMode;
+		setViewModeRef.current = setViewMode;
+	}, [viewMode, setViewMode]);
+
+	// 切换视图模式 - 使用 ref 避免依赖变化导致回调重新创建
 	const toggleViewMode = useCallback(() => {
-		const newMode: DashboardViewMode = viewMode === 'view' ? 'edit' : 'view';
+		const currentMode = viewModeRef.current;
+		const newMode: DashboardViewMode = currentMode === 'view' ? 'edit' : 'view';
 
 		if (newMode === 'edit' && dashboardId) {
 			// 如果有dashboardId，导航到编辑页面（使用 query 参数）
 			navigate(`${DASHBOARD}/${dashboardId}?mode=edit`);
 		} else {
 			// 否则切换viewMode（用于编辑页面内的预览功能）
-			setViewMode(newMode);
+			setViewModeRef.current(newMode);
 			if (newMode === 'view') {
 				message.success('已切换到查看模式');
 			} else {
 				message.info('已切换到编辑模式');
 			}
 		}
-	}, [viewMode, setViewMode, dashboardId, navigate]);
+	}, [dashboardId, navigate]); // 减少依赖，只保留必要的 dashboardId 和 navigate
 
 	// 保存仪表盘
 	const handleSave = async () => {

@@ -10,7 +10,7 @@ export const EDITOR_CONSTANTS = {
   DEFAULT_GRID_SIZE: 20,
   DEFAULT_CANVAS_WIDTH: 2000,
   DEFAULT_CANVAS_HEIGHT: 2000,
-  MIN_WORKSTATION_SPACING: 20,
+  MIN_WORKSTATION_SPACING: 0,
   MIN_SCALE: 0.1,
   MAX_SCALE: 5,
   ZOOM_STEP: 0.1,
@@ -66,6 +66,36 @@ export function checkWorkstationCollision(
       continue;
     }
     if (checkRectCollision(workstation, ws, EDITOR_CONSTANTS.MIN_WORKSTATION_SPACING)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * 检查工位拖动时的碰撞（允许从碰撞状态移出）
+ * 只检查目标位置是否会导致新的碰撞，不包括与当前已经在碰撞中的工位的碰撞
+ */
+export function checkWorkstationCollisionForDrag(
+  targetWorkstation: { id: string; x: number; y: number; width: number; height: number },
+  existingWorkstations: Array<{ id: string; x: number; y: number; width: number; height: number }>,
+  originalWorkstation: { x: number; y: number; width: number; height: number }
+): boolean {
+  for (const ws of existingWorkstations) {
+    if (ws.id === targetWorkstation.id) {
+      continue;
+    }
+
+    // 检查与目标位置的碰撞
+    const targetCollision = checkRectCollision(targetWorkstation, ws, EDITOR_CONSTANTS.MIN_WORKSTATION_SPACING);
+
+    // 检查原始位置是否已经与该工位碰撞
+    const originalCollision = checkRectCollision(originalWorkstation, ws, EDITOR_CONSTANTS.MIN_WORKSTATION_SPACING);
+
+    // 如果目标位置碰撞，但原始位置没有碰撞，则阻止移动（新的碰撞）
+    // 如果两者都碰撞，允许移动（从碰撞状态中移出）
+    // 如果目标位置没有碰撞，允许移动
+    if (targetCollision && !originalCollision) {
       return true;
     }
   }

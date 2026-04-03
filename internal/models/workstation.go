@@ -40,7 +40,7 @@ type Workstation struct {
 	WorkstationName string            `gorm:"size:100;not null" json:"name"`                 // 工位名称
 	WorkstationType WorkstationType   `gorm:"default:0" json:"type"`                          // 工位类型
 	Status          WorkstationStatus `gorm:"default:0" json:"status"`                        // 工位状态
-	Description     *string           `gorm:"size:500" json:"remark,omitempty"`               // 备注
+	Description     *string           `gorm:"size:500" json:"description,omitempty"`         // 备注
 
 	// 组织信息
 	DeptID   *string `gorm:"size:64" json:"deptId,omitempty"`   // 部门ID

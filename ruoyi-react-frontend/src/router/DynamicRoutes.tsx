@@ -110,13 +110,15 @@ function InitializingFallback() {
   return (
     <div style={{
       display: 'flex',
+      flexDirection: 'column',
       justifyContent: 'center',
       alignItems: 'center',
       height: '100vh',
       fontSize: '16px',
       color: '#999'
     }}>
-      <Spin size="large" tip="加载中..." />
+      <Spin size="large" />
+      <div style={{ marginTop: 16 }}>加载中...</div>
     </div>
   );
 }

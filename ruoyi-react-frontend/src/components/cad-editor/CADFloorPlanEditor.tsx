@@ -10,7 +10,7 @@ import { CADLayersPanel } from './CADLayersPanel';
 import { WallElement, DoorElement, WorkstationElement, CADTextElement } from '../cad-elements';
 import { useWallDrawing, type WallDrawingResult } from '@/hooks/useWallDrawing';
 import { CAD_COLOR_THEME } from './theme';
-import { EDITOR_CONSTANTS, snapToGrid, checkWorkstationCollision, pointToLineDistance, findNearbyWallNode } from './editorUtils';
+import { EDITOR_CONSTANTS, snapToGrid, checkWorkstationCollision, checkWorkstationCollisionForDrag, pointToLineDistance, findNearbyWallNode } from './editorUtils';
 import type { FloorPlanData, Wall, Door, EditorMode, Layer, LayerConfig, Point, WallType, TextElement } from './types';
 import type { WorkstationNode } from '@/components/shared/FloorPlanEditor.types';
 
@@ -97,6 +97,8 @@ export function CADFloorPlanEditor({
   const lastElementMouseCanvasPos = useRef<Point | null>(null);
   const dragStartCanvasPos = useRef<Point | null>(null);
   const hasMovedBeyondThreshold = useRef<boolean>(false);
+  // 存储拖动开始时工位的原始位置
+  const originalWorkstationPositions = useRef<Map<string, { x: number; y: number }>>(new Map());
   const [draggedElement, setDraggedElement] = useState<{ id: string; type: 'wall' | 'door' | 'workstation' | 'text' } | null>(null);
   const [isBoxSelecting, setIsBoxSelecting] = useState(false);
   const [boxSelectStart, setBoxSelectStart] = useState<Point | null>(null);
@@ -645,6 +647,11 @@ export function CADFloorPlanEditor({
               lastElementMouseCanvasPos.current = point;
               dragStartCanvasPos.current = point;
               hasMovedBeyondThreshold.current = false;
+              // 保存工位的原始位置
+              const ws = floorPlanData.workstations.find(w => w.id === hitElement.id);
+              if (ws) {
+                originalWorkstationPositions.current.set(ws.id, { x: ws.x, y: ws.y });
+              }
             }
           } else {
             // 创建新工位 - 吸附到网格并检查碰撞
@@ -747,6 +754,23 @@ export function CADFloorPlanEditor({
             lastElementMouseCanvasPos.current = point;
             dragStartCanvasPos.current = point;
             hasMovedBeyondThreshold.current = false;
+            // 如果是工位，保存所有选中工位的原始位置
+            if (hitElement.type === 'workstation') {
+              // 保存当前点击的工位
+              const ws = floorPlanData.workstations.find(w => w.id === hitElement.id);
+              if (ws) {
+                originalWorkstationPositions.current.set(ws.id, { x: ws.x, y: ws.y });
+              }
+              // 同时保存其他已选中的工位的原始位置
+              selectedIds.forEach(id => {
+                if (id !== hitElement.id) {
+                  const selectedWs = floorPlanData.workstations.find(w => w.id === id);
+                  if (selectedWs && !originalWorkstationPositions.current.has(id)) {
+                    originalWorkstationPositions.current.set(id, { x: selectedWs.x, y: selectedWs.y });
+                  }
+                }
+              });
+            }
           } else {
             handleSelectElement(hitElement.id, hitElement.type, addToSelection);
           }
@@ -852,7 +876,7 @@ export function CADFloorPlanEditor({
             return d;
           });
 
-          // 拖动工位（带碰撞检测和网格吸附）
+          // 拖动工位（带网格吸附，无碰撞检测）
           newData.workstations = prev.workstations.map((ws) => {
             if (selectedIds.has(ws.id)) {
               // 先应用增量
@@ -865,14 +889,8 @@ export function CADFloorPlanEditor({
                 newY = snapToGrid(newY, floorPlanData.gridSize ?? EDITOR_CONSTANTS.DEFAULT_GRID_SIZE);
               }
 
-              // 检查碰撞（排除自身）
-              const testWorkstation = { x: newX, y: newY, width: ws.width || 160, height: ws.height || 70 };
-              const hasCollision = checkWorkstationCollision(testWorkstation, prev.workstations, ws.id);
-
-              // 如果没有碰撞，应用移动；否则保持原位
-              if (!hasCollision) {
-                return { ...ws, x: newX, y: newY };
-              }
+              // 直接应用移动，不进行碰撞检测
+              return { ...ws, x: newX, y: newY };
             }
             return ws;
           });
@@ -921,6 +939,7 @@ export function CADFloorPlanEditor({
     lastElementMouseCanvasPos.current = null;
     dragStartCanvasPos.current = null;
     hasMovedBeyondThreshold.current = false;
+    originalWorkstationPositions.current.clear();
 
     // 清除平面图拖拽状态
     setIsDraggingPlanImage(false);

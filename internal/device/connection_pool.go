@@ -382,14 +382,24 @@ func (p *DeviceConnectionPool) createConnection(ctx context.Context, deviceID st
 
 // removeConnection 移除连接（线程安全，内部获取 poolLock）
 // 注意：调用此方法前必须释放设备锁（deviceLock），避免死锁
-func (p *DeviceConnectionPool) removeConnection(deviceID string) {
+func (p *DeviceConnectionPool) removeConnection(deviceID string) error {
 	p.poolLock.Lock()
 	defer p.poolLock.Unlock()
 
 	if pc, exists := p.connections[deviceID]; exists {
-		// 等待引用计数归零
+		// 使用带超时的等待，避免永久阻塞
+		// 遵循 Go 最佳实践：使用条件变量或 channel 而不是忙等待
+		timeout := time.After(30 * time.Second)
+		ticker := time.NewTicker(100 * time.Millisecond)
+		defer ticker.Stop()
+
 		for !pc.IsIdle() {
-			time.Sleep(100 * time.Millisecond)
+			select {
+			case <-ticker.C:
+				continue
+			case <-timeout:
+				return fmt.Errorf("等待连接空闲超时: %s", deviceID)
+			}
 		}
 
 		// 关闭连接
@@ -399,6 +409,7 @@ func (p *DeviceConnectionPool) removeConnection(deviceID string) {
 
 		delete(p.connections, deviceID)
 	}
+	return nil
 }
 
 // startCleanup 启动清理协程
@@ -493,18 +504,34 @@ func (p *DeviceConnectionPool) Close() error {
 	p.poolLock.Lock()
 	defer p.poolLock.Unlock()
 
-	// 关闭所有连接
-	for _, pc := range p.connections {
-		// 等待引用计数归零
+	// 关闭所有连接，使用超时控制避免永久阻塞
+	closeTimeout := time.After(10 * time.Second)
+	ticker := time.NewTicker(50 * time.Millisecond)
+	defer ticker.Stop()
+
+	for deviceID, pc := range p.connections {
+		// 等待引用计数归零（带超时）
+		idleCheck := time.After(2 * time.Second)
 		for !pc.IsIdle() {
-			time.Sleep(100 * time.Millisecond)
+			select {
+			case <-ticker.C:
+				continue
+			case <-idleCheck:
+				applogger.Warnf("[连接池] 连接 %s 关闭超时，强制关闭", deviceID)
+				goto closeConnection
+			case <-closeTimeout:
+				applogger.Warnf("[连接池] 整体关闭超时，退出清理")
+				goto finalize
+			}
 		}
 
+	closeConnection:
 		if pc.wrapper != nil {
 			pc.wrapper.Close()
 		}
 	}
 
+finalize:
 	p.connections = make(map[string]*PooledConnection)
 	p.deviceLocks = make(map[string]*sync.Mutex)
 

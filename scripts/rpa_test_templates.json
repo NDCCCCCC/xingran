@@ -1,0 +1,464 @@
+{
+  "templates": {
+    "simple": {
+      "name": "简单导航测试",
+      "description": "最简单的导航和截图测试",
+      "targetUrl": "https://www.baidu.com",
+      "timeout": 30,
+      "maxRetry": 1,
+      "priority": 1,
+      "script": [
+        {
+          "id": "step1",
+          "type": "navigate",
+          "selector": "",
+          "value": "",
+          "params": {"url": "https://www.baidu.com"},
+          "timeout": 15000,
+          "retry": 2
+        },
+        {
+          "id": "step2",
+          "type": "wait",
+          "selector": "#kw",
+          "value": "",
+          "params": {"condition": "visible"},
+          "timeout": 10000,
+          "retry": 0
+        },
+        {
+          "id": "step3",
+          "type": "screenshot",
+          "selector": "",
+          "value": "",
+          "params": {"name": "测试完成"},
+          "timeout": 3000,
+          "retry": 0
+        }
+      ]
+    },
+
+    "search_extract": {
+      "name": "百度搜索结果提取测试",
+      "description": "在百度搜索关键词，提取搜索结果标题和链接",
+      "targetUrl": "https://www.baidu.com",
+      "timeout": 60,
+      "maxRetry": 2,
+      "priority": 1,
+      "script": [
+        {
+          "id": "step1",
+          "type": "navigate",
+          "selector": "",
+          "value": "",
+          "params": {"url": "https://www.baidu.com"},
+          "timeout": 15000,
+          "retry": 2
+        },
+        {
+          "id": "step2",
+          "type": "fill",
+          "selector": "#kw",
+          "value": "",
+          "params": {"value": "RPA自动化测试"},
+          "timeout": 5000,
+          "retry": 1
+        },
+        {
+          "id": "step3",
+          "type": "click",
+          "selector": "#su",
+          "value": "",
+          "params": {},
+          "timeout": 5000,
+          "retry": 1
+        },
+        {
+          "id": "step4",
+          "type": "wait",
+          "selector": ".result",
+          "value": "",
+          "params": {"condition": "visible", "timeout": 8000},
+          "timeout": 10000,
+          "retry": 0
+        },
+        {
+          "id": "step5",
+          "type": "screenshot",
+          "selector": "",
+          "value": "",
+          "params": {"name": "搜索结果页面"},
+          "timeout": 3000,
+          "retry": 0
+        },
+        {
+          "id": "step6",
+          "type": "extract",
+          "selector": ".result",
+          "value": "",
+          "params": {
+            "extractType": "multiple",
+            "fields": [
+              {"name": "title", "selector": "h3", "attribute": "text"},
+              {"name": "link", "selector": "a", "attribute": "href"}
+            ],
+            "maxItems": 5,
+            "outputVariable": "searchResults"
+          },
+          "timeout": 5000,
+          "retry": 0
+        },
+        {
+          "id": "step7",
+          "type": "screenshot",
+          "selector": "",
+          "value": "",
+          "params": {"name": "任务完成"},
+          "timeout": 3000,
+          "retry": 0
+        }
+      ]
+    },
+
+    "loop_batch": {
+      "name": "循环批量搜索测试",
+      "description": "对多个关键词进行批量搜索，测试循环和变量替换功能",
+      "targetUrl": "https://www.baidu.com",
+      "timeout": 120,
+      "maxRetry": 1,
+      "priority": 1,
+      "script": [
+        {
+          "id": "step1",
+          "type": "navigate",
+          "selector": "",
+          "value": "",
+          "params": {"url": "https://www.baidu.com"},
+          "timeout": 15000,
+          "retry": 2
+        },
+        {
+          "id": "step2",
+          "type": "screenshot",
+          "selector": "",
+          "value": "",
+          "params": {"name": "初始页面"},
+          "timeout": 3000,
+          "retry": 0
+        },
+        {
+          "id": "step3",
+          "type": "loop",
+          "selector": "",
+          "value": "",
+          "params": {
+            "dataSource": [
+              {"keyword": "RPA自动化"},
+              {"keyword": "Python爬虫"},
+              {"keyword": "Golang开发"}
+            ],
+            "itemName": "item",
+            "actions": [
+              {
+                "type": "fill",
+                "selector": "#kw",
+                "value": "",
+                "params": {"value": "{{item.keyword}}", "clear": true}
+              },
+              {
+                "type": "screenshot",
+                "selector": "",
+                "value": "",
+                "params": {"name": "搜索_{{item.keyword}}"}
+              },
+              {
+                "type": "click",
+                "selector": "#su",
+                "value": "",
+                "params": {}
+              },
+              {
+                "type": "wait",
+                "selector": ".result",
+                "value": "",
+                "params": {"condition": "visible", "timeout": 5000}
+              },
+              {
+                "type": "screenshot",
+                "selector": "",
+                "value": "",
+                "params": {"name": "结果_{{item.keyword}}"}
+              }
+            ]
+          },
+          "timeout": 60000,
+          "retry": 0
+        },
+        {
+          "id": "step4",
+          "type": "screenshot",
+          "selector": "",
+          "value": "",
+          "params": {"name": "批量搜索完成"},
+          "timeout": 3000,
+          "retry": 0
+        }
+      ]
+    },
+
+    "conditional": {
+      "name": "条件判断与分支测试",
+      "description": "测试条件判断功能，根据页面元素是否存在执行不同分支",
+      "targetUrl": "https://www.baidu.com",
+      "timeout": 60,
+      "maxRetry": 1,
+      "priority": 1,
+      "script": [
+        {
+          "id": "step1",
+          "type": "navigate",
+          "selector": "",
+          "value": "",
+          "params": {"url": "https://www.baidu.com"},
+          "timeout": 15000,
+          "retry": 2
+        },
+        {
+          "id": "step2",
+          "type": "screenshot",
+          "selector": "",
+          "value": "",
+          "params": {"name": "页面加载完成"},
+          "timeout": 3000,
+          "retry": 0
+        },
+        {
+          "id": "step3",
+          "type": "condition",
+          "selector": "#kw",
+          "value": "",
+          "params": {
+            "condition": "exists",
+            "trueActions": [
+              {
+                "type": "fill",
+                "selector": "#kw",
+                "value": "",
+                "params": {"value": "搜索框存在"}
+              },
+              {
+                "type": "screenshot",
+                "selector": "",
+                "value": "",
+                "params": {"name": "搜索框存在分支"}
+              }
+            ],
+            "falseActions": [
+              {
+                "type": "screenshot",
+                "selector": "",
+                "value": "",
+                "params": {"name": "搜索框不存在分支"}
+              }
+            ]
+          },
+          "timeout": 10000,
+          "retry": 0
+        },
+        {
+          "id": "step4",
+          "type": "screenshot",
+          "selector": "",
+          "value": "",
+          "params": {"name": "条件判断测试完成"},
+          "timeout": 3000,
+          "retry": 0
+        }
+      ]
+    },
+
+    "navigation": {
+      "name": "页面导航与滚动测试",
+      "description": "测试页面滚动、导航跳转、悬停等浏览器操作",
+      "targetUrl": "https://www.baidu.com",
+      "timeout": 90,
+      "maxRetry": 1,
+      "priority": 1,
+      "script": [
+        {
+          "id": "step1",
+          "type": "navigate",
+          "selector": "",
+          "value": "",
+          "params": {"url": "https://www.baidu.com"},
+          "timeout": 15000,
+          "retry": 2
+        },
+        {
+          "id": "step2",
+          "type": "screenshot",
+          "selector": "",
+          "value": "",
+          "params": {"name": "首页"},
+          "timeout": 3000,
+          "retry": 0
+        },
+        {
+          "id": "step3",
+          "type": "fill",
+          "selector": "#kw",
+          "value": "",
+          "params": {"value": "Python编程"},
+          "timeout": 5000,
+          "retry": 1
+        },
+        {
+          "id": "step4",
+          "type": "click",
+          "selector": "#su",
+          "value": "",
+          "params": {},
+          "timeout": 5000,
+          "retry": 1
+        },
+        {
+          "id": "step5",
+          "type": "wait",
+          "selector": ".result",
+          "value": "",
+          "params": {"condition": "visible"},
+          "timeout": 10000,
+          "retry": 0
+        },
+        {
+          "id": "step6",
+          "type": "screenshot",
+          "selector": "",
+          "value": "",
+          "params": {"name": "搜索结果"},
+          "timeout": 3000,
+          "retry": 0
+        },
+        {
+          "id": "step7",
+          "type": "scroll",
+          "selector": "",
+          "value": "",
+          "params": {
+            "direction": "down",
+            "distance": 500
+          },
+          "timeout": 5000,
+          "retry": 0
+        },
+        {
+          "id": "step8",
+          "type": "screenshot",
+          "selector": "",
+          "value": "",
+          "params": {"name": "滚动后页面"},
+          "timeout": 3000,
+          "retry": 0
+        }
+      ]
+    },
+
+    "comprehensive": {
+      "name": "综合端到端业务流程测试",
+      "description": "完整的业务流程测试，包含多种RPA操作",
+      "targetUrl": "https://www.baidu.com",
+      "timeout": 180,
+      "maxRetry": 2,
+      "priority": 1,
+      "script": [
+        {
+          "id": "init",
+          "type": "navigate",
+          "selector": "",
+          "value": "",
+          "params": {"url": "https://www.baidu.com"},
+          "timeout": 15000,
+          "retry": 2
+        },
+        {
+          "id": "screenshot1",
+          "type": "screenshot",
+          "selector": "",
+          "value": "",
+          "params": {"name": "01_页面初始化"},
+          "timeout": 3000,
+          "retry": 0
+        },
+        {
+          "id": "check",
+          "type": "condition",
+          "selector": "#kw",
+          "value": "",
+          "params": {
+            "condition": "exists",
+            "trueActions": [],
+            "falseActions": []
+          },
+          "timeout": 5000,
+          "retry": 0
+        },
+        {
+          "id": "batch_search",
+          "type": "loop",
+          "selector": "",
+          "value": "",
+          "params": {
+            "dataSource": [
+              {"keyword": "RPA", "step": 1},
+              {"keyword": "自动化", "step": 2}
+            ],
+            "itemName": "searchItem",
+            "actions": [
+              {
+                "type": "fill",
+                "selector": "#kw",
+                "value": "",
+                "params": {"value": "{{searchItem.keyword}}", "clear": true}
+              },
+              {
+                "type": "screenshot",
+                "selector": "",
+                "value": "",
+                "params": {"name": "02_搜索{{searchItem.step}}"}
+              },
+              {
+                "type": "click",
+                "selector": "#su",
+                "value": "",
+                "params": {}
+              },
+              {
+                "type": "wait",
+                "selector": ".result",
+                "value": "",
+                "params": {"condition": "visible", "timeout": 6000}
+              },
+              {
+                "type": "screenshot",
+                "selector": "",
+                "value": "",
+                "params": {"name": "03_结果{{searchItem.step}}"}
+              }
+            ]
+          },
+          "timeout": 60000,
+          "retry": 0
+        },
+        {
+          "id": "final",
+          "type": "screenshot",
+          "selector": "",
+          "value": "",
+          "params": {"name": "04_测试完成"},
+          "timeout": 3000,
+          "retry": 0
+        }
+      ]
+    }
+  }
+}

@@ -141,60 +141,49 @@ const layoutConfigs: Record<LayoutType, LayoutConfig> = {
 	},
 };
 
+/**
+ * 统一的初始化函数 - 优化 localStorage 读取
+ * 遵循 Vercel React Best Practices: js-cache-storage
+ */
+function loadInitialLayoutState(): {
+	configuration: LayoutConfiguration;
+	currentLayout: LayoutType;
+	sidebarCollapsed: boolean;
+	density: DensityMode;
+} {
+	try {
+		const stored = localStorage.getItem('settings-storage');
+		if (stored) {
+			const parsed = JSON.parse(stored);
+			const savedLayout = parsed.state?.preferences?.layout;
+			if (savedLayout) {
+				return {
+					configuration: savedLayout,
+					currentLayout: savedLayout.type || 'classic',
+					sidebarCollapsed: savedLayout.sidebar?.collapsed ?? false,
+					density: savedLayout.density || 'comfortable',
+				};
+			}
+		}
+	} catch (e) {
+		console.error('Failed to read layout from localStorage:', e);
+	}
+	// 返回默认值
+	return {
+		configuration: defaultLayoutConfiguration,
+		currentLayout: 'classic',
+		sidebarCollapsed: false,
+		density: 'comfortable',
+	};
+}
+
+// 预加载初始状态（模块级别缓存）
+const initialLayoutState = loadInitialLayoutState();
+
 export const useLayoutStore = create<LayoutStore>()(
 	(set, get) => ({
-		// 初始状态 - 从 localStorage 同步读取，避免首次渲染闪烁
-		configuration: (() => {
-			try {
-				const stored = localStorage.getItem('settings-storage');
-				if (stored) {
-					const parsed = JSON.parse(stored);
-					return parsed.state?.preferences?.layout || defaultLayoutConfiguration;
-				}
-			} catch (e) {
-				console.error('Failed to read layout from localStorage:', e);
-			}
-			return defaultLayoutConfiguration;
-		})(),
-
-		currentLayout: (() => {
-			try {
-				const stored = localStorage.getItem('settings-storage');
-				if (stored) {
-					const parsed = JSON.parse(stored);
-					return parsed.state?.preferences?.layout?.type || 'classic';
-				}
-			} catch (e) {
-				console.error('Failed to read layout type from localStorage:', e);
-			}
-			return 'classic';
-		})(),
-
-		sidebarCollapsed: (() => {
-			try {
-				const stored = localStorage.getItem('settings-storage');
-				if (stored) {
-					const parsed = JSON.parse(stored);
-					return parsed.state?.preferences?.layout?.sidebar?.collapsed ?? false;
-				}
-			} catch (e) {
-				console.error('Failed to read sidebarCollapsed from localStorage:', e);
-			}
-			return false;
-		})(),
-
-		density: (() => {
-			try {
-				const stored = localStorage.getItem('settings-storage');
-				if (stored) {
-					const parsed = JSON.parse(stored);
-					return parsed.state?.preferences?.layout?.density || 'comfortable';
-				}
-			} catch (e) {
-				console.error('Failed to read density from localStorage:', e);
-			}
-			return 'comfortable';
-		})(),
+		// 使用预加载的初始状态，避免重复读取 localStorage
+		...initialLayoutState,
 
 		// 从 SettingsStore 同步配置
 		syncFromSettings: (config) => {

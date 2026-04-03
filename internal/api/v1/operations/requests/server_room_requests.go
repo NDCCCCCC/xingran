@@ -4,8 +4,9 @@ package requests
 type ServerRoomListRequest struct {
 	PaginationParams  // 嵌入分页参数
 	StatusRequest     // 嵌入状态筛选
-	Name       string `json:"name"`      // 机房名称（模糊查询）
-	FloorID    string `json:"floorId"`   // 楼层ID
+	Name        string `json:"name"`        // 机房名称（模糊查询）
+	BuildingID  string `json:"buildingId"`  // 楼宇ID
+	FloorID     string `json:"floorId"`     // 楼层ID
 }
 
 // ServerRoomBatchOperationRequest 机房批量操作请求

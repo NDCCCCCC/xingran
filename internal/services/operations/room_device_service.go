@@ -35,7 +35,11 @@ func (s *roomDeviceService) Create(ctx context.Context, device *operations.OpsRo
 		return err
 	}
 
-	return s.db.WithContext(ctx).Create(device).Error
+	err := s.db.WithContext(ctx).Create(device).Error
+	if err != nil && isDuplicateKeyError(err) {
+		return apperrors.DeviceCodeAlreadyExists()
+	}
+	return err
 }
 
 // Update 更新机房设备
@@ -56,7 +60,11 @@ func (s *roomDeviceService) Delete(ctx context.Context, id string) error {
 // GetByID 根据ID获取机房设备
 func (s *roomDeviceService) GetByID(ctx context.Context, id string) (*operations.OpsRoomDevice, error) {
 	var device operations.OpsRoomDevice
-	err := s.db.WithContext(ctx).Where("id = ?", id).First(&device).Error
+	err := s.db.WithContext(ctx).
+		Joins("LEFT JOIN ops_server_rooms ON ops_server_rooms.id = ops_room_devices.room_id::uuid").
+		Select("ops_room_devices.*, ops_server_rooms.name as room_name").
+		Where("ops_room_devices.id = ?", id).
+		First(&device).Error
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +101,11 @@ func (s *roomDeviceService) List(ctx context.Context, req requests.RoomDeviceLis
 		return nil, err
 	}
 
-	if err := query.Offset(offset).Limit(pageSize).Order("created_at DESC").Find(&list).Error; err != nil {
+	// 使用JOIN查询获取机房名称（需要类型转换：varchar -> uuid）
+	query = query.Joins("LEFT JOIN ops_server_rooms ON ops_server_rooms.id = ops_room_devices.room_id::uuid").
+		Select("ops_room_devices.*, ops_server_rooms.name as room_name")
+
+	if err := query.Offset(offset).Limit(pageSize).Order("ops_room_devices.created_at DESC").Find(&list).Error; err != nil {
 		return nil, err
 	}
 

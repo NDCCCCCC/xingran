@@ -374,22 +374,7 @@ export interface BMapGLNamespace extends BMapNamespace {
 }
 
 // ============ 全局 Window 扩展 ============
-
-declare global {
-  interface Window {
-    BMap?: BMapNamespace;
-    BMapGL?: BMapGLNamespace;
-    initBMapGL?: () => void;
-    init?: () => void;
-    viewBuildingDetails?: (buildingId: string) => void;
-    viewBuildingDetailsGL?: (buildingId: string) => void;
-    // 百度地图 GL 控件锚点常量
-    BMAPGL_ANCHOR_TOP_LEFT?: number;
-    BMAPGL_ANCHOR_TOP_RIGHT?: number;
-    BMAPGL_ANCHOR_BOTTOM_LEFT?: number;
-    BMAPGL_ANCHOR_BOTTOM_RIGHT?: number;
-  }
-}
+// 这些类型扩展需要在 global.d.ts 中声明
 
 // ============ 类型助手函数 ============
 
@@ -420,5 +405,3 @@ export function isBMapLoaded(): boolean {
 export function isBMapGLLoaded(): boolean {
   return typeof window.BMapGL !== 'undefined';
 }
-
-export {};

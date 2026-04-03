@@ -3,8 +3,9 @@
  */
 
 import type { FC } from 'react';
+import type { RadioChangeEvent } from 'antd';
 import { Radio, Select, Space, Checkbox } from 'antd';
-import type { CronFieldConfig } from '../constants';
+import type { CronFieldConfig, PeriodType } from '../constants';
 
 
 interface WeekFieldProps {
@@ -28,7 +29,7 @@ const WeekField: FC<WeekFieldProps> = ({ value, onChange }) => {
 
   return (
     <div className="cron-selector-week-field">
-      <Radio.Group value={periodType} onChange={(e) => onChange({ ...value, periodType: e.target.value })}>
+      <Radio.Group value={periodType} onChange={(e: RadioChangeEvent) => onChange({ ...value, periodType: e.target.value as PeriodType })}>
         <Space orientation="vertical" style={{ width: '100%' }}>
           <Radio value="every">每周</Radio>
 
@@ -37,7 +38,7 @@ const WeekField: FC<WeekFieldProps> = ({ value, onChange }) => {
               <span>指定:</span>
               <Checkbox.Group
                 value={value.specific || []}
-                onChange={(values) => onChange({ ...value, periodType: 'specific', specific: values as number[] })}
+                onChange={(values: number[]) => onChange({ ...value, periodType: 'specific', specific: values })}
                 style={{ marginLeft: 24, display: 'flex', flexWrap: 'wrap', gap: '8px' }}
               >
                 {weekOptions.map(opt => (
@@ -54,7 +55,7 @@ const WeekField: FC<WeekFieldProps> = ({ value, onChange }) => {
               <Select
                 style={{ width: 100 }}
                 value={value.cycleStart ?? 1}
-                onChange={(cycleStart) => onChange({ ...value, periodType: 'cycle', cycleStart })}
+                onChange={(cycleStart: number) => onChange({ ...value, periodType: 'cycle', cycleStart })}
               >
                 {weekOptions.map(opt => (
                   <Select.Option key={opt.value} value={opt.value}>{opt.label}</Select.Option>
@@ -64,7 +65,7 @@ const WeekField: FC<WeekFieldProps> = ({ value, onChange }) => {
               <Select
                 style={{ width: 80 }}
                 value={value.cycleInterval ?? 1}
-                onChange={(cycleInterval) => onChange({ ...value, periodType: 'cycle', cycleInterval })}
+                onChange={(cycleInterval: number) => onChange({ ...value, periodType: 'cycle', cycleInterval })}
               >
                 {Array.from({ length: 7 }, (_, i) => i + 1).map(v => (
                   <Select.Option key={v} value={v}>{v}</Select.Option>
@@ -81,7 +82,7 @@ const WeekField: FC<WeekFieldProps> = ({ value, onChange }) => {
               <Select
                 style={{ width: 100 }}
                 value={value.rangeStart ?? 1}
-                onChange={(rangeStart) => onChange({ ...value, periodType: 'range', rangeStart })}
+                onChange={(rangeStart: number) => onChange({ ...value, periodType: 'range', rangeStart })}
               >
                 {weekOptions.map(opt => (
                   <Select.Option key={opt.value} value={opt.value}>{opt.label}</Select.Option>
@@ -91,7 +92,7 @@ const WeekField: FC<WeekFieldProps> = ({ value, onChange }) => {
               <Select
                 style={{ width: 100 }}
                 value={value.rangeEnd ?? 7}
-                onChange={(rangeEnd) => onChange({ ...value, periodType: 'range', rangeEnd })}
+                onChange={(rangeEnd: number) => onChange({ ...value, periodType: 'range', rangeEnd })}
               >
                 {weekOptions.map(opt => (
                   <Select.Option key={opt.value} value={opt.value}>{opt.label}</Select.Option>

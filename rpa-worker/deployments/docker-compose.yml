@@ -1,0 +1,121 @@
+version: '3.8'
+
+services:
+  # RPA Worker 服务
+  rpa-worker:
+    build:
+      context: ..
+      dockerfile: deployments/Dockerfile
+    container_name: rpa-worker
+    ports:
+      - "9001:8080"           # 健康检查端口映射到宿主机 9001
+      # Chrome调试端口（可选）
+      - "9222:9222"
+    volumes:
+      - ../configs/config.yaml:/app/configs/config.yaml:ro
+      # Chrome缓存目录
+      - chrome-cache:/home/chrome/.cache
+      # 下载目录
+      - chrome-downloads:/home/chrome/Downloads
+      # 截图目录
+      - ./screenshots:/app/screenshots
+    environment:
+      # Worker 配置
+      - WORKER_ID=${WORKER_ID:-worker-${HOSTNAME}}
+      - WORKER_NAME=${WORKER_NAME:-rpa-worker-1}
+      - MAX_CONCURRENCY=${MAX_CONCURRENCY:-5}
+
+      # 后端 API 配置
+      - BACKEND_URL=${BACKEND_URL:-http://10.62.10.34:9000/api/v1}
+      - WORKER_TOKEN=${WORKER_TOKEN:-}
+
+      # Redis 配置 - 使用外部 Redis
+      - REDIS_ADDR=10.62.10.34:6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-)(PO09po}
+      - REDIS_DB=0
+
+      # Chrome 配置
+      - CHROME_BIN=/usr/bin/chromium-browser
+      - CHROME_PATH=/usr/bin/chromium-browser
+      - CHROME_FLAGS=--no-sandbox --headless=new --disable-gpu --disable-dev-shm-usage
+      - HEADLESS=true
+
+      # 日志配置
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+
+      # 共享内存配置（Chrome需要）
+      - SHM_SIZE=2gb
+    # 移除 depends_on，因为不再依赖本地 Redis
+    restart: unless-stopped
+    # 使用 host 网络模式以便访问外部服务（可选）
+    # 如果使用 host 网络，上面的 ports 映射将失效
+    # network_mode: host
+    networks:
+      - rpa-network
+    # 共享内存配置
+    shm_size: 2gb
+    # 资源限制
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '2'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+
+  # Redis 服务已移除 - 使用外部 Redis (10.62.10.34:6379)
+  # 如需本地 Redis，请取消注释以下内容
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: rpa-redis
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis-data:/data
+  #   command: >
+  #     redis-server
+  #     --appendonly yes
+  #     --maxmemory 512mb
+  #     --maxmemory-policy allkeys-lru
+  #     --save 900 1
+  #     --save 300 10
+  #     --save 60 10000
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #   restart: unless-stopped
+  #   networks:
+  #     - rpa-network
+
+  # (可选) Chrome调试服务
+  # chrome-debug:
+  #   image: selenium/standalone-chrome:latest
+  #   container_name: chrome-debug
+  #   ports:
+  #     - "4444:4444"
+  #     - "7900:7900"
+  #   environment:
+  #     - SE_NODE_SESSION_TIMEOUT=120
+  #     - SE_NODE_MAX_SESSIONS=5
+  #   shm_size: 2gb
+  #   restart: unless-stopped
+  #   networks:
+  #     - rpa-network
+
+volumes:
+  # redis-data 已移除 - 使用外部 Redis
+  chrome-cache:
+    driver: local
+  chrome-downloads:
+    driver: local
+
+networks:
+  rpa-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16

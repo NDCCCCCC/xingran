@@ -160,9 +160,11 @@ func (s *ExcelService) getExampleValue(col ExcelColumn) string {
 	case "assetNumber":
 		return "ZC2024001"
 	// 专线相关
-	case "workstationType", "infoPointType", "deviceType", "lineType":
+	case "workstationType", "deviceType":
 		return "固定工位" // 第一选项的Label
-	case "bandwidth":
+	case "infoPointType":
+		return "网络信息点" // 第一选项的Label
+	case "lineType":
 		return "100M"
 	case "isp":
 		return "中国电信"

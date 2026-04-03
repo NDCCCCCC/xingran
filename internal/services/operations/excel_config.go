@@ -192,19 +192,20 @@ var ExcelConfigs = map[string]ExcelConfig{
 		},
 	},
 	"infoPoint": {
-		SheetName:  "信息点列表",
-		TableName:  "ops_info_points",
-		EntityName: "信息点",
-		HasHeader:  true,
-		StartRow:   2,
-		CachePatterns: []string{"infoPoint:*", "info_points:*"},
-		UniqueKeys:    []string{"workstationId", "name"}, // 按工位+名称判断重复
+		SheetName:      "信息点列表",
+		TableName:      "ops_info_points",
+		EntityName:     "信息点",
+		HasHeader:      true,
+		StartRow:       2,
+		CachePatterns:  []string{"infoPoint:*", "info_points:*"},
+		UniqueKeys:     []string{"workstation_id", "name"}, // 按工位+名称判断重复（使用数据库字段名）
+		PartialUpdate:  true,                               // 启用部分更新以避免 GORM 无法识别部分索引的问题
 		Columns: []ExcelColumn{
-			{Field: "name", Header: "信息点名称", Required: true, MaxLength: 100, UpsertKey: true},
+			{Field: "name", Header: "信息点名称", Required: true, MaxLength: 100, DBField: "name"},
 			{Field: "infoPointType", Header: "信息点类型", Options: map[interface{}]string{string(operations.InfoPointTypeNetwork): "网络信息点", string(operations.InfoPointTypePower): "电源信息点", string(operations.InfoPointTypeOther): "其他"}, DBField: "info_point_type"},
 			{Field: "workstationName", Header: "关联工位名称", Required: true, MaxLength: 100, Reference: "sys_workstation.workstation_name", DBField: "workstation_id"}, // 用户提供工位名称，自动转换为workstationId
-			{Field: "status", Header: "状态", Options: map[interface{}]string{int(operations.InfoPointStatusNormal): "正常", int(operations.InfoPointStatusFault): "故障", int(operations.InfoPointStatusDisabled): "停用"}},
-			{Field: "remark", Header: "备注", MaxLength: 500},
+			{Field: "status", Header: "状态", Options: map[interface{}]string{int(operations.InfoPointStatusNormal): "正常", int(operations.InfoPointStatusFault): "故障", int(operations.InfoPointStatusDisabled): "停用"}, DBField: "status"},
+			{Field: "remark", Header: "备注", MaxLength: 500, DBField: "remark"},
 		},
 	},
 }

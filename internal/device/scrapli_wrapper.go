@@ -44,6 +44,7 @@ func (s ConnectionState) String() string {
 
 // ScrapliWrapper scrapligo驱动封装（简化版）
 // 并发安全由上层 PooledConnection 的设备级锁保护
+// 遵循 Go 最佳实践：使用 sync.Once 确保 initDone channel 只关闭一次
 type ScrapliWrapper struct {
 	driver    *network.Driver
 	device    *models.NetworkDevice
@@ -51,6 +52,7 @@ type ScrapliWrapper struct {
 	stateMu   sync.RWMutex    // 保护状态读写
 	closing   chan struct{}   // 用于通知关闭信号
 	initDone  chan struct{}   // 初始化完成信号
+	closeOnce sync.Once      // 确保 initDone 只关闭一次
 }
 
 // PlatformName 平台名称映射
@@ -254,7 +256,9 @@ func (w *ScrapliWrapper) OpenContext(ctx context.Context) error {
 		defer func() {
 			if r := recover(); r != nil {
 				w.setState(StateClosed)
-				close(w.initDone)
+				w.closeOnce.Do(func() {
+					close(w.initDone)
+				})
 				resultCh <- result{err: fmt.Errorf("连接 panic: %v", r)}
 			}
 		}()
@@ -263,7 +267,9 @@ func (w *ScrapliWrapper) OpenContext(ctx context.Context) error {
 		err := w.driver.Open()
 		if err != nil {
 			w.setState(StateClosed)
-			close(w.initDone)
+			w.closeOnce.Do(func() {
+				close(w.initDone)
+			})
 			resultCh <- result{err: err}
 			return
 		}
@@ -282,7 +288,9 @@ func (w *ScrapliWrapper) OpenContext(ctx context.Context) error {
 			select {
 			case <-initCtx.Done():
 				w.setState(StateClosed)
-				close(w.initDone)
+				w.closeOnce.Do(func() {
+					close(w.initDone)
+				})
 				resultCh <- result{err: fmt.Errorf("连接初始化超时")}
 				return
 			case <-ticker.C:
@@ -303,7 +311,9 @@ func (w *ScrapliWrapper) OpenContext(ctx context.Context) error {
 
 		// 连接已就绪，更新状态
 		w.setState(StateReady)
-		close(w.initDone)
+		w.closeOnce.Do(func() {
+			close(w.initDone)
+		})
 		resultCh <- result{err: nil}
 	}()
 
@@ -314,7 +324,9 @@ func (w *ScrapliWrapper) OpenContext(ctx context.Context) error {
 		go func() {
 			_ = w.driver.Close()
 			w.setState(StateClosed)
-			close(w.initDone)
+			w.closeOnce.Do(func() {
+				close(w.initDone)
+			})
 		}()
 		return fmt.Errorf("连接设备超时 [%s]: %w", w.device.IPAddress, ctx.Err())
 	case res := <-resultCh:

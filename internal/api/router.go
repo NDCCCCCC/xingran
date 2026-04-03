@@ -10,6 +10,7 @@ import (
 	networkV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/network"
 	monitorV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/monitor"
 	v1_knowledge "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/knowledge"
+	rpaV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/rpa"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/scheduler"
 	opsServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
@@ -148,11 +149,11 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			}
 
 			// 通知配置管理（需要系统配置权限）
-		notificationConfigs := authorized.Group("/settings")
-		notificationConfigs.Use(middleware.RequirePermissions([]string{permSystemConfig}, core))
-		{
-			systemV1.SetupNotificationConfigRouter(notificationConfigs, core)
-		}
+			notificationConfigs := authorized.Group("/settings/notification")
+			notificationConfigs.Use(middleware.RequirePermissions([]string{permSystemConfig}, core))
+			{
+				systemV1.SetupNotificationConfigRouter(notificationConfigs, core)
+			}
 
 			// 用户管理
 			users := authorized.Group("/users")
@@ -769,5 +770,22 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			texts.POST("/:id/delete", textHandler.Delete)
 			texts.POST("", textHandler.Create)
 		}
+	}
+
+	// RPA 管理模块
+	// 先设置公开的 worker 注册接口（不需要认证）
+	rpaPublic := r.Group("/rpa")
+	{
+		rpaV1.SetupPublicWorkerRouter(rpaPublic, core)
+	}
+
+	// 需要 JWT 认证的 RPA 路由
+	rpa := r.Group("/rpa")
+	rpa.Use(middleware.JWTAuth(core.JWTManager))
+	// 添加操作日志中间件
+	rpa.Use(middleware.OperLogMiddleware(core.OperLogService, core))
+	{
+		// 使用统一的 RPA 路由设置（排除公开的 worker 接口）
+		rpaV1.SetupRPARouter(rpa, core)
 	}
 }

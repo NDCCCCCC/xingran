@@ -2,10 +2,19 @@ package websocket
 
 import (
 	"encoding/json"
+	"fmt"
 	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+)
+
+// RPA 消息类型常量
+const (
+	MessageTypeRPAProgress  = "rpa_progress"
+	MessageTypeRPACompleted = "rpa_completed"
+	MessageTypeRPAFailed    = "rpa_failed"
 )
 
 // NoticeHub WebSocket通知中心
@@ -16,6 +25,9 @@ type NoticeHub struct {
 	unregister chan *Client
 	mu         sync.RWMutex
 	stop       chan struct{} // 用于优雅关闭
+	stopOnce   sync.Once      // 确保 stop channel 只关闭一次
+	// 遵循 Go 最佳实践：使用 sync.Pool 复用高频分配的对象
+	toDeletePool sync.Pool // string slice pool for broadcast operations
 }
 
 // Client WebSocket客户端
@@ -37,15 +49,33 @@ type NoticeMessage struct {
 	UnreadCount int    `json:"unreadCount,omitempty"`
 }
 
+// RPAProgressMessage RPA执行进度消息
+type RPAProgressMessage struct {
+	Type        string `json:"type"`        // rpa_progress, rpa_completed, rpa_failed
+	ExecutionID string `json:"executionId"` // 执行记录ID
+	TaskID      string `json:"taskId"`      // 任务ID
+	TaskName    string `json:"taskName"`    // 任务名称
+	Step        int    `json:"step"`        // 当前步骤
+	Total       int    `json:"total"`       // 总步骤数
+	Message     string `json:"message"`     // 进度消息
+	Status      string `json:"status"`      // 状态
+	Timestamp   int64  `json:"timestamp"`   // 时间戳
+}
+
 // NewNoticeHub 创建通知中心
 func NewNoticeHub() *NoticeHub {
-	return &NoticeHub{
+	h := &NoticeHub{
 		clients:    make(map[string]*Client),
 		broadcast:  make(chan NoticeMessage, 256),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
 		stop:       make(chan struct{}),
 	}
+	// 初始化对象池，预分配容量减少后续分配
+	h.toDeletePool.New = func() interface{} {
+		return make([]string, 0, 16)
+	}
+	return h
 }
 
 // Run 运行通知中心
@@ -77,8 +107,18 @@ func (h *NoticeHub) Run() {
 
 		case message := <-h.broadcast:
 			// 先收集需要删除的客户端，避免在读锁中进行写操作
-			var toDelete []string
-			encodedMsg := h.encodeMessage(message)
+			// 遵循 Go 最佳实践：使用 sync.Pool 复用切片，减少 GC 压力
+			toDelete := h.toDeletePool.Get().([]string)
+			defer func() {
+				toDelete = toDelete[:0] // 重置长度但保留容量
+				h.toDeletePool.Put(toDelete)
+			}()
+
+			encodedMsg, err := h.encodeMessage(message)
+			if err != nil {
+				applogger.Errorf("消息序列化失败: %v", err)
+				continue // 跳过此消息
+			}
 
 			h.mu.RLock()
 			for userID, client := range h.clients {
@@ -108,8 +148,11 @@ func (h *NoticeHub) Run() {
 }
 
 // Stop 停止通知中心
+// 遵循 Go 最佳实践：使用 sync.Once 确保只关闭一次
 func (h *NoticeHub) Stop() {
-	close(h.stop)
+	h.stopOnce.Do(func() {
+		close(h.stop)
+	})
 }
 
 // RegisterClient 注册客户端
@@ -133,8 +176,18 @@ func (h *NoticeHub) UnregisterClient(client *Client) {
 // BroadcastToUsers 向指定用户广播消息
 func (h *NoticeHub) BroadcastToUsers(userIDs []string, message NoticeMessage) {
 	// 先收集需要删除的客户端，避免在读锁中进行写操作
-	var toDelete []string
-	data := h.encodeMessage(message)
+	// 遵循 Go 最佳实践：使用 sync.Pool 复用切片
+	toDelete := h.toDeletePool.Get().([]string)
+	defer func() {
+		toDelete = toDelete[:0]
+		h.toDeletePool.Put(toDelete)
+	}()
+
+	data, err := h.encodeMessage(message)
+	if err != nil {
+		applogger.Errorf("消息序列化失败: %v", err)
+		return
+	}
 
 	h.mu.RLock()
 	for _, userID := range userIDs {
@@ -168,10 +221,76 @@ func (h *NoticeHub) BroadcastToAll(message NoticeMessage) {
 	h.broadcast <- message
 }
 
+// BroadcastRPAProgress 广播RPA执行进度消息（全员）
+func (h *NoticeHub) BroadcastRPAProgress(message RPAProgressMessage) {
+	// 将RPA消息转换为通用消息格式
+	data, err := json.Marshal(message)
+	if err != nil {
+		return
+	}
+	h.broadcast <- NoticeMessage{
+		Type:      message.Type,
+		Timestamp: time.Now().Unix(),
+		Content:   string(data),
+	}
+}
+
+// BroadcastRPAProgressToUser 向指定用户推送RPA执行进度消息
+func (h *NoticeHub) BroadcastRPAProgressToUser(userID string, message RPAProgressMessage) {
+	h.BroadcastRPAProgressToUsers([]string{userID}, message)
+}
+
+// BroadcastRPAProgressToUsers 向多个用户推送RPA执行进度消息
+func (h *NoticeHub) BroadcastRPAProgressToUsers(userIDs []string, message RPAProgressMessage) {
+	// 先收集需要删除的客户端，避免在读锁中进行写操作
+	// 遵循 Go 最佳实践：使用 sync.Pool 复用切片
+	toDelete := h.toDeletePool.Get().([]string)
+	defer func() {
+		toDelete = toDelete[:0]
+		h.toDeletePool.Put(toDelete)
+	}()
+
+	data, err := json.Marshal(message)
+	if err != nil {
+		applogger.Errorf("RPA消息序列化失败: %v", err)
+		return
+	}
+
+	h.mu.RLock()
+	for _, userID := range userIDs {
+		if client, ok := h.clients[userID]; ok {
+			select {
+			case client.send <- data:
+				// 发送成功
+			default:
+				// 发送失败，标记为待删除
+				toDelete = append(toDelete, userID)
+			}
+		}
+	}
+	h.mu.RUnlock()
+
+	// 在读锁外执行删除操作
+	if len(toDelete) > 0 {
+		h.mu.Lock()
+		for _, userID := range toDelete {
+			if client, ok := h.clients[userID]; ok {
+				delete(h.clients, userID)
+				close(client.send)
+			}
+		}
+		h.mu.Unlock()
+	}
+}
+
 // encodeMessage 编码消息
-func (h *NoticeHub) encodeMessage(msg NoticeMessage) []byte {
-	data, _ := json.Marshal(msg)
-	return data
+// 遵循 Go 最佳实践：不忽略错误
+func (h *NoticeHub) encodeMessage(msg NoticeMessage) ([]byte, error) {
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return nil, fmt.Errorf("消息序列化失败: %w", err)
+	}
+	return data, nil
 }
 
 // writePump 写入循环
@@ -186,12 +305,21 @@ func (c *Client) writePump() {
 		select {
 		case message, ok := <-c.send:
 			if !ok {
-				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				// Hub 关闭了通道
+				_ = c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
-			c.conn.WriteMessage(websocket.TextMessage, message)
+			// 遵循 Go 最佳实践：检查 WriteMessage 的错误
+			if err := c.conn.WriteMessage(websocket.TextMessage, message); err != nil {
+				applogger.Errorf("WebSocket 写入失败 (用户: %s): %v", c.userID, err)
+				return
+			}
 		case <-ticker.C:
-			c.conn.WriteMessage(websocket.PingMessage, nil)
+			// 发送心跳 ping
+			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				applogger.Errorf("WebSocket Ping 发送失败 (用户: %s): %v", c.userID, err)
+				return
+			}
 		}
 	}
 }

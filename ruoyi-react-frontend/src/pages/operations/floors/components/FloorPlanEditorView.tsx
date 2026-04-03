@@ -11,8 +11,7 @@ import {
 import type { Floor, Building } from '@/types';
 import { CADFloorPlanEditor } from '@/components/cad-editor';
 import type { FloorPlanData } from '@/components/cad-editor/types';
-import { DepartmentTreeSelect } from '@/components/shared/DepartmentTreeSelect';
-import type { TreeNode } from '@/components/shared/DepartmentTreeSelect';
+import { DepartmentTreeSelect, type TreeNode, type Department } from '@/components/shared/DepartmentTreeSelect';
 
 export interface FloorOption {
   id: string;
@@ -26,6 +25,7 @@ interface FloorPlanEditorViewProps {
   loading: boolean;
   isEditMode: boolean;
   departmentTreeData?: TreeNode[];
+  departments?: Department[];
   buildingOptions: Building[];
   floorOptions: FloorOption[];
   selectedDeptId: string;
@@ -47,6 +47,7 @@ export const FloorPlanEditorView: FC<FloorPlanEditorViewProps> = ({
   loading,
   isEditMode,
   departmentTreeData,
+  departments,
   buildingOptions,
   floorOptions,
   selectedDeptId,
@@ -91,6 +92,7 @@ export const FloorPlanEditorView: FC<FloorPlanEditorViewProps> = ({
                 style={{ width: 180 }}
                 placeholder="选择机构"
                 treeData={departmentTreeData}
+                departments={departments}
                 value={selectedDeptId}
                 onChange={onDepartmentChange}
                 allowClear={false}

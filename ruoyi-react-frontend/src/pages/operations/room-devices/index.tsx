@@ -200,14 +200,14 @@ const RoomDeviceManagement: FC = () => {
   };
 
   const columns: ColumnsType<RoomDevice> = [
-    { title: '设备名称', dataIndex: 'deviceName', key: 'deviceName', width: 150 },
+    { title: '设备名称', dataIndex: 'name', key: 'name', width: 150 },
     { title: '设备编码', dataIndex: 'deviceCode', key: 'deviceCode', width: 150 },
     {
       title: '所属机房',
       dataIndex: 'roomName',
       key: 'roomName',
       width: 120,
-      render: (_, record) => record.roomName || record.roomCode,
+      render: (roomName) => roomName || '-',
     },
     {
       title: '设备类型',
@@ -281,14 +281,14 @@ const RoomDeviceManagement: FC = () => {
               <Card.Meta
                 title={
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>{device.deviceName}</span>
+                    <span>{device.name}</span>
                     <Tag color={device.status === 0 ? 'success' : device.status === 1 ? 'error' : 'default'}>{getStatusText(device.status)}</Tag>
                   </div>
                 }
                 description={
                   <div>
                     <div><strong>编码：</strong>{device.deviceCode}</div>
-                    <div><strong>机房：</strong>{device.roomName || device.roomCode}</div>
+                    <div><strong>机房：</strong>{device.roomName || '-'}</div>
                     <div><strong>类型：</strong>{getDeviceTypeText(device.deviceType)}</div>
                     {device.vendor && <div><strong>厂商：</strong>{device.vendor}</div>}
                     {device.model && <div><strong>型号：</strong>{device.model}</div>}
@@ -388,6 +388,9 @@ const RoomDeviceManagement: FC = () => {
             </Form.Item>
             <Form.Item name="name" label="设备名称" rules={[{ required: true, message: '请输入设备名称' }]}>
               <Input placeholder="请输入设备名称" className="user-form-input" />
+            </Form.Item>
+            <Form.Item name="deviceCode" label="设备编码" rules={[{ required: true, message: '请输入设备编码' }]}>
+              <Input placeholder="请输入设备编码" className="user-form-input" />
             </Form.Item>
             <Form.Item name="deviceType" label="设备类型" rules={[{ required: true, message: '请选择设备类型' }]}>
               <Select placeholder="请选择设备类型" className="user-form-input">

@@ -975,3 +975,27 @@ func (m *MultiLevelCache) DirectRedisTTL(ctx context.Context, key string) (time.
 	}
 	return 0, nil
 }
+
+// DirectRedisXAdd 直接向 Redis Stream 添加消息
+func (m *MultiLevelCache) DirectRedisXAdd(ctx context.Context, stream string, values map[string]interface{}) error {
+	if redisCache, ok := m.l2Cache.(redisCacheInterface); ok {
+		client := redisCache.getClient()
+		if client == nil {
+			return fmt.Errorf("Redis客户端未初始化")
+		}
+		result := client.XAdd(ctx, &redis.XAddArgs{
+			Stream: stream,
+			Values: values,
+		})
+		return result.Err()
+	}
+	return fmt.Errorf("L2缓存不支持Redis操作")
+}
+
+// GetRedisClient 获取 Redis 客户端（用于特殊操作如 Stream）
+func (m *MultiLevelCache) GetRedisClient() *redis.Client {
+	if redisCache, ok := m.l2Cache.(redisCacheInterface); ok {
+		return redisCache.getClient()
+	}
+	return nil
+}

@@ -4,6 +4,7 @@ package middleware
 import (
 	"bytes"
 	"encoding/json"
+	"strconv"
 	"sync/atomic"
 
 	"github.com/gin-gonic/gin"
@@ -168,7 +169,7 @@ func ResponseEncryption(encryptor *crypto.RequestEncryptor, config *ResponseEncr
 		c.Writer.Header().Set("X-Response-Encrypted", "true")
 
 		// 清空原始响应并写入加密响应
-		c.Writer.Header().Set("Content-Length", string(len(encryptedJSON)))
+		c.Writer.Header().Set("Content-Length", strconv.Itoa(len(encryptedJSON)))
 		blw.buffer.Reset()
 		blw.ResponseWriter.Write(encryptedJSON)
 

@@ -485,11 +485,24 @@ type NoticeHub interface {
 
 // GlobalNoticeHub 全局通知中心
 // 在Core初始化时设置
-var GlobalNoticeHub NoticeHub
+// 遵循 Go 最佳实践：使用 sync.RWMutex 保护全局变量
+var (
+	GlobalNoticeHub     NoticeHub
+	GlobalNoticeHubMu sync.RWMutex
+)
 
-// SetNoticeHub 设置通知中心
+// SetNoticeHub 设置通知中心（线程安全）
 func SetNoticeHub(hub NoticeHub) {
+	GlobalNoticeHubMu.Lock()
+	defer GlobalNoticeHubMu.Unlock()
 	GlobalNoticeHub = hub
+}
+
+// GetNoticeHub 获取通知中心（线程安全）
+func GetNoticeHub() NoticeHub {
+	GlobalNoticeHubMu.RLock()
+	defer GlobalNoticeHubMu.RUnlock()
+	return GlobalNoticeHub
 }
 
 // DBGetter 数据库获取接口
@@ -498,20 +511,46 @@ type DBGetter interface {
 }
 
 // GlobalDB 全局数据库访问器
-var GlobalDB DBGetter
+// 遵循 Go 最佳实践：使用 sync.RWMutex 保护全局变量
+var (
+	GlobalDB     DBGetter
+	GlobalDBMu sync.RWMutex
+)
 
-// SetDB 设置数据库访问器
+// SetDB 设置数据库访问器（线程安全）
 func SetDB(db DBGetter) {
+	GlobalDBMu.Lock()
+	defer GlobalDBMu.Unlock()
 	GlobalDB = db
+}
+
+// GetDB 获取数据库访问器（线程安全）
+func GetDB() DBGetter {
+	GlobalDBMu.RLock()
+	defer GlobalDBMu.RUnlock()
+	return GlobalDB
 }
 
 // GlobalScheduler 全局调度器引用
 // 在Core初始化时设置，用于任务执行函数中访问调度器
-var GlobalScheduler *Scheduler
+// 遵循 Go 最佳实践：使用 sync.RWMutex 保护全局变量
+var (
+	GlobalScheduler     *Scheduler
+	GlobalSchedulerMu sync.RWMutex
+)
 
-// SetGlobalScheduler 设置全局调度器
+// SetGlobalScheduler 设置全局调度器（线程安全）
 func SetGlobalScheduler(scheduler *Scheduler) {
+	GlobalSchedulerMu.Lock()
+	defer GlobalSchedulerMu.Unlock()
 	GlobalScheduler = scheduler
+}
+
+// GetGlobalScheduler 获取全局调度器（线程安全）
+func GetGlobalScheduler() *Scheduler {
+	GlobalSchedulerMu.RLock()
+	defer GlobalSchedulerMu.RUnlock()
+	return GlobalScheduler
 }
 
 // ==================== 通知定时任务注册函数 ====================

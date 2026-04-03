@@ -14,6 +14,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/scheduler"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/rpa"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/websocket"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
@@ -58,6 +59,10 @@ type Core struct {
 	PostService    system.PostService
 	ConfigService  system.ConfigService
 	SettingsService system.SettingsService
+
+	// RPA 服务
+	RPAConfig     *config.RPAConfig // RPA 配置
+	RPAScalingService interface{}   // RPA 扩缩容服务 (interface{} 避免循环依赖)
 
 	// API端点元数据服务
 	APIMetadata        *config.APIMetadataConfig    // API元数据配置
@@ -311,7 +316,17 @@ func (c *Core) Init() error {
 	c.TokenBlacklistService = services.NewTokenBlacklistService(c.Cache)
 	applogger.Infof("令牌黑名单服务初始化完成")
 
-	// 17. 初始化API端点元数据服务
+	// 17. 初始化RPA服务
+	if c.Config.RPA.Enabled {
+		c.RPAConfig = &c.Config.RPA
+		if err := c.initRPAServices(); err != nil {
+			applogger.Warnf("初始化RPA服务失败: %v", err)
+		} else {
+			applogger.Infof("RPA服务初始化完成")
+		}
+	}
+
+	// 18. 初始化API端点元数据服务
 	if err := c.initAPIEndpointService(); err != nil {
 		applogger.Warnf("初始化API端点元数据服务失败: %v", err)
 	} else {
@@ -359,6 +374,14 @@ func (c *Core) Close() {
 	}
 	if c.MetricsCacheService != nil {
 		c.MetricsCacheService.Stop()
+	}
+	// 停止 RPA 扩缩容服务
+	if c.RPAScalingService != nil {
+		// 使用类型断言调用 Stop 方法
+		if scalingSvc, ok := c.RPAScalingService.(interface{ Stop() }); ok {
+			scalingSvc.Stop()
+			applogger.Infof("RPA 扩缩容服务已停止")
+		}
 	}
 }
 
@@ -503,4 +526,129 @@ func (c *Core) performCacheWarmUp(ctx context.Context) {
 	} else {
 		applogger.Infof("缓存预热成功完成")
 	}
+}
+
+// initRPAServices 初始化 RPA 服务
+func (c *Core) initRPAServices() error {
+	// 确保 RPA 存储目录存在
+	if c.RPAConfig.Storage.DownloadsDir != "" {
+		if err := os.MkdirAll(c.RPAConfig.Storage.DownloadsDir, 0755); err != nil {
+			applogger.Warnf("创建RPA下载目录失败: %v", err)
+		}
+	}
+	if c.RPAConfig.Storage.ScreenshotsDir != "" {
+		if err := os.MkdirAll(c.RPAConfig.Storage.ScreenshotsDir, 0755); err != nil {
+			applogger.Warnf("创建RPA截图目录失败: %v", err)
+		}
+	}
+
+	// 检查 AI 配置
+	if c.RPAConfig.AI.Agent.Enabled && c.RPAConfig.AI.Agent.APIKey == "" {
+		applogger.Warnf("RPA AI Agent 已启用但未配置 API Key，请在环境变量中设置 RPA_AI_AGENT_KEY")
+	}
+	if c.RPAConfig.AI.Generator.Enabled && c.RPAConfig.AI.Generator.APIKey == "" {
+		applogger.Warnf("RPA AI Generator 已启用但未配置 API Key，请在环境变量中设置 RPA_AI_GENERATOR_KEY")
+	}
+
+	// 初始化 RPA 扩缩容服务
+	if c.RPAConfig.Scaling.Enabled {
+		if err := c.initRPAScalingService(); err != nil {
+			applogger.Warnf("启动RPA扩缩容服务失败: %v", err)
+		}
+	}
+
+	// 注册 RPA 任务到调度器
+	c.registerRPATasks()
+
+	return nil
+}
+
+// registerRPATasks 注册 RPA 任务处理器到调度器
+func (c *Core) registerRPATasks() {
+	// 注册 RPA 任务执行处理器
+	c.Scheduler.RegisterTask("rpa_task", func(ctx context.Context, params map[string]interface{}) error {
+		// 从参数中获取任务ID
+		taskIDStr, ok := params["task_id"].(string)
+		if !ok || taskIDStr == "" {
+			return fmt.Errorf("rpa_task 处理器缺少 task_id 参数")
+		}
+
+		// 获取 RPA 服务
+		rpaServices := rpa.NewServiceGroup(c.GetDB(), c.Config, c.NoticeHub, c.Cache, c.SM4Cipher)
+
+		// 执行 RPA 任务
+		req := &rpa.ExecuteTaskRequest{
+			TaskID: taskIDStr,
+		}
+
+		// 如果有额外参数，添加到输入参数中
+		if len(params) > 1 {
+			req.InputParams = make(map[string]interface{})
+			for k, v := range params {
+				if k != "task_id" {
+					req.InputParams[k] = v
+				}
+			}
+		}
+
+		_, err := rpaServices.TaskService.Execute(ctx, req, "system")
+		return err
+	})
+
+	applogger.Infof("RPA 任务处理器已注册到调度器")
+}
+
+// initRPAScalingService 初始化 RPA 扩缩容服务
+func (c *Core) initRPAScalingService() error {
+	// 动态导入以避免循环依赖
+	scalingConfig := &rpa.ScalingConfig{
+		Enabled:           c.RPAConfig.Scaling.Enabled,
+		CheckInterval:     parseDuration(c.RPAConfig.Scaling.CheckInterval, 30*time.Second),
+		MinWorkers:        c.RPAConfig.Scaling.MinWorkers,
+		MaxWorkers:        c.RPAConfig.Scaling.MaxWorkers,
+		ScaleUpThreshold:  c.RPAConfig.Scaling.ScaleUpThreshold,
+		ScaleDownCooldown: parseDuration(c.RPAConfig.Scaling.ScaleDownCooldown, 5*time.Minute),
+		ScaleUpLimit:      c.RPAConfig.Scaling.ScaleUpLimit,
+		EnableMockDocker:  c.RPAConfig.Scaling.EnableMockDocker,
+	}
+
+	dockerConfig := &rpa.DockerConfig{
+		DockerHost:    c.RPAConfig.Scaling.Docker.DockerHost,
+		DockerPort:    c.RPAConfig.Scaling.Docker.DockerPort,
+		ContainerName: c.RPAConfig.Scaling.Docker.ContainerName,
+		ImageName:     c.RPAConfig.Scaling.Docker.ImageName,
+		NetworkName:   c.RPAConfig.Scaling.Docker.NetworkName,
+	}
+
+	// 验证配置
+	if err := rpa.ValidateScalingConfig(scalingConfig); err != nil {
+		return fmt.Errorf("扩缩容配置无效: %w", err)
+	}
+
+	// 创建扩缩容服务
+	scalingService := rpa.NewScalingService(c.GetDB(), scalingConfig, dockerConfig)
+
+	// 启动扩缩容监控
+	if err := scalingService.Start(context.Background()); err != nil {
+		return err
+	}
+
+	c.RPAScalingService = scalingService
+	applogger.Infof("RPA 扩缩容服务已启动 (检查间隔: %v, Worker范围: %d-%d)",
+		scalingConfig.CheckInterval, scalingConfig.MinWorkers, scalingConfig.MaxWorkers)
+
+	return nil
+}
+
+// parseDuration 解析时间间隔字符串
+func parseDuration(s string, defaultVal time.Duration) time.Duration {
+	if s == "" {
+		return defaultVal
+	}
+	d, err := time.ParseDuration(s)
+	if err != nil {
+		applogger.Warnf("解析时间间隔失败: %v, 使用默认值: %v", err, defaultVal)
+		return defaultVal
+	}
+	return d
 }

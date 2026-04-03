@@ -268,9 +268,10 @@ const FloorManagement: FC = () => {
   // 筛选楼宇变化处理
   const handleFilterBuildingChange = useCallback(
     async (buildingId: string) => {
-      if (!selectedDeptId || !buildingId) return;
+      // 触发搜索以应用楼宇筛选
+      handleSearch();
     },
-    [selectedDeptId]
+    [selectedDeptId, handleSearch]
   );
 
   // 加载指定部门的楼宇选项（用于编辑器模式）
@@ -422,7 +423,7 @@ const FloorManagement: FC = () => {
       floorPlanData={floorPlanData}
       loading={floorPlanLoading}
       isEditMode={isEditMode}
-      departmentTreeData={[]}
+      departments={departmentData.departments}
       buildingOptions={buildingOptionsByDept}
       floorOptions={floorOptions}
       selectedDeptId={selectedDeptIdForEditor}

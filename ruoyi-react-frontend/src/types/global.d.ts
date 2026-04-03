@@ -47,3 +47,19 @@ declare namespace CSS {
     paddingX?: string | number;
   }
 }
+
+// 百度地图全局类型
+declare global {
+  interface Window {
+    BMap?: any;
+    BMapGL?: any;
+    initBMapGL?: () => void;
+    init?: () => void;
+    viewBuildingDetails?: (buildingId: string) => void;
+    viewBuildingDetailsGL?: (buildingId: string) => void;
+    BMAPGL_ANCHOR_TOP_LEFT?: number;
+    BMAPGL_ANCHOR_TOP_RIGHT?: number;
+    BMAPGL_ANCHOR_BOTTOM_LEFT?: number;
+    BMAPGL_ANCHOR_BOTTOM_RIGHT?: number;
+  }
+}

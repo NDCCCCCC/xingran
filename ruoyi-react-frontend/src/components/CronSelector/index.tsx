@@ -6,7 +6,7 @@
  * - 下方: 可视化配置(Tab切换秒/分/时/日/月/周)
  */
 
-import { useState, useLayoutEffect, useImperativeHandle, forwardRef } from 'react';
+import { useState, useLayoutEffect, useImperativeHandle, forwardRef, useRef, useEffect } from 'react';
 import { Input, Select, Tabs, Alert, Space, Row, Col } from 'antd';
 import { InfoCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import type { CronConfig, CronFieldType } from './constants';
@@ -61,16 +61,28 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
     const [activeField, setActiveField] = useState<CronFieldType>('minute');
     const [initialized, setInitialized] = useState(false);
 
-    // 同步外部value变化
+    // 使用 ref 存储稳定的函数引用，遵循 Vercel React Best Practices
+    const validateRef = useRef(validateCronExpression);
+    const toConfigRef = useRef(expressionToCronConfig);
+    const toExpressionRef = useRef(cronConfigToExpression);
+    const onChangeRef = useRef(onChange);
+
+    useEffect(() => {
+      validateRef.current = validateCronExpression;
+      toConfigRef.current = expressionToCronConfig;
+      toExpressionRef.current = cronConfigToExpression;
+      onChangeRef.current = onChange;
+    });
+
+    // 同步外部value变化 - 使用 ref 避免依赖问题
     useLayoutEffect(() => {
       if (value !== cronExpression) {
         setCronExpression(value || DEFAULT_CRON_EXPRESSION);
-        if (validateCronExpression(value)) {
-          setCronConfig(expressionToCronConfig(value));
+        if (validateRef.current(value)) {
+          setCronConfig(toConfigRef.current(value));
         }
       }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [value]);
+    }, [value, cronExpression]);
 
     // 初始化时，如果没有外部值，使用默认值并触发onChange
     useLayoutEffect(() => {
@@ -79,15 +91,14 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
         if (!value) {
           // 使用默认配置生成表达式
           const defaultConfig = getDefaultCronConfig();
-          const defaultExpression = cronConfigToExpression(defaultConfig);
+          const defaultExpression = toExpressionRef.current(defaultConfig);
           setCronConfig(defaultConfig);
           setCronExpression(defaultExpression);
           // 触发onChange，将默认值传递给表单
-          onChange?.(defaultExpression);
+          onChangeRef.current?.(defaultExpression);
         }
       }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [initialized, value]);
 
     // 暴露给父组件的方法
     useImperativeHandle(ref, () => ({
@@ -262,19 +273,3 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
 CronSelector.displayName = 'CronSelector';
 
 export default CronSelector;
-
-// 导出类型
-export type { CronConfig, CronFieldConfig, CronPreset } from './constants';
-
-// 导出常量
-export { CRON_PRESETS, FIELD_RANGES, WEEK_DAY_NAMES, MONTH_NAMES, DEFAULT_CRON_EXPRESSION } from './constants';
-
-// 导出工具函数
-export {
-  cronConfigToExpression,
-  expressionToCronConfig,
-  validateCronExpression,
-  getNextRunTimes,
-  cronToChinese,
-  getDefaultCronConfig,
-} from './utils';
