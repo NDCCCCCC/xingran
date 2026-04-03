@@ -43,6 +43,7 @@ type ExcelConfig struct {
 	CachePatterns  []string  // 导入后需要清理的缓存模式
 	UniqueKeys     []string  // 用于判断重复的字段组合（备用，未配置UpsertKey时使用）
 	PartialUpdate  bool      // 是否启用部分更新（只更新有值的字段）
+	Instructions   []string  // Excel 模板顶部的说明文字，每行一个单元格
 }
 
 var ExcelConfigs = map[string]ExcelConfig{
@@ -144,22 +145,22 @@ var ExcelConfigs = map[string]ExcelConfig{
 		HasHeader:  true,
 		StartRow:   2,
 		Columns: []ExcelColumn{
-			{Field: "name", Header: "设备名称", Required: true, MaxLength: 100},
-			{Field: "deviceCode", Header: "设备编码", Required: true, Unique: true, MaxLength: 50},
+			{Field: "name", Header: "设备名称", Required: true, MaxLength: 100, DBField: "name"},
+			{Field: "deviceCode", Header: "设备编码", Required: true, Unique: true, MaxLength: 50, DBField: "device_code"},
 			{Field: "deviceType", Header: "设备类型", DBField: "device_type", Options: map[interface{}]string{string(operations.DeviceTypeServer): "服务器", string(operations.DeviceTypeStorage): "存储设备", string(operations.DeviceTypeUPS): "UPS", string(operations.DeviceTypePDU): "PDU", string(operations.DeviceTypeFirewall): "防火墙", string(operations.DeviceTypeKVM): "KVM", string(operations.DeviceTypeCabinet): "机柜", string(operations.DeviceTypeOther): "其他"}},
-			{Field: "vendor", Header: "厂商", MaxLength: 100},
-			{Field: "model", Header: "型号", MaxLength: 100},
-			{Field: "serialNumber", Header: "序列号", MaxLength: 100},
-			{Field: "roomId", Header: "所在机房ID", Required: true, Reference: "ops_server_rooms.id"},
-			{Field: "roomName", Header: "所在机房名称", MaxLength: 100},
-			{Field: "positionU", Header: "U位"},
-			{Field: "positionDesc", Header: "位置描述", MaxLength: 200},
-			{Field: "assetNumber", Header: "资产编号", MaxLength: 100},
-			{Field: "purchaseDate", Header: "购买日期", MaxLength: 50},
-			{Field: "warrantyDate", Header: "保修到期", MaxLength: 50},
-			{Field: "powerConsumption", Header: "功耗(W)"},
-			{Field: "status", Header: "状态", Options: map[interface{}]string{int(operations.RoomDeviceStatusNormal): "正常", int(operations.RoomDeviceStatusFault): "故障", int(operations.RoomDeviceStatusScrapped): "报废"}},
-			{Field: "remark", Header: "备注", MaxLength: 500},
+			{Field: "vendor", Header: "厂商", MaxLength: 100, DBField: "vendor"},
+			{Field: "model", Header: "型号", MaxLength: 100, DBField: "model"},
+			{Field: "serialNumber", Header: "序列号", MaxLength: 100, DBField: "serial_number"},
+			{Field: "roomId", Header: "所在机房ID", Required: true, Reference: "ops_server_rooms.id", DBField: "room_id"},
+			{Field: "roomName", Header: "所在机房名称", MaxLength: 100, DBField: "room_name"},
+			{Field: "positionU", Header: "U位", DBField: "position_u"},
+			{Field: "positionDesc", Header: "位置描述", MaxLength: 200, DBField: "position_desc"},
+			{Field: "assetNumber", Header: "资产编号", MaxLength: 100, DBField: "asset_number"},
+			{Field: "purchaseDate", Header: "购买日期", MaxLength: 50, DBField: "purchase_date"},
+			{Field: "warrantyDate", Header: "保修到期", MaxLength: 50, DBField: "warranty_date"},
+			{Field: "powerConsumption", Header: "功耗(W)", DBField: "power_consumption"},
+			{Field: "status", Header: "状态", DBField: "status", Options: map[interface{}]string{0: "正常", 1: "故障", 2: "报废"}},
+			{Field: "remark", Header: "备注", MaxLength: 500, DBField: "remark"},
 		},
 	},
 	"dedicatedLine": {
@@ -167,7 +168,14 @@ var ExcelConfigs = map[string]ExcelConfig{
 		TableName:  "ops_dedicated_lines",
 		EntityName: "专线",
 		HasHeader:  true,
-		StartRow:   2,
+		StartRow:   3,
+		Instructions: []string{
+			"重要提示：请仔细阅读以下说明后再填写数据！",
+			"",
+			"【专线类型】请填写英文代码：internet(互联网专线)、intranet(内网专线)、cloud_desktop(云桌面专线)、mpls(MPLS VPN)、fiber(光纤专线)、leased_line(租用专线)",
+			"【运营商】请填写英文代码：telecom(电信)、mobile(移动)、unicom(联通)、broadcast(广电)、other(其他)",
+			"【状态】请填写数字：0(正常)、1(故障)、2(停用)",
+		},
 		Columns: []ExcelColumn{
 			{Field: "name", Header: "专线名称", Required: true, MaxLength: 100},
 			{Field: "lineType", Header: "专线类型", Required: true, Options: map[interface{}]string{"internet": "互联网专线", "intranet": "内网专线", "cloud_desktop": "云桌面专线", "mpls": "MPLS VPN", "fiber": "光纤专线", "leased_line": "租用专线"}, DBField: "line_type"},

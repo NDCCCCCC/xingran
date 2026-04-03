@@ -4,21 +4,56 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"gorm.io/gorm/schema"
 )
+
+// NamingStrategy 字段名命名策略接口
+// 允许自定义字段名转换逻辑
+type NamingStrategy interface {
+	// FieldToDB 将字段名转换为数据库列名
+	FieldToDB(fieldName string) string
+}
+
+// gormNamingStrategy GORM 标准命名策略实现
+type gormNamingStrategy struct {
+	namer *schema.NamingStrategy
+}
+
+// newGORMNamingStrategy 创建 GORM 命名策略实例
+func newGORMNamingStrategy() *gormNamingStrategy {
+	return &gormNamingStrategy{
+		namer: &schema.NamingStrategy{},
+	}
+}
+
+// FieldToDB 使用 GORM 的 NamingStrategy 将字段名转换为数据库列名
+// 例如：deviceCode -> device_code, roomId -> room_id
+func (g *gormNamingStrategy) FieldToDB(fieldName string) string {
+	return g.namer.ColumnName("", fieldName)
+}
 
 // BatchUpsert 批量插入或更新
 // 使用GORM的Clause实现PostgreSQL的ON CONFLICT DO UPDATE功能
 type BatchUpsert struct {
-	db     *gorm.DB
-	config ExcelConfig
+	db              *gorm.DB
+	config          ExcelConfig
+	naming          NamingStrategy
+	fieldNameCache  map[string]string // 字段名缓存，避免重复转换
+	fieldNameMutex  sync.RWMutex
 }
 
 // NewBatchUpsert 创建批量Upsert实例
 func NewBatchUpsert(db *gorm.DB, config ExcelConfig) *BatchUpsert {
-	return &BatchUpsert{db: db, config: config}
+	return &BatchUpsert{
+		db:             db,
+		config:         config,
+		naming:         newGORMNamingStrategy(),
+		fieldNameCache: make(map[string]string),
+	}
 }
 
 // Upsert 执行批量插入或更新
@@ -39,13 +74,16 @@ func (b *BatchUpsert) standardUpsert(ctx context.Context, records []map[string]i
 	conflictColumns := b.buildConflictColumns()
 	updateColumns := b.buildUpdateColumns()
 
+	// 转换记录中的字段名为数据库列名
+	convertedRecords := b.convertRecordFields(records)
+
 	result := b.db.WithContext(ctx).
 		Table(b.config.TableName).
 		Clauses(clause.OnConflict{
 			Columns:   conflictColumns,
 			DoUpdates: clause.AssignmentColumns(updateColumns),
 		}).
-		Create(&records)
+		Create(&convertedRecords)
 
 	if result.Error != nil {
 		return 0, 0, fmt.Errorf("批量Upsert失败: %w", result.Error)
@@ -193,7 +231,10 @@ func (b *BatchUpsert) executeInsert(ctx context.Context, records []map[string]in
 		return 0, nil
 	}
 
-	result := b.db.WithContext(ctx).Table(b.config.TableName).Create(&records)
+	// 转换记录中的字段名
+	convertedRecords := b.convertRecordFields(records)
+
+	result := b.db.WithContext(ctx).Table(b.config.TableName).Create(&convertedRecords)
 	if result.Error != nil {
 		return 0, fmt.Errorf("批量插入失败: %w", result.Error)
 	}
@@ -235,43 +276,59 @@ func (b *BatchUpsert) executeUpdate(ctx context.Context, records []map[string]in
 	return updatedCount, nil
 }
 
-// buildCombinedKey 构建组合键字符串
-func buildCombinedKey(record map[string]interface{}, columns []clause.Column) string {
-	parts := make([]string, 0, len(columns))
-	for _, col := range columns {
-		if val := record[col.Name]; val != nil {
-			parts = append(parts, fmt.Sprintf("%v", val))
+// convertRecordFields 将记录中的字段名转换为数据库列名
+// 使用缓存避免重复转换，提高性能
+func (b *BatchUpsert) convertRecordFields(records []map[string]interface{}) []map[string]interface{} {
+	converted := make([]map[string]interface{}, len(records))
+
+	for i, record := range records {
+		convertedRecord := make(map[string]interface{}, len(record))
+		for field, value := range record {
+			dbField := b.resolveFieldName(field)
+			if dbField != "" {
+				convertedRecord[dbField] = value
+			}
 		}
+		converted[i] = convertedRecord
 	}
-	if len(parts) != len(columns) {
-		return ""
-	}
-	return strings.Join(parts, "|")
+
+	return converted
 }
 
-// getValidValue 获取有效的非空值
-func getValidValue(record map[string]interface{}, key string) interface{} {
-	val, ok := record[key]
-	if !ok || val == nil {
-		return nil
+// resolveFieldName 解析字段名，返回数据库列名
+// 优先级：配置的 DBField > NamingStrategy 转换
+// 使用缓存提高性能
+func (b *BatchUpsert) resolveFieldName(fieldName string) string {
+	// 先检查缓存
+	b.fieldNameMutex.RLock()
+	if cached, ok := b.fieldNameCache[fieldName]; ok {
+		b.fieldNameMutex.RUnlock()
+		return cached
 	}
-	if strVal, ok := val.(string); ok && strVal == "" {
-		return nil
-	}
-	return val
-}
+	b.fieldNameMutex.RUnlock()
 
-// uniqueValues 去重
-func uniqueValues(values []interface{}) []interface{} {
-	seen := make(map[interface{}]bool)
-	result := make([]interface{}, 0, len(values))
-	for _, v := range values {
-		key := fmt.Sprintf("%v", v)
-		if !seen[key] {
-			seen[key] = true
-			result = append(result, v)
+	// 查找配置中是否有 DBField 定义
+	var dbField string
+	for _, col := range b.config.Columns {
+		if col.Field == fieldName {
+			dbField = col.DBField
+			break
 		}
 	}
+
+	// 如果没有配置 DBField，使用 NamingStrategy 转换
+	var result string
+	if dbField != "" {
+		result = dbField
+	} else {
+		result = b.naming.FieldToDB(fieldName)
+	}
+
+	// 缓存结果
+	b.fieldNameMutex.Lock()
+	b.fieldNameCache[fieldName] = result
+	b.fieldNameMutex.Unlock()
+
 	return result
 }
 
@@ -325,11 +382,12 @@ func (b *BatchUpsert) buildUpdateColumns() []string {
 }
 
 // getDBFieldName 获取数据库字段名
+// 优先使用配置的 DBField，否则使用 NamingStrategy 自动转换
 func (b *BatchUpsert) getDBFieldName(col ExcelColumn) string {
 	if col.DBField != "" {
 		return col.DBField
 	}
-	return col.Field
+	return b.naming.FieldToDB(col.Field)
 }
 
 // buildFieldToColMap 构建字段名到列配置的映射
@@ -378,4 +436,44 @@ func (b *BatchUpsert) shouldSkipFromUpdate(field string, col ExcelColumn, confli
 	}
 
 	return conflictFields[field]
+}
+
+// buildCombinedKey 构建组合键字符串
+func buildCombinedKey(record map[string]interface{}, columns []clause.Column) string {
+	parts := make([]string, 0, len(columns))
+	for _, col := range columns {
+		if val := record[col.Name]; val != nil {
+			parts = append(parts, fmt.Sprintf("%v", val))
+		}
+	}
+	if len(parts) != len(columns) {
+		return ""
+	}
+	return strings.Join(parts, "|")
+}
+
+// getValidValue 获取有效的非空值
+func getValidValue(record map[string]interface{}, key string) interface{} {
+	val, ok := record[key]
+	if !ok || val == nil {
+		return nil
+	}
+	if strVal, ok := val.(string); ok && strVal == "" {
+		return nil
+	}
+	return val
+}
+
+// uniqueValues 去重
+func uniqueValues(values []interface{}) []interface{} {
+	seen := make(map[interface{}]bool)
+	result := make([]interface{}, 0, len(values))
+	for _, v := range values {
+		key := fmt.Sprintf("%v", v)
+		if !seen[key] {
+			seen[key] = true
+			result = append(result, v)
+		}
+	}
+	return result
 }

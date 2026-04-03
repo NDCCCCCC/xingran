@@ -76,15 +76,34 @@ func (s *ExcelService) GenerateTemplate(entityType string) (*excelize.File, erro
 		return nil, fmt.Errorf("创建表头样式失败: %w", err)
 	}
 
-	s.writeHeaders(f, sheetName, config.Columns, headerStyle)
-	s.writeExampleData(f, sheetName, config.Columns)
+	// 写入说明行（如果有）
+	s.writeInstructions(f, sheetName, config.Columns, config.Instructions)
+
+	// 计算表头行号（如果有说明行，表头从第2行开始，否则从第1行开始）
+	headerRow := 1
+	if len(config.Instructions) > 0 {
+		headerRow = len(config.Instructions) + 1
+	}
+
+	s.writeHeaders(f, sheetName, config.Columns, headerStyle, headerRow)
+	s.writeExampleData(f, sheetName, config.Columns, headerRow)
 	s.setColumnWidths(f, sheetName, config.Columns)
 
-	f.SetPanes(sheetName, &excelize.Panes{
-		Freeze: true,
-		XSplit: 1,
-		YSplit: 1,
-	})
+	// 冻结窗格：如果有说明行，冻结表头行；否则冻结第一行
+	freezeRow := headerRow
+	if len(config.Instructions) > 0 {
+		f.SetPanes(sheetName, &excelize.Panes{
+			Freeze: true,
+			XSplit: 1,
+			YSplit: freezeRow,
+		})
+	} else {
+		f.SetPanes(sheetName, &excelize.Panes{
+			Freeze: true,
+			XSplit: 1,
+			YSplit: 1,
+		})
+	}
 
 	return f, nil
 }
@@ -165,9 +184,9 @@ func (s *ExcelService) getExampleValue(col ExcelColumn) string {
 	case "infoPointType":
 		return "网络信息点" // 第一选项的Label
 	case "lineType":
-		return "100M"
+		return "internet" // 互联网专线
 	case "isp":
-		return "中国电信"
+		return "telecom" // 电信
 	case "sourceDeviceName", "destDeviceName":
 		return "核心交换机A"
 	case "sourcePort", "destPort":
@@ -987,7 +1006,7 @@ func (s *ExcelService) ExportData(ctx context.Context, entityType string, params
 		return nil, fmt.Errorf("创建表头样式失败: %w", err)
 	}
 
-	s.writeHeaders(f, sheetName, config.Columns, headerStyle)
+	s.writeHeaders(f, sheetName, config.Columns, headerStyle, 1)
 	s.setColumnWidths(f, sheetName, config.Columns)
 
 	data, err := s.queryData(ctx, config, params)
@@ -1113,19 +1132,65 @@ func createHeaderStyle(f *excelize.File) (int, error) {
 	})
 }
 
-func (s *ExcelService) writeHeaders(f *excelize.File, sheetName string, columns []ExcelColumn, headerStyle int) {
+func (s *ExcelService) writeHeaders(f *excelize.File, sheetName string, columns []ExcelColumn, headerStyle int, headerRow int) {
 	for i, col := range columns {
-		cell, _ := excelize.CoordinatesToCellName(i+1, 1)
+		cell, _ := excelize.CoordinatesToCellName(i+1, headerRow)
 		f.SetCellValue(sheetName, cell, col.Header)
 		f.SetCellStyle(sheetName, cell, cell, headerStyle)
 	}
 }
 
-func (s *ExcelService) writeExampleData(f *excelize.File, sheetName string, columns []ExcelColumn) {
+func (s *ExcelService) writeExampleData(f *excelize.File, sheetName string, columns []ExcelColumn, headerRow int) {
+	dataRow := headerRow + 1
 	for i, col := range columns {
-		cell, _ := excelize.CoordinatesToCellName(i+1, 2)
+		cell, _ := excelize.CoordinatesToCellName(i+1, dataRow)
 		exampleValue := s.getExampleValue(col)
 		f.SetCellValue(sheetName, cell, exampleValue)
+	}
+}
+
+// writeInstructions 写入模板顶部的说明文字
+func (s *ExcelService) writeInstructions(f *excelize.File, sheetName string, columns []ExcelColumn, instructions []string) {
+	if len(instructions) == 0 {
+		return
+	}
+
+	// 创建说明行样式
+	instructionStyle, err := f.NewStyle(&excelize.Style{
+		Font:     &excelize.Font{Bold: true, Color: "#C00000", Size: 10},
+		Alignment: &excelize.Alignment{Vertical: "top", WrapText: true},
+	})
+	if err != nil {
+		logger.Debugf("创建说明样式失败: %v", err)
+		return
+	}
+
+	// 设置第一列宽度以容纳说明文字
+	f.SetColWidth(sheetName, "A", "A", 60)
+
+	// 写入说明文字（跨所有列合并）
+	lastCol, _ := excelize.CoordinatesToCellName(len(columns), 1)
+
+	for i, text := range instructions {
+		row := i + 1
+		if text == "" {
+			continue // 跳过空行
+		}
+
+		startCell, _ := excelize.CoordinatesToCellName(1, row)
+		// 合并单元格以显示完整说明
+		if err := f.MergeCell(sheetName, startCell, lastCol); err != nil {
+			logger.Debugf("合并单元格失败: %v", err)
+			continue
+		}
+
+		f.SetCellValue(sheetName, startCell, text)
+		f.SetCellStyle(sheetName, startCell, startCell, instructionStyle)
+	}
+
+	// 设置说明行高度
+	for i := range instructions {
+		f.SetRowHeight(sheetName, i+1, 25)
 	}
 }
 

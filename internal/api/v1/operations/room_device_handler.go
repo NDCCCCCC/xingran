@@ -138,7 +138,7 @@ func (h *RoomDeviceHandler) Delete(c *gin.Context) {
 	response.Success(c, nil)
 }
 
-// BatchOperation 批量操作（类型安全版本）
+// BatchOperation 批量操作
 // @Summary 批量操作
 // @Description 对机房设备进行批量操作，如批量删除
 // @Tags 运维管理

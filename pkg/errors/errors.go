@@ -432,6 +432,10 @@ func BuildingExists() *AppError {
 	return New(CodeBuildingExists, CodeBuildingExists.DefaultMessage())
 }
 
+func BuildingExistsWithMsg(msg string) *AppError {
+	return New(CodeBuildingExists, msg)
+}
+
 func BuildingHasFloors() *AppError {
 	return New(CodeBuildingHasFloors, CodeBuildingHasFloors.DefaultMessage())
 }

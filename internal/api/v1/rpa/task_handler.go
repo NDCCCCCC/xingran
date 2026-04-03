@@ -1,7 +1,9 @@
 package rpa
 
 import (
+	"context"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/rpa"
@@ -188,10 +190,16 @@ func (h *TaskHandler) ExecuteWithExcel(c *gin.Context) {
 		return
 	}
 
-	// 初始化批量报告
+	// 初始化批量报告（异步执行，避免阻塞响应）
 	if h.excelService != nil {
-		task, _ := h.taskService.GetByID(c.Request.Context(), id)
-		h.excelService.CreateBatchExecutionReport(c.Request.Context(), execution.ID, task, dataItems)
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			task, err := h.taskService.GetByID(ctx, id)
+			if err == nil && task != nil {
+				_ = h.excelService.CreateBatchExecutionReport(ctx, execution.ID, task, dataItems)
+			}
+		}()
 	}
 
 	success(c, gin.H{

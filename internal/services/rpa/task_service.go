@@ -248,10 +248,9 @@ func (s *taskServiceImpl) publishTaskToRedis(
 	targetURL := extractURLFromScript(actions)
 
 	// 转换 ScriptAction 为 WorkerAction 格式
-	workerActions := make([]WorkerAction, 0, len(actions))
+	workerActions := make([]WorkerAction, len(actions))
 	for i, action := range actions {
-		workerAction := s.convertToWorkerAction(action, i)
-		workerActions = append(workerActions, workerAction)
+		workerActions[i] = convertToWorkerAction(action, i)
 	}
 
 	// 构建任务消息
@@ -383,7 +382,8 @@ func extractTargetSystem(url string) string {
 
 // convertToWorkerAction 将 ScriptAction 转换为 Worker 期望的 Action 格式
 // 统一前后端和 Worker 之间的数据格式
-func (s *taskServiceImpl) convertToWorkerAction(action rpamodels.ScriptAction, index int) WorkerAction {
+// 使用值接收者，因为方法不修改接收者状态
+func convertToWorkerAction(action rpamodels.ScriptAction, index int) WorkerAction {
 	workerAction := WorkerAction{
 		ID:       fmt.Sprintf("action_%d", index),
 		Type:     action.Type,

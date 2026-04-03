@@ -9,7 +9,9 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
 	rpamodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/rpa"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -179,7 +181,8 @@ func (s *workerServiceImpl) Progress(ctx context.Context, req *WorkerProgressReq
 		screenshotPath, err := s.saveScreenshot(ctx, req.ExecutionID, req.ProgressCurrent, req.Screenshot)
 		if err != nil {
 			// 记录错误但不中断进度更新
-			fmt.Printf("保存截图失败: %v\n", err)
+			// 遵循 Go 最佳实践：使用结构化日志而非 fmt.Printf
+			logger.Errorf("保存截图失败: executionID=%s, step=%d, error=%v", req.ExecutionID, req.ProgressCurrent, err)
 		} else {
 			screenshotURL = "/" + filepath.ToSlash(screenshotPath)
 			// 获取现有截图并追加新截图
@@ -228,10 +231,11 @@ func (s *workerServiceImpl) Progress(ctx context.Context, req *WorkerProgressReq
 		}
 
 		// 异步推送，避免阻塞 Worker
-		// 遵循 Go 最佳实践：使用带超时的 context 传播，而不是 context.Background()
+		// 遵循 Go 最佳实践：使用带超时的派生 context，从父 context 派生而非使用 Background()
 		go func() {
 			// 使用带超时的派生 context，确保 goroutine 不会永远阻塞
-			pubCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			// 从父 context 派生，支持请求取消时一并取消 goroutine
+			pubCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
 			_ = s.executionService.PublishProgress(pubCtx, progressUpdate)
 		}()
