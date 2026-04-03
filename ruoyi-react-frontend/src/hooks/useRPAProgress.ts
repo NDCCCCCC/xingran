@@ -4,7 +4,7 @@
  * 通过 WebSocket 订阅 RPA 任务执行进度更新
  */
 
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNoticeStore } from '@/store/noticeStore';
 import type { RPAProgressMessage } from '@/types/rpa';
 
@@ -23,15 +23,6 @@ export interface RPAProgressData {
 }
 
 /**
- * 进度更新回调
- */
-export interface ProgressCallbacks {
-	onProgress?: (data: RPAProgressData) => void;
-	onCompleted?: (data: RPAProgressData) => void;
-	onFailed?: (data: RPAProgressData) => void;
-}
-
-/**
  * Hook 选项
  */
 export interface UseRPAProgressOptions {
@@ -42,7 +33,11 @@ export interface UseRPAProgressOptions {
 	/** 过滤：只订阅指定任务的进度 */
 	taskId?: string;
 	/** 进度回调 */
-	onProgress?: ProgressCallbacks;
+	onProgress?: (data: RPAProgressData) => void;
+	/** 完成回调 */
+	onCompleted?: (data: RPAProgressData) => void;
+	/** 失败回调 */
+	onFailed?: (data: RPAProgressData) => void;
 }
 
 /**
@@ -56,24 +51,28 @@ export interface UseRPAProgressOptions {
  * // 订阅特定执行记录的进度
  * const { progressData } = useRPAProgress({
  *   executionId: 'uuid',
- *   onProgress: {
- *     onProgress: (data) => console.log('进度:', data),
- *     onCompleted: (data) => message.success('任务完成'),
- *     onFailed: (data) => message.error('任务失败'),
- *   }
+ *   onProgress: (data) => console.log('进度:', data),
+ *   onCompleted: (data) => message.success('任务完成'),
+ *   onFailed: (data) => message.error('任务失败'),
  * });
  * ```
  */
 export function useRPAProgress(options?: UseRPAProgressOptions) {
 	const { wsConnected, onRPAProgress } = useNoticeStore();
 	const progressDataRef = useRef<Map<string, RPAProgressData>>(new Map());
-	const callbacksRef = useRef(options?.onProgress);
 	const unsubscribeRef = useRef<(() => void) | null>(null);
 
-	// 更新 callbacks 引用
-	useEffect(() => {
-		callbacksRef.current = options?.onProgress;
-	}, [options?.onProgress]);
+	// 使用 useMemo 缓存回调函数引用，避免 useEffect 无限循环
+	// 遵循 Vercel React Best Practices: rerender-dependencies
+	const callbacks = useMemo(() => ({
+		onProgress: options?.onProgress,
+		onCompleted: options?.onCompleted,
+		onFailed: options?.onFailed,
+	}), [
+		options?.onProgress,
+		options?.onCompleted,
+		options?.onFailed,
+	]);
 
 	// 处理 RPA 进度消息
 	const handleRPAProgressMessage = useCallback((message: RPAProgressMessage) => {
@@ -100,21 +99,18 @@ export function useRPAProgress(options?: UseRPAProgressOptions) {
 		progressDataRef.current.set(data.executionId, data);
 
 		// 触发回调
-		const callbacks = callbacksRef.current;
-		if (callbacks) {
-			switch (message.type) {
-			case 'rpa_progress':
-				callbacks.onProgress?.(data);
-				break;
-			case 'rpa_completed':
-				callbacks.onCompleted?.(data);
-				break;
-			case 'rpa_failed':
-				callbacks.onFailed?.(data);
-				break;
-			}
+		switch (message.type) {
+		case 'rpa_progress':
+			callbacks.onProgress?.(data);
+			break;
+		case 'rpa_completed':
+			callbacks.onCompleted?.(data);
+			break;
+		case 'rpa_failed':
+			callbacks.onFailed?.(data);
+			break;
 		}
-	}, [options?.executionId, options?.taskId]);
+	}, [options?.executionId, options?.taskId, callbacks]);
 
 	// 订阅 RPA 进度事件
 	useEffect(() => {
@@ -131,7 +127,7 @@ export function useRPAProgress(options?: UseRPAProgressOptions) {
 			unsubscribeRef.current?.();
 			unsubscribeRef.current = null;
 		};
-	}, [handleRPAProgressMessage, options?.enabled, onRPAProgress]);
+	}, [handleRPAProgressMessage, options?.enabled, options?.executionId, options?.taskId, onRPAProgress]);
 
 	// 获取指定执行记录的进度
 	const getProgress = useCallback((executionId: string): RPAProgressData | undefined => {

@@ -2,7 +2,7 @@
  * RPA 执行记录页面
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import type { FC } from 'react';
 import {
   Table, Button, Space, Form, Input, Select, Card, Tag,
@@ -11,6 +11,7 @@ import {
   SearchOutlined, ReloadOutlined, FilterOutlined,
 } from '@ant-design/icons';
 import type { Execution } from '@/types/rpa';
+import type { PageResponse } from '@/types/base';
 import { useTableManager } from '@/hooks/useTableManager';
 import { usePagination } from '@/hooks/usePagination';
 import { getExecutionColumns } from './columns';
@@ -33,7 +34,7 @@ const ExecutionManagement: FC = () => {
     handleReset,
   } = useTableManager<Execution>(
     async (params) => {
-      const result = await post('/rpa/executions/list', params);
+      const result = await post<PageResponse<Execution>>('/rpa/executions/list', params);
       return {
         list: result.data?.list || [],
         total: result.data?.total || 0,
@@ -75,13 +76,15 @@ const ExecutionManagement: FC = () => {
     handleViewDetail,
   });
 
-  // 统计数据
-  const stats = {
+  // 统计数据 - 使用 useMemo 缓存计算结果
+  // 遵循 Vercel React Best Practices: rerender-memo
+  // 避免每次渲染时重新计算统计数据
+  const stats = useMemo(() => ({
     total: executions.length,
     running: executions.filter(e => e.status === 'running').length,
     completed: executions.filter(e => e.status === 'completed').length,
     failed: executions.filter(e => e.status === 'failed').length,
-  };
+  }), [executions]);
 
   return (
     <div style={{ padding: 16, background: '#f0f2f5', minHeight: 'calc(100vh - 64px)' }}>

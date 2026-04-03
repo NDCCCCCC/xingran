@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import type { FC, MouseEvent } from 'react';
 import { Badge, Dropdown, Empty, Spin, Tag, Avatar, message } from 'antd';
 import { BellOutlined, DeleteOutlined } from '@ant-design/icons';
@@ -14,6 +14,50 @@ import 'dayjs/locale/zh-cn';
 
 dayjs.extend(relativeTime);
 dayjs.locale('zh-cn');
+
+// ==================== 样式常量 ====================
+// 遵循 Vercel React Best Practices: rendering-hoist-jsx
+// 将静态样式对象提取到组件外部，避免每次渲染重新创建
+
+const NOTIFICATION_CONTENT_STYLE = {
+  width: '400px',
+  maxHeight: '480px',
+  background: 'var(--theme-bg-primary)',
+} as const;
+
+const HEADER_STYLE = {
+  borderBottomColor: 'var(--theme-border-primary)',
+  background: 'linear-gradient(to bottom, var(--theme-bg-primary), var(--theme-bg-secondary))',
+} as const;
+
+const LIST_CONTAINER_STYLE = {
+  maxHeight: '400px',
+  background: 'var(--theme-bg-secondary)',
+} as const;
+
+const EMPTY_STYLE = {
+  color: 'var(--theme-text-secondary)',
+} as const;
+
+const FOOTER_STYLE = {
+  borderTopColor: 'var(--theme-border-secondary)',
+  background: 'var(--theme-bg-tertiary)',
+} as const;
+
+const BADGE_STYLE = {
+  background: 'var(--theme-error)',
+  boxShadow: '0 2px 8px rgba(239, 68, 68, 0.3)',
+} as const;
+
+const AVATAR_WRAPPER_STYLE = {
+  display: 'inline-block',
+} as const;
+
+const AVATAR_STYLE = {
+  background: 'linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%)',
+  boxShadow: '0 2px 8px rgba(79, 70, 229, 0.2)',
+  transition: 'transform 300ms, box-shadow 300ms',
+} as const;
 
 /**
  * 通知铃铛组件
@@ -48,8 +92,9 @@ const NotificationBell: FC = () => {
     }
   }, [dropdownOpen, notifications.length, setNotifications]);
 
-  // 点击通知项
-  const handleClickNotification = async (notice: NoticeListItem) => {
+  // 点击通知项 - 使用 useCallback 避免每次渲染重新创建函数
+  // 遵循 Vercel React Best Practices: rerender-dependencies
+  const handleClickNotification = useCallback(async (notice: NoticeListItem) => {
     // 标记为已读
     if (!notice.isRead) {
       try {
@@ -63,10 +108,10 @@ const NotificationBell: FC = () => {
     // 跳转到通知详情页面
     setDropdownOpen(false);
     navigate(`/my-notices/${notice.id}`);
-  };
+  }, [markAsRead, navigate]);
 
   // 全部标记为已读
-  const handleMarkAllRead = async () => {
+  const handleMarkAllRead = useCallback(async () => {
     try {
       await markAllNoticesAsRead();
       markAllAsRead();
@@ -75,10 +120,10 @@ const NotificationBell: FC = () => {
       console.error('标记全部已读失败:', error);
       message.error('操作失败，请稍后重试');
     }
-  };
+  }, [markAllAsRead]);
 
   // 删除通知（调用忽略API）
-  const handleDelete = async (e: MouseEvent, noticeId: string) => {
+  const handleDelete = useCallback(async (e: MouseEvent, noticeId: string) => {
     e.stopPropagation();
     try {
       await ignoreNotice(noticeId);
@@ -89,25 +134,24 @@ const NotificationBell: FC = () => {
       console.error('忽略通知失败:', error);
       message.error('操作失败，请稍后重试');
     }
-  };
+  }, [removeNotification]);
+
+  // 查看全部通知
+  const handleViewAll = useCallback(() => {
+    setDropdownOpen(false);
+    navigate(USER_NOTICES);
+  }, [navigate]);
 
   // 渲染通知列表
   const notificationContent = (
     <div
       className="rounded-lg overflow-hidden border border-slate-200 shadow-lg"
-      style={{
-        width: '400px',
-        maxHeight: '480px',
-        background: 'var(--theme-bg-primary)',
-      }}
+      style={NOTIFICATION_CONTENT_STYLE}
     >
       {/* 头部 */}
       <div
         className="flex items-center justify-between px-4 py-3 border-b"
-        style={{
-          borderBottomColor: 'var(--theme-border-primary)',
-          background: 'linear-gradient(to bottom, var(--theme-bg-primary), var(--theme-bg-secondary))',
-        }}
+        style={HEADER_STYLE}
       >
         <div className="flex items-center gap-2">
           <BellOutlined className="text-sm" style={{ color: 'var(--theme-primary)' }} />
@@ -146,10 +190,7 @@ const NotificationBell: FC = () => {
             style={{
               color: 'var(--theme-text-secondary)',
             }}
-            onClick={() => {
-              setDropdownOpen(false);
-              navigate(USER_NOTICES);
-            }}
+            onClick={handleViewAll}
             onMouseEnter={(e) => e.currentTarget.style.color = 'var(--theme-primary)'}
             onMouseLeave={(e) => e.currentTarget.style.color = 'var(--theme-text-secondary)'}
           >
@@ -165,16 +206,13 @@ const NotificationBell: FC = () => {
             <Empty
               description="暂无通知"
               image={Empty.PRESENTED_IMAGE_SIMPLE}
-              style={{ color: 'var(--theme-text-secondary)' }}
+              style={EMPTY_STYLE}
             />
           </div>
         ) : (
           <div
             className="overflow-y-auto"
-            style={{
-              maxHeight: '400px',
-              background: 'var(--theme-bg-secondary)',
-            }}
+            style={LIST_CONTAINER_STYLE}
           >
             {notifications.map((notice, index) => (
               <div
@@ -299,18 +337,12 @@ const NotificationBell: FC = () => {
       {notifications.length > 0 && (
         <div
           className="px-4 py-2 border-t text-center"
-          style={{
-            borderTopColor: 'var(--theme-border-secondary)',
-            background: 'var(--theme-bg-tertiary)',
-          }}
+          style={FOOTER_STYLE}
         >
           <span
             className="text-xs cursor-pointer transition-colors duration-200 font-medium"
             style={{ color: 'var(--theme-primary)' }}
-            onClick={() => {
-              setDropdownOpen(false);
-              navigate(USER_NOTICES);
-            }}
+            onClick={handleViewAll}
           >
             查看全部通知 →
           </span>
@@ -331,16 +363,11 @@ const NotificationBell: FC = () => {
         count={unreadCount}
         size="small"
         offset={[0, 8]}
-        style={{
-          background: 'var(--theme-error)',
-          boxShadow: '0 2px 8px rgba(239, 68, 68, 0.3)',
-        }}
+        style={BADGE_STYLE}
       >
         <div
           className="cursor-pointer transition-all duration-300"
-          style={{
-            display: 'inline-block',
-          }}
+          style={AVATAR_WRAPPER_STYLE}
           onMouseEnter={(e) => {
             const avatar = e.currentTarget.querySelector('.ant-avatar') as HTMLElement;
             if (avatar) {
@@ -359,11 +386,7 @@ const NotificationBell: FC = () => {
           <Avatar
             size="large"
             icon={<BellOutlined />}
-            style={{
-              background: 'linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%)',
-              boxShadow: '0 2px 8px rgba(79, 70, 229, 0.2)',
-              transition: 'transform 300ms, box-shadow 300ms',
-            }}
+            style={AVATAR_STYLE}
           />
         </div>
       </Badge>

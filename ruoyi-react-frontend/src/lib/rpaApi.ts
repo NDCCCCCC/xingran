@@ -3,6 +3,7 @@
  */
 
 import { post } from './api';
+import { getAccessToken } from '@/utils/authHelpers';
 import type {
   BaseResponse,
   PageParams,
@@ -359,7 +360,7 @@ export const executionApi = {
    */
   downloadReport: async (id: string, format: 'pdf' | 'html' = 'pdf') => {
     const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://10.62.10.33:9000/api/v1';
-    const token = localStorage.getItem('accessToken');
+    const token = await getAccessToken();
     const response = await fetch(`${baseUrl}/rpa/executions/${id}/report?format=${format}`, {
       method: 'POST',
       headers: {

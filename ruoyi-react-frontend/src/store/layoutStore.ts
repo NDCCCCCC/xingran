@@ -282,17 +282,8 @@ export const useLayoutStore = create<LayoutStore>()(
 			document.documentElement.setAttribute('data-density', density);
 			document.documentElement.setAttribute('data-sidebar-collapsed', String(sidebarCollapsed));
 		},
-	})
+	}),
 );
-
-// 监听 SettingsStore 变化
-if (typeof window !== 'undefined') {
-	window.addEventListener('settings-changed', ((event: CustomEvent) => {
-		const preferences = event.detail;
-		const syncLayout = useLayoutStore.getState().syncFromSettings;
-		syncLayout(preferences.layout);
-	}) as EventListener);
-}
 
 /**
  * 布局 Hook
@@ -307,6 +298,23 @@ export function useLayout() {
 		document.documentElement.setAttribute('data-layout', store.currentLayout);
 		document.documentElement.setAttribute('data-density', store.density);
 	}, [currentLayout, density]);
+
+	// 监听 SettingsStore 变化
+	// 遵循 Vercel React Best Practices: client-event-listeners
+	// 使用 useEffect 管理事件监听器，确保正确注册和清理
+	useEffect(() => {
+		const handleSettingsChange = ((event: CustomEvent) => {
+			const preferences = event.detail;
+			syncFromSettings(preferences.layout);
+		}) as EventListener;
+
+		window.addEventListener('settings-changed', handleSettingsChange);
+
+		// 清理函数：组件卸载时移除监听器
+		return () => {
+			window.removeEventListener('settings-changed', handleSettingsChange);
+		};
+	}, [syncFromSettings]);
 
 	const layoutConfig = layoutConfigs[currentLayout];
 
