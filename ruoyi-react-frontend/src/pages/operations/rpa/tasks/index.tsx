@@ -11,6 +11,7 @@ import {
   PlusOutlined, SearchOutlined, ReloadOutlined, PlayCircleOutlined,
 } from '@ant-design/icons';
 import type { Task } from '@/types/rpa';
+import type { PageResponse } from '@/types/base';
 import { useTableManager } from '@/hooks/useTableManager';
 import { usePagination } from '@/hooks/usePagination';
 import { handleSuccess as showSuccessMessage } from '@/utils/errorHandler';
@@ -43,7 +44,7 @@ const TaskManagement: FC = () => {
     resetSelection,
   } = useTableManager<Task>(
     async (params) => {
-      const result = await post('/rpa/tasks/list', params);
+      const result = await post<PageResponse<Task>>('/rpa/tasks/list', params);
       return {
         list: result.data?.list || [],
         total: result.data?.total || 0,

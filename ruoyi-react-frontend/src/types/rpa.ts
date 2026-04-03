@@ -88,7 +88,7 @@ export interface Task {
   taskName: string;       // 任务名称（后端字段名）
   name?: string;          // 兼容字段（可能不存在）
   description?: string;
-  script?: ScriptAction[] | Script; // 脚本动作数组或脚本对象
+  script?: Action[] | Script; // 脚本动作数组或脚本对象
   priority: number;       // 优先级 (0-100)
   status: number;         // 任务状态 (0=启用, 1=停用)
   tags?: string;          // 标签（字符串格式）
@@ -118,7 +118,7 @@ export interface TaskListParams extends PageParams {
 export interface TaskFormData {
   name: string;           // 表单使用 name
   description?: string;
-  script?: ScriptAction[]; // 脚本动作数组
+  script?: Action[]; // 脚本动作数组
   priority?: number;
   tags?: string;
   timeout?: number;

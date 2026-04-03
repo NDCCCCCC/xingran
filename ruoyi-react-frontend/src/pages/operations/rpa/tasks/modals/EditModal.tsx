@@ -152,7 +152,7 @@ export function TaskEditModal({
             scriptData = [];
           }
         } else {
-          scriptData = editingTask.script;
+          scriptData = editingTask.script as Action[];
         }
 
         // 转换为前端 Action 格式
