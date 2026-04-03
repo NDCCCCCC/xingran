@@ -70,7 +70,7 @@ const (
 type RoomDevice struct {
 	BaseModel
 	Name             string           `gorm:"size:100;not null" json:"name"`
-	DeviceType       RoomDeviceType   `gorm:"size:50;not null" json:"deviceType"`
+	DeviceType       string           `gorm:"size:50;not null" json:"deviceType"`
 	Model            *string          `gorm:"size:100" json:"model,omitempty"`
 	Vendor           *string          `gorm:"size:100" json:"vendor,omitempty"`
 	SerialNumber     *string          `gorm:"size:100" json:"serialNumber,omitempty"`
@@ -81,7 +81,7 @@ type RoomDevice struct {
 	AssetNumber      *string          `gorm:"size:100" json:"assetNumber,omitempty"`
 	PurchaseDate     *string          `gorm:"size:50" json:"purchaseDate,omitempty"`
 	WarrantyDate     *string          `gorm:"size:50" json:"warrantyDate,omitempty"`
-	Status           RoomDeviceStatus `gorm:"default:0" json:"status"`
+	Status           int              `gorm:"default:0" json:"status"`
 	ResponsibleID    *string          `gorm:"size:64" json:"responsibleId,omitempty"`
 	ResponsibleName  *string          `gorm:"size:100" json:"responsibleName,omitempty"`
 	PowerConsumption *float64         `gorm:"default:0" json:"powerConsumption,omitempty"`

@@ -46,6 +46,11 @@ func (s *buildingService) Create(ctx context.Context, building *operations.OpsBu
 		return err
 	}
 
+	// 验证楼宇名称唯一性（同一机构下不能有同名楼宇）
+	if err := s.validateNameUnique(ctx, building.OrgID, building.Name, ""); err != nil {
+		return err
+	}
+
 	return s.db.WithContext(ctx).Create(building).Error
 }
 
@@ -53,6 +58,11 @@ func (s *buildingService) Create(ctx context.Context, building *operations.OpsBu
 func (s *buildingService) Update(ctx context.Context, building *operations.OpsBuilding) error {
 	// 验证机构存在性
 	if err := s.validateOrg(ctx, building.OrgID); err != nil {
+		return err
+	}
+
+	// 验证楼宇名称唯一性（同一机构下不能有同名楼宇，排除自身）
+	if err := s.validateNameUnique(ctx, building.OrgID, building.Name, building.ID); err != nil {
 		return err
 	}
 
@@ -167,6 +177,28 @@ func (s *buildingService) validateOrg(ctx context.Context, orgID string) error {
 
 	if count == 0 {
 		return apperrors.BuildingOrgInvalidWithMsg("所属机构不存在")
+	}
+
+	return nil
+}
+
+// validateNameUnique 验证楼宇名称唯一性（同一机构下不能有同名楼宇）
+func (s *buildingService) validateNameUnique(ctx context.Context, orgID, name string, excludeID string) error {
+	var count int64
+	query := s.db.WithContext(ctx).Table("ops_buildings").
+		Where("org_id = ? AND name = ?", orgID, name)
+
+	// 更新时排除当前记录
+	if excludeID != "" {
+		query = query.Where("id != ?", excludeID)
+	}
+
+	if err := query.Count(&count).Error; err != nil {
+		return err
+	}
+
+	if count > 0 {
+		return apperrors.BuildingExistsWithMsg("同一机构下已存在同名楼宇")
 	}
 
 	return nil

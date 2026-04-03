@@ -103,14 +103,43 @@ func (s *infoPointService) List(ctx context.Context, req requests.InfoPointListR
 	if req.Name != "" {
 		query = query.Where("ops_info_points.name LIKE ?", "%"+req.Name+"%")
 	}
-	if req.WorkID != "" {
-		query = query.Where("ops_info_points.workstation_id = ?", req.WorkID)
+	// 优先使用新字段 workstationId，兼容旧字段 workId
+	workstationID := req.WorkstationID
+	if workstationID == "" {
+		workstationID = req.WorkID
 	}
-	if req.PointType != "" {
-		query = query.Where("ops_info_points.info_point_type = ?", req.PointType)
+	if workstationID != "" {
+		query = query.Where("ops_info_points.workstation_id = ?", workstationID)
+	}
+	// 优先使用新字段 infoPointType，兼容旧字段 pointType
+	infoPointType := req.InfoPointType
+	if infoPointType == "" {
+		infoPointType = req.PointType
+	}
+	if infoPointType != "" {
+		query = query.Where("ops_info_points.info_point_type = ?", infoPointType)
 	}
 	if req.HasStatus() {
 		query = query.Where("ops_info_points.status = ?", req.GetStatus(0))
+	}
+	// 通过关联工位、楼层、楼宇的 orgId 筛选部门（包含子部门）
+	// 信息点 → 工位 → 楼层 → 楼宇 → 部门
+	if req.OrgID != "" {
+		// 使用 EXISTS 子查询避免与现有 JOIN 冲突
+		// 查询该部门及其所有子部门：ancestors 包含该部门ID，或 ID 等于该部门ID
+		query = query.Where(`
+			EXISTS (
+				SELECT 1 FROM sys_workstation w
+				JOIN ops_floors f ON f.id = w.floor_id::uuid
+				JOIN ops_buildings b ON b.id = f.building_id::uuid
+				JOIN sys_dept d ON d.id::text = b.org_id
+				WHERE w.id::text = ops_info_points.workstation_id
+				AND (b.org_id = ? OR d.ancestors LIKE ? OR d.ancestors = ?)
+				AND w.deleted_at IS NULL
+				AND f.deleted_at IS NULL
+				AND b.deleted_at IS NULL
+			)
+		`, req.OrgID, "%,"+req.OrgID, req.OrgID)
 	}
 
 	// 分页 - 使用请求结构体的方法

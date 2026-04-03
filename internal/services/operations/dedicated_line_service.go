@@ -87,6 +87,15 @@ func (s *dedicatedLineService) List(ctx context.Context, req requests.DedicatedL
 	query := s.db.WithContext(ctx).Model(&operations.OpsDedicatedLine{})
 
 	// 添加筛选条件 - 类型安全，使用相关字段进行筛选
+	if req.Name != "" {
+		query = query.Where("name LIKE ?", "%"+req.Name+"%")
+	}
+	if req.LineType != "" {
+		query = query.Where("line_type = ?", req.LineType)
+	}
+	if req.ISP != "" {
+		query = query.Where("isp = ?", req.ISP)
+	}
 	if req.SourceRoomName != "" {
 		query = query.Where("source_room_name LIKE ?", "%"+req.SourceRoomName+"%")
 	}
