@@ -4,11 +4,14 @@ package requests
 type DedicatedLineListRequest struct {
 	PaginationParams  // 嵌入分页参数
 	StatusRequest     // 嵌入状态筛选
-	SourceRoomName      string `json:"sourceRoomName"`      // 源机房名称
-	DestRoomName        string `json:"destRoomName"`        // 目的机房名称
-	SourceDeviceName    string `json:"sourceDeviceName"`    // 源设备名称
-	DestDeviceName      string `json:"destDeviceName"`      // 目的设备名称
-	CarrierContactName  string `json:"carrierContactName"`  // 运营商联系人
+	Name               string `json:"name"`               // 专线名称
+	LineType           string `json:"lineType"`           // 专线类型
+	ISP                string `json:"isp"`                // 运营商
+	SourceRoomName     string `json:"sourceRoomName"`     // 源机房名称
+	DestRoomName       string `json:"destRoomName"`       // 目的机房名称
+	SourceDeviceName   string `json:"sourceDeviceName"`   // 源设备名称
+	DestDeviceName     string `json:"destDeviceName"`     // 目的设备名称
+	CarrierContactName string `json:"carrierContactName"` // 运营商联系人
 }
 
 // DedicatedLineBatchOperationRequest 专线批量操作请求

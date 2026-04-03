@@ -163,14 +163,14 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
 
     // 缩放控件
     const zoomControl = new BMapGL.ZoomControl({
-      anchor: window.BMAPGL_ANCHOR_BOTTOM_RIGHT ?? 0,
+      anchor: (window.BMAPGL_ANCHOR_BOTTOM_RIGHT as unknown as number) ?? 0,
       offset: new BMapGL.Size(20, 50),
     });
     map.addControl(zoomControl);
 
     // 比例尺控件
     const scaleControl = new BMapGL.ScaleControl({
-      anchor: window.BMAPGL_ANCHOR_BOTTOM_LEFT ?? 0,
+      anchor: (window.BMAPGL_ANCHOR_BOTTOM_LEFT as unknown as number) ?? 0,
       offset: new BMapGL.Size(80, 30),
     });
     map.addControl(scaleControl);
@@ -487,7 +487,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
   // ============ 全局函数 ============
 
   useEffect(() => {
-    window.viewBuildingDetailsGL = (buildingId: string) => {
+    (window as any).viewBuildingDetailsGL = (buildingId: string) => {
       const building = buildings.find((b) => b.id === buildingId);
       if (building) {
         navigateToBuilding({

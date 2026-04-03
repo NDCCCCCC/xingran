@@ -55,6 +55,9 @@ type Worker struct {
 	maxConcurrencyMu    sync.RWMutex
 	scaleCommandChan    chan scaleCommandWrapper
 
+	// Hybrid mode fields
+	taskSplitter        *executor.TaskSplitter
+
 	// Lifecycle
 	ctx              context.Context
 	cancel           context.CancelFunc
@@ -107,7 +110,7 @@ func (s WorkerState) String() string {
 // New create worker
 func New(cfg *config.Config) (*Worker, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-	log, err := logger.NewZapLogger(cfg.Logging.Level, cfg.Logging.Format, cfg.Logging.Output)
+	log, err := logger.NewLogger(cfg.Logging.Level, cfg.Logging.Format, cfg.Logging.Output)
 	if err != nil {
 		cancel()
 		return nil, fmt.Errorf("init logger failed: %w", err)
@@ -159,6 +162,19 @@ func (w *Worker) initComponents() error {
 		return fmt.Errorf("init browser pool failed: %w", err)
 	}
 	w.engine = executor.NewEngine(&w.config.Executor, &w.config.Worker, w.browserPool, w.progressReporter, w.logger, w.redisClient.GetClient())
+
+	// 初始化任务拆分器（混合模式）
+	if w.config.Worker.HybridMode.Enabled {
+		w.taskSplitter = executor.NewTaskSplitter(
+			w.redisClient.GetClient(),
+			w.config.Redis.StreamTasks,
+			w.config.Redis.StreamGroup,
+			&w.config.Worker.HybridMode,
+			w.logger,
+		)
+		w.logger.Info("task splitter initialized (hybrid mode enabled)")
+	}
+
 	w.logger.Info("worker components initialized")
 	return nil
 }
@@ -202,11 +218,19 @@ func (w *Worker) Start() error {
 func (w *Worker) Shutdown(ctx context.Context) error {
 	w.setState(StateShuttingDown)
 	w.logger.Info("worker shutting down...")
+
+	// Critical: Stop all active progress monitors before canceling context
+	// This prevents goroutine leaks
+	if w.taskSplitter != nil {
+		w.taskSplitter.StopAllMonitors()
+		w.logger.Info("all subtask progress monitors stopped")
+	}
+
 	w.cancel()
 	close(w.shutdownSignal)
 
 	// Wait a bit for scale commands to finish processing
-	time.Sleep(w.config.Worker.RetryCheckInterval)
+	time.Sleep(w.config.Worker.ShutdownTimeout)
 	close(w.scaleCommandChan)
 
 	done := make(chan struct{})
@@ -231,6 +255,13 @@ func (w *Worker) Shutdown(ctx context.Context) error {
 
 // register register worker
 func (w *Worker) register() error {
+	capabilities := []string{"chromium", "auto-scaling"}
+
+	// 声明混合模式能力
+	if w.config.Worker.HybridMode.Enabled {
+		capabilities = append(capabilities, "hybrid-mode")
+	}
+
 	req := &types.WorkerRegisterRequest{
 		WorkerID:      w.id,
 		Name:          w.name,
@@ -238,7 +269,7 @@ func (w *Worker) register() error {
 		Port:          8080,
 		MaxConcurrency: w.getMaxConcurrency(),
 		Version:       w.config.Worker.Version,
-		Capabilities:  []string{"chromium", "auto-scaling"},
+		Capabilities:  capabilities,
 	}
 	_, err := w.apiClient.Register(w.ctx, req)
 	if err != nil {
@@ -343,6 +374,12 @@ func (w *Worker) consumeLoop() {
 
 			go func(task *types.TaskMessage, msgID string) {
 				defer func() {
+					if r := recover(); r != nil {
+						w.logger.Error("task execution panic",
+							logger.String("panic", fmt.Sprintf("%v", r)),
+							logger.String("execution_id", task.ExecutionID))
+						w.tasksFailed++
+					}
 					w.currentTasksMu.Lock()
 					w.currentTasks--
 					w.currentTasksMu.Unlock()
@@ -362,6 +399,54 @@ func (w *Worker) executeTask(task *types.TaskMessage, messageID string) {
 	ctx, cancel := context.WithTimeout(w.ctx, w.config.Worker.TaskTimeout)
 	defer cancel()
 
+	// 检查是否正在关闭
+	select {
+	case <-ctx.Done():
+		w.logger.Warn("task cancelled due to shutdown",
+			logger.String("execution_id", task.ExecutionID))
+		w.tasksFailed++
+		return
+	default:
+	}
+
+	// 检查是否需要拆分任务
+	if w.taskSplitter != nil && w.taskSplitter.ShouldSplit(task) {
+		w.logger.Info("task requires splitting", logger.String("execution_id", task.ExecutionID))
+
+		splitResult, err := w.taskSplitter.SplitTask(ctx, task)
+		if err != nil {
+			w.tasksFailed++
+			w.logger.Error("task splitting failed", logger.Err(err))
+
+			// 报告失败
+			result := &types.ExecutionResult{
+				ExecutionID:  task.ExecutionID,
+				TaskID:       task.TaskID,
+				Status:       types.StatusFailed,
+				ErrorMessage: fmt.Sprintf("Task splitting failed: %v", err),
+				StartedAt:    time.Now(),
+				CompletedAt:  time.Now(),
+			}
+			w.progressReporter.ReportCompletion(ctx, result)
+		} else {
+			w.logger.Info("task split successfully",
+				logger.String("execution_id", task.ExecutionID),
+				logger.Int("subtask_count", splitResult.SubTaskCount))
+
+			// 父任务拆分成功，等待子任务完成
+			// 拆分器会自动处理进度聚合和最终结果上报
+
+			// 确认原始任务消息
+			if messageID != "" {
+				if err := w.redisClient.AckTask(ctx, messageID); err != nil {
+					w.logger.Error("ack parent task failed", logger.Err(err))
+				}
+			}
+		}
+		return
+	}
+
+	// 原有执行逻辑（不拆分的任务或子任务）
 	result, err := w.engine.Execute(ctx, task, w.id)
 	if err != nil {
 		w.tasksFailed++
@@ -509,7 +594,10 @@ func (w *Worker) scaleUp(targetConcurrency int, reason string) error {
 	}
 
 	// Apply maximum limit
-	maxAllowed := 50 // Maximum reasonable limit
+	maxAllowed := w.config.Worker.MaxScaleUpConcurrency
+	if maxAllowed == 0 {
+		maxAllowed = 50 // Fallback default
+	}
 	if targetConcurrency > maxAllowed {
 		targetConcurrency = maxAllowed
 	}
@@ -536,7 +624,10 @@ func (w *Worker) scaleDown(targetConcurrency int, reason string) error {
 	}
 
 	// Apply minimum limit
-	minAllowed := 1
+	minAllowed := w.config.Worker.MinScaleDownConcurrency
+	if minAllowed == 0 {
+		minAllowed = 1 // Fallback default
+	}
 	if targetConcurrency < minAllowed {
 		targetConcurrency = minAllowed
 	}
@@ -624,18 +715,18 @@ func (w *Worker) startHealthCheck() {
 	addr := fmt.Sprintf(":%d", w.config.Monitor.HealthPort)
 
 	if err := healthServer.Start(addr); err != nil {
-		w.logger.Error("健康检查服务器启动失败", logger.Err(err))
+		w.logger.Error("health check server start failed", logger.Err(err))
 		return
 	}
 
-	// 等待关闭信号
+	// Wait for shutdown signal
 	<-w.ctx.Done()
 
-	// 关闭服务器
+	// Shutdown server
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := healthServer.Shutdown(ctx); err != nil {
-		w.logger.Error("健康检查服务器关闭失败", logger.Err(err))
+		w.logger.Error("health check server shutdown failed", logger.Err(err))
 	}
 }
 

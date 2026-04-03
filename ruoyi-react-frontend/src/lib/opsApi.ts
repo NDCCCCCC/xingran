@@ -3,6 +3,7 @@
  */
 
 import { post, postFormData } from './api';
+import { getAccessToken } from '@/utils/authHelpers';
 import type {
   BaseResponse,
   Building,
@@ -209,7 +210,7 @@ export const infoPointApi = createCrudApi<InfoPoint>({ basePath: '/ops/infoPoint
 
 // 通用文件下载函数
 async function downloadFile(url: string, filename: string): Promise<void> {
-  const token = localStorage.getItem('accessToken');
+  const token = await getAccessToken();
   const response = await fetch(url, {
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -258,7 +259,7 @@ export const excelApi = {
   },
 
   export: async (entityType: string, params: Record<string, unknown> = {}) => {
-    const token = localStorage.getItem('accessToken');
+    const token = await getAccessToken();
     const response = await fetch(`/api/v1/ops/${entityType}/export`, {
       method: 'POST',
       headers: {

@@ -460,7 +460,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
 
   // 全局函数：查看楼宇详情
   useEffect(() => {
-    window.viewBuildingDetails = (buildingId: string) => {
+    (window as any).viewBuildingDetails = (buildingId: string) => {
       const building = buildings.find(b => b.id === buildingId);
       if (building) {
         // 转换 BuildingItem 为 Building 类型，补充缺失字段

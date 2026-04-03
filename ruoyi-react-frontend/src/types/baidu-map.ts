@@ -389,7 +389,7 @@ export function getBMap(): BMapNamespace | undefined {
  * 获取百度地图 GL 命名空间（3D版本）
  */
 export function getBMapGL(): BMapGLNamespace | undefined {
-  return window.BMapGL;
+  return window.BMapGL as unknown as BMapGLNamespace | undefined;
 }
 
 /**

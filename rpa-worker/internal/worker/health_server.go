@@ -10,14 +10,14 @@ import (
 	"github.com/ruoyi-next/rpa-worker/internal/logger"
 )
 
-// HealthServer 健康检查HTTP服务器
+// HealthServer HTTP health check server
 type HealthServer struct {
 	worker   *Worker
 	server   *http.Server
 	logger   logger.Logger
 }
 
-// HealthResponse 健康检查响应
+// HealthResponse Health check response
 type HealthResponse struct {
 	Status    string    `json:"status"`
 	WorkerID  string    `json:"worker_id"`
@@ -28,7 +28,7 @@ type HealthResponse struct {
 	Stats     WorkerStats `json:"stats"`
 }
 
-// WorkerStats Worker统计信息
+// WorkerStats Worker statistics
 type WorkerStats struct {
 	CurrentTasks  int `json:"current_tasks"`
 	MaxConcurrency int `json:"max_concurrency"`
@@ -37,7 +37,7 @@ type WorkerStats struct {
 	TasksFailed int64 `json:"tasks_failed"`
 }
 
-// NewHealthServer 创建健康检查服务器
+// NewHealthServer Create health check server
 func NewHealthServer(worker *Worker, logger logger.Logger) *HealthServer {
 	return &HealthServer{
 		worker: worker,
@@ -45,11 +45,11 @@ func NewHealthServer(worker *Worker, logger logger.Logger) *HealthServer {
 	}
 }
 
-// Start 启动健康检查服务器
+// Start Start health check server
 func (s *HealthServer) Start(addr string) error {
 	mux := http.NewServeMux()
 
-	// 健康检查端点
+	// Health check endpoints
 	mux.HandleFunc("/health", s.handleHealth)
 	mux.HandleFunc("/healthz", s.handleHealth)
 	mux.HandleFunc("/ready", s.handleReady)
@@ -60,18 +60,18 @@ func (s *HealthServer) Start(addr string) error {
 		Handler: mux,
 	}
 
-	s.logger.Info("健康检查服务器启动", logger.String("addr", addr))
+	s.logger.Info("health check server started", logger.String("addr", addr))
 
 	go func() {
 		if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			s.logger.Error("健康检查服务器错误", logger.Err(err))
+			s.logger.Error("health check server error", logger.Err(err))
 		}
 	}()
 
 	return nil
 }
 
-// Shutdown 关闭服务器
+// Shutdown Shutdown server
 func (s *HealthServer) Shutdown(ctx context.Context) error {
 	if s.server != nil {
 		return s.server.Shutdown(ctx)
@@ -79,7 +79,7 @@ func (s *HealthServer) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-// handleHealth 处理健康检查请求
+// handleHealth Handle health check request
 func (s *HealthServer) handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -106,7 +106,7 @@ func (s *HealthServer) handleHealth(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	// 检查状态是否健康
+	// Check if state is healthy
 	if state == StateError || state == StateOffline {
 		response.Status = "unhealthy"
 		w.WriteHeader(http.StatusServiceUnavailable)
@@ -115,7 +115,7 @@ func (s *HealthServer) handleHealth(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-// handleReady 处理就绪检查请求
+// handleReady Handle readiness check request
 func (s *HealthServer) handleReady(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -136,7 +136,7 @@ func (s *HealthServer) handleReady(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// handleMetrics 处理指标请求
+// handleMetrics Handle metrics request
 func (s *HealthServer) handleMetrics(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 

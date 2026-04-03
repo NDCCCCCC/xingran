@@ -2,6 +2,15 @@ package types
 
 import "time"
 
+// Task variable key constants
+const (
+	VariableIsSubTask          = "__isSubTask"
+	VariableParentExecutionID  = "__parentExecutionID"
+	VariableSubTaskIndex       = "__subTaskIndex"
+	VariableSessionData        = "__sessionData"
+	VariableCredentials        = "__credentials"
+)
+
 // Task 任务定义
 type Task struct {
 	ID          string        `json:"id"`
@@ -213,4 +222,38 @@ type ScaleEvent struct {
 	NewValue    int            `json:"newValue"`
 	Reason      string         `json:"reason"`
 	Timestamp   time.Time      `json:"timestamp"`
+}
+
+// ========== 混合模式相关类型 ==========
+
+// SubTaskMessage 子任务消息（继承 TaskMessage）
+type SubTaskMessage struct {
+	*TaskMessage                      // 嵌入原始任务消息
+	ParentExecutionID string                 `json:"parentExecutionId"` // 父任务执行ID
+	SubTaskIndex      int                    `json:"subTaskIndex"`      // 子任务索引
+	SubTaskTotal      int                    `json:"subTaskTotal"`      // 子任务总数
+	LoopItemVar       string                 `json:"loopItemVar"`       // 循环项变量名
+	LoopItemData      map[string]interface{} `json:"loopItemData"`      // 循环项数据
+}
+
+// SubTaskResult 子任务执行结果（用于进度聚合）
+type SubTaskResult struct {
+	SubTaskIndex int             `json:"subTaskIndex"`
+	Status       ExecutionStatus `json:"status"`
+	ErrorMessage string          `json:"errorMessage,omitempty"`
+	StartedAt    time.Time       `json:"startedAt"`
+	CompletedAt  time.Time       `json:"completedAt"`
+	Data         map[string]interface{} `json:"data,omitempty"`
+}
+
+// ProgressAggregateMessage 进度聚合消息
+type ProgressAggregateMessage struct {
+	ParentExecutionID string          `json:"parentExecutionId"`
+	CompletedCount    int             `json:"completedCount"`
+	TotalCount        int             `json:"totalCount"`
+	SuccessCount      int             `json:"successCount"`
+	FailureCount      int             `json:"failureCount"`
+	Status            ExecutionStatus `json:"status"`
+	SubTaskResults    []SubTaskResult `json:"subTaskResults,omitempty"`
+	Timestamp         time.Time       `json:"timestamp"`
 }

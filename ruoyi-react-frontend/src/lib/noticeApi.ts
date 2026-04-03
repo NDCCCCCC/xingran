@@ -10,6 +10,10 @@ import type {
   PageResponse,
 } from '@/types/notice';
 import type { BaseResponse } from '@/types';
+import { SecureTokenStorageImpl } from '@/utils/token/SecureTokenStorageImpl';
+
+// 单例 token 存储，用于 WebSocket 连接同步获取 token
+const tokenStorage = new SecureTokenStorageImpl();
 
 // ==================== 管理端通知 API ====================
 
@@ -144,8 +148,8 @@ export function getNotificationList(params: { current?: number; pageSize?: numbe
 export function buildWebSocketUrl(): string {
   const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://10.62.10.33:9000/api/v1';
   const wsURL = baseURL.replace(/^http/, 'ws');
-  const token = localStorage.getItem('accessToken');
+  const token = tokenStorage.getAccessToken();
 
   // 通过 query 参数传递 token
-  return `${wsURL}/system/ws/notices?token=${token}`;
+  return `${wsURL}/system/ws/notices?token=${token || ''}`;
 }

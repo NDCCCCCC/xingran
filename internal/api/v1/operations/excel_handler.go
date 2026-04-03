@@ -89,25 +89,15 @@ func importData(entityType string, core *core.Core) gin.HandlerFunc {
 // exportData 导出数据
 func exportData(entityType string, core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var req ExportRequest
+		// 支持动态参数接收，向后兼容旧格式
+		var req map[string]interface{}
 		if err := c.ShouldBindJSON(&req); err != nil {
 			response.Error(c, response.ErrBadRequest, "请求参数错误")
 			return
 		}
 
-		params := make(map[string]interface{})
-		if req.Name != "" {
-			params["name"] = req.Name
-		}
-		if req.Code != "" {
-			params["code"] = req.Code
-		}
-		if req.Status != nil {
-			params["status"] = req.Status
-		}
-
 		excelService := getExcelService(core)
-		file, err := excelService.ExportData(c.Request.Context(), entityType, params)
+		file, err := excelService.ExportData(c.Request.Context(), entityType, req)
 		if err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
@@ -118,13 +108,6 @@ func exportData(entityType string, core *core.Core) gin.HandlerFunc {
 			response.Error(c, response.ErrServerError, err.Error())
 		}
 	}
-}
-
-// ExportRequest 导出请求
-type ExportRequest struct {
-	Name   string `json:"name"`
-	Code   string `json:"code"`
-	Status *int   `json:"status"`
 }
 
 // downloadTemplate 下载模板
@@ -255,10 +238,10 @@ func GetEntityStatusOptions(entityType string) gin.HandlerFunc {
 			}
 		case "roomDevice":
 			options = []map[string]interface{}{
-				{"value": int(operations.RoomDeviceStatusNormal), "label": "正常"},
-				{"value": int(operations.RoomDeviceStatusFault), "label": "故障"},
-				{"value": int(operations.RoomDeviceStatusScrapped), "label": "报废"},
-			}
+			{"value": 0, "label": "正常"},
+			{"value": 1, "label": "故障"},
+			{"value": 2, "label": "报废"},
+		}
 		case "dedicatedLine":
 			options = []map[string]interface{}{
 				{"value": int(operations.LineStatusNormal), "label": "正常"},
