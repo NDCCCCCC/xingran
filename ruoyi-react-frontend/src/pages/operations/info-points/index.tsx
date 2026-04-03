@@ -21,6 +21,7 @@ import { usePagination } from '@/hooks/usePagination';
 import { useSidebarDeptFilter } from '@/hooks/useSidebarDeptFilter';
 import { handleApiError, handleSuccess, isFormValidationError } from '@/utils/errorHandler';
 import { createDateTimeColumn } from '@/utils/tableHelpers';
+import { fetchInfoPointStatistics } from '@/utils/statisticsHelper';
 import ActionButtons from '@/components/shared/ActionButtons';
 import ExcelImport from '@/components/shared/ExcelImport';
 import ExcelExport from '@/components/shared/ExcelExport';
@@ -77,6 +78,7 @@ const InfoPointManagement: FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [importVisible, setImportVisible] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
+  const [exportFilters, setExportFilters] = useState<Record<string, unknown>>({});
   const [workstationOptions, setWorkstationOptions] = useState<WorkstationOption[]>([]);
   const [infoPointTypeDict, setInfoPointTypeDict] = useState<DictData[]>([]);
   const [networkDevices, setNetworkDevices] = useState<NetworkDeviceOption[]>([]);
@@ -119,14 +121,7 @@ const InfoPointManagement: FC = () => {
 
   const loadStatistics = useCallback(async (): Promise<Statistics> => {
     try {
-      const result = await infoPointApi.list({ current: 1, pageSize: 1000 });
-      const allInfoPoints = result.data?.list || [];
-      return {
-        total: allInfoPoints.length,
-        normal: allInfoPoints.filter((i: InfoPoint) => i.status === 0).length,
-        fault: allInfoPoints.filter((i: InfoPoint) => i.status === 1).length,
-        disabled: allInfoPoints.filter((i: InfoPoint) => i.status === 2).length,
-      };
+      return await fetchInfoPointStatistics();
     } catch (error) {
       handleApiError(error, '加载统计数据', false);
       return { total: 0, normal: 0, fault: 0, disabled: 0 };
@@ -297,7 +292,8 @@ const InfoPointManagement: FC = () => {
   useEffect(() => {
     loadInfoPoints();
     setWorkstationOptions([]);
-  }, [selectedDeptId, loadInfoPoints]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDeptId]);
 
   const handleSave = async () => {
     try {
@@ -632,7 +628,18 @@ const InfoPointManagement: FC = () => {
                 <Radio.Button value="table"><TableOutlined /> 表格</Radio.Button><Radio.Button value="card"><AppstoreOutlined /> 卡片</Radio.Button>
               </Radio.Group>
               <Button icon={<ImportOutlined />} onClick={() => setImportVisible(true)}>导入</Button>
-              <Button icon={<ExportOutlined />} onClick={() => setExportVisible(true)}>导出</Button>
+              <Button icon={<ExportOutlined />} onClick={() => {
+                const values = searchForm.getFieldsValue() as Record<string, unknown>;
+                const currentFilters: Record<string, unknown> = {};
+                Object.keys(values).forEach(key => {
+                  const value = values[key];
+                  if (value !== undefined && value !== null && value !== '') {
+                    currentFilters[key] = value;
+                  }
+                });
+                setExportFilters(currentFilters);
+                setExportVisible(true);
+              }}>导出</Button>
               {selectedRowKeys.length > 0 && <Button icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }} onClick={handleBatchDelete}>批量删除 ({selectedRowKeys.length})</Button>}
               <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>新增信息点</Button>
             </Space>
@@ -726,7 +733,7 @@ const InfoPointManagement: FC = () => {
           </Form>
         </Modal>
         <ExcelImport entityType="infoPoint" entityName="信息点" visible={importVisible} onClose={() => setImportVisible(false)} onImportSuccess={handleImportSuccess} />
-        <ExcelExport entityType="infoPoint" entityName="信息点" visible={exportVisible} onClose={() => setExportVisible(false)} />
+        <ExcelExport entityType="infoPoint" entityName="信息点" visible={exportVisible} onClose={() => setExportVisible(false)} filters={exportFilters} />
       </Content>
     </Layout>
   );

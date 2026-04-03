@@ -18,6 +18,7 @@ import { usePagination } from '@/hooks/usePagination';
 import { handleApiError, handleSuccess } from '@/utils/errorHandler';
 import { isFormValidationError } from '@/utils/errorHandler';
 import { createStatusColumn, createDateTimeColumn } from '@/utils/tableHelpers';
+import { fetchBuildingStatistics } from '@/utils/statisticsHelper';
 import ActionButtons from '@/components/shared/ActionButtons';
 import ExcelImport from '@/components/shared/ExcelImport';
 import ExcelExport from '@/components/shared/ExcelExport';
@@ -43,6 +44,7 @@ const BuildingManagement: FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [importVisible, setImportVisible] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
+  const [exportFilters, setExportFilters] = useState<Record<string, unknown>>({});
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
@@ -71,14 +73,8 @@ const BuildingManagement: FC = () => {
 
   const loadStatistics = useCallback(async (searchParams: Record<string, unknown> = {}) => {
     try {
-      // 获取当前筛选条件下的所有数据，使用大pageSize确保获取完整数据
-      const result = await buildingApi.list({ current: 1, pageSize: 100000, ...searchParams }) as { data?: { list: Record<string, unknown>[] } };
-      const allBuildings = result.data?.list || [];
-      setStatistics({
-        total: allBuildings.length,
-        active: allBuildings.filter((b: Record<string, unknown>) => b.status === 0).length,
-        inactive: allBuildings.filter((b: Record<string, unknown>) => b.status === 1).length,
-      });
+      const stats = await fetchBuildingStatistics(searchParams);
+      setStatistics(stats);
     } catch (error) { handleApiError(error, '加载统计数据', false); }
   }, []);
 
@@ -135,7 +131,8 @@ const BuildingManagement: FC = () => {
     }
     loadBuildings(searchParams);
     loadStatistics(searchParams);
-  }, [selectedDeptId, loadBuildings, loadStatistics]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDeptId]);
 
   // 初始加载和分页变化处理
   useEffect(() => {
@@ -408,7 +405,22 @@ const BuildingManagement: FC = () => {
               <Radio.Button value="table"><TableOutlined /> 表格</Radio.Button><Radio.Button value="card"><AppstoreOutlined /> 卡片</Radio.Button>
             </Radio.Group>
             <Button icon={<ImportOutlined />} onClick={() => setImportVisible(true)}>导入</Button>
-            <Button icon={<ExportOutlined />} onClick={() => setExportVisible(true)}>导出</Button>
+            <Button icon={<ExportOutlined />} onClick={() => {
+              // 获取当前筛选条件
+              const values = searchForm.getFieldsValue() as Record<string, unknown>;
+              const currentFilters: Record<string, unknown> = {};
+              Object.keys(values).forEach(key => {
+                const value = values[key];
+                if (value !== undefined && value !== null && value !== '') {
+                  currentFilters[key] = value;
+                }
+              });
+              if (selectedDeptId) {
+                currentFilters.orgId = selectedDeptId;
+              }
+              setExportFilters(currentFilters);
+              setExportVisible(true);
+            }}>导出</Button>
             {selectedRowKeys.length > 0 && <Button icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }} onClick={handleBatchDelete}>批量删除 ({selectedRowKeys.length})</Button>}
             <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>新增楼宇</Button>
           </Space>
@@ -509,7 +521,7 @@ const BuildingManagement: FC = () => {
         </Form>
       </Modal>
       <ExcelImport entityType="building" entityName="楼宇" visible={importVisible} onClose={() => setImportVisible(false)} onImportSuccess={handleImportSuccess} />
-      <ExcelExport entityType="building" entityName="楼宇" visible={exportVisible} onClose={() => setExportVisible(false)} />
+      <ExcelExport entityType="building" entityName="楼宇" visible={exportVisible} onClose={() => setExportVisible(false)} filters={exportFilters} />
         </div>
       </Content>
     </Layout>

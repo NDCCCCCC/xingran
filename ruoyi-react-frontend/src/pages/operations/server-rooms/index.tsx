@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 机房管理页面
  */
 
@@ -21,6 +21,7 @@ import { usePagination } from '@/hooks/usePagination';
 import { useSidebarDeptFilter } from '@/hooks/useSidebarDeptFilter';
 import { handleApiError, handleSuccess, isFormValidationError } from '@/utils/errorHandler';
 import { createStatusColumn, createDateTimeColumn } from '@/utils/tableHelpers';
+import { fetchServerRoomStatistics } from '@/utils/statisticsHelper';
 import ActionButtons from '@/components/shared/ActionButtons';
 import ExcelImport from '@/components/shared/ExcelImport';
 import ExcelExport from '@/components/shared/ExcelExport';
@@ -55,6 +56,7 @@ const ServerRoomManagement: FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [importVisible, setImportVisible] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
+  const [exportFilters, setExportFilters] = useState<Record<string, unknown>>({});
   const [buildingOptions, setBuildingOptions] = useState<BuildingOption[]>([]);
   const [floorOptions, setFloorOptions] = useState<FloorOption[]>([]);
   const [statistics, setStatistics] = useState<Statistics>({ total: 0, active: 0, inactive: 0 });
@@ -100,13 +102,7 @@ const ServerRoomManagement: FC = () => {
 
   const loadStatistics = useCallback(async (): Promise<Statistics> => {
     try {
-      const result = await serverRoomApi.list({ current: 1, pageSize: 1000 });
-      const allRooms = result.data?.list || [];
-      return {
-        total: allRooms.length,
-        active: allRooms.filter((r: ServerRoom) => r.status === 0).length,
-        inactive: allRooms.filter((r: ServerRoom) => r.status === 1).length,
-      };
+      return await fetchServerRoomStatistics();
     } catch (error) {
       handleApiError(error, '加载统计数据', false);
       return { total: 0, active: 0, inactive: 0 };
@@ -199,8 +195,8 @@ const ServerRoomManagement: FC = () => {
 
   // 创建 handleDeptSelect 函数供 DeptSidebar 使用
   const handleDeptSelect = useCallback(
-    (selectedKeys: unknown[], info: { selected: boolean; node: { key?: string } }) => {
-      const deptId = (info.node.key as string) || '';
+    (selectedKeys: any[], info: { selected: boolean; node: { key?: any } }) => {
+      const deptId = String(info.node.key || '');
       selectedDeptIdRef.current = deptId;
       setSelectedDeptId(deptId);
     },
@@ -406,7 +402,19 @@ const ServerRoomManagement: FC = () => {
                 <Radio.Button value="card"><AppstoreOutlined /> 卡片</Radio.Button>
               </Radio.Group>
               <Button icon={<ImportOutlined />} onClick={() => setImportVisible(true)}>导入</Button>
-              <Button icon={<ExportOutlined />} onClick={() => setExportVisible(true)}>导出</Button>
+              <Button icon={<ExportOutlined />} onClick={() => {
+                // 获取当前筛选条件
+                const values = searchForm.getFieldsValue() as Record<string, unknown>;
+                const currentFilters: Record<string, unknown> = {};
+                Object.keys(values).forEach(key => {
+                  const value = values[key];
+                  if (value !== undefined && value !== null && value !== '') {
+                    currentFilters[key] = value;
+                  }
+                });
+                setExportFilters(currentFilters);
+                setExportVisible(true);
+              }}>导出</Button>
               {selectedRowKeys.length > 0 && <Button icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }} onClick={handleBatchDelete}>批量删除 ({selectedRowKeys.length})</Button>}
               <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>新增机房</Button>
             </Space>
@@ -451,7 +459,7 @@ const ServerRoomManagement: FC = () => {
           </Form>
         </Modal>
         <ExcelImport entityType="serverRoom" entityName="机房" visible={importVisible} onClose={() => setImportVisible(false)} onImportSuccess={handleImportSuccess} />
-        <ExcelExport entityType="serverRoom" entityName="机房" visible={exportVisible} onClose={() => setExportVisible(false)} />
+        <ExcelExport entityType="serverRoom" entityName="机房" visible={exportVisible} onClose={() => setExportVisible(false)} filters={exportFilters} />
       </Content>
     </Layout>
   );

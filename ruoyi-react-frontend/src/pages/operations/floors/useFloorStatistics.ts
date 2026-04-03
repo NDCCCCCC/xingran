@@ -3,8 +3,8 @@
  */
 
 import { useState, useCallback } from 'react';
-import { floorApi } from '@/lib/opsApi';
 import { handleApiError } from '@/utils/errorHandler';
+import { fetchFloorStatistics } from '@/utils/statisticsHelper';
 
 interface FloorStatistics {
   total: number;
@@ -21,14 +21,8 @@ export function useFloorStatistics() {
 
   const loadStatistics = useCallback(async () => {
     try {
-      const result = await floorApi.list({ current: 1, pageSize: 1000 });
-      const allFloors = result.data?.list || [];
-
-      setStatistics({
-        total: allFloors.length,
-        active: allFloors.filter((f) => f.status === 0).length,
-        inactive: allFloors.filter((f) => f.status === 1).length,
-      });
+      const stats = await fetchFloorStatistics();
+      setStatistics(stats);
     } catch (error) {
       handleApiError(error, '加载统计数据', false);
     }

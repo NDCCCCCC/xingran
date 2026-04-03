@@ -107,10 +107,20 @@ export function useTableManager<T>(
   }, [current, pageSize]);
 
   const handleSearch = useCallback(() => {
-    searchForm.validateFields().then((values) => {
-      setCurrent(1);
-      loadData(values);
-    });
+    // 使用 getFieldsValue 获取所有字段值（包括没有验证规则的字段）
+    const values = searchForm.getFieldsValue();
+
+    // 过滤掉空值、undefined、null
+    const filteredValues = Object.keys(values).reduce((acc, key) => {
+      const value = values[key];
+      if (value !== undefined && value !== null && value !== '') {
+        acc[key] = value;
+      }
+      return acc;
+    }, {} as Record<string, unknown>);
+
+    setCurrent(1);
+    loadData(filteredValues);
   }, [searchForm, setCurrent, loadData]);
 
   const handleReset = useCallback(() => {

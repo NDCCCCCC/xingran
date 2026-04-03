@@ -1,62 +1,53 @@
 /**
  * Excel导出组件
- * 支持导出条件筛选、数据导出
+ * 直接导出当前筛选条件的数据
  */
 
 import { useState, useCallback } from 'react';
 import type { FC } from 'react';
 import {
   Button,
-  Form,
-  Input,
-  Select,
   Space,
   Modal,
   message,
+  Alert,
+  Descriptions,
 } from 'antd';
 import { ExportOutlined } from '@ant-design/icons';
-
-const { Option } = Select;
-
-export interface ExportFilter {
-  name?: string;
-  code?: string;
-  status?: number;
-}
+import { getAccessToken } from '@/utils/authHelpers';
 
 export interface ExcelExportProps {
   entityType: string;
   entityName?: string;
   exportUrl?: string;
-  statusOptions?: { value: number; label: string }[];
   visible?: boolean;
   onClose?: () => void;
+  // 接收页面当前筛选参数
+  filters?: Record<string, any>;
 }
 
 const ExcelExport: FC<ExcelExportProps> = ({
   entityType,
   entityName = entityType,
   exportUrl = `/api/v1/ops/${entityType}/export`,
-  statusOptions,
   visible = false,
   onClose,
+  filters = {},
 }) => {
-  const [form] = Form.useForm();
   const [exporting, setExporting] = useState(false);
 
   const handleExport = useCallback(async () => {
-    const values = await form.validateFields();
     setExporting(true);
 
     try {
-      const token = localStorage.getItem('accessToken');
+      const token = await getAccessToken();
       const response = await fetch(exportUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(values),
+        body: JSON.stringify(filters),
       });
 
       if (!response.ok) {
@@ -67,18 +58,13 @@ const ExcelExport: FC<ExcelExportProps> = ({
       await downloadFile(response, filename);
 
       message.success('导出成功');
-      form.resetFields();
       onClose?.();
     } catch (error) {
       message.error('导出失败');
     } finally {
       setExporting(false);
     }
-  }, [form, exportUrl, entityName, onClose]);
-
-  const handleReset = useCallback(() => {
-    form.resetFields();
-  }, [form]);
+  }, [exportUrl, entityName, onClose, filters]);
 
   return (
     <Modal
@@ -87,49 +73,48 @@ const ExcelExport: FC<ExcelExportProps> = ({
       onCancel={onClose}
       footer={
         <Space>
-          <Button onClick={onClose}>取消</Button>
-          <Button onClick={handleReset}>重置</Button>
+          <Button onClick={onClose} disabled={exporting}>取消</Button>
           <Button
             type="primary"
             icon={<ExportOutlined />}
             onClick={handleExport}
             loading={exporting}
           >
-            导出
+            立即导出
           </Button>
         </Space>
       }
-      destroyOnHidden
     >
-      <Form
-        form={form}
-        layout="vertical"
-        initialValues={{ status: undefined }}
-      >
-        <Form.Item label="名称" name="name">
-          <Input placeholder="请输入名称关键词（可选）" allowClear />
-        </Form.Item>
+      {Object.keys(filters).length > 0 ? (
+        <Alert
+          message="将导出以下筛选条件的数据"
+          description={
+            <Descriptions size="small" column={1} bordered>
+              {Object.entries(filters).map(([key, value]) => {
+                if (value === undefined || value === null || value === '') return null;
+                return (
+                  <Descriptions.Item key={key} label={getFilterLabel(key)}>
+                    {formatFilterValue(key, value)}
+                  </Descriptions.Item>
+                );
+              })}
+            </Descriptions>
+          }
+          type="info"
+          showIcon
+        />
+      ) : (
+        <Alert
+          message="将导出全部数据"
+          description="当前页面没有设置任何筛选条件，将导出所有数据。"
+          type="warning"
+          showIcon
+        />
+      )}
 
-        <Form.Item label="编码" name="code">
-          <Input placeholder="请输入编码关键词（可选）" allowClear />
-        </Form.Item>
-
-        {statusOptions && statusOptions.length > 0 && (
-          <Form.Item label="状态" name="status">
-            <Select placeholder="请选择状态（可选）" allowClear>
-              {statusOptions.map(option => (
-                <Option key={option.value} value={option.value}>
-                  {option.label}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-        )}
-      </Form>
-
-      <div style={{ marginTop: 16, padding: 12, background: '#f5f5f5', borderRadius: 4 }}>
+      <div style={{ marginTop: 16, padding: 12, background: '#f0f7ff', borderRadius: 4 }}>
         <Space orientation="vertical" size={4}>
-          <div>• 不填写任何条件将导出所有数据</div>
+          <div>• 点击"立即导出"按钮即可下载数据</div>
           <div>• 导出文件为 .xlsx 格式</div>
           <div>• 大量数据导出可能需要较长时间，请耐心等待</div>
         </Space>
@@ -137,6 +122,55 @@ const ExcelExport: FC<ExcelExportProps> = ({
     </Modal>
   );
 };
+
+function getFilterLabel(key: string): string {
+  const labels: Record<string, string> = {
+    name: '名称',
+    code: '编码',
+    status: '状态',
+    orgId: '所属机构',
+    buildingId: '所属楼宇',
+    floorId: '所属楼层',
+    deptId: '所属部门',
+    userId: '所属人员',
+    level: '层级',
+    workstationType: '工位类型',
+    roomCode: '机房编码',
+    isp: '运营商',
+  };
+  return labels[key] || key;
+}
+
+function formatFilterValue(key: string, value: any): string {
+  if (value === undefined || value === null || value === '') {
+    return '-';
+  }
+
+  // 状态值格式化
+  if (key === 'status') {
+    const statusMap: Record<number, string> = {
+      0: '正常',
+      1: '停用',
+      2: '故障',
+    };
+    if (typeof value === 'number') {
+      return statusMap[value] ?? String(value);
+    }
+  }
+
+  // 层级格式化
+  if (key === 'level') {
+    const levelMap: Record<number, string> = {
+      1: '城市级汇总',
+      2: '具体楼宇',
+    };
+    if (typeof value === 'number') {
+      return levelMap[value] ?? String(value);
+    }
+  }
+
+  return String(value);
+}
 
 function extractFilename(contentDisposition: string | null, entityName: string): string {
   if (!contentDisposition) {

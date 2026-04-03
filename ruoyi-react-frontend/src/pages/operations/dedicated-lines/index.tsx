@@ -21,6 +21,7 @@ import { usePagination } from '@/hooks/usePagination';
 import { useSidebarDeptFilter } from '@/hooks/useSidebarDeptFilter';
 import { handleApiError, handleSuccess, isFormValidationError } from '@/utils/errorHandler';
 import { createDateTimeColumn } from '@/utils/tableHelpers';
+import { fetchDedicatedLineStatistics } from '@/utils/statisticsHelper';
 import ActionButtons from '@/components/shared/ActionButtons';
 import ExcelImport from '@/components/shared/ExcelImport';
 import ExcelExport from '@/components/shared/ExcelExport';
@@ -51,6 +52,7 @@ const DedicatedLineManagement: FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [importVisible, setImportVisible] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
+  const [exportFilters, setExportFilters] = useState<Record<string, unknown>>({});
   const [serverRooms, setServerRooms] = useState<ServerRoomOption[]>([]);
   const [lineTypeDict, setLineTypeDict] = useState<DictData[]>([]);
   const [ispDict, setIspDict] = useState<DictData[]>([]);
@@ -118,14 +120,7 @@ const DedicatedLineManagement: FC = () => {
 
   const loadStatistics = useCallback(async (): Promise<Statistics> => {
     try {
-      const result = await dedicatedLineApi.list({ current: 1, pageSize: 1000 }) as { data?: { list: DedicatedLine[] } };
-      const allLines = result.data?.list || [];
-      return {
-        total: allLines.length,
-        normal: allLines.filter((l: DedicatedLine) => l.status === 0).length,
-        fault: allLines.filter((l: DedicatedLine) => l.status === 1).length,
-        disabled: allLines.filter((l: DedicatedLine) => l.status === 2).length,
-      };
+      return await fetchDedicatedLineStatistics();
     } catch (error) {
       handleApiError(error, '加载统计数据', false);
       return { total: 0, normal: 0, fault: 0, disabled: 0 };
@@ -149,7 +144,8 @@ const DedicatedLineManagement: FC = () => {
   useEffect(() => {
     loadLines();
     loadServerRooms(selectedDeptId || undefined);
-  }, [selectedDeptId, loadLines, loadServerRooms]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDeptId]);
 
   const handleSave = async () => {
     try {
@@ -377,7 +373,18 @@ const DedicatedLineManagement: FC = () => {
                 <Radio.Button value="card"><AppstoreOutlined /> 卡片</Radio.Button>
               </Radio.Group>
               <Button icon={<ImportOutlined />} onClick={() => setImportVisible(true)}>导入</Button>
-              <Button icon={<ExportOutlined />} onClick={() => setExportVisible(true)}>导出</Button>
+              <Button icon={<ExportOutlined />} onClick={() => {
+                const values = searchForm.getFieldsValue() as Record<string, unknown>;
+                const currentFilters: Record<string, unknown> = {};
+                Object.keys(values).forEach(key => {
+                  const value = values[key];
+                  if (value !== undefined && value !== null && value !== '') {
+                    currentFilters[key] = value;
+                  }
+                });
+                setExportFilters(currentFilters);
+                setExportVisible(true);
+              }}>导出</Button>
               {selectedRowKeys.length > 0 && <Button icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }} onClick={handleBatchDelete}>批量删除 ({selectedRowKeys.length})</Button>}
               <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>新增专线</Button>
             </Space>
@@ -512,7 +519,7 @@ const DedicatedLineManagement: FC = () => {
           </Form>
         </Modal>
         <ExcelImport entityType="dedicatedLine" entityName="专线" visible={importVisible} onClose={() => setImportVisible(false)} onImportSuccess={handleImportSuccess} />
-        <ExcelExport entityType="dedicatedLine" entityName="专线" visible={exportVisible} onClose={() => setExportVisible(false)} />
+        <ExcelExport entityType="dedicatedLine" entityName="专线" visible={exportVisible} onClose={() => setExportVisible(false)} filters={exportFilters} />
       </Content>
     </Layout>
   );

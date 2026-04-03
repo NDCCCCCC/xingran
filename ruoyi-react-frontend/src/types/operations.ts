@@ -108,15 +108,7 @@ export interface RoomPhoto {
   createdAt: string;
 }
 
-export type RoomDeviceType =
-  | 'server'
-  | 'storage'
-  | 'ups'
-  | 'pdu'
-  | 'firewall'
-  | 'kvm'
-  | 'cabinet'
-  | 'other';
+export type RoomDeviceType = string;
 
 export type RoomDeviceStatus = 0 | 1 | 2;
 

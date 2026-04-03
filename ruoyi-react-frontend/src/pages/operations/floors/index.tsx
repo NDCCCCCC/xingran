@@ -39,6 +39,7 @@ const FloorManagement: FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [importVisible, setImportVisible] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
+  const [exportFilters, setExportFilters] = useState<Record<string, unknown>>({});
 
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
   const { buildingOptions, loadBuildingOptions } = useBuildingOptions();
@@ -126,7 +127,8 @@ const FloorManagement: FC = () => {
 
   useEffect(() => {
     loadFloors();
-  }, [selectedDeptId, loadFloors]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDeptId]);
 
   const handleSave = useCallback(async () => {
     try {
@@ -473,7 +475,19 @@ const FloorManagement: FC = () => {
           onRefresh={handleRefresh}
           onViewModeChange={setViewMode}
           onImport={() => setImportVisible(true)}
-          onExport={() => setExportVisible(true)}
+          onExport={() => {
+            // 获取当前筛选条件
+            const values = searchForm.getFieldsValue() as Record<string, unknown>;
+            const currentFilters: Record<string, unknown> = {};
+            Object.keys(values).forEach(key => {
+              const value = values[key];
+              if (value !== undefined && value !== null && value !== '') {
+                currentFilters[key] = value;
+              }
+            });
+            setExportFilters(currentFilters);
+            setExportVisible(true);
+          }}
           onBatchDelete={handleBatchDelete}
           onAdd={() => openModal()}
           onBuildingChange={handleFilterBuildingChange}
@@ -552,6 +566,7 @@ const FloorManagement: FC = () => {
           entityName="楼层"
           visible={exportVisible}
           onClose={() => setExportVisible(false)}
+          filters={exportFilters}
         />
       </Content>
     </Layout>

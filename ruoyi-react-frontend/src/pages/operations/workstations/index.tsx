@@ -58,6 +58,7 @@ const WorkstationManagement: FC = () => {
   });
   const [importVisible, setImportVisible] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
+  const [exportFilters, setExportFilters] = useState<Record<string, unknown>>({});
   const [floorOptions, setFloorOptions] = useState<FloorOption[]>([]);
   const [deptTreeData, setDeptTreeData] = useState<DeptTreeNode[]>([]);
   const [userOptions, setUserOptions] = useState<UserOption[]>([]);
@@ -147,7 +148,8 @@ const WorkstationManagement: FC = () => {
     if (selectedDeptId) {
       loadFloorOptions(selectedDeptId);
     }
-  }, [selectedDeptId, loadWorkstations, loadStatisticsFromHook, loadFloorOptions]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDeptId]);
 
   const handleSuccess = useCallback(() => {
     refreshData();
@@ -209,17 +211,13 @@ const WorkstationManagement: FC = () => {
 
     try {
       if (selectedOptions.length === 1) {
+        // 加载楼层（第二级）
         const buildingId = targetOption.value;
         const floors = await loadFloorsForCascader(buildingId);
-        const optionIndex = cascaderOptions.findIndex(opt => opt.value === buildingId);
-        if (optionIndex !== -1) {
-          const updatedOptions = [...cascaderOptions];
-          updatedOptions[optionIndex] = {
-            ...updatedOptions[optionIndex],
-            children: floors,
-          };
-          setCascaderOptions(updatedOptions);
-        }
+        // 直接修改 targetOption 的 children 属性
+        targetOption.children = floors;
+        // 触发重新渲染
+        setCascaderOptions([...cascaderOptions]);
       }
     } finally {
       setLoadingCascader(false);
@@ -438,7 +436,19 @@ const WorkstationManagement: FC = () => {
               <Button icon={<ImportOutlined />} onClick={() => setImportVisible(true)}>
                 导入
               </Button>
-              <Button icon={<ExportOutlined />} onClick={() => setExportVisible(true)}>
+              <Button icon={<ExportOutlined />} onClick={() => {
+                // 获取当前筛选条件
+                const values = searchForm.getFieldsValue() as Record<string, unknown>;
+                const currentFilters: Record<string, unknown> = {};
+                Object.keys(values).forEach(key => {
+                  const value = values[key];
+                  if (value !== undefined && value !== null && value !== '') {
+                    currentFilters[key] = value;
+                  }
+                });
+                setExportFilters(currentFilters);
+                setExportVisible(true);
+              }}>
                 导出
               </Button>
               {selectedRowKeys.length > 0 && (
@@ -534,6 +544,7 @@ const WorkstationManagement: FC = () => {
           entityName="工位"
           visible={exportVisible}
           onClose={() => setExportVisible(false)}
+          filters={exportFilters}
         />
       </Content>
     </Layout>

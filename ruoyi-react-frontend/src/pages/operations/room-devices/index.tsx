@@ -21,6 +21,7 @@ import { usePagination } from '@/hooks/usePagination';
 import { useSidebarDeptFilter } from '@/hooks/useSidebarDeptFilter';
 import { handleApiError, handleSuccess, isFormValidationError } from '@/utils/errorHandler';
 import { createDateTimeColumn } from '@/utils/tableHelpers';
+import { fetchRoomDeviceStatistics } from '@/utils/statisticsHelper';
 import ActionButtons from '@/components/shared/ActionButtons';
 import ExcelImport from '@/components/shared/ExcelImport';
 import ExcelExport from '@/components/shared/ExcelExport';
@@ -51,6 +52,7 @@ const RoomDeviceManagement: FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [importVisible, setImportVisible] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
+  const [exportFilters, setExportFilters] = useState<Record<string, unknown>>({});
   const [roomOptions, setRoomOptions] = useState<RoomOption[]>([]);
   const [statistics, setStatistics] = useState<Statistics>({ total: 0, normal: 0, fault: 0, scrapped: 0 });
 
@@ -84,14 +86,7 @@ const RoomDeviceManagement: FC = () => {
 
   const loadStatistics = useCallback(async (): Promise<Statistics> => {
     try {
-      const result = await roomDeviceApi.list({ current: 1, pageSize: 1000 });
-      const allDevices = result.data?.list || [];
-      return {
-        total: allDevices.length,
-        normal: allDevices.filter((d: RoomDevice) => d.status === 0).length,
-        fault: allDevices.filter((d: RoomDevice) => d.status === 1).length,
-        scrapped: allDevices.filter((d: RoomDevice) => d.status === 2).length,
-      };
+      return await fetchRoomDeviceStatistics();
     } catch (error) {
       handleApiError(error, '加载统计数据', false);
       return { total: 0, normal: 0, fault: 0, scrapped: 0 };
@@ -126,10 +121,12 @@ const RoomDeviceManagement: FC = () => {
     loadStatistics().then(setStatistics);
   }, [loadStatistics]);
 
+  // 当部门变化时，重新加载数据
   useEffect(() => {
     loadDevices();
     loadRoomOptions(selectedDeptId || undefined);
-  }, [selectedDeptId, loadDevices, loadRoomOptions]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDeptId]);
 
   const handleSave = async () => {
     try {
@@ -367,7 +364,18 @@ const RoomDeviceManagement: FC = () => {
                 <Radio.Button value="card"><AppstoreOutlined /> 卡片</Radio.Button>
               </Radio.Group>
               <Button icon={<ImportOutlined />} onClick={() => setImportVisible(true)}>导入</Button>
-              <Button icon={<ExportOutlined />} onClick={() => setExportVisible(true)}>导出</Button>
+              <Button icon={<ExportOutlined />} onClick={() => {
+                const values = searchForm.getFieldsValue() as Record<string, unknown>;
+                const currentFilters: Record<string, unknown> = {};
+                Object.keys(values).forEach(key => {
+                  const value = values[key];
+                  if (value !== undefined && value !== null && value !== '') {
+                    currentFilters[key] = value;
+                  }
+                });
+                setExportFilters(currentFilters);
+                setExportVisible(true);
+              }}>导出</Button>
               {selectedRowKeys.length > 0 && <Button icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }} onClick={handleBatchDelete}>批量删除 ({selectedRowKeys.length})</Button>}
               <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>新增设备</Button>
             </Space>
@@ -474,7 +482,7 @@ const RoomDeviceManagement: FC = () => {
           </Form>
         </Modal>
         <ExcelImport entityType="roomDevice" entityName="机房设备" visible={importVisible} onClose={() => setImportVisible(false)} onImportSuccess={handleImportSuccess} />
-        <ExcelExport entityType="roomDevice" entityName="机房设备" visible={exportVisible} onClose={() => setExportVisible(false)} />
+        <ExcelExport entityType="roomDevice" entityName="机房设备" visible={exportVisible} onClose={() => setExportVisible(false)} filters={exportFilters} />
       </Content>
     </Layout>
   );

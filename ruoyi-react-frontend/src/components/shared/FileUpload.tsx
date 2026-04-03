@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import type { FC } from 'react';
 import { Upload, message, Image, Progress, Button, Space } from 'antd';
 import { PlusOutlined, LoadingOutlined } from '@ant-design/icons';
+import { getAccessToken } from '@/utils/authHelpers';
 import type { UploadFile, UploadProps } from 'antd';
 
 // 自定义 UploadRequestOption 类型定义
@@ -115,7 +116,7 @@ const FileUpload: FC<FileUploadProps> = ({
     message.error('上传失败');
   }, [onUploadError]);
 
-  const customRequest = useCallback((options: UploadRequestOption) => {
+  const customRequest = useCallback(async (options: UploadRequestOption) => {
     const { file, onProgress, onSuccess, onError } = options;
 
     // 获取原始文件对象 - 处理 Ant Design 6.x 的 UploadRequestFile 类型
@@ -189,7 +190,7 @@ const FileUpload: FC<FileUploadProps> = ({
     };
 
     xhr.open('POST', '/api/v1/system/files/upload', true);
-    const token = localStorage.getItem('accessToken');
+    const token = await getAccessToken();
     if (token) {
       xhr.setRequestHeader('Authorization', `Bearer ${token}`);
     }
@@ -214,10 +215,11 @@ const FileUpload: FC<FileUploadProps> = ({
   const handleRemove = useCallback(async (file: UploadFile) => {
     if (file.response?.data?.id) {
       try {
+        const token = await getAccessToken();
         await fetch(`/api/v1/system/files/${file.response.data.id}`, {
           method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            'Authorization': `Bearer ${token}`,
           },
         });
       } catch (error) {
