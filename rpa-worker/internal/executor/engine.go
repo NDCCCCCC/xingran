@@ -5,7 +5,7 @@ import (
     "encoding/base64"
     "encoding/json"
     "fmt"
-    "sync"
+    "strings"
     "time"
 
     "github.com/redis/go-redis/v9"
@@ -59,12 +59,26 @@ func (e *Engine) Execute(ctx context.Context, task *types.TaskMessage, workerID 
     e.currentExecutionID = task.ExecutionID
     e.currentWorkerID = workerID
 
-    e.logger.Info("start executing task",
-        logger.String("execution_id", task.ExecutionID),
-        logger.String("task_id", task.TaskID),
-        logger.String("worker_id", workerID),
-        logger.Int("actions", len(task.Script)),
-    )
+    // 检查是否是子任务
+    isSubTask, parentExecutionID, subTaskIndex := e.extractSubTaskMeta(task)
+
+    // 记录日志 - 子任务使用 debug 级别减少日志量
+    if isSubTask {
+        e.logger.Debug("start executing task",
+            logger.String("execution_id", task.ExecutionID),
+            logger.String("task_id", task.TaskID),
+            logger.String("worker_id", workerID),
+            logger.Int("actions", len(task.Script)),
+            logger.String("task_type", "subtask"),
+        )
+    } else {
+        e.logger.Info("start executing task",
+            logger.String("execution_id", task.ExecutionID),
+            logger.String("task_id", task.TaskID),
+            logger.String("worker_id", workerID),
+            logger.Int("actions", len(task.Script)),
+        )
+    }
 
     result := &types.ExecutionResult{
         ExecutionID: task.ExecutionID,
@@ -78,7 +92,9 @@ func (e *Engine) Execute(ctx context.Context, task *types.TaskMessage, workerID 
     // Acquire browser page
     pooledPage, err := e.browserPool.Acquire(ctx)
     if err != nil {
-        return e.createErrorResult(result, err, 0, len(task.Script)), nil
+        errorResult := e.createErrorResult(result, err, 0, len(task.Script))
+        e.reportSubTaskResult(ctx, task, errorResult)
+        return errorResult, fmt.Errorf("failed to acquire browser: %w", err)
     }
     defer e.browserPool.Release(pooledPage)
 
@@ -94,7 +110,9 @@ func (e *Engine) Execute(ctx context.Context, task *types.TaskMessage, workerID 
     // Navigate to target URL
     if task.TargetURL != "" {
         if err := pageMgr.Goto(task.TargetURL); err != nil {
-            return e.createErrorResult(result, err, 0, len(task.Script)), nil
+            errorResult := e.createErrorResult(result, err, 0, len(task.Script))
+            e.reportSubTaskResult(ctx, task, errorResult)
+            return errorResult, fmt.Errorf("failed to navigate to %s: %w", task.TargetURL, err)
         }
     }
 
@@ -108,6 +126,11 @@ func (e *Engine) Execute(ctx context.Context, task *types.TaskMessage, workerID 
         result.Status = types.StatusRunning
 
         // Report progress
+        // 子任务额外上报到 Redis Pub/Sub
+        if isSubTask && parentExecutionID != "" {
+            e.reportSubTaskProgress(ctx, parentExecutionID, subTaskIndex, i+1, len(task.Script), types.StatusRunning, fmt.Sprintf("executing: %s %s", action.Type, action.Description))
+        }
+
         if err := e.progressReporter.ReportProgress(ctx, &types.ProgressReport{
             ExecutionID:     task.ExecutionID,
             ProgressCurrent: i + 1,
@@ -140,7 +163,9 @@ func (e *Engine) Execute(ctx context.Context, task *types.TaskMessage, workerID 
             }
 
             if err != nil {
-                return e.createErrorResult(result, err, i+1, len(task.Script)), nil
+                errorResult := e.createErrorResult(result, err, i+1, len(task.Script))
+                e.reportSubTaskResult(ctx, task, errorResult)
+                return errorResult, nil
             }
         }
     }
@@ -155,7 +180,24 @@ func (e *Engine) Execute(ctx context.Context, task *types.TaskMessage, workerID 
         logger.Duration("duration", result.Duration),
     )
 
+    // 上报子任务结果
+    e.reportSubTaskResult(ctx, task, result)
+
     return result, nil
+}
+
+// extractSubTaskMeta 从任务变量中提取子任务元数据
+func (e *Engine) extractSubTaskMeta(task *types.TaskMessage) (isSubTask bool, parentExecutionID string, subTaskIndex int) {
+	if isSubTaskVal := task.Variables[types.VariableIsSubTask]; isSubTaskVal != nil {
+		isSubTask = true
+		if parentID, ok := task.Variables[types.VariableParentExecutionID].(string); ok {
+			parentExecutionID = parentID
+		}
+		if idx, ok := task.Variables[types.VariableSubTaskIndex].(int); ok {
+			subTaskIndex = idx
+		}
+	}
+	return
 }
 
 // executeAction execute single action
@@ -280,7 +322,8 @@ func (e *Engine) executeAction(ctx context.Context, pageMgr *browser.PageManager
 }
 
 // executeLoop execute loop action for batch processing
-// 支持并发执行：当 loopConcurrency > 0 时，多个迭代并行执行
+// 注意：混合模式下，Loop 动作应该由 Worker 的 TaskSplitter 拆分为子任务
+// 这里保留简单的串行执行是为了向后兼容（当混合模式未启用时）
 func (e *Engine) executeLoop(ctx context.Context, pageMgr *browser.PageManager, action *types.Action, variables map[string]interface{}) error {
     // Get loop data source
     dataSource, ok := action.Params["dataSource"]
@@ -333,32 +376,13 @@ func (e *Engine) executeLoop(ctx context.Context, pageMgr *browser.PageManager, 
         itemName = name
     }
 
-    // 检查是否需要并发执行
-    // 可以通过 action.Params["concurrency"] 覆盖全局配置
-    concurrency := e.loopConcurrency
-    if concurrencyOverride, ok := action.Params["concurrency"].(int); ok && concurrencyOverride >= 0 {
-        concurrency = concurrencyOverride
-    }
-
-    e.logger.Info("starting loop",
+    e.logger.Info("starting loop (serial execution for backward compatibility)",
         logger.String("item_var", itemName),
-        logger.Int("iterations", len(dataArray)),
-        logger.Int("concurrency", concurrency),
-    )
+        logger.Int("iterations", len(dataArray)))
 
-    // 如果并发数为0或1，或者数据量小，使用串行执行
-    if concurrency <= 1 || len(dataArray) <= 1 {
-        return e.executeLoopSerial(ctx, pageMgr, dataArray, nestedActions, itemName, variables)
-    }
-
-    // 并发执行
-    return e.executeLoopParallel(ctx, dataArray, nestedActions, itemName, variables, concurrency)
-}
-
-// executeLoopSerial 串行执行循环（原有逻辑）
-func (e *Engine) executeLoopSerial(ctx context.Context, pageMgr *browser.PageManager, dataArray []map[string]interface{}, nestedActions []types.Action, itemName string, variables map[string]interface{}) error {
+    // 串行执行（向后兼容）
     for i, item := range dataArray {
-        e.logger.Debug("loop iteration (serial)",
+        e.logger.Debug("loop iteration",
             logger.Int("index", i),
             logger.Int("total", len(dataArray)),
         )
@@ -388,141 +412,7 @@ func (e *Engine) executeLoopSerial(ctx context.Context, pageMgr *browser.PageMan
         }
     }
 
-    e.logger.Info("loop completed (serial)", logger.Int("iterations", len(dataArray)))
-    return nil
-}
-
-// executeLoopParallel 并发执行循环
-func (e *Engine) executeLoopParallel(ctx context.Context, dataArray []map[string]interface{}, nestedActions []types.Action, itemName string, variables map[string]interface{}, concurrency int) error {
-    totalIterations := len(dataArray)
-
-    // 创建错误收集通道
-    errChan := make(chan error, totalIterations)
-    doneChan := make(chan int, totalIterations)
-
-    // 创建信号量控制并发数
-    sem := make(chan struct{}, concurrency)
-
-    // 用于等待所有 goroutine 完成
-    var wg sync.WaitGroup
-
-    // 启动多个 worker 并发执行
-    for i, item := range dataArray {
-        wg.Add(1)
-
-        go func(index int, itemData map[string]interface{}) {
-            defer wg.Done()
-
-            // 获取信号量
-            sem <- struct{}{}
-            defer func() { <-sem }()
-
-            // 为每个迭代获取独立的浏览器页面
-            pooledPage, err := e.browserPool.Acquire(ctx)
-            if err != nil {
-                e.logger.Error("failed to acquire browser page for iteration",
-                    logger.Int("index", index),
-                    logger.Err(err))
-                errChan <- fmt.Errorf("iteration %d: failed to acquire browser: %w", index, err)
-                return
-            }
-            defer e.browserPool.Release(pooledPage)
-
-            // 创建页面管理器
-            pageMgr := browser.NewPageManager(pooledPage.Page(), e.logger)
-
-            // 创建迭代变量上下文
-            iterationVars := make(map[string]interface{})
-            for k, v := range variables {
-                iterationVars[k] = v
-            }
-
-            // 添加当前项到变量
-            for k, v := range itemData {
-                iterationVars[itemName+"."+k] = v
-                iterationVars[k] = v
-            }
-
-            // 添加索引
-            iterationVars[itemName+".index"] = index
-            iterationVars["index"] = index
-
-            // 如果第一个动作是导航，先导航到目标URL
-            if len(nestedActions) > 0 && nestedActions[0].Type == types.ActionNavigate {
-                if err := e.executeAction(ctx, pageMgr, &nestedActions[0], iterationVars); err != nil {
-                    e.logger.Error("navigation failed in loop iteration",
-                        logger.Int("index", index),
-                        logger.Err(err))
-                    errChan <- fmt.Errorf("iteration %d: navigation failed: %w", index, err)
-                    return
-                }
-                // 跳过第一个导航动作，已执行
-                nestedActions = nestedActions[1:]
-            }
-
-            // 执行嵌套动作
-            for _, nestedAction := range nestedActions {
-                if err := e.executeAction(ctx, pageMgr, &nestedAction, iterationVars); err != nil {
-                    e.logger.Error("loop iteration failed",
-                        logger.Int("index", index),
-                        logger.String("action", string(nestedAction.Type)),
-                        logger.Err(err))
-                    errChan <- fmt.Errorf("iteration %d failed: %w", index, err)
-                    return
-                }
-            }
-
-            // 报告进度
-            completed := index + 1
-            if e.progressReporter != nil {
-                if err := e.progressReporter.ReportProgress(ctx, &types.ProgressReport{
-                    ExecutionID:     e.currentExecutionID,
-                    ProgressCurrent: completed,
-                    ProgressTotal:   totalIterations,
-                    Message:         fmt.Sprintf("循环进度: %d/%d", completed, totalIterations),
-                    Status:          types.StatusRunning,
-                }); err != nil {
-                    e.logger.Warn("failed to report loop progress", logger.Err(err))
-                }
-            }
-
-            e.logger.Debug("loop iteration completed",
-                logger.Int("index", index),
-                logger.Int("completed", completed),
-                logger.Int("total", totalIterations))
-
-            doneChan <- index
-        }(i, item)
-    }
-
-    // 等待所有 goroutine 完成
-    wg.Wait()
-    close(errChan)
-    close(doneChan)
-
-    // 收集错误
-    var errors []error
-    for err := range errChan {
-        errors = append(errors, err)
-    }
-
-    // 统计完成的迭代数
-    completedCount := len(doneChan)
-    for range doneChan {
-        completedCount++
-    }
-
-    e.logger.Info("loop completed (parallel)",
-        logger.Int("total_iterations", totalIterations),
-        logger.Int("completed", completedCount),
-        logger.Int("errors", len(errors)),
-        logger.Int("concurrency", concurrency))
-
-    // 如果有错误，返回第一个错误
-    if len(errors) > 0 {
-        return errors[0]
-    }
-
+    e.logger.Info("loop completed", logger.Int("iterations", len(dataArray)))
     return nil
 }
 
@@ -728,8 +618,8 @@ func (e *Engine) executeAutoLogin(ctx context.Context, pageMgr *browser.PageMana
 	}
 
 	// Get session data from variables (passed from TaskMessage)
-	sessionDataInterface, hasSession := variables["__sessionData"]
-	credInterface, hasCred := variables["__credentials"]
+	sessionDataInterface, hasSession := variables[types.VariableSessionData]
+	credInterface, hasCred := variables[types.VariableCredentials]
 
 	// If we have session data (token/cookies), apply it directly
 	if hasSession && sessionDataInterface != nil {
@@ -910,32 +800,9 @@ func (e *Engine) replaceVariables(s string, variables map[string]interface{}) st
     result := s
     for k, v := range variables {
         placeholder := fmt.Sprintf("${%s}", k)
-        result = e.replaceAll(result, placeholder, fmt.Sprintf("%v", v))
+        result = strings.ReplaceAll(result, placeholder, fmt.Sprintf("%v", v))
     }
     return result
-}
-
-// replaceAll replace all matches
-func (e *Engine) replaceAll(s, old, new string) string {
-    result := ""
-    for {
-        idx := indexOf(s, old)
-        if idx == -1 {
-            break
-        }
-        result += s[:idx] + new
-        s = s[idx+len(old):]
-    }
-    return result + s
-}
-
-func indexOf(s, substr string) int {
-    for i := 0; i <= len(s)-len(substr); i++ {
-        if s[i:i+len(substr)] == substr {
-            return i
-        }
-    }
-    return -1
 }
 
 // createErrorResult create error result
@@ -955,4 +822,65 @@ func (e *Engine) createErrorResult(result *types.ExecutionResult, err error, ste
     )
 
     return result
+}
+
+// reportSubTaskProgress 上报子任务进度到 Redis Pub/Sub
+func (e *Engine) reportSubTaskProgress(ctx context.Context, parentExecutionID string, subTaskIndex, step, total int, status types.ExecutionStatus, message string) {
+	if e.redisClient == nil {
+		return
+	}
+
+	progressMsg := map[string]interface{}{
+		"subTaskIndex": subTaskIndex,
+		"status":       status,
+		"step":         step,
+		"total":        total,
+		"message":      message,
+		"timestamp":    time.Now(),
+	}
+
+	progressChannel := fmt.Sprintf("subtask:progress:%s", parentExecutionID)
+	data, err := json.Marshal(progressMsg)
+	if err != nil {
+		e.logger.Warn("failed to marshal subtask progress", logger.Err(err))
+		return
+	}
+
+	if err := e.redisClient.Publish(ctx, progressChannel, data).Err(); err != nil {
+		e.logger.Warn("failed to publish subtask progress", logger.Err(err))
+	}
+}
+
+// reportSubTaskResult 上报子任务执行结果到 Redis Pub/Sub
+func (e *Engine) reportSubTaskResult(ctx context.Context, task *types.TaskMessage, result *types.ExecutionResult) {
+	// 检查是否是子任务
+	isSubTask, parentExecutionID, subTaskIndex := e.extractSubTaskMeta(task)
+
+	if !isSubTask || parentExecutionID == "" || e.redisClient == nil {
+		return
+	}
+
+	subTaskResult := &types.SubTaskResult{
+		SubTaskIndex: subTaskIndex,
+		Status:       result.Status,
+		ErrorMessage: result.ErrorMessage,
+		StartedAt:    result.StartedAt,
+		CompletedAt:  result.CompletedAt,
+	}
+
+	resultChannel := fmt.Sprintf("subtask:result:%s", parentExecutionID)
+	data, err := json.Marshal(subTaskResult)
+	if err != nil {
+		e.logger.Warn("failed to marshal subtask result", logger.Err(err))
+		return
+	}
+
+	if err := e.redisClient.Publish(ctx, resultChannel, data).Err(); err != nil {
+		e.logger.Warn("failed to publish subtask result", logger.Err(err))
+	}
+
+	e.logger.Debug("subtask result reported",
+		logger.String("parent_execution_id", parentExecutionID),
+		logger.Int("subtask_index", subTaskIndex),
+		logger.String("status", string(result.Status)))
 }

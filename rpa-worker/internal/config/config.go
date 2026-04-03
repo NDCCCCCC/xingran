@@ -39,6 +39,10 @@ type WorkerConfig struct {
 	AutoLoginFillDelay  time.Duration `mapstructure:"autologin_fill_delay"`   // 自动登录填写延迟
 	AutoLoginNavDelay   time.Duration `mapstructure:"autologin_nav_delay"`    // 自动登录导航延迟
 	LoopConcurrency     int           `mapstructure:"loop_concurrency"`       // 循环内并发执行数量（0表示串行）
+	ShutdownTimeout     time.Duration `mapstructure:"shutdown_timeout"`      // 优雅关闭超时
+	MaxScaleUpConcurrency   int        `mapstructure:"max_scale_up_concurrency"`   // 最大扩容并发数
+	MinScaleDownConcurrency int        `mapstructure:"min_scale_down_concurrency"` // 最小缩容并发数
+	HybridMode          HybridModeConfig `mapstructure:"hybrid_mode"`         // 混合模式配置
 }
 
 // BackendConfig 后端 API 配置
@@ -104,6 +108,15 @@ type ExecutorConfig struct {
 	InitialDelay  time.Duration `mapstructure:"retry_delay"`
 	MaxDelay      time.Duration `mapstructure:"max_retry_delay"`
 	BackoffFactor float64       `mapstructure:"backoff_factor"`
+}
+
+// HybridModeConfig 混合模式配置
+type HybridModeConfig struct {
+	Enabled            bool          `mapstructure:"enabled"`              // 启用混合模式
+	SubTaskTimeout     time.Duration `mapstructure:"subtask_timeout"`       // 子任务超时（默认5分钟）
+	SubTaskRetryCount  int           `mapstructure:"subtask_retry_count"`  // 子任务重试次数（默认2）
+	ProgressThrottle   time.Duration `mapstructure:"progress_throttle"`     // 进度上报节流（默认100ms）
+	SubtaskPriority    int           `mapstructure:"subtask_priority"`      // 子任务优先级（默认5）
 }
 
 // Load load configuration
@@ -181,6 +194,17 @@ func setDefaults(cfg *Config) {
 	// 设置为0则表示串行执行（原有行为）
 	if cfg.Worker.LoopConcurrency == 0 {
 		cfg.Worker.LoopConcurrency = 3
+	}
+
+	// 扩缩容配置默认值
+	if cfg.Worker.ShutdownTimeout == 0 {
+		cfg.Worker.ShutdownTimeout = 5 * time.Second
+	}
+	if cfg.Worker.MaxScaleUpConcurrency == 0 {
+		cfg.Worker.MaxScaleUpConcurrency = 50
+	}
+	if cfg.Worker.MinScaleDownConcurrency == 0 {
+		cfg.Worker.MinScaleDownConcurrency = 1
 	}
 
 	if cfg.Backend.BaseURL == "" {
@@ -263,6 +287,22 @@ func setDefaults(cfg *Config) {
 	if cfg.Executor.BackoffFactor == 0 {
 		cfg.Executor.BackoffFactor = 2.0
 	}
+
+	// 混合模式默认配置
+	if cfg.Worker.HybridMode.Enabled {
+		if cfg.Worker.HybridMode.SubTaskTimeout == 0 {
+			cfg.Worker.HybridMode.SubTaskTimeout = 5 * time.Minute
+		}
+		if cfg.Worker.HybridMode.SubTaskRetryCount == 0 {
+			cfg.Worker.HybridMode.SubTaskRetryCount = 2
+		}
+		if cfg.Worker.HybridMode.ProgressThrottle == 0 {
+			cfg.Worker.HybridMode.ProgressThrottle = 100 * time.Millisecond
+		}
+		if cfg.Worker.HybridMode.SubtaskPriority == 0 {
+			cfg.Worker.HybridMode.SubtaskPriority = 5
+		}
+	}
 }
 
 // overrideWithEnv 环境变量覆盖
@@ -293,5 +333,13 @@ func overrideWithEnv(cfg *Config) {
 	}
 	if logLevel := os.Getenv("LOG_LEVEL"); logLevel != "" {
 		cfg.Logging.Level = logLevel
+	}
+	if hybridEnabled := os.Getenv("HYBRID_MODE_ENABLED"); hybridEnabled != "" {
+		cfg.Worker.HybridMode.Enabled = strings.ToLower(hybridEnabled) == "true"
+	}
+	if subtaskTimeout := os.Getenv("SUBTASK_TIMEOUT"); subtaskTimeout != "" {
+		if duration, err := time.ParseDuration(subtaskTimeout); err == nil {
+			cfg.Worker.HybridMode.SubTaskTimeout = duration
+		}
 	}
 }

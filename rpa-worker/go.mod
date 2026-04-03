@@ -8,6 +8,7 @@ require (
 	github.com/redis/go-redis/v9 v9.5.1
 	github.com/spf13/viper v1.18.2
 	go.uber.org/zap v1.27.0
+	golang.org/x/sync v0.5.0
 )
 
 require (

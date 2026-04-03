@@ -35,8 +35,28 @@ func NewChromePage(ctx context.Context, cfg *config.BrowserConfig, log logger.Lo
 		launcherPath = launcherPath.Bin(chromePath)
 	}
 
-	// TODO: 添加Chrome flags支持（需要适配新API）
-	_ = cfg.ChromeFlags
+	// 添加Chrome启动参数（容器模式必需）
+	launcherPath = launcherPath.MustAppend(
+		"--no-sandbox",
+		"--disable-dev-shm-usage",
+		"--disable-gpu",
+		"--disable-extensions",
+		"--disable-background-networking",
+		"--no-first-run",
+		"--no-default-browser-check",
+		"--disable-translate",
+		"--disable-save-password-bubble",
+		"--disable-autofill",
+		"--lang=zh-CN",
+		"--accept-lang=zh-CN,zh,en-US,en",
+		"--disable-sync",
+		"--disable-blink-features=AutomationControlled",
+	)
+
+	// 添加自定义flags
+	for _, flag := range cfg.ChromeFlags {
+		launcherPath = launcherPath.MustAppend(flag)
+	}
 
 	// 启动浏览器
 	launcherURL := launcherPath.MustLaunch()

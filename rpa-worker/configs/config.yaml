@@ -4,7 +4,7 @@ worker:
   id: ""                    # Worker ID (自动生成)
   name: "rpa-worker-1"      # Worker 名称
   max_concurrency: 5        # 最大并发数（同时执行的任务数）
-  loop_concurrency: 3       # 循环内并发数（单个任务内循环的并行执行数，0=串行）
+  loop_concurrency: 3       # 循环内并发数（单个任务内循环的并行执行数，0=串行，已废弃）
   version: "1.0.0"          # Worker 版本
   task_timeout: 10m         # 任务超时时间
   retry_check_interval: 100ms # 任务消费重试检查间隔
@@ -12,6 +12,19 @@ worker:
   autologin_wait_delay: 1s  # 自动登录等待表单就绪延迟
   autologin_fill_delay: 500ms # 自动登录填写后延迟
   autologin_nav_delay: 2s   # 自动登录提交后导航延迟
+
+  # 混合模式配置（循环拆分为子任务）
+  hybrid_mode:
+    enabled: true           # 启用混合模式
+    subtask_timeout: 5m     # 子任务超时时间
+    subtask_retry_count: 2  # 子任务重试次数
+    progress_throttle: 100ms # 进度上报节流
+    subtask_priority: 5     # 子任务优先级
+
+  # 扩缩容配置
+  shutdown_timeout: 5s             # 优雅关闭超时
+  max_scale_up_concurrency: 50     # 最大扩容并发数
+  min_scale_down_concurrency: 1    # 最小缩容并发数
 
 backend:
   base_url: "http://10.62.10.33:9000/api/v1"  # 后端 API 地址

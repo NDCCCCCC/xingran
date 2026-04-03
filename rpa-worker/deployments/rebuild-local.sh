@@ -8,6 +8,11 @@ echo "========================================="
 echo "RPA Worker 本地构建和部署"
 echo "========================================="
 
+# 配置 Go 代理（解决国内网络访问问题）
+export GOPROXY=https://goproxy.cn,direct
+
+echo "使用 Go 代理: $GOPROXY"
+
 # 进入 rpa-worker 目录
 cd "$(dirname "$0")/.."
 

@@ -53,6 +53,8 @@ check_docker_compose() {
 download_deps() {
     info "下载Go依赖..."
     cd "$PROJECT_ROOT"
+    export GOPROXY=https://goproxy.cn,direct
+    export GOSUMDB=off
     go mod download
     go mod tidy
     info "依赖下载完成"

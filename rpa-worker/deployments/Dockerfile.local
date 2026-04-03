@@ -36,7 +36,7 @@ RUN apt-get update && apt-get install -y \
     libxrandr2 \
     libxshmfence1 \
     libxtst6 \
-   xdg-utils \
+    chromium-browser \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /home/chrome/.cache/rod \
     && mkdir -p /home/chrome/Downloads \
@@ -53,6 +53,10 @@ COPY configs/config.yaml ./configs/
 ENV HOME=/home/chrome
 ENV XDG_CACHE_HOME=/home/chrome/.cache
 ENV XDG_RUNTIME_DIR=/tmp
+
+# Chrome 路径配置
+ENV CHROME_BIN=/usr/bin/chromium-browser
+ENV CHROMIUM_PATH=/usr/bin/chromium-browser
 
 # 健康检查端点
 EXPOSE 8080
