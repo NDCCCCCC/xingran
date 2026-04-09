@@ -3,9 +3,9 @@ package operations
 import (
 	"context"
 
-	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"gorm.io/gorm"
 )
 
@@ -92,15 +92,36 @@ func (s *serverRoomService) List(ctx context.Context, req requests.ServerRoomLis
 	_, pageSize := req.GetPagination()
 	current, _ := req.GetPagination()
 
+	// JOIN 关联表获取楼宇名称和楼层名称（需要类型转换：varchar -> uuid）
+	// 必须在 Count 之前执行 JOIN，这样后面的条件才能使用 JOIN 的表
+	query = query.
+		Select("ops_server_rooms.*, b.name as building_name, f.name as floor_name, f.floor_no").
+		Joins("LEFT JOIN ops_buildings b ON b.id::text = ops_server_rooms.building_id").
+		Joins("LEFT JOIN ops_floors f ON f.id::text = ops_server_rooms.floor_id")
+
+	// 部门筛选（包含子部门）- 必须在 JOIN 之后添加
+	if req.OrgID != "" {
+		deptIDs := s.getDeptAndChildDeptIDs(ctx, req.OrgID)
+		if len(deptIDs) == 0 {
+			// 如果没有找到有效的部门ID，返回空结果
+			return &PageResult{
+				List:     []operations.OpsServerRoom{},
+				Total:    0,
+				Current:  current,
+				PageSize: pageSize,
+			}, nil
+		}
+		// 通过楼宇的 org_id 进行筛选
+		query = query.Where("b.org_id IN ?", deptIDs)
+	}
+
+	// 执行 Count 查询
 	if err := query.Count(&total).Error; err != nil {
 		return nil, err
 	}
 
-	// JOIN 关联表获取楼宇名称和楼层名称（需要类型转换：varchar -> uuid）
+	// 执行数据查询
 	if err := query.
-		Select("ops_server_rooms.*, b.name as building_name, f.name as floor_name, f.floor_no").
-		Joins("LEFT JOIN ops_buildings b ON b.id::text = ops_server_rooms.building_id").
-		Joins("LEFT JOIN ops_floors f ON f.id::text = ops_server_rooms.floor_id").
 		Offset(offset).
 		Limit(pageSize).
 		Order("ops_server_rooms.created_at DESC").
@@ -131,4 +152,26 @@ func (s *serverRoomService) validateFloor(ctx context.Context, floorID string) e
 		return apperrors.FloorNotFound()
 	}
 	return nil
+}
+
+// getDeptAndChildDeptIDs 获取部门及其所有子部门的ID
+func (s *serverRoomService) getDeptAndChildDeptIDs(ctx context.Context, orgId string) []string {
+	var deptIDs []string
+
+	// 查询该部门及其所有子部门的ID
+	// 匹配条件：
+	// 1. id = orgId (当前部门)
+	// 2. ancestors LIKE '%,' + orgId + ',%' (中间的子部门)
+	// 3. ancestors LIKE '%,' + orgId (最后一个子部门)
+	// 4. ancestors = orgId (直接子部门)
+	err := s.db.WithContext(ctx).Table("sys_dept").
+		Where("id = ? OR ancestors LIKE ? OR ancestors LIKE ? OR ancestors = ?",
+			orgId, "%,"+orgId+",%", "%,"+orgId, orgId).
+		Pluck("id", &deptIDs).Error
+
+	if err != nil || len(deptIDs) == 0 {
+		return []string{}
+	}
+
+	return deptIDs
 }

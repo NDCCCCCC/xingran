@@ -63,13 +63,14 @@ const ServerRoomManagement: FC = () => {
 
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
-  // 使用 ref 存储最新的 selectedDeptId，避免 loadFunction 闭包值不更新的问题
+  // 使用 useSidebarDeptFilter hook 管理部门筛选
+  const { selectedDeptId, handleDeptSelect, setSelectedDeptId } = useSidebarDeptFilter({
+    searchForm: undefined, // 机房管理不需要清空搜索表单字段
+    clearFieldNames: [],
+  });
+
+  // 使用 ref 存储最新的 selectedDeptId，避免闭包问题
   const selectedDeptIdRef = useRef<string>('');
-
-  // 简单的部门 ID 状态和设置函数
-  const [selectedDeptId, setSelectedDeptId] = useState<string>('');
-
-  // 更新 ref 的值
   useEffect(() => {
     selectedDeptIdRef.current = selectedDeptId;
   }, [selectedDeptId]);
@@ -83,7 +84,7 @@ const ServerRoomManagement: FC = () => {
     setData, setLoading,
   } = useTableManager<ServerRoom>(
     async (params) => {
-      // 使用 ref 的值而不是闭包的值
+      // 使用 ref 获取最新的部门 ID，避免闭包捕获旧值
       const currentDeptId = selectedDeptIdRef.current;
       const searchParams = currentDeptId ? { ...params, orgId: currentDeptId } : params;
       const result = await serverRoomApi.list(searchParams);
@@ -99,6 +100,16 @@ const ServerRoomManagement: FC = () => {
       },
     }
   );
+
+  // 当部门变化时，重新加载数据并重置分页
+  const loadServerRoomsByDept = useCallback(async () => {
+    setCurrent(1);
+    loadServerRooms();
+  }, [setCurrent, loadServerRooms]);
+
+  useEffect(() => {
+    loadServerRoomsByDept();
+  }, [selectedDeptId, loadServerRoomsByDept]);
 
   const loadStatistics = useCallback(async (): Promise<Statistics> => {
     try {
@@ -159,49 +170,18 @@ const ServerRoomManagement: FC = () => {
     searchForm.setFieldValue('buildingId', undefined);
   }, [selectedDeptId, searchForm]);
 
-  // 当部门变化时，重新加载数据
-  // 使用 ref 存储上一次的部门 ID，避免初始渲染时执行
-  const prevDeptIdRef = useRef<string>('');
+  // 当部门变化时，加载楼宇选项
   useEffect(() => {
-    // 跳过初始渲染（prevDeptIdRef 初始为空字符串，selectedDeptId 初始也为空字符串）
-    if (selectedDeptId === prevDeptIdRef.current && prevDeptIdRef.current === '') {
-      prevDeptIdRef.current = selectedDeptId;
-      return;
-    }
-    prevDeptIdRef.current = selectedDeptId;
-
-    const loadByDept = async () => {
-      try {
-        setLoading(true);
-        // 使用 ref 的值，因为状态更新可能是异步的
-        const deptId = selectedDeptIdRef.current;
-        const params: Record<string, unknown> = { current: 1, pageSize: paginationProps.pageSize ?? 10 };
-        if (deptId) {
-          params.orgId = deptId;
-        }
-        const result = await serverRoomApi.list(params);
-        setData(result.data?.list || []);
-        setTotal(result.data?.total || 0);
-      } catch (error) {
-        handleApiError(error, '加载数据', false);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadByDept();
     loadBuildingOptions(selectedDeptId || undefined);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDeptId, paginationProps.pageSize]);
+  }, [selectedDeptId, loadBuildingOptions]);
 
-  // 创建 handleDeptSelect 函数供 DeptSidebar 使用
-  const handleDeptSelect = useCallback(
-    (selectedKeys: any[], info: { selected: boolean; node: { key?: any } }) => {
-      const deptId = String(info.node.key || '');
-      selectedDeptIdRef.current = deptId;
-      setSelectedDeptId(deptId);
-    },
-    []
-  );
+  // 部门变化时清空搜索表单中的楼宇筛选
+  useEffect(() => {
+    searchForm.setFieldValue('buildingId', undefined);
+    searchForm.setFieldValue('floorNo', undefined);
+    searchForm.setFieldValue('name', undefined);
+    searchForm.setFieldValue('status', undefined);
+  }, [selectedDeptId, searchForm]);
 
   const handleSave = async () => {
     try {

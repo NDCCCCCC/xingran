@@ -74,3 +74,4 @@ fix_*.sql
 数据/
 *.xlsx
 *.png
+.trae/
