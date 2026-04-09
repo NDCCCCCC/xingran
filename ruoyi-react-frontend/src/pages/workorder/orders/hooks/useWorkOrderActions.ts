@@ -4,6 +4,9 @@
 
 import { useState, useCallback } from 'react';
 import { message } from 'antd';
+import type {
+  WorkOrderType,
+  WorkOrderPriority} from '@/lib/workorderApi';
 import {
   createWorkOrder,
   updateWorkOrder,
@@ -15,9 +18,7 @@ import {
   getWorkOrderComments,
   type WorkOrder,
   type WorkOrderCreateRequest,
-  type WorkOrderUpdateRequest,
-  WorkOrderType,
-  WorkOrderPriority,
+  type WorkOrderUpdateRequest
 } from '@/lib/workorderApi';
 
 export interface UseWorkOrderActionsOptions {

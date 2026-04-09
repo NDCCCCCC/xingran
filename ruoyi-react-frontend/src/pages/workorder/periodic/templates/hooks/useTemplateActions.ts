@@ -6,6 +6,9 @@
 import { useState, useCallback } from 'react';
 import { message } from 'antd';
 import type { FormInstance } from 'antd/es/form';
+import type {
+  WorkOrderType,
+  PeriodicAssignType} from '@/lib/workorderApi';
 import {
   createPeriodicTemplate,
   updatePeriodicTemplate,
@@ -15,9 +18,7 @@ import {
   generateWorkOrderNow,
   type PeriodicWorkOrderTemplate,
   type CreatePeriodicTemplateRequest,
-  type UpdatePeriodicTemplateRequest,
-  WorkOrderType,
-  PeriodicAssignType,
+  type UpdatePeriodicTemplateRequest
 } from '@/lib/workorderApi';
 
 export interface UseTemplateActionsParams {

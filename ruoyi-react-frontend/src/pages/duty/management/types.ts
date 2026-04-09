@@ -3,7 +3,7 @@
  * 值班管理类型定义
  */
 
-import dayjs from 'dayjs';
+import type dayjs from 'dayjs';
 import type { Holiday } from '@/lib/dutyApi';
 
 /** 排班搜索参数 */

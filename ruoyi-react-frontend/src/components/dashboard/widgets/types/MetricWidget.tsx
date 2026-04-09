@@ -12,12 +12,12 @@ interface MetricWidgetProps {
 	onDelete?: () => void;
 }
 
-export const MetricWidget = memo(function MetricWidget({
+export const MetricWidget = memo(({
 	widget,
 	display,
 	onEdit,
 	onDelete,
-}: MetricWidgetProps) {
+}: MetricWidgetProps) => {
 	const { data, loading, error, refresh } = useWidgetData(widget);
 
 	const { percent, color } = useMemo(() => {
