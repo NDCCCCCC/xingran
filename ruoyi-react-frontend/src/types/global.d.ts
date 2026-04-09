@@ -21,7 +21,7 @@ declare module 'sm-crypto' {
 }
 
 declare module '@uiw/react-md-editor' {
-  import React from 'react';
+  import type React from 'react';
 
   export interface MDEditorProps {
     value?: string;
