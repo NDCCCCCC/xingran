@@ -146,7 +146,7 @@ func splitSQL(sql string) []string {
 
 	// 添加最后一个语句（如果没有分号结尾）
 	if currentStmt.Len() > 0 {
-		statements = append(statements, currentStmt.Statement())
+		statements = append(statements, currentStmt.String())
 	}
 
 	return statements
