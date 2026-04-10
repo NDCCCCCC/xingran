@@ -1,10 +1,13 @@
 /**
  * WorkOrder 模态框和抽屉状态管理 Hook
+ * ✅ 优化：移除动态导入，在顶层导入 API 函数
  */
 
 import { useState, useCallback } from 'react';
 import type { WorkOrder } from '@/lib/workorderApi';
 import type { FormInstance } from 'antd/es/form';
+// ✅ 优化：直接导入 API 函数，避免动态导入 (bundle-dynamic-imports)
+import { getWorkOrderComments, getWorkOrderHistory } from '@/lib/workorderApi';
 
 export interface Comment {
   id: string;
@@ -95,7 +98,7 @@ export function useWorkOrderModals(): UseWorkOrderModalsReturn {
 
     // 获取评论和历史
     try {
-      const { getWorkOrderComments, getWorkOrderHistory } = await import('@/lib/workorderApi');
+      // ✅ 优化：直接使用顶层导入的函数，移除动态导入 (bundle-dynamic-imports)
       const [commentsResult, historyResult] = await Promise.all([
         getWorkOrderComments(record.id),
         getWorkOrderHistory(record.id),

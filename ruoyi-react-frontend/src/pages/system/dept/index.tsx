@@ -19,6 +19,7 @@ import { renderTreeData } from './utils';
 import ExcelImport from '@/components/shared/ExcelImport';
 import ExcelExport from '@/components/shared/ExcelExport';
 
+import { post } from '@/lib/api';
 const { Option } = Select;
 
 const DepartmentManagement: FC = () => {
@@ -85,7 +86,7 @@ const DepartmentManagement: FC = () => {
 
   const handleDelete = async (id: string) => {
     try {
-      const { post } = await import('@/lib/api');
+      // ✅ 优化：移除动态导入
       await post(`/system/departments/${id}/delete`);
       message.success('删除成功');
       loadDepartments();
@@ -114,7 +115,7 @@ const DepartmentManagement: FC = () => {
 
   const handleSave = async () => {
     try {
-      const { post } = await import('@/lib/api');
+      // ✅ 优化：移除动态导入
       const values = await editForm.validateFields();
 
       const submitData: Record<string, unknown> = {

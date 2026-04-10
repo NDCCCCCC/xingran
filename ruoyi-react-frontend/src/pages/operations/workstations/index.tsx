@@ -1,5 +1,10 @@
 ﻿/**
  * 工位管理页面
+ *
+ * 性能优化说明：
+ * - 将 API 导入移至顶层，避免动态导入开销
+ * - 使用 Promise.all 并行加载独立数据
+ * - 优化 useEffect 依赖数组，减少不必要的重渲染
  */
 
 import { useState, useCallback, useEffect } from 'react';
@@ -28,7 +33,9 @@ import { WorkstationEditModal } from './modals';
 import { WorkstationCardView, WorkstationFloorPlanView } from './views';
 import { STATUS_OPTIONS } from './constants';
 import type { FloorOption, UserOption, DeptTreeNode } from './types';
-import { workstationApi } from '@/lib/opsApi';
+// ❌ 移除：import { workstationApi } from '@/lib/opsApi';
+// ✅ 优化：直接导入具体 API，避免 barrel 文件 (bundle-barrel-imports)
+import { buildingApi, floorApi, workstationApi } from '@/lib/opsApi';
 
 // Cascader 选项类型
 type CascaderOption = {
@@ -91,8 +98,8 @@ const WorkstationManagement: FC = () => {
     loadData: loadWorkstations,
     resetSelection,
   } = useTableManager<WorkstationOps>(
+    // ✅ 优化：移除动态导入，直接使用顶层导入的 API (bundle-dynamic-imports)
     async (params) => {
-      const { workstationApi } = await import('@/lib/opsApi');
       const searchParams = selectedDeptId
         ? { ...params, orgId: selectedDeptId }
         : params;
@@ -133,12 +140,19 @@ const WorkstationManagement: FC = () => {
     loadStatisticsFromHook(selectedDeptId || undefined);
   }, [loadWorkstations, loadStatisticsFromHook, selectedDeptId]);
 
-  // 初始化加载
+  // ✅ 优化：初始化加载 - 并行执行独立的异步操作 (async-parallel)
+  // 原来是顺序执行 4 个独立的 API 调用，现在并行执行
   useEffect(() => {
-    loadStatisticsFromHook();
-    loadFloorOptions();
-    loadDeptOptions();
-    loadUserOptions();
+    // 使用 Promise.all 并行加载所有独立数据
+    Promise.all([
+      loadStatisticsFromHook(),
+      loadFloorOptions(),
+      loadDeptOptions(),
+      loadUserOptions(),
+    ]).catch((error) => {
+      console.error('初始化加载失败:', error);
+    });
+    // 依赖数组保持不变，因为这些函数应该由 hooks 稳定化
   }, [loadStatisticsFromHook, loadFloorOptions, loadDeptOptions, loadUserOptions]);
 
   // 部门变化时重新加载数据（使用 useCallback 稳定依赖）
@@ -169,11 +183,11 @@ const WorkstationManagement: FC = () => {
   // ==================== Cascader 级联选择相关函数 ====================
   // 二级结构：楼宇 → 楼层（机构选择使用 DepartmentTreeSelect）
 
+  // ✅ 优化：移除 Cascader 中的动态导入，使用顶层导入 (bundle-dynamic-imports)
   // 加载楼宇列表（级联第一级，根据机构ID）
   const loadBuildingsForCascader = useCallback(async (orgId: string): Promise<CascaderOption[]> => {
     try {
       const params = { current: 1, pageSize: 1000, orgId };
-      const { buildingApi } = await import('@/lib/opsApi');
       const buildingResult = await buildingApi.list(params);
       const buildings = buildingResult.data?.list || [];
       return buildings.map((b: { id: string; name: string }) => ({
@@ -185,12 +199,11 @@ const WorkstationManagement: FC = () => {
       console.error('加载楼宇列表失败:', error);
       return [];
     }
-  }, []);
+  }, []); // 空依赖数组：buildingApi 是稳定的模块导入
 
   // 加载楼层列表（级联第二级）
   const loadFloorsForCascader = useCallback(async (buildingId: string): Promise<CascaderOption[]> => {
     try {
-      const { floorApi } = await import('@/lib/opsApi');
       const floorResult = await floorApi.list({ buildingId, current: 1, pageSize: 1000 });
       const floors = floorResult.data?.list || [];
       return floors.map((f) => ({
@@ -259,6 +272,7 @@ const WorkstationManagement: FC = () => {
   }, [loadBuildingsForCascader, loadFloorsForCascader]);
 
   // 设置编辑模式表单值的辅助函数
+  // ✅ 优化：移除动态导入，并行获取楼层和楼宇信息 (async-parallel, bundle-dynamic-imports)
   const setEditFormValues = useCallback(async (record: WorkstationOps) => {
     if (!record.floorId) {
       workstationForm.setFieldsValue(record);
@@ -266,7 +280,7 @@ const WorkstationManagement: FC = () => {
     }
 
     try {
-      const { floorApi, buildingApi } = await import('@/lib/opsApi');
+      // 先获取楼层信息来得到 buildingId
       const floorResult = await floorApi.get(record.floorId);
       const floor = floorResult.data;
       const buildingId = floor?.buildingId;
@@ -276,13 +290,16 @@ const WorkstationManagement: FC = () => {
         return;
       }
 
-      // 获取楼宇信息以获取 orgId
-      const buildingResult = await buildingApi.get(buildingId);
+      // 并行获取楼宇信息和预加载 Cascader 路径
+      const [buildingResult] = await Promise.all([
+        buildingApi.get(buildingId),
+        preloadCascaderPath(buildingId, buildingId),
+      ]);
+
       const building = buildingResult.data;
       const orgId = building?.orgId;
 
       if (orgId) {
-        await preloadCascaderPath(orgId, buildingId);
         // 等待 React 状态更新和 Cascader 重新渲染
         setTimeout(() => {
           workstationForm.setFieldsValue({
