@@ -133,7 +133,8 @@ const DedicatedLineManagement: FC = () => {
     loadStatistics().then(setStatistics);
     loadLineTypeDict();
     loadIspDict();
-  }, [loadServerRooms, loadStatistics, loadLineTypeDict, loadIspDict]);
+    loadLines(); // 加载专线数据
+  }, [loadServerRooms, loadStatistics, loadLineTypeDict, loadIspDict, loadLines]);
 
   const handleSave = async () => {
     try {
