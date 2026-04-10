@@ -765,6 +765,7 @@ func (s *ExcelService) prepareRecordsForUpsert(
 		preparedRecord["id"] = generateUUID()
 		preparedRecord["updated_at"] = time.Now()
 		preparedRecord["created_at"] = time.Now()
+		preparedRecord["deleted_at"] = nil // 显式设置为未删除状态
 
 		prepared = append(prepared, preparedRecord)
 	}

@@ -3,9 +3,9 @@ package operations
 import (
 	"context"
 
-	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"gorm.io/gorm"
 )
 
@@ -78,18 +78,31 @@ func (s *roomDeviceService) List(ctx context.Context, req requests.RoomDeviceLis
 
 	query := s.db.WithContext(ctx).Model(&operations.OpsRoomDevice{})
 
+	// 先 JOIN 机房表和楼宇表，便于后续筛选和显示机房名称
+	// 注意：server_rooms.building_id 是 varchar，需要转换为 uuid 才能与 buildings.id 比较
+	query = query.Joins("LEFT JOIN ops_server_rooms ON ops_server_rooms.id = ops_room_devices.room_id::uuid").
+		Joins("LEFT JOIN ops_buildings ON ops_buildings.id = ops_server_rooms.building_id::uuid")
+
 	// 添加筛选条件 - 类型安全，无需类型断言
 	if req.Name != "" {
-		query = query.Where("name LIKE ?", "%"+req.Name+"%")
+		query = query.Where("ops_room_devices.name LIKE ?", "%"+req.Name+"%")
 	}
 	if req.DeviceType != "" {
-		query = query.Where("device_type = ?", req.DeviceType)
+		query = query.Where("ops_room_devices.device_type = ?", req.DeviceType)
 	}
+	// 机房ID筛选优先
 	if req.RoomID != "" {
-		query = query.Where("room_id = ?", req.RoomID)
+		query = query.Where("ops_room_devices.room_id = ?", req.RoomID)
+	}
+	// 部门筛选：通过楼宇表筛选（设备 → 机房 → 楼宇 → 部门）
+	if req.OrgID != "" {
+		query = query.Where("ops_buildings.org_id = ?", req.OrgID)
+	}
+	if req.IPAddress != "" {
+		query = query.Where("ops_room_devices.ip_address = ?", req.IPAddress)
 	}
 	if req.HasStatus() {
-		query = query.Where("status = ?", req.GetStatus(0))
+		query = query.Where("ops_room_devices.status = ?", req.GetStatus(0))
 	}
 
 	// 分页 - 使用请求结构体的方法
@@ -101,9 +114,8 @@ func (s *roomDeviceService) List(ctx context.Context, req requests.RoomDeviceLis
 		return nil, err
 	}
 
-	// 使用JOIN查询获取机房名称（需要类型转换：varchar -> uuid）
-	query = query.Joins("LEFT JOIN ops_server_rooms ON ops_server_rooms.id = ops_room_devices.room_id::uuid").
-		Select("ops_room_devices.*, ops_server_rooms.name as room_name")
+	// 选择字段（包括机房名称）
+	query = query.Select("ops_room_devices.*, ops_server_rooms.name as room_name")
 
 	if err := query.Offset(offset).Limit(pageSize).Order("ops_room_devices.created_at DESC").Find(&list).Error; err != nil {
 		return nil, err

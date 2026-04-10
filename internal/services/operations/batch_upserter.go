@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -74,11 +75,20 @@ func (b *BatchUpsert) standardUpsert(ctx context.Context, records []map[string]i
 	conflictColumns := b.buildConflictColumns()
 	updateColumns := b.buildUpdateColumns()
 
+	// 强制包含 deleted_at 以恢复软删除记录
+	updateColumns = append(updateColumns, "deleted_at")
+
 	// 转换记录中的字段名为数据库列名
 	convertedRecords := b.convertRecordFields(records)
 
+	// 设置 deleted_at 为 nil 以恢复软删除记录
+	for i := range convertedRecords {
+		convertedRecords[i]["deleted_at"] = nil
+	}
+
 	result := b.db.WithContext(ctx).
 		Table(b.config.TableName).
+		Unscoped(). // 包含软删除记录
 		Clauses(clause.OnConflict{
 			Columns:   conflictColumns,
 			DoUpdates: clause.AssignmentColumns(updateColumns),
@@ -140,8 +150,8 @@ func (b *BatchUpsert) queryExistingRecords(ctx context.Context, records []map[st
 		return nil, fmt.Errorf("没有有效的冲突键值")
 	}
 
-	// 构建查询
-	query := b.db.WithContext(ctx).Table(b.config.TableName)
+	// 构建查询（包含软删除的记录，以便恢复它们）
+	query := b.db.WithContext(ctx).Table(b.config.TableName).Unscoped()
 	for colName, values := range columnValues {
 		query = query.Where(fmt.Sprintf("%s IN ?", colName), uniqueValues(values))
 	}
@@ -222,6 +232,30 @@ func (b *BatchUpsert) buildUpdateData(record, existing map[string]interface{}, c
 		updateData["updated_at"] = updatedAt
 	}
 
+	// 检查是否是软删除记录，如果是则恢复
+	// 注意：gorm.DeletedAt 在数据库查询时会被映射为 time.Time
+	if deletedAt := existing["deleted_at"]; deletedAt != nil {
+		// 统一的软删除检测：检查时间零值
+		var isDeleted bool
+		switch v := deletedAt.(type) {
+		case time.Time:
+			isDeleted = !v.IsZero()
+		case *time.Time:
+			isDeleted = v != nil && !v.IsZero()
+		case string:
+			isDeleted = v != ""
+		default:
+			// 其他类型（如 gorm.DeletedAt）通过反射或接口检查
+			if tVal, ok := deletedAt.(interface{ IsZero() bool }); ok {
+				isDeleted = !tVal.IsZero()
+			}
+		}
+
+		if isDeleted {
+			updateData["deleted_at"] = nil
+		}
+	}
+
 	return updateData
 }
 
@@ -259,8 +293,12 @@ func (b *BatchUpsert) executeUpdate(ctx context.Context, records []map[string]in
 			continue
 		}
 
+		// 清除软删除标记，恢复记录
+		updateData["deleted_at"] = nil
+
 		result := b.db.WithContext(ctx).
 			Table(b.config.TableName).
+			Unscoped(). // 必须使用 Unscoped 才能更新软删除记录
 			Where("id = ?", id).
 			Updates(updateData)
 

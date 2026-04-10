@@ -270,11 +270,13 @@ const MACAddressPage: FC = () => {
           scroll={{ x: 1200 }}
           pagination={paginationProps}
           onChange={(pagination) => {
-            setCurrent(pagination.current ?? 1);
-            setPageSize(pagination.pageSize ?? 10);
+            const newPage = pagination.current ?? 1;
+            const newPageSize = pagination.pageSize ?? 10;
+            setCurrent(newPage);
+            setPageSize(newPageSize);
             loadMACAddresses({
-              current: pagination.current ?? 1,
-              pageSize: pagination.pageSize ?? 10,
+              current: newPage,
+              pageSize: newPageSize,
             });
           }}
         />

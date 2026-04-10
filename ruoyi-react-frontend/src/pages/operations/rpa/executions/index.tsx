@@ -146,6 +146,13 @@ const ExecutionManagement: FC = () => {
           loading={loading}
           rowKey="id"
           pagination={paginationProps}
+          onChange={(pagination) => {
+            const newPage = pagination.current ?? 1;
+            const newPageSize = pagination.pageSize ?? 10;
+            setCurrent(newPage);
+            setPageSize(newPageSize);
+            loadExecutions({ current: newPage, pageSize: newPageSize });
+          }}
         />
       </Card>
 

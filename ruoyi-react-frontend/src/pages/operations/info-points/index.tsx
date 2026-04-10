@@ -648,7 +648,21 @@ const InfoPointManagement: FC = () => {
         </Card>
         <Card>
           {viewMode === 'table' ? (
-            <Table rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }} columns={columns} dataSource={infoPoints} loading={loading} rowKey="id" pagination={paginationProps} />
+            <Table
+              rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
+              columns={columns}
+              dataSource={infoPoints}
+              loading={loading}
+              rowKey="id"
+              pagination={paginationProps}
+              onChange={(pagination) => {
+                const newPage = pagination.current || 1;
+                const newPageSize = pagination.pageSize || 10;
+                setCurrent(newPage);
+                setPageSize(newPageSize);
+                loadInfoPoints({ current: newPage, pageSize: newPageSize });
+              }}
+            />
           ) : renderCardView()}
         </Card>
         <Modal title={editingInfoPoint ? '编辑信息点' : '新增信息点'} open={modalVisible} onOk={handleSave} onCancel={() => { setModalVisible(false); infoPointForm.resetFields(); setEditingInfoPoint(null); }} width={600}>

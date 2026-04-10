@@ -366,11 +366,13 @@ const ConfigManagement: FC = () => {
           rowKey="id"
           pagination={paginationProps}
           onChange={(pagination) => {
-            setCurrent(pagination.current ?? 1);
-            setPageSize(pagination.pageSize ?? 10);
+            const newPage = pagination.current ?? 1;
+            const newPageSize = pagination.pageSize ?? 10;
+            setCurrent(newPage);
+            setPageSize(newPageSize);
             loadConfigs({
-              current: pagination.current ?? 1,
-              pageSize: pagination.pageSize ?? 10,
+              current: newPage,
+              pageSize: newPageSize,
             });
           }}
         />

@@ -96,10 +96,15 @@ func (s *dedicatedLineService) List(ctx context.Context, req requests.DedicatedL
 	if req.ISP != "" {
 		query = query.Where("isp = ?", req.ISP)
 	}
-	if req.SourceRoomName != "" {
+	// 机房ID筛选优先（更精确）
+	if req.SourceRoomId != "" {
+		query = query.Where("source_room_id = ?", req.SourceRoomId)
+	} else if req.SourceRoomName != "" {
 		query = query.Where("source_room_name LIKE ?", "%"+req.SourceRoomName+"%")
 	}
-	if req.DestRoomName != "" {
+	if req.DestRoomId != "" {
+		query = query.Where("dest_room_id = ?", req.DestRoomId)
+	} else if req.DestRoomName != "" {
 		query = query.Where("dest_room_name LIKE ?", "%"+req.DestRoomName+"%")
 	}
 	if req.SourceDeviceName != "" {

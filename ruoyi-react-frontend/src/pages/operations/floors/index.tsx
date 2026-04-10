@@ -524,6 +524,13 @@ const FloorManagement: FC = () => {
               loading={loading}
               rowKey="id"
               pagination={paginationProps}
+              onChange={(pagination) => {
+                const newPage = pagination.current || 1;
+                const newPageSize = pagination.pageSize || 10;
+                setCurrent(newPage);
+                setPageSize(newPageSize);
+                loadFloors({ current: newPage, pageSize: newPageSize });
+              }}
             />
           ) : (
             <FloorCardView

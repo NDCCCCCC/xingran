@@ -403,7 +403,21 @@ const ServerRoomManagement: FC = () => {
         </Card>
         <Card>
           {viewMode === 'table' ? (
-            <Table rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }} columns={columns} dataSource={serverRooms} loading={loading} rowKey="id" pagination={paginationProps} />
+            <Table
+              rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
+              columns={columns}
+              dataSource={serverRooms}
+              loading={loading}
+              rowKey="id"
+              pagination={paginationProps}
+              onChange={(pagination) => {
+                const newPage = pagination.current || 1;
+                const newPageSize = pagination.pageSize || 10;
+                setCurrent(newPage);
+                setPageSize(newPageSize);
+                loadServerRooms({ current: newPage, pageSize: newPageSize });
+              }}
+            />
           ) : renderCardView()}
         </Card>
         <Modal title={editingServerRoom ? '编辑机房' : '新增机房'} open={modalVisible} onOk={handleSave} onCancel={() => { setModalVisible(false); serverRoomForm.resetFields(); setEditingServerRoom(null); setFloorOptions([]); }} width={600}>

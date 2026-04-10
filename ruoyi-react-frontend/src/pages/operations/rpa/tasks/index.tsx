@@ -198,6 +198,13 @@ const TaskManagement: FC = () => {
           loading={loading || executeLoading}
           rowKey="id"
           pagination={paginationProps}
+          onChange={(pagination) => {
+            const newPage = pagination.current ?? 1;
+            const newPageSize = pagination.pageSize ?? 10;
+            setCurrent(newPage);
+            setPageSize(newPageSize);
+            loadTasks({ current: newPage, pageSize: newPageSize });
+          }}
         />
       </Card>
 

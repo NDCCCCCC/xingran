@@ -240,6 +240,13 @@ const WorkerMonitor: FC = () => {
           loading={loading}
           rowKey="id"
           pagination={paginationProps}
+          onChange={(pagination) => {
+            const newPage = pagination.current ?? 1;
+            const newPageSize = pagination.pageSize ?? 10;
+            setCurrent(newPage);
+            setPageSize(newPageSize);
+            loadWorkers({ current: newPage, pageSize: newPageSize });
+          }}
           rowClassName={(record) => {
             if (record.status === 'offline') return 'row-offline';
             if (record.status === 'error') return 'row-error';

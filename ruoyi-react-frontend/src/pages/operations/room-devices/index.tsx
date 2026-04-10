@@ -1,8 +1,8 @@
-﻿/**
+/**
  * 机房设备管理页面
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { FC } from 'react';
 import {
   Table, Button, Space, Modal, Form, Input, InputNumber, Select,
@@ -57,41 +57,18 @@ const RoomDeviceManagement: FC = () => {
   const [statistics, setStatistics] = useState<Statistics>({ total: 0, normal: 0, fault: 0, scrapped: 0 });
 
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
-  const { selectedDeptId, handleDeptSelect } = useSidebarDeptFilter({
+
+  // 使用 useSidebarDeptFilter hook 管理部门筛选
+  const { selectedDeptId, handleDeptSelect, setSelectedDeptId } = useSidebarDeptFilter({
+    searchForm: undefined,
     clearFieldNames: ['roomId'],
   });
 
-  const {
-    loading, data: devices, total, selectedRowKeys,
-    searchForm, editForm: deviceForm, editModalVisible: modalVisible,
-    editingItem: editingDevice, setSelectedRowKeys, setEditModalVisible: setModalVisible,
-    setEditingItem: setEditingDevice, handleSearch,
-    handleReset, handleAdd, handleEdit, handleModalClose, loadData: loadDevices, resetSelection,
-  } = useTableManager<RoomDevice>(
-    async (params) => {
-      const searchParams = selectedDeptId ? { ...params, orgId: selectedDeptId } : params;
-      const result = await roomDeviceApi.list(searchParams);
-      return { list: result.data?.list || [], total: result.data?.total || 0 };
-    },
-    {
-      externalPagination: {
-        current: paginationProps.current ?? 1,
-        pageSize: paginationProps.pageSize ?? 10,
-        setCurrent,
-        setPageSize,
-        setTotal,
-      },
-    }
-  );
-
-  const loadStatistics = useCallback(async (): Promise<Statistics> => {
-    try {
-      return await fetchRoomDeviceStatistics();
-    } catch (error) {
-      handleApiError(error, '加载统计数据', false);
-      return { total: 0, normal: 0, fault: 0, scrapped: 0 };
-    }
-  }, []);
+  // 使用 ref 存储最新的 selectedDeptId，避免闭包问题
+  const selectedDeptIdRef = useRef<string>('');
+  useEffect(() => {
+    selectedDeptIdRef.current = selectedDeptId;
+  }, [selectedDeptId]);
 
   const loadRoomOptions = useCallback(async (orgId?: string) => {
     try {
@@ -110,6 +87,46 @@ const RoomDeviceManagement: FC = () => {
     }
   }, []);
 
+  const {
+    loading, data: devices, total, selectedRowKeys,
+    searchForm, editForm: deviceForm, editModalVisible: modalVisible,
+    editingItem: editingDevice, setSelectedRowKeys, setEditModalVisible: setModalVisible,
+    setEditingItem: setEditingDevice, handleSearch,
+    handleReset, handleAdd, handleEdit, handleModalClose, loadData: loadDevices, resetSelection,
+  } = useTableManager<RoomDevice>(
+    async (params) => {
+      // 使用 ref 获取最新的部门 ID，避免闭包捕获旧值
+      const currentDeptId = selectedDeptIdRef.current;
+      const searchParams = currentDeptId ? { ...params, orgId: currentDeptId } : params;
+      const result = await roomDeviceApi.list(searchParams);
+      return { list: result.data?.list || [], total: result.data?.total || 0 };
+    },
+    {
+      externalPagination: {
+        current: paginationProps.current ?? 1,
+        pageSize: paginationProps.pageSize ?? 10,
+        setCurrent,
+        setPageSize,
+        setTotal,
+      },
+    }
+  );
+
+  // 当部门变化时，重新加载数据并重置分页
+  const loadDevicesByDept = useCallback(async () => {
+    setCurrent(1);
+    loadDevices();
+  }, [setCurrent, loadDevices]);
+
+  const loadStatistics = useCallback(async (): Promise<Statistics> => {
+    try {
+      return await fetchRoomDeviceStatistics();
+    } catch (error) {
+      handleApiError(error, '加载统计数据', false);
+      return { total: 0, normal: 0, fault: 0, scrapped: 0 };
+    }
+  }, []);
+
   // 统一的数据刷新函数
   const refreshData = useCallback(() => {
     loadDevices();
@@ -121,12 +138,19 @@ const RoomDeviceManagement: FC = () => {
     loadStatistics().then(setStatistics);
   }, [loadStatistics]);
 
-  // 当部门变化时，重新加载数据
+  // 当部门变化时，重新加载数据和机房选项
   useEffect(() => {
-    loadDevices();
+    loadDevicesByDept();
     loadRoomOptions(selectedDeptId || undefined);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDeptId]);
+  }, [selectedDeptId, loadDevicesByDept, loadRoomOptions]);
+
+  // 部门变化时清空搜索表单中的机房筛选字段
+  useEffect(() => {
+    searchForm.setFieldValue('roomId', undefined);
+    searchForm.setFieldValue('name', undefined);
+    searchForm.setFieldValue('deviceType', undefined);
+    searchForm.setFieldValue('status', undefined);
+  }, [selectedDeptId, searchForm]);
 
   const handleSave = async () => {
     try {
@@ -320,19 +344,22 @@ const RoomDeviceManagement: FC = () => {
             <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
               <Form.Item name="roomId" label="所属机房">
                 <Select
-                  placeholder="请先选择部门"
+                  placeholder={selectedDeptId ? "请选择机房" : "请先选择部门"}
                   allowClear
+                  showSearch
+                  filterOption={(input, option) =>
+                    String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                  }
                   style={{ width: 150 }}
                   disabled={!selectedDeptId}
-                >
-                  {roomOptions.map(r => <Option key={r.id} value={r.id}>{r.name}</Option>)}
-                </Select>
+                  options={roomOptions.map(r => ({ label: r.name, value: r.id }))}
+                />
               </Form.Item>
               <Form.Item name="name" label="设备名称">
-                <Input placeholder="请输入设备名称" />
+                <Input placeholder="请输入设备名称" allowClear style={{ width: 150 }} />
               </Form.Item>
               <Form.Item name="deviceType" label="设备类型">
-                <Select placeholder="请选择类型">
+                <Select placeholder="请选择类型" allowClear style={{ width: 130 }}>
                   <Option value="server">服务器</Option>
                   <Option value="storage">存储设备</Option>
                   <Option value="ups">UPS</Option>
@@ -344,7 +371,7 @@ const RoomDeviceManagement: FC = () => {
                 </Select>
               </Form.Item>
               <Form.Item name="status" label="状态">
-                <Select placeholder="请选择状态">
+                <Select placeholder="请选择状态" allowClear style={{ width: 100 }}>
                   <Option value={0}>正常</Option>
                   <Option value={1}>故障</Option>
                   <Option value={2}>报废</Option>
@@ -384,24 +411,38 @@ const RoomDeviceManagement: FC = () => {
         </Card>
         <Card>
           {viewMode === 'table' ? (
-            <Table rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }} columns={columns} dataSource={devices} loading={loading} rowKey="id" pagination={paginationProps} />
+            <Table
+              rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
+              columns={columns}
+              dataSource={devices}
+              loading={loading}
+              rowKey="id"
+              pagination={paginationProps}
+              onChange={(pagination) => {
+                const newPage = pagination.current || 1;
+                const newPageSize = pagination.pageSize || 10;
+                setCurrent(newPage);
+                setPageSize(newPageSize);
+                loadDevices({ current: newPage, pageSize: newPageSize });
+              }}
+            />
           ) : renderCardView()}
         </Card>
         <Modal title={editingDevice ? '编辑设备' : '新增设备'} open={modalVisible} onOk={handleSave} onCancel={() => { setModalVisible(false); deviceForm.resetFields(); setEditingDevice(null); }} width={700}>
           <Form form={deviceForm} layout="horizontal" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
             <Form.Item name="roomId" label="所属机房" rules={[{ required: true, message: '请选择所属机房' }]}>
-              <Select placeholder="请选择所属机房" className="user-form-input">
-                {roomOptions.map(r => <Option key={r.id} value={r.id}>{r.name}</Option>)}
-              </Select>
+              <Select placeholder="请选择所属机房" showSearch filterOption={(input, option) =>
+                String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+              } options={roomOptions.map(r => ({ label: r.name, value: r.id }))} />
             </Form.Item>
             <Form.Item name="name" label="设备名称" rules={[{ required: true, message: '请输入设备名称' }]}>
-              <Input placeholder="请输入设备名称" className="user-form-input" />
+              <Input placeholder="请输入设备名称" />
             </Form.Item>
             <Form.Item name="deviceCode" label="设备编码" rules={[{ required: true, message: '请输入设备编码' }]}>
-              <Input placeholder="请输入设备编码" className="user-form-input" />
+              <Input placeholder="请输入设备编码" />
             </Form.Item>
             <Form.Item name="deviceType" label="设备类型" rules={[{ required: true, message: '请选择设备类型' }]}>
-              <Select placeholder="请选择设备类型" className="user-form-input">
+              <Select placeholder="请选择设备类型">
                 <Option value="server">服务器</Option>
                 <Option value="storage">存储设备</Option>
                 <Option value="ups">UPS</Option>
@@ -415,48 +456,48 @@ const RoomDeviceManagement: FC = () => {
             <Row gutter={16}>
               <Col span={12}>
                 <Form.Item name="vendor" label="厂商">
-                  <Input placeholder="请输入厂商" className="user-form-input" />
+                  <Input placeholder="请输入厂商" />
                 </Form.Item>
               </Col>
               <Col span={12}>
                 <Form.Item name="model" label="型号">
-                  <Input placeholder="请输入型号" className="user-form-input" />
+                  <Input placeholder="请输入型号" />
                 </Form.Item>
               </Col>
             </Row>
             <Row gutter={16}>
               <Col span={12}>
                 <Form.Item name="serialNumber" label="序列号">
-                  <Input placeholder="请输入序列号" className="user-form-input" />
+                  <Input placeholder="请输入序列号" />
                 </Form.Item>
               </Col>
               <Col span={12}>
                 <Form.Item name="positionDesc" label="位置描述">
-                  <Input placeholder="请输入位置描述" className="user-form-input" />
+                  <Input placeholder="请输入位置描述" />
                 </Form.Item>
               </Col>
             </Row>
             <Row gutter={16}>
               <Col span={12}>
                 <Form.Item name="positionU" label="U位置">
-                  <InputNumber min={0} placeholder="U位置" style={{ width: '100%' }} className="user-form-input" />
+                  <InputNumber min={0} placeholder="U位置" style={{ width: '100%' }} />
                 </Form.Item>
               </Col>
               <Col span={12}>
                 <Form.Item name="heightU" label="高度(U)">
-                  <InputNumber min={0} placeholder="高度" style={{ width: '100%' }} className="user-form-input" />
+                  <InputNumber min={0} placeholder="高度" style={{ width: '100%' }} />
                 </Form.Item>
               </Col>
             </Row>
             <Row gutter={16}>
               <Col span={12}>
                 <Form.Item name="powerConsumption" label="功耗(W)">
-                  <InputNumber min={0} placeholder="功耗" style={{ width: '100%' }} className="user-form-input" />
+                  <InputNumber min={0} placeholder="功耗" style={{ width: '100%' }} />
                 </Form.Item>
               </Col>
               <Col span={12}>
                 <Form.Item name="status" label="状态" rules={[{ required: true, message: '请选择状态' }]}>
-                  <Select placeholder="请选择状态" className="user-form-input">
+                  <Select placeholder="请选择状态">
                     <Option value={0}>正常</Option>
                     <Option value={1}>故障</Option>
                     <Option value={2}>报废</Option>
@@ -467,17 +508,17 @@ const RoomDeviceManagement: FC = () => {
             <Row gutter={16}>
               <Col span={12}>
                 <Form.Item name="purchaseDate" label="购买日期">
-                  <DatePicker style={{ width: '100%' }} className="user-form-input" />
+                  <DatePicker style={{ width: '100%' }} />
                 </Form.Item>
               </Col>
               <Col span={12}>
                 <Form.Item name="warrantyDate" label="保修到期">
-                  <DatePicker style={{ width: '100%' }} className="user-form-input" />
+                  <DatePicker style={{ width: '100%' }} />
                 </Form.Item>
               </Col>
             </Row>
             <Form.Item name="description" label="描述">
-              <TextArea rows={3} placeholder="请输入描述" className="user-form-input" />
+              <TextArea rows={3} placeholder="请输入描述" />
             </Form.Item>
           </Form>
         </Modal>
@@ -489,4 +530,3 @@ const RoomDeviceManagement: FC = () => {
 };
 
 export default RoomDeviceManagement;
-

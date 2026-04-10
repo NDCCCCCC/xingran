@@ -429,7 +429,25 @@ const BuildingManagement: FC = () => {
       </Card>
       <Card>
         {viewMode === 'table' ? (
-          <Table rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }} columns={columns} dataSource={buildings} loading={loading} rowKey="id" pagination={paginationProps} />
+          <Table
+            rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
+            columns={columns}
+            dataSource={buildings}
+            loading={loading}
+            rowKey="id"
+            pagination={paginationProps}
+            onChange={(pagination) => {
+              const newPage = pagination.current || 1;
+              const newPageSize = pagination.pageSize || 10;
+              setCurrent(newPage);
+              setPageSize(newPageSize);
+              const searchParams: Record<string, unknown> = { current: newPage, pageSize: newPageSize };
+              if (selectedDeptId) {
+                searchParams.orgId = selectedDeptId;
+              }
+              loadBuildings(searchParams);
+            }}
+          />
         ) : renderCardView()}
       </Card>
       <Modal
