@@ -363,11 +363,24 @@ func isFirstUpper(s string) bool {
 	return s[0] >= 'A' && s[0] <= 'Z'
 }
 
+// Clone 创建 FSM 的浅拷贝，共享不可变的 Variables 和 States，
+// 但使用独立的可变状态（Records、CurrentRecord、CurrentState）。
+// 这样缓存的 FSM 模板可以被多个 goroutine 安全地并发使用。
+func (f *FSM) Clone() *FSM {
+	return &FSM{
+		Variables:     f.Variables, // 共享只读
+		States:        f.States,    // 共享只读
+		CurrentState:  "Start",
+		Records:       make([]map[string]string, 0),
+		CurrentRecord: make(map[string]string),
+	}
+}
+
 // ParseText 使用模板解析文本
+// 注意：此方法会修改 FSM 的可变状态，通过 Clone 确保并发安全。
 func (f *FSM) ParseText(text string) ([]map[string]string, error) {
-	f.Records = make([]map[string]string, 0)
-	f.CurrentRecord = make(map[string]string)
-	f.CurrentState = "Start"
+	// 克隆自身，避免修改缓存中的模板实例
+	clone := f.Clone()
 
 	if debugTextFSM {
 		fmt.Printf("[TextFSM] 开始解析文本，共 %d 行\n", len(strings.Split(text, "\n")))
@@ -378,10 +391,10 @@ func (f *FSM) ParseText(text string) ([]map[string]string, error) {
 		line = strings.TrimSpace(line)
 
 		// 获取当前状态
-		state := f.States[f.CurrentState]
+		state := clone.States[clone.CurrentState]
 		if state == nil {
-			f.CurrentState = "Start"
-			state = f.States["Start"]
+			clone.CurrentState = "Start"
+			state = clone.States["Start"]
 		}
 
 		matched := false
@@ -402,7 +415,7 @@ func (f *FSM) ParseText(text string) ([]map[string]string, error) {
 					fmt.Printf("[TextFSM]   捕获组: %v\n", matches)
 					for i, varName := range rule.VarNames {
 						if i+1 < len(matches) {
-							f.CurrentRecord[varName] = matches[i+1]
+							clone.CurrentRecord[varName] = matches[i+1]
 							fmt.Printf("[TextFSM]   %s = %s\n", varName, matches[i+1])
 						}
 					}
@@ -411,13 +424,13 @@ func (f *FSM) ParseText(text string) ([]map[string]string, error) {
 					matches := rule.Regex.FindStringSubmatch(line)
 					for i, varName := range rule.VarNames {
 						if i+1 < len(matches) {
-							f.CurrentRecord[varName] = matches[i+1]
+							clone.CurrentRecord[varName] = matches[i+1]
 						}
 					}
 				}
 
 				// 处理状态转换
-				f.handleStateTransition(rule.NextState)
+				clone.handleStateTransition(rule.NextState)
 
 				break
 			}
@@ -434,21 +447,21 @@ func (f *FSM) ParseText(text string) ([]map[string]string, error) {
 				}
 			}
 			if state.Default != "" {
-				f.handleStateTransition(state.Default)
+				clone.handleStateTransition(state.Default)
 			}
 		}
 	}
 
 	// 保存最后一条记录
-	if len(f.CurrentRecord) > 0 {
-		f.copyCurrentRecord()
+	if len(clone.CurrentRecord) > 0 {
+		clone.copyCurrentRecord()
 	}
 
 	if debugTextFSM {
-		fmt.Printf("[TextFSM] 解析完成，提取 %d 条记录\n", len(f.Records))
+		fmt.Printf("[TextFSM] 解析完成，提取 %d 条记录\n", len(clone.Records))
 	}
 
-	return f.Records, nil
+	return clone.Records, nil
 }
 
 // copyCurrentRecord 复制当前记录到记录集
