@@ -897,14 +897,19 @@ type DeviceMonitorService interface {
 }
 
 // GlobalDeviceMonitorService 全局设备监控服务
-// 在Core初始化时设置
-var GlobalDeviceMonitorService DeviceMonitorService
+// 遵循 Go 最佳实践：使用 sync.RWMutex 保护全局变量
+var (
+	GlobalDeviceMonitorService        DeviceMonitorService
+	GlobalDeviceMonitorServiceMu      sync.RWMutex
+)
 
 // GlobalDeviceInfoCollectionService 全局设备信息采集服务
-// 在Core初始化时设置
-var GlobalDeviceInfoCollectionService interface {
-	EnqueueAllOnlineDevices(ctx context.Context) error
-}
+var (
+	GlobalDeviceInfoCollectionService interface {
+		EnqueueAllOnlineDevices(ctx context.Context) error
+	}
+	GlobalDeviceInfoCollectionServiceMu sync.RWMutex
+)
 
 // RegisterNetworkDeviceTasks 注册网络设备相关定时任务
 func RegisterNetworkDeviceTasks(scheduler *Scheduler, db *gorm.DB) {
@@ -937,11 +942,12 @@ func RegisterNetworkDeviceTasks(scheduler *Scheduler, db *gorm.DB) {
 // executeDeviceStatusCheckTask 执行设备状态检查任务
 // 通过SNMP定时检查所有设备的在线/离线状态
 func executeDeviceStatusCheckTask(ctx context.Context) error {
-	if GlobalDeviceMonitorService == nil {
+	svc := GetDeviceMonitorService()
+	if svc == nil {
 		return fmt.Errorf("设备监控服务未初始化")
 	}
 
-	online, offline, err := GlobalDeviceMonitorService.CheckAllDevicesStatus(ctx)
+	online, offline, err := svc.CheckAllDevicesStatus(ctx)
 	if err != nil {
 		return fmt.Errorf("设备状态检查失败: %w", err)
 	}
@@ -953,11 +959,12 @@ func executeDeviceStatusCheckTask(ctx context.Context) error {
 // executeDeviceInfoUpdateTask 执行设备信息更新任务
 // 通过SSH异步采集设备的详细信息（型号、序列号、版本、运行时间等）
 func executeDeviceInfoUpdateTask(ctx context.Context) error {
-	if GlobalDeviceInfoCollectionService == nil {
+	svc := GetDeviceInfoCollectionService()
+	if svc == nil {
 		return fmt.Errorf("设备信息采集服务未初始化")
 	}
 
-	if err := GlobalDeviceInfoCollectionService.EnqueueAllOnlineDevices(ctx); err != nil {
+	if err := svc.EnqueueAllOnlineDevices(ctx); err != nil {
 		return fmt.Errorf("设备信息更新失败: %w", err)
 	}
 
@@ -968,11 +975,12 @@ func executeDeviceInfoUpdateTask(ctx context.Context) error {
 // executePortCollectionTask 执行端口采集任务
 // 采集所有在线设备的端口状态信息
 func executePortCollectionTask(ctx context.Context) error {
-	if GlobalDeviceMonitorService == nil {
+	svc := GetDeviceMonitorService()
+	if svc == nil {
 		return fmt.Errorf("设备监控服务未初始化")
 	}
 
-	if err := GlobalDeviceMonitorService.CollectAllPortStatus(ctx); err != nil {
+	if err := svc.CollectAllPortStatus(ctx); err != nil {
 		return fmt.Errorf("端口状态采集失败: %w", err)
 	}
 
@@ -983,11 +991,12 @@ func executePortCollectionTask(ctx context.Context) error {
 // executeMACCollectionTask 执行MAC采集任务
 // 采集所有在线设备的MAC地址表
 func executeMACCollectionTask(ctx context.Context) error {
-	if GlobalDeviceMonitorService == nil {
+	svc := GetDeviceMonitorService()
+	if svc == nil {
 		return fmt.Errorf("设备监控服务未初始化")
 	}
 
-	if err := GlobalDeviceMonitorService.CollectAllMACAddresses(ctx); err != nil {
+	if err := svc.CollectAllMACAddresses(ctx); err != nil {
 		return fmt.Errorf("MAC地址采集失败: %w", err)
 	}
 
@@ -998,11 +1007,12 @@ func executeMACCollectionTask(ctx context.Context) error {
 // executeConfigBackupTask 执行配置备份任务
 // 备份所有设备配置
 func executeConfigBackupTask(ctx context.Context) error {
-	if GlobalDeviceMonitorService == nil {
+	svc := GetDeviceMonitorService()
+	if svc == nil {
 		return fmt.Errorf("设备监控服务未初始化")
 	}
 
-	if err := GlobalDeviceMonitorService.BackupAllConfigurations(ctx); err != nil {
+	if err := svc.BackupAllConfigurations(ctx); err != nil {
 		return fmt.Errorf("配置备份失败: %w", err)
 	}
 
@@ -1010,14 +1020,34 @@ func executeConfigBackupTask(ctx context.Context) error {
 	return nil
 }
 
-// SetDeviceMonitorService 设置设备监控服务
+// SetDeviceMonitorService 设置设备监控服务（线程安全）
 func SetDeviceMonitorService(service DeviceMonitorService) {
+	GlobalDeviceMonitorServiceMu.Lock()
+	defer GlobalDeviceMonitorServiceMu.Unlock()
 	GlobalDeviceMonitorService = service
 }
 
-// SetDeviceInfoCollectionService 设置设备信息采集服务
+// GetDeviceMonitorService 获取设备监控服务（线程安全）
+func GetDeviceMonitorService() DeviceMonitorService {
+	GlobalDeviceMonitorServiceMu.RLock()
+	defer GlobalDeviceMonitorServiceMu.RUnlock()
+	return GlobalDeviceMonitorService
+}
+
+// SetDeviceInfoCollectionService 设置设备信息采集服务（线程安全）
 func SetDeviceInfoCollectionService(service interface {
 	EnqueueAllOnlineDevices(ctx context.Context) error
 }) {
+	GlobalDeviceInfoCollectionServiceMu.Lock()
+	defer GlobalDeviceInfoCollectionServiceMu.Unlock()
 	GlobalDeviceInfoCollectionService = service
+}
+
+// GetDeviceInfoCollectionService 获取设备信息采集服务（线程安全）
+func GetDeviceInfoCollectionService() interface {
+	EnqueueAllOnlineDevices(ctx context.Context) error
+} {
+	GlobalDeviceInfoCollectionServiceMu.RLock()
+	defer GlobalDeviceInfoCollectionServiceMu.RUnlock()
+	return GlobalDeviceInfoCollectionService
 }

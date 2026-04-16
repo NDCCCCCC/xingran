@@ -23,6 +23,21 @@ import (
 	"gorm.io/gorm"
 )
 
+// rpaScalingService RPA扩缩容服务最小接口
+// 在 core 包内定义以避免循环依赖，rpa.ScalingService 自动满足此接口
+type rpaScalingService interface {
+	Stop()
+}
+
+// warmUpServices 缓存预热所需的服务集合（仅在初始化期间使用）
+type warmUpServices struct {
+	UserService     system.UserService
+	RoleService     system.RoleService
+	MenuService     system.MenuService
+	DeptService     system.DepartmentService
+	PostService     system.PostService
+}
+
 // Core 核心模块管理器
 // 负责管理系统的所有核心服务组件，包括数据库连接、缓存、JWT管理、密码加密等
 type Core struct {
@@ -38,7 +53,6 @@ type Core struct {
 	DeviceExecutor              *device.DeviceExecutor                // 设备执行器（新架构，统一入口）
 	DeviceDiscoveryService      *services.DeviceDiscoveryService      // 设备发现服务
 	DeviceInfoCollectionService *services.DeviceInfoCollectionService // 设备信息采集服务
-	NetworkDeviceService        *services.NetworkDeviceService        // 网络设备服务
 	DeviceMonitorService        *services.DeviceMonitorService        // 设备监控服务
 	NoticeHub                   *websocket.NoticeHub                  // WebSocket通知中心
 	CaptchaService              *CaptchaService                       // 验证码服务
@@ -51,18 +65,9 @@ type Core struct {
 	CacheConfigService *services.CacheConfigService // 缓存配置服务
 	CacheManager       *system.CacheManager         // 缓存管理器（增强功能）
 
-	// System 模块服务（用于缓存预热）
-	UserService     system.UserService
-	RoleService     system.RoleService
-	MenuService     system.MenuService
-	DeptService     system.DepartmentService
-	PostService     system.PostService
-	ConfigService   system.ConfigService
-	SettingsService system.SettingsService
-
 	// RPA 服务
 	RPAConfig         *config.RPAConfig // RPA 配置
-	RPAScalingService interface{}       // RPA 扩缩容服务 (interface{} 避免循环依赖)
+	RPAScalingService rpaScalingService // RPA 扩缩容服务
 
 	// API端点元数据服务
 	APIMetadata        *config.APIMetadataConfig    // API元数据配置
@@ -179,12 +184,12 @@ func (c *Core) Init() error {
 
 		applogger.Infof("缓存服务初始化完成（预热功能: %v）", cacheManagerEnabled)
 
-		// 初始化 System 模块服务（用于缓存预热）
-		c.initSystemServicesForWarmUp()
+		// 初始化缓存预热服务
+		warmUpSvcs := c.initSystemServicesForWarmUp()
 
 		// 执行缓存预热（异步执行，不阻塞启动）
 		if cacheManagerEnabled {
-			go c.performCacheWarmUp(context.Background())
+			go c.performCacheWarmUp(context.Background(), warmUpSvcs)
 		}
 	}
 
@@ -231,11 +236,7 @@ func (c *Core) Init() error {
 		applogger.Infof("设备信息采集服务启动成功")
 	}
 
-	// 10. 初始化网络设备服务
-	c.NetworkDeviceService = services.NewNetworkDeviceService(c.GetDB(), c.DeviceDiscoveryService, c.DeviceInfoCollectionService)
-	applogger.Infof("网络设备服务初始化完成")
-
-	// 11. 初始化定时任务调度器
+	// 10. 初始化定时任务调度器
 	c.Scheduler = scheduler.NewScheduler(c.GetDB())
 	if err := c.Scheduler.Start(context.Background()); err != nil {
 		applogger.Warnf("启动调度器失败: %v", err)
@@ -487,38 +488,32 @@ func (c *Core) initAPIEndpointService() error {
 	return nil
 }
 
-// initSystemServicesForWarmUp 初始化 System 模块服务（用于缓存预热）
-func (c *Core) initSystemServicesForWarmUp() {
+// initSystemServicesForWarmUp 初始化缓存预热所需的 System 服务
+func (c *Core) initSystemServicesForWarmUp() *warmUpServices {
 	db := c.GetDB()
-
-	// 创建缓存提供者
 	cacheProvider := system.NewCacheProvider(c.DataCacheService)
 
-	// 统一创建带缓存的服务（与 Router 中的逻辑保持一致）
-	c.UserService = system.NewUserServiceWithCache(db, cacheProvider, c.CacheConfigService, c.PwdManager)
-	c.RoleService = system.NewRoleServiceWithCache(db, cacheProvider, c.CacheConfigService)
-	c.MenuService = system.NewMenuServiceWithCache(db, cacheProvider, c.CacheConfigService)
-	c.DeptService = system.NewDepartmentServiceWithCache(db, cacheProvider, c.CacheConfigService)
-	c.PostService = system.NewPostServiceWithCache(db, cacheProvider, c.CacheConfigService)
-	c.ConfigService = system.NewConfigServiceWithCache(db, cacheProvider, c.CacheConfigService)
-	c.SettingsService = system.NewSettingsServiceWithCache(db, cacheProvider, c.CacheConfigService)
-
-	applogger.Infof("System 服务初始化完成（用于缓存预热）")
+	return &warmUpServices{
+		UserService: system.NewUserServiceWithCache(db, cacheProvider, c.CacheConfigService, c.PwdManager),
+		RoleService: system.NewRoleServiceWithCache(db, cacheProvider, c.CacheConfigService),
+		MenuService: system.NewMenuServiceWithCache(db, cacheProvider, c.CacheConfigService),
+		DeptService: system.NewDepartmentServiceWithCache(db, cacheProvider, c.CacheConfigService),
+		PostService: system.NewPostServiceWithCache(db, cacheProvider, c.CacheConfigService),
+	}
 }
 
 // performCacheWarmUp 执行缓存预热
-func (c *Core) performCacheWarmUp(ctx context.Context) {
-	// 等待一小段时间，确保服务已完全启动
+func (c *Core) performCacheWarmUp(ctx context.Context, svcs *warmUpServices) {
 	time.Sleep(2 * time.Second)
 
 	applogger.Infof("开始执行缓存预热...")
 
 	warmUpFuncs := map[string]system.WarmUpFunc{
-		"user": system.WarmUpUserCache(c.UserService),
-		"role": system.WarmUpRoleCache(c.RoleService),
-		"menu": system.WarmUpMenuCache(c.MenuService),
-		"dept": system.WarmUpDeptCache(c.DeptService),
-		"post": system.WarmUpPostCache(c.PostService),
+		"user": system.WarmUpUserCache(svcs.UserService),
+		"role": system.WarmUpRoleCache(svcs.RoleService),
+		"menu": system.WarmUpMenuCache(svcs.MenuService),
+		"dept": system.WarmUpDeptCache(svcs.DeptService),
+		"post": system.WarmUpPostCache(svcs.PostService),
 	}
 
 	if err := c.CacheManager.WarmUp(ctx, warmUpFuncs); err != nil {

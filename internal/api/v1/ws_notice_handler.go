@@ -2,6 +2,7 @@ package v1
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -16,8 +17,16 @@ var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 	CheckOrigin: func(r *http.Request) bool {
-		// 生产环境需要验证来源
-		return true
+		origin := r.Header.Get("Origin")
+		if origin == "" {
+			return true // 非浏览器客户端（如Postman）无Origin头
+		}
+		// 允许同源请求
+		host := r.Header.Get("Host")
+		if host == "" {
+			host = r.Host
+		}
+		return strings.HasPrefix(origin, "http://"+host) || strings.HasPrefix(origin, "https://"+host)
 	},
 }
 
