@@ -31,4 +31,5 @@
 
 | Phase | Requirements | Status |
 |-------|-------------|--------|
-| — | — | — |
+| Phase 1 | IMPORT-01, IMPORT-02, IMPORT-03 | pending |
+| Phase 2 | IMPORT-04, TMPL-01, VAL-01, VAL-02 | pending |

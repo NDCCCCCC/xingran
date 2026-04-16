@@ -872,3 +872,245 @@ Use TodoWrite to track progress. Ask for my approval only before starting and fo
 - Test after every single change
 - Fail fast - fix issues immediately
 - Continuous verification prevents regression debt
+
+<!-- GSD:project-start source:PROJECT.md -->
+## Project
+
+**工位导入部门/用户关联功能**
+
+为 RuoYi-Next 运维管理系统的工位（Workstation）Excel 导入功能添加"所属部门"和"所属用户"两个可选字段。导入时通过部门名称匹配 `sys_dept`、通过用户名匹配 `sys_user`，建立工位与部门、用户的关联关系，并在前端展示。
+
+**Core Value:** 工位导入时能自动关联部门和用户，避免手动逐条配置，提升批量管理效率。
+
+### Constraints
+
+- **Tech Stack**: 必须沿用现有架构模式（Handler-Service、opsApi、excel_config）
+- **Backward Compatible**: 新字段可选，不影响现有工位数据和导入流程
+- **UUID Foreign Keys**: `org_id` 和 `user_id` 必须是有效 UUID，参考 `building_service.go` 的 `validateOrg()` 模式
+- **Status Convention**: 遵循 0=正常, 1=停用 的惯例
+- **Response Format**: 使用 `response.Success()` / `response.Error()` 包装
+<!-- GSD:project-end -->
+
+<!-- GSD:stack-start source:codebase/STACK.md -->
+## Technology Stack
+
+## Overview
+## Backend Stack
+### Language & Runtime
+- **Go 1.24** (toolchain go1.24.5)
+- Module: `github.com/ruoyi-next/ruoyi-go-backend`
+- Entry point: `cmd/main.go`
+### Web Framework
+- **Gin v1.10.0** — HTTP routing, middleware, JSON binding
+- **gin-contrib/cors v1.7.0** — CORS middleware
+- **gin-contrib/gzip v0.0.6** — Response compression
+- **swaggo/gin-swagger v1.6.0** — Swagger UI integration
+### Database
+- **PostgreSQL** (primary) via `gorm.io/driver/postgres v1.5.9`
+- **SQLite** (alternate) via `gorm.io/driver/sqlite v1.5.4` + `modernc.org/sqlite v1.40.1`
+- **GORM v1.30.5** — ORM with auto-migration
+- Connection pooling: configurable max_open_conns, max_idle_conns, max_lifetime
+### Cache
+- **Redis 7.4** via `redis/go-redis/v9 v9.7.0`
+- Two-tier: L1 (in-memory) + L2 (Redis) with async writer pool
+- Prefix: `ruoyi:` for all keys
+- L2 writer pool: configurable workers, queue size, retry with exponential backoff
+### Authentication & Security
+- **JWT v5.2.1** — Dual token (access + refresh)
+- **tjfoc/gmsm v1.4.1** — SM2/SM3/SM4 national cryptography
+- **SM2** — Key exchange, digital signatures
+- **SM3** — Password hashing
+- **SM4-CBC** — Request body encryption
+- **base64Captcha v1.3.6** — Login captcha
+### Task Scheduling
+- **robfig/cron/v3 v3.0.1** — Cron job engine
+- Built-in scheduler in `internal/scheduler/`
+- AD sync tasks, periodic work orders
+### Network Device Management
+- **scrapli/scrapligo v1.3.3** — Network device SSH/Telnet connections
+- **gosnmp/gosnmp v1.35.0** — SNMP operations
+- **sirikothe/gotextfsm v1.0.1** — TextFSM template parsing
+### Excel Processing
+- **xuri/excelize/v2 v2.10.0** — Excel import/export
+- Supports building, floor, workstation, infopoint batch operations
+### Real-time
+- **gorilla/websocket v1.5.3** — WebSocket connections for real-time features
+### Configuration
+- **spf13/viper v1.19.0** — YAML config with env var overrides
+- Config files: `configs/config.yaml`, `config.dev.yaml`, `config.prod.yaml`
+### Logging
+- **sirupsen/logrus v1.9.3** — Structured logging
+- **natefinch/lumberjack v2.2.1** — Log rotation
+### Other Libraries
+- **google/uuid v1.6.0** — UUID generation (primary keys)
+- **go-ldap/ldap/v3 v3.4.12** — AD/LDAP integration
+- **golang.org/x/sync v0.19.0** — Concurrency primitives (errgroup, singleflight)
+- **swaggo/swag v1.16.4** — Swagger doc generation
+## Frontend Stack
+### Core
+- **React 19.2** with TypeScript 5.9
+- **Vite 7.2** — Build tool and dev server
+- **ESLint** — Code linting
+### UI Framework
+- **Ant Design 6.1** — Component library
+- **Tailwind CSS 4.1.18** — Utility-first styling
+### State Management
+- **Zustand 5.0.9** — Lightweight state stores (7 stores)
+- **TanStack React Query v5.90.12** — Server state management
+### Routing
+- **react-router-dom v7.10.1** — Client-side routing
+### 3D Visualization
+- **Three.js v0.182.0** — 3D rendering
+- **@react-three/fiber v9.5.0** — React renderer for Three.js
+- **@react-three/drei v10.7.7** — Three.js helpers
+- Used for building/floor 3D visualization and CAD-style floor plan editor
+### Charts & Data
+- **ECharts 6.0** via `echarts-for-react v3.0.5`
+- **xlsx v0.18.5** — Client-side Excel processing
+### Maps
+- **@uiw/react-baidu-map v2.7.5** — Baidu Maps integration
+- **react-baidu-map v1.3.5** — Alternative map component
+### Other Frontend
+- **sm-crypto v0.3.13** — Client-side SM2/SM4 encryption
+- **axios v1.13.2** — HTTP client
+- **dayjs v1.11.19** — Date/time handling
+- **react-markdown v10.1.0** — Markdown rendering
+- **@uiw/react-md-editor v4.0.11** — Markdown editor
+- **react-grid-layout v2.2.2** — Drag-and-drop grid
+- **jsonata v2.1.0** — JSON query/transformation
+- **cron-parser/cron-validate** — Cron expression handling
+- **vitest** — Testing framework
+### Code Statistics
+- **485 Go files** (backend)
+- **506 TS/TSX files** (frontend)
+<!-- GSD:stack-end -->
+
+<!-- GSD:conventions-start source:CONVENTIONS.md -->
+## Conventions
+
+## Go Code Style
+### Handler-Service Pattern (Mandatory)
+### Response Wrapping
+### Error Handling
+- Service layer returns `error` (not response codes)
+- Handler layer translates errors to HTTP status codes
+- Use `fmt.Errorf("context: %w", err)` for wrapping
+- Use `pkg/errors` for typed errors where needed
+### Context Propagation
+### Request Binding
+### GORM Patterns
+- Always use soft delete (GORM default with `deleted_at`)
+- UUID primary keys via `gen_random_uuid()`
+- Use GORM scopes for reusable query logic
+- Avoid raw SQL; prefer GORM chainable API
+### Cache Key Helpers
+### Cache Prefix Handling
+- Store: `cache.Set(ctx, "user:1", value)` → Redis key `ruoyi:user:1`
+- When user input includes `ruoyi:` prefix, strip it before cache operations:
+## Status Value Convention
+## API Convention
+### Route Pattern
+- `POST /list` — List with pagination
+- `POST /` — Create
+- `POST /:id` — Get by ID
+- `POST /:id/update` — Update
+- `POST /:id/delete` — Delete
+### Response Format
+### Pagination
+## Frontend Conventions
+### API Calling
+### Token Management
+### State Management (Zustand)
+- 7 stores in `src/store/`
+- `authStore` includes `TokenManager` for auto-refresh
+- Use `useStore` hook for component access
+### useEffect Dependencies
+### Import Organization
+## Database Conventions
+- Table prefix: `sys_` for system tables
+- Column names: `snake_case`
+- Primary keys: UUID with `gen_random_uuid()`
+- Timestamps: `created_at`, `updated_at`, `deleted_at`
+- Soft delete: GORM default with `deleted_at` field
+- Migrations: auto-run on startup, versioned in `internal/core/db/migrations/`
+## Git Conventions
+- Commit messages: conventional commits format (`fix:`, `feat:`, `chore:`, `docs:`)
+- Build check before commit: `go build ./...`
+- Test check before commit: `go test ./...`
+- Always ask user before committing
+<!-- GSD:conventions-end -->
+
+<!-- GSD:architecture-start source:ARCHITECTURE.md -->
+## Architecture
+
+## Pattern: Layered Handler-Service with Core DI
+```
+```
+## Core Dependency Injection
+```go
+```
+```go
+```
+## Data Flow
+### Request Flow
+### Cache Flow
+### Import Flow (Workstation/Building)
+## Key Abstractions
+### Service Interface Pattern
+- Interface defined in service file (e.g., `UserService interface`)
+- Private implementation struct (`userServiceImpl`)
+- Constructor function (`NewUserService`)
+- Dependencies injected via constructor
+### CacheProvider Interface
+```go
+```
+- Cached version: reads/writes Redis
+- Non-cached version: pass-through to DB
+### Dual Cache Architecture
+- **Legacy**: Root-level `*_cache_service.go` files wrapping `DataCacheService`
+- **New**: `internal/services/system/*_cache_impl.go` using `CacheProvider` interface
+## Entry Points
+- **HTTP**: `cmd/main.go` → `internal/api/router.go` → module routers
+- **WebSocket**: `internal/websocket/` for real-time connections
+- **Scheduler**: `internal/scheduler/` for cron-based tasks (AD sync, work orders)
+- **Migrations**: `internal/core/db/migrations/` auto-run on startup
+## Module Boundaries
+| Module | API Layer | Service Layer | Models |
+|--------|-----------|---------------|--------|
+| System | `api/v1/system/` | `services/system/` | `models/` |
+| Operations | `api/v1/operations/` | `services/operations/` | `models/` |
+| Scheduler | `api/v1/scheduler/` | `services/scheduler/` | `models/` |
+| Work Order | `api/v1/workorder/` | `services/workorder/` | `models/` |
+| Network | `api/v1/network/` | `services/network/` | `models/` |
+| Monitor | `api/v1/monitor/` | `services/monitor/` | `models/` |
+| Duty | `api/v1/duty/` | `services/duty/` | `models/` |
+| Knowledge | `api/v1/knowledge/` | `services/knowledge/` | `models/` |
+| AD Domain | — | `services/addomain/` | `models/` |
+| Port Collection | — | `services/portcollection/` | — |
+<!-- GSD:architecture-end -->
+
+<!-- GSD:skills-start source:skills/ -->
+## Project Skills
+
+No project skills found. Add skills to any of: `.claude/skills/`, `.agents/skills/`, `.cursor/skills/`, or `.github/skills/` with a `SKILL.md` index file.
+<!-- GSD:skills-end -->
+
+<!-- GSD:workflow-start source:GSD defaults -->
+## GSD Workflow Enforcement
+
+Before using Edit, Write, or other file-changing tools, start work through a GSD command so planning artifacts and execution context stay in sync.
+
+Use these entry points:
+- `/gsd-quick` for small fixes, doc updates, and ad-hoc tasks
+- `/gsd-debug` for investigation and bug fixing
+- `/gsd-execute-phase` for planned phase work
+
+Do not make direct repo edits outside a GSD workflow unless the user explicitly asks to bypass it.
+<!-- GSD:workflow-end -->
+
+<!-- GSD:profile-start -->
+## Developer Profile
+
+> Profile not yet configured. Run `/gsd-profile-user` to generate your developer profile.
+> This section is managed by `generate-claude-profile` -- do not edit manually.
+<!-- GSD:profile-end -->
