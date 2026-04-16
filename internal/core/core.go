@@ -378,11 +378,8 @@ func (c *Core) Close() {
 	}
 	// 停止 RPA 扩缩容服务
 	if c.RPAScalingService != nil {
-		// 使用类型断言调用 Stop 方法
-		if scalingSvc, ok := c.RPAScalingService.(interface{ Stop() }); ok {
-			scalingSvc.Stop()
-			applogger.Infof("RPA 扩缩容服务已停止")
-		}
+		c.RPAScalingService.Stop()
+		applogger.Infof("RPA 扩缩容服务已停止")
 	}
 }
 
