@@ -1,9 +1,9 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.1
-milestone_name: milestone
-status: verifying
-last_updated: "2026-04-16T13:27:59.914Z"
+milestone_name: 信息点导入设备端口关联
+status: completed
+last_updated: "2026-04-16T21:30:00.000Z"
 last_activity: 2026-04-16
 progress:
   total_phases: 1
@@ -17,14 +17,13 @@ progress:
 
 **Project**: 工位导入部门/用户关联功能
 **Created**: 2026-04-16
-**Current Phase**: Phase 03 (信息点导入设备端口配置) — COMPLETE
-**Status**: All plans executed, ready for verification
+**Status**: Milestone v1.1 shipped
 
 ## Current Position
 
-Phase: 03
-Plan: Not started
-Status: All plans executed, ready for verification
+Phase: —
+Plan: —
+Status: Milestone v1.1 complete, ready for next milestone
 Last activity: 2026-04-16
 
 ## Project Reference
@@ -32,7 +31,7 @@ Last activity: 2026-04-16
 See: .planning/PROJECT.md (updated 2026-04-16)
 
 **Core value:** 工位导入时自动关联部门和用户，避免手动逐条配置
-**Current focus:** Phase 03 — 信息点导入设备端口配置
+**Current focus:** Planning next milestone — `/gsd-new-milestone`
 
 ## Phase Status
 
@@ -42,14 +41,7 @@ See: .planning/PROJECT.md (updated 2026-04-16)
 
 ## Completed Milestones
 
-(None)
-
-## Active Decisions
-
-1. D-01: Device uses Reference to sys_network_device.device_name (exact match)
-2. D-02: Port uses Reference to sys_device_port_status.interface_name (exact match)
-3. D-03: Both columns optional, match failure leaves field empty
-4. D-04: Port uses global lookup, no DependsOn scoping to device
+- ✅ **v1.1 信息点导入设备端口关联** (2026-04-16) — 1 phase, 1 plan, 2 tasks
 
 ## Session History
 
@@ -59,3 +51,4 @@ See: .planning/PROJECT.md (updated 2026-04-16)
 | 2026-04-16 | Milestone v1.1 started | — |
 | 2026-04-16 | Phase 3 context gathered | 3 |
 | 2026-04-16 | Plan 03-01 executed (2 tasks, 2 commits) | 3 |
+| 2026-04-16 | Milestone v1.1 completed and archived | — |
