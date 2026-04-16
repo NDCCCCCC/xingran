@@ -32,6 +32,13 @@
 - [ ] 前端工位详情展示部门名称和用户姓名
 - [ ] 匹配失败时（部门名或用户名不存在）：有就关联，没有就留空，不阻断导入
 
+### Validated in Phase 03
+
+- ✓ 信息点导入配置添加"所属设备"列 (`deviceName` → `sys_network_device.device_name` → `device_id`) — Phase 03
+- ✓ 信息点导入配置添加"所属端口"列 (`portName` → `sys_device_port_status.interface_name` → `port_id`) — Phase 03
+- ✓ 两个新列均为可选，空值不阻断导入 — Phase 03
+- ✓ 模板下载包含设备和端口示例值 — Phase 03
+
 ### Out of Scope
 
 - 导入时自动创建不存在的部门或用户 — 超出导入功能职责范围
@@ -73,10 +80,12 @@
 
 **Goal:** 为信息点 Excel 导入添加"所属设备"和"所属端口"两个可选列
 
-**Target features:**
-- 导入配置添加"所属设备"列，通过设备名称匹配 `sys_network_device.name` → `device_id`
-- 导入配置添加"所属端口"列，通过端口名称匹配 `sys_device_port_status.port_name` → `port_id`
-- 两个字段可选，匹配失败留空不阻断导入
+**Status:** Phase 03 complete — all plans executed and verified (1/1)
+
+**Completed features:**
+- ✓ 导入配置添加"所属设备"列，通过设备名称匹配 `sys_network_device.device_name` → `device_id` — Phase 03
+- ✓ 导入配置添加"所属端口"列，通过端口名称匹配 `sys_device_port_status.interface_name` → `port_id` — Phase 03
+- ✓ 两个字段可选，匹配失败留空不阻断导入 — Phase 03
 
 ## Key Decisions
 
@@ -105,4 +114,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-16 — Milestone v1.1 started*
+*Last updated: 2026-04-16 — Phase 03 complete (信息点导入设备端口配置)*
