@@ -69,6 +69,15 @@
 - **Status Convention**: 遵循 0=正常, 1=停用 的惯例
 - **Response Format**: 使用 `response.Success()` / `response.Error()` 包装
 
+## Current Milestone: v1.1 信息点导入设备/端口关联
+
+**Goal:** 为信息点 Excel 导入添加"所属设备"和"所属端口"两个可选列
+
+**Target features:**
+- 导入配置添加"所属设备"列，通过设备名称匹配 `sys_network_device.name` → `device_id`
+- 导入配置添加"所属端口"列，通过端口名称匹配 `sys_device_port_status.port_name` → `port_id`
+- 两个字段可选，匹配失败留空不阻断导入
+
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
@@ -96,4 +105,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-16 after initialization*
+*Last updated: 2026-04-16 — Milestone v1.1 started*
