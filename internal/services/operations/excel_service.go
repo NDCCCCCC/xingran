@@ -187,9 +187,9 @@ func (s *ExcelService) getExampleValue(col ExcelColumn) string {
 		return "internet" // 互联网专线
 	case "isp":
 		return "telecom" // 电信
-	case "sourceDeviceName", "destDeviceName":
+	case "sourceDeviceName", "destDeviceName", "deviceName":
 		return "核心交换机A"
-	case "sourcePort", "destPort":
+	case "sourcePort", "destPort", "portName":
 		return "Gi0/1"
 	case "sourceIpAddress", "destIpAddress":
 		return "192.168.1.1"
