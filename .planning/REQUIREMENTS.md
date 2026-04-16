@@ -1,35 +1,39 @@
 # Requirements
 
-## v1 Requirements
+## v1.1 Requirements
 
 ### 导入配置
-- [ ] **IMPORT-01**: Excel 导入配置添加"所属部门"列，通过部门名称匹配 `sys_dept.dept_name`，写入 `dept_id`
-- [ ] **IMPORT-02**: Excel 导入配置添加"所属用户"列，通过用户名匹配 `sys_user.user_name`，写入 `user_id`
-- [ ] **IMPORT-03**: 两个字段均为可选，匹配失败时留空不阻断导入
-- [ ] **IMPORT-04**: Excel 导出包含"所属部门"和"所属用户"列（如导出功能存在）
-
-### 导入模板
-- [ ] **TMPL-01**: 导入模板下载包含"所属部门"和"所属用户"列头
+- [ ] **IMPORT-05**: Excel 导入配置添加"所属设备"列，通过设备名称匹配 `sys_network_device.name`，写入 `device_id`
+- [ ] **IMPORT-06**: Excel 导入配置添加"所属端口"列，通过端口名称匹配 `sys_device_port_status.port_name`，写入 `port_id`
+- [ ] **IMPORT-07**: 两个字段均为可选，匹配失败时留空不阻断导入
 
 ### 验证
-- [ ] **VAL-01**: 导入含部门/用户名的 Excel 后，工位列表正确显示部门名称和用户姓名
-- [ ] **VAL-02**: 导入不含部门/用户名的 Excel 后，工位列表对应列为空
+- [ ] **VAL-03**: 导入含设备名/端口名的 Excel 后，信息点列表正确显示设备名称和端口名称
+- [ ] **VAL-04**: 导出包含设备和端口信息（已有，验证不退化）
+
+## v1.0 Requirements (Completed)
+
+- [x] **IMPORT-01**: Excel 导入配置添加"所属部门"列
+- [x] **IMPORT-02**: Excel 导入配置添加"所属用户"列
+- [x] **IMPORT-03**: 两个字段均为可选，匹配失败时留空不阻断导入
+- [x] **IMPORT-04**: Excel 导出包含"所属部门"和"所属用户"列
+- [x] **TMPL-01**: 导入模板下载包含"所属部门"和"所属用户"列头
+- [x] **VAL-01**: 导入含部门/用户名的 Excel 后，工位列表正确显示
+- [x] **VAL-02**: 导入不含部门/用户名的 Excel 后，工位列表对应列为空
 
 ## v2 Requirements (Deferred)
 
-- 按-orgId 级联匹配部门（解决同名部门问题）
+- 信息点导入时通过楼宇+楼层级联匹配工位（解决需要知道工位名的问题）
 - 导入时显示匹配失败的警告信息
-- 批量修改已有工位的部门/用户关联
 
 ## Out of Scope
 
-- 导入时自动创建不存在的部门或用户 — 超出导入功能职责
-- 工位与用户多对多关系 — 当前只需一对一
-- 部门树级联选择匹配 — 复杂度高，用户未要求
+- 设备/端口多对多关系 — 当前只需一对一
+- 导入时自动创建不存在的设备或端口 — 超出导入功能职责
+- 端口与设备的级联验证（确认端口属于指定设备）— 复杂度高，用户未要求
 
 ## Traceability
 
 | Phase | Requirements | Status |
 |-------|-------------|--------|
-| Phase 1 | IMPORT-01, IMPORT-02, IMPORT-03 | pending |
-| Phase 2 | IMPORT-04, TMPL-01, VAL-01, VAL-02 | pending |
+| Phase 3 | IMPORT-05, IMPORT-06, IMPORT-07, VAL-03, VAL-04 | pending |
