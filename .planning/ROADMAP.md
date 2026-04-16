@@ -13,10 +13,15 @@
 **Goal**: 在 Excel 导入配置中添加设备和端口列，实现名称→ID 自动匹配
 
 **Requirements**: IMPORT-05, IMPORT-06, IMPORT-07, VAL-03, VAL-04
+**Plans:** 1 plan
 **UI hint**: no
+
+Plans:
+- [ ] 03-01-PLAN.md — Add deviceName and portName ExcelColumn entries with Reference resolution + template example values
 
 **Changes**:
 - `internal/services/operations/excel_config.go` — infoPoint 配置添加设备和端口列
+- `internal/services/operations/excel_service.go` — 模板示例值添加 deviceName/portName cases
 
 **Success Criteria**:
 1. 导入含设备名和端口名的 Excel 文件后，`ops_info_points` 表的 `device_id` 和 `port_id` 字段正确存储 UUID
