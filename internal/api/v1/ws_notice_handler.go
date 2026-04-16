@@ -26,7 +26,12 @@ var upgrader = websocket.Upgrader{
 		if host == "" {
 			host = r.Host
 		}
-		return strings.HasPrefix(origin, "http://"+host) || strings.HasPrefix(origin, "https://"+host)
+		if strings.HasPrefix(origin, "http://"+host) || strings.HasPrefix(origin, "https://"+host) {
+			return true
+		}
+		// 允许 localhost 连接（开发环境前端 dev server）
+		// WebSocket 端点已有 JWT 认证保障安全
+		return strings.HasPrefix(origin, "http://localhost") || strings.HasPrefix(origin, "http://127.0.0.1")
 	},
 }
 
