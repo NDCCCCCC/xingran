@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	addomainServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
@@ -61,7 +61,7 @@ func (h *ADDomainHandler) ListConfigs(c *gin.Context) {
 		Current  int  `json:"current"`
 		PageSize int  `json:"pageSize"`
 	}
-	c.ShouldBindJSON(&req)
+	_ = c.ShouldBindJSON(&req)
 
 	h.setDefaultPagination(&req.Current, &req.PageSize)
 
@@ -251,7 +251,7 @@ func (h *ADDomainHandler) SyncData(c *gin.Context) {
 	var req struct {
 		SyncType string `json:"syncType"`
 	}
-	c.ShouldBindJSON(&req)
+	_ = c.ShouldBindJSON(&req)
 
 	if req.SyncType == "" {
 		req.SyncType = "full"
@@ -317,7 +317,7 @@ func (h *ADDomainHandler) GetOUTree(c *gin.Context) {
 // @Router /system/ad-domain/groups/list [post]
 func (h *ADDomainHandler) ListGroups(c *gin.Context) {
 	var req addomainServices.ADGroupListRequest
-	c.ShouldBindJSON(&req)
+	_ = c.ShouldBindJSON(&req)
 
 	h.setDefaultPagination(&req.Current, &req.PageSize)
 
@@ -384,7 +384,7 @@ func (h *ADDomainHandler) GetGroupMembers(c *gin.Context) {
 		Current  int    `json:"current"`
 		PageSize int    `json:"pageSize"`
 	}
-	c.ShouldBindJSON(&req)
+	_ = c.ShouldBindJSON(&req)
 
 	h.setDefaultPagination(&req.Current, &req.PageSize)
 
@@ -410,7 +410,7 @@ func (h *ADDomainHandler) GetGroupMembers(c *gin.Context) {
 // @Router /system/ad-domain/users/list [post]
 func (h *ADDomainHandler) ListUsers(c *gin.Context) {
 	var req addomainServices.ADUserListRequest
-	c.ShouldBindJSON(&req)
+	_ = c.ShouldBindJSON(&req)
 
 	h.setDefaultPagination(&req.Current, &req.PageSize)
 
@@ -459,7 +459,7 @@ func (h *ADDomainHandler) UpdateUser(c *gin.Context) {
 	}
 
 	var req struct {
-		ConfigID string                                     `json:"configId" binding:"required"`
+		ConfigID string                               `json:"configId" binding:"required"`
 		Update   addomainServices.ADUserUpdateRequest `json:"update"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -655,7 +655,7 @@ func (h *ADDomainHandler) ListSyncLogs(c *gin.Context) {
 		Current  int    `json:"current"`
 		PageSize int    `json:"pageSize"`
 	}
-	c.ShouldBindJSON(&req)
+	_ = c.ShouldBindJSON(&req)
 
 	h.setDefaultPagination(&req.Current, &req.PageSize)
 
@@ -681,7 +681,7 @@ func (h *ADDomainHandler) ListSyncLogs(c *gin.Context) {
 // @Router /system/ad-domain/computers/list [post]
 func (h *ADDomainHandler) ListComputers(c *gin.Context) {
 	var req addomainServices.ComputerListRequest
-	c.ShouldBindJSON(&req)
+	_ = c.ShouldBindJSON(&req)
 
 	h.setDefaultPagination(&req.Current, &req.PageSize)
 
@@ -707,8 +707,8 @@ func (h *ADDomainHandler) ListComputers(c *gin.Context) {
 // @Router /system/ad-domain/computers/detail [post]
 func (h *ADDomainHandler) GetComputerDetail(c *gin.Context) {
 	var req struct {
-		ConfigID    string `json:"configId" binding:"required"`
-		ComputerDN  string `json:"computerDn" binding:"required"`
+		ConfigID   string `json:"configId" binding:"required"`
+		ComputerDN string `json:"computerDn" binding:"required"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {

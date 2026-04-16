@@ -96,7 +96,8 @@ func (s *floorService) Update(ctx context.Context, floor *operations.OpsFloor) e
 		go func() {
 			syncCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
-			s.syncWorkstationBuildingID(syncCtx, floor.ID, floor.BuildingID)
+			// best-effort: 同步工位 building_id，忽略错误以避免阻塞主流程
+				_ = s.syncWorkstationBuildingID(syncCtx, floor.ID, floor.BuildingID)
 		}()
 	}
 

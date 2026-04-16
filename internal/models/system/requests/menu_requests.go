@@ -12,17 +12,17 @@ type MenuListParams struct {
 
 // MenuCreateRequest 创建菜单请求
 type MenuCreateRequest struct {
-	MenuName  string              `json:"menuName" binding:"required"`
-	ParentID  *string             `json:"parentId"`
-	OrderNum  int                 `json:"orderNum"`
-	Path      *string             `json:"path"`
-	Component *string             `json:"component"`
-	MenuType  models.MenuType     `json:"menuType"`
-	Visible   models.VisibleType  `json:"visible"`
-	Status    models.MenuStatus   `json:"status"`
-	Perms     *string             `json:"perms"`
-	Icon      *string             `json:"icon"`
-	Remark    *string             `json:"remark"`
+	MenuName  string             `json:"menuName" binding:"required"`
+	ParentID  *string            `json:"parentId"`
+	OrderNum  int                `json:"orderNum"`
+	Path      *string            `json:"path"`
+	Component *string            `json:"component"`
+	MenuType  models.MenuType    `json:"menuType"`
+	Visible   models.VisibleType `json:"visible"`
+	Status    models.MenuStatus  `json:"status"`
+	Perms     *string            `json:"perms"`
+	Icon      *string            `json:"icon"`
+	Remark    *string            `json:"remark"`
 }
 
 // ToModel 转换为菜单模型
@@ -44,18 +44,18 @@ func (r *MenuCreateRequest) ToModel() models.Menu {
 
 // MenuUpdateRequest 更新菜单请求
 type MenuUpdateRequest struct {
-	ID        string              `json:"id" binding:"required"`
-	MenuName  string              `json:"menuName" binding:"required"`
-	ParentID  *string             `json:"parentId"`
-	OrderNum  int                 `json:"orderNum"`
-	Path      *string             `json:"path"`
-	Component *string             `json:"component"`
-	MenuType  models.MenuType     `json:"menuType"`
-	Visible   models.VisibleType  `json:"visible"`
-	Status    models.MenuStatus   `json:"status"`
-	Perms     *string             `json:"perms"`
-	Icon      *string             `json:"icon"`
-	Remark    *string             `json:"remark"`
+	ID        string             `json:"id" binding:"required"`
+	MenuName  string             `json:"menuName" binding:"required"`
+	ParentID  *string            `json:"parentId"`
+	OrderNum  int                `json:"orderNum"`
+	Path      *string            `json:"path"`
+	Component *string            `json:"component"`
+	MenuType  models.MenuType    `json:"menuType"`
+	Visible   models.VisibleType `json:"visible"`
+	Status    models.MenuStatus  `json:"status"`
+	Perms     *string            `json:"perms"`
+	Icon      *string            `json:"icon"`
+	Remark    *string            `json:"remark"`
 }
 
 // normalizeParentID 处理空字符串的 ParentID

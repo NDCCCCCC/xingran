@@ -18,16 +18,16 @@ const (
 
 // WorkerCapability Worker能力配置
 type WorkerCapability struct {
-	BrowserTypes    []string `json:"browserTypes"`    // 支持的浏览器类型
-	Headless        bool     `json:"headless"`        // 是否支持无头模式
-	ScreenShots     bool     `json:"screenShots"`     // 是否支持截图
-	FileDownload    bool     `json:"fileDownload"`    // 是否支持文件下载
-	FileUpload      bool     `json:"fileUpload"`      // 是否支持文件上传
-	MaxTimeout      int      `json:"maxTimeout"`      // 最大超时时间（秒）
-	SupportsAI      bool     `json:"supportsAI"`      // 是否支持AI
-	AITypes         []string `json:"aiTypes"`         // 支持的AI类型
-	OS              string   `json:"os"`              // 操作系统
-	BrowserVersion  string   `json:"browserVersion"`  // 浏览器版本
+	BrowserTypes   []string `json:"browserTypes"`   // 支持的浏览器类型
+	Headless       bool     `json:"headless"`       // 是否支持无头模式
+	ScreenShots    bool     `json:"screenShots"`    // 是否支持截图
+	FileDownload   bool     `json:"fileDownload"`   // 是否支持文件下载
+	FileUpload     bool     `json:"fileUpload"`     // 是否支持文件上传
+	MaxTimeout     int      `json:"maxTimeout"`     // 最大超时时间（秒）
+	SupportsAI     bool     `json:"supportsAI"`     // 是否支持AI
+	AITypes        []string `json:"aiTypes"`        // 支持的AI类型
+	OS             string   `json:"os"`             // 操作系统
+	BrowserVersion string   `json:"browserVersion"` // 浏览器版本
 }
 
 // Worker RPA Worker节点
@@ -52,7 +52,7 @@ func (Worker) TableName() string {
 
 // BeforeCreate GORM钩子
 func (w *Worker) BeforeCreate(tx *gorm.DB) error {
-	w.BaseModel.BeforeCreate(tx)
+	_ = w.BaseModel.BeforeCreate(tx)
 	return nil
 }
 

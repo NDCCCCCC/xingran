@@ -108,7 +108,8 @@ func (s *APIEndpointService) GetUserAccessibleEndpoints(
 		}
 	}
 
-	s.cache.SetJSON(ctx, cacheKey, result, 5*time.Minute)
+	// 缓存写入失败不影响业务，显式忽略错误
+	_ = s.cache.SetJSON(ctx, cacheKey, result, 5*time.Minute)
 
 	return result, nil
 }

@@ -167,7 +167,7 @@ func (s *infoPointService) List(ctx context.Context, req requests.InfoPointListR
 	return &PageResult{
 		List:     list,
 		Total:    total,
-		Current: current,
+		Current:  current,
 		PageSize: pageSize,
 	}, nil
 }

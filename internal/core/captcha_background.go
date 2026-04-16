@@ -180,7 +180,7 @@ func (s *CaptchaBackgroundService) GetRandomEnabled(ctx context.Context, shape m
 
 	// 缓存查询结果
 	if data, err := json.Marshal(backgrounds); err == nil {
-		s.cache.Set(ctx, cacheKey, string(data), 5*time.Minute)
+		_ = s.cache.Set(ctx, cacheKey, string(data), 5*time.Minute)
 	}
 
 	return backgrounds[rand.Intn(len(backgrounds))], nil
@@ -244,7 +244,11 @@ func (s *CaptchaBackgroundService) preGenerateForConfig(ctx context.Context, sha
 	counterStr, _ := s.cache.Get(ctx, counterKey)
 	var counter int64
 	if counterStr != "" {
-		counter, _ = strconv.ParseInt(counterStr, 10, 64)
+		if parsed, err := strconv.ParseInt(counterStr, 10, 64); err != nil {
+			counter = 0
+		} else {
+			counter = parsed
+		}
 	}
 
 	// 为每个背景图预生成验证码
@@ -280,16 +284,19 @@ func (s *CaptchaBackgroundService) preGenerateForConfig(ctx context.Context, sha
 		}
 
 		// 存入缓存（使用索引作为key的一部分）
-		data, _ := json.Marshal(cacheData)
+		data, err := json.Marshal(cacheData)
+		if err != nil {
+			continue
+		}
 		itemKey := fmt.Sprintf("%s:%d", poolPrefix, (counter%int64(poolSize))+1)
-		s.cache.Set(ctx, itemKey, string(data), 24*time.Hour)
+			_ = s.cache.Set(ctx, itemKey, string(data), 24*time.Hour)
 
 		counter++
 		idx++
 	}
 
 	// 更新计数器
-	s.cache.Set(ctx, counterKey, strconv.FormatInt(counter, 10), 24*time.Hour)
+	_ = s.cache.Set(ctx, counterKey, strconv.FormatInt(counter, 10), 24*time.Hour)
 
 	return nil
 }
@@ -326,16 +333,16 @@ func (s *CaptchaBackgroundService) GetFromCachePool(ctx context.Context, shape s
 	// 更新计数器
 	newCounter := counter - 1
 	if newCounter > 0 {
-		s.cache.Set(ctx, counterKey, strconv.FormatInt(newCounter, 10), 24*time.Hour)
+		_ = s.cache.Set(ctx, counterKey, strconv.FormatInt(newCounter, 10), 24*time.Hour)
 	} else {
-		s.cache.Delete(ctx, counterKey)
+		_ = s.cache.Delete(ctx, counterKey)
 	}
 
 	// 异步补充缓存
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		s.preGenerateForConfig(ctx, shape, difficulty)
+		_ = s.preGenerateForConfig(ctx, shape, difficulty)
 	}()
 
 	return result, nil

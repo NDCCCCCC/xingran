@@ -1,11 +1,10 @@
 package system
 
 import (
-
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
 // FixMenuPathsHandler 修复菜单路径的临时API
@@ -79,8 +78,8 @@ func FixMenuPathsHandler(c *gin.Context, core *core.Core) {
 
 	// 6. 查询修复结果
 	type MenuInfo struct {
-		MenuName string `json:"menu_name"`
-		Path     string `json:"path"`
+		MenuName  string `json:"menu_name"`
+		Path      string `json:"path"`
 		Component string `json:"component"`
 		ParentID  string `json:"parent_id"`
 	}

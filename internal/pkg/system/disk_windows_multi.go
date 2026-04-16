@@ -74,24 +74,6 @@ func getAllDiskInfoByPlatform() ([]DiskInfo, error) {
 	return disks, nil
 }
 
-// getEstimatedMultiDiskInfo 获取估算的多磁盘信息（备用方案）
-func getEstimatedMultiDiskInfo() ([]DiskInfo, error) {
-	return []DiskInfo{
-		{
-			MountPoint: "C:",
-			Total:      uint64(475) * 1024 * 1024 * 1024, // 475GB
-			Available:  uint64(100) * 1024 * 1024 * 1024, // 100GB可用
-			Used:       uint64(375) * 1024 * 1024 * 1024, // 375GB已用
-		},
-		{
-			MountPoint: "D:",
-			Total:      uint64(931) * 1024 * 1024 * 1024, // 931GB
-			Available:  uint64(500) * 1024 * 1024 * 1024, // 500GB可用
-			Used:       uint64(431) * 1024 * 1024 * 1024, // 431GB已用
-		},
-	}, nil
-}
-
 // getDisksViaPowerShell 使用PowerShell获取磁盘信息
 func getDisksViaPowerShell() ([]DiskInfo, error) {
 	cmd := exec.Command("powershell", "-Command", "Get-WmiObject Win32_LogicalDisk | Where-Object {$_.DriveType -eq 3} | Select-Object DeviceID, Size, FreeSpace")

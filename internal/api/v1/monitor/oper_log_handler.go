@@ -2,8 +2,8 @@ package monitor
 
 import (
 	"github.com/gin-gonic/gin"
-	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	monitorServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/monitor"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )

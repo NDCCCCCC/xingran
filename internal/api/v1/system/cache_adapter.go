@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	sysServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	sysServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 )
 
 // dataCacheAdapter DataCacheService 适配器
@@ -71,12 +71,12 @@ func (a *dataCacheAdapter) GetStats(ctx context.Context) (*sysServices.CacheStat
 		return nil, err
 	}
 	return &sysServices.CacheStats{
-		Hits:        stats.Hits,
-		Misses:      stats.Misses,
-		Count:       stats.Count,
-		MemorySize:  stats.MemorySize,
-		HitRate:     stats.HitRate,
-		KeyCount:    stats.KeyCount,
+		Hits:          stats.Hits,
+		Misses:        stats.Misses,
+		Count:         stats.Count,
+		MemorySize:    stats.MemorySize,
+		HitRate:       stats.HitRate,
+		KeyCount:      stats.KeyCount,
 		ExtendedStats: stats.ExtendedStats,
 	}, nil
 }

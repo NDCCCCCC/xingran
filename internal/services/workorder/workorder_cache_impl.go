@@ -43,11 +43,11 @@ type WorkOrderCacheService interface {
 
 // workOrderCacheServiceImpl 工单缓存服务实现
 type workOrderCacheServiceImpl struct {
-	db           *gorm.DB
-	base         *WorkOrderService
-	statistics    *StatisticsService
-	cache        systemServices.CacheProvider
-	config       *services.CacheConfigService
+	db         *gorm.DB
+	base       *WorkOrderService
+	statistics *StatisticsService
+	cache      systemServices.CacheProvider
+	config     *services.CacheConfigService
 }
 
 // NewWorkOrderServiceWithCache 创建带缓存的工单服务
@@ -107,6 +107,7 @@ func (s *workOrderCacheServiceImpl) Update(ctx context.Context, req *UpdateReque
 	if err := s.db.WithContext(ctx).Where("id = ?", req.ID).First(&workOrder).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			// 继续执行，可能工单已被删除
+			_ = err
 		}
 	}
 
@@ -139,7 +140,7 @@ func (s *workOrderCacheServiceImpl) Delete(ctx context.Context, id string) error
 	var workOrder models.WorkOrder
 	if err := s.db.WithContext(ctx).Where("id = ?", id).First(&workOrder).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			// 工单不存在，继续执行
+			_ = err // 工单不存在，继续执行
 		}
 	}
 

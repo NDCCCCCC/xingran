@@ -29,7 +29,7 @@ func (Template) TableName() string {
 
 // BeforeCreate GORM钩子
 func (t *Template) BeforeCreate(tx *gorm.DB) error {
-	t.BaseModel.BeforeCreate(tx)
+	_ = t.BaseModel.BeforeCreate(tx)
 	return nil
 }
 

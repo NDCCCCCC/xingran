@@ -17,7 +17,7 @@ import (
 // WorkerHandler Worker 处理器
 type WorkerHandler struct {
 	workerService rpa.WorkerService
-	redisClient    *redis.Client
+	redisClient   *redis.Client
 }
 
 // NewWorkerHandler 创建 Worker 处理器
@@ -216,19 +216,19 @@ func (h *WorkerHandler) ScaleAll(c *gin.Context) {
 
 // AutoScaleConfig 自动扩缩容配置
 type AutoScaleConfig struct {
-	Enabled         bool    `json:"enabled"`
-	ScaleUpThreshold   int    `json:"scale_up_threshold"`    // 队列长度触发扩容
-	ScaleDownThreshold int    `json:"scale_down_threshold"`  // 空闲时长触发缩容
-	MinConcurrency    int    `json:"min_concurrency"`
-	MaxConcurrency    int    `json:"max_concurrency"`
-	CheckInterval     int    `json:"check_interval"` // seconds
+	Enabled            bool `json:"enabled"`
+	ScaleUpThreshold   int  `json:"scale_up_threshold"`   // 队列长度触发扩容
+	ScaleDownThreshold int  `json:"scale_down_threshold"` // 空闲时长触发缩容
+	MinConcurrency     int  `json:"min_concurrency"`
+	MaxConcurrency     int  `json:"max_concurrency"`
+	CheckInterval      int  `json:"check_interval"` // seconds
 }
 
 // GetAutoScaleConfig 获取自动扩缩容配置
 func (h *WorkerHandler) GetAutoScaleConfig(c *gin.Context) {
 	// TODO: 从数据库或配置获取自动扩缩容配置
 	config := AutoScaleConfig{
-		Enabled:           false,
+		Enabled:            false,
 		ScaleUpThreshold:   10,
 		ScaleDownThreshold: 5,
 		MinConcurrency:     1,

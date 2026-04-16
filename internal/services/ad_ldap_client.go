@@ -28,13 +28,13 @@ func (c *LDAPClient) Connect() error {
 
 	if c.config.UseSSL {
 		// LDAPS (端口636)
-		c.conn, err = ldap.DialTLS("tcp", address, &tls.Config{
+		c.conn, err = ldap.DialURL("ldaps://"+address, ldap.DialWithTLSConfig(&tls.Config{
 			InsecureSkipVerify: true, // 生产环境应验证证书
 			ServerName:         c.config.ServerAddress,
-		})
+		}))
 	} else {
 		// LDAP (端口389)
-		c.conn, err = ldap.Dial("tcp", address)
+		c.conn, err = ldap.DialURL("ldap://" + address)
 	}
 
 	if err != nil {

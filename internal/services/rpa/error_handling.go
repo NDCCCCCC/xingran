@@ -14,54 +14,54 @@ import (
 type ErrorHandlingStrategy string
 
 const (
-	ErrorStrategyIgnore      ErrorHandlingStrategy = "ignore"       // 忽略错误继续执行
-	ErrorStrategyRetry       ErrorHandlingStrategy = "retry"        // 重试
-	ErrorStrategyRollback    ErrorHandlingStrategy = "rollback"     // 回滚
-	ErrorStrategySkip        ErrorHandlingStrategy = "skip"         // 跳过当前步骤
-	ErrorStrategyAbort       ErrorHandlingStrategy = "abort"        // 中止执行
-	ErrorStrategyFallback    ErrorHandlingStrategy = "fallback"     // 降级执行
+	ErrorStrategyIgnore   ErrorHandlingStrategy = "ignore"   // 忽略错误继续执行
+	ErrorStrategyRetry    ErrorHandlingStrategy = "retry"    // 重试
+	ErrorStrategyRollback ErrorHandlingStrategy = "rollback" // 回滚
+	ErrorStrategySkip     ErrorHandlingStrategy = "skip"     // 跳过当前步骤
+	ErrorStrategyAbort    ErrorHandlingStrategy = "abort"    // 中止执行
+	ErrorStrategyFallback ErrorHandlingStrategy = "fallback" // 降级执行
 )
 
 // RetryPolicy 重试策略
 type RetryPolicy struct {
-	MaxAttempts int           `json:"maxAttempts"`    // 最大重试次数
-	InitialDelay time.Duration `json:"initialDelay"`   // 初始延迟
-	MaxDelay    time.Duration `json:"maxDelay"`       // 最大延迟
-	BackoffType BackoffType   `json:"backoffType"`    // 退避类型
-	RetryOn     []string      `json:"retryOn"`        // 重试的错误类型
+	MaxAttempts  int           `json:"maxAttempts"`  // 最大重试次数
+	InitialDelay time.Duration `json:"initialDelay"` // 初始延迟
+	MaxDelay     time.Duration `json:"maxDelay"`     // 最大延迟
+	BackoffType  BackoffType   `json:"backoffType"`  // 退避类型
+	RetryOn      []string      `json:"retryOn"`      // 重试的错误类型
 }
 
 // BackoffType 退避类型
 type BackoffType string
 
 const (
-	BackoffTypeFixed    BackoffType = "fixed"     // 固定延迟
-	BackoffTypeLinear   BackoffType = "linear"    // 线性增长
+	BackoffTypeFixed       BackoffType = "fixed"       // 固定延迟
+	BackoffTypeLinear      BackoffType = "linear"      // 线性增长
 	BackoffTypeExponential BackoffType = "exponential" // 指数增长
 )
 
 // ErrorHandlingConfig 错误处理配置
 type ErrorHandlingConfig struct {
-	Strategy    ErrorHandlingStrategy `json:"strategy"`
-	RetryPolicy *RetryPolicy          `json:"retryPolicy,omitempty"`
-	FallbackAction *json.RawMessage   `json:"fallbackAction,omitempty"`
-	ContinueOnError bool              `json:"continueOnError"`
+	Strategy        ErrorHandlingStrategy `json:"strategy"`
+	RetryPolicy     *RetryPolicy          `json:"retryPolicy,omitempty"`
+	FallbackAction  *json.RawMessage      `json:"fallbackAction,omitempty"`
+	ContinueOnError bool                  `json:"continueOnError"`
 }
 
 // ErrorRecoveryAction 错误恢复动作
 type ErrorRecoveryAction struct {
-	Type        string                 `json:"type"`        // recover, notify, compensate
-	Actions     []json.RawMessage      `json:"actions"`     // 恢复动作列表
-	Notify      *NotificationConfig    `json:"notify"`      // 通知配置
-	Compensate  *CompensationAction    `json:"compensate"`  // 补偿动作
+	Type       string              `json:"type"`       // recover, notify, compensate
+	Actions    []json.RawMessage   `json:"actions"`    // 恢复动作列表
+	Notify     *NotificationConfig `json:"notify"`     // 通知配置
+	Compensate *CompensationAction `json:"compensate"` // 补偿动作
 }
 
 // NotificationConfig 通知配置
 type NotificationConfig struct {
-	Channels  []string `json:"channels"`   // 通知渠道
+	Channels   []string `json:"channels"`   // 通知渠道
 	Recipients []string `json:"recipients"` // 接收人
-	Template  string   `json:"template"`   // 消息模板
-	Severity  string   `json:"severity"`   // 严重程度
+	Template   string   `json:"template"`   // 消息模板
+	Severity   string   `json:"severity"`   // 严重程度
 }
 
 // CompensationAction 补偿动作
@@ -88,28 +88,28 @@ type ErrorHandlingService interface {
 
 // errorHandlingServiceImpl 错误处理服务实现
 type errorHandlingServiceImpl struct {
-	db              *gorm.DB
-	flowService     FlowControlService
+	db               *gorm.DB
+	flowService      FlowControlService
 	executionService ExecutionService
 }
 
 // NewErrorHandlingService 创建错误处理服务
 func NewErrorHandlingService(db *gorm.DB, flowService FlowControlService, execService ExecutionService) ErrorHandlingService {
 	return &errorHandlingServiceImpl{
-		db:              db,
-		flowService:     flowService,
+		db:               db,
+		flowService:      flowService,
 		executionService: execService,
 	}
 }
 
 // ErrorHandleRequest 错误处理请求
 type ErrorHandleRequest struct {
-	ExecutionID     string                `json:"executionId"`
-	StepIndex       int                   `json:"stepIndex"`
-	Error           error                 `json:"error"`
-	Config          *ErrorHandlingConfig  `json:"config"`
-	Variables       map[string]interface{} `json:"variables"`
-	Context         map[string]interface{} `json:"context"`
+	ExecutionID string                 `json:"executionId"`
+	StepIndex   int                    `json:"stepIndex"`
+	Error       error                  `json:"error"`
+	Config      *ErrorHandlingConfig   `json:"config"`
+	Variables   map[string]interface{} `json:"variables"`
+	Context     map[string]interface{} `json:"context"`
 }
 
 // ErrorHandleResult 错误处理结果
@@ -174,11 +174,11 @@ func (s *errorHandlingServiceImpl) HandleError(ctx context.Context, req *ErrorHa
 
 	case ErrorStrategyFallback:
 		fallbackResult, err := s.ExecuteFallback(ctx, &FallbackRequest{
-			ExecutionID:   req.ExecutionID,
-			StepIndex:     req.StepIndex,
+			ExecutionID:    req.ExecutionID,
+			StepIndex:      req.StepIndex,
 			FallbackAction: req.Config.FallbackAction,
-			Variables:     req.Variables,
-			Error:         req.Error,
+			Variables:      req.Variables,
+			Error:          req.Error,
 		})
 		if err != nil {
 			return nil, err
@@ -207,10 +207,10 @@ type RetryRequest struct {
 
 // RetryResult 重试结果
 type RetryResult struct {
-	Success   bool                   `json:"success"`
-	Attempt   int                    `json:"attempt"`
-	Variables map[string]interface{} `json:"variables"`
-	ShouldRetry bool                 `json:"shouldRetry"`
+	Success     bool                   `json:"success"`
+	Attempt     int                    `json:"attempt"`
+	Variables   map[string]interface{} `json:"variables"`
+	ShouldRetry bool                   `json:"shouldRetry"`
 }
 
 // ExecuteRetry 执行重试
@@ -393,7 +393,7 @@ func (s *errorHandlingServiceImpl) logFallback(ctx context.Context, executionID 
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
 		len(s) > 0 && (s[0:len(substr)] == substr || s[len(s)-len(substr):] == substr ||
-		findInString(s, substr)))
+			findInString(s, substr)))
 }
 
 func findInString(s, substr string) bool {

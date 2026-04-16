@@ -2,9 +2,9 @@ package monitor
 
 import (
 	"github.com/gin-gonic/gin"
-	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
@@ -165,11 +165,11 @@ type GetKeyInfoRequest struct {
 
 // GetKeyInfoResponse 获取缓存键信息响应
 type GetKeyInfoResponse struct {
-	Key      string        `json:"key"`      // 键
-	Exists   bool          `json:"exists"`   // 是否存在
-	TTL      int64         `json:"ttl"`      // 剩余存活时间（秒）
-	Value    string        `json:"value"`    // 值（可选，仅在请求时返回）
-	Size     int64         `json:"size"`     // 大小（字节）
+	Key    string `json:"key"`    // 键
+	Exists bool   `json:"exists"` // 是否存在
+	TTL    int64  `json:"ttl"`    // 剩余存活时间（秒）
+	Value  string `json:"value"`  // 值（可选，仅在请求时返回）
+	Size   int64  `json:"size"`   // 大小（字节）
 }
 
 // GetKeyInfo 获取缓存键信息

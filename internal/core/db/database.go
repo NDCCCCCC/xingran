@@ -94,10 +94,10 @@ func createPostgresConnection(cfg *config.DatabaseConfig) (*gorm.DB, error) {
 	dsn := cfg.GetDSN()
 
 	gormConfig := &gorm.Config{
-		Logger:                                    createFilteredLogger(),
-		NowFunc:                                    func() time.Time { return time.Now().Local() },
+		Logger:                                   createFilteredLogger(),
+		NowFunc:                                  func() time.Time { return time.Now().Local() },
 		DisableForeignKeyConstraintWhenMigrating: true,
-		SkipDefaultTransaction:                     true,
+		SkipDefaultTransaction:                   true,
 	}
 
 	db, err := gorm.Open(postgres.Open(dsn), gormConfig)

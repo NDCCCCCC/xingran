@@ -47,7 +47,7 @@ type SelectorSuccessRecord struct {
 	Selector     string    `json:"selector" gorm:"not null"`
 	SelectorType string    `json:"selectorType"` // css, xpath, text, aria, data-testid
 	SuccessCount int       `json:"successCount" gorm:"default:1"`
-	AvgDuration  int64     `json:"avgDuration"`  // 平均查找时长（毫秒）
+	AvgDuration  int64     `json:"avgDuration"` // 平均查找时长（毫秒）
 	LastUsedAt   time.Time `json:"lastUsedAt" gorm:"autoUpdateTime"`
 	CreatedAt    time.Time `json:"createdAt" gorm:"autoCreateTime"`
 	Metadata     string    `json:"metadata"` // JSON 格式的额外信息
@@ -55,16 +55,16 @@ type SelectorSuccessRecord struct {
 
 // SelectorFailureRecord 选择器失败记录
 type SelectorFailureRecord struct {
-	ID           string    `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	PageURL      string    `json:"pageUrl" gorm:"index;not null"`
-	ElementID    string    `json:"elementId" gorm:"index;not null"`
-	Selector     string    `json:"selector" gorm:"not null"`
-	ErrorType    string    `json:"errorType"`    // timeout, not_found, multiple_matches
-	ErrorMessage string    `json:"errorMessage"`
-	FailureCount int       `json:"failureCount" gorm:"default:1"`
-	CreatedAt    time.Time `json:"createdAt" gorm:"autoCreateTime"`
+	ID           string     `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	PageURL      string     `json:"pageUrl" gorm:"index;not null"`
+	ElementID    string     `json:"elementId" gorm:"index;not null"`
+	Selector     string     `json:"selector" gorm:"not null"`
+	ErrorType    string     `json:"errorType"` // timeout, not_found, multiple_matches
+	ErrorMessage string     `json:"errorMessage"`
+	FailureCount int        `json:"failureCount" gorm:"default:1"`
+	CreatedAt    time.Time  `json:"createdAt" gorm:"autoCreateTime"`
 	ResolvedAt   *time.Time `json:"resolvedAt"`   // 是否已解决
-	ResolvedWith string    `json:"resolvedWith"`  // 解决方案
+	ResolvedWith string     `json:"resolvedWith"` // 解决方案
 }
 
 // SelectorRecommendation 选择器推荐
@@ -429,12 +429,12 @@ func (l *selectorLearnerImpl) AnalyzeSelectorTrends(ctx context.Context, pageURL
 
 // SelectorTrendAnalysis 选择器趋势分析
 type SelectorTrendAnalysis struct {
-	PageURL           string             `json:"pageUrl"`
-	AnalyzedPeriod    int                `json:"analyzedPeriod"`
-	TotalSuccesses    int                `json:"totalSuccesses"`
-	TotalFailures     int                `json:"totalFailures"`
-	OverallSuccessRate float64           `json:"overallSuccessRate"`
-	MostUsedTypes     []SelectorTypeStat `json:"mostUsedTypes"`
+	PageURL            string             `json:"pageUrl"`
+	AnalyzedPeriod     int                `json:"analyzedPeriod"`
+	TotalSuccesses     int                `json:"totalSuccesses"`
+	TotalFailures      int                `json:"totalFailures"`
+	OverallSuccessRate float64            `json:"overallSuccessRate"`
+	MostUsedTypes      []SelectorTypeStat `json:"mostUsedTypes"`
 }
 
 // SelectorTypeStat 选择器类型统计

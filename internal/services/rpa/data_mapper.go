@@ -8,59 +8,62 @@ import (
 	"strconv"
 	"strings"
 
-	"gorm.io/gorm"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+
 	"gopkg.in/yaml.v3"
+	"gorm.io/gorm"
 )
 
 // MappingType 映射类型
 type MappingType string
 
 const (
-	MappingTypeDirect    MappingType = "direct"     // 直接映射
-	MappingTypeTransform MappingType = "transform"  // 转换映射
-	MappingTypeConstant  MappingType = "constant"   // 常量映射
-	MappingTypeTemplate  MappingType = "template"   // 模板映射
-	MappingTypeLookup    MappingType = "lookup"     // 查找映射
-	MappingTypeJSONPath  MappingType = "jsonpath"   // JSON 路径提取
-	MappingTypeAggregate MappingType = "aggregate"  // 聚合映射
+	MappingTypeDirect    MappingType = "direct"    // 直接映射
+	MappingTypeTransform MappingType = "transform" // 转换映射
+	MappingTypeConstant  MappingType = "constant"  // 常量映射
+	MappingTypeTemplate  MappingType = "template"  // 模板映射
+	MappingTypeLookup    MappingType = "lookup"    // 查找映射
+	MappingTypeJSONPath  MappingType = "jsonpath"  // JSON 路径提取
+	MappingTypeAggregate MappingType = "aggregate" // 聚合映射
 )
 
 // TransformFunction 转换函数类型
 type TransformFunction string
 
 const (
-	TransformToUpper       TransformFunction = "toUpper"
-	TransformToLower       TransformFunction = "toLower"
-	TransformToTitle       TransformFunction = "toTitle"
-	TransformTrim          TransformFunction = "trim"
-	TransformReplace       TransformFunction = "replace"
-	TransformSplit         TransformFunction = "split"
-	TransformJoin          TransformFunction = "join"
-	TransformDateFormat    TransformFunction = "dateFormat"
-	TransformNumberFormat  TransformFunction = "numberFormat"
-	TransformConcat        TransformFunction = "concat"
-	TransformSubstring     TransformFunction = "substring"
-	TransformParseJSON     TransformFunction = "parseJSON"
-	TransformStringify     TransformFunction = "stringify"
-	TransformDefaultValue  TransformFunction = "defaultValue"
+	TransformToUpper      TransformFunction = "toUpper"
+	TransformToLower      TransformFunction = "toLower"
+	TransformToTitle      TransformFunction = "toTitle"
+	TransformTrim         TransformFunction = "trim"
+	TransformReplace      TransformFunction = "replace"
+	TransformSplit        TransformFunction = "split"
+	TransformJoin         TransformFunction = "join"
+	TransformDateFormat   TransformFunction = "dateFormat"
+	TransformNumberFormat TransformFunction = "numberFormat"
+	TransformConcat       TransformFunction = "concat"
+	TransformSubstring    TransformFunction = "substring"
+	TransformParseJSON    TransformFunction = "parseJSON"
+	TransformStringify    TransformFunction = "stringify"
+	TransformDefaultValue TransformFunction = "defaultValue"
 )
 
 // DataMappingRule 数据映射规则
 type DataMappingRule struct {
-	Source      string                 `json:"source"`       // 源字段路径
-	Target      string                 `json:"target"`       // 目标字段路径
-	Type        MappingType            `json:"type"`         // 映射类型
-	Transform   TransformFunction      `json:"transform"`    // 转换函数
-	Params      map[string]interface{} `json:"params"`       // 转换参数
-	Required    bool                   `json:"required"`     // 是否必填
-	DefaultValue interface{}           `json:"defaultValue"` // 默认值
+	Source       string                 `json:"source"`       // 源字段路径
+	Target       string                 `json:"target"`       // 目标字段路径
+	Type         MappingType            `json:"type"`         // 映射类型
+	Transform    TransformFunction      `json:"transform"`    // 转换函数
+	Params       map[string]interface{} `json:"params"`       // 转换参数
+	Required     bool                   `json:"required"`     // 是否必填
+	DefaultValue interface{}            `json:"defaultValue"` // 默认值
 }
 
 // DataMappingConfig 数据映射配置
 type DataMappingConfig struct {
-	Rules       []DataMappingRule      `json:"rules"`
-	Variables   map[string]interface{} `json:"variables"`
-	Mode        MappingMode            `json:"mode"`        // 映射模式
+	Rules     []DataMappingRule      `json:"rules"`
+	Variables map[string]interface{} `json:"variables"`
+	Mode      MappingMode            `json:"mode"` // 映射模式
 }
 
 // MappingMode 映射模式
@@ -248,7 +251,7 @@ func (s *dataMapperServiceImpl) TransformValue(ctx context.Context, value interf
 
 	case TransformToTitle:
 		str := fmt.Sprintf("%v", value)
-		return strings.Title(str), nil
+		return cases.Title(language.English).String(str), nil
 
 	case TransformTrim:
 		str := fmt.Sprintf("%v", value)
@@ -505,8 +508,8 @@ func (s *dataMapperServiceImpl) formatDate(value interface{}, params map[string]
 	}
 
 	// 尝试解析并重新格式化日期
-	_ = inputFormat   // 预留用于完整实现
-	_ = outputFormat  // 预留用于完整实现
+	_ = inputFormat  // 预留用于完整实现
+	_ = outputFormat // 预留用于完整实现
 
 	// 这里需要实际的时间解析逻辑
 	// 简化实现：直接返回字符串

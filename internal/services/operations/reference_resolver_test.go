@@ -1,3 +1,4 @@
+//go:build !skip_db_tests
 // +build !skip_db_tests
 
 package operations

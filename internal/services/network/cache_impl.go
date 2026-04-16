@@ -39,10 +39,10 @@ type CacheService interface {
 
 // cacheServiceImpl 网络设备缓存服务实现
 type cacheServiceImpl struct {
-	db                 *gorm.DB
-	base               *services.NetworkDeviceService
-	cache              systemServices.CacheProvider
-	config             *services.CacheConfigService
+	db     *gorm.DB
+	base   *services.NetworkDeviceService
+	cache  systemServices.CacheProvider
+	config *services.CacheConfigService
 }
 
 // NewServiceWithCache 创建带缓存的网络设备服务
@@ -54,10 +54,10 @@ func NewServiceWithCache(
 	config *services.CacheConfigService,
 ) CacheService {
 	return &cacheServiceImpl{
-		db:                 db,
-		base:               services.NewNetworkDeviceService(db, discoveryService, deviceInfoCollectionSvc),
-		cache:              cache,
-		config:             config,
+		db:     db,
+		base:   services.NewNetworkDeviceService(db, discoveryService, deviceInfoCollectionSvc),
+		cache:  cache,
+		config: config,
 	}
 }
 

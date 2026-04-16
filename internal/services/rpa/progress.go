@@ -27,16 +27,16 @@ type ProgressStep struct {
 
 // ProgressDetail 进度详情结构体
 type ProgressDetail struct {
-	ExecutionID   string         `json:"executionId"`   // 执行记录ID
-	TaskID        string         `json:"taskId"`        // 任务ID
-	TaskName      string         `json:"taskName"`      // 任务名称
-	CurrentStep   int            `json:"currentStep"`   // 当前步骤
-	TotalSteps    int            `json:"totalSteps"`    // 总步骤数
-	Progress      float64        `json:"progress"`      // 进度百分比 (0-100)
-	Status        string         `json:"status"`        // 状态
-	Steps         []ProgressStep `json:"steps"`         // 步骤列表
-	StartTime     int64          `json:"startTime"`     // 开始时间
-	EstimatedEndTime int64       `json:"estimatedEndTime"` // 预计结束时间
-	TriggeredBy   string         `json:"triggeredBy"`   // 触发人
-	WorkerName    string         `json:"workerName"`    // Worker 名称
+	ExecutionID      string         `json:"executionId"`      // 执行记录ID
+	TaskID           string         `json:"taskId"`           // 任务ID
+	TaskName         string         `json:"taskName"`         // 任务名称
+	CurrentStep      int            `json:"currentStep"`      // 当前步骤
+	TotalSteps       int            `json:"totalSteps"`       // 总步骤数
+	Progress         float64        `json:"progress"`         // 进度百分比 (0-100)
+	Status           string         `json:"status"`           // 状态
+	Steps            []ProgressStep `json:"steps"`            // 步骤列表
+	StartTime        int64          `json:"startTime"`        // 开始时间
+	EstimatedEndTime int64          `json:"estimatedEndTime"` // 预计结束时间
+	TriggeredBy      string         `json:"triggeredBy"`      // 触发人
+	WorkerName       string         `json:"workerName"`       // Worker 名称
 }

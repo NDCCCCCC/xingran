@@ -81,12 +81,12 @@ func TestCacheInvalidator_InvalidateByEntityType(t *testing.T) {
 	ctx := context.Background()
 
 	tests := []struct {
-		name         string
-		entityType   string
-		patterns     []string
-		expectCalls  int
-		expectError  bool
-		setupMock    func(*MockCacheProvider)
+		name        string
+		entityType  string
+		patterns    []string
+		expectCalls int
+		expectError bool
+		setupMock   func(*MockCacheProvider)
 	}{
 		{
 			name:        "正常清理building缓存",

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -31,7 +32,9 @@ func (s *CategoryService) GetTree(ctx context.Context) ([]models.WorkOrderCatego
 
 	// 加载子分类
 	for i := range list {
-		s.loadChildren(ctx, &list[i])
+		if err := s.loadChildren(ctx, &list[i]); err != nil {
+			applogger.Warnf("加载工单分类 %s 的子分类失败: %v", list[i].ID, err)
+		}
 	}
 
 	return list, nil
@@ -52,7 +55,9 @@ func (s *CategoryService) loadChildren(ctx context.Context, category *models.Wor
 
 	// 递归加载子分类的子分类
 	for i := range children {
-		s.loadChildren(ctx, &children[i])
+		if err := s.loadChildren(ctx, &children[i]); err != nil {
+			applogger.Warnf("加载工单子分类 %s 递归失败: %v", children[i].ID, err)
+		}
 	}
 
 	return nil

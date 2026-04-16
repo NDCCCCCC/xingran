@@ -38,14 +38,14 @@ type ScriptAction struct {
 // Task RPA任务定义
 type Task struct {
 	models.BaseModel
-	TaskName   string       `gorm:"column:name;size:255;not null" json:"taskName"`
-	Description string      `gorm:"type:text" json:"description"`
-	Script     json.RawMessage `gorm:"type:jsonb;not null" json:"script"`
-	Timeout    int          `gorm:"column:timeout_seconds;default:300" json:"timeout"`
-	RetryCount int          `gorm:"column:retry_count;default:0" json:"retryCount"`
-	Priority   TaskPriority `gorm:"default:5" json:"priority"`
-	Status     TaskStatus   `gorm:"default:0" json:"status"`
-	Tags       string       `gorm:"size:500" json:"tags"`
+	TaskName    string          `gorm:"column:name;size:255;not null" json:"taskName"`
+	Description string          `gorm:"type:text" json:"description"`
+	Script      json.RawMessage `gorm:"type:jsonb;not null" json:"script"`
+	Timeout     int             `gorm:"column:timeout_seconds;default:300" json:"timeout"`
+	RetryCount  int             `gorm:"column:retry_count;default:0" json:"retryCount"`
+	Priority    TaskPriority    `gorm:"default:5" json:"priority"`
+	Status      TaskStatus      `gorm:"default:0" json:"status"`
+	Tags        string          `gorm:"size:500" json:"tags"`
 }
 
 // TableName 指定表名
@@ -55,7 +55,7 @@ func (Task) TableName() string {
 
 // BeforeCreate GORM钩子
 func (t *Task) BeforeCreate(tx *gorm.DB) error {
-	t.BaseModel.BeforeCreate(tx)
+	_ = t.BaseModel.BeforeCreate(tx)
 	return nil
 }
 

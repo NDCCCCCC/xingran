@@ -241,7 +241,7 @@ func (s *SyncService) batchUpdateOUs(ctx context.Context, ous map[string]*models
 		batch := ouSlice[i:end]
 		if len(batch) > 0 {
 			if err := s.db.WithContext(ctx).Clauses(clause.OnConflict{
-				Columns:   []clause.Column{{Name: "ad_config_id"}, {Name: "ou_dn"}},
+				Columns: []clause.Column{{Name: "ad_config_id"}, {Name: "ou_dn"}},
 				DoUpdates: clause.AssignmentColumns([]string{
 					"ou_name", "description", "parent_dn", "ou_path", "last_sync_at",
 				}),
@@ -356,7 +356,7 @@ func (s *SyncService) updateGroupsInBatches(ctx context.Context, groups map[stri
 		}
 		batch := groupSlice[i:end]
 		if err := s.db.WithContext(ctx).Clauses(clause.OnConflict{
-			Columns:   []clause.Column{{Name: "ad_config_id"}, {Name: "group_dn"}},
+			Columns: []clause.Column{{Name: "ad_config_id"}, {Name: "group_dn"}},
 			DoUpdates: clause.AssignmentColumns([]string{
 				"group_name", "description", "member_count", "ou_dn", "last_sync_at",
 			}),
@@ -522,7 +522,7 @@ func (s *SyncService) syncUsers(ctx context.Context, config *models.ADConfig, en
 			batch := usersSlice[i:end]
 			if len(batch) > 0 {
 				if err := s.db.WithContext(ctx).Clauses(clause.OnConflict{
-					Columns:   []clause.Column{{Name: "ad_config_id"}, {Name: "user_dn"}},
+					Columns: []clause.Column{{Name: "ad_config_id"}, {Name: "user_dn"}},
 					DoUpdates: clause.AssignmentColumns([]string{
 						"username", "display_name", "email", "phone", "mobile",
 						"title", "department", "company", "description", "ou_dn",

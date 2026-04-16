@@ -1,41 +1,41 @@
 package operations
 
 type ExcelExportField struct {
-	Field       string                    // 导出字段名（对应数据库或计算字段）
-	Header      string                    // Excel列标题
-	DBField     string                    // 数据库字段名（可选，如果与Field不同）
-	Options     map[interface{}]string    // 枚举值映射
-	Join        *JoinConfig               // 关联查询配置（可选）
-	Formatter   string                    // 格式化器名称（可选）
+	Field     string                 // 导出字段名（对应数据库或计算字段）
+	Header    string                 // Excel列标题
+	DBField   string                 // 数据库字段名（可选，如果与Field不同）
+	Options   map[interface{}]string // 枚举值映射
+	Join      *JoinConfig            // 关联查询配置（可选）
+	Formatter string                 // 格式化器名称（可选）
 }
 
 type JoinConfig struct {
-	Table       string  // 关联表名
-	LeftField   string  // 左表字段（通常是ID）
-	RightField  string  // 右表字段
-	SelectField string  // 要查询的字段
-	As          string  // 别名
+	Table       string // 关联表名
+	LeftField   string // 左表字段（通常是ID）
+	RightField  string // 右表字段
+	SelectField string // 要查询的字段
+	As          string // 别名
 }
 
 type ExcelExportConfig struct {
-	SheetName      string
-	TableName      string
-	EntityName     string
-	Columns        []ExcelExportField
-	HasHeader      bool
-	StartRow       int
-	QueryBuilder   string                    // 查询构建器名称（可选）
-	FilterMapping  map[string]string         // 参数名 -> 数据库字段名
+	SheetName     string
+	TableName     string
+	EntityName    string
+	Columns       []ExcelExportField
+	HasHeader     bool
+	StartRow      int
+	QueryBuilder  string            // 查询构建器名称（可选）
+	FilterMapping map[string]string // 参数名 -> 数据库字段名
 }
 
 func GetExportConfig(entityType string) (ExcelExportConfig, bool) {
 	configs := map[string]ExcelExportConfig{
 		"department": {
-			SheetName:  "部门列表",
-			TableName:  "sys_dept",
-			EntityName: "部门",
-			HasHeader:  true,
-			StartRow:   2,
+			SheetName:    "部门列表",
+			TableName:    "sys_dept",
+			EntityName:   "部门",
+			HasHeader:    true,
+			StartRow:     2,
 			QueryBuilder: "department",
 			FilterMapping: map[string]string{
 				"name":   "dept_name",
@@ -110,11 +110,11 @@ func GetExportConfig(entityType string) (ExcelExportConfig, bool) {
 			},
 		},
 		"building": {
-			SheetName:  "楼宇列表",
-			TableName:  "ops_buildings",
-			EntityName: "楼宇",
-			HasHeader:  true,
-			StartRow:   2,
+			SheetName:    "楼宇列表",
+			TableName:    "ops_buildings",
+			EntityName:   "楼宇",
+			HasHeader:    true,
+			StartRow:     2,
 			QueryBuilder: "default",
 			FilterMapping: map[string]string{
 				"name":   "name",
@@ -141,11 +141,11 @@ func GetExportConfig(entityType string) (ExcelExportConfig, bool) {
 			},
 		},
 		"floor": {
-			SheetName:  "楼层列表",
-			TableName:  "ops_floors",
-			EntityName: "楼层",
-			HasHeader:  true,
-			StartRow:   2,
+			SheetName:    "楼层列表",
+			TableName:    "ops_floors",
+			EntityName:   "楼层",
+			HasHeader:    true,
+			StartRow:     2,
 			QueryBuilder: "default",
 			FilterMapping: map[string]string{
 				"name":       "name",
@@ -168,18 +168,18 @@ func GetExportConfig(entityType string) (ExcelExportConfig, bool) {
 			},
 		},
 		"workstation": {
-			SheetName:  "工位列表",
-			TableName:  "sys_workstation",
-			EntityName: "工位",
-			HasHeader:  true,
-			StartRow:   2,
+			SheetName:    "工位列表",
+			TableName:    "sys_workstation",
+			EntityName:   "工位",
+			HasHeader:    true,
+			StartRow:     2,
 			QueryBuilder: "default",
 			FilterMapping: map[string]string{
-				"name":       "workstation_name",
-				"status":     "status",
-				"floorId":    "floor_id",
-				"deptId":     "dept_id",
-				"userId":     "user_id",
+				"name":    "workstation_name",
+				"status":  "status",
+				"floorId": "floor_id",
+				"deptId":  "dept_id",
+				"userId":  "user_id",
 			},
 			Columns: []ExcelExportField{
 				{Field: "workstationName", Header: "工位名称", DBField: "workstation_name"},
@@ -206,11 +206,11 @@ func GetExportConfig(entityType string) (ExcelExportConfig, bool) {
 			},
 		},
 		"serverRoom": {
-			SheetName:  "机房列表",
-			TableName:  "ops_server_rooms",
-			EntityName: "机房",
-			HasHeader:  true,
-			StartRow:   2,
+			SheetName:    "机房列表",
+			TableName:    "ops_server_rooms",
+			EntityName:   "机房",
+			HasHeader:    true,
+			StartRow:     2,
 			QueryBuilder: "default",
 			FilterMapping: map[string]string{
 				"name":       "name",
@@ -236,11 +236,11 @@ func GetExportConfig(entityType string) (ExcelExportConfig, bool) {
 			},
 		},
 		"roomDevice": {
-			SheetName:  "机房设备列表",
-			TableName:  "ops_room_devices",
-			EntityName: "机房设备",
-			HasHeader:  true,
-			StartRow:   2,
+			SheetName:    "机房设备列表",
+			TableName:    "ops_room_devices",
+			EntityName:   "机房设备",
+			HasHeader:    true,
+			StartRow:     2,
 			QueryBuilder: "default",
 			FilterMapping: map[string]string{
 				"name":     "name",
@@ -270,11 +270,11 @@ func GetExportConfig(entityType string) (ExcelExportConfig, bool) {
 			},
 		},
 		"dedicatedLine": {
-			SheetName:  "专线列表",
-			TableName:  "ops_dedicated_lines",
-			EntityName: "专线",
-			HasHeader:  true,
-			StartRow:   2,
+			SheetName:    "专线列表",
+			TableName:    "ops_dedicated_lines",
+			EntityName:   "专线",
+			HasHeader:    true,
+			StartRow:     2,
 			QueryBuilder: "default",
 			FilterMapping: map[string]string{
 				"name":   "name",
@@ -315,17 +315,17 @@ func GetExportConfig(entityType string) (ExcelExportConfig, bool) {
 			},
 		},
 		"infoPoint": {
-			SheetName:  "信息点列表",
-			TableName:  "ops_info_points",
-			EntityName: "信息点",
-			HasHeader:  true,
-			StartRow:   2,
+			SheetName:    "信息点列表",
+			TableName:    "ops_info_points",
+			EntityName:   "信息点",
+			HasHeader:    true,
+			StartRow:     2,
 			QueryBuilder: "default",
 			FilterMapping: map[string]string{
-				"name":           "name",
-				"status":         "status",
-				"workstationId":  "workstation_id",
-				"infoPointType":  "info_point_type",
+				"name":          "name",
+				"status":        "status",
+				"workstationId": "workstation_id",
+				"infoPointType": "info_point_type",
 			},
 			Columns: []ExcelExportField{
 				{Field: "name", Header: "信息点名称", DBField: "name"},

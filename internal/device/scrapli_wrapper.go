@@ -21,9 +21,9 @@ type ConnectionState int
 
 const (
 	StateInitializing ConnectionState = iota // 正在初始化
-	StateReady                              // 已就绪，可以使用
-	StateClosing                            // 正在关闭
-	StateClosed                             // 已关闭
+	StateReady                               // 已就绪，可以使用
+	StateClosing                             // 正在关闭
+	StateClosed                              // 已关闭
 )
 
 // String 返回状态的字符串表示
@@ -52,7 +52,7 @@ type ScrapliWrapper struct {
 	stateMu   sync.RWMutex    // 保护状态读写
 	closing   chan struct{}   // 用于通知关闭信号
 	initDone  chan struct{}   // 初始化完成信号
-	closeOnce sync.Once      // 确保 initDone 只关闭一次
+	closeOnce sync.Once       // 确保 initDone 只关闭一次
 }
 
 // PlatformName 平台名称映射
@@ -298,7 +298,7 @@ func (w *ScrapliWrapper) OpenContext(ctx context.Context) error {
 				func() {
 					defer func() {
 						if r := recover(); r != nil {
-							// GetPrompt panic，连接还未就绪
+							_ = r // GetPrompt panic, connection not ready
 						}
 					}()
 					_, err := w.driver.GetPrompt()
@@ -366,7 +366,7 @@ func (w *ScrapliWrapper) Close() error {
 		func() {
 			defer func() {
 				if r := recover(); r != nil {
-					// Close 时 panic，记录但不让程序崩溃
+					_ = r // Close panic, suppress to prevent crash
 				}
 			}()
 			_ = w.driver.Close()
@@ -624,7 +624,7 @@ func (w *ScrapliWrapper) GetResponse() string {
 	// 使用 recover 捕获 scrapligo 库可能的内部 panic
 	defer func() {
 		if r := recover(); r != nil {
-			// panic 被捕获，记录日志但不让程序崩溃
+			_ = r // panic 被捕获，记录日志但不让程序崩溃
 		}
 	}()
 

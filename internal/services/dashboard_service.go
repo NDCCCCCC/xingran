@@ -29,11 +29,11 @@ func NewDashboardService(db *gorm.DB, cache cache.Cache) *DashboardService {
 
 // DashboardListParams 仪表盘列表请求参数
 type DashboardListParams struct {
-	Current    int                       `json:"current" binding:"required,min=1"`
-	PageSize   int                       `json:"pageSize" binding:"required,min=1,max=100"`
-	Keyword    string                    `json:"keyword,omitempty"`
-	IsTemplate bool                      `json:"isTemplate,omitempty"`
-	Status     *models.DashboardStatus   `json:"status,omitempty"`
+	Current    int                     `json:"current" binding:"required,min=1"`
+	PageSize   int                     `json:"pageSize" binding:"required,min=1,max=100"`
+	Keyword    string                  `json:"keyword,omitempty"`
+	IsTemplate bool                    `json:"isTemplate,omitempty"`
+	Status     *models.DashboardStatus `json:"status,omitempty"`
 }
 
 // DashboardListResponse 仪表盘列表响应
@@ -46,20 +46,20 @@ type DashboardListResponse struct {
 
 // CreateDashboardRequest 创建仪表盘请求
 type CreateDashboardRequest struct {
-	Name            string                  `json:"name" binding:"required,min=1,max=100"`
-	Description     string                  `json:"description" binding:"max=500"`
-	Layout          models.LayoutConfig     `json:"layout" binding:"required"`
-	RefreshInterval int                     `json:"refreshInterval" binding:"min=0,max=3600"`
-	IsTemplate      bool                    `json:"isTemplate"`
-	TemplateScope   models.TemplateScope    `json:"templateScope" binding:"omitempty,oneof=global dept personal"`
+	Name            string               `json:"name" binding:"required,min=1,max=100"`
+	Description     string               `json:"description" binding:"max=500"`
+	Layout          models.LayoutConfig  `json:"layout" binding:"required"`
+	RefreshInterval int                  `json:"refreshInterval" binding:"min=0,max=3600"`
+	IsTemplate      bool                 `json:"isTemplate"`
+	TemplateScope   models.TemplateScope `json:"templateScope" binding:"omitempty,oneof=global dept personal"`
 }
 
 // UpdateDashboardRequest 更新仪表盘请求
 type UpdateDashboardRequest struct {
-	Name            *string                  `json:"name" binding:"omitempty,min=1,max=100"`
-	Description     *string                  `json:"description" binding:"omitempty,max=500"`
-	Layout          *models.LayoutConfig     `json:"layout"`
-	RefreshInterval *int                     `json:"refreshInterval" binding:"omitempty,min=0,max=3600"`
+	Name            *string                 `json:"name" binding:"omitempty,min=1,max=100"`
+	Description     *string                 `json:"description" binding:"omitempty,max=500"`
+	Layout          *models.LayoutConfig    `json:"layout"`
+	RefreshInterval *int                    `json:"refreshInterval" binding:"omitempty,min=0,max=3600"`
 	Status          *models.DashboardStatus `json:"status" binding:"omitempty,min=0,max=1"`
 }
 
@@ -121,7 +121,7 @@ func (s *DashboardService) GetDashboard(ctx context.Context, id string) (*models
 		return nil, fmt.Errorf("failed to fetch dashboard: %w", err)
 	}
 
-	s.cache.SetJSON(ctx, cacheKey, dashboard, 5*time.Minute)
+	_ = s.cache.SetJSON(ctx, cacheKey, dashboard, 5*time.Minute)
 
 	return &dashboard, nil
 }
@@ -185,7 +185,7 @@ func (s *DashboardService) UpdateDashboard(ctx context.Context, userID string, i
 		return fmt.Errorf("failed to update dashboard: %w", err)
 	}
 
-	s.cache.Delete(ctx, dashboardCachePrefix+id)
+	_ = s.cache.Delete(ctx, dashboardCachePrefix+id)
 
 	return nil
 }
@@ -208,7 +208,7 @@ func (s *DashboardService) DeleteDashboard(ctx context.Context, userID string, i
 		return fmt.Errorf("failed to delete dashboard: %w", err)
 	}
 
-	s.cache.Delete(ctx, dashboardCachePrefix+id)
+	_ = s.cache.Delete(ctx, dashboardCachePrefix+id)
 
 	return nil
 }
@@ -267,7 +267,7 @@ func (s *DashboardService) SetDefaultDashboard(ctx context.Context, userID strin
 		return fmt.Errorf("failed to set default dashboard: %w", err)
 	}
 
-	s.cache.Delete(ctx, dashboardCachePrefix+id)
+	_ = s.cache.Delete(ctx, dashboardCachePrefix+id)
 
 	return nil
 }
@@ -377,7 +377,7 @@ func (s *DashboardService) RestoreVersion(ctx context.Context, userID string, da
 		return fmt.Errorf("failed to restore version: %w", err)
 	}
 
-	s.cache.Delete(ctx, dashboardCachePrefix+dashboardID)
+	_ = s.cache.Delete(ctx, dashboardCachePrefix+dashboardID)
 
 	return nil
 }

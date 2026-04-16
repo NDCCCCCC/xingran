@@ -4,20 +4,11 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"gorm.io/gorm"
 )
 
 // ==================== 工具函数 ====================
-
-// getCurrentUser 获取当前用户
-func getCurrentUser(c *gin.Context) string {
-	if username, exists := c.Get("username"); exists {
-		return username.(string)
-	}
-	return "system"
-}
 
 // FormatDuration 格式化时长
 func FormatDuration(milliseconds int64) string {

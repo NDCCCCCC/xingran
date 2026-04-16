@@ -19,8 +19,8 @@ type ErrorAnalyzer interface {
 
 // errorAnalyzerImpl 错误分析服务实现
 type errorAnalyzerImpl struct {
-	config         *config.Config
-	agentClient    *AIClient
+	config          *config.Config
+	agentClient     *AIClient
 	generatorClient *AIClient
 }
 
@@ -112,7 +112,7 @@ func (a *errorAnalyzerImpl) AnalyzeFailure(ctx context.Context, req *AnalyzeFail
 				"}",
 		},
 		{
-			Role: "user",
+			Role:    "user",
 			Content: prompt,
 		},
 	}
@@ -164,7 +164,7 @@ func (a *errorAnalyzerImpl) SuggestFix(ctx context.Context, req *SuggestFixReque
 				"}",
 		},
 		{
-			Role: "user",
+			Role:    "user",
 			Content: prompt,
 		},
 	}
@@ -263,12 +263,12 @@ func (a *errorAnalyzerImpl) enhanceLocalClassification(result *FailureAnalysisRe
 // getDetailedRootCause 获取详细的根本原因
 func (a *errorAnalyzerImpl) getDetailedRootCause(classification ErrorClassification) string {
 	reasons := map[string]string{
-		"timing_timeout":           "页面加载或元素响应时间超过预设阈值",
+		"timing_timeout":             "页面加载或元素响应时间超过预设阈值",
 		"selector_element_not_found": "指定的元素未能在页面中找到，可能原因：选择器错误、页面结构变化、元素未加载",
-		"network_connection_error":  "无法建立网络连接，可能是网络问题或服务器不可达",
-		"network_access_denied":     "访问被拒绝，可能由于IP被封、验证码、请求频率限制",
-		"content_invalid_input":     "提交的数据格式或内容不符合预期",
-		"logic_access_denied":       "权限不足或未登录，无法执行操作",
+		"network_connection_error":   "无法建立网络连接，可能是网络问题或服务器不可达",
+		"network_access_denied":      "访问被拒绝，可能由于IP被封、验证码、请求频率限制",
+		"content_invalid_input":      "提交的数据格式或内容不符合预期",
+		"logic_access_denied":        "权限不足或未登录，无法执行操作",
 	}
 
 	key := classification.Category + "_" + classification.SubCategory
@@ -281,12 +281,12 @@ func (a *errorAnalyzerImpl) getDetailedRootCause(classification ErrorClassificat
 // getSeverityByCategory 根据分类获取严重程度
 func (a *errorAnalyzerImpl) getSeverityByCategory(category string) string {
 	severities := map[string]string{
-		"timing":    "medium",
-		"selector":  "high",
-		"network":   "high",
-		"content":   "medium",
-		"logic":     "critical",
-		"unknown":   "medium",
+		"timing":   "medium",
+		"selector": "high",
+		"network":  "high",
+		"content":  "medium",
+		"logic":    "critical",
+		"unknown":  "medium",
 	}
 
 	if severity, ok := severities[category]; ok {

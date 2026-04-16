@@ -8,6 +8,7 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
 	rpamodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/rpa"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
 	"gorm.io/gorm"
 )
@@ -42,23 +43,23 @@ type CredentialService interface {
 
 // CredentialData 解密后的凭证数据
 type CredentialData struct {
-	Username string                 `json:"username"`
-	Password string                 `json:"password"`
+	Username  string                 `json:"username"`
+	Password  string                 `json:"password"`
 	ExtraData map[string]interface{} `json:"extraData,omitempty"`
 }
 
 // SessionData 解密后的会话数据
 type SessionData struct {
-	AccessToken  string                   `json:"accessToken,omitempty"`
-	RefreshToken string                   `json:"refreshToken,omitempty"`
-	Cookies      []rpamodels.Cookie       `json:"cookies,omitempty"`
-	SessionData  map[string]interface{}   `json:"sessionData,omitempty"`
+	AccessToken  string                 `json:"accessToken,omitempty"`
+	RefreshToken string                 `json:"refreshToken,omitempty"`
+	Cookies      []rpamodels.Cookie     `json:"cookies,omitempty"`
+	SessionData  map[string]interface{} `json:"sessionData,omitempty"`
 }
 
 type credentialServiceImpl struct {
-	db        *gorm.DB
-	sm4       *security.SM4Cipher
-	cache     CredentialCache
+	db    *gorm.DB
+	sm4   *security.SM4Cipher
+	cache CredentialCache
 }
 
 // NewCredentialService 创建凭证服务
@@ -245,8 +246,8 @@ func (s *credentialServiceImpl) GetCredentialForExecution(ctx context.Context, t
 // DecryptCredential 解密凭证（供执行时使用）
 func (s *credentialServiceImpl) DecryptCredential(ctx context.Context, cred *rpamodels.RPACredential) (*CredentialData, error) {
 	return &CredentialData{
-		Username: s.decryptString(cred.UsernameEncrypted),
-		Password: s.decryptString(cred.PasswordEncrypted),
+		Username:  s.decryptString(cred.UsernameEncrypted),
+		Password:  s.decryptString(cred.PasswordEncrypted),
 		ExtraData: s.decryptExtraData(cred.ExtraDataEncrypted),
 	}, nil
 }
@@ -260,16 +261,16 @@ func (s *credentialServiceImpl) CreateSession(ctx context.Context, req *rpamodel
 	}
 
 	session := &rpamodels.RPASession{
-		CredentialID:         req.CredentialID,
-		ExecutionID:          req.ExecutionID,
-		TargetSystem:         req.TargetSystem,
-		TargetURL:            req.TargetURL,
-		AccessTokenEncrypted: encrypted.AccessToken,
+		CredentialID:          req.CredentialID,
+		ExecutionID:           req.ExecutionID,
+		TargetSystem:          req.TargetSystem,
+		TargetURL:             req.TargetURL,
+		AccessTokenEncrypted:  encrypted.AccessToken,
 		RefreshTokenEncrypted: encrypted.RefreshToken,
-		CookiesEncrypted:     encrypted.Cookies,
-		SessionDataEncrypted: encrypted.SessionData,
-		ExpiresAt:            req.ExpiresAt,
-		IsValid:              true,
+		CookiesEncrypted:      encrypted.Cookies,
+		SessionDataEncrypted:  encrypted.SessionData,
+		ExpiresAt:             req.ExpiresAt,
+		IsValid:               true,
 	}
 
 	if err := s.db.WithContext(ctx).Create(session).Error; err != nil {
@@ -355,8 +356,8 @@ func (s *credentialServiceImpl) UpdateLastUsed(ctx context.Context, credentialID
 // ===== 加密/解密辅助方法 =====
 
 type encryptedCredentialData struct {
-	Username string
-	Password string
+	Username  string
+	Password  string
 	ExtraData string
 }
 
@@ -465,14 +466,18 @@ func (s *credentialServiceImpl) decryptSessionData(session *rpamodels.RPASession
 	// 解密 cookies
 	if session.CookiesEncrypted != "" {
 		if decrypted, err := s.sm4.Decrypt(session.CookiesEncrypted); err == nil {
-			json.Unmarshal([]byte(decrypted), &session.Cookies)
+			if err := json.Unmarshal([]byte(decrypted), &session.Cookies); err != nil {
+				applogger.Warnf("反序列化会话 Cookies 数据失败: %v", err)
+			}
 		}
 	}
 
 	// 解密 session data
 	if session.SessionDataEncrypted != "" {
 		if decrypted, err := s.sm4.Decrypt(session.SessionDataEncrypted); err == nil {
-			json.Unmarshal([]byte(decrypted), &session.SessionData)
+			if err := json.Unmarshal([]byte(decrypted), &session.SessionData); err != nil {
+				applogger.Warnf("反序列化会话 SessionData 数据失败: %v", err)
+			}
 		}
 	}
 }

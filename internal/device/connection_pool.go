@@ -217,7 +217,9 @@ func (p *DeviceConnectionPool) GetConnection(ctx context.Context, deviceID strin
 		// 连接失效，从池中移除
 		// 释放 deviceLock 后再调用 removeConnection，避免持有 deviceLock 时获取 poolLock
 		deviceLock.Unlock()
-		p.removeConnection(deviceID)
+		if err := p.removeConnection(deviceID); err != nil {
+			applogger.Warnf("[连接池] 移除失效连接失败: %s, error: %v", deviceID, err)
+		}
 		// 重新获取 deviceLock 用于后续操作
 		deviceLock.Lock()
 	}

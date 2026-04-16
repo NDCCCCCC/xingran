@@ -16,11 +16,11 @@ import (
 
 // RetryConfig 重试配置
 type RetryConfig struct {
-	MaxRetries      int           // 最大重试次数（0表示不重试）
-	InitialDelay    time.Duration // 初始延迟
-	MaxDelay        time.Duration // 最大延迟
-	BackoffFactor   float64       // 退避因子（每次重试延迟乘以这个因子）
-	RetryableCheck  func(error) bool // 判断错误是否可重试
+	MaxRetries     int              // 最大重试次数（0表示不重试）
+	InitialDelay   time.Duration    // 初始延迟
+	MaxDelay       time.Duration    // 最大延迟
+	BackoffFactor  float64          // 退避因子（每次重试延迟乘以这个因子）
+	RetryableCheck func(error) bool // 判断错误是否可重试
 }
 
 // DefaultRetryConfig 默认重试配置
@@ -36,14 +36,14 @@ func DefaultRetryConfig() *RetryConfig {
 
 // RetryStats 重试统计信息
 type RetryStats struct {
-	mu             sync.RWMutex
-	TotalAttempts   int64 // 总尝试次数
-	TotalSuccess    int64 // 成功次数
-	TotalFailure    int64 // 失败次数
-	TotalRetries    int64 // 重试次数
+	mu               sync.RWMutex
+	TotalAttempts    int64 // 总尝试次数
+	TotalSuccess     int64 // 成功次数
+	TotalFailure     int64 // 失败次数
+	TotalRetries     int64 // 重试次数
 	ConsecutiveFails int64 // 连续失败次数
-	LastError       error // 最后一次错误
-	LastErrorTime   time.Time
+	LastError        error // 最后一次错误
+	LastErrorTime    time.Time
 }
 
 // NewRetryStats 创建重试统计
@@ -165,8 +165,8 @@ func RetryWithContext(ctx context.Context, config *RetryConfig, fn func() error)
 // retryablePattern 可重试错误模式定义
 // 使用完整短语避免误判（如单独使用"timeout"会匹配"operation timeout exceeded"）
 type retryablePattern struct {
-	pattern  string
-	exact    bool // true=精确匹配, false=包含匹配
+	pattern string
+	exact   bool // true=精确匹配, false=包含匹配
 }
 
 // retryablePatterns 可重试错误模式列表
@@ -223,10 +223,10 @@ func IsRetryableError(err error) bool {
 		return false
 	}
 
-	// 2. 检查 net.Error 接口 - 超时和临时网络错误应重试
+	// 2. 检查 net.Error 接口 - 超时网络错误应重试
 	var netErr net.Error
 	if errors.As(err, &netErr) {
-		return netErr.Timeout() || netErr.Temporary()
+		return netErr.Timeout()
 	}
 
 	// 3. 先检查明确不重试的模式（避免误判）
@@ -289,12 +289,11 @@ type AsyncRetryWorker struct {
 }
 
 type retryWork struct {
-	ctx         context.Context
-	key         string
-	value       interface{}
-	expiration  time.Duration
-	cache       Cache
-	attempt     int
+	ctx        context.Context
+	key        string
+	value      interface{}
+	expiration time.Duration
+	cache      Cache
 }
 
 // NewAsyncRetryWorker 创建异步重试工作器
@@ -367,11 +366,11 @@ func (w *AsyncRetryWorker) processWork(workerID int, work retryWork) {
 func (w *AsyncRetryWorker) Enqueue(ctx context.Context, cache Cache, key string, value interface{}, expiration time.Duration) bool {
 	select {
 	case w.workQueue <- retryWork{
-		ctx:         ctx,
-		key:         key,
-		value:       value,
-		expiration:  expiration,
-		cache:       cache,
+		ctx:        ctx,
+		key:        key,
+		value:      value,
+		expiration: expiration,
+		cache:      cache,
 	}:
 		return true
 	case <-ctx.Done():

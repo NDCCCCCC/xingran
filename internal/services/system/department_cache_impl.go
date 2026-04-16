@@ -25,7 +25,7 @@ func NewDepartmentServiceWithCache(
 	return &departmentCacheService{
 		departmentService: base,
 		cache:             cache,
-		CacheServiceBase: CacheServiceBase{Config: config},
+		CacheServiceBase:  CacheServiceBase{Config: config},
 	}
 }
 

@@ -94,11 +94,11 @@ func (s *aiServiceImpl) GenerateScript(ctx context.Context, req *AIScriptGenerat
 
 	messages := []Message{
 		{
-			Role: "system",
+			Role:    "system",
 			Content: "你是一个 RPA 脚本生成助手。根据用户描述生成 Playwright 脚本。返回 JSON 格式。",
 		},
 		{
-			Role: "user",
+			Role:    "user",
 			Content: fmt.Sprintf("请生成以下任务的 RPA 脚本：\n%s\n\n目标页面：%s", req.Description, req.URL),
 		},
 	}
@@ -140,7 +140,7 @@ func (s *aiServiceImpl) OptimizeScript(ctx context.Context, req *AIScriptOptimiz
 				"}",
 		},
 		{
-			Role: "user",
+			Role:    "user",
 			Content: fmt.Sprintf("%s\n\n脚本内容：\n%s", prompt, string(scriptJSON)),
 		},
 	}
@@ -210,11 +210,11 @@ func (s *aiServiceImpl) DecideNextAction(ctx context.Context, req *AIAgentDecisi
 
 	messages := []Message{
 		{
-			Role: "system",
+			Role:    "system",
 			Content: "你是 RPA 执行助手，帮助解决页面操作问题。返回 JSON 格式。",
 		},
 		{
-			Role: "user",
+			Role:    "user",
 			Content: fmt.Sprintf("任务: %s\n当前步骤: %d\n失败选择器: %s\n最后错误: %s", req.TaskDescription, req.CurrentStep, req.FailedSelector, req.LastError),
 		},
 	}

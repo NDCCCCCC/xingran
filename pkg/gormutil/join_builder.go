@@ -18,12 +18,12 @@ const (
 
 // JoinConfig JOIN配置
 type JoinConfig struct {
-	Type     JoinType
-	Table    string
-	On       string
-	Alias    string
-	Args     []interface{}
-	Selects  []string
+	Type    JoinType
+	Table   string
+	On      string
+	Alias   string
+	Args    []interface{}
+	Selects []string
 }
 
 // JoinBuilder JOIN构建器

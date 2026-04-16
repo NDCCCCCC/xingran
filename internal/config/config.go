@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
-	"github.com/spf13/viper"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	"github.com/spf13/viper"
 )
 
 // Config 应用配置
@@ -46,24 +46,24 @@ type DatabaseConfig struct {
 
 // CacheConfig 缓存配置
 type CacheConfig struct {
-	Type             string `mapstructure:"type"` // redis, memory
-	Host             string `mapstructure:"host"`
-	Port             int    `mapstructure:"port"`
-	Password         string `mapstructure:"password"`
-	DB               int    `mapstructure:"db"`
-	PoolSize         int    `mapstructure:"pool_size"`
-	MaxSize          int    `mapstructure:"max_size"`
-	CleanupTime      int    `mapstructure:"cleanup_time"`
-	WarmUpEnabled    bool   `mapstructure:"warm_up_enabled"` // 是否启用缓存预热
+	Type          string `mapstructure:"type"` // redis, memory
+	Host          string `mapstructure:"host"`
+	Port          int    `mapstructure:"port"`
+	Password      string `mapstructure:"password"`
+	DB            int    `mapstructure:"db"`
+	PoolSize      int    `mapstructure:"pool_size"`
+	MaxSize       int    `mapstructure:"max_size"`
+	CleanupTime   int    `mapstructure:"cleanup_time"`
+	WarmUpEnabled bool   `mapstructure:"warm_up_enabled"` // 是否启用缓存预热
 	// L2写入Worker配置
-	L2Writer         *cache.L2WriterConfig `mapstructure:"l2_writer"` // L2写入Worker Pool配置
+	L2Writer *cache.L2WriterConfig `mapstructure:"l2_writer"` // L2写入Worker Pool配置
 	// 重试配置
-	RetryEnabled      bool    `mapstructure:"retry_enabled"`       // 是否启用L2缓存写入重试
-	RetryMaxRetries   int     `mapstructure:"retry_max_retries"`   // 最大重试次数
-	RetryInitialDelay int     `mapstructure:"retry_initial_delay"` // 初始延迟(毫秒)
-	RetryMaxDelay     int     `mapstructure:"retry_max_delay"`     // 最大延迟(毫秒)
+	RetryEnabled       bool    `mapstructure:"retry_enabled"`        // 是否启用L2缓存写入重试
+	RetryMaxRetries    int     `mapstructure:"retry_max_retries"`    // 最大重试次数
+	RetryInitialDelay  int     `mapstructure:"retry_initial_delay"`  // 初始延迟(毫秒)
+	RetryMaxDelay      int     `mapstructure:"retry_max_delay"`      // 最大延迟(毫秒)
 	RetryBackoffFactor float64 `mapstructure:"retry_backoff_factor"` // 退避因子
-	RetryWorkerCount  int     `mapstructure:"retry_worker_count"`  // 重试工作协程数
+	RetryWorkerCount   int     `mapstructure:"retry_worker_count"`   // 重试工作协程数
 }
 
 // JWTConfig JWT配置
@@ -123,19 +123,19 @@ type RPAAIConfig struct {
 
 // RPAAIGeneratorConfig 脚本生成模型配置
 type RPAAIGeneratorConfig struct {
-	Enabled   bool   `mapstructure:"enabled"`   // 是否启用
-	APIKey    string `mapstructure:"api_key"`   // API密钥
-	BaseURL   string `mapstructure:"base_url"`  // API基础URL（OpenAI兼容）
-	Model     string `mapstructure:"model"`     // 模型名称
+	Enabled   bool   `mapstructure:"enabled"`    // 是否启用
+	APIKey    string `mapstructure:"api_key"`    // API密钥
+	BaseURL   string `mapstructure:"base_url"`   // API基础URL（OpenAI兼容）
+	Model     string `mapstructure:"model"`      // 模型名称
 	MaxTokens int    `mapstructure:"max_tokens"` // 最大token数
 }
 
 // RPAAIAgentConfig AI Agent模型配置
 type RPAAIAgentConfig struct {
-	Enabled   bool   `mapstructure:"enabled"`   // 是否启用
-	APIKey    string `mapstructure:"api_key"`   // API密钥
-	BaseURL   string `mapstructure:"base_url"`  // API基础URL（OpenAI兼容）
-	Model     string `mapstructure:"model"`     // 模型名称
+	Enabled   bool   `mapstructure:"enabled"`    // 是否启用
+	APIKey    string `mapstructure:"api_key"`    // API密钥
+	BaseURL   string `mapstructure:"base_url"`   // API基础URL（OpenAI兼容）
+	Model     string `mapstructure:"model"`      // 模型名称
 	MaxTokens int    `mapstructure:"max_tokens"` // 最大token数
 }
 
@@ -148,30 +148,30 @@ type RPAAIFallbackConfig struct {
 
 // RPAWorkerConfig RPA Worker配置
 type RPAWorkerConfig struct {
-	MinWorkers         int    `mapstructure:"min_workers"`          // 最小Worker数量
-	MaxWorkers         int    `mapstructure:"max_workers"`          // 最大Worker数量
-	HeartbeatInterval  string `mapstructure:"heartbeat_interval"`   // 心跳间隔
-	TaskTimeout        string `mapstructure:"task_timeout"`         // 任务超时时间
+	MinWorkers        int    `mapstructure:"min_workers"`        // 最小Worker数量
+	MaxWorkers        int    `mapstructure:"max_workers"`        // 最大Worker数量
+	HeartbeatInterval string `mapstructure:"heartbeat_interval"` // 心跳间隔
+	TaskTimeout       string `mapstructure:"task_timeout"`       // 任务超时时间
 }
 
 // RPAStorageConfig RPA存储配置
 type RPAStorageConfig struct {
-	DownloadsDir    string `mapstructure:"downloads_dir"`    // 下载文件目录
-	ScreenshotsDir  string `mapstructure:"screenshots_dir"`  // 截图目录
+	DownloadsDir    string `mapstructure:"downloads_dir"`     // 下载文件目录
+	ScreenshotsDir  string `mapstructure:"screenshots_dir"`   // 截图目录
 	MaxRetainedDays int    `mapstructure:"max_retained_days"` // 最大保留天数
 }
 
 // RPAScalingConfig RPA扩缩容配置
 type RPAScalingConfig struct {
-	Enabled           bool          `mapstructure:"enabled"`             // 是否启用自动扩缩容
-	CheckInterval     string        `mapstructure:"check_interval"`      // 监控检查间隔
-	MinWorkers        int           `mapstructure:"min_workers"`         // 最小 Worker 数量
-	MaxWorkers        int           `mapstructure:"max_workers"`         // 最大 Worker 数量
-	ScaleUpThreshold  float64       `mapstructure:"scale_up_threshold"`  // 扩容阈值
-	ScaleDownCooldown string        `mapstructure:"scale_down_cooldown"` // 缩容冷却时间
-	ScaleUpLimit      int           `mapstructure:"scale_up_limit"`      // 单次扩容上限
-	EnableMockDocker  bool          `mapstructure:"enable_mock_docker"`  // 是否使用模拟 Docker 客户端
-	Docker            DockerConfig  `mapstructure:"docker"`              // Docker 配置
+	Enabled           bool         `mapstructure:"enabled"`             // 是否启用自动扩缩容
+	CheckInterval     string       `mapstructure:"check_interval"`      // 监控检查间隔
+	MinWorkers        int          `mapstructure:"min_workers"`         // 最小 Worker 数量
+	MaxWorkers        int          `mapstructure:"max_workers"`         // 最大 Worker 数量
+	ScaleUpThreshold  float64      `mapstructure:"scale_up_threshold"`  // 扩容阈值
+	ScaleDownCooldown string       `mapstructure:"scale_down_cooldown"` // 缩容冷却时间
+	ScaleUpLimit      int          `mapstructure:"scale_up_limit"`      // 单次扩容上限
+	EnableMockDocker  bool         `mapstructure:"enable_mock_docker"`  // 是否使用模拟 Docker 客户端
+	Docker            DockerConfig `mapstructure:"docker"`              // Docker 配置
 }
 
 // DockerConfig Docker 配置

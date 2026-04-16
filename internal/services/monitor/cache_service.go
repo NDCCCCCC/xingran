@@ -137,12 +137,12 @@ type CacheConfigInfo struct {
 
 // cacheServiceImpl 缓存服务实现
 type cacheServiceImpl struct {
-	db               *gorm.DB
-	cacheProvider    CacheProvider
-	configProvider   CacheConfigProvider
-	multiLevelCache  MultiLevelCacheProvider
-	directRedis      DirectRedisProvider
-	statsProvider    StatsProvider
+	db              *gorm.DB
+	cacheProvider   CacheProvider
+	configProvider  CacheConfigProvider
+	multiLevelCache MultiLevelCacheProvider
+	directRedis     DirectRedisProvider
+	statsProvider   StatsProvider
 }
 
 // NewCacheService 创建缓存服务实例
@@ -486,7 +486,7 @@ func (s *cacheServiceImpl) BatchOperateCache(ctx context.Context, params CacheBa
 		return nil, ErrCacheKeysRequired
 	}
 
-	results := make(map[string]interface{})
+	var results map[string]interface{}
 
 	switch params.Operation {
 	case "get":
@@ -815,14 +815,14 @@ func convertToCacheStats(stats map[string]interface{}, cacheType string) models.
 // ==================== 错误定义 ====================
 
 var (
-	ErrCacheKeyRequired       = fmt.Errorf("缓存键不能为空")
+	ErrCacheKeyRequired        = fmt.Errorf("缓存键不能为空")
 	ErrCacheServiceUnavailable = fmt.Errorf("缓存服务不可用")
-	ErrCacheNotFound          = fmt.Errorf("缓存不存在")
-	ErrCacheValueRequired     = fmt.Errorf("设置缓存值不能为空")
-	ErrCacheTTLRequired       = fmt.Errorf("过期时间必须大于0")
-	ErrOperationUnsupported   = fmt.Errorf("不支持的操作")
-	ErrCacheKeysRequired      = fmt.Errorf("缓存键列表不能为空")
-	ErrCacheStatsUnsupported  = fmt.Errorf("缓存不支持统计信息")
-	ErrCacheConfigUnavailable = fmt.Errorf("缓存配置服务不可用")
-	ErrInvalidConfigKey       = fmt.Errorf("无效的配置键")
+	ErrCacheNotFound           = fmt.Errorf("缓存不存在")
+	ErrCacheValueRequired      = fmt.Errorf("设置缓存值不能为空")
+	ErrCacheTTLRequired        = fmt.Errorf("过期时间必须大于0")
+	ErrOperationUnsupported    = fmt.Errorf("不支持的操作")
+	ErrCacheKeysRequired       = fmt.Errorf("缓存键列表不能为空")
+	ErrCacheStatsUnsupported   = fmt.Errorf("缓存不支持统计信息")
+	ErrCacheConfigUnavailable  = fmt.Errorf("缓存配置服务不可用")
+	ErrInvalidConfigKey        = fmt.Errorf("无效的配置键")
 )

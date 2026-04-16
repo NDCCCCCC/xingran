@@ -105,7 +105,9 @@ func (s *NotificationSenderService) sendNotificationByChannels(
 	for _, channel := range channels {
 		switch channel.ChannelType {
 		case models.ChannelTypeWeb:
-			s.sendWebNotification(ctx, notice, targetUsers)
+			if err := s.sendWebNotification(ctx, notice, targetUsers); err != nil {
+				logger.Errorf("发送站内信通知失败: %v", err)
+			}
 
 		case models.ChannelTypeEmail:
 			s.sendEmailNotification(ctx, notice, &channel, userInfo)

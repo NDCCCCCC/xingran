@@ -6,13 +6,13 @@ import (
 )
 
 const (
-	StatusNormal      = "正常"
-	StatusStopped     = "停用"
-	StatusFault       = "故障"
-	StatusDisabled    = "停用"
-	WorkstationTypeFixed  = "固定工位"
-	WorkstationTypeHotDesk = "灵活工位"
-	WorkstationTypeManager = "管理工位"
+	StatusNormal               = "正常"
+	StatusStopped              = "停用"
+	StatusFault                = "故障"
+	StatusDisabled             = "停用"
+	WorkstationTypeFixed       = "固定工位"
+	WorkstationTypeHotDesk     = "灵活工位"
+	WorkstationTypeManager     = "管理工位"
 	WorkstationStatusAvailable = "空闲"
 	WorkstationStatusOccupied  = "占用"
 	WorkstationStatusMaintain  = "维护"
@@ -27,40 +27,40 @@ type ExcelColumn struct {
 	MaxLength int
 	Pattern   string
 	Options   map[interface{}]string
-	Reference string   // 引用配置，格式："table.field"，用于名称到ID的转换
-	DependsOn string   // 依赖字段：该字段的引用解析依赖于另一个字段的解析结果（如 floorName 依赖 buildingName）
-	UpsertKey bool     // 是否作为Upsert的唯一键（用于判断重复记录）
-	DBField   string   // 数据库字段名（可选，如果与Field不同，例如 workstationName -> workstation_name）
+	Reference string // 引用配置，格式："table.field"，用于名称到ID的转换
+	DependsOn string // 依赖字段：该字段的引用解析依赖于另一个字段的解析结果（如 floorName 依赖 buildingName）
+	UpsertKey bool   // 是否作为Upsert的唯一键（用于判断重复记录）
+	DBField   string // 数据库字段名（可选，如果与Field不同，例如 workstationName -> workstation_name）
 }
 
 type ExcelConfig struct {
-	SheetName      string
-	TableName      string
-	EntityName     string
-	Columns        []ExcelColumn
-	HasHeader      bool
-	StartRow       int
-	CachePatterns  []string  // 导入后需要清理的缓存模式
-	UniqueKeys     []string  // 用于判断重复的字段组合（备用，未配置UpsertKey时使用）
-	PartialUpdate  bool      // 是否启用部分更新（只更新有值的字段）
-	Instructions   []string  // Excel 模板顶部的说明文字，每行一个单元格
+	SheetName     string
+	TableName     string
+	EntityName    string
+	Columns       []ExcelColumn
+	HasHeader     bool
+	StartRow      int
+	CachePatterns []string // 导入后需要清理的缓存模式
+	UniqueKeys    []string // 用于判断重复的字段组合（备用，未配置UpsertKey时使用）
+	PartialUpdate bool     // 是否启用部分更新（只更新有值的字段）
+	Instructions  []string // Excel 模板顶部的说明文字，每行一个单元格
 }
 
 var ExcelConfigs = map[string]ExcelConfig{
 	"department": {
-		SheetName:  "部门列表",
-		TableName:  "sys_dept",
-		EntityName: "部门",
-		HasHeader:  true,
-		StartRow:   2,
+		SheetName:     "部门列表",
+		TableName:     "sys_dept",
+		EntityName:    "部门",
+		HasHeader:     true,
+		StartRow:      2,
 		CachePatterns: []string{"dept:*", "departments:*"},
 		UniqueKeys:    []string{"dept_code"}, // 按科室编码判断重复（使用数据库字段名）
-		PartialUpdate: true,                 // 启用部分更新（只更新有值的字段）
+		PartialUpdate: true,                  // 启用部分更新（只更新有值的字段）
 		Columns: []ExcelColumn{
 			{Field: "deptCode", Header: "科室编码(SECTION_OFFICE_CODE)", Required: true, Unique: true, MaxLength: 100, UpsertKey: true, DBField: "dept_code"},
 			{Field: "deptName", Header: "科室名称(SECTION_OFFICE_NAME)", Required: true, MaxLength: 100, DBField: "dept_name"},
-			{Field: "departmentCode", Header: "部门编码(DEPARTMENT_CODE)", Required: true, MaxLength: 100}, // 临时字段，无DBField，不会写入数据库
-			{Field: "departmentName", Header: "部门名称(DEPARTMENT_NAME)", Required: true, MaxLength: 100}, // 临时字段，无DBField
+			{Field: "departmentCode", Header: "部门编码(DEPARTMENT_CODE)", Required: true, MaxLength: 100},             // 临时字段，无DBField，不会写入数据库
+			{Field: "departmentName", Header: "部门名称(DEPARTMENT_NAME)", Required: true, MaxLength: 100},             // 临时字段，无DBField
 			{Field: "departmentGroupCode", Header: "部门组编码(DEPARTMENT_GROUP_CODE)", Required: true, MaxLength: 100}, // 临时字段，无DBField
 			{Field: "departmentGroupName", Header: "部门组名称(DEPARTMENT_GROUP_NAME)", Required: true, MaxLength: 100}, // 临时字段，无DBField
 			{Field: "leader", Header: "负责人", MaxLength: 100},
@@ -73,11 +73,11 @@ var ExcelConfigs = map[string]ExcelConfig{
 		},
 	},
 	"building": {
-		SheetName:  "楼宇列表",
-		TableName:  "ops_buildings",
-		EntityName: "楼宇",
-		HasHeader:  true,
-		StartRow:   2,
+		SheetName:     "楼宇列表",
+		TableName:     "ops_buildings",
+		EntityName:    "楼宇",
+		HasHeader:     true,
+		StartRow:      2,
 		CachePatterns: []string{"building:*", "buildings:*"},
 		UniqueKeys:    []string{"name", "orgId"}, // 按名称+机构判断重复
 		Columns: []ExcelColumn{
@@ -90,11 +90,11 @@ var ExcelConfigs = map[string]ExcelConfig{
 		},
 	},
 	"floor": {
-		SheetName:  "楼层列表",
-		TableName:  "ops_floors",
-		EntityName: "楼层",
-		HasHeader:  true,
-		StartRow:   2,
+		SheetName:     "楼层列表",
+		TableName:     "ops_floors",
+		EntityName:    "楼层",
+		HasHeader:     true,
+		StartRow:      2,
 		CachePatterns: []string{"floor:*", "floors:*"},
 		UniqueKeys:    []string{"building_id", "floor_no"}, // 按楼宇+楼层号判断重复（使用数据库字段名）
 		Columns: []ExcelColumn{
@@ -106,16 +106,16 @@ var ExcelConfigs = map[string]ExcelConfig{
 		},
 	},
 	"workstation": {
-		SheetName:  "工位列表",
-		TableName:  "sys_workstation",
-		EntityName: "工位",
-		HasHeader:  true,
-		StartRow:   2,
+		SheetName:     "工位列表",
+		TableName:     "sys_workstation",
+		EntityName:    "工位",
+		HasHeader:     true,
+		StartRow:      2,
 		CachePatterns: []string{"workstation:*", "workstations:*"},
 		UniqueKeys:    []string{"floorName", "name"}, // 按楼层+工位名称判断重复
 		Columns: []ExcelColumn{
 			{Field: "name", Header: "工位名称", Required: true, MaxLength: 100, DBField: "workstation_name"},
-			{Field: "buildingName", Header: "所属楼宇", MaxLength: 100, Reference: "ops_buildings.name", DBField: "building_id"}, // Excel列名：所属楼宇
+			{Field: "buildingName", Header: "所属楼宇", MaxLength: 100, Reference: "ops_buildings.name", DBField: "building_id"},                                     // Excel列名：所属楼宇
 			{Field: "floorName", Header: "所属楼层名称", Required: true, MaxLength: 100, Reference: "ops_floors.name", DBField: "floor_id", DependsOn: "buildingName"}, // 依赖 buildingName 的解析结果
 			{Field: "workstationType", Header: "工位类型", DBField: "workstation_type", Options: map[interface{}]string{int(models.WorkstationTypeFixed): "固定工位", int(models.WorkstationTypeHotDesk): "灵活工位", int(models.WorkstationTypeManager): "管理工位"}},
 			{Field: "status", Header: "状态", Options: map[interface{}]string{int(models.WorkstationStatusAvailable): "空闲", int(models.WorkstationStatusOccupied): "占用", int(models.WorkstationStatusMaintain): "维护"}},
@@ -145,22 +145,22 @@ var ExcelConfigs = map[string]ExcelConfig{
 		HasHeader:  true,
 		StartRow:   2,
 		Columns: []ExcelColumn{
-			{Field: "name", Header: "设备名称", Required: true, MaxLength: 100, DBField: "name"},
-			{Field: "deviceCode", Header: "设备编码", Required: true, Unique: true, MaxLength: 50, DBField: "device_code"},
+			{Field: "name", Header: "设备名称", Required: true, MaxLength: 100},
+			{Field: "deviceCode", Header: "设备编码", Required: true, Unique: true, MaxLength: 50},
 			{Field: "deviceType", Header: "设备类型", DBField: "device_type", Options: map[interface{}]string{string(operations.DeviceTypeServer): "服务器", string(operations.DeviceTypeStorage): "存储设备", string(operations.DeviceTypeUPS): "UPS", string(operations.DeviceTypePDU): "PDU", string(operations.DeviceTypeFirewall): "防火墙", string(operations.DeviceTypeKVM): "KVM", string(operations.DeviceTypeCabinet): "机柜", string(operations.DeviceTypeOther): "其他"}},
-			{Field: "vendor", Header: "厂商", MaxLength: 100, DBField: "vendor"},
-			{Field: "model", Header: "型号", MaxLength: 100, DBField: "model"},
-			{Field: "serialNumber", Header: "序列号", MaxLength: 100, DBField: "serial_number"},
-			{Field: "roomId", Header: "所在机房ID", Required: true, Reference: "ops_server_rooms.id", DBField: "room_id"},
-			{Field: "roomName", Header: "所在机房名称", MaxLength: 100, DBField: "room_name"},
-			{Field: "positionU", Header: "U位", DBField: "position_u"},
-			{Field: "positionDesc", Header: "位置描述", MaxLength: 200, DBField: "position_desc"},
-			{Field: "assetNumber", Header: "资产编号", MaxLength: 100, DBField: "asset_number"},
-			{Field: "purchaseDate", Header: "购买日期", MaxLength: 50, DBField: "purchase_date"},
-			{Field: "warrantyDate", Header: "保修到期", MaxLength: 50, DBField: "warranty_date"},
-			{Field: "powerConsumption", Header: "功耗(W)", DBField: "power_consumption"},
-			{Field: "status", Header: "状态", DBField: "status", Options: map[interface{}]string{0: "正常", 1: "故障", 2: "报废"}},
-			{Field: "remark", Header: "备注", MaxLength: 500, DBField: "remark"},
+			{Field: "vendor", Header: "厂商", MaxLength: 100},
+			{Field: "model", Header: "型号", MaxLength: 100},
+			{Field: "serialNumber", Header: "序列号", MaxLength: 100},
+			{Field: "roomId", Header: "所在机房ID", Required: true, Reference: "ops_server_rooms.id"},
+			{Field: "roomName", Header: "所在机房名称", MaxLength: 100},
+			{Field: "positionU", Header: "U位"},
+			{Field: "positionDesc", Header: "位置描述", MaxLength: 200},
+			{Field: "assetNumber", Header: "资产编号", MaxLength: 100},
+			{Field: "purchaseDate", Header: "购买日期", MaxLength: 50},
+			{Field: "warrantyDate", Header: "保修到期", MaxLength: 50},
+			{Field: "powerConsumption", Header: "功耗(W)"},
+			{Field: "status", Header: "状态", Options: map[interface{}]string{0: "正常", 1: "故障", 2: "报废"}},
+			{Field: "remark", Header: "备注", MaxLength: 500},
 		},
 	},
 	"dedicatedLine": {
@@ -168,14 +168,7 @@ var ExcelConfigs = map[string]ExcelConfig{
 		TableName:  "ops_dedicated_lines",
 		EntityName: "专线",
 		HasHeader:  true,
-		StartRow:   3,
-		Instructions: []string{
-			"重要提示：请仔细阅读以下说明后再填写数据！",
-			"",
-			"【专线类型】请填写英文代码：internet(互联网专线)、intranet(内网专线)、cloud_desktop(云桌面专线)、mpls(MPLS VPN)、fiber(光纤专线)、leased_line(租用专线)",
-			"【运营商】请填写英文代码：telecom(电信)、mobile(移动)、unicom(联通)、broadcast(广电)、other(其他)",
-			"【状态】请填写数字：0(正常)、1(故障)、2(停用)",
-		},
+		StartRow:   2,
 		Columns: []ExcelColumn{
 			{Field: "name", Header: "专线名称", Required: true, MaxLength: 100},
 			{Field: "lineType", Header: "专线类型", Required: true, Options: map[interface{}]string{"internet": "互联网专线", "intranet": "内网专线", "cloud_desktop": "云桌面专线", "mpls": "MPLS VPN", "fiber": "光纤专线", "leased_line": "租用专线"}, DBField: "line_type"},
@@ -200,14 +193,14 @@ var ExcelConfigs = map[string]ExcelConfig{
 		},
 	},
 	"infoPoint": {
-		SheetName:      "信息点列表",
-		TableName:      "ops_info_points",
-		EntityName:     "信息点",
-		HasHeader:      true,
-		StartRow:       2,
-		CachePatterns:  []string{"infoPoint:*", "info_points:*"},
-		UniqueKeys:     []string{"workstation_id", "name"}, // 按工位+名称判断重复（使用数据库字段名）
-		PartialUpdate:  true,                               // 启用部分更新以避免 GORM 无法识别部分索引的问题
+		SheetName:     "信息点列表",
+		TableName:     "ops_info_points",
+		EntityName:    "信息点",
+		HasHeader:     true,
+		StartRow:      2,
+		CachePatterns: []string{"infoPoint:*", "info_points:*"},
+		UniqueKeys:    []string{"workstation_id", "name"}, // 按工位+名称判断重复（使用数据库字段名）
+		PartialUpdate: true,                               // 启用部分更新以避免 GORM 无法识别部分索引的问题
 		Columns: []ExcelColumn{
 			{Field: "name", Header: "信息点名称", Required: true, MaxLength: 100, DBField: "name"},
 			{Field: "infoPointType", Header: "信息点类型", Options: map[interface{}]string{string(operations.InfoPointTypeNetwork): "网络信息点", string(operations.InfoPointTypePower): "电源信息点", string(operations.InfoPointTypeOther): "其他"}, DBField: "info_point_type"},

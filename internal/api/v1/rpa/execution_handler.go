@@ -18,14 +18,14 @@ import (
 // ExecutionHandler 执行记录处理器
 type ExecutionHandler struct {
 	executionService rpa.ExecutionService
-	excelService      *rpa.RPAExcelService
+	excelService     *rpa.RPAExcelService
 }
 
 // NewExecutionHandler 创建执行记录处理器
 func NewExecutionHandler(executionService rpa.ExecutionService, excelService *rpa.RPAExcelService) *ExecutionHandler {
 	return &ExecutionHandler{
 		executionService: executionService,
-		excelService:      excelService,
+		excelService:     excelService,
 	}
 }
 
@@ -129,21 +129,21 @@ func (h *ExecutionHandler) RequestHumanIntervention(c *gin.Context) {
 	if err != nil {
 		// 没有待处理的干预，返回等待状态
 		success(c, gin.H{
-			"status":     "waiting",
-			"message":    "正在等待用户输入",
+			"status":      "waiting",
+			"message":     "正在等待用户输入",
 			"executionId": id,
 		})
 		return
 	}
 
 	success(c, gin.H{
-		"status":     "pending",
-		"eventId":    event.ID,
-		"action":     event.Action,
-		"message":    event.Message,
+		"status":      "pending",
+		"eventId":     event.ID,
+		"action":      event.Action,
+		"message":     event.Message,
 		"executionId": id,
-		"workerId":   event.WorkerID,
-		"createdAt":  event.CreatedAt,
+		"workerId":    event.WorkerID,
+		"createdAt":   event.CreatedAt,
 	})
 }
 
@@ -171,13 +171,15 @@ func (h *ExecutionHandler) SubmitHumanIntervention(c *gin.Context) {
 	}
 
 	// 标记事件为已处理
-	h.excelService.ProcessHumanIntervention(c.Request.Context(), event.ID, true)
+	if err := h.excelService.ProcessHumanIntervention(c.Request.Context(), event.ID, true); err != nil {
+		_ = err // 记录日志但不影响响应
+	}
 
 	success(c, gin.H{
-		"eventId":    event.ID,
-		"status":     "submitted",
-		"message":    "人工输入已提交",
-		"action":     req.Action,
+		"eventId": event.ID,
+		"status":  "submitted",
+		"message": "人工输入已提交",
+		"action":  req.Action,
 	})
 }
 
@@ -242,7 +244,7 @@ func (h *ExecutionHandler) DownloadArtifacts(c *gin.Context) {
 	if execution.Logs != "" {
 		w, err := zipWriter.Create("execution_log.txt")
 		if err == nil {
-			w.Write([]byte(execution.Logs))
+			_, _ = w.Write([]byte(execution.Logs))
 		}
 	}
 
@@ -257,7 +259,7 @@ func (h *ExecutionHandler) DownloadArtifacts(c *gin.Context) {
 
 	w, err := zipWriter.Create("execution_info.txt")
 	if err == nil {
-		w.Write([]byte(infoContent))
+		_, _ = w.Write([]byte(infoContent))
 	}
 }
 

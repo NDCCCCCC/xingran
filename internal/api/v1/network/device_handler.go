@@ -5,9 +5,9 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	networkServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/network"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
-	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 )
 
 // DeviceHandler 网络设备处理器
@@ -77,7 +77,7 @@ func (h *DeviceHandler) List(c *gin.Context) {
 	pageResp := response.PageResponse{
 		List:     devices,
 		Total:    total,
-			Current:  req.Current,
+		Current:  req.Current,
 		PageSize: req.PageSize,
 	}
 	response.Success(c, pageResp)

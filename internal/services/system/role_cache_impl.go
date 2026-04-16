@@ -25,8 +25,8 @@ func NewRoleServiceWithCache(
 ) RoleService {
 	base := &roleService{db: db}
 	return &roleCacheService{
-		roleService: base,
-		cache:       cache,
+		roleService:      base,
+		cache:            cache,
 		CacheServiceBase: CacheServiceBase{Config: config},
 	}
 }

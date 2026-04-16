@@ -25,7 +25,7 @@ type NoticeHub struct {
 	unregister chan *Client
 	mu         sync.RWMutex
 	stop       chan struct{} // 用于优雅关闭
-	stopOnce   sync.Once      // 确保 stop channel 只关闭一次
+	stopOnce   sync.Once     // 确保 stop channel 只关闭一次
 	// 遵循 Go 最佳实践：使用 sync.Pool 复用高频分配的对象
 	toDeletePool sync.Pool // string slice pool for broadcast operations
 }
@@ -73,7 +73,8 @@ func NewNoticeHub() *NoticeHub {
 	}
 	// 初始化对象池，预分配容量减少后续分配
 	h.toDeletePool.New = func() interface{} {
-		return make([]string, 0, 16)
+		s := make([]string, 0, 16)
+		return &s
 	}
 	return h
 }
@@ -108,9 +109,9 @@ func (h *NoticeHub) Run() {
 		case message := <-h.broadcast:
 			// 先收集需要删除的客户端，避免在读锁中进行写操作
 			// 遵循 Go 最佳实践：使用 sync.Pool 复用切片，减少 GC 压力
-			toDelete := h.toDeletePool.Get().([]string)
+			toDelete := h.toDeletePool.Get().(*[]string)
 			defer func() {
-				toDelete = toDelete[:0] // 重置长度但保留容量
+				*toDelete = (*toDelete)[:0] // 重置长度但保留容量
 				h.toDeletePool.Put(toDelete)
 			}()
 
@@ -127,15 +128,15 @@ func (h *NoticeHub) Run() {
 					// 发送成功
 				default:
 					// 发送失败，标记为待删除
-					toDelete = append(toDelete, userID)
+					*toDelete = append(*toDelete, userID)
 				}
 			}
 			h.mu.RUnlock()
 
 			// 在读锁外执行删除操作
-			if len(toDelete) > 0 {
+			if len(*toDelete) > 0 {
 				h.mu.Lock()
-				for _, userID := range toDelete {
+				for _, userID := range *toDelete {
 					if client, ok := h.clients[userID]; ok {
 						delete(h.clients, userID)
 						close(client.send)
@@ -177,9 +178,9 @@ func (h *NoticeHub) UnregisterClient(client *Client) {
 func (h *NoticeHub) BroadcastToUsers(userIDs []string, message NoticeMessage) {
 	// 先收集需要删除的客户端，避免在读锁中进行写操作
 	// 遵循 Go 最佳实践：使用 sync.Pool 复用切片
-	toDelete := h.toDeletePool.Get().([]string)
+	toDelete := h.toDeletePool.Get().(*[]string)
 	defer func() {
-		toDelete = toDelete[:0]
+		*toDelete = (*toDelete)[:0]
 		h.toDeletePool.Put(toDelete)
 	}()
 
@@ -197,16 +198,16 @@ func (h *NoticeHub) BroadcastToUsers(userIDs []string, message NoticeMessage) {
 				// 发送成功
 			default:
 				// 发送失败，标记为待删除
-				toDelete = append(toDelete, userID)
+				*toDelete = append(*toDelete, userID)
 			}
 		}
 	}
 	h.mu.RUnlock()
 
 	// 在读锁外执行删除操作
-	if len(toDelete) > 0 {
+	if len(*toDelete) > 0 {
 		h.mu.Lock()
-		for _, userID := range toDelete {
+		for _, userID := range *toDelete {
 			if client, ok := h.clients[userID]; ok {
 				delete(h.clients, userID)
 				close(client.send)
@@ -244,9 +245,9 @@ func (h *NoticeHub) BroadcastRPAProgressToUser(userID string, message RPAProgres
 func (h *NoticeHub) BroadcastRPAProgressToUsers(userIDs []string, message RPAProgressMessage) {
 	// 先收集需要删除的客户端，避免在读锁中进行写操作
 	// 遵循 Go 最佳实践：使用 sync.Pool 复用切片
-	toDelete := h.toDeletePool.Get().([]string)
+	toDelete := h.toDeletePool.Get().(*[]string)
 	defer func() {
-		toDelete = toDelete[:0]
+		*toDelete = (*toDelete)[:0]
 		h.toDeletePool.Put(toDelete)
 	}()
 
@@ -264,16 +265,16 @@ func (h *NoticeHub) BroadcastRPAProgressToUsers(userIDs []string, message RPAPro
 				// 发送成功
 			default:
 				// 发送失败，标记为待删除
-				toDelete = append(toDelete, userID)
+				*toDelete = append(*toDelete, userID)
 			}
 		}
 	}
 	h.mu.RUnlock()
 
 	// 在读锁外执行删除操作
-	if len(toDelete) > 0 {
+	if len(*toDelete) > 0 {
 		h.mu.Lock()
-		for _, userID := range toDelete {
+		for _, userID := range *toDelete {
 			if client, ok := h.clients[userID]; ok {
 				delete(h.clients, userID)
 				close(client.send)

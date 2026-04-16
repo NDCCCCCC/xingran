@@ -74,12 +74,12 @@ func (a *cacheProviderAdapter) GetStats(ctx context.Context) (*CacheStats, error
 		return nil, err
 	}
 	return &CacheStats{
-		Hits:         stats.Hits,
-		Misses:       stats.Misses,
-		Count:        stats.Count,
-		MemorySize:   stats.MemorySize,
-		HitRate:      stats.HitRate,
-		KeyCount:     stats.KeyCount,
+		Hits:          stats.Hits,
+		Misses:        stats.Misses,
+		Count:         stats.Count,
+		MemorySize:    stats.MemorySize,
+		HitRate:       stats.HitRate,
+		KeyCount:      stats.KeyCount,
 		ExtendedStats: stats.ExtendedStats,
 	}, nil
 }

@@ -27,8 +27,8 @@ func NewUserServiceWithCache(
 ) UserService {
 	base := &userService{db: db, pwdManager: pwdManager}
 	return &userCacheService{
-		userService:     base,
-		cache:           cache,
+		userService:      base,
+		cache:            cache,
 		CacheServiceBase: CacheServiceBase{Config: config},
 	}
 }

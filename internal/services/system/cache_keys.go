@@ -78,69 +78,69 @@ const (
 // 系统模块缓存键
 const (
 	// 用户相关
-	CacheKeyUserByID      = "user:id"       // 用户详情: user:id:{uuid}
-	CacheKeyUserByUserName = "user:name"    // 用户名查询: user:name:{username}
-	CacheKeyUserList      = "user:list"     // 用户列表: user:list
-	CacheKeyUserListByDept = "user:dept"    // 部门用户: user:dept:{deptId}
+	CacheKeyUserByID       = "user:id"   // 用户详情: user:id:{uuid}
+	CacheKeyUserByUserName = "user:name" // 用户名查询: user:name:{username}
+	CacheKeyUserList       = "user:list" // 用户列表: user:list
+	CacheKeyUserListByDept = "user:dept" // 部门用户: user:dept:{deptId}
 
 	// 角色相关
-	CacheKeyRoleByID      = "role:id"       // 角色详情: role:id:{uuid}
-	CacheKeyRoleList      = "role:list"     // 角色列表: role:list
-	CacheKeyRoleByUserID  = "role:user"     // 用户角色: role:user:{userId}
+	CacheKeyRoleByID     = "role:id"   // 角色详情: role:id:{uuid}
+	CacheKeyRoleList     = "role:list" // 角色列表: role:list
+	CacheKeyRoleByUserID = "role:user" // 用户角色: role:user:{userId}
 
 	// 菜单相关
-	CacheKeyMenuByID      = "menu:id"       // 菜单详情: menu:id:{uuid}
-	CacheKeyMenuList      = "menu:list"     // 菜单列表: menu:list
-	CacheKeyMenuByRoleID  = "menu:role"     // 角色菜单: menu:role:{roleId}
-	CacheKeyMenuTree      = "menu:tree"     // 菜单树: menu:tree
+	CacheKeyMenuByID     = "menu:id"   // 菜单详情: menu:id:{uuid}
+	CacheKeyMenuList     = "menu:list" // 菜单列表: menu:list
+	CacheKeyMenuByRoleID = "menu:role" // 角色菜单: menu:role:{roleId}
+	CacheKeyMenuTree     = "menu:tree" // 菜单树: menu:tree
 
 	// 部门相关
-	CacheKeyDeptByID      = "dept:id"       // 部门详情: dept:id:{uuid}
-	CacheKeyDeptList      = "dept:list"     // 部门列表: dept:list
-	CacheKeyDeptTree      = "dept:tree"     // 部门树: dept:tree
-	CacheKeyDeptChildren  = "dept:children" // 子部门: dept:children:{parentId}
+	CacheKeyDeptByID     = "dept:id"       // 部门详情: dept:id:{uuid}
+	CacheKeyDeptList     = "dept:list"     // 部门列表: dept:list
+	CacheKeyDeptTree     = "dept:tree"     // 部门树: dept:tree
+	CacheKeyDeptChildren = "dept:children" // 子部门: dept:children:{parentId}
 
 	// 岗位相关
-	CacheKeyPostByID      = "post:id"       // 岗位详情: post:id:{uuid}
-	CacheKeyPostList      = "post:list"     // 岗位列表: post:list
+	CacheKeyPostByID = "post:id"   // 岗位详情: post:id:{uuid}
+	CacheKeyPostList = "post:list" // 岗位列表: post:list
 
 	// 字典相关
-	CacheKeyDictType      = "dict:type"     // 字典类型: dict:type
-	CacheKeyDictData      = "dict:data"     // 字典数据: dict:data:{dictType}
+	CacheKeyDictType       = "dict:type"      // 字典类型: dict:type
+	CacheKeyDictData       = "dict:data"      // 字典数据: dict:data:{dictType}
 	CacheKeyDictDataByType = "dict:data:type" // 字典数据列表: dict:data:type:{dictType}
 
 	// 配置相关
-	CacheKeyConfigByID    = "config:id"     // 配置详情: config:id:{uuid}
-	CacheKeyConfigByKey   = "config:key"    // 配置键: config:key:{configKey}
-	CacheKeyConfigList    = "config:list"   // 配置列表: config:list
+	CacheKeyConfigByID  = "config:id"   // 配置详情: config:id:{uuid}
+	CacheKeyConfigByKey = "config:key"  // 配置键: config:key:{configKey}
+	CacheKeyConfigList  = "config:list" // 配置列表: config:list
 )
 
 // 运维模块缓存键
 const (
 	// 楼宇相关
-	CacheKeyBuildingByID = "building:id"    // 楼宇详情: building:id:{uuid}
-	CacheKeyBuildingList = "building:list"  // 楼宇列表: building:list
+	CacheKeyBuildingByID = "building:id"   // 楼宇详情: building:id:{uuid}
+	CacheKeyBuildingList = "building:list" // 楼宇列表: building:list
 
 	// 楼层相关
-	CacheKeyFloorByID    = "floor:id"       // 楼层详情: floor:id:{uuid}
-	CacheKeyFloorList    = "floor:list"     // 楼层列表: floor:list
+	CacheKeyFloorByID       = "floor:id"       // 楼层详情: floor:id:{uuid}
+	CacheKeyFloorList       = "floor:list"     // 楼层列表: floor:list
 	CacheKeyFloorByBuilding = "floor:building" // 楼宇楼层: floor:building:{buildingId}
 
 	// 工位相关
-	CacheKeyWorkstationByID = "workstation:id"    // 工位详情: workstation:id:{uuid}
-	CacheKeyWorkstationList = "workstation:list"  // 工位列表: workstation:list
+	CacheKeyWorkstationByID    = "workstation:id"    // 工位详情: workstation:id:{uuid}
+	CacheKeyWorkstationList    = "workstation:list"  // 工位列表: workstation:list
 	CacheKeyWorkstationByFloor = "workstation:floor" // 楼层工位: workstation:floor:{floorId}
 
 	// 信息点相关
-	CacheKeyInfoPointByID = "infopoint:id"    // 信息点详情: infopoint:id:{uuid}
-	CacheKeyInfoPointList = "infopoint:list"  // 信息点列表: infopoint:list
+	CacheKeyInfoPointByID = "infopoint:id"   // 信息点详情: infopoint:id:{uuid}
+	CacheKeyInfoPointList = "infopoint:list" // 信息点列表: infopoint:list
 )
 
 // 监控模块缓存键
 const (
-	CacheKeyServerInfo     = "monitor:server"      // 服务器信息: monitor:server:{serverKey}
-	CacheKeyCacheStats     = "monitor:cache:stats" // 缓存统计: monitor:cache:stats
-	CacheKeyOnlineUsers    = "monitor:online"      // 在线用户: monitor:online
+	CacheKeyServerInfo  = "monitor:server"      // 服务器信息: monitor:server:{serverKey}
+	CacheKeyCacheStats  = "monitor:cache:stats" // 缓存统计: monitor:cache:stats
+	CacheKeyOnlineUsers = "monitor:online"      // 在线用户: monitor:online
 )
 
 // ==================== 缓存键构建辅助函数 ====================

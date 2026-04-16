@@ -71,7 +71,7 @@ func (s *excelExportServiceImpl) ExportData(
 
 	s.writeExportDataRows(f, sheetName, config.Columns, data)
 
-	f.SetPanes(sheetName, &excelize.Panes{
+	_ = f.SetPanes(sheetName, &excelize.Panes{
 		Freeze: true,
 		XSplit: 1,
 		YSplit: 1,
@@ -183,8 +183,8 @@ func (s *excelExportServiceImpl) writeExportHeaders(
 ) {
 	for i, col := range columns {
 		cell, _ := excelize.CoordinatesToCellName(i+1, 1)
-		f.SetCellValue(sheetName, cell, col.Header)
-		f.SetCellStyle(sheetName, cell, cell, headerStyle)
+		_ = f.SetCellValue(sheetName, cell, col.Header)
+		_ = f.SetCellStyle(sheetName, cell, cell, headerStyle)
 	}
 }
 
@@ -196,7 +196,7 @@ func (s *excelExportServiceImpl) setExportColumnWidths(
 	for i, col := range columns {
 		colName, _ := coordinatesToColumnString(i + 1)
 		width := calculateColumnWidth(col.Header)
-		f.SetColWidth(sheetName, colName, colName, width)
+		_ = f.SetColWidth(sheetName, colName, colName, width)
 	}
 }
 
@@ -210,7 +210,7 @@ func (s *excelExportServiceImpl) writeExportDataRows(
 		for j, col := range columns {
 			cell, _ := excelize.CoordinatesToCellName(j+1, i+2)
 			value := s.formatExportCellValue(col, row)
-			f.SetCellValue(sheetName, cell, value)
+			_ = f.SetCellValue(sheetName, cell, value)
 		}
 	}
 }

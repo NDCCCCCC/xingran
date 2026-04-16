@@ -160,8 +160,8 @@ type ScalingEvent struct {
 	QueueLength     int       `json:"queueLength"`
 	ActiveWorkers   int       `json:"activeWorkers"`
 	WorkerCapacity  int       `json:"workerCapacity"`
-	AverageExecTime int       `json:"averageExecTime"` // 毫秒
-	ContainerIDs    string    `gorm:"type:text" json:"containerIds"` // JSON 数组
+	AverageExecTime int       `json:"averageExecTime"`                         // 毫秒
+	ContainerIDs    string    `gorm:"type:text" json:"containerIds"`           // JSON 数组
 	Status          string    `gorm:"size:20;default:'success'" json:"status"` // success, failed
 	ErrorMessage    string    `gorm:"type:text" json:"errorMessage"`
 }
@@ -173,12 +173,12 @@ func (ScalingEvent) TableName() string {
 
 // ScalingMetrics 扩缩容决策指标
 type ScalingMetrics struct {
-	QueueLength         int           // 待执行任务数
-	RunningTasks        int           // 执行中任务数
-	ActiveWorkers       int           // 活跃 Worker 数
-	WorkerCapacity      int           // Worker 总容量（最大并发数）
-	AverageExecTime     time.Duration // 平均执行时间
-	Timestamp           time.Time     // 采集时间
+	QueueLength     int           // 待执行任务数
+	RunningTasks    int           // 执行中任务数
+	ActiveWorkers   int           // 活跃 Worker 数
+	WorkerCapacity  int           // Worker 总容量（最大并发数）
+	AverageExecTime time.Duration // 平均执行时间
+	Timestamp       time.Time     // 采集时间
 }
 
 // MetricsCollector 指标采集器

@@ -56,30 +56,6 @@ func normalizeInterfaceName(name string) string {
 	return name
 }
 
-// isValidInterfaceName 验证是否为有效的接口名称
-func isValidInterfaceName(name string) bool {
-	if name == "" {
-		return false
-	}
-
-	validPrefixes := []string{
-		"GigabitEthernet", "FastEthernet", "Ethernet",
-		"TenGigE", "FortyGigE", "HundredGigE",
-		"Vlan", "Vlanif", "Loopback", "NULL",
-		"Serial", "POS", "ATM", "Dialer",
-		"Tunnel", "Port-Channel", "Bridge-Aggregation",
-		"Route-Aggregation", "InLoopBack", "Register-Tunnel",
-	}
-
-	for _, prefix := range validPrefixes {
-		if strings.HasPrefix(name, prefix) {
-			return true
-		}
-	}
-
-	return false
-}
-
 // buildPortStatus 从接口信息构建端口状态
 func buildPortStatus(deviceID, interfaceName string, iface InterfaceInfo, adminStatus, operStatus, description string, dot1xMap map[string]Dot1xInfo, securityMap map[string]PortSecurityInfo, collectionTime time.Time) *models.DevicePortStatus {
 	portStatus := &models.DevicePortStatus{

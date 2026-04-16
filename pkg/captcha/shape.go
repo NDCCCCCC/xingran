@@ -44,11 +44,11 @@ func NewBaseShapeFactory() ShapeFactory {
 		creators: make(map[string]ShapeCreator),
 	}
 
-	// 注册内置形状
-	factory.RegisterShape("circle", func() Shape { return NewCircleShape() })
-	factory.RegisterShape("square", func() Shape { return NewSquareShape() })
-	factory.RegisterShape("star", func() Shape { return NewStarShape() })
-	factory.RegisterShape("heart", func() Shape { return NewHeartShape() })
+	// 注册内置形状（errors impossible for these built-in registrations, explicitly discard）
+	_ = factory.RegisterShape("circle", func() Shape { return NewCircleShape() })
+	_ = factory.RegisterShape("square", func() Shape { return NewSquareShape() })
+	_ = factory.RegisterShape("star", func() Shape { return NewStarShape() })
+	_ = factory.RegisterShape("heart", func() Shape { return NewHeartShape() })
 
 	return factory
 }

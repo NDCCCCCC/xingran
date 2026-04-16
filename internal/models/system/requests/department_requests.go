@@ -10,16 +10,16 @@ type DepartmentListParams struct {
 }
 
 type DepartmentCreateRequest struct {
-	DeptName      string              `json:"deptName" binding:"required"`
-	DeptCode      string              `json:"deptCode" binding:"required"`
-	ParentID      *string             `json:"parentId"`
-	OrderNum      int                 `json:"orderNum"`
-	Leader        *string             `json:"leader"`
-	Phone         *string             `json:"phone"`
-	Email         *string             `json:"email"`
-	IsExternalOrg int                 `json:"isExternalOrg"`
-	Status        models.DeptStatus   `json:"status"`
-	Remark        *string             `json:"remark"`
+	DeptName      string            `json:"deptName" binding:"required"`
+	DeptCode      string            `json:"deptCode" binding:"required"`
+	ParentID      *string           `json:"parentId"`
+	OrderNum      int               `json:"orderNum"`
+	Leader        *string           `json:"leader"`
+	Phone         *string           `json:"phone"`
+	Email         *string           `json:"email"`
+	IsExternalOrg int               `json:"isExternalOrg"`
+	Status        models.DeptStatus `json:"status"`
+	Remark        *string           `json:"remark"`
 }
 
 func (r *DepartmentCreateRequest) ToModel(ancestors string) models.Department {
@@ -39,15 +39,15 @@ func (r *DepartmentCreateRequest) ToModel(ancestors string) models.Department {
 }
 
 type DepartmentUpdateRequest struct {
-	ID            string              `json:"id" binding:"required"`
-	DeptName      string              `json:"deptName" binding:"required"`
-	DeptCode      string              `json:"deptCode" binding:"required"`
-	ParentID      *string             `json:"parentId"`
-	OrderNum      int                 `json:"orderNum"`
-	Leader        *string             `json:"leader"`
-	Phone         *string             `json:"phone"`
-	Email         *string             `json:"email"`
-	IsExternalOrg int                 `json:"isExternalOrg"`
-	Status        models.DeptStatus   `json:"status"`
-	Remark        *string             `json:"remark"`
+	ID            string            `json:"id" binding:"required"`
+	DeptName      string            `json:"deptName" binding:"required"`
+	DeptCode      string            `json:"deptCode" binding:"required"`
+	ParentID      *string           `json:"parentId"`
+	OrderNum      int               `json:"orderNum"`
+	Leader        *string           `json:"leader"`
+	Phone         *string           `json:"phone"`
+	Email         *string           `json:"email"`
+	IsExternalOrg int               `json:"isExternalOrg"`
+	Status        models.DeptStatus `json:"status"`
+	Remark        *string           `json:"remark"`
 }

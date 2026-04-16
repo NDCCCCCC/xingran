@@ -18,17 +18,17 @@ import (
 // ADSyncScheduler AD同步调度器
 // 遵循 Go 最佳实践：将全局变量封装为结构体，便于测试和并发控制
 type ADSyncScheduler struct {
-	cron        *cron.Cron
-	started     bool
-	sem         *semaphore.Weighted // 并发控制信号量
-	db          *gorm.DB
-	mu          sync.Mutex         // 保护状态变更
+	cron    *cron.Cron
+	started bool
+	sem     *semaphore.Weighted // 并发控制信号量
+	db      *gorm.DB
+	mu      sync.Mutex // 保护状态变更
 }
 
 // 全局 AD 同步调度器实例
 // 遵循 Go 最佳实践：使用 sync.Once 确保单例初始化的线程安全
 var (
-	globalADSyncScheduler   *ADSyncScheduler
+	globalADSyncScheduler     *ADSyncScheduler
 	globalADSyncSchedulerOnce sync.Once
 )
 

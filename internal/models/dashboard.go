@@ -18,14 +18,14 @@ const (
 )
 
 type WidgetPosition struct {
-	X     int `json:"x"`
-	Y     int `json:"y"`
-	W     int `json:"w"`
-	H     int `json:"h"`
-	MinW  int `json:"minW,omitempty"`
-	MinH  int `json:"minH,omitempty"`
-	MaxW  int `json:"maxW,omitempty"`
-	MaxH  int `json:"maxH,omitempty"`
+	X    int `json:"x"`
+	Y    int `json:"y"`
+	W    int `json:"w"`
+	H    int `json:"h"`
+	MinW int `json:"minW,omitempty"`
+	MinH int `json:"minH,omitempty"`
+	MaxW int `json:"maxW,omitempty"`
+	MaxH int `json:"maxH,omitempty"`
 }
 
 type DataSourceType string
@@ -38,11 +38,11 @@ const (
 
 // DataTransformConfig 数据转换配置
 type DataTransformConfig struct {
-	Expression string                    `json:"expression,omitempty"`
-	Aggregate  *string                   `json:"aggregate,omitempty"`
-	GroupBy    string                    `json:"groupBy,omitempty"`
-	OrderBy    *OrderByConfig            `json:"orderBy,omitempty"`
-	Limit      int                       `json:"limit,omitempty"`
+	Expression string         `json:"expression,omitempty"`
+	Aggregate  *string        `json:"aggregate,omitempty"`
+	GroupBy    string         `json:"groupBy,omitempty"`
+	OrderBy    *OrderByConfig `json:"orderBy,omitempty"`
+	Limit      int            `json:"limit,omitempty"`
 }
 
 // OrderByConfig 排序配置
@@ -53,12 +53,12 @@ type OrderByConfig struct {
 
 // ApiDataSourceConfig API 数据源配置
 type ApiDataSourceConfig struct {
-	Type     DataSourceType        `json:"type"`
-	Endpoint string                `json:"endpoint"`
-	Method   string                `json:"method"`
-	Params   map[string]interface{} `json:"params,omitempty"`
-	Body     map[string]interface{} `json:"body,omitempty"`
-	Transform *DataTransformConfig  `json:"transform,omitempty"`
+	Type      DataSourceType         `json:"type"`
+	Endpoint  string                 `json:"endpoint"`
+	Method    string                 `json:"method"`
+	Params    map[string]interface{} `json:"params,omitempty"`
+	Body      map[string]interface{} `json:"body,omitempty"`
+	Transform *DataTransformConfig   `json:"transform,omitempty"`
 }
 
 // WebSocketDataSourceConfig WebSocket 数据源配置
@@ -123,17 +123,17 @@ type StatCardDisplayConfig struct {
 // ChartDisplayConfig 图表显示配置
 type ChartDisplayConfig struct {
 	BaseDisplayConfig `json:",inline"`
-	Type              string              `json:"type"`
-	ChartType         string              `json:"chartType"`
-	XField            string              `json:"xField,omitempty"`
-	YField            string              `json:"yField,omitempty"`
-	SeriesField       string              `json:"seriesField,omitempty"`
-	Colors            []string            `json:"colors,omitempty"`
-	ShowLegend        bool                `json:"showLegend,omitempty"`
-	ShowLabels        bool                `json:"showLabels,omitempty"`
-	Smooth            bool                `json:"smooth,omitempty"`
-	ShowArea          bool                `json:"showArea,omitempty"`
-	Title             string              `json:"title,omitempty"`
+	Type              string   `json:"type"`
+	ChartType         string   `json:"chartType"`
+	XField            string   `json:"xField,omitempty"`
+	YField            string   `json:"yField,omitempty"`
+	SeriesField       string   `json:"seriesField,omitempty"`
+	Colors            []string `json:"colors,omitempty"`
+	ShowLegend        bool     `json:"showLegend,omitempty"`
+	ShowLabels        bool     `json:"showLabels,omitempty"`
+	Smooth            bool     `json:"smooth,omitempty"`
+	ShowArea          bool     `json:"showArea,omitempty"`
+	Title             string   `json:"title,omitempty"`
 }
 
 // TableColumnConfig 表格列配置
@@ -178,9 +178,9 @@ type ListDisplayConfig struct {
 // ProgressDisplayConfig 进度条显示配置
 type ProgressDisplayConfig struct {
 	BaseDisplayConfig `json:",inline"`
-	Type              string `json:"type"`
-	ProgressType      string `json:"progressType"`
-	Target            int    `json:"target,omitempty"`
+	Type              string           `json:"type"`
+	ProgressType      string           `json:"progressType"`
+	Target            int              `json:"target,omitempty"`
 	ColorThresholds   []ColorThreshold `json:"colorThresholds,omitempty"`
 }
 
@@ -192,11 +192,11 @@ type ColorThreshold struct {
 
 // DisplayConfig 显示配置（存储为 JSON）
 type DisplayConfig struct {
-	StatCard  *StatCardDisplayConfig  `json:"statCard,omitempty"`
-	Chart     *ChartDisplayConfig     `json:"chart,omitempty"`
-	Table     *TableDisplayConfig     `json:"table,omitempty"`
-	List      *ListDisplayConfig      `json:"list,omitempty"`
-	Progress  *ProgressDisplayConfig  `json:"progress,omitempty"`
+	StatCard *StatCardDisplayConfig `json:"statCard,omitempty"`
+	Chart    *ChartDisplayConfig    `json:"chart,omitempty"`
+	Table    *TableDisplayConfig    `json:"table,omitempty"`
+	List     *ListDisplayConfig     `json:"list,omitempty"`
+	Progress *ProgressDisplayConfig `json:"progress,omitempty"`
 }
 
 // Scan 实现 sql.Scanner 接口
@@ -217,20 +217,20 @@ func (d DisplayConfig) Value() (driver.Value, error) {
 }
 
 type WidgetConfig struct {
-	ID              string           `json:"id" gorm:"primaryKey;size:64"`
-	Type            string           `json:"type" gorm:"size:20;not null"`
-	Title           string           `json:"title" gorm:"size:200;not null"`
-	Position        WidgetPosition   `json:"position" gorm:"type:jsonb;not null"`
-	DataSource      DataSourceConfig `json:"dataSource" gorm:"type:jsonb;not null"`
-	Display         DisplayConfig    `json:"display" gorm:"type:jsonb;not null"`
+	ID         string           `json:"id" gorm:"primaryKey;size:64"`
+	Type       string           `json:"type" gorm:"size:20;not null"`
+	Title      string           `json:"title" gorm:"size:200;not null"`
+	Position   WidgetPosition   `json:"position" gorm:"type:jsonb;not null"`
+	DataSource DataSourceConfig `json:"dataSource" gorm:"type:jsonb;not null"`
+	Display    DisplayConfig    `json:"display" gorm:"type:jsonb;not null"`
 
 	// 数据权限过滤
-	DataFilter      *WidgetDataFilter `json:"dataFilter,omitempty" gorm:"type:jsonb"`
+	DataFilter *WidgetDataFilter `json:"dataFilter,omitempty" gorm:"type:jsonb"`
 
-	RefreshInterval int              `json:"refreshInterval,omitempty" gorm:"default:0"`
-	Enabled         bool             `json:"enabled,omitempty" gorm:"default:true"`
-	CreatedAt       int64            `json:"createdAt,omitempty" gorm:"autoCreateTime:milli"`
-	UpdatedAt       int64            `json:"updatedAt,omitempty" gorm:"autoUpdateTime:milli"`
+	RefreshInterval int   `json:"refreshInterval,omitempty" gorm:"default:0"`
+	Enabled         bool  `json:"enabled,omitempty" gorm:"default:true"`
+	CreatedAt       int64 `json:"createdAt,omitempty" gorm:"autoCreateTime:milli"`
+	UpdatedAt       int64 `json:"updatedAt,omitempty" gorm:"autoUpdateTime:milli"`
 }
 
 type Columns struct {
@@ -291,13 +291,13 @@ const (
 // Dashboard 仪表盘模型
 type Dashboard struct {
 	BaseModel
-	Name          string       `json:"name" gorm:"size:100;not null;index"`
-	Description   string       `json:"description" gorm:"size:500"`
-	OwnerID       string       `json:"ownerId" gorm:"size:64;index"`
-	OwnerDeptID   string       `json:"ownerDeptId" gorm:"size:64;index"` // 创建者部门
-	IsDefault     bool         `json:"isDefault" gorm:"default:false;index"`
-	IsTemplate    bool         `json:"isTemplate" gorm:"default:false;index"`
-	IsSystem      bool         `json:"isSystem" gorm:"default:false;index"` // 系统仪表盘标识
+	Name        string `json:"name" gorm:"size:100;not null;index"`
+	Description string `json:"description" gorm:"size:500"`
+	OwnerID     string `json:"ownerId" gorm:"size:64;index"`
+	OwnerDeptID string `json:"ownerDeptId" gorm:"size:64;index"` // 创建者部门
+	IsDefault   bool   `json:"isDefault" gorm:"default:false;index"`
+	IsTemplate  bool   `json:"isTemplate" gorm:"default:false;index"`
+	IsSystem    bool   `json:"isSystem" gorm:"default:false;index"` // 系统仪表盘标识
 
 	// 权限相关
 	Scope  DashboardScope `json:"scope" gorm:"size:20;default:'private'"` // 可见范围
@@ -307,8 +307,8 @@ type Dashboard struct {
 	TemplateScope TemplateScope `json:"templateScope" gorm:"size:20"`
 
 	// 布局相关
-	Layout          LayoutConfig `json:"layout" gorm:"type:jsonb;not null"`
-	RefreshInterval int          `json:"refreshInterval" gorm:"default:60"`
+	Layout          LayoutConfig    `json:"layout" gorm:"type:jsonb;not null"`
+	RefreshInterval int             `json:"refreshInterval" gorm:"default:60"`
 	Status          DashboardStatus `json:"status" gorm:"default:0;index"`
 }
 
@@ -324,12 +324,12 @@ func (d *Dashboard) BeforeCreate(tx *gorm.DB) error {
 }
 
 type DashboardVersion struct {
-	ID         string       `json:"id" gorm:"primaryKey;type:uuid"`
-	DashboardID string      `json:"dashboardId" gorm:"type:uuid;not null;index"`
-	Layout     LayoutConfig `json:"layout" gorm:"type:jsonb;not null"`
-	Comment    string       `json:"comment" gorm:"size:500"`
-	CreatedAt  time.Time    `json:"createdAt" gorm:"autoCreateTime"`
-	CreatedBy  string       `json:"createdBy" gorm:"size:64"`
+	ID          string       `json:"id" gorm:"primaryKey;type:uuid"`
+	DashboardID string       `json:"dashboardId" gorm:"type:uuid;not null;index"`
+	Layout      LayoutConfig `json:"layout" gorm:"type:jsonb;not null"`
+	Comment     string       `json:"comment" gorm:"size:500"`
+	CreatedAt   time.Time    `json:"createdAt" gorm:"autoCreateTime"`
+	CreatedBy   string       `json:"createdBy" gorm:"size:64"`
 }
 
 func (DashboardVersion) TableName() string {

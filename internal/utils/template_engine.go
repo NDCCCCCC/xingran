@@ -6,6 +6,9 @@ import (
 	"reflect"
 	"strings"
 	"text/template"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // TemplateEngine 模板引擎
@@ -26,7 +29,7 @@ func defaultFuncMap() template.FuncMap {
 		// 字符串操作
 		"toUpper":   strings.ToUpper,
 		"toLower":   strings.ToLower,
-		"title":     strings.Title,
+		"title":     cases.Title(language.English).String,
 		"trim":      strings.TrimSpace,
 		"replace":   strings.ReplaceAll,
 		"contains":  strings.Contains,
@@ -265,7 +268,9 @@ func toInt(v interface{}) int {
 	case string:
 		// 尝试解析字符串为整数
 		var i int
-		fmt.Sscanf(val, "%d", &i)
+		if _, err := fmt.Sscanf(val, "%d", &i); err != nil {
+			return 0
+		}
 		return i
 	default:
 		return 0
@@ -296,7 +301,9 @@ func ipToHex(ip string) string {
 	var result strings.Builder
 	for _, part := range parts {
 		var b int
-		fmt.Sscanf(part, "%d", &b)
+		if _, err := fmt.Sscanf(part, "%d", &b); err != nil {
+			continue
+		}
 		result.WriteString(fmt.Sprintf("%02X", b))
 	}
 

@@ -122,8 +122,8 @@ type NotificationChannel struct {
 	ID               string                  `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
 	NoticeID         string                  `gorm:"type:uuid;not null" json:"noticeId"`
 	ChannelType      NotificationChannelType `gorm:"size:20;not null" json:"channelType"`
-	EmailConfigID    *string                 `gorm:"type:uuid" json:"emailConfigId"`       // 邮件配置ID
-	APIConfigID      *string                 `gorm:"type:uuid" json:"apiConfigId"`         // API配置ID
+	EmailConfigID    *string                 `gorm:"type:uuid" json:"emailConfigId"`                     // 邮件配置ID
+	APIConfigID      *string                 `gorm:"type:uuid" json:"apiConfigId"`                       // API配置ID
 	CustomRecipients *[]string               `gorm:"type:jsonb;serializer:json" json:"customRecipients"` // 自定义收件人列表（邮件地址或企微用户代码）
 	CreatedAt        time.Time               `json:"createdAt"`
 }

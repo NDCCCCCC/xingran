@@ -1,12 +1,11 @@
 package system
 
 import (
-
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	"gorm.io/gorm"
 )
 
@@ -95,7 +94,7 @@ func (h *NoticeUserHandler) GetMyNotices(c *gin.Context) {
 
 	var req MyNoticesRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
-		c.ShouldBindJSON(&req)
+		_ = c.ShouldBindJSON(&req)
 	}
 
 	if req.Current == 0 {

@@ -10,18 +10,18 @@ const (
 	CodeSuccess ErrorCode = 0
 
 	// 1000-1999 系统级通用错误
-	CodeParamError      ErrorCode = 1001 // 参数错误
-	CodeParamMissing    ErrorCode = 1002 // 参数缺失
-	CodeParamInvalid    ErrorCode = 1003 // 参数无效
-	CodeRecordNotFound  ErrorCode = 1010 // 记录不存在
-	CodeRecordExists    ErrorCode = 1011 // 记录已存在
-	CodeDatabaseError   ErrorCode = 1014 // 数据库错误
-	CodeUnauthorized    ErrorCode = 1020 // 未授权
-	CodeTokenExpired    ErrorCode = 1021 // 令牌过期
-	CodeTokenInvalid    ErrorCode = 1022 // 令牌无效
+	CodeParamError       ErrorCode = 1001 // 参数错误
+	CodeParamMissing     ErrorCode = 1002 // 参数缺失
+	CodeParamInvalid     ErrorCode = 1003 // 参数无效
+	CodeRecordNotFound   ErrorCode = 1010 // 记录不存在
+	CodeRecordExists     ErrorCode = 1011 // 记录已存在
+	CodeDatabaseError    ErrorCode = 1014 // 数据库错误
+	CodeUnauthorized     ErrorCode = 1020 // 未授权
+	CodeTokenExpired     ErrorCode = 1021 // 令牌过期
+	CodeTokenInvalid     ErrorCode = 1022 // 令牌无效
 	CodePermissionDenied ErrorCode = 1025 // 权限不足
-	CodeServerError     ErrorCode = 1500 // 服务器内部错误
-	CodeNotImplemented  ErrorCode = 1501 // 功能未实现
+	CodeServerError      ErrorCode = 1500 // 服务器内部错误
+	CodeNotImplemented   ErrorCode = 1501 // 功能未实现
 
 	// 2000-2999 用户权限模块
 	// 用户相关 2010-2039
@@ -33,13 +33,13 @@ const (
 	CodeUserDeleteSelf ErrorCode = 2015 // 不能删除自己
 
 	// 角色相关 2040-2069
-	CodeRoleNotFound    ErrorCode = 2040 // 角色不存在
-	CodeRoleExists      ErrorCode = 2041 // 角色已存在
-	CodeRoleHasUsers    ErrorCode = 2042 // 角色已分配用户
-	CodeRoleHasMenus    ErrorCode = 2043 // 角色已分配菜单
-	CodeRoleHasDepts    ErrorCode = 2044 // 角色已分配部门
-	CodeRoleIsAdmin     ErrorCode = 2045 // 不能修改管理员角色
-	CodeRoleIsSuper     ErrorCode = 2046 // 不能修改超级管理员角色
+	CodeRoleNotFound ErrorCode = 2040 // 角色不存在
+	CodeRoleExists   ErrorCode = 2041 // 角色已存在
+	CodeRoleHasUsers ErrorCode = 2042 // 角色已分配用户
+	CodeRoleHasMenus ErrorCode = 2043 // 角色已分配菜单
+	CodeRoleHasDepts ErrorCode = 2044 // 角色已分配部门
+	CodeRoleIsAdmin  ErrorCode = 2045 // 不能修改管理员角色
+	CodeRoleIsSuper  ErrorCode = 2046 // 不能修改超级管理员角色
 
 	// 部门相关 2070-2099
 	CodeDeptNotFound    ErrorCode = 2070 // 部门不存在
@@ -56,14 +56,14 @@ const (
 	CodePostHasUsers ErrorCode = 2102 // 岗位已分配用户
 
 	// 菜单相关 2120-2149
-	CodeMenuNotFound     ErrorCode = 2120 // 菜单不存在
-	CodeMenuExists       ErrorCode = 2121 // 菜单已存在
-	CodeMenuHasChildren  ErrorCode = 2122 // 菜单存在子菜单
-	CodeMenuHasRoles     ErrorCode = 2123 // 菜单已分配角色
-	CodeMenuInvalid      ErrorCode = 2124 // 无效的菜单
-	CodeMenuIsParent     ErrorCode = 2125 // 不能选择父菜单
-	CodeMenuTypeInvalid  ErrorCode = 2126 // 菜单类型无效
-	CodeMenuHasButtons   ErrorCode = 2127 // 菜单存在按钮
+	CodeMenuNotFound    ErrorCode = 2120 // 菜单不存在
+	CodeMenuExists      ErrorCode = 2121 // 菜单已存在
+	CodeMenuHasChildren ErrorCode = 2122 // 菜单存在子菜单
+	CodeMenuHasRoles    ErrorCode = 2123 // 菜单已分配角色
+	CodeMenuInvalid     ErrorCode = 2124 // 无效的菜单
+	CodeMenuIsParent    ErrorCode = 2125 // 不能选择父菜单
+	CodeMenuTypeInvalid ErrorCode = 2126 // 菜单类型无效
+	CodeMenuHasButtons  ErrorCode = 2127 // 菜单存在按钮
 
 	// 字典相关 2150-2169
 	CodeDictTypeNotFound ErrorCode = 2150 // 字典类型不存在
@@ -75,7 +75,7 @@ const (
 	// 参数配置相关 2170-2189
 	CodeConfigNotFound ErrorCode = 2170 // 参数配置不存在
 	CodeConfigExists   ErrorCode = 2171 // 参数配置已存在
-	CodeConfigReserved  ErrorCode = 2172 // 系统保留配置
+	CodeConfigReserved ErrorCode = 2172 // 系统保留配置
 
 	// 通知公告相关 2190-2209
 	CodeNoticeNotFound ErrorCode = 2190 // 通知公告不存在
@@ -92,17 +92,17 @@ const (
 
 	// 3000-3999 运维管理模块
 	// 楼宇相关 3010-3039
-	CodeBuildingNotFound  ErrorCode = 3010 // 楼宇不存在
-	CodeBuildingExists    ErrorCode = 3011 // 楼宇已存在
-	CodeBuildingHasFloors ErrorCode = 3012 // 楼宇存在楼层
-	CodeBuildingInvalid   ErrorCode = 3013 // 无效的楼宇
+	CodeBuildingNotFound   ErrorCode = 3010 // 楼宇不存在
+	CodeBuildingExists     ErrorCode = 3011 // 楼宇已存在
+	CodeBuildingHasFloors  ErrorCode = 3012 // 楼宇存在楼层
+	CodeBuildingInvalid    ErrorCode = 3013 // 无效的楼宇
 	CodeBuildingOrgInvalid ErrorCode = 3016 // 关联组织无效
 
 	// 楼层相关 3040-3069
-	CodeFloorNotFound     ErrorCode = 3040 // 楼层不存在
-	CodeFloorExists       ErrorCode = 3041 // 楼层已存在
+	CodeFloorNotFound        ErrorCode = 3040 // 楼层不存在
+	CodeFloorExists          ErrorCode = 3041 // 楼层已存在
 	CodeFloorHasWorkstations ErrorCode = 3042 // 楼层存在工位
-	CodeFloorInvalid      ErrorCode = 3043 // 无效的楼层
+	CodeFloorInvalid         ErrorCode = 3043 // 无效的楼层
 
 	// 工位相关 3070-3099
 	CodeWorkstationNotFound ErrorCode = 3070 // 工位不存在
@@ -110,10 +110,10 @@ const (
 	CodeWorkstationInvalid  ErrorCode = 3072 // 无效的工位
 
 	// 机房相关 3100-3129
-	CodeServerRoomNotFound ErrorCode = 3100 // 机房不存在
-	CodeServerRoomExists   ErrorCode = 3101 // 机房已存在
+	CodeServerRoomNotFound   ErrorCode = 3100 // 机房不存在
+	CodeServerRoomExists     ErrorCode = 3101 // 机房已存在
 	CodeServerRoomHasServers ErrorCode = 3102 // 机房存在服务器
-	CodeRoomDeviceNotFound ErrorCode = 3110 // 机房设备不存在
+	CodeRoomDeviceNotFound   ErrorCode = 3110 // 机房设备不存在
 	CodeRoomDeviceCodeExists ErrorCode = 3111 // 机房设备编码已存在
 
 	// 信息点相关 3130-3159
@@ -140,11 +140,11 @@ const (
 	CodeRoomPhotoExists   ErrorCode = 3201 // 机房照片已存在
 
 	// 4000-4999 调度任务模块
-	CodeJobNotFound       ErrorCode = 4000 // 定时任务不存在
-	CodeJobExists         ErrorCode = 4001 // 定时任务已存在
-	CodeJobIsRunning      ErrorCode = 4002 // 定时任务正在运行
-	CodeJobHasCron        ErrorCode = 4003 // 定时任务已分配Cron
-	CodeCronInvalid       ErrorCode = 4004 // Cron表达式无效
+	CodeJobNotFound  ErrorCode = 4000 // 定时任务不存在
+	CodeJobExists    ErrorCode = 4001 // 定时任务已存在
+	CodeJobIsRunning ErrorCode = 4002 // 定时任务正在运行
+	CodeJobHasCron   ErrorCode = 4003 // 定时任务已分配Cron
+	CodeCronInvalid  ErrorCode = 4004 // Cron表达式无效
 
 	// 5000-5999 工单模块
 	CodeWorkorderNotFound ErrorCode = 5000 // 工单不存在
@@ -153,10 +153,10 @@ const (
 	CodeWorkorderStatus   ErrorCode = 5003 // 工单状态不允许该操作
 
 	// 6000-6999 监控模块
-	CodeMonitorDataNotFound   ErrorCode = 6000 // 监控数据不存在
-	CodeCacheKeyNotFound      ErrorCode = 6010 // 缓存键不存在
-	CodeCacheOperationFailed  ErrorCode = 6011 // 缓存操作失败
-	CodeServerInfoNotFound    ErrorCode = 6020 // 服务器信息不存在
+	CodeMonitorDataNotFound  ErrorCode = 6000 // 监控数据不存在
+	CodeCacheKeyNotFound     ErrorCode = 6010 // 缓存键不存在
+	CodeCacheOperationFailed ErrorCode = 6011 // 缓存操作失败
+	CodeServerInfoNotFound   ErrorCode = 6020 // 服务器信息不存在
 
 	// 7000-7999 网络设备模块
 	CodeNetworkDeviceNotFound ErrorCode = 7000 // 网络设备不存在

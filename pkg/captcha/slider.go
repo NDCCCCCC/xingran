@@ -504,30 +504,6 @@ func (s *SliderCaptcha) generatePiece(r *rand.Rand) *image.RGBA {
 	return s.generatePieceWithShape(r)
 }
 
-// drawPieceShape 绘制拼图形状
-func (s *SliderCaptcha) drawPieceShape(img *image.RGBA) {
-	// 绘制拼图的典型形状（带凹凸边缘）
-	// 这里简化为圆形拼图块
-	centerX := s.PieceWidth / 2
-	centerY := s.PieceHeight / 2
-	radius := s.PieceWidth / 3
-
-	for y := 0; y < s.PieceHeight; y++ {
-		for x := 0; x < s.PieceWidth; x++ {
-			dx := x - centerX
-			dy := y - centerY
-			dist := dx*dx + dy*dy
-
-			// 创建拼图的波浪边缘效果
-			wave := int(float64(radius) + 5*sin(float64(x)*0.2))
-			if dist > wave*wave {
-				// 设置透明
-				img.Set(x, y, color.RGBA{R: 0, G: 0, B: 0, A: 0})
-			}
-		}
-	}
-}
-
 // drawShadowOnBackground 在背景图上绘制阴影（缺口）
 func (s *SliderCaptcha) drawShadowOnBackground(bgImg *image.RGBA, xPos, yPos int) {
 	s.drawShadowOnBackgroundWithShape(bgImg, xPos, yPos)
@@ -613,11 +589,6 @@ func (s *SliderCaptcha) drawLine(img *image.RGBA, x1, y1, x2, y2 int, c color.RG
 			y1 += sy
 		}
 	}
-}
-
-// generateToken 生成验证token（已弃用，保留用于兼容）
-func (s *SliderCaptcha) generateToken(yPos int) string {
-	return s.generateTokenWithPosition(0, yPos)
 }
 
 // generateTokenWithPosition 生成包含X和Y坐标的验证token

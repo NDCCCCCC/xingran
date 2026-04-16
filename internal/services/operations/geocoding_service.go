@@ -37,8 +37,8 @@ type GeocodingResult struct {
 		Lng float64 `json:"lng"`
 		Lat float64 `json:"lat"`
 	} `json:"location"`
-	FormattedAddress  string `json:"formatted_address"`
-	AddressComponent  struct {
+	FormattedAddress string `json:"formatted_address"`
+	AddressComponent struct {
 		Province string `json:"province"`
 		City     string `json:"city"`
 		District string `json:"district"`

@@ -57,7 +57,7 @@ func DefaultScalingConfig() *ScalingConfig {
 		CheckInterval:     30 * time.Second,
 		MinWorkers:        2,
 		MaxWorkers:        10,
-		ScaleUpThreshold:  0.7,  // 70% 容量使用时扩容
+		ScaleUpThreshold:  0.7, // 70% 容量使用时扩容
 		ScaleDownCooldown: 5 * time.Minute,
 		ScaleUpLimit:      3,
 		EnableMockDocker:  true, // 默认使用模拟模式
@@ -73,21 +73,21 @@ type scalingServiceImpl struct {
 	dockerClient   DockerClient
 	collector      *MetricsCollector
 
-	stopCh     chan struct{}
-	mu         sync.RWMutex
-	status     *ScalingStatus
+	stopCh        chan struct{}
+	mu            sync.RWMutex
+	status        *ScalingStatus
 	lastScaleDown time.Time // 上次缩容时间
 }
 
 // ScalingStatus 扩缩容状态
 type ScalingStatus struct {
-	IsRunning        bool      `json:"isRunning"`
-	LastCheckTime    time.Time `json:"lastCheckTime"`
-	LastScaleTime    time.Time `json:"lastScaleTime"`
-	TotalScaleUps    int       `json:"totalScaleUps"`
-	TotalScaleDowns  int       `json:"totalScaleDowns"`
-	CurrentWorkers   int       `json:"currentWorkers"`
-	AutoScalingEnabled bool     `json:"autoScalingEnabled"`
+	IsRunning          bool      `json:"isRunning"`
+	LastCheckTime      time.Time `json:"lastCheckTime"`
+	LastScaleTime      time.Time `json:"lastScaleTime"`
+	TotalScaleUps      int       `json:"totalScaleUps"`
+	TotalScaleDowns    int       `json:"totalScaleDowns"`
+	CurrentWorkers     int       `json:"currentWorkers"`
+	AutoScalingEnabled bool      `json:"autoScalingEnabled"`
 }
 
 // NewScalingService 创建扩缩容服务
@@ -169,13 +169,13 @@ func (s *scalingServiceImpl) monitoringLoop(ctx context.Context) {
 	ticker := time.NewTicker(s.config.CheckInterval)
 	defer ticker.Stop()
 
-	// 立即执行一次检查
-	s.MonitorAndScale(ctx)
+	// 立即执行一次检查（后台监控循环，忽略错误）
+	_ = s.MonitorAndScale(ctx)
 
 	for {
 		select {
 		case <-ticker.C:
-			s.MonitorAndScale(ctx)
+			_ = s.MonitorAndScale(ctx) // 后台监控循环，忽略错误
 		case <-s.stopCh:
 			return
 		case <-ctx.Done():

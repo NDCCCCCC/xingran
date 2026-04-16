@@ -5,8 +5,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
 // 定义错误类型（与服务层共享）
@@ -350,7 +350,7 @@ func (h *DashboardHandler) GetTemplates(c *gin.Context) {
 	var req struct {
 		Scope *string `json:"scope"`
 	}
-	c.ShouldBindJSON(&req)
+	_ = c.ShouldBindJSON(&req)
 
 	var scope *string
 	if req.Scope != nil {
@@ -454,7 +454,7 @@ func (h *DashboardHandler) CreateVersion(c *gin.Context) {
 	var req struct {
 		Comment string `json:"comment"`
 	}
-	c.ShouldBindJSON(&req)
+	_ = c.ShouldBindJSON(&req)
 
 	version, err := h.service.CreateVersion(c.Request.Context(), userCtx.UserID, id, req.Comment)
 	if err != nil {
@@ -578,7 +578,7 @@ func (h *DashboardHandler) GetWidgetData(c *gin.Context) {
 		Endpoint string                 `json:"endpoint"`
 		Params   map[string]interface{} `json:"params"`
 	}
-	c.ShouldBindJSON(&req)
+	_ = c.ShouldBindJSON(&req)
 
 	data, err := h.service.GetWidgetData(c.Request.Context(), widgetID, req.Endpoint, req.Params)
 	if err != nil {

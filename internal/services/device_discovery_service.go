@@ -441,7 +441,7 @@ func (s *DeviceDiscoveryService) ProbeSingleDevice(ctx context.Context, req *Dev
 	}
 
 	// 1. 确定要尝试的 community 列表
-	communities := []string{}
+	var communities []string
 
 	// 优先使用用户输入的 communities
 	if len(req.Communities) > 0 {

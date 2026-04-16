@@ -2,8 +2,8 @@ package system
 
 import (
 	"github.com/gin-gonic/gin"
-	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
+	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 )
 
 // SetupSettingsRouter 设置系统设置路由

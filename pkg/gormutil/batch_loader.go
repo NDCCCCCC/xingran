@@ -79,8 +79,8 @@ func (l *BatchLoader) LoadManyToMany(
 
 	// 批量查询关联表
 	type Junction struct {
-		EntityID         string `gorm:"column:${entity_foreign_key}"`
-		AssociationID    string `gorm:"column:${association_foreign_key}"`
+		EntityID      string `gorm:"column:${entity_foreign_key}"`
+		AssociationID string `gorm:"column:${association_foreign_key}"`
 	}
 
 	junctions := make([]Junction, 0)

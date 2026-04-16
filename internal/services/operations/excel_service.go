@@ -92,13 +92,13 @@ func (s *ExcelService) GenerateTemplate(entityType string) (*excelize.File, erro
 	// 冻结窗格：如果有说明行，冻结表头行；否则冻结第一行
 	freezeRow := headerRow
 	if len(config.Instructions) > 0 {
-		f.SetPanes(sheetName, &excelize.Panes{
+		_ = f.SetPanes(sheetName, &excelize.Panes{
 			Freeze: true,
 			XSplit: 1,
 			YSplit: freezeRow,
 		})
 	} else {
-		f.SetPanes(sheetName, &excelize.Panes{
+		_ = f.SetPanes(sheetName, &excelize.Panes{
 			Freeze: true,
 			XSplit: 1,
 			YSplit: 1,
@@ -346,7 +346,7 @@ func (s *ExcelService) ImportData(ctx context.Context, entityType string, file *
 		result.Inserted = inserted
 		result.Updated = updated
 
-		if (inserted + updated) > 0 && len(config.CachePatterns) > 0 {
+		if (inserted+updated) > 0 && len(config.CachePatterns) > 0 {
 			if cacheErr := s.cacheInvalidator.InvalidateByEntityType(ctx, entityType, config.CachePatterns); cacheErr != nil {
 				logger.Warnf("[%s] 清理缓存失败: %v", entityType, cacheErr)
 			}
@@ -444,34 +444,6 @@ func (s *ExcelService) splitReferencesByDependency(
 	return independent, dependent
 }
 
-// extractResolvedIDs 从已解析的数据中提取 ID 映射
-// 返回格式：{"building_id": "xxx-uuid"} （字段名 -> ID）
-// 用于依赖引用的解析（如 floorName 需要 building_id 条件）
-func (s *ExcelService) extractResolvedIDs(
-	records []map[string]interface{},
-	config ExcelConfig,
-) map[string]string {
-	resolvedIDs := make(map[string]string)
-
-	for _, record := range records {
-		for _, col := range config.Columns {
-			if col.Reference != "" && col.DependsOn == "" {
-				// 这是一个独立的引用字段，获取其解析后的 ID
-				targetField := s.getTargetFieldForReference(col)
-				if id, exists := record[targetField]; exists {
-					if idStr, ok := id.(string); ok && idStr != "" {
-						// 存储到 resolvedIDs 中，键是 DBField（目标数据库字段名）
-						// 例如：building_id -> "xxx-uuid"
-						resolvedIDs[targetField] = idStr
-					}
-				}
-			}
-		}
-	}
-
-	return resolvedIDs
-}
-
 // applyDependentReferenceResults 应用依赖引用的解析结果
 func (s *ExcelService) applyDependentReferenceResults(
 	data map[string]interface{},
@@ -496,67 +468,6 @@ func (s *ExcelService) applyDependentReferenceResults(
 			}
 		}
 	}
-}
-
-// resolveDependentReferencesForRecord 为单条记录解析依赖引用
-// 返回该记录的依赖引用解析结果
-func (s *ExcelService) resolveDependentReferencesForRecord(
-	ctx context.Context,
-	data map[string]interface{},
-	dependentRefs []ReferenceRequest,
-	config ExcelConfig,
-) map[string]string {
-	result := make(map[string]string)
-
-	for _, ref := range dependentRefs {
-		// 找到对应的列配置
-		var col ExcelColumn
-		for _, c := range config.Columns {
-			if c.Reference == ref.Reference {
-				col = c
-				break
-			}
-		}
-
-		if col.DependsOn == "" {
-			continue
-		}
-
-		// 获取依赖字段的解析结果（如从 building_id 获取楼宇ID）
-		dependsOnTargetField := s.getTargetFieldForReferenceByName(col.DependsOn, config)
-		if dependsOnTargetField == "" {
-			logger.Debugf("找不到依赖字段的目标字段: %s", col.DependsOn)
-			continue
-		}
-
-		dependencyID, exists := data[dependsOnTargetField]
-		if !exists || dependencyID == nil || dependencyID == "" {
-			logger.Debugf("依赖字段未解析: %s -> %s", col.DependsOn, dependsOnTargetField)
-			continue
-		}
-
-		dependencyIDStr, ok := dependencyID.(string)
-		if !ok || dependencyIDStr == "" {
-			continue
-		}
-
-		// 构建查询条件
-		conditions := map[string]string{
-			dependsOnTargetField: dependencyIDStr,
-		}
-
-		// 使用带条件的解析
-		id, err := s.referenceResolver.ResolveSingleWithCondition(ctx, ref, conditions)
-		if err != nil {
-			logger.Debugf("依赖引用解析失败: %s=%s (条件: %s=%s): %v", col.Reference, ref.Value, dependsOnTargetField, dependencyIDStr, err)
-			continue
-		}
-
-		key := (&referenceResolverImpl{}).makeKey(col.Reference, ref.Value)
-		result[key] = id
-	}
-
-	return result
 }
 
 // resolveDependentReferencesBatch 批量解析依赖引用
@@ -684,7 +595,7 @@ func (s *ExcelService) groupRecordsByDependencyID(
 func (s *ExcelService) extractDependentValues(
 	records []map[string]interface{},
 	depCol ExcelColumn,
-	config ExcelConfig,
+	_ ExcelConfig,
 ) []string {
 	valueSet := make(map[string]bool)
 
@@ -812,8 +723,8 @@ func (s *ExcelService) validateReferenceFields(
 				result.Failed++
 				result.Errors = append(result.Errors, ImportError{
 					Row:   config.StartRow + i + 1, // 实际 Excel 行号（i 从 0 开始，StartRow 从 2 开始）
-					Field:  col.Header,
-					Value:  fmt.Sprintf("%v", data[col.Field]),
+					Field: col.Header,
+					Value: fmt.Sprintf("%v", data[col.Field]),
 					Error: fmt.Sprintf("引用的 %s 不存在", col.Header),
 				})
 				valid = false
@@ -1017,7 +928,7 @@ func (s *ExcelService) ExportData(ctx context.Context, entityType string, params
 
 	s.writeDataRows(f, sheetName, config.Columns, data)
 
-	f.SetPanes(sheetName, &excelize.Panes{
+	_ = f.SetPanes(sheetName, &excelize.Panes{
 		Freeze: true,
 		XSplit: 1,
 		YSplit: 1,
@@ -1026,44 +937,6 @@ func (s *ExcelService) ExportData(ctx context.Context, entityType string, params
 	return f, nil
 }
 
-// queryFloorTemplateData 查询楼层模板数据
-// 返回楼宇及其楼层的实际数据（按名称排序）
-// 使用 JOIN 查询避免 N+1 问题
-func (s *ExcelService) queryFloorTemplateData(query *gorm.DB) ([]map[string]interface{}, error) {
-	type FloorWithBuilding struct {
-		FloorName   string
-		FloorNo     string
-		BuildingName string
-		Status      int
-	}
-
-	var results []FloorWithBuilding
-	err := query.Table("ops_floors").
-		Select("ops_floors.name as floor_name, floor_no, ops_buildings.name as building_name, ops_floors.status").
-		Joins("JOIN ops_buildings ON ops_buildings.id = ops_floors.building_id").
-		Where("ops_floors.deleted_at IS NULL AND ops_floors.status = ?", 0).
-		Where("ops_buildings.deleted_at IS NULL AND ops_buildings.status = ?", 0).
-		Order("building_name ASC, floor_no ASC").
-		Find(&results).Error
-
-	if err != nil {
-		return nil, err
-	}
-
-	// 预分配容量以提高性能
-	data := make([]map[string]interface{}, len(results))
-	for i, r := range results {
-		data[i] = map[string]interface{}{
-			"name":         r.FloorName,
-			"floorNo":      r.FloorNo,
-			"buildingName": r.BuildingName,
-			"Status":       r.Status,
-			"remark":       "",
-		}
-	}
-
-	return data, nil
-}
 
 func (s *ExcelService) queryData(_ context.Context, config ExcelConfig, params map[string]interface{}) ([]map[string]interface{}, error) {
 	query := s.db.Table(config.TableName).Where("deleted_at IS NULL")
@@ -1136,8 +1009,8 @@ func createHeaderStyle(f *excelize.File) (int, error) {
 func (s *ExcelService) writeHeaders(f *excelize.File, sheetName string, columns []ExcelColumn, headerStyle int, headerRow int) {
 	for i, col := range columns {
 		cell, _ := excelize.CoordinatesToCellName(i+1, headerRow)
-		f.SetCellValue(sheetName, cell, col.Header)
-		f.SetCellStyle(sheetName, cell, cell, headerStyle)
+		_ = f.SetCellValue(sheetName, cell, col.Header)
+		_ = f.SetCellStyle(sheetName, cell, cell, headerStyle)
 	}
 }
 
@@ -1146,7 +1019,7 @@ func (s *ExcelService) writeExampleData(f *excelize.File, sheetName string, colu
 	for i, col := range columns {
 		cell, _ := excelize.CoordinatesToCellName(i+1, dataRow)
 		exampleValue := s.getExampleValue(col)
-		f.SetCellValue(sheetName, cell, exampleValue)
+		_ = f.SetCellValue(sheetName, cell, exampleValue)
 	}
 }
 
@@ -1158,7 +1031,7 @@ func (s *ExcelService) writeInstructions(f *excelize.File, sheetName string, col
 
 	// 创建说明行样式
 	instructionStyle, err := f.NewStyle(&excelize.Style{
-		Font:     &excelize.Font{Bold: true, Color: "#C00000", Size: 10},
+		Font:      &excelize.Font{Bold: true, Color: "#C00000", Size: 10},
 		Alignment: &excelize.Alignment{Vertical: "top", WrapText: true},
 	})
 	if err != nil {
@@ -1167,7 +1040,7 @@ func (s *ExcelService) writeInstructions(f *excelize.File, sheetName string, col
 	}
 
 	// 设置第一列宽度以容纳说明文字
-	f.SetColWidth(sheetName, "A", "A", 60)
+	_ = f.SetColWidth(sheetName, "A", "A", 60)
 
 	// 写入说明文字（跨所有列合并）
 	lastCol, _ := excelize.CoordinatesToCellName(len(columns), 1)
@@ -1185,13 +1058,13 @@ func (s *ExcelService) writeInstructions(f *excelize.File, sheetName string, col
 			continue
 		}
 
-		f.SetCellValue(sheetName, startCell, text)
-		f.SetCellStyle(sheetName, startCell, startCell, instructionStyle)
+		_ = f.SetCellValue(sheetName, startCell, text)
+		_ = f.SetCellStyle(sheetName, startCell, startCell, instructionStyle)
 	}
 
 	// 设置说明行高度
 	for i := range instructions {
-		f.SetRowHeight(sheetName, i+1, 25)
+		_ = f.SetRowHeight(sheetName, i+1, 25)
 	}
 }
 
@@ -1203,7 +1076,7 @@ func (s *ExcelService) setColumnWidths(f *excelize.File, sheetName string, colum
 		}
 		startCol, _ := excelize.CoordinatesToCellName(i+1, 1)
 		endCol, _ := excelize.CoordinatesToCellName(i+1, 1)
-		f.SetColWidth(sheetName, startCol, endCol, colWidth)
+		_ = f.SetColWidth(sheetName, startCol, endCol, colWidth)
 	}
 }
 
@@ -1212,7 +1085,7 @@ func (s *ExcelService) writeDataRows(f *excelize.File, sheetName string, columns
 		for j, col := range columns {
 			cell, _ := excelize.CoordinatesToCellName(j+1, i+2)
 			value := s.formatCellValue(col, row)
-			f.SetCellValue(sheetName, cell, value)
+			_ = f.SetCellValue(sheetName, cell, value)
 		}
 	}
 }

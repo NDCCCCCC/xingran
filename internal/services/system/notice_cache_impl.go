@@ -40,9 +40,9 @@ type NoticeCacheService interface {
 
 // noticeCacheService 通知公告缓存服务实现
 type noticeCacheService struct {
-	db    *gorm.DB
-	base  *services.NoticeService
-	cache CacheProvider
+	db     *gorm.DB
+	base   *services.NoticeService
+	cache  CacheProvider
 	config *services.CacheConfigService
 }
 
@@ -53,9 +53,9 @@ func NewNoticeServiceWithCache(
 	config *services.CacheConfigService,
 ) NoticeCacheService {
 	return &noticeCacheService{
-		db:    db,
-		base:  services.NewNoticeService(db),
-		cache: cache,
+		db:     db,
+		base:   services.NewNoticeService(db),
+		cache:  cache,
 		config: config,
 	}
 }
@@ -190,7 +190,7 @@ func (s *noticeCacheService) GetUserNotices(ctx context.Context, userID string, 
 		cacheKey = fmt.Sprintf("notice:my_notices:%s:page:%d:size:%d:status:%s", userID, page, pageSize, *status)
 	}
 	var result struct {
-		List []models.Notice
+		List  []models.Notice
 		Total int64
 	}
 
@@ -202,7 +202,7 @@ func (s *noticeCacheService) GetUserNotices(ctx context.Context, userID string, 
 			return nil, err
 		}
 		return struct {
-			List []models.Notice
+			List  []models.Notice
 			Total int64
 		}{
 			List:  list,

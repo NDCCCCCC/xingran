@@ -91,9 +91,9 @@ func TestCacheStats_GetStats(t *testing.T) {
 
 func TestCacheStatsData_GetHitRate(t *testing.T) {
 	tests := []struct {
-		name           string
-		data           CacheStatsData
-		expectedRate   float64
+		name         string
+		data         CacheStatsData
+		expectedRate float64
 	}{
 		{
 			name: "零请求",

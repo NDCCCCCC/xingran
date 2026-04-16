@@ -25,20 +25,20 @@ const (
 
 // L2WriterConfig L2写入Worker配置
 type L2WriterConfig struct {
-	WorkerCount         int           // 工作goroutine数量
-	QueueSize           int           // 队列大小
-	EnqueueTimeout      time.Duration // 入队超时
-	WriteTimeout        time.Duration // L2写入超时
+	WorkerCount          int           // 工作goroutine数量
+	QueueSize            int           // 队列大小
+	EnqueueTimeout       time.Duration // 入队超时
+	WriteTimeout         time.Duration // L2写入超时
 	FallbackWriteTimeout time.Duration // 入队失败时同步降级超时（保证数据一致性）
 }
 
 // DefaultL2WriterConfig 返回默认的L2写入Worker配置
 func DefaultL2WriterConfig() *L2WriterConfig {
 	return &L2WriterConfig{
-		WorkerCount:         DefaultWorkerCount,
-		QueueSize:           DefaultQueueSize,
-		EnqueueTimeout:      DefaultEnqueueTimeout,
-		WriteTimeout:        DefaultL2WriteTimeout,
+		WorkerCount:          DefaultWorkerCount,
+		QueueSize:            DefaultQueueSize,
+		EnqueueTimeout:       DefaultEnqueueTimeout,
+		WriteTimeout:         DefaultL2WriteTimeout,
 		FallbackWriteTimeout: DefaultFallbackWriteTimeout,
 	}
 }
@@ -65,8 +65,8 @@ func (c *L2WriterConfig) normalize() *L2WriterConfig {
 
 // L2WriterStats L2写入Worker统计信息
 type L2WriterStats struct {
-	enqueued    atomic.Int64 // 已入队任务数
-	completed   atomic.Int64 // 已完成任务数
+	enqueued     atomic.Int64 // 已入队任务数
+	completed    atomic.Int64 // 已完成任务数
 	dropped      atomic.Int64 // 已丢弃任务数
 	failed       atomic.Int64 // 失败任务数
 	totalLatency atomic.Int64 // 总延迟(纳秒)

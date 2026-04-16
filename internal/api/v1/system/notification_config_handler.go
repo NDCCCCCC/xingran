@@ -1,19 +1,18 @@
 package system
 
 import (
-
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
 // NotificationConfigHandler 通知配置处理器
 type NotificationConfigHandler struct {
-	emailConfigService      systemServices.EmailConfigService
-	apiNotificationService  systemServices.APINotificationConfigService
-	emailSenderService      *services.EmailSenderService
+	emailConfigService     systemServices.EmailConfigService
+	apiNotificationService systemServices.APINotificationConfigService
+	emailSenderService     *services.EmailSenderService
 }
 
 // NewNotificationConfigHandler 创建通知配置处理器实例

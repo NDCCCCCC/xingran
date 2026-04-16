@@ -27,7 +27,7 @@ type EndpointMeta struct {
 	Method           string            `yaml:"method"`
 	DisplayName      string            `yaml:"displayName"`
 	Description      string            `yaml:"description"`
-	DataType         string            `yaml:"dataType"`         // paginated/single
+	DataType         string            `yaml:"dataType"` // paginated/single
 	DataPath         string            `yaml:"dataPath"`
 	SupportedWidgets []string          `yaml:"supportedWidgets"`
 	Permissions      []string          `yaml:"permissions"`

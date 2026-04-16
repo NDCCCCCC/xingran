@@ -25,8 +25,8 @@ type OpsFloor struct {
 	Remark       *string     `gorm:"size:500" json:"-"`
 	Description  *string     `gorm:"-" json:"description,omitempty"`
 	OrderNum     int         `gorm:"default:0" json:"orderNum"`
-	PlanImageID  *string `gorm:"type:uuid" json:"planImageId,omitempty"`
-	PlanImageUrl *string `gorm:"size:500" json:"planImageUrl,omitempty"`
+	PlanImageID  *string     `gorm:"type:uuid" json:"planImageId,omitempty"`
+	PlanImageUrl *string     `gorm:"size:500" json:"planImageUrl,omitempty"`
 }
 
 func (f *OpsFloor) BeforeSave(tx *gorm.DB) error {
@@ -46,7 +46,7 @@ func (f OpsFloor) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Description: f.Remark,
-		Alias:      (*Alias)(&f),
+		Alias:       (*Alias)(&f),
 	})
 }
 

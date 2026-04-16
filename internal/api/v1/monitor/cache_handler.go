@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	monitorServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/monitor"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
@@ -364,7 +364,7 @@ func (h *CacheHandler) GetCacheMonitor(c *gin.Context) {
 // @Router /monitor/cache/export [post]
 func (h *CacheHandler) ExportCache(c *gin.Context) {
 	var req CacheListRequest
-	c.ShouldBindJSON(&req)
+	_ = c.ShouldBindJSON(&req)
 
 	params := monitorServices.CacheExportParams{
 		Key:  req.Key,
@@ -617,10 +617,10 @@ func (h *CacheHandler) DebugL1Cache(c *gin.Context) {
 		hitRate, _ := l1Stats["hit_rate"].(float64)
 
 		result["analysis"] = gin.H{
-			"hits":           hits,
-			"misses":         misses,
-			"total":          hits + misses,
-			"hit_rate":       hitRate,
+			"hits":             hits,
+			"misses":           misses,
+			"total":            hits + misses,
+			"hit_rate":         hitRate,
 			"hit_rate_percent": fmt.Sprintf("%.2f%%", hitRate),
 		}
 

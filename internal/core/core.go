@@ -55,14 +55,14 @@ type Core struct {
 	UserService     system.UserService
 	RoleService     system.RoleService
 	MenuService     system.MenuService
-	DeptService    system.DepartmentService
-	PostService    system.PostService
-	ConfigService  system.ConfigService
+	DeptService     system.DepartmentService
+	PostService     system.PostService
+	ConfigService   system.ConfigService
 	SettingsService system.SettingsService
 
 	// RPA 服务
-	RPAConfig     *config.RPAConfig // RPA 配置
-	RPAScalingService interface{}   // RPA 扩缩容服务 (interface{} 避免循环依赖)
+	RPAConfig         *config.RPAConfig // RPA 配置
+	RPAScalingService interface{}       // RPA 扩缩容服务 (interface{} 避免循环依赖)
 
 	// API端点元数据服务
 	APIMetadata        *config.APIMetadataConfig    // API元数据配置
@@ -431,10 +431,10 @@ func (c *Core) initCache() (cache.Cache, error) {
 			l2WriterConfig := cache.DefaultL2WriterConfig()
 			if c.Config.Cache.L2Writer != nil {
 				l2WriterConfig = &cache.L2WriterConfig{
-					WorkerCount:         c.Config.Cache.L2Writer.WorkerCount,
-					QueueSize:           c.Config.Cache.L2Writer.QueueSize,
-					EnqueueTimeout:      c.Config.Cache.L2Writer.EnqueueTimeout,
-					WriteTimeout:        c.Config.Cache.L2Writer.WriteTimeout,
+					WorkerCount:          c.Config.Cache.L2Writer.WorkerCount,
+					QueueSize:            c.Config.Cache.L2Writer.QueueSize,
+					EnqueueTimeout:       c.Config.Cache.L2Writer.EnqueueTimeout,
+					WriteTimeout:         c.Config.Cache.L2Writer.WriteTimeout,
 					FallbackWriteTimeout: c.Config.Cache.L2Writer.FallbackWriteTimeout,
 				}
 			}
@@ -450,10 +450,10 @@ func (c *Core) initCache() (cache.Cache, error) {
 		l2WriterConfig := cache.DefaultL2WriterConfig()
 		if c.Config.Cache.L2Writer != nil {
 			l2WriterConfig = &cache.L2WriterConfig{
-				WorkerCount:         c.Config.Cache.L2Writer.WorkerCount,
-				QueueSize:           c.Config.Cache.L2Writer.QueueSize,
-				EnqueueTimeout:      c.Config.Cache.L2Writer.EnqueueTimeout,
-				WriteTimeout:        c.Config.Cache.L2Writer.WriteTimeout,
+				WorkerCount:          c.Config.Cache.L2Writer.WorkerCount,
+				QueueSize:            c.Config.Cache.L2Writer.QueueSize,
+				EnqueueTimeout:       c.Config.Cache.L2Writer.EnqueueTimeout,
+				WriteTimeout:         c.Config.Cache.L2Writer.WriteTimeout,
 				FallbackWriteTimeout: c.Config.Cache.L2Writer.FallbackWriteTimeout,
 			}
 		}

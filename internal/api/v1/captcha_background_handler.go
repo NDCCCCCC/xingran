@@ -2,7 +2,6 @@
 package v1
 
 import (
-	"context"
 	"encoding/json"
 	"io"
 	"os"
@@ -12,7 +11,6 @@ import (
 	"github.com/gin-gonic/gin"
 	corepkg "github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/captcha"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
@@ -119,7 +117,7 @@ func uploadCaptchaBackground(core *corepkg.Core) gin.HandlerFunc {
 		// 解析允许的形状
 		var allowedShapes []string
 		if shapesStr := c.PostForm("allowedShapes"); shapesStr != "" {
-			json.Unmarshal([]byte(shapesStr), &allowedShapes)
+			_ = json.Unmarshal([]byte(shapesStr), &allowedShapes)
 		}
 
 		// 构建上传请求
@@ -300,7 +298,7 @@ func getStatistics(core *corepkg.Core) gin.HandlerFunc {
 		for rows.Next() {
 			var level int
 			var count int
-			rows.Scan(&level, &count)
+			_ = rows.Scan(&level, &count)
 			diffDist[level] = count
 		}
 		rows.Close()
@@ -328,48 +326,3 @@ func preloadCache(core *corepkg.Core) gin.HandlerFunc {
 	}
 }
 
-// generateWithCustomBackground 使用自定义背景图生成验证码（供CaptchaService调用）
-func generateWithCustomBackground(ctx context.Context, core *corepkg.Core, shape string, difficulty int) (map[string]interface{}, error) {
-	// 先尝试从缓存池获取
-	if cached, err := core.CaptchaBackgroundService.GetFromCachePool(ctx, shape, difficulty); err == nil && cached != nil {
-		// 更新使用次数
-		if bgID, ok := cached["backgroundId"].(string); ok {
-			core.CaptchaBackgroundService.IncrementUseCount(bgID)
-		}
-		return cached, nil
-	}
-
-	// 缓存未命中，从数据库获取随机背景图
-	bgShape := models.PieceShape(shape)
-	bg, err := core.CaptchaBackgroundService.GetRandomEnabled(ctx, bgShape, difficulty)
-	if err != nil {
-		return nil, err
-	}
-
-	// 生成验证码
-	generator, _ := captcha.NewSliderCaptchaWithShape(shape)
-	bgImg, err := generator.LoadBackgroundFromFile(bg.FilePath)
-	if err != nil {
-		return nil, err
-	}
-
-	bgBytes, pieceBytes, xPos, yPos, token, err := generator.GenerateSliderWithCustomBackground(bgImg, shape, difficulty)
-	if err != nil {
-		return nil, err
-	}
-
-	// 更新使用次数
-	core.CaptchaBackgroundService.IncrementUseCount(bg.ID)
-
-	return map[string]interface{}{
-		"backgroundId": bg.ID,
-		"sliderImg":    "data:image/png;base64," + string(bgBytes),
-		"pieceImg":     "data:image/png;base64," + string(pieceBytes),
-		"xPos":         xPos,
-		"yPos":         yPos,
-		"token":        token,
-		"shape":        shape,
-		"difficulty":   difficulty,
-		"createdAt":    time.Now().Unix(),
-	}, nil
-}

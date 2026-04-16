@@ -16,19 +16,19 @@ type RPACredential struct {
 	TargetURL    string `json:"targetUrl" gorm:"size:500"`
 
 	// 加密的凭证信息（使用SM4加密，这里存储加密后的base64字符串）
-	UsernameEncrypted string `json:"-" gorm:"column:username_encrypted;not null;type:text"`
-	PasswordEncrypted string `json:"-" gorm:"column:password_encrypted;not null;type:text"`
+	UsernameEncrypted  string `json:"-" gorm:"column:username_encrypted;not null;type:text"`
+	PasswordEncrypted  string `json:"-" gorm:"column:password_encrypted;not null;type:text"`
 	ExtraDataEncrypted string `json:"-" gorm:"column:extra_data_encrypted;type:text"`
 
 	// 明文仅用于创建/更新响应（不存储）
-	Username string `json:"username" gorm:"-"`
-	Password string `json:"password" gorm:"-"`
+	Username  string                 `json:"username" gorm:"-"`
+	Password  string                 `json:"password" gorm:"-"`
 	ExtraData map[string]interface{} `json:"extraData" gorm:"-"`
 
 	// 归属和权限
-	UserID    string `json:"userId" gorm:"type:uuid;not null;index:idx_rpa_cred_user,priority:2"`
-	DeptID    string `json:"deptId" gorm:"type:uuid;index:idx_rpa_cred_shared,priority:2"`
-	IsShared  bool   `json:"isShared" gorm:"default:false;index:idx_rpa_cred_shared,priority:3"`
+	UserID   string `json:"userId" gorm:"type:uuid;not null;index:idx_rpa_cred_user,priority:2"`
+	DeptID   string `json:"deptId" gorm:"type:uuid;index:idx_rpa_cred_shared,priority:2"`
+	IsShared bool   `json:"isShared" gorm:"default:false;index:idx_rpa_cred_shared,priority:3"`
 
 	// 状态和元数据
 	Status            int        `json:"status" gorm:"default:0;check:status IN (0,1)"`
@@ -61,9 +61,9 @@ type RPASession struct {
 	SessionDataEncrypted  string `json:"-" gorm:"column:session_data_encrypted;type:text"`
 
 	// 明文仅用于响应
-	AccessToken  string `json:"accessToken" gorm:"-"`
-	RefreshToken string `json:"refreshToken" gorm:"-"`
-	Cookies      []Cookie `json:"cookies" gorm:"-"`
+	AccessToken  string                 `json:"accessToken" gorm:"-"`
+	RefreshToken string                 `json:"refreshToken" gorm:"-"`
+	Cookies      []Cookie               `json:"cookies" gorm:"-"`
 	SessionData  map[string]interface{} `json:"sessionData" gorm:"-"`
 
 	// 过期和状态
@@ -81,13 +81,13 @@ func (RPASession) TableName() string {
 
 // Cookie HTTP Cookie
 type Cookie struct {
-	Name     string `json:"name"`
-	Value    string `json:"value"`
-	Domain   string `json:"domain"`
-	Path     string `json:"path"`
+	Name     string     `json:"name"`
+	Value    string     `json:"value"`
+	Domain   string     `json:"domain"`
+	Path     string     `json:"path"`
 	Expires  *time.Time `json:"expires"`
-	Secure   bool   `json:"secure"`
-	HTTPOnly bool   `json:"httpOnly"`
+	Secure   bool       `json:"secure"`
+	HTTPOnly bool       `json:"httpOnly"`
 }
 
 // CredentialCreateRequest 创建凭证请求
@@ -113,25 +113,25 @@ type CredentialUpdateRequest struct {
 
 // SessionCreateRequest 创建会话请求
 type SessionCreateRequest struct {
-	CredentialID string `json:"credentialId" binding:"required"`
-	ExecutionID  string `json:"executionId"`
-	TargetSystem string `json:"targetSystem" binding:"required"`
-	TargetURL    string `json:"targetUrl"`
-	AccessToken  string `json:"accessToken"`
-	RefreshToken string `json:"refreshToken"`
-	Cookies      []Cookie `json:"cookies"`
+	CredentialID string                 `json:"credentialId" binding:"required"`
+	ExecutionID  string                 `json:"executionId"`
+	TargetSystem string                 `json:"targetSystem" binding:"required"`
+	TargetURL    string                 `json:"targetUrl"`
+	AccessToken  string                 `json:"accessToken"`
+	RefreshToken string                 `json:"refreshToken"`
+	Cookies      []Cookie               `json:"cookies"`
 	SessionData  map[string]interface{} `json:"sessionData"`
-	ExpiresAt    *time.Time `json:"expiresAt"`
+	ExpiresAt    *time.Time             `json:"expiresAt"`
 }
 
 // CredentialListParams 凭证列表查询参数
 type CredentialListParams struct {
-	Current       int    `json:"current" form:"current"`
-	PageSize      int    `json:"pageSize" form:"pageSize"`
-	TargetSystem  string `json:"targetSystem,omitempty" form:"targetSystem"`
-	Status        *int   `json:"status,omitempty" form:"status"`
-	IsShared      *bool  `json:"isShared,omitempty" form:"isShared"`
-	MyCredOnly    bool   `json:"myCredOnly,omitempty" form:"myCredOnly"` // 仅查看我的凭证
+	Current      int    `json:"current" form:"current"`
+	PageSize     int    `json:"pageSize" form:"pageSize"`
+	TargetSystem string `json:"targetSystem,omitempty" form:"targetSystem"`
+	Status       *int   `json:"status,omitempty" form:"status"`
+	IsShared     *bool  `json:"isShared,omitempty" form:"isShared"`
+	MyCredOnly   bool   `json:"myCredOnly,omitempty" form:"myCredOnly"` // 仅查看我的凭证
 }
 
 // SessionListParams 会话列表查询参数

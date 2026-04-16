@@ -156,9 +156,9 @@ func (m *CacheManager) GetStats(ctx context.Context) (*CacheManagerStats, error)
 	m.mu.RUnlock()
 
 	return &CacheManagerStats{
-		CacheStats:     *stats,
-		WarmedUpCount:  warmedUpCount,
-		WarmUpEnabled:  m.enabled,
+		CacheStats:       *stats,
+		WarmedUpCount:    warmedUpCount,
+		WarmUpEnabled:    m.enabled,
 		KeyManagerPrefix: m.keyManager.prefix,
 	}, nil
 }
@@ -180,7 +180,7 @@ func (m *CacheManager) ClearWarmUpCache() {
 
 // CacheManagerStats 缓存管理器统计信息
 type CacheManagerStats struct {
-	CacheStats       // 基础缓存统计
+	CacheStats              // 基础缓存统计
 	WarmedUpCount    int    // 已预热缓存数量
 	WarmUpEnabled    bool   // 是否启用预热
 	KeyManagerPrefix string // 键管理器前缀

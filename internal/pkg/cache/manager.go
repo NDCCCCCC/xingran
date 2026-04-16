@@ -15,21 +15,21 @@ import (
 
 const (
 	// 默认缓存 TTL
-	defaultL1TTL            = 30 * time.Second
-	defaultL2TTL            = 5 * time.Minute
-	metricsUpdateTick       = 30 * time.Second
-	serverInfoUpdateTick    = 30 * time.Minute
-	serverInfoL1TTL         = 5 * time.Minute
-	serverInfoL2TTL         = 30 * time.Minute
-	cleanupTick             = 2 * time.Hour
+	defaultL1TTL         = 30 * time.Second
+	defaultL2TTL         = 5 * time.Minute
+	metricsUpdateTick    = 30 * time.Second
+	serverInfoUpdateTick = 30 * time.Minute
+	serverInfoL1TTL      = 5 * time.Minute
+	serverInfoL2TTL      = 30 * time.Minute
+	cleanupTick          = 2 * time.Hour
 )
 
 // MetricsCacheManager 系统指标缓存管理器
 type MetricsCacheManager struct {
-	memoryCache sync.Map      // L1缓存：内存缓存
-	redisCache  interface{}   // L2缓存：Redis缓存
-	hostname    string        // 主机名
-	stopChan    chan struct{} // 停止信号
+	memoryCache sync.Map       // L1缓存：内存缓存
+	redisCache  interface{}    // L2缓存：Redis缓存
+	hostname    string         // 主机名
+	stopChan    chan struct{}  // 停止信号
 	wg          sync.WaitGroup // 等待组
 }
 
@@ -174,7 +174,7 @@ func (m *MetricsCacheManager) GetSystemMetrics(ctx context.Context) (*MetricsDat
 
 	// 4. 写入缓存
 	m.setToL1(key, metrics, defaultL1TTL)
-	m.setToL2(ctx, key, metrics, defaultL2TTL)
+	_ = m.setToL2(ctx, key, metrics, defaultL2TTL)
 
 	return metrics, nil
 }
@@ -227,7 +227,7 @@ func (m *MetricsCacheManager) GetServerInfo(ctx context.Context) (map[string]int
 
 	// 4. 写入缓存
 	m.setToL1(key, info, serverInfoL1TTL)
-	m.setToL2(ctx, key, info, serverInfoL2TTL)
+	_ = m.setToL2(ctx, key, info, serverInfoL2TTL)
 
 	return info, nil
 }
@@ -451,7 +451,7 @@ func (m *MetricsCacheManager) InvalidateCache(key string) {
 		if cacheWithDelete, ok := m.redisCache.(interface {
 			Delete(ctx context.Context, key string) error
 		}); ok {
-			cacheWithDelete.Delete(ctx, key)
+			_ = cacheWithDelete.Delete(ctx, key)
 		}
 	}
 }

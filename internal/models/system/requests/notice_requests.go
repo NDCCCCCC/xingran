@@ -48,21 +48,21 @@ func (p *NoticeListParams) GetOffset() int {
 
 // NoticeCreateRequest 创建通知公告请求
 type NoticeCreateRequest struct {
-	NoticeTitle      string                            `json:"noticeTitle" binding:"required"`
-	NoticeType       string                            `json:"noticeType" binding:"required"`
-	NoticeContent    string                            `json:"noticeContent" binding:"required"`
-	Priority         models.NoticePriority             `json:"priority"`
-	PublishTime      *time.Time                        `json:"publishTime"`
-	ExecutionType    *string                           `json:"executionType"`
-	RecurrenceConfig *RecurrenceConfig                 `json:"recurrenceConfig"`
-	CronExpression   *string                           `json:"cronExpression"`
-	TargetType       models.TargetType                 `json:"targetType"`
-	TargetDepts      []string                          `json:"targetDepts"`
-	TargetRoles      []string                          `json:"targetRoles"`
-	TargetUsers      []string                          `json:"targetUsers"`
-	IsMarkdown       bool                              `json:"isMarkdown"`
-	Status           int                               `json:"status"`
-	Channels         []NotificationChannelRequest      `json:"channels"`
+	NoticeTitle      string                       `json:"noticeTitle" binding:"required"`
+	NoticeType       string                       `json:"noticeType" binding:"required"`
+	NoticeContent    string                       `json:"noticeContent" binding:"required"`
+	Priority         models.NoticePriority        `json:"priority"`
+	PublishTime      *time.Time                   `json:"publishTime"`
+	ExecutionType    *string                      `json:"executionType"`
+	RecurrenceConfig *RecurrenceConfig            `json:"recurrenceConfig"`
+	CronExpression   *string                      `json:"cronExpression"`
+	TargetType       models.TargetType            `json:"targetType"`
+	TargetDepts      []string                     `json:"targetDepts"`
+	TargetRoles      []string                     `json:"targetRoles"`
+	TargetUsers      []string                     `json:"targetUsers"`
+	IsMarkdown       bool                         `json:"isMarkdown"`
+	Status           int                          `json:"status"`
+	Channels         []NotificationChannelRequest `json:"channels"`
 }
 
 // RecurrenceConfig 周期性执行配置
@@ -81,12 +81,12 @@ type NotificationChannelRequest struct {
 
 // NoticeUpdateRequest 更新通知公告请求
 type NoticeUpdateRequest struct {
-	NoticeTitle      *string                           `json:"noticeTitle"`
-	NoticeType       *string                           `json:"noticeType"`
-	NoticeContent    *string                           `json:"noticeContent"`
-	Priority         *models.NoticePriority            `json:"priority"`
-	Status           *int                              `json:"status"`
-	PublishTime      *time.Time                        `json:"publishTime"`
-	ClearPublishTime bool                              `json:"clearPublishTime"`
-	Channels         []NotificationChannelRequest      `json:"channels"`
+	NoticeTitle      *string                      `json:"noticeTitle"`
+	NoticeType       *string                      `json:"noticeType"`
+	NoticeContent    *string                      `json:"noticeContent"`
+	Priority         *models.NoticePriority       `json:"priority"`
+	Status           *int                         `json:"status"`
+	PublishTime      *time.Time                   `json:"publishTime"`
+	ClearPublishTime bool                         `json:"clearPublishTime"`
+	Channels         []NotificationChannelRequest `json:"channels"`
 }

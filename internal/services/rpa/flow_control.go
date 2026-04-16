@@ -17,27 +17,27 @@ import (
 type ConditionType string
 
 const (
-	ConditionTypeEquals         ConditionType = "equals"          // 等于
-	ConditionTypeNotEquals      ConditionType = "notEquals"       // 不等于
-	ConditionTypeContains       ConditionType = "contains"        // 包含
-	ConditionTypeNotContains    ConditionType = "notContains"     // 不包含
-	ConditionTypeGreaterThan    ConditionType = "greaterThan"     // 大于
-	ConditionTypeLessThan       ConditionType = "lessThan"        // 小于
-	ConditionTypeGreaterOrEqual ConditionType = "greaterOrEqual"  // 大于等于
-	ConditionTypeLessOrEqual    ConditionType = "lessOrEqual"     // 小于等于
-	ConditionTypeMatches        ConditionType = "matches"         // 正则匹配
-	ConditionTypeExists         ConditionType = "exists"          // 存在
-	ConditionTypeEmpty          ConditionType = "empty"           // 为空
+	ConditionTypeEquals         ConditionType = "equals"         // 等于
+	ConditionTypeNotEquals      ConditionType = "notEquals"      // 不等于
+	ConditionTypeContains       ConditionType = "contains"       // 包含
+	ConditionTypeNotContains    ConditionType = "notContains"    // 不包含
+	ConditionTypeGreaterThan    ConditionType = "greaterThan"    // 大于
+	ConditionTypeLessThan       ConditionType = "lessThan"       // 小于
+	ConditionTypeGreaterOrEqual ConditionType = "greaterOrEqual" // 大于等于
+	ConditionTypeLessOrEqual    ConditionType = "lessOrEqual"    // 小于等于
+	ConditionTypeMatches        ConditionType = "matches"        // 正则匹配
+	ConditionTypeExists         ConditionType = "exists"         // 存在
+	ConditionTypeEmpty          ConditionType = "empty"          // 为空
 )
 
 // LoopType 循环类型
 type LoopType string
 
 const (
-	LoopTypeCount     LoopType = "count"      // 计数循环
-	LoopTypeWhile     LoopType = "while"      // 条件循环
-	LoopTypeForEach   LoopType = "forEach"    // 遍历循环
-	LoopTypeUntil     LoopType = "until"      // 直到循环
+	LoopTypeCount   LoopType = "count"   // 计数循环
+	LoopTypeWhile   LoopType = "while"   // 条件循环
+	LoopTypeForEach LoopType = "forEach" // 遍历循环
+	LoopTypeUntil   LoopType = "until"   // 直到循环
 )
 
 // ExpressionEvaluator 表达式求值器
@@ -256,26 +256,26 @@ type FlowControlService interface {
 
 // flowControlServiceImpl 流程控制服务实现
 type flowControlServiceImpl struct {
-	db              *gorm.DB
-	evaluator       ExpressionEvaluator
+	db               *gorm.DB
+	evaluator        ExpressionEvaluator
 	executionService ExecutionService
 }
 
 // NewFlowControlService 创建流程控制服务
 func NewFlowControlService(db *gorm.DB, execService ExecutionService) FlowControlService {
 	return &flowControlServiceImpl{
-		db:              db,
-		evaluator:       NewExpressionEvaluator(db),
+		db:               db,
+		evaluator:        NewExpressionEvaluator(db),
 		executionService: execService,
 	}
 }
 
 // ConditionAction 条件分支动作
 type ConditionAction struct {
-	Type       ActionConditionType `json:"type"`
-	Expression string              `json:"expression"`
-	TrueActions []json.RawMessage  `json:"trueActions"`
-	FalseActions []json.RawMessage `json:"falseActions"`
+	Type         ActionConditionType `json:"type"`
+	Expression   string              `json:"expression"`
+	TrueActions  []json.RawMessage   `json:"trueActions"`
+	FalseActions []json.RawMessage   `json:"falseActions"`
 }
 
 // ActionConditionType 条件动作类型
@@ -298,13 +298,13 @@ func (s *flowControlServiceImpl) ExecuteCondition(ctx context.Context, condition
 
 // LoopAction 循环动作
 type LoopAction struct {
-	Type        LoopType          `json:"type"`
-	Count       int               `json:"count,omitempty"`        // 计数循环次数
-	Expression  string            `json:"expression,omitempty"`   // while/until 条件
-	Variable    string            `json:"variable,omitempty"`     // 遍历变量名
-	Items       []interface{}     `json:"items,omitempty"`        // 遍历列表
-	Actions     []json.RawMessage `json:"actions"`                // 循环体动作
-	MaxIter     int               `json:"maxIter,omitempty"`      // 最大迭代次数（防止无限循环）
+	Type       LoopType          `json:"type"`
+	Count      int               `json:"count,omitempty"`      // 计数循环次数
+	Expression string            `json:"expression,omitempty"` // while/until 条件
+	Variable   string            `json:"variable,omitempty"`   // 遍历变量名
+	Items      []interface{}     `json:"items,omitempty"`      // 遍历列表
+	Actions    []json.RawMessage `json:"actions"`              // 循环体动作
+	MaxIter    int               `json:"maxIter,omitempty"`    // 最大迭代次数（防止无限循环）
 }
 
 // ExecuteLoop 执行循环

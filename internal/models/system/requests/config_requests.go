@@ -48,19 +48,19 @@ func (p *ConfigListParams) GetOffset() int {
 
 // ConfigCreateRequest 创建参数配置请求
 type ConfigCreateRequest struct {
-	ConfigName  string              `json:"configName" binding:"required"`
-	ConfigKey   string              `json:"configKey" binding:"required"`
-	ConfigValue string              `json:"configValue" binding:"required"`
-	ConfigType  models.ConfigType   `json:"configType"`
-	IsSystem    int                 `json:"isSystem"`
-	Remark      *string             `json:"remark"`
+	ConfigName  string            `json:"configName" binding:"required"`
+	ConfigKey   string            `json:"configKey" binding:"required"`
+	ConfigValue string            `json:"configValue" binding:"required"`
+	ConfigType  models.ConfigType `json:"configType"`
+	IsSystem    int               `json:"isSystem"`
+	Remark      *string           `json:"remark"`
 }
 
 // ConfigUpdateRequest 更新参数配置请求
 type ConfigUpdateRequest struct {
-	ID          string              `json:"id" binding:"required"`
-	ConfigName  string              `json:"configName" binding:"required"`
-	ConfigValue string              `json:"configValue" binding:"required"`
-	ConfigType  models.ConfigType   `json:"configType"`
-	Remark      *string             `json:"remark"`
+	ID          string            `json:"id" binding:"required"`
+	ConfigName  string            `json:"configName" binding:"required"`
+	ConfigValue string            `json:"configValue" binding:"required"`
+	ConfigType  models.ConfigType `json:"configType"`
+	Remark      *string           `json:"remark"`
 }

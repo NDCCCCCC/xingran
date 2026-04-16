@@ -227,9 +227,9 @@ func (s *departmentService) GetTreeWithFilter(ctx context.Context, includeDisabl
 		}
 
 		applogger.WithFields(map[string]interface{}{
-			"ancestor_count":  len(ancestorDepts),
-			"matched_count":   len(matchedDepts),
-			"unique_count":    len(deptMap),
+			"ancestor_count": len(ancestorDepts),
+			"matched_count":  len(matchedDepts),
+			"unique_count":   len(deptMap),
 		}).Info("Combined departments for search (deduplicated)")
 	} else {
 		if !includeDisabled {

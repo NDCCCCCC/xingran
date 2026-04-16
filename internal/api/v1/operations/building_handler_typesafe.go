@@ -6,14 +6,14 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 	opsServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
 // BuildingHandlerTypeSafe 楼宇处理器（类型安全版本）
 // 这是新的类型安全 Handler 实现，使用专门的请求结构体替代 map[string]interface{}
 type BuildingHandlerTypeSafe struct {
-	service         opsServices.BuildingServiceTypeSafe
+	service          opsServices.BuildingServiceTypeSafe
 	geocodingService *opsServices.GeocodingService
 }
 

@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 )
 
 // DataCacheService 数据缓存服务
@@ -146,12 +146,12 @@ func (s *DataCacheService) GetStats(ctx context.Context) (*CacheStats, error) {
 
 // CacheStats 缓存统计信息
 type CacheStats struct {
-	Hits        int64                  // 命中次数
-	Misses      int64                  // 未命中次数
-	Count       int64                  // 缓存项数量
-	MemorySize  int64                  // 内存占用（字节）
-	HitRate     float64                // 命中率
-	KeyCount    int                    // 键数量
+	Hits          int64                  // 命中次数
+	Misses        int64                  // 未命中次数
+	Count         int64                  // 缓存项数量
+	MemorySize    int64                  // 内存占用（字节）
+	HitRate       float64                // 命中率
+	KeyCount      int                    // 键数量
 	ExtendedStats map[string]interface{} // 扩展统计
 }
 
@@ -228,27 +228,27 @@ func (b *CacheKeyBuilder) Build(params ...interface{}) string {
 // ==================== 预定义的缓存键 ====================
 
 const (
-	CacheKeyDeptTree       = "dept:tree"
-	CacheKeyDeptList       = "dept:list"
-	CacheKeyDeptTreeSelect = "dept:tree:select"
+	CacheKeyDeptTree        = "dept:tree"
+	CacheKeyDeptList        = "dept:list"
+	CacheKeyDeptTreeSelect  = "dept:tree:select"
 	CacheKeyRoleMenus       = "role:menus"
 	CacheKeyRoleMenuTree    = "role:menu:tree"
 	CacheKeyRoleDepts       = "role:depts"
 	CacheKeyRoleAll         = "role:all"
 	CacheKeyRoleEnabled     = "role:enabled"
 	CacheKeyDictType        = "dict:type"
-	CacheKeyDictDataByType = "dict:data:type"
+	CacheKeyDictDataByType  = "dict:data:type"
 	CacheKeyMenuTree        = "menu:tree"
 	CacheKeyMenuRouter      = "menu:router"
 	CacheKeyMenuAll         = "menu:all"
 	CacheKeyPostAll         = "post:all"
 	CacheKeyPostEnabled     = "post:enabled"
-	CacheKeyUserInfo       = "user:info"
-	CacheKeyUserRoles      = "user:roles"
+	CacheKeyUserInfo        = "user:info"
+	CacheKeyUserRoles       = "user:roles"
 	CacheKeyUserPermissions = "user:permissions"
-	CacheKeyUserByID       = "user:id"
-	CacheKeyUserByUsername = "user:username"
-	CacheKeyUserList       = "user:list"
+	CacheKeyUserByID        = "user:id"
+	CacheKeyUserByUsername  = "user:username"
+	CacheKeyUserList        = "user:list"
 )
 
 // GetDeptTreeKey 获取部门树缓存键

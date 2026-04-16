@@ -36,9 +36,9 @@ func NewJobLogService(db *gorm.DB) JobLogService {
 
 // JobLogListParams 任务日志列表查询参数
 type JobLogListParams struct {
-	JobName  string
-	JobGroup string
-	Status   *int
+	JobName   string
+	JobGroup  string
+	Status    *int
 	StartTime *string
 	EndTime   *string
 	common.ListParams

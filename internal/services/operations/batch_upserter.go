@@ -40,11 +40,11 @@ func (g *gormNamingStrategy) FieldToDB(fieldName string) string {
 // BatchUpsert 批量插入或更新
 // 使用GORM的Clause实现PostgreSQL的ON CONFLICT DO UPDATE功能
 type BatchUpsert struct {
-	db              *gorm.DB
-	config          ExcelConfig
-	naming          NamingStrategy
-	fieldNameCache  map[string]string // 字段名缓存，避免重复转换
-	fieldNameMutex  sync.RWMutex
+	db             *gorm.DB
+	config         ExcelConfig
+	naming         NamingStrategy
+	fieldNameCache map[string]string // 字段名缓存，避免重复转换
+	fieldNameMutex sync.RWMutex
 }
 
 // NewBatchUpsert 创建批量Upsert实例

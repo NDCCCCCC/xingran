@@ -48,14 +48,14 @@ func (a *MetricsProviderAdapter) GetCurrentMetrics(ctx context.Context) (*monito
 	}
 
 	return &monitorServices.SystemMetricsData{
-		CPUUsage:     metrics.CPUUsage,
-		MemoryUsage:  metrics.MemoryUsage,
-		DiskUsage:    metrics.DiskUsage,
-		NetworkRx:    metrics.NetworkRx,
-		NetworkTx:    metrics.NetworkTx,
-		ProcessNum:   metrics.ProcessNum,
-		TotalMemory:  metrics.TotalMemory,
-		UsedMemory:   metrics.UsedMemory,
-		Timestamp:    metrics.Timestamp,
+		CPUUsage:    metrics.CPUUsage,
+		MemoryUsage: metrics.MemoryUsage,
+		DiskUsage:   metrics.DiskUsage,
+		NetworkRx:   metrics.NetworkRx,
+		NetworkTx:   metrics.NetworkTx,
+		ProcessNum:  metrics.ProcessNum,
+		TotalMemory: metrics.TotalMemory,
+		UsedMemory:  metrics.UsedMemory,
+		Timestamp:   metrics.Timestamp,
 	}, nil
 }

@@ -62,19 +62,6 @@ func (d *defaultNonceStorage) CheckAndStore(nonce string, timestamp int64) bool 
 	return true
 }
 
-// cleanupExpiredNonces 清理过期的nonce（应该定期调用）
-func (d *defaultNonceStorage) cleanupExpiredNonces() {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-
-	now := time.Now().Unix()
-	for nonce, ts := range d.nonces {
-		if now-ts > maxTimeDiff*2 { // 清理超过2倍时间窗口的nonce
-			delete(d.nonces, nonce)
-		}
-	}
-}
-
 // RequestEncryptor 请求加密器
 type RequestEncryptor struct {
 	sm2PrivateKey *sm2.PrivateKey // SM2 私钥（用于解密 SM4 密钥）

@@ -463,9 +463,7 @@ func (s *ConfigBackupService) DeleteBackup(ctx context.Context, backupID string)
 
 	// 如果是文件存储，删除文件
 	if backup.IsStoredInFile() && backup.FilePath != "" {
-		if err := os.Remove(backup.FilePath); err != nil {
-			// 文件删除失败不影响数据库删除
-		}
+		_ = os.Remove(backup.FilePath)
 	}
 
 	// 软删除

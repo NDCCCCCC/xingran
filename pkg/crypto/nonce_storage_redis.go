@@ -66,11 +66,6 @@ func (r *redisNonceStorage) CheckAndStore(nonce string, timestamp int64) bool {
 	return ok
 }
 
-// cleanupExpiredNonces 不需要手动清理，Redis 会自动过期
-func (r *redisNonceStorage) cleanupExpiredNonces() {
-	// Redis 设置了 TTL，会自动清理过期数据
-}
-
 // Close 关闭 Redis 连接
 func (r *redisNonceStorage) Close() error {
 	return r.client.Close()

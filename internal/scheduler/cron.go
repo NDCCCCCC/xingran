@@ -487,7 +487,7 @@ type NoticeHub interface {
 // 在Core初始化时设置
 // 遵循 Go 最佳实践：使用 sync.RWMutex 保护全局变量
 var (
-	GlobalNoticeHub     NoticeHub
+	GlobalNoticeHub   NoticeHub
 	GlobalNoticeHubMu sync.RWMutex
 )
 
@@ -513,7 +513,7 @@ type DBGetter interface {
 // GlobalDB 全局数据库访问器
 // 遵循 Go 最佳实践：使用 sync.RWMutex 保护全局变量
 var (
-	GlobalDB     DBGetter
+	GlobalDB   DBGetter
 	GlobalDBMu sync.RWMutex
 )
 
@@ -535,7 +535,7 @@ func GetDB() DBGetter {
 // 在Core初始化时设置，用于任务执行函数中访问调度器
 // 遵循 Go 最佳实践：使用 sync.RWMutex 保护全局变量
 var (
-	GlobalScheduler     *Scheduler
+	GlobalScheduler   *Scheduler
 	GlobalSchedulerMu sync.RWMutex
 )
 

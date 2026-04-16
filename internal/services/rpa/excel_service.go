@@ -7,50 +7,50 @@ import (
 	"mime/multipart"
 	"time"
 
-	"github.com/xuri/excelize/v2"
 	rpamodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/rpa"
+	"github.com/xuri/excelize/v2"
 	"gorm.io/gorm"
 )
 
 // ExcelParseResult Excel 解析结果
 type ExcelParseResult struct {
-	FileName   string                 `json:"fileName"`
-	FileSize   int64                  `json:"fileSize"`
-	SheetCount int                    `json:"sheetCount"`
-	Columns    []string               `json:"columns"`
-	RowCount   int                    `json:"rowCount"`
+	FileName   string                   `json:"fileName"`
+	FileSize   int64                    `json:"fileSize"`
+	SheetCount int                      `json:"sheetCount"`
+	Columns    []string                 `json:"columns"`
+	RowCount   int                      `json:"rowCount"`
 	Preview    []map[string]interface{} `json:"preview"`
-	MaxPreview  int                    `json:"maxPreview"`
-	ParsedAt   time.Time              `json:"parsedAt"`
+	MaxPreview int                      `json:"maxPreview"`
+	ParsedAt   time.Time                `json:"parsedAt"`
 }
 
 // BatchExecutionReport 批量执行报告
 type BatchExecutionReport struct {
-	ExecutionID    string                `json:"executionId"`
-	TaskID         string                `json:"taskId"`
-	TaskName       string                `json:"taskName"`
-	TotalItems     int                   `json:"totalItems"`
-	SuccessCount   int                   `json:"successCount"`
-	FailedCount    int                   `json:"failedCount"`
-	SkippedCount   int                   `json:"skippedCount"`
-	StartTime      time.Time             `json:"startTime"`
-	EndTime        time.Time             `json:"endTime"`
-	Duration       time.Duration         `json:"duration"`
-	Items          []BatchItemReport     `json:"items"`
-	Summary        map[string]interface{} `json:"summary"`
+	ExecutionID  string                 `json:"executionId"`
+	TaskID       string                 `json:"taskId"`
+	TaskName     string                 `json:"taskName"`
+	TotalItems   int                    `json:"totalItems"`
+	SuccessCount int                    `json:"successCount"`
+	FailedCount  int                    `json:"failedCount"`
+	SkippedCount int                    `json:"skippedCount"`
+	StartTime    time.Time              `json:"startTime"`
+	EndTime      time.Time              `json:"endTime"`
+	Duration     time.Duration          `json:"duration"`
+	Items        []BatchItemReport      `json:"items"`
+	Summary      map[string]interface{} `json:"summary"`
 }
 
 // BatchItemReport 批量项报告
 type BatchItemReport struct {
-	Index       int                    `json:"index"`
-	Status      string                 `json:"status"`      // success, failed, skipped
-	InputData   map[string]interface{} `json:"inputData"`
-	OutputData  map[string]interface{} `json:"outputData"`
-	Error       string                 `json:"error,omitempty"`
-	StartTime   time.Time              `json:"startTime"`
-	EndTime     time.Time              `json:"endTime"`
-	Duration    time.Duration          `json:"duration"`
-	Screenshot  string                 `json:"screenshot,omitempty"`
+	Index      int                    `json:"index"`
+	Status     string                 `json:"status"` // success, failed, skipped
+	InputData  map[string]interface{} `json:"inputData"`
+	OutputData map[string]interface{} `json:"outputData"`
+	Error      string                 `json:"error,omitempty"`
+	StartTime  time.Time              `json:"startTime"`
+	EndTime    time.Time              `json:"endTime"`
+	Duration   time.Duration          `json:"duration"`
+	Screenshot string                 `json:"screenshot,omitempty"`
 }
 
 // HumanInterventionRequest 人工干预请求
@@ -63,16 +63,16 @@ type HumanInterventionRequest struct {
 
 // HumanInterventionEvent 人工干预事件
 type HumanInterventionEvent struct {
-	ID          string                 `gorm:"type:uuid;primary_key" json:"id"`
-	CreatedAt   time.Time              `json:"createdAt"`
-	ExecutionID string                 `gorm:"type:uuid;not null;index:idx_rpa_hi_exec,priority:1" json:"executionId"`
-	WorkerID    string                 `gorm:"size:100;index" json:"workerId"`
-	Action      string                 `gorm:"size:20;not null" json:"action"` // pause, resume, skip, abort
-	Message     string                 `gorm:"type:text" json:"message"`
-	InputData   string                 `gorm:"type:jsonb" json:"inputData"` // 用户输入的数据
-	Reason      string                 `gorm:"type:text" json:"reason"`
-	ProcessedAt *time.Time             `json:"processedAt,omitempty"`
-	Status      string                 `gorm:"size:20;default:'pending'" json:"status"` // pending, processed, timeout
+	ID          string     `gorm:"type:uuid;primary_key" json:"id"`
+	CreatedAt   time.Time  `json:"createdAt"`
+	ExecutionID string     `gorm:"type:uuid;not null;index:idx_rpa_hi_exec,priority:1" json:"executionId"`
+	WorkerID    string     `gorm:"size:100;index" json:"workerId"`
+	Action      string     `gorm:"size:20;not null" json:"action"` // pause, resume, skip, abort
+	Message     string     `gorm:"type:text" json:"message"`
+	InputData   string     `gorm:"type:jsonb" json:"inputData"` // 用户输入的数据
+	Reason      string     `gorm:"type:text" json:"reason"`
+	ProcessedAt *time.Time `json:"processedAt,omitempty"`
+	Status      string     `gorm:"size:20;default:'pending'" json:"status"` // pending, processed, timeout
 }
 
 func (HumanInterventionEvent) TableName() string {
@@ -125,10 +125,7 @@ func (s *RPAExcelService) ParseExcelFile(file *multipart.FileHeader) (*ExcelPars
 	}
 
 	// 第一行作为列名
-	columns := make([]string, 0)
-	for _, cell := range rows[0] {
-		columns = append(columns, cell)
-	}
+	columns := append([]string{}, rows[0]...)
 
 	// 解析数据行（跳过表头）
 	data := make([]map[string]interface{}, 0)
@@ -196,10 +193,7 @@ func (s *RPAExcelService) ParseExcelForExecution(file *multipart.FileHeader) ([]
 	}
 
 	// 第一行作为列名
-	columns := make([]string, 0)
-	for _, cell := range rows[0] {
-		columns = append(columns, cell)
-	}
+	columns := append([]string{}, rows[0]...)
 
 	// 解析所有数据行
 	data := make([]map[string]interface{}, 0)

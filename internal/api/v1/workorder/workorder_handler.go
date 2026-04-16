@@ -2,9 +2,9 @@ package workorder
 
 import (
 	"github.com/gin-gonic/gin"
-	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/workorder"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
@@ -33,7 +33,7 @@ func NewWorkOrderHandler(service workorder.WorkOrderCacheService) *WorkOrderHand
 func (h *WorkOrderHandler) List(c *gin.Context) {
 	var req workorder.ListRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		// 允许空请求体，使用默认值
+		_ = err // 允许空请求体，使用默认值
 	}
 
 	list, total, err := h.service.GetList(c.Request.Context(), &req)
@@ -62,7 +62,7 @@ func (h *WorkOrderHandler) List(c *gin.Context) {
 func (h *WorkOrderHandler) GetMyPending(c *gin.Context) {
 	var req workorder.GetMyPendingRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		// 允许空请求体，使用默认值
+		_ = err // 允许空请求体，使用默认值
 		req.Limit = 5
 	}
 
@@ -565,7 +565,7 @@ func (h *WorkOrderHandler) DeleteCategory(c *gin.Context) {
 func (h *WorkOrderHandler) ListPeriodic(c *gin.Context) {
 	var req workorder.PeriodicTemplateListRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		// 允许空请求体
+		_ = err // 允许空请求体
 	}
 
 	list, total, err := h.service.Periodic().GetTemplateList(c.Request.Context(), &req)

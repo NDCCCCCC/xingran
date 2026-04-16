@@ -216,7 +216,8 @@ func (s *BaseService) Create(ctx context.Context, req *CreateRequest, submitterI
 
 		// 处理期望解决时间
 		if req.ExpectedResolveAt != nil && *req.ExpectedResolveAt != "" {
-			// Time parsing logic
+			// Time parsing logic (placeholder for future implementation)
+			_ = req.ExpectedResolveAt
 		}
 
 		// 创建工单

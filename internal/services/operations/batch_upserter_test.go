@@ -1,3 +1,4 @@
+//go:build !skip_db_tests
 // +build !skip_db_tests
 
 package operations
@@ -60,14 +61,14 @@ func TestBatchUpsert_Insert(t *testing.T) {
 
 	records := []map[string]interface{}{
 		{
-			"name":       "科技楼",
-			"city_code":  "wuhan",
-			"org_id":     "1",
+			"name":      "科技楼",
+			"city_code": "wuhan",
+			"org_id":    "1",
 		},
 		{
-			"name":       "研发楼",
-			"city_code":  "wuhan",
-			"org_id":     "2",
+			"name":      "研发楼",
+			"city_code": "wuhan",
+			"org_id":    "2",
 		},
 	}
 
@@ -108,9 +109,9 @@ func TestBatchUpsert_Update(t *testing.T) {
 	// 先插入数据
 	insertRecords := []map[string]interface{}{
 		{
-			"name":       "科技楼",
-			"city_code":  "wuhan",
-			"org_id":     "1",
+			"name":      "科技楼",
+			"city_code": "wuhan",
+			"org_id":    "1",
 		},
 	}
 	_, _, err := upserter.Upsert(ctx, insertRecords)
@@ -119,9 +120,9 @@ func TestBatchUpsert_Update(t *testing.T) {
 	// 更新数据
 	updateRecords := []map[string]interface{}{
 		{
-			"name":       "科技楼",
-			"city_code":  "beijing", // 更新城市
-			"org_id":     "1",
+			"name":      "科技楼",
+			"city_code": "beijing", // 更新城市
+			"org_id":    "1",
 		},
 	}
 
@@ -175,14 +176,14 @@ func TestBatchUpsert_Mixed(t *testing.T) {
 	// 混合操作：一条更新，一条插入
 	mixedRecords := []map[string]interface{}{
 		{
-			"name":       "科技楼",
-			"city_code":  "beijing", // 更新
-			"org_id":     "1",
+			"name":      "科技楼",
+			"city_code": "beijing", // 更新
+			"org_id":    "1",
 		},
 		{
-			"name":       "研发楼", // 新增
-			"city_code":  "wuhan",
-			"org_id":     "2",
+			"name":      "研发楼", // 新增
+			"city_code": "wuhan",
+			"org_id":    "2",
 		},
 	}
 

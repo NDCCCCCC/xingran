@@ -12,8 +12,8 @@ type PageResult struct {
 
 // ListParams 列表查询基础参数
 type ListParams struct {
-	Current  int    `json:"current"`
-	PageSize int    `json:"pageSize"`
+	Current  int `json:"current"`
+	PageSize int `json:"pageSize"`
 }
 
 // DefaultListParams 默认列表参数

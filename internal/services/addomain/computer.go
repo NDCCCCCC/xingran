@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	batchCreateSize      = 100
-	batchUpdateSize      = 200 // 批量更新大小（PostgreSQL 参数限制 65535 / 28 字段 ≈ 2340，保守取 200）
+	batchCreateSize     = 100
+	batchUpdateSize     = 200 // 批量更新大小（PostgreSQL 参数限制 65535 / 28 字段 ≈ 2340，保守取 200）
 	onlineThresholdDays = 7
 )
 
@@ -32,7 +32,7 @@ func NewComputerService(db *gorm.DB) *ComputerService {
 // ComputerListRequest 电脑设备列表请求
 type ComputerListRequest struct {
 	ConfigID     string `json:"configId"`
-	OUN          string `json:"ouDn,omitempty"`       // 所属OU
+	OUN          string `json:"ouDn,omitempty"`         // 所属OU
 	ComputerName string `json:"computerName,omitempty"` // 计算机名称模糊搜索
 	Current      int    `json:"current"`
 	PageSize     int    `json:"pageSize"`
@@ -125,7 +125,7 @@ func (s *ComputerService) convertToDetails(computers []models.ADComputer) []Comp
 	details := make([]ComputerDetail, len(computers))
 	for i, comp := range computers {
 		details[i] = ComputerDetail{
-			ADComputer:     comp,
+			ADComputer:    comp,
 			LastLogonUser: parseComputerDescriptionForUser(comp.OriginalDescription),
 		}
 	}
@@ -145,7 +145,7 @@ func (s *ComputerService) GetByDN(ctx context.Context, configID, computerDN stri
 	}
 
 	detail := &ComputerDetail{
-		ADComputer:     computer,
+		ADComputer:    computer,
 		LastLogonUser: parseComputerDescriptionForUser(computer.OriginalDescription),
 	}
 
@@ -181,13 +181,13 @@ func parseComputerDescription(desc string) map[string]string {
 
 	// 字段索引映射: 0: 空, 1: username, 2: ip, 3: mac, 4: serial, 5: os, 6: cpu, 7: arch, 8: memory, 9: disk, 10: datetime
 	fieldMappings := map[int]string{
-		1: "lastLogonUser",
-		2: "ipAddress",
-		3: "macAddress",
-		4: "serialNumber",
-		5: "operatingSystem",
-		6: "cpuModel",
-		7: "architecture",
+		1:  "lastLogonUser",
+		2:  "ipAddress",
+		3:  "macAddress",
+		4:  "serialNumber",
+		5:  "operatingSystem",
+		6:  "cpuModel",
+		7:  "architecture",
 		10: "lastOnlineTime",
 	}
 
@@ -270,7 +270,7 @@ func buildComputerFromEntry(configID string, entry *ldap.Entry, parsedDesc map[s
 	return models.ADComputer{
 		ADConfigID:          configID,
 		ComputerName:        computerName,
-		DistinguishedName:    computerDN,
+		DistinguishedName:   computerDN,
 		OUDN:                extractParentDN(computerDN),
 		OriginalDescription: entry.GetAttributeValue("description"),
 		IPAddress:           parsedDesc["ipAddress"],

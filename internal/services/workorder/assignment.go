@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -54,7 +55,9 @@ func (s *AssignmentService) Assign(ctx context.Context, id string, req *AssignRe
 
 		// 记录历史
 		baseService := NewBaseService(s.db)
-		baseService.recordHistory(tx, workOrder.ID, "assign", "assignee_id", oldAssignee, req.AssigneeID, req.Remark, operatorID)
+		if err := baseService.recordHistory(tx, workOrder.ID, "assign", "assignee_id", oldAssignee, req.AssigneeID, req.Remark, operatorID); err != nil {
+			applogger.Warnf("记录工单分配历史失败: %v", err)
+		}
 
 		return nil
 	})
@@ -136,8 +139,10 @@ func (s *AssignmentService) UpdateStatus(ctx context.Context, id string, req *Up
 			remark = getStatusName(req.Status)
 		}
 		baseService := NewBaseService(s.db)
-		baseService.recordHistory(tx, workOrder.ID, "update_status", "status",
-			strconv.Itoa(int(workOrder.Status)), strconv.Itoa(int(req.Status)), remark, operatorID)
+		if err := baseService.recordHistory(tx, workOrder.ID, "update_status", "status",
+			strconv.Itoa(int(workOrder.Status)), strconv.Itoa(int(req.Status)), remark, operatorID); err != nil {
+			applogger.Warnf("记录工单状态变更历史失败: %v", err)
+		}
 
 		return nil
 	})

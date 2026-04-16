@@ -400,7 +400,9 @@ func (m *MemoryCache) HSet(ctx context.Context, key, field string, value interfa
 	// 获取现有Hash
 	if item, exists := m.items[key]; exists && !item.IsExpired() {
 		if strValue, ok := item.Value.(string); ok {
-			json.Unmarshal([]byte(strValue), &hashMap)
+			if err := json.Unmarshal([]byte(strValue), &hashMap); err != nil {
+				hashMap = make(map[string]string)
+			}
 			expirationTime = item.Expiration
 		} else {
 			hashMap = make(map[string]string)
@@ -663,4 +665,3 @@ func (m *MemoryCache) GetStats(ctx context.Context) (map[string]interface{}, err
 
 	return stats, nil
 }
-

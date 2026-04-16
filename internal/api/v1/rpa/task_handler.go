@@ -12,14 +12,14 @@ import (
 
 // TaskHandler 任务处理器
 type TaskHandler struct {
-	taskService      rpa.TaskService
-	excelService      *rpa.RPAExcelService
+	taskService  rpa.TaskService
+	excelService *rpa.RPAExcelService
 }
 
 // NewTaskHandler 创建任务处理器
 func NewTaskHandler(taskService rpa.TaskService, excelService *rpa.RPAExcelService) *TaskHandler {
 	return &TaskHandler{
-		taskService: taskService,
+		taskService:  taskService,
 		excelService: excelService,
 	}
 }
@@ -203,8 +203,8 @@ func (h *TaskHandler) ExecuteWithExcel(c *gin.Context) {
 	}
 
 	success(c, gin.H{
-		"execution": execution,
+		"execution":  execution,
 		"totalItems": len(dataItems),
-		"message":   "批量任务已开始执行",
+		"message":    "批量任务已开始执行",
 	})
 }

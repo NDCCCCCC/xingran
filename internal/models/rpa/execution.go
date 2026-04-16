@@ -67,27 +67,27 @@ func (sa StringArray) Value() (driver.Value, error) {
 
 // Execution RPA 任务执行记录
 type Execution struct {
-	ID             string     `gorm:"type:uuid;primary_key" json:"id"`
-	CreatedAt      time.Time  `json:"createdAt"`
-	UpdatedAt      time.Time  `json:"updatedAt"`
-	DeletedAt      *time.Time `gorm:"index" json:"deletedAt,omitempty"`
-	TaskID         string     `gorm:"type:uuid;not null" json:"taskId"`
-	TaskName       string     `gorm:"size:255" json:"taskName"`
-	WorkerID       *string    `gorm:"type:uuid" json:"workerId"`
-	WorkerName     string     `gorm:"size:255" json:"workerName"`
-	Status         string     `gorm:"size:20;not null;default:'pending'" json:"status"` // pending, running, success, failed, cancelled, timeout
-	StartTime      *time.Time `gorm:"column:start_time" json:"startedAt"`     // 前端期望 startedAt
-	EndTime        *time.Time `gorm:"column:end_time" json:"completedAt"`   // 前端期望 completedAt
-	Duration       *int       `json:"duration"` // 毫秒
-	Step           int        `gorm:"column:progress_current;default:0" json:"step"`              // 前端期望 step
-	TotalSteps     int        `gorm:"column:progress_total;default:0" json:"totalSteps"`        // 前端期望 totalSteps
-	Progress       float64    `gorm:"-" json:"progress"` // 计算属性：进度百分比
-	Screenshots    StringArray `gorm:"type:text;default:'[]'" json:"screenshots"` // JSON 字符串数组
-	Logs           string     `gorm:"type:text" json:"logs"`
-	ErrorMessage   string     `gorm:"column:error_message" json:"error"`              // 前端期望 error
-	RetryCount     int        `gorm:"default:0" json:"retryCount"`
-	TriggeredBy    string     `gorm:"size:64" json:"triggeredBy"`
-	TriggerType    string     `gorm:"size:20" json:"triggerType"` // manual, schedule, event, webhook
+	ID           string      `gorm:"type:uuid;primary_key" json:"id"`
+	CreatedAt    time.Time   `json:"createdAt"`
+	UpdatedAt    time.Time   `json:"updatedAt"`
+	DeletedAt    *time.Time  `gorm:"index" json:"deletedAt,omitempty"`
+	TaskID       string      `gorm:"type:uuid;not null" json:"taskId"`
+	TaskName     string      `gorm:"size:255" json:"taskName"`
+	WorkerID     *string     `gorm:"type:uuid" json:"workerId"`
+	WorkerName   string      `gorm:"size:255" json:"workerName"`
+	Status       string      `gorm:"size:20;not null;default:'pending'" json:"status"`  // pending, running, success, failed, cancelled, timeout
+	StartTime    *time.Time  `gorm:"column:start_time" json:"startedAt"`                // 前端期望 startedAt
+	EndTime      *time.Time  `gorm:"column:end_time" json:"completedAt"`                // 前端期望 completedAt
+	Duration     *int        `json:"duration"`                                          // 毫秒
+	Step         int         `gorm:"column:progress_current;default:0" json:"step"`     // 前端期望 step
+	TotalSteps   int         `gorm:"column:progress_total;default:0" json:"totalSteps"` // 前端期望 totalSteps
+	Progress     float64     `gorm:"-" json:"progress"`                                 // 计算属性：进度百分比
+	Screenshots  StringArray `gorm:"type:text;default:'[]'" json:"screenshots"`         // JSON 字符串数组
+	Logs         string      `gorm:"type:text" json:"logs"`
+	ErrorMessage string      `gorm:"column:error_message" json:"error"` // 前端期望 error
+	RetryCount   int         `gorm:"default:0" json:"retryCount"`
+	TriggeredBy  string      `gorm:"size:64" json:"triggeredBy"`
+	TriggerType  string      `gorm:"size:20" json:"triggerType"` // manual, schedule, event, webhook
 }
 
 // TableName 指定表名

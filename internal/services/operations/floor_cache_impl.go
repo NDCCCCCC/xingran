@@ -27,7 +27,7 @@ func NewFloorServiceWithCache(
 	base := &floorService{db: db}
 	return &floorCacheService{
 		floorService:     base,
-		cache:           cache,
+		cache:            cache,
 		CacheServiceBase: system.CacheServiceBase{Config: config},
 	}
 }

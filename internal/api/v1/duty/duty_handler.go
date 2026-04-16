@@ -5,10 +5,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	dutyServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/duty"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
@@ -37,7 +37,7 @@ func NewDutyHandler(service dutyServices.DutyCacheService) *DutyHandler {
 func (h *DutyHandler) ListPools(c *gin.Context) {
 	var req services.DutyPoolListRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		// 允许空请求体
+		_ = err // 允许空请求体
 	}
 
 	pools, total, err := h.service.GetDutyPoolList(c.Request.Context(), &req)
@@ -175,7 +175,7 @@ func (h *DutyHandler) DeletePool(c *gin.Context) {
 func (h *DutyHandler) ListSchedules(c *gin.Context) {
 	var req services.DutyScheduleListRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		// 允许空请求体
+		_ = err // 允许空请求体
 	}
 
 	schedules, total, err := h.service.GetDutyScheduleList(c.Request.Context(), &req)

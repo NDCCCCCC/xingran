@@ -7,11 +7,11 @@ import (
 
 // AppError 应用错误结构
 type AppError struct {
-	Code       ErrorCode                 // 业务错误码
-	Message    string                    // 错误消息
-	HTTPStatus int                       // HTTP状态码
-	Err        error                     // 原始错误
-	Context    map[string]interface{}    // 错误上下文
+	Code       ErrorCode              // 业务错误码
+	Message    string                 // 错误消息
+	HTTPStatus int                    // HTTP状态码
+	Err        error                  // 原始错误
+	Context    map[string]interface{} // 错误上下文
 }
 
 // Error 实现error接口

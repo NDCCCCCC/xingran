@@ -25,8 +25,8 @@ func NewPostServiceWithCache(
 ) PostService {
 	base := &postService{db: db}
 	return &postCacheService{
-		postService: base,
-		cache:       cache,
+		postService:      base,
+		cache:            cache,
 		CacheServiceBase: CacheServiceBase{Config: config},
 	}
 }

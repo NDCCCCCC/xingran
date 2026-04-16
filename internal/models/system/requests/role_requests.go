@@ -46,29 +46,29 @@ func (p *RoleListParams) GetOffset() int {
 
 // RoleCreateRequest 创建角色请求
 type RoleCreateRequest struct {
-	RoleName          string             `json:"roleName" binding:"required"`
-	RoleKey           string             `json:"roleKey" binding:"required"`
-	RoleSort          int                `json:"roleSort"`
-	DataScope         models.DataScope   `json:"dataScope"`
-	MenuCheckStrictly *bool              `json:"menuCheckStrictly"`
-	DeptCheckStrictly *bool              `json:"deptCheckStrictly"`
-	Status            models.RoleStatus  `json:"status"`
-	Remark            *string            `json:"remark"`
-	MenuIds           []string           `json:"menuIds"`
-	DeptIds           []string           `json:"deptIds"`
+	RoleName          string            `json:"roleName" binding:"required"`
+	RoleKey           string            `json:"roleKey" binding:"required"`
+	RoleSort          int               `json:"roleSort"`
+	DataScope         models.DataScope  `json:"dataScope"`
+	MenuCheckStrictly *bool             `json:"menuCheckStrictly"`
+	DeptCheckStrictly *bool             `json:"deptCheckStrictly"`
+	Status            models.RoleStatus `json:"status"`
+	Remark            *string           `json:"remark"`
+	MenuIds           []string          `json:"menuIds"`
+	DeptIds           []string          `json:"deptIds"`
 }
 
 // RoleUpdateRequest 更新角色请求
 type RoleUpdateRequest struct {
-	ID                string             `json:"id" binding:"required"`
-	RoleName          string             `json:"roleName" binding:"required"`
-	RoleKey           string             `json:"roleKey" binding:"required"`
-	RoleSort          int                `json:"roleSort"`
-	DataScope         models.DataScope   `json:"dataScope"`
-	MenuCheckStrictly *bool              `json:"menuCheckStrictly"`
-	DeptCheckStrictly *bool              `json:"deptCheckStrictly"`
-	Status            models.RoleStatus  `json:"status"`
-	Remark            *string            `json:"remark"`
-	MenuIds           []string           `json:"menuIds"`
-	DeptIds           []string           `json:"deptIds"`
+	ID                string            `json:"id" binding:"required"`
+	RoleName          string            `json:"roleName" binding:"required"`
+	RoleKey           string            `json:"roleKey" binding:"required"`
+	RoleSort          int               `json:"roleSort"`
+	DataScope         models.DataScope  `json:"dataScope"`
+	MenuCheckStrictly *bool             `json:"menuCheckStrictly"`
+	DeptCheckStrictly *bool             `json:"deptCheckStrictly"`
+	Status            models.RoleStatus `json:"status"`
+	Remark            *string           `json:"remark"`
+	MenuIds           []string          `json:"menuIds"`
+	DeptIds           []string          `json:"deptIds"`
 }

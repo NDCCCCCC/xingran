@@ -29,16 +29,16 @@ type TaskService interface {
 
 // taskServiceImpl 任务服务实现
 type taskServiceImpl struct {
-	db              *gorm.DB
-	cache           cache.Cache
+	db                *gorm.DB
+	cache             cache.Cache
 	credentialService CredentialService
 }
 
 // NewTaskService 创建任务服务
 func NewTaskService(db *gorm.DB, cacheInstance cache.Cache, credService CredentialService) TaskService {
 	return &taskServiceImpl{
-		db:               db,
-		cache:            cacheInstance,
+		db:                db,
+		cache:             cacheInstance,
 		credentialService: credService,
 	}
 }
@@ -58,17 +58,17 @@ type WorkerAction struct {
 
 // TaskMessage 发布到Redis的任务消息格式
 type TaskMessage struct {
-	ExecutionID string         `json:"executionId"`
-	TaskID      string         `json:"taskId"`
-	TaskName    string         `json:"taskName"`
-	TargetURL   string         `json:"targetUrl"`
-	Script      []WorkerAction `json:"script"` // 使用 WorkerAction 格式
-	Timeout     time.Duration  `json:"timeout"`
-	MaxRetry    int            `json:"maxRetry"`
+	ExecutionID string                 `json:"executionId"`
+	TaskID      string                 `json:"taskId"`
+	TaskName    string                 `json:"taskName"`
+	TargetURL   string                 `json:"targetUrl"`
+	Script      []WorkerAction         `json:"script"` // 使用 WorkerAction 格式
+	Timeout     time.Duration          `json:"timeout"`
+	MaxRetry    int                    `json:"maxRetry"`
 	Variables   map[string]interface{} `json:"inputParams"`
-	TriggeredBy string         `json:"triggeredBy"`
-	TriggerType string         `json:"triggerType"`
-	CreatedAt   time.Time      `json:"createdAt"`
+	TriggeredBy string                 `json:"triggeredBy"`
+	TriggerType string                 `json:"triggerType"`
+	CreatedAt   time.Time              `json:"createdAt"`
 
 	// 自动登录相关
 	CredentialID string                 `json:"credentialId,omitempty"`
@@ -85,13 +85,13 @@ func (s *taskServiceImpl) Create(ctx context.Context, req *CreateTaskRequest, us
 	}
 
 	task := &rpamodels.Task{
-		TaskName:   req.Name,
+		TaskName:    req.Name,
 		Description: req.Description,
-		Script:     scriptJSON,
-		Timeout:    req.Timeout,
-		RetryCount: req.MaxRetry,
-		Priority:   rpamodels.TaskPriority(req.Priority),
-		Status:     rpamodels.TaskStatus(req.Status),
+		Script:      scriptJSON,
+		Timeout:     req.Timeout,
+		RetryCount:  req.MaxRetry,
+		Priority:    rpamodels.TaskPriority(req.Priority),
+		Status:      rpamodels.TaskStatus(req.Status),
 	}
 
 	if err := s.db.WithContext(ctx).Create(task).Error; err != nil {
@@ -255,17 +255,17 @@ func (s *taskServiceImpl) publishTaskToRedis(
 
 	// 构建任务消息
 	message := TaskMessage{
-		ExecutionID: executionID,
-		TaskID:      task.ID,
-		TaskName:    task.TaskName,
-		TargetURL:   targetURL,
-		Script:      workerActions, // 使用转换后的格式
-		Timeout:     time.Duration(task.Timeout) * time.Second,
-		MaxRetry:    task.RetryCount,
-		Variables:   inputParams,
-		TriggeredBy: userID,
-		TriggerType: "manual",
-		CreatedAt:   time.Now(),
+		ExecutionID:  executionID,
+		TaskID:       task.ID,
+		TaskName:     task.TaskName,
+		TargetURL:    targetURL,
+		Script:       workerActions, // 使用转换后的格式
+		Timeout:      time.Duration(task.Timeout) * time.Second,
+		MaxRetry:     task.RetryCount,
+		Variables:    inputParams,
+		TriggeredBy:  userID,
+		TriggerType:  "manual",
+		CreatedAt:    time.Now(),
 		CredentialID: credentialID,
 	}
 
@@ -296,12 +296,12 @@ func (s *taskServiceImpl) publishTaskToRedis(
 				if err == nil {
 					message.CredentialID = cred.ID
 					message.Variables["__credentials"] = map[string]interface{}{
-						"username": credData.Username,
-						"password": credData.Password,
+						"username":  credData.Username,
+						"password":  credData.Password,
 						"extraData": credData.ExtraData,
 					}
-					// 更新最后使用时间
-					s.credentialService.UpdateLastUsed(ctx, cred.ID)
+					// 更新最后使用时间（尽力而为）
+					_ = s.credentialService.UpdateLastUsed(ctx, cred.ID)
 				}
 			}
 		}

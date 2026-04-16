@@ -77,9 +77,9 @@ func executePeriodicWorkOrderCreateTask(ctx context.Context, params map[string]i
 			Priority:       template.Priority,
 			Status:         models.WorkOrderStatusPending, // 待处理
 			Description:    template.Description,
-			SubmitterID:    systemUser.ID,  // 系统创建用户ID
-			IsAutoAssigned: true,            // 标记为自动分配
-			AssignStrategy: "assign_one",    // 默认分配策略
+			SubmitterID:    systemUser.ID, // 系统创建用户ID
+			IsAutoAssigned: true,          // 标记为自动分配
+			AssignStrategy: "assign_one",  // 默认分配策略
 		}
 
 		// 根据分配类型获取处理人

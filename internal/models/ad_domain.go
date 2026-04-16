@@ -180,20 +180,20 @@ const (
 
 // ADSyncLog 同步日志
 type ADSyncLog struct {
-	ID         string       `gorm:"primaryKey;type:uuid" json:"id"`
-	ADConfigID string       `gorm:"type:uuid;not null;index:idx_ad_sync_log_config,priority:1" json:"adConfigId"`
-	SyncType   ADSyncType   `gorm:"size:50;not null" json:"syncType"`
-	SyncStatus ADSyncStatus `gorm:"size:20;not null" json:"syncStatus"`
-	StartTime  time.Time    `gorm:"not null;index:idx_ad_sync_log_time,priority:2" json:"startTime"`
-	EndTime    *time.Time   `json:"endTime,omitempty"`
-	Duration   int          `json:"duration,omitempty"` // 秒
-	OUCount      int          `gorm:"default:0" json:"ouCount"`
-	GroupCount   int          `gorm:"default:0" json:"groupCount"`
-	UserCount    int          `gorm:"default:0" json:"userCount"`
+	ID            string       `gorm:"primaryKey;type:uuid" json:"id"`
+	ADConfigID    string       `gorm:"type:uuid;not null;index:idx_ad_sync_log_config,priority:1" json:"adConfigId"`
+	SyncType      ADSyncType   `gorm:"size:50;not null" json:"syncType"`
+	SyncStatus    ADSyncStatus `gorm:"size:20;not null" json:"syncStatus"`
+	StartTime     time.Time    `gorm:"not null;index:idx_ad_sync_log_time,priority:2" json:"startTime"`
+	EndTime       *time.Time   `json:"endTime,omitempty"`
+	Duration      int          `json:"duration,omitempty"` // 秒
+	OUCount       int          `gorm:"default:0" json:"ouCount"`
+	GroupCount    int          `gorm:"default:0" json:"groupCount"`
+	UserCount     int          `gorm:"default:0" json:"userCount"`
 	ComputerCount int          `gorm:"default:0" json:"computerCount"`
-	ErrorCount   int          `gorm:"default:0" json:"errorCount"`
-	ErrorMsg     string       `gorm:"type:text;column:error_msg" json:"errorMessage,omitempty"`
-	CreatedAt    time.Time    `json:"createdAt"`
+	ErrorCount    int          `gorm:"default:0" json:"errorCount"`
+	ErrorMsg      string       `gorm:"type:text;column:error_msg" json:"errorMessage,omitempty"`
+	CreatedAt     time.Time    `json:"createdAt"`
 }
 
 // BeforeCreate GORM钩子

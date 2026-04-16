@@ -2,8 +2,8 @@ package monitor
 
 import (
 	"github.com/gin-gonic/gin"
-	monitorServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/monitor"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
+	monitorServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/monitor"
 )
 
 // SetupLoginLogRouter 设置登录日志路由

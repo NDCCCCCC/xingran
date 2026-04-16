@@ -1,12 +1,11 @@
 package system
 
 import (
-
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
 // 常量定义
@@ -90,7 +89,7 @@ func (h *MenuHandler) GetTree(c *gin.Context) {
 // @Router /system/menus/list [post]
 func (h *MenuHandler) List(c *gin.Context) {
 	var req requests.MenuListParams
-	c.ShouldBindJSON(&req)
+	_ = c.ShouldBindJSON(&req)
 
 	result, err := h.service.List(c.Request.Context(), req)
 	if err != nil {
@@ -216,8 +215,8 @@ func (h *MenuHandler) Delete(c *gin.Context) {
 // @Router /system/menus/batch [post]
 func (h *MenuHandler) BatchDelete(c *gin.Context) {
 	var req struct {
-		IDs      []string `json:"ids" binding:"required,min=1"`
-		Cascade  bool     `json:"cascade"`
+		IDs     []string `json:"ids" binding:"required,min=1"`
+		Cascade bool     `json:"cascade"`
 	}
 
 	if !h.bindAndValidate(c, &req) {

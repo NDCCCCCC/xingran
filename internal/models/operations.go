@@ -69,23 +69,23 @@ const (
 
 type RoomDevice struct {
 	BaseModel
-	Name             string           `gorm:"size:100;not null" json:"name"`
-	DeviceType       string           `gorm:"size:50;not null" json:"deviceType"`
-	Model            *string          `gorm:"size:100" json:"model,omitempty"`
-	Vendor           *string          `gorm:"size:100" json:"vendor,omitempty"`
-	SerialNumber     *string          `gorm:"size:100" json:"serialNumber,omitempty"`
-	RoomID           string           `gorm:"size:64" json:"roomId"`
-	RoomName         *string          `gorm:"size:100" json:"roomName,omitempty"`
-	PositionU        int              `gorm:"default:0" json:"positionU"`
-	PositionDesc     *string          `gorm:"size:200" json:"positionDesc,omitempty"`
-	AssetNumber      *string          `gorm:"size:100" json:"assetNumber,omitempty"`
-	PurchaseDate     *string          `gorm:"size:50" json:"purchaseDate,omitempty"`
-	WarrantyDate     *string          `gorm:"size:50" json:"warrantyDate,omitempty"`
-	Status           int              `gorm:"default:0" json:"status"`
-	ResponsibleID    *string          `gorm:"size:64" json:"responsibleId,omitempty"`
-	ResponsibleName  *string          `gorm:"size:100" json:"responsibleName,omitempty"`
-	PowerConsumption *float64         `gorm:"default:0" json:"powerConsumption,omitempty"`
-	Remark           *string          `gorm:"size:500" json:"remark,omitempty"`
+	Name             string   `gorm:"size:100;not null" json:"name"`
+	DeviceType       string   `gorm:"size:50;not null" json:"deviceType"`
+	Model            *string  `gorm:"size:100" json:"model,omitempty"`
+	Vendor           *string  `gorm:"size:100" json:"vendor,omitempty"`
+	SerialNumber     *string  `gorm:"size:100" json:"serialNumber,omitempty"`
+	RoomID           string   `gorm:"size:64" json:"roomId"`
+	RoomName         *string  `gorm:"size:100" json:"roomName,omitempty"`
+	PositionU        int      `gorm:"default:0" json:"positionU"`
+	PositionDesc     *string  `gorm:"size:200" json:"positionDesc,omitempty"`
+	AssetNumber      *string  `gorm:"size:100" json:"assetNumber,omitempty"`
+	PurchaseDate     *string  `gorm:"size:50" json:"purchaseDate,omitempty"`
+	WarrantyDate     *string  `gorm:"size:50" json:"warrantyDate,omitempty"`
+	Status           int      `gorm:"default:0" json:"status"`
+	ResponsibleID    *string  `gorm:"size:64" json:"responsibleId,omitempty"`
+	ResponsibleName  *string  `gorm:"size:100" json:"responsibleName,omitempty"`
+	PowerConsumption *float64 `gorm:"default:0" json:"powerConsumption,omitempty"`
+	Remark           *string  `gorm:"size:500" json:"remark,omitempty"`
 }
 
 func (RoomDevice) TableName() string {

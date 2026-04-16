@@ -20,8 +20,8 @@ const (
 
 // LogFilterConfig 日志过滤配置
 type LogFilterConfig struct {
-	MinLevel     logger.LogLevel   // 最小日志级别（低于此级别的不输出）
-	FilterTypes  map[LogType]bool  // 要过滤的日志类型（true = 过滤掉，false = 保留）
+	MinLevel      logger.LogLevel  // 最小日志级别（低于此级别的不输出）
+	FilterTypes   map[LogType]bool // 要过滤的日志类型（true = 过滤掉，false = 保留）
 	SlowThreshold int              // 慢查询阈值（毫秒），0 表示不启用
 }
 

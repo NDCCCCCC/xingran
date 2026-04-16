@@ -238,10 +238,10 @@ func GetEntityStatusOptions(entityType string) gin.HandlerFunc {
 			}
 		case "roomDevice":
 			options = []map[string]interface{}{
-			{"value": 0, "label": "正常"},
-			{"value": 1, "label": "故障"},
-			{"value": 2, "label": "报废"},
-		}
+				{"value": 0, "label": "正常"},
+				{"value": 1, "label": "故障"},
+				{"value": 2, "label": "报废"},
+			}
 		case "dedicatedLine":
 			options = []map[string]interface{}{
 				{"value": int(operations.LineStatusNormal), "label": "正常"},

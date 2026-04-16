@@ -46,18 +46,18 @@ func (p *PostListParams) GetOffset() int {
 
 // PostCreateRequest 创建岗位请求
 type PostCreateRequest struct {
-	PostCode string             `json:"postCode" binding:"required"`
-	PostName string             `json:"postName" binding:"required"`
-	PostSort int                `json:"postSort"`
-	Status   models.PostStatus  `json:"status"`
-	Remark   *string            `json:"remark"`
+	PostCode string            `json:"postCode" binding:"required"`
+	PostName string            `json:"postName" binding:"required"`
+	PostSort int               `json:"postSort"`
+	Status   models.PostStatus `json:"status"`
+	Remark   *string           `json:"remark"`
 }
 
 // PostUpdateRequest 更新岗位请求
 type PostUpdateRequest struct {
-	ID       string             `json:"id" binding:"required"`
-	PostName string             `json:"postName" binding:"required"`
-	PostSort int                `json:"postSort"`
-	Status   models.PostStatus  `json:"status"`
-	Remark   *string            `json:"remark"`
+	ID       string            `json:"id" binding:"required"`
+	PostName string            `json:"postName" binding:"required"`
+	PostSort int               `json:"postSort"`
+	Status   models.PostStatus `json:"status"`
+	Remark   *string           `json:"remark"`
 }

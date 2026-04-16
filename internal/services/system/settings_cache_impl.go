@@ -24,8 +24,8 @@ func NewSettingsServiceWithCache(
 ) SettingsService {
 	base := &settingsService{db: db}
 	return &settingsCacheService{
-		settingsService: base,
-		cache:           cache,
+		settingsService:  base,
+		cache:            cache,
 		CacheServiceBase: CacheServiceBase{Config: config},
 	}
 }

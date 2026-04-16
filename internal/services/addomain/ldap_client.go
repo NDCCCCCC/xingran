@@ -17,8 +17,8 @@ const (
 	minPageSize = 100
 
 	// 用户账户控制值
-	uacNormalAccount      = "512" // NORMAL_ACCOUNT
-	uacDisabledAccount    = "514" // NORMAL_ACCOUNT | ACCOUNTDISABLE
+	uacNormalAccount   = "512" // NORMAL_ACCOUNT
+	uacDisabledAccount = "514" // NORMAL_ACCOUNT | ACCOUNTDISABLE
 )
 
 // LDAPClient LDAP客户端封装
@@ -60,9 +60,9 @@ func (c *LDAPClient) dialConnection(address string) (*ldap.Conn, error) {
 
 	switch {
 	case c.config.UseSSL:
-		return ldap.DialTLS("tcp", address, tlsConfig)
+		return ldap.DialURL("ldaps://"+address, ldap.DialWithTLSConfig(tlsConfig))
 	case c.config.UseTLS:
-		conn, err := ldap.Dial("tcp", address)
+		conn, err := ldap.DialURL("ldap://" + address)
 		if err != nil {
 			return nil, err
 		}
@@ -72,7 +72,7 @@ func (c *LDAPClient) dialConnection(address string) (*ldap.Conn, error) {
 		}
 		return conn, nil
 	default:
-		return ldap.Dial("tcp", address)
+		return ldap.DialURL("ldap://" + address)
 	}
 }
 

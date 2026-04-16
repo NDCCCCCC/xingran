@@ -148,10 +148,10 @@ func (m *mockCache) GetCount() int64 {
 func TestL2WriteWorker_BasicOperations(t *testing.T) {
 	cache := &mockCache{}
 	config := &L2WriterConfig{
-		WorkerCount:         2,
-		QueueSize:           100,
-		EnqueueTimeout:      100 * time.Millisecond,
-		WriteTimeout:        1 * time.Second,
+		WorkerCount:          2,
+		QueueSize:            100,
+		EnqueueTimeout:       100 * time.Millisecond,
+		WriteTimeout:         1 * time.Second,
 		FallbackWriteTimeout: 500 * time.Millisecond,
 	}
 
@@ -230,10 +230,10 @@ func TestL2WriteWorker_QueueFull(t *testing.T) {
 	slowCache := &mockCache{delay: 500 * time.Millisecond}
 
 	config := &L2WriterConfig{
-		WorkerCount:         1,
-		QueueSize:           1, // 队列大小为1
-		EnqueueTimeout:      100 * time.Millisecond,
-		WriteTimeout:        1000 * time.Millisecond,
+		WorkerCount:          1,
+		QueueSize:            1, // 队列大小为1
+		EnqueueTimeout:       100 * time.Millisecond,
+		WriteTimeout:         1000 * time.Millisecond,
 		FallbackWriteTimeout: 100 * time.Millisecond,
 	}
 
@@ -244,13 +244,13 @@ func TestL2WriteWorker_QueueFull(t *testing.T) {
 	ctx := context.Background()
 
 	// 入队一个任务，队列将满（1个在队列中，1个在worker处理）
-	worker.Enqueue(ctx, slowCache, "key1", "value1", time.Minute)
+	_ = worker.Enqueue(ctx, slowCache, "key1", "value1", time.Minute)
 
 	// 稍等一下，让worker开始处理第一个任务
 	time.Sleep(50 * time.Millisecond)
 
 	// 快速入队第二个任务，填满队列
-	worker.Enqueue(ctx, slowCache, "key2", "value2", time.Minute)
+	_ = worker.Enqueue(ctx, slowCache, "key2", "value2", time.Minute)
 
 	// 队列已满，第三次入队应该超时
 	start := time.Now()
@@ -271,10 +271,10 @@ func TestL2WriteWorker_QueueFull(t *testing.T) {
 func TestL2WriteWorker_ContextCancellation(t *testing.T) {
 	slowCache := &mockCache{delay: 500 * time.Millisecond}
 	config := &L2WriterConfig{
-		WorkerCount:         1,
-		QueueSize:           1, // 小队列
-		EnqueueTimeout:      5 * time.Second, // 长超时
-		WriteTimeout:        1000 * time.Millisecond,
+		WorkerCount:          1,
+		QueueSize:            1,               // 小队列
+		EnqueueTimeout:       5 * time.Second, // 长超时
+		WriteTimeout:         1000 * time.Millisecond,
 		FallbackWriteTimeout: 100 * time.Millisecond,
 	}
 
@@ -284,8 +284,8 @@ func TestL2WriteWorker_ContextCancellation(t *testing.T) {
 
 	// 填满队列
 	ctx := context.Background()
-	worker.Enqueue(ctx, slowCache, "key1", "value1", time.Minute)
-	worker.Enqueue(ctx, slowCache, "key2", "value2", time.Minute)
+	_ = worker.Enqueue(ctx, slowCache, "key1", "value1", time.Minute)
+	_ = worker.Enqueue(ctx, slowCache, "key2", "value2", time.Minute)
 
 	// 创建会被取消的上下文
 	cancelCtx, cancel := context.WithCancel(context.Background())
@@ -315,10 +315,10 @@ func TestL2WriteWorker_ContextCancellation(t *testing.T) {
 func TestL2WriteWorker_GracefulShutdown(t *testing.T) {
 	cache := &mockCache{}
 	config := &L2WriterConfig{
-		WorkerCount:         1,
-		QueueSize:           10,
-		EnqueueTimeout:      100 * time.Millisecond,
-		WriteTimeout:        100 * time.Millisecond,
+		WorkerCount:          1,
+		QueueSize:            10,
+		EnqueueTimeout:       100 * time.Millisecond,
+		WriteTimeout:         100 * time.Millisecond,
 		FallbackWriteTimeout: 100 * time.Millisecond,
 	}
 
@@ -329,7 +329,7 @@ func TestL2WriteWorker_GracefulShutdown(t *testing.T) {
 
 	// 入队多个任务
 	for i := 0; i < 5; i++ {
-		worker.Enqueue(ctx, cache, "key", "value", time.Minute)
+		_ = worker.Enqueue(ctx, cache, "key", "value", time.Minute)
 	}
 
 	// 停止worker，应该处理完队列中剩余任务
@@ -357,10 +357,10 @@ func TestL2WriteWorker_GracefulShutdown(t *testing.T) {
 func TestL2WriteWorker_ConcurrentAccess(t *testing.T) {
 	cache := &mockCache{}
 	config := &L2WriterConfig{
-		WorkerCount:         5,
-		QueueSize:           1000,
-		EnqueueTimeout:      1 * time.Second,
-		WriteTimeout:        100 * time.Millisecond,
+		WorkerCount:          5,
+		QueueSize:            1000,
+		EnqueueTimeout:       1 * time.Second,
+		WriteTimeout:         100 * time.Millisecond,
 		FallbackWriteTimeout: 100 * time.Millisecond,
 	}
 
@@ -419,7 +419,7 @@ func TestL2WriteWorker_Statistics(t *testing.T) {
 
 	// 执行一些操作
 	for i := 0; i < 5; i++ {
-		worker.Enqueue(ctx, cache, "key", "value", time.Minute)
+		_ = worker.Enqueue(ctx, cache, "key", "value", time.Minute)
 	}
 
 	// 等待处理
@@ -473,20 +473,20 @@ func TestL2WriteWorker_ConfigNormalization(t *testing.T) {
 		{
 			name: "零值配置",
 			input: &L2WriterConfig{
-				WorkerCount:         0,
-				QueueSize:           0,
-				EnqueueTimeout:      0,
-				WriteTimeout:        0,
+				WorkerCount:          0,
+				QueueSize:            0,
+				EnqueueTimeout:       0,
+				WriteTimeout:         0,
 				FallbackWriteTimeout: 0,
 			},
 		},
 		{
 			name: "负值配置",
 			input: &L2WriterConfig{
-				WorkerCount:         -1,
-				QueueSize:           -1,
-				EnqueueTimeout:      -1,
-				WriteTimeout:        -1,
+				WorkerCount:          -1,
+				QueueSize:            -1,
+				EnqueueTimeout:       -1,
+				WriteTimeout:         -1,
 				FallbackWriteTimeout: -1,
 			},
 		},
@@ -519,9 +519,9 @@ func TestL2WriteWorker_ConfigNormalization(t *testing.T) {
 // TestL2WriteWorker_GetFallbackTimeout 测试获取降级超时
 func TestL2WriteWorker_GetFallbackTimeout(t *testing.T) {
 	tests := []struct {
-		name              string
-		config            *L2WriterConfig
-		expectedTimeout   time.Duration
+		name            string
+		config          *L2WriterConfig
+		expectedTimeout time.Duration
 	}{
 		{
 			name: "自定义配置",
@@ -531,9 +531,9 @@ func TestL2WriteWorker_GetFallbackTimeout(t *testing.T) {
 			expectedTimeout: 2 * time.Second,
 		},
 		{
-			name:              "nil配置",
-			config:            nil,
-			expectedTimeout:   DefaultFallbackWriteTimeout,
+			name:            "nil配置",
+			config:          nil,
+			expectedTimeout: DefaultFallbackWriteTimeout,
 		},
 		{
 			name: "零值配置",
@@ -563,10 +563,10 @@ func TestMultiLevelCache_L2WriterIntegration(t *testing.T) {
 	l2Cache := &mockCache{}
 
 	config := &L2WriterConfig{
-		WorkerCount:         2,
-		QueueSize:           100,
-		EnqueueTimeout:      100 * time.Millisecond,
-		WriteTimeout:        500 * time.Millisecond,
+		WorkerCount:          2,
+		QueueSize:            100,
+		EnqueueTimeout:       100 * time.Millisecond,
+		WriteTimeout:         500 * time.Millisecond,
 		FallbackWriteTimeout: 200 * time.Millisecond,
 	}
 

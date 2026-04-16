@@ -189,13 +189,6 @@ const (
 	oidSysName     = "1.3.6.1.2.1.1.5.0" // 系统名称
 	oidSysLocation = "1.3.6.1.2.1.1.6.0" // 系统位置
 
-	// 接口信息 OIDs
-	oidIfNumber      = "1.3.6.1.2.1.2.1.0"   // 接口数量
-	oidIfDescr       = "1.3.6.1.2.1.2.2.1.2" // 接口描述
-	oidIfType        = "1.3.6.1.2.1.2.2.1.3" // 接口类型
-	oidIfSpeed       = "1.3.6.1.2.1.2.2.1.5" // 接口速率
-	oidIfAdminStatus = "1.3.6.1.2.1.2.2.1.7" // 接口管理状态
-	oidIfOperStatus  = "1.3.6.1.2.1.2.2.1.8" // 接口操作状态
 )
 
 // SystemInfo 系统信息
@@ -562,7 +555,7 @@ func PingCheck(ip string, timeout time.Duration) bool {
 	defer conn.Close()
 
 	// 设置超时
-	conn.SetDeadline(time.Now().Add(timeout))
+	_ = conn.SetDeadline(time.Now().Add(timeout))
 
 	return true
 }

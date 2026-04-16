@@ -28,12 +28,12 @@ const (
 	CacheConfigDictData = "cache.dict.data" // 字典数据缓存时间（分钟）
 
 	// 用户缓存时间配置
-	CacheConfigUserList      = "cache.user.list"       // 用户列表缓存时间（分钟）
-	CacheConfigUserByID      = "cache.user.byid"       // 用户详情缓存时间（分钟）
+	CacheConfigUserList       = "cache.user.list"       // 用户列表缓存时间（分钟）
+	CacheConfigUserByID       = "cache.user.byid"       // 用户详情缓存时间（分钟）
 	CacheConfigUserByUsername = "cache.user.byusername" // 用户名查询缓存时间（分钟）
-	CacheConfigUserByDept     = "cache.user.bydept"    // 用户部门缓存时间（分钟）
-	CacheConfigUserRoles      = "cache.user.roles"     // 用户角色缓存时间（分钟）
-	CacheConfigUserPosts      = "cache.user.posts"     // 用户岗位缓存时间（分钟）
+	CacheConfigUserByDept     = "cache.user.bydept"     // 用户部门缓存时间（分钟）
+	CacheConfigUserRoles      = "cache.user.roles"      // 用户角色缓存时间（分钟）
+	CacheConfigUserPosts      = "cache.user.posts"      // 用户岗位缓存时间（分钟）
 
 	// 菜单缓存时间配置
 	CacheConfigMenuTree   = "cache.menu.tree"   // 菜单树缓存时间（分钟）
@@ -45,7 +45,7 @@ const (
 	CacheConfigPostEnabled = "cache.post.enabled" // 启用岗位缓存时间（分钟）
 
 	// 系统配置缓存时间配置
-	CacheConfigConfigAll  = "cache.config.all"  // 所有配置缓存时间（分钟）
+	CacheConfigConfigAll   = "cache.config.all"   // 所有配置缓存时间（分钟）
 	CacheConfigConfigByID  = "cache.config.byid"  // 配置详情缓存时间（分钟）
 	CacheConfigConfigByKey = "cache.config.bykey" // 配置键查询缓存时间（分钟）
 
@@ -67,7 +67,7 @@ const (
 	CacheConfigDutyHolidays = "cache.duty.holidays" // 节假日数据缓存时间（分钟）
 
 	// 工单管理缓存时间配置
-	CacheConfigWorkorderMyPending  = "cache.workorder.my_pending"  // 待办工单缓存时间（分钟）
+	CacheConfigWorkorderMyPending  = "cache.workorder.my_pending" // 待办工单缓存时间（分钟）
 	CacheConfigWorkorderStatistics = "cache.workorder.statistics" // 统计数据缓存时间（分钟）
 
 	// 通知公告缓存时间配置
@@ -187,40 +187,40 @@ func (s *CacheConfigService) LoadConfigs(ctx context.Context) error {
 // setDefaultsIfNeeded 设置默认配置
 func (s *CacheConfigService) setDefaultsIfNeeded(_ context.Context) {
 	defaults := map[string]int{
-		CacheConfigDeptTree:        30,
-		CacheConfigDeptList:        30,
-		CacheConfigDeptSelect:      30,
-		CacheConfigRoleMenus:       30,
-		CacheConfigRoleDepts:       30,
-		CacheConfigDictType:        60,
-		CacheConfigDictData:        30,
-		CacheConfigUserList:        10,
-		CacheConfigUserByID:        30,
-		CacheConfigUserByUsername:  30,
-		CacheConfigUserByDept:      10,
-		CacheConfigUserRoles:       30,
-		CacheConfigUserPosts:       30,
-		CacheConfigMenuTree:        30,
-		CacheConfigMenuRouter:      30,
-		CacheConfigMenuAll:         30,
-		CacheConfigPostAll:         30,
-		CacheConfigPostEnabled:     30,
-		CacheConfigConfigAll:       30,
-		CacheConfigConfigByID:      30,
-		CacheConfigConfigByKey:     30,
-		CacheConfigSettingsUser:    15,
-		CacheConfigFloorTree:       30,
-		CacheConfigFloorBuilding:   15,
-		CacheConfigKBCategory:      30,
-		CacheConfigKBTags:          30,
-		CacheConfigKBArticle:       10,
-		CacheConfigDutyToday:       5,
-		CacheConfigDutyMonthly:     30,
-		CacheConfigDutyHolidays:    60,
-		CacheConfigWorkorderMyPending: 2,
-		CacheConfigWorkorderStatistics: 5,
-		CacheConfigNoticeMyNotices:     1,
-		CacheConfigNoticeUnreadCount:   0, // 30秒
+		CacheConfigDeptTree:                30,
+		CacheConfigDeptList:                30,
+		CacheConfigDeptSelect:              30,
+		CacheConfigRoleMenus:               30,
+		CacheConfigRoleDepts:               30,
+		CacheConfigDictType:                60,
+		CacheConfigDictData:                30,
+		CacheConfigUserList:                10,
+		CacheConfigUserByID:                30,
+		CacheConfigUserByUsername:          30,
+		CacheConfigUserByDept:              10,
+		CacheConfigUserRoles:               30,
+		CacheConfigUserPosts:               30,
+		CacheConfigMenuTree:                30,
+		CacheConfigMenuRouter:              30,
+		CacheConfigMenuAll:                 30,
+		CacheConfigPostAll:                 30,
+		CacheConfigPostEnabled:             30,
+		CacheConfigConfigAll:               30,
+		CacheConfigConfigByID:              30,
+		CacheConfigConfigByKey:             30,
+		CacheConfigSettingsUser:            15,
+		CacheConfigFloorTree:               30,
+		CacheConfigFloorBuilding:           15,
+		CacheConfigKBCategory:              30,
+		CacheConfigKBTags:                  30,
+		CacheConfigKBArticle:               10,
+		CacheConfigDutyToday:               5,
+		CacheConfigDutyMonthly:             30,
+		CacheConfigDutyHolidays:            60,
+		CacheConfigWorkorderMyPending:      2,
+		CacheConfigWorkorderStatistics:     5,
+		CacheConfigNoticeMyNotices:         1,
+		CacheConfigNoticeUnreadCount:       0, // 30秒
 		CacheConfigNetworkDeviceStatistics: 3,
 		CacheConfigNetworkDeviceDept:       5,
 		CacheConfigNetworkDeviceCredential: 5,

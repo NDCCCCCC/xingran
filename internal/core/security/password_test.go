@@ -72,8 +72,8 @@ func TestPasswordManager_VerifyInvalidFormat(t *testing.T) {
 		"",
 		"invalid",
 		"$invalid$format",
-		"$sm3$100$salt",   // 缺少哈希值
-		"$sm3$100",         // 缺少盐和哈希
+		"$sm3$100$salt", // 缺少哈希值
+		"$sm3$100",      // 缺少盐和哈希
 	}
 
 	for _, hash := range invalidHashes {

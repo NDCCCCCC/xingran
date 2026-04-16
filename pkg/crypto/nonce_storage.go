@@ -97,19 +97,6 @@ func (s *syncMapNonceStorage) CheckAndStore(nonce string, timestamp int64) bool 
 	return true
 }
 
-// cleanupExpiredNonces 清理过期的 nonce
-func (s *syncMapNonceStorage) cleanupExpiredNonces() {
-	now := time.Now().Unix()
-	s.nonces.Range(func(key, value interface{}) bool {
-		if ts, ok := value.(int64); ok {
-			if now-ts > maxTimeDiff*2 {
-				s.nonces.Delete(key)
-			}
-		}
-		return true
-	})
-}
-
 // GetNonceCount 获取当前存储的 nonce 数量（用于监控）
 func (s *shardedNonceStorage) GetNonceCount() int {
 	count := 0

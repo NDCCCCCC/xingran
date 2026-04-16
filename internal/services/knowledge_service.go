@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -509,7 +510,9 @@ func (s *KnowledgeService) GetKnowledgeCategoryList(ctx context.Context, req *Kn
 
 	// 递归加载子分类
 	for i := range list {
-		s.loadKnowledgeChildrenCategories(ctx, &list[i])
+		if err := s.loadKnowledgeChildrenCategories(ctx, &list[i]); err != nil {
+			applogger.Warnf("加载知识库分类 %s 的子分类失败: %v", list[i].ID, err)
+		}
 	}
 
 	return list, nil
@@ -530,7 +533,9 @@ func (s *KnowledgeService) loadKnowledgeChildrenCategories(ctx context.Context, 
 
 	// 递归加载子分类的子分类
 	for i := range children {
-		s.loadKnowledgeChildrenCategories(ctx, &children[i])
+		if err := s.loadKnowledgeChildrenCategories(ctx, &children[i]); err != nil {
+			applogger.Warnf("加载知识库子分类 %s 递归失败: %v", children[i].ID, err)
+		}
 	}
 
 	return nil

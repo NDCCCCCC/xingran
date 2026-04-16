@@ -3,10 +3,10 @@ package rpa
 import (
 	"context"
 	"fmt"
-	"time"
 	rpamodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/rpa"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/websocket"
 	"gorm.io/gorm"
+	"time"
 )
 
 // ExecutionService 执行记录服务接口
@@ -23,8 +23,8 @@ type ExecutionService interface {
 
 // executionServiceImpl 执行记录服务实现
 type executionServiceImpl struct {
-	db         *gorm.DB
-	noticeHub  *websocket.NoticeHub
+	db        *gorm.DB
+	noticeHub *websocket.NoticeHub
 }
 
 // NewExecutionService 创建执行记录服务

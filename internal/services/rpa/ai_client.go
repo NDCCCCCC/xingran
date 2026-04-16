@@ -39,8 +39,8 @@ type Message struct {
 // Call 调用 OpenAI 兼容 API
 func (c *AIClient) Call(ctx context.Context, messages []Message) (string, error) {
 	reqBody := map[string]interface{}{
-		"model":    c.model,
-		"messages": messages,
+		"model":      c.model,
+		"messages":   messages,
 		"max_tokens": c.maxTokens,
 	}
 

@@ -39,7 +39,9 @@ func (w *responseWriter) WriteString(s string) (int, error) {
 // writeBuffer 原子性地写入缓冲区内容（只执行一次）
 func (w *responseWriter) writeBuffer() {
 	if atomic.CompareAndSwapInt32(&w.written, 0, 1) {
-		w.ResponseWriter.Write(w.buffer.Bytes())
+		if _, err := w.ResponseWriter.Write(w.buffer.Bytes()); err != nil {
+			applogger.Warnf("写入响应缓冲区失败: %v", err)
+		}
 	}
 }
 
@@ -62,9 +64,9 @@ func ResponseEncryption(encryptor *crypto.RequestEncryptor, config *ResponseEncr
 		// 调试日志：记录所有请求路径（用于排查加密问题）
 		if c.Request.URL.Path != "/api/v1/ad-domain/configs/list" {
 			applogger.WithFields(map[string]interface{}{
-				"path":         c.Request.URL.Path,
-				"method":       c.Request.Method,
-				"excluded":     isExcludedPath(c.Request.URL.Path, config.ExcludePaths),
+				"path":     c.Request.URL.Path,
+				"method":   c.Request.Method,
+				"excluded": isExcludedPath(c.Request.URL.Path, config.ExcludePaths),
 			}).Debug("响应加密中间件：处理请求")
 		}
 
@@ -171,7 +173,9 @@ func ResponseEncryption(encryptor *crypto.RequestEncryptor, config *ResponseEncr
 		// 清空原始响应并写入加密响应
 		c.Writer.Header().Set("Content-Length", strconv.Itoa(len(encryptedJSON)))
 		blw.buffer.Reset()
-		blw.ResponseWriter.Write(encryptedJSON)
+		if _, err := blw.ResponseWriter.Write(encryptedJSON); err != nil {
+			applogger.Warnf("写入加密响应失败: %v", err)
+		}
 
 		// 记录加密日志
 		applogger.WithFields(map[string]interface{}{

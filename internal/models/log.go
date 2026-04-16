@@ -92,12 +92,12 @@ type Notice struct {
 	Status        int    `gorm:"default:0" json:"status"`                 // 0=正常 1=关闭
 
 	// 新增字段
-	Priority      NoticePriority `gorm:"default:0" json:"priority"`       // 优先级: 0=普通 1=重要 2=紧急
-	PublishTime   *time.Time     `json:"publishTime,omitempty"`           // 定时发布时间
-	PublishStatus PublishStatus  `gorm:"default:0" json:"publishStatus"`  // 发布状态: 0=草稿 1=已发布 2=定时发布中 3=已撤回
-	TargetType    TargetType     `gorm:"default:0" json:"targetType"`     // 目标类型: 0=全部 1=部门 2=角色 3=用户
-	CreatedByName string         `gorm:"size:64" json:"createdByName"`    // 创建人姓名
-	IsMarkdown    bool           `gorm:"default:false" json:"isMarkdown"` // 是否为Markdown格式
+	Priority      NoticePriority `gorm:"default:0" json:"priority"`                // 优先级: 0=普通 1=重要 2=紧急
+	PublishTime   *time.Time     `json:"publishTime,omitempty"`                    // 定时发布时间
+	PublishStatus PublishStatus  `gorm:"default:0" json:"publishStatus"`           // 发布状态: 0=草稿 1=已发布 2=定时发布中 3=已撤回
+	TargetType    TargetType     `gorm:"default:0" json:"targetType"`              // 目标类型: 0=全部 1=部门 2=角色 3=用户
+	CreatedByName string         `gorm:"size:64" json:"createdByName"`             // 创建人姓名
+	IsMarkdown    bool           `gorm:"default:false" json:"isMarkdown"`          // 是否为Markdown格式
 	EndDate       *time.Time     `gorm:"column:end_date" json:"endDate,omitempty"` // 周期性通知结束时间
 
 	// 关联

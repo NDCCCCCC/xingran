@@ -26,8 +26,8 @@ func NewDictTypeServiceWithCache(
 ) DictTypeService {
 	base := &dictTypeService{db: db}
 	return &dictTypeCacheService{
-		dictTypeService: base,
-		cache:           cache,
+		dictTypeService:  base,
+		cache:            cache,
 		CacheServiceBase: CacheServiceBase{Config: config},
 	}
 }
@@ -156,8 +156,8 @@ func NewDictDataServiceWithCache(
 ) DictDataService {
 	base := &dictDataService{db: db}
 	return &dictDataCacheService{
-		dictDataService: base,
-		cache:           cache,
+		dictDataService:  base,
+		cache:            cache,
 		CacheServiceBase: CacheServiceBase{Config: config},
 	}
 }

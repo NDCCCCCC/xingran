@@ -527,7 +527,7 @@ func (s *CaptchaService) generateSliderWithBackground(ctx context.Context) (map[
 				bgBytes, pieceBytes, xPos, yPos, token, err := generator.GenerateSliderWithCustomBackground(bgImg, shape, difficulty)
 				if err == nil {
 					// 更新使用次数
-					s.backgroundService.IncrementUseCount(bg.ID)
+					_ = s.backgroundService.IncrementUseCount(bg.ID)
 					return map[string]interface{}{
 						"backgroundId": bg.ID,
 						"sliderImg":    "data:image/png;base64," + base64.StdEncoding.EncodeToString(bgBytes),

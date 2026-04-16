@@ -186,12 +186,8 @@ func parseRule(line string, fsm *FSM) (*Rule, error) {
 	}
 
 	// 移除锚点
-	if strings.HasPrefix(line, "^") {
-		line = line[1:]
-	}
-	if strings.HasSuffix(line, "$") {
-		line = line[:len(line)-1]
-	}
+	line = strings.TrimPrefix(line, "^")
+	line = strings.TrimSuffix(line, "$")
 
 	// 构建正则表达式并记录变量名顺序
 	regexPattern, varNames := buildRegexWithVariables(line, fsm)

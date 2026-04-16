@@ -6,10 +6,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
-	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	gorilla_ws "github.com/ruoyi-next/ruoyi-go-backend/internal/websocket"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
 var upgrader = websocket.Upgrader{
@@ -69,7 +69,7 @@ func SetupNoticeWebSocketRouter(r *gin.RouterGroup, hub *gorilla_ws.NoticeHub, c
 				if messageType == websocket.TextMessage {
 					// 心跳响应
 					if string(message) == "ping" {
-						conn.WriteMessage(websocket.TextMessage, []byte("pong"))
+						_ = conn.WriteMessage(websocket.TextMessage, []byte("pong"))
 					}
 				}
 			}

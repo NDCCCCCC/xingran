@@ -9,9 +9,9 @@ import (
 
 // FlowHandler 流程控制处理器
 type FlowHandler struct {
-	flowService     rpa.FlowControlService
-	errorService    rpa.ErrorHandlingService
-	mapperService   rpa.DataMapperService
+	flowService   rpa.FlowControlService
+	errorService  rpa.ErrorHandlingService
+	mapperService rpa.DataMapperService
 }
 
 // NewFlowHandler 创建流程控制处理器
@@ -57,7 +57,7 @@ func (h *FlowHandler) EvaluateCondition(c *gin.Context) {
 // MapDataRequest 数据映射请求
 type MapDataRequest struct {
 	Config rpa.DataMappingConfig `json:"config" binding:"required"`
-	Source interface{}            `json:"source" binding:"required"`
+	Source interface{}           `json:"source" binding:"required"`
 }
 
 // MapData 执行数据映射
@@ -77,9 +77,9 @@ func (h *FlowHandler) MapData(c *gin.Context) {
 
 // TransformValueRequest 值转换请求
 type TransformValueRequest struct {
-	Value     interface{}              `json:"value" binding:"required"`
-	Transform rpa.TransformFunction    `json:"transform" binding:"required"`
-	Params    map[string]interface{}   `json:"params"`
+	Value     interface{}            `json:"value" binding:"required"`
+	Transform rpa.TransformFunction  `json:"transform" binding:"required"`
+	Params    map[string]interface{} `json:"params"`
 }
 
 // TransformValue 转换值
@@ -120,11 +120,11 @@ func (h *FlowHandler) ExtractJSONPath(c *gin.Context) {
 
 // HandleErrorRequest 错误处理请求
 type HandleErrorRequest struct {
-	ExecutionID string                    `json:"executionId" binding:"required"`
-	StepIndex   int                       `json:"stepIndex" binding:"required"`
-	Error       string                    `json:"error" binding:"required"`
-	Config      *rpa.ErrorHandlingConfig  `json:"config"`
-	Variables   map[string]interface{}    `json:"variables"`
+	ExecutionID string                   `json:"executionId" binding:"required"`
+	StepIndex   int                      `json:"stepIndex" binding:"required"`
+	Error       string                   `json:"error" binding:"required"`
+	Config      *rpa.ErrorHandlingConfig `json:"config"`
+	Variables   map[string]interface{}   `json:"variables"`
 }
 
 // HandleError 处理错误

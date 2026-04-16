@@ -56,9 +56,9 @@ type WorkerService interface {
 
 // workerServiceImpl Worker 服务实现
 type workerServiceImpl struct {
-	db              *gorm.DB
+	db               *gorm.DB
 	executionService ExecutionService
-	screenshotsDir  string
+	screenshotsDir   string
 }
 
 // NewWorkerService 创建 Worker 服务
@@ -68,9 +68,9 @@ func NewWorkerService(db *gorm.DB, executionService ExecutionService, screenshot
 		screenshotsDir = "./uploads/rpa/screenshots"
 	}
 	return &workerServiceImpl{
-		db:              db,
+		db:               db,
 		executionService: executionService,
-		screenshotsDir:  screenshotsDir,
+		screenshotsDir:   screenshotsDir,
 	}
 }
 
@@ -288,12 +288,12 @@ func (s *workerServiceImpl) GetByID(ctx context.Context, id string) (*rpamodels.
 // GetAvailable 获取可用 Worker 列表
 func (s *workerServiceImpl) GetAvailable(ctx context.Context) ([]rpamodels.Worker, error) {
 	var workers []rpamodels.Worker
-	
+
 	err := s.db.WithContext(ctx).
 		Where("status = ? AND current_tasks < max_concurrency", rpamodels.WorkerStatusOnline).
 		Order("current_tasks ASC").
 		Find(&workers).Error
-		
+
 	return workers, err
 }
 

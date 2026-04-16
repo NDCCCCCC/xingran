@@ -3,23 +3,23 @@ package api
 import (
 	"github.com/gin-gonic/gin"
 	v1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1"
+	dutyV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/duty"
+	v1_knowledge "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/knowledge"
+	monitorV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/monitor"
+	networkV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/network"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations"
+	rpaV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/rpa"
 	systemV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/system"
 	workorderV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/workorder"
-	dutyV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/duty"
-	networkV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/network"
-	monitorV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/monitor"
-	v1_knowledge "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/knowledge"
-	rpaV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/rpa"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/scheduler"
 	opsServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/websocket"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/permission"
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 )
 
 const permSystemConfig = "system:config"
@@ -77,33 +77,6 @@ func setupNoticeHub(r *gin.RouterGroup, core *core.Core) *websocket.NoticeHub {
 	scheduler.SetNoticeHub(&noticeHubAdapter{hub: noticeHub})
 
 	return noticeHub
-}
-
-// registerCRUDRoutes 注册标准CRUD路由
-func registerCRUDRoutes(group *gin.RouterGroup, handler interface{}) {
-	type CRUDHandler interface {
-		List(c *gin.Context)
-		Create(c *gin.Context)
-		GetByID(c *gin.Context)
-		Update(c *gin.Context)
-		Delete(c *gin.Context)
-	}
-
-	type BatchHandler interface {
-		BatchOperation(c *gin.Context)
-	}
-
-	if h, ok := handler.(CRUDHandler); ok {
-		group.POST("/list", h.List)
-		group.POST("/:id", h.GetByID)
-		group.POST("/:id/update", h.Update)
-		group.POST("/:id/delete", h.Delete)
-		group.POST("", h.Create)
-
-		if bh, batchOk := handler.(BatchHandler); batchOk {
-			group.POST("/batch", bh.BatchOperation)
-		}
-	}
 }
 
 // SetupRouter 设置路由

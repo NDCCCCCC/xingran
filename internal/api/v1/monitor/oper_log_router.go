@@ -2,8 +2,8 @@ package monitor
 
 import (
 	"github.com/gin-gonic/gin"
-	monitorServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/monitor"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
+	monitorServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/monitor"
 )
 
 // SetupOperLogRouter 设置操作日志路由

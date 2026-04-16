@@ -72,7 +72,7 @@ func TestIsRetryableError(t *testing.T) {
 		{"Redis只读", errors.New("READONLY You can't write"), true},
 		{"Redis集群下线", errors.New("CLUSTERDOWN"), true},
 		{"语法错误", errors.New("ERR syntax error"), false}, // 明确不重试
-		{"权限错误", errors.New("NOPERM"), false},         // 明确不重试
+		{"权限错误", errors.New("NOPERM"), false},           // 明确不重试
 		{"其他错误", errors.New("some other error"), false},
 		{"空错误", nil, false},
 	}

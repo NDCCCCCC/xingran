@@ -10,11 +10,11 @@ import (
 // TestCacheKeyBuilder_Build 测试缓存键构建
 func TestCacheKeyBuilder_Build(t *testing.T) {
 	tests := []struct {
-		name           string
-		prefix         string
-		params         []interface{}
-		expected       string
-		shouldContain  string
+		name          string
+		prefix        string
+		params        []interface{}
+		expected      string
+		shouldContain string
 	}{
 		{
 			name:     "无参数",

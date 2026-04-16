@@ -29,19 +29,19 @@ func NewSettingsService(db *gorm.DB) SettingsService {
 
 // UserPreference 用户个人设置模型（扩展版）
 type UserPreference struct {
-	ID        string `gorm:"primaryKey;type:uuid" json:"id"`
-	UserID    string `gorm:"type:uuid;not null;uniqueIndex" json:"userId"`
+	ID     string `gorm:"primaryKey;type:uuid" json:"id"`
+	UserID string `gorm:"type:uuid;not null;uniqueIndex" json:"userId"`
 
 	// 主题配置
 	Theme      string `gorm:"size:20;default:light" json:"theme"`
 	ThemeStyle string `gorm:"size:20;default:minimal" json:"themeStyle"`
 
 	// 布局配置
-	LayoutType           string `gorm:"size:20;default:classic" json:"layoutType"`
-	LayoutDensity        string `gorm:"size:20;default:comfortable" json:"layoutDensity"`
-	SidebarWidth         int    `gorm:"default:280" json:"sidebarWidth"`
-	SidebarCollapsedWidth int   `gorm:"default:64" json:"sidebarCollapsedWidth"`
-	SidebarCollapsed     bool   `gorm:"default:false" json:"sidebarCollapsed"`
+	LayoutType            string `gorm:"size:20;default:classic" json:"layoutType"`
+	LayoutDensity         string `gorm:"size:20;default:comfortable" json:"layoutDensity"`
+	SidebarWidth          int    `gorm:"default:280" json:"sidebarWidth"`
+	SidebarCollapsedWidth int    `gorm:"default:64" json:"sidebarCollapsedWidth"`
+	SidebarCollapsed      bool   `gorm:"default:false" json:"sidebarCollapsed"`
 
 	// 数据配置
 	PageSize int `gorm:"default:10" json:"pageSize"`
@@ -74,11 +74,11 @@ type UserPreferences struct {
 	ThemeStyle string `json:"themeStyle" binding:"omitempty,oneof=minimal glassmorphism neumorphism flat2.0 luxury-quiet"`
 
 	// 布局
-	LayoutType           string `json:"layoutType" binding:"omitempty,oneof=classic hybrid innovative"`
-	LayoutDensity        string `json:"layoutDensity" binding:"omitempty,oneof=compact comfortable spacious"`
-	SidebarWidth         int    `json:"sidebarWidth" binding:"omitempty,min=100,max=400"`
+	LayoutType            string `json:"layoutType" binding:"omitempty,oneof=classic hybrid innovative"`
+	LayoutDensity         string `json:"layoutDensity" binding:"omitempty,oneof=compact comfortable spacious"`
+	SidebarWidth          int    `json:"sidebarWidth" binding:"omitempty,min=100,max=400"`
 	SidebarCollapsedWidth int    `json:"sidebarCollapsedWidth" binding:"omitempty,min=40,max=100"`
-	SidebarCollapsed     bool   `json:"sidebarCollapsed"`
+	SidebarCollapsed      bool   `json:"sidebarCollapsed"`
 
 	// 数据
 	PageSize int `json:"pageSize" binding:"required,min=5,max=100"`
@@ -99,15 +99,15 @@ func (s *settingsService) GetUserPreferences(ctx context.Context, userID string)
 	// 如果不存在，返回默认值
 	if err == gorm.ErrRecordNotFound {
 		return &UserPreferences{
-			Theme:                "light",
-			ThemeStyle:           "minimal",
-			LayoutType:           "classic",
-			LayoutDensity:        "comfortable",
-			SidebarWidth:         280,
+			Theme:                 "light",
+			ThemeStyle:            "minimal",
+			LayoutType:            "classic",
+			LayoutDensity:         "comfortable",
+			SidebarWidth:          280,
 			SidebarCollapsedWidth: 64,
-			SidebarCollapsed:     false,
-			PageSize:             10,
-			Language:             "zh-CN",
+			SidebarCollapsed:      false,
+			PageSize:              10,
+			Language:              "zh-CN",
 		}, nil
 	}
 
@@ -126,17 +126,17 @@ func (s *settingsService) GetUserPreferences(ctx context.Context, userID string)
 	}
 
 	return &UserPreferences{
-		Theme:                pref.Theme,
-		ThemeStyle:           pref.ThemeStyle,
-		LayoutType:           pref.LayoutType,
-		LayoutDensity:        pref.LayoutDensity,
-		SidebarWidth:         sidebarWidth,
+		Theme:                 pref.Theme,
+		ThemeStyle:            pref.ThemeStyle,
+		LayoutType:            pref.LayoutType,
+		LayoutDensity:         pref.LayoutDensity,
+		SidebarWidth:          sidebarWidth,
 		SidebarCollapsedWidth: sidebarCollapsedWidth,
-		SidebarCollapsed:     pref.SidebarCollapsed,
-		PageSize:             pref.PageSize,
-		CustomPrimaryColor:   pref.CustomPrimaryColor,
-		CustomSidebarColor:   pref.CustomSidebarColor,
-		Language:             pref.Language,
+		SidebarCollapsed:      pref.SidebarCollapsed,
+		PageSize:              pref.PageSize,
+		CustomPrimaryColor:    pref.CustomPrimaryColor,
+		CustomSidebarColor:    pref.CustomSidebarColor,
+		Language:              pref.Language,
 	}, nil
 }
 
@@ -149,18 +149,18 @@ func (s *settingsService) UpdateUserPreferences(ctx context.Context, userID stri
 	if err == gorm.ErrRecordNotFound {
 		// 创建新记录
 		pref = UserPreference{
-			UserID:               userID,
-			Theme:                req.Theme,
-			ThemeStyle:           req.ThemeStyle,
-			LayoutType:           req.LayoutType,
-			LayoutDensity:        req.LayoutDensity,
-			SidebarWidth:         req.SidebarWidth,
+			UserID:                userID,
+			Theme:                 req.Theme,
+			ThemeStyle:            req.ThemeStyle,
+			LayoutType:            req.LayoutType,
+			LayoutDensity:         req.LayoutDensity,
+			SidebarWidth:          req.SidebarWidth,
 			SidebarCollapsedWidth: req.SidebarCollapsedWidth,
-			SidebarCollapsed:     req.SidebarCollapsed,
-			PageSize:             req.PageSize,
-			CustomPrimaryColor:   req.CustomPrimaryColor,
-			CustomSidebarColor:   req.CustomSidebarColor,
-			Language:             req.Language,
+			SidebarCollapsed:      req.SidebarCollapsed,
+			PageSize:              req.PageSize,
+			CustomPrimaryColor:    req.CustomPrimaryColor,
+			CustomSidebarColor:    req.CustomSidebarColor,
+			Language:              req.Language,
 		}
 		if createErr := s.db.WithContext(ctx).Create(&pref).Error; createErr != nil {
 			return fmt.Errorf("创建用户设置失败: %w", createErr)
@@ -174,17 +174,17 @@ func (s *settingsService) UpdateUserPreferences(ctx context.Context, userID stri
 
 	// 更新现有记录 - 使用 Updates 更新所有字段
 	if updateErr := s.db.WithContext(ctx).Model(&pref).Updates(map[string]interface{}{
-		"theme":                    req.Theme,
-		"theme_style":              req.ThemeStyle,
-		"layout_type":              req.LayoutType,
-		"layout_density":           req.LayoutDensity,
-		"sidebar_width":            req.SidebarWidth,
-		"sidebar_collapsed_width":  req.SidebarCollapsedWidth,
-		"sidebar_collapsed":        req.SidebarCollapsed,
-		"page_size":                req.PageSize,
-		"custom_primary_color":     req.CustomPrimaryColor,
-		"custom_sidebar_color":     req.CustomSidebarColor,
-		"language":                 req.Language,
+		"theme":                   req.Theme,
+		"theme_style":             req.ThemeStyle,
+		"layout_type":             req.LayoutType,
+		"layout_density":          req.LayoutDensity,
+		"sidebar_width":           req.SidebarWidth,
+		"sidebar_collapsed_width": req.SidebarCollapsedWidth,
+		"sidebar_collapsed":       req.SidebarCollapsed,
+		"page_size":               req.PageSize,
+		"custom_primary_color":    req.CustomPrimaryColor,
+		"custom_sidebar_color":    req.CustomSidebarColor,
+		"language":                req.Language,
 	}).Error; updateErr != nil {
 		return fmt.Errorf("更新用户设置失败: %w", updateErr)
 	}

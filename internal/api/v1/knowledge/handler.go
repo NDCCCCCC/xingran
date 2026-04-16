@@ -2,9 +2,9 @@ package knowledge
 
 import (
 	"github.com/gin-gonic/gin"
-	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
-	knowledgeServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/knowledge"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	knowledgeServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/knowledge"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
@@ -65,8 +65,8 @@ func (h *ArticleHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	// 增加浏览次数
-	h.service.IncrementViewCount(c.Request.Context(), id)
+	// 增加浏览次数（best-effort，不影响主流程）
+	_ = h.service.IncrementViewCount(c.Request.Context(), id)
 
 	article, err := h.service.GetKnowledgeArticle(c.Request.Context(), id)
 	if err != nil {
@@ -291,6 +291,7 @@ func (h *CategoryHandler) List(c *gin.Context) {
 	// 允许空请求体
 	if err := c.ShouldBindJSON(&req); err != nil {
 		// 使用默认值
+		_ = err
 	}
 
 	categories, err := h.service.GetKnowledgeCategoryList(c.Request.Context(), &req)

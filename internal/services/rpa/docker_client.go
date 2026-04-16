@@ -33,18 +33,18 @@ type DockerClient interface {
 
 // dockerClientImpl Docker 客户端实现
 type dockerClientImpl struct {
-	dockerHost     string
-	dockerPort     int
-	containerName  string
-	imageName      string
-	networkName    string
-	httpClient     *http.Client
+	dockerHost    string
+	dockerPort    int
+	containerName string
+	imageName     string
+	networkName   string
+	httpClient    *http.Client
 }
 
 // DockerConfig Docker 配置
 type DockerConfig struct {
 	DockerHost    string `mapstructure:"docker_host"`    // Docker 主机地址
-	DockerPort     int    `mapstructure:"docker_port"`    // Docker API 端口
+	DockerPort    int    `mapstructure:"docker_port"`    // Docker API 端口
 	ContainerName string `mapstructure:"container_name"` // 容器名称前缀
 	ImageName     string `mapstructure:"image_name"`     // 镜像名称
 	NetworkName   string `mapstructure:"network_name"`   // 网络名称
@@ -106,9 +106,9 @@ func (c *dockerClientImpl) ScaleUp(ctx context.Context, count int) ([]string, er
 	for i := 0; i < count; i++ {
 		containerID, err := c.createWorkerContainer(ctx)
 		if err != nil {
-			// 回滚已创建的容器
+			// 回滚已创建的容器（尽力而为）
 			if len(containerIDs) > 0 {
-				c.ScaleDown(ctx, containerIDs)
+				_ = c.ScaleDown(ctx, containerIDs)
 			}
 			return nil, fmt.Errorf("创建容器失败: %w", err)
 		}
@@ -153,7 +153,7 @@ func (c *dockerClientImpl) createWorkerContainer(ctx context.Context) (string, e
 	defer resp.Body.Close()
 
 	var result struct {
-		ID       string `json:"Id"`
+		ID       string   `json:"Id"`
 		Warnings []string `json:"Warnings"`
 	}
 
@@ -165,7 +165,9 @@ func (c *dockerClientImpl) createWorkerContainer(ctx context.Context) (string, e
 	startResp, err := c.makeDockerRequest(ctx, "POST", "/containers/"+result.ID+"/start", nil)
 	if err != nil {
 		// 清理已创建但未启动的容器
-		c.makeDockerRequest(ctx, "DELETE", "/containers/"+result.ID, nil)
+		if _, cleanupErr := c.makeDockerRequest(ctx, "DELETE", "/containers/"+result.ID, nil); cleanupErr != nil {
+			applogger.Warnf("清理未启动的容器 %s 失败: %v", result.ID, cleanupErr)
+		}
 		return "", fmt.Errorf("启动容器失败: %w", err)
 	}
 	startResp.Body.Close()
@@ -210,15 +212,15 @@ func (c *dockerClientImpl) ScaleDown(ctx context.Context, containerIDs []string)
 
 // DockerContainer Docker 容器信息
 type DockerContainer struct {
-	ID         string `json:"Id"`
-	Names      []string `json:"Names"`
-	Image      string `json:"Image"`
-	ImageName  string `json:"ImageName"`
-	State      string `json:"State"`
-	Status     string `json:"Status"`
-	Created    int64  `json:"Created"`
-	Ports      []Port `json:"Ports"`
-	Labels     map[string]string `json:"Labels"`
+	ID        string            `json:"Id"`
+	Names     []string          `json:"Names"`
+	Image     string            `json:"Image"`
+	ImageName string            `json:"ImageName"`
+	State     string            `json:"State"`
+	Status    string            `json:"Status"`
+	Created   int64             `json:"Created"`
+	Ports     []Port            `json:"Ports"`
+	Labels    map[string]string `json:"Labels"`
 }
 
 // Port 端口信息
@@ -277,7 +279,7 @@ func (c *dockerClientImpl) GetContainerStats(ctx context.Context, containerID st
 	var stats struct {
 		CPUStats struct {
 			CPUUsage struct {
-				TotalUsage  uint64 `json:"total_usage"`
+				TotalUsage  uint64   `json:"total_usage"`
 				PercpuUsage []uint64 `json:"percpu_usage"`
 			} `json:"cpu_usage"`
 			SystemUsage uint64 `json:"system_usage"`
@@ -293,7 +295,7 @@ func (c *dockerClientImpl) GetContainerStats(ctx context.Context, containerID st
 		MemoryStats struct {
 			Usage    uint64 `json:"usage"`
 			MaxUsage uint64 `json:"max_usage"`
-			Limit   uint64 `json:"limit"`
+			Limit    uint64 `json:"limit"`
 		} `json:"memory_stats"`
 		Networks map[string]struct {
 			RxBytes uint64 `json:"rx_bytes"`

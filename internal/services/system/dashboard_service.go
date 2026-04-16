@@ -43,9 +43,9 @@ type DashboardService interface {
 
 // DashboardServiceImpl 仪表盘服务实现
 type DashboardServiceImpl struct {
-	db               *gorm.DB
-	cache            cache.Cache
-	endpointService  EndpointService
+	db              *gorm.DB
+	cache           cache.Cache
+	endpointService EndpointService
 }
 
 // EndpointService 端点服务接口（抽象）
@@ -76,10 +76,10 @@ func NewDashboardService(db *gorm.DB, cache cache.Cache, endpointService *servic
 
 // DashboardListParams 仪表盘列表请求参数
 type DashboardListParams struct {
-	Current    int                    `json:"current" binding:"required,min=1"`
-	PageSize   int                    `json:"pageSize" binding:"required,min=1,max=100"`
-	Keyword    string                 `json:"keyword,omitempty"`
-	IsTemplate bool                   `json:"isTemplate,omitempty"`
+	Current    int                     `json:"current" binding:"required,min=1"`
+	PageSize   int                     `json:"pageSize" binding:"required,min=1,max=100"`
+	Keyword    string                  `json:"keyword,omitempty"`
+	IsTemplate bool                    `json:"isTemplate,omitempty"`
 	Status     *models.DashboardStatus `json:"status,omitempty"`
 }
 
@@ -93,24 +93,24 @@ type DashboardListResponse struct {
 
 // CreateDashboardRequest 创建仪表盘请求
 type CreateDashboardRequest struct {
-	Name            string                  `json:"name" binding:"required,min=1,max=100"`
-	Description     string                  `json:"description" binding:"max=500"`
-	Layout          models.LayoutConfig     `json:"layout" binding:"required"`
-	RefreshInterval int                     `json:"refreshInterval" binding:"min=0,max=3600"`
-	IsTemplate      bool                    `json:"isTemplate"`
-	TemplateScope   models.TemplateScope    `json:"templateScope" binding:"omitempty,oneof=global dept personal"`
+	Name            string               `json:"name" binding:"required,min=1,max=100"`
+	Description     string               `json:"description" binding:"max=500"`
+	Layout          models.LayoutConfig  `json:"layout" binding:"required"`
+	RefreshInterval int                  `json:"refreshInterval" binding:"min=0,max=3600"`
+	IsTemplate      bool                 `json:"isTemplate"`
+	TemplateScope   models.TemplateScope `json:"templateScope" binding:"omitempty,oneof=global dept personal"`
 	// 权限相关
-	Scope           models.DashboardScope   `json:"scope" binding:"omitempty,oneof=private dept global"`
-	DeptID          *string                 `json:"deptId" binding:"omitempty"`
-	IsSystem        bool                    `json:"isSystem"`
+	Scope    models.DashboardScope `json:"scope" binding:"omitempty,oneof=private dept global"`
+	DeptID   *string               `json:"deptId" binding:"omitempty"`
+	IsSystem bool                  `json:"isSystem"`
 }
 
 // UpdateDashboardRequest 更新仪表盘请求
 type UpdateDashboardRequest struct {
-	Name            *string                  `json:"name" binding:"omitempty,min=1,max=100"`
-	Description     *string                  `json:"description" binding:"omitempty,max=500"`
-	Layout          *models.LayoutConfig     `json:"layout"`
-	RefreshInterval *int                     `json:"refreshInterval" binding:"omitempty,min=0,max=3600"`
+	Name            *string                 `json:"name" binding:"omitempty,min=1,max=100"`
+	Description     *string                 `json:"description" binding:"omitempty,max=500"`
+	Layout          *models.LayoutConfig    `json:"layout"`
+	RefreshInterval *int                    `json:"refreshInterval" binding:"omitempty,min=0,max=3600"`
 	Status          *models.DashboardStatus `json:"status" binding:"omitempty,min=0,max=1"`
 }
 
@@ -140,7 +140,7 @@ func (s *DashboardServiceImpl) getDashboardWithOwner(ctx context.Context, id, ow
 
 // invalidateDashboardCache 清除仪表盘缓存
 func (s *DashboardServiceImpl) invalidateDashboardCache(ctx context.Context, dashboardID string) {
-	s.cache.Delete(ctx, dashboardCachePrefix+dashboardID)
+	_ = s.cache.Delete(ctx, dashboardCachePrefix+dashboardID)
 }
 
 // invalidateDashboardListCache 清除仪表盘列表缓存
@@ -243,7 +243,7 @@ func (s *DashboardServiceImpl) GetDashboard(ctx context.Context, id string) (*mo
 		return nil, fmt.Errorf("failed to fetch dashboard: %w", err)
 	}
 
-	s.cache.SetJSON(ctx, cacheKey, dashboard, 5*time.Minute)
+	_ = s.cache.SetJSON(ctx, cacheKey, dashboard, 5*time.Minute)
 
 	return &dashboard, nil
 }
@@ -483,7 +483,7 @@ func (s *DashboardServiceImpl) RestoreVersion(ctx context.Context, userID string
 		return fmt.Errorf("failed to restore version: %w", err)
 	}
 
-	s.cache.Delete(ctx, dashboardCachePrefix+dashboardID)
+	_ = s.cache.Delete(ctx, dashboardCachePrefix+dashboardID)
 
 	return nil
 }
@@ -634,7 +634,7 @@ func (s *DashboardServiceImpl) GetAccessibleDashboards(ctx context.Context, para
 	// 1. 私有：仅自己创建的
 	// 2. 部门：自己创建的 或 本部门可见的
 	// 3. 全局：任何人可见
-	permissionFilter := s.db.WithContext(ctx).Where("owner_id = ?", userID) // 自己创建的
+	permissionFilter := s.db.WithContext(ctx).Where("owner_id = ?", userID)                      // 自己创建的
 	permissionFilter = permissionFilter.Or(s.db.Where("scope = ?", models.DashboardScopeGlobal)) // 全局可见
 
 	// 部门可见性（根据用户数据范围）
@@ -717,18 +717,18 @@ func (s *DashboardServiceImpl) CreateDashboardWithPermissions(ctx context.Contex
 	}
 
 	dashboard := &models.Dashboard{
-		Name:          req.Name,
-		Description:   req.Description,
-		OwnerID:       userID,
-		OwnerDeptID:   userDeptID,
-		Layout:        req.Layout,
+		Name:            req.Name,
+		Description:     req.Description,
+		OwnerID:         userID,
+		OwnerDeptID:     userDeptID,
+		Layout:          req.Layout,
 		RefreshInterval: req.RefreshInterval,
-		IsTemplate:    req.IsTemplate,
-		TemplateScope: req.TemplateScope,
-		Scope:         scope,
-		DeptID:        req.DeptID,
-		IsSystem:      req.IsSystem,
-		Status:        models.DashboardStatusNormal,
+		IsTemplate:      req.IsTemplate,
+		TemplateScope:   req.TemplateScope,
+		Scope:           scope,
+		DeptID:          req.DeptID,
+		IsSystem:        req.IsSystem,
+		Status:          models.DashboardStatusNormal,
 	}
 
 	dashboard.CreatedBy = userID

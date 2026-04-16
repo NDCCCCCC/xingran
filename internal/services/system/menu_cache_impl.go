@@ -25,8 +25,8 @@ func NewMenuServiceWithCache(
 ) MenuService {
 	base := &menuService{db: db}
 	return &menuCacheService{
-		menuService: base,
-		cache:       cache,
+		menuService:      base,
+		cache:            cache,
 		CacheServiceBase: CacheServiceBase{Config: config},
 	}
 }

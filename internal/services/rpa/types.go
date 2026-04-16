@@ -52,11 +52,11 @@ type UpdateTaskRequest struct {
 
 // ExecuteTaskRequest 执行任务请求
 type ExecuteTaskRequest struct {
-	TaskID      string                 `json:"taskId" binding:"required"`
-	InputParams map[string]interface{} `json:"inputParams,omitempty"`
-	WorkerID    string                 `json:"workerId,omitempty"`
-	Priority    int                    `json:"priority"`
-	CredentialID string                `json:"credentialId,omitempty"` // 凭证ID（用于自动登录）
+	TaskID       string                 `json:"taskId" binding:"required"`
+	InputParams  map[string]interface{} `json:"inputParams,omitempty"`
+	WorkerID     string                 `json:"workerId,omitempty"`
+	Priority     int                    `json:"priority"`
+	CredentialID string                 `json:"credentialId,omitempty"` // 凭证ID（用于自动登录）
 }
 
 // WorkerListParams Worker列表查询参数
@@ -154,12 +154,12 @@ type OptimizeScriptResponse struct {
 
 // AnalyzeFailureRequest 分析失败原因请求
 type AnalyzeFailureRequest struct {
-	TaskDescription  string   `json:"taskDescription" binding:"required"`
-	CurrentStep      int      `json:"currentStep"`
+	TaskDescription  string      `json:"taskDescription" binding:"required"`
+	CurrentStep      int         `json:"currentStep"`
 	FailedAction     interface{} `json:"failedAction"`
-	ErrorMessage     string   `json:"errorMessage" binding:"required"`
-	ScreenshotBase64 string   `json:"screenshotBase64"`
-	HTMLSnippet      string   `json:"htmlSnippet"`
+	ErrorMessage     string      `json:"errorMessage" binding:"required"`
+	ScreenshotBase64 string      `json:"screenshotBase64"`
+	HTMLSnippet      string      `json:"htmlSnippet"`
 }
 
 // FixAction 修复动作
@@ -167,5 +167,5 @@ type FixAction struct {
 	OriginalAction interface{} `json:"originalAction"`
 	FixedAction    interface{} `json:"fixedAction"`
 	Reason         string      `json:"reason"`
-	Confidence     float64    `json:"confidence"`
+	Confidence     float64     `json:"confidence"`
 }

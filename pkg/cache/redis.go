@@ -468,12 +468,12 @@ func contains(slice []string, item string) bool {
 // ==================== MultiLevelCache 多级缓存 ====================
 
 type MultiLevelCache struct {
-	l1Cache        Cache             // 本地缓存
-	l2Cache        Cache             // Redis缓存
-	l2Writer       *L2WriteWorker    // L2写入Worker Pool
-	retryWorker    *AsyncRetryWorker // 异步重试工作器
-	retryEnabled   bool              // 是否启用重试
-	l2WriterEnabled bool             // 是否启用L2 Writer
+	l1Cache         Cache             // 本地缓存
+	l2Cache         Cache             // Redis缓存
+	l2Writer        *L2WriteWorker    // L2写入Worker Pool
+	retryWorker     *AsyncRetryWorker // 异步重试工作器
+	retryEnabled    bool              // 是否启用重试
+	l2WriterEnabled bool              // 是否启用L2 Writer
 }
 
 // NewMultiLevelCache 创建多级缓存（不带重试，带默认L2Writer）
@@ -563,7 +563,7 @@ func (m *MultiLevelCache) Get(ctx context.Context, key string) (string, error) {
 		return "", err
 	}
 
-	m.l1Cache.Set(ctx, key, value, 5*time.Minute)
+	_ = m.l1Cache.Set(ctx, key, value, 5*time.Minute)
 	return value, nil
 }
 
@@ -626,7 +626,7 @@ func (m *MultiLevelCache) asyncSetL2(ctx context.Context, key string, value inte
 }
 
 func (m *MultiLevelCache) Delete(ctx context.Context, key string) error {
-	m.l1Cache.Delete(ctx, key)
+	_ = m.l1Cache.Delete(ctx, key)
 	return m.l2Cache.Delete(ctx, key)
 }
 
@@ -660,7 +660,7 @@ func (m *MultiLevelCache) MSet(ctx context.Context, pairs ...interface{}) error 
 }
 
 func (m *MultiLevelCache) MDelete(ctx context.Context, keys ...string) error {
-	m.l1Cache.MDelete(ctx, keys...)
+	_ = m.l1Cache.MDelete(ctx, keys...)
 	return m.l2Cache.MDelete(ctx, keys...)
 }
 
@@ -729,7 +729,7 @@ func (m *MultiLevelCache) KeysByLevel(ctx context.Context, pattern string, level
 }
 
 func (m *MultiLevelCache) FlushDB(ctx context.Context) error {
-	m.l1Cache.FlushDB(ctx)
+	_ = m.l1Cache.FlushDB(ctx)
 	return m.l2Cache.FlushDB(ctx)
 }
 
@@ -849,7 +849,7 @@ func (m *MultiLevelCache) MGetJSON(ctx context.Context, keys ...string) (map[str
 				for key, value := range l2Result {
 					result[key] = value
 					if jsonValue, err := json.Marshal(value); err == nil {
-						m.l1Cache.Set(ctx, key, jsonValue, 5*time.Minute)
+						_ = m.l1Cache.Set(ctx, key, jsonValue, 5*time.Minute)
 					}
 				}
 			}
@@ -873,7 +873,7 @@ func (m *MultiLevelCache) MSetJSON(ctx context.Context, data map[string]interfac
 	}
 
 	for key, value := range l1Data {
-		m.l1Cache.Set(ctx, key, value, 5*time.Minute)
+		_ = m.l1Cache.Set(ctx, key, value, 5*time.Minute)
 	}
 
 	for key, value := range data {
@@ -915,7 +915,7 @@ func (m *MultiLevelCache) GetInt(ctx context.Context, key string) (int, error) {
 
 func (m *MultiLevelCache) SetJSON(ctx context.Context, key string, value interface{}, expiration time.Duration) error {
 	if jsonValue, err := json.Marshal(value); err == nil {
-		m.l1Cache.Set(ctx, key, jsonValue, 5*time.Minute)
+		_ = m.l1Cache.Set(ctx, key, jsonValue, 5*time.Minute)
 	}
 	return m.l2Cache.SetJSON(ctx, key, value, expiration)
 }

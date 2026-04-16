@@ -26,8 +26,8 @@ func NewConfigServiceWithCache(
 ) ConfigService {
 	base := &configService{db: db}
 	return &configCacheService{
-		configService:     base,
-		cache:           cache,
+		configService:    base,
+		cache:            cache,
 		CacheServiceBase: CacheServiceBase{Config: config},
 	}
 }

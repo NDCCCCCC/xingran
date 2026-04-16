@@ -9,16 +9,16 @@ import (
 // MenuMeta 菜单元数据（JSONB 类型）
 // 用于统一管理路由相关元数据：标题、图标、权限、缓存等
 type MenuMeta struct {
-	Title       string   `json:"title"`                  // 页面标题（必填）
-	Icon        string   `json:"icon,omitempty"`         // 图标
-	Hidden      bool     `json:"hidden,omitempty"`       // 隐藏菜单（但路由可访问）
-	Affix       bool     `json:"affix,omitempty"`        // 固定标签页（不可关闭）
-	KeepAlive   bool     `json:"keepAlive,omitempty"`    // 缓存组件
-	Permissions []string `json:"permissions,omitempty"`  // 需要的权限标识
-	Roles       []string `json:"roles,omitempty"`        // 允许的角色
-	I18nKey     string   `json:"i18nKey,omitempty"`      // 国际化 key（预留）
-	NoCache     bool     `json:"noCache,omitempty"`      // 禁用缓存
-	Link        string   `json:"link,omitempty"`         // 外链跳转
+	Title       string   `json:"title"`                 // 页面标题（必填）
+	Icon        string   `json:"icon,omitempty"`        // 图标
+	Hidden      bool     `json:"hidden,omitempty"`      // 隐藏菜单（但路由可访问）
+	Affix       bool     `json:"affix,omitempty"`       // 固定标签页（不可关闭）
+	KeepAlive   bool     `json:"keepAlive,omitempty"`   // 缓存组件
+	Permissions []string `json:"permissions,omitempty"` // 需要的权限标识
+	Roles       []string `json:"roles,omitempty"`       // 允许的角色
+	I18nKey     string   `json:"i18nKey,omitempty"`     // 国际化 key（预留）
+	NoCache     bool     `json:"noCache,omitempty"`     // 禁用缓存
+	Link        string   `json:"link,omitempty"`        // 外链跳转
 }
 
 // Scan 实现 sql.Scanner 接口，用于从数据库读取 JSONB 数据

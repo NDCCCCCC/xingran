@@ -50,18 +50,18 @@ func (p *UserListParams) GetOffset() int {
 
 // UserCreateRequest 创建用户请求
 type UserCreateRequest struct {
-	Username   string    `json:"username" binding:"required"`
-	Password   string    `json:"password" binding:"required"`
-	Nickname   *string   `json:"nickname"`
-	EmployeeNo *string   `json:"employeeNo"`
-	Email      *string   `json:"email"`
-	Phone      *string   `json:"phone"`
-	Gender     models.Gender `json:"gender"`
+	Username   string            `json:"username" binding:"required"`
+	Password   string            `json:"password" binding:"required"`
+	Nickname   *string           `json:"nickname"`
+	EmployeeNo *string           `json:"employeeNo"`
+	Email      *string           `json:"email"`
+	Phone      *string           `json:"phone"`
+	Gender     models.Gender     `json:"gender"`
 	Status     models.UserStatus `json:"status"`
-	DeptID     *string   `json:"deptId"`
-	RoleIds    []string  `json:"roleIds"`
-	PostIds    []string  `json:"postIds"`
-	Remark     *string   `json:"remark"`
+	DeptID     *string           `json:"deptId"`
+	RoleIds    []string          `json:"roleIds"`
+	PostIds    []string          `json:"postIds"`
+	Remark     *string           `json:"remark"`
 }
 
 // ToModel 转换为用户模型
@@ -82,17 +82,17 @@ func (r *UserCreateRequest) ToModel(hashedPassword string) models.User {
 
 // UserUpdateRequest 更新用户请求
 type UserUpdateRequest struct {
-	ID         string          `json:"id" binding:"required"`
-	Nickname   *string        `json:"nickname"`
-	EmployeeNo *string        `json:"employeeNo"`
-	Email      *string        `json:"email"`
-	Phone      *string        `json:"phone"`
-	Gender     models.Gender  `json:"gender"`
+	ID         string            `json:"id" binding:"required"`
+	Nickname   *string           `json:"nickname"`
+	EmployeeNo *string           `json:"employeeNo"`
+	Email      *string           `json:"email"`
+	Phone      *string           `json:"phone"`
+	Gender     models.Gender     `json:"gender"`
 	Status     models.UserStatus `json:"status"`
-	DeptID     *string        `json:"deptId"`
-	RoleIds    []string       `json:"roleIds"`
-	PostIds    []string       `json:"postIds"`
-	Remark     *string        `json:"remark"`
+	DeptID     *string           `json:"deptId"`
+	RoleIds    []string          `json:"roleIds"`
+	PostIds    []string          `json:"postIds"`
+	Remark     *string           `json:"remark"`
 }
 
 // ToModel 转换为用户模型
