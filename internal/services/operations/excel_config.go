@@ -119,6 +119,8 @@ var ExcelConfigs = map[string]ExcelConfig{
 			{Field: "floorName", Header: "所属楼层名称", Required: true, MaxLength: 100, Reference: "ops_floors.name", DBField: "floor_id", DependsOn: "buildingName"}, // 依赖 buildingName 的解析结果
 			{Field: "workstationType", Header: "工位类型", DBField: "workstation_type", Options: map[interface{}]string{int(models.WorkstationTypeFixed): "固定工位", int(models.WorkstationTypeHotDesk): "灵活工位", int(models.WorkstationTypeManager): "管理工位"}},
 			{Field: "status", Header: "状态", Options: map[interface{}]string{int(models.WorkstationStatusAvailable): "空闲", int(models.WorkstationStatusOccupied): "占用", int(models.WorkstationStatusMaintain): "维护"}},
+			{Field: "deptName", Header: "所属部门", Reference: "sys_dept.dept_name", DBField: "dept_id"},
+			{Field: "userName", Header: "所属用户", Reference: "sys_user.user_name", DBField: "user_id"},
 			{Field: "remark", Header: "备注", MaxLength: 500, DBField: "description"},
 		},
 	},
