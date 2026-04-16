@@ -119,10 +119,8 @@ const FloorManagement: FC = () => {
 
   // 初始化加载和部门变化时重新加载
   useEffect(() => {
+    Promise.all([loadStatistics(), loadBuildingOptions(), departmentData.loadDepartments()]);
     loadFloors();
-    loadStatistics();
-    loadBuildingOptions();
-    departmentData.loadDepartments();
   }, [loadFloors, loadStatistics, loadBuildingOptions, departmentData.loadDepartments]);
 
   useEffect(() => {
@@ -529,7 +527,15 @@ const FloorManagement: FC = () => {
                 const newPageSize = pagination.pageSize || 10;
                 setCurrent(newPage);
                 setPageSize(newPageSize);
-                loadFloors({ current: newPage, pageSize: newPageSize });
+                const formValues = searchForm.getFieldsValue() as Record<string, unknown>;
+	                const searchParams: Record<string, unknown> = { current: newPage, pageSize: newPageSize };
+	                Object.keys(formValues).forEach(key => {
+	                  const value = formValues[key];
+	                  if (value !== undefined && value !== null && value !== '') {
+	                    searchParams[key] = value;
+	                  }
+	                });
+	                loadFloors(searchParams);
               }}
             />
           ) : (

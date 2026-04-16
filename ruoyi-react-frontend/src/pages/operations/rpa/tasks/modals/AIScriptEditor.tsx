@@ -25,9 +25,7 @@ export interface AIScriptEditorProps {
 }
 
 // 示例生成的动作（模拟 AI 返回结果）
-// 遵循 Vercel React Best Practices: rendering-hoist-jsx
-// 将静态数据移到组件外部，避免每次渲染重新创建
-const MOCK_GENERATED_ACTIONS: Action[] = [
+const mockGeneratedActions: Action[] = [
   {
     id: 'action_1',
     type: 'navigate',
@@ -88,7 +86,7 @@ export function AIScriptEditor({ open, onClose, onConfirm }: AIScriptEditorProps
 
       // 模拟 API 调用
       await new Promise(resolve => setTimeout(resolve, 1500));
-      setGeneratedActions(MOCK_GENERATED_ACTIONS);
+      setGeneratedActions(mockGeneratedActions);
       message.success('AI 生成脚本成功！');
     } catch (error) {
       message.error('AI 生成失败，请重试');

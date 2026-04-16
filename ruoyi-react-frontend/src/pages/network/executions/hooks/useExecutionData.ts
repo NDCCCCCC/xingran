@@ -103,6 +103,7 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
       const requestPageSize = params.pageSize ?? pageSize ?? 10;
 
       const result = await post<PageResponse<ConfigExecution>>('/network/executions/list', {
+        ...params,
         current: requestCurrent,
         pageSize: requestPageSize,
       });

@@ -122,8 +122,7 @@ const CredentialManagement: FC = () => {
   };
 
   useEffect(() => {
-    loadCredentials();
-    loadStatistics();
+    Promise.all([loadCredentials(), loadStatistics()]);
   }, []);
 
   // 创建/更新凭证
@@ -426,10 +425,15 @@ const CredentialManagement: FC = () => {
             const newPageSize = pagination.pageSize ?? 10;
             setCurrent(newPage);
             setPageSize(newPageSize);
-            loadCredentials({
-              current: newPage,
-              pageSize: newPageSize,
+            const formValues = searchForm.getFieldsValue() as Record<string, unknown>;
+            const searchParams: Record<string, unknown> = { current: newPage, pageSize: newPageSize };
+            Object.keys(formValues).forEach(key => {
+              const value = formValues[key];
+              if (value !== undefined && value !== null && value !== '') {
+                searchParams[key] = value;
+              }
             });
+            loadCredentials(searchParams);
           }}
         />
       </Card>

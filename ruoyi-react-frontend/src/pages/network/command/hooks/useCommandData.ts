@@ -64,6 +64,7 @@ export function useCommandData(
       setExecLoadingState(true);
       try {
         const result = await post<PageResponse<ConfigExecution>>('/network/command/list', {
+          ...params,
           current: params.current || current,
           pageSize: params.pageSize || pageSize,
         });

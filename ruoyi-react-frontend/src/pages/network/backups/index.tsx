@@ -119,8 +119,7 @@ const ConfigBackupPage: FC = () => {
 
   // 初始化加载
   useEffect(() => {
-    loadBackups();
-    loadStatistics();
+    Promise.all([loadBackups(), loadStatistics()]);
   }, [paginationProps.current, paginationProps.pageSize, loadBackups, loadStatistics]);
 
   // 打开备份弹窗
@@ -510,10 +509,15 @@ const ConfigBackupPage: FC = () => {
           onChange={(pagination) => {
             setCurrent(pagination.current ?? 1);
             setPageSize(pagination.pageSize ?? 10);
-            loadBackups({
-              current: pagination.current ?? 1,
-              pageSize: pagination.pageSize ?? 10,
+            const formValues = searchForm.getFieldsValue() as Record<string, unknown>;
+            const searchParams: Record<string, unknown> = { current: pagination.current ?? 1, pageSize: pagination.pageSize ?? 10 };
+            Object.keys(formValues).forEach(key => {
+              const value = formValues[key];
+              if (value !== undefined && value !== null && value !== '') {
+                searchParams[key] = value;
+              }
             });
+            loadBackups(searchParams);
           }}
         />
       </Card>

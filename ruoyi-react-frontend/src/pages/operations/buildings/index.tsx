@@ -441,10 +441,17 @@ const BuildingManagement: FC = () => {
               const newPageSize = pagination.pageSize || 10;
               setCurrent(newPage);
               setPageSize(newPageSize);
+              const formValues = searchForm.getFieldsValue() as Record<string, unknown>;
               const searchParams: Record<string, unknown> = { current: newPage, pageSize: newPageSize };
               if (selectedDeptId) {
                 searchParams.orgId = selectedDeptId;
               }
+              Object.keys(formValues).forEach(key => {
+                const value = formValues[key];
+                if (value !== undefined && value !== null && value !== '') {
+                  searchParams[key] = value;
+                }
+              });
               loadBuildings(searchParams);
             }}
           />

@@ -40,6 +40,7 @@ const CommandDispatch: FC = () => {
   const [dispatchModalVisible, setDispatchModalVisible] = useState(false);
   const [detailDrawerVisible, setDetailDrawerVisible] = useState(false);
   const [dispatchForm] = Form.useForm();
+  const [searchForm] = Form.useForm();
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
   const [devices, setDevices] = useState<NetworkDevice[]>([]);
   const [currentExecution, setCurrentExecution] = useState<ConfigExecution | null>(null);
@@ -70,8 +71,7 @@ const CommandDispatch: FC = () => {
   const { handleQuickCommand, handleCancelExecution } = useCommandModals();
 
   useEffect(() => {
-    loadExecutions();
-    loadStatistics();
+    Promise.all([loadExecutions(), loadStatistics()]);
   }, [paginationProps.current, paginationProps.pageSize, loadExecutions, loadStatistics]);
 
   // 操作成功后刷新
@@ -156,7 +156,7 @@ const CommandDispatch: FC = () => {
       {/* 主要内容 */}
       <Card>
         <div style={{ marginBottom: 16 }}>
-          <Form layout="inline">
+          <Form form={searchForm} layout="inline">
             <Form.Item label="状态">
               <Select
                 placeholder="请选择状态"
@@ -214,10 +214,15 @@ const CommandDispatch: FC = () => {
           onChange={(pagination) => {
             setCurrent(pagination.current ?? 1);
             setPageSize(pagination.pageSize ?? 10);
-            loadExecutions({
-              current: pagination.current ?? 1,
-              pageSize: pagination.pageSize ?? 10,
+            const formValues = searchForm.getFieldsValue() as Record<string, unknown>;
+            const searchParams: Record<string, unknown> = { current: pagination.current ?? 1, pageSize: pagination.pageSize ?? 10 };
+            Object.keys(formValues).forEach(key => {
+              const value = formValues[key];
+              if (value !== undefined && value !== null && value !== '') {
+                searchParams[key] = value;
+              }
             });
+            loadExecutions(searchParams);
           }}
         />
       </Card>

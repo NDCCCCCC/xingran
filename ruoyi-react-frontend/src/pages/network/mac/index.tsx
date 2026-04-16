@@ -107,8 +107,7 @@ const MACAddressPage: FC = () => {
   };
 
   useEffect(() => {
-    loadDevices();
-    loadMACAddresses();
+    Promise.all([loadDevices(), loadMACAddresses()]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -274,10 +273,15 @@ const MACAddressPage: FC = () => {
             const newPageSize = pagination.pageSize ?? 10;
             setCurrent(newPage);
             setPageSize(newPageSize);
-            loadMACAddresses({
-              current: newPage,
-              pageSize: newPageSize,
+            const formValues = searchForm.getFieldsValue() as Record<string, unknown>;
+            const searchParams: Record<string, unknown> = { current: newPage, pageSize: newPageSize };
+            Object.keys(formValues).forEach(key => {
+              const value = formValues[key];
+              if (value !== undefined && value !== null && value !== '') {
+                searchParams[key] = value;
+              }
             });
+            loadMACAddresses(searchParams);
           }}
         />
       </Card>

@@ -129,11 +129,9 @@ const DedicatedLineManagement: FC = () => {
 
   // 初始化加载
   useEffect(() => {
-    loadServerRooms();
-    loadStatistics().then(setStatistics);
-    loadLineTypeDict();
-    loadIspDict();
-    loadLines(); // 加载专线数据
+    Promise.all([loadServerRooms(), loadStatistics(), loadLineTypeDict(), loadIspDict()])
+      .then(([_, stats]) => setStatistics(stats));
+    loadLines();
   }, [loadServerRooms, loadStatistics, loadLineTypeDict, loadIspDict, loadLines]);
 
   const handleSave = async () => {
@@ -418,8 +416,15 @@ const DedicatedLineManagement: FC = () => {
               const newPageSize = pagination.pageSize || 10;
               setCurrent(newPage);
               setPageSize(newPageSize);
-              // 直接传入新的分页参数，避免闭包问题
-              loadLines({ current: newPage, pageSize: newPageSize });
+              const formValues = searchForm.getFieldsValue() as Record<string, unknown>;
+	              const searchParams: Record<string, unknown> = { current: newPage, pageSize: newPageSize };
+	              Object.keys(formValues).forEach(key => {
+	                const value = formValues[key];
+	                if (value !== undefined && value !== null && value !== '') {
+	                  searchParams[key] = value;
+	                }
+	              });
+	              loadLines(searchParams);
             }}
           />
         ) : renderCardView()}

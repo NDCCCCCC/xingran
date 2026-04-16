@@ -165,23 +165,14 @@ const ServerRoomManagement: FC = () => {
     loadStatistics().then(setStatistics);
   }, [loadStatistics]);
 
-  // 清空楼宇筛选
-  useEffect(() => {
-    searchForm.setFieldValue('buildingId', undefined);
-  }, [selectedDeptId, searchForm]);
-
-  // 当部门变化时，加载楼宇选项
-  useEffect(() => {
-    loadBuildingOptions(selectedDeptId || undefined);
-  }, [selectedDeptId, loadBuildingOptions]);
-
-  // 部门变化时清空搜索表单中的楼宇筛选
+  // 部门变化时清空搜索表单并加载楼宇选项
   useEffect(() => {
     searchForm.setFieldValue('buildingId', undefined);
     searchForm.setFieldValue('floorNo', undefined);
     searchForm.setFieldValue('name', undefined);
     searchForm.setFieldValue('status', undefined);
-  }, [selectedDeptId, searchForm]);
+    loadBuildingOptions(selectedDeptId || undefined);
+  }, [selectedDeptId, searchForm, loadBuildingOptions]);
 
   const handleSave = async () => {
     try {
@@ -415,7 +406,15 @@ const ServerRoomManagement: FC = () => {
                 const newPageSize = pagination.pageSize || 10;
                 setCurrent(newPage);
                 setPageSize(newPageSize);
-                loadServerRooms({ current: newPage, pageSize: newPageSize });
+                const formValues = searchForm.getFieldsValue() as Record<string, unknown>;
+	                const searchParams: Record<string, unknown> = { current: newPage, pageSize: newPageSize };
+	                Object.keys(formValues).forEach(key => {
+	                  const value = formValues[key];
+	                  if (value !== undefined && value !== null && value !== '') {
+	                    searchParams[key] = value;
+	                  }
+	                });
+	                loadServerRooms(searchParams);
               }}
             />
           ) : renderCardView()}

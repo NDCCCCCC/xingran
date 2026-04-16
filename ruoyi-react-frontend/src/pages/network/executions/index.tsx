@@ -31,6 +31,7 @@ const { Option } = Select;
 
 const ConfigExecutionPage: FC = () => {
   const [executeForm] = Form.useForm();
+  const [searchForm] = Form.useForm();
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
@@ -96,8 +97,7 @@ const ConfigExecutionPage: FC = () => {
   });
 
   useEffect(() => {
-    loadExecutions();
-    loadStatistics();
+    Promise.all([loadExecutions(), loadStatistics()]);
   }, [paginationProps.current, paginationProps.pageSize, loadExecutions, loadStatistics]);
 
   return (
@@ -158,7 +158,7 @@ const ConfigExecutionPage: FC = () => {
       {/* 搜索表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
-          <Form layout="inline" style={{ flex: 1, minWidth: 0 }}>
+          <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item label="状态">
               <Select
                 placeholder="请选择状态"
@@ -220,10 +220,15 @@ const ConfigExecutionPage: FC = () => {
           onChange={(pagination) => {
             setCurrent(pagination.current ?? 1);
             setPageSize(pagination.pageSize ?? 10);
-            loadExecutions({
-              current: pagination.current ?? 1,
-              pageSize: pagination.pageSize ?? 10,
+            const formValues = searchForm.getFieldsValue() as Record<string, unknown>;
+            const searchParams: Record<string, unknown> = { current: pagination.current ?? 1, pageSize: pagination.pageSize ?? 10 };
+            Object.keys(formValues).forEach(key => {
+              const value = formValues[key];
+              if (value !== undefined && value !== null && value !== '') {
+                searchParams[key] = value;
+              }
             });
+            loadExecutions(searchParams);
           }}
         />
       </Card>

@@ -353,7 +353,18 @@ const WorkstationManagement: FC = () => {
             const newPageSize = pagination.pageSize || 10;
             setCurrent(newPage);
             setPageSize(newPageSize);
-            loadWorkstations({ current: newPage, pageSize: newPageSize });
+
+            // 获取搜索表单值并合并分页参数
+            const formValues = searchForm.getFieldsValue() as Record<string, unknown>;
+            const searchParams: Record<string, unknown> = { current: newPage, pageSize: newPageSize };
+            Object.keys(formValues).forEach(key => {
+              const value = formValues[key];
+              if (value !== undefined && value !== null && value !== '') {
+                searchParams[key] = value;
+              }
+            });
+
+            loadWorkstations(searchParams);
           }}
         />
       );
