@@ -3,13 +3,13 @@
 ## v1.1 Requirements
 
 ### 导入配置
-- [ ] **IMPORT-05**: Excel 导入配置添加"所属设备"列，通过设备名称匹配 `sys_network_device.name`，写入 `device_id`
-- [ ] **IMPORT-06**: Excel 导入配置添加"所属端口"列，通过端口名称匹配 `sys_device_port_status.port_name`，写入 `port_id`
-- [ ] **IMPORT-07**: 两个字段均为可选，匹配失败时留空不阻断导入
+- [x] **IMPORT-05**: Excel 导入配置添加"所属设备"列，通过设备名称匹配 `sys_network_device.name`，写入 `device_id`
+- [x] **IMPORT-06**: Excel 导入配置添加"所属端口"列，通过端口名称匹配 `sys_device_port_status.port_name`，写入 `port_id`
+- [x] **IMPORT-07**: 两个字段均为可选，匹配失败时留空不阻断导入
 
 ### 验证
-- [ ] **VAL-03**: 导入含设备名/端口名的 Excel 后，信息点列表正确显示设备名称和端口名称
-- [ ] **VAL-04**: 导出包含设备和端口信息（已有，验证不退化）
+- [x] **VAL-03**: 导入含设备名/端口名的 Excel 后，信息点列表正确显示设备名称和端口名称
+- [x] **VAL-04**: 导出包含设备和端口信息（已有，验证不退化）
 
 ## v1.0 Requirements (Completed)
 

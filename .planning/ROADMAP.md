@@ -17,7 +17,7 @@
 **UI hint**: no
 
 Plans:
-- [ ] 03-01-PLAN.md — Add deviceName and portName ExcelColumn entries with Reference resolution + template example values
+- [x] 03-01-PLAN.md — Add deviceName and portName ExcelColumn entries with Reference resolution + template example values
 
 **Changes**:
 - `internal/services/operations/excel_config.go` — infoPoint 配置添加设备和端口列
@@ -42,11 +42,11 @@ Plans:
 | TMPL-01 | Phase 2 | completed |
 | VAL-01 | Phase 2 | completed |
 | VAL-02 | Phase 2 | completed |
-| IMPORT-05 | Phase 3 | pending |
-| IMPORT-06 | Phase 3 | pending |
-| IMPORT-07 | Phase 3 | pending |
-| VAL-03 | Phase 3 | pending |
-| VAL-04 | Phase 3 | pending |
+| IMPORT-05 | Phase 3 | completed |
+| IMPORT-06 | Phase 3 | completed |
+| IMPORT-07 | Phase 3 | completed |
+| VAL-03 | Phase 3 | completed |
+| VAL-04 | Phase 3 | completed |
 
 ---
 
