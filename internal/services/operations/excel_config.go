@@ -149,7 +149,7 @@ var ExcelConfigs = map[string]ExcelConfig{
 		StartRow:   2,
 		Columns: []ExcelColumn{
 			{Field: "name", Header: "设备名称", Required: true, MaxLength: 100, DBField: "name"},
-			{Field: "deviceCode", Header: "设备编码", Required: true, Unique: true, UpsertKey: true, MaxLength: 50, DBField: "device_code"},
+			{Field: "deviceCode", Header: "设备编码", Required: true, Unique: true, UpsertKey: true, MaxLength: 200, DBField: "device_code"},
 			{Field: "deviceType", Header: "设备类型", DBField: "device_type", Default: string(operations.DeviceTypeOther), Options: map[interface{}]string{string(operations.DeviceTypeServer): "服务器", string(operations.DeviceTypeStorage): "存储设备", string(operations.DeviceTypeUPS): "UPS", string(operations.DeviceTypePDU): "PDU", string(operations.DeviceTypeFirewall): "防火墙", string(operations.DeviceTypeKVM): "KVM", string(operations.DeviceTypeCabinet): "机柜", string(operations.DeviceTypeOther): "其他"}},
 			{Field: "vendor", Header: "厂商", MaxLength: 100, DBField: "vendor"},
 			{Field: "model", Header: "型号", MaxLength: 100, DBField: "model"},

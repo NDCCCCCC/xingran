@@ -31,7 +31,7 @@ const (
 type OpsRoomDevice struct {
 	models.BaseModel
 	Name             string   `gorm:"size:100;not null" json:"name"`               // 设备名称
-	DeviceCode       string   `gorm:"size:50;not null;unique" json:"deviceCode"`   // 设备编码
+	DeviceCode       string   `gorm:"size:200;not null;unique" json:"deviceCode"`   // 设备编码
 	DeviceType       string   `gorm:"size:50;not null" json:"deviceType"`          // 设备类型
 	Model            *string  `gorm:"size:100" json:"model,omitempty"`             // 设备型号
 	Vendor           *string  `gorm:"size:100" json:"vendor,omitempty"`            // 厂商
