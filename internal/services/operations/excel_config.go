@@ -82,7 +82,7 @@ var ExcelConfigs = map[string]ExcelConfig{
 		UniqueKeys:    []string{"name", "orgId"}, // 按名称+机构判断重复
 		Columns: []ExcelColumn{
 			{Field: "name", Header: "楼宇名称", Required: true, MaxLength: 100, UpsertKey: true},
-			{Field: "address", Header: "地址", MaxLength: 200},
+			{Field: "address", Header: "地址", MaxLength: 200, DBField: "position_desc"},
 			{Field: "orgName", Header: "所属机构名称/编码", Required: true, MaxLength: 100, Reference: "sys_dept.dept_code", DBField: "org_id"}, // 用户提供机构名称或编码，自动转换为orgId
 			{Field: "level", Header: "层级", Options: map[interface{}]string{1: "城市级汇总", 2: "具体楼宇"}},
 			{Field: "status", Header: "状态", Options: map[interface{}]string{int(operations.BuildingStatusNormal): "正常", int(operations.BuildingStatusStopped): "停用"}},
@@ -148,19 +148,19 @@ var ExcelConfigs = map[string]ExcelConfig{
 		StartRow:   2,
 		Columns: []ExcelColumn{
 			{Field: "name", Header: "设备名称", Required: true, MaxLength: 100},
-			{Field: "deviceCode", Header: "设备编码", Required: true, Unique: true, MaxLength: 50},
+			{Field: "deviceCode", Header: "设备编码", Required: true, Unique: true, MaxLength: 50, DBField: "device_code"},
 			{Field: "deviceType", Header: "设备类型", DBField: "device_type", Options: map[interface{}]string{string(operations.DeviceTypeServer): "服务器", string(operations.DeviceTypeStorage): "存储设备", string(operations.DeviceTypeUPS): "UPS", string(operations.DeviceTypePDU): "PDU", string(operations.DeviceTypeFirewall): "防火墙", string(operations.DeviceTypeKVM): "KVM", string(operations.DeviceTypeCabinet): "机柜", string(operations.DeviceTypeOther): "其他"}},
 			{Field: "vendor", Header: "厂商", MaxLength: 100},
 			{Field: "model", Header: "型号", MaxLength: 100},
-			{Field: "serialNumber", Header: "序列号", MaxLength: 100},
-			{Field: "roomId", Header: "所在机房ID", Required: true, Reference: "ops_server_rooms.id"},
+			{Field: "serialNumber", Header: "序列号", MaxLength: 100, DBField: "serial_number"},
+			{Field: "roomId", Header: "所在机房ID", Required: true, Reference: "ops_server_rooms.name", DBField: "room_id"},
 			{Field: "roomName", Header: "所在机房名称", MaxLength: 100},
-			{Field: "positionU", Header: "U位"},
+			{Field: "positionU", Header: "U位", DBField: "position_u"},
 			{Field: "positionDesc", Header: "位置描述", MaxLength: 200},
 			{Field: "assetNumber", Header: "资产编号", MaxLength: 100},
 			{Field: "purchaseDate", Header: "购买日期", MaxLength: 50},
 			{Field: "warrantyDate", Header: "保修到期", MaxLength: 50},
-			{Field: "powerConsumption", Header: "功耗(W)"},
+			{Field: "powerConsumption", Header: "功耗(W)", DBField: "power_consumption"},
 			{Field: "status", Header: "状态", Options: map[interface{}]string{0: "正常", 1: "故障", 2: "报废"}},
 			{Field: "remark", Header: "备注", MaxLength: 500},
 		},
