@@ -81,6 +81,32 @@ func (b *BatchUpsert) standardUpsert(ctx context.Context, records []map[string]i
 	// 转换记录中的字段名为数据库列名
 	convertedRecords := b.convertRecordFields(records)
 
+	// 按 conflict columns 去重，保留最后一条（PostgreSQL 不允许单次 batch 中同一冲突键出现多次）
+	conflictNames := make([]string, len(conflictColumns))
+	for i, col := range conflictColumns {
+		conflictNames[i] = col.Name
+	}
+	seen := make(map[string]int, len(convertedRecords))
+	for i, record := range convertedRecords {
+		key := buildCombinedKey(record, conflictColumns)
+		if key == "" {
+			continue
+		}
+		if prev, exists := seen[key]; exists {
+			// 将之前的记录标记为 nil（后面跳过）
+			convertedRecords[prev] = nil
+		}
+		seen[key] = i
+	}
+	// 过滤掉 nil 记录
+	deduped := make([]map[string]interface{}, 0, len(convertedRecords))
+	for _, record := range convertedRecords {
+		if record != nil {
+			deduped = append(deduped, record)
+		}
+	}
+	convertedRecords = deduped
+
 	// 设置 deleted_at 为 nil 以恢复软删除记录
 	for i := range convertedRecords {
 		convertedRecords[i]["deleted_at"] = nil
