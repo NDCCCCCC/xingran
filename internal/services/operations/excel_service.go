@@ -825,6 +825,13 @@ func (s *ExcelService) validateAndParseRow(ctx context.Context, row []string, ro
 		data[col.Field] = parsedValue
 	}
 
+	// 应用默认值：当字段值为空且配置了Default时
+	for _, col := range config.Columns {
+		if _, exists := data[col.Field]; !exists && col.Default != nil {
+			data[col.Field] = col.Default
+		}
+	}
+
 	if len(errors) == 0 {
 		uniqueErrors := s.validateUniqueness(ctx, config, data, rowNum)
 		errors = append(errors, uniqueErrors...)

@@ -29,8 +29,9 @@ type ExcelColumn struct {
 	Options   map[interface{}]string
 	Reference string // 引用配置，格式："table.field"，用于名称到ID的转换
 	DependsOn string // 依赖字段：该字段的引用解析依赖于另一个字段的解析结果（如 floorName 依赖 buildingName）
-	UpsertKey bool   // 是否作为Upsert的唯一键（用于判断重复记录）
-	DBField   string // 数据库字段名（可选，如果与Field不同，例如 workstationName -> workstation_name）
+	UpsertKey bool        // 是否作为Upsert的唯一键（用于判断重复记录）
+	DBField   string      // 数据库字段名（可选，如果与Field不同，例如 workstationName -> workstation_name）
+	Default   interface{} // 当Excel值为空时的默认值
 }
 
 type ExcelConfig struct {
@@ -149,7 +150,7 @@ var ExcelConfigs = map[string]ExcelConfig{
 		Columns: []ExcelColumn{
 			{Field: "name", Header: "设备名称", Required: true, MaxLength: 100, DBField: "name"},
 			{Field: "deviceCode", Header: "设备编码", Required: true, Unique: true, UpsertKey: true, MaxLength: 50, DBField: "device_code"},
-			{Field: "deviceType", Header: "设备类型", DBField: "device_type", Options: map[interface{}]string{string(operations.DeviceTypeServer): "服务器", string(operations.DeviceTypeStorage): "存储设备", string(operations.DeviceTypeUPS): "UPS", string(operations.DeviceTypePDU): "PDU", string(operations.DeviceTypeFirewall): "防火墙", string(operations.DeviceTypeKVM): "KVM", string(operations.DeviceTypeCabinet): "机柜", string(operations.DeviceTypeOther): "其他"}},
+			{Field: "deviceType", Header: "设备类型", DBField: "device_type", Default: string(operations.DeviceTypeOther), Options: map[interface{}]string{string(operations.DeviceTypeServer): "服务器", string(operations.DeviceTypeStorage): "存储设备", string(operations.DeviceTypeUPS): "UPS", string(operations.DeviceTypePDU): "PDU", string(operations.DeviceTypeFirewall): "防火墙", string(operations.DeviceTypeKVM): "KVM", string(operations.DeviceTypeCabinet): "机柜", string(operations.DeviceTypeOther): "其他"}},
 			{Field: "vendor", Header: "厂商", MaxLength: 100, DBField: "vendor"},
 			{Field: "model", Header: "型号", MaxLength: 100, DBField: "model"},
 			{Field: "serialNumber", Header: "序列号", MaxLength: 100, DBField: "serial_number"},
