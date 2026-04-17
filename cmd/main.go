@@ -69,7 +69,8 @@ func main() {
 
 	coreModule := initializeCoreModule(cfg)
 	engine := setupGinEngine(cfg)
-	setupRoutes(engine, cfg, coreModule)
+	allowedOrigins := []string{"*"}
+	setupRoutes(engine, cfg, coreModule, allowedOrigins)
 
 	server := startServer(cfg, engine)
 	waitForShutdown(server, coreModule)
@@ -122,8 +123,7 @@ func setupGinEngine(cfg *config.Config) *gin.Engine {
 
 	// CORS配置：生产环境应该配置具体的域名列表
 	// 开发环境使用 "*" 允许所有来源
-	allowedOrigins := []string{"*"}
-	engine.Use(middleware.Cors(allowedOrigins))
+	engine.Use(middleware.Cors([]string{"*"}))
 
 	engine.Use(middleware.Gzip())
 
@@ -140,7 +140,7 @@ func setGinMode(mode string) {
 }
 
 // setupRoutes 设置路由
-func setupRoutes(engine *gin.Engine, cfg *config.Config, coreModule *core.Core) {
+func setupRoutes(engine *gin.Engine, cfg *config.Config, coreModule *core.Core, allowedOrigins []string) {
 	// 健康检查
 	engine.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
@@ -178,7 +178,7 @@ func setupRoutes(engine *gin.Engine, cfg *config.Config, coreModule *core.Core) 
 
 	// API 路由
 	apiRouter := engine.Group("/api/v1")
-	api.SetupRouter(apiRouter, coreModule)
+	api.SetupRouter(apiRouter, coreModule, allowedOrigins)
 }
 
 // startServer 启动 HTTP 服务器

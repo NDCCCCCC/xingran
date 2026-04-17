@@ -13,30 +13,63 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	CheckOrigin: func(r *http.Request) bool {
-		origin := r.Header.Get("Origin")
-		if origin == "" {
-			return true // 非浏览器客户端（如Postman）无Origin头
-		}
-		// 允许同源请求
-		host := r.Header.Get("Host")
-		if host == "" {
-			host = r.Host
-		}
-		if strings.HasPrefix(origin, "http://"+host) || strings.HasPrefix(origin, "https://"+host) {
+// newWebSocketUpgrader 创建 WebSocket 升级器
+// allowedOrigins: 允许的来源列表，空或含 "*" 表示允许所有（开发环境）
+func newWebSocketUpgrader(allowedOrigins []string) websocket.Upgrader {
+	allowAll := len(allowedOrigins) == 0 || containsOrigin(allowedOrigins, "*")
+
+	return websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+		CheckOrigin: func(r *http.Request) bool {
+			if allowAll {
+				return true
+			}
+
+			origin := r.Header.Get("Origin")
+			if origin == "" {
+				return true // 非浏览器客户端（如Postman）无Origin头
+			}
+
+			// 允许同源请求
+			host := r.Header.Get("Host")
+			if host == "" {
+				host = r.Host
+			}
+			if strings.HasPrefix(origin, "http://"+host) || strings.HasPrefix(origin, "https://"+host) {
+				return true
+			}
+
+			// 允许 localhost（开发环境）和配置的域名
+			if strings.HasPrefix(origin, "http://localhost") || strings.HasPrefix(origin, "http://127.0.0.1") {
+				return true
+			}
+			for _, allowed := range allowedOrigins {
+				if origin == allowed || strings.HasPrefix(origin, allowed) {
+					return true
+				}
+			}
+
+			return false
+		},
+	}
+}
+
+// containsOrigin 检查来源列表是否包含指定值
+func containsOrigin(origins []string, target string) bool {
+	for _, o := range origins {
+		if o == target {
 			return true
 		}
-		// 允许 localhost 连接（开发环境前端 dev server）
-		// WebSocket 端点已有 JWT 认证保障安全
-		return strings.HasPrefix(origin, "http://localhost") || strings.HasPrefix(origin, "http://127.0.0.1")
-	},
+	}
+	return false
 }
 
 // SetupNoticeWebSocketRouter 设置通知WebSocket路由
-func SetupNoticeWebSocketRouter(r *gin.RouterGroup, hub *gorilla_ws.NoticeHub, core *core.Core) {
+// allowedOrigins: 允许的来源列表，空或含 "*" 表示允许所有（开发环境）
+func SetupNoticeWebSocketRouter(r *gin.RouterGroup, hub *gorilla_ws.NoticeHub, core *core.Core, allowedOrigins []string) {
+	upgrader := newWebSocketUpgrader(allowedOrigins)
+
 	r.GET("/notices", func(c *gin.Context) {
 		// 从query或header获取token
 		token := c.Query("token")

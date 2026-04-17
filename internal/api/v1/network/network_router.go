@@ -48,6 +48,7 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 	executionHandler := NewExecutionHandler(executionService)
 	backupHandler := NewBackupHandler(backupService, db)
 	discoveryHandler := NewDiscoveryHandler(discoveryService)
+	exportHandler := NewNetworkExportHandler(core)
 
 	// ==================== 网络设备路由 ====================
 	devices := r.Group("/devices")
@@ -58,6 +59,7 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 		devices.POST("/:id/update", deviceHandler.Update)
 		devices.POST("/:id/delete", deviceHandler.Delete)
 		devices.POST("/batch-delete", deviceHandler.BatchDelete)
+		devices.POST("/export", exportHandler.ExportDevices)
 	}
 
 	// ==================== 授权凭证路由 ====================
@@ -71,6 +73,7 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 		credentials.POST("/batch-delete", credentialHandler.BatchDelete)
 		credentials.POST("/:id/set-default", credentialHandler.SetDefault)
 		credentials.POST("/:id/devices", credentialHandler.GetDevicesByCredential)
+		credentials.POST("/export", exportHandler.ExportCredentials)
 	}
 
 	// ==================== 配置模板路由 ====================
@@ -85,6 +88,7 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 		templates.POST("/:id/preview", templateHandler.Preview)
 		templates.POST("/:id/clone", templateHandler.Clone)
 		templates.POST("/:id/variables", templateHandler.GetVariables)
+		templates.POST("/export", exportHandler.ExportTemplates)
 	}
 
 	// ==================== 命令分发路由 ====================
@@ -95,6 +99,7 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 		command.POST("/list", commandHandler.List)
 		command.POST("/:id", commandHandler.GetExecutionResult)
 		command.POST("/:id/device/:deviceId", commandHandler.GetDeviceExecutionDetail)
+		command.POST("/export", exportHandler.ExportCommands)
 	}
 
 	// ==================== 配置执行路由 ====================
@@ -106,6 +111,7 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 		executions.POST("/:id/cancel", executionHandler.Cancel)
 		executions.POST("/:id/delete", executionHandler.Delete)
 		executions.POST("/batch-delete", executionHandler.BatchDelete)
+		executions.POST("/export", exportHandler.ExportExecutions)
 	}
 
 	// ==================== 配置备份路由 ====================
@@ -123,6 +129,7 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 		backups.POST("/batch", backupHandler.BatchBackup)
 		backups.GET("/version", backupHandler.GetByVersion)
 		backups.GET("/history", backupHandler.GetHistory)
+		backups.POST("/export", exportHandler.ExportBackups)
 	}
 
 	// ==================== 设备发现路由 ====================
@@ -135,6 +142,7 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 		discoveries.POST("/:id/execute", discoveryHandler.Execute)
 		discoveries.POST("/:id/cancel", discoveryHandler.Cancel)
 		discoveries.POST("/:id/delete", discoveryHandler.Delete)
+		discoveries.POST("/export", exportHandler.ExportDiscoveries)
 		discoveries.POST("/batch-delete", discoveryHandler.BatchDelete)
 		discoveries.POST("/:id/import", discoveryHandler.ImportDevices)
 	}
@@ -145,7 +153,7 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 		"network:mac:query",
 	}, core))
 	{
-		SetupMACRouter(mac, core)
+		SetupMACRouter(mac, core, exportHandler)
 	}
 
 	// ==================== 端口状态管理路由（独立权限） ====================
@@ -154,6 +162,6 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 		"network:port:query",
 	}, core))
 	{
-		SetupPortRouter(ports, core)
+		SetupPortRouter(ports, core, exportHandler)
 	}
 }

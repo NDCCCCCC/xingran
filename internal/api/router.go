@@ -80,7 +80,7 @@ func setupNoticeHub(r *gin.RouterGroup, core *core.Core) *websocket.NoticeHub {
 }
 
 // SetupRouter 设置路由
-func SetupRouter(r *gin.RouterGroup, core *core.Core) {
+func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 	r.Use(middleware.RequestID())
 
 	setupEncryptionMiddlewares(r, core)
@@ -263,7 +263,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core) {
 			wsGroup := authorized.Group("/ws")
 			wsGroup.Use(middleware.CORSForWebSocket())
 			{
-				v1.SetupNoticeWebSocketRouter(wsGroup, noticeHub, core)
+				v1.SetupNoticeWebSocketRouter(wsGroup, noticeHub, core, allowedOrigins)
 			}
 		}
 	}
