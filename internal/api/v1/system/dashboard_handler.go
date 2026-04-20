@@ -595,19 +595,20 @@ func (h *DashboardHandler) GetWidgetData(c *gin.Context) {
 // @Tags 仪表盘管理
 // @Accept json
 // @Produce json
-// @Param request body object{widgetIds=[]string} true "Widget ID列表"
-// @Success 200 {object} response.Response{data=map[string]interface{}}
+// @Param request body object{widgetIds=[]string,bypassCache=bool} true "Widget ID列表"
+// @Success 200 {object} response.Response{data=map[string]WidgetDataResult}
 // @Router /system/dashboards/widgets/batch-data [post]
 func (h *DashboardHandler) GetBatchWidgetData(c *gin.Context) {
 	var req struct {
-		WidgetIds []string `json:"widgetIds" binding:"required,min=1"`
+		WidgetIds   []string `json:"widgetIds" binding:"required,min=1"`
+		BypassCache bool     `json:"bypassCache"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
 		return
 	}
 
-	data, err := h.service.GetBatchWidgetData(c.Request.Context(), req.WidgetIds)
+	data, err := h.service.GetBatchWidgetData(c.Request.Context(), req.WidgetIds, req.BypassCache)
 	if err != nil {
 		response.Error(c, err)
 		return

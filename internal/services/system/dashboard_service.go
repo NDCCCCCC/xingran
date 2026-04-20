@@ -34,7 +34,7 @@ type DashboardService interface {
 	ExportDashboard(ctx context.Context, id string) (string, error)
 	ImportDashboard(ctx context.Context, userID string, config string) (*models.Dashboard, error)
 	GetWidgetData(ctx context.Context, widgetID string, apiEndpoint string, params map[string]interface{}) (interface{}, error)
-	GetBatchWidgetData(ctx context.Context, widgetIDs []string) (map[string]interface{}, error)
+	GetBatchWidgetData(ctx context.Context, widgetIDs []string, bypassCache bool) (map[string]WidgetDataResult, error)
 	GetUserAccessibleEndpoints(ctx context.Context, userID string) ([]services.CategoryEndpoints, error)
 	ValidateEndpoint(route, method string) (*services.EndpointDetail, error)
 	InvalidateUserCache(ctx context.Context, userID string)
@@ -560,8 +560,19 @@ func (s *DashboardServiceImpl) GetWidgetData(ctx context.Context, widgetID strin
 }
 
 // GetBatchWidgetData 批量获取 Widget 数据
-func (s *DashboardServiceImpl) GetBatchWidgetData(ctx context.Context, widgetIDs []string) (map[string]interface{}, error) {
-	return make(map[string]interface{}), nil
+func (s *DashboardServiceImpl) GetBatchWidgetData(ctx context.Context, widgetIDs []string, bypassCache bool) (map[string]WidgetDataResult, error) {
+	// 从 Context 提取用户 ID
+	userID, ok := ctx.Value("user_id").(string)
+	if !ok {
+		return nil, fmt.Errorf("user not authenticated")
+	}
+
+	// 调用 WidgetDataFetcher 批量获取数据
+	if s.widgetFetcher == nil {
+		return nil, fmt.Errorf("widget fetcher not available")
+	}
+
+	return s.widgetFetcher.FetchBatchWidgetData(ctx, widgetIDs, userID, bypassCache)
 }
 
 // GetUserAccessibleEndpoints 获取用户可访问的端点

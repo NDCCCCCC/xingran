@@ -165,3 +165,61 @@ func TestDefaultServiceRegistry_CallService(t *testing.T) {
 	assert.Equal(t, "GET", resultMap["method"])
 	assert.Equal(t, map[string]interface{}{"test": 1}, resultMap["params"])
 }
+
+// TestFetchBatchWidgetData_Parallel 测试并行获取
+func TestFetchBatchWidgetData_Parallel(t *testing.T) {
+	// 创建 fetcher（需要 mock db）
+	// TODO: 实现 mock db 和 cache
+	t.Skip("需要 mock db 实现")
+}
+
+// TestFetchBatchWidgetData_PartialFailure 测试部分失败
+func TestFetchBatchWidgetData_PartialFailure(t *testing.T) {
+	// 创建 fetcher
+	// TODO: 实现 mock db 和 cache
+	// 验证结果：
+	// - widget-1 和 widget-2 有数据
+	// - non-existent-widget 有错误
+	// - 整体不返回错误
+
+	t.Skip("需要 mock db 实现")
+}
+
+// TestFetchBatchWidgetData_Timeout 测试超时
+func TestFetchBatchWidgetData_Timeout(t *testing.T) {
+	// 创建测试数据：包含一个会超时的 Widget
+	// 验证超时 Widget 返回错误，其他 Widget 正常返回
+
+	t.Skip("需要 mock db 和慢速数据源实现")
+}
+
+// TestFetchBatchWidgetData_ConcurrencyLimit 测试并发限制
+func TestFetchBatchWidgetData_ConcurrencyLimit(t *testing.T) {
+	// 创建 20 个 Widget，验证并发数不超过 10
+	// 通过记录并发执行数，验证最大并发数
+
+	t.Skip("需要实现并发数监控")
+}
+
+// TestWidgetDataResult 测试 WidgetDataResult 结构
+func TestWidgetDataResult(t *testing.T) {
+	// 成功结果
+	successResult := WidgetDataResult{
+		Data:   map[string]interface{}{"value": 100},
+		Cached: true,
+	}
+	assert.NotNil(t, successResult.Data)
+	assert.Empty(t, successResult.Error)
+	assert.True(t, successResult.Cached)
+
+	// 错误结果
+	errorResult := WidgetDataResult{
+		Error:  "widget not found",
+		Code:   404,
+		Cached: false,
+	}
+	assert.Nil(t, errorResult.Data)
+	assert.NotEmpty(t, errorResult.Error)
+	assert.Equal(t, 404, errorResult.Code)
+	assert.False(t, errorResult.Cached)
+}

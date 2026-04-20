@@ -5,18 +5,29 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/transform"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
+	"golang.org/x/sync/errgroup"
 	"gorm.io/gorm"
 )
 
 // WidgetDataFetcher Widget 数据获取接口
 type WidgetDataFetcher interface {
 	FetchWidgetData(ctx context.Context, widget *models.WidgetConfig, userID string, bypassCache bool) (interface{}, bool, error)
+	FetchBatchWidgetData(ctx context.Context, widgetIDs []string, userID string, bypassCache bool) (map[string]WidgetDataResult, error)
+}
+
+// WidgetDataResult Widget 数据获取结果
+type WidgetDataResult struct {
+	Data   interface{} `json:"data,omitempty"`   // 成功时的数据
+	Error  string      `json:"error,omitempty"`  // 失败时的错误消息
+	Code   int         `json:"code,omitempty"`   // 错误码（可选）
+	Cached bool        `json:"cached"`           // 是否来自缓存
 }
 
 // WidgetDataFetcherImpl Widget 数据获取实现
@@ -180,6 +191,74 @@ func (f *WidgetDataFetcherImpl) getUserPermissions(ctx context.Context, userID s
 	`, userID).Scan(&permissions).Error
 
 	return permissions, err
+}
+
+// FetchBatchWidgetData 批量获取 Widget 数据
+func (f *WidgetDataFetcherImpl) FetchBatchWidgetData(ctx context.Context, widgetIDs []string, userID string, bypassCache bool) (map[string]WidgetDataResult, error) {
+	results := make(map[string]WidgetDataResult)
+	resultsMutex := sync.Mutex{}
+
+	// 创建 errgroup，设置最大并发数（per D-03）
+	g, ctx := errgroup.WithContext(ctx)
+	g.SetLimit(10) // 最大 10 个并发
+
+	for _, widgetID := range widgetIDs {
+		widgetID := widgetID // 捕获循环变量
+
+		g.Go(func() error {
+			// 设置单个 Widget 超时
+			widgetCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			defer cancel()
+
+			// 查询 Widget 配置
+			var widget models.WidgetConfig
+			if err := f.db.WithContext(widgetCtx).Where("id = ?", widgetID).First(&widget).Error; err != nil {
+				if err == gorm.ErrRecordNotFound {
+					resultsMutex.Lock()
+					results[widgetID] = WidgetDataResult{
+						Error: fmt.Sprintf("widget not found: %s", widgetID),
+						Code:  404,
+					}
+					resultsMutex.Unlock()
+					return nil // 不中断其他 goroutine（per D-04）
+				}
+				resultsMutex.Lock()
+				results[widgetID] = WidgetDataResult{
+					Error: fmt.Sprintf("failed to fetch widget: %v", err),
+					Code:  500,
+				}
+				resultsMutex.Unlock()
+				return nil
+			}
+
+			// 获取 Widget 数据
+			data, cached, err := f.FetchWidgetData(widgetCtx, &widget, userID, bypassCache)
+
+			resultsMutex.Lock()
+			if err != nil {
+				results[widgetID] = WidgetDataResult{
+					Error:  err.Error(),
+					Code:   500,
+					Cached: false,
+				}
+			} else {
+				results[widgetID] = WidgetDataResult{
+					Data:   data,
+					Cached: cached,
+				}
+			}
+			resultsMutex.Unlock()
+
+			return nil // 不中断其他 goroutine（per D-04）
+		})
+	}
+
+	// 等待所有 goroutine 完成
+	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+
+	return results, nil
 }
 
 // DefaultServiceRegistry 默认服务注册表实现
