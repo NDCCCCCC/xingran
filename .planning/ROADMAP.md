@@ -47,9 +47,9 @@
 5. 权限过滤生效，用户只能访问有权限的端点
 
 **Plans:**
-- [ ] 04-01: 实现 GetWidgetData 核心逻辑
-- [ ] 04-02: 实现数据转换管道
-- [ ] 04-03: 实现批量获取和缓存
+- [x] 04-01-PLAN.md — 实现 GetWidgetData 核心逻辑，支持 API/Static/WebSocket 三种数据源
+- [x] 04-02-PLAN.md — 实现数据转换管道，使用 JSONata 表达式引擎
+- [x] 04-03-PLAN.md — 实现批量获取和缓存，使用 errgroup 并行获取
 
 ---
 
@@ -137,7 +137,7 @@
 | 1. 后端导入配置 | v1.0 | 3/3 | Complete | — |
 | 2. 验证与导出 | v1.0 | 4/4 | Complete | — |
 | 3. 信息点导入设备端口配置 | v1.1 | 1/1 | Complete | 2026-04-16 |
-| 4. Widget 数据获取机制 | v1.2 | 0/3 | Not Started | — |
+| 4. Widget 数据获取机制 | v1.2 | 3/3 | Complete | 2026-04-20 |
 | 5. 前端交互完善 | v1.2 | 0/3 | Not Started | — |
 | 6. 实时数据刷新 | v1.2 | 0/3 | Not Started | — |
 | 7. 用户体验优化 | v1.2 | 0/2 | Not Started | — |
