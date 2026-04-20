@@ -44,13 +44,16 @@ func (s ConnectionState) String() string {
 
 // ScrapliWrapper scrapligo驱动封装（简化版）
 // 并发安全由上层 PooledConnection 的设备级锁保护
-// 遵循 Go 最佳实践：使用 sync.Once 确保 initDone channel 只关闭一次
+// 使用 opMu (sync.RWMutex) 保护所有 driver 操作与 Close() 之间的竞态：
+//   - 操作方法获取 RLock（允许多个操作并发）
+//   - Close() 获取 Lock（等待所有操作完成后才关闭）
 type ScrapliWrapper struct {
 	driver    *network.Driver
 	device    *models.NetworkDevice
 	state     ConnectionState // 连接状态
 	stateMu   sync.RWMutex    // 保护状态读写
-	closing   chan struct{}   // 用于通知关闭信号
+	opMu      sync.RWMutex    // 保护 driver 操作与 Close() 的竞态
+	closing   chan struct{}   // 用于通知关闭信号（用于 OpenContext 初始化循环等非 opMu 路径）
 	initDone  chan struct{}   // 初始化完成信号
 	closeOnce sync.Once       // 确保 initDone 只关闭一次
 }
@@ -209,6 +212,58 @@ func NewScrapliWrapperWithPort(device *models.NetworkDevice, username, password 
 	}, nil
 }
 
+// setState 设置连接状态
+func (w *ScrapliWrapper) setState(state ConnectionState) {
+	w.stateMu.Lock()
+	defer w.stateMu.Unlock()
+	w.state = state
+}
+
+// getState 获取连接状态
+func (w *ScrapliWrapper) getState() ConnectionState {
+	w.stateMu.RLock()
+	defer w.stateMu.RUnlock()
+	return w.state
+}
+
+// isClosing 检查是否正在关闭（非阻塞）
+func (w *ScrapliWrapper) isClosing() bool {
+	select {
+	case <-w.closing:
+		return true
+	default:
+		return false
+	}
+}
+
+// acquireOp 获取操作锁（共享读锁），用于所有 driver 操作方法
+// 确保 Close() 必须等待所有操作完成后才能关闭连接
+func (w *ScrapliWrapper) acquireOp() error {
+	state := w.getState()
+	if state != StateReady {
+		return fmt.Errorf("连接不可用 (当前状态: %s)", state)
+	}
+
+	w.opMu.RLock()
+
+	// 获取锁后二次检查状态（防止 TOCTOU 竞态）
+	if w.getState() != StateReady {
+		w.opMu.RUnlock()
+		return fmt.Errorf("连接不可用")
+	}
+	if w.driver == nil {
+		w.opMu.RUnlock()
+		return fmt.Errorf("设备未连接")
+	}
+
+	return nil
+}
+
+// releaseOp 释放操作锁
+func (w *ScrapliWrapper) releaseOp() {
+	w.opMu.RUnlock()
+}
+
 // Open 打开设备连接（已废弃，使用 OpenContext）
 func (w *ScrapliWrapper) Open() error {
 	// 捕获 scrapligo 库可能的 panic
@@ -226,20 +281,6 @@ func (w *ScrapliWrapper) Open() error {
 	// 等待初始化完成
 	w.setState(StateReady)
 	return nil
-}
-
-// setState 设置连接状态
-func (w *ScrapliWrapper) setState(state ConnectionState) {
-	w.stateMu.Lock()
-	defer w.stateMu.Unlock()
-	w.state = state
-}
-
-// getState 获取连接状态
-func (w *ScrapliWrapper) getState() ConnectionState {
-	w.stateMu.RLock()
-	defer w.stateMu.RUnlock()
-	return w.state
 }
 
 // OpenContext 打开设备连接（支持超时控制）
@@ -294,6 +335,16 @@ func (w *ScrapliWrapper) OpenContext(ctx context.Context) error {
 				resultCh <- result{err: fmt.Errorf("连接初始化超时")}
 				return
 			case <-ticker.C:
+				// 检查是否正在关闭（此时尚未进入 Ready 状态，不走 acquireOp 路径）
+				if w.isClosing() {
+					w.setState(StateClosed)
+					w.closeOnce.Do(func() {
+						close(w.initDone)
+					})
+					resultCh <- result{err: fmt.Errorf("连接正在关闭")}
+					return
+				}
+
 				// 尝试调用 GetPrompt 来验证连接是否真正就绪
 				func() {
 					defer func() {
@@ -339,6 +390,7 @@ func (w *ScrapliWrapper) OpenContext(ctx context.Context) error {
 }
 
 // Close 关闭设备连接
+// 使用 opMu.Lock() 确保所有正在执行的 driver 操作完成后才关闭
 func (w *ScrapliWrapper) Close() error {
 	// 获取当前状态
 	currentState := w.getState()
@@ -346,20 +398,24 @@ func (w *ScrapliWrapper) Close() error {
 		return nil // 已经关闭或正在关闭，直接返回
 	}
 
-	// 设置状态为正在关闭
+	// 设置状态为正在关闭（阻止新操作通过 acquireOp 的状态检查）
 	w.setState(StateClosing)
 
-	// 先通知所有等待的 goroutine（不关闭 closing channel，以防双重 close）
+	// 通知 closing channel（用于 OpenContext 初始化循环等非 opMu 路径）
 	select {
 	case <-w.closing:
 	default:
 		close(w.closing)
 	}
 
-	// 给 scrapligo 内部的 goroutine 更多的时间退出
-	// GetPrompt 等方法会在 goroutine 中执行，需要等待它们完成
-	// 增加到 200ms 以确保在高并发场景下也能安全退出
-	time.Sleep(200 * time.Millisecond)
+	// 获取排他锁 — 阻塞直到所有 acquireOp() 持有的 RLock 释放
+	// 这保证了：所有正在执行的 driver 操作完成后，Close 才会继续
+	w.opMu.Lock()
+
+	// 安全网：给 scrapligo 内部子 goroutine（如 GetPrompt 内部的 Write goroutine）
+	// 少量时间退出。正常情况下这些 goroutine 在 opMu 排他锁获取前已完成，
+	// 但 GetPrompt() 的子 goroutine 可能在父方法返回后仍在运行
+	time.Sleep(100 * time.Millisecond)
 
 	if w.driver != nil {
 		// 捕获 Close 可能的 panic
@@ -373,11 +429,10 @@ func (w *ScrapliWrapper) Close() error {
 		}()
 	}
 
-	// 再次等待，确保 Close 完全完成
-	time.Sleep(50 * time.Millisecond)
-
 	// 设置状态为已关闭
 	w.setState(StateClosed)
+
+	w.opMu.Unlock()
 
 	return nil
 }
@@ -389,17 +444,14 @@ func (w *ScrapliWrapper) IsConnected() bool {
 }
 
 // IsReady 检查连接是否真正可用（通过尝试调用 GetPrompt 验证）
-// 这个方法会捕获可能的 panic，因此即使 transport 尚未完全初始化也不会崩溃
+// 使用 acquireOp 确保与 Close() 的正确同步
 func (w *ScrapliWrapper) IsReady() bool {
-	state := w.getState()
-
-	// 只有 Ready 状态才认为真正可用
-	if state != StateReady {
+	if err := w.acquireOp(); err != nil {
 		return false
 	}
+	defer w.releaseOp()
 
-	// 尝试调用 GetPrompt 来验证 transport 是否真正就绪
-	// 使用 recover 捕获可能的 nil pointer panic
+	// 捕获 GetPrompt 可能的 panic
 	ready := func() bool {
 		defer func() {
 			if r := recover(); r != nil {
@@ -440,21 +492,10 @@ func (w *ScrapliWrapper) WaitForReady(timeout time.Duration) error {
 
 // SendCommand 发送单个命令
 func (w *ScrapliWrapper) SendCommand(command string, stripPrompt bool) (*Response, error) {
-	// 检查连接状态
-	state := w.getState()
-	if state != StateReady {
-		return nil, fmt.Errorf("连接不可用 (当前状态: %s)", state)
+	if err := w.acquireOp(); err != nil {
+		return nil, err
 	}
-
-	if w.driver == nil {
-		return nil, fmt.Errorf("设备未连接")
-	}
-
-	// 在发送命令前，再次检查连接是否真正可用
-	// 这可以防止并发场景下的空指针问题
-	if !w.IsReady() {
-		return nil, fmt.Errorf("连接不可用")
-	}
+	defer w.releaseOp()
 
 	// 捕获 scrapligo 库可能的 panic
 	defer func() {
@@ -484,23 +525,14 @@ func (w *ScrapliWrapper) SendCommand(command string, stripPrompt bool) (*Respons
 
 // SendCommands 发送多个命令
 func (w *ScrapliWrapper) SendCommands(commands []string, stripPrompt bool) ([]*Response, error) {
-	// 检查连接状态
-	if w.getState() != StateReady {
-		return nil, fmt.Errorf("连接不可用")
+	if err := w.acquireOp(); err != nil {
+		return nil, err
 	}
-
-	if w.driver == nil {
-		return nil, fmt.Errorf("设备未连接")
-	}
+	defer w.releaseOp()
 
 	responses := make([]*Response, 0, len(commands))
 
 	for _, cmd := range commands {
-		// 检查是否在执行过程中状态变化
-		if w.getState() != StateReady {
-			return responses, fmt.Errorf("连接已关闭")
-		}
-
 		r, err := w.driver.SendCommand(cmd)
 		if err != nil {
 			return responses, fmt.Errorf("发送命令 '%s' 失败: %w", cmd, err)
@@ -518,14 +550,10 @@ func (w *ScrapliWrapper) SendCommands(commands []string, stripPrompt bool) ([]*R
 
 // SendConfig 发送配置命令
 func (w *ScrapliWrapper) SendConfig(config string) (*Response, error) {
-	// 检查连接状态
-	if w.getState() != StateReady {
-		return nil, fmt.Errorf("连接不可用")
+	if err := w.acquireOp(); err != nil {
+		return nil, err
 	}
-
-	if w.driver == nil {
-		return nil, fmt.Errorf("设备未连接")
-	}
+	defer w.releaseOp()
 
 	// 捕获 scrapligo 库可能的 panic
 	defer func() {
@@ -549,23 +577,14 @@ func (w *ScrapliWrapper) SendConfig(config string) (*Response, error) {
 
 // SendConfigs 发送多个配置命令
 func (w *ScrapliWrapper) SendConfigs(configs []string) ([]*Response, error) {
-	// 检查连接状态
-	if w.getState() != StateReady {
-		return nil, fmt.Errorf("连接不可用")
+	if err := w.acquireOp(); err != nil {
+		return nil, err
 	}
-
-	if w.driver == nil {
-		return nil, fmt.Errorf("设备未连接")
-	}
+	defer w.releaseOp()
 
 	responses := make([]*Response, 0, len(configs))
 
 	for _, cfg := range configs {
-		// 检查是否在执行过程中状态变化
-		if w.getState() != StateReady {
-			return responses, fmt.Errorf("连接已关闭")
-		}
-
 		r, err := w.driver.SendConfig(cfg)
 		if err != nil {
 			return responses, fmt.Errorf("发送配置 '%s' 失败: %w", cfg, err)
@@ -583,14 +602,10 @@ func (w *ScrapliWrapper) SendConfigs(configs []string) ([]*Response, error) {
 
 // GetConfig 获取设备配置
 func (w *ScrapliWrapper) GetConfig() (string, error) {
-	// 检查连接状态
-	if w.getState() != StateReady {
-		return "", fmt.Errorf("连接不可用")
+	if err := w.acquireOp(); err != nil {
+		return "", err
 	}
-
-	if w.driver == nil {
-		return "", fmt.Errorf("设备未连接")
-	}
+	defer w.releaseOp()
 
 	var command string
 	switch w.device.Vendor {
@@ -612,14 +627,10 @@ func (w *ScrapliWrapper) GetConfig() (string, error) {
 
 // GetResponse 获取命令响应
 func (w *ScrapliWrapper) GetResponse() string {
-	// 检查连接状态
-	if w.getState() != StateReady {
+	if err := w.acquireOp(); err != nil {
 		return ""
 	}
-
-	if w.driver == nil {
-		return ""
-	}
+	defer w.releaseOp()
 
 	// 使用 recover 捕获 scrapligo 库可能的内部 panic
 	defer func() {
