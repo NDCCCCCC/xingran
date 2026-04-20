@@ -73,9 +73,9 @@
 5. 用户可以删除 Widget 并确认
 
 **Plans:**
-- [ ] 05-01-PLAN.md — 增强 WidgetSelector 组件，实现完整配置流程（数据源+显示配置）
-- [ ] 05-02-PLAN.md — 创建 DashboardSettings 侧边抽屉，实现仪表盘设置编辑
-- [ ] 05-03-PLAN.md — 创建 TemplatePreview 和 WidgetEditor 组件，实现预览和编辑/删除交互
+- [x] 05-01-PLAN.md — 增强 WidgetSelector 组件，实现完整配置流程（数据源+显示配置）
+- [x] 05-02-PLAN.md — 创建 DashboardSettings 侧边抽屉，实现仪表盘设置编辑
+- [x] 05-03-PLAN.md — 创建 TemplatePreview 和 WidgetEditor 组件，实现预览和编辑/删除交互
 
 ---
 
@@ -138,6 +138,6 @@
 | 2. 验证与导出 | v1.0 | 4/4 | Complete | — |
 | 3. 信息点导入设备端口配置 | v1.1 | 1/1 | Complete | 2026-04-16 |
 | 4. Widget 数据获取机制 | v1.2 | 3/3 | Complete | 2026-04-20 |
-| 5. 前端交互完善 | v1.2 | 0/3 | Not Started | — |
+| 5. 前端交互完善 | v1.2 | 3/3 | Complete | 2026-04-21 |
 | 6. 实时数据刷新 | v1.2 | 0/3 | Not Started | — |
 | 7. 用户体验优化 | v1.2 | 0/2 | Not Started | — |
