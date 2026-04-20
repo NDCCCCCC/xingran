@@ -46,6 +46,7 @@ type DashboardServiceImpl struct {
 	db              *gorm.DB
 	cache           cache.Cache
 	endpointService EndpointService
+	widgetFetcher   WidgetDataFetcher // Widget 数据获取器
 }
 
 // EndpointService 端点服务接口（抽象）
@@ -67,10 +68,15 @@ func NewDashboardService(db *gorm.DB, cache cache.Cache, endpointService *servic
 		endpointSvc = &endpointServiceAdapter{APIEndpointService: endpointService}
 	}
 
+	// 创建 WidgetDataFetcher
+	serviceRegistry := NewDefaultServiceRegistry()
+	widgetFetcher := NewWidgetDataFetcher(db, cache, endpointSvc, serviceRegistry)
+
 	return &DashboardServiceImpl{
 		db:              db,
 		cache:           cache,
 		endpointService: endpointSvc,
+		widgetFetcher:   widgetFetcher,
 	}
 }
 
@@ -525,7 +531,32 @@ func (s *DashboardServiceImpl) ImportDashboard(ctx context.Context, userID strin
 
 // GetWidgetData 获取 Widget 数据（调用其他服务的 API）
 func (s *DashboardServiceImpl) GetWidgetData(ctx context.Context, widgetID string, apiEndpoint string, params map[string]interface{}) (interface{}, error) {
-	return nil, fmt.Errorf("widget data fetching not implemented yet")
+	// 1. 查询 Widget 配置
+	var widget models.WidgetConfig
+	if err := s.db.WithContext(ctx).Where("id = ?", widgetID).First(&widget).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, fmt.Errorf("widget not found: %s", widgetID)
+		}
+		return nil, fmt.Errorf("failed to fetch widget: %w", err)
+	}
+
+	// 2. 从 Context 提取用户 ID
+	userID, ok := ctx.Value("user_id").(string)
+	if !ok {
+		return nil, fmt.Errorf("user not authenticated")
+	}
+
+	// 3. 调用 WidgetDataFetcher 获取数据
+	if s.widgetFetcher == nil {
+		return nil, fmt.Errorf("widget fetcher not available")
+	}
+
+	data, _, err := s.widgetFetcher.FetchWidgetData(ctx, &widget, userID, false)
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
 }
 
 // GetBatchWidgetData 批量获取 Widget 数据
