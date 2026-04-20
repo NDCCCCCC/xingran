@@ -3,14 +3,17 @@
  *
  * 用于选择和添加Widget到仪表盘
  * 集成API端点元数据系统，支持友好的端点选择
+ * 支持完整的数据源配置（API/WebSocket/Static）和显示配置
  */
 
-import { useState, useCallback } from 'react';
-import { Modal, Card, Col, Row, Input, Button, Form, Select, Divider } from 'antd';
+import { useState, useCallback, useEffect } from 'react';
+import { Modal, Card, Col, Row, Input, Button, Form, Select, Divider, Tabs } from 'antd';
 import { widgetRegistry, getWidgetTypes } from '../widgets/configs/widgetRegistry';
 import EndpointSelector from './EndpointSelector';
 import ParamsEditor from './ParamsEditor';
-import type { WidgetType, WidgetConfig, ApiDataSourceConfig, EndpointDetail, StatCardDisplayConfig, ChartDisplayConfig, TableDisplayConfig, ListDisplayConfig, ProgressDisplayConfig } from '@/types/dashboard';
+import DataSourceForm from './DataSourceForm';
+import DisplayConfigForm from './DisplayConfigForm';
+import type { WidgetType, WidgetConfig, ApiDataSourceConfig, EndpointDetail, StatCardDisplayConfig, ChartDisplayConfig, TableDisplayConfig, ListDisplayConfig, ProgressDisplayConfig, DataSourceConfig, DisplayConfig } from '@/types/dashboard';
 import { widgetDefaultSizes } from '@/types/dashboard';
 
 interface WidgetSelectorProps {
@@ -32,21 +35,30 @@ export const WidgetSelector: React.FC<WidgetSelectorProps> = ({
 }) => {
 	const [selectedType, setSelectedType] = useState<WidgetType | null>(null);
 	const [selectedEndpoint, setSelectedEndpoint] = useState<EndpointDetail | null>(null);
+	const [dataSource, setDataSource] = useState<DataSourceConfig | undefined>(undefined);
+	const [displayConfig, setDisplayConfig] = useState<DisplayConfig | undefined>(undefined);
 	const [form] = Form.useForm();
 
 	const widgetTypes = getWidgetTypes();
 
 	// 如果是编辑模式，初始化表单数据
-	useCallback(() => {
+	useEffect(() => {
 		if (editingWidget && visible) {
-			const dataSource = editingWidget.dataSource as ApiDataSourceConfig;
 			setSelectedType(editingWidget.type);
+			setDataSource(editingWidget.dataSource);
+			setDisplayConfig(editingWidget.display);
 			form.setFieldsValue({
 				type: editingWidget.type,
 				title: editingWidget.title,
-				endpoint: dataSource.endpoint,
-				method: dataSource.method,
+				description: editingWidget.description || '',
 			});
+		} else if (!visible) {
+			// 关闭时重置状态
+			setSelectedType(null);
+			setSelectedEndpoint(null);
+			setDataSource(undefined);
+			setDisplayConfig(undefined);
+			form.resetFields();
 		}
 	}, [editingWidget, visible, form]);
 
@@ -75,8 +87,17 @@ export const WidgetSelector: React.FC<WidgetSelectorProps> = ({
 		try {
 			const values = await form.validateFields();
 
-			// 根据Widget类型创建对应的显示配置
-			const createDisplayConfig = (widgetType: WidgetType): StatCardDisplayConfig | ChartDisplayConfig | TableDisplayConfig | ListDisplayConfig | ProgressDisplayConfig => {
+			// 使用数据源配置（如果已设置）或创建默认配置
+			const finalDataSource: DataSourceConfig = dataSource || {
+				api: {
+					type: 'api',
+					endpoint: values.endpoint || '/api/default',
+					method: (values.method || 'GET') as 'GET' | 'POST',
+				},
+			};
+
+			// 使用显示配置（如果已设置）或创建默认配置
+			const createDefaultDisplayConfig = (widgetType: WidgetType): DisplayConfig => {
 				switch (widgetType) {
 					case 'stat-card':
 						return {
@@ -89,54 +110,36 @@ export const WidgetSelector: React.FC<WidgetSelectorProps> = ({
 						return {
 							type: 'chart',
 							chartType: 'line',
+							showLegend: true,
 						};
 					case 'table':
 						return {
 							type: 'table',
 							columns: [],
+							bordered: true,
 						};
 					case 'list':
 						return {
 							type: 'list',
 							titleField: 'title',
+							maxItems: 10,
 						};
 					case 'progress':
 						return {
 							type: 'progress',
 							progressType: 'line',
+							target: 100,
 						};
 					default:
 						return {
 							type: 'stat-card',
 							icon: '📊',
 							iconColor: '#1890ff',
-							decimals: 0,
 						};
 				}
 			};
 
-			// 处理参数：将表单的params数组转换为对象
-			const paramsObj: Record<string, unknown> = {};
-			if (values.params && Array.isArray(values.params)) {
-				values.params.forEach((param: { name: string; value: string }) => {
-					if (param.name && param.value) {
-						paramsObj[param.name] = param.value;
-					}
-				});
-			}
-
-			// 创建API数据源配置 - 按后端期望的格式包装
-			const apiDataSourceConfig = {
-				type: 'api' as const,
-				endpoint: values.endpoint || '/api/default',
-				method: (values.method || 'GET') as 'GET' | 'POST',
-				params: Object.keys(paramsObj).length > 0 ? paramsObj : undefined,
-			};
-
-			// 后端DataSourceConfig格式：{ api: ApiDataSourceConfig }
-			const dataSource = {
-				api: apiDataSourceConfig,
-			};
+			const finalDisplayConfig: DisplayConfig = displayConfig || createDefaultDisplayConfig(values.type as WidgetType);
 
 			const widget: WidgetConfig = {
 				id: editingWidgetId || `widget-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
@@ -147,8 +150,8 @@ export const WidgetSelector: React.FC<WidgetSelectorProps> = ({
 					y: 0,
 					...widgetDefaultSizes[values.type as WidgetType],
 				},
-				dataSource: dataSource,
-				display: createDisplayConfig(values.type as WidgetType),
+				dataSource: finalDataSource,
+				display: finalDisplayConfig,
 				enabled: true,
 			};
 
@@ -159,6 +162,8 @@ export const WidgetSelector: React.FC<WidgetSelectorProps> = ({
 			setTimeout(() => {
 				setSelectedType(null);
 				setSelectedEndpoint(null);
+				setDataSource(undefined);
+				setDisplayConfig(undefined);
 				form.resetFields();
 				onClose();
 			}, 100);
@@ -214,83 +219,64 @@ export const WidgetSelector: React.FC<WidgetSelectorProps> = ({
 							← 返回选择Widget类型
 						</Button>
 
-						<Form form={form} layout="vertical" initialValues={{ method: 'GET' }}>
-							<Form.Item name="type" hidden>
-								<input />
-							</Form.Item>
+				<Form form={form} layout="vertical" initialValues={{ method: 'GET' }}>
+						<Form.Item name="type" hidden>
+							<input />
+						</Form.Item>
 
-							<Form.Item
-								label="Widget类型"
-								name="type"
-								rules={[{ required: true }]}
-							>
-								<Select disabled>
-									{widgetTypes.map((type: WidgetType) => (
-										<Select.Option key={type} value={type}>
-											{widgetRegistry[type]?.displayName}
-										</Select.Option>
-									))}
-								</Select>
-							</Form.Item>
+						<Form.Item
+							label="Widget类型"
+							name="type"
+							rules={[{ required: true }]}
+						>
+							<Select disabled>
+								{widgetTypes.map((type: WidgetType) => (
+									<Select.Option key={type} value={type}>
+										{widgetRegistry[type]?.displayName}
+									</Select.Option>
+								))}
+							</Select>
+						</Form.Item>
 
-							<Form.Item
-								label="标题"
-								name="title"
-								rules={[{ required: true, message: '请输入Widget标题' }]}
-							>
-								<Input placeholder="请输入Widget标题" />
-							</Form.Item>
+						<Form.Item
+							label="标题"
+							name="title"
+							rules={[{ required: true, message: '请输入Widget标题' }]}
+						>
+							<Input placeholder="请输入Widget标题" />
+						</Form.Item>
 
-							<Divider titlePlacement="left">数据源配置</Divider>
+						<Divider titlePlacement="left">数据源配置</Divider>
 
-							<Form.Item
-								label="API端点"
-								name="endpoint"
-								rules={[{ required: true, message: '请选择API端点' }]}
-								tooltip="从下拉列表中选择可用的API端点"
-							>
-								<EndpointSelector
-									widgetType={selectedType || undefined}
-									onChange={handleEndpointChange}
-								/>
-							</Form.Item>
+						<Form.Item>
+							<DataSourceForm
+								value={dataSource}
+								onChange={setDataSource}
+								widgetType={selectedType || undefined}
+								form={form}
+							/>
+						</Form.Item>
 
-							<Form.Item
-								label="请求方法"
-								name="method"
-								tooltip="根据所选端点自动设置"
-							>
-								<Select>
-									<Select.Option value="GET">GET</Select.Option>
-									<Select.Option value="POST">POST</Select.Option>
-								</Select>
-							</Form.Item>
+						<Divider titlePlacement="left">显示配置</Divider>
 
-							<Form.Item
-								label="数据路径"
-								name="dataPath"
-								tooltip="使用JSONata表达式提取数据，根据所选端点自动设置"
-								extra="例如：data.list 用于提取分页数据列表"
-							>
-								<Input placeholder="data.list" />
-							</Form.Item>
+						<Form.Item>
+							<DisplayConfigForm
+								value={displayConfig}
+								onChange={setDisplayConfig}
+								widgetType={selectedType!}
+								form={form}
+							/>
+						</Form.Item>
 
-							<Form.Item
-								label="请求参数"
-								tooltip="配置API请求的查询参数"
-							>
-								<ParamsEditor endpoint={selectedEndpoint || undefined} form={form} />
-							</Form.Item>
+						<Divider titlePlacement="left">其他</Divider>
 
-							<Divider titlePlacement="left">其他</Divider>
-
-							<Form.Item
-								label="说明"
-								name="description"
-							>
-								<TextArea rows={2} placeholder="可选的Widget说明" />
-							</Form.Item>
-						</Form>
+						<Form.Item
+							label="说明"
+							name="description"
+						>
+							<TextArea rows={2} placeholder="可选的Widget说明" />
+						</Form.Item>
+					</Form>
 					</div>
 				)}
 			</div>
