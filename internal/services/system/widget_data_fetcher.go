@@ -9,6 +9,7 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/transform"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
 	"gorm.io/gorm"
 )
@@ -20,10 +21,11 @@ type WidgetDataFetcher interface {
 
 // WidgetDataFetcherImpl Widget 数据获取实现
 type WidgetDataFetcherImpl struct {
-	db              *gorm.DB
-	cache           cache.Cache
-	endpointService EndpointService
-	serviceRegistry ServiceRegistry
+	db               *gorm.DB
+	cache            cache.Cache
+	endpointService  EndpointService
+	serviceRegistry  ServiceRegistry
+	jsonataEvaluator *transform.JSONataEvaluator
 }
 
 // ServiceRegistry 服务注册表接口，用于根据端点路由分发到对应 Service
@@ -34,10 +36,11 @@ type ServiceRegistry interface {
 // NewWidgetDataFetcher 创建 Widget 数据获取器
 func NewWidgetDataFetcher(db *gorm.DB, cache cache.Cache, endpointService EndpointService, serviceRegistry ServiceRegistry) *WidgetDataFetcherImpl {
 	return &WidgetDataFetcherImpl{
-		db:              db,
-		cache:           cache,
-		endpointService: endpointService,
-		serviceRegistry: serviceRegistry,
+		db:               db,
+		cache:            cache,
+		endpointService:  endpointService,
+		serviceRegistry:  serviceRegistry,
+		jsonataEvaluator: transform.NewJSONataEvaluator(),
 	}
 }
 
@@ -77,6 +80,16 @@ func (f *WidgetDataFetcherImpl) FetchWidgetData(ctx context.Context, widget *mod
 	switch {
 	case widget.DataSource.Api != nil:
 		data, err = f.fetchFromAPISource(ctx, widget.DataSource.Api, userID)
+		if err != nil {
+			return nil, false, err
+		}
+		// 应用数据转换（per D-02）
+		if widget.DataSource.Api.Transform != nil {
+			data, err = f.jsonataEvaluator.Transform(data, widget.DataSource.Api.Transform)
+			if err != nil {
+				return nil, false, fmt.Errorf("transform failed: %w", err)
+			}
+		}
 	case widget.DataSource.Static != nil:
 		data = widget.DataSource.Static.Data
 		err = nil
