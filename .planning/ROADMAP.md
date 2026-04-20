@@ -73,9 +73,9 @@
 5. 用户可以删除 Widget 并确认
 
 **Plans:**
-- [ ] 05-01: 实现 Widget 选择器
-- [ ] 05-02: 实现仪表盘设置面板
-- [ ] 05-03: 实现模板预览和 Widget 编辑
+- [ ] 05-01-PLAN.md — 增强 WidgetSelector 组件，实现完整配置流程（数据源+显示配置）
+- [ ] 05-02-PLAN.md — 创建 DashboardSettings 侧边抽屉，实现仪表盘设置编辑
+- [ ] 05-03-PLAN.md — 创建 TemplatePreview 和 WidgetEditor 组件，实现预览和编辑/删除交互
 
 ---
 
