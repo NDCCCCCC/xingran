@@ -23,11 +23,6 @@
 	position: relative;
 }
 
-.dashboard-grid .react-grid-item {
-	transition: all 200ms ease;
-	transition-property: left, top;
-}
-
 .dashboard-grid .react-grid-item.resizing {
 	opacity: 0.9;
 	z-index: 10;
