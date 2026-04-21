@@ -5,12 +5,13 @@
  */
 
 import React, { type ReactNode, useState, useCallback } from 'react';
-import { Card, Space, Dropdown, Button } from 'antd';
+import { Card, Space, Dropdown, Button, Tooltip } from 'antd';
 import {
 	MoreOutlined,
 	SettingOutlined,
 	ReloadOutlined,
 	CloseOutlined,
+	DragOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import type { WidgetConfig } from '@/types/dashboard';
@@ -118,13 +119,22 @@ export const BaseWidget: React.FC<BaseWidgetProps> = ({
 
 	return (
 		<div
-			className={`base-widget ${isSelected ? 'base-widget--selected' : ''} ${isEditable ? 'base-widget--editable' : ''}`}
+			className={`base-widget ${isSelected ? 'base-widget--selected' : ''} ${isEditable ? 'base-widget--editable' : ''} ${loading ? 'base-widget--loading' : ''}`}
 			onClick={handleClick}
 			onMouseEnter={() => setIsHovered(true)}
 			onMouseLeave={() => setIsHovered(false)}
 		>
 			<Card
-				title={widget.title}
+				title={
+					<div className="base-widget__title-wrapper">
+						{isEditable && (
+							<Tooltip title="拖拽移动">
+								<DragOutlined className="widget-drag-handle" />
+							</Tooltip>
+						)}
+						<span>{widget.title}</span>
+					</div>
+				}
 				extra={
 					<Space size="small">
 						{loading && <ReloadOutlined spin />}
@@ -145,9 +155,15 @@ export const BaseWidget: React.FC<BaseWidgetProps> = ({
 						)}
 					</Space>
 				}
-				variant="borderless"
+			variant="borderless"
 				className="base-widget__card"
 				data-widget-id={widget.id}
+				styles={{
+					body: {
+						height: 'calc(100% - 40px)',
+						overflow: 'auto',
+					},
+				}}
 			>
 				{error ? (
 					<div className="base-widget__error">

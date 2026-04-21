@@ -44,6 +44,17 @@
 	width: 100%;
 	height: 100%;
 	border-radius: var(--border-radius-base, 4px);
+	transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+/* 悬停动画效果 */
+.base-widget--editable:hover .base-widget__card {
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+/* 选中动画效果 */
+.base-widget--selected .base-widget__card {
+	box-shadow: 0 4px 12px rgba(24, 144, 255, 0.2);
 }
 
 .base-widget__card .ant-card-head {
@@ -73,6 +84,24 @@
 	font-size: 14px;
 	justify-content: center;
 	padding: 20px;
+}
+
+/* 标题包装器 */
+.base-widget__title-wrapper {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+/* 拖拽手柄样式 */
+.base-widget .widget-drag-handle {
+	cursor: move;
+	color: var(--text-color-secondary, rgba(0, 0, 0, 0.45));
+	transition: color 0.2s ease;
+}
+
+.base-widget .widget-drag-handle:hover {
+	color: var(--primary-color, #1890ff);
 }
 
 /* 头部组件 */
