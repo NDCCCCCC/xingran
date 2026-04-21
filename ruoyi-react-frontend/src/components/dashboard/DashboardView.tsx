@@ -76,14 +76,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 		}) || false;
 	}, [dashboard]);
 
+	// WebSocket 消息类型守卫
+	const isWidgetMessage = (data: unknown): data is { widgetId: string; data: unknown } => {
+		return typeof data === 'object' && data !== null &&
+			'widgetId' in data && 'data' in data &&
+			typeof (data as Record<string, unknown>).widgetId === 'string';
+	};
+
 	// WebSocket 消息处理
 	const handleWebSocketMessage = (data: unknown) => {
-		const msg = data as { widgetId?: string; data?: unknown };
-		if (msg.widgetId && msg.data) {
-			// 验证 widgetId 属于当前仪表盘
-			if (widgetIds.includes(msg.widgetId)) {
-				updateWidgetData(msg.widgetId, msg.data);
-			}
+		if (isWidgetMessage(data) && widgetIds.includes(data.widgetId)) {
+			updateWidgetData(data.widgetId, data.data);
 		}
 	};
 
