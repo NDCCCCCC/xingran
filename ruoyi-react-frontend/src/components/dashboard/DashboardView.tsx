@@ -88,7 +88,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 	};
 
 	// WebSocket 连接
-	const { status: wsStatus, connect, disconnect } = useWebSocket({
+	const { status: wsConnStatus, connect, disconnect } = useWebSocket({
 		url: `/ws/dashboard/${dashboard?.id}`,
 		onMessage: handleWebSocketMessage,
 		onOpen: () => {
@@ -150,20 +150,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
 	// WebSocket 错误提示
 	useEffect(() => {
-		if (wsStatus === 'error') {
+		if (wsConnStatus === 'error') {
 			notification.warning({
 				message: 'WebSocket 连接错误',
 				description: '实时数据推送不可用，将使用轮询模式',
 				duration: 5,
 			});
 		}
-	}, [wsStatus]);
-
-	// 从缓存获取 Widget 数据
-	const getWidgetData = (widgetId: string) => {
-		const cached = widgetDataCache.get(widgetId);
-		return cached?.data;
-	};
+	}, [wsConnStatus]);
 
 	// 渲染连接状态指示器
 	const renderConnectionStatus = () => {
@@ -176,7 +170,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 			error: { color: 'error', icon: <DisconnectOutlined />, text: '连接错误' },
 		};
 
-		const config = statusConfig[wsStatus];
+		const config = statusConfig[wsConnStatus];
 
 		return (
 			<Tooltip title={`WebSocket ${config.text}`}>
@@ -184,6 +178,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 			</Tooltip>
 		);
 	};
+
+	// 布局变更处理
+	const handleLayoutChange = useCallback((layouts: Array<{ id: string; position: unknown }>) => {
+		// 可以在这里保存布局变更
+		console.log('Layout changed:', layouts);
+	}, []);
 
 	if (!dashboard) {
 		return (
@@ -238,7 +238,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 			)}
 
 			{/* WebSocket 断开提示 */}
-			{hasWebSocketSource && wsStatus === 'disconnected' && isOnline && (
+			{hasWebSocketSource && wsConnStatus === 'disconnected' && isOnline && (
 				<Alert
 					message="实时连接已断开"
 					description="正在尝试重新连接..."
@@ -250,34 +250,38 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
 			{/* 工具栏 */}
 			<div className="dashboard-view__toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 16px' }}>
-					<div className="dashboard-view__title">
-						<h2 style={{ margin: 0 }}>{dashboard.name}</h2>
-						{dashboard.description && (
-							<p style={{ margin: 0, color: '#666', fontSize: 12 }}>{dashboard.description}</p>
-						)}
-					</div>
-					<div className="dashboard-view__status" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-						{renderConnectionStatus()}
-						{isPaused && (
-							<Tooltip title="轮询已暂停">
-								<Badge status="warning" text="已暂停" />
-							</Tooltip>
-						)}
-						{!isOnline && (
-							<Tooltip title="离线模式">
-								<Badge status="error" text="离线" />
-							</Tooltip>
-						)}
-					</div>
+				<div className="dashboard-view__title">
+					<h2 style={{ margin: 0 }}>{dashboard.name}</h2>
+					{dashboard.description && (
+						<p style={{ margin: 0, color: '#666', fontSize: 12 }}>{dashboard.description}</p>
+					)}
 				</div>
-
-				{/* 仪表盘网格 */}
-				<DashboardGrid
-					dashboard={dashboard}
-					widgetData={widgetDataCache}
-					readonly={readonly}
-				/>
+				<div className="dashboard-view__status" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+					{renderConnectionStatus()}
+					{isPaused && (
+						<Tooltip title="轮询已暂停">
+							<Badge status="warning" text="已暂停" />
+						</Tooltip>
+					)}
+					{!isOnline && (
+						<Tooltip title="离线模式">
+							<Badge status="error" text="离线" />
+						</Tooltip>
+					)}
+				</div>
 			</div>
+
+			{/* 仪表盘网格 */}
+			<DashboardGrid
+				widgets={dashboard.layout.widgets}
+				onLayoutChange={handleLayoutChange}
+			>
+				{dashboard.layout.widgets.map((widget) => (
+					<div key={widget.id} data-widget-id={widget.id}>
+						{widget.title}
+					</div>
+				))}
+			</DashboardGrid>
 		</div>
 	);
 };
