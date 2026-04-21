@@ -86,6 +86,29 @@
 	padding: 20px;
 }
 
+/* 错误容器 - 使用 Result 组件 */
+.base-widget__error-container {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 100%;
+	min-height: 150px;
+}
+
+/* 空数据状态 */
+.base-widget__empty {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 100%;
+	min-height: 100px;
+}
+
+/* 骨架屏样式 */
+.base-widget__skeleton {
+	padding: 16px;
+}
+
 /* 标题包装器 */
 .base-widget__title-wrapper {
 	display: flex;
@@ -145,14 +168,22 @@
 	align-items: center;
 	justify-content: center;
 	color: var(--text-color-secondary, rgba(0, 0, 0, 0.45));
+	min-height: 120px;
 }
 
 .base-widget-content--error {
 	display: flex;
+	flex-direction: column;
 	align-items: center;
 	justify-content: center;
 	color: var(--error-color, #ff4d4f);
 	font-size: 14px;
+	min-height: 120px;
+	gap: 8px;
+}
+
+.base-widget-content--error .anticon {
+	font-size: 24px;
 }
 
 .base-widget-content--empty {
@@ -161,6 +192,7 @@
 	justify-content: center;
 	color: var(--text-color-secondary, rgba(0, 0, 0, 0.45));
 	font-size: 14px;
+	min-height: 120px;
 }
 
 /* 操作按钮组件 */

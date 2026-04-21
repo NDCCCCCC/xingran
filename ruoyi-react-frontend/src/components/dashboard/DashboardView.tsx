@@ -7,9 +7,9 @@
  * - 网络状态检测和提示
  */
 
-import { useEffect, useMemo } from 'react';
-import { message, notification, Badge, Tooltip, Spin } from 'antd';
-import { WifiOutlined, DisconnectOutlined, ReloadOutlined, SyncOutlined } from '@ant-design/icons';
+import { useEffect, useMemo, useState, useCallback } from 'react';
+import { message, notification, Badge, Tooltip, Spin, Alert, Result, Button, Empty } from 'antd';
+import { WifiOutlined, DisconnectOutlined, ReloadOutlined, SyncOutlined, WarningOutlined, ReloadOutlined as RefreshIcon } from '@ant-design/icons';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { useWidgetPolling } from '@/hooks/useWidgetPolling';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
@@ -22,6 +22,12 @@ export interface DashboardViewProps {
 	dashboard: Dashboard;
 	/** 是否为只读模式 */
 	readonly?: boolean;
+	/** 加载状态 */
+	loading?: boolean;
+	/** 错误信息 */
+	error?: string | null;
+	/** 重试回调 */
+	onRetry?: () => void;
 }
 
 /**
@@ -30,6 +36,9 @@ export interface DashboardViewProps {
 export const DashboardView: React.FC<DashboardViewProps> = ({
 	dashboard,
 	readonly = false,
+	loading: externalLoading = false,
+	error: externalError = null,
+	onRetry,
 }) => {
 	const {
 		viewMode,
@@ -37,7 +46,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 		setWsStatus,
 		setIsRefreshing,
 		updateWidgetData,
+		wsStatus,
+		isRefreshing,
 	} = useDashboardStore();
+
+	// 内部状态
+	const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
 	// 网络状态检测
 	const { isOnline, wasOffline, resetWasOffline } = useNetworkStatus();
@@ -127,6 +141,24 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 		setIsRefreshing(loading);
 	}, [loading, setIsRefreshing]);
 
+	// 首次加载完成
+	useEffect(() => {
+		if (!loading && !initialLoadComplete) {
+			setInitialLoadComplete(true);
+		}
+	}, [loading, initialLoadComplete]);
+
+	// WebSocket 错误提示
+	useEffect(() => {
+		if (wsStatus === 'error') {
+			notification.warning({
+				message: 'WebSocket 连接错误',
+				description: '实时数据推送不可用，将使用轮询模式',
+				duration: 5,
+			});
+		}
+	}, [wsStatus]);
+
 	// 从缓存获取 Widget 数据
 	const getWidgetData = (widgetId: string) => {
 		const cached = widgetDataCache.get(widgetId);
@@ -154,14 +186,70 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 	};
 
 	if (!dashboard) {
-		return null;
+		return (
+			<div className="dashboard-view dashboard-view--empty">
+				<Empty description="仪表盘不存在" />
+			</div>
+		);
+	}
+
+	// 全局错误状态
+	if (externalError) {
+		return (
+			<div className="dashboard-view dashboard-view--error">
+				<Result
+					status="error"
+					title="加载仪表盘失败"
+					subTitle={externalError}
+					extra={
+						onRetry && (
+							<Button type="primary" icon={<RefreshIcon />} onClick={onRetry}>
+								重试
+							</Button>
+						)
+					}
+				/>
+			</div>
+		);
+	}
+
+	// 首次加载骨架屏
+	if (!initialLoadComplete && externalLoading) {
+		return (
+			<div className="dashboard-view dashboard-view--loading">
+				<Spin size="large" tip="加载仪表盘中..." />
+			</div>
+		);
 	}
 
 	return (
-		<Spin spinning={loading} tip="加载数据中...">
-			<div className="dashboard-view">
-				{/* 工具栏 */}
-				<div className="dashboard-view__toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 16px' }}>
+		<div className="dashboard-view">
+			{/* 离线提示条 */}
+			{!isOnline && (
+				<Alert
+					message="当前处于离线模式"
+					description="数据可能不是最新，网络恢复后将自动刷新"
+					type="warning"
+					icon={<WarningOutlined />}
+					showIcon
+					closable
+					style={{ marginBottom: 16 }}
+				/>
+			)}
+
+			{/* WebSocket 断开提示 */}
+			{hasWebSocketSource && wsStatus === 'disconnected' && isOnline && (
+				<Alert
+					message="实时连接已断开"
+					description="正在尝试重新连接..."
+					type="info"
+					showIcon
+					style={{ marginBottom: 16 }}
+				/>
+			)}
+
+			{/* 工具栏 */}
+			<div className="dashboard-view__toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 16px' }}>
 					<div className="dashboard-view__title">
 						<h2 style={{ margin: 0 }}>{dashboard.name}</h2>
 						{dashboard.description && (
@@ -190,7 +278,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 					readonly={readonly}
 				/>
 			</div>
-		</Spin>
+		</div>
 	);
 };
 

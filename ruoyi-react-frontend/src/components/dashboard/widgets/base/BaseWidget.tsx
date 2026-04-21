@@ -4,14 +4,15 @@
  * 所有Widget组件的基础类，提供通用功能和数据获取
  */
 
-import React, { type ReactNode, useState, useCallback } from 'react';
-import { Card, Space, Dropdown, Button, Tooltip } from 'antd';
+import React, { type ReactNode, useState, useCallback, useEffect } from 'react';
+import { Card, Space, Dropdown, Button, Tooltip, Spin, Empty, Result, Skeleton } from 'antd';
 import {
 	MoreOutlined,
 	SettingOutlined,
 	ReloadOutlined,
 	CloseOutlined,
 	DragOutlined,
+	WarningOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import type { WidgetConfig } from '@/types/dashboard';
@@ -34,6 +35,12 @@ export interface BaseWidgetProps {
 	/** 错误信息 */
 	error?: string | null;
 
+	/** 是否为空数据 */
+	empty?: boolean;
+
+	/** 空数据提示信息 */
+	emptyMessage?: string;
+
 	/** 子元素 */
 	children: ReactNode;
 
@@ -48,6 +55,9 @@ export interface BaseWidgetProps {
 
 	/** 禁用自动数据获取（子组件自行获取数据） */
 	disableDataFetch?: boolean;
+
+	/** 是否首次加载（显示骨架屏） */
+	isInitialLoad?: boolean;
 }
 
 export const BaseWidget: React.FC<BaseWidgetProps> = ({
@@ -55,14 +65,18 @@ export const BaseWidget: React.FC<BaseWidgetProps> = ({
 	data: externalData,
 	loading: externalLoading,
 	error: externalError,
+	empty: externalEmpty = false,
+	emptyMessage = '暂无数据',
 	children,
 	onEdit,
 	onDelete,
 	onRefresh: externalOnRefresh,
 	disableDataFetch = false,
+	isInitialLoad = false,
 }) => {
 	const { viewMode, selectWidget, selectedWidgetId } = useDashboardStore();
 	const [isHovered, setIsHovered] = useState(false);
+	const [isFirstLoad, setIsFirstLoad] = useState(true);
 
 	// 自动获取数据（如果没有提供外部数据且未禁用自动获取）
 	const { data: internalData, loading: internalLoading, error: internalError, refresh } = useWidgetData(
@@ -76,8 +90,21 @@ export const BaseWidget: React.FC<BaseWidgetProps> = ({
 	const error = externalError ?? internalError;
 	const onRefresh = externalOnRefresh ?? refresh;
 
+	// 检测数据是否为空
+	const isEmpty = externalEmpty || (!loading && !error && (data === null || data === undefined ||
+		(Array.isArray(data) && data.length === 0) ||
+		(typeof data === 'object' && Object.keys(data as object).length === 0)));
+
+	// 首次加载完成后更新状态
+	useEffect(() => {
+		if (!loading && isFirstLoad) {
+			setIsFirstLoad(false);
+		}
+	}, [loading, isFirstLoad]);
+
 	const isSelected = selectedWidgetId === widget.id;
 	const isEditable = viewMode === 'edit';
+	const showSkeleton = (isInitialLoad || isFirstLoad) && loading;
 
 	// 点击处理
 	const handleClick = useCallback(() => {
@@ -165,14 +192,44 @@ export const BaseWidget: React.FC<BaseWidgetProps> = ({
 					},
 				}}
 			>
-				{error ? (
-					<div className="base-widget__error">
-						<CloseOutlined />
-						<span>{error}</span>
+				{/* 骨架屏 - 首次加载 */}
+				{showSkeleton && (
+					<div className="base-widget__skeleton">
+						<Skeleton active paragraph={{ rows: 4 }} />
 					</div>
-				) : (
-					// 直接渲染children，子组件会使用useWidgetData自行获取数据
-					children
+				)}
+
+				{/* 错误状态 */}
+				{!showSkeleton && error && (
+					<div className="base-widget__error-container">
+						<Result
+							status="error"
+							title="加载失败"
+							subTitle={error}
+							extra={
+								<Button type="primary" icon={<ReloadOutlined />} onClick={() => onRefresh?.()}>
+									重试
+								</Button>
+							}
+						/>
+					</div>
+				)}
+
+				{/* 空数据状态 */}
+				{!showSkeleton && !error && isEmpty && (
+					<div className="base-widget__empty">
+						<Empty
+							description={emptyMessage}
+							image={Empty.PRESENTED_IMAGE_SIMPLE}
+						/>
+					</div>
+				)}
+
+				{/* 正常内容 */}
+				{!showSkeleton && !error && !isEmpty && (
+					<Spin spinning={loading} tip="加载中...">
+						{children}
+					</Spin>
 				)}
 			</Card>
 		</div>
