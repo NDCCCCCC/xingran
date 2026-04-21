@@ -51,6 +51,9 @@ const updateSingleWidget = (
 ): WidgetConfig[] =>
 	widgets.map((w) => (w.id === widgetId ? { ...w, ...updates } : w));
 
+// WebSocket 连接状态类型
+export type WebSocketStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
+
 // ==================== 类型定义 ====================
 
 interface DashboardState {
@@ -79,6 +82,10 @@ interface DashboardState {
 	pageMode: PageMode;
 	defaultDashboard: Dashboard | null;
 	defaultDashboardLoading: boolean;
+	// WebSocket 和实时刷新状态
+	wsStatus: WebSocketStatus;
+	wsLastConnected: Date | null;
+	isRefreshing: boolean;
 }
 
 interface DashboardActions {
@@ -111,6 +118,10 @@ interface DashboardActions {
 	// 新增 actions
 	fetchDefaultDashboard: () => Promise<void>;
 	setPageMode: (mode: PageMode) => void;
+	// WebSocket 和实时刷新 actions
+	setWsStatus: (status: WebSocketStatus) => void;
+	setIsRefreshing: (refreshing: boolean) => void;
+	updateWidgetData: (widgetId: string, data: unknown) => void;
 }
 
 type DashboardStore = DashboardState & DashboardActions;
@@ -138,6 +149,10 @@ const initialState: DashboardState = {
 	pageMode: 'home',
 	defaultDashboard: null,
 	defaultDashboardLoading: false,
+	// WebSocket 和实时刷新状态初始值
+	wsStatus: 'disconnected',
+	wsLastConnected: null,
+	isRefreshing: false,
 };
 
 export const useDashboardStore = create<DashboardStore>()(
@@ -450,6 +465,29 @@ export const useDashboardStore = create<DashboardStore>()(
 
 			setPageMode: (mode) => {
 				set({ pageMode: mode });
+			},
+
+			// WebSocket 和实时刷新 actions
+			setWsStatus: (status) => {
+				set((state) => ({
+					wsStatus: status,
+					wsLastConnected: status === 'connected' ? new Date() : state.wsLastConnected,
+				}));
+			},
+
+			setIsRefreshing: (refreshing) => {
+				set({ isRefreshing: refreshing });
+			},
+
+			updateWidgetData: (widgetId, data) => {
+				set((state) => {
+					const newCache = new Map(state.widgetDataCache);
+					newCache.set(widgetId, {
+						data,
+						timestamp: Date.now(),
+					});
+					return { widgetDataCache: newCache };
+				});
 			},
 
 			reset: () => {
