@@ -91,9 +91,12 @@ export const BaseWidget: React.FC<BaseWidgetProps> = ({
 	const onRefresh = externalOnRefresh ?? refresh;
 
 	// 检测数据是否为空
-	const isEmpty = externalEmpty || (!loading && !error && (data === null || data === undefined ||
+	const isEmpty = externalEmpty || (!loading && !error && (
+		data === null ||
+		data === undefined ||
 		(Array.isArray(data) && data.length === 0) ||
-		(typeof data === 'object' && Object.keys(data as object).length === 0)));
+		(typeof data === 'object' && data !== null && Object.keys(data).length === 0)
+	));
 
 	// 首次加载完成后更新状态
 	useEffect(() => {
