@@ -47,17 +47,17 @@ export interface UseWebSocketReturn {
 /**
  * WebSocket 连接管理 Hook
  */
-export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
+export function useWebSocket(options?: UseWebSocketOptions): UseWebSocketReturn {
 	const {
-		url,
-		onMessage,
+		url = '',
+		onMessage = () => {},
 		onOpen,
 		onClose,
 		onError,
 		reconnect = true,
 		reconnectInterval = 1000,
 		maxReconnectAttempts = 10,
-	} = options;
+	} = options || {};
 
 	const [status, setStatus] = useState<WebSocketStatus>('disconnected');
 	const [reconnectAttempts, setReconnectAttempts] = useState(0);
