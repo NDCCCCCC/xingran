@@ -17,6 +17,9 @@ import { useWebSocket } from '@/hooks/useWebSocket';
 import { DashboardGrid } from './layout/DashboardGrid';
 import type { Dashboard } from '@/types/dashboard';
 
+import './DashboardView.css';
+import './DashboardView.css';
+
 export interface DashboardViewProps {
 	/** 仪表盘数据 */
 	dashboard: Dashboard;
@@ -252,14 +255,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 			)}
 
 			{/* 工具栏 */}
-			<div className="dashboard-view__toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 16px' }}>
+			<div className="dashboard-view__toolbar">
 				<div className="dashboard-view__title">
-					<h2 style={{ margin: 0 }}>{dashboard.name}</h2>
+					<h2>{dashboard.name}</h2>
 					{dashboard.description && (
-						<p style={{ margin: 0, color: '#666', fontSize: 12 }}>{dashboard.description}</p>
+						<p>{dashboard.description}</p>
 					)}
 				</div>
-				<div className="dashboard-view__status" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+				<div className="dashboard-view__status">
 					{renderConnectionStatus()}
 					{isPaused && (
 						<Tooltip title="轮询已暂停">
