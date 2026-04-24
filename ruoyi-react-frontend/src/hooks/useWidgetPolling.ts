@@ -56,7 +56,7 @@ export function useWidgetPolling(options: UseWidgetPollingOptions): UseWidgetPol
 	const [lastRefreshTime, setLastRefreshTime] = useState<Date | null>(null);
 	const [isPaused, setIsPaused] = useState(false);
 
-	const intervalRef = useRef<NodeJS.Timeout | null>(null);
+	const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 	const isFetchingRef = useRef(false);
 
 	// 计算缓存过期时间（毫秒）

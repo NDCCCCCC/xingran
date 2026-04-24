@@ -22,6 +22,8 @@ interface ExtendedResponsiveProps extends ResponsiveProps {
 	isResizable?: boolean;
 	compactType?: 'vertical' | 'horizontal' | null;
 	preventCollision?: boolean;
+	draggableHandle?: string;
+	useCSSTransforms?: boolean;
 	children: React.ReactNode;
 }
 

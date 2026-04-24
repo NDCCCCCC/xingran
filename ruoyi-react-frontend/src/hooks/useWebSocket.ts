@@ -63,7 +63,7 @@ export function useWebSocket(options?: UseWebSocketOptions): UseWebSocketReturn 
 	const [reconnectAttempts, setReconnectAttempts] = useState(0);
 
 	const wsRef = useRef<WebSocket | null>(null);
-	const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+	const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const isManualDisconnectRef = useRef(false);
 
 	// 清理重连定时器

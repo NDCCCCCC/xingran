@@ -131,12 +131,15 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({
 						</div>
 					) : (
 						<>
-							{/* 仪表盘布局预览 */}
-							<DashboardGrid
-								dashboard={template}
-								widgetData={previewData}
-								readonly={true}
-							/>
+					{/* 仪表盘布局预览 */}
+					<DashboardGrid
+						widgets={template.layout.widgets}
+						onLayoutChange={() => {}}
+					>
+						{template.layout.widgets.map((widget) => (
+							<div key={widget.id}>{widget.title}</div>
+						))}
+					</DashboardGrid>
 
 							{/* 底部操作按钮 */}
 							<div
