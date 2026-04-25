@@ -147,7 +147,7 @@ export const WidgetEditor: React.FC<WidgetEditorProps> = ({ visible, widget, onC
 			<Spin spinning={loading}>
 				<Form form={form} layout="vertical" initialValues={widget}>
 					{/* 基本信息 */}
-					<Divider orientation="left" plain>
+					<Divider titlePlacement="left" plain>
 						基本信息
 					</Divider>
 
@@ -171,7 +171,7 @@ export const WidgetEditor: React.FC<WidgetEditorProps> = ({ visible, widget, onC
 					</Form.Item>
 
 					{/* 数据源配置 */}
-					<Divider orientation="left" plain>
+					<Divider titlePlacement="left" plain>
 						数据源配置
 					</Divider>
 
@@ -185,7 +185,7 @@ export const WidgetEditor: React.FC<WidgetEditorProps> = ({ visible, widget, onC
 					</Form.Item>
 
 					{/* 显示配置 */}
-					<Divider orientation="left" plain>
+					<Divider titlePlacement="left" plain>
 						显示配置
 					</Divider>
 
@@ -199,7 +199,7 @@ export const WidgetEditor: React.FC<WidgetEditorProps> = ({ visible, widget, onC
 					</Form.Item>
 
 					{/* Widget 信息 */}
-					<Divider orientation="left" plain>
+					<Divider titlePlacement="left" plain>
 						Widget 信息
 					</Divider>
 

@@ -1,4 +1,4 @@
-import type { FC } from 'react';
+﻿import type { FC } from 'react';
 import {
   Table,
   Button,
@@ -29,6 +29,7 @@ import { useTableManager } from '@/hooks/useTableManager';
 import { withErrorHandling } from '@/utils/errorHandler';
 import { useState, useEffect } from 'react';
 import { usePagination } from '@/hooks/usePagination';
+import NetworkExport from '@/components/shared/NetworkExport';
 
 const { Option } = Select;
 
@@ -248,6 +249,23 @@ const MACAddressPage: FC = () => {
             </Form.Item>
           </Form>
           <Space>
+            <NetworkExport
+              exportUrl="/api/v1/network/mac/export"
+              entityName="MAC地址"
+              filters={(() => {
+                const values = searchForm.getFieldsValue() as Record<string, unknown>;
+                const filtered: Record<string, unknown> = {};
+                Object.keys(values).forEach(key => {
+                  const value = values[key];
+                  if (value !== undefined && value !== null && value !== '') {
+                    filtered[key] = value;
+                  }
+                });
+                return filtered;
+              })()}
+              current={paginationProps.current}
+              pageSize={paginationProps.pageSize}
+            />
             <Button icon={<DeleteOutlined />} onClick={handleBatchDelete} disabled={selectedRowKeys.length === 0} style={{ color: '#ff4d4f' }}>
               批量删除 ({selectedRowKeys.length})
             </Button>

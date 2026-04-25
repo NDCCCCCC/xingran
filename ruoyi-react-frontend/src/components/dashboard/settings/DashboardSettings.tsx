@@ -126,7 +126,7 @@ export const DashboardSettings: React.FC<DashboardSettingsProps> = ({ visible, o
 			<Spin spinning={loading}>
 				<Form form={form} layout="vertical" initialValues={currentDashboard}>
 					{/* 基本信息 */}
-					<Divider orientation="left" plain>
+					<Divider titlePlacement="left" plain>
 						基本信息
 					</Divider>
 
@@ -150,7 +150,7 @@ export const DashboardSettings: React.FC<DashboardSettingsProps> = ({ visible, o
 					</Form.Item>
 
 					{/* 权限设置 */}
-					<Divider orientation="left" plain>
+					<Divider titlePlacement="left" plain>
 						权限设置
 					</Divider>
 
@@ -162,7 +162,7 @@ export const DashboardSettings: React.FC<DashboardSettingsProps> = ({ visible, o
 					</Form.Item>
 
 					{/* 刷新设置 */}
-					<Divider orientation="left" plain>
+					<Divider titlePlacement="left" plain>
 						刷新设置
 					</Divider>
 
@@ -176,7 +176,7 @@ export const DashboardSettings: React.FC<DashboardSettingsProps> = ({ visible, o
 					</Form.Item>
 
 					{/* 仪表盘信息 */}
-					<Divider orientation="left" plain>
+					<Divider titlePlacement="left" plain>
 						仪表盘信息
 					</Divider>
 

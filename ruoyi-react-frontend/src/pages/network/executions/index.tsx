@@ -19,12 +19,14 @@ import {
   CloseCircleOutlined,
   ClockCircleOutlined,
   ApiOutlined,
+  ExportOutlined,
 } from '@ant-design/icons';
 import { useExecutionData, useExecutionModals } from './hooks';
 import { getExecutionColumns, getDetailColumns } from './columns';
 import { ConfigExecuteModal, VariableModal, DetailDrawer } from './modals';
 import { STATUS_OPTIONS } from './constants';
 import { usePagination } from '@/hooks/usePagination';
+import NetworkExport from '@/components/shared/NetworkExport';
 import type { ConfigExecution } from '@/types';
 
 const { Option } = Select;
@@ -204,6 +206,15 @@ const ConfigExecutionPage: FC = () => {
             <Button type="primary" icon={<PlayCircleOutlined />} onClick={openExecuteModal}>
               执行配置模板
             </Button>
+            <NetworkExport
+              exportUrl="/api/v1/network/executions/export"
+              entityName="配置执行"
+              filters={Object.fromEntries(
+                Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(([, v]) => v !== undefined && v !== null && v !== '')
+              )}
+              current={paginationProps?.current ?? 1}
+              pageSize={paginationProps?.pageSize ?? 10}
+            />
           </Space>
         </div>
       </Card>

@@ -48,6 +48,7 @@ import { useTableManager } from '@/hooks/useTableManager';
 import { handleApiError, handleSuccess } from '@/utils/errorHandler';
 import ActionButtons from '@/components/shared/ActionButtons';
 import { DepartmentTreeSelect } from '@/components/shared';
+import NetworkExport from '@/components/shared/NetworkExport';
 import { usePagination } from '@/hooks/usePagination';
 
 // 导入提取的常量、工具和 Hook
@@ -617,6 +618,23 @@ const DeviceManagement: FC = () => {
                 </Form.Item>
               </Form>
               <Space>
+                <NetworkExport
+                  exportUrl="/api/v1/network/devices/export"
+                  entityName="网络设备"
+                  filters={(() => {
+                    const values = searchForm.getFieldsValue() as Record<string, unknown>;
+                    const filtered: Record<string, unknown> = {};
+                    Object.keys(values).forEach(key => {
+                      const value = values[key];
+                      if (value !== undefined && value !== null && value !== '') {
+                        filtered[key] = value;
+                      }
+                    });
+                    return filtered;
+                  })()}
+                  current={paginationProps.current}
+                  pageSize={paginationProps.pageSize}
+                />
                 <Button type="primary" icon={<ThunderboltOutlined />} onClick={openQuickCreateModal}>快速创建</Button>
                 <Button type="default" icon={<PlusOutlined />} onClick={() => openModal()}>手动新增</Button>
                 {selectedRowKeys.length > 0 && (

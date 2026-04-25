@@ -35,11 +35,13 @@
     "plan_bounce": false,
     "plan_bounce_script": null,
     "plan_bounce_passes": 2,
-    "auto_prune_state": false
+    "auto_prune_state": false,
+    "_auto_chain_active": false
   },
   "hooks": {
     "context_warnings": true
   },
+  "response_language": "Chinese",
   "project_code": null,
   "phase_naming": "sequential",
   "agent_skills": {},

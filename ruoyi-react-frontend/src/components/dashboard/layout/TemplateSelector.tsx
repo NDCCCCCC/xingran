@@ -89,6 +89,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
 		if (template) {
 			// 将预设模板转换为 Dashboard 格式
 			const dashboard: Dashboard = {
+				...template.dashboard,
 				id: `template-${templateType}`,
 				name: template.displayName,
 				description: template.description,
@@ -99,7 +100,6 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
 				status: 0,
 				createdAt: new Date().toISOString(),
 				updatedAt: new Date().toISOString(),
-				...template.dashboard,
 			} as Dashboard;
 			setPreviewTemplate(dashboard);
 			setPreviewVisible(true);

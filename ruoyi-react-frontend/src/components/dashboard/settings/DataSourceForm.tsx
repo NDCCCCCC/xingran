@@ -51,10 +51,10 @@ const getDataSourceType = (config?: DataSourceConfig): DataSourceType => {
 /**
  * 从 DataSourceConfig 中提取实际配置对象
  */
-const extractConfig = <T extends DataSourceConfig>(config?: DataSourceConfig, type: DataSourceType): T | null => {
+const extractConfig = <T extends DataSourceConfig>(type: DataSourceType, config?: DataSourceConfig): T | null => {
 	if (!config) return null;
 	if ('type' in config && config.type === type) return config as T;
-	if (type in config) return (config as Record<string, T>)[type] as T;
+	if (type in (config as object)) return (config as unknown as Record<string, T>)[type] as T;
 	return null;
 };
 
@@ -80,7 +80,7 @@ export const DataSourceForm: React.FC<DataSourceFormProps> = ({
 			setDataSourceType(type);
 
 			if (type === 'api') {
-				const apiConfig = extractConfig<ApiDataSourceConfig>(value, 'api');
+				const apiConfig = extractConfig<ApiDataSourceConfig>('api', value);
 				if (apiConfig) {
 					activeForm.setFieldsValue({
 						endpoint: apiConfig.endpoint,
@@ -95,7 +95,7 @@ export const DataSourceForm: React.FC<DataSourceFormProps> = ({
 					});
 				}
 			} else if (type === 'websocket') {
-				const wsConfig = extractConfig<WebSocketDataSourceConfig>(value, 'websocket');
+				const wsConfig = extractConfig<WebSocketDataSourceConfig>('websocket', value);
 				if (wsConfig) {
 					activeForm.setFieldsValue({
 						channel: wsConfig.channel,
@@ -103,7 +103,7 @@ export const DataSourceForm: React.FC<DataSourceFormProps> = ({
 					});
 				}
 			} else if (type === 'static') {
-				const staticConfig = extractConfig<StaticDataSourceConfig>(value, 'static');
+				const staticConfig = extractConfig<StaticDataSourceConfig>('static', value);
 				if (staticConfig) {
 					activeForm.setFieldsValue({
 						staticData: JSON.stringify(staticConfig.data, null, 2),

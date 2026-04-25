@@ -25,6 +25,7 @@ import {
   CloseCircleOutlined,
   ClockCircleOutlined,
   ApiOutlined,
+  ExportOutlined,
 } from '@ant-design/icons';
 import type { ConfigExecution, ConfigExecutionDetail, NetworkDevice } from '@/types';
 import { useCommandData, useCommandModals } from './hooks';
@@ -32,6 +33,7 @@ import { getExecutionColumns, deviceColumns } from './columns';
 import { CommandDispatchModal, CommandDetailDrawer } from './modals';
 import { STATUS_OPTIONS } from './constants';
 import { usePagination } from '@/hooks/usePagination';
+import NetworkExport from '@/components/shared/NetworkExport';
 
 const { Option } = Select;
 
@@ -199,6 +201,15 @@ const CommandDispatch: FC = () => {
                 >
                   快速命令
                 </Button>
+                <NetworkExport
+                  exportUrl="/api/v1/network/command/export"
+                  entityName="命令分发"
+                  filters={Object.fromEntries(
+                    Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(([, v]) => v !== undefined && v !== null && v !== '')
+                  )}
+                  current={paginationProps?.current ?? 1}
+                  pageSize={paginationProps?.pageSize ?? 10}
+                />
               </Space>
             </Form.Item>
           </Form>

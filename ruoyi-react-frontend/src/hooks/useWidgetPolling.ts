@@ -78,7 +78,7 @@ export function useWidgetPolling(options: UseWidgetPollingOptions): UseWidgetPol
 			} else {
 				// 检查缓存是否过期
 				const cached = getCachedWidgetData(id);
-				if (!cached || !('timestamp' in cached) || (now - (cached as { timestamp: number }).timestamp) > cacheExpiry) {
+				if (!cached || typeof cached !== 'object' || !('timestamp' in cached) || (now - (cached as { timestamp: number }).timestamp) > cacheExpiry) {
 					uncachedIds.push(id);
 				}
 			}

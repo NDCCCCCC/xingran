@@ -249,7 +249,7 @@ export const DisplayConfigForm: React.FC<DisplayConfigFormProps> = ({
 					<span style={{ color: '#999' }}>条/页</span>
 				</Space>
 			</Form.Item>
-			<Divider orientation="left" plain>
+			<Divider titlePlacement="left" plain>
 				列配置
 			</Divider>
 			<Form.List name="columns">
@@ -362,7 +362,7 @@ export const DisplayConfigForm: React.FC<DisplayConfigFormProps> = ({
 			>
 				<InputNumber min={1} disabled={disabled} style={{ width: '100%' }} />
 			</Form.Item>
-			<Divider orientation="left" plain>
+			<Divider titlePlacement="left" plain>
 				颜色阈值
 			</Divider>
 			<Form.List name="colorThresholds">

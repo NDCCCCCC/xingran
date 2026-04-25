@@ -39,12 +39,14 @@ import {
   ClockCircleOutlined,
   FolderOpenOutlined,
   FileTextOutlined,
+  ExportOutlined,
 } from '@ant-design/icons';
 import type { ConfigBackup } from '@/types';
 import type { DeviceBackupGroup, DiffLine } from './types';
 import { useBackupData, useBackupDiff, useBackupModals } from './hooks';
 import { post } from '@/lib/api';
 import ActionButtons from '@/components/shared/ActionButtons';
+import NetworkExport from '@/components/shared/NetworkExport';
 import { usePagination } from '@/hooks/usePagination';
 import { formatDateTime } from '@/utils/datetime';
 
@@ -493,6 +495,15 @@ const ConfigBackupPage: FC = () => {
             <Button type="primary" icon={<CloudUploadOutlined />} onClick={handleOpenBackupModal}>
               创建备份
             </Button>
+            <NetworkExport
+              exportUrl="/api/v1/network/backups/export"
+              entityName="配置备份"
+              filters={Object.fromEntries(
+                Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(([, v]) => v !== undefined && v !== null && v !== '')
+              )}
+              current={paginationProps?.current ?? 1}
+              pageSize={paginationProps?.pageSize ?? 10}
+            />
           </Space>
         </div>
       </Card>

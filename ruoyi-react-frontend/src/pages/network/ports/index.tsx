@@ -1,4 +1,4 @@
-import type { FC } from 'react';
+﻿import type { FC } from 'react';
 import {
   Table,
   Button,
@@ -33,6 +33,7 @@ import { withErrorHandling } from '@/utils/errorHandler';
 import { useState } from 'react';
 import { formatDateTime } from '@/utils/datetime';
 import { usePagination } from '@/hooks/usePagination';
+import NetworkExport from '@/components/shared/NetworkExport';
 
 const { Option } = Select;
 
@@ -398,6 +399,23 @@ const PortStatusPage: FC = () => {
             </Form.Item>
           </Form>
           <Space>
+            <NetworkExport
+              exportUrl="/api/v1/network/ports/export"
+              entityName="端口状态"
+              filters={(() => {
+                const values = searchForm.getFieldsValue() as Record<string, unknown>;
+                const filtered: Record<string, unknown> = {};
+                Object.keys(values).forEach(key => {
+                  const value = values[key];
+                  if (value !== undefined && value !== null && value !== '') {
+                    filtered[key] = value;
+                  }
+                });
+                return filtered;
+              })()}
+              current={paginationProps.current}
+              pageSize={paginationProps.pageSize}
+            />
             <Button icon={<CloudSyncOutlined />} onClick={handleCollectAll} loading={collecting}>
               采集所有设备
             </Button>

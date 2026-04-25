@@ -24,6 +24,7 @@ import {
   ReloadOutlined,
   KeyOutlined,
   ApiOutlined,
+  ExportOutlined,
 } from '@ant-design/icons';
 import type { AuthCredential, BaseResponse, PageResponse } from '@/types';
 import { formatDateTime } from '@/utils/datetime';
@@ -32,6 +33,7 @@ import { useTableManager } from '@/hooks/useTableManager';
 import { withErrorHandling } from '@/utils/errorHandler';
 import { useState, useEffect } from 'react';
 import ActionButtons from '@/components/shared/ActionButtons';
+import NetworkExport from '@/components/shared/NetworkExport';
 import { usePagination } from '@/hooks/usePagination';
 
 const { Option } = Select;
@@ -403,6 +405,15 @@ const CredentialManagement: FC = () => {
                 批量删除 ({selectedRowKeys.length})
               </Button>
             )}
+            <NetworkExport
+              exportUrl="/api/v1/network/credentials/export"
+              entityName="授权凭证"
+              filters={Object.fromEntries(
+                Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(([, v]) => v !== undefined && v !== null && v !== '')
+              )}
+              current={paginationProps?.current ?? 1}
+              pageSize={paginationProps?.pageSize ?? 10}
+            />
           </Space>
         </div>
       </Card>

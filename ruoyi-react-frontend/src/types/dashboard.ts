@@ -369,6 +369,9 @@ export interface WidgetConfig {
 	/** Widget 标题 */
 	title: string;
 
+	/** Widget 描述 */
+	description?: string;
+
 	/** 位置和大小 */
 	position: WidgetPosition;
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import type { FC } from 'react';
 import {
   Table,
@@ -28,6 +28,7 @@ import { parseIPRanges } from './utils';
 import { post } from '@/lib/api';
 import { message } from 'antd';
 import type { FormInstance } from 'antd/es/form';
+import NetworkExport from '@/components/shared/NetworkExport';
 import { usePagination } from '@/hooks/usePagination';
 import { isFormValidationError } from '@/utils/errorHandler';
 import type { DeviceDiscovery, NetworkDevice } from '@/types';
@@ -271,6 +272,13 @@ const DeviceDiscoveryPage: FC = () => {
             </Form.Item>
           </Form>
           <Space>
+            <NetworkExport
+              exportUrl="/api/v1/network/discoveries/export"
+              entityName="设备发现"
+              filters={{}}
+              current={paginationProps.current}
+              pageSize={paginationProps.pageSize}
+            />
             <Button type="primary" icon={<PlusOutlined />} onClick={openModal}>
               创建发现任务
             </Button>

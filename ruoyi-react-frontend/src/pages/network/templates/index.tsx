@@ -15,6 +15,7 @@ import {
   AppstoreOutlined,
   SettingOutlined,
   FundOutlined,
+  ExportOutlined,
 } from '@ant-design/icons';
 import type { ConfigTemplate } from '@/types';
 import { useTemplateData, useTemplateModals } from './hooks';
@@ -26,6 +27,7 @@ import {
 } from './modals';
 import { VENDOR_OPTIONS, TEMPLATE_TYPE_OPTIONS } from './constants';
 import { usePagination } from '@/hooks/usePagination';
+import NetworkExport from '@/components/shared/NetworkExport';
 
 const { Option } = Select;
 
@@ -204,6 +206,15 @@ const TemplateManagement: FC = () => {
             >
               批量删除
             </Button>
+            <NetworkExport
+              exportUrl="/api/v1/network/templates/export"
+              entityName="配置模板"
+              filters={Object.fromEntries(
+                Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(([, v]) => v !== undefined && v !== null && v !== '')
+              )}
+              current={paginationProps?.current ?? 1}
+              pageSize={paginationProps?.pageSize ?? 10}
+            />
           </Space>
         </div>
       </Card>
