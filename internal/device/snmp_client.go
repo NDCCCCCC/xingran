@@ -1,6 +1,7 @@
 package device
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"runtime/debug"
@@ -15,8 +16,10 @@ import (
 
 // SNMPClient SNMP客户端
 type SNMPClient struct {
-	client *gosnmp.GoSNMP
-	mu     sync.RWMutex // 保护 gosnmp.Conn 的并发访问
+	client  *gosnmp.GoSNMP
+	mu      sync.RWMutex  // 保护 gosnmp.Conn 的并发访问
+	ready   bool          // 连接是否就绪
+	readyMu sync.RWMutex  // 保护 ready 字段，支持并发读取
 }
 
 // SNMPClientConfig SNMP客户端配置
@@ -78,7 +81,29 @@ func (c *SNMPClient) connectLocked() error {
 func (c *SNMPClient) Connect() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return c.connectLocked()
+
+	err := c.connectLocked()
+	if err != nil {
+		return err
+	}
+
+	// 标记为就绪
+	c.setReady(true)
+	return nil
+}
+
+// setReady 设置就绪状态（线程安全）
+func (c *SNMPClient) setReady(ready bool) {
+	c.readyMu.Lock()
+	defer c.readyMu.Unlock()
+	c.ready = ready
+}
+
+// isReady 检查是否就绪（线程安全）
+func (c *SNMPClient) isReady() bool {
+	c.readyMu.RLock()
+	defer c.readyMu.RUnlock()
+	return c.ready
 }
 
 // closeLocked 内部关闭方法，假设调用方已持有锁
@@ -93,8 +118,35 @@ func (c *SNMPClient) closeLocked() error {
 func (c *SNMPClient) Close() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return c.closeLocked()
+
+	err := c.closeLocked()
+	c.setReady(false) // 标记为未就绪
+	return err
 }
+
+// WaitForReady 等待连接就绪（带超时）
+// timeout: 超时时间，建议 5-10 秒
+// 返回 nil 表示连接已就绪，返回 error 表示超时或连接失败
+func (c *SNMPClient) WaitForReady(timeout time.Duration) error {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	ticker := time.NewTicker(50 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("等待连接就绪超时")
+
+		case <-ticker.C:
+			if c.isReady() {
+				return nil
+			}
+		}
+	}
+}
+
 
 // Get � 获取单个OID值
 func (c *SNMPClient) Get(oid string) (result interface{}, err error) {
