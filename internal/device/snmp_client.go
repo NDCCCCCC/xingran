@@ -5,6 +5,7 @@ import (
 	"net"
 	"runtime/debug"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/gosnmp/gosnmp"
@@ -15,6 +16,7 @@ import (
 // SNMPClient SNMP客户端
 type SNMPClient struct {
 	client *gosnmp.GoSNMP
+	mu     sync.RWMutex // 保护 gosnmp.Conn 的并发访问
 }
 
 // SNMPClientConfig SNMP客户端配置
@@ -63,8 +65,8 @@ func NewSNMPClient(config *SNMPClientConfig) *SNMPClient {
 	}
 }
 
-// Connect 连接SNMP设备
-func (c *SNMPClient) Connect() error {
+// connectLocked 内部连接方法，假设调用方已持有锁
+func (c *SNMPClient) connectLocked() error {
 	err := c.client.Connect()
 	if err != nil {
 		return fmt.Errorf("SNMP连接失败: %w", err)
@@ -72,16 +74,33 @@ func (c *SNMPClient) Connect() error {
 	return nil
 }
 
-// Close 关闭连接
-func (c *SNMPClient) Close() error {
+// Connect 连接SNMP设备
+func (c *SNMPClient) Connect() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.connectLocked()
+}
+
+// closeLocked 内部关闭方法，假设调用方已持有锁
+func (c *SNMPClient) closeLocked() error {
 	if c.client != nil {
 		return c.client.Conn.Close()
 	}
 	return nil
 }
 
+// Close 关闭连接
+func (c *SNMPClient) Close() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.closeLocked()
+}
+
 // Get � 获取单个OID值
 func (c *SNMPClient) Get(oid string) (result interface{}, err error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
 	defer func() {
 		if r := recover(); r != nil {
 			ip := "unknown"
@@ -91,14 +110,14 @@ func (c *SNMPClient) Get(oid string) (result interface{}, err error) {
 			logger.Errorf("[SNMP] Panic: ip=%s, method=Get, error=%v, stack=%s",
 				ip, r, string(debug.Stack()))
 			err = fmt.Errorf("SNMP Get操作panic: %v", r)
-			c.Close()
+			c.closeLocked()
 		}
 	}()
 
-	if err := c.Connect(); err != nil {
+	if err := c.connectLocked(); err != nil {
 		return nil, err
 	}
-	defer c.Close()
+	defer c.closeLocked()
 
 	resp, err := c.client.Get([]string{oid})
 	if err != nil {
@@ -114,6 +133,9 @@ func (c *SNMPClient) Get(oid string) (result interface{}, err error) {
 
 // GetNext 获取下一个OID值（用于遍历）
 func (c *SNMPClient) GetNext(oid string) (resultOid string, resultValue interface{}, err error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
 	defer func() {
 		if r := recover(); r != nil {
 			ip := "unknown"
@@ -123,14 +145,14 @@ func (c *SNMPClient) GetNext(oid string) (resultOid string, resultValue interfac
 			logger.Errorf("[SNMP] Panic: ip=%s, method=GetNext, error=%v, stack=%s",
 				ip, r, string(debug.Stack()))
 			err = fmt.Errorf("SNMP GetNext操作panic: %v", r)
-			c.Close()
+			c.closeLocked()
 		}
 	}()
 
-	if err := c.Connect(); err != nil {
+	if err := c.connectLocked(); err != nil {
 		return "", nil, err
 	}
-	defer c.Close()
+	defer c.closeLocked()
 
 	resp, err := c.client.GetNext([]string{oid})
 	if err != nil {
@@ -147,6 +169,9 @@ func (c *SNMPClient) GetNext(oid string) (resultOid string, resultValue interfac
 
 // Walk 遍历OID树
 func (c *SNMPClient) Walk(oid string, callback func(oid string, value interface{}) bool) (err error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
 	defer func() {
 		if r := recover(); r != nil {
 			ip := "unknown"
@@ -156,14 +181,14 @@ func (c *SNMPClient) Walk(oid string, callback func(oid string, value interface{
 			logger.Errorf("[SNMP] Panic: ip=%s, method=Walk, error=%v, stack=%s",
 				ip, r, string(debug.Stack()))
 			err = fmt.Errorf("SNMP Walk操作panic: %v", r)
-			c.Close()
+			c.closeLocked()
 		}
 	}()
 
-	if err := c.Connect(); err != nil {
+	if err := c.connectLocked(); err != nil {
 		return err
 	}
-	defer c.Close()
+	defer c.closeLocked()
 
 	return c.client.Walk(oid, func(variable gosnmp.SnmpPDU) error {
 		if !callback(variable.Name, parseSNMPValue(variable)) {
@@ -175,6 +200,9 @@ func (c *SNMPClient) Walk(oid string, callback func(oid string, value interface{
 
 // GetBulk 批量获取（SNMP v2c/v3）
 func (c *SNMPClient) GetBulk(oid string, maxRepetitions uint8) (result []gosnmp.SnmpPDU, err error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
 	defer func() {
 		if r := recover(); r != nil {
 			ip := "unknown"
@@ -184,7 +212,7 @@ func (c *SNMPClient) GetBulk(oid string, maxRepetitions uint8) (result []gosnmp.
 			logger.Errorf("[SNMP] Panic: ip=%s, method=GetBulk, error=%v, stack=%s",
 				ip, r, string(debug.Stack()))
 			err = fmt.Errorf("SNMP GetBulk操作panic: %v", r)
-			c.Close()
+			c.closeLocked()
 		}
 	}()
 
@@ -192,10 +220,10 @@ func (c *SNMPClient) GetBulk(oid string, maxRepetitions uint8) (result []gosnmp.
 		return nil, fmt.Errorf("GETBULK仅支持SNMP v2c或更高版本")
 	}
 
-	if err := c.Connect(); err != nil {
+	if err := c.connectLocked(); err != nil {
 		return nil, err
 	}
-	defer c.Close()
+	defer c.closeLocked()
 
 	resp, err := c.client.GetBulk([]string{oid}, 0, uint32(maxRepetitions))
 	if err != nil {
