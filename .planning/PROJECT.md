@@ -28,31 +28,42 @@ Excel 导入时自动关联关联实体（部门、用户、设备、端口）�
 
 ### Active
 
-#### v1.2 可配置仪表盘生产级改造（仿 Zabbix）
+## Current Milestone: v1.3 技术债清理
+
+**目标:** 修复已知问题、优化代码结构、完善功能
+
+**目标功能:**
+- SNMP panic 修复 — 修复 scrapligo transport 在 SNMP Ping 时的崩溃问题
+- 后端代码优化 — 清理死代码、修复安全问题、简化 Core 结构
+- 网络设备导出 — 实现网络设备配置导出功能
+
+### Completed
+
+#### v1.2 可配置仪表盘生产级改造（仿 Zabbix）— ✅ Completed 2026-04-21
 
 **WDG-01: Widget 数据获取机制**
-- [ ] **WDG-01a**: 实现 `GetWidgetData` 方法，支持从配置的 API 端点获取数据
-- [ ] **WDG-01b**: 实现 `GetBatchWidgetData` 批量获取多个 Widget 数据
-- [ ] **WDG-01c**: 支持数据转换（transform）配置：表达式求值、聚合、排序、限制
-- [ ] **WDG-01d**: 支持三种数据源类型：API、WebSocket、Static
+- [x] **WDG-01a**: 实现 `GetWidgetData` 方法，支持从配置的 API 端点获取数据
+- [x] **WDG-01b**: 实现 `GetBatchWidgetData` 批量获取多个 Widget 数据
+- [x] **WDG-01c**: 支持数据转换（transform）配置：表达式求值、聚合、排序、限制
+- [x] **WDG-01d**: 支持三种数据源类型：API、WebSocket、Static
 
 **FE-02: 前端未完成功能**
-- [ ] **FE-02a**: 实现 Widget 选择器组件（添加 Widget 到仪表盘）
-- [ ] **FE-02b**: 实现仪表盘设置面板（名称、描述、权限、刷新间隔）
-- [ ] **FE-02c**: 实现模板预览功能
-- [ ] **FE-02d**: 完善 Widget 编辑/删除交互
+- [x] **FE-02a**: 实现 Widget 选择器组件（添加 Widget 到仪表盘）
+- [x] **FE-02b**: 实现仪表盘设置面板（名称、描述、权限、刷新间隔）
+- [x] **FE-02c**: 实现模板预览功能
+- [x] **FE-02d**: 完善 Widget 编辑/删除交互
 
 **RT-03: 实时数据刷新**
-- [ ] **RT-03a**: 实现 WebSocket 连接管理（连接、断开、重连）
-- [ ] **RT-03b**: 实现基于刷新间隔的轮询机制
-- [ ] **RT-03c**: 实现缓存策略（避免重复请求）
-- [ ] **RT-03d**: 前端实时数据订阅和更新
+- [x] **RT-03a**: 实现 WebSocket 连接管理（连接、断开、重连）
+- [x] **RT-03b**: 实现基于刷新间隔的轮询机制
+- [x] **RT-03c**: 实现缓存策略（避免重复请求）
+- [x] **RT-03d**: 前端实时数据订阅和更新
 
 **UX-04: 用户体验优化**
-- [ ] **UX-04a**: Widget 拖拽布局优化（网格对齐、碰撞检测）
-- [ ] **UX-04b**: 仪表盘加载状态和错误处理
-- [ ] **UX-04c**: 数据为空时的友好提示
-- [ ] **UX-04d**: 响应式布局适配（桌面/平板/移动端）
+- [x] **UX-04a**: Widget 拖拽布局优化（网格对齐、碰撞检测）
+- [x] **UX-04b**: 仪表盘加载状态和错误处理
+- [x] **UX-04c**: 数据为空时的友好提示
+- [x] **UX-04d**: 响应式布局适配（桌面/平板/移动端）
 
 ### Out of Scope
 
@@ -119,4 +130,4 @@ Excel 导入时自动关联关联实体（部门、用户、设备、端口）�
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-04-20 starting v1.2 milestone*
+*Last updated: 2026-04-27 starting v1.3 milestone*
