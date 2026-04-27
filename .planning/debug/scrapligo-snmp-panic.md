@@ -1,8 +1,9 @@
 ---
-status: investigating
+status: resolved
 trigger: "scrapligo transport panic during SNMP Ping operation - transport.(*Standard).Write crash during Channel.GetPrompt when trying to get system name OID 1.3.6.1.2.1.1.5.0"
 created: "2026-04-20"
-updated: "2026-04-20"
+updated: "2026-04-27"
+resolved: "2026-04-27"
 ---
 
 ## Symptoms
@@ -48,7 +49,10 @@ exit status 2
 
 ## Resolution
 
-- root_cause: null
-- fix: null
-- verification: null
-- files_changed: null
+- root_cause: Scrapligo transport layer panic during concurrent SNMP operations
+- fix: Phase 8 implemented panic recovery wrapper, RWMutex concurrency control, and connection readiness validation
+- verification: All 3 plans in Phase 8 completed, SNMP operations stabilized
+- files_changed:
+  - internal/device/scrapli_device.go
+  - internal/scheduler/cron.go
+  - internal/api/v1/network/snmp_handler.go
