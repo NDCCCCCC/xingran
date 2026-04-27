@@ -3,11 +3,13 @@ package device
 import (
 	"fmt"
 	"net"
+	"runtime/debug"
 	"strconv"
 	"time"
 
 	"github.com/gosnmp/gosnmp"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 )
 
 // SNMPClient SNMP客户端
@@ -79,46 +81,85 @@ func (c *SNMPClient) Close() error {
 }
 
 // Get � 获取单个OID值
-func (c *SNMPClient) Get(oid string) (interface{}, error) {
+func (c *SNMPClient) Get(oid string) (result interface{}, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			ip := "unknown"
+			if c.client != nil {
+				ip = c.client.Target
+			}
+			logger.Errorf("[SNMP] Panic: ip=%s, method=Get, error=%v, stack=%s",
+				ip, r, string(debug.Stack()))
+			err = fmt.Errorf("SNMP Get操作panic: %v", r)
+			c.Close()
+		}
+	}()
+
 	if err := c.Connect(); err != nil {
 		return nil, err
 	}
 	defer c.Close()
 
-	result, err := c.client.Get([]string{oid})
+	resp, err := c.client.Get([]string{oid})
 	if err != nil {
 		return nil, fmt.Errorf("SNMP GET失败: %w", err)
 	}
 
-	if len(result.Variables) == 0 {
+	if len(resp.Variables) == 0 {
 		return nil, fmt.Errorf("没有返回数据")
 	}
 
-	return parseSNMPValue(result.Variables[0]), nil
+	return parseSNMPValue(resp.Variables[0]), nil
 }
 
 // GetNext 获取下一个OID值（用于遍历）
-func (c *SNMPClient) GetNext(oid string) (string, interface{}, error) {
+func (c *SNMPClient) GetNext(oid string) (resultOid string, resultValue interface{}, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			ip := "unknown"
+			if c.client != nil {
+				ip = c.client.Target
+			}
+			logger.Errorf("[SNMP] Panic: ip=%s, method=GetNext, error=%v, stack=%s",
+				ip, r, string(debug.Stack()))
+			err = fmt.Errorf("SNMP GetNext操作panic: %v", r)
+			c.Close()
+		}
+	}()
+
 	if err := c.Connect(); err != nil {
 		return "", nil, err
 	}
 	defer c.Close()
 
-	result, err := c.client.GetNext([]string{oid})
+	resp, err := c.client.GetNext([]string{oid})
 	if err != nil {
 		return "", nil, fmt.Errorf("SNMP GETNEXT失败: %w", err)
 	}
 
-	if len(result.Variables) == 0 {
+	if len(resp.Variables) == 0 {
 		return "", nil, fmt.Errorf("没有返回数据")
 	}
 
-	variable := result.Variables[0]
+	variable := resp.Variables[0]
 	return variable.Name, parseSNMPValue(variable), nil
 }
 
 // Walk 遍历OID树
-func (c *SNMPClient) Walk(oid string, callback func(oid string, value interface{}) bool) error {
+func (c *SNMPClient) Walk(oid string, callback func(oid string, value interface{}) bool) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			ip := "unknown"
+			if c.client != nil {
+				ip = c.client.Target
+			}
+			logger.Errorf("[SNMP] Panic: ip=%s, method=Walk, error=%v, stack=%s",
+				ip, r, string(debug.Stack()))
+			err = fmt.Errorf("SNMP Walk操作panic: %v", r)
+			c.Close()
+		}
+	}()
+
 	if err := c.Connect(); err != nil {
 		return err
 	}
@@ -133,7 +174,20 @@ func (c *SNMPClient) Walk(oid string, callback func(oid string, value interface{
 }
 
 // GetBulk 批量获取（SNMP v2c/v3）
-func (c *SNMPClient) GetBulk(oid string, maxRepetitions uint8) ([]gosnmp.SnmpPDU, error) {
+func (c *SNMPClient) GetBulk(oid string, maxRepetitions uint8) (result []gosnmp.SnmpPDU, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			ip := "unknown"
+			if c.client != nil {
+				ip = c.client.Target
+			}
+			logger.Errorf("[SNMP] Panic: ip=%s, method=GetBulk, error=%v, stack=%s",
+				ip, r, string(debug.Stack()))
+			err = fmt.Errorf("SNMP GetBulk操作panic: %v", r)
+			c.Close()
+		}
+	}()
+
 	if c.client.Version < gosnmp.Version2c {
 		return nil, fmt.Errorf("GETBULK仅支持SNMP v2c或更高版本")
 	}
@@ -143,12 +197,12 @@ func (c *SNMPClient) GetBulk(oid string, maxRepetitions uint8) ([]gosnmp.SnmpPDU
 	}
 	defer c.Close()
 
-	result, err := c.client.GetBulk([]string{oid}, 0, uint32(maxRepetitions))
+	resp, err := c.client.GetBulk([]string{oid}, 0, uint32(maxRepetitions))
 	if err != nil {
 		return nil, fmt.Errorf("SNMP GETBULK失败: %w", err)
 	}
 
-	return result.Variables, nil
+	return resp.Variables, nil
 }
 
 // parseSNMPValue 解析SNMP值

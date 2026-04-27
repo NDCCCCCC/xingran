@@ -1044,17 +1044,51 @@ Use TodoWrite to track progress. Ask for my approval only before starting and fo
 ## Architecture
 
 ## Pattern: Layered Handler-Service with Core DI
+
 ```
+Request → Router → Middleware → Handler → Service → Repository/Cache
 ```
 ## Core Dependency Injection
+
 ```go
-```
-```go
+// Core struct holds all core dependencies
+type Core struct {
+    Config    *config.Config
+    DB        *db.Database
+    Cache     cache.Cache
+    JWTManager *security.JWTManager
+    PwdManager *security.PasswordManager
+    // ... other services
+}
+
+// Router setup with Core DI
+func SetupUserRouter(r *gin.RouterGroup, core *core.Core) {
+    userService := system.NewUserService(core.GetDB(), core.Cache, core.PwdManager)
+    userHandler := system.NewUserHandler(userService, core.PwdManager)
+    // ...
+}
 ```
 ## Data Flow
 ### Request Flow
+```
+Client Request → Gin Router → Auth Middleware → Permission Middleware
+→ Encryption Middleware → Handler → Service → Repository/Cache → Database
+→ Response Wrapper → JSON Response
+```
 ### Cache Flow
+```
+Service.GetOrSet() → CacheProvider.GetOrSet()
+→ Check L1 (in-memory) → Hit? Return
+→ Check L2 (Redis) → Hit? Return & populate L1
+→ Execute query() → Store to L2 → Store to L1 → Return
+```
 ### Import Flow (Workstation/Building)
+```
+Excel Upload → ExcelService.Parse() → Validate rows
+→ ReferenceResolver.ResolveDept() → ReferenceResolver.ResolveUser()
+→ GeocodingService.Geocode() (optional) → BatchUpsert()
+→ CacheInvalidator.Invalidate() → Return ImportResult
+```
 ## Key Abstractions
 ### Service Interface Pattern
 - Interface defined in service file (e.g., `UserService interface`)
@@ -1063,6 +1097,21 @@ Use TodoWrite to track progress. Ask for my approval only before starting and fo
 - Dependencies injected via constructor
 ### CacheProvider Interface
 ```go
+type CacheProvider interface {
+    // GetOrSet 获取缓存，如果不存在则执行查询函数并缓存结果
+    GetOrSet(ctx context.Context, key string, dest interface{},
+        expiration time.Duration, query func() (interface{}, error)) error
+
+    // Delete 删除缓存
+    Delete(ctx context.Context, key string) error
+
+    // DeleteByPattern 根据模式删除缓存
+    DeleteByPattern(ctx context.Context, pattern string) error
+
+    // MGet/MDelete 批量操作
+    MGet(ctx context.Context, keys ...string) (map[string]string, error)
+    MDelete(ctx context.Context, keys ...string) error
+}
 ```
 - Cached version: reads/writes Redis
 - Non-cached version: pass-through to DB
