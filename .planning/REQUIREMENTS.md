@@ -110,15 +110,15 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SNMP-01a | - | pending |
-| SNMP-01b | - | pending |
-| SNMP-01c | - | pending |
-| CODE-02a | - | pending |
-| CODE-02b | - | pending |
-| CODE-02c | - | pending |
-| EXPORT-03a | - | pending |
-| EXPORT-03b | - | pending |
-| EXPORT-03c | - | pending |
+| SNMP-01a | 8 | pending |
+| SNMP-01b | 8 | pending |
+| SNMP-01c | 8 | pending |
+| CODE-02a | 9 | pending |
+| CODE-02b | 9 | pending |
+| CODE-02c | 9 | pending |
+| EXPORT-03a | 10 | pending |
+| EXPORT-03b | 10 | pending |
+| EXPORT-03c | 10 | pending |
 
 ---
 *Created: 2026-04-27*
