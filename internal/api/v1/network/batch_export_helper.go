@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/lldp"
 	networkServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/network"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/portcollection"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
@@ -372,7 +373,8 @@ func (h *NetworkExportHandler) generateEntityExcel(entityType string, req Export
 		sheet = "MAC地址"
 		headers = []string{"MAC地址", "接口名称", "VLAN ID", "MAC类型", "采集时间"}
 
-		svc := services.NewMACCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor)
+		lldpSvc := lldp.NewLLDPService(h.core.DeviceExecutor)
+			svc := services.NewMACCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor, lldpSvc)
 
 		var deviceID, macAddress, interfaceName string
 		if req.Filters != nil {

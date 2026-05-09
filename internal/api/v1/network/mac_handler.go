@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/lldp"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
@@ -54,7 +55,8 @@ func (h *MACHandler) List(c *gin.Context) {
 		return
 	}
 
-	svc := services.NewMACCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor)
+	lldpSvc := lldp.NewLLDPService(h.core.DeviceExecutor)
+	svc := services.NewMACCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor, lldpSvc)
 	macAddrs, total, err := svc.GetMACAddressList(c.Request.Context(), req.Current, req.PageSize,
 		req.DeviceID, req.MACAddress, req.InterfaceName)
 	if !responseHelpers.HandleServiceError(c, err, "获取MAC地址列表") {
@@ -81,7 +83,8 @@ func (h *MACHandler) Collect(c *gin.Context) {
 		return
 	}
 
-	svc := services.NewMACCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor)
+	lldpSvc := lldp.NewLLDPService(h.core.DeviceExecutor)
+	svc := services.NewMACCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor, lldpSvc)
 	result, err := svc.CollectDevice(c.Request.Context(), req.DeviceID)
 	if !responseHelpers.HandleServiceError(c, err, "采集设备MAC地址") {
 		return
@@ -100,7 +103,8 @@ func (h *MACHandler) Collect(c *gin.Context) {
 // @Failure 500 {object} response.Response
 // @Router /network/mac/collect-all [post]
 func (h *MACHandler) CollectAll(c *gin.Context) {
-	svc := services.NewMACCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor)
+	lldpSvc := lldp.NewLLDPService(h.core.DeviceExecutor)
+	svc := services.NewMACCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor, lldpSvc)
 	results, err := svc.CollectAllDevices(c.Request.Context())
 	if !responseHelpers.HandleServiceError(c, err, "采集所有设备MAC地址") {
 		return
@@ -119,7 +123,8 @@ func (h *MACHandler) CollectAll(c *gin.Context) {
 // @Failure 500 {object} response.Response
 // @Router /network/mac/stats [post]
 func (h *MACHandler) GetStats(c *gin.Context) {
-	svc := services.NewMACCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor)
+	lldpSvc := lldp.NewLLDPService(h.core.DeviceExecutor)
+	svc := services.NewMACCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor, lldpSvc)
 	stats, err := svc.GetMACAddressStats(c.Request.Context())
 	if !responseHelpers.HandleServiceError(c, err, "获取MAC地址统计") {
 		return
@@ -145,9 +150,37 @@ func (h *MACHandler) Clean(c *gin.Context) {
 		return
 	}
 
-	svc := services.NewMACCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor)
+	lldpSvc := lldp.NewLLDPService(h.core.DeviceExecutor)
+	svc := services.NewMACCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor, lldpSvc)
 	count, err := svc.CleanOldRecords(c.Request.Context(), req.Days)
 	if !responseHelpers.HandleServiceError(c, err, "清理旧MAC地址记录") {
+		return
+	}
+
+	response.Success(c, gin.H{"deletedCount": count})
+}
+
+// BatchDelete 批量删除MAC地址记录
+// @Summary 批量删除MAC地址记录
+// @Description 根据ID列表批量删除MAC地址记录
+// @Tags 网络设备管理
+// @Accept json
+// @Produce json
+// @Param request body object{ids=[]string} true "记录ID列表"
+// @Success 200 {object} response.Response
+// @Router /network/mac/batch-delete [post]
+func (h *MACHandler) BatchDelete(c *gin.Context) {
+	var req struct {
+		IDs []string `json:"ids" binding:"required,min=1"`
+	}
+	if !responseHelpers.HandleJSONBinding(c, &req) {
+		return
+	}
+
+	lldpSvc := lldp.NewLLDPService(h.core.DeviceExecutor)
+	svc := services.NewMACCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor, lldpSvc)
+	count, err := svc.BatchDelete(c.Request.Context(), req.IDs)
+	if !responseHelpers.HandleServiceError(c, err, "批量删除MAC地址记录") {
 		return
 	}
 

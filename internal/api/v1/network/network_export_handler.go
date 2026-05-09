@@ -10,6 +10,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/lldp"
 	networkServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/network"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/portcollection"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
@@ -434,7 +435,8 @@ func (h *NetworkExportHandler) ExportMACAddresses(c *gin.Context) {
 		return
 	}
 
-	svc := services.NewMACCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor)
+	lldpSvc := lldp.NewLLDPService(h.core.DeviceExecutor)
+		svc := services.NewMACCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor, lldpSvc)
 	current, pageSize := h.getPaginationParams(&req)
 
 	var deviceID, macAddress, interfaceName string
