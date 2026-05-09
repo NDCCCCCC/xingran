@@ -48,23 +48,23 @@
 <details>
 <summary>🚧 v1.4 MAC地址采集优化 (Phase 11) — IN PROGRESS</summary>
 
-- [ ] Phase 11: MAC地址采集优化 - 过滤设备间互联端口 (1/4 plans) — started 2026-05-09
+- [ ] Phase 11: MAC地址采集优化 - 过滤设备间互联端口 (2/4 plans) — started 2026-05-09
 
 **Plans:**
 - [x] 11-01-PLAN.md — LLDP discovery service implementation ✅ completed 2026-05-09
-- [ ] 11-02-PLAN.md — MAC filtering enhancement with LLDP
+- [x] 11-02-PLAN.md — MAC filtering enhancement with LLDP ✅ completed 2026-05-09
 - [ ] 11-03-PLAN.md — Configurable filter rules and API
 - [ ] 11-04-PLAN.md — Comprehensive testing and validation
 
 **Wave Structure:**
-- Wave 1 (parallel): 11-01 (LLDP service) ✅, 11-02 (MAC filtering)
+- Wave 1 (parallel): 11-01 (LLDP service) ✅, 11-02 (MAC filtering) ✅
 - Wave 2 (parallel): 11-03 (Filter rules API), 11-04 (Testing)
 
 **Requirements:**
 - [x] MAC-01: LLDP discovery identifies uplink ports ✅
-- [ ] MAC-02: MAC filtering excludes LLDP neighbor ports
-- [ ] MAC-03: MAC filtering respects count threshold
-- [ ] MAC-04: LLDP failure doesn't block MAC collection
+- [x] MAC-02: MAC filtering excludes LLDP neighbor ports ✅
+- [x] MAC-03: MAC filtering respects count threshold ✅
+- [x] MAC-04: LLDP failure doesn't block MAC collection ✅
 - [ ] MAC-05: Configurable filtering rules work
 
 </details>
@@ -85,7 +85,7 @@
 | 8. SNMP Panic 修复 | v1.3 | 3/3 | Complete | 2026-04-27 |
 | 9. 后端代码优化 | v1.3 | 5/5 | Complete | 2026-04-27 |
 | 10. 网络设备导出集成 | v1.3 | 1/1 | Complete | 2026-04-27 |
-| 11. MAC地址采集优化 - 过滤设备间互联端口 | v1.4 | 1/4 | Executing | 2026-05-09 |
+| 11. MAC地址采集优化 - 过滤设备间互联端口 | v1.4 | 2/4 | Executing | 2026-05-09 |
 
 ---
 
