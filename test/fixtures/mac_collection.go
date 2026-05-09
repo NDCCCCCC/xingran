@@ -4,12 +4,19 @@ import (
 	"fmt"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 )
+
+// MACAddressEntry MAC地址条目（测试用，避免循环导入services包）
+type MACAddressEntry struct {
+	MACAddress    string
+	InterfaceName string
+	VLANID        int
+	MACType       string
+}
 
 // MockMACAddresses 模拟MAC地址条目
 // 用于测试MAC采集和过滤逻辑
-var MockMACAddresses = []services.MACAddressEntry{
+var MockMACAddresses = []MACAddressEntry{
 	{
 		MACAddress:    "00:11:22:33:44:55",
 		InterfaceName: "GigabitEthernet0/0/1",
@@ -70,10 +77,10 @@ var MockMACAddresses = []services.MACAddressEntry{
 //   - count: MAC地址数量
 // 返回:
 //   - MAC地址条目列表
-func GenerateHighMACCountPort(interfaceName string, count int) []services.MACAddressEntry {
-	addresses := make([]services.MACAddressEntry, count)
+func GenerateHighMACCountPort(interfaceName string, count int) []MACAddressEntry {
+	addresses := make([]MACAddressEntry, count)
 	for i := 0; i < count; i++ {
-		addresses[i] = services.MACAddressEntry{
+		addresses[i] = MACAddressEntry{
 			MACAddress:    fmt.Sprintf("00:11:22:33:44:%02x", i%256),
 			InterfaceName: interfaceName,
 			VLANID:        1,
@@ -165,7 +172,7 @@ var MockLLDPNeighborsByDevice = map[string]map[string]*models.LLDPNeighborInfo{
 }
 
 // MockMACAddressesByInterface 按接口组织的MAC地址列表
-var MockMACAddressesByInterface = map[string][]services.MACAddressEntry{
+var MockMACAddressesByInterface = map[string][]MACAddressEntry{
 	"GigabitEthernet0/0/1": {
 		{
 			MACAddress:    "00:11:22:33:44:55",
