@@ -1,503 +1,672 @@
-# Domain Pitfalls
+# Domain Pitfalls: MAC地址历史数据管理
 
-**Domain:** Go Backend Network Management & SNMP Integration
-**Researched:** 2026-04-27
-**Overall confidence:** HIGH
+**Domain:** Network Monitoring - Historical MAC Address Tracking
+**Researched:** 2026-05-09
+**Context:** Adding historical tracking capabilities to existing RuoYi-Next MAC collection system
+
+## Executive Summary
+
+Adding historical MAC address tracking to an existing network monitoring system introduces unique challenges around data volume growth, query performance, and integration with existing collection workflows. The most critical pitfalls involve uncontrolled database growth from continuous collection, improper change detection logic that misses or duplicates events, and performance degradation from querying large historical datasets.
+
+The existing MAC collection system (`mac_collection_service.go`) currently uses a "delete-and-replace" strategy that destroys historical data. Adding historical tracking requires careful architectural changes to preserve change events without disrupting the proven collection pipeline.
 
 ## Critical Pitfalls
 
-Mistakes that cause rewrites or major issues.
+### Pitfall 1: Uncontrolled Database Growth from Continuous Collection
 
-### Pitfall 1: SNMP Transport Layer Panic During Device Connection
-
-**What goes wrong:** Intermittent goroutine panic in scrapligo transport layer during Channel.GetPrompt when trying to get system name OID (1.3.6.1.2.1.1.5.0). The panic occurs at `transport.(*Standard).Write` with exit status 2, crashing the entire application during scheduled SNMP monitoring tasks.
+**What goes wrong:** MAC address tables are collected frequently (often hourly) from hundreds of devices. Without proper retention policies and change detection, storing every collection cycle creates massive data volumes. A single device with 1000 MAC addresses collected hourly generates 8.7 million records per year.
 
 **Why it happens:**
-- scrapligo's transport layer spawns internal goroutines during connection initialization
-- `GetPrompt()` method creates a Write goroutine that may panic if the transport is not fully ready
-- Timing-dependent: occurs intermittently during concurrent SNMP operations
-- No proper synchronization between connection state and transport layer goroutines
+- Existing `mac_collection_service.go` uses `DELETE` then `CREATE` strategy (line 201-206) which is incompatible with historical tracking
+- Default approach of storing all collected data without change detection
+- Lack of time-based partitioning or automated cleanup
+- Underestimation of MAC table sizes in enterprise networks
 
 **Consequences:**
-- Application crash (exit status 2) during scheduled monitoring tasks
-- Loss of real-time monitoring data
-- Potential data corruption if panic occurs during device configuration backup
-- Unreliable network device management functionality
+- Database storage exhaustion (terabytes of historical MAC data)
+- Query performance degradation (scanning millions of records for simple searches)
+- Backup/restore operations become impractical
+- Increased infrastructure costs
 
 **Prevention:**
-- **ALWAYS wrap scrapligo operations with panic recovery** in defer functions
-- **Use connection state machine pattern** with proper mutex protection (opMu.Lock/RLock)
-- **Implement readiness verification** before calling transport methods
-- **Add sleep delays before Close()** to allow internal goroutines to finish (100ms minimum)
-- **Use context-based cancellation** for connection initialization with timeout
+```go
+// ✅ CORRECT: Change-based insertion with deduplication
+func (s *MACHistoryService) RecordChanges(ctx context.Context, deviceID string, newMACs []MACEntry) error {
+    // 1. Get current state from previous collection
+    existingMACs, err := s.GetLatestMACs(ctx, deviceID)
 
-**Detection:**
-- Look for goroutine stack traces mentioning `transport.(*Standard).Write` or `Channel.GetPrompt`
-- Monitor for unexpected exit status 2 during scheduled tasks
-- Check logs for "panic during SNMP Ping operation" patterns
+    // 2. Detect changes using hash comparison
+    changes := s.detectChanges(existingMACs, newMACs)
 
-**Phase Assignment:** Phase 1 - SNMP Panic Fix
-- This must be addressed first as it affects system stability
-- All subsequent phases depend on stable SNMP operations
+    // 3. Only record actual changes (additions, removals, moves)
+    if len(changes) > 0 {
+        return s.CreateChangeEvents(ctx, changes)
+    }
 
-### Pitfall 2: Race Conditions in Connection Pool Management
+    return nil // No changes = no database writes
+}
 
-**What goes wrong:** Data races between connection.Close() and concurrent operations (SendCommand, SendConfig) accessing the same driver instance, causing "use of closed network connection" errors or nil pointer dereferences.
+// ✅ CORRECT: Automated retention policy
+func (s *MACHistoryService) CleanupOldRecords(ctx context.Context) error {
+    // Partition by month, drop partitions older than 13 months
+    // Or: DELETE WHERE collected_at < NOW() - INTERVAL '13 months'
+    return s.db.WithContext(ctx).
+        Where("collected_at < ?", time.Now().AddDate(0, -13, 0)).
+        Delete(&models.MACAddressHistory{}).Error
+}
+```
+
+**Detection:** Monitor database size growth rate (should be ~5-10% of total MAC count per collection, not 100%). Set alerts for `pg_database_size()` growth > 100GB/month.
+
+**Phase to address:** Phase 12 (Data Model & Collection Integration)
+
+---
+
+### Pitfall 2: Broken Change Detection from MAC Address Flapping
+
+**What goes wrong:** MAC addresses frequently move between ports (especially in wireless networks, VMware environments, or with spanning tree topology changes). Poor change detection logic either misses moves (treating them as no-change) or creates excessive event noise (recording every flapping event).
 
 **Why it happens:**
-- scrapligo driver is not concurrency-safe for simultaneous operations
-- Connection pool may return the same connection to multiple goroutines
-- No proper synchronization between Close() and active operations
-- State checking (TOCTOU - Time-Of-Check-Time-Of-Use) race conditions
+- Comparing only MAC address sets without tracking interface changes
+- Not accounting for VLAN changes on the same MAC
+- MAC address format inconsistencies between vendors and collections
+- Race conditions from concurrent collections
 
 **Consequences:**
-- Connection pool corruption
-- Device commands sent to closed connections
-- Memory leaks from connections that never close properly
-- Intermittent "connection reset by peer" errors
+- Incomplete audit trails (security investigations miss device movements)
+- False change alerts (alarm fatigue from legitimate mobility)
+- Inability to distinguish between "device moved" vs "new device appeared"
 
 **Prevention:**
-- **Use device-level mutex locks** in connection pool (not connection-level)
-- **Implement RWMutex pattern**: operations use RLock, Close uses Lock
-- **Double-check state after acquiring locks** to prevent TOCTOU races
-- **Set connection state to Closing before acquiring exclusive lock** for Close()
-- **Add grace period before actual Close()** to allow in-flight operations to complete
-
-**Detection:**
-- Race detector output: `WARNING: DATA RACE`
-- Stack traces showing concurrent Close() and SendCommand/SendConfig
-- "use of closed network connection" errors in device operations
-
-**Code Example - Anti-Pattern:**
 ```go
-// ❌ WRONG - No synchronization
-func (p *PooledConnection) SendCommand(cmd string) error {
-    return p.driver.SendCommand(cmd) // Race with Close()
+// ✅ CORRECT: Composite key change detection
+type MACState struct {
+    MACAddress    string
+    InterfaceName string
+    VLANID        *int
+    MACType       models.MACType
 }
 
-func (p *PooledConnection) Close() error {
-    return p.driver.Close() // Closes while operations active
-}
-```
-
-**Code Example - Correct Pattern:**
-```go
-// ✅ CORRECT - Proper synchronization
-func (w *ScrapliWrapper) SendCommand(cmd string) (*Response, error) {
-    if err := w.acquireOp(); err != nil { // RLock + state check
-        return nil, err
+func (s *MACHistoryService) detectChanges(oldMACs, newMACs []MACState) []MACChangeEvent {
+    oldMap := make(map[string]MACState) // key: normalized MAC+VLAN
+    for _, mac := range oldMACs {
+        key := fmt.Sprintf("%s:%d", mac.MACAddress, mac.VLANID)
+        oldMap[key] = mac
     }
-    defer w.releaseOp() // RUnlock
-    
-    // Safe to use driver now
-    r, err := w.driver.SendCommand(cmd)
-    // ... error handling
+
+    var changes []MACChangeEvent
+    for _, newMAC := range newMACs {
+        key := fmt.Sprintf("%s:%d", newMAC.MACAddress, newMAC.VLANID)
+        oldMAC, exists := oldMap[key]
+
+        if !exists {
+            // New MAC appeared
+            changes = append(changes, MACChangeEvent{
+                Type: MACEventAppeared,
+                MAC: newMAC.MACAddress,
+                OldInterface: "",
+                NewInterface: newMAC.InterfaceName,
+            })
+        } else if oldMAC.InterfaceName != newMAC.InterfaceName {
+            // MAC moved between ports
+            changes = append(changes, MACChangeEvent{
+                Type: MACEventMoved,
+                MAC: newMAC.MACAddress,
+                OldInterface: oldMAC.InterfaceName,
+                NewInterface: newMAC.InterfaceName,
+            })
+        }
+        delete(oldMap, key)
+    }
+
+    // Remaining keys in oldMap are MACs that disappeared
+    for _, oldMAC := range oldMap {
+        changes = append(changes, MACChangeEvent{
+            Type: MACEventDisappeared,
+            MAC: oldMAC.MACAddress,
+            OldInterface: oldMAC.InterfaceName,
+            NewInterface: "",
+        })
+    }
+
+    return changes
 }
 
-func (w *ScrapliWrapper) Close() error {
-    w.setState(StateClosing) // Block new operations
-    w.opMu.Lock()           // Wait for all operations
-    defer w.opMu.Unlock()
-    
-    time.Sleep(100 * time.Millisecond) // Grace period
-    return w.driver.Close()
+// ✅ CORRECT: Normalize MAC addresses before comparison
+func normalizeMAC(mac string) string {
+    cleaned := strings.Map(func(r rune) rune {
+        if r >= 'a' && r <= 'f' {
+            return r
+        }
+        if r >= 'A' && r <= 'F' {
+            return r + ('a' - 'A')
+        }
+        if r >= '0' && r <= '9' {
+            return r
+        }
+        return -1 // Remove separators
+    }, mac)
+    return cleaned
 }
 ```
 
-**Phase Assignment:** Phase 1 - SNMP Panic Fix
-- This is the root cause of the SNMP panic issue
-- Must be fixed before implementing export functionality
+**Detection:** Unit tests with synthetic MAC flapping scenarios (same MAC appears on different ports in consecutive collections). Monitor "disappeared then reappeared" event rates.
 
-### Pitfall 3: SQL Injection in Dynamic Table Names
+**Phase to address:** Phase 12 (Change Detection Logic)
 
-**What goes wrong:** Direct string concatenation of user-provided table names in SQL queries, allowing attackers to execute arbitrary SQL commands.
+---
+
+### Pitfall 3: Performance Collapse from Historical Query Scans
+
+**What goes wrong:** Historical MAC tracking queries (e.g., "show all movements for MAC AA:BB:CC:DD:EE:FF in the last 30 days") perform full table scans on unindexed datasets, causing timeout issues and database lock contention.
 
 **Why it happens:**
-- Dynamic table name generation for multi-tenant scenarios
-- Lack of input validation on table name parameters
-- String concatenation instead of parameterized queries for table identifiers
+- Missing composite indexes on (mac_address, collected_at) or (device_id, collected_at)
+- Using `LIKE %mac%` queries instead of normalized exact matches
+- No time-range partitioning for efficient pruning
+- N+1 query patterns when fetching related device information
 
 **Consequences:**
-- Data leakage from unauthorized tables
-- Data corruption through malicious UPDATE/DELETE commands
-- Complete database compromise
-- Security audit failures
+- API timeouts (>30s) for historical searches
+- Database CPU spikes during query execution
+- Frontend UI freezes when loading historical timelines
+- Blocked collection cycles from database lock contention
 
 **Prevention:**
-- **ALWAYS use whitelist validation** for table names
-- **Never concatenate user input directly into SQL queries**
-- **Use a predefined map of allowed table names**
-- **Reject any table name not in the whitelist**
-
-**Detection:**
-- Code patterns: `+tableName+` or `fmt.Sprintf("...%s...", tableName)`
-- Missing validation before table name usage
-- Direct string concatenation in query building
-
-**Code Example - Anti-Pattern:**
 ```go
-// ❌ WRONG - Direct concatenation
-floorTable := "ops_floors" // Could come from user input
-query = query.Where("EXISTS (SELECT 1 FROM "+floorTable+" WHERE...)")
+// ✅ CORRECT: Composite indexes for common query patterns
+// In migration file:
+CREATE INDEX idx_mac_history_device_time
+ON sys_mac_address_history (device_id, collected_at DESC);
+
+CREATE INDEX idx_mac_history_mac_time
+ON sys_mac_address_history (mac_address, collected_at DESC);
+
+CREATE INDEX idx_mac_history_change_type
+ON sys_mac_address_history (change_type, collected_at DESC);
+
+// Partial index for active records (performance optimization)
+CREATE INDEX idx_mac_history_active
+ON sys_mac_address_history (mac_address, collected_at)
+WHERE collected_at > NOW() - INTERVAL '90 days';
+
+// ✅ CORRECT: Partitioned table structure (PostgreSQL 11+)
+CREATE TABLE sys_mac_address_history (
+    id UUID,
+    device_id UUID,
+    mac_address MACADDR,
+    collected_at TIMESTAMPTZ,
+    ...
+) PARTITION BY RANGE (collected_at);
+
+-- Monthly partitions
+CREATE TABLE sys_mac_history_2025_01 PARTITION OF sys_mac_address_history
+    FOR VALUES FROM ('2025-01-01') TO ('2025-02-01');
 ```
 
-**Code Example - Correct Pattern:**
+**Detection:** Query performance monitoring using `pg_stat_statements`. Alert on queries with `mean_exec_time > 5000ms` or `calls > 1000/hour` on historical tables.
+
+**Phase to address:** Phase 13 (Query Optimization & Indexing)
+
+---
+
+### Pitfall 4: Integration Race Conditions with Existing Collection
+
+**What goes wrong:** Historical tracking added to existing `mac_collection_service.go` creates race conditions where the history service reads "old" data while the collection service is mid-update, causing missed changes or duplicate event recording.
+
+**Why it happens:**
+- Existing collection uses `DELETE` + `CREATE` pattern (lines 201-243 in `mac_collection_service.go`)
+- History service queries `sys_device_mac_address` concurrently
+- No transactional isolation between collection and history recording
+- Timing-dependent logic that works in tests but fails in production
+
+**Consequences:**
+- Lost change events (history shows "no previous state" for moved MACs)
+- Duplicate events (same change recorded multiple times)
+- Inconsistent historical data (gaps in timeline)
+
+**Prevention:**
 ```go
-// ✅ CORRECT - Whitelist validation
-func validateTableName(tableName string) bool {
-    allowedTables := map[string]bool{
-        "ops_floors": true,
-        "sys_floors": true,
-    }
-    return allowedTables[tableName]
+// ✅ CORRECT: Transactional isolation with proper ordering
+func (s *MACCollectionService) CollectWithHistory(ctx context.Context, deviceID string) (*MACCollectionResult, error) {
+    // Step 1: Read current state BEFORE deletion (in transaction)
+    var existingMACs []models.DeviceMACAddress
+    err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+        if err := tx.Where("device_id = ?", deviceID).Find(&existingMACs).Error; err != nil {
+            return err
+        }
+
+        // Step 2: Collect new MACs from device
+        newMACs, err := s.collectFromDevice(ctx, deviceID)
+        if err != nil {
+            return err
+        }
+
+        // Step 3: Detect changes using in-memory comparison
+        changes := s.detectChanges(existingMACs, newMACs)
+
+        // Step 4: Delete old and insert new (existing pattern)
+        if err := tx.Where("device_id = ?", deviceID).Delete(&models.DeviceMACAddress{}).Error; err != nil {
+            return err
+        }
+        if err := tx.Create(&newMACs).Error; err != nil {
+            return err
+        }
+
+        // Step 5: Record history in same transaction
+        if len(changes) > 0 {
+            historyRecords := s.buildHistoryRecords(changes)
+            if err := tx.Create(&historyRecords).Error; err != nil {
+                return err
+            }
+        }
+
+        return nil
+    })
+
+    return &MACCollectionResult{SuccessCount: len(newMACs)}, err
 }
 
-if floorCode != "" {
-    if !validateTableName(floorTable) {
-        return nil, fmt.Errorf("invalid table name: %s", floorTable)
+// ✅ CORRECT: Use READ COMMITTED isolation level (PostgreSQL default)
+// This prevents "non-repeatable read" issues while allowing concurrent collections
+```
+
+**Detection:** Integration tests that simulate concurrent collection + history recording. Monitor for "gap" events where MAC disappears and reappears in same collection cycle.
+
+**Phase to address:** Phase 12 (Collection Integration)
+
+---
+
+### Pitfall 5: MAC Address Format Inconsistencies Breaking Queries
+
+**What goes wrong:** Different network vendors report MAC addresses in different formats (Cisco uses `aaaa.bbbb.cccc`, Huawei uses `aaaa-bbbb-cccc`, standard is `aa:bb:cc:dd:ee:ff`). Queries fail to find matches because the database stores inconsistent formats.
+
+**Why it happens:**
+- Existing `mac_collector.go` has `normalizeMACAddress()` but it's not consistently applied
+- Direct database inserts bypass normalization
+- User searches use unnormalized input
+- Historical data imported from legacy systems
+
+**Consequences:**
+- "Missing" history for MAC addresses (stored in different format)
+- Duplicate MAC records (same device, different format representations)
+- Failed JOIN queries between historical and current tables
+- User frustration from "MAC not found" errors
+
+**Prevention:**
+```go
+// ✅ CORRECT: Enforce normalization at database layer
+// In model:
+type MACAddressHistory struct {
+    MACAddress string `gorm:"type:varchar(17);not null"`
+}
+
+func (m *MACAddressHistory) BeforeSave(tx *gorm.DB) error {
+    normalized, err := normalizeAndValidateMAC(m.MACAddress)
+    if err != nil {
+        return err
     }
-    // Safe to use floorTable in query
+    m.MACAddress = normalized
+    return nil
+}
+
+// ✅ CORRECT: Use PostgreSQL MACADDR type for automatic validation
+CREATE TABLE sys_mac_address_history (
+    ...
+    mac_address MACADDR NOT NULL,  -- Enforces format and provides conversion functions
+    ...
+);
+
+// ✅ CORRECT: Normalize user input in search queries
+func (s *MACHistoryService) SearchByMAC(ctx context.Context, macInput string) ([]MACAddressHistory, error) {
+    normalized, err := normalizeMACAddress(macInput)
+    if err != nil {
+        return nil, fmt.Errorf("invalid MAC address format: %w", err)
+    }
+
+    var results []MACAddressHistory
+    // Use exact match on normalized field, not LIKE
+    err = s.db.WithContext(ctx).
+        Where("mac_address = ?", normalized).
+        Order("collected_at DESC").
+        Find(&results).Error
+
+    return results, err
 }
 ```
 
-**Phase Assignment:** Phase 2 - Backend Code Optimization
-- Critical security issue that must be addressed
-- Review all dynamic SQL construction in the codebase
+**Detection:** Data quality queries checking for format inconsistencies: `SELECT mac_address, COUNT(*) FROM sys_mac_address_history GROUP BY mac_address HAVING COUNT(*) > 1`.
+
+**Phase to address:** Phase 12 (Data Normalization)
+
+---
+
+### Pitfall 6: Missing Device Context in Historical Events
+
+**What goes wrong:** Historical MAC events store only the device ID, but when devices are renamed or deleted, historical queries show "Unknown Device" or break entirely, losing critical context for forensic investigations.
+
+**Why it happens:**
+- Using `device_id` foreign key without device name snapshot
+- No soft-delete pattern for network devices
+- JOIN queries on deleted devices return null
+- Not capturing device state at time of event
+
+**Consequences:**
+- Useless historical data (cannot identify which device was involved)
+- Broken audit trails (device deleted before investigation)
+- Inability to reconstruct network topology changes over time
+
+**Prevention:**
+```go
+// ✅ CORRECT: Snapshot device context at time of event
+type MACAddressHistory struct {
+    ID            string    `gorm:"type:uuid;primary_key"`
+    DeviceID      string    `gorm:"type:uuid;not null;index"`
+    DeviceName    string    `gorm:"size:100;not null"`    // Snapshot, not FK
+    IPAddress     string    `gorm:"size:50"`              // Snapshot
+    MACAddress    string    `gorm:"size:17;not null;index"`
+    InterfaceName string    `gorm:"size:100;not null"`
+    VLANID        *int
+    EventType     string    `gorm:"size:20;index"`  // appeared/moved/disappeared
+    CollectedAt   time.Time `gorm:"not null;index"`
+    CreatedAt     time.Time `gorm:"not null"`
+}
+
+// ✅ CORRECT: Populate snapshots during collection
+func (s *MACCollectionService) buildHistoryRecords(device *models.NetworkDevice, changes []MACChange) []MACAddressHistory {
+    records := make([]MACAddressHistory, len(changes))
+    for i, change := range changes {
+        records[i] = MACAddressHistory{
+            DeviceID:      device.ID,
+            DeviceName:    device.DeviceName,  // Snapshot current name
+            IPAddress:     device.IPAddress,   // Snapshot current IP
+            MACAddress:    change.MACAddress,
+            InterfaceName: change.NewInterface,
+            EventType:     change.Type,
+            CollectedAt:   time.Now(),
+        }
+    }
+    return records
+}
+
+// ✅ CONVENTION: Historical tables use denormalized snapshots
+// Rule: Historical data = immutable snapshots, not live references
+```
+
+**Detection:** Query tests after device rename/delete to verify historical data remains readable. Alert on "DeviceID not found" rates in historical queries.
+
+**Phase to address:** Phase 12 (Data Model Design)
+
+---
+
+### Pitfall 7: No Audit Trail for Security Investigations
+
+**What goes wrong:** When security teams need to investigate "which device was connected to port X at time Y", the historical data lacks sufficient context (who triggered the collection, was there an alert, what was the configuration state).
+
+**Why it happens:**
+- Historical tables only store MAC + interface + timestamp
+- No link to collection job ID or scheduled task
+- Missing correlation with alert events
+- No user activity context (manual vs automatic collection)
+
+**Consequences:**
+- Failed security audits (cannot prove compliance)
+- Incomplete incident response (missing context)
+- Inability to correlate with other system events (syslogs, alerts)
+
+**Prevention:**
+```go
+// ✅ CORRECT: Rich event context for forensic analysis
+type MACAddressHistory struct {
+    // ... basic fields ...
+
+    // Collection context
+    CollectionJobID *string    `gorm:"type:uuid"`      // Link to scheduled job
+    CollectionType  string     `gorm:"size:20"`        // manual/scheduled/on_demand
+    TriggeredBy     *string    `gorm:"type:uuid"`      // User ID (if manual)
+
+    // State snapshots for context
+    DeviceType      string     `gorm:"size:50"`        // Router/Switch/etc
+    SiteName        string     `gorm:"size:100"`       // Location context
+    ConfigVersion   *string    `gorm:"size:50"`        // Device config hash
+
+    // Correlation
+    CorrelationID   string     `gorm:"type:uuid;index"` // Link to alerts/logs
+}
+
+// ✅ CORRECT: Populate context from collection trigger
+func (s *MACCollectionService) CollectWithHistory(ctx context.Context, deviceID string, trigger CollectionTrigger) error {
+    // Enrich history with collection context
+    history.CollectionJobID = trigger.JobID
+    history.CollectionType = trigger.Type
+    history.TriggeredBy = trigger.UserID
+
+    // Capture device state snapshots
+    history.DeviceType = device.DeviceType
+    history.SiteName = device.SiteName
+
+    return s.CreateHistory(ctx, history)
+}
+```
+
+**Detection:** Review security team use cases. Test "reconstruct incident at specific timestamp" scenarios.
+
+**Phase to address:** Phase 14 (Security & Compliance Features)
+
+---
 
 ## Moderate Pitfalls
 
-### Pitfall 4: Improper Error Handling in Export Operations
+### Pitfall 8: Timezone Issues in Timestamp Comparisons
 
-**What goes wrong:** Export operations fail silently or return partial results when errors occur during Excel generation or database queries, leading to incomplete or corrupted export files.
-
-**Why it happens:**
-- Missing error checks on excelize operations
-- No rollback mechanism for partial exports
-- Lack of transaction management in export queries
-- Assuming all operations will succeed
-
-**Consequences:**
-- Users receive incomplete export files
-- Silent data loss in exported data
-- Corrupted Excel files that cannot be opened
-- User frustration and loss of trust in export functionality
+**What goes wrong:** Collection timestamps stored in UTC but queries use local time, causing "missing" events or incorrect time ranges in historical reports.
 
 **Prevention:**
-- **Check all excelize method return values**
-- **Use database transactions for export queries** to ensure consistency
-- **Implement row-by-row error handling** with logging but continue processing
-- **Validate export size limits** before starting to prevent memory exhaustion
-- **Add progress tracking** for large exports
+- Always store `collected_at` as `TIMESTAMPTZ` (PostgreSQL timezone-aware type)
+- Convert user input to UTC before queries: `WHERE collected_at >= '2025-01-01 00:00:00+00'::timestamptz`
+- Display timestamps in user's timezone in UI layer only
 
-**Detection:**
-- Missing `if err != nil` checks after excelize calls
-- No `defer tx.Rollback()` pattern in database operations
-- Hardcoded limits without validation (e.g., maxExportRows)
+---
 
-**Code Example - Anti-Pattern:**
-```go
-// ❌ WRONG - No error handling
-for i, device := range devices {
-    row := i + 2
-    cell, _ := excelize.CoordinatesToCellName(i+1, row)
-    file.SetCellValue(sheet, cell, device.Name) // Error ignored
-}
-```
+### Pitfall 9: Bulk Export Performance Issues
 
-**Code Example - Correct Pattern:**
-```go
-// ✅ CORRECT - Proper error handling
-for i, device := range devices {
-    row := i + 2
-    cell, err := excelize.CoordinatesToCellName(i+1, row)
-    if err != nil {
-        logger.Errorf("Invalid cell coordinates: %v", err)
-        continue // Skip this row but continue
-    }
-    if err := file.SetCellValue(sheet, cell, device.Name); err != nil {
-        logger.Errorf("Failed to set cell value: %v", err)
-        continue
-    }
-}
-```
-
-**Phase Assignment:** Phase 3 - Network Device Export
-- Export functionality must be robust and handle errors gracefully
-- Implement comprehensive error handling in all export operations
-
-### Pitfall 5: Memory Exhaustion in Large Exports
-
-**What goes wrong:** Export operations attempt to load entire datasets into memory before writing to Excel, causing out-of-memory errors when exporting large tables (e.g., 100K+ devices or MAC addresses).
-
-**Why it happens:**
-- Loading all records into memory before Excel generation
-- No pagination or streaming in export operations
-- Inefficient data structures that duplicate data
-- Missing limits on export size
-
-**Consequences:**
-- Application crash (OOM killer) during export
-- Server performance degradation
-- Failed exports for large datasets
-- Poor user experience
+**What goes wrong:** Exporting 90 days of historical MAC changes for all devices causes memory exhaustion or API timeouts due to unbounded result sets.
 
 **Prevention:**
-- **Implement pagination with reasonable page sizes** (e.g., 1000 rows per batch)
-- **Use streaming patterns** for large Excel files (write row-by-row)
-- **Set hard limits on export size** (e.g., 100K rows max)
-- **Provide warning feedback** when approaching limits
-- **Use cursor-based pagination** for large datasets
+- Implement streaming export using server-sent events or chunked responses
+- Require time range + device filters for exports (max 30 days, 10 devices per export)
+- Use background job generation with download links (like existing batch export in Phase 10)
 
-**Detection:**
-- Patterns like `var devices []models.NetworkDevice` without pagination
-- `Find(&devices)` without Limit() clause
-- Export operations that load all data before processing
+---
 
-**Code Example - Anti-Pattern:**
-```go
-// ❌ WRONG - Loads all into memory
-var devices []models.NetworkDevice
-db.Find(&devices) // Could be 100K+ records
-for _, device := range devices {
-    // Process
-}
-```
+### Pitfall 10: No API Rate Limiting Causing Database Overload
 
-**Code Example - Correct Pattern:**
-```go
-// ✅ CORRECT - Pagination with streaming
-const pageSize = 1000
-for page := 0; ; page++ {
-    var devices []models.NetworkDevice
-    offset := page * pageSize
-    if err := db.Offset(offset).Limit(pageSize).Find(&devices).Error; err != nil {
-        return err
-    }
-    if len(devices) == 0 {
-        break // No more records
-    }
-    // Process this batch
-    writeBatchToExcel(file, devices)
-}
-```
-
-**Phase Assignment:** Phase 3 - Network Device Export
-- Must handle large exports efficiently
-- Implement pagination and streaming patterns
-
-### Pitfall 6: Resource Leaks in Connection Management
-
-**What goes wrong:** Network connections, file handles, or database connections are not properly closed, leading to resource exhaustion over time. Common with SNMP operations and file exports.
-
-**Why it happens:**
-- Missing defer statements for cleanup
-- Early returns that bypass cleanup code
-- Panic conditions that skip defer execution
-- Incorrect error handling that prevents cleanup
-
-**Consequences:**
-- File descriptor leaks (too many open files)
-- Database connection pool exhaustion
-- Memory leaks from unclosed connections
-- Performance degradation over time
-- Application crashes after running for extended periods
+**What goes wrong:** Historical search APIs allow unlimited queries, causing database overload from automated scripts or aggressive user queries.
 
 **Prevention:**
-- **ALWAYS use defer for cleanup** (Close, Rollback, etc.)
-- **Use named return values** to allow deferred cleanup to modify return values
-- **Wrap panic-prone operations** in deferred recovery functions
-- **Implement connection timeouts** to prevent hanging connections
-- **Use context with cancellation** for long-running operations
+- Implement per-user rate limiting on historical search endpoints
+- Require time range filters (max 90 days for non-admin users)
+- Cache frequent queries (last 24h MAC movements for top 100 devices)
 
-**Detection:**
-- Functions that open resources without matching defer Close()
-- Early returns that skip cleanup code
-- Missing error handling that prevents cleanup code from running
-
-**Code Example - Anti-Pattern:**
-```go
-// ❌ WRONG - Resource leak on error
-func ExportDevices() error {
-    file := excelize.NewFile()
-    if err := loadData(); err != nil {
-        return err // file never closed!
-    }
-    file.WriteTo(buffer)
-    file.Close()
-    return nil
-}
-```
-
-**Code Example - Correct Pattern:**
-```go
-// ✅ CORRECT - Proper cleanup with defer
-func ExportDevices() (err error) {
-    file := excelize.NewFile()
-    defer func() {
-        if cerr := file.Close(); cerr != nil {
-            // Log but don't hide original error
-            logger.Errorf("Failed to close file: %v", cerr)
-        }
-    }()
-    
-    if err := loadData(); err != nil {
-        return err // defer will run
-    }
-    return file.WriteTo(buffer)
-}
-```
-
-**Phase Assignment:** Phase 2 - Backend Code Optimization
-- Review and fix all resource management patterns
-- Implement proper cleanup across the codebase
+---
 
 ## Minor Pitfalls
 
-### Pitfall 7: Inconsistent Status Value Conventions
+### Pitfall 11: Inconsistent Event Type Naming
 
-**What goes wrong:** Mixing up status value semantics (0 = enabled vs 0 = disabled) across different modules, causing confusion and bugs in business logic.
+**Prevention:** Define standardized event types in code: `MACEventAppeared`, `MACEventDisappeared`, `MACEventMoved`, `MACEventVLANChanged`. Use constants, not string literals.
 
-**Why it happens:**
-- Inconsistent adoption of project conventions
-- Different developers using different patterns
-- Copy-paste from external codebases
-- Lack of clear documentation
+### Pitfall 12: Missing Data Validation Before Inserts
 
-**Consequences:**
-- Incorrect filtering in queries
-- UI showing wrong status indicators
-- Business logic errors (e.g., enabling disabled devices)
-- Migration errors when combining data from different sources
+**Prevention:** Add `BeforeCreate` hooks to validate MAC address format, ensure `device_id` exists, verify `collected_at` is not in future.
 
-**Prevention:**
-- **Document the convention**: 0 = enabled/normal/visible, 1 = disabled/stopped/hidden
-- **Exception documentation**: Menu visibility uses 1 = visible (boolean semantics)
-- **Use constants or enums** instead of magic numbers
-- **Add code reviews** to catch violations
-- **Create helper functions** like `IsEnabled(status int) bool`
-
-**Detection:**
-- Magic numbers (0, 1) in business logic
-- Inconsistent WHERE clauses (`status = 0` vs `status = 1`)
-- Comments that contradict the code
-
-**Phase Assignment:** Phase 2 - Backend Code Optimization
-- Standardize status conventions across the codebase
-- Add documentation and helper functions
-
-### Pitfall 8: Hardcoded Configuration Values
-
-**What goes wrong:** Configuration values (timeouts, limits, ports) are hardcoded in business logic, making it difficult to adapt to different environments without code changes.
-
-**Why it happens:**
-- Quick prototyping without proper configuration
-- Lack of planning for deployment variability
-- Copying values from external examples
-- Not using the existing config system
-
-**Consequences:**
-- Cannot adapt to different environments without code changes
-- Difficult to tune performance parameters
-- Deployment complexity increases
-- Configuration drift between environments
-
-**Prevention:**
-- **Move all timeouts to config files** (config.yaml)
-- **Use environment variables** for deployment-specific values
-- **Define constants in internal/constants/** for global values
-- **Add validation** for configuration values on startup
-- **Document configuration options** in example files
-
-**Detection:**
-- Hardcoded values like `time.Sleep(100 * time.Millisecond)`
-- Magic numbers like `maxExportRows = 100000` in code
-- Ports and IP addresses embedded in business logic
-
-**Code Example - Anti-Pattern:**
-```go
-// ❌ WRONG - Hardcoded
-timeout := 5 * time.Second
-maxDevices := 100000
-port := 161
-```
-
-**Code Example - Correct Pattern:**
-```go
-// ✅ CORRECT - From config
-timeout := time.Duration(cfg.Device.Timeout) * time.Second
-maxDevices := cfg.Export.MaxRows
-port := cfg.SNMP.DefaultPort
-```
-
-**Phase Assignment:** Phase 2 - Backend Code Optimization
-- Extract hardcoded values to configuration
-- Centralize timeout and limit constants
+---
 
 ## Phase-Specific Warnings
 
 | Phase Topic | Likely Pitfall | Mitigation |
 |-------------|---------------|------------|
-| **Phase 1: SNMP Panic Fix** | Race conditions in connection pool | Implement RWMutex pattern with state machine |
-| **Phase 1: SNMP Panic Fix** | Panic in scrapligo transport layer | Add panic recovery in all scrapligo operations |
-| **Phase 1: SNMP Panic Fix** | TOCTOU races in state checking | Double-check state after acquiring locks |
-| **Phase 2: Code Optimization** | SQL injection in dynamic queries | Implement whitelist validation for table names |
-| **Phase 2: Code Optimization** | Resource leaks (connections, files) | Add defer cleanup for all resources |
-| **Phase 2: Code Optimization** | Hardcoded configuration values | Move to config.yaml or constants |
-| **Phase 2: Code Optimization** | Inconsistent status conventions | Document and standardize |
-| **Phase 3: Network Export** | Memory exhaustion on large exports | Implement pagination and streaming |
-| **Phase 3: Network Export** | Silent failures in export operations | Check all excelize return values |
-| **Phase 3: Network Export** | Missing transaction management | Use DB transactions for export queries |
+| **Phase 12: Data Model** | Pitfall 1 (uncontrolled growth), Pitfall 6 (missing context) | Implement change detection + device snapshots, add retention policy |
+| **Phase 12: Collection Integration** | Pitfall 2 (change detection), Pitfall 4 (race conditions) | Use transactional isolation, composite key comparison, in-memory change detection |
+| **Phase 13: Query Layer** | Pitfall 3 (performance collapse), Pitfall 5 (format inconsistency) | Add composite indexes, use MACADDR type, enforce normalization in model layer |
+| **Phase 14: Security Features** | Pitfall 7 (missing audit trail) | Add collection context, correlation IDs, device state snapshots |
+| **Phase 15: Export & Reports** | Pitfall 9 (bulk export issues) | Implement streaming exports, require time/device filters, background job generation |
 
-## Integration Pitfalls
+---
 
-### Fixing One Issue Without Breaking Others
+## Integration Pitfalls with Existing MAC Collection
 
-**Warning:** The SNMP panic fix involves modifying connection pool synchronization, which affects all code that uses the `ScrapliWrapper`. Be extremely careful to:
+### 1. Breaking the "Delete-Replace" Pattern
 
-1. **Maintain backward compatibility** with existing connection pool usage
-2. **Test all device operations** (SSH, Telnet, SNMP, config backup/restore)
-3. **Verify concurrent access patterns** work correctly with new synchronization
-4. **Ensure cleanup code runs** even when panics occur
-5. **Monitor for performance degradation** from additional locking
+**Current Code (lines 201-243 in `mac_collection_service.go`):**
+```go
+// ❌ This destroys historical data
+if err := s.db.WithContext(ctx).
+    Where("device_id = ?", device.ID).
+    Delete(&models.DeviceMACAddress{}).Error; err != nil {
+    return err
+}
+```
 
-**Specific Risks:**
-- Adding opMu.Lock() in Close() could cause deadlocks if not all code paths release RLock properly
-- Grace period sleep in Close() (100ms) might delay connection reuse in high-throughput scenarios
-- State machine transitions must be atomic to prevent race conditions
-- Panic recovery must not hide legitimate errors
+**Required Change:**
+```go
+// ✅ Preserve historical state before deletion
+var existingMACs []models.DeviceMACAddress
+s.db.WithContext(ctx).Where("device_id = ?", device.ID).Find(&existingMACs)
 
-**Testing Strategy:**
-- Run load tests with concurrent device operations
-- Verify connection pool doesn't leak connections
-- Test graceful degradation when individual devices fail
-- Monitor for deadlocks with the race detector
-- Validate that scheduled tasks don't accumulate panics
+// Detect changes
+changes := s.detectChanges(existingMACs, newMACs)
+
+// Store to history BEFORE deletion
+if len(changes) > 0 {
+    s.db.Create(&s.buildHistoryRecords(changes))
+}
+
+// Now safe to delete and replace
+s.db.Where("device_id = ?", device.ID).Delete(&models.DeviceMACAddress{})
+```
+
+### 2. Concurrent Collection Conflicts
+
+**Issue:** Existing code uses goroutines with semaphore for concurrent device collection (lines 69-91). Historical tracking must handle multiple concurrent writes to the same device's history.
+
+**Solution:** Use `INSERT ... ON CONFLICT DO NOTHING` for idempotent history inserts, or partition history writes by device ID to avoid lock contention.
+
+### 3. Filter Rules Integration
+
+**Existing:** MAC collection applies LLDP and count-based filtering (lines 164-190). Historical tracking must record both "filtered" and "unfiltered" states for audit purposes.
+
+**Solution:** Add `filtered_reason` field to history table to track why MACs were excluded (LLDP neighbor, high count, etc.).
+
+---
+
+## Data Retention and Cleanup Strategies
+
+### Strategy 1: Partition-Based Retention (Recommended for High Volume)
+
+**Implementation:**
+- Partition `sys_mac_address_history` by month on `collected_at`
+- Automated job drops partitions older than N months (configurable, default 13 months)
+- Benefits: Instant cleanup (`DROP PARTITION`), query pruning by time range
+- Tradeoff: Requires PostgreSQL partitioning (v11+)
+
+### Strategy 2: Scheduled Cleanup Job
+
+**Implementation:**
+```go
+// Run daily at 2 AM
+func (s *MACHistoryService) ScheduledCleanup(ctx context.Context) error {
+    retentionMonths := s.getRetentionConfig() // from sys_config table
+    cutoff := time.Now().AddDate(0, -retentionMonths, 0)
+
+    result := s.db.WithContext(ctx).
+        Where("collected_at < ?", cutoff).
+        Delete(&models.MACAddressHistory{})
+
+    if result.Error != nil {
+        return fmt.Errorf("cleanup failed: %w", result.Error)
+    }
+
+    applogger.Infof("[MAC History] Cleaned %d old records (cutoff: %s)",
+        result.RowsAffected, cutoff)
+    return nil
+}
+```
+
+**Configuration:**
+- Add `mac.history.retention_months` to `sys_config` table (default: 13)
+- Add scheduler job in `internal/scheduler/` to run cleanup daily
+- Monitor cleanup execution time (should be < 5 minutes for 100M records)
+
+### Strategy 3: Tiered Storage for Archive
+
+**Implementation:**
+- Move records older than 3 months to archive table (unindexed, compressed)
+- Use PostgreSQL table inheritance or separate archive database
+- Archive queries available but slower and admin-only
+
+**Recommended:** Start with Strategy 2, implement Strategy 1 if data volume exceeds 10M records/month.
+
+---
+
+## Testing Strategy to Avoid Pitfalls
+
+### Unit Tests
+- **Change Detection:** Synthetic MAC flapping scenarios (move same MAC across 5 ports)
+- **Normalization:** MAC format variants (Cisco, Huawei, standard, mixed case)
+- **Deduplication:** Insert same event twice, verify only one record created
+
+### Integration Tests
+- **Concurrent Collection:** 10 goroutines collecting same device simultaneously
+- **Transaction Rollback:** Simulate collection failure, verify no partial history written
+- **Device Delete:** Delete device after recording history, verify historical data preserved
+
+### Performance Tests
+- **Query Performance:** 10M historical records, query last 30 days for specific MAC (< 2s)
+- **Insert Throughput:** 100K change events per collection cycle (< 30s)
+- **Cleanup Speed:** Delete 1M records older than 13 months (< 5 minutes)
+
+### Data Quality Tests
+- **Format Consistency:** Query for invalid MAC formats, should return 0 rows
+- **Gap Detection:** Find time ranges with no collections for active devices
+- **Orphan Detection:** Find history records referencing deleted device IDs (expected, not error)
+
+---
 
 ## Sources
 
-- **Debug Session:** `.planning/debug/scrapligo-snmp-panic.md` (MEDIUM confidence)
-- **Code Review Report:** `docs/code-review-report.md` (HIGH confidence) 
-- **Code Fix Guide:** `docs/code-fix-guide.md` (HIGH confidence)
-- **Source Code Analysis:** `internal/device/scrapli_wrapper.go` (HIGH confidence)
-- **Source Code Analysis:** `internal/api/v1/network/network_export_handler.go` (HIGH confidence)
-- **Project Documentation:** `CLAUDE.md` (HIGH confidence)
-- **Go Concurrency Patterns:** Standard Go sync.RWMutex usage (HIGH confidence)
+- **HIGH Confidence**: Existing codebase analysis (`mac_collection_service.go`, `mac_collector.go`, `DeviceMACAddress` model)
+- **HIGH Confidence**: PostgreSQL documentation on partitioning and indexing strategies
+- **MEDIUM Confidence**: Industry best practices for network monitoring data retention (Cisco Prime, SolarWinds patterns)
+- **MEDIUM Confidence**: Common historical database patterns (temporal tables, event sourcing)
+- **LOW Confidence**: Specific enterprise MAC table volume statistics (needs validation from target environment)
 
-## Confidence Assessment
+---
 
-| Area | Confidence | Notes |
-|------|------------|-------|
-| SNMP Transport Panics | HIGH | Debug session provides detailed stack trace evidence |
-| Race Conditions | HIGH | Source code shows inadequate synchronization in connection pool |
-| SQL Injection Risks | HIGH | Code review report documents specific vulnerable patterns |
-| Export Implementation | HIGH | Existing export handler code shows the patterns to follow/avoid |
-| Resource Management | MEDIUM | General Go patterns, needs verification across all code paths |
-| Configuration Issues | MEDIUM | Inferred from common patterns, needs systematic review |
+## Open Questions Requiring Phase-Specific Research
 
-## Gaps to Address
+1. **Data Volume Baseline**: What is the actual MAC address table size distribution in the target network? (needed for retention policy tuning)
+2. **Query Patterns**: Which historical queries are most common for security teams? (needed for index optimization)
+3. **Compliance Requirements**: Are there regulatory requirements for MAC history retention duration? (needed for cleanup policy)
+4. **Vendor Output Variations**: Do all supported network vendors (Huawei, H3C, Ruijie, Maipu) provide consistent MAC address table formats? (needed for robust parsing)
+5. **Collection Frequency**: What is the planned MAC collection interval in production? (affects growth rate estimation)
 
-- **Performance Impact**: The 100ms grace period in Close() needs performance testing under load
-- **Memory Profiling**: Large export operations need memory profiling to identify bottlenecks
-- **Deadlock Analysis**: Complex interaction between opMu, stateMu, and closing channel needs formal analysis
-- **Connection Pool Sizing**: Current pool size limits may not be optimal for the new synchronization patterns
-- **Error Recovery**: Panic recovery strategy should be tested systematically across all failure modes
+---
+
+## Conclusion
+
+Adding MAC address historical tracking to an existing network monitoring system requires careful architectural changes to the current "delete-and-replace" collection pattern. The most critical risks are uncontrolled database growth from continuous collection and race conditions between existing collection workflows and new history recording.
+
+**Success criteria:**
+- Historical queries return in < 2 seconds for 90-day lookups
+- Database growth rate is < 10% of total MAC count per collection (not 100%)
+- Zero lost change events under concurrent collection scenarios
+- Historical data remains readable after device rename/delete operations
+
+**Recommended approach:**
+1. Phase 12: Implement change detection and transaction-safe collection integration
+2. Phase 13: Add composite indexes and partitioning for query performance
+3. Phase 14: Build security-focused features with rich audit context
+4. Phase 15: Implement tiered storage and automated cleanup policies
+
+By addressing these pitfalls proactively, the historical MAC tracking system will provide valuable forensic capabilities without degrading the performance and reliability of the existing network monitoring platform.
