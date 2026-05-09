@@ -321,6 +321,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 	}, core))
 	{
 		networkV1.SetupNetworkRouter(network, core)
+		// 拓扑管理（MAC过滤规则）
+		networkV1.SetupTopologyRouter(network, core.GetDB())
 	}
 
 	// 值班管理模块（运维管理）
