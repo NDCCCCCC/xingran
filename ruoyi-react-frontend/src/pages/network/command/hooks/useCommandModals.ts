@@ -41,7 +41,7 @@ export function useCommandModals(): UseCommandModalsReturn {
 
   const handleCancelExecution = useCallback(async (id: string, onSuccess: () => void) => {
     try {
-      await post(`/network/command/${id}/cancel`, {});
+      await post(`/network/executions/${id}/cancel`, {});
       message.success('取消成功');
       onSuccess();
     } catch (error) {

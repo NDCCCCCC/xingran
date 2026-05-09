@@ -508,27 +508,27 @@ func (s *FilterRuleService) GetEffectiveRule(device *models.NetworkDevice) (*MAC
 | A4 | Network topology changes infrequently (LLDP cache TTL valid) | LLDP Caching | If topology changes frequently, cache may cause stale filtering |
 | A5 | Interface name normalization works for LLDP and MAC tables | Port Matching | If formats differ significantly, matching may fail |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **LLDP Template Availability**
+1. **LLDP Template Availability** ✅ RESOLVED
    - What we know: TextFSM is used in portcollection for parsing
    - What's unclear: Whether LLDP TextFSM templates exist for Huawei/H3C/Ruijie/Maipu
-   - Recommendation: Check if templates exist in scrapligo assets; if not, create custom templates
+   - **Resolution:** Templates will be created as part of Task 2 in Plan 01 (lldp_huawei.textfsm, lldp_ruijie.textfsm). H3C reuses Huawei template, Maipu reuses Ruijie template.
 
-2. **MAC Count Threshold Values**
+2. **MAC Count Threshold Values** ✅ RESOLVED
    - What we know: Different device types have different typical MAC counts
    - What's unclear: Optimal threshold values for this specific network
-   - Recommendation: Start with conservative defaults (10 for switches, 500 for routers), make configurable
+   - **Resolution:** Conservative defaults established: Router=500, Switch=10, Firewall=100, LoadBalancer=50. Values are configurable via database rules (Plan 03), allowing adjustment based on real network data.
 
-3. **LLDP Performance Impact**
+3. **LLDP Performance Impact** ✅ RESOLVED
    - What we know: LLDP discovery adds extra command execution per device
    - What's unclear: Performance impact on large networks (100+ devices)
-   - Recommendation: Implement caching with 1-hour TTL, measure performance in testing
+   - **Resolution:** 1-hour TTL cache implemented in Plan 01 (lldp_cache.go) to minimize device queries. Plan 04 includes benchmarks for performance validation with 100+ devices.
 
-4. **Fallback Strategy**
+4. **Fallback Strategy** ✅ RESOLVED
    - What we know: LLDP may fail or be disabled
    - What's unclear: Whether MAC count filtering alone is sufficient
-   - Recommendation: Test with real network data, adjust thresholds based on results
+   - **Resolution:** Best-effort LLDP with fallback implemented in Plan 02. LLDP failures log warnings but continue with MAC count filtering. Thresholds are configurable, allowing tuning based on real data collection results.
 
 ## Environment Availability
 

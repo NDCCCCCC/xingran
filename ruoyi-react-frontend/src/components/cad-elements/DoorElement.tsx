@@ -17,7 +17,7 @@ export interface DoorElementProps {
 }
 
 // CAD 标准常量
-const DOOR_THICKNESS = 5;
+const _DOOR_THICKNESS = 5;
 const OPENING_STROKE_WIDTH = 12;
 const OPENING_COLOR = '#ffffff';
 const LINE_COLOR = '#2c3e50';

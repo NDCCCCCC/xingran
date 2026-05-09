@@ -26,9 +26,12 @@ import { CreateModal, ResultModal } from './modals';
 import { STATUS_OPTIONS } from './constants';
 import { parseIPRanges } from './utils';
 import { post } from '@/lib/api';
+import { getAccessToken } from '@/utils/authHelpers';
 import { message } from 'antd';
 import type { FormInstance } from 'antd/es/form';
 import NetworkExport from '@/components/shared/NetworkExport';
+import { BatchExportModal } from '@/components/shared';
+import { DownloadOutlined } from '@ant-design/icons';
 import { usePagination } from '@/hooks/usePagination';
 import { isFormValidationError } from '@/utils/errorHandler';
 import type { DeviceDiscovery, NetworkDevice } from '@/types';
@@ -39,6 +42,8 @@ const DeviceDiscoveryPage: FC = () => {
   // 使用全局分页 hook
   const { paginationProps, setTotal } = usePagination();
   const [form] = Form.useForm();
+  const [batchModalVisible, setBatchModalVisible] = useState(false);
+  const [batchExporting, setBatchExporting] = useState(false);
 
   // 数据管理
   const {
@@ -149,6 +154,47 @@ const DeviceDiscoveryPage: FC = () => {
       loadDiscoveries();
     } catch (error) {
       message.error('导入失败');
+    }
+  };
+
+  // 批量导出
+  const handleBatchExport = async (entityTypes: string[]) => {
+    setBatchExporting(true);
+    try {
+      const token = await getAccessToken();
+      const response = await fetch('/api/v1/network/batch-export', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          entityTypes,
+          filters: {},
+        }),
+      });
+      if (!response.ok) throw new Error('导出失败');
+      const disposition = response.headers.get('content-disposition');
+      let filename = `网络管理_批量导出_${Date.now()}.zip`;
+      if (disposition) {
+        const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (match?.[1]) filename = decodeURIComponent(match[1].replace(/['"]/g, ''));
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      message.success(`批量导出成功，文件: ${filename}`);
+      setBatchModalVisible(false);
+    } catch (error: any) {
+      message.error(`批量导出失败：${error.message}`);
+    } finally {
+      setBatchExporting(false);
     }
   };
 
@@ -282,7 +328,21 @@ const DeviceDiscoveryPage: FC = () => {
             <Button type="primary" icon={<PlusOutlined />} onClick={openModal}>
               创建发现任务
             </Button>
-          </Space>
+          </Space>{/* 批量导出 Modal */}
+
+        <BatchExportModal
+
+          visible={batchModalVisible}
+
+          onConfirm={handleBatchExport}
+
+          onCancel={() => setBatchModalVisible(false)}
+
+          loading={batchExporting}
+
+        />
+
+
         </div>
       </Card>
 

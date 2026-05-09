@@ -294,20 +294,21 @@ func (s *DeviceInfoCollectionService) getCommandsByVendor(vendor models.DeviceVe
 	}
 }
 
-// updateDeviceInfo 更新设备信息
+// updateDeviceInfo 更新设备信息（仅更新空字段，保留现有数据）
 func (s *DeviceInfoCollectionService) updateDeviceInfo(device *models.NetworkDevice, info *DeviceInfo) {
 	updates := map[string]interface{}{}
 
-	if info.Model != "" {
+	// 只更新当前为空的字段，保留SNMP探测获取的数据
+	if info.Model != "" && device.Model == "" {
 		updates["model"] = info.Model
 	}
-	if info.SerialNumber != "" {
+	if info.SerialNumber != "" && device.SerialNumber == "" {
 		updates["serial_number"] = info.SerialNumber
 	}
-	if info.SoftwareVersion != "" {
+	if info.SoftwareVersion != "" && device.SoftwareVersion == "" {
 		updates["software_version"] = info.SoftwareVersion
 	}
-	if info.Uptime != "" {
+	if info.Uptime != "" && device.Uptime == "" {
 		updates["uptime"] = info.Uptime
 	}
 

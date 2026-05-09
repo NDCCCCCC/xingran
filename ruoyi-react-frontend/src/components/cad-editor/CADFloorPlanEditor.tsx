@@ -10,7 +10,7 @@ import { CADLayersPanel } from './CADLayersPanel';
 import { WallElement, DoorElement, WorkstationElement, CADTextElement } from '../cad-elements';
 import { useWallDrawing, type WallDrawingResult } from '@/hooks/useWallDrawing';
 import { CAD_COLOR_THEME } from './theme';
-import { EDITOR_CONSTANTS, snapToGrid, checkWorkstationCollision, checkWorkstationCollisionForDrag, pointToLineDistance, findNearbyWallNode } from './editorUtils';
+import { EDITOR_CONSTANTS, snapToGrid, checkWorkstationCollision, pointToLineDistance } from './editorUtils';
 import type { FloorPlanData, Wall, Door, EditorMode, Layer, LayerConfig, Point, WallType, TextElement } from './types';
 import type { WorkstationNode } from '@/components/shared/FloorPlanEditor.types';
 
@@ -53,7 +53,7 @@ export function CADFloorPlanEditor({
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState<Point>({ x: 0, y: 0 });
-  const [history, setHistory] = useState<FloorPlanData[]>([]);
+  const [history, _setHistory] = useState<FloorPlanData[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [isTextInputVisible, setIsTextInputVisible] = useState(false);
   const [textInputPosition, setTextInputPosition] = useState<Point | null>(null);
@@ -91,7 +91,7 @@ export function CADFloorPlanEditor({
   // 拖动和交互状态
   const svgRef = useRef<SVGSVGElement>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState<Point | null>(null);
+  const [_dragStart, setDragStart] = useState<Point | null>(null);
   const [lastMousePos, setLastMousePos] = useState<Point | null>(null);
   const [isAltPressed, setIsAltPressed] = useState(false);
   const lastElementMouseCanvasPos = useRef<Point | null>(null);
@@ -180,7 +180,7 @@ export function CADFloorPlanEditor({
   });
 
   // ==================== 门绘制 ====================
-  const [isDrawingDoor, setIsDrawingDoor] = useState(false);
+  const [_isDrawingDoor, _setIsDrawingDoor] = useState(false);
 
   // ==================== 图层操作 ====================
   const handleLayerVisibilityChange = useCallback((layerId: string, visible: boolean) => {
@@ -254,6 +254,11 @@ export function CADFloorPlanEditor({
       ));
     }
   }, [floorPlanData.walls.length, floorPlanData.doors.length, layerConfig?.planImage?.autoHide]);
+
+  // ==================== 图层辅助函数 ====================
+  function isLayerLocked(layerId: string): boolean {
+    return layers.find(l => l.id === layerId)?.locked ?? false;
+  }
 
   // 鼠标滚轮缩放（Shift+滚轮缩放平面图，普通滚轮缩放画布）
   useEffect(() => {
@@ -351,7 +356,7 @@ export function CADFloorPlanEditor({
   }, []);
 
   // 获取当前选中的所有元素
-  const selectedElements = useMemo(() => {
+  const _selectedElements = useMemo(() => {
     const elements: { id: string; type: 'wall' | 'door' | 'workstation' | 'text' }[] = [];
     if (selectedIds.size === 0) return elements;
 
@@ -466,10 +471,6 @@ export function CADFloorPlanEditor({
   // ==================== 坐标转换 ====================
   function isLayerVisible(layerId: string): boolean {
     return layers.find(l => l.id === layerId)?.visible ?? false;
-  }
-
-  function isLayerLocked(layerId: string): boolean {
-    return layers.find(l => l.id === layerId)?.locked ?? false;
   }
 
   function getLayerOpacity(layerId: string): number {

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { FC } from 'react';
+import { getAccessToken } from '@/utils/authHelpers';
 import {
   Table,
   Button,
@@ -10,6 +11,7 @@ import {
   Row,
   Col,
   Statistic,
+  message,
 } from 'antd';
 import {
   PlayCircleOutlined,
@@ -27,6 +29,8 @@ import { ConfigExecuteModal, VariableModal, DetailDrawer } from './modals';
 import { STATUS_OPTIONS } from './constants';
 import { usePagination } from '@/hooks/usePagination';
 import NetworkExport from '@/components/shared/NetworkExport';
+import { BatchExportModal } from '@/components/shared';
+import { DownloadOutlined } from '@ant-design/icons';
 import type { ConfigExecution } from '@/types';
 
 const { Option } = Select;
@@ -34,6 +38,8 @@ const { Option } = Select;
 const ConfigExecutionPage: FC = () => {
   const [executeForm] = Form.useForm();
   const [searchForm] = Form.useForm();
+  const [batchModalVisible, setBatchModalVisible] = useState(false);
+  const [batchExporting, setBatchExporting] = useState(false);
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
@@ -97,6 +103,47 @@ const ConfigExecutionPage: FC = () => {
   const detailColumns = getDetailColumns({
     handleViewOutput,
   });
+
+  // 批量导出
+  const handleBatchExport = async (entityTypes: string[]) => {
+    setBatchExporting(true);
+    try {
+      const token = await getAccessToken();
+      const response = await fetch('/api/v1/network/batch-export', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          entityTypes,
+          filters: {},
+        }),
+      });
+      if (!response.ok) throw new Error('导出失败');
+      const disposition = response.headers.get('content-disposition');
+      let filename = `网络管理_批量导出_${Date.now()}.zip`;
+      if (disposition) {
+        const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (match?.[1]) filename = decodeURIComponent(match[1].replace(/['"]/g, ''));
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      message.success(`批量导出成功，文件: ${filename}`);
+      setBatchModalVisible(false);
+    } catch (error: any) {
+      message.error(`批量导出失败：${error.message}`);
+    } finally {
+      setBatchExporting(false);
+    }
+  };
 
   useEffect(() => {
     Promise.all([loadExecutions(), loadStatistics()]);
@@ -215,7 +262,21 @@ const ConfigExecutionPage: FC = () => {
               current={paginationProps?.current ?? 1}
               pageSize={paginationProps?.pageSize ?? 10}
             />
-          </Space>
+          </Space>{/* 批量导出 Modal */}
+
+        <BatchExportModal
+
+          visible={batchModalVisible}
+
+          onConfirm={handleBatchExport}
+
+          onCancel={() => setBatchModalVisible(false)}
+
+          loading={batchExporting}
+
+        />
+
+
         </div>
       </Card>
 

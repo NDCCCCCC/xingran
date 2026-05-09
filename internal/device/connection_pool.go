@@ -308,10 +308,12 @@ func (p *DeviceConnectionPool) createConnection(ctx context.Context, deviceID st
 		if err := p.db.Where("id = ?", *device.CredentialID).First(&credential).Error; err != nil {
 			return nil, fmt.Errorf("查询凭证失败: %w", err)
 		}
+		applogger.Infof("[连接池] 设备 %s 使用关联凭证: %s (id=%s, user=%s, protocol=%s)", device.DeviceName, credential.CredentialName, credential.ID, credential.Username, credential.ProtocolType)
 	} else {
 		if err := p.db.Where("is_default = ?", true).First(&credential).Error; err != nil {
 			return nil, fmt.Errorf("未找到默认凭证: %w", err)
 		}
+		applogger.Infof("[连接池] 设备 %s 未关联凭证，使用默认凭证: %s (id=%s, user=%s, protocol=%s)", device.DeviceName, credential.CredentialName, credential.ID, credential.Username, credential.ProtocolType)
 	}
 
 	// 解密密码
@@ -328,6 +330,7 @@ func (p *DeviceConnectionPool) createConnection(ctx context.Context, deviceID st
 		return nil, fmt.Errorf("密码解密失败: %w", err)
 	}
 	password = decrypted
+	applogger.Infof("[连接池] 设备 %s 凭证解密成功: 密文长度=%d, 明文长度=%d", device.DeviceName, len(credential.Password), len(password))
 
 	// 创建连接
 	var wrapper *ScrapliWrapper

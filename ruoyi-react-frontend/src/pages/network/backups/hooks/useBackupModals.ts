@@ -107,7 +107,12 @@ export function useBackupModals(
   const handleBackup = useCallback(async (form: FormInstance<unknown>) => {
     try {
       const values = await form.validateFields();
-      await post('/network/backups', values);
+      // 调用批量备份端点，添加 backupType 字段
+      await post('/network/backups/batch', {
+        deviceIds: values.deviceIds,
+        backupType: 'manual',
+        changeReason: values.changeReason,
+      });
       closeBackupModal(form);
       onLoad();
     } catch (error: unknown) {
@@ -124,7 +129,7 @@ export function useBackupModals(
       return;
     }
     try {
-      await post('/network/backups/restore', { id: selectedRestoreBackup.id });
+      await post(`/network/backups/${selectedRestoreBackup.id}/restore`, {});
       closeRestoreModal();
       onLoad();
     } catch (error) {

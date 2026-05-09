@@ -21,6 +21,7 @@ import {
   Layout,
   Divider,
   Alert,
+  message,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { DividerProps } from 'antd/es/divider';
@@ -42,6 +43,7 @@ import {
 import type { NetworkDevice } from '@/types';
 import type { BaseResponse, PageResponse } from '@/types';
 import { post } from '@/lib/api';
+import { getAccessToken } from '@/utils/authHelpers';
 import DeptTree from '@/components/DeptTree';
 import { useNavigate } from 'react-router-dom';
 import { useTableManager } from '@/hooks/useTableManager';
@@ -49,6 +51,8 @@ import { handleApiError, handleSuccess } from '@/utils/errorHandler';
 import ActionButtons from '@/components/shared/ActionButtons';
 import { DepartmentTreeSelect } from '@/components/shared';
 import NetworkExport from '@/components/shared/NetworkExport';
+import { BatchExportModal } from '@/components/shared';
+import { DownloadOutlined } from '@ant-design/icons';
 import { usePagination } from '@/hooks/usePagination';
 
 // 导入提取的常量、工具和 Hook
@@ -207,6 +211,8 @@ const DeviceManagement: FC = () => {
   // 自定义状态
   const [selectedDeptId, setSelectedDeptId] = useState<string>('');
   const [collectingDeviceId, setCollectingDeviceId] = useState<string | null>(null);
+  const [batchModalVisible, setBatchModalVisible] = useState(false);
+  const [batchExporting, setBatchExporting] = useState(false);
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
@@ -416,18 +422,56 @@ const DeviceManagement: FC = () => {
     }
   };
 
+  const handleBatchExport = async (entityTypes: string[]) => {
+    setBatchExporting(true);
+    try {
+      const token = await getAccessToken();
+      const response = await fetch('/api/v1/network/batch-export', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          entityTypes,
+          filters: {}, // 可以根据需要添加筛选条件
+        }),
+      });
+      if (!response.ok) throw new Error('导出失败');
+      const disposition = response.headers.get('content-disposition');
+      let filename = `网络管理_批量导出_${Date.now()}.zip`;
+      if (disposition) {
+        const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (match?.[1]) filename = decodeURIComponent(match[1].replace(/['"]/g, ''));
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      message.success(`批量导出成功，文件: ${filename}`);
+      setBatchModalVisible(false);
+    } catch (error: any) {
+      message.error(`批量导出失败：${error.message}`);
+    } finally {
+      setBatchExporting(false);
+    }
+  };
+
   // 采集设备端口
   const handleCollectPorts = async (device: NetworkDevice) => {
     try {
       setCollectingDeviceId(device.id);
-      const result = await post('/network/ports/collect', { deviceId: device.id });
+      const result = await post<{ errorMessage?: string; successCount?: number; failedCount?: number }>('/network/ports/collect', { deviceId: device.id });
 
-      const data = result as {
-        errorMessage?: string;
-        successCount?: number;
-        failedCount?: number;
-      };
-      if (data.errorMessage) {
+      const data = result.data;
+      if (!data) {
+        handleApiError('采集失败: 未获取到端口数据', '采集');
+      } else if (data.errorMessage) {
         handleApiError(data.errorMessage, '采集', false);
       } else if (data.successCount && data.successCount > 0) {
         handleSuccess(`采集成功: 成功 ${data.successCount} 个端口${data.failedCount && data.failedCount > 0 ? `，失败 ${data.failedCount} 个` : ''}`);
@@ -642,7 +686,21 @@ const DeviceManagement: FC = () => {
                     批量删除 ({selectedRowKeys.length})
                   </Button>
                 )}
-              </Space>
+              </Space>{/* 批量导出 Modal */}
+
+            <BatchExportModal
+
+              visible={batchModalVisible}
+
+              onConfirm={handleBatchExport}
+
+              onCancel={() => setBatchModalVisible(false)}
+
+              loading={batchExporting}
+
+            />
+
+
             </div>
             {selectedRowKeys.length > 0 && (
               <Alert

@@ -4,7 +4,7 @@ import { Tree, Card, Spin, Input } from 'antd';
 import type { DataNode, EventDataNode } from 'antd/es/tree';
 import { ApartmentOutlined, SearchOutlined } from '@ant-design/icons';
 import { post } from '@/lib/api';
-import type { BaseResponse, Department } from '@/types';
+import type { Department } from '@/types';
 
 interface DeptTreeProps {
   onSelect?: (selectedKeys: Key[], info: {

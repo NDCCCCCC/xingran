@@ -23,6 +23,8 @@ func newWebSocketUpgrader(allowedOrigins []string) websocket.Upgrader {
 		WriteBufferSize: 1024,
 		CheckOrigin: func(r *http.Request) bool {
 			if allowAll {
+				// 生产环境警告：允许所有来源是不安全的
+				applogger.Warnf("WebSocket CheckOrigin 允许所有来源（开发模式），建议在生产环境配置具体白名单")
 				return true
 			}
 
@@ -50,6 +52,8 @@ func newWebSocketUpgrader(allowedOrigins []string) websocket.Upgrader {
 				}
 			}
 
+			// 记录拒绝的来源（安全审计）
+			applogger.Warnf("WebSocket 连接被拒绝: origin=%s, client_ip=%s", origin, r.RemoteAddr)
 			return false
 		},
 	}

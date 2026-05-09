@@ -14,5 +14,6 @@ func SetupMACRouter(r *gin.RouterGroup, core *core.Core, exportHandler *NetworkE
 	r.POST("/collect/all", handler.CollectAll)
 	r.GET("/statistics", handler.GetStats)
 	r.POST("/clean", handler.Clean)
+	r.POST("/batch-delete", handler.BatchDelete)
 	r.POST("/export", exportHandler.ExportMACAddresses)
 }

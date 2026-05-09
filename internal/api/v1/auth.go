@@ -426,7 +426,7 @@ func recordLoginLog(c *gin.Context, core *core.Core, username string, status int
 
 	go func() {
 		if err := core.DB.GetDB().Create(&loginLog).Error; err != nil {
-			applogger.Warnf("记录登录日志失败: %v", err)
+			applogger.Errorf("记录登录日志失败 (user: %s, ip: %s, status: %d): %v", username, clientIP, status, err)
 		}
 	}()
 }

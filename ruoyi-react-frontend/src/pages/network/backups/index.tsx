@@ -45,8 +45,10 @@ import type { ConfigBackup } from '@/types';
 import type { DeviceBackupGroup, DiffLine } from './types';
 import { useBackupData, useBackupDiff, useBackupModals } from './hooks';
 import { post } from '@/lib/api';
+import { getAccessToken } from '@/utils/authHelpers';
 import ActionButtons from '@/components/shared/ActionButtons';
 import NetworkExport from '@/components/shared/NetworkExport';
+import { BatchExportModal } from '@/components/shared';
 import { usePagination } from '@/hooks/usePagination';
 import { formatDateTime } from '@/utils/datetime';
 
@@ -64,6 +66,9 @@ const ConfigBackupPage: FC = () => {
   const [backupForm] = Form.useForm();
   const [searchForm] = Form.useForm();
   const [selectedDeviceGroup, setSelectedDeviceGroup] = useState<DeviceBackupGroup | null>(null);
+
+const [batchModalVisible, setBatchModalVisible] = useState(false);
+const [batchExporting, setBatchExporting] = useState(false);
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
@@ -197,6 +202,47 @@ const ConfigBackupPage: FC = () => {
     });
   };
 
+  // 批量导出
+  const handleBatchExport = async (entityTypes: string[]) => {
+    setBatchExporting(true);
+    try {
+      const token = await getAccessToken();
+      const response = await fetch('/api/v1/network/batch-export', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          entityTypes,
+          filters: {},
+        }),
+      });
+      if (!response.ok) throw new Error('导出失败');
+      const disposition = response.headers.get('content-disposition');
+      let filename = `网络管理_批量导出_${Date.now()}.zip`;
+      if (disposition) {
+        const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (match?.[1]) filename = decodeURIComponent(match[1].replace(/['"]/g, ''));
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      message.success(`批量导出成功，文件: ${filename}`);
+      setBatchModalVisible(false);
+    } catch (error: any) {
+      message.error(`批量导出失败：${error.message}`);
+    } finally {
+      setBatchExporting(false);
+    }
+  };
+
   // 渲染差异行
   const renderDiffLine = (line: DiffLine, side: 'left' | 'right', index: number) => {
     const lineNum = line.lineNum !== undefined ? String(line.lineNum).padStart(4, ' ') : '    ';
@@ -234,7 +280,21 @@ const ConfigBackupPage: FC = () => {
             flexShrink: 0,
             borderRight: '1px solid #e8e8e8',
           }}>
-            {lineNum}
+            {lineNum}{/* 批量导出 Modal */}
+
+          <BatchExportModal
+
+            visible={batchModalVisible}
+
+            onConfirm={handleBatchExport}
+
+            onCancel={() => setBatchModalVisible(false)}
+
+            loading={batchExporting}
+
+          />
+
+
           </div>
           <div style={{
             padding: '0 12px',

@@ -35,12 +35,12 @@ func NewCollectionService(db *gorm.DB, executor *device.DeviceExecutor) *Collect
 
 // CollectionResult 采集结果
 type CollectionResult struct {
-	DeviceID       string
-	DeviceName     string
-	SuccessCount   int
-	FailedCount    int
-	ErrorMessage   string
-	CollectionTime time.Time
+	DeviceID       string    `json:"deviceId"`
+	DeviceName     string    `json:"deviceName"`
+	SuccessCount   int       `json:"successCount"`
+	FailedCount    int       `json:"failedCount"`
+	ErrorMessage   string    `json:"errorMessage"`
+	CollectionTime time.Time `json:"collectionTime"`
 }
 
 // CollectAllDevices 采集所有设备的端口状态
@@ -108,6 +108,7 @@ func (s *CollectionService) collectDevicePort(ctx context.Context, device *model
 	pool := s.executor.GetScheduler().GetConnectionPool()
 	conn, err := pool.GetConnection(ctx, device.ID)
 	if err != nil {
+		applogger.Infof("[端口采集] %s (%s): 获取连接失败: %v", device.DeviceName, device.IPAddress, err)
 		result.ErrorMessage = err.Error()
 		return result
 	}
@@ -127,9 +128,12 @@ func (s *CollectionService) collectDevicePort(ctx context.Context, device *model
 	// 获取接口列表
 	interfaces, err := parseInterfaceList(wrapper, device.Vendor)
 	if err != nil {
+		applogger.Infof("[端口采集] %s (%s): 解析接口列表失败: %v", device.DeviceName, device.IPAddress, err)
 		result.ErrorMessage = err.Error()
 		return result
 	}
+
+	applogger.Infof("[端口采集] %s (%s): 获取到 %d 个接口", device.DeviceName, device.IPAddress, len(interfaces))
 
 	// 获取接口状态和描述信息
 	descriptionMap := make(map[string]InterfaceDescription)

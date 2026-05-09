@@ -36,3 +36,6 @@ export type {
   DragState,
   ContextMenuState,
 } from './FloorPlanEditor.types';
+
+export { default as BatchExportModal } from './BatchExportModal';
+export type { BatchExportModalProps, EntityType } from './BatchExportModal';

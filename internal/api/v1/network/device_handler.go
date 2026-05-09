@@ -220,6 +220,31 @@ func (h *DeviceHandler) BatchDelete(c *gin.Context) {
 		"count":   len(req.IDs),
 	})
 }
+	// QuickCreate 快速创建设备（自动探测并创建）
+	// @Summary 快速创建网络设备
+	// @Description 通过 SNMP 探测自动获取设备信息并创建设备
+	// @Tags 网络设备管理
+	// @Accept json
+	// @Produce json
+	// @Param request body services.QuickCreateRequest true "快速创建请求"
+	// @Success 200 {object} response.Response
+	// @Router /network/devices/quick-create [post]
+	func (h *DeviceHandler) QuickCreate(c *gin.Context) {
+		var req services.QuickCreateRequest
+		if !responseHelpers.HandleJSONBinding(c, &req) {
+			return
+		}
+
+		userID, _ := c.Get("user_id")
+		req.CreatedBy = userID.(string)
+
+		device, err := h.deviceService.QuickCreateDevice(c.Request.Context(), &req)
+		if !responseHelpers.HandleServiceError(c, err, "快速创建设备") {
+			return
+		}
+
+		response.Success(c, gin.H{"id": device.ID})
+	}
 
 // ==================== 辅助函数 ====================
 

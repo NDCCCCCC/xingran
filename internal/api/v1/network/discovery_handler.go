@@ -13,6 +13,31 @@ type DiscoveryHandler struct {
 	discoveryService *services.DeviceDiscoveryService
 }
 
+// Probe 探测单台设备
+// @Summary 探测单台设备
+// @Description 使用指定凭证探测单台设备的连通性和基本信息
+// @Tags 网络设备管理
+// @Accept json
+// @Produce json
+// @Param request body services.DeviceProbeRequest true "探测参数"
+// @Success 200 {object} response.Response{data=services.DeviceProbeResult}
+// @Router /network/devices/discover [post]
+func (h *DiscoveryHandler) Probe(c *gin.Context) {
+	var req services.DeviceProbeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		responseHelpers.Error(c, 400, "请求参数错误: "+err.Error())
+		return
+	}
+
+	result, err := h.discoveryService.ProbeSingleDevice(c.Request.Context(), &req)
+	if err != nil {
+		responseHelpers.Error(c, 500, "探测失败: "+err.Error())
+		return
+	}
+
+	response.Success(c, result)
+}
+
 // NewDiscoveryHandler 创建设备发现处理器实例
 func NewDiscoveryHandler(discoveryService *services.DeviceDiscoveryService) *DiscoveryHandler {
 	return &DiscoveryHandler{discoveryService: discoveryService}

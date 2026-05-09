@@ -369,9 +369,8 @@ func (h *BackupHandler) GetHistory(c *gin.Context) {
 	if err := h.db.Where("device_id = ?", deviceID).
 		Order("version DESC").
 		Find(&backups).Error; err != nil {
-		if !responseHelpers.HandleServiceError(c, err, "获取备份历史") {
-			return
-		}
+		responseHelpers.HandleServiceError(c, err, "获取备份历史")
+		return
 	}
 
 	response.Success(c, backups)

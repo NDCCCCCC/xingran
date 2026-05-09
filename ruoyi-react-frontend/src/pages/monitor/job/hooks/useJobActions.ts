@@ -110,7 +110,7 @@ export function useJobActions(params: UseJobActionsParams): UseJobActionsReturn 
   // 启动/停止任务
   const handleToggleStatus = useCallback(async (record: JobInfo) => {
     try {
-      await put(`/monitor/jobs/${record.id}/status`, {
+      await post(`/monitor/jobs/${record.id}/status`, {
         status: record.status === 0 ? 1 : 0
       });
 

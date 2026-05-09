@@ -55,6 +55,8 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 	{
 		devices.POST("/list", deviceHandler.List)
 		devices.POST("", deviceHandler.Create)
+		devices.POST("/discover", discoveryHandler.Probe)
+		devices.POST("/quick-create", deviceHandler.QuickCreate)
 		devices.POST("/:id", deviceHandler.GetByID)
 		devices.POST("/:id/update", deviceHandler.Update)
 		devices.POST("/:id/delete", deviceHandler.Delete)
@@ -164,4 +166,8 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 	{
 		SetupPortRouter(ports, core, exportHandler)
 	}
+
+	// ==================== 批量导出路由（所有实体类型通用） ====================
+	r.POST("/batch-export", exportHandler.BatchExport)
+
 }

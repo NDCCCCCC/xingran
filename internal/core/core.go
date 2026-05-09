@@ -47,18 +47,17 @@ type Core struct {
 	JWTManager                  *security.JWTManager                  // JWT令牌管理器
 	PwdManager                  *security.PasswordManager             // 密码管理器
 	SM4Cipher                   *security.SM4Cipher                   // SM4加密器（用于凭证密码加密）
-	MetricsCacheService         *MetricsCacheService                  // 系统指标缓存服务
+	MetricsCacheService         *MetricsCacheService                  // 系统指标缓存服务（被 monitor/adapters.go 使用）
 	Scheduler                   *scheduler.Scheduler                  // 定时任务调度器
-	DeviceManager               *device.Manager                       // 网络设备管理器（简化版，仅辅助方法）
-	DeviceExecutor              *device.DeviceExecutor                // 设备执行器（新架构，统一入口）
-	DeviceDiscoveryService      *services.DeviceDiscoveryService      // 设备发现服务
-	DeviceInfoCollectionService *services.DeviceInfoCollectionService // 设备信息采集服务
-	DeviceMonitorService        *services.DeviceMonitorService        // 设备监控服务
-	NoticeHub                   *websocket.NoticeHub                  // WebSocket通知中心
-	CaptchaService              *CaptchaService                       // 验证码服务
-	CaptchaBackgroundService    *CaptchaBackgroundService             // 验证码背景图服务
-	OperLogService              services.OperLogService               // 操作日志服务
-	TokenBlacklistService       services.TokenBlacklistService        // 令牌黑名单服务
+	DeviceExecutor              *device.DeviceExecutor                // 设备执行器（被 mac_handler.go, network_export_handler.go, port_handler.go 使用）
+	DeviceDiscoveryService      *services.DeviceDiscoveryService      // 设备发现服务（被 network_export_handler.go 使用）
+	DeviceInfoCollectionService *services.DeviceInfoCollectionService // 设备信息采集服务（被 network_export_handler.go 使用）
+	DeviceMonitorService        *services.DeviceMonitorService        // 设备监控服务（被 scheduler.SetDeviceMonitorService() 使用）
+	NoticeHub                   *websocket.NoticeHub                  // WebSocket通知中心（被 router.go 和 rpa_router.go 使用）
+	CaptchaService              *CaptchaService                       // 验证码服务（被 auth.go 和 captcha_handler.go 使用）
+	CaptchaBackgroundService    *CaptchaBackgroundService             // 验证码背景图服务（被 captcha_background_handler.go 使用）
+	OperLogService              services.OperLogService               // 操作日志服务（被 middleware 和 helper.go 使用）
+	TokenBlacklistService       services.TokenBlacklistService        // 令牌黑名单服务（被 middleware 和 auth.go 使用）
 
 	// 缓存服务（用于 System 模块）
 	DataCacheService   *services.DataCacheService   // 通用数据缓存服务
@@ -66,12 +65,10 @@ type Core struct {
 	CacheManager       *system.CacheManager         // 缓存管理器（增强功能）
 
 	// RPA 服务
-	RPAConfig         *config.RPAConfig // RPA 配置
-	RPAScalingService rpaScalingService // RPA 扩缩容服务
+	RPAScalingService rpaScalingService // RPA 扩缩容服务（内部使用，仅在 Close() 中停止）
 
 	// API端点元数据服务
-	APIMetadata        *config.APIMetadataConfig    // API元数据配置
-	APIEndpointService *services.APIEndpointService // API端点服务
+	APIEndpointService *services.APIEndpointService // API端点服务（被 dashboard_router.go 使用）
 }
 
 // GetDB 获取数据库连接
@@ -198,21 +195,19 @@ func (c *Core) Init() error {
 	applogger.Infof("系统指标缓存服务初始化完成")
 
 	// 8. 初始化网络设备管理器（新架构）
-	// 7.1 创建简化版管理器（仅辅助方法）
-	c.DeviceManager = device.NewManager(c.GetDB())
-	// 7.2 创建连接池
+	// 8.1 创建连接池
 	poolConfig := &device.PoolConfig{
 		MaxIdle:        5 * time.Minute,
 		MaxConnections: 20, // 降低并发连接数，减少 scrapligo panic 问题
 	}
 	connectionPool := device.NewDeviceConnectionPool(c.GetDB(), c.SM4Cipher, poolConfig)
-	// 7.3 创建任务调度器
+	// 8.2 创建任务调度器
 	schedulerConfig := &device.SchedulerConfig{
 		TaskTimeout: 5 * time.Minute,
 		QueueSize:   100,
 	}
 	taskScheduler := device.NewDeviceTaskScheduler(connectionPool, schedulerConfig)
-	// 7.4 创建执行器
+	// 8.3 创建执行器
 	executorConfig := &device.ExecutionConfig{
 		MaxRetries:          2,
 		RetryDelay:          time.Second,
@@ -220,11 +215,9 @@ func (c *Core) Init() error {
 		EnablePanicRecovery: true,
 	}
 	c.DeviceExecutor = device.NewDeviceExecutor(taskScheduler, executorConfig)
-	// 7.5 将执行器设置到管理器（兼容层）
-	c.DeviceManager.SetExecutor(c.DeviceExecutor)
 	applogger.Infof("网络设备管理器（新架构）初始化完成")
 
-	// 8. 初始化设备发现服务
+	// 9. 初始化设备发现服务
 	c.DeviceDiscoveryService = services.NewDeviceDiscoveryService(c.GetDB())
 	applogger.Infof("设备发现服务初始化完成")
 
@@ -319,8 +312,7 @@ func (c *Core) Init() error {
 
 	// 17. 初始化RPA服务
 	if c.Config.RPA.Enabled {
-		c.RPAConfig = &c.Config.RPA
-		if err := c.initRPAServices(); err != nil {
+		if err := c.initRPAServices(&c.Config.RPA); err != nil {
 			applogger.Warnf("初始化RPA服务失败: %v", err)
 		} else {
 			applogger.Infof("RPA服务初始化完成")
@@ -361,11 +353,6 @@ func (c *Core) Close() {
 	if c.Scheduler != nil {
 		c.Scheduler.Stop()
 		applogger.Infof("定时任务调度器已停止")
-	}
-	// 关闭网络设备连接管理器
-	if c.DeviceManager != nil {
-		c.DeviceManager.Close()
-		applogger.Infof("网络设备连接管理器已关闭")
 	}
 	if c.DB != nil {
 		c.DB.Close()
@@ -473,7 +460,6 @@ func (c *Core) initAPIEndpointService() error {
 	if err != nil {
 		return err
 	}
-	c.APIMetadata = metadata
 
 	// 创建API端点服务
 	c.APIEndpointService = services.NewAPIEndpointService(
@@ -521,30 +507,30 @@ func (c *Core) performCacheWarmUp(ctx context.Context, svcs *warmUpServices) {
 }
 
 // initRPAServices 初始化 RPA 服务
-func (c *Core) initRPAServices() error {
+func (c *Core) initRPAServices(rpaConfig *config.RPAConfig) error {
 	// 确保 RPA 存储目录存在
-	if c.RPAConfig.Storage.DownloadsDir != "" {
-		if err := os.MkdirAll(c.RPAConfig.Storage.DownloadsDir, 0755); err != nil {
+	if rpaConfig.Storage.DownloadsDir != "" {
+		if err := os.MkdirAll(rpaConfig.Storage.DownloadsDir, 0755); err != nil {
 			applogger.Warnf("创建RPA下载目录失败: %v", err)
 		}
 	}
-	if c.RPAConfig.Storage.ScreenshotsDir != "" {
-		if err := os.MkdirAll(c.RPAConfig.Storage.ScreenshotsDir, 0755); err != nil {
+	if rpaConfig.Storage.ScreenshotsDir != "" {
+		if err := os.MkdirAll(rpaConfig.Storage.ScreenshotsDir, 0755); err != nil {
 			applogger.Warnf("创建RPA截图目录失败: %v", err)
 		}
 	}
 
 	// 检查 AI 配置
-	if c.RPAConfig.AI.Agent.Enabled && c.RPAConfig.AI.Agent.APIKey == "" {
+	if rpaConfig.AI.Agent.Enabled && rpaConfig.AI.Agent.APIKey == "" {
 		applogger.Warnf("RPA AI Agent 已启用但未配置 API Key，请在环境变量中设置 RPA_AI_AGENT_KEY")
 	}
-	if c.RPAConfig.AI.Generator.Enabled && c.RPAConfig.AI.Generator.APIKey == "" {
+	if rpaConfig.AI.Generator.Enabled && rpaConfig.AI.Generator.APIKey == "" {
 		applogger.Warnf("RPA AI Generator 已启用但未配置 API Key，请在环境变量中设置 RPA_AI_GENERATOR_KEY")
 	}
 
 	// 初始化 RPA 扩缩容服务
-	if c.RPAConfig.Scaling.Enabled {
-		if err := c.initRPAScalingService(); err != nil {
+	if rpaConfig.Scaling.Enabled {
+		if err := c.initRPAScalingService(rpaConfig); err != nil {
 			applogger.Warnf("启动RPA扩缩容服务失败: %v", err)
 		}
 	}
@@ -591,25 +577,25 @@ func (c *Core) registerRPATasks() {
 }
 
 // initRPAScalingService 初始化 RPA 扩缩容服务
-func (c *Core) initRPAScalingService() error {
+func (c *Core) initRPAScalingService(rpaConfig *config.RPAConfig) error {
 	// 动态导入以避免循环依赖
 	scalingConfig := &rpa.ScalingConfig{
-		Enabled:           c.RPAConfig.Scaling.Enabled,
-		CheckInterval:     parseDuration(c.RPAConfig.Scaling.CheckInterval, 30*time.Second),
-		MinWorkers:        c.RPAConfig.Scaling.MinWorkers,
-		MaxWorkers:        c.RPAConfig.Scaling.MaxWorkers,
-		ScaleUpThreshold:  c.RPAConfig.Scaling.ScaleUpThreshold,
-		ScaleDownCooldown: parseDuration(c.RPAConfig.Scaling.ScaleDownCooldown, 5*time.Minute),
-		ScaleUpLimit:      c.RPAConfig.Scaling.ScaleUpLimit,
-		EnableMockDocker:  c.RPAConfig.Scaling.EnableMockDocker,
+		Enabled:           rpaConfig.Scaling.Enabled,
+		CheckInterval:     parseDuration(rpaConfig.Scaling.CheckInterval, 30*time.Second),
+		MinWorkers:        rpaConfig.Scaling.MinWorkers,
+		MaxWorkers:        rpaConfig.Scaling.MaxWorkers,
+		ScaleUpThreshold:  rpaConfig.Scaling.ScaleUpThreshold,
+		ScaleDownCooldown: parseDuration(rpaConfig.Scaling.ScaleDownCooldown, 5*time.Minute),
+		ScaleUpLimit:      rpaConfig.Scaling.ScaleUpLimit,
+		EnableMockDocker:  rpaConfig.Scaling.EnableMockDocker,
 	}
 
 	dockerConfig := &rpa.DockerConfig{
-		DockerHost:    c.RPAConfig.Scaling.Docker.DockerHost,
-		DockerPort:    c.RPAConfig.Scaling.Docker.DockerPort,
-		ContainerName: c.RPAConfig.Scaling.Docker.ContainerName,
-		ImageName:     c.RPAConfig.Scaling.Docker.ImageName,
-		NetworkName:   c.RPAConfig.Scaling.Docker.NetworkName,
+		DockerHost:    rpaConfig.Scaling.Docker.DockerHost,
+		DockerPort:    rpaConfig.Scaling.Docker.DockerPort,
+		ContainerName: rpaConfig.Scaling.Docker.ContainerName,
+		ImageName:     rpaConfig.Scaling.Docker.ImageName,
+		NetworkName:   rpaConfig.Scaling.Docker.NetworkName,
 	}
 
 	// 验证配置

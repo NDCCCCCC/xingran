@@ -4,7 +4,6 @@
  */
 
 import { useMemo, useCallback } from 'react';
-import { getWorkstationColor } from '@/components/cad-editor/theme';
 import type { WorkstationNode } from '@/components/shared/FloorPlanEditor.types';
 
 export interface WorkstationElementProps {

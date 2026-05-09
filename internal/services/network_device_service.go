@@ -159,7 +159,7 @@ type QuickCreateRequest struct {
 	DeptID      *string  `json:"deptId,omitempty"`
 	Location    string   `json:"location,omitempty"`
 	Description string   `json:"description,omitempty"`
-	CreatedBy   string   `json:"-" binding:"required"`
+	CreatedBy   string   `json:"-"`
 }
 
 // Create 创建设备
@@ -277,7 +277,7 @@ func (s *NetworkDeviceService) QuickCreateDevice(ctx context.Context, req *Quick
 	}
 
 	// 如果设备存在但已删除，恢复并更新
-	if err == nil && !existingDevice.DeletedAt.Valid {
+	if err == nil && existingDevice.DeletedAt.Valid {
 		// 恢复已删除的设备（清空 deleted_at）
 		// now := time.Now()
 		existingDevice.DeletedAt = gorm.DeletedAt{}
@@ -290,7 +290,7 @@ func (s *NetworkDeviceService) QuickCreateDevice(ctx context.Context, req *Quick
 		existingDevice.CredentialID = &req.CredentialID
 		existingDevice.DeptID = req.DeptID
 		existingDevice.Location = req.Location
-		existingDevice.Status = models.DeviceStatusUnknown
+		existingDevice.Status = models.DeviceStatusOnline
 		existingDevice.Description = req.Description
 		existingDevice.UpdatedBy = req.CreatedBy
 
@@ -317,7 +317,7 @@ func (s *NetworkDeviceService) QuickCreateDevice(ctx context.Context, req *Quick
 		CredentialID: &req.CredentialID,
 		DeptID:       req.DeptID,
 		Location:     req.Location,
-		Status:       models.DeviceStatusUnknown, // 初始状态为未知
+		Status:       models.DeviceStatusOnline, // 初始状态为在线
 		Description:  req.Description,
 	}
 
