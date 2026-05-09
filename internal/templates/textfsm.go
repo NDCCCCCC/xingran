@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -44,12 +45,63 @@ type Rule struct {
 }
 
 // ParseTemplate 从文件解析 textfsm 模板
+// 支持相对路径（相对于项目根目录）和绝对路径
 func ParseTemplate(filename string) (*FSM, error) {
-	content, err := os.ReadFile(filename)
-	if err != nil {
-		return nil, fmt.Errorf("读取模板文件失败: %w", err)
+	var content []byte
+	var err error
+
+	// 如果是相对路径，需要找到项目根目录
+	if !filepath.IsAbs(filename) {
+		// 尝试获取当前工作目录并向上搜索 go.mod
+		cwd, err := os.Getwd()
+		if err != nil {
+			return nil, fmt.Errorf("无法获取当前工作目录: %w", err)
+		}
+
+		// 从当前目录向上搜索项目根目录（包含 go.mod 的目录）
+		projectRoot := findProjectRoot(cwd)
+		if projectRoot == "" {
+			// 如果找不到 go.mod，使用当前目录
+			projectRoot = cwd
+		}
+
+		// 使用项目根目录作为基础路径
+		fullPath := filepath.Join(projectRoot, filename)
+		content, err = os.ReadFile(fullPath)
+		if err != nil {
+			return nil, fmt.Errorf("读取模板文件失败 %s (尝试路径: %s): %w", filename, fullPath, err)
+		}
+	} else {
+		// 绝对路径直接读取
+		content, err = os.ReadFile(filename)
+		if err != nil {
+			return nil, fmt.Errorf("读取模板文件失败: %w", err)
+		}
 	}
 
+	return parseTemplateContent(filename, content)
+}
+
+// findProjectRoot 从当前目录向上搜索包含 go.mod 的目录（项目根目录）
+func findProjectRoot(dir string) string {
+	for {
+		// 检查当前目录是否有 go.mod
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+			return dir
+		}
+
+		// 到达文件系统根目录
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return "" // 没找到 go.mod
+		}
+
+		dir = parent
+	}
+}
+
+// parseTemplateContent 解析模板内容（内部辅助函数）
+func parseTemplateContent(filename string, content []byte) (*FSM, error) {
 	fsm, err := ParseTemplateString(string(content))
 	if err != nil {
 		return nil, err

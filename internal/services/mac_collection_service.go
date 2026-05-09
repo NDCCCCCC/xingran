@@ -12,28 +12,31 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/lldp"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/topology"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
 // MACCollectionService MAC地址采集服务
 type MACCollectionService struct {
-	db            *gorm.DB
-	executor      *device.DeviceExecutor
-	maxConcurrent int
-	lldpService   *lldp.LLDPService
+	db              *gorm.DB
+	executor        *device.DeviceExecutor
+	maxConcurrent   int
+	lldpService     *lldp.LLDPService
+	filterRuleService topology.FilterRuleService
 }
 
 // MAC采集并发数的默认配置键
 const macConcurrentConfigKey = "network.mac.collection.concurrent"
 
 // NewMACCollectionService 创建MAC采集服务
-func NewMACCollectionService(db *gorm.DB, executor *device.DeviceExecutor, lldpSvc *lldp.LLDPService) *MACCollectionService {
+func NewMACCollectionService(db *gorm.DB, executor *device.DeviceExecutor, lldpSvc *lldp.LLDPService, filterRuleSvc topology.FilterRuleService) *MACCollectionService {
 	svc := &MACCollectionService{
-		db:            db,
-		executor:      executor,
-		maxConcurrent: 10, // 默认值
-		lldpService:   lldpSvc,
+		db:                db,
+		executor:          executor,
+		maxConcurrent:     10, // 默认值
+		lldpService:       lldpSvc,
+		filterRuleService: filterRuleSvc,
 	}
 	// 从数据库加载配置
 	svc.loadConfigFromDB()
@@ -556,7 +559,21 @@ func (s *MACCollectionService) ReloadConfig() {
 
 // getMACThreshold 根据设备类型获取MAC数量阈值
 // 用于过滤设备间互联端口（上行链路通常有更多MAC地址）
+// 优先使用数据库配置的过滤规则，回退到硬编码默认值
 func (s *MACCollectionService) getMACThreshold(device *models.NetworkDevice) int {
+	// 尝试从数据库获取有效规则（优先使用配置的阈值）
+	if s.filterRuleService != nil {
+		rule, err := s.filterRuleService.GetEffectiveRule(context.Background(), device)
+		if err == nil && rule != nil {
+			applogger.Debugf("[MAC采集] %s: 使用数据库配置阈值=%d (规则=%s)",
+				device.DeviceName, rule.MACThreshold, rule.RuleName)
+			return rule.MACThreshold
+		}
+		// 规则查询失败时使用默认值，记录警告
+		applogger.Warnf("[MAC采集] %s: 无法获取过滤规则，使用默认阈值: %v", device.DeviceName, err)
+	}
+
+	// 硬编码默认阈值（当数据库规则不可用时）
 	thresholds := map[models.DeviceType]int{
 		models.DeviceTypeRouter:       500, // 路由器：通常连接多个子网，MAC数量多
 		models.DeviceTypeSwitch:       10,  // 交换机：接入端口MAC数少，上行端口MAC数多

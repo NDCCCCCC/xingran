@@ -14,6 +14,7 @@ import (
 	networkServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/network"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/portcollection"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/topology"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	"github.com/xuri/excelize/v2"
 )
@@ -374,7 +375,8 @@ func (h *NetworkExportHandler) generateEntityExcel(entityType string, req Export
 		headers = []string{"MAC地址", "接口名称", "VLAN ID", "MAC类型", "采集时间"}
 
 		lldpSvc := lldp.NewLLDPService(h.core.DeviceExecutor)
-			svc := services.NewMACCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor, lldpSvc)
+		filterRuleSvc := topology.NewFilterRuleService(h.core.DB.GetDB())
+		svc := services.NewMACCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor, lldpSvc, filterRuleSvc)
 
 		var deviceID, macAddress, interfaceName string
 		if req.Filters != nil {

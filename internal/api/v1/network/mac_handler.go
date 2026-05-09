@@ -5,6 +5,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/lldp"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/topology"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
@@ -56,7 +57,8 @@ func (h *MACHandler) List(c *gin.Context) {
 	}
 
 	lldpSvc := lldp.NewLLDPService(h.core.DeviceExecutor)
-	svc := services.NewMACCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor, lldpSvc)
+	filterRuleSvc := topology.NewFilterRuleService(h.core.DB.GetDB())
+	svc := services.NewMACCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor, lldpSvc, filterRuleSvc)
 	macAddrs, total, err := svc.GetMACAddressList(c.Request.Context(), req.Current, req.PageSize,
 		req.DeviceID, req.MACAddress, req.InterfaceName)
 	if !responseHelpers.HandleServiceError(c, err, "获取MAC地址列表") {
@@ -84,7 +86,8 @@ func (h *MACHandler) Collect(c *gin.Context) {
 	}
 
 	lldpSvc := lldp.NewLLDPService(h.core.DeviceExecutor)
-	svc := services.NewMACCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor, lldpSvc)
+	filterRuleSvc := topology.NewFilterRuleService(h.core.DB.GetDB())
+	svc := services.NewMACCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor, lldpSvc, filterRuleSvc)
 	result, err := svc.CollectDevice(c.Request.Context(), req.DeviceID)
 	if !responseHelpers.HandleServiceError(c, err, "采集设备MAC地址") {
 		return
@@ -104,7 +107,8 @@ func (h *MACHandler) Collect(c *gin.Context) {
 // @Router /network/mac/collect-all [post]
 func (h *MACHandler) CollectAll(c *gin.Context) {
 	lldpSvc := lldp.NewLLDPService(h.core.DeviceExecutor)
-	svc := services.NewMACCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor, lldpSvc)
+	filterRuleSvc := topology.NewFilterRuleService(h.core.DB.GetDB())
+	svc := services.NewMACCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor, lldpSvc, filterRuleSvc)
 	results, err := svc.CollectAllDevices(c.Request.Context())
 	if !responseHelpers.HandleServiceError(c, err, "采集所有设备MAC地址") {
 		return
@@ -124,7 +128,8 @@ func (h *MACHandler) CollectAll(c *gin.Context) {
 // @Router /network/mac/stats [post]
 func (h *MACHandler) GetStats(c *gin.Context) {
 	lldpSvc := lldp.NewLLDPService(h.core.DeviceExecutor)
-	svc := services.NewMACCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor, lldpSvc)
+	filterRuleSvc := topology.NewFilterRuleService(h.core.DB.GetDB())
+	svc := services.NewMACCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor, lldpSvc, filterRuleSvc)
 	stats, err := svc.GetMACAddressStats(c.Request.Context())
 	if !responseHelpers.HandleServiceError(c, err, "获取MAC地址统计") {
 		return
@@ -151,7 +156,8 @@ func (h *MACHandler) Clean(c *gin.Context) {
 	}
 
 	lldpSvc := lldp.NewLLDPService(h.core.DeviceExecutor)
-	svc := services.NewMACCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor, lldpSvc)
+	filterRuleSvc := topology.NewFilterRuleService(h.core.DB.GetDB())
+	svc := services.NewMACCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor, lldpSvc, filterRuleSvc)
 	count, err := svc.CleanOldRecords(c.Request.Context(), req.Days)
 	if !responseHelpers.HandleServiceError(c, err, "清理旧MAC地址记录") {
 		return
@@ -178,7 +184,8 @@ func (h *MACHandler) BatchDelete(c *gin.Context) {
 	}
 
 	lldpSvc := lldp.NewLLDPService(h.core.DeviceExecutor)
-	svc := services.NewMACCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor, lldpSvc)
+	filterRuleSvc := topology.NewFilterRuleService(h.core.DB.GetDB())
+	svc := services.NewMACCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor, lldpSvc, filterRuleSvc)
 	count, err := svc.BatchDelete(c.Request.Context(), req.IDs)
 	if !responseHelpers.HandleServiceError(c, err, "批量删除MAC地址记录") {
 		return

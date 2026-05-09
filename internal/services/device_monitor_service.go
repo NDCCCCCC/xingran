@@ -12,6 +12,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/lldp"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/portcollection"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/topology"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"golang.org/x/sync/semaphore"
 	"gorm.io/gorm"
@@ -75,7 +76,8 @@ func (s *DeviceMonitorService) SetExecutor(executor *device.DeviceExecutor) {
 	// 初始化子服务
 	s.portCollectionSvc = portcollection.NewPortCollectionService(s.db, executor)
 	lldpSvc := lldp.NewLLDPService(executor)
-	s.macCollectionSvc = NewMACCollectionService(s.db, executor, lldpSvc)
+	filterRuleSvc := topology.NewFilterRuleService(s.db)
+	s.macCollectionSvc = NewMACCollectionService(s.db, executor, lldpSvc, filterRuleSvc)
 	s.configBackupSvc = NewConfigBackupService(s.db, executor)
 }
 
