@@ -2,15 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: MAC地址采集优化
+current_phase: "11 (MAC地址采集优化 - 过滤设备间互联端口) — 2/4 plans complete — 2026-05-09T03:30:00.000Z"
 status: executing
-last_updated: "2026-05-09T02:45:00.000Z"
-last_activity: 2026-05-09 — Plan 11-01 completed: LLDP discovery service
+last_updated: "2026-05-09T03:30:00.000Z"
+last_activity: "2026-05-09 — Plan 11-02 completed: MAC filtering enhancement with LLDP"
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 4
-  completed_plans: 1
-  percent: 25
+  completed_plans: 2
+  percent: 50
 ---
 
 # Project State
@@ -22,9 +23,9 @@ progress:
 ## Current Position
 
 Phase: 11 — EXECUTING
-Plan: 11-02 (待执行)
-Status: Plan 11-01 completed
-Last activity: 2026-05-09 — Plan 11-01 completed: LLDP discovery service with TextFSM parsing
+Plan: 11-03 (待执行)
+Status: Plan 11-02 completed
+Last activity: 2026-05-09 — Plan 11-02 completed: MAC filtering enhancement with LLDP and MAC count thresholds
 
 ## Project Reference
 
@@ -40,7 +41,7 @@ See: .planning/PROJECT.md (updated 2026-04-27)
 | 8 | SNMP Panic 修复 | ✅ Complete | 3/3 plans |
 | 9 | 后端代码优化 | ✅ Complete | 5/5 plans |
 | 10 | 网络设备导出集成 | ✅ Complete | 1/1 plan |
-| 11 | MAC地址采集优化 - 过滤设备间互联端口 | 🚧 Executing | 1/4 plans |
+| 11 | MAC地址采集优化 - 过滤设备间互联端口 | 🚧 Executing | 2/4 plans |
 
 ## Completed Milestones
 
@@ -72,6 +73,7 @@ See: .planning/PROJECT.md (updated 2026-04-27)
 | 2026-04-27 | Milestone v1.3 completed | — |
 | 2026-05-09 | Phase 11 added to roadmap | 11 |
 | 2026-05-09 | Plan 11-01 completed: LLDP discovery service | 11 |
+| 2026-05-09 | Plan 11-02 completed: MAC filtering enhancement with LLDP | 11 |
 
 ## Deferred Items
 
@@ -85,8 +87,8 @@ See: .planning/PROJECT.md (updated 2026-04-27)
 - v1.1 完成: 信息点导入设备端口关联
 - v1.2 完成: 可配置仪表盘生产级改造（4 个阶段）
 - v1.3 完成: 技术债清理（3 个阶段）
-- v1.4 执行中: MAC地址采集优化 - 过滤设备间互联端口（Phase 11, 1/4 plans complete）
+- v1.4 执行中: MAC地址采集优化 - 过滤设备间互联端口（Phase 11, 2/4 plans complete）
 
-**Total shipped**: 10 phases, 28 plans, ~150 tasks
+**Total shipped**: 10 phases, 29 plans, ~150 tasks
 
-**Current Phase:** 11 (MAC地址采集优化 - 过滤设备间互联端口) — 1/4 plans complete — 2026-05-09T02:45:00.000Z
+**Current Phase:** 11 (MAC地址采集优化 - 过滤设备间互联端口) — 2/4 plans complete — 2026-05-09T03:30:00.000Z
