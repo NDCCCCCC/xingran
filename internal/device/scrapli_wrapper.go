@@ -728,3 +728,17 @@ func containsConnectionError(errStr string) bool {
 		strings.Contains(errStr, "network") ||
 		strings.Contains(errStr, "closed")
 }
+
+// GetLLDPCommand 根据厂商获取LLDP命令
+func GetLLDPCommand(vendor models.DeviceVendor) string {
+	commands := map[models.DeviceVendor]string{
+		models.VendorHuawei: "display lldp neighbor brief",
+		models.VendorH3C:    "display lldp neighbor brief",
+		models.VendorRuijie: "show lldp neighbors",
+		models.VendorMaipu:  "show lldp neighbors",
+	}
+	if cmd, ok := commands[vendor]; ok {
+		return cmd
+	}
+	return "show lldp neighbors" // 默认
+}
