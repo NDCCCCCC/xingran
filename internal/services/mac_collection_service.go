@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/lldp"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
@@ -19,17 +21,19 @@ type MACCollectionService struct {
 	db            *gorm.DB
 	executor      *device.DeviceExecutor
 	maxConcurrent int
+	lldpService   *lldp.LLDPService
 }
 
 // MAC采集并发数的默认配置键
 const macConcurrentConfigKey = "network.mac.collection.concurrent"
 
 // NewMACCollectionService 创建MAC采集服务
-func NewMACCollectionService(db *gorm.DB, executor *device.DeviceExecutor) *MACCollectionService {
+func NewMACCollectionService(db *gorm.DB, executor *device.DeviceExecutor, lldpSvc *lldp.LLDPService) *MACCollectionService {
 	svc := &MACCollectionService{
 		db:            db,
 		executor:      executor,
 		maxConcurrent: 10, // 默认值
+		lldpService:   lldpSvc,
 	}
 	// 从数据库加载配置
 	svc.loadConfigFromDB()
@@ -113,6 +117,19 @@ func (s *MACCollectionService) collectDeviceMAC(ctx context.Context, device *mod
 		CollectionTime: time.Now(),
 	}
 
+	// Step 1: 发现LLDP邻居（best-effort，失败不影响MAC采集）
+	// 注意：LLDP服务返回的map键是已经规范化的接口名（来自Plan 01 Task 5）
+	lldpNeighbors := make(map[string]*models.LLDPNeighborInfo)
+	if s.lldpService != nil {
+		neighbors, err := s.lldpService.DiscoverNeighbors(ctx, device)
+		if err != nil {
+			applogger.Warnf("[MAC采集] %s: LLDP发现失败 (仅使用MAC数过滤): %v", device.DeviceName, err)
+		} else {
+			lldpNeighbors = neighbors
+			applogger.Infof("[MAC采集] %s: 发现 %d 个LLDP邻居", device.DeviceName, len(neighbors))
+		}
+	}
+
 	// 获取MAC地址表命令
 	command := s.getMACCommand(device.Vendor)
 
@@ -130,6 +147,48 @@ func (s *MACCollectionService) collectDeviceMAC(ctx context.Context, device *mod
 		return result
 	}
 
+	// Step 2: 构建每个接口的MAC地址数量统计
+	macCountByInterface := make(map[string]int)
+	for _, mac := range macAddresses {
+		normalized := lldp.NormalizeInterfaceName(mac.InterfaceName)
+		macCountByInterface[normalized]++
+	}
+
+	// Step 3: 获取设备类型对应的MAC数量阈值
+	threshold := s.getMACThreshold(device)
+	applogger.Infof("[MAC采集] %s: MAC数阈值=%d (设备类型=%s)", device.DeviceName, threshold, device.DeviceType)
+
+	// Step 4: 应用过滤规则
+	filteredCount := 0
+	var filteredMACAddresses []MACAddressEntry
+
+	for _, mac := range macAddresses {
+		normalizedIface := lldp.NormalizeInterfaceName(mac.InterfaceName)
+
+		// 过滤规则1: LLDP邻居端口
+		// 注意：LLDP map的键已经是规范化的（来自Plan 01），可以直接查找
+		if neighbor, exists := lldpNeighbors[normalizedIface]; exists {
+			applogger.Debugf("[MAC采集] %s: 过滤LLDP邻居端口 %s (邻居: %s)",
+				device.DeviceName, mac.InterfaceName, neighbor.NeighborName)
+			filteredCount++
+			continue
+		}
+
+		// 过滤规则2: MAC数量超过阈值
+		macCount := macCountByInterface[normalizedIface]
+		if macCount > threshold {
+			applogger.Debugf("[MAC采集] %s: 过滤高MAC数端口 %s (MAC数=%d, 阈值=%d)",
+				device.DeviceName, mac.InterfaceName, macCount, threshold)
+			filteredCount++
+			continue
+		}
+
+		filteredMACAddresses = append(filteredMACAddresses, mac)
+	}
+
+	applogger.Infof("[MAC采集] %s: 总MAC=%d, 过滤=%d, 保留=%d",
+		device.DeviceName, len(macAddresses), filteredCount, len(filteredMACAddresses))
+
 	// 批量保存到数据库
 	// 策略：先删除该设备的旧MAC地址，然后批量插入新数据
 	collectionTime := time.Now()
@@ -143,9 +202,9 @@ func (s *MACCollectionService) collectDeviceMAC(ctx context.Context, device *mod
 		return result
 	}
 
-	// 2. 构建MAC地址记录列表
+	// 2. 构建MAC地址记录列表（使用过滤后的MAC地址）
 	var macRecords []*models.DeviceMACAddress
-	for _, macAddr := range macAddresses {
+	for _, macAddr := range filteredMACAddresses {
 		var vlanIDPtr *int
 		if macAddr.VLANID > 0 {
 			vlanIDPtr = &macAddr.VLANID
@@ -214,7 +273,19 @@ func (s *MACCollectionService) parseMACAddressTable(output string, vendor models
 
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
-		if line == "" || strings.HasPrefix(line, "---") || strings.HasPrefix(line, "MAC Address") {
+
+		// 过滤空行和分隔符行
+		if line == "" || strings.HasPrefix(line, "---") || strings.HasPrefix(line, "===") {
+			continue
+		}
+
+		// 过滤标题行 - 检查常见的标题关键词
+		lowerLine := strings.ToLower(line)
+		if strings.Contains(lowerLine, "mac address") ||
+		   strings.Contains(lowerLine, "vlan") && strings.Contains(lowerLine, "mac") ||
+		   strings.Contains(lowerLine, "type") && strings.Contains(lowerLine, "interface") ||
+		   strings.Contains(lowerLine, "port") && strings.Contains(lowerLine, "mac") ||
+		   strings.Contains(lowerLine, "learned") {
 			continue
 		}
 
@@ -239,19 +310,67 @@ func (s *MACCollectionService) parseMACLine(line string, vendor models.DeviceVen
 
 	switch vendor {
 	case models.VendorHuawei, models.VendorH3C:
-		// Huawei/H3C 格式: MAC Address VLAN Learned-From Type
+		// Huawei/H3C 格式: MAC Address VLAN Interface... Type
+		// 实际输出示例需要确认，可能格式为:
+		// d89e.f327.2d19 100 GigabitEthernet0/1/1 Dynamic
+		// 或者包含更多空格的变体
 		if len(fields) >= 4 {
 			entry.MACAddress = fields[0]
-			entry.InterfaceName = fields[2]
+			// 解析VLAN ID (fields[1])
+			if vlanID, err := strconv.Atoi(fields[1]); err == nil {
+				entry.VLANID = vlanID
+			}
+
+			// MAC类型是最后一个字段
 			entry.MACType = fields[len(fields)-1]
+
+			// 智能识别接口名称：从fields[2]开始，到最后一个非类型字段
+			// 常见的MAC类型：Dynamic, Static, Secure
+			interfaceParts := []string{}
+			for i := 2; i < len(fields)-1; i++ {
+				// 跳过已知的MAC类型字段
+				lowerField := strings.ToLower(fields[i])
+				if lowerField == "dynamic" || lowerField == "static" || lowerField == "secure" {
+					continue
+				}
+				interfaceParts = append(interfaceParts, fields[i])
+			}
+
+			if len(interfaceParts) > 0 {
+				entry.InterfaceName = strings.Join(interfaceParts, " ")
+			} else {
+				// fallback: 使用fields[2]
+				entry.InterfaceName = fields[2]
+			}
+
+			// 清理接口名称中的时间戳格式（如 "2026-5-9 0:51:07"）
+			entry.InterfaceName = s.cleanTimestampFromInterface(entry.InterfaceName)
 		}
 
 	case models.VendorRuijie, models.VendorMaipu:
-		// Ruijie/Maipu 格式: VLAN MAC Address Type Port
+		// Ruijie/Maipu 格式: VLAN MAC Address Type Interface...
 		if len(fields) >= 4 {
+			// 解析VLAN ID (fields[0])
+			if vlanID, err := strconv.Atoi(fields[0]); err == nil {
+				entry.VLANID = vlanID
+			}
 			entry.MACAddress = fields[1]
-			entry.InterfaceName = fields[3]
 			entry.MACType = fields[2]
+
+			// 接口名称从fields[3]开始
+			interfaceParts := []string{}
+			for i := 3; i < len(fields); i++ {
+				interfaceParts = append(interfaceParts, fields[i])
+			}
+
+			if len(interfaceParts) > 0 {
+				entry.InterfaceName = strings.Join(interfaceParts, " ")
+			} else {
+				entry.InterfaceName = fields[3]
+			}
+
+			// 清理接口名称中的时间戳格式（如 "2026-5-9 0:51:07"）
+			entry.InterfaceName = s.cleanTimestampFromInterface(entry.InterfaceName)
 		}
 	}
 
@@ -261,35 +380,106 @@ func (s *MACCollectionService) parseMACLine(line string, vendor models.DeviceVen
 	return MACAddressEntry{}, false
 }
 
+// cleanTimestampFromInterface 清理接口名称中的时间戳
+// 示例: "GigabitEthernet 0/12 2026-5-9 0:51:07" -> "GigabitEthernet 0/12"
+func (s *MACCollectionService) cleanTimestampFromInterface(interfaceName string) string {
+	// 使用正则表达式匹配时间戳格式
+	// 可能的格式: "2026-5-9 0:51:07", "2026-05-09 08:52:15" 等
+	timestampPattern := regexp.MustCompile(`\d{4}-\d{1,2}-\d{1,2}.*\d{1,2}:\d{2}:\d{2}`)
+	cleaned := timestampPattern.ReplaceAllString(interfaceName, "")
+	cleaned = strings.TrimSpace(cleaned)
+
+	// 如果清理后为空，返回原始接口名称
+	if cleaned == "" {
+		return interfaceName
+	}
+	return cleaned
+}
+
+// MACAddressResponse MAC地址响应DTO（包含设备名称）
+type MACAddressResponse struct {
+	ID            string    `json:"id"`
+	DeviceID      string    `json:"deviceId"`
+	DeviceName    string    `json:"deviceName"`
+	MACAddress    string    `json:"macAddress"`
+	InterfaceName string    `json:"interfaceName"`
+	VLANID        *int      `json:"vlanId,omitempty"`
+	MACType       string    `json:"macType,omitempty"`
+	CollectedAt   time.Time `json:"collectedAt"`
+	CreatedAt     time.Time `json:"createdAt"`
+}
+
 // GetMACAddressList 获取MAC地址列表
-func (s *MACCollectionService) GetMACAddressList(ctx context.Context, current, pageSize int, deviceID, macAddress, interfaceName string) ([]models.DeviceMACAddress, int64, error) {
-	var macAddrs []models.DeviceMACAddress
+func (s *MACCollectionService) GetMACAddressList(ctx context.Context, current, pageSize int, deviceID, macAddress, interfaceName string) ([]MACAddressResponse, int64, error) {
 	var total int64
 
-	query := s.db.WithContext(ctx).Model(&models.DeviceMACAddress{})
+	// 构建基础查询（用于计数）
+	baseQuery := s.db.WithContext(ctx).Model(&models.DeviceMACAddress{})
 
 	if deviceID != "" {
-		query = query.Where("device_id = ?", deviceID)
+		baseQuery = baseQuery.Where("device_id = ?", deviceID)
 	}
 	if macAddress != "" {
-		query = query.Where("mac_address LIKE ?", "%"+macAddress+"%")
+		baseQuery = baseQuery.Where("mac_address LIKE ?", "%"+macAddress+"%")
 	}
 	if interfaceName != "" {
-		query = query.Where("interface_name LIKE ?", "%"+interfaceName+"%")
+		baseQuery = baseQuery.Where("interface_name LIKE ?", "%"+interfaceName+"%")
 	}
 
 	// 获取总数
-	if err := query.Count(&total).Error; err != nil {
+	if err := baseQuery.Count(&total).Error; err != nil {
 		return nil, 0, fmt.Errorf("查询MAC地址总数失败: %w", err)
 	}
 
-	// 分页查询
+	// 分页查询，JOIN获取设备名称
 	offset := (current - 1) * pageSize
-	if err := query.Offset(offset).Limit(pageSize).Order("collected_at DESC").Find(&macAddrs).Error; err != nil {
+	type macWithDeviceName struct {
+		models.DeviceMACAddress
+		DeviceName string
+	}
+
+	// 构建JOIN查询
+	joinQuery := s.db.WithContext(ctx).
+		Select("sys_device_mac_address.*, sys_network_device.device_name").
+		Joins("LEFT JOIN sys_network_device ON sys_network_device.id = sys_device_mac_address.device_id")
+
+	// 应用筛选条件到JOIN查询
+	if deviceID != "" {
+		joinQuery = joinQuery.Where("sys_device_mac_address.device_id = ?", deviceID)
+	}
+	if macAddress != "" {
+		joinQuery = joinQuery.Where("sys_device_mac_address.mac_address LIKE ?", "%"+macAddress+"%")
+	}
+	if interfaceName != "" {
+		joinQuery = joinQuery.Where("sys_device_mac_address.interface_name LIKE ?", "%"+interfaceName+"%")
+	}
+
+	var results []macWithDeviceName
+	if err := joinQuery.
+		Offset(offset).
+		Limit(pageSize).
+		Order("sys_device_mac_address.collected_at DESC").
+		Find(&results).Error; err != nil {
 		return nil, 0, fmt.Errorf("查询MAC地址列表失败: %w", err)
 	}
 
-	return macAddrs, total, nil
+	// 转换为响应DTO
+	response := make([]MACAddressResponse, len(results))
+	for i, r := range results {
+		response[i] = MACAddressResponse{
+			ID:            r.ID,
+			DeviceID:      r.DeviceID,
+			DeviceName:    r.DeviceName,
+			MACAddress:    r.MACAddress,
+			InterfaceName: r.InterfaceName,
+			VLANID:        r.VLANID,
+			MACType:       string(r.MACType),
+			CollectedAt:   r.CollectedAt,
+			CreatedAt:     r.CreatedAt,
+		}
+	}
+
+	return response, total, nil
 }
 
 // GetMACAddressStats 获取MAC地址统计信息
@@ -338,6 +528,15 @@ func (s *MACCollectionService) CleanOldRecords(ctx context.Context, days int) (i
 	return result.RowsAffected, nil
 }
 
+// BatchDelete 批量删除MAC地址记录
+func (s *MACCollectionService) BatchDelete(ctx context.Context, ids []string) (int64, error) {
+	result := s.db.WithContext(ctx).Where("id IN ?", ids).Delete(&models.DeviceMACAddress{})
+	if result.Error != nil {
+		return 0, fmt.Errorf("批量删除MAC地址记录失败: %w", result.Error)
+	}
+	return result.RowsAffected, nil
+}
+
 // loadConfigFromDB 从数据库加载并发数配置
 func (s *MACCollectionService) loadConfigFromDB() {
 	var config models.Config
@@ -353,4 +552,20 @@ func (s *MACCollectionService) loadConfigFromDB() {
 // ReloadConfig 重新加载配置（从数据库）
 func (s *MACCollectionService) ReloadConfig() {
 	s.loadConfigFromDB()
+}
+
+// getMACThreshold 根据设备类型获取MAC数量阈值
+// 用于过滤设备间互联端口（上行链路通常有更多MAC地址）
+func (s *MACCollectionService) getMACThreshold(device *models.NetworkDevice) int {
+	thresholds := map[models.DeviceType]int{
+		models.DeviceTypeRouter:       500, // 路由器：通常连接多个子网，MAC数量多
+		models.DeviceTypeSwitch:       10,  // 交换机：接入端口MAC数少，上行端口MAC数多
+		models.DeviceTypeFirewall:     100, // 防火墙：可能连接多个网段
+		models.DeviceTypeLoadBalancer: 50,  // 负载均衡器：连接后端服务器
+	}
+
+	if threshold, ok := thresholds[device.DeviceType]; ok {
+		return threshold
+	}
+	return 10 // 默认阈值（针对未知设备类型）
 }
