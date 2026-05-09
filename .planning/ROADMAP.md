@@ -6,6 +6,7 @@
 - ✅ **v1.1 信息点导入设备端口关联** — Phase 3 (shipped 2026-04-16)
 - ✅ **v1.2 可配置仪表盘生产级改造** — Phases 4-7 (shipped 2026-04-21)
 - ✅ **v1.3 技术债清理** — Phases 8-10 (shipped 2026-04-27)
+- ✅ **v1.4 MAC地址采集优化** — Phase 11 (shipped 2026-05-09)
 
 ## Phases
 
@@ -43,31 +44,79 @@
 
 </details>
 
+<details>
+<summary>✅ v1.4 MAC地址采集优化 (Phase 11) — SHIPPED 2026-05-09</summary>
+
+- [x] Phase 11: MAC地址采集优化 - 过滤设备间互联端口 (4/4 plans) — completed 2026-05-09
+
+</details>
+
 ---
 
 <details>
-<summary>🚧 v1.4 MAC地址采集优化 (Phase 11) — IN PROGRESS</summary>
+<summary>🚧 v1.5 MAC地址历史数据管理 (Phases 12-15) — IN PROGRESS</summary>
 
-- [ ] Phase 11: MAC地址采集优化 - 过滤设备间互联端口 (3/4 plans) — started 2026-05-09
-
-**Plans:**
-- [x] 11-01-PLAN.md — LLDP discovery service implementation ✅ completed 2026-05-09
-- [x] 11-02-PLAN.md — MAC filtering enhancement with LLDP ✅ completed 2026-05-09
-- [x] 11-03-PLAN.md — Configurable filter rules and API ✅ completed 2026-05-09
-- [ ] 11-04-PLAN.md — Comprehensive testing and validation
-
-**Wave Structure:**
-- Wave 1 (parallel): 11-01 (LLDP service) ✅, 11-02 (MAC filtering) ✅
-- Wave 2 (parallel): 11-03 (Filter rules API) ✅, 11-04 (Testing)
-
-**Requirements:**
-- [x] MAC-01: LLDP discovery identifies uplink ports ✅
-- [x] MAC-02: MAC filtering excludes LLDP neighbor ports ✅
-- [x] MAC-03: MAC filtering respects count threshold ✅
-- [x] MAC-04: LLDP failure doesn't block MAC collection ✅
-- [x] MAC-05: Configurable filtering rules work ✅
+- [ ] Phase 12: 数据模型与采集集成
+- [ ] Phase 13: 查询层与轨迹
+- [ ] Phase 14: 前端与用户体验
+- [ ] Phase 15: 性能优化
 
 </details>
+
+---
+
+## Phase Details
+
+### Phase 12: 数据模型与采集集成
+**Goal**: 建立历史数据基础设施，最小侵入集成到现有采集流程
+**Depends on**: Phase 11 (v1.4 MAC采集优化)
+**Requirements**: DATA-01, DATA-02, QUERY-01
+**Success Criteria** (what must be TRUE):
+  1. 采集周期运行时，MAC地址变更自动记录到历史表（appeared/disappeared/moved/vlan_changed）
+  2. 用户可按设备ID和接口名查询历史MAC地址变化，支持时间范围和分页
+  3. 历史表使用月度分区存储，自动清理超过保留期的数据（默认90天）
+  4. 历史记录包含设备名称快照，设备删除后历史数据仍然可读
+  5. 查询性能满足：90天内查询<2秒，数据库增长率<10%总MAC数/采集周期
+**Plans**: TBD
+
+### Phase 13: 查询层与轨迹
+**Goal**: 提供强大的历史查询能力和MAC轨迹追踪功能
+**Depends on**: Phase 12
+**Requirements**: QUERY-02, QUERY-03, QUERY-04, UI-03
+**Success Criteria** (what must be TRUE):
+  1. 用户可按MAC地址查询跨设备/端口的移动路径，按时间顺序展示迁移历史
+  2. 系统自动计算MAC地址在每个端口的停留时长（last_seen - first_seen）
+  3. 查询结果中显示MAC地址厂商信息（基于OUI识别），无法识别显示"Unknown"
+  4. 前端使用ECharts时间轴图表可视化MAC移动路径，支持交互式缩放和拖拽
+  5. 支持按MAC地址或端口聚合统计连接时长，识别长期占用端口的设备
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 14: 前端与用户体验
+**Goal**: 完善前端交互，提供直观的历史数据探索体验
+**Depends on**: Phase 13
+**Requirements**: UI-01, UI-02, UI-04
+**Success Criteria** (what must be TRUE):
+  1. 用户可在MAC历史查询页面选择设备、端口和时间范围，表格分页显示查询结果
+  2. 用户可将查询结果导出为Excel文件，导出包含所有查询列（限制最多30天数据）
+  3. 历史事件时间线组件按时间顺序展示所有变更事件，不同事件类型使用不同图标
+  4. 用户可点击时间线事件查看详情，变更类型标签使用不同颜色区分
+  5. 页面提供快捷时间选项（最近24小时、7天、30天、90天），提升查询效率
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 15: 性能优化
+**Goal**: 优化大规模数据场景下的性能，确保生产环境稳定性
+**Depends on**: Phase 14
+**Requirements**: PERF-01, PERF-02, PERF-03, PERF-04
+**Success Criteria** (what must be TRUE):
+  1. 系统使用复合索引和BRIN索引优化查询，90天查询<2秒，1年查询<5秒
+  2. 系统自动为常用查询创建物化视图，每5分钟刷新，查询优先使用物化视图
+  3. 热点查询结果缓存在Redis中，缓存键包含查询参数哈希，过期时间5分钟
+  4. 用户可查看端口使用热力图，颜色深浅表示使用密度，支持按时间范围筛选
+  5. 分区裁剪机制自动跳过无关分区，查询性能不受历史数据总量影响
+**Plans**: TBD
+**UI hint**: yes
 
 ---
 
@@ -85,8 +134,12 @@
 | 8. SNMP Panic 修复 | v1.3 | 3/3 | Complete | 2026-04-27 |
 | 9. 后端代码优化 | v1.3 | 5/5 | Complete | 2026-04-27 |
 | 10. 网络设备导出集成 | v1.3 | 1/1 | Complete | 2026-04-27 |
-| 11. MAC地址采集优化 - 过滤设备间互联端口 | v1.4 | 3/4 | Executing | 2026-05-09 |
+| 11. MAC地址采集优化 - 过滤设备间互联端口 | v1.4 | 4/4 | Complete | 2026-05-09 |
+| 12. 数据模型与采集集成 | v1.5 | 0/5 | Not started | - |
+| 13. 查询层与轨迹 | v1.5 | 0/5 | Not started | - |
+| 14. 前端与用户体验 | v1.5 | 0/5 | Not started | - |
+| 15. 性能优化 | v1.5 | 0/5 | Not started | - |
 
 ---
 
-**Total**: 11 phases, 31 plans, 1 executing 🚧
+**Total**: 15 phases, 31 plans complete, 20 plans planned, 51 total
