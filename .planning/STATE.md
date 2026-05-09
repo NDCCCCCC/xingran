@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.5
-milestone_name: MAC地址历史数据管理
+milestone: v1.0
+milestone_name: milestone
 current_phase: 12
 status: planning
-last_updated: "2026-05-09T14:00:00.000Z"
-last_activity: 2026-05-09
+last_updated: "2026-05-09T09:06:04.418Z"
+last_activity: 2026-05-09 — 里程碑 v1.5 路线图创建完成
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 20
+  total_plans: 0
   completed_plans: 0
-  percent: 0
 ---
 
 # Project State
@@ -129,12 +128,14 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 
 **Total Requirements**: 14
 **Categories**:
+
 - DATA (数据基础设施): 2 requirements
 - QUERY (查询与检索): 4 requirements
 - UI (用户界面): 4 requirements
 - PERF (性能优化): 4 requirements
 
 **Phase Mapping**:
+
 - Phase 12: DATA-01, DATA-02, QUERY-01 (3 requirements)
 - Phase 13: QUERY-02, QUERY-03, QUERY-04, UI-03 (4 requirements)
 - Phase 14: UI-01, UI-02, UI-04 (3 requirements)
