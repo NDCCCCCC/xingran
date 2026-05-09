@@ -1,0 +1,13 @@
+Value List LOCAL_INTERFACE
+Value List NEIGHBOR_ID
+Value List NEIGHBOR_PORT
+Value List NEIGHBOR_NAME
+
+Start
+  ^\s*$$ -> Start
+  ^\s*Local Interface.* -> SkipHeader
+  ^\s*---+.* -> SkipHeader
+
+SkipHeader
+  ^\s*${LOCAL_INTERFACE}\s+${NEIGHBOR_ID}\s+${NEIGHBOR_PORT}\s+${NEIGHBOR_NAME}$$ -> Record
+  ^\s*$$ -> Start
