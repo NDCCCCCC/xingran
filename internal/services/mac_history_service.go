@@ -180,17 +180,21 @@ func (s *macHistoryServiceImpl) RecordMACChange(ctx context.Context, device *mod
 
 	// 3. moved: MAC地址相同但接口不同
 	// 4. vlan_changed: 接口相同但VLAN不同
+	// CR-02 fix: 优化O(n²)复杂度为O(n) - 构建MAC地址到事件的映射
+	// 构建新MAC的映射: MAC地址 -> 事件列表
+	newMACByAddress := make(map[string][]MACEvent)
+	for eventKey, mac := range newMACs {
+		normMAC := normalizeMACAddress(mac.MACAddress)
+		newMACByAddress[normMAC] = append(newMACByAddress[normMAC], eventKey)
+	}
+
+	// 遍历旧MAC，通过映射查找匹配的新MAC（O(1)查找）
 	for oldEventKey, oldMAC := range oldMACs {
-		// 查找相同MAC地址的新记录
-		for newEventKey := range newMACs {
-			// 比较规范化的MAC地址
-			oldMACNorm := normalizeMACAddress(oldMAC.MACAddress)
-			newMAC := newMACs[newEventKey]
-			newMACNorm := normalizeMACAddress(newMAC.MACAddress)
+		oldMACNorm := normalizeMACAddress(oldMAC.MACAddress)
 
-			if oldMACNorm == newMACNorm {
-				// MAC地址相同，检查接口和VLAN
-
+		if matchingEvents, exists := newMACByAddress[oldMACNorm]; exists {
+			// 遍历所有匹配的事件
+			for _, newEventKey := range matchingEvents {
 				// vlan_changed: 接口相同但VLAN不同
 				if oldEventKey.InterfaceName == newEventKey.InterfaceName {
 					if !vlanEqual(oldEventKey.VLANID, newEventKey.VLANID) {
@@ -229,9 +233,6 @@ func (s *macHistoryServiceImpl) RecordMACChange(ctx context.Context, device *mod
 					applogger.Debugf("[MAC历史] %s: moved MAC=%s oldInterface=%s newInterface=%s",
 						device.DeviceName, oldMACNorm, oldEventKey.InterfaceName, newEventKey.InterfaceName)
 				}
-
-				// 已找到匹配，跳出内层循环
-				break
 			}
 		}
 	}
