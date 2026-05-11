@@ -13,6 +13,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/api"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
 	swaggerFiles "github.com/swaggo/files"
@@ -232,11 +233,18 @@ func waitForShutdown(server *http.Server, coreModule *core.Core) {
 func initMACHistoryRetentionConfig(coreModule *core.Core) {
 	db := coreModule.GetDB()
 
+	applogger.Infof("开始检查MAC历史保留期配置...")
+
 	// 检查配置是否已存在
 	var count int64
-	db.Table("sys_config").
+	err := db.Table("sys_config").
 		Where("config_key = ?", "network.mac.history.retention_days").
-		Count(&count)
+		Count(&count).Error
+
+	if err != nil {
+		applogger.Warnf("查询MAC历史保留期配置失败: %v", err)
+		return
+	}
 
 	if count > 0 {
 		applogger.Infof("MAC历史保留期配置已存在，跳过初始化")
@@ -244,16 +252,17 @@ func initMACHistoryRetentionConfig(coreModule *core.Core) {
 	}
 
 	// 插入默认配置：120天
-	config := map[string]interface{}{
-		"config_name":  "MAC地址历史数据保留期",
-		"config_key":   "network.mac.history.retention_days",
-		"config_value": "120",
-		"config_type":  "Y", // 是/否类型：Y=是
-		"is_system":    1,   // 系统配置：1=是
-		"remark":       "MAC地址历史数据保留天数（90天数据+30天缓冲），默认120天，最小30天",
+	config := models.Config{
+		ConfigName:  "MAC地址历史数据保留期",
+		ConfigKey:   "network.mac.history.retention_days",
+		ConfigValue: "120",
+		ConfigType:  "Y",
+		IsSystem:    1,
+		Remark:      "MAC地址历史数据保留天数（90天数据+30天缓冲），默认120天，最小30天",
 	}
 
-	if err := db.Table("sys_config").Create(config).Error; err != nil {
+	applogger.Infof("尝试插入MAC历史保留期配置...")
+	if err := db.Create(&config).Error; err != nil {
 		applogger.Warnf("创建MAC历史保留期配置失败: %v", err)
 	} else {
 		applogger.Infof("MAC历史保留期配置已创建（默认120天）")
