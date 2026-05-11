@@ -95,15 +95,33 @@ func (s *macHistoryQueryServiceImpl) QueryPortHistory(ctx context.Context, req *
 	}
 
 	// 可选：时间范围过滤
-	if req.StartTime != "" {
+	// WR-02 fix: 限制查询时间范围最大为1年，防止DoS攻击
+	const maxQueryRange = 365 * 24 * time.Hour // 最多查询1年
+
+	if req.StartTime != "" && req.EndTime != "" {
+		startTime, err := time.Parse(time.RFC3339, req.StartTime)
+		if err != nil {
+			return nil, fmt.Errorf("无效的开始时间格式: %w", err)
+		}
+		endTime, err := time.Parse(time.RFC3339, req.EndTime)
+		if err != nil {
+			return nil, fmt.Errorf("无效的结束时间格式: %w", err)
+		}
+
+		// 验证时间跨度
+		if endTime.Sub(startTime) > maxQueryRange {
+			return nil, fmt.Errorf("查询时间跨度过大，最大允许 %d 天", int(maxQueryRange.Hours()/24))
+		}
+
+		query = query.Where("first_seen >= ?", startTime).
+			Where("first_seen <= ?", endTime)
+	} else if req.StartTime != "" {
 		startTime, err := time.Parse(time.RFC3339, req.StartTime)
 		if err != nil {
 			return nil, fmt.Errorf("无效的开始时间格式: %w", err)
 		}
 		query = query.Where("first_seen >= ?", startTime)
-	}
-
-	if req.EndTime != "" {
+	} else if req.EndTime != "" {
 		endTime, err := time.Parse(time.RFC3339, req.EndTime)
 		if err != nil {
 			return nil, fmt.Errorf("无效的结束时间格式: %w", err)
@@ -178,15 +196,33 @@ func (s *macHistoryQueryServiceImpl) QueryDeviceHistory(ctx context.Context, req
 	query = query.Where("device_id = ?", req.DeviceID)
 
 	// 可选：时间范围过滤
-	if req.StartTime != "" {
+	// WR-02 fix: 限制查询时间范围最大为1年，防止DoS攻击
+	const maxQueryRange = 365 * 24 * time.Hour // 最多查询1年
+
+	if req.StartTime != "" && req.EndTime != "" {
+		startTime, err := time.Parse(time.RFC3339, req.StartTime)
+		if err != nil {
+			return nil, fmt.Errorf("无效的开始时间格式: %w", err)
+		}
+		endTime, err := time.Parse(time.RFC3339, req.EndTime)
+		if err != nil {
+			return nil, fmt.Errorf("无效的结束时间格式: %w", err)
+		}
+
+		// 验证时间跨度
+		if endTime.Sub(startTime) > maxQueryRange {
+			return nil, fmt.Errorf("查询时间跨度过大，最大允许 %d 天", int(maxQueryRange.Hours()/24))
+		}
+
+		query = query.Where("first_seen >= ?", startTime).
+			Where("first_seen <= ?", endTime)
+	} else if req.StartTime != "" {
 		startTime, err := time.Parse(time.RFC3339, req.StartTime)
 		if err != nil {
 			return nil, fmt.Errorf("无效的开始时间格式: %w", err)
 		}
 		query = query.Where("first_seen >= ?", startTime)
-	}
-
-	if req.EndTime != "" {
+	} else if req.EndTime != "" {
 		endTime, err := time.Parse(time.RFC3339, req.EndTime)
 		if err != nil {
 			return nil, fmt.Errorf("无效的结束时间格式: %w", err)
