@@ -323,6 +323,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 		networkV1.SetupNetworkRouter(network, core)
 		// 拓扑管理（MAC过滤规则）
 		networkV1.SetupTopologyRouter(network, core.GetDB())
+		// MAC历史查询
+		networkV1.SetupMACHistoryRouter(network, core)
 	}
 
 	// 值班管理模块（运维管理）
