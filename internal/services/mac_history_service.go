@@ -269,7 +269,7 @@ func (s *macHistoryServiceImpl) MergeFlappingRecords(ctx context.Context, device
 		Where("device_id = ?", deviceID).
 		Order("first_seen ASC, created_at ASC").
 		Find(&histories).Error; err != nil {
-		return fmt.Errorf("查询MAC历史记录失败: %w", err)
+		return fmt.Errorf("查询设备 %s 的MAC历史记录失败: %w", deviceID, err)
 	}
 
 	// 合并逻辑：
