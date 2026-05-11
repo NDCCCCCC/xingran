@@ -305,6 +305,7 @@ func (s *macHistoryServiceImpl) MergeFlappingRecords(ctx context.Context, device
 
 		// 找到连续的相同事件类型记录
 		merged := make([]*models.DeviceMACHistory, 0, len(group.Records))
+		retainedIDs := make(map[string]bool) // 记录保留的记录ID
 		current := group.Records[0]
 
 		for i := 1; i < len(group.Records); i++ {
@@ -322,30 +323,52 @@ func (s *macHistoryServiceImpl) MergeFlappingRecords(ctx context.Context, device
 
 				// 合并：更新当前记录的last_seen
 				current.LastSeen = next.LastSeen
-
-				// 标记next记录为待删除（在后续处理中删除）
-				// 注意：这里不立即删除，避免在遍历中修改切片
 			} else {
 				// 不能合并，保存当前记录，开始新的合并组
 				merged = append(merged, current)
+				retainedIDs[current.ID] = true
 				current = next
 			}
 		}
 
 		// 保存最后一个合并组
 		merged = append(merged, current)
+		retainedIDs[current.ID] = true
 
 		// 如果有合并发生，更新数据库
 		if len(merged) < len(group.Records) {
 			applogger.Infof("[MAC历史] 设备 %s: MAC %s 合并前 %d 条记录，合并后 %d 条记录",
 				deviceID, group.MACAddress, len(group.Records), len(merged))
 
-			// TODO: 实际删除重复记录的逻辑
-			// 由于需要精确识别哪些记录被合并，这里暂时仅记录日志
-			// 完整实现需要：
-			// 1. 识别被合并的记录ID列表
-			// 2. 更新保留记录的last_seen
-			// 3. 删除重复记录
+			// CR-03 fix: 实现完整的合并逻辑
+			// 1. 批量更新保留记录的last_seen
+			for _, mergedRecord := range merged {
+				if err := s.db.WithContext(ctx).
+					Model(&models.DeviceMACHistory{}).
+					Where("id = ?", mergedRecord.ID).
+					Update("last_seen", mergedRecord.LastSeen).Error; err != nil {
+					return fmt.Errorf("更新合并记录失败: %w", err)
+				}
+			}
+
+			// 2. 收集要删除的记录ID
+			deletedIDs := make([]string, 0)
+			for _, record := range group.Records {
+				if !retainedIDs[record.ID] {
+					deletedIDs = append(deletedIDs, record.ID)
+				}
+			}
+
+			// 3. 批量删除重复记录
+			if len(deletedIDs) > 0 {
+				if err := s.db.WithContext(ctx).
+					Where("id IN ?", deletedIDs).
+					Delete(&models.DeviceMACHistory{}).Error; err != nil {
+					return fmt.Errorf("删除重复记录失败: %w", err)
+				}
+				applogger.Infof("[MAC历史] 设备 %s: MAC %s 删除了 %d 条重复记录",
+					deviceID, group.MACAddress, len(deletedIDs))
+			}
 		}
 	}
 
