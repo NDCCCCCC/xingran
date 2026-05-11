@@ -258,6 +258,13 @@ func (c *Core) Init() error {
 		scheduler.RegisterADSyncTasks(c.Scheduler)
 		applogger.Infof("AD域同步定时任务注册完成")
 
+		// 注册MAC历史清理任务
+		if c.PartitionService != nil {
+			scheduler.SetPartitionService(c.PartitionService)
+			scheduler.RegisterMACHistoryTasks(c.Scheduler)
+			applogger.Infof("MAC历史清理任务注册完成")
+		}
+
 		// 启动AD域同步调度器（每5分钟检查需要同步的配置）
 		scheduler.StartADSyncScheduler(c.GetDB())
 

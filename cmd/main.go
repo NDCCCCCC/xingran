@@ -13,7 +13,6 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/api"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	mac_history_tasks "github.com/ruoyi-next/ruoyi-go-backend/internal/scheduler"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
 	swaggerFiles "github.com/swaggo/files"
@@ -110,13 +109,6 @@ func initializeCoreModule(cfg *config.Config) *core.Core {
 	}
 	if err := coreModule.Init(); err != nil {
 		applogger.Fatalf("初始化核心模块失败: %v", err)
-	}
-
-	// 注册MAC历史清理任务
-	if coreModule.Scheduler != nil && coreModule.PartitionService != nil {
-		mac_history_tasks.SetPartitionService(coreModule.PartitionService)
-		mac_history_tasks.RegisterMACHistoryTasks(coreModule.Scheduler)
-		applogger.Infof("MAC历史清理任务已注册")
 	}
 
 	// 添加MAC历史保留期默认配置
