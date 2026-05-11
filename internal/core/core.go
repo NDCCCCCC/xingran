@@ -261,7 +261,7 @@ func (c *Core) Init() error {
 		// 注册MAC历史清理任务
 		if c.PartitionService != nil {
 			scheduler.SetPartitionService(c.PartitionService)
-			scheduler.RegisterMACHistoryTasks(c.Scheduler)
+			scheduler.RegisterMACHistoryTasks(c.Scheduler, c.GetDB())
 			applogger.Infof("MAC历史清理任务注册完成")
 		}
 

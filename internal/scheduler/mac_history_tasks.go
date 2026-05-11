@@ -39,7 +39,7 @@ func SetPartitionService(service PartitionService) {
 // RegisterMACHistoryTasks 注册MAC地址历史相关的定时任务
 // 包括：
 // - mac_history_cleanup: 每天凌晨2点清理过期分区
-func RegisterMACHistoryTasks(scheduler *Scheduler) {
+func RegisterMACHistoryTasks(scheduler *Scheduler, db *gorm.DB) {
 	// 注册MAC历史清理任务处理器
 	scheduler.RegisterTask("mac_history_cleanup", func(ctx context.Context, params map[string]interface{}) error {
 		return executeMACHistoryCleanup(ctx, params)
@@ -48,9 +48,8 @@ func RegisterMACHistoryTasks(scheduler *Scheduler) {
 	applogger.Infof("MAC历史清理任务处理器已注册")
 
 	// 向数据库添加任务记录
-	db := GlobalDB.GetDB()
 	if db == nil {
-		applogger.Warnf("MAC历史清理任务数据库注册跳过（全局数据库未设置）")
+		applogger.Warnf("MAC历史清理任务数据库注册跳过（数据库未设置）")
 		return
 	}
 
