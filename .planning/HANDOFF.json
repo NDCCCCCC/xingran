@@ -1,0 +1,41 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-05-11T04:28:26.865Z",
+  "phase": "12",
+  "phase_name": "data-model-integration",
+  "phase_dir": ".planning/phases/12-data-model-integration",
+  "plan": null,
+  "task": 0,
+  "total_tasks": 0,
+  "status": "paused",
+  "stage": "verification",
+  "completed_tasks": [
+    {"id": "code-review", "name": "代码审查 - 迭代1修复5个问题", "status": "done", "commit": "0fc6ddd,841dd74,faea8e1,318a2bc,c61c30e"},
+    {"id": "code-review-2", "name": "代码审查 - 迭代2修复3个问题", "status": "done", "commit": "18b7def,afb5623"},
+    {"id": "code-review-final", "name": "最终代码审查 - 状态CLEAN", "status": "done", "commit": "99be61a"},
+    {"id": "uat", "name": "UAT验收测试 - 发现3个问题", "status": "done", "commit": "f4b9a87,c819fe3"},
+    {"id": "diagnosis", "name": "问题诊断 - 3个问题根因已找到", "status": "done", "commit": "c819fe3"}
+  ],
+  "remaining_tasks": [
+    {"id": "fix-issues", "name": "修复3个已诊断的问题", "status": "not_started"},
+    {"id": "re-verify", "name": "重新验证修复后的功能", "status": "not_started"},
+    {"id": "complete-phase", "name": "完成Phase 12并准备下一阶段", "status": "not_started"}
+  ],
+  "blockers": [
+    {"description": "MAC历史API未注册 - 需在router.go中添加SetupMACHistoryRouter调用", "type": "technical", "workaround": "已知修复位置: internal/api/router.go:326行后"},
+    {"description": "清理任务注册时机错误 - 需移至core.Init()并添加sys_job迁移", "type": "technical", "workaround": "已知修复位置: internal/core/core.go:236-273"},
+    {"description": "配置初始化缺失 - network.mac.history.retention_days未创建", "type": "technical", "workaround": "需要在main.go或迁移中添加配置初始化"}
+  ],
+  "human_actions_pending": [
+    {"action": "验证MAC地址规范化是否正确支持华为/锐捷格式", "context": "代码分析显示已支持，但UAT报告为问题", "blocking": false},
+    {"action": "测试修复后的API端点是否可访问", "context": "路由注册后需要验证", "blocking": true}
+  ],
+  "decisions": [
+    {"decision": "跳过Phase 12的MAC变更检测和采集测试", "rationale": "需要运行时环境和实际设备，用户选择跳过", "phase": "12"},
+    {"decision": "MAC地址规范化问题标记为误报", "rationale": "代码分析确认normalizeMACAddress()已支持所有厂商格式", "phase": "12"},
+    {"decision": "使用并行调试代理加速问题诊断", "rationale": "3个独立问题可以同时调查", "phase": "12"}
+  ],
+  "uncommitted_files": [],
+  "next_action": "修复3个已诊断的问题：1) 在router.go中添加SetupMACHistoryRouter调用 2) 将MAC历史清理任务注册移至core.Init() 3) 添加配置初始化",
+  "context_notes": "UAT完成发现3个问题。通过代码审查修复了8个问题(CR-01至CR-03, WR-01至WR-05, WR-06至WR-08)。最终代码审查状态为CLEAN。但UAT发现集成问题：清理任务和API路由未正确注册/初始化。所有问题的根因已通过调试代理找到。下一步是执行修复或规划gap closure阶段。"
+}
