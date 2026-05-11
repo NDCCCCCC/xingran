@@ -24,6 +24,7 @@ type MACCollectionService struct {
 	maxConcurrent   int
 	lldpService     *lldp.LLDPService
 	filterRuleService topology.FilterRuleService
+	enableHistory   bool // 是否启用MAC历史记录
 }
 
 // MAC采集并发数的默认配置键
@@ -37,6 +38,7 @@ func NewMACCollectionService(db *gorm.DB, executor *device.DeviceExecutor, lldpS
 		maxConcurrent:     10, // 默认值
 		lldpService:       lldpSvc,
 		filterRuleService: filterRuleSvc,
+		enableHistory:     true, // 默认启用历史记录
 	}
 	// 从数据库加载配置
 	svc.loadConfigFromDB()
@@ -197,7 +199,14 @@ func (s *MACCollectionService) collectDeviceMAC(ctx context.Context, device *mod
 	collectionTime := time.Now()
 	successCount := 0
 
-	// 1. 先删除该设备的旧MAC地址记录
+	// 【新增】Step 5: 查询旧MAC地址状态（DELETE 前）- CONTEXT.md D-01
+	var oldMACs []models.DeviceMACAddress
+	if err := s.db.WithContext(ctx).Where("device_id = ?", device.ID).Find(&oldMACs).Error; err != nil {
+		applogger.Warnf("[MAC采集] %s: 查询旧MAC状态失败: %v", device.DeviceName, err)
+		// 继续执行，不阻断采集
+	}
+
+	// Step 6: 删除旧数据（原有逻辑）
 	if err := s.db.WithContext(ctx).
 		Where("device_id = ?", device.ID).
 		Delete(&models.DeviceMACAddress{}).Error; err != nil {
@@ -205,7 +214,7 @@ func (s *MACCollectionService) collectDeviceMAC(ctx context.Context, device *mod
 		return result
 	}
 
-	// 2. 构建MAC地址记录列表（使用过滤后的MAC地址）
+	// Step 7: 构建新MAC地址记录列表
 	var macRecords []*models.DeviceMACAddress
 	for _, macAddr := range filteredMACAddresses {
 		var vlanIDPtr *int
@@ -232,7 +241,7 @@ func (s *MACCollectionService) collectDeviceMAC(ctx context.Context, device *mod
 		macRecords = append(macRecords, macRecord)
 	}
 
-	// 3. 批量插入新的MAC地址记录
+	// Step 8: 批量插入新的MAC地址记录
 	if len(macRecords) > 0 {
 		if err := s.db.WithContext(ctx).
 			Create(&macRecords).Error; err != nil {
@@ -240,6 +249,31 @@ func (s *MACCollectionService) collectDeviceMAC(ctx context.Context, device *mod
 			return result
 		}
 		successCount = len(macRecords)
+	}
+
+	// 【新增】Step 9: 记录MAC变更历史（DELETE 后）- CONTEXT.md D-06, D-07
+	// 注意：使用历史服务记录变更（如果启用）
+	if s.enableHistory && len(oldMACs) > 0 {
+		// 创建历史服务实例
+		historySvc := NewMACHistoryService(s.db)
+
+		// 构建旧状态映射（从已查询的 oldMACs）
+		oldState := historySvc.BuildMACStateMap(oldMACs)
+
+		// 构建新状态映射（从已插入的 macRecords）
+		var macRecordsSlice []models.DeviceMACAddress
+		for _, record := range macRecords {
+			macRecordsSlice = append(macRecordsSlice, *record)
+		}
+		newState := historySvc.BuildMACStateMap(macRecordsSlice)
+
+		// 记录变更（非阻塞）
+		if err := historySvc.RecordMACChange(ctx, device, oldState, newState); err != nil {
+			applogger.Errorf("[MAC采集] %s: 记录历史失败: %v", device.DeviceName, err)
+			// 不阻断采集流程（CONTEXT.md D-07）
+		} else {
+			applogger.Infof("[MAC采集] %s: MAC历史记录成功", device.DeviceName)
+		}
 	}
 
 	result.SuccessCount = successCount

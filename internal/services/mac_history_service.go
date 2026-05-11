@@ -33,6 +33,10 @@ type MACEvent struct {
 
 // MACHistoryService MAC地址历史记录服务接口
 type MACHistoryService interface {
+	// BuildMACStateMap 构建MAC状态映射
+	// 将DeviceMACAddress切片转换为map[MACEvent]*models.DeviceMACAddress
+	BuildMACStateMap(macList []models.DeviceMACAddress) map[MACEvent]*models.DeviceMACAddress
+
 	// RecordMACChange 记录MAC地址变更
 	// 对比新旧状态，识别变更类型并写入历史表
 	RecordMACChange(ctx context.Context, device *models.NetworkDevice, oldMACs, newMACs map[MACEvent]*models.DeviceMACAddress) error
@@ -98,10 +102,10 @@ func normalizeMACAddress(mac string) string {
 	return result.String()
 }
 
-// buildMACStateMap 构建MAC状态映射
+// BuildMACStateMap 构建MAC状态映射（导出方法供其他服务使用）
 // 将DeviceMACAddress切片转换为map[MACEvent]*models.DeviceMACAddress
 // 关键：在构建时调用normalizeMACAddress规范化MAC地址格式
-func (s *macHistoryServiceImpl) buildMACStateMap(macList []models.DeviceMACAddress) map[MACEvent]*models.DeviceMACAddress {
+func (s *macHistoryServiceImpl) BuildMACStateMap(macList []models.DeviceMACAddress) map[MACEvent]*models.DeviceMACAddress {
 	stateMap := make(map[MACEvent]*models.DeviceMACAddress)
 
 	for i := range macList {
