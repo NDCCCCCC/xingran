@@ -4,8 +4,11 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	"gorm.io/gorm"
 )
 
 // PartitionService 分区服务接口（避免循环依赖）
@@ -37,12 +40,55 @@ func SetPartitionService(service PartitionService) {
 // 包括：
 // - mac_history_cleanup: 每天凌晨2点清理过期分区
 func RegisterMACHistoryTasks(scheduler *Scheduler) {
-	// 注册MAC历史清理任务
+	// 注册MAC历史清理任务处理器
 	scheduler.RegisterTask("mac_history_cleanup", func(ctx context.Context, params map[string]interface{}) error {
 		return executeMACHistoryCleanup(ctx, params)
 	})
 
 	applogger.Infof("MAC历史清理任务处理器已注册")
+
+	// 向数据库添加任务记录
+	db := GlobalDB.GetDB()
+	if db == nil {
+		applogger.Warnf("MAC历史清理任务数据库注册跳过（全局数据库未设置）")
+		return
+	}
+
+	// 检查任务是否已存在
+	var existingJob models.Job
+	err := db.Where("job_name = ?", "MAC历史数据清理").First(&existingJob).Error
+	if err == nil {
+		applogger.Infof("MAC历史清理任务已存在于数据库，跳过创建")
+		return
+	}
+
+	if err != gorm.ErrRecordNotFound {
+		applogger.Warnf("查询MAC历史清理任务失败: %v", err)
+		return
+	}
+
+	// 计算下次执行时间（明天凌晨2点）
+	now := time.Now()
+	nextRunTime := time.Date(now.Year(), now.Month(), now.Day()+1, 2, 0, 0, 0, now.Location())
+	remark := "MAC地址历史数据清理任务，每天凌晨2点执行，清理过期的月度分区"
+
+	newJob := &models.Job{
+		JobName:        "MAC历史数据清理",
+		JobGroup:       "SYSTEM",
+		InvokeTarget:   "mac_history_cleanup",
+		CronExpression: "0 0 2 * * ?",
+		MisfirePolicy:  models.MisfirePolicyExecuteOnce,
+		Status:         0,
+		NextRunTime:    &nextRunTime,
+		Remark:         &remark,
+	}
+
+	if err := scheduler.AddJob(newJob); err != nil {
+		applogger.Warnf("创建MAC历史清理任务失败: %v", err)
+		return
+	}
+
+	applogger.Infof("MAC历史清理任务已添加到数据库（下次执行: %v）", nextRunTime.Format("2006-01-02 15:04:05"))
 }
 
 // executeMACHistoryCleanup 执行MAC历史清理任务
