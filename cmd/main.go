@@ -248,8 +248,8 @@ func initMACHistoryRetentionConfig(coreModule *core.Core) {
 		"config_name":  "MAC地址历史数据保留期",
 		"config_key":   "network.mac.history.retention_days",
 		"config_value": "120",
-		"config_type":  "number", // 使用 Yes 类型表示数字
-		"is_system":    "Y",      // 系统配置
+		"config_type":  "Y", // 是/否类型：Y=是
+		"is_system":    1,   // 系统配置：1=是
 		"remark":       "MAC地址历史数据保留天数（90天数据+30天缓冲），默认120天，最小30天",
 	}
 
