@@ -112,12 +112,43 @@ SELECT * FROM sys_config WHERE config_key = 'network.mac.history.retention_days'
 ## 偏差记录
 有 - 执行过程中发现并修复了两个时序问题（GlobalDB 和 PartitionService 初始化顺序）。
 
+## 验证结果
+
+### 启动日志验证
+✓ 通过 - 启动日志显示：
+```
+开始检查MAC历史保留期配置...
+尝试插入MAC历史保留期配置...
+MAC历史保留期配置已创建（默认120天）
+```
+
+### 数据库验证
+```sql
+-- sys_job 表验证
+SELECT job_name, job_group, invoke_target, cron_expression, status
+FROM sys_job WHERE job_name = 'MAC历史数据清理';
+```
+✓ 通过 - 返回 1 条记录：
+- job_name: MAC历史数据清理
+- job_group: SYSTEM
+- invoke_target: mac_history_cleanup
+- cron_expression: 0 0 2 * * ?
+- status: 0
+
+```sql
+-- sys_config 表验证
+SELECT config_name, config_key, config_value, config_type, is_system
+FROM sys_config WHERE config_key = 'network.mac.history.retention_days';
+```
+✓ 通过 - 返回 1 条记录：
+- config_name: MAC地址历史数据保留期
+- config_key: network.mac.history.retention_days
+- config_value: 120
+- config_type: Y
+- is_system: 1
+
 ## 后续工作
-需要手动验证任务注册修复：
-1. 启动应用程序
-2. 检查启动日志显示 "MAC历史清理任务注册完成"
-3. 查询 sys_job 表，确认 mac_history_cleanup 任务存在
-4. 查询 sys_config 表，确认 retention_days 配置存在
+无 - 所有验证已通过。
 
 ## Self-Check: PASSED
 
@@ -125,3 +156,5 @@ SELECT * FROM sys_config WHERE config_key = 'network.mac.history.retention_days'
 ✓ 每个任务已单独提交
 ✓ 编译检查通过
 ✓ 任务注册时机符合预期（在调度器初始化块内）
+✓ 数据库验证通过（sys_job 和 sys_config 表都有记录）
+✓ 启动日志验证通过
