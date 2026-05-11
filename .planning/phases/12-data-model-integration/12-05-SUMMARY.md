@@ -93,8 +93,24 @@ SELECT * FROM sys_config WHERE config_key = 'network.mac.history.retention_days'
 ## 已知问题
 无
 
+## 额外修复（执行中发现）
+
+### 修复1：数据库任务记录创建时序问题
+**问题**: `RegisterMACHistoryTasks` 函数试图在注册时向数据库添加任务记录，但使用了 `GlobalDB.GetDB()`，而 `SetDB()` 在任务注册之后才调用，导致 `GlobalDB` 为 `nil`。
+
+**解决**: 修改函数签名接受 `db *gorm.DB` 参数，直接从 `Core` 传递数据库连接。
+
+**提交**: `fix(12-05): 修复数据库任务记录创建时序问题`
+
+### 修复2：PartitionService初始化顺序问题
+**问题**: `PartitionService` 在第 19 步才初始化，而任务注册发生在第 10 步。当任务注册检查 `c.PartitionService != nil` 时，`PartitionService` 还是 `nil`，导致任务注册被跳过。
+
+**解决**: 将 `PartitionService` 初始化移至第 9.5 步（调度器初始化之前）。
+
+**提交**: `fix(12-05): 修复PartitionService初始化顺序`
+
 ## 偏差记录
-无 - 执行完全符合计划。
+有 - 执行过程中发现并修复了两个时序问题（GlobalDB 和 PartitionService 初始化顺序）。
 
 ## 后续工作
 需要手动验证任务注册修复：
