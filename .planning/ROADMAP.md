@@ -56,7 +56,7 @@
 <details>
 <summary>🚧 v1.5 MAC地址历史数据管理 (Phases 12-15) — IN PROGRESS</summary>
 
-- [x] Phase 12: 数据模型与采集集成 (3/3 plans) — completed 2026-05-11
+- [x] Phase 12: 数据模型与采集集成 (5/5 plans) — completed 2026-05-11
 - [ ] Phase 13: 查询层与轨迹
 - [ ] Phase 14: 前端与用户体验
 - [ ] Phase 15: 性能优化
@@ -81,6 +81,8 @@
 - [x] 12-01-PLAN.md — 创建历史数据模型和变更检测（Wave 1）— completed 2026-05-11
 - [x] 12-02-PLAN.md — 实现分区管理和自动清理（Wave 2）— completed 2026-05-11
 - [x] 12-03-PLAN.md — 创建历史数据查询服务（Wave 3）— completed 2026-05-11
+- [ ] 12-04-PLAN.md — 修复MAC历史路由注册位置（Gap closure, Wave 4）— UAT Gap 2 (blocker)
+- [ ] 12-05-PLAN.md — 修复清理任务注册时机（Gap closure, Wave 4）— UAT Gap 0 (major)
 
 ### Phase 13: 查询层与轨迹
 **Goal**: 提供强大的历史查询能力和MAC轨迹追踪功能
@@ -138,11 +140,11 @@
 | 9. 后端代码优化 | v1.3 | 5/5 | Complete | 2026-04-27 |
 | 10. 网络设备导出集成 | v1.3 | 1/1 | Complete | 2026-04-27 |
 | 11. MAC地址采集优化 - 过滤设备间互联端口 | v1.4 | 4/4 | Complete | 2026-05-09 |
-| 12. 数据模型与采集集成 | v1.5 | 3/3 | Complete | 2026-05-11 |
+| 12. 数据模型与采集集成 | v1.5 | 3/5 | Gap Closure | - |
 | 13. 查询层与轨迹 | v1.5 | 0/5 | Planned | - |
 | 14. 前端与用户体验 | v1.5 | 0/5 | Planned | - |
 | 15. 性能优化 | v1.5 | 0/5 | Planned | - |
 
 ---
 
-**Total**: 15 phases, 34 plans complete, 20 plans planned (5 each for phases 13-15), 54 total
+**Total**: 15 phases, 34 plans complete, 2 gap closure plans, 20 plans planned (5 each for phases 13-15), 56 total
