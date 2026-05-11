@@ -232,6 +232,16 @@ func (c *Core) Init() error {
 		applogger.Infof("设备信息采集服务启动成功")
 	}
 
+	// 9.5. 初始化MAC历史分区管理服务（必须在调度器初始化之前）
+	c.PartitionService = services.NewPartitionService(c.GetDB())
+	// 确保未来2个月的分区存在
+	if err := c.PartitionService.EnsurePartitionsExist(context.Background(), 2); err != nil {
+		applogger.Warnf("初始化MAC历史分区失败: %v", err)
+		// 不阻断应用启动（分区创建可稍后手动执行）
+	} else {
+		applogger.Infof("MAC历史分区管理服务初始化完成")
+	}
+
 	// 10. 初始化定时任务调度器
 	c.Scheduler = scheduler.NewScheduler(c.GetDB())
 	if err := c.Scheduler.Start(context.Background()); err != nil {
@@ -334,16 +344,6 @@ func (c *Core) Init() error {
 		applogger.Warnf("初始化API端点元数据服务失败: %v", err)
 	} else {
 		applogger.Infof("API端点元数据服务初始化完成")
-	}
-
-	// 19. 初始化MAC历史分区管理服务
-	c.PartitionService = services.NewPartitionService(c.GetDB())
-	// 确保未来2个月的分区存在
-	if err := c.PartitionService.EnsurePartitionsExist(context.Background(), 2); err != nil {
-		applogger.Warnf("初始化MAC历史分区失败: %v", err)
-		// 不阻断应用启动（分区创建可稍后手动执行）
-	} else {
-		applogger.Infof("MAC历史分区管理服务初始化完成")
 	}
 
 	return nil
