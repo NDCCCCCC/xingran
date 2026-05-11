@@ -156,6 +156,7 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 	}, core))
 	{
 		SetupMACRouter(mac, core, exportHandler)
+		SetupMACHistoryRouter(mac, core)
 	}
 
 	// ==================== 端口状态管理路由（独立权限） ====================
