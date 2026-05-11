@@ -127,16 +127,18 @@ skipped: 6
   reason: "User reported: MAC历史清理任务未在定时任务列表中找到。network.mac.history.retention_days配置项在参数配置中不存在。"
   severity: major
   test: 1
-  artifacts: []
+  artifacts: [cmd/main.go, internal/core/core.go, internal/scheduler/mac_history_tasks.go]
   missing: []
+  root_cause: "任务注册时机错误。cmd/main.go:115-120的任务注册发生在core.Init()之后，调度器已启动并从数据库加载任务。缺少sys_job表中的mac_history_cleanup任务条目。需要将任务注册移至core.go:236-273的调度器初始化代码中，并添加迁移脚本创建定时任务条目。"
 
 - truth: "不同厂商MAC地址格式被正确规范化"
   status: failed
   reason: "User reported: 华为格式：487b-6b85-f191，锐捷格式：0074.9c2e.c1d9 - 需确认是否被正确规范化"
   severity: major
   test: 4
-  artifacts: []
+  artifacts: [internal/services/mac_history_service.go]
   missing: []
+  root_cause: "误报 - normalizeMACAddress()函数已正确支持华为和锐捷格式。代码使用分隔符剥离策略(lines 79-83)，移除所有点、冒号、横杠后验证12位16进制字符。手动验证确认两种格式均正确规范化为AA:BB:CC:DD:EE:FF。建议添加单元测试防止回归，但无需修复代码。"
 
 - truth: "MAC历史查询API在主路由中注册"
   status: failed
@@ -145,3 +147,4 @@ skipped: 6
   test: 5
   artifacts: [internal/api/router.go, internal/api/v1/network/mac_history_router.go]
   missing: []
+  root_cause: "路由注册缺失。mac_history_router.go:11-24定义了SetupMACHistoryRouter()函数，但router.go:296-326的网络路由组只调用了SetupNetworkRouter和SetupTopologyRouter，缺少对SetupMACHistoryRouter的调用。需要在router.go:326行后添加networkV1.SetupMACHistoryRouter(network, core)。"
