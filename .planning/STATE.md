@@ -1,47 +1,49 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
+milestone: v1.5
+milestone_name: MAC地址历史数据管理
 current_phase: 12
-status: planning
-last_updated: "2026-05-09T09:06:04.418Z"
-last_activity: 2026-05-09 — 里程碑 v1.5 路线图创建完成
+current_plan: 3
+status: completed
+last_updated: "2026-05-11T01:13:05.000Z"
+last_activity: 2026-05-11
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 3
+  completed_plans: 3
+  percent: 100
 ---
 
 # Project State
 
 **Project**: 工位导入部门/用户关联功能
 **Created**: 2026-04-16
-**Status**: 里程碑 v1.5 规划中
+**Status**: 里程碑 v1.5 执行中
 Phase: 12
-Plan: Roadmap created, ready to start Phase 12
-Status: Planning complete for v1.5
-Last activity: 2026-05-09 — 里程碑 v1.5 路线图创建完成
+Plan: 3
+Status: Phase 12 completed
+Last activity: 2026-05-11
 
 ## Current Position
 
-Phase: 12 - 数据模型与采集集成
-Plan: TBD (roadmap created, awaiting first plan)
-Status: Ready to start Phase 12
-Last activity: 2026-05-09 — 路线图创建完成，包含4个阶段，覆盖14个需求
+Phase: 12 (数据模型与采集集成) — ✅ COMPLETED
+Plan: 3 of 3
+Status: All plans in Phase 12 completed
+Last activity: 2026-05-11 — Plan 12-03 (MAC地址历史查询API) completed
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-09)
 
 **Core value:** Excel 导入时自动关联实体，提升批量管理效率；可配置仪表盘系统提供监控可视化能力
-**Current focus:** MAC地址历史数据管理 - 在现有MAC采集基础上增加历史数据保留和分析能力
+**Current focus:** Phase 12 — 数据模型与采集集成（已完成）
 
 ## Phase Status
 
 | Phase | Name | Status | Progress |
 |-------|------|--------|----------|
-| 12 | 数据模型与采集集成 | 🔶 Planning | 0/5 plans |
+| 12 | 数据模型与采集集成 | ✅ Completed | 3/3 plans |
 | 13 | 查询层与轨迹 | 📋 Planned | 0/5 plans |
 | 14 | 前端与用户体验 | 📋 Planned | 0/5 plans |
 | 15 | 性能优化 | 📋 Planned | 0/5 plans |
@@ -85,6 +87,10 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 | 2026-05-09 | Requirements defined for v1.5 (14 requirements) | — |
 | 2026-05-09 | Research completed (MAC地址历史数据管理) | — |
 | 2026-05-09 | Roadmap created for v1.5 (4 phases: 12-15) | — |
+| 2026-05-11 | Plan 12-01 completed: 数据模型与变更检测 | 12 |
+| 2026-05-11 | Plan 12-02 completed: 分区管理与自动清理 | 12 |
+| 2026-05-11 | Plan 12-03 completed: MAC地址历史查询API | 12 |
+| 2026-05-11 | Phase 12 completed: 数据模型与采集集成 | 12 |
 
 ## Deferred Items
 
@@ -100,11 +106,12 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 - v1.3 完成: 技术债清理（3 个阶段）
 - v1.4 完成: MAC地址采集优化 - 过滤设备间互联端口
 - v1.5 规划中: MAC地址历史数据管理（4 个阶段）
+- v1.5 Phase 12 完成: 数据模型与采集集成（3 个计划）
 
-**Total shipped**: 11 phases, 32 plans, ~160 tasks
+**Total shipped**: 11 phases + Phase 12, 35 plans, ~170 tasks
 
-**Current Phase:** 12
-**Phase Status:** 🔶 PLANNING - Roadmap created, ready to execute
+**Current Phase:** 13 (查询层与轨迹) - Ready to start
+**Phase Status:** ✅ Phase 12 completed - Ready to proceed to Phase 13
 
 ### Key Technical Decisions for v1.5
 
@@ -113,6 +120,14 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 3. **变更检测**: 复合键变更检测（MAC+VLAN+接口），避免MAC flapping误判
 4. **性能目标**: 90天查询<2秒，1年查询<5秒
 5. **数据保留**: 默认90天，可配置，自动清理过期分区
+
+### Phase 12 Implementation Decisions
+
+1. **Query-01**: 使用 GORM 参数化查询防止 SQL 注入（T-12-08 mitigation）
+2. **Query-02**: 支持分页查询（默认每页20条，最大100条）
+3. **Query-03**: RFC3339 时间格式解析（严格校验防止格式攻击）
+4. **Query-04**: 设备删除后历史数据保留（device_name_snapshot 字段）
+5. **History Query Pattern**: 服务层负责查询逻辑，处理器负责参数绑定和响应格式化
 
 ### Known Risks & Mitigations
 
@@ -136,9 +151,12 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 
 **Phase Mapping**:
 
-- Phase 12: DATA-01, DATA-02, QUERY-01 (3 requirements)
+- Phase 12: DATA-01, DATA-02, QUERY-01 ✅ (3 requirements completed)
 - Phase 13: QUERY-02, QUERY-03, QUERY-04, UI-03 (4 requirements)
 - Phase 14: UI-01, UI-02, UI-04 (3 requirements)
 - Phase 15: PERF-01, PERF-02, PERF-03, PERF-04 (4 requirements)
 
-**Coverage**: 14/14 (100%) ✓
+**Coverage**: 3/14 (21%) ✓
+
+**Completed Phase:** 12 (数据模型与采集集成) — 3 plans — 2026-05-11T01:13:05.000Z
+**Next Phase:** 13 (查询层与轨迹) — 4 plans — Ready to start

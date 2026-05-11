@@ -56,7 +56,7 @@
 <details>
 <summary>🚧 v1.5 MAC地址历史数据管理 (Phases 12-15) — IN PROGRESS</summary>
 
-- [ ] Phase 12: 数据模型与采集集成
+- [x] Phase 12: 数据模型与采集集成 (3/3 plans) — completed 2026-05-11
 - [ ] Phase 13: 查询层与轨迹
 - [ ] Phase 14: 前端与用户体验
 - [ ] Phase 15: 性能优化
@@ -77,7 +77,10 @@
   3. 历史表使用月度分区存储，自动清理超过保留期的数据（默认90天）
   4. 历史记录包含设备名称快照，设备删除后历史数据仍然可读
   5. 查询性能满足：90天内查询<2秒，数据库增长率<10%总MAC数/采集周期
-**Plans**: TBD
+**Plans**:
+- [x] 12-01-PLAN.md — 创建历史数据模型和变更检测（Wave 1）— completed 2026-05-11
+- [x] 12-02-PLAN.md — 实现分区管理和自动清理（Wave 2）— completed 2026-05-11
+- [x] 12-03-PLAN.md — 创建历史数据查询服务（Wave 3）— completed 2026-05-11
 
 ### Phase 13: 查询层与轨迹
 **Goal**: 提供强大的历史查询能力和MAC轨迹追踪功能
@@ -135,11 +138,11 @@
 | 9. 后端代码优化 | v1.3 | 5/5 | Complete | 2026-04-27 |
 | 10. 网络设备导出集成 | v1.3 | 1/1 | Complete | 2026-04-27 |
 | 11. MAC地址采集优化 - 过滤设备间互联端口 | v1.4 | 4/4 | Complete | 2026-05-09 |
-| 12. 数据模型与采集集成 | v1.5 | 0/5 | Not started | - |
-| 13. 查询层与轨迹 | v1.5 | 0/5 | Not started | - |
-| 14. 前端与用户体验 | v1.5 | 0/5 | Not started | - |
-| 15. 性能优化 | v1.5 | 0/5 | Not started | - |
+| 12. 数据模型与采集集成 | v1.5 | 3/3 | Complete | 2026-05-11 |
+| 13. 查询层与轨迹 | v1.5 | 0/5 | Planned | - |
+| 14. 前端与用户体验 | v1.5 | 0/5 | Planned | - |
+| 15. 性能优化 | v1.5 | 0/5 | Planned | - |
 
 ---
 
-**Total**: 15 phases, 31 plans complete, 20 plans planned, 51 total
+**Total**: 15 phases, 34 plans complete, 20 plans planned (5 each for phases 13-15), 54 total
