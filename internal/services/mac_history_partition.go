@@ -51,6 +51,12 @@ func (s *partitionServiceImpl) CreateMonthlyPartition(ctx context.Context, year 
 	// 生成分区名称
 	partitionName := fmt.Sprintf("sys_device_mac_history_%d_%02d", year, month)
 
+	// 验证分区名称格式，防止SQL注入（CR-01 fix）
+	validPartitionName := regexp.MustCompile(`^[a-z_]+_[0-9]{4}_[0-9]{2}$`)
+	if !validPartitionName.MatchString(partitionName) {
+		return fmt.Errorf("非法的分区名称: %s", partitionName)
+	}
+
 	// 计算分区边界
 	startDate := fmt.Sprintf("'%d-%02d-01'", year, month)
 	endYear := year
