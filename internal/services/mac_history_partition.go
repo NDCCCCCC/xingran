@@ -52,7 +52,8 @@ func (s *partitionServiceImpl) CreateMonthlyPartition(ctx context.Context, year 
 	partitionName := fmt.Sprintf("sys_device_mac_history_%d_%02d", year, month)
 
 	// 验证分区名称格式，防止SQL注入（CR-01 fix）
-	validPartitionName := regexp.MustCompile(`^[a-z_]+_[0-9]{4}_[0-9]{2}$`)
+	// WR-08 fix: 使用更严格的模式防止连续下划线
+	validPartitionName := regexp.MustCompile(`^[a-z]+(?:_[a-z]+)*_[0-9]{4}_[0-9]{2}$`)
 	if !validPartitionName.MatchString(partitionName) {
 		return fmt.Errorf("非法的分区名称: %s", partitionName)
 	}
@@ -94,6 +95,7 @@ func (s *partitionServiceImpl) EnsurePartitionsExist(ctx context.Context, months
 	applogger.Infof("开始检查MAC历史表分区，将确保未来 %d 个月的分区存在", monthsAhead)
 
 	// 遍历未来N个月，确保每个分区都存在
+	var creationErrors []error
 	for i := 0; i <= monthsAhead; i++ {
 		targetDate := now.AddDate(0, i, 0)
 		year := targetDate.Year()
@@ -102,8 +104,13 @@ func (s *partitionServiceImpl) EnsurePartitionsExist(ctx context.Context, months
 		// 尝试创建分区（IF NOT EXISTS 会忽略已存在的分区）
 		if err := s.CreateMonthlyPartition(ctx, year, month); err != nil {
 			applogger.Errorf("创建 %d年%02d月 分区失败: %v", year, month, err)
-			// 继续创建其他分区，不中断流程
+			creationErrors = append(creationErrors, err)
 		}
+	}
+
+	// If all partitions failed to create, return error
+	if len(creationErrors) > 0 && len(creationErrors) > monthsAhead {
+		return fmt.Errorf("创建所有MAC历史分区失败，共 %d 个错误", len(creationErrors))
 	}
 
 	applogger.Infof("MAC历史表分区检查完成")
