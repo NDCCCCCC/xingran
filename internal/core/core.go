@@ -69,6 +69,9 @@ type Core struct {
 
 	// API端点元数据服务
 	APIEndpointService *services.APIEndpointService // API端点服务（被 dashboard_router.go 使用）
+
+	// MAC历史分区服务
+	PartitionService services.PartitionService // MAC历史表分区管理服务
 }
 
 // GetDB 获取数据库连接
@@ -324,6 +327,16 @@ func (c *Core) Init() error {
 		applogger.Warnf("初始化API端点元数据服务失败: %v", err)
 	} else {
 		applogger.Infof("API端点元数据服务初始化完成")
+	}
+
+	// 19. 初始化MAC历史分区管理服务
+	c.PartitionService = services.NewPartitionService(c.GetDB())
+	// 确保未来2个月的分区存在
+	if err := c.PartitionService.EnsurePartitionsExist(context.Background(), 2); err != nil {
+		applogger.Warnf("初始化MAC历史分区失败: %v", err)
+		// 不阻断应用启动（分区创建可稍后手动执行）
+	} else {
+		applogger.Infof("MAC历史分区管理服务初始化完成")
 	}
 
 	return nil
