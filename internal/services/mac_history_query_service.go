@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
@@ -69,6 +70,11 @@ func NewMACHistoryQueryService(db *gorm.DB) MACHistoryQueryService {
 
 // QueryPortHistory 查询指定端口的历史记录
 func (s *macHistoryQueryServiceImpl) QueryPortHistory(ctx context.Context, req *PortHistoryQuery) (*MACHistoryQueryResult, error) {
+	// WR-01 fix: 验证设备ID格式
+	if _, err := uuid.Parse(req.DeviceID); err != nil {
+		return nil, fmt.Errorf("无效的设备ID格式: %w", err)
+	}
+
 	// 设置默认值
 	if req.Current < 1 {
 		req.Current = 1
@@ -152,6 +158,11 @@ func (s *macHistoryQueryServiceImpl) QueryPortHistory(ctx context.Context, req *
 
 // QueryDeviceHistory 查询指定设备的历史记录
 func (s *macHistoryQueryServiceImpl) QueryDeviceHistory(ctx context.Context, req *DeviceHistoryQuery) (*MACHistoryQueryResult, error) {
+	// WR-01 fix: 验证设备ID格式
+	if _, err := uuid.Parse(req.DeviceID); err != nil {
+		return nil, fmt.Errorf("无效的设备ID格式: %w", err)
+	}
+
 	// 设置默认值
 	if req.Current < 1 {
 		req.Current = 1
