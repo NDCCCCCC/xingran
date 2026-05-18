@@ -374,19 +374,28 @@ func (c *Core) Close() {
 		c.Scheduler.Stop()
 		applogger.Infof("定时任务调度器已停止")
 	}
-	if c.DB != nil {
-		c.DB.Close()
-	}
-	if c.Cache != nil {
-		c.Cache.Close()
-	}
+	// 停止系统指标缓存服务
 	if c.MetricsCacheService != nil {
 		c.MetricsCacheService.Stop()
+		applogger.Infof("系统指标缓存服务已停止")
 	}
 	// 停止 RPA 扩缩容服务
 	if c.RPAScalingService != nil {
 		c.RPAScalingService.Stop()
 		applogger.Infof("RPA 扩缩容服务已停止")
+	}
+	// 关闭缓存（必须在数据库之前关闭，因为缓存可能有异步写入操作）
+	if c.Cache != nil {
+		c.Cache.Close()
+		applogger.Infof("缓存已关闭")
+	}
+	// 等待一小段时间，确保所有异步操作完成
+	// 这包括：操作日志异步写入、缓存异步写入等
+	time.Sleep(100 * time.Millisecond)
+	// 最后关闭数据库连接
+	if c.DB != nil {
+		c.DB.Close()
+		applogger.Infof("数据库连接已关闭")
 	}
 }
 

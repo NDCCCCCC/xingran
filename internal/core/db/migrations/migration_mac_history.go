@@ -28,9 +28,11 @@ func CreateMACHistoryTable(db *gorm.DB) error {
 	applogger.Infof("[迁移] 开始创建MAC地址历史表（分区表）")
 
 	// 1. 创建主表（声明为 PARTITION BY RANGE）
+	// 注意：分区表的唯一约束必须包含所有分区列，因此不使用 PRIMARY KEY
+	// 使用 NOT NULL 约束和唯一索引替代
 	createMainTableSQL := `
 	CREATE TABLE IF NOT EXISTS sys_device_mac_history (
-		id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+		id UUID NOT NULL DEFAULT gen_random_uuid(),
 		device_id UUID NOT NULL,
 		device_name_snapshot VARCHAR(100),
 		mac_address VARCHAR(30) NOT NULL,
@@ -86,8 +88,9 @@ func CreateMACHistoryTable(db *gorm.DB) error {
 
 	// 3. 创建BRIN索引（RESEARCH.md Pattern 4）
 	// pages_per_range = 128 适合时间序列数据
+	// 注意：分区表不支持 CONCURRENTLY 创建索引
 	createBRINIndexSQL := `
-	CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_mac_history_first_seen_brin
+	CREATE INDEX IF NOT EXISTS idx_mac_history_first_seen_brin
 	ON sys_device_mac_history USING BRIN (first_seen)
 	WITH (pages_per_range = 128);
 	`
@@ -98,8 +101,9 @@ func CreateMACHistoryTable(db *gorm.DB) error {
 	applogger.Infof("[迁移] BRIN索引创建成功")
 
 	// 4. 创建复合索引（用于设备+MAC查询）
+	// 注意：分区表不支持 CONCURRENTLY 创建索引
 	createCompositeIndexSQL := `
-	CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_mac_history_device_mac
+	CREATE INDEX IF NOT EXISTS idx_mac_history_device_mac
 	ON sys_device_mac_history (device_id, mac_address);
 	`
 

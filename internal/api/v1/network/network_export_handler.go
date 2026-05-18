@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -12,7 +13,6 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/lldp"
 	networkServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/network"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/portcollection"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/topology"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
@@ -481,6 +481,12 @@ func (h *NetworkExportHandler) ExportMACAddresses(c *gin.Context) {
 	h.setExportHeader(c, file, "MAC地址")
 }
 
+// PortStatusWithDeviceName 端口状态带设备名称
+type PortStatusWithDeviceName struct {
+	models.DevicePortStatus
+	DeviceName string `json:"deviceName"`
+}
+
 // ExportPorts 导出端口状态记录
 func (h *NetworkExportHandler) ExportPorts(c *gin.Context) {
 	var req ExportRequest
@@ -489,30 +495,33 @@ func (h *NetworkExportHandler) ExportPorts(c *gin.Context) {
 		return
 	}
 
-	portSvc := portcollection.NewPortCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor)
+	db := h.core.DB.GetDB()
 	current, pageSize := h.getPaginationParams(&req)
 
-	portReq := &portcollection.ListRequest{
-		Current:  current,
-		PageSize: pageSize,
-	}
+	// Build query with join to get device name
+	query := db.Table("sys_device_port_status as p").
+		Select("p.*, d.device_name").
+		Joins("LEFT JOIN sys_network_device as d ON p.device_id = d.id")
+
+	// Apply filters
 	if req.Filters != nil {
-		if v, ok := req.Filters["deviceId"].(string); ok {
-			portReq.DeviceID = v
+		if v, ok := req.Filters["deviceId"].(string); ok && v != "" {
+			query = query.Where("p.device_id = ?", v)
 		}
-		if v, ok := req.Filters["interfaceName"].(string); ok {
-			portReq.InterfaceName = v
+		if v, ok := req.Filters["interfaceName"].(string); ok && v != "" {
+			query = query.Where("p.interface_name LIKE ?", "%"+v+"%")
 		}
-		if v, ok := req.Filters["adminStatus"].(string); ok {
-			portReq.AdminStatus = v
+		if v, ok := req.Filters["adminStatus"].(string); ok && v != "" {
+			query = query.Where("p.admin_status = ?", v)
 		}
-		if v, ok := req.Filters["operStatus"].(string); ok {
-			portReq.OperStatus = v
+		if v, ok := req.Filters["operStatus"].(string); ok && v != "" {
+			query = query.Where("p.oper_status = ?", v)
 		}
 	}
 
-	records, _, err := portSvc.Query.GetList(c.Request.Context(), portReq)
-	if err != nil {
+	var records []PortStatusWithDeviceName
+	offset := (current - 1) * pageSize
+	if err := query.Offset(offset).Limit(pageSize).Order("p.collected_at DESC").Find(&records).Error; err != nil {
 		response.Error(c, response.ErrServerError, err.Error())
 		return
 	}
@@ -521,7 +530,7 @@ func (h *NetworkExportHandler) ExportPorts(c *gin.Context) {
 	sheet := "端口状态"
 	file.SetSheetName("Sheet1", sheet)
 
-	headers := []string{"接口名称", "管理状态", "操作状态", "描述", "VLAN", "双工模式", "速率", "端口类型", "802.1X", "802.1X状态", "端口安全", "安全模式", "最大MAC数", "当前MAC数", "采集时间"}
+	headers := []string{"设备名称", "接口名称", "管理状态", "操作状态", "描述", "VLAN", "双工模式", "速率", "端口类型", "802.1X", "802.1X状态", "端口安全", "安全模式", "最大MAC数", "当前MAC数", "采集时间"}
 	for i, header := range headers {
 		cell, _ := excelize.CoordinatesToCellName(i+1, 1)
 		file.SetCellValue(sheet, cell, header)
@@ -537,9 +546,18 @@ func (h *NetworkExportHandler) ExportPorts(c *gin.Context) {
 		if r.PortSecurityEnabled {
 			sec = "是"
 		}
+
+		// Handle VLAN pointer - dereference safely
+		var vlanValue interface{}
+		if r.VLAN != nil {
+			vlanValue = *r.VLAN
+		} else {
+			vlanValue = ""
+		}
+
 		writeRow(file, sheet, row, []interface{}{
-			r.InterfaceName, r.AdminStatus, r.OperStatus, r.Description,
-			r.VLAN, r.Duplex, r.Speed, r.PortType,
+			r.DeviceName, r.InterfaceName, r.AdminStatus, r.OperStatus, r.Description,
+			vlanValue, r.Duplex, r.Speed, r.PortType,
 			dot1x, r.Dot1xPortStatus, sec, r.PortSecurityMode,
 			r.MaxMACCount, r.CurrentMACCount, formatTime(r.CollectedAt),
 		})
@@ -664,8 +682,10 @@ func (h *NetworkExportHandler) setExportHeader(c *gin.Context, file *excelize.Fi
 
 	timestamp := time.Now().Format("20060102_150405")
 	filename := fmt.Sprintf("%s_export_%s.xlsx", entityName, timestamp)
+	// URL-encode the filename to properly handle Chinese characters
+	encodedFilename := url.QueryEscape(filename)
 	c.Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-	c.Header("Content-Disposition", "attachment; filename="+filename)
+	c.Header("Content-Disposition", "attachment; filename="+encodedFilename+"; filename*=utf-8''"+encodedFilename)
 	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", buf.Bytes())
 }
 

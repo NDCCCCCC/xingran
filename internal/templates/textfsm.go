@@ -238,12 +238,26 @@ func parseRule(line string, fsm *FSM) (*Rule, error) {
 	}
 
 	// 移除锚点
+	// 检查是否有行首锚点
+	hasStartAnchor := strings.HasPrefix(line, "^")
+	// 检查是否需要行尾锚点（TextFSM中使用$$表示行尾锚点$）
+	hasEndAnchor := strings.HasSuffix(line, "$")
+
 	line = strings.TrimPrefix(line, "^")
 	// TextFSM中使用$$表示行尾锚点$，需要移除所有末尾的$
 	line = strings.TrimRight(line, "$")
 
 	// 构建正则表达式并记录变量名顺序
 	regexPattern, varNames := buildRegexWithVariables(line, fsm)
+
+	// 添加回锚点
+	if hasStartAnchor {
+		regexPattern = "^" + regexPattern
+	}
+	// 如果原始行有行尾锚点，添加$到正则表达式末尾
+	if hasEndAnchor {
+		regexPattern += "$"
+	}
 
 	// 调试输出
 	if debugTextFSM {
@@ -342,7 +356,14 @@ func buildRegexWithVariables(pattern string, fsm *FSM) (string, []string) {
 	return result, varNames
 }
 
-// escapeRegexLiteral 转义正则表达式字面量，智能处理正则序列
+// escapeRegexLiteral 转义正则表达式字面量，智能处理正则序列。
+// TextFSM 模板中的规则文本本身就是正则表达式片段，不是纯字面量文本。
+// 因此：
+//   - 裸 . 是正则通配符（匹配任何字符），不应转义
+//   - \. 是转义的点（匹配字面量点），应保留原样
+//   - \s \d \w 等字符类转义应保留原样
+//   - ? + * 作为量词不应转义
+//   - ( ) 用于分组和可选组
 func escapeRegexLiteral(s string) string {
 	result := ""
 	i := 0
@@ -350,23 +371,32 @@ func escapeRegexLiteral(s string) string {
 	for i < len(s) {
 		c := s[i]
 
-		// 如果是反斜杠，可能是转义序列
+		// 如果是反斜杠，可能是正则转义序列
 		if c == '\\' && i+1 < len(s) {
 			nextC := s[i+1]
-			// 常见的正则转义序列，保留
-			if strings.ContainsAny(string(nextC), "sSdDwWbBnrt") {
-				result += string([]byte{c, nextC})
-				i += 2
+			// 保留所有有效的正则转义序列：
+			// - 非字母字符（元字符转义）：\. \( \| \[ \] \{ \} \^ \$ \* \+ \? \\ 等
+			//   在正则中，\ 后跟非字母字符总是"转义该元字符为字面量"，必须保留原样
+			// - 字母字符（字符类转义）：\s \S \d \D \w \W \b \B \n \r \t \a \f \v 等
+			if (nextC >= 'a' && nextC <= 'z') || (nextC >= 'A' && nextC <= 'Z') {
+				// 字母字符：只保留已知的正则字符类转义
+				if strings.ContainsAny(string(nextC), "sSdDwWbBnrtafv") {
+					result += string([]byte{c, nextC})
+					i += 2
+					continue
+				}
+				// 未知字母转义，转义反斜杠
+				result += "\\\\"
+				i++
 				continue
 			}
-			// 其他情况转义反斜杠
-			result += "\\\\"
-			i++
+			// 非字母字符（如 . ( ) | [ ] { } ^ $ * + ? \ 等）：保留转义序列原样
+			result += string([]byte{c, nextC})
+			i += 2
 			continue
 		}
 
 		// 处理正则元字符
-		// 注意：不转义 ? + * 因为它们是量词
 		if c == '(' {
 			// 检查是否是可选组 "(...)?"
 			// 向前查找匹配的 )
@@ -393,9 +423,13 @@ func escapeRegexLiteral(s string) string {
 			} else {
 				result += `\` + string(c)
 			}
+		} else if c == '.' {
+			// TextFSM 模板中裸 . 是正则通配符（匹配任何字符），不应转义。
+			// 字面量点通过 \. 表示（已在上方反斜杠处理中保留）。
+			result += string(c)
 		} else {
-			// 其他元字符（不包括 ? + *）
-			metaChars := ".|[]{}^$"
+			// 其他元字符：? + * 作为量词不转义，| [ ] { } ^ $ 需要转义
+			metaChars := "|[]{}^$"
 			if strings.ContainsAny(string(c), metaChars) {
 				result += `\` + string(c)
 			} else {
