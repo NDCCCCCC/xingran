@@ -309,7 +309,7 @@ const DeviceManagement: FC = () => {
         setProbeResult(result.data);
         handleSuccess('设备探测');
       } else {
-        handleApiError(result?.message || '探测失败', '探测');
+        handleApiError(result.data?.message || '探测失败', '探测');
       }
     } catch (error) {
       if (error && typeof error === 'object' && 'errorFields' in error) {

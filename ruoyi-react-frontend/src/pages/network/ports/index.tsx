@@ -271,20 +271,6 @@ const PortStatusPage: FC = () => {
       render: (vlan?: number) => vlan ?? '-',
     },
     {
-      title: '双工',
-      dataIndex: 'duplex',
-      key: 'duplex',
-      width: 80,
-      render: (duplex?: string) => duplex?.toUpperCase() || '-',
-    },
-    {
-      title: '速率',
-      dataIndex: 'speed',
-      key: 'speed',
-      width: 80,
-      render: (speed?: string) => speed || '-',
-    },
-    {
       title: '类型',
       dataIndex: 'portType',
       key: 'portType',
@@ -321,16 +307,6 @@ const PortStatusPage: FC = () => {
             <Tag>{record.portSecurityMode}</Tag>
           )}
         </Space>
-      ),
-    },
-    {
-      title: 'MAC数',
-      key: 'macCount',
-      width: 100,
-      render: (_, record) => (
-        <span>
-          {record.currentMACCount || 0} / {record.maxMACCount || '-'}
-        </span>
       ),
     },
     {
