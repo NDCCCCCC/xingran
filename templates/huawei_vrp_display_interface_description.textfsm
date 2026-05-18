@@ -1,18 +1,21 @@
 Value INTERFACE (\S+)
-Value PHY (down|\*down|up|up\(s\))
-Value PROTOCOL (down|\*down|up|up\(s\))
-Value DESCRIPTION (\S+.*?)
-
+Value PHY (down|\*down|up|up\(s\)|\*?)
+Value PROTOCOL (down|\*down|up|up\(s\)|\*?)
+Value DESCRIPTION (.+)
 
 Start
-  ^Interface\s+PHY\s+Protocol\s+Description\s*$$ -> Begin
-  ^\s*$$
-  ^PHY:\s+Physical
-  ^(?:\*|\^|\#|\-)down:
-  ^\(\w+\):\s+\S+
+  ^<[^>]+>.*$$ -> Start
+  ^PHY:\s+.*$$ -> Start
+  ^\*down:\s+.*$$ -> Start
+  ^#\s*down:\s+.*$$ -> Start
+  ^\([a-z]+\):\s+.*$$ -> Start
+  ^InUti/OutUti:\s+.*$$ -> Start
+  ^\s*$$ -> Start
+  ^Interface\s+PHY\s+Protocol\s+Description$$ -> Begin
   ^. -> Error
 
 Begin
-  ^${INTERFACE}\s+${PHY}\s+${PROTOCOL}(?:\s+${DESCRIPTION})?\s*$$ -> Record
-  ^\s*$$
+  ^${INTERFACE}\s+${PHY}\s+${PROTOCOL}\s+${DESCRIPTION}\s*$$ -> Record
+  ^${INTERFACE}\s+${PHY}\s+${PROTOCOL}\s*$$ -> Record
+  ^\s*$$ -> Begin
   ^. -> Error

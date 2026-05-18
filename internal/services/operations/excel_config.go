@@ -210,7 +210,7 @@ var ExcelConfigs = map[string]ExcelConfig{
 			{Field: "deviceName", Header: "所属设备", MaxLength: 100, Reference: "sys_network_device.device_name", DBField: "device_id"},
 			{Field: "portName", Header: "所属端口", MaxLength: 100, Reference: "sys_device_port_status.interface_name", DBField: "port_id"},
 			{Field: "status", Header: "状态", Options: map[interface{}]string{int(operations.InfoPointStatusNormal): "正常", int(operations.InfoPointStatusFault): "故障", int(operations.InfoPointStatusDisabled): "停用"}, DBField: "status"},
-			{Field: "remark", Header: "备注", MaxLength: 500, DBField: "remark"},
+			{Field: "description", Header: "描述", MaxLength: 500, DBField: "remark"},
 		},
 	},
 }

@@ -8,6 +8,8 @@ Value OUTERRORS (\d+)
 
 
 Start
+  # 跳过命令提示符行
+  ^<[^>]+>.*$$ -> Start
   # 首先处理特殊端口行，如观察端口
   ^\s*\([a-zA-Z]\):\s+Observe-port\s+forwarding\s+.* -> Continue
   ^\s*\([a-zA-Z]\):\s+.+ -> Continue
@@ -28,7 +30,8 @@ Start
   ^\s*\(lb\):\s+LBDT\s+block\s*$$
   ^\s*\(d\):\s+Dampening\s+Suppressed\s*$$
   ^\s*\(v\):\s+VirtualPort\s*$$
+  ^\s*\(o\):\s+Observe-port\s+forwarding\s+down\s*$$
   ^\s*InUti/OutUti:\s+input\s+utility/output\s+utility\s*$$
-  ^\s*Interface\s+PHY\s+Protocol\s+InUti\s+OutUti\s+inErrors\s+outErrors\s*$$
+  ^\s*Interface\s+PHY\s+Protocol\s+.*$$
   # 最后处理无法匹配的行
   ^. -> Continue

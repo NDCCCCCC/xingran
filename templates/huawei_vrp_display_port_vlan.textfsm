@@ -5,7 +5,8 @@ Value List TRUNK_VLAN_LIST (\d+\-\d+|\d+)
 
 
 Start
-  ^\s*$$
+  ^<\w+>.*$$ -> Start
+  ^\s*$$ -> Start
   ^[pPoOrRtT]{4}.*$$ -> VLANS
   ^. -> Error
 

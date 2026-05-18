@@ -152,6 +152,7 @@ func (s *infoPointService) List(ctx context.Context, req requests.InfoPointListR
 	}
 
 	// JOIN 楼宇和楼层表获取关联信息（需要类型转换：floor_id/building_id是varchar，而floors/buildings的id是UUID）
+	// 注意：device_name和port_name是ops_info_points表的冗余字段，通过ops_info_points.*已经包含
 	if err := query.
 		Select("ops_info_points.*, ops_floors.name as floor_name, ops_buildings.name as building_name, ops_buildings.id as building_id, sys_workstation.workstation_name").
 		Joins("LEFT JOIN sys_workstation ON sys_workstation.id::text = ops_info_points.workstation_id").

@@ -10,7 +10,7 @@ import (
 )
 
 // debug 模式开关（设置为 true 启用 TextFSM 调试日志）
-const debugTextFSM = false
+const debugTextFSM = true
 
 // TextFSM 解析器 - 简化且正确的实现
 type FSM struct {
@@ -239,7 +239,8 @@ func parseRule(line string, fsm *FSM) (*Rule, error) {
 
 	// 移除锚点
 	line = strings.TrimPrefix(line, "^")
-	line = strings.TrimSuffix(line, "$")
+	// TextFSM中使用$$表示行尾锚点$，需要移除所有末尾的$
+	line = strings.TrimRight(line, "$")
 
 	// 构建正则表达式并记录变量名顺序
 	regexPattern, varNames := buildRegexWithVariables(line, fsm)
@@ -492,9 +493,14 @@ func (f *FSM) ParseText(text string) ([]map[string]string, error) {
 		if !matched {
 			if debugTextFSM {
 				fmt.Printf("[TextFSM] 行%d不匹配任何规则: %s\n", lineNum, line)
-				if lineNum < 5 && len(state.Rules) > 0 {
-					rule := state.Rules[0]
-					fmt.Printf("[TextFSM]   尝试规则1: %s\n", rule.RegexPattern)
+				// 显示前3条规则的匹配尝试
+				maxShow := 3
+				if len(state.Rules) < maxShow {
+					maxShow = len(state.Rules)
+				}
+				for i := 0; i < maxShow; i++ {
+					rule := state.Rules[i]
+					fmt.Printf("[TextFSM]   尝试规则%d: %s\n", i+1, rule.RegexPattern)
 					fmt.Printf("[TextFSM]   正则表达式: %s\n", rule.Regex.String())
 				}
 			}

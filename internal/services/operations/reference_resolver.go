@@ -35,6 +35,11 @@ type referenceResolverImpl struct {
 	db *gorm.DB
 }
 
+// tablesWithoutSoftDelete 不支持软删除的表名列表（没有deleted_at列）
+var tablesWithoutSoftDelete = map[string]bool{
+	"sys_device_port_status": true, // 设备端口状态表（实时采集数据，无需软删除）
+}
+
 // ResolveBatch 批量解析引用值
 // 通过按引用类型分组，每种类型只执行一次查询，大幅提升性能
 func (r *referenceResolverImpl) ResolveBatch(
@@ -101,12 +106,17 @@ func (r *referenceResolverImpl) ResolveSingle(
 		ID string `gorm:"column:id;type:uuid"`
 	}
 
-	err := r.db.WithContext(ctx).
+	query := r.db.WithContext(ctx).
 		Table(table).
 		Select("id").
-		Where(field+" = ?", ref.Value).
-		Where("deleted_at IS NULL").
-		First(&result).Error
+		Where(field+" = ?", ref.Value)
+
+	// 只对支持软删除的表添加 deleted_at IS NULL 条件
+	if !tablesWithoutSoftDelete[table] {
+		query = query.Where("deleted_at IS NULL")
+	}
+
+	err := query.First(&result).Error
 
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -173,8 +183,12 @@ func (r *referenceResolverImpl) ResolveSingleWithCondition(
 	query := r.db.WithContext(ctx).
 		Table(table).
 		Select("id").
-		Where(field+" = ?", ref.Value).
-		Where("deleted_at IS NULL")
+		Where(field+" = ?", ref.Value)
+
+	// 只对支持软删除的表添加 deleted_at IS NULL 条件
+	if !tablesWithoutSoftDelete[table] {
+		query = query.Where("deleted_at IS NULL")
+	}
 
 	// 添加额外的查询条件
 	for condField, condValue := range conditions {
@@ -254,13 +268,18 @@ func (r *referenceResolverImpl) batchQueryIDs(
 
 	var results []Result
 
-	// 构建查询：SELECT id, {field} FROM {table} WHERE {field} IN (...) AND deleted_at IS NULL
-	err := r.db.WithContext(ctx).
+	// 构建查询：SELECT id, {field} FROM {table} WHERE {field} IN (...)
+	query := r.db.WithContext(ctx).
 		Table(table).
 		Select("id, "+field+" as value").
-		Where(field+" IN ?", values).
-		Where("deleted_at IS NULL").
-		Find(&results).Error
+		Where(field+" IN ?", values)
+
+	// 只对支持软删除的表添加 deleted_at IS NULL 条件
+	if !tablesWithoutSoftDelete[table] {
+		query = query.Where("deleted_at IS NULL")
+	}
+
+	err := query.Find(&results).Error
 
 	if err != nil {
 		return nil, err
@@ -310,8 +329,12 @@ func (r *referenceResolverImpl) ResolveBatchWithCondition(
 	query := r.db.WithContext(ctx).
 		Table(table).
 		Select("id, "+field+" as value").
-		Where(field+" IN ?", values).
-		Where("deleted_at IS NULL")
+		Where(field+" IN ?", values)
+
+	// 只对支持软删除的表添加 deleted_at IS NULL 条件
+	if !tablesWithoutSoftDelete[table] {
+		query = query.Where("deleted_at IS NULL")
+	}
 
 	// 添加额外的查询条件
 	for condField, condValue := range conditions {

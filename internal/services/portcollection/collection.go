@@ -137,10 +137,24 @@ func (s *CollectionService) collectDevicePort(ctx context.Context, device *model
 
 	// 获取接口状态和描述信息
 	descriptionMap := make(map[string]InterfaceDescription)
-	if device.Vendor == models.VendorRuijie || device.Vendor == models.VendorMaipu {
-		descs, err := parseInterfaceDescriptions(wrapper, device.Vendor)
-		if err == nil {
+	if device.Vendor == models.VendorRuijie || device.Vendor == models.VendorMaipu || device.Vendor == models.VendorHuawei || device.Vendor == models.VendorH3C {
+		// 临时使用调试函数
+		descs, err := DebugParseInterfaceDescriptions(wrapper, device.Vendor)
+		if err != nil {
+			applogger.Infof("[端口采集] %s (%s): 解析接口描述失败: %v", device.DeviceName, device.IPAddress, err)
+		} else {
 			descriptionMap = descs
+			applogger.Infof("[端口采集] %s (%s): 获取到 %d 个接口描述", device.DeviceName, device.IPAddress, len(descs))
+		}
+	}
+
+	// 获取华为/H3C设备的VLAN信息
+	vlanMap := make(map[string]*int)
+	if device.Vendor == models.VendorHuawei || device.Vendor == models.VendorH3C {
+		vlanMap, err = parseInterfaceVLANInfo(wrapper, device.Vendor)
+		if err != nil {
+			applogger.Infof("[警告] %s (%s): 获取VLAN信息失败: %v", device.DeviceName, device.IPAddress, err)
+			vlanMap = make(map[string]*int)
 		}
 	}
 
@@ -176,6 +190,13 @@ func (s *CollectionService) collectDevicePort(ctx context.Context, device *model
 				adminStatus = desc.AdminStatus
 				operStatus = desc.OperStatus
 				description = desc.Description
+			}
+
+			// 对于华为/H3C设备，使用从display port vlan获取的VLAN信息
+			if device.Vendor == models.VendorHuawei || device.Vendor == models.VendorH3C {
+				if vlan, ok := vlanMap[normalizedName]; ok {
+					iface.VLAN = vlan
+				}
 			}
 
 			portStatus := buildPortStatus(device.ID, normalizedName, iface, adminStatus, operStatus, description, dot1xMap, securityMap, collectionTime)

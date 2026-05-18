@@ -137,11 +137,18 @@ func parseInterfaceDescriptions(wrapper *device.ScrapliWrapper, vendor models.De
 			desc.OriginalName = trimmedName
 		}
 
-		if status, ok := record["STATUS"]; ok {
+		// 华为/H3C设备使用PHY和PROTOCOL字段
+		if phy, ok := record["PHY"]; ok {
+			desc.OperStatus = strings.ToLower(phy)
+		} else if status, ok := record["STATUS"]; ok {
+			// 锐捷等设备使用STATUS字段
 			desc.OperStatus = strings.ToLower(status)
 		}
 
-		if admin, ok := record["ADMINISTRATIVE"]; ok {
+		if protocol, ok := record["PROTOCOL"]; ok {
+			desc.AdminStatus = strings.ToLower(protocol)
+		} else if admin, ok := record["ADMINISTRATIVE"]; ok {
+			// 锐捷等设备使用ADMINISTRATIVE字段
 			desc.AdminStatus = strings.ToLower(admin)
 		}
 
@@ -182,20 +189,32 @@ func getAllDot1xStatus(wrapper *device.ScrapliWrapper, vendor models.DeviceVendo
 		ifaceName := normalizeInterfaceName(record["INTERFACE"])
 
 		if vendor == models.VendorHuawei || vendor == models.VendorH3C {
-			enabled := record["ENABLED"] == "Enabled"
-			portStatus := "Unknown"
-			if record["CURRENT_USERS"] != "" && record["CURRENT_USERS"] != "0" {
-				portStatus = "Authorized"
-			} else if record["STATUS"] == "UP" {
-				portStatus = "Unauthorized"
+			// 新配置格式解析：从 display current-configuration | include interface
+			dot1xEnabled := record["DOT1X_ENABLED"] == "dot1x enable"
+			portControl := record["PORT_CONTROL"]
+
+			// 根据端口控制模式确定状态
+			var portStatus string = "Unknown"
+			if dot1xEnabled {
+				switch portControl {
+				case "authorized-force":
+					portStatus = "Authorized"
+				case "unauthorized-force":
+					portStatus = "Unauthorized"
+				case "auto":
+					portStatus = "Unknown" // 需要实际用户状态
+				default:
+					portStatus = "Unknown"
+				}
 			}
 
 			result[ifaceName] = Dot1xInfo{
-				Enabled:     enabled,
+				Enabled:     dot1xEnabled,
 				PortStatus:  portStatus,
-				CurrentUser: record["CURRENT_USERS"],
+				CurrentUser: "",
 			}
 		} else {
+			// 锐捷/迈普等厂商的解析逻辑保持不变
 			authened := record["AUTHENED"] == "yes"
 			portStatus := "Unauthorized"
 			if authened {
@@ -332,7 +351,7 @@ func getInterfaceDescriptionTemplate(vendor models.DeviceVendor) string {
 // getDot1xBatchCommand 获取批量802.1X命令
 func getDot1xBatchCommand(vendor models.DeviceVendor) string {
 	commands := map[models.DeviceVendor]string{
-		models.VendorHuawei: "display dot1x",
+		models.VendorHuawei: "display current-configuration | include interface",
 		models.VendorH3C:    "display dot1x",
 		models.VendorRuijie: "show dot1x port-control",
 		models.VendorMaipu:  "show dot1x port-control",
@@ -383,4 +402,44 @@ func getPortSecurityBatchTemplate(vendor models.DeviceVendor) string {
 		return tmpl
 	}
 	return "templates/huawei_vrp_display_port-security.textfsm"
+}
+
+// parseInterfaceVLANInfo 解析华为/H3C设备的接口VLAN信息
+func parseInterfaceVLANInfo(wrapper *device.ScrapliWrapper, vendor models.DeviceVendor) (map[string]*int, error) {
+	// 只有华为和H3C设备需要额外的VLAN解析
+	if vendor != models.VendorHuawei && vendor != models.VendorH3C {
+		return make(map[string]*int), nil
+	}
+
+	command := "display port vlan"
+	resp, err := wrapper.SendCommand(command, true)
+	if err != nil {
+		// 如果命令失败，返回空map而不是错误（VLAN信息可选）
+		return make(map[string]*int), nil
+	}
+
+	templatePath := "templates/huawei_vrp_display_port_vlan.textfsm"
+	fsm, err := templates.ParseTemplate(templatePath)
+	if err != nil {
+		return make(map[string]*int), nil
+	}
+
+	records, err := fsm.ParseText(resp.Result)
+	if err != nil {
+		return make(map[string]*int), nil
+	}
+
+	vlanMap := make(map[string]*int)
+	for _, record := range records {
+		ifaceName := normalizeInterfaceName(record["INTERFACE"])
+		
+		// 优先使用PVID (VLAN_ID)
+		if vlanStr, ok := record["VLAN_ID"]; ok && vlanStr != "" && vlanStr != "0" {
+			if vlan, err := strconv.Atoi(vlanStr); err == nil {
+				vlanMap[ifaceName] = &vlan
+			}
+		}
+	}
+
+	return vlanMap, nil
 }
