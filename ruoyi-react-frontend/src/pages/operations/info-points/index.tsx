@@ -535,7 +535,7 @@ const InfoPointManagement: FC = () => {
         return <Tooltip title={name}>{name || '-'}</Tooltip>;
       },
     },
-    { title: '所属设备', dataIndex: 'deviceName', key: 'deviceName', width: 220, ellipsis: { showTitle: false }, render: (v) => v || '-' },
+    { title: '所属设备', dataIndex: 'deviceName', key: 'deviceName', width: 260, ellipsis: { showTitle: false }, render: (v) => v || '-' },
     { title: '所属端口', dataIndex: 'portName', key: 'portName', width: 140, ellipsis: { showTitle: false }, render: (v) => v || '-' },
     {
       title: '状态',
