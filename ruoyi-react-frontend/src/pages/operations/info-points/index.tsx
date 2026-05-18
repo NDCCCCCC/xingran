@@ -129,9 +129,10 @@ const InfoPointManagement: FC = () => {
   }, []);
 
   const refreshData = useCallback(() => {
-    loadInfoPoints();
+    // 使用 handleSearch 而不是 loadInfoPoints，以保留搜索筛选条件
+    handleSearch();
     loadStatistics().then(setStatistics);
-  }, [loadInfoPoints, loadStatistics]);
+  }, [handleSearch, loadStatistics]);
 
   // ==================== Cascader 懒加载函数 ====================
 
@@ -294,12 +295,38 @@ const InfoPointManagement: FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDeptId]);
 
+  // 编辑模式：初始化设备ID和端口列表
+  useEffect(() => {
+    const initializeDeviceAndPorts = async () => {
+      if (editingInfoPoint && editingInfoPoint.deviceId) {
+        setSelectedDeviceId(editingInfoPoint.deviceId);
+        await loadDevicePorts(editingInfoPoint.deviceId);
+        // 端口列表加载完成后，重新设置 portId 以确保 Select 显示正确的标签
+        if (editingInfoPoint.portId) {
+          infoPointForm.setFieldsValue({ portId: editingInfoPoint.portId });
+        }
+      } else if (!editingInfoPoint) {
+        // 新增模式：清空设备ID和端口列表
+        setSelectedDeviceId('');
+        setDevicePorts([]);
+      }
+    };
+    initializeDeviceAndPorts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingInfoPoint]);
+
   const handleSave = async () => {
     try {
       const values = await infoPointForm.validateFields() as Record<string, unknown>;
 
       if (Array.isArray(values.workstationId)) {
         values.workstationId = (values.workstationId as unknown[])[values.workstationId.length - 1];
+      }
+
+      // 字段映射：前端的 description 映射到后端的 remark
+      if (values.description !== undefined) {
+        values.remark = values.description;
+        delete values.description;
       }
 
       if (editingInfoPoint) {
@@ -347,6 +374,19 @@ const InfoPointManagement: FC = () => {
       handleEdit(record);
       const formValues = { ...record } as Record<string, unknown>;
 
+      // 如果有设备ID，先加载设备端口列表，确保表单回显时能找到匹配的端口
+      if (formValues.deviceId) {
+        setSelectedDeviceId(formValues.deviceId as string);
+        // 直接调用 API 并同步设置状态，确保在 setFieldsValue 之前完成
+        try {
+          const result = await post('/network/ports/list', { deviceId: formValues.deviceId, current: 1, pageSize: 1000 }) as { data?: { list: DevicePortOption[] } };
+          setDevicePorts(result.data?.list || []);
+        } catch (error) {
+          console.error('加载设备端口列表失败:', error);
+          setDevicePorts([]);
+        }
+      }
+
       // 处理 workstationId：将单个字符串转换为三级路径数组
       if (formValues.workstationId && typeof formValues.workstationId === 'string') {
         try {
@@ -375,6 +415,12 @@ const InfoPointManagement: FC = () => {
           console.error('获取工位信息失败:', error);
           formValues.workstationId = undefined;
         }
+      }
+
+      // 字段映射：后端的 remark 映射到前端的 description
+      if (formValues.remark !== undefined) {
+        formValues.description = formValues.remark;
+        delete formValues.remark;
       }
 
       infoPointForm.setFieldsValue(formValues);
@@ -489,8 +535,8 @@ const InfoPointManagement: FC = () => {
         return <Tooltip title={name}>{name || '-'}</Tooltip>;
       },
     },
-    { title: '所属设备', dataIndex: 'deviceName', key: 'deviceName', width: 150, ellipsis: { showTitle: false }, render: (v) => v || '-' },
-    { title: '所属端口', dataIndex: 'portName', key: 'portName', width: 150, ellipsis: { showTitle: false }, render: (v) => v || '-' },
+    { title: '所属设备', dataIndex: 'deviceName', key: 'deviceName', width: 180, ellipsis: { showTitle: false }, render: (v) => v || '-' },
+    { title: '所属端口', dataIndex: 'portName', key: 'portName', width: 180, ellipsis: { showTitle: false }, render: (v) => v || '-' },
     {
       title: '状态',
       dataIndex: 'status',
@@ -501,7 +547,7 @@ const InfoPointManagement: FC = () => {
         return <Tag color={colors[status as keyof typeof colors]}>{getStatusText(status)}</Tag>;
       },
     },
-    { title: '描述', dataIndex: 'description', key: 'description', width: 200, ellipsis: { showTitle: false }, render: (v) => <Tooltip title={v}>{v || '-'}</Tooltip> },
+    { title: '描述', dataIndex: 'remark', key: 'remark', width: 200, ellipsis: { showTitle: false }, render: (v) => <Tooltip title={v}>{v || '-'}</Tooltip> },
     createDateTimeColumn('createdAt', { width: 180 }),
     {
       title: '操作', key: 'action',
