@@ -239,9 +239,44 @@ func (s *ExcelService) ImportData(ctx context.Context, entityType string, file *
 	}
 	defer f.Close()
 
+	// Try to get the configured sheet name first, then fall back to flexible lookup
 	rows, err := f.GetRows(config.SheetName)
+	sheetName := config.SheetName
 	if err != nil {
-		return nil, fmt.Errorf("读取数据失败: %w", err)
+		// Get all available sheets
+		sheets := f.GetSheetList()
+		logger.Warnf("Configured sheet '%s' not found, available sheets: %v", config.SheetName, sheets)
+
+		// Try to find a matching sheet (fuzzy matching)
+		found := false
+		for _, sheet := range sheets {
+			// Try exact match first (case-insensitive)
+			if strings.EqualFold(sheet, config.SheetName) {
+				sheetName = sheet
+				found = true
+				logger.Infof("Found matching sheet (case-insensitive): '%s'", sheetName)
+				break
+			}
+			// Try partial match (contains)
+			if strings.Contains(strings.ToLower(sheet), strings.ToLower(config.SheetName)) ||
+			   strings.Contains(strings.ToLower(config.SheetName), strings.ToLower(sheet)) {
+				sheetName = sheet
+				found = true
+				logger.Infof("Found matching sheet (partial match): '%s' (configured: '%s')", sheetName, config.SheetName)
+				break
+			}
+		}
+
+		// Fall back to first sheet if no match found
+		if !found && len(sheets) > 0 {
+			sheetName = sheets[0]
+			logger.Warnf("No matching sheet found, using first available sheet: '%s'", sheetName)
+		}
+
+		rows, err = f.GetRows(sheetName)
+		if err != nil {
+			return nil, fmt.Errorf("读取数据失败: 无法找到工作表 '%s' (可用: %v): %w", config.SheetName, sheets, err)
+		}
 	}
 
 	if len(rows) < 2 {
@@ -252,7 +287,7 @@ func (s *ExcelService) ImportData(ctx context.Context, entityType string, file *
 		Errors: make([]ImportError, 0),
 	}
 
-	var validRecords []map[string]interface{}
+	var validRecords []map[string]any
 	var allRefRequests []ReferenceRequest
 
 	for rowNum := config.StartRow; rowNum <= len(rows); rowNum++ {
@@ -357,7 +392,7 @@ func (s *ExcelService) ImportData(ctx context.Context, entityType string, file *
 }
 
 func (s *ExcelService) extractReferenceRequests(
-	data map[string]interface{},
+	data map[string]any,
 	config ExcelConfig,
 ) []ReferenceRequest {
 	var requests []ReferenceRequest
@@ -377,7 +412,7 @@ func (s *ExcelService) extractReferenceRequests(
 }
 
 func (s *ExcelService) applyReferenceResults(
-	data map[string]interface{},
+	data map[string]any,
 	refResults map[string]string,
 	config ExcelConfig,
 ) {
@@ -392,10 +427,33 @@ func (s *ExcelService) applyReferenceResults(
 					// 优先使用配置的 DBField，否则使用自动转换的字段名
 					targetField := s.getTargetFieldForReference(col)
 					data[targetField] = id
-					// 删除原始的名称字段（避免数据冗余）
-					delete(data, col.Field)
+
+					// InfoPoint特殊处理：保留名称字段用于显示
+					// InfoPoint模型有冗余字段（deviceName, portName）用于前端显示
+					// 而Service层没有JOIN设备和端口表，所以需要在导入时保存名称
+					if config.TableName == "ops_info_points" {
+						if col.Field == "deviceName" {
+							data["device_name"] = value
+						} else if col.Field == "portName" {
+							data["port_name"] = value
+						}
+						// 保留原始字段供前端使用
+					} else {
+						// 其他实体：删除原始的名称字段（避免数据冗余）
+						delete(data, col.Field)
+					}
 				} else {
+					// 引用解析失败
 					logger.Debugf("引用解析失败: %s=%s", col.Reference, value)
+					// InfoPoint特殊处理：即使引用解析失败，也保存名称字段
+					// 这样用户能看到原始的Excel值，便于排查问题
+					if config.TableName == "ops_info_points" {
+						if col.Field == "deviceName" {
+							data["device_name"] = value
+						} else if col.Field == "portName" {
+							data["port_name"] = value
+						}
+					}
 				}
 			}
 		}
@@ -413,11 +471,11 @@ func (s *ExcelService) getTargetFieldForReference(col ExcelColumn) string {
 
 	// 如果没有配置 DBField，使用自动转换规则
 	field := col.Field
-	if strings.HasSuffix(field, "Name") {
-		return strings.TrimSuffix(field, "Name") + "Id"
+	if suffix, ok := strings.CutSuffix(field, "Name"); ok {
+		return suffix + "Id"
 	}
-	if strings.HasSuffix(field, "Code") {
-		return strings.TrimSuffix(field, "Code") + "Id"
+	if suffix, ok := strings.CutSuffix(field, "Code"); ok {
+		return suffix + "Id"
 	}
 	return field
 }
@@ -446,7 +504,7 @@ func (s *ExcelService) splitReferencesByDependency(
 
 // applyDependentReferenceResults 应用依赖引用的解析结果
 func (s *ExcelService) applyDependentReferenceResults(
-	data map[string]interface{},
+	data map[string]any,
 	refResults map[string]string,
 	config ExcelConfig,
 ) {
@@ -475,7 +533,7 @@ func (s *ExcelService) applyDependentReferenceResults(
 // 例如：对于工位导入，按 building_id 分组，每个楼宇只查询一次所有楼层
 func (s *ExcelService) resolveDependentReferencesBatch(
 	ctx context.Context,
-	records []map[string]interface{},
+	records []map[string]any,
 	dependentRefs []ReferenceRequest,
 	config ExcelConfig,
 ) map[string]string {
@@ -561,11 +619,11 @@ func (s *ExcelService) resolveDependentReferencesBatch(
 // 返回：{ "building-id-1": [record1, record2, ...], "building-id-2": [...] }
 // 对于 floorName (依赖 buildingName)，按 building_id 分组
 func (s *ExcelService) groupRecordsByDependencyID(
-	records []map[string]interface{},
+	records []map[string]any,
 	depCol ExcelColumn,
 	config ExcelConfig,
-) map[string][]map[string]interface{} {
-	groups := make(map[string][]map[string]interface{})
+) map[string][]map[string]any {
+	groups := make(map[string][]map[string]any)
 
 	// 获取被依赖的字段配置（如 floorName 依赖 buildingName，则获取 buildingName 的配置）
 	dependsOnCol := s.getColumnByName(depCol.DependsOn, config)
@@ -593,7 +651,7 @@ func (s *ExcelService) groupRecordsByDependencyID(
 // extractDependentValues 提取一组记录中所有待解析的依赖引用值
 // 对于指定的依赖列，提取所有唯一值（如所有楼层名称）
 func (s *ExcelService) extractDependentValues(
-	records []map[string]interface{},
+	records []map[string]any,
 	depCol ExcelColumn,
 	_ ExcelConfig,
 ) []string {
@@ -633,20 +691,20 @@ func (s *ExcelService) getColumnByName(fieldName string, config ExcelConfig) Exc
 }
 
 func (s *ExcelService) prepareRecordsForUpsert(
-	records []map[string]interface{},
+	records []map[string]any,
 	config ExcelConfig,
-) []map[string]interface{} {
-	prepared := make([]map[string]interface{}, 0, len(records))
+) []map[string]any {
+	prepared := make([]map[string]any, 0, len(records))
 
 	for _, record := range records {
-		preparedRecord := make(map[string]interface{})
+		preparedRecord := make(map[string]any)
 
 		for _, col := range config.Columns {
 			if col.DBField == "" {
 				continue
 			}
 
-			var value interface{}
+			var value any
 			var exists bool
 
 			// 对于引用字段，只使用解析后的值（不使用原始值）
@@ -663,6 +721,17 @@ func (s *ExcelService) prepareRecordsForUpsert(
 			if exists {
 				dbFieldName := s.getDBFieldName(col)
 				preparedRecord[dbFieldName] = value
+			}
+		}
+		// InfoPoint特殊处理：包含动态添加的冗余字段
+		// InfoPoint模型有冗余字段（device_name, port_name）用于前端显示
+		// 这些字段是在applyReferenceResults中动态添加的，不在config.Columns中定义
+		if config.TableName == "ops_info_points" {
+			if deviceName, exists := record["device_name"]; exists && deviceName != nil {
+				preparedRecord["device_name"] = deviceName
+			}
+			if portName, exists := record["port_name"]; exists && portName != nil {
+				preparedRecord["port_name"] = portName
 			}
 		}
 
@@ -697,11 +766,11 @@ func (s *ExcelService) getDBFieldName(col ExcelColumn) string {
 
 // validateReferenceFields 验证必填的引用字段是否成功解析
 func (s *ExcelService) validateReferenceFields(
-	records []map[string]interface{},
+	records []map[string]any,
 	config ExcelConfig,
 	result *ImportResult,
-) []map[string]interface{} {
-	validated := make([]map[string]interface{}, 0, len(records))
+) []map[string]any {
+	validated := make([]map[string]any, 0, len(records))
 
 	logger.Infof("开始验证必填引用字段，共 %d 条记录", len(records))
 
@@ -750,8 +819,8 @@ func isEmptyRow(row []string) bool {
 	return true
 }
 
-func (s *ExcelService) validateAndParseRow(ctx context.Context, row []string, rowNum int, config ExcelConfig, _ string) (map[string]interface{}, []ImportError) {
-	data := make(map[string]interface{})
+func (s *ExcelService) validateAndParseRow(ctx context.Context, row []string, rowNum int, config ExcelConfig, _ string) (map[string]any, []ImportError) {
+	data := make(map[string]any)
 	errors := make([]ImportError, 0)
 
 	for i, col := range config.Columns {
@@ -840,7 +909,7 @@ func (s *ExcelService) validateAndParseRow(ctx context.Context, row []string, ro
 	return data, errors
 }
 
-func (s *ExcelService) parseFieldValue(col ExcelColumn, value string) (interface{}, error) {
+func (s *ExcelService) parseFieldValue(col ExcelColumn, value string) (any, error) {
 	if col.Options != nil {
 		for k, v := range col.Options {
 			if v == value {
@@ -860,7 +929,7 @@ func (s *ExcelService) parseFieldValue(col ExcelColumn, value string) (interface
 	return value, nil
 }
 
-func (s *ExcelService) validateUniqueness(ctx context.Context, config ExcelConfig, data map[string]interface{}, rowNum int) []ImportError {
+func (s *ExcelService) validateUniqueness(ctx context.Context, config ExcelConfig, data map[string]any, rowNum int) []ImportError {
 	errors := make([]ImportError, 0)
 
 	for _, col := range config.Columns {
@@ -897,7 +966,7 @@ func (s *ExcelService) validateUniqueness(ctx context.Context, config ExcelConfi
 	return errors
 }
 
-func (s *ExcelService) ExportData(ctx context.Context, entityType string, params map[string]interface{}) (*excelize.File, error) {
+func (s *ExcelService) ExportData(ctx context.Context, entityType string, params map[string]any) (*excelize.File, error) {
 	if _, exists := GetExportConfig(entityType); exists {
 		exportService := NewExcelExportService(s.db)
 		return exportService.ExportData(ctx, entityType, params)
@@ -945,7 +1014,7 @@ func (s *ExcelService) ExportData(ctx context.Context, entityType string, params
 }
 
 
-func (s *ExcelService) queryData(_ context.Context, config ExcelConfig, params map[string]interface{}) ([]map[string]interface{}, error) {
+func (s *ExcelService) queryData(_ context.Context, config ExcelConfig, params map[string]any) ([]map[string]any, error) {
 	query := s.db.Table(config.TableName).Where("deleted_at IS NULL")
 
 	nameField := "name"
@@ -965,7 +1034,7 @@ func (s *ExcelService) queryData(_ context.Context, config ExcelConfig, params m
 		query = query.Where("status = ?", status)
 	}
 
-	var data []map[string]interface{}
+	var data []map[string]any
 	if err := query.Find(&data).Error; err != nil {
 		return nil, err
 	}
@@ -973,7 +1042,7 @@ func (s *ExcelService) queryData(_ context.Context, config ExcelConfig, params m
 	return data, nil
 }
 
-func (s *ExcelService) formatCellValue(col ExcelColumn, row map[string]interface{}) string {
+func (s *ExcelService) formatCellValue(col ExcelColumn, row map[string]any) string {
 	fieldKey := col.Field
 	if col.DBField != "" {
 		fieldKey = col.DBField
@@ -1087,7 +1156,7 @@ func (s *ExcelService) setColumnWidths(f *excelize.File, sheetName string, colum
 	}
 }
 
-func (s *ExcelService) writeDataRows(f *excelize.File, sheetName string, columns []ExcelColumn, data []map[string]interface{}) {
+func (s *ExcelService) writeDataRows(f *excelize.File, sheetName string, columns []ExcelColumn, data []map[string]any) {
 	for i, row := range data {
 		for j, col := range columns {
 			cell, _ := excelize.CoordinatesToCellName(j+1, i+2)
@@ -1102,7 +1171,7 @@ type geocodingTask struct {
 	index   int
 }
 
-func (s *ExcelService) batchGeocodeBuildings(ctx context.Context, records []map[string]interface{}) {
+func (s *ExcelService) batchGeocodeBuildings(ctx context.Context, records []map[string]any) {
 	// 收集需要解析的任务
 	tasks := s.collectGeocodingTasks(records)
 	if len(tasks) == 0 {
@@ -1117,7 +1186,7 @@ func (s *ExcelService) batchGeocodeBuildings(ctx context.Context, records []map[
 	logger.Infof("批量地址解析完成: 成功 %d, 失败 %d", successCount, failCount)
 }
 
-func (s *ExcelService) collectGeocodingTasks(records []map[string]interface{}) []geocodingTask {
+func (s *ExcelService) collectGeocodingTasks(records []map[string]any) []geocodingTask {
 	var tasks []geocodingTask
 
 	for i, record := range records {
@@ -1139,7 +1208,7 @@ func (s *ExcelService) collectGeocodingTasks(records []map[string]interface{}) [
 	return tasks
 }
 
-func (s *ExcelService) hasCoordinates(record map[string]interface{}) bool {
+func (s *ExcelService) hasCoordinates(record map[string]any) bool {
 	_, hasLng := record["longitude"]
 	_, hasLat := record["latitude"]
 	return hasLng && hasLat
@@ -1148,7 +1217,7 @@ func (s *ExcelService) hasCoordinates(record map[string]interface{}) bool {
 func (s *ExcelService) executeGeocodingTasks(
 	ctx context.Context,
 	tasks []geocodingTask,
-	records []map[string]interface{},
+	records []map[string]any,
 ) (successCount, failCount int) {
 	const maxConcurrency = 5
 	sem := make(chan struct{}, maxConcurrency)
@@ -1188,10 +1257,10 @@ func (s *ExcelService) executeGeocodingTasks(
 
 func (s *ExcelService) processThreeLevelDepartments(
 	ctx context.Context,
-	records []map[string]interface{},
+	records []map[string]any,
 	result *ImportResult,
 	config ExcelConfig,
-) ([]map[string]interface{}, *ImportResult) {
+) ([]map[string]any, *ImportResult) {
 	// 收集所有唯一的部门组和部门
 	type DeptGroup struct {
 		Code string
@@ -1207,7 +1276,7 @@ func (s *ExcelService) processThreeLevelDepartments(
 	groupMap := make(map[string]DeptGroup)  // groupCode -> DeptGroup
 	deptMap := make(map[string]Dept)        // deptCode -> Dept
 	sectionCodeSet := make(map[string]bool) // 收集所有科室编码
-	validRecords := make([]map[string]interface{}, 0, len(records))
+	validRecords := make([]map[string]any, 0, len(records))
 	invalidRowNumbers := make(map[int]bool) // 记录无效行号
 
 	// 第一遍：收集所有部门组和部门信息，检测编码冲突
@@ -1351,7 +1420,7 @@ func (s *ExcelService) processThreeLevelDepartments(
 	}
 
 	// 清理被标记跳过的记录
-	finalRecords := make([]map[string]interface{}, 0, len(validRecords))
+	finalRecords := make([]map[string]any, 0, len(validRecords))
 	for _, record := range validRecords {
 		if skip, exists := record["_skip"]; !exists || !skip.(bool) {
 			delete(record, "_skip")
@@ -1401,7 +1470,7 @@ func (s *ExcelService) ensureDeptGroupExists(ctx context.Context, code, name str
 
 	// 不存在则创建（parent_id为空，表示顶级部门）
 	now := time.Now()
-	dept := map[string]interface{}{
+	dept := map[string]any{
 		"id":         generateUUID(),
 		"dept_name":  name,
 		"dept_code":  code,
@@ -1454,7 +1523,7 @@ func (s *ExcelService) ensureDeptExists(ctx context.Context, code, name, parentI
 	ancestors += parentID
 
 	now := time.Now()
-	dept := map[string]interface{}{
+	dept := map[string]any{
 		"id":         generateUUID(),
 		"dept_name":  name,
 		"dept_code":  code,
