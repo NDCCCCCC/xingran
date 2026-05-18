@@ -125,21 +125,32 @@ func (s *CollectionService) collectDevicePort(ctx context.Context, device *model
 		return result
 	}
 
-	// 获取接口列表
-	interfaces, err := parseInterfaceList(wrapper, device.Vendor)
-	if err != nil {
-		applogger.Infof("[端口采集] %s (%s): 解析接口列表失败: %v", device.DeviceName, device.IPAddress, err)
-		result.ErrorMessage = err.Error()
-		return result
-	}
-
-	applogger.Infof("[端口采集] %s (%s): 获取到 %d 个接口", device.DeviceName, device.IPAddress, len(interfaces))
-
-	// 获取接口状态和描述信息
+	// 华为/H3C设备：只使用 display interface description
+	// 锐捷/迈普设备：使用 display interface brief + description
+	var interfaces []InterfaceInfo
 	descriptionMap := make(map[string]InterfaceDescription)
-	if device.Vendor == models.VendorRuijie || device.Vendor == models.VendorMaipu || device.Vendor == models.VendorHuawei || device.Vendor == models.VendorH3C {
-		// 临时使用调试函数
-		descs, err := DebugParseInterfaceDescriptions(wrapper, device.Vendor)
+
+	if device.Vendor == models.VendorHuawei || device.Vendor == models.VendorH3C {
+		// 华为/H3C：只解析接口描述
+		descs, err := parseInterfaceDescriptions(wrapper, device.Vendor)
+		if err != nil {
+			applogger.Infof("[端口采集] %s (%s): 解析接口描述失败: %v", device.DeviceName, device.IPAddress, err)
+		} else {
+			descriptionMap = descs
+			applogger.Infof("[端口采集] %s (%s): 获取到 %d 个接口描述", device.DeviceName, device.IPAddress, len(descs))
+		}
+	} else {
+		// 锐捷/迈普：先获取接口列表
+		interfaces, err = parseInterfaceList(wrapper, device.Vendor)
+		if err != nil {
+			applogger.Infof("[端口采集] %s (%s): 解析接口列表失败: %v", device.DeviceName, device.IPAddress, err)
+			result.ErrorMessage = err.Error()
+			return result
+		}
+		applogger.Infof("[端口采集] %s (%s): 获取到 %d 个接口", device.DeviceName, device.IPAddress, len(interfaces))
+
+		// 再获取接口描述
+		descs, err := parseInterfaceDescriptions(wrapper, device.Vendor)
 		if err != nil {
 			applogger.Infof("[端口采集] %s (%s): 解析接口描述失败: %v", device.DeviceName, device.IPAddress, err)
 		} else {
@@ -163,26 +174,38 @@ func (s *CollectionService) collectDevicePort(ctx context.Context, device *model
 	if err != nil {
 		applogger.Infof("[警告] 获取802.1X状态失败: %v", err)
 		dot1xMap = make(map[string]Dot1xInfo)
+	} else {
+		// 调试：输出dot1xMap的键
+		applogger.Infof("[调试] dot1xMap包含 %d 个接口:", len(dot1xMap))
+		for ifaceName := range dot1xMap {
+			applogger.Infof("[调试]   - %s", ifaceName)
+		}
 	}
 
-	// 批量获取端口安全配置
-	securityMap, err := getAllPortSecurity(wrapper, device.Vendor, s.templateCache)
-	if err != nil {
-		applogger.Infof("[警告] 获取端口安全配置失败: %v", err)
+	// 批量获取端口安全配置（仅锐捷/迈普）
+	var securityMap map[string]PortSecurityInfo
+	if device.Vendor == models.VendorRuijie || device.Vendor == models.VendorMaipu {
+		securityMap, err = getAllPortSecurity(wrapper, device.Vendor, s.templateCache)
+		if err != nil {
+			applogger.Infof("[警告] 获取端口安全配置失败: %v", err)
+			securityMap = make(map[string]PortSecurityInfo)
+		}
+	} else {
 		securityMap = make(map[string]PortSecurityInfo)
 	}
 
 	collectionTime := time.Now()
 	var portStatuses []*models.DevicePortStatus
 
-	if len(interfaces) == 0 && len(descriptionMap) > 0 {
-		// 降级方案
-		for ifaceName, desc := range descriptionMap {
-			portStatus := buildPortStatusFromDesc(device.ID, ifaceName, desc, dot1xMap, securityMap, collectionTime)
-			portStatuses = append(portStatuses, portStatus)
+	if device.Vendor == models.VendorHuawei || device.Vendor == models.VendorH3C {
+		// 华为/H3C：使用接口列表 + descriptionMap（确保所有接口都被处理）
+		interfaces, err = parseInterfaceList(wrapper, device.Vendor)
+		if err != nil {
+			applogger.Infof("[端口采集] %s (%s): 解析接口列表失败: %v", device.DeviceName, device.IPAddress, err)
+		} else {
+			applogger.Infof("[端口采集] %s (%s): 获取到 %d 个接口", device.DeviceName, device.IPAddress, len(interfaces))
 		}
-	} else {
-		// 正常流程
+		emptySecurityMap := make(map[string]PortSecurityInfo)
 		for _, iface := range interfaces {
 			normalizedName := normalizeInterfaceName(iface.Name)
 			var adminStatus, operStatus, description string
@@ -191,12 +214,22 @@ func (s *CollectionService) collectDevicePort(ctx context.Context, device *model
 				operStatus = desc.OperStatus
 				description = desc.Description
 			}
-
-			// 对于华为/H3C设备，使用从display port vlan获取的VLAN信息
-			if device.Vendor == models.VendorHuawei || device.Vendor == models.VendorH3C {
-				if vlan, ok := vlanMap[normalizedName]; ok {
-					iface.VLAN = vlan
-				}
+			portStatus := buildPortStatus(device.ID, normalizedName, iface, adminStatus, operStatus, description, dot1xMap, emptySecurityMap, collectionTime)
+			// 添加VLAN信息（优先使用vlanMap中的值）
+			if vlan, ok := vlanMap[normalizedName]; ok {
+				portStatus.VLAN = vlan
+			}
+			portStatuses = append(portStatuses, portStatus)
+		}
+	} else {
+		// 锐捷/迈普：使用 interfaces + descriptionMap
+		for _, iface := range interfaces {
+			normalizedName := normalizeInterfaceName(iface.Name)
+			var adminStatus, operStatus, description string
+			if desc, ok := descriptionMap[normalizedName]; ok {
+				adminStatus = desc.AdminStatus
+				operStatus = desc.OperStatus
+				description = desc.Description
 			}
 
 			portStatus := buildPortStatus(device.ID, normalizedName, iface, adminStatus, operStatus, description, dot1xMap, securityMap, collectionTime)
@@ -208,7 +241,7 @@ func (s *CollectionService) collectDevicePort(ctx context.Context, device *model
 	// 使用 device_id 和 interface_name 作为唯一键，如果存在则更新
 	err = s.db.WithContext(ctx).Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "device_id"}, {Name: "interface_name"}},
-		DoUpdates: clause.AssignmentColumns([]string{"admin_status", "oper_status", "description", "vlan", "duplex", "speed", "port_type", "dot1x_enabled", "dot1x_port_status", "port_security_enabled", "port_security_mode", "max_mac_count", "current_mac_count", "collected_at"}),
+		DoUpdates: clause.AssignmentColumns([]string{"admin_status", "oper_status", "description", "vlan", "duplex", "speed", "port_type", "dot1x_enabled", "dot1x_port_status", "collected_at"}),
 	}).Create(&portStatuses).Error
 	if err != nil {
 		applogger.Infof("[端口采集] %s (%s): 批量保存失败: %v", device.DeviceName, device.IPAddress, err)

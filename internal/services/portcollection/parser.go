@@ -6,6 +6,7 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/templates"
 )
 
@@ -158,9 +159,15 @@ func parseInterfaceDescriptions(wrapper *device.ScrapliWrapper, vendor models.De
 
 		if desc.InterfaceName != "" {
 			descriptions[desc.InterfaceName] = desc
+			// 输出前3条调试信息
+			if len(descriptions) <= 3 {
+				applogger.Infof("[parseInterfaceDescriptions] 解析到: interface=%s admin=%s oper=%s desc='%s'",
+					desc.InterfaceName, desc.AdminStatus, desc.OperStatus, desc.Description)
+			}
 		}
 	}
 
+	applogger.Infof("[parseInterfaceDescriptions] 共解析到 %d 条接口描述", len(descriptions))
 	return descriptions, nil
 }
 
@@ -189,29 +196,27 @@ func getAllDot1xStatus(wrapper *device.ScrapliWrapper, vendor models.DeviceVendo
 		ifaceName := normalizeInterfaceName(record["INTERFACE"])
 
 		if vendor == models.VendorHuawei || vendor == models.VendorH3C {
-			// 新配置格式解析：从 display current-configuration | include interface
-			dot1xEnabled := record["DOT1X_ENABLED"] == "dot1x enable"
-			portControl := record["PORT_CONTROL"]
+			// 从 display dot1x 命令解析
+			dot1xEnabledStr := record["DOT1X_ENABLED"]
+			dot1xEnabled := dot1xEnabledStr == "Enabled"
 
-			// 根据端口控制模式确定状态
-			var portStatus string = "Unknown"
-			if dot1xEnabled {
-				switch portControl {
-				case "authorized-force":
-					portStatus = "Authorized"
-				case "unauthorized-force":
-					portStatus = "Unauthorized"
-				case "auto":
-					portStatus = "Unknown" // 需要实际用户状态
-				default:
-					portStatus = "Unknown"
-				}
+			// 如果 DOT1X_ENABLED 为空，默认为 true（因为模板只匹配 protocol is Enabled 的接口）
+			if dot1xEnabledStr == "" {
+				dot1xEnabled = true
+			}
+
+			currentUsersStr := record["CURRENT_USERS"]
+
+			// 根据当前用户数确定端口状态
+			var portStatus string = "Unauthorized"
+			if dot1xEnabled && currentUsersStr != "" && currentUsersStr != "0" {
+				portStatus = "Authorized"
 			}
 
 			result[ifaceName] = Dot1xInfo{
 				Enabled:     dot1xEnabled,
 				PortStatus:  portStatus,
-				CurrentUser: "",
+				CurrentUser: currentUsersStr,
 			}
 		} else {
 			// 锐捷/迈普等厂商的解析逻辑保持不变
@@ -351,7 +356,7 @@ func getInterfaceDescriptionTemplate(vendor models.DeviceVendor) string {
 // getDot1xBatchCommand 获取批量802.1X命令
 func getDot1xBatchCommand(vendor models.DeviceVendor) string {
 	commands := map[models.DeviceVendor]string{
-		models.VendorHuawei: "display current-configuration | include interface",
+		models.VendorHuawei: "display dot1x",
 		models.VendorH3C:    "display dot1x",
 		models.VendorRuijie: "show dot1x port-control",
 		models.VendorMaipu:  "show dot1x port-control",

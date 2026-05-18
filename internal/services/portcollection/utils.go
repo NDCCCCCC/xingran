@@ -5,11 +5,30 @@ import (
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 )
 
 // normalizeInterfaceName 标准化接口名称
 func normalizeInterfaceName(name string) string {
 	name = strings.ReplaceAll(name, " ", "")
+
+	// 全称转简写：GigabitEthernet0/0/1 → GE0/0/1
+	fullToShort := map[string]string{
+		"FastEthernet": "FE",
+		"GigabitEthernet": "GE",
+		"TenGigE": "XGE",
+		"FortyGigE": "FOE",
+		"HundredGigE": "HGE",
+		"Vlanif": "Vlanif",
+		"Loopback": "Loop",
+	}
+
+	for full, short := range fullToShort {
+		if strings.HasPrefix(name, full) {
+			suffix := name[len(full):]
+			return short + suffix
+		}
+	}
 
 	validPrefixes := []string{"FastEthernet", "GigabitEthernet", "TenGigE", "FortyGigE", "HundredGigE", "Vlan", "Vlanif", "Loopback", "NULL"}
 	for _, prefix := range validPrefixes {
@@ -82,6 +101,9 @@ func buildPortStatus(deviceID, interfaceName string, iface InterfaceInfo, adminS
 		default:
 			portStatus.Dot1xPortStatus = models.Dot1xStatusUnknown
 		}
+		applogger.Infof("[调试] 接口 %s 匹配到dot1x数据: Enabled=%v, Status=%s", interfaceName, dot1x.Enabled, dot1x.PortStatus)
+	} else {
+		applogger.Infof("[调试] 接口 %s 没有匹配到dot1x数据", interfaceName)
 	}
 
 	// 添加端口安全配置
