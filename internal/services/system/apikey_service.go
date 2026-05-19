@@ -23,6 +23,8 @@ type APIKeyService interface {
 	DeleteAPIKey(ctx context.Context, id string) error
 	ToggleAPIKeyStatus(ctx context.Context, id string) error
 	ValidateAPIKey(ctx context.Context, keyStr string) (*models.APIKey, error)
+	ListUsageLogs(ctx context.Context, params ListUsageLogsParams) (*UsageLogsPageResult, error)
+	GetUsageLogSummary(ctx context.Context, apiKeyID string) (*UsageSummary, error)
 }
 
 // apiKeyServiceImpl API密钥服务实现
@@ -370,4 +372,194 @@ func (s *apiKeyServiceImpl) ToggleAPIKeyStatus(ctx context.Context, id string) e
 	}
 
 	return nil
+}
+
+// ListUsageLogsParams 使用日志查询参数
+type ListUsageLogsParams struct {
+	APIKeyID  string   // 密钥ID
+	Current   int      // 当前页
+	PageSize  int      // 每页数量
+	StartTime *string  // 开始时间
+	EndTime   *string  // 结束时间
+	Success   *bool    // 成功筛选
+}
+
+// UsageLogsPageResult 使用日志分页结果
+type UsageLogsPageResult struct {
+	List     []models.APIKeyUsageLog `json:"list"`
+	Total    int64                    `json:"total"`
+	Current  int                      `json:"current"`
+	PageSize int                      `json:"pageSize"`
+}
+
+// GetOffset 计算分页偏移量
+func (p ListUsageLogsParams) GetOffset() int {
+	return (p.Current - 1) * p.PageSize
+}
+
+// ListUsageLogs 查询API密钥使用日志
+func (s *apiKeyServiceImpl) ListUsageLogs(ctx context.Context, params ListUsageLogsParams) (*UsageLogsPageResult, error) {
+	var total int64
+	var list []models.APIKeyUsageLog
+
+	query := s.db.WithContext(ctx).Model(&models.APIKeyUsageLog{})
+
+	// 添加筛选条件
+	if params.APIKeyID != "" {
+		query = query.Where("api_key_id = ?", params.APIKeyID)
+	}
+	if params.StartTime != nil && *params.StartTime != "" {
+		query = query.Where("created_at >= ?", *params.StartTime)
+	}
+	if params.EndTime != nil && *params.EndTime != "" {
+		query = query.Where("created_at <= ?", *params.EndTime)
+	}
+	if params.Success != nil {
+		query = query.Where("success = ?", *params.Success)
+	}
+
+	// 统计总数
+	if err := query.Count(&total).Error; err != nil {
+		return nil, apperrors.DatabaseError(err)
+	}
+
+	// 分页查询
+	offset := params.GetOffset()
+	if err := query.
+		Preload("APIKey").
+		Preload("User").
+		Order("created_at DESC").
+		Offset(offset).Limit(params.PageSize).
+		Find(&list).Error; err != nil {
+		return nil, apperrors.DatabaseError(err)
+	}
+
+	return &UsageLogsPageResult{
+		List:     list,
+		Total:    total,
+		Current:  params.Current,
+		PageSize: params.PageSize,
+	}, nil
+}
+
+// UsageSummary 使用统计汇总
+type UsageSummary struct {
+	TotalRequests    int64            `json:"totalRequests"`    // 总请求数
+	SuccessRate      float64          `json:"successRate"`      // 成功率
+	AvgDuration      float64          `json:"avgDuration"`      // 平均耗时
+	RequestsByMethod map[string]int64 `json:"requestsByMethod"` // 按方法分组统计
+	RequestsByPath   map[string]int64 `json:"requestsByPath"`   // 按路径分组统计（TOP 10）
+	ErrorsByStatus   map[int]int      `json:"errorsByStatus"`   // 按状态码分组错误统计
+}
+
+// GetUsageLogSummary 获取API密钥使用统计汇总
+func (s *apiKeyServiceImpl) GetUsageLogSummary(ctx context.Context, apiKeyID string) (*UsageSummary, error) {
+	// 定义统计结果结构
+	type MethodStat struct {
+		Method string
+		Count  int64
+	}
+	type PathStat struct {
+		Path  string
+		Count int64
+	}
+	type ErrorStat struct {
+		StatusCode int
+		Count      int64
+	}
+
+	// 1. 计算总请求数和成功率
+	var totalRequests int64
+	var successCount int64
+
+	if err := s.db.WithContext(ctx).Model(&models.APIKeyUsageLog{}).
+		Where("api_key_id = ?", apiKeyID).
+		Count(&totalRequests).Error; err != nil {
+		return nil, apperrors.DatabaseError(err)
+	}
+
+	// 处理空结果
+	if totalRequests == 0 {
+		return &UsageSummary{
+			TotalRequests:    0,
+			SuccessRate:      0,
+			AvgDuration:      0,
+			RequestsByMethod: make(map[string]int64),
+			RequestsByPath:   make(map[string]int64),
+			ErrorsByStatus:   make(map[int]int),
+		}, nil
+	}
+
+	if err := s.db.WithContext(ctx).Model(&models.APIKeyUsageLog{}).
+		Where("api_key_id = ? AND success = ?", apiKeyID, true).
+		Count(&successCount).Error; err != nil {
+		return nil, apperrors.DatabaseError(err)
+	}
+
+	successRate := (float64(successCount) / float64(totalRequests)) * 100
+
+	// 2. 计算平均耗时
+	var avgDuration float64
+	if err := s.db.WithContext(ctx).Model(&models.APIKeyUsageLog{}).
+		Select("AVG(duration)").
+		Where("api_key_id = ?", apiKeyID).
+		Scan(&avgDuration).Error; err != nil {
+		return nil, apperrors.DatabaseError(err)
+	}
+
+	// 3. 按方法分组统计
+	var methodStats []MethodStat
+	if err := s.db.WithContext(ctx).Model(&models.APIKeyUsageLog{}).
+		Select("method, COUNT(*) as count").
+		Where("api_key_id = ?", apiKeyID).
+		Group("method").
+		Scan(&methodStats).Error; err != nil {
+		return nil, apperrors.DatabaseError(err)
+	}
+
+	requestsByMethod := make(map[string]int64)
+	for _, stat := range methodStats {
+		requestsByMethod[stat.Method] = stat.Count
+	}
+
+	// 4. 按路径分组统计（TOP 10）
+	var pathStats []PathStat
+	if err := s.db.WithContext(ctx).Model(&models.APIKeyUsageLog{}).
+		Select("path, COUNT(*) as count").
+		Where("api_key_id = ?", apiKeyID).
+		Group("path").
+		Order("count DESC").
+		Limit(10).
+		Scan(&pathStats).Error; err != nil {
+		return nil, apperrors.DatabaseError(err)
+	}
+
+	requestsByPath := make(map[string]int64)
+	for _, stat := range pathStats {
+		requestsByPath[stat.Path] = stat.Count
+	}
+
+	// 5. 按状态码分组错误统计
+	var errorStats []ErrorStat
+	if err := s.db.WithContext(ctx).Model(&models.APIKeyUsageLog{}).
+		Select("status_code, COUNT(*) as count").
+		Where("api_key_id = ? AND success = ?", apiKeyID, false).
+		Group("status_code").
+		Scan(&errorStats).Error; err != nil {
+		return nil, apperrors.DatabaseError(err)
+	}
+
+	errorsByStatus := make(map[int]int)
+	for _, stat := range errorStats {
+		errorsByStatus[stat.StatusCode] = int(stat.Count)
+	}
+
+	return &UsageSummary{
+		TotalRequests:    totalRequests,
+		SuccessRate:      successRate,
+		AvgDuration:      avgDuration,
+		RequestsByMethod: requestsByMethod,
+		RequestsByPath:   requestsByPath,
+		ErrorsByStatus:   errorsByStatus,
+	}, nil
 }
