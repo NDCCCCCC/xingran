@@ -149,12 +149,12 @@
 
 Plans:
 - [x] 16-01-PLAN.md — 创建数据模型和数据库迁移（Wave 1）— completed 2026-05-19
-- [ ] 16-02-PLAN.md — 实现服务层 - 基础 CRUD（Wave 2）
-- [ ] 16-02a-PLAN.md — 实现服务层 - 使用日志和统计（Wave 2）
+- [x] 16-02-PLAN.md — 实现服务层 - 基础 CRUD（Wave 2）— completed 2026-05-19
+- [x] 16-02a-PLAN.md — 实现服务层 - 使用日志和统计（Wave 2）— completed 2026-05-19
 - [ ] 16-03-PLAN.md — 创建处理器和路由（Wave 3）
 - [ ] 16-04-PLAN.md — 实现认证中间件和速率限制器（Wave 4）
-- [ ] 16-05a-PLAN.md — 创建前端类型定义和 API 客户端（Wave 5）
-- [ ] 16-05b-PLAN.md — 创建前端管理页面组件（Wave 5）
+- [x] 16-05a-PLAN.md — 创建前端类型定义和 API 客户端（Wave 5）— completed 2026-05-19
+- [x] 16-05b-PLAN.md — 创建前端管理页面组件（Wave 5）— completed 2026-05-19
 - [ ] 16-06-PLAN.md — 后端测试（Wave 6）
 - [ ] 16-07-PLAN.md — 前端测试（Wave 7）
 - [ ] 16-08-PLAN.md — 集成测试和覆盖率报告（Wave 8）
@@ -180,7 +180,7 @@ Plans:
 | 13. 查询层与轨迹 | v1.5 | 0/5 | Planned | - |
 | 14. 前端与用户体验 | v1.5 | 0/5 | Planned | - |
 | 15. 性能优化 | v1.5 | 0/5 | Planned | - |
-| 16. API 密钥管理 | v1.6 | 1/10 | In Progress | 2026-05-19 |
+| 16. API 密钥管理 | v1.6 | 6/10 | In Progress | 2026-05-19 |
 
 ---
 
