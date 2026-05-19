@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
@@ -252,4 +253,87 @@ func getRequiredScope(action string) string {
 		return scope
 	}
 	return "read"
+}
+
+// RateLimitByScope 基于作用域的速率限制中间件
+// 根据API Key的作用域动态调整速率限制
+// 符合 RFC 6585 规范（429 Too Many Requests）
+func RateLimitByScope(rateLimiter *services.RateLimiter) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// 检查是否为API Key认证
+		authType, exists := c.Get("auth_type")
+		if !exists || authType != "api_key" {
+			// 不是API Key认证，跳过速率限制
+			c.Next()
+			return
+		}
+
+		// 确定作用域
+		scope := getScopeFromContext(c)
+
+		// 获取唯一标识符
+		identifier := getIdentifier(c)
+
+		// 检查速率限制
+		allowed, result := rateLimiter.Check(identifier, scope)
+
+		// 设置速率限制响应头（RFC 6585）
+		c.Header("X-RateLimit-Limit", string(rune(result.Limit)))
+		c.Header("X-RateLimit-Remaining", string(rune(result.Remaining)))
+		c.Header("X-RateLimit-Reset", result.ResetAt.Format(time.RFC3339))
+
+		if !allowed {
+			// 超过速率限制，返回429
+			c.Header("Retry-After", "60") // 建议60秒后重试
+			response.Error(c, 429, "请求过于频繁，请稍后再试")
+			c.Abort()
+			return
+		}
+
+		c.Next()
+	}
+}
+
+// getScopeFromContext 从上下文获取作用域（私有函数）
+// 如果没有作用域或继承权限，使用 "default" 作用域
+func getScopeFromContext(c *gin.Context) string {
+	// 检查是否继承权限
+	if inheritPerms, exists := c.Get("inherit_perms"); exists && inheritPerms == true {
+		return "default"
+	}
+
+	// 获取作用域
+	scopes, exists := c.Get("scopes")
+	if !exists {
+		return "default"
+	}
+
+	userScopes, ok := scopes.([]string)
+	if !ok || len(userScopes) == 0 {
+		return "default"
+	}
+
+	// 返回第一个作用域
+	return userScopes[0]
+}
+
+// getIdentifier 获取客户端唯一标识符（私有函数）
+// 优先级：API Key ID > 用户 ID > 客户端 IP
+func getIdentifier(c *gin.Context) string {
+	// 优先使用 API Key ID
+	if apiKeyID, exists := c.Get("api_key_id"); exists {
+		if id, ok := apiKeyID.(string); ok && id != "" {
+			return "apikey:" + id
+		}
+	}
+
+	// 回退到用户 ID
+	if userID, exists := c.Get("user_id"); exists {
+		if id, ok := userID.(string); ok && id != "" {
+			return "user:" + id
+		}
+	}
+
+	// 最后回退到客户端 IP
+	return "ip:" + c.ClientIP()
 }
