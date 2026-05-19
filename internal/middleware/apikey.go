@@ -183,3 +183,73 @@ func setUserContextForAPIKey(c *gin.Context, apiKey interface{}, scopes []string
 		}
 	}
 }
+
+// RequireScope 作用域验证中间件
+// 验证API Key是否具有所需的作用域
+// 支持层级权限：admin > write > read
+func RequireScope(requiredScope string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// 从上下文获取作用域
+		scopes, exists := c.Get("scopes")
+		if !exists {
+			response.Error(c, response.ErrForbidden, "缺少权限作用域")
+			c.Abort()
+			return
+		}
+
+		// 类型断言
+		userScopes, ok := scopes.([]string)
+		if !ok {
+			response.Error(c, response.ErrForbidden, "权限作用域格式错误")
+			c.Abort()
+			return
+		}
+
+		// 检查是否有所需作用域或admin权限（admin包含所有权限）
+		hasScope := false
+		for _, scope := range userScopes {
+			if scope == "admin" || scope == requiredScope {
+				hasScope = true
+				break
+			}
+		}
+
+		if !hasScope {
+			response.Error(c, response.ErrForbidden, "权限不足，需要作用域: "+requiredScope)
+			c.Abort()
+			return
+		}
+
+		c.Next()
+	}
+}
+
+// RequireAPIKeyResourcePermission API Key资源权限验证中间件
+// 根据资源和操作映射到相应的作用域
+func RequireAPIKeyResourcePermission(resource string, action string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// 确定所需作用域
+		requiredScope := getRequiredScope(action)
+
+		// 调用作用域验证
+		RequireScope(requiredScope)(c)
+	}
+}
+
+// getRequiredScope 根据操作获取所需作用域（私有函数）
+// 映射规则：view/create/edit/delete -> read/write
+func getRequiredScope(action string) string {
+	// 操作到作用域的映射
+	scopeMap := map[string]string{
+		"view":   "read",
+		"create": "write",
+		"edit":   "write",
+		"delete": "write",
+	}
+
+	// 如果操作不在映射中，默认为 read
+	if scope, ok := scopeMap[action]; ok {
+		return scope
+	}
+	return "read"
+}
