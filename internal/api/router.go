@@ -208,6 +208,18 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 				// 新架构：结构体Handler + Service层
 				systemV1.SetupPostRouter(posts, core)
 			}
+				// API密钥管理
+				apikeys := authorized.Group("/apikeys")
+				apikeys.Use(middleware.RequirePermissions([]string{
+					"system:apikey:list",
+					"system:apikey:add",
+					"system:apikey:edit",
+					"system:apikey:delete",
+				}, core))
+				{
+					// 新架构：结构体Handler + Service层
+					systemV1.SetupAPIKeyRouter(apikeys, core)
+				}
 
 			// 字典管理
 			dicts := authorized.Group("/dicts")
