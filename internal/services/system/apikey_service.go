@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -138,38 +139,235 @@ func (s *apiKeyServiceImpl) ValidateAPIKey(ctx context.Context, keyStr string) (
 	return &apiKey, nil
 }
 
-// CreateAPIKey 创建API密钥（stub implementation for Task 2）
+// CreateAPIKey 创建API密钥
 func (s *apiKeyServiceImpl) CreateAPIKey(ctx context.Context, userID string, req *requests.CreateAPIKeyRequest) (*string, error) {
-	// Task 4 will implement this
-	return nil, apperrors.Wrap(nil, apperrors.CodeServerError, "not implemented")
+	// 验证用户是否存在
+	var user models.User
+	if err := s.db.WithContext(ctx).First(&user, "id = ?", userID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, apperrors.Wrap(nil, apperrors.CodeParamError, "用户不存在")
+		}
+		return nil, apperrors.DatabaseError(err)
+	}
+
+	// 检查用户密钥数量限制
+	var count int64
+	if err := s.db.WithContext(ctx).Model(&models.APIKey{}).Where("user_id = ?", userID).Count(&count).Error; err != nil {
+		return nil, apperrors.DatabaseError(err)
+	}
+	if count >= MaxKeysPerUser {
+		return nil, apperrors.Wrap(nil, apperrors.CodeParamError, fmt.Sprintf("已达到最大密钥数量限制（%d个）", MaxKeysPerUser))
+	}
+
+	// 生成密钥
+	key, err := generateKey()
+	if err != nil {
+		return nil, apperrors.Wrap(err, apperrors.CodeServerError, "密钥生成失败")
+	}
+
+	// 验证作用域
+	if err := validateScopes(req.Scopes); err != nil {
+		return nil, err
+	}
+
+	// 转换作用域为JSON
+	scopesJSON, err := json.Marshal(req.Scopes)
+	if err != nil {
+		return nil, apperrors.Wrap(err, apperrors.CodeServerError, "作用域序列化失败")
+	}
+
+	// 转换IP白名单为JSON
+	ipWhitelistJSON, err := json.Marshal(req.IPWhitelist)
+	if err != nil {
+		return nil, apperrors.Wrap(err, apperrors.CodeServerError, "IP白名单序列化失败")
+	}
+
+	// 解析过期时间
+	var expiresAt *time.Time
+	if req.ExpiresAt != nil && *req.ExpiresAt != "" {
+		parsedTime, err := time.Parse(time.RFC3339, *req.ExpiresAt)
+		if err != nil {
+			return nil, apperrors.Wrap(err, apperrors.CodeParamError, "过期时间格式错误")
+		}
+		expiresAt = &parsedTime
+	}
+
+	// 创建APIKey记录
+	apiKey := models.APIKey{
+		Name:         req.Name,
+		Key:          key,
+		UserID:       &userID,
+		Scopes:       string(scopesJSON),
+		IPWhitelist:  string(ipWhitelistJSON),
+		Description:  req.Description,
+		InheritPerms: req.InheritPerms,
+		ExpiresAt:    expiresAt,
+		IsActive:     true,
+	}
+
+	if err := s.db.WithContext(ctx).Create(&apiKey).Error; err != nil {
+		return nil, apperrors.DatabaseError(err)
+	}
+
+	return &key, nil
 }
 
-// ListAPIKeys 查询API密钥列表（stub implementation for Task 2）
+// ListAPIKeys 查询API密钥列表
 func (s *apiKeyServiceImpl) ListAPIKeys(ctx context.Context, userID string, params requests.ListAPIKeysParams) (*PageResult, error) {
-	// Task 4 will implement this
-	return nil, apperrors.Wrap(nil, apperrors.CodeServerError, "not implemented")
+	var total int64
+	var list []models.APIKey
+
+	query := s.db.WithContext(ctx).Model(&models.APIKey{})
+
+	// 筛选用户ID
+	if userID != "" {
+		query = query.Where("user_id = ?", userID)
+	}
+
+	// 添加筛选条件
+	if params.Keyword != nil && *params.Keyword != "" {
+		keyword := "%" + *params.Keyword + "%"
+		query = query.Where("name LIKE ? OR LEFT(key, 12) LIKE ?", keyword, keyword)
+	}
+	if params.Status != nil {
+		query = query.Where("is_active = ?", *params.Status)
+	}
+	if params.Scope != nil && *params.Scope != "" {
+		query = query.Where("scopes @> ?", fmt.Sprintf("[\"%s\"]", *params.Scope))
+	}
+
+	// 统计总数
+	if err := query.Count(&total).Error; err != nil {
+		return nil, apperrors.DatabaseError(err)
+	}
+
+	// 分页查询
+	offset := params.GetOffset()
+	if err := query.Preload("User").
+		Order("created_at DESC").
+		Offset(offset).Limit(params.PageSize).
+		Find(&list).Error; err != nil {
+		return nil, apperrors.DatabaseError(err)
+	}
+
+	return &PageResult{
+		List:     list,
+		Total:    total,
+		Current:  params.Current,
+		PageSize: params.PageSize,
+	}, nil
 }
 
-// GetAPIKey 获取API密钥详情（stub implementation for Task 2）
+// GetAPIKey 获取API密钥详情
 func (s *apiKeyServiceImpl) GetAPIKey(ctx context.Context, id string) (*models.APIKey, error) {
-	// Task 4 will implement this
-	return nil, apperrors.Wrap(nil, apperrors.CodeServerError, "not implemented")
+	var apiKey models.APIKey
+	err := s.db.WithContext(ctx).Preload("User").First(&apiKey, "id = ?", id).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, apperrors.Wrap(nil, apperrors.CodeParamError, "密钥不存在")
+		}
+		return nil, apperrors.DatabaseError(err)
+	}
+	return &apiKey, nil
 }
 
-// UpdateAPIKey 更新API密钥（stub implementation for Task 2）
+// UpdateAPIKey 更新API密钥
 func (s *apiKeyServiceImpl) UpdateAPIKey(ctx context.Context, id string, req *requests.UpdateAPIKeyRequest) error {
-	// Task 4 will implement this
-	return apperrors.Wrap(nil, apperrors.CodeServerError, "not implemented")
+	// 检查密钥是否存在
+	var apiKey models.APIKey
+	if err := s.db.WithContext(ctx).First(&apiKey, "id = ?", id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return apperrors.Wrap(nil, apperrors.CodeParamError, "密钥不存在")
+		}
+		return apperrors.DatabaseError(err)
+	}
+
+	// 更新可修改字段
+	updates := make(map[string]interface{})
+
+	if req.Name != nil {
+		updates["name"] = *req.Name
+	}
+	if req.Description != nil {
+		updates["description"] = *req.Description
+	}
+	if req.InheritPerms != nil {
+		updates["inherit_perms"] = *req.InheritPerms
+	}
+	if req.IsActive != nil {
+		updates["is_active"] = *req.IsActive
+	}
+	if req.ExpiresAt != nil {
+		if *req.ExpiresAt == "" {
+			updates["expires_at"] = nil
+		} else {
+			parsedTime, err := time.Parse(time.RFC3339, *req.ExpiresAt)
+			if err != nil {
+				return apperrors.Wrap(err, apperrors.CodeParamError, "过期时间格式错误")
+			}
+			updates["expires_at"] = parsedTime
+		}
+	}
+	if req.Scopes != nil {
+		if err := validateScopes(req.Scopes); err != nil {
+			return err
+		}
+		scopesJSON, err := json.Marshal(req.Scopes)
+		if err != nil {
+			return apperrors.Wrap(err, apperrors.CodeServerError, "作用域序列化失败")
+		}
+		updates["scopes"] = string(scopesJSON)
+	}
+	if req.IPWhitelist != nil {
+		ipWhitelistJSON, err := json.Marshal(req.IPWhitelist)
+		if err != nil {
+			return apperrors.Wrap(err, apperrors.CodeServerError, "IP白名单序列化失败")
+		}
+		updates["ip_whitelist"] = string(ipWhitelistJSON)
+	}
+
+	if err := s.db.WithContext(ctx).Model(&apiKey).Updates(updates).Error; err != nil {
+		return apperrors.DatabaseError(err)
+	}
+
+	return nil
 }
 
-// DeleteAPIKey 删除API密钥（stub implementation for Task 2）
+// DeleteAPIKey 删除API密钥
 func (s *apiKeyServiceImpl) DeleteAPIKey(ctx context.Context, id string) error {
-	// Task 4 will implement this
-	return apperrors.Wrap(nil, apperrors.CodeServerError, "not implemented")
+	// 检查密钥是否存在
+	var apiKey models.APIKey
+	if err := s.db.WithContext(ctx).First(&apiKey, "id = ?", id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return apperrors.Wrap(nil, apperrors.CodeParamError, "密钥不存在")
+		}
+		return apperrors.DatabaseError(err)
+	}
+
+	// 软删除
+	if err := s.db.WithContext(ctx).Delete(&apiKey).Error; err != nil {
+		return apperrors.DatabaseError(err)
+	}
+
+	return nil
 }
 
-// ToggleAPIKeyStatus 切换API密钥状态（stub implementation for Task 2）
+// ToggleAPIKeyStatus 切换API密钥状态
 func (s *apiKeyServiceImpl) ToggleAPIKeyStatus(ctx context.Context, id string) error {
-	// Task 4 will implement this
-	return apperrors.Wrap(nil, apperrors.CodeServerError, "not implemented")
+	// 检查密钥是否存在
+	var apiKey models.APIKey
+	if err := s.db.WithContext(ctx).First(&apiKey, "id = ?", id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return apperrors.Wrap(nil, apperrors.CodeParamError, "密钥不存在")
+		}
+		return apperrors.DatabaseError(err)
+	}
+
+	// 切换状态
+	apiKey.IsActive = !apiKey.IsActive
+	if err := s.db.WithContext(ctx).Save(&apiKey).Error; err != nil {
+		return apperrors.DatabaseError(err)
+	}
+
+	return nil
 }
