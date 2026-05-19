@@ -50,15 +50,13 @@ vi.stubGlobal('IntersectionObserver', vi.fn().mockImplementation(() => ({
   disconnect: vi.fn(),
 })));
 
-// Mock antd message
-vi.mock('antd', () => ({
-  message: {
-    success: vi.fn(),
-    error: vi.fn(),
-    warning: vi.fn(),
-    info: vi.fn(),
-  },
-}));
+// Mock antd message globally (but don't mock the entire antd module)
+global.mockMessage = {
+  success: vi.fn(),
+  error: vi.fn(),
+  warning: vi.fn(),
+  info: vi.fn(),
+};
 
 // Mock authStore
 vi.mock('@/store/authStore', () => ({
