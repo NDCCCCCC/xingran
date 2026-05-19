@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: MAC地址历史数据管理
-current_phase: --phase
+current_phase: 16
 status: executing
-last_updated: "2026-05-19T01:08:36Z"
+last_updated: "2026-05-19T01:38:00Z"
 last_activity: 2026-05-19
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 16
-  completed_plans: 11
-  percent: 69
+  completed_plans: 12
+  percent: 75
 ---
 
 # Project State
@@ -27,9 +27,9 @@ Last activity: 2026-05-19
 ## Current Position
 
 Phase: 16 (API 密钥管理) — EXECUTING
-Plan: 4 of 10 (API密钥认证中间件和速率限制器)
-Status: Plan 16-04 completed
-Last activity: 2026-05-19 -- Plan 16-04 execution completed
+Plan: 5a of 10 (API密钥管理的前端类型定义和API客户端)
+Status: Plan 16-05a completed
+Last activity: 2026-05-19 -- Plan 16-05a execution completed
 
 ## Project Reference
 
@@ -46,7 +46,7 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 | 13 | 查询层与轨迹 | 📋 Planned | 0/5 plans |
 | 14 | 前端与用户体验 | 📋 Planned | 0/5 plans |
 | 15 | 性能优化 | 📋 Planned | 0/5 plans |
-| 16 | API 密钥管理 | 🔄 Executing | 4/10 plans |
+| 16 | API 密钥管理 | 🔄 Executing | 5/10 plans |
 
 ## Completed Milestones
 
@@ -93,6 +93,7 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 | 2026-05-11 | Phase 12 completed: 数据模型与采集集成 | 12 |
 | 2026-05-18 | Phase 16 planned: API 密钥管理功能 (10 plans) | 16 |
 | 2026-05-19 | Plan 16-04 completed: API密钥认证中间件和速率限制器 | 16 |
+| 2026-05-19 | Plan 16-05a completed: API密钥管理的前端类型定义和API客户端 | 16 |
 
 ## Deferred Items
 
