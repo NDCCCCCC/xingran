@@ -7,6 +7,8 @@
 - ✅ **v1.2 可配置仪表盘生产级改造** — Phases 4-7 (shipped 2026-04-21)
 - ✅ **v1.3 技术债清理** — Phases 8-10 (shipped 2026-04-27)
 - ✅ **v1.4 MAC地址采集优化** — Phase 11 (shipped 2026-05-09)
+- 🚧 **v1.5 MAC地址历史数据管理** — Phases 12-15 (in progress)
+- 📋 **v1.6 API密钥管理系统** — Phase 16 (planned)
 
 ## Phases
 
@@ -60,6 +62,15 @@
 - [ ] Phase 13: 查询层与轨迹
 - [ ] Phase 14: 前端与用户体验
 - [ ] Phase 15: 性能优化
+
+</details>
+
+---
+
+<details>
+<summary>📋 v1.6 API密钥管理系统 (Phase 16) — PLANNED</summary>
+
+- [ ] Phase 16: API密钥管理 (10 plans) — planned
 
 </details>
 
@@ -123,6 +134,31 @@
 **Plans**: TBD
 **UI hint**: yes
 
+### Phase 16: API 密钥管理
+**Goal**: 实现完整的 API 密钥管理系统，支持密钥的 CRUD 操作、自动生成、权限控制、使用日志审计和前端管理页面
+**Depends on**: 无（独立功能）
+**Requirements**: 独立功能需求
+**Success Criteria** (what must be TRUE):
+  1. 用户可以创建、查看、编辑、删除 API 密钥
+  2. 密钥自动生成（rec_ + 64位hex），仅创建时完整显示一次
+  3. 密钥验证支持格式检查、过期验证、IP白名单验证
+  4. 速率限制根据作用域动态调整（read: 30/min, write: 100/min, admin: 200/min）
+  5. 使用日志异步记录，支持查询和统计分析
+  6. 前端管理页面支持密钥脱敏显示、复制、查看日志等操作
+**Plans**: 10 plans
+
+Plans:
+- [x] 16-01-PLAN.md — 创建数据模型和数据库迁移（Wave 1）— completed 2026-05-19
+- [ ] 16-02-PLAN.md — 实现服务层 - 基础 CRUD（Wave 2）
+- [ ] 16-02a-PLAN.md — 实现服务层 - 使用日志和统计（Wave 2）
+- [ ] 16-03-PLAN.md — 创建处理器和路由（Wave 3）
+- [ ] 16-04-PLAN.md — 实现认证中间件和速率限制器（Wave 4）
+- [ ] 16-05a-PLAN.md — 创建前端类型定义和 API 客户端（Wave 5）
+- [ ] 16-05b-PLAN.md — 创建前端管理页面组件（Wave 5）
+- [ ] 16-06-PLAN.md — 后端测试（Wave 6）
+- [ ] 16-07-PLAN.md — 前端测试（Wave 7）
+- [ ] 16-08-PLAN.md — 集成测试和覆盖率报告（Wave 8）
+
 ---
 
 ## Progress
@@ -144,7 +180,8 @@
 | 13. 查询层与轨迹 | v1.5 | 0/5 | Planned | - |
 | 14. 前端与用户体验 | v1.5 | 0/5 | Planned | - |
 | 15. 性能优化 | v1.5 | 0/5 | Planned | - |
+| 16. API 密钥管理 | v1.6 | 1/10 | In Progress | 2026-05-19 |
 
 ---
 
-**Total**: 15 phases, 34 plans complete, 2 gap closure plans, 20 plans planned (5 each for phases 13-15), 56 total
+**Total**: 16 phases, 34 plans complete, 2 gap closure plans, 20 plans planned (5 each for phases 13-15), 10 plans planned (phase 16), 66 total

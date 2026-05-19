@@ -10,7 +10,10 @@
       "mcp__chrome-devtools__take_snapshot",
       "mcp__chrome-devtools__list_console_messages",
       "Bash(xxd:*)",
-      "mcp__chrome-devtools__evaluate_script"
+      "mcp__chrome-devtools__evaluate_script",
+      "Skill(gsd-debug)",
+      "Bash(go test *)",
+      "Bash(go build *)"
     ]
   }
 }
