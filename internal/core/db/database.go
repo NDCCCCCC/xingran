@@ -479,6 +479,11 @@ func initData(db *gorm.DB) error {
 		return fmt.Errorf("创建运维管理菜单失败: %w", err)
 	}
 
+	// 创建请求加密开关配置参数
+	if err := createRequestEncryptionToggleConfig(db); err != nil {
+		return fmt.Errorf("创建请求加密开关配置失败: %w", err)
+	}
+
 	applogger.Infof("基础数据初始化完成")
 	return nil
 }
@@ -1279,5 +1284,43 @@ func createOperationsManagementMenus(db *gorm.DB) error {
 	}
 
 	applogger.Infof("运维管理菜单创建完成")
+	return nil
+}
+
+// createRequestEncryptionToggleConfig 创建请求加密开关配置参数
+func createRequestEncryptionToggleConfig(db *gorm.DB) error {
+	// 检查配置是否已存在
+	var count int64
+	err := db.Table("sys_config").
+		Where("config_key = ?", "sys.request.encryption.enabled").
+		Count(&count).Error
+
+	if err != nil {
+		applogger.Warnf("查询请求加密开关配置失败: %v", err)
+		return err
+	}
+
+	if count > 0 {
+		applogger.Infof("请求加密开关配置已存在，跳过初始化")
+		return nil
+	}
+
+	// 插入默认配置：true (启用)
+	config := models.Config{
+		ConfigName:  "请求加密开关",
+		ConfigKey:   "sys.request.encryption.enabled",
+		ConfigValue: "true",
+		ConfigType:  models.ConfigTypeYes,
+		IsSystem:    models.ConfigIsSystemYes,
+		Remark:      "控制请求体加密功能的启停（true=启用，false=停用），修改后立即生效",
+	}
+
+	applogger.Infof("尝试插入请求加密开关配置...")
+	if err := db.Create(&config).Error; err != nil {
+		applogger.Warnf("创建请求加密开关配置失败: %v", err)
+		return err
+	}
+
+	applogger.Infof("请求加密开关配置已创建（默认启用）")
 	return nil
 }
