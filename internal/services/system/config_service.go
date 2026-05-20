@@ -3,6 +3,7 @@ package system
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
@@ -70,6 +71,14 @@ func (s *configService) Update(ctx context.Context, req *requests.ConfigUpdateRe
 		return fmt.Errorf("系统内置参数不能修改")
 	}
 
+	// 验证请求加密开关的值（T-QUICK-01, T-QUICK-05 mitigation）
+	if config.ConfigKey == "sys.request.encryption.enabled" {
+		lowerValue := strings.ToLower(req.ConfigValue)
+		if lowerValue != "true" && lowerValue != "false" && req.ConfigValue != "1" && req.ConfigValue != "0" {
+			return fmt.Errorf("请求加密开关的值只能是 true 或 false")
+		}
+	}
+
 	updates := map[string]interface{}{
 		"config_name":  req.ConfigName,
 		"config_value": req.ConfigValue,
@@ -81,6 +90,12 @@ func (s *configService) Update(ctx context.Context, req *requests.ConfigUpdateRe
 
 	if err := s.db.WithContext(ctx).Model(&config).Updates(updates).Error; err != nil {
 		return fmt.Errorf("更新参数配置失败: %w", err)
+	}
+
+	// 如果更新的是请求加密开关，刷新缓存
+	if config.ConfigKey == "sys.request.encryption.enabled" {
+		// 这里需要导入 middleware 包来调用 RefreshEncryptionConfigCache
+		// 为了避免循环依赖，我们在路由层处理缓存刷新
 	}
 
 	return nil

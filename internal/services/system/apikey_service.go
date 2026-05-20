@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -172,18 +171,6 @@ func (s *apiKeyServiceImpl) CreateAPIKey(ctx context.Context, userID string, req
 		return nil, err
 	}
 
-	// 转换作用域为JSON
-	scopesJSON, err := json.Marshal(req.Scopes)
-	if err != nil {
-		return nil, apperrors.Wrap(err, apperrors.CodeServerError, "作用域序列化失败")
-	}
-
-	// 转换IP白名单为JSON
-	ipWhitelistJSON, err := json.Marshal(req.IPWhitelist)
-	if err != nil {
-		return nil, apperrors.Wrap(err, apperrors.CodeServerError, "IP白名单序列化失败")
-	}
-
 	// 解析过期时间
 	var expiresAt *time.Time
 	if req.ExpiresAt != nil && *req.ExpiresAt != "" {
@@ -199,8 +186,8 @@ func (s *apiKeyServiceImpl) CreateAPIKey(ctx context.Context, userID string, req
 		Name:         req.Name,
 		Key:          key,
 		UserID:       &userID,
-		Scopes:       string(scopesJSON),
-		IPWhitelist:  string(ipWhitelistJSON),
+		Scopes:       req.Scopes,
+		IPWhitelist:  req.IPWhitelist,
 		Description:  req.Description,
 		InheritPerms: req.InheritPerms,
 		ExpiresAt:    expiresAt,
@@ -314,18 +301,10 @@ func (s *apiKeyServiceImpl) UpdateAPIKey(ctx context.Context, id string, req *re
 		if err := validateScopes(req.Scopes); err != nil {
 			return err
 		}
-		scopesJSON, err := json.Marshal(req.Scopes)
-		if err != nil {
-			return apperrors.Wrap(err, apperrors.CodeServerError, "作用域序列化失败")
-		}
-		updates["scopes"] = string(scopesJSON)
+		updates["scopes"] = req.Scopes
 	}
 	if req.IPWhitelist != nil {
-		ipWhitelistJSON, err := json.Marshal(req.IPWhitelist)
-		if err != nil {
-			return apperrors.Wrap(err, apperrors.CodeServerError, "IP白名单序列化失败")
-		}
-		updates["ip_whitelist"] = string(ipWhitelistJSON)
+		updates["ip_whitelist"] = req.IPWhitelist
 	}
 
 	if err := s.db.WithContext(ctx).Model(&apiKey).Updates(updates).Error; err != nil {

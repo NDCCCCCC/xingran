@@ -56,7 +56,7 @@ func setupEncryptionMiddlewares(r *gin.RouterGroup, core *core.Core) *crypto.Req
 				ExcludePaths: core.Config.Security.RequestEncryption.ExcludePaths,
 			}
 
-			r.Use(middleware.RequestDecryption(encryptor, decryptionConfig))
+			r.Use(middleware.RequestDecryption(encryptor, decryptionConfig, core.GetDB()))
 			r.Use(middleware.ResponseEncryption(encryptor, encryptionConfig))
 			applogger.Infof("请求/响应加密中间件已启用")
 		} else {
