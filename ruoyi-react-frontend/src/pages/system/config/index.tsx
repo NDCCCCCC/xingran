@@ -34,6 +34,7 @@ import { useTableManager } from '@/hooks/useTableManager';
 import { usePagination } from '@/hooks/usePagination';
 import { handleApiError, handleSuccess, isFormValidationError } from '@/utils/errorHandler';
 import ActionButtons from '@/components/shared/ActionButtons';
+import { refreshEncryptionConfig } from '@/utils/authHelpers';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -67,11 +68,27 @@ const ConfigManagement: FC = () => {
   } = useTableManager<Config>(
     async (params): Promise<{ list: Config[]; total: number }> => {
       const values = searchForm.getFieldsValue() as Record<string, unknown>;
-      const result = await post<{ list: Config[]; total: number }>('/system/configs/list', {
+      const requestParams = {
         current: params.current || paginationProps.current,
         pageSize: params.pageSize || paginationProps.pageSize,
         ...values,
+      };
+      // DEBUG: 打印实际发送的请求参数
+      console.log('[DEBUG Config List] Request params:', requestParams);
+      console.log('[DEBUG Config List] paginationProps:', {
+        current: paginationProps.current,
+        pageSize: paginationProps.pageSize,
       });
+      console.log('[DEBUG Config List] params from loadData:', params);
+
+      const result = await post<{ list: Config[]; total: number }>('/system/configs/list', requestParams);
+
+      // DEBUG: 打印返回的数据
+      console.log('[DEBUG Config List] Response:', {
+        listLength: result.data?.list?.length || 0,
+        total: result.data?.total || 0,
+      });
+
       return result.data || { list: [], total: 0 };
     },
     {
@@ -103,18 +120,35 @@ const ConfigManagement: FC = () => {
   }, []);
 
   useEffect(() => {
-    loadConfigs();
-    loadStatistics();
+    // 确保 paginationProps 已完全初始化后再加载数据
+    if (paginationProps.current && paginationProps.pageSize) {
+      loadConfigs();
+      loadStatistics();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [paginationProps.current, paginationProps.pageSize]);
 
   // 创建参数配置
   const handleCreate = async () => {
     try {
       const values = await editForm.validateFields();
       if (editingConfig) {
-        await post(`/system/configs/${editingConfig.id}/update`, values);
-        handleSuccess('更新');
+        // 移除 configKey 和 isSystem 字段，后端 UpdateConfigRequest 不接受这些字段
+        const { configKey, isSystem, ...updateValues } = values;
+        await post(`/system/configs/${editingConfig.id}/update`, updateValues);
+
+        // 如果更新的是加密相关配置，刷新加密配置
+        if (configKey === 'sys.request.encryption.enabled') {
+          try {
+            await refreshEncryptionConfig();
+            message.success('配置已更新，加密配置已刷新');
+          } catch (refreshError) {
+            console.error('刷新加密配置失败:', refreshError);
+            // 刷新失败不影响配置更新成功
+          }
+        } else {
+          handleSuccess('更新');
+        }
       } else {
         await post('/system/configs', values);
         handleSuccess('创建');
