@@ -16,8 +16,6 @@ import {
   Statistic,
   Alert,
   message,
-  Switch,
-  Divider,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -28,9 +26,6 @@ import {
   ReloadOutlined,
   CheckCircleOutlined,
   StopOutlined,
-  LockOutlined,
-  UnlockOutlined,
-  SafetyOutlined,
 } from '@ant-design/icons';
 import type { Config } from '@/types';
 import { formatDateTime } from '@/utils/datetime';
@@ -49,11 +44,6 @@ const ConfigManagement: FC = () => {
     active: 0,
     inactive: 0,
   });
-
-  // 请求加密状态
-  const [encryptionEnabled, setEncryptionEnabled] = useState<boolean>(true);
-  const [encryptionConfig, setEncryptionConfig] = useState<Config | null>(null);
-  const [encryptionLoading, setEncryptionLoading] = useState(false);
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
@@ -95,60 +85,6 @@ const ConfigManagement: FC = () => {
     }
   );
 
-  // 加载请求加密配置
-  const loadEncryptionConfig = useCallback(async () => {
-    try {
-      const result = await post<Config>('/system/configs/getByKey', { configKey: 'sys.request.encryption.enabled' });
-      const config = result.data;
-      if (config) {
-        setEncryptionConfig(config);
-        const isEnabled = config.configValue === 'true' || config.configValue === '1';
-        setEncryptionEnabled(isEnabled);
-      }
-    } catch (error) {
-      // 如果配置不存在，使用默认值 true
-      setEncryptionEnabled(true);
-    }
-  }, []);
-
-  // 切换请求加密状态
-  const handleToggleEncryption = async (enabled: boolean) => {
-    setEncryptionLoading(true);
-    try {
-      if (encryptionConfig) {
-        // 更新现有配置
-        await post(`/system/configs/${encryptionConfig.id}/update`, {
-          configValue: enabled ? 'true' : 'false',
-        });
-      } else {
-        // 创建新配置（不应该发生，因为迁移已创建）
-        await post('/system/configs', {
-          configName: '请求加密开关',
-          configKey: 'sys.request.encryption.enabled',
-          configValue: enabled ? 'true' : 'false',
-          configType: 'Y',
-          isSystem: 1,
-          remark: '控制请求体加密功能的启停。true=启用加密，false=禁用加密',
-        });
-      }
-
-      // 刷新加密配置缓存
-      await post('/system/configs/refresh-cache', {});
-
-      setEncryptionEnabled(enabled);
-      message.success(`请求加密已${enabled ? '启用' : '禁用'}，配置将在 30 秒内生效`);
-
-      // 重新加载配置数据
-      loadConfigs();
-    } catch (error) {
-      handleApiError(error, '切换请求加密状态');
-      // 恢复开关状态
-      setEncryptionEnabled(!enabled);
-    } finally {
-      setEncryptionLoading(false);
-    }
-  };
-
   // 加载统计数据
   const loadStatistics = useCallback(async () => {
     try {
@@ -169,7 +105,6 @@ const ConfigManagement: FC = () => {
   useEffect(() => {
     loadConfigs();
     loadStatistics();
-    loadEncryptionConfig();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -178,9 +113,7 @@ const ConfigManagement: FC = () => {
     try {
       const values = await editForm.validateFields();
       if (editingConfig) {
-        // 更新时只发送必要的字段，移除不可修改的字段
-        const { configKey, isSystem, ...updateData } = values;
-        await post(`/system/configs/${editingConfig.id}/update`, updateData);
+        await post(`/system/configs/${editingConfig.id}/update`, values);
         handleSuccess('更新');
       } else {
         await post('/system/configs', values);
@@ -242,27 +175,8 @@ const ConfigManagement: FC = () => {
 
   // 表格列
   const columns: ColumnsType<Config> = [
-    {
-      title: '参数名称',
-      dataIndex: 'configName',
-      key: 'configName',
-      width: 200,
-      minWidth: 180,
-      render: (configName: string, record: Config) => {
-        const isEncryptionConfig = record.configKey === 'sys.request.encryption.enabled';
-        return (
-          <Space>
-            {configName}
-            {isEncryptionConfig && (
-              <Tag color="purple" icon={<SafetyOutlined />}>
-                加密开关
-              </Tag>
-            )}
-          </Space>
-        );
-      },
-    },
-    { title: '参数键名', dataIndex: 'configKey', key: 'configKey', width: 220, minWidth: 200 },
+    { title: '参数名称', dataIndex: 'configName', key: 'configName', width: 160, minWidth: 140 },
+    { title: '参数键名', dataIndex: 'configKey', key: 'configKey', width: 160, minWidth: 140 },
     { title: '参数键值', dataIndex: 'configValue', key: 'configValue', width: 180, minWidth: 150, ellipsis: true },
     {
       title: '系统内置',
@@ -334,62 +248,6 @@ const ConfigManagement: FC = () => {
 
   return (
     <div>
-      {/* 请求加密状态卡片 */}
-      <Card
-        style={{
-          marginBottom: 16,
-          border: encryptionEnabled ? '1px solid #52c41a' : '1px solid #ff4d4f',
-          background: encryptionEnabled ? 'linear-gradient(135deg, #f6ffed 0%, #ffffff 100%)' : 'linear-gradient(135deg, #fff2f0 0%, #ffffff 100%)',
-        }}
-      >
-        <Row gutter={16} align="middle">
-          <Col span={16}>
-            <Space direction="vertical" size={4}>
-              <Space>
-                {encryptionEnabled ? (
-                  <SafetyOutlined style={{ fontSize: 24, color: '#52c41a' }} />
-                ) : (
-                  <UnlockOutlined style={{ fontSize: 24, color: '#ff4d4f' }} />
-                )}
-                <span style={{ fontSize: 16, fontWeight: 500 }}>
-                  请求加密功能
-                </span>
-                <Tag color={encryptionEnabled ? 'success' : 'error'}>
-                  {encryptionEnabled ? '已启用' : '已禁用'}
-                </Tag>
-              </Space>
-              <div style={{ color: '#666', fontSize: 14 }}>
-                {encryptionEnabled
-                  ? '所有 POST/PUT/PATCH 请求将被强制使用 SM2+SM4 加密传输'
-                  : '警告：请求未加密，敏感数据可能被拦截'}
-              </div>
-            </Space>
-          </Col>
-          <Col span={8} style={{ textAlign: 'right' }}>
-            <Popconfirm
-              title={encryptionEnabled ? '确认禁用请求加密？' : '确认启用请求加密？'}
-              description={
-                encryptionEnabled
-                  ? '禁用后，所有请求将不再加密，仅用于调试环境'
-                  : '启用后，所有请求必须使用 SM2+SM4 加密，否则将被拒绝'
-              }
-              onConfirm={() => handleToggleEncryption(!encryptionEnabled)}
-              okText="确认"
-              cancelText="取消"
-            >
-              <Button
-                type={encryptionEnabled ? 'default' : 'primary'}
-                danger={!encryptionEnabled}
-                icon={encryptionEnabled ? <UnlockOutlined /> : <LockOutlined />}
-                loading={encryptionLoading}
-              >
-                {encryptionEnabled ? '禁用加密' : '启用加密'}
-              </Button>
-            </Popconfirm>
-          </Col>
-        </Row>
-      </Card>
-
       {/* 统计卡片 - 只在总数大于10时显示 */}
       {statistics.total > 10 && (
         <Row gutter={16} style={{ marginBottom: 16 }}>
