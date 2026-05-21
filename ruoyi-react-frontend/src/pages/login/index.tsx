@@ -20,16 +20,19 @@ const authModeOptions = [
     value: 'local' as AuthMode,
     label: '本地认证',
     description: '使用系统账号登录',
+    icon: '\u{1F512}',
   },
   {
     value: 'ad' as AuthMode,
     label: 'AD域控认证',
     description: '使用企业域账号登录',
+    icon: '\u{1F3E2}',
   },
   {
     value: 'hybrid' as AuthMode,
     label: '混合认证',
     description: '优先本地，失败则AD认证',
+    icon: '\u{1F504}',
   },
 ];
 
@@ -185,11 +188,10 @@ const Login: FC = () => {
               <Space direction="vertical" style={{ width: '100%' }}>
                 {authModeOptions.map((option) => (
                   <Radio key={option.value} value={option.value}>
-                    <div>
-                      <span style={{ fontWeight: 500 }}>{option.label}</span>
-                      <span style={{ fontSize: '12px', color: '#999', marginLeft: '8px' }}>
-                        {option.description}
-                      </span>
+                    <span style={{ fontSize: '20px', marginRight: '8px' }}>{option.icon}</span>
+                    <div style={{ display: 'inline-block', verticalAlign: 'top' }}>
+                      <div style={{ fontWeight: 500 }}>{option.label}</div>
+                      <div style={{ fontSize: '12px', color: '#999' }}>{option.description}</div>
                     </div>
                   </Radio>
                 ))}
