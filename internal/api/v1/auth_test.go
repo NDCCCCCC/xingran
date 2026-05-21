@@ -393,6 +393,9 @@ func TestLoginWithDualLayerEncryption(t *testing.T) {
 func TestLoginWithInvalidEncryptedRequest(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
+	// 创建测试路由器
+	router := gin.New()
+
 	testCases := []struct {
 		name    string
 		request map[string]interface{}
