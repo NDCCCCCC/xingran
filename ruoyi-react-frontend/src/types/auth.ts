@@ -5,6 +5,25 @@
 import type { Gender } from './base';
 import type { User } from './system';
 
+// ==================== 认证模式 ====================
+
+/**
+ * 认证模式
+ * - local: 本地认证（SM3密码验证）
+ * - ad: AD域控认证（LDAP绑定验证）
+ * - hybrid: 混合认证（本地优先，失败降级到AD）
+ */
+export type AuthMode = 'local' | 'ad' | 'hybrid';
+
+/**
+ * 认证模式选项（用于UI渲染）
+ */
+export interface AuthModeOption {
+  label: string;
+  value: AuthMode;
+  description?: string;
+}
+
 // ==================== 登录相关 ====================
 
 /**
@@ -13,6 +32,7 @@ import type { User } from './system';
 export interface LoginRequest {
   username: string;
   password: string;
+  authMode?: AuthMode;
   encryptedPassword?: boolean;
   captcha?: string;
   captchaId?: string;
