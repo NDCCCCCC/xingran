@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.8
-milestone_name: 登录端点加密增强
+milestone: v1.5
+milestone_name: MAC地址历史数据管理
 current_phase: 18
-status: milestone_complete
-last_updated: "2026-05-21T10:00:00Z"
+status: completed
+last_updated: "2026-05-21T06:40:09.833Z"
 last_activity: 2026-05-21
 progress:
-  total_phases: 1
-  completed_phases: 1
-  total_plans: 4
-  completed_plans: 0
+  total_phases: 7
+  completed_phases: 4
+  total_plans: 28
+  completed_plans: 30
   percent: 100
 ---
 
@@ -166,3 +166,9 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 **Coverage**: 0% (execution started)
 
 **Planned Phase:** 18 (login-endpoint-encryption) — 4 plans — 2026-05-21T10:00:00.000Z
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260521-ksr | 整理项目目录，清除临时版本和构建物 | 2026-05-21 | 578be37 | [260521-ksr-1-exe-cmd-exe-main-exe-ruoyi-backend-exe](./quick/260521-ksr-1-exe-cmd-exe-main-exe-ruoyi-backend-exe/) |

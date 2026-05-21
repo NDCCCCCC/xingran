@@ -229,7 +229,7 @@ go build -o ruoyi-backend-linux ./cmd/main.go
 
 ```bash
 # 运行测试脚本（可选）
-go run scripts/test_excel_import.go
+go run scripts/tests/test_excel_import.go
 ```
 
 ### 验证2: 下载Excel模板
@@ -385,7 +385,7 @@ internal/core/db/migrations/080_add_dept_code_field.sql
 internal/services/operations/reference_resolver.go
 internal/services/operations/batch_upserter.go
 internal/services/operations/cache_invalidator.go
-scripts/test_excel_import.go
+scripts/tests/test_excel_import.go
 docs/EXCEL_IMPORT_GUIDE.md (本文件)
 ```
 

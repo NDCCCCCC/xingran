@@ -71,6 +71,20 @@ go run migrate/056_fix_user_center_paths.go
 go run migrate/076_check_computer_data.go
 ```
 
+## 测试脚本 (tests/)
+
+### 功能测试
+- `test_excel_import.go` - Excel 导入功能测试脚本
+
+运行测试脚本：
+```bash
+# 进入脚本目录
+cd scripts/tests
+
+# 运行 Excel 导入测试
+go run test_excel_import.go
+```
+
 ## SQL 脚本
 
 根目录下的 SQL 文件可以直接通过 psql 执行：
