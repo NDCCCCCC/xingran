@@ -26,6 +26,11 @@ type User struct {
 	InitFlag      bool       `gorm:"default:false" json:"initFlag"`
 	Remark        string     `gorm:"size:500" json:"remark,omitempty"`
 
+	// AD认证相关字段
+	AuthSource string  `gorm:"size:10;default:'local';not null" json:"authSource"`
+	ADUsername *string `gorm:"size:100" json:"adUsername,omitempty"`
+	ADDN       *string `gorm:"type:text" json:"adDn,omitempty"`
+
 	// 关联
 	Roles []string    `gorm:"-" json:"roles"` // 简化为字符串数组，避免复杂关联
 	Posts []Post      `gorm:"many2many:user_posts;" json:"posts,omitempty"`
