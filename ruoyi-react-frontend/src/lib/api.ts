@@ -16,6 +16,7 @@ import {
 	handleParseError,
 } from '@/utils/errorHandler';
 import type { BaseResponse } from '@/types/base';
+import { getCachedEncryptionConfig, clearEncryptionConfigCache } from '@/services/encryptionConfig';
 
 // 工具函数：生成请求ID
 function generateRequestId(): string {
@@ -33,8 +34,20 @@ function generateNonce(): string {
 // Key: X-Request-ID, Value: { sm4KeyHex: string, ivHex: string }
 const encryptionKeyStore = new Map<string, { sm4KeyHex: string; ivHex: string }>();
 
-// 是否启用请求体加密
-const ENABLE_REQUEST_ENCRYPTION = import.meta.env.VITE_ENABLE_REQUEST_ENCRYPTION === 'true';
+/**
+ * 原始 axios 实例（无拦截器）
+ * 专门用于获取加密配置，避免无限循环
+ */
+const rawAxios: AxiosInstance = axios.create({
+	baseURL: import.meta.env.VITE_API_BASE_URL || 'http://10.62.10.33:9000/api/v1',
+	timeout: 30000,
+	headers: {
+		'Content-Type': 'application/json',
+	},
+});
+
+// 是否启用请求体加密（动态配置，默认禁用以避免循环依赖）
+let ENABLE_REQUEST_ENCRYPTION = false;
 
 // 加密白名单
 const ENCRYPTION_WHITELIST: string[] = [];
@@ -44,6 +57,7 @@ const ENCRYPTION_BLACKLIST: string[] = [
 	'/system/auth/login',
 	'/system/auth/public-key',
 	'/system/auth/captcha',
+	'/system/auth/encryption-config', // 防止无限循环：加密配置端点本身不能被加密
 	'/upload',
 ];
 
@@ -85,6 +99,67 @@ function processRefreshQueue(error?: any) {
 		}
 	});
 	refreshQueue.length = 0;
+}
+
+/**
+ * 初始化加密配置
+ * 从后端获取当前加密状态并应用到 ENABLE_REQUEST_ENCRYPTION 变量
+ * 注意：必须在应用启动时调用，使用 rawAxios 避免拦截器循环
+ */
+export async function initEncryptionConfig(): Promise<void> {
+	// 默认值：禁用加密（更安全，避免循环依赖问题）
+	ENABLE_REQUEST_ENCRYPTION = false;
+
+	try {
+		// 使用 rawAxios 而不是 api.get()，避免触发拦截器造成无限循环
+		// 设置较短超时，避免阻塞应用启动
+		const response = await rawAxios.get<{ code: number; data: { enabled: boolean; key: string; source: string } }>('/system/auth/encryption-config', {
+			timeout: 5000, // 5秒超时
+		});
+
+		if (response.data && response.data.code === 0) {
+			ENABLE_REQUEST_ENCRYPTION = response.data.data.enabled;
+			console.log('[Encryption Config] 加密配置已加载:', {
+				enabled: response.data.data.enabled,
+				key: response.data.data.key,
+				source: response.data.data.source,
+			});
+		} else {
+			console.warn('[Encryption Config] 响应格式异常，保持默认值 (禁用)');
+		}
+	} catch (error) {
+		// 失败时保持默认值（禁用），避免循环依赖
+		console.warn('[Encryption Config] 加载加密配置失败，保持默认值 (禁用):', error);
+	}
+}
+
+/**
+ * 刷新加密配置
+ * 供配置更新页面调用，清除缓存并重新加载配置
+ * 使用 rawAxios 避免拦截器循环依赖
+ */
+export async function refreshEncryptionConfig(): Promise<void> {
+	// 清除前端缓存
+	clearEncryptionConfigCache();
+
+	// 使用 rawAxios 重新获取配置（避免拦截器循环）
+	try {
+		const response = await rawAxios.get<{ code: number; data: { enabled: boolean; key: string; source: string } }>('/system/auth/encryption-config', {
+			timeout: 5000,
+		});
+
+		if (response.data && response.data.code === 0) {
+			ENABLE_REQUEST_ENCRYPTION = response.data.data.enabled;
+			console.log('[Encryption Config] 配置已刷新:', {
+				enabled: response.data.data.enabled,
+				key: response.data.data.key,
+				source: response.data.data.source,
+			});
+		}
+	} catch (error) {
+		console.error('[Encryption Config] 刷新配置失败，保持当前设置:', error);
+		// 失败时不改变当前设置
+	}
 }
 
 // 创建axios实例
@@ -161,6 +236,9 @@ api.interceptors.request.use(
 
 		if (config.data && shouldEncryptRequest(config.url || '', config.method || '')) {
 			try {
+				// DEBUG: 打印加密前的原始数据
+				console.log('[ENCRYPTION DEBUG] 加密前的原始数据:', JSON.stringify(config.data, null, 2));
+
 				const publicKey = await fetchPublicKey();
 				const sm4KeyHex = generateSM4Key();
 				const ivHex = generateIV();
