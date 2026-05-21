@@ -8,11 +8,11 @@ server:
 # 数据库配置 - PostgreSQL
 # 环境变量: DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
 database:
-  host: "10.62.10.34"
-  port: 5432
-  user: "postgres"
-  password: "Cpic1234"
-  dbname: "ruoyi"
+  host: "${DB_HOST}"
+  port: "${DB_PORT:-5432}"
+  user: "${DB_USER}"
+  password: "${DB_PASSWORD}"
+  dbname: "${DB_NAME}"
   sslmode: "disable"
   max_open_conns: 10
   max_idle_conns: 5
