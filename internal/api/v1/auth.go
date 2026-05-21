@@ -18,6 +18,8 @@ import (
 type LoginRequest struct {
 	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"`
+	// AuthMode 认证模式：local=本地, ad=AD域控, hybrid=混合（可选，为空时使用系统默认配置）
+	AuthMode string `json:"authMode,omitempty"`
 	// EncryptedPassword 表示密码是否已加密（SM2）
 	EncryptedPassword bool   `json:"encryptedPassword,omitempty"`
 	Captcha           string `json:"captcha,omitempty"`
@@ -85,47 +87,28 @@ func login(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		// 检查验证码（如果启用）
-		if core.CaptchaService.IsEnabled() {
-			// 获取客户端IP
-			clientIP := c.ClientIP()
+		ctx := c.Request.Context()
 
-			// 验证验证码
+		// 1. 检查验证码（如果启用）
+		if core.CaptchaService.IsEnabled() {
+			clientIP := c.ClientIP()
 			if req.Captcha == "" || req.CaptchaID == "" {
 				response.Error(c, response.ErrCaptchaError, "请输入验证码")
 				return
 			}
-
-			if err := core.CaptchaService.VerifyCaptcha(c.Request.Context(), req.CaptchaID, req.Captcha, clientIP); err != nil {
+			if err := core.CaptchaService.VerifyCaptcha(ctx, req.CaptchaID, req.Captcha, clientIP); err != nil {
 				response.Error(c, response.ErrCaptchaError, err.Error())
 				return
 			}
 		}
 
-		// 检查账号是否被锁定
-		if err := core.CaptchaService.CheckLoginLock(c.Request.Context(), req.Username); err != nil {
+		// 2. 检查账号是否被锁定
+		if err := core.CaptchaService.CheckLoginLock(ctx, req.Username); err != nil {
 			response.Error(c, response.ErrForbidden, err.Error())
 			return
 		}
 
-		// 查找用户
-		var user models.User
-		if err := core.DB.GetDB().Where("username = ?", req.Username).First(&user).Error; err != nil {
-			if err.Error() == "record not found" {
-				response.Error(c, response.ErrUserNotFound)
-			} else {
-				response.Error(c, response.ErrDatabaseError, "查询用户失败: "+err.Error())
-			}
-			return
-		}
-
-		// 检查用户状态
-		if user.Status != models.UserStatusEnabled {
-			response.Error(c, response.ErrForbidden, "用户已被禁用")
-			return
-		}
-
-		// 解密密码（如果使用 SM2 加密）
+		// 3. 解密密码（如果使用 SM2 加密）
 		passwordToVerify := req.Password
 		if req.EncryptedPassword {
 			decrypted, err := core.JWTManager.DecryptPassword(req.Password)
@@ -136,31 +119,91 @@ func login(core *core.Core) gin.HandlerFunc {
 			passwordToVerify = decrypted
 		}
 
-		// 验证密码 - 使用SM3算法
-		pwdManager := security.NewPasswordManager(nil)
-		if ok, err := pwdManager.VerifyPassword(passwordToVerify, user.Password); err != nil || !ok {
-			if err != nil {
-				response.Error(c, response.ErrPasswordDecrypt, "密码验证失败: "+err.Error())
-				return
+		// 4. 确定认证模式
+		authMode := req.AuthMode
+		if authMode == "" {
+			// 从配置读取默认认证模式
+			factory := core.GetAuthFactory()
+			if factory != nil {
+				defaultMode, err := factory.GetDefaultAuthMode(ctx)
+				if err != nil {
+					applogger.Warnf("获取默认认证模式失败: %v，降级到本地认证", err)
+				} else {
+					authMode = defaultMode
+				}
 			}
+			if authMode == "" {
+				authMode = "local"
+			}
+		}
 
-			// 记录登录失败日志
-			if failErr := core.CaptchaService.RecordLoginFailure(c.Request.Context(), req.Username); failErr != nil {
-				response.Error(c, response.ErrCredentialInvalid, failErr.Error())
-			} else {
-				response.Error(c, response.ErrCredentialInvalid)
-			}
-			recordLoginLog(c, core, req.Username, 1, "用户或密码错误")
+		// 5. 获取认证器并执行认证
+		factory := core.GetAuthFactory()
+		if factory == nil {
+			// 工厂未初始化，回退到直接本地认证（向后兼容）
+			applogger.Warnf("认证策略工厂未初始化，使用直接本地认证")
+			loginLocalDirect(c, core, req.Username, passwordToVerify)
 			return
 		}
 
-		// 登录成功，清除失败记录
-		core.CaptchaService.ClearLoginFailure(c.Request.Context(), req.Username)
+		authenticator, err := factory.GetAuthenticator(authMode)
+		if err != nil {
+			applogger.Errorf("获取认证器失败(mode=%s): %v", authMode, err)
+			response.Error(c, response.ErrServerError, "认证服务异常")
+			return
+		}
 
-		// 记录登录成功日志
+		authReq := &security.AuthRequest{
+			Username: req.Username,
+			Password: passwordToVerify,
+			IP:       c.ClientIP(),
+		}
+
+		authResult, err := authenticator.Authenticate(ctx, authReq)
+		if err != nil {
+			applogger.Warnf("用户 %s 认证失败(mode=%s): %v", req.Username, authMode, err)
+
+			// 记录登录失败
+			if failErr := core.CaptchaService.RecordLoginFailure(ctx, req.Username); failErr != nil {
+				applogger.Warnf("记录登录失败次数失败: %v", failErr)
+			}
+
+			// 返回认证错误
+			if err == security.ErrUserNotFound || err == security.ErrInvalidCredentials {
+				response.Error(c, response.ErrCredentialInvalid)
+				recordLoginLog(c, core, req.Username, 1, "用户名或密码错误")
+			} else if err == security.ErrUserDisabled {
+				response.Error(c, response.ErrForbidden, "用户已被禁用")
+				recordLoginLog(c, core, req.Username, 1, "用户已被禁用")
+			} else if err == security.ErrADConfigNotFound || err == security.ErrADConnectionFailed {
+				// AD配置/连接问题
+				response.Error(c, response.ErrServerError, "认证服务暂时不可用")
+				recordLoginLog(c, core, req.Username, 1, "认证服务不可用")
+			} else {
+				response.Error(c, response.ErrCredentialInvalid)
+				recordLoginLog(c, core, req.Username, 1, "认证失败")
+			}
+			return
+		}
+
+		// 6. 认证成功 - 获取完整用户信息
+		if authResult.User == nil {
+			response.Error(c, response.ErrServerError, "认证成功但用户信息缺失")
+			return
+		}
+
+		var user models.User
+		if err := core.DB.GetDB().Where("id = ?", authResult.User.ID).First(&user).Error; err != nil {
+			applogger.Errorf("查询认证用户完整信息失败: %v", err)
+			response.Error(c, response.ErrServerError, "获取用户信息失败")
+			return
+		}
+
+		// 7. 登录成功后处理
+		core.CaptchaService.ClearLoginFailure(ctx, req.Username)
 		recordLoginLog(c, core, req.Username, 0, "登录成功")
 
-		// 查询用户角色
+		// 8. 查询用户角色
 		var userRoles []models.UserRole
 		var roleIds []string
 		if err := core.DB.GetDB().Where("user_id = ?", user.ID).Find(&userRoles).Error; err == nil {
@@ -169,14 +212,14 @@ func login(core *core.Core) gin.HandlerFunc {
 			}
 		}
 
-		// 生成JWT令牌
+		// 9. 生成JWT令牌
 		tokenPair, err := core.JWTManager.GenerateTokenPair(user.ID, user.Username, roleIds)
 		if err != nil {
 			response.Error(c, response.ErrServerError, "生成令牌失败")
 			return
 		}
 
-		// 构建用户信息
+		// 10. 构建响应
 		userInfo := &UserInfo{
 			ID:         user.ID,
 			Username:   user.Username,
@@ -185,21 +228,73 @@ func login(core *core.Core) gin.HandlerFunc {
 			Gender:     user.Gender,
 			Status:     user.Status,
 			DeptName:   user.DeptName,
-			Roles:      roleIds, // 使用数据库中的角色ID
+			Roles:      roleIds,
 			CreateTime: user.CreatedAt,
 		}
 
-		// 构建响应
 		loginResp := &LoginResponse{
 			User:         userInfo,
 			AccessToken:  tokenPair.AccessToken,
 			RefreshToken: tokenPair.RefreshToken,
-			ExpiresIn:    7200, // 2小时
+			ExpiresIn:    7200,
 			TokenType:    "Bearer",
 		}
 
 		response.Success(c, loginResp)
+		applogger.Infof("用户 %s 登录成功，认证模式: %s，认证源: %s", user.Username, authMode, authResult.AuthSource)
 	}
+}
+
+// loginLocalDirect 直接本地认证（工厂未初始化时的回退路径）
+func loginLocalDirect(c *gin.Context, core *core.Core, username, password string) {
+	ctx := c.Request.Context()
+
+	var user models.User
+	if err := core.DB.GetDB().Where("username = ?", username).First(&user).Error; err != nil {
+		response.Error(c, response.ErrCredentialInvalid)
+		return
+	}
+
+	if user.Status != models.UserStatusEnabled {
+		response.Error(c, response.ErrForbidden, "用户已被禁用")
+		return
+	}
+
+	pwdManager := security.NewPasswordManager(nil)
+	if ok, err := pwdManager.VerifyPassword(password, user.Password); err != nil || !ok {
+		core.CaptchaService.RecordLoginFailure(ctx, username)
+		response.Error(c, response.ErrCredentialInvalid)
+		recordLoginLog(c, core, username, 1, "用户或密码错误")
+		return
+	}
+
+	core.CaptchaService.ClearLoginFailure(ctx, username)
+	recordLoginLog(c, core, username, 0, "登录成功")
+
+	var userRoles []models.UserRole
+	var roleIds []string
+	if err := core.DB.GetDB().Where("user_id = ?", user.ID).Find(&userRoles).Error; err == nil {
+		for _, ur := range userRoles {
+			roleIds = append(roleIds, ur.RoleID)
+		}
+	}
+
+	tokenPair, err := core.JWTManager.GenerateTokenPair(user.ID, user.Username, roleIds)
+	if err != nil {
+		response.Error(c, response.ErrServerError, "生成令牌失败")
+		return
+	}
+
+	userInfo := &UserInfo{
+		ID: user.ID, Username: user.Username, Nickname: user.Nickname,
+		Email: user.Email, Gender: user.Gender, Status: user.Status,
+		DeptName: user.DeptName, Roles: roleIds, CreateTime: user.CreatedAt,
+	}
+
+	response.Success(c, &LoginResponse{
+		User: userInfo, AccessToken: tokenPair.AccessToken,
+		RefreshToken: tokenPair.RefreshToken, ExpiresIn: 7200, TokenType: "Bearer",
+	})
 }
 
 // logout 用户登出
