@@ -483,6 +483,10 @@ func initData(db *gorm.DB) error {
 	if err := createRequestEncryptionToggleConfig(db); err != nil {
 		return fmt.Errorf("创建请求加密开关配置失败: %w", err)
 	}
+	// 创建AD认证配置参数
+	if err := createADAuthConfig(db); err != nil {
+		return fmt.Errorf("创建AD认证配置参数失败: %w", err)
+	}
 
 	applogger.Infof("基础数据初始化完成")
 	return nil
@@ -1322,5 +1326,77 @@ func createRequestEncryptionToggleConfig(db *gorm.DB) error {
 	}
 
 	applogger.Infof("请求加密开关配置已创建（默认启用）")
+	return nil
+}
+
+// createADAuthConfig 创建AD认证配置参数
+func createADAuthConfig(db *gorm.DB) error {
+	authConfigs := []models.Config{
+		{
+			ConfigName:  "AD认证启用",
+			ConfigKey:   "sys.auth.ad.enabled",
+			ConfigValue: "false",
+			ConfigType:  models.ConfigTypeYes,
+			IsSystem:    models.ConfigIsSystemYes,
+			Remark:      "是否启用AD域控认证（true/false）",
+		},
+		{
+			ConfigName:  "默认认证模式",
+			ConfigKey:   "sys.auth.default.mode",
+			ConfigValue: "local",
+			ConfigType:  models.ConfigTypeYes,
+			IsSystem:    models.ConfigIsSystemYes,
+			Remark:      "默认认证模式：local=本地, ad=AD, hybrid=混合",
+		},
+		{
+			ConfigName:  "AD配置ID",
+			ConfigKey:   "sys.auth.ad.config_id",
+			ConfigValue: "",
+			ConfigType:  models.ConfigTypeYes,
+			IsSystem:    models.ConfigIsSystemNo,
+			Remark:      "AD域控配置ID（为空则使用第一个启用的配置）",
+		},
+		{
+			ConfigName:  "AD用户默认角色",
+			ConfigKey:   "sys.auth.ad.default_role_id",
+			ConfigValue: "",
+			ConfigType:  models.ConfigTypeYes,
+			IsSystem:    models.ConfigIsSystemNo,
+			Remark:      "AD用户首次登录时分配的默认角色ID",
+		},
+		{
+			ConfigName:  "AD用户默认部门",
+			ConfigKey:   "sys.auth.ad.default_dept_id",
+			ConfigValue: "",
+			ConfigType:  models.ConfigTypeYes,
+			IsSystem:    models.ConfigIsSystemNo,
+			Remark:      "AD用户首次登录时分配的默认部门ID",
+		},
+	}
+
+	for _, cfg := range authConfigs {
+		var count int64
+		err := db.Table("sys_config").
+			Where("config_key = ?", cfg.ConfigKey).
+			Count(&count).Error
+
+		if err != nil {
+			applogger.Warnf("查询AD认证配置 %s 失败: %v", cfg.ConfigKey, err)
+			return err
+		}
+
+		if count > 0 {
+			applogger.Infof("AD认证配置 %s 已存在，跳过", cfg.ConfigKey)
+			continue
+		}
+
+		if err := db.Create(&cfg).Error; err != nil {
+			applogger.Warnf("创建AD认证配置 %s 失败: %v", cfg.ConfigKey, err)
+			return err
+		}
+
+		applogger.Infof("AD认证配置 %s 已创建", cfg.ConfigKey)
+	}
+
 	return nil
 }
