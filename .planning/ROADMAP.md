@@ -8,7 +8,9 @@
 - ✅ **v1.3 技术债清理** — Phases 8-10 (shipped 2026-04-27)
 - ✅ **v1.4 MAC地址采集优化** — Phase 11 (shipped 2026-05-09)
 - 🚧 **v1.5 MAC地址历史数据管理** — Phases 12-15 (in progress)
-- 📋 **v1.6 API密钥管理系统** — Phase 16 (planned)
+- 🚧 **v1.6 API密钥管理系统** — Phase 16 (in progress)
+- ✅ **v1.7 前后端加密配置同步** — Phase 17 (shipped 2026-05-20)
+- 📋 **v1.8 登录端点加密增强** — Phase 18 (planned)
 
 ## Phases
 
@@ -71,6 +73,22 @@
 <summary>📋 v1.6 API密钥管理系统 (Phase 16) — PLANNED</summary>
 
 - [ ] Phase 16: API密钥管理 (10 plans) — planned
+
+</details>
+
+<details>
+<summary>✅ v1.7 前后端加密配置同步 (Phase 17) — SHIPPED 2026-05-20</summary>
+
+- [x] Phase 17: 前后端加密配置同步 (6/6 plans) — completed 2026-05-20
+
+</details>
+
+---
+
+<details>
+<summary>📋 v1.8 登录端点加密增强 (Phase 18) — PLANNED</summary>
+
+- [ ] Phase 18: 登录端点请求体加密 (4 plans) — planned
 
 </details>
 
@@ -159,6 +177,50 @@ Plans:
 - [ ] 16-07-PLAN.md — 前端测试（Wave 7）
 - [ ] 16-08-PLAN.md — 集成测试和覆盖率报告（Wave 8）
 
+### Phase 17: 前后端加密配置同步
+**Goal**: 实现前后端加密配置的运行时同步，支持请求和响应加密的统一配置管理
+**Depends on**: 无（独立功能）
+**Requirements**: REQ-01, REQ-02, REQ-03, REQ-04, REQ-05, REQ-06, REQ-07, REQ-08
+**Success Criteria** (what must be TRUE):
+  1. 前端通过公共API端点动态获取加密配置，不再依赖构建时环境变量
+  2. 加密配置存储在数据库 `sys_config` 表中，可通过参数管理UI实时修改
+  3. 配置变更后立即生效，中间件缓存自动刷新，无需重启服务
+  4. 前端缓存配置5分钟减少API调用，后端缓存30秒保证性能
+  5. Token刷新前自动获取最新加密配置，避免配置变更导致的400错误
+  6. 响应加密与请求加密使用同一配置开关，实现统一控制
+  7. 前端自动解密加密响应，对用户透明
+  8. 参数管理页面支持手动刷新配置，立即应用变更
+**Plans**: 6 plans
+
+Plans:
+- [x] 17-01-PLAN.md — 创建后端公共加密配置端点（Wave 1）— completed 2026-05-20
+- [x] 17-02-PLAN.md — 实现前端加密配置服务与缓存（Wave 2）— completed 2026-05-20
+- [x] 17-03-PLAN.md — 集成Token刷新流程与手动刷新工具（Wave 3）— completed 2026-05-20
+- [x] 17-04-PLAN.md — 启用响应加密与数据库配置同步（Wave 4）— completed 2026-05-20
+- [x] 17-05-PLAN.md — 实现前端响应解密与UI刷新（Wave 5）— completed 2026-05-20
+- [x] 17-06-PLAN.md — 测试与文档（Wave 6）— completed 2026-05-20
+
+### Phase 18: 登录端点请求体加密
+**Goal**: 为登录端点 `/system/auth/login` 启用 SM2+SM4 混合请求体加密，实现三层加密保护
+**Depends on**: Phase 17 (前后端加密配置同步)
+**Requirements**: 独立功能需求
+**Success Criteria** (what must be TRUE):
+  1. 登录请求经过SM2+SM4请求体加密（传输层 + 应用层）
+  2. 密码仍经过SM2字段级加密（双层加密，深度防御）
+  3. 性能影响可接受（< 50ms 增加延迟，P99 < 350ms）
+  4. 向后兼容旧客户端（require_encryption: false）
+  5. 测试覆盖率 > 80%（单元测试 + 集成测试）
+  6. 安全保护有效（防重放攻击、时间戳验证、防MITM）
+  7. 部署文档完整（部署步骤、回滚程序、监控告警）
+  8. 符合国密标准（GM/T 0024-2014 双重保护建议）
+**Plans**: 4 plans
+
+Plans:
+- [x] 18-01-PLAN.md — 配置文件修改（Wave 1）— 移除登录端点排除/黑名单
+- [x] 18-02-PLAN.md — 单元测试（Wave 2）— 后端+前端加密逻辑测试
+- [x] 18-03-PLAN.md — 集成测试（Wave 3）— E2E测试、性能测试、安全测试
+- [x] 18-04-PLAN.md — 部署和验证（Wave 4）— 部署文档、安全文档、最终验证
+
 ---
 
 ## Progress
@@ -181,7 +243,9 @@ Plans:
 | 14. 前端与用户体验 | v1.5 | 0/5 | Planned | - |
 | 15. 性能优化 | v1.5 | 0/5 | Planned | - |
 | 16. API 密钥管理 | v1.6 | 6/10 | In Progress | 2026-05-19 |
+| 17. 前后端加密配置同步 | v1.7 | 6/6 | Complete | 2026-05-20 |
+| 18. 登录端点请求体加密 | v1.8 | 4/4 | Complete    | 2026-05-21 |
 
 ---
 
-**Total**: 16 phases, 34 plans complete, 2 gap closure plans, 20 plans planned (5 each for phases 13-15), 10 plans planned (phase 16), 66 total
+**Total**: 18 phases, 46 plans complete, 2 gap closure plans, 20 plans planned (5 each for phases 13-15), 4 plans remaining (phase 16), 4 plans planned (phase 18), 76 total

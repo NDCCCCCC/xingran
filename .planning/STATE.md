@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.5
-milestone_name: MAC地址历史数据管理
-current_phase: 16
-status: executing
-last_updated: "2026-05-20T06:20:00.000Z"
-last_activity: 2026-05-20
+milestone: v1.8
+milestone_name: 登录端点加密增强
+current_phase: 18
+status: milestone_complete
+last_updated: "2026-05-21T10:00:00Z"
+last_activity: 2026-05-21
 progress:
-  total_phases: 5
-  completed_phases: 2
-  total_plans: 16
-  completed_plans: 17
+  total_phases: 1
+  completed_phases: 1
+  total_plans: 4
+  completed_plans: 0
   percent: 100
 ---
 
@@ -18,25 +18,25 @@ progress:
 
 **Project**: 工位导入部门/用户关联功能
 **Created**: 2026-04-16
-**Status**: 里程碑 v1.5 执行中
-Phase: 16
-Plan: 4
-Status: Executing Phase 16
-Last activity: 2026-05-20
+**Status**: 里程碑 v1.8 执行中
+Phase: 18
+Plan: Not started
+Status: Milestone complete
+Last activity: 2026-05-21
 
 ## Current Position
 
-Phase: 16 (API 密钥管理) — EXECUTING
-Plan: 08 of 10 (集成测试和覆盖率汇总报告)
-Status: Plan 16-08 completed
-Last activity: 2026-05-20 -- Quick task 260520-jrp completed: 在参数管理页面添加请求加密开关配置参数
+Phase: 18 (登录端点加密增强) — 🔄 EXECUTING
+Plan: 00 of 04 (配置更新)
+Status: Phase 18 started - executing Wave 1 (configuration updates)
+Last activity: 2026-05-21 -- Phase 18 execution started
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-09)
 
 **Core value:** Excel 导入时自动关联实体，提升批量管理效率；可配置仪表盘系统提供监控可视化能力
-**Current focus:** Phase --phase — 16
+**Current focus:** Phase 18 - 登录端点加密增强
 
 ## Phase Status
 
@@ -47,6 +47,8 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 | 14 | 前端与用户体验 | 📋 Planned | 0/5 plans |
 | 15 | 性能优化 | 📋 Planned | 0/5 plans |
 | 16 | API 密钥管理 | 🔄 Executing | 8/10 plans |
+| 17 | 前后端加密配置同步 | ✅ Completed | 6/6 plans |
+| 18 | 登录端点加密增强 | 🔄 Executing | 0/4 plans |
 
 ## Completed Milestones
 
@@ -55,6 +57,7 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 - ✅ **v1.2 可配置仪表盘生产级改造** (2026-04-21) — 4 phases, 11 plans
 - ✅ **v1.3 技术债清理** (2026-04-27) — 3 phases, 9 plans
 - ✅ **v1.4 MAC地址采集优化** (2026-05-09) — 1 phase, 4 plans
+- ✅ **v1.7 前后端加密配置同步** (2026-05-20) — 1 phase, 6 plans
 
 ## Session History
 
@@ -97,6 +100,9 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 | 2026-05-19 | Plan 16-05b completed: API密钥管理的前端页面组件 | 16 |
 | 2026-05-19 | Plan 16-07 completed: API密钥管理功能的前端测试 | 16 |
 | 2026-05-19 | Plan 16-08 completed: 集成测试和覆盖率汇总报告 (81.7% coverage) | 16 |
+| 2026-05-20 | Phase 17 completed: 前后端加密配置同步 (6/6 plans, 35 tests) | 17 |
+| 2026-05-20 | Milestone v1.7 completed | — |
+| 2026-05-21 | Phase 18 started: 登录端点加密增强 | 18 |
 
 ## Quick Tasks Completed
 
@@ -119,59 +125,44 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 - v1.4 完成: MAC地址采集优化 - 过滤设备间互联端口
 - v1.5 规划中: MAC地址历史数据管理（4 个阶段）
 - v1.5 Phase 12 完成: 数据模型与采集集成（3 个计划）
-- Phase 16 添加: API 密钥管理功能
+- v1.6 规划中: API密钥管理系统（1 个阶段）
+- v1.7 完成: 前后端加密配置同步（1 个阶段）
+- v1.8 执行中: 登录端点加密增强（1 个阶段）
 
-**Total shipped**: 11 phases + Phase 12, 35 plans, ~170 tasks
+**Total shipped**: 13 phases, 41 plans, ~200 tasks
 
-**Current Phase:** --phase
-**Phase Status:** ✅ Phase 12 completed - Ready to proceed to Phase 13
+**Current Phase:** 18
+**Phase Status:** 🔄 Phase 18 executing - 4 plans across 4 waves
 
-### Key Technical Decisions for v1.5
+### Key Technical Decisions for Phase 18
 
-1. **存储策略**: 增量快照（仅记录变更事件）vs 全量存储 → 选择增量快照，节省99%存储空间
-2. **数据库架构**: PostgreSQL原生时间序列优化（BRIN索引 + 月度分区）→ 无需引入TimescaleDB
-3. **变更检测**: 复合键变更检测（MAC+VLAN+接口），避免MAC flapping误判
-4. **性能目标**: 90天查询<2秒，1年查询<5秒
-5. **数据保留**: 默认90天，可配置，自动清理过期分区
-
-### Phase 12 Implementation Decisions
-
-1. **Query-01**: 使用 GORM 参数化查询防止 SQL 注入（T-12-08 mitigation）
-2. **Query-02**: 支持分页查询（默认每页20条，最大100条）
-3. **Query-03**: RFC3339 时间格式解析（严格校验防止格式攻击）
-4. **Query-04**: 设备删除后历史数据保留（device_name_snapshot 字段）
-5. **History Query Pattern**: 服务层负责查询逻辑，处理器负责参数绑定和响应格式化
+1. **加密策略**: 三层加密防御（HTTPS + SM2+SM4请求体 + SM2密码字段）
+2. **向后兼容**: require_encryption: false，支持混合客户端环境
+3. **配置驱动**: 通过配置文件控制加密排除路径，无需代码变更
+4. **安全防护**: 防重放攻击（nonce + 时间戳300s窗口）
+5. **性能目标**: 加密开销 < 50ms，P99 < 350ms
 
 ### Known Risks & Mitigations
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| 数据库无限制增长 | High | 增量快照（减少99%写入）+ 自动分区清理（保留13个月） |
-| 现有采集流程破坏历史数据 | High | 事务性变更检测，先记录历史再删除当前状态 |
-| 查询性能下降 | Medium | BRIN索引 + 分区裁剪 + 复合索引 |
-| MAC地址格式不一致 | Medium | 数据库层强制规范化或使用MACADDR类型 |
-| 历史事件缺少设备上下文 | Medium | 历史表存储设备名称快照（非外键） |
+| 配置错误导致登录失败 | High | 渐进式部署（开发→测试→生产），快速回滚（5分钟） |
+| 性能退化影响用户体验 | Medium | 性能基准测试验证，监控P99延迟 |
+| nonce存储内存泄漏 | Low | 当前实现可接受，监控内存使用 |
+| 旧客户端兼容性问题 | Medium | require_encryption: false保持向后兼容 |
 
-### v1.5 Requirements Coverage
+### v1.8 Requirements Coverage
 
-**Total Requirements**: 14
+**Total Requirements**: 3
 **Categories**:
 
-- DATA (数据基础设施): 2 requirements
-- QUERY (查询与检索): 4 requirements
-- UI (用户界面): 4 requirements
-- PERF (性能优化): 4 requirements
+- PHASE-18-GOAL: 启用登录端点SM2+SM4请求体加密
+- PHASE-18-SUCCESS: 加密配置、向后兼容、三层加密验证
 
 **Phase Mapping**:
 
-- Phase 12: DATA-01, DATA-02, QUERY-01 ✅ (3 requirements completed)
-- Phase 13: QUERY-02, QUERY-03, QUERY-04, UI-03 (4 requirements)
-- Phase 14: UI-01, UI-02, UI-04 (3 requirements)
-- Phase 15: PERF-01, PERF-02, PERF-03, PERF-04 (4 requirements)
+- Phase 18: PHASE-18-GOAL, PHASE-18-SUCCESS-1,2,3 (4 requirements)
 
-**Coverage**: 3/14 (21%) ✓
+**Coverage**: 0% (execution started)
 
-**Completed Phase:** 12 (数据模型与采集集成) — 3 plans — 2026-05-11T01:13:05.000Z
-**Next Phase:** 13 (查询层与轨迹) — 4 plans — Ready to start
-
-**Planned Phase:** 12 (data-model-integration) — 5 plans — 2026-05-11T04:35:30.807Z
+**Planned Phase:** 18 (login-endpoint-encryption) — 4 plans — 2026-05-21T10:00:00.000Z
