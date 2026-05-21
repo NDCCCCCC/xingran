@@ -109,7 +109,8 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260520-jrp | 在参数管理页面添加请求加密开关配置参数 | 2026-05-20 | a0cddc9 | [260520-jrp-request-encryption-config-toggle](./quick/260520-jrp-request-encryption-config-toggle/) |
-| 260521-m45 | 清理所有空文件夹 | 2026-05-21 | N/A | [260521-m45-clean-empty-folders](./quick/260521-m45-clean-empty-folders/) |
+| 260521-m45 | 清理所有空文件夹 | 2026-05-21 | d9c1b5e | [260521-m45-clean-empty-folders](./quick/260521-m45-clean-empty-folders/) |
+| 260521-org | 整理 scripts、test、tests 目录 | 2026-05-21 | 2f8391b | [260521-m45-clean-empty-folders](./quick/260521-m45-clean-empty-folders/) |
 
 ## Deferred Items
 
