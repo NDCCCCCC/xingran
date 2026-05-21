@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"gorm.io/gorm"
 )
@@ -153,4 +154,39 @@ func (s *UserSyncService) getDefaultDeptID(tx *gorm.DB) string {
 		return "" // 没有配置默认部门
 	}
 	return config.ConfigValue
+}
+
+// SyncADUser 实现 security.UserSyncer 接口
+// 将 security.ADUserInfo 转换为内部类型并调用同步逻辑
+func (s *UserSyncService) SyncADUser(ctx context.Context, adUserInfo *security.ADUserInfo, defaultRoleID string) (*security.SyncedUser, error) {
+	// 转换 ADUserInfo -> ADUserInfoForSync
+	adUser := &ADUserInfoForSync{
+		UserDN:      adUserInfo.UserDN,
+		Username:    adUserInfo.Username,
+		DisplayName: adUserInfo.DisplayName,
+		Email:       adUserInfo.Email,
+		Phone:       adUserInfo.Phone,
+		Mobile:      adUserInfo.Mobile,
+		Title:       adUserInfo.Title,
+		Department:  adUserInfo.Department,
+	}
+
+	user, err := s.SyncUserFromAD(ctx, adUser, defaultRoleID)
+	if err != nil {
+		return nil, err
+	}
+
+	// 转换 models.User -> security.SyncedUser
+	result := &security.SyncedUser{
+		ID:       user.ID,
+		Username: user.Username,
+		Nickname: user.Nickname,
+		Email:    user.Email,
+		Phone:    user.Phone,
+		Status:   int(user.Status),
+		DeptID:   user.DeptID,
+		Roles:    user.Roles,
+	}
+
+	return result, nil
 }
