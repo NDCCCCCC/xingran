@@ -246,6 +246,31 @@ Plans:
 | 17. 前后端加密配置同步 | v1.7 | 6/6 | Complete | 2026-05-20 |
 | 18. 登录端点请求体加密 | v1.8 | 4/4 | Complete    | 2026-05-21 |
 
+### Phase 19: 添加AD域控账号登录功能阶段
+
+阶段目标：在现有AD域控管理基础上实现域控账号登录功能，包括：
+- 策略模式认证系统
+- 初次登录自动同步用户信息
+- 参数管理页面AD登录开关
+- 前端SM4+SM2加密集成
+
+技术要点：
+- 策略模式：LocalAuthenticator、ADAuthenticator、Hybrid模式
+- go-ldap/v3连接AD域控（389/LDAP和636/LDAPS）
+- 数据库迁移：添加auth_source、ad_username、ad_dn、ad_guid等字段
+- 前端登录界面改造：认证模式选择、SM4密码加密
+- 参数配置：sys_config表添加ad_auth_enabled开关
+
+参考文档：AD域控认证完整前后端实现方案总结
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 18
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 19 to break down)
+
 ---
 
 **Total**: 18 phases, 46 plans complete, 2 gap closure plans, 20 plans planned (5 each for phases 13-15), 4 plans remaining (phase 16), 4 plans planned (phase 18), 76 total
