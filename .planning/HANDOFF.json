@@ -1,41 +1,48 @@
 {
   "version": "1.0",
-  "timestamp": "2026-05-11T04:28:26.865Z",
-  "phase": "12",
-  "phase_name": "data-model-integration",
-  "phase_dir": ".planning/phases/12-data-model-integration",
-  "plan": null,
+  "timestamp": "2026-05-21T02:34:18Z",
+  "phase": 18,
+  "phase_name": "登录端点加密增强",
+  "phase_dir": ".planning/phases/18-login-endpoint-encryption",
+  "plan": 2,
   "task": 0,
-  "total_tasks": 0,
+  "total_tasks": 4,
   "status": "paused",
-  "stage": "verification",
   "completed_tasks": [
-    {"id": "code-review", "name": "代码审查 - 迭代1修复5个问题", "status": "done", "commit": "0fc6ddd,841dd74,faea8e1,318a2bc,c61c30e"},
-    {"id": "code-review-2", "name": "代码审查 - 迭代2修复3个问题", "status": "done", "commit": "18b7def,afb5623"},
-    {"id": "code-review-final", "name": "最终代码审查 - 状态CLEAN", "status": "done", "commit": "99be61a"},
-    {"id": "uat", "name": "UAT验收测试 - 发现3个问题", "status": "done", "commit": "f4b9a87,c819fe3"},
-    {"id": "diagnosis", "name": "问题诊断 - 3个问题根因已找到", "status": "done", "commit": "c819fe3"}
+    {"id": 1, "name": "配置更新：移除登录端点的加密排除", "status": "done", "commit": "1d3dd82"},
+    {"id": 2, "name": "单元测试：后端和前端加密逻辑", "status": "done", "commit": "9e9cf5e"}
   ],
   "remaining_tasks": [
-    {"id": "fix-issues", "name": "修复3个已诊断的问题", "status": "not_started"},
-    {"id": "re-verify", "name": "重新验证修复后的功能", "status": "not_started"},
-    {"id": "complete-phase", "name": "完成Phase 12并准备下一阶段", "status": "not_started"}
+    {"id": 3, "name": "集成测试：端到端登录流程验证", "status": "not_started"},
+    {"id": 4, "name": "文档：部署指南和安全文档", "status": "not_started"}
   ],
-  "blockers": [
-    {"description": "MAC历史API未注册 - 需在router.go中添加SetupMACHistoryRouter调用", "type": "technical", "workaround": "已知修复位置: internal/api/router.go:326行后"},
-    {"description": "清理任务注册时机错误 - 需移至core.Init()并添加sys_job迁移", "type": "technical", "workaround": "已知修复位置: internal/core/core.go:236-273"},
-    {"description": "配置初始化缺失 - network.mac.history.retention_days未创建", "type": "technical", "workaround": "需要在main.go或迁移中添加配置初始化"}
-  ],
-  "human_actions_pending": [
-    {"action": "验证MAC地址规范化是否正确支持华为/锐捷格式", "context": "代码分析显示已支持，但UAT报告为问题", "blocking": false},
-    {"action": "测试修复后的API端点是否可访问", "context": "路由注册后需要验证", "blocking": true}
-  ],
+  "blockers": [],
+  "human_actions_pending": [],
   "decisions": [
-    {"decision": "跳过Phase 12的MAC变更检测和采集测试", "rationale": "需要运行时环境和实际设备，用户选择跳过", "phase": "12"},
-    {"decision": "MAC地址规范化问题标记为误报", "rationale": "代码分析确认normalizeMACAddress()已支持所有厂商格式", "phase": "12"},
-    {"decision": "使用并行调试代理加速问题诊断", "rationale": "3个独立问题可以同时调查", "phase": "12"}
+    {"decision": "使用配置文件驱动的方式启用登录端点加密", "rationale": "无需修改代码，仅更新配置文件即可启用加密", "phase": "18"},
+    {"decision": "保持 require_encryption: false 确保向后兼容", "rationale": "支持旧客户端发送明文请求，渐进式迁移", "phase": "18"},
+    {"decision": "双层SM2加密是设计特性而非实现缺陷", "rationale": "Layer 2 (SM2+SM4请求体) + Layer 3 (SM2密码字段) 提供深度防御", "phase": "18"}
   ],
-  "uncommitted_files": [],
-  "next_action": "修复3个已诊断的问题：1) 在router.go中添加SetupMACHistoryRouter调用 2) 将MAC历史清理任务注册移至core.Init() 3) 添加配置初始化",
-  "context_notes": "UAT完成发现3个问题。通过代码审查修复了8个问题(CR-01至CR-03, WR-01至WR-05, WR-06至WR-08)。最终代码审查状态为CLEAN。但UAT发现集成问题：清理任务和API路由未正确注册/初始化。所有问题的根因已通过调试代理找到。下一步是执行修复或规划gap closure阶段。"
+  "uncommitted_files": [
+    ".planning/ROADMAP.md",
+    ".planning/STATE.md",
+    "internal/api/router.go",
+    "internal/api/v1/auth.go",
+    "internal/api/v1/system/config_handler.go",
+    "internal/api/v1/system/config_router.go",
+    "internal/middleware/apikey.go",
+    "internal/models/api_key.go",
+    "internal/models/system/requests/config_requests.go",
+    "pkg/middleware/request_decryption.go",
+    "pkg/middleware/response_encryption.go",
+    "ruoyi-react-frontend/src/components/captcha/SliderCaptcha.tsx",
+    "ruoyi-react-frontend/src/components/captcha/TextCaptcha.tsx",
+    "ruoyi-react-frontend/src/lib/notificationConfigApi.ts",
+    "ruoyi-react-frontend/src/pages/login/index.tsx",
+    "ruoyi-react-frontend/src/utils/authHelpers.ts",
+    "ruoyi-react-frontend/src/utils/sm4.ts",
+    "ruoyi-react-frontend/src/utils/token/TokenManager.ts"
+  ],
+  "next_action": "执行 Wave 3 (计划 18-03): 创建集成测试 - 后端集成测试、前端E2E测试、性能基准测试、安全测试",
+  "context_notes": "Wave 1 和 Wave 2 已完成。配置文件已更新，单元测试全部通过（后端7个，前端18个）。需要继续执行集成测试和文档工作。上下文使用87%。"
 }
