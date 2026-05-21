@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { FC } from 'react';
-import { Form, Input, Button, Card, message } from 'antd';
+import { Form, Input, Button, Card, message, Radio, Space } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
@@ -9,11 +9,36 @@ import { TextCaptcha, SliderCaptcha } from '@/components/captcha';
 import { getCaptchaConfig } from '@/services/captcha';
 import { DASHBOARD } from '@/constants/routes';
 import type { LoginRequest } from '@/types';
+import type { AuthMode } from '@/types/auth';
 import type { CaptchaEnabled } from '@/types/captcha';
+import { encryptPasswordWithSM4, generateSessionKey } from '@/utils/sm4';
 import './login.css';
+
+// 认证模式配置
+const authModeOptions = [
+  {
+    value: 'local' as AuthMode,
+    label: '本地认证',
+    description: '使用系统账号登录',
+    icon: '\u{1F512}',
+  },
+  {
+    value: 'ad' as AuthMode,
+    label: 'AD域控认证',
+    description: '使用企业域账号登录',
+    icon: '\u{1F3E2}',
+  },
+  {
+    value: 'hybrid' as AuthMode,
+    label: '混合认证',
+    description: '优先本地，失败则AD认证',
+    icon: '\u{1F504}',
+  },
+];
 
 const Login: FC = () => {
   const [loading, setLoading] = useState(false);
+  const [authMode, setAuthMode] = useState<AuthMode>('local');
   const [form] = Form.useForm();
   const navigate = useNavigate();
   const { login } = useAuthStore();
@@ -40,9 +65,15 @@ const Login: FC = () => {
   const handleFinish = async (values: LoginRequest) => {
     setLoading(true);
     try {
+      // 使用 SM4-ECB 加密密码
+      const sm4Key = generateSessionKey();
+      const encryptedPassword = await encryptPasswordWithSM4(values.password, sm4Key);
+
       const loginData: LoginRequest = {
         username: values.username,
-        password: values.password,
+        password: encryptedPassword,
+        authMode: authMode,
+        encryptedPassword: false, // 标记密码已 SM4 加密（非 SM2 加密）
       };
 
       // 如果启用了验证码，添加验证码参数
@@ -147,6 +178,27 @@ const Login: FC = () => {
           onFinish={handleFinish}
           autoComplete="off"
         >
+          {/* 认证模式选择器 */}
+          <Form.Item label="认证模式">
+            <Radio.Group
+              value={authMode}
+              onChange={(e) => setAuthMode(e.target.value)}
+              className="auth-mode-selector"
+            >
+              <Space direction="vertical" style={{ width: '100%' }}>
+                {authModeOptions.map((option) => (
+                  <Radio key={option.value} value={option.value}>
+                    <span style={{ fontSize: '20px', marginRight: '8px' }}>{option.icon}</span>
+                    <div style={{ display: 'inline-block', verticalAlign: 'top' }}>
+                      <div style={{ fontWeight: 500 }}>{option.label}</div>
+                      <div style={{ fontSize: '12px', color: '#999' }}>{option.description}</div>
+                    </div>
+                  </Radio>
+                ))}
+              </Space>
+            </Radio.Group>
+          </Form.Item>
+
           <Form.Item
             name="username"
             rules={[{ required: true, message: '请输入用户名' }]}
