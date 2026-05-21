@@ -15,9 +15,10 @@ import (
 // ADAuthenticator AD域控认证器
 // 使用LDAP绑定验证实现AD域控账号认证
 type ADAuthenticator struct {
-	db      *gorm.DB
-	dbName  string // 用于日志
-	configID string  // 默认AD配置ID
+	db          *gorm.DB
+	dbName      string       // 用于日志
+	configID    string       // 默认AD配置ID
+	userSyncer  UserSyncer   // 用户同步服务（可选，为nil时不同步）
 }
 
 // NewADAuthenticator 创建AD认证器
@@ -26,6 +27,11 @@ func NewADAuthenticator(db *gorm.DB, configID string) *ADAuthenticator {
 		db:       db,
 		configID: configID,
 	}
+}
+
+// SetUserSyncer 设置用户同步服务
+func (a *ADAuthenticator) SetUserSyncer(syncer UserSyncer) {
+	a.userSyncer = syncer
 }
 
 // Authenticate 实现AD域控认证
@@ -99,8 +105,41 @@ func (a *ADAuthenticator) Authenticate(ctx context.Context, req *AuthRequest) (*
 		}, nil
 	}
 
+	// 6. 如果设置了用户同步服务，自动同步AD用户到sys_user表
+	if a.userSyncer != nil {
+		defaultRoleID := a.getDefaultRoleID()
+		syncedUser, err := a.userSyncer.SyncADUser(ctx, adUserInfo, defaultRoleID)
+		if err != nil {
+			// 同步失败不影响认证成功，但标记需要同步
+			return &AuthResult{
+				User:       nil,
+				AuthSource: "ad",
+				ADUserInfo: adUserInfo,
+				NeedsSync:  true,
+			}, nil
+		}
+
+		// 同步成功，返回完整的用户信息
+		return &AuthResult{
+			User: &UserResult{
+				ID:       syncedUser.ID,
+				Username: syncedUser.Username,
+				Nickname: syncedUser.Nickname,
+				Email:    syncedUser.Email,
+				Phone:    syncedUser.Phone,
+				Status:   syncedUser.Status,
+				DeptID:   syncedUser.DeptID,
+				Roles:    syncedUser.Roles,
+			},
+			AuthSource: "ad",
+			ADUserInfo: adUserInfo,
+			NeedsSync:  false, // 已同步
+		}, nil
+	}
+
+	// 没有同步服务，返回AD用户信息，标记需要同步
 	return &AuthResult{
-		User:       nil, // AD认证不一定有sys_user记录
+		User:       nil,
 		AuthSource: "ad",
 		ADUserInfo: adUserInfo,
 		NeedsSync:  true,
@@ -193,4 +232,14 @@ func (a *ADAuthenticator) searchUserInfo(conn *ldap.Conn, config *models.ADConfi
 		Title:       entry.GetAttributeValue("title"),
 		Department:  entry.GetAttributeValue("department"),
 	}, nil
+}
+
+// getDefaultRoleID 获取默认角色ID（从sys_config读取）
+func (a *ADAuthenticator) getDefaultRoleID() string {
+	var config models.Config
+	err := a.db.Where("config_key = ?", "sys.auth.ad.default_role_id").First(&config).Error
+	if err != nil {
+		return "" // 没有配置默认角色
+	}
+	return config.ConfigValue
 }

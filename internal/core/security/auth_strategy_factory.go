@@ -11,8 +11,9 @@ import (
 // AuthStrategyFactory 认证策略工厂
 // 根据认证模式动态创建对应的认证器
 type AuthStrategyFactory struct {
-	db         *gorm.DB
-	pwdManager *PasswordManager
+	db          *gorm.DB
+	pwdManager  *PasswordManager
+	userSyncer  UserSyncer // 用户同步服务（可选）
 }
 
 // NewAuthStrategyFactory 创建认证策略工厂
@@ -21,6 +22,11 @@ func NewAuthStrategyFactory(db *gorm.DB, pwdMgr *PasswordManager) *AuthStrategyF
 		db:         db,
 		pwdManager: pwdMgr,
 	}
+}
+
+// SetUserSyncer 设置用户同步服务
+func (f *AuthStrategyFactory) SetUserSyncer(syncer UserSyncer) {
+	f.userSyncer = syncer
 }
 
 // GetAuthenticator 根据认证模式获取认证器
@@ -36,7 +42,9 @@ func (f *AuthStrategyFactory) GetAuthenticator(mode string) (Authenticator, erro
 		if err != nil {
 			return nil, err
 		}
-		return NewADAuthenticator(f.db, configID), nil
+		ad := NewADAuthenticator(f.db, configID)
+		ad.SetUserSyncer(f.userSyncer)
+		return ad, nil
 
 	case "hybrid":
 		local := NewLocalAuthenticator(f.db, f.pwdManager)
@@ -45,6 +53,7 @@ func (f *AuthStrategyFactory) GetAuthenticator(mode string) (Authenticator, erro
 			return nil, err
 		}
 		ad := NewADAuthenticator(f.db, configID)
+		ad.SetUserSyncer(f.userSyncer)
 		return NewHybridAuthenticator(local, ad), nil
 
 	default:

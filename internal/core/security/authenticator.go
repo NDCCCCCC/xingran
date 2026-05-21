@@ -56,6 +56,26 @@ type ADUserInfo struct {
 	Department  string // 部门
 }
 
+// UserSyncer 用户同步接口
+// 由外部服务实现，将AD用户信息同步到sys_user表
+type UserSyncer interface {
+	// SyncADUser 从AD同步用户到本地数据库
+	// 返回同步后的用户信息和可能的错误
+	SyncADUser(ctx context.Context, adUserInfo *ADUserInfo, defaultRoleID string) (*SyncedUser, error)
+}
+
+// SyncedUser 同步后的用户信息（由同步服务返回）
+type SyncedUser struct {
+	ID       string
+	Username string
+	Nickname *string
+	Email    *string
+	Phone    *string
+	Status   int
+	DeptID   *string
+	Roles    []string
+}
+
 // 认证标准错误定义
 var (
 	ErrUserNotFound       = errors.New("用户不存在")
