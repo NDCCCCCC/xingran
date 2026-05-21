@@ -41,6 +41,11 @@ func encryptPassword(password string) string {
 	return base64.StdEncoding.EncodeToString(ciphertext)
 }
 
+// DecryptPassword 解密密码（使用AES-GCM）- 导出版本
+func DecryptPassword(encrypted string) string {
+	return decryptPassword(encrypted)
+}
+
 // decryptPassword 解密密码（使用AES-GCM）
 func decryptPassword(encrypted string) string {
 	// AD域加密密钥，实际应从配置文件读取
