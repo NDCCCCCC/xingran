@@ -28,3 +28,28 @@
   border: none !important;
   background: transparent !important;
 }
+
+/* 认证模式选择器样式 */
+.auth-mode-selector .ant-radio-wrapper {
+  display: flex;
+  align-items: flex-start;
+  padding: 12px;
+  margin-bottom: 8px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  transition: all 0.3s;
+}
+
+.auth-mode-selector .ant-radio-wrapper:hover {
+  border-color: #1890ff;
+  background-color: #f0f7ff;
+}
+
+.auth-mode-selector .ant-radio-wrapper-checked {
+  border-color: #1890ff;
+  background-color: #e6f7ff;
+}
+
+.auth-mode-selector .ant-radio {
+  margin-top: 2px;
+}
