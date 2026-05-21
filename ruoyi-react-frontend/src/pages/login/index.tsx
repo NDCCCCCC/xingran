@@ -12,6 +12,7 @@ import type { LoginRequest } from '@/types';
 import type { AuthMode } from '@/types/auth';
 import type { CaptchaEnabled } from '@/types/captcha';
 import { encryptPasswordWithSM4, generateSessionKey } from '@/utils/sm4';
+import { get } from '@/lib/api';
 import './login.css';
 
 // 认证模式配置
@@ -47,8 +48,9 @@ const Login: FC = () => {
   const [captchaValue, setCaptchaValue] = useState('');
   const [captchaId, setCaptchaId] = useState('');
   const [sliderVerified, setSliderVerified] = useState(false);
+  const [adEnabled, setAdEnabled] = useState(false);
 
-  // 加载验证码配置
+  // 加载验证码和认证配置
   useEffect(() => {
     const loadCaptchaConfig = async () => {
       try {
@@ -59,7 +61,23 @@ const Login: FC = () => {
         console.error('加载验证码配置失败:', error);
       }
     };
+
+    const loadAuthConfig = async () => {
+      try {
+        const result = await get<{ adEnabled: boolean; defaultMode: AuthMode }>('/system/auth/config');
+        const { adEnabled: enabled, defaultMode } = result.data;
+        setAdEnabled(enabled ?? false);
+        if (defaultMode && ['local', 'ad', 'hybrid'].includes(defaultMode)) {
+          setAuthMode(defaultMode);
+        }
+      } catch (error) {
+        // 认证配置加载失败，默认仅本地认证
+        console.error('加载认证配置失败:', error);
+      }
+    };
+
     loadCaptchaConfig();
+    loadAuthConfig();
   }, []);
 
   const handleFinish = async (values: LoginRequest) => {
@@ -178,26 +196,28 @@ const Login: FC = () => {
           onFinish={handleFinish}
           autoComplete="off"
         >
-          {/* 认证模式选择器 */}
-          <Form.Item label="认证模式">
-            <Radio.Group
-              value={authMode}
-              onChange={(e) => setAuthMode(e.target.value)}
-              className="auth-mode-selector"
-            >
-              <Space direction="vertical" style={{ width: '100%' }}>
-                {authModeOptions.map((option) => (
-                  <Radio key={option.value} value={option.value}>
-                    <span style={{ fontSize: '20px', marginRight: '8px' }}>{option.icon}</span>
-                    <div style={{ display: 'inline-block', verticalAlign: 'top' }}>
-                      <div style={{ fontWeight: 500 }}>{option.label}</div>
-                      <div style={{ fontSize: '12px', color: '#999' }}>{option.description}</div>
-                    </div>
-                  </Radio>
-                ))}
-              </Space>
-            </Radio.Group>
-          </Form.Item>
+          {/* 认证模式选择器 - 仅在AD认证启用时显示 */}
+          {adEnabled && (
+            <Form.Item label="认证模式">
+              <Radio.Group
+                value={authMode}
+                onChange={(e) => setAuthMode(e.target.value)}
+                className="auth-mode-selector"
+              >
+                <Space direction="vertical" style={{ width: '100%' }}>
+                  {authModeOptions.map((option) => (
+                    <Radio key={option.value} value={option.value}>
+                      <span style={{ fontSize: '20px', marginRight: '8px' }}>{option.icon}</span>
+                      <div style={{ display: 'inline-block', verticalAlign: 'top' }}>
+                        <div style={{ fontWeight: 500 }}>{option.label}</div>
+                        <div style={{ fontSize: '12px', color: '#999' }}>{option.description}</div>
+                      </div>
+                    </Radio>
+                  ))}
+                </Space>
+              </Radio.Group>
+            </Form.Item>
+          )}
 
           <Form.Item
             name="username"

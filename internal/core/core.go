@@ -58,6 +58,7 @@ type Core struct {
 	CaptchaBackgroundService    *CaptchaBackgroundService             // 验证码背景图服务（被 captcha_background_handler.go 使用）
 	OperLogService              services.OperLogService               // 操作日志服务（被 middleware 和 helper.go 使用）
 	TokenBlacklistService       services.TokenBlacklistService        // 令牌黑名单服务（被 middleware 和 auth.go 使用）
+	AuthFactory                 *security.AuthStrategyFactory         // 认证策略工厂（被 auth.go 使用）
 
 	// 缓存服务（用于 System 模块）
 	DataCacheService   *services.DataCacheService   // 通用数据缓存服务
@@ -329,6 +330,9 @@ func (c *Core) Init() error {
 	// 16. 初始化令牌黑名单服务
 	c.TokenBlacklistService = services.NewTokenBlacklistService(c.Cache)
 	applogger.Infof("令牌黑名单服务初始化完成")
+	// 16.5 初始化认证策略工厂
+	c.initAuthFactory()
+	applogger.Infof("认证策略工厂初始化完成")
 
 	// 17. 初始化RPA服务
 	if c.Config.RPA.Enabled {
@@ -498,6 +502,26 @@ func (c *Core) initAPIEndpointService() error {
 	)
 
 	return nil
+}
+
+// initAuthFactory 初始化认证策略工厂
+func (c *Core) initAuthFactory() {
+	if c.DB == nil {
+		applogger.Warnf("数据库未初始化，跳过认证策略工厂初始化")
+		return
+	}
+	c.AuthFactory = security.NewAuthStrategyFactory(c.GetDB(), c.PwdManager)
+
+	// 初始化用户同步服务并注入到工厂
+	userSyncService := system.NewUserSyncService(c.GetDB(), c.PwdManager)
+	c.AuthFactory.SetUserSyncer(userSyncService)
+
+	applogger.Infof("认证策略工厂初始化完成（支持 local/ad/hybrid 模式）")
+}
+
+// GetAuthFactory 获取认证策略工厂
+func (c *Core) GetAuthFactory() *security.AuthStrategyFactory {
+	return c.AuthFactory
 }
 
 // initSystemServicesForWarmUp 初始化缓存预热所需的 System 服务
