@@ -1,6 +1,17 @@
 # Scripts 说明
 
-本目录包含用于数据库迁移和维护的 Go 脚本。
+本目录包含用于数据库迁移、维护和构建的脚本。
+
+## 目录结构
+
+```
+scripts/
+├── build/          # 构建脚本
+├── migrate/        # 已执行的迁移脚本（归档）
+├── tools/          # 可复用的维护工具
+├── sql/            # SQL 修复脚本
+└── README.md       # 本文档
+```
 
 ## 环境变量配置
 
@@ -30,68 +41,122 @@ export DB_NAME=ruoyi
 export $(cat .env | xargs)
 ```
 
-## 迁移脚本 (migrate/)
+## build/ - 构建脚本
 
-### 用户中心菜单路径修复
+用于构建和部署的脚本：
 
+- `build.bat` - 构建后端
+- `build_and_deploy.bat` - 构建并部署
+- `generate_swagger.bat` - 生成 Swagger 文档
+
+### 使用示例
+
+```bash
+cd scripts/build
+
+# 构建项目
+./build.bat
+
+# 生成 Swagger 文档
+./generate_swagger.bat
+```
+
+## migrate/ - 已执行的迁移脚本
+
+这些迁移脚本已经执行过，归档在这里用于参考：
+
+### 用户中心菜单路径修复 (2026-01)
 - `056_fix_user_center_paths.go` - 修复用户中心子菜单路径
 - `057_fix_user_center_parent_path.go` - 修复用户中心父菜单路径
 - `058_fix_user_center_relative_paths.go` - 修复为相对路径
 
-### AD 域设备管理
+### 菜单路径分析和修复
+- `053_fix_menu_paths.go` - 修复菜单路径
+- `054_analyze_menu_paths.go` - 分析菜单路径问题
 
+### AD 域设备管理 (2026-01)
 - `074_run_migration.go` - 运行电脑设备唯一约束迁移
 - `075_cleanup_duplicate_computers.go` - 清理重复的电脑设备
 - `076_check_computer_data.go` - 检查电脑设备数据
 - `077_run_ou_optimization.go` - 运行OU查询优化
 
-### 菜单路径分析和修复
+### 其他迁移
+- `042_add_hidden_special_page_menus.go` - 添加隐藏的特殊页面菜单
+- `096_fix_floor_and_file_tables.go` - 修复楼层和文件表
+- `098_add_floor_unique_constraint.go` - 添加楼层唯一约束
+- `099_add_workstation_unique_constraint.go` - 添加工位唯一约束
+- `104_run_rpa_scaling_migration.go` - RPA 扩展迁移
+- `106_run_rpa_migration.go` - RPA 迁移
+- `113_fix_screenshots_column.go` - 修复截图列类型
 
-- `053_fix_menu_paths.go` - 修复菜单路径
-- `054_analyze_menu_paths.go` - 分析菜单路径问题
+**注意：** 这些脚本已经执行过，通常不需要再次运行。如需参考，请查看脚本中的注释。
+
+## tools/ - 维护工具
+
+可重复使用的维护工具脚本：
+
+### 菜单管理工具
+- `check_and_fix_apikey_menu.go` - 检查并修复 API 密钥菜单
+- `check_all_including_buttons.go` - 检查所有按钮权限
+- `check_menu_permissions.go` - 检查菜单权限
+- `cleanup_menus.go` - 清理重复菜单
+- `execute_cleanup.go` - 执行清理操作
+- `find_duplicate_names.go` - 查找重复名称
+- `find_real_duplicates.go` - 查找真实重复项
+- `full_check.go` - 完整检查
+- `generate_cleanup.go` - 生成清理脚本
+- `list_all_menus.go` - 列出所有菜单
+- `search_menus.go` - 搜索菜单
+- `show_duplicate_details.go` - 显示重复详情
+
+### 其他工具
 - `analyze_paths.go` - 深入分析路径关系
+- `check_user_menu.go` - 检查用户菜单
+- `fix_user_settings_menu.go` - 修复用户设置菜单
 
-## 使用示例
+### 使用示例
 
 ```bash
-# 进入脚本目录
-cd scripts
+cd scripts/tools
 
-# 设置环境变量（根据实际情况修改）
+# 设置环境变量
 set DB_HOST=10.62.10.34
 set DB_PORT=5432
 set DB_USER=postgres
 set DB_PASSWORD=Cpic1234
 set DB_NAME=ruoyi
 
-# 运行迁移脚本
-go run migrate/056_fix_user_center_paths.go
+# 列出所有菜单
+go run list_all_menus.go
 
-# 检查电脑设备数据
-go run migrate/076_check_computer_data.go
+# 检查重复菜单
+go run find_real_duplicates.go
 ```
 
-## 测试脚本 (tests/)
+## sql/ - SQL 脚本
 
-### 功能测试
-- `test_excel_import.go` - Excel 导入功能测试脚本
+SQL 修复脚本和查询：
 
-运行测试脚本：
+### 直接执行 SQL
+
 ```bash
-# 进入脚本目录
-cd scripts/tests
+cd scripts/sql
+
+# 通过 psql 执行 SQL 文件
+psql -h localhost -U postgres -d ruoyi -f check_duplicate_menus.sql
+psql -h localhost -U postgres -d ruoyi -f cleanup_duplicate_menus.sql
+```
+
+## 测试
+
+### Excel 导入测试
+- `migrate/test_excel_import.go` - Excel 导入功能测试脚本
+
+```bash
+cd scripts/migrate
 
 # 运行 Excel 导入测试
 go run test_excel_import.go
-```
-
-## SQL 脚本
-
-根目录下的 SQL 文件可以直接通过 psql 执行：
-
-```bash
-# 执行用户中心路径修复
-psql -h localhost -U postgres -d ruoyi -f fix_user_center_paths_v2.sql
 ```
 
 ## 注意事项
@@ -100,6 +165,7 @@ psql -h localhost -U postgres -d ruoyi -f fix_user_center_paths_v2.sql
 2. 确保环境变量配置正确
 3. 建议先在测试环境验证脚本
 4. 某些脚本需要按顺序执行（如用户中心路径修复系列）
+5. **migrate/ 目录中的脚本已执行过，通常不需要再次运行**
 
 ## 数据库连接工具
 
