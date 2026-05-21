@@ -54,7 +54,6 @@ const ENCRYPTION_WHITELIST: string[] = [];
 
 // 加密黑名单
 const ENCRYPTION_BLACKLIST: string[] = [
-	'/system/auth/login',
 	'/system/auth/public-key',
 	'/system/auth/captcha',
 	'/system/auth/encryption-config', // 防止无限循环：加密配置端点本身不能被加密
