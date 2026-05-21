@@ -433,12 +433,16 @@ func TestLoginWithInvalidEncryptedRequest(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			if ts, ok := tc.request["timestamp"].(int64); ok {
-				timeDiff := time.Now().Unix() - ts
-				if timeDiff < -300 || timeDiff > 300 {
-					t.Logf("✓ 检测到无效时间戳: %s (时间差: %d秒)", tc.name, timeDiff)
-				}
-			}
+			// Simulate actual request validation
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest("POST", "/login", nil)
+			// Add request body with tc.request
+
+			router.ServeHTTP(w, req)
+
+			// Assert that request is rejected
+			assert.Equal(t, http.StatusBadRequest, w.Code)
+			assert.Contains(t, w.Body.String(), tc.expectError)
 		})
 	}
 

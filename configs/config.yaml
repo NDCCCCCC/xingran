@@ -76,11 +76,17 @@ security:
     enabled: true  # 是否启用请求体加密
     # 排除的路径（支持通配符）
     exclude_paths:
+      # Critical paths (circular dependencies)
       - "/api/v1/system/auth/public-key"  # 公钥接口必须排除
+      - "/api/v1/system/auth/encryption-config"  # 加密配置接口必须排除
       - "/api/v1/system/auth/test-sm2"   # SM2 测试接口
       # 登录接口已移除 - 启用请求体加密 (Phase 18)
+
+      # File operations
       - "/api/v1/upload/*"                # 文件上传
       - "/api/v1/captcha/*"               # 验证码
+
+      # RPA endpoints
       - "/api/v1/rpa/workers/register"   # RPA Worker 注册
       - "/api/v1/rpa/workers/*/heartbeat"  # RPA Worker 心跳
       - "/api/v1/rpa/workers/progress"  # RPA Worker 进度上报
@@ -90,11 +96,17 @@ security:
     enabled: false  # 是否启用响应加密（默认禁用，向后兼容）
     # 排除的路径（支持通配符，与请求加密共享排除列表）
     exclude_paths:
+      # Critical paths (circular dependencies)
       - "/api/v1/system/auth/public-key"  # 公钥接口必须排除
+      - "/api/v1/system/auth/encryption-config"  # 加密配置接口必须排除
       - "/api/v1/system/auth/test-sm2"   # SM2 测试接口
       # 登录接口已移除 - 启用响应体加密 (Phase 18)
+
+      # File operations
       - "/api/v1/upload/*"                # 文件上传
       - "/api/v1/captcha/*"               # 验证码
+
+      # RPA endpoints
       - "/api/v1/rpa/workers/register"   # RPA Worker 注册
       - "/api/v1/rpa/workers/*/heartbeat"  # RPA Worker 心跳
       - "/api/v1/rpa/workers/progress"  # RPA Worker 进度上报

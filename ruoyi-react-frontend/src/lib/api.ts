@@ -106,30 +106,29 @@ function processRefreshQueue(error?: any) {
  * 注意：必须在应用启动时调用，使用 rawAxios 避免拦截器循环
  */
 export async function initEncryptionConfig(): Promise<void> {
-	// 默认值：禁用加密（更安全，避免循环依赖问题）
-	ENABLE_REQUEST_ENCRYPTION = false;
+	const MAX_RETRIES = 3;
+	let lastError: Error | null = null;
 
-	try {
-		// 使用 rawAxios 而不是 api.get()，避免触发拦截器造成无限循环
-		// 设置较短超时，避免阻塞应用启动
-		const response = await rawAxios.get<{ code: number; data: { enabled: boolean; key: string; source: string } }>('/system/auth/encryption-config', {
-			timeout: 5000, // 5秒超时
-		});
-
-		if (response.data && response.data.code === 0) {
-			ENABLE_REQUEST_ENCRYPTION = response.data.data.enabled;
-			console.log('[Encryption Config] 加密配置已加载:', {
-				enabled: response.data.data.enabled,
-				key: response.data.data.key,
-				source: response.data.data.source,
+	for (let i = 0; i < MAX_RETRIES; i++) {
+		try {
+			const response = await rawAxios.get<{ code: number; data: { enabled: boolean; key: string; source: string } }>('/system/auth/encryption-config', {
+				timeout: 3000, // 3秒超时
 			});
-		} else {
-			console.warn('[Encryption Config] 响应格式异常，保持默认值 (禁用)');
+
+			if (response.data?.code === 0) {
+				ENABLE_REQUEST_ENCRYPTION = response.data.data.enabled;
+				return; // Success, exit retry loop
+			}
+		} catch (error) {
+			lastError = error as Error;
+			console.warn(`[Encryption Config] 加载失败，重试 ${i + 1}/${MAX_RETRIES}:`, error);
+			await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // Exponential backoff
 		}
-	} catch (error) {
-		// 失败时保持默认值（禁用），避免循环依赖
-		console.warn('[Encryption Config] 加载加密配置失败，保持默认值 (禁用):', error);
 	}
+
+	// All retries failed - use secure default
+	console.error('[Encryption Config] 所有重试失败，保持安全默认值:', lastError);
+	ENABLE_REQUEST_ENCRYPTION = true; // Fail secure: enable encryption
 }
 
 /**
@@ -149,11 +148,6 @@ export async function refreshEncryptionConfig(): Promise<void> {
 
 		if (response.data && response.data.code === 0) {
 			ENABLE_REQUEST_ENCRYPTION = response.data.data.enabled;
-			console.log('[Encryption Config] 配置已刷新:', {
-				enabled: response.data.data.enabled,
-				key: response.data.data.key,
-				source: response.data.data.source,
-			});
 		}
 	} catch (error) {
 		console.error('[Encryption Config] 刷新配置失败，保持当前设置:', error);
@@ -235,9 +229,6 @@ api.interceptors.request.use(
 
 		if (config.data && shouldEncryptRequest(config.url || '', config.method || '')) {
 			try {
-				// DEBUG: 打印加密前的原始数据
-				console.log('[ENCRYPTION DEBUG] 加密前的原始数据:', JSON.stringify(config.data, null, 2));
-
 				const publicKey = await fetchPublicKey();
 				const sm4KeyHex = generateSM4Key();
 				const ivHex = generateIV();
