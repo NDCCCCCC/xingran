@@ -5,6 +5,13 @@
 import type { Gender } from './base';
 import type { User } from './system';
 
+// ==================== 认证模式 ====================
+
+/**
+ * 认证模式类型
+ */
+export type AuthMode = 'local' | 'ad' | 'hybrid';
+
 // ==================== 登录相关 ====================
 
 /**
@@ -13,6 +20,7 @@ import type { User } from './system';
 export interface LoginRequest {
   username: string;
   password: string;
+  authMode?: AuthMode;
   encryptedPassword?: boolean;
   captcha?: string;
   captchaId?: string;

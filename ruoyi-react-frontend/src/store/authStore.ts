@@ -68,6 +68,7 @@ export const useAuthStore = create<AuthStore>()(
 					const loginRequest = {
 						username: encryptedRequest.username,
 						password: encryptedRequest.password,
+						authMode: credentials.authMode,
 						encryptedPassword: encryptedRequest.encryptedPassword,
 						captcha: credentials.captcha,
 						captchaId: credentials.captchaId,
