@@ -56,6 +56,9 @@ func SetupAuthRouter(r *gin.RouterGroup, core *core.Core) {
 	// GET /api/v1/system/auth/test-sm2 - 测试 SM2 加密解密（调试用）
 	r.GET("/test-sm2", testSM2(core))
 
+	// GET /api/v1/system/auth/config - 获取认证配置（公开接口，用于登录页面）
+	r.GET("/config", getAuthConfig(core))
+
 	// POST /api/v1/system/auth/login - 用户登录
 	r.POST("/login", login(core))
 
@@ -436,6 +439,34 @@ func refreshToken(core *core.Core) gin.HandlerFunc {
 		}
 
 		response.Success(c, loginResp)
+	}
+}
+
+// getAuthConfig 获取认证配置（公开接口，无需认证）
+// 返回AD认证是否启用及默认认证模式，供登录页面决定是否显示认证模式选择器
+func getAuthConfig(core *core.Core) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx := c.Request.Context()
+		adEnabled := false
+		defaultMode := "local"
+
+		// 从sys_config读取AD认证是否启用
+		var config models.Config
+		if err := core.DB.GetDB().Where("config_key = ?", "sys.auth.ad.enabled").First(&config).Error; err == nil {
+			adEnabled = config.ConfigValue == "true"
+		}
+
+		// 从sys_config读取默认认证模式
+		if err := core.DB.GetDB().Where("config_key = ?", "sys.auth.default.mode").First(&config).Error; err == nil {
+			if config.ConfigValue == "local" || config.ConfigValue == "ad" || config.ConfigValue == "hybrid" {
+				defaultMode = config.ConfigValue
+			}
+		}
+
+		response.Success(c, gin.H{
+			"adEnabled":   adEnabled,
+			"defaultMode": defaultMode,
+		})
 	}
 }
 
