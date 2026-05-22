@@ -3,6 +3,7 @@ package system
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 )
 
@@ -27,8 +28,12 @@ func SetupUserRouter(r *gin.RouterGroup, core *core.Core) {
 		)
 	}
 
-	// 创建用户处理器
-	handler := NewUserHandler(userService)
+	// 创建AD同步服务（依赖DeptOUmapper）
+	mapper := addomain.NewDeptOUmapper(core.DB.GetDB())
+	userADSyncService := addomain.NewUserADSyncService(core.DB.GetDB(), nil, mapper)
+
+	// 创建用户处理器，注入AD同步服务
+	handler := NewUserHandler(userService, userADSyncService)
 
 	// 注册路由
 	r.POST("", handler.Create)
