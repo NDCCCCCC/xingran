@@ -126,7 +126,7 @@ func login(core *core.Core) gin.HandlerFunc {
 		authMode := req.AuthMode
 		if authMode == "" {
 			// 从配置读取默认认证模式
-			factory := core.GetAuthFactory()
+			factory := core.AuthFactory
 			if factory != nil {
 				defaultMode, err := factory.GetDefaultAuthMode(ctx)
 				if err != nil {
@@ -141,7 +141,7 @@ func login(core *core.Core) gin.HandlerFunc {
 		}
 
 		// 5. 获取认证器并执行认证
-		factory := core.GetAuthFactory()
+		factory := core.AuthFactory
 		if factory == nil {
 			// 工厂未初始化，回退到直接本地认证（向后兼容）
 			applogger.Warnf("认证策略工厂未初始化，使用直接本地认证")
@@ -446,7 +446,6 @@ func refreshToken(core *core.Core) gin.HandlerFunc {
 // 返回AD认证是否启用及默认认证模式，供登录页面决定是否显示认证模式选择器
 func getAuthConfig(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		ctx := c.Request.Context()
 		adEnabled := false
 		defaultMode := "local"
 

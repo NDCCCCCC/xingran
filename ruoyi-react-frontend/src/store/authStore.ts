@@ -13,7 +13,6 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { post } from '@/lib/api';
 import type { User, LoginRequest } from '@/types';
-import type { AuthMode } from '@/types/auth';
 import { useMenuStore } from './menuStore';
 import { getEncryptedLoginRequest } from '@/utils/sm2';
 import { TokenManager } from '@/utils/token/TokenManager';
@@ -36,7 +35,6 @@ interface AuthState {
 	loading: boolean;
 	menusLoaded: boolean; // 登录时是否已加载菜单
 	initialized: boolean; // 是否已尝试从存储恢复
-	authMode?: AuthMode; // 当前认证模式
 }
 
 interface AuthActions {
@@ -58,13 +56,10 @@ export const useAuthStore = create<AuthStore>()(
 			loading: false,
 			menusLoaded: false,
 			initialized: false, // 是否已尝试从存储恢复
-			authMode: undefined,
 
 			login: async (credentials: LoginRequest) => {
 				set({ loading: true });
 				try {
-					const { authMode = 'local' } = credentials;
-
 					const encryptedRequest = await getEncryptedLoginRequest(
 						credentials.username,
 						credentials.password
@@ -73,9 +68,7 @@ export const useAuthStore = create<AuthStore>()(
 					const loginRequest = {
 						username: encryptedRequest.username,
 						password: encryptedRequest.password,
-						authMode: credentials.authMode,
 						encryptedPassword: encryptedRequest.encryptedPassword,
-						authMode: authMode,
 						captcha: credentials.captcha,
 						captchaId: credentials.captchaId,
 					};
@@ -94,7 +87,6 @@ export const useAuthStore = create<AuthStore>()(
 						loading: false,
 						menusLoaded: false, // 重置菜单加载状态
 						initialized: true, // 标记为已初始化
-						authMode: authMode, // 保存认证模式
 					});
 
 					// 登录成功后自动加载菜单和权限
@@ -121,7 +113,6 @@ export const useAuthStore = create<AuthStore>()(
 					isAuthenticated: false,
 					menusLoaded: false,
 					initialized: false, // 重置初始化标志
-					authMode: undefined, // 重置认证模式
 				});
 			},
 
