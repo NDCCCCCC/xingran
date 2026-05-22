@@ -1,21 +1,30 @@
 package system
 
 import (
+	"context"
+
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
 // UserHandler 用户处理器
 type UserHandler struct {
-	service systemServices.UserService
+	service           systemServices.UserService
+	userADSyncService *addomain.UserADSyncService
 }
 
 // NewUserHandler 创建用户处理器实例
-func NewUserHandler(service systemServices.UserService) *UserHandler {
-	return &UserHandler{service: service}
+func NewUserHandler(service systemServices.UserService, userADSyncService ...*addomain.UserADSyncService) *UserHandler {
+	handler := &UserHandler{service: service}
+	if len(userADSyncService) > 0 && userADSyncService[0] != nil {
+		handler.userADSyncService = userADSyncService[0]
+	}
+	return handler
 }
 
 // Create 创建用户
@@ -133,7 +142,36 @@ func (h *UserHandler) Update(c *gin.Context) {
 		return
 	}
 
+	// 系统更新成功后，异步同步到AD域控（降级处理：不阻断系统更新）
+	if h.userADSyncService != nil {
+		adSyncReq := h.buildADSyncMap(&req)
+		go func() {
+			ctx := context.Background()
+			if err := h.userADSyncService.SyncUserUpdateToAD(ctx, id, adSyncReq); err != nil {
+				applogger.Errorf("同步用户到AD失败 [ID=%s]: %v", id, err)
+			}
+		}()
+	}
+
 	response.Success(c, gin.H{"message": "更新成功"})
+}
+
+// buildADSyncMap 将UserUpdateRequest转换为AD同步用的map
+func (h *UserHandler) buildADSyncMap(req *requests.UserUpdateRequest) map[string]interface{} {
+	m := make(map[string]interface{})
+	if req.Nickname != nil {
+		m["nickname"] = *req.Nickname
+	}
+	if req.Email != nil {
+		m["email"] = *req.Email
+	}
+	if req.Phone != nil {
+		m["phone"] = *req.Phone
+	}
+	if req.DeptID != nil {
+		m["deptId"] = *req.DeptID
+	}
+	return m
 }
 
 // Delete 删除用户
