@@ -311,3 +311,50 @@ func extractNetBIOSName(domain string) string {
 	}
 	return strings.ToUpper(domain)
 }
+
+// CreateOU 在AD中创建OU（幂等操作）
+func (c *LDAPClient) CreateOU(ouDN, ouName string) error {
+	// 检查OU是否已存在
+	exists, err := c.OUExists(ouDN)
+	if err != nil {
+		return fmt.Errorf("检查OU存在性失败: %w", err)
+	}
+	if exists {
+		// 已存在，跳过创建
+		return nil
+	}
+
+	// 创建新OU
+	addRequest := ldap.NewAddRequest(ouDN, nil)
+	addRequest.Attribute("objectClass", []string{"top", "organizationalUnit"})
+	addRequest.Attribute("ou", []string{ouName})
+	addRequest.Attribute("description", []string{fmt.Sprintf("同步自系统部门: %s", ouName)})
+
+	if err := c.conn.Add(addRequest); err != nil {
+		return fmt.Errorf("创建OU失败 %s: %w", ouDN, err)
+	}
+
+	return nil
+}
+
+// OUExists 检查OU是否存在
+func (c *LDAPClient) OUExists(ouDN string) (bool, error) {
+	searchRequest := ldap.NewSearchRequest(
+		ouDN,
+		ldap.ScopeBaseObject,
+		ldap.NeverDerefAliases,
+		0, 0, false,
+		"(objectClass=*)",
+		[]string{"dn"},
+		nil,
+	)
+
+	_, err := c.conn.Search(searchRequest)
+	if err != nil {
+		if ldap.IsErrorWithCode(err, ldap.LDAPResultNoSuchObject) {
+			return false, nil
+		}
+		return false, fmt.Errorf("搜索OU失败: %w", err)
+	}
+	return true, nil
+}

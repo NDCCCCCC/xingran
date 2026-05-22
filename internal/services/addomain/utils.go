@@ -142,3 +142,32 @@ func parseFileTime(fileTime string) *time.Time {
 	t := time.Unix(unix, 0)
 	return &t
 }
+
+// ExtractOUDNFromUserDN 从用户DN中提取OU DN
+// 例如: CN=zhangsan,OU=科技创新部,OU=分公司本部,OU=湖北分公司,DC=company,DC=com
+// 提取为: OU=科技创新部,OU=分公司本部,OU=湖北分公司,DC=company,DC=com
+func ExtractOUDNFromUserDN(userDN string) string {
+	if userDN == "" {
+		return ""
+	}
+
+	parts := strings.Split(userDN, ",")
+	if len(parts) <= 1 {
+		return ""
+	}
+
+	// 跳过第一个部分（通常是CN=xxx）
+	// 返回剩余部分（从第一个OU开始到DN结束）
+	for i, part := range parts {
+		if strings.HasPrefix(strings.ToUpper(part), "OU=") {
+			return strings.Join(parts[i:], ",")
+		}
+	}
+
+	// 如果没有找到OU，返回DN的Base部分（去掉CN）
+	if len(parts) > 1 {
+		return strings.Join(parts[1:], ",")
+	}
+
+	return ""
+}
