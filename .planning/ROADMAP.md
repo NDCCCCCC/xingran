@@ -94,6 +94,16 @@
 
 ---
 
+<details>
+<summary>📋 v1.9 AD域控集成扩展 (Phases 19-20) — IN PROGRESS</summary>
+
+- [x] Phase 19: AD域控账号登录功能 (6 plans) — completed 2026-05-21
+- [ ] Phase 20: AD域控OU与部门映射 (5 plans) — ready for execution
+
+</details>
+
+---
+
 ## Phase Details
 
 ### Phase 12: 数据模型与采集集成
@@ -274,3 +284,28 @@ Plans:
 ---
 
 **Total**: 18 phases, 46 plans complete, 2 gap closure plans, 20 plans planned (5 each for phases 13-15), 4 plans remaining (phase 16), 4 plans planned (phase 18), 76 total
+
+### Phase 20: AD域控OU与部门映射
+**Goal**: 实现系统部门与AD域控OU的双向映射功能，包括定时同步、用户登录部门设置、用户修改AD同步
+**Depends on**: Phase 19 (AD域控账号登录功能)
+**Requirements**: PHASE-20-DATA-MODEL, PHASE-20-DEPT-SYNC, PHASE-20-USER-LOGIN, PHASE-20-USER-SYNC, PHASE-20-TESTING
+**Success Criteria** (what must be TRUE):
+  1. 定时任务每天凌晨2点自动同步系统部门树到AD OU结构（保持层级关系）
+  2. 用户AD认证登录时自动设置部门（通过OU DN反向查找映射表）
+  3. 管理员修改用户信息时自动同步到AD（部门变更移动OU，属性变更更新AD）
+  4. 提供手动触发部门同步的API端点和同步状态查询
+  5. 映射表（sys_dept_ou_mapping）存储部门ID与AD OU DN的对应关系
+  6. 同步失败有降级处理（不阻断主流程），详细日志记录
+  7. 性能指标：部门同步<10秒（100个部门），用户登录处理<100ms
+**Plans**: 5 plans
+
+Plans:
+- [x] 20-01-PLAN.md — 创建数据模型和基础服务（Wave 1）— 数据库迁移、映射模型、LDAP扩展
+- [x] 20-02-PLAN.md — 实现部门定时同步功能（Wave 2）— 递归同步、定时任务、API端点
+- [x] 20-03-PLAN.md — 实现用户登录部门设置（Wave 3）— OU处理、认证集成、降级处理
+- [x] 20-04-PLAN.md — 实现用户修改AD同步（Wave 4）— 部门移动、属性更新、异步同步
+- [x] 20-05-PLAN.md — 测试与验证（Wave 5）— 单元测试、集成测试、覆盖率报告
+
+---
+
+**Total**: 20 phases, 46 plans complete, 2 gap closure plans, 20 plans planned (5 each for phases 13-15), 4 plans remaining (phase 16), 4 plans planned (phase 18), 5 plans planned (phase 20), 81 total
