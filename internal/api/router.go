@@ -57,8 +57,8 @@ func setupEncryptionMiddlewares(r *gin.RouterGroup, core *core.Core) *crypto.Req
 			}
 
 			r.Use(middleware.RequestDecryption(encryptor, decryptionConfig, core.GetDB()))
-			r.Use(middleware.ResponseEncryption(encryptor, encryptionConfig))
-			applogger.Infof("请求/响应加密中间件已启用")
+			r.Use(middleware.ResponseEncryption(encryptor, encryptionConfig, core.GetDB()))
+			applogger.Infof("请求/响应加密中间件已启用（共享数据库配置）")
 		} else {
 			applogger.Warnf("SM2 密钥对未配置，无法启用请求体加密")
 		}
@@ -309,28 +309,6 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 	network.Use(middleware.JWTAuth(core.JWTManager))
 	// 添加操作日志中间件
 	network.Use(middleware.OperLogMiddleware(core.OperLogService, core))
-	network.Use(middleware.RequirePermissions([]string{
-		"network:device:list",
-		"network:device:add",
-		"network:device:edit",
-		"network:device:delete",
-		"network:credential:list",
-		"network:credential:add",
-		"network:credential:edit",
-		"network:credential:delete",
-		"network:template:list",
-		"network:template:add",
-		"network:template:edit",
-		"network:template:delete",
-		"network:command:execute",
-		"network:command:view",
-		"network:backup:list",
-		"network:backup:add",
-		"network:backup:restore",
-		"network:backup:diff",
-		"network:discovery:add",
-		"network:discovery:view",
-	}, core))
 	{
 		networkV1.SetupNetworkRouter(network, core)
 		// 拓扑管理（MAC过滤规则）
@@ -494,6 +472,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 	adDomain.Use(middleware.OperLogMiddleware(core.OperLogService, core))
 	{
 		systemV1.SetupADDomainRouter(adDomain, core)
+		// AD部门同步路由
+		systemV1.SetupADDeptSyncRouter(adDomain, core)
 	}
 
 	// 运维管理模块（物理资源管理）
@@ -777,4 +757,5 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 		// 使用统一的 RPA 路由设置（排除公开的 worker 接口）
 		rpaV1.SetupRPARouter(rpa, core)
 	}
+	// 注意：前端静态文件路由已移至 cmd/main.go，直接注册在 engine 上
 }

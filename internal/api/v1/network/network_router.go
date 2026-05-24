@@ -52,6 +52,12 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 
 	// ==================== 网络设备路由 ====================
 	devices := r.Group("/devices")
+	devices.Use(middleware.RequirePermissions([]string{
+		"network:device:list",
+		"network:device:add",
+		"network:device:edit",
+		"network:device:delete",
+	}, core))
 	{
 		devices.POST("/list", deviceHandler.List)
 		devices.POST("", deviceHandler.Create)
@@ -66,6 +72,12 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 
 	// ==================== 授权凭证路由 ====================
 	credentials := r.Group("/credentials")
+	credentials.Use(middleware.RequirePermissions([]string{
+		"network:credential:list",
+		"network:credential:add",
+		"network:credential:edit",
+		"network:credential:delete",
+	}, core))
 	{
 		credentials.POST("/list", credentialHandler.List)
 		credentials.POST("", credentialHandler.Create)
@@ -80,6 +92,12 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 
 	// ==================== 配置模板路由 ====================
 	templates := r.Group("/templates")
+	templates.Use(middleware.RequirePermissions([]string{
+		"network:template:list",
+		"network:template:add",
+		"network:template:edit",
+		"network:template:delete",
+	}, core))
 	{
 		templates.POST("/list", templateHandler.List)
 		templates.POST("", templateHandler.Create)
@@ -95,6 +113,10 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 
 	// ==================== 命令分发路由 ====================
 	command := r.Group("/command")
+	command.Use(middleware.RequirePermissions([]string{
+		"network:command:execute",
+		"network:command:view",
+	}, core))
 	{
 		command.POST("/dispatch", commandHandler.Dispatch)
 		command.POST("/quick", commandHandler.QuickCommand)
@@ -106,6 +128,9 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 
 	// ==================== 配置执行路由 ====================
 	executions := r.Group("/executions")
+	executions.Use(middleware.RequirePermissions([]string{
+		"network:command:execute",
+	}, core))
 	{
 		executions.POST("/list", executionHandler.List)
 		executions.POST("/template/execute", executionHandler.ExecuteByTemplate)
@@ -118,6 +143,12 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 
 	// ==================== 配置备份路由 ====================
 	backups := r.Group("/backups")
+	backups.Use(middleware.RequirePermissions([]string{
+		"network:backup:list",
+		"network:backup:add",
+		"network:backup:restore",
+		"network:backup:diff",
+	}, core))
 	{
 		backups.POST("/list", backupHandler.List)
 		backups.POST("", backupHandler.Create)
@@ -136,6 +167,10 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 
 	// ==================== 设备发现路由 ====================
 	discoveries := r.Group("/discoveries")
+	discoveries.Use(middleware.RequirePermissions([]string{
+		"network:discovery:add",
+		"network:discovery:view",
+	}, core))
 	{
 		discoveries.POST("/list", discoveryHandler.List)
 		discoveries.POST("/create", discoveryHandler.Create)
