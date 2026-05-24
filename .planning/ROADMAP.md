@@ -95,10 +95,10 @@
 ---
 
 <details>
-<summary>📋 v1.9 AD域控集成扩展 (Phases 19-20) — IN PROGRESS</summary>
+<summary>✅ v1.9 AD域控集成扩展 (Phases 19-20) — SHIPPED 2026-05-24</summary>
 
 - [x] Phase 19: AD域控账号登录功能 (6 plans) — completed 2026-05-21
-- [ ] Phase 20: AD域控OU与部门映射 (5 plans) — ready for execution
+- [x] Phase 20: AD域控OU与部门映射 (5 plans) — completed 2026-05-24
 
 </details>
 

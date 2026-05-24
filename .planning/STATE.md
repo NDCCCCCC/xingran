@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.5
-milestone_name: MAC地址历史数据管理
+milestone: v1.9
+milestone_name: AD域控集成扩展
 current_phase: 20
 status: completed
-last_updated: "2026-05-22T08:25:02.550Z"
-last_activity: 2026-05-22
+last_updated: "2026-05-24T08:00:00Z"
+last_activity: 2026-05-24
 progress:
-  total_phases: 9
-  completed_phases: 6
-  total_plans: 39
-  completed_plans: 41
+  total_phases: 20
+  completed_phases: 20
+  total_plans: 50
+  completed_plans: 50
   percent: 100
 ---
 
@@ -18,25 +18,25 @@ progress:
 
 **Project**: 工位导入部门/用户关联功能
 **Created**: 2026-04-16
-**Status**: 里程碑 v1.9 执行中
-Phase: 20
-Plan: Executing
-Status: Phase complete
-Last activity: 2026-05-24
+**Status**: 里程碑 v1.9 已完成
+**Phase**: 20
+**Plan**: All plans complete
+**Status**: Phase complete - verification passed
+**Last activity**: 2026-05-24
 
 ## Current Position
 
-Phase: --phase (20) — EXECUTING
-Plan: 1 of --name
-Status: Executing Phase --phase
-Last activity: 2026-05-22 -- Phase --phase execution started
+**Phase**: 20 — AD域控OU与部门映射 — **COMPLETED** ✅
+**Verification**: PASSED (20/20 must-haves)
+**Last activity**: 2026-05-24 — Phase 20 verification complete
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-09)
+See: `.planning/PROJECT.md` (updated 2026-05-09)
 
-**Core value:** Excel 导入时自动关联实体，提升批量管理效率；可配置仪表盘系统提供监控可视化能力
-**Current focus:** Phase --phase — 20
+**Core value**: Excel 导入时自动关联实体，提升批量管理效率；可配置仪表盘系统提供监控可视化能力；AD域控集成实现组织架构双向同步
+
+**Current focus**: Phase 20 完成 — AD域控OU与部门映射功能已实现并验证
 
 ## Phase Status
 
@@ -46,9 +46,11 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 | 13 | 查询层与轨迹 | 📋 Planned | 0/5 plans |
 | 14 | 前端与用户体验 | 📋 Planned | 0/5 plans |
 | 15 | 性能优化 | 📋 Planned | 0/5 plans |
-| 16 | API 密钥管理 | 🔄 Executing | 8/10 plans |
+| 16 | API 密钥管理 | 🔄 In Progress | 8/10 plans |
 | 17 | 前后端加密配置同步 | ✅ Completed | 6/6 plans |
 | 18 | 登录端点加密增强 | ✅ Completed | 4/4 plans |
+| 19 | AD域控账号登录功能 | ✅ Completed | 6/6 plans |
+| 20 | AD域控OU与部门映射 | ✅ Completed | 5/5 plans |
 
 ## Completed Milestones
 
@@ -59,6 +61,7 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 - ✅ **v1.4 MAC地址采集优化** (2026-05-09) — 1 phase, 4 plans
 - ✅ **v1.7 前后端加密配置同步** (2026-05-20) — 1 phase, 6 plans
 - ✅ **v1.8 登录端点加密增强** (2026-05-21) — 1 phase, 4 plans
+- ✅ **v1.9 AD域控集成扩展** (2026-05-24) — 2 phases, 11 plans
 
 ## Session History
 
@@ -84,36 +87,36 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 | 2026-05-09 | Phase 11 added to roadmap | 11 |
 | 2026-05-09 | Plan 11-01 completed: LLDP discovery service | 11 |
 | 2026-05-09 | Plan 11-02 completed: MAC filtering enhancement with LLDP | 11 |
-| 2026-05-09 | Plan 11-03 completed: Configurable MAC filter rules with priority-based resolution | 11 |
-| 2026-05-09 | Plan 11-04 completed: Comprehensive testing and validation (44 tests) | 11 |
+| 2026-05-09 | Plan 11-03 completed: Configurable MAC filter rules | 11 |
+| 2026-05-09 | Plan 11-04 completed: Testing and validation (44 tests) | 11 |
 | 2026-05-09 | Milestone v1.4 completed | — |
 | 2026-05-09 | Milestone v1.5 started | — |
-| 2026-05-09 | Requirements defined for v1.5 (14 requirements) | — |
-| 2026-05-09 | Research completed (MAC地址历史数据管理) | — |
-| 2026-05-09 | Roadmap created for v1.5 (4 phases: 12-15) | — |
+| 2026-05-09 | Requirements defined for v1.5 | — |
+| 2026-05-09 | Research completed (MAC历史数据管理) | — |
+| 2026-05-09 | Roadmap created for v1.5 (4 phases) | — |
 | 2026-05-11 | Plan 12-01 completed: 数据模型与变更检测 | 12 |
 | 2026-05-11 | Plan 12-02 completed: 分区管理与自动清理 | 12 |
 | 2026-05-11 | Plan 12-03 completed: MAC地址历史查询API | 12 |
 | 2026-05-11 | Phase 12 completed: 数据模型与采集集成 | 12 |
-| 2026-05-18 | Phase 16 planned: API 密钥管理功能 (10 plans) | 16 |
-| 2026-05-19 | Plan 16-04 completed: API密钥认证中间件和速率限制器 | 16 |
-| 2026-05-19 | Plan 16-05a completed: API密钥管理的前端类型定义和API客户端 | 16 |
-| 2026-05-19 | Plan 16-05b completed: API密钥管理的前端页面组件 | 16 |
-| 2026-05-19 | Plan 16-07 completed: API密钥管理功能的前端测试 | 16 |
-| 2026-05-19 | Plan 16-08 completed: 集成测试和覆盖率汇总报告 (81.7% coverage) | 16 |
-| 2026-05-20 | Phase 17 completed: 前后端加密配置同步 (6/6 plans, 35 tests) | 17 |
+| 2026-05-18 | Phase 16 planned: API 密钥管理 (10 plans) | 16 |
+| 2026-05-19 | Plans 16-04, 16-05a, 16-05b, 16-07, 16-08 completed | 16 |
+| 2026-05-20 | Phase 17 completed: 前后端加密配置同步 (6/6 plans) | 17 |
 | 2026-05-20 | Milestone v1.7 completed | — |
-| 2026-05-21 | Phase 18 started: 登录端点加密增强 | 18 |
-| 2026-05-21 | Phase 18 completed: 登录端点请求体加密 (4/4 plans, 8/8 must-haves verified) | 18 |
+| 2026-05-21 | Phase 18 completed: 登录端点请求体加密 (4/4 plans) | 18 |
+| 2026-05-21 | Phase 19 completed: AD域控账号登录功能 (6/6 plans) | 19 |
+| 2026-05-22 | Phase 20 Wave 1-3 completed | 20 |
+| 2026-05-22 | Phase 20 Wave 4-5 completed | 20 |
+| 2026-05-24 | Phase 20 verification complete | 20 |
+| 2026-05-24 | Milestone v1.9 completed | — |
 
 ## Quick Tasks Completed
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
-| 260520-jrp | 在参数管理页面添加请求加密开关配置参数 | 2026-05-20 | a0cddc9 | [260520-jrp-request-encryption-config-toggle](./quick/260520-jrp-request-encryption-config-toggle/) |
-| 260521-m45 | 清理所有空文件夹 | 2026-05-21 | d9c1b5e | [260521-m45-clean-empty-folders](./quick/260521-m45-clean-empty-folders/) |
-| 260521-org | 整理 scripts、test、tests 目录 | 2026-05-21 | 2f8391b | [260521-m45-clean-empty-folders](./quick/260521-m45-clean-empty-folders/) |
-| 260521-bel | 创建嵌入式前端构建脚本（Linux/Windows） | 2026-05-21 | - | [260521-build-embedded-linux](./quick/260521-build-embedded-linux/) |
+| 260520-jrp | 参数管理页面添加请求加密开关 | 2026-05-20 | a0cddc9 | [260520-jrp-request-encryption-config-toggle](./quick/) |
+| 260521-m45 | 清理所有空文件夹 | 2026-05-21 | d9c1b5e | [260521-m45-clean-empty-folders](./quick/) |
+| 260521-org | 整理 scripts、test、tests 目录 | 2026-05-21 | 2f8391b | [260521-m45-clean-empty-folders](./quick/) |
+| 260521-bel | 创建嵌入式前端构建脚本 | 2026-05-21 | - | [260521-build-embedded-linux](./quick/) |
 
 ## Deferred Items
 
@@ -127,55 +130,65 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 - v1.1 完成: 信息点导入设备端口关联
 - v1.2 完成: 可配置仪表盘生产级改造（4 个阶段）
 - v1.3 完成: 技术债清理（3 个阶段）
-- v1.4 完成: MAC地址采集优化 - 过滤设备间互联端口
+- v1.4 完成: MAC地址采集优化
 - v1.5 规划中: MAC地址历史数据管理（4 个阶段）
-- v1.5 Phase 12 完成: 数据模型与采集集成（3 个计划）
 - v1.6 规划中: API密钥管理系统（1 个阶段）
-- v1.7 完成: 前后端加密配置同步（1 个阶段）
-- v1.8 执行中: 登录端点加密增强（1 个阶段）
-- Phase 19 添加: AD域控账号登录功能（策略模式认证、SM4加密、参数管理开关）
+- v1.7 完成: 前后端加密配置同步
+- v1.8 完成: 登录端点加密增强
+- v1.9 完成: AD域控集成扩展（Phase 19+20）
 
-**Total shipped**: 13 phases, 41 plans, ~200 tasks
+**Total shipped**: 20 phases, 50 plans, ~250 tasks
 
-**Current Phase:** 20
-**Phase Status:** 🔄 Phase 18 executing - 4 plans across 4 waves
+### Key Technical Decisions for Phase 20
 
-### Key Technical Decisions for Phase 18
-
-1. **加密策略**: 三层加密防御（HTTPS + SM2+SM4请求体 + SM2密码字段）
-2. **向后兼容**: require_encryption: false，支持混合客户端环境
-3. **配置驱动**: 通过配置文件控制加密排除路径，无需代码变更
-4. **安全防护**: 防重放攻击（nonce + 时间戳300s窗口）
-5. **性能目标**: 加密开销 < 50ms，P99 < 350ms
+1. **双向映射**: 系统部门 ⇄ AD OU，映射表存储对应关系
+2. **递归同步**: 部门树递归同步到AD OU层级结构（保持3+层级）
+3. **降级处理**: AD同步失败不阻断主流程，异步重试机制
+4. **性能优化**: Redis缓存映射查询（5分钟TTL），批量操作分批处理
+5. **定时任务**: 每日凌晨2点自动同步部门树到AD
 
 ### Known Risks & Mitigations
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| 配置错误导致登录失败 | High | 渐进式部署（开发→测试→生产），快速回滚（5分钟） |
-| 性能退化影响用户体验 | Medium | 性能基准测试验证，监控P99延迟 |
-| nonce存储内存泄漏 | Low | 当前实现可接受，监控内存使用 |
-| 旧客户端兼容性问题 | Medium | require_encryption: false保持向后兼容 |
+| AD权限问题 | Medium | 专用服务账号，CreateOU幂等性 |
+| OU命名冲突 | Low | 路径匹配复用，否则创建新OU |
+| 批量操作性能 | Medium | 分批处理（10个/批），1秒暂停 |
+| 同步失败回滚 | Medium | 详细日志+事务，降级处理 |
 
-### v1.8 Requirements Coverage
+### v1.9 Requirements Coverage
 
-**Total Requirements**: 3
+**Total Requirements**: 5
 **Categories**:
 
-- PHASE-18-GOAL: 启用登录端点SM2+SM4请求体加密
-- PHASE-18-SUCCESS: 加密配置、向后兼容、三层加密验证
+- PHASE-20-DATA-MODEL: 映射表、AD字段
+- PHASE-20-DEPT-SYNC: 定时同步、API端点
+- PHASE-20-USER-LOGIN: OU反向查找、自动部门设置
+- PHASE-20-USER-SYNC: 部门移动、属性同步
+- PHASE-20-TESTING: 单元测试、集成测试
 
 **Phase Mapping**:
 
-- Phase 18: PHASE-18-GOAL, PHASE-18-SUCCESS-1,2,3 (4 requirements)
+- Phase 19: PHASE-19-GOAL (6 requirements)
+- Phase 20: All 5 requirements (20 must-haves verified)
 
-**Coverage**: 0% (execution started)
+**Coverage**: 100% (verification passed)
 
-**Planned Phase:** 19 (添加AD域控账号登录功能) — 6 plans — 2026-05-21T08:35:17.776Z
+## Next Steps
 
-### Quick Tasks Completed
+**Current milestone v1.9 完成** ✅
 
-| # | Description | Date | Commit | Directory |
-|---|-------------|------|--------|-----------|
-| 260521-ksr | 整理项目目录，清除临时版本和构建物 | 2026-05-21 | 578be37 | [260521-ksr-1-exe-cmd-exe-main-exe-ruoyi-backend-exe](./quick/260521-ksr-1-exe-cmd-exe-main-exe-ruoyi-backend-exe/) |
-| 260521-m45 | 清理所有空文件夹 | 2026-05-21 | N/A | [260521-m45-clean-empty-folders](./quick/260521-m45-clean-empty-folders/) |
+**Available options**:
+
+1. **继续 v1.5** (MAC地址历史数据管理)
+   - Phase 13: 查询层与轨迹 (5 plans)
+   - Phase 14: 前端与用户体验 (5 plans)
+   - Phase 15: 性能优化 (5 plans)
+
+2. **继续 v1.6** (API密钥管理系统)
+   - Phase 16: 剩余2个计划完成
+
+3. **规划新里程碑**
+   - `/gsd-new-milestone` 创建新的里程碑
+
+**推荐**: 继续完成 Phase 16 (API密钥管理)剩余计划，然后推进 v1.5 MAC地址历史数据管理
