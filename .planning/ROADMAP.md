@@ -11,6 +11,8 @@
 - 🚧 **v1.6 API密钥管理系统** — Phase 16 (in progress)
 - ✅ **v1.7 前后端加密配置同步** — Phase 17 (shipped 2026-05-20)
 - ✅ **v1.8 登录端点加密增强** — Phase 18 (shipped 2026-05-21)
+- ✅ **v1.9 AD域控集成扩展** — Phases 19-20 (shipped 2026-05-24)
+- 🔧 **v1.10 网络设备权限修复** — Phase 21 (planned)
 
 ## Phases
 
@@ -99,6 +101,15 @@
 
 - [x] Phase 19: AD域控账号登录功能 (6 plans) — completed 2026-05-21
 - [x] Phase 20: AD域控OU与部门映射 (5 plans) — completed 2026-05-24
+
+</details>
+
+---
+
+<details>
+<summary>🔧 v1.10 网络设备权限修复 (Phase 21) — PLANNED</summary>
+
+- [ ] Phase 21: 网络设备管理权限泄露修复 (1 plan) — planned
 
 </details>
 
@@ -252,7 +263,7 @@ Plans:
 | 13. 查询层与轨迹 | v1.5 | 0/5 | Planned | - |
 | 14. 前端与用户体验 | v1.5 | 0/5 | Planned | - |
 | 15. 性能优化 | v1.5 | 0/5 | Planned | - |
-| 16. API 密钥管理 | v1.6 | 6/10 | In Progress | 2026-05-19 |
+| 16. API 密钥管理 | v1.6 | 0/0 | Complete    | 2026-05-24 |
 | 17. 前后端加密配置同步 | v1.7 | 6/6 | Complete | 2026-05-20 |
 | 18. 登录端点请求体加密 | v1.8 | 4/4 | Complete    | 2026-05-21 |
 
@@ -276,7 +287,7 @@ Plans:
 **Goal:** [To be planned]
 **Requirements**: TBD
 **Depends on:** Phase 18
-**Plans:** 0 plans
+**Plans:** 0/0 plans complete
 
 Plans:
 - [ ] TBD (run /gsd-plan-phase 19 to break down)
@@ -308,4 +319,21 @@ Plans:
 
 ---
 
-**Total**: 20 phases, 50 plans complete, 2 gap closure plans, 20 plans planned (5 each for phases 13-15), 4 plans remaining (phase 16), 5 plans planned (phase 20), 81 total
+### Phase 21: 网络设备管理权限泄露修复
+**Goal**: 修复网络设备路由组权限泄露问题，将OR逻辑的权限中间件改为细粒度的子路由权限控制
+**Depends on**: 无（安全修复）
+**Requirements**: SECURITY-001, SECURITY-002
+**Success Criteria** (what must be TRUE):
+  1. 移除router.go中网络路由组的20+权限OR逻辑中间件（lines 312-333）
+  2. 为每个子路由组（devices, credentials, templates, backups, discoveries等）单独配置权限中间件
+  3. 权限验证在子路由级别进行，而非父路由级别
+  4. 用户仅有device:list权限时无法访问credential或backup端点
+  5. 实现模式参考MAC/端口路由的权限配置模式
+**Plans**: 1 plan
+
+Plans:
+- [ ] 21-01-PLAN.md — 修复网络设备权限泄露（Wave 1）— 移除OR逻辑权限，实现细粒度子路由权限
+
+---
+
+**Total**: 21 phases, 50 plans complete, 2 gap closure plans, 20 plans planned (5 each for phases 13-15), 4 plans remaining (phase 16), 5 plans planned (phase 20), 1 plan planned (phase 21), 82 total

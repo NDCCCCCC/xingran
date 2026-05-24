@@ -1,17 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.9
-milestone_name: AD域控集成扩展
-current_phase: 20
-status: completed
-last_updated: "2026-05-24T08:00:00Z"
-last_activity: 2026-05-24
+milestone: v1.5
+milestone_name: MAC地址历史数据管理
+status: ready_to_plan
+last_updated: "2026-05-24T13:44:07.038Z"
 progress:
-  total_phases: 20
-  completed_phases: 20
-  total_plans: 50
-  completed_plans: 50
-  percent: 100
+  total_phases: 10
+  completed_phases: 7
+  total_plans: 39
+  completed_plans: 41
+  percent: 70
 ---
 
 # Project State
