@@ -10,7 +10,7 @@
 - 🚧 **v1.5 MAC地址历史数据管理** — Phases 12-15 (in progress)
 - 🚧 **v1.6 API密钥管理系统** — Phase 16 (in progress)
 - ✅ **v1.7 前后端加密配置同步** — Phase 17 (shipped 2026-05-20)
-- 📋 **v1.8 登录端点加密增强** — Phase 18 (planned)
+- ✅ **v1.8 登录端点加密增强** — Phase 18 (shipped 2026-05-21)
 
 ## Phases
 
@@ -86,9 +86,9 @@
 ---
 
 <details>
-<summary>📋 v1.8 登录端点加密增强 (Phase 18) — PLANNED</summary>
+<summary>✅ v1.8 登录端点加密增强 (Phase 18) — SHIPPED 2026-05-21</summary>
 
-- [ ] Phase 18: 登录端点请求体加密 (4 plans) — planned
+- [x] Phase 18: 登录端点请求体加密 (4 plans) — completed 2026-05-21
 
 </details>
 
@@ -308,4 +308,4 @@ Plans:
 
 ---
 
-**Total**: 20 phases, 46 plans complete, 2 gap closure plans, 20 plans planned (5 each for phases 13-15), 4 plans remaining (phase 16), 4 plans planned (phase 18), 5 plans planned (phase 20), 81 total
+**Total**: 20 phases, 50 plans complete, 2 gap closure plans, 20 plans planned (5 each for phases 13-15), 4 plans remaining (phase 16), 5 plans planned (phase 20), 81 total
