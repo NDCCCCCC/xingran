@@ -103,6 +103,7 @@ progress:
 | 260521-m45 | 清理所有空文件夹 | 2026-05-21 | d9c1b5e | quick/ |
 | 260521-org | 整理 scripts、test、tests 目录 | 2026-05-21 | 2f8391b | quick/ |
 | 260521-bel | 创建嵌入式前端构建脚本 | 2026-05-21 | - | quick/ |
+| 260525-vdi | 添加 VDI 菜单到 sys_menu 表 | 2026-05-25 | 8625031 | quick/ |
 
 ## Accumulated Context
 
