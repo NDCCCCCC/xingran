@@ -10,6 +10,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations"
 	rpaV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/rpa"
 	systemV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/system"
+	vdiV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/vdi"
 	workorderV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/workorder"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/scheduler"
@@ -740,6 +741,38 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			texts.POST("", textHandler.Create)
 		}
 	}
+
+		// VDI管理模块（虚拟桌面基础设施）
+		vdi := r.Group("/vdi")
+		vdi.Use(middleware.JWTAuth(core.JWTManager))
+		// 添加操作日志中间件
+		vdi.Use(middleware.OperLogMiddleware(core.OperLogService, core))
+		{
+			// 虚拟机管理
+			vms := vdi.Group("/vm")
+			vms.Use(middleware.RequirePermissions([]string{
+				"vdi:vm:list",
+				"vdi:vm:add",
+				"vdi:vm:edit",
+				"vdi:vm:delete",
+				"vdi:vm:operate",
+			}, core))
+			{
+				vdiV1.SetupVMRouter(vms, core)
+			}
+
+			// VDI服务器管理
+			servers := vdi.Group("/servers")
+			servers.Use(middleware.RequirePermissions([]string{
+				"vdi:server:list",
+				"vdi:server:add",
+				"vdi:server:edit",
+				"vdi:server:delete",
+			}, core))
+			{
+				vdiV1.SetupVDIServerRouter(servers, core)
+			}
+		}
 
 	// RPA 管理模块
 	// 先设置公开的 worker 注册接口（不需要认证）
