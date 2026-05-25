@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Card,
   Table,
@@ -11,11 +11,15 @@ import {
   Form,
   message,
   Drawer,
+  Descriptions,
+  Tooltip,
 } from 'antd';
 import {
   ReloadOutlined,
   PlusOutlined,
-  MinusCircleOutlined
+  MinusCircleOutlined,
+  SyncOutlined,
+  InfoCircleOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -26,9 +30,12 @@ import {
   updateADGroup,
   getADUserList,
   getADOUTree,
+  syncADGroups,
+  getADGroupSyncStatus,
   type ADGroup,
   type ADUser,
-  type ADOUNode
+  type ADOUNode,
+  type ADGroupSyncStatus,
 } from '@/lib/adDomainApi';
 import { useADConfigs } from '@/hooks/useADConfigs';
 import type { ADConfig } from '@/lib/adDomainApi';
@@ -66,6 +73,10 @@ const ADGroupPage: FC = () => {
   const [searchGroupName, setSearchGroupName] = useState<string>();
   const [ouList, setOUList] = useState<Array<{ dn: string; name: string }>>([]);
   const [selectedOUDN, setSelectedOUDN] = useState<string | undefined>();
+
+  // Group sync state
+  const [syncLoading, setSyncLoading] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<ADGroupSyncStatus | null>(null);
 
   // 扁平化OU树，提取所有OU
   const flattenOUTree = (nodes: ADOUNode[]): Array<{ dn: string; name: string }> => {
@@ -134,6 +145,43 @@ const ADGroupPage: FC = () => {
       fetchGroups(searchGroupName);
     }
   }, [selectedConfig, selectedOUDN, paginationProps.current, paginationProps.pageSize]);
+
+  // Fetch sync status when config changes
+  const fetchSyncStatus = useCallback(async () => {
+    if (!selectedConfig) return;
+    try {
+      const res = await getADGroupSyncStatus(selectedConfig);
+      if (res.code === 0 && res.data) {
+        setSyncStatus(res.data);
+      }
+    } catch {
+      // ignore
+    }
+  }, [selectedConfig]);
+
+  useEffect(() => {
+    fetchSyncStatus();
+  }, [fetchSyncStatus]);
+
+  const handleSyncGroups = async () => {
+    if (!selectedConfig) return;
+    setSyncLoading(true);
+    try {
+      const res = await syncADGroups(selectedConfig);
+      if (res.code === 0 && res.data) {
+        const r = res.data;
+        message.success(
+          `组同步完成: 总数=${r.totalGroups}, 创建=${r.createdGroups}, 更新=${r.updatedGroups}, 删除=${r.deletedGroups}, 耗时=${r.duration}ms`
+        );
+        fetchGroups(searchGroupName);
+        fetchSyncStatus();
+      }
+    } catch {
+      message.error('组同步失败');
+    } finally {
+      setSyncLoading(false);
+    }
+  };
 
   const handleSearch = () => {
     const groupName = form.getFieldValue('groupName');
@@ -261,6 +309,24 @@ const ADGroupPage: FC = () => {
       render: (scope: string) => scope ? <Tag>{scope}</Tag> : '-',
     },
     {
+      title: '类型',
+      dataIndex: 'groupType',
+      key: 'groupType',
+      width: 100,
+      render: (type: number) => {
+        if (type === 1) return <Tag color="blue">安全组</Tag>;
+        if (type === 2) return <Tag color="default">分发组</Tag>;
+        return '-';
+      },
+    },
+    {
+      title: '最后同步',
+      dataIndex: 'lastSyncAt',
+      key: 'lastSyncAt',
+      width: 170,
+      render: (val: string) => val ? new Date(val).toLocaleString() : <Tag color="warning">未同步</Tag>,
+    },
+    {
       title: '操作',
       key: 'action',
       width: 180,
@@ -364,9 +430,44 @@ const ADGroupPage: FC = () => {
               <Button icon={<ReloadOutlined />} onClick={() => fetchGroups(searchGroupName)}>
                 刷新
               </Button>
+              <Button
+                type="primary"
+                icon={<SyncOutlined spin={syncLoading} />}
+                loading={syncLoading}
+                onClick={handleSyncGroups}
+                disabled={!selectedConfig}
+              >
+                同步组
+              </Button>
+              {syncStatus && (
+                <Tooltip title={
+                  `总组数: ${syncStatus.totalGroups} | ` +
+                  `已同步: ${syncStatus.recentlySynced} | ` +
+                  `未同步: ${syncStatus.neverSynced} | ` +
+                  `成员关系: ${syncStatus.totalMemberRelations}`
+                }>
+                  <Tag color={syncStatus.neverSynced > 0 ? 'orange' : 'green'} style={{ cursor: 'pointer' }}>
+                    <InfoCircleOutlined /> 同步状态
+                  </Tag>
+                </Tooltip>
+              )}
             </Space>
           </Form.Item>
         </Form>
+
+        {/* Sync Status Summary */}
+        {syncStatus && (
+          <Descriptions size="small" bordered column={4}>
+            <Descriptions.Item label="总组数">{syncStatus.totalGroups}</Descriptions.Item>
+            <Descriptions.Item label="最近同步">{syncStatus.recentlySynced}</Descriptions.Item>
+            <Descriptions.Item label="未同步">
+              <Tag color={syncStatus.neverSynced > 0 ? 'warning' : 'success'}>
+                {syncStatus.neverSynced}
+              </Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="成员关系数">{syncStatus.totalMemberRelations}</Descriptions.Item>
+          </Descriptions>
+        )}
 
         {/* 用户组列表 */}
         <Table
