@@ -3,6 +3,7 @@ package addomain
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/go-ldap/ldap/v3"
@@ -280,11 +281,16 @@ func (s *SyncService) syncGroups(ctx context.Context, config *models.ADConfig, e
 		members := entry.GetAttributeValues("member")
 		groupMembersMap[groupDN] = members
 
+		// Parse groupType from LDAP
+		groupScope, groupType := parseGroupTypeFromLDAP(entry.GetAttributeValue("groupType"))
+
 		if existingGroup, exists := existingGroupMap[groupDN]; exists {
 			existingGroup.GroupName = entry.GetAttributeValue("cn")
 			existingGroup.Description = entry.GetAttributeValue("description")
 			existingGroup.MemberCount = len(members)
 			existingGroup.OUN = ouDN
+			existingGroup.GroupScope = groupScope
+			existingGroup.GroupType = groupType
 			existingGroup.LastSyncAt = &now
 			groupsToUpdate[groupDN] = existingGroup
 		} else {
@@ -295,6 +301,8 @@ func (s *SyncService) syncGroups(ctx context.Context, config *models.ADConfig, e
 				Description: entry.GetAttributeValue("description"),
 				MemberCount: len(members),
 				OUN:         ouDN,
+				GroupScope:  groupScope,
+				GroupType:   groupType,
 				LastSyncAt:  &now,
 			})
 		}
@@ -358,7 +366,7 @@ func (s *SyncService) updateGroupsInBatches(ctx context.Context, groups map[stri
 		if err := s.db.WithContext(ctx).Clauses(clause.OnConflict{
 			Columns: []clause.Column{{Name: "ad_config_id"}, {Name: "group_dn"}},
 			DoUpdates: clause.AssignmentColumns([]string{
-				"group_name", "description", "member_count", "ou_dn", "last_sync_at",
+				"group_name", "description", "member_count", "ou_dn", "group_scope", "group_type", "last_sync_at",
 			}),
 		}).Create(batch).Error; err != nil {
 			return fmt.Errorf("批量更新用户组失败: %w", err)
@@ -429,8 +437,9 @@ func (s *SyncService) syncUsers(ctx context.Context, config *models.ADConfig, en
 		uacStr := entry.GetAttributeValue("userAccountControl")
 		userAccountControl := parseIntOrDefault(uacStr, 512)
 
-		// 解析memberOf（第一个）
-		memberOf := entry.GetAttributeValue("memberOf")
+		// memberOf is multi-valued, store as semicolon-separated
+		memberOfValues := entry.GetAttributeValues("memberOf")
+		memberOf := strings.Join(memberOfValues, ";")
 
 		// 解析时间字段
 		var lastLogon, pwdLastSet *time.Time
@@ -601,4 +610,43 @@ func (s *SyncService) updateSyncLog(ctx context.Context, logID string, status mo
 	}
 
 	s.db.WithContext(ctx).Model(&models.ADSyncLog{}).Where("id = ?", logID).Updates(updates)
+}
+
+// parseGroupTypeFromLDAP parses the AD groupType integer flag into GroupScope and GroupType
+// AD groupType values:
+//   - 0x00000002 (2)   = Global Distribution Group
+//   - 0x00000004 (4)   = Domain Local Distribution Group
+//   - 0x00000008 (8)   = Universal Distribution Group
+//   - 0x80000002 (-2147483646) = Global Security Group
+//   - 0x80000004 (-2147483644) = Domain Local Security Group
+//   - 0x80000008 (-2147483640) = Universal Security Group
+func parseGroupTypeFromLDAP(groupTypeStr string) (models.ADGroupScope, models.ADGroupType) {
+	if groupTypeStr == "" {
+		return models.ADGroupScopeGlobal, models.ADGroupTypeSecurity
+	}
+
+	val := parseIntOrDefault(groupTypeStr, -2147483646)
+	isSecurity := val&0x80000000 != 0
+	scopeVal := val & 0x0FFFFFFF
+
+	var scope models.ADGroupScope
+	switch scopeVal {
+	case 2:
+		scope = models.ADGroupScopeGlobal
+	case 4:
+		scope = models.ADGroupScopeLocal
+	case 8:
+		scope = models.ADGroupScopeUniversal
+	default:
+		scope = models.ADGroupScopeGlobal
+	}
+
+	var groupType models.ADGroupType
+	if isSecurity {
+		groupType = models.ADGroupTypeSecurity
+	} else {
+		groupType = models.ADGroupTypeDistribution
+	}
+
+	return scope, groupType
 }

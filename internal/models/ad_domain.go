@@ -1,6 +1,7 @@
 package models
 
 import (
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -140,9 +141,16 @@ func (u *ADUser) GetGroupDNs() []string {
 	if u.MemberOf == "" {
 		return []string{}
 	}
-	// 简单实现：按逗号分割
-	// 实际AD中的memberOf是多个值的集合，需要更复杂的解析
-	return []string{u.MemberOf}
+	// memberOf is stored as semicolon-separated DN values
+	parts := strings.Split(u.MemberOf, ";")
+	result := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			result = append(result, p)
+		}
+	}
+	return result
 }
 
 // ==================== 用户组成员关系 ====================
