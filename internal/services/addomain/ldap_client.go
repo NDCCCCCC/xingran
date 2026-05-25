@@ -294,6 +294,56 @@ func (c *LDAPClient) RemoveGroupMember(groupDN, userDN string) error {
 	return c.conn.Modify(modifyRequest)
 }
 
+// CreateGroup 创建AD用户组
+func (c *LDAPClient) CreateGroup(groupDN, groupName, description string, groupType int) error {
+	// 构造组条目
+	entry := ldap.NewAddRequest(groupDN, nil)
+	entry.Attribute("objectClass", []string{"top", "group"})
+	entry.Attribute("sAMAccountName", []string{groupName})
+	entry.Attribute("cn", []string{groupName})
+	if description != "" {
+		entry.Attribute("description", []string{description})
+	}
+	// groupType: -2147483646 = Global Security Group, -2147483644 = Domain Local Security Group
+	// 默认创建全局安全组
+	if groupType == 0 {
+		groupType = -2147483646
+	}
+	entry.Attribute("groupType", []string{fmt.Sprintf("%d", groupType)})
+
+	return c.conn.Add(entry)
+}
+
+// DeleteGroup 删除AD用户组
+func (c *LDAPClient) DeleteGroup(groupDN string) error {
+	delRequest := ldap.NewDelRequest(groupDN, nil)
+	return c.conn.Del(delRequest)
+}
+
+// AddGroupMembers 批量添加组成员
+func (c *LDAPClient) AddGroupMembers(groupDN string, userDNs []string) error {
+	if len(userDNs) == 0 {
+		return nil
+	}
+
+	modifyRequest := ldap.NewModifyRequest(groupDN, nil)
+	modifyRequest.Add("member", userDNs)
+
+	return c.conn.Modify(modifyRequest)
+}
+
+// RemoveGroupMembers 批量移除组成员
+func (c *LDAPClient) RemoveGroupMembers(groupDN string, userDNs []string) error {
+	if len(userDNs) == 0 {
+		return nil
+	}
+
+	modifyRequest := ldap.NewModifyRequest(groupDN, nil)
+	modifyRequest.Delete("member", userDNs)
+
+	return c.conn.Modify(modifyRequest)
+}
+
 // extractRDNFromDN 从DN中提取RDN
 func extractRDNFromDN(dn string) string {
 	idx := strings.Index(dn, ",")
