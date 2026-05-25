@@ -1,6 +1,7 @@
 package models
 
 import (
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -92,7 +93,7 @@ type ADGroup struct {
 	GroupDN     string       `gorm:"size:500;not null;uniqueIndex:uni_sys_ad_group_config_dn,priority:2" json:"groupDn"`
 	GroupName   string       `gorm:"size:255;not null" json:"groupName"`
 	GroupScope  ADGroupScope `gorm:"size:50" json:"groupScope,omitempty"`
-	GroupType   ADGroupType  `json:"groupType,omitempty"`
+	GroupType   ADGroupType  `gorm:"default:1" json:"groupType,omitempty"`
 	Description string       `gorm:"type:text" json:"description,omitempty"`
 	MemberCount int          `gorm:"default:0" json:"memberCount"`
 	OUN         string       `gorm:"size:500;index:idx_ad_group_ou;column:ou_dn" json:"ouDn,omitempty"`
@@ -140,9 +141,16 @@ func (u *ADUser) GetGroupDNs() []string {
 	if u.MemberOf == "" {
 		return []string{}
 	}
-	// 简单实现：按逗号分割
-	// 实际AD中的memberOf是多个值的集合，需要更复杂的解析
-	return []string{u.MemberOf}
+	// memberOf is stored as semicolon-separated DN values
+	parts := strings.Split(u.MemberOf, ";")
+	result := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			result = append(result, p)
+		}
+	}
+	return result
 }
 
 // ==================== 用户组成员关系 ====================

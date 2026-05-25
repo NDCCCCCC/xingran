@@ -135,7 +135,7 @@ func (c *LDAPClient) SearchGroups(baseDN string) ([]*ldap.Entry, error) {
 	return c.searchWithPaging(
 		baseDN,
 		"(objectClass=group)",
-		[]string{"dn", "cn", "description", "member"},
+		[]string{"dn", "cn", "description", "member", "groupType"},
 		defaultPageSize,
 	)
 }

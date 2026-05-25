@@ -265,3 +265,33 @@ func (s *ADSyncScheduler) IsStarted() bool {
 	defer s.mu.Unlock()
 	return s.started
 }
+
+// ScheduleGroupSyncForConfig schedules a one-time group sync for a specific config
+func ScheduleGroupSyncForConfig(configID string, delay time.Duration) {
+	if globalADSyncScheduler == nil {
+		applogger.Errorf("AD同步调度器未初始化")
+		return
+	}
+
+	go func() {
+		time.Sleep(delay)
+		syncCtx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+		defer cancel()
+		globalADSyncScheduler.syncADGroups(syncCtx, configID)
+	}()
+}
+
+// syncADGroups syncs only groups (not full sync) for a given config
+func (s *ADSyncScheduler) syncADGroups(ctx context.Context, configID string) {
+	applogger.Infof("开始组同步: configID=%s", configID)
+
+	adService := addomain.NewADDomainService(s.db)
+	result, err := adService.GroupSync.SyncGroupsByConfig(ctx, configID)
+	if err != nil {
+		applogger.Errorf("组同步失败: %v", err)
+		return
+	}
+
+	applogger.Infof("组同步完成: 总数=%d, 创建=%d, 更新=%d, 删除=%d, 耗时=%dms",
+		result.TotalGroups, result.CreatedGroups, result.UpdatedGroups, result.DeletedGroups, result.Duration)
+}

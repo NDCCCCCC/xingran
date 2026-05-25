@@ -30,6 +30,7 @@ func SetupADDomainRouter(r *gin.RouterGroup, core *core.Core) {
 		configs.POST("/:id/delete", handler.DeleteConfig)
 		configs.POST("/:id/test", handler.TestConnection)
 		configs.POST("/:id/sync", handler.SyncData)
+		configs.POST("/:id/sync-groups", handler.SyncGroups)
 	}
 
 	// OU管理
@@ -44,12 +45,15 @@ func SetupADDomainRouter(r *gin.RouterGroup, core *core.Core) {
 	groups.Use(middleware.RequirePermissions([]string{
 		"ops:ad:group:view",
 		"ops:ad:group:edit",
+		"ops:ad:group:sync",
 	}, core))
 	{
 		groups.POST("/list", handler.ListGroups)
 		groups.GET("/:id", handler.GetGroupDetail)
 		groups.POST("/:id/update", handler.UpdateGroup)
 		groups.POST("/:id/members", handler.GetGroupMembers)
+		groups.POST("/sync-single", handler.SyncSingleGroup)
+		groups.POST("/sync-status", handler.GetGroupSyncStatus)
 	}
 
 	// 用户管理

@@ -298,6 +298,42 @@ export function removeADGroupMember(id: string, configId: string, userDn: string
   return post(`/ad-domain/groups/${id}/members/remove`, { configId, userDn });
 }
 
+// ==================== 用户组同步 API ====================
+
+export interface ADGroupSyncResult {
+  totalGroups: number;
+  createdGroups: number;
+  updatedGroups: number;
+  deletedGroups: number;
+  totalMembers: number;
+  createdMembers: number;
+  removedMembers: number;
+  duration: number;
+}
+
+export interface ADGroupSyncStatus {
+  configId: string;
+  configName: string;
+  lastSyncAt?: string;
+  syncEnabled: boolean;
+  totalGroups: number;
+  recentlySynced: number;
+  totalMemberRelations: number;
+  neverSynced: number;
+}
+
+export function syncADGroups(configId: string): Promise<BaseResponse<ADGroupSyncResult>> {
+  return post(`/ad-domain/configs/${configId}/sync-groups`, {});
+}
+
+export function syncADSingleGroup(configId: string, groupDn: string): Promise<BaseResponse<{ message: string }>> {
+  return post('/ad-domain/groups/sync-single', { configId, groupDn });
+}
+
+export function getADGroupSyncStatus(configId: string): Promise<BaseResponse<ADGroupSyncStatus>> {
+  return post('/ad-domain/groups/sync-status', { configId });
+}
+
 // ==================== 用户管理 API ====================
 
 export function getADUserList(params: ADUserListRequest): Promise<BaseResponse<PageResponse<ADUser>>> {
