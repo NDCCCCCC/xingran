@@ -32,6 +32,7 @@ type ADConfig struct {
 	UseTLS        bool           `gorm:"default:false" json:"useTls"`
 	SyncEnabled   bool           `gorm:"default:true" json:"syncEnabled"`
 	SyncInterval  int            `gorm:"default:3600" json:"syncInterval"` // 秒
+	MemberOUDN    string         `gorm:"size:500;column:member_ou_dn" json:"memberOuDn,omitempty"` // 本部部门分组OU DN，用于创建和管理部门组
 	LastSyncAt    *time.Time     `json:"lastSyncAt,omitempty"`
 	Status        ADConfigStatus `gorm:"default:0" json:"status"`
 }

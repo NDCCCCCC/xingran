@@ -74,6 +74,7 @@ type CreateRequest struct {
 	UseTLS        bool   `json:"useTls"`
 	SyncEnabled   bool   `json:"syncEnabled"`
 	SyncInterval  int    `json:"syncInterval" binding:"min=60"`
+	MemberOUDN    string `json:"memberOuDn,omitempty"` // 本部部门分组OU DN
 }
 
 // Create 创建AD配置
@@ -95,6 +96,7 @@ func (s *ConfigService) Create(ctx context.Context, req *CreateRequest, creatorI
 		UseTLS:        req.UseTLS,
 		SyncEnabled:   req.SyncEnabled,
 		SyncInterval:  req.SyncInterval,
+		MemberOUDN:    req.MemberOUDN,
 		Status:        models.ADConfigStatusEnabled,
 	}
 
@@ -121,6 +123,7 @@ type UpdateRequest struct {
 	UseTLS        bool   `json:"useTls"`
 	SyncEnabled   bool   `json:"syncEnabled"`
 	SyncInterval  int    `json:"syncInterval" binding:"min=60"`
+	MemberOUDN    string `json:"memberOuDn,omitempty"` // 本部部门分组OU DN
 	Status        *int   `json:"status,omitempty"`
 }
 
@@ -143,6 +146,7 @@ func (s *ConfigService) Update(ctx context.Context, req *UpdateRequest, updaterI
 		"use_tls":        req.UseTLS,
 		"sync_enabled":   req.SyncEnabled,
 		"sync_interval":  req.SyncInterval,
+		"member_ou_dn":   req.MemberOUDN,
 		"updated_by":     updaterID,
 	}
 

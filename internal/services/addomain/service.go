@@ -32,6 +32,7 @@ type ADConfigCreateRequest struct {
 	UseTLS        bool   `json:"useTls"`
 	SyncEnabled   bool   `json:"syncEnabled"`
 	SyncInterval  int    `json:"syncInterval" binding:"min=60"`
+	MemberOUDN    string `json:"memberOuDn,omitempty"` // 本部部门分组OU DN
 }
 
 // ADConfigUpdateRequest 更新AD配置请求
@@ -48,6 +49,7 @@ type ADConfigUpdateRequest struct {
 	UseTLS        bool   `json:"useTls"`
 	SyncEnabled   bool   `json:"syncEnabled"`
 	SyncInterval  int    `json:"syncInterval" binding:"min=60"`
+	MemberOUDN    string `json:"memberOuDn,omitempty"` // 本部部门分组OU DN
 	Status        *int   `json:"status,omitempty"`
 }
 
@@ -155,6 +157,7 @@ func (s *ADDomainService) CreateADConfig(ctx context.Context, req *ADConfigCreat
 		UseTLS:        req.UseTLS,
 		SyncEnabled:   req.SyncEnabled,
 		SyncInterval:  req.SyncInterval,
+		MemberOUDN:    req.MemberOUDN,
 	}
 	return s.Config.Create(ctx, internalReq, creatorID)
 }
@@ -174,6 +177,7 @@ func (s *ADDomainService) UpdateADConfig(ctx context.Context, req *ADConfigUpdat
 		UseTLS:        req.UseTLS,
 		SyncEnabled:   req.SyncEnabled,
 		SyncInterval:  req.SyncInterval,
+		MemberOUDN:    req.MemberOUDN,
 		Status:        req.Status,
 	}
 	return s.Config.Update(ctx, internalReq, updaterID)
