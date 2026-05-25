@@ -102,27 +102,29 @@ type ADSyncRequest struct {
 // ADDomainService AD域管理服务（主服务）
 // 提供统一的访问入口，内部委托给各个专门的服务
 type ADDomainService struct {
-	Config     *ConfigService
-	Sync       *SyncService
-	OU         *OUService
-	User       *UserService
-	Group      *GroupService
-	GroupSync  *GroupSyncService
-	Log        *LogService
-	Computer   *ComputerService
+	Config          *ConfigService
+	Sync            *SyncService
+	OU              *OUService
+	User            *UserService
+	Group           *GroupService
+	GroupSync       *GroupSyncService
+	DeptGroupMapping DeptGroupMappingService
+	Log             *LogService
+	Computer        *ComputerService
 }
 
 // NewADDomainService 创建AD域管理服务
 func NewADDomainService(db *gorm.DB) *ADDomainService {
 	return &ADDomainService{
-		Config:    NewConfigService(db),
-		Sync:      NewSyncService(db),
-		OU:        NewOUService(db),
-		User:      NewUserService(db),
-		Group:     NewGroupService(db),
-		GroupSync: NewGroupSyncService(db),
-		Log:       NewLogService(db),
-		Computer:  NewComputerService(db),
+		Config:          NewConfigService(db),
+		Sync:            NewSyncService(db),
+		OU:              NewOUService(db),
+		User:            NewUserService(db),
+		Group:           NewGroupService(db),
+		GroupSync:       NewGroupSyncService(db),
+		DeptGroupMapping: NewDeptGroupMappingService(db),
+		Log:             NewLogService(db),
+		Computer:        NewComputerService(db),
 	}
 }
 
