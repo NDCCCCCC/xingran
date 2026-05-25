@@ -36,7 +36,10 @@ func (a *VDIAuthManager) Authenticate(ctx context.Context) (string, error) {
 	// 1. 检查缓存的token是否有效
 	var server models.VDIServer
 	err := a.db.WithContext(ctx).Where("id = ?", a.serverID).First(&server).Error
-	if err == nil && server.AuthToken != "" && !a.isTokenExpired(server.TokenExpiry) {
+	if err != nil {
+		return "", fmt.Errorf("failed to query VDI server: %w", err)
+	}
+	if server.AuthToken != "" && !a.isTokenExpired(server.TokenExpiry) {
 		return server.AuthToken, nil
 	}
 
@@ -55,7 +58,7 @@ func (a *VDIAuthManager) Authenticate(ctx context.Context) (string, error) {
 	}
 
 	var resp struct {
-		ErrorCode    int `json:"error_code"`
+		ErrorCode    int    `json:"error_code"`
 		ErrorMessage string `json:"error_message"`
 		Data         struct {
 			Token struct {
