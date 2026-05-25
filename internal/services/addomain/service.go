@@ -109,6 +109,7 @@ type ADDomainService struct {
 	Group           *GroupService
 	GroupSync       *GroupSyncService
 	DeptGroupMapping DeptGroupMappingService
+	GroupMgmt       GroupManagementService
 	Log             *LogService
 	Computer        *ComputerService
 }
@@ -123,6 +124,7 @@ func NewADDomainService(db *gorm.DB) *ADDomainService {
 		Group:           NewGroupService(db),
 		GroupSync:       NewGroupSyncService(db),
 		DeptGroupMapping: NewDeptGroupMappingService(db),
+		GroupMgmt:       NewGroupManagementService(db),
 		Log:             NewLogService(db),
 		Computer:        NewComputerService(db),
 	}
