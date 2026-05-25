@@ -212,7 +212,7 @@ const VirtualMachineDetail: React.FC = () => {
 
   return (
     <Card>
-      <Space direction="vertical" size="large" style={{ width: '100%' }}>
+      <Space orientation="vertical" size="large" style={{ width: '100%' }}>
         {/* 头部 */}
         <Space>
           <Button
@@ -259,7 +259,7 @@ const VirtualMachineDetail: React.FC = () => {
 
           {/* 账号管理标签页 */}
           <Tabs.TabPane tab="账号管理" key="accounts">
-            <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+            <Space orientation="vertical" size="middle" style={{ width: '100%' }}>
               <Space>
                 <Button
                   type="primary"
