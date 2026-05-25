@@ -724,3 +724,100 @@ func (h *ADDomainHandler) GetComputerDetail(c *gin.Context) {
 
 	response.Success(c, detail)
 }
+
+// SyncGroups triggers group sync for a specific AD configuration
+// @Summary 同步AD用户组
+// @Description 从AD域同步用户组数据和成员关系
+// @Tags AD域管理
+// @Accept json
+// @Produce json
+// @Param id path string true "配置ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/ad-domain/configs/:id/sync-groups [post]
+func (h *ADDomainHandler) SyncGroups(c *gin.Context) {
+	id := c.Param("id")
+	if err := h.requireConfigID(id); err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Minute)
+	defer cancel()
+
+	result, err := h.service.GroupSync.SyncGroupsByConfig(ctx, id)
+	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			response.Error(c, apperrors.New(apperrors.CodeServerError, "组同步超时，请稍后重试"))
+			return
+		}
+		response.Error(c, err)
+		return
+	}
+
+	recordOperLog(c, h.core, "AD用户组同步", OperTypeOther)
+	response.Success(c, result)
+}
+
+// SyncSingleGroup triggers sync for a single group
+// @Summary 同步单个AD用户组
+// @Description 从AD域同步指定用户组及其成员关系
+// @Tags AD域管理
+// @Accept json
+// @Produce json
+// @Param request body object{configId=string,groupDn=string} true "同步参数"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/ad-domain/groups/sync-single [post]
+func (h *ADDomainHandler) SyncSingleGroup(c *gin.Context) {
+	var req struct {
+		ConfigID string `json:"configId" binding:"required"`
+		GroupDN  string `json:"groupDn" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Minute)
+	defer cancel()
+
+	if err := h.service.GroupSync.SyncSingleGroup(ctx, req.ConfigID, req.GroupDN); err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	recordOperLog(c, h.core, "AD单组同步", OperTypeOther)
+	response.Success(c, gin.H{"message": "同步成功"})
+}
+
+// GetGroupSyncStatus returns sync status for groups under a config
+// @Summary 获取用户组同步状态
+// @Description 获取指定AD配置下的用户组同步状态统计
+// @Tags AD域管理
+// @Accept json
+// @Produce json
+// @Param request body object{configId=string} true "配置ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/ad-domain/groups/sync-status [post]
+func (h *ADDomainHandler) GetGroupSyncStatus(c *gin.Context) {
+	var req struct {
+		ConfigID string `json:"configId" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
+		return
+	}
+
+	status, err := h.service.GroupSync.GetGroupSyncStatus(c.Request.Context(), req.ConfigID)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	response.Success(c, status)
+}
