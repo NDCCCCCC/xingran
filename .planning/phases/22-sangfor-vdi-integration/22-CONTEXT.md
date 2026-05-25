@@ -98,6 +98,96 @@ ruoyi-agent ALL=(root) NOPASSWD: /usr/bin/passwd
 **备用方案：**
 - 手动安装（仅用于测试环境或特殊情况）
 
+### D-07: 数据库表命名规范
+**选择：统一使用 vdi 前缀（而非 sys_vdi）**
+
+**规范：**
+- 所有VDI相关表使用 `vdi_` 前缀（如 `vdi_servers`、`vdi_vms`、`vdi_agents`）
+- 遵循项目现有的表命名约定，但不使用 `sys_` 前缀
+- 与系统核心表（如 `sys_user`、`sys_role`）区分开
+
+**示例表名：**
+- `vdi_servers` — VDI服务器配置表
+- `vdi_vms` — 虚拟机表
+- `vdi_vm_accounts` — VM内部账号表
+- `vdi_agents` — Agent注册信息表
+- `vdi_audit_logs` — 操作审计日志表
+
+### D-08: 配置管理系统
+**选择：所有配置项集成到参数管理页面 + 支持热启动**
+
+**实现方式：**
+1. **参数管理页面配置：**
+   - VDI服务器配置、Agent配置、策略配置都可通过参数管理页面修改
+   - 配置存储在 `sys_config` 表中
+   - 前端参数管理页面支持VDI分类的配置项
+
+2. **热启动支持：**
+   - 配置修改后立即生效，无需重启服务
+   - 后端使用30秒缓存，配置变更后自动刷新
+   - Agent配置变更通过WebSocket推送给在线Agent
+
+3. **配置项示例：**
+   - VDI服务器连接配置（endpoint、tenant_id、timeout）
+   - Agent配置（心跳间隔、速率限制、日志级别）
+   - 密码策略配置（最小长度、复杂度要求、有效期）
+
+### D-09: 前端菜单结构
+**选择：新建一级菜单"虚拟机管理" + 管理/业务功能分离**
+
+**菜单结构：**
+```
+虚拟机管理 (一级菜单)
+├── 服务器配置 (管理功能)
+│   ├── VDI服务器列表
+│   ├── 服务器连接测试
+│   └── Agent状态监控
+├── 虚拟机管理 (业务功能)
+│   ├── 虚拟机列表
+│   ├── 虚拟机详情
+│   ├── 虚拟机操作 (开关机、重启等)
+│   └── 虚拟机同步
+├── 账号管理 (业务功能)
+│   ├── VM账号列表
+│   ├── 创建账号
+│   ├── 密码重置
+│   └── 操作审计日志
+└── 系统设置 (管理功能)
+    ├── 密码策略配置
+    ├── 权限管理
+    └── 批量操作配置
+```
+
+**权限设计：**
+- 一级菜单"虚拟机管理"使用 `vdi:visit` 权限
+- 管理功能子菜单使用 `vdi:admin` 权限
+- 业务功能子菜单使用细粒度权限（如 `vdi:vm:view`、`vdi:vm:operate`）
+- 遵循项目现有的权限管理模式（`pkg/permission/`）
+
+### D-10: 权限管理集成
+**选择：使用项目现有权限系统，无需自定义权限中间件**
+
+**权限标识符：**
+- `vdi:visit` — 访问虚拟机管理模块
+- `vdi:admin` — VDI系统管理（服务器配置、策略配置）
+- `vdi:vm:list` — 查看虚拟机列表
+- `vdi:vm:view` — 查看虚拟机详情
+- `vdi:vm:create` — 创建虚拟机
+- `vdi:vm:update` — 更新虚拟机
+- `vdi:vm:delete` — 删除虚拟机
+- `vdi:vm:operate` — 虚拟机操作（开关机、重启等）
+- `vdi:vm:sync` — 同步虚拟机状态
+- `vdi:account:list` — 查看VM账号列表
+- `vdi:account:create` — 创建VM账号
+- `vdi:account:reset` — 重置账号密码
+- `vdi:account:delete` — 删除VM账号
+- `vdi:audit:log` — 查看操作审计日志
+
+**权限实现：**
+- 后端使用现有的 `middleware.Permission()` 中间件
+- 前端路由使用 `useAuth` 和 `usePermission` 检查
+- 角色管理中自动包含VDI权限选项
+
 ### Claude's Discretion
 **Agent通信协议：** HTTP REST vs gRPC
 - 建议使用HTTP REST（更简单、易于调试、与现有架构一致）
@@ -105,6 +195,7 @@ ruoyi-agent ALL=(root) NOPASSWD: /usr/bin/passwd
 
 **Agent心跳间隔：** 建议30秒（可配置）
 - 平衡实时性和网络开销
+- 可通过参数管理页面配置
 
 **Agent版本管理：**
 - 支持Agent版本查询和远程升级（可选）
@@ -222,10 +313,22 @@ systemctl start ruoyi-vm-agent
 ```
 
 ### Agent数据模型
-**新增表：**
-- `sys_vdi_agents` — Agent注册信息（agent_id、vm_id、version、os_type、last_heartbeat、status）
-- `sys_vdi_vm_accounts` — VM内部账号（vm_id、account_id、username、account_type、is_admin、is_enabled）
-- `sys_vdi_vm_audit_logs` — 账号操作审计日志（vm_id、account_id、operation、operator、status、command_used）
+**新增表（使用 vdi_ 前缀）：**
+- `vdi_servers` — VDI服务器配置表（id、name、endpoint、username、password_encrypted、tenant_id、auth_token、token_expiry）
+- `vdi_vms` — 虚拟机表（vm_id、name、resource_id、power_state、ip_address、mac_address、os_type、vdi_server_id、bound_user_id）
+- `vdi_vm_accounts` — VM内部账号表（id、vm_id、account_id、username、account_type、os_type、is_admin、is_enabled、sync_status）
+- `vdi_agents` — Agent注册信息表（id、agent_id、vm_id、version、os_type、hostname、ip_address、auth_token、last_heartbeat、status）
+- `vdi_audit_logs` — 操作审计日志表（id、vm_id、account_id、operation、operator、operator_ip、details、status、error_message、command_used、execution_time）
+
+**配置表（sys_config，使用参数管理）：**
+- `vdi.agent.heartbeat_interval` — Agent心跳间隔（秒）
+- `vdi.agent.rate_limit` — Agent速率限制（每分钟请求数）
+- `vdi.agent.log_level` — Agent日志级别
+- `vdi.password.min_length` — 密码最小长度
+- `vdi.password.require_uppercase` — 是否需要大写字母
+- `vdi.password.require_lowercase` — 是否需要小写字母
+- `vdi.password.require_number` — 是否需要数字
+- `vdi.password.require_special` — 是否需要特殊字符
 
 ## Deferred Ideas
 
