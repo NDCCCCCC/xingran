@@ -93,7 +93,7 @@ type ADGroup struct {
 	GroupDN     string       `gorm:"size:500;not null;uniqueIndex:uni_sys_ad_group_config_dn,priority:2" json:"groupDn"`
 	GroupName   string       `gorm:"size:255;not null" json:"groupName"`
 	GroupScope  ADGroupScope `gorm:"size:50" json:"groupScope,omitempty"`
-	GroupType   ADGroupType  `json:"groupType,omitempty"`
+	GroupType   ADGroupType  `gorm:"default:1" json:"groupType,omitempty"`
 	Description string       `gorm:"type:text" json:"description,omitempty"`
 	MemberCount int          `gorm:"default:0" json:"memberCount"`
 	OUN         string       `gorm:"size:500;index:idx_ad_group_ou;column:ou_dn" json:"ouDn,omitempty"`
