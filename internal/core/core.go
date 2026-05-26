@@ -277,7 +277,10 @@ func (c *Core) Init() error {
 		}
 
 		// 启动AD域同步调度器（每5分钟检查需要同步的配置）
-		scheduler.StartADSyncScheduler(c.GetDB())
+		if c.SM4Cipher != nil {
+				scheduler.SetADSM4Cipher(c.SM4Cipher)
+			}
+			scheduler.StartADSyncScheduler(c.GetDB())
 
 		// 设置全局数据库访问器，供定时任务使用（必须在同步周期性工单任务之前）
 		scheduler.SetDB(c)
