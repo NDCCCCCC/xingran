@@ -270,6 +270,9 @@ func (d *Database) AutoMigrate() error {
 		&models.ADGroupMember{},
 		&models.ADComputer{},
 		&models.ADSyncLog{},
+		// 部门组映射相关模型
+		&models.DeptGroupMapping{},
+		&models.DeptGroupMappingSyncLog{},
 		// 运维管理相关模型（Workstation 复用系统已有的 sys_workstation）
 		&operations.OpsBuilding{},
 		&operations.OpsFloor{},
