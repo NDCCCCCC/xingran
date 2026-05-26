@@ -4,7 +4,7 @@ milestone: v1.5
 milestone_name: MAC地址历史数据管理
 status: milestone_complete
 stopped_at: context exhaustion at 91% (2026-05-26)
-last_updated: "2026-05-26T04:50:40.382Z"
+last_updated: "2026-05-26T08:12:27.688Z"
 progress:
   total_phases: 1
   completed_phases: 0
@@ -108,6 +108,7 @@ Plan: Not started
 | 260525-vdi | 添加 VDI 菜单到 sys_menu 表 | 2026-05-25 | 8625031 | quick/ |
 | 260525-lfw | LDAP 客户端连接代码重构 | 2026-05-25 | - | quick/ |
 | 260525-w22 | VDI配置页3个Bug修复(500错误/输入警告/弃用警告) | 2026-05-25 | aa992fc | [260525-w22-vdi-1-500-2-input-suffix-3-direction-ori](./quick/260525-w22-vdi-1-500-2-input-suffix-3-direction-ori/) |
+| 260526-nij | 用户管理页面部门路径显示修复 | 2026-05-26 | - | [260526-nij](./quick/260526-nij/) |
 
 ## Accumulated Context
 
@@ -200,6 +201,6 @@ Plan: Not started
 
 ## Session Continuity
 
-Last session: 2026-05-26T04:50:40.376Z
+Last session: 2026-05-26T08:12:27.680Z
 Stopped at: context exhaustion at 91% (2026-05-26)
 Resume file: None

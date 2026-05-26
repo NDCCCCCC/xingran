@@ -344,6 +344,9 @@ func (s *userService) List(ctx context.Context, params requests.UserListParams) 
 		}
 	}
 
+	// 构建部门路径
+	s.buildDepartmentPaths(ctx, list)
+
 	return &PageResult{
 		List:     list,
 		Total:    total,
@@ -351,6 +354,103 @@ func (s *userService) List(ctx context.Context, params requests.UserListParams) 
 		PageSize: params.PageSize,
 	}, nil
 }
+
+// buildDepartmentPaths 为用户列表构建完整部门路径（从二级部门开始）
+func (s *userService) buildDepartmentPaths(ctx context.Context, list []models.User) {
+	// 收集所有有部门的用户ID
+	userDeptMap := make(map[string]string) // userID -> deptID
+	for _, user := range list {
+		if user.DeptID != nil && user.Dept != nil {
+			userDeptMap[user.ID] = *user.DeptID
+		}
+	}
+
+	if len(userDeptMap) == 0 {
+		return
+	}
+
+	// 获取所有唯一的部门ID
+	uniqueDeptIDs := make(map[string]bool)
+	for _, deptID := range userDeptMap {
+		uniqueDeptIDs[deptID] = true
+	}
+
+	// 批量查询这些部门的ancestors信息
+	var depts []models.Department
+	s.db.WithContext(ctx).Select("id", "dept_name", "ancestors").Where("id IN ?", uniqueDeptIDs).Find(&depts)
+
+	// 构建部门ID到部门信息的映射
+	deptMap := make(map[string]*models.Department)
+	for i := range depts {
+		deptMap[depts[i].ID] = &depts[i]
+	}
+
+	// 对于每个有ancestors的部门，查询其所有祖先部门
+	allAncestorIDs := make(map[string]bool)
+	for _, dept := range depts {
+		if dept.Ancestors != "" {
+			ancestors := splitAncestors(dept.Ancestors)
+			for _, ancestorID := range ancestors {
+				allAncestorIDs[ancestorID] = true
+			}
+		}
+	}
+
+	// 查询所有祖先部门
+	var ancestorDepts []models.Department
+	if len(allAncestorIDs) > 0 {
+		s.db.WithContext(ctx).Select("id", "dept_name").Where("id IN ?", allAncestorIDs).Find(&ancestorDepts)
+	}
+
+	// 构建祖先部门ID到名称的映射
+	ancestorDeptMap := make(map[string]string)
+	for i := range ancestorDepts {
+		ancestorDeptMap[ancestorDepts[i].ID] = ancestorDepts[i].DeptName
+	}
+
+	// 为每个用户构建部门路径
+	for i := range list {
+		if list[i].Dept == nil {
+			continue
+		}
+
+		dept, exists := deptMap[list[i].Dept.ID]
+		if !exists {
+			continue
+		}
+
+		// 如果有ancestors，构建完整路径
+		if dept.Ancestors != "" {
+			ancestors := splitAncestors(dept.Ancestors)
+			pathParts := make([]string, 0, len(ancestors)+1)
+
+			// 添加祖先部门名称（从二级开始，跳过顶级）
+			for j, ancestorID := range ancestors {
+				if j > 0 { // 跳过第一个（顶级）部门
+					if name, exists := ancestorDeptMap[ancestorID]; exists {
+						pathParts = append(pathParts, name)
+					}
+				}
+			}
+
+			// 添加当前部门名称
+			pathParts = append(pathParts, dept.DeptName)
+
+			// 构建路径字符串
+			if len(pathParts) > 0 {
+				path := ""
+				for k, part := range pathParts {
+					if k > 0 {
+						path += "/"
+					}
+					path += part
+				}
+				list[i].DeptPath = &path
+			}
+		}
+	}
+}
+
 
 // BatchDelete 批量删除用户
 func (s *userService) BatchDelete(ctx context.Context, ids []string) error {

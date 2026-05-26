@@ -123,9 +123,10 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
       title: '部门',
       dataIndex: 'deptName',
       key: 'deptName',
-      width: 140,
-      minWidth: 120,
+      width: 200,
+      minWidth: 150,
       ellipsis: true,
+      render: (_, record) => record.deptPath || record.deptName || '-',
     },
     {
       title: '角色',

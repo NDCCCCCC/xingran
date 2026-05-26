@@ -19,6 +19,7 @@ type User struct {
 	Status        UserStatus `gorm:"default:0" json:"status"`
 	DeptID        *string    `gorm:"size:64" json:"deptId,omitempty"`
 	DeptName      *string    `gorm:"size:64" json:"deptName,omitempty"`
+	DeptPath      *string    `gorm:"-" json:"deptPath,omitempty"` // 完整部门路径（从二级开始）
 	LoginIP       *string    `gorm:"size:128" json:"loginIp,omitempty"`
 	LoginTime     *time.Time `json:"loginTime,omitempty"`
 	PwdUpdateTime *time.Time `json:"pwdUpdateTime,omitempty"`
@@ -29,7 +30,7 @@ type User struct {
 	// AD认证相关字段
 	AuthSource string  `gorm:"size:10;default:'local';not null" json:"authSource"`
 	ADUsername *string `gorm:"size:100" json:"adUsername,omitempty"`
-	ADDN       *string `gorm:"type:text" json:"adDn,omitempty"`
+	ADDN       *string `gorm:"type:text;column:ad_dn" json:"adDn,omitempty"`
 
 	// 关联
 	Roles []string    `gorm:"-" json:"roles"` // 简化为字符串数组，避免复杂关联
