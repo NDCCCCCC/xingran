@@ -125,6 +125,7 @@ Plan: Not started
 - ✅ v1.9 完成: AD域控集成扩展（Phase 19+20）
 - ✅ v1.10 完成: 网络设备权限修复
 - 📋 v1.11 规划中: 深信服桌面云集成（Phase 22A-22D）
+- 📋 Phase 23 added: 阶段23前端UI-部门组映射管理界面
 
 **Total shipped**: 66 plans, 16 phases completed
 
