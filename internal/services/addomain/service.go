@@ -102,31 +102,37 @@ type ADSyncRequest struct {
 // ADDomainService AD域管理服务（主服务）
 // 提供统一的访问入口，内部委托给各个专门的服务
 type ADDomainService struct {
-	Config          *ConfigService
-	Sync            *SyncService
-	OU              *OUService
-	User            *UserService
-	Group           *GroupService
-	GroupSync       *GroupSyncService
+	Config           *ConfigService
+	Sync             *SyncService
+	OU               *OUService
+	User             *UserService
+	Group            *GroupService
+	GroupSync        *GroupSyncService
 	DeptGroupMapping DeptGroupMappingService
-	GroupMgmt       GroupManagementService
-	Log             *LogService
-	Computer        *ComputerService
+	GroupMgmt        GroupManagementService
+	MemberSync       MemberSyncService
+	Log              *LogService
+	Computer         *ComputerService
 }
 
-// NewADDomainService 创建AD域管理服务
-func NewADDomainService(db *gorm.DB) *ADDomainService {
+// NewADDomainService creates the AD domain service.
+// cipher is optional - if provided, it sets the global password cipher for the addomain package.
+func NewADDomainService(db *gorm.DB, cipher ...PasswordCipher) *ADDomainService {
+	if len(cipher) > 0 && cipher[0] != nil {
+		SetADSM4Cipher(cipher[0])
+	}
 	return &ADDomainService{
-		Config:          NewConfigService(db),
-		Sync:            NewSyncService(db),
-		OU:              NewOUService(db),
-		User:            NewUserService(db),
-		Group:           NewGroupService(db),
-		GroupSync:       NewGroupSyncService(db),
+		Config:           NewConfigService(db),
+		Sync:             NewSyncService(db),
+		OU:               NewOUService(db),
+		User:             NewUserService(db),
+		Group:            NewGroupService(db),
+		GroupSync:        NewGroupSyncService(db),
 		DeptGroupMapping: NewDeptGroupMappingService(db),
-		GroupMgmt:       NewGroupManagementService(db),
-		Log:             NewLogService(db),
-		Computer:        NewComputerService(db),
+		GroupMgmt:        NewGroupManagementService(db),
+		MemberSync:       NewMemberSyncService(db),
+		Log:              NewLogService(db),
+		Computer:         NewComputerService(db),
 	}
 }
 

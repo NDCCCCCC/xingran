@@ -8,20 +8,94 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
 	"time"
 )
 
-// encryptPassword 加密密码（使用AES-GCM）
-func encryptPassword(password string) string {
-	// AD域加密密钥，实际应从配置文件读取
-	const encryptionKey = "ruoyi-ad-domain-key-16"
+// ==================== SM4 Cipher Interface ====================
 
-	// 确保密钥长度为16字节（AES-128）
+// PasswordCipher defines the interface for password encryption/decryption.
+// This avoids an import cycle with internal/core/security.
+type PasswordCipher interface {
+	Encrypt(plaintext string) (string, error)
+	Decrypt(ciphertext string) (string, error)
+}
+
+var (
+	globalPasswordCipher PasswordCipher
+	passwordCipherMu     sync.RWMutex
+)
+
+// SetADSM4Cipher sets the global SM4 cipher for AD password encryption (thread-safe)
+func SetADSM4Cipher(c PasswordCipher) {
+	passwordCipherMu.Lock()
+	defer passwordCipherMu.Unlock()
+	globalPasswordCipher = c
+}
+
+// getPasswordCipher returns the global SM4 cipher (thread-safe)
+func getPasswordCipher() PasswordCipher {
+	passwordCipherMu.RLock()
+	defer passwordCipherMu.RUnlock()
+	return globalPasswordCipher
+}
+
+// ==================== Password Encryption/Decryption ====================
+
+// encryptPassword encrypts a password using SM4-GCM.
+// Falls back to the legacy AES-GCM key only when SM4 cipher is not initialized.
+func encryptPassword(password string) string {
+	c := getPasswordCipher()
+	if c != nil {
+		encrypted, err := c.Encrypt(password)
+		if err == nil {
+			return encrypted
+		}
+	}
+	return encryptPasswordLegacyAES(password)
+}
+
+// DecryptPassword decrypts a password - exported version for backward compatibility
+func DecryptPassword(encrypted string) string {
+	return decryptPassword(encrypted)
+}
+
+// decryptPassword decrypts a password, trying SM4 first, then legacy AES fallback.
+// If both fail, returns the original string (for plaintext passwords).
+func decryptPassword(encrypted string) string {
+	if encrypted == "" {
+		return ""
+	}
+
+	// Try SM4-GCM decryption first (new format)
+	c := getPasswordCipher()
+	if c != nil {
+		plaintext, err := c.Decrypt(encrypted)
+		if err == nil {
+			return plaintext
+		}
+	}
+
+	// Try legacy AES-GCM decryption (old format)
+	plaintext, err := decryptPasswordLegacyAES(encrypted)
+	if err == nil {
+		return plaintext
+	}
+
+	// Both failed - assume plaintext (backward compatibility for pre-encryption data)
+	return encrypted
+}
+
+// ==================== Legacy AES-GCM (for backward compatibility) ====================
+
+// encryptPasswordLegacyAES encrypts using the old AES-GCM key.
+// Kept for writing passwords when SM4 cipher is not yet available.
+func encryptPasswordLegacyAES(password string) string {
+	const encryptionKey = "ruoyi-ad-domain-key-16"
 	key := []byte(encryptionKey[:16])
 
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		// 加密失败时返回原始密码（向后兼容）
 		return password
 	}
 
@@ -30,63 +104,52 @@ func encryptPassword(password string) string {
 		return password
 	}
 
-	// 生成随机nonce
 	nonce := make([]byte, gcm.NonceSize())
 	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
 		return password
 	}
 
-	// 加密并编码为Base64
 	ciphertext := gcm.Seal(nonce, nonce, []byte(password), nil)
 	return base64.StdEncoding.EncodeToString(ciphertext)
 }
 
-// DecryptPassword 解密密码（使用AES-GCM）- 导出版本
-func DecryptPassword(encrypted string) string {
-	return decryptPassword(encrypted)
-}
-
-// decryptPassword 解密密码（使用AES-GCM）
-func decryptPassword(encrypted string) string {
-	// AD域加密密钥，实际应从配置文件读取
+// decryptPasswordLegacyAES decrypts using the old AES-GCM key.
+func decryptPasswordLegacyAES(encrypted string) (string, error) {
 	const encryptionKey = "ruoyi-ad-domain-key-16"
-
-	// 确保密钥长度为16字节（AES-128）
 	key := []byte(encryptionKey[:16])
 
 	data, err := base64.StdEncoding.DecodeString(encrypted)
 	if err != nil {
-		// 解码失败，可能未加密，返回原始值
-		return encrypted
+		return "", fmt.Errorf("base64 decode failed: %w", err)
 	}
 
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		return encrypted
+		return "", fmt.Errorf("aes cipher failed: %w", err)
 	}
 
 	gcm, err := cipher.NewGCM(block)
 	if err != nil {
-		return encrypted
+		return "", fmt.Errorf("gcm failed: %w", err)
 	}
 
 	nonceSize := gcm.NonceSize()
 	if len(data) < nonceSize {
-		// 数据长度不足，可能未加密
-		return encrypted
+		return "", fmt.Errorf("data too short")
 	}
 
 	nonce, cipherData := data[:nonceSize], data[nonceSize:]
 	plaintext, err := gcm.Open(nil, nonce, cipherData, nil)
 	if err != nil {
-		// 解密失败，返回原始值
-		return encrypted
+		return "", fmt.Errorf("decryption failed: %w", err)
 	}
 
-	return string(plaintext)
+	return string(plaintext), nil
 }
 
-// extractParentDN 提取父DN
+// ==================== Utility Functions ====================
+
+// extractParentDN extracts the parent DN
 func extractParentDN(dn string) string {
 	parts := strings.Split(dn, ",")
 	if len(parts) <= 1 {
@@ -95,12 +158,11 @@ func extractParentDN(dn string) string {
 	return strings.Join(parts[1:], ",")
 }
 
-// buildOUPath 构建OU路径
+// buildOUPath builds the OU path
 func buildOUPath(ouDN, baseDN string) string {
 	if ouDN == baseDN {
 		return "/"
 	}
-	// 简化处理：去掉baseDN后反转DN部分
 	parts := strings.Split(ouDN, ",")
 	var pathParts []string
 	for _, part := range parts {
@@ -112,7 +174,7 @@ func buildOUPath(ouDN, baseDN string) string {
 	return "/" + strings.Join(pathParts, "/")
 }
 
-// parseIntOrDefault 解析整数，失败返回默认值
+// parseIntOrDefault parses an integer, returns default on failure
 func parseIntOrDefault(str string, defaultValue int) int {
 	var result int
 	_, err := fmt.Sscanf(str, "%d", &result)
@@ -122,18 +184,14 @@ func parseIntOrDefault(str string, defaultValue int) int {
 	return result
 }
 
-// parseFileTime 解析AD FileTime格式
+// parseFileTime parses AD FileTime format
 func parseFileTime(fileTime string) *time.Time {
-	// AD FileTime是100纳秒为单位，从1601-01-01开始的计数
-	// 这里简化处理，实际需要完整的转换
 	var ft int64
 	_, err := fmt.Sscanf(fileTime, "%d", &ft)
 	if err != nil || ft == 0 {
 		return nil
 	}
 
-	// 转换为Unix时间戳（简化版）
-	// 实际需要：unix = (ft / 10000000) - 11644473600
 	unix := (ft / 10000000) - 11644473600
 	if unix < 0 {
 		return nil
@@ -143,9 +201,7 @@ func parseFileTime(fileTime string) *time.Time {
 	return &t
 }
 
-// ExtractOUDNFromUserDN 从用户DN中提取OU DN
-// 例如: CN=zhangsan,OU=科技创新部,OU=分公司本部,OU=湖北分公司,DC=company,DC=com
-// 提取为: OU=科技创新部,OU=分公司本部,OU=湖北分公司,DC=company,DC=com
+// ExtractOUDNFromUserDN extracts the OU DN from a user DN
 func ExtractOUDNFromUserDN(userDN string) string {
 	if userDN == "" {
 		return ""
@@ -156,15 +212,12 @@ func ExtractOUDNFromUserDN(userDN string) string {
 		return ""
 	}
 
-	// 跳过第一个部分（通常是CN=xxx）
-	// 返回剩余部分（从第一个OU开始到DN结束）
 	for i, part := range parts {
 		if strings.HasPrefix(strings.ToUpper(part), "OU=") {
 			return strings.Join(parts[i:], ",")
 		}
 	}
 
-	// 如果没有找到OU，返回DN的Base部分（去掉CN）
 	if len(parts) > 1 {
 		return strings.Join(parts[1:], ",")
 	}
