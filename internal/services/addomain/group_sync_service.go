@@ -240,15 +240,28 @@ func (s *GroupSyncService) syncGroupEntries(ctx context.Context, config *models.
 		groupScope, groupType := parseGroupTypeFromLDAP(entry.GetAttributeValue("groupType"))
 
 		if existingGroup, exists := existingGroupMap[groupDN]; exists {
-			existingGroup.GroupName = entry.GetAttributeValue("cn")
-			existingGroup.Description = entry.GetAttributeValue("description")
-			existingGroup.MemberCount = len(members)
+			// Check if data actually changed before counting as update
+			groupName := entry.GetAttributeValue("cn")
+			description := entry.GetAttributeValue("description")
+			memberCount := len(members)
+
+			if existingGroup.GroupName != groupName ||
+				existingGroup.Description != description ||
+				existingGroup.MemberCount != memberCount ||
+				existingGroup.OUN != ouDN ||
+				existingGroup.GroupScope != groupScope ||
+				existingGroup.GroupType != groupType {
+				result.UpdatedGroups++
+			}
+
+			existingGroup.GroupName = groupName
+			existingGroup.Description = description
+			existingGroup.MemberCount = memberCount
 			existingGroup.OUN = ouDN
 			existingGroup.GroupScope = groupScope
 			existingGroup.GroupType = groupType
 			existingGroup.LastSyncAt = &now
 			groupsToUpdate[groupDN] = existingGroup
-			result.UpdatedGroups++
 		} else {
 			groupsToCreate = append(groupsToCreate, models.ADGroup{
 				ADConfigID:  config.ID,
