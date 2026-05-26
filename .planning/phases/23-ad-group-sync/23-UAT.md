@@ -1,14 +1,14 @@
 ---
-status: partial
+status: diagnosed
 phase: 23-ad-group-sync
 source: 23-06-SUMMARY.md, 23-08-SUMMARY.md, 23-09-SUMMARY.md, 23-10-SUMMARY.md, 23-11-SUMMARY.md, 23-12-SUMMARY.md, 23-13-SUMMARY.md, 23-14-SUMMARY.md, 23-16-SUMMARY.md
 started: 2026-05-26T12:30:00Z
-updated: 2026-05-26T12:45:00Z
+updated: 2026-05-26T13:00:00Z
 ---
 
 ## Current Test
 
-[testing paused — 8 items outstanding]
+[testing complete]
 
 ## Tests
 
@@ -99,26 +99,48 @@ blocked: 7
   reason: "User reported: SM4 解密失败: cipher: message authentication failed. API returns 500 when attempting group sync."
   severity: blocker
   test: 5
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "AD config passwords stored as plaintext or encrypted with different key/algorithm. decryptPassword() in utils.go silently fails and returns ciphertext instead of propagating error. When SM4 cipher was not initialized during password creation, encryptPassword() returned plaintext. Now decryptPassword() tries to decrypt plaintext as SM4-GCM, causing authentication failure."
+  artifacts:
+    - path: "internal/services/addomain/utils.go"
+      issue: "decryptPassword() silently returns ciphertext on decryption failure (line 48-51)"
+      issue: "encryptPassword() returns plaintext when cipher is nil (line 22-27)"
+    - path: "internal/services/addomain/config.go"
+      issue: "TestConnection and Sync operations call decryptPassword without error checking"
+    - path: "pkg/crypto/sm4.go"
+      issue: "SM4-GCM authentication fails when decrypting non-SM4 data"
+  missing:
+    - "Modify decryptPassword() to return (string, error) for proper error propagation"
+    - "Add backward compatibility: try SM4 decryption, fall back to plaintext if fails"
+    - "Add looksLikeSM4Ciphertext() helper to distinguish encrypted vs plaintext passwords"
+    - "Update all callers (config.go, group_sync_service.go) to handle decryption errors"
+    - "Data migration: detect and re-encrypt plaintext passwords in sys_ad_config table"
+    - "Ensure SM4 cipher is initialized before any AD operations (SetADSM4Cipher called early)"
+  debug_session: "SM4密码解密失败的详细分析已记录"
 
 - truth: "Department-group mapping UI is accessible in the application"
   status: failed
   reason: "User reported: '没有创建映射按钮'. Frontend component exists (23-16) but is not integrated into App.tsx routes or Sidebar.tsx menu."
   severity: major
   test: 3
-  root_cause: "Frontend integration incomplete - component created but not wired into application"
+  root_cause: "Missing database menu entry in sys_menu table. Component exists at ruoyi-react-frontend/src/pages/ad/GroupMapping/index.tsx and backend API exists at /api/v1/ad/groups/mappings, but there's no corresponding menu entry to make it accessible through navigation. Migration 133 created tables but didn't add menu entries."
   artifacts:
     - path: "ruoyi-react-frontend/src/pages/ad/GroupMapping/index.tsx"
-      issue: "Component exists but no route registered"
+      issue: "Complete functional component exists but not accessible"
     - path: "ruoyi-react-frontend/src/App.tsx"
-      issue: "Missing route for /ad/group-mapping"
+      issue: "No route registered for group mapping page"
     - path: "ruoyi-react-frontend/src/components/layout/Sidebar.tsx"
-      issue: "Missing menu item for AD group mapping"
+      issue: "No menu item - renders from menuStore.allMenus which comes from sys_menu table"
+    - path: "internal/api/v1/addomain/group_sync_handler.go"
+      issue: "Complete handler implementation exists"
+    - path: "internal/api/v1/addomain/group_sync_router.go"
+      issue: "Router properly configured but may not be registered in main router"
+    - path: "sys_menu table"
+      issue: "Missing menu entry for '部门-组映射' under 'AD域管理' parent"
   missing:
-    - "Add route to App.tsx for GroupMapping page"
-    - "Add menu item to Sidebar.tsx with permission check"
-    - "Import GroupMapping component in App.tsx"
-  debug_session: ""
+    - "Create database migration (e.g., 135_add_group_mapping_menu.sql) following migration 017 pattern"
+    - "Add menu item: '部门-组映射' with path='group-mapping', component='/ad-domain/group-mapping', menu_type='C'"
+    - "Add button permissions: ops:ad:group:mapping:add, ops:ad:group:mapping:edit, ops:ad:group:mapping:delete, ops:ad:group:mapping:view"
+    - "Assign permissions to enabled roles (similar to migration 017)"
+    - "Verify SetupGroupSyncRouter is called in internal/api/router.go"
+    - "Add icon (NodeIndexOutlined or PartitionOutlined) and order_num=4 (after '用户组管理')"
+  debug_session: "前端UI集成缺失的详细分析已记录"
