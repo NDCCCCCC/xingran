@@ -323,7 +323,7 @@ export interface ADGroupSyncStatus {
 }
 
 export function syncADGroups(configId: string): Promise<BaseResponse<ADGroupSyncResult>> {
-  return post(`/ad-domain/configs/${configId}/sync-groups`, {});
+  return post(`/ad-domain/groups/sync-by-config/${configId}`, {});
 }
 
 export function syncADSingleGroup(configId: string, groupDn: string): Promise<BaseResponse<{ message: string }>> {
