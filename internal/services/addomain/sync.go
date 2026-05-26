@@ -554,8 +554,10 @@ func (s *SyncService) syncUsers(ctx context.Context, config *models.ADConfig, en
 // syncGroupMembers 同步用户组成员关系
 func (s *SyncService) syncGroupMembers(ctx context.Context, config *models.ADConfig, groupDN string, memberDNs []string) error {
 	// 先删除旧的成员关系
-	s.db.WithContext(ctx).Unscoped().Where("ad_config_id = ? AND group_dn = ?", config.ID, groupDN).
-		Delete(&models.ADGroupMember{})
+	if err := s.db.WithContext(ctx).Unscoped().Where("ad_config_id = ? AND group_dn = ?", config.ID, groupDN).
+		Delete(&models.ADGroupMember{}).Error; err != nil {
+		return fmt.Errorf("清理旧成员关系失败: %w", err)
+	}
 
 	if len(memberDNs) == 0 {
 		return nil
