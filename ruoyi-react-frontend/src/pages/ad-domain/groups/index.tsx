@@ -116,7 +116,7 @@ const ADGroupPage: FC = () => {
     fetchOUs();
   }, [selectedConfig]);
 
-  const fetchGroups = async (groupName?: string) => {
+  const fetchGroups = useCallback(async (groupName?: string) => {
     if (!selectedConfig) return;
 
     setGroupLoading(true);
@@ -138,13 +138,13 @@ const ADGroupPage: FC = () => {
     } finally {
       setGroupLoading(false);
     }
-  };
+  }, [selectedConfig, selectedOUDN, paginationProps.current, paginationProps.pageSize]);
 
   useEffect(() => {
     if (selectedConfig) {
       fetchGroups(searchGroupName);
     }
-  }, [selectedConfig, selectedOUDN, paginationProps.current, paginationProps.pageSize]);
+  }, [selectedConfig, selectedOUDN, paginationProps.current, paginationProps.pageSize, searchGroupName, fetchGroups]);
 
   // Fetch sync status when config changes
   const fetchSyncStatus = useCallback(async () => {
