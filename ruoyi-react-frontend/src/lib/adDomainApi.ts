@@ -381,3 +381,87 @@ export function getADComputerList(params: ADComputerListRequest): Promise<BaseRe
 export function getADComputerDetail(configId: string, computerDn: string): Promise<BaseResponse<ADComputerDetail>> {
   return post('/ad-domain/computers/detail', { configId, computerDn });
 }
+
+// ==================== 部门组映射 API ====================
+
+export interface DeptGroupMapping {
+  id: string;
+  deptId: string;
+  adGroupId: string;
+  adConfigId: string;
+  mappingType: 'auto' | 'manual';
+  mappingStatus: 'active' | 'inactive';
+  groupDn: string;
+  groupName: string;
+  syncEnabled: boolean;
+  lastSyncAt?: string;
+  createdBy?: string;
+  updatedBy?: string;
+  createdAt: string;
+  updatedAt: string;
+  Dept?: { id: string; deptName: string };
+  ADGroup?: { id: string; groupName: string; groupDn: string };
+}
+
+export interface MappingListRequest {
+  adConfigId?: string;
+  deptId?: string;
+  mappingType?: 'auto' | 'manual';
+  mappingStatus?: 'active' | 'inactive';
+  groupName?: string;
+  current?: number;
+  pageSize?: number;
+}
+
+export interface MappingListResponse {
+  total: number;
+  list: DeptGroupMapping[];
+}
+
+export interface CreateMappingRequest {
+  deptId: string;
+  adGroupId: string;
+  adConfigId: string;
+  mappingType?: 'auto' | 'manual';
+  syncEnabled?: boolean;
+}
+
+export interface UpdateMappingRequest {
+  mappingStatus?: 'active' | 'inactive';
+  syncEnabled?: boolean;
+}
+
+export interface AutoMapResult {
+  totalDepts: number;
+  mappedCount: number;
+  failedCount: number;
+  failedDepts?: string[];
+}
+
+export function getMappingList(params: MappingListRequest): Promise<BaseResponse<MappingListResponse>> {
+  return post('/ad-domain/mappings/list', withDefaultPagination(params));
+}
+
+export function createMapping(data: CreateMappingRequest): Promise<BaseResponse<DeptGroupMapping>> {
+  return post('/ad-domain/mappings', data);
+}
+
+export function getMapping(id: string): Promise<BaseResponse<DeptGroupMapping>> {
+  return get(`/ad-domain/mappings/${id}`);
+}
+
+export function updateMapping(id: string, data: UpdateMappingRequest): Promise<BaseResponse<null>> {
+  return post(`/ad-domain/mappings/${id}/update`, data);
+}
+
+export function deleteMapping(id: string): Promise<BaseResponse<null>> {
+  return post(`/ad-domain/mappings/${id}/delete`, {});
+}
+
+export function autoMapDepartment(deptId: string, configId: string): Promise<BaseResponse<DeptGroupMapping>> {
+  return post('/ad-domain/mappings/auto-map', { deptId, configId });
+}
+
+export function autoMapAllDepartments(configId: string): Promise<BaseResponse<AutoMapResult>> {
+  return post('/ad-domain/mappings/auto-map-all', { configId });
+}

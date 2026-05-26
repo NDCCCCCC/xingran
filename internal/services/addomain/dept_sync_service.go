@@ -10,17 +10,17 @@ import (
 	"gorm.io/gorm"
 )
 
-// DeptSyncError records a single error during dept sync
+// DeptSyncError 部门同步错误信息
 type DeptSyncError struct {
 	DeptID   string `json:"deptId"`
 	DeptName string `json:"deptName"`
 	Error    string `json:"error"`
 }
 
-// DeptSyncResult tracks the result of a dept-to-AD-OU sync operation
+// DeptSyncResult 部门同步结果
 type DeptSyncResult struct {
 	ADConfigID   string         `json:"adConfigId"`
-	Status       string         `json:"status"`
+	Status       string         `json:"status"` // running, completed, failed
 	StartTime    time.Time      `json:"startTime"`
 	EndTime      time.Time      `json:"endTime"`
 	Duration     time.Duration  `json:"duration"`
