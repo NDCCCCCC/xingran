@@ -346,8 +346,8 @@ func (s *GroupSyncService) handleDeletedGroups(ctx context.Context, config *mode
 			return fmt.Errorf("删除过期用户组失败: %w", err)
 		}
 
-		// Also clean up member relations
-		if err := s.db.WithContext(ctx).
+		// Also clean up member relations (hard delete since they are derived data)
+		if err := s.db.WithContext(ctx).Unscoped().
 			Where("ad_config_id = ? AND group_dn IN ?", config.ID, deletedDNs).
 			Delete(&models.ADGroupMember{}).Error; err != nil {
 			applogger.Warnf("[组同步] 清理过期组成员关系失败: %v", err)
