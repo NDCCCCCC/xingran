@@ -10,6 +10,27 @@ import (
 	"gorm.io/gorm"
 )
 
+// DeptSyncError records a single error during dept sync
+type DeptSyncError struct {
+	DeptID   string `json:"deptId"`
+	DeptName string `json:"deptName"`
+	Error    string `json:"error"`
+}
+
+// DeptSyncResult tracks the result of a dept-to-AD-OU sync operation
+type DeptSyncResult struct {
+	ADConfigID   string         `json:"adConfigId"`
+	Status       string         `json:"status"`
+	StartTime    time.Time      `json:"startTime"`
+	EndTime      time.Time      `json:"endTime"`
+	Duration     time.Duration  `json:"duration"`
+	TotalDepts   int            `json:"totalDepts"`
+	SuccessDepts int            `json:"successDepts"`
+	FailedDepts  int            `json:"failedDepts"`
+	SkippedDepts int            `json:"skippedDepts"`
+	Errors       []DeptSyncError `json:"errors,omitempty"`
+}
+
 type DeptToADSyncService struct {
 	db     *gorm.DB
 	ldap   *LDAPClient

@@ -8,9 +8,9 @@ import (
 
 	"github.com/robfig/cron/v3"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/constants"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"golang.org/x/sync/semaphore"
 	"gorm.io/gorm"
@@ -33,12 +33,12 @@ type ADSyncScheduler struct {
 var (
 	globalADSyncScheduler     *ADSyncScheduler
 	globalADSyncSchedulerOnce sync.Once
-	globalADSM4Cipher        *crypto.SM4Cipher // 全局AD域SM4加密器
+	globalADSM4Cipher        *security.SM4Cipher // 全局AD域SM4加密器
 	globalADSM4CipherMu      sync.RWMutex
 )
 
 // SetADSM4Cipher 设置全局AD域SM4加密器（线程安全）
-func SetADSM4Cipher(cipher *crypto.SM4Cipher) {
+func SetADSM4Cipher(cipher *security.SM4Cipher) {
 	globalADSM4CipherMu.Lock()
 	defer globalADSM4CipherMu.Unlock()
 	globalADSM4Cipher = cipher
@@ -47,7 +47,7 @@ func SetADSM4Cipher(cipher *crypto.SM4Cipher) {
 }
 
 // getADSM4Cipher 获取全局AD域SM4加密器（线程安全）
-func getADSM4Cipher() *crypto.SM4Cipher {
+func getADSM4Cipher() *security.SM4Cipher {
 	globalADSM4CipherMu.RLock()
 	defer globalADSM4CipherMu.RUnlock()
 	return globalADSM4Cipher
