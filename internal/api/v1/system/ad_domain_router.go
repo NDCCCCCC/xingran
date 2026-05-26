@@ -9,7 +9,7 @@ import (
 
 // SetupADDomainRouter 设置AD域管理路由
 func SetupADDomainRouter(r *gin.RouterGroup, core *core.Core) {
-	service := addomainServices.NewADDomainService(core.GetDB())
+	service := addomainServices.NewADDomainService(core.GetDB(), core.SM4Cipher)
 	handler := NewADDomainHandler(service, core)
 
 	// AD配置管理
@@ -30,7 +30,6 @@ func SetupADDomainRouter(r *gin.RouterGroup, core *core.Core) {
 		configs.POST("/:id/delete", handler.DeleteConfig)
 		configs.POST("/:id/test", handler.TestConnection)
 		configs.POST("/:id/sync", handler.SyncData)
-		configs.POST("/:id/sync-groups", handler.SyncGroups)
 	}
 
 	// OU管理
@@ -54,6 +53,7 @@ func SetupADDomainRouter(r *gin.RouterGroup, core *core.Core) {
 		groups.POST("/:id/members", handler.GetGroupMembers)
 		groups.POST("/sync-single", handler.SyncSingleGroup)
 		groups.POST("/sync-status", handler.GetGroupSyncStatus)
+		groups.POST("/sync-by-config/:id", handler.SyncGroups)
 	}
 
 	// 用户管理

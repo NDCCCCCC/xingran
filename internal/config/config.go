@@ -89,7 +89,7 @@ type LogConfig struct {
 
 // SecurityConfig 安全配置
 type SecurityConfig struct {
-	SM4Key            string                  `mapstructure:"sm4_key"`            // SM4 加密密钥（16字节，Base64编码）
+	SM4Key            string                  `mapstructure:"sm4_key"`            // SM4 加密密钥（16字节，Base64编码），用于所有敏感数据加密
 	RequestEncryption RequestEncryptionConfig `mapstructure:"request_encryption"` // 请求体加密配置
 }
 
