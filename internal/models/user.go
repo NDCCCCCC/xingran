@@ -33,9 +33,10 @@ type User struct {
 	ADDN       *string `gorm:"type:text;column:ad_dn" json:"adDn,omitempty"`
 
 	// 关联
-	Roles []string    `gorm:"-" json:"roles"` // 简化为字符串数组，避免复杂关联
-	Posts []Post      `gorm:"many2many:user_posts;" json:"posts,omitempty"`
-	Dept  *Department `gorm:"foreignKey:DeptID" json:"department,omitempty"`
+	Roles   []string    `gorm:"-" json:"roles"`           // 简化为字符串数组，避免复杂关联
+	RoleIds []string    `gorm:"-" json:"roleIds,omitempty"` // 角色ID数组，用于前端表单回显
+	Posts   []Post      `gorm:"many2many:user_posts;" json:"posts,omitempty"`
+	Dept    *Department `gorm:"foreignKey:DeptID" json:"department,omitempty"`
 }
 
 // UserRole 用户角色关联

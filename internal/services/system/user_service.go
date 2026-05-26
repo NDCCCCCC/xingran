@@ -246,7 +246,51 @@ func (s *userService) GetByID(ctx context.Context, id string) (*models.User, err
 		}
 		return nil, apperrors.DatabaseError(err)
 	}
+
+	// 填充角色信息
+	s.fillUserRoles(ctx, &user)
+
 	return &user, nil
+}
+
+// fillUserRoles 填充用户的角色信息
+func (s *userService) fillUserRoles(ctx context.Context, user *models.User) {
+	// 查询用户角色关系
+	var userRoles []models.UserRole
+	s.db.WithContext(ctx).Where("user_id = ?", user.ID).Find(&userRoles)
+
+	if len(userRoles) == 0 {
+		user.Roles = []string{}
+		user.RoleIds = []string{}
+		return
+	}
+
+	// 提取角色ID
+	roleIDs := make([]string, len(userRoles))
+	for i, ur := range userRoles {
+		roleIDs[i] = ur.RoleID
+	}
+
+	// 查询所有相关角色
+	var allRoles []models.Role
+	s.db.WithContext(ctx).Where("id IN ?", roleIDs).Find(&allRoles)
+
+	// 构建角色ID到角色名称的映射
+	roleMap := make(map[string]string)
+	for _, r := range allRoles {
+		roleMap[r.ID] = r.RoleName
+	}
+
+	// 填充角色名称数组和角色ID数组
+	roleNames := make([]string, 0, len(roleIDs))
+	for _, rid := range roleIDs {
+		if roleName, exists := roleMap[rid]; exists {
+			roleNames = append(roleNames, roleName)
+		}
+	}
+
+	user.Roles = roleNames
+	user.RoleIds = roleIDs
 }
 
 // List 查询用户列表
@@ -331,16 +375,19 @@ func (s *userService) List(ctx context.Context, params requests.UserListParams) 
 		roleMap[r.ID] = r.RoleName
 	}
 
-	// 填充每个用户的角色名称数组
+	// 填充每个用户的角色名称数组和角色ID数组
 	for i := range list {
 		if roleIDs, ok := userRoleMap[list[i].ID]; ok {
 			roleNames := make([]string, 0, len(roleIDs))
+			roleIDsCopy := make([]string, 0, len(roleIDs))
 			for _, rid := range roleIDs {
 				if roleName, exists := roleMap[rid]; exists {
 					roleNames = append(roleNames, roleName)
 				}
+				roleIDsCopy = append(roleIDsCopy, rid)
 			}
 			list[i].Roles = roleNames
+			list[i].RoleIds = roleIDsCopy
 		}
 	}
 
