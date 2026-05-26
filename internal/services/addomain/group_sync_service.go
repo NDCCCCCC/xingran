@@ -14,12 +14,16 @@ import (
 
 // GroupSyncService handles incremental group synchronization from AD
 type GroupSyncService struct {
-	db *gorm.DB
+	db           *gorm.DB
+	syncService *SyncService
 }
 
 // NewGroupSyncService creates a new GroupSyncService
 func NewGroupSyncService(db *gorm.DB) *GroupSyncService {
-	return &GroupSyncService{db: db}
+	return &GroupSyncService{
+		db:           db,
+		syncService: NewSyncService(db),
+	}
 }
 
 // GroupSyncResult represents the result of a group sync operation
@@ -142,8 +146,7 @@ func (s *GroupSyncService) SyncSingleGroup(ctx context.Context, configID, groupD
 	}
 
 	// Sync members
-	syncService := NewSyncService(s.db)
-	if err := syncService.syncGroupMembers(ctx, &config, groupDN, members); err != nil {
+	if err := s.syncService.syncGroupMembers(ctx, &config, groupDN, members); err != nil {
 		return fmt.Errorf("同步组成员失败: %w", err)
 	}
 
@@ -318,9 +321,8 @@ func (s *GroupSyncService) syncGroupEntries(ctx context.Context, config *models.
 	}
 
 	// Sync group members
-	syncService := NewSyncService(s.db)
 	for groupDN, members := range groupMembersMap {
-		if err := syncService.syncGroupMembers(ctx, config, groupDN, members); err != nil {
+		if err := s.syncService.syncGroupMembers(ctx, config, groupDN, members); err != nil {
 			applogger.Warnf("[组同步] 同步组成员失败 [%s]: %v", groupDN, err)
 			// Continue with other groups
 		}
