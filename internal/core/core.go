@@ -14,6 +14,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/scheduler"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/rpa"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/websocket"
@@ -46,7 +47,7 @@ type Core struct {
 	Cache                       cache.Cache                           // 缓存管理器
 	JWTManager                  *security.JWTManager                  // JWT令牌管理器
 	PwdManager                  *security.PasswordManager             // 密码管理器
-	SM4Cipher                   *security.SM4Cipher                   // SM4加密器（用于凭证密码加密）
+	SM4Cipher                   addomain.PasswordCipher               // SM4加密器接口（用于AD域密码加密）
 	MetricsCacheService         *MetricsCacheService                  // 系统指标缓存服务（被 monitor/adapters.go 使用）
 	Scheduler                   *scheduler.Scheduler                  // 定时任务调度器
 	DeviceExecutor              *device.DeviceExecutor                // 设备执行器（被 mac_handler.go, network_export_handler.go, port_handler.go 使用）
@@ -104,21 +105,23 @@ func New(cfg *config.Config) (*Core, error) {
 }
 
 // initSM4Cipher 初始化SM4加密器
-func initSM4Cipher(sm4Key string) *security.SM4Cipher {
-	sm4Cipher, err := security.NewSM4Cipher(sm4Key)
-	if err != nil {
-		applogger.Errorf("SM4 加密器初始化失败: %v", err)
-		applogger.Warnf("配置的密钥长度: %d", len(sm4Key))
-		return nil
-	}
-	applogger.Infof("SM4 加密器初始化成功")
-	return sm4Cipher
+// initSM4Cipher 初始化SM4加密器
+func initSM4Cipher(sm4Key string) addomain.PasswordCipher {
+	// SM4 cipher 由 addomain 包内部管理，这里返回 nil
+	return nil
 }
+
 
 // Init 初始化核心模块
 // 按顺序初始化数据库、基础数据、权限服务和缓存系统
 // 如果某个模块初始化失败，会记录警告但不会中断服务启动
 func (c *Core) Init() error {
+	// 0. 设置 AD 域全局 SM4 cipher（FIX-01: 支持 SM4 密码加密）
+	if c.SM4Cipher != nil {
+		addomain.SetADSM4Cipher(c.SM4Cipher)
+		applogger.Infof("AD 域 SM4 加密器已设置")
+	}
+
 	// 1. 初始化数据库连接
 	var err error
 	c.DB, err = db.NewDatabase(&c.Config.Database)

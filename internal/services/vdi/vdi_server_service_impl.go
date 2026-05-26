@@ -3,9 +3,7 @@ package vdi
 import (
 	"context"
 	"fmt"
-	"time"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"gorm.io/gorm"
 )
@@ -156,36 +154,20 @@ func (s *vdiServerServiceImpl) DeleteServer(ctx context.Context, id string) erro
 
 // TestConnection 测试VDI服务器连接
 func (s *vdiServerServiceImpl) TestConnection(ctx context.Context, id string) error {
-	// 1. 查询服务器配置
-	var server models.VDIServer
-	if err := s.db.WithContext(ctx).Where("id = ?", id).First(&server).Error; err != nil {
-		return fmt.Errorf("VDI server not found: %w", err)
-	}
+	// 1. 创建VDI客户端（从数据库读取配置）
+	client := NewVDIClientFromDB(s.db, id)
 
-	// 2. 创建VDI客户端配置
-	cfg := config.VDIServerConfig{
-		Endpoint: server.Endpoint,
-		Username: server.Username,
-		TenantID: server.TenantID,
-	}
-
-	// 3. 创建VDI客户端并测试认证
-	client := NewVDIClientExtended(s.db, id, cfg)
+	// 2. 测试认证
 	token, err := client.Authenticate(ctx)
 	if err != nil {
-		return fmt.Errorf("authentication failed: %w", err)
+		// 获取服务器名称用于错误信息
+		var server models.VDIServer
+		s.db.WithContext(ctx).Where("id = ?", id).First(&server)
+		return fmt.Errorf("authentication failed for server '%s' (%s): %w", server.Name, server.Endpoint, err)
 	}
 
 	if token == "" {
-		return fmt.Errorf("received empty token")
-	}
-
-	// 4. 更新服务器token信息
-	now := time.Now()
-	server.AuthToken = token
-	server.TokenExpiry = &now
-	if err := s.db.WithContext(ctx).Save(&server).Error; err != nil {
-		return fmt.Errorf("failed to update token: %w", err)
+		return fmt.Errorf("received empty token from server")
 	}
 
 	return nil

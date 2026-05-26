@@ -58,7 +58,7 @@ type ConfigCreateRequest struct {
 
 // ConfigUpdateRequest 更新参数配置请求
 type ConfigUpdateRequest struct {
-	ID          string            `json:"id" binding:"required"`
+	ID          string            `json:"id"` // ID 从 URL 参数获取，不在请求体验证
 	ConfigName  string            `json:"configName" binding:"required"`
 	ConfigValue string            `json:"configValue" binding:"required"`
 	ConfigType  models.ConfigType `json:"configType"`

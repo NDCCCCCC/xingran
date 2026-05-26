@@ -13,6 +13,8 @@ import (
 	"image/png"
 	"math/rand"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -91,7 +93,9 @@ func (s *SliderCaptcha) SetDifficulty(level int) (tolerance int) {
 
 // LoadBackgroundFromFile 从文件加载背景图
 func (s *SliderCaptcha) LoadBackgroundFromFile(filePath string) (*image.RGBA, error) {
-	file, err := os.Open(filePath)
+	// 兼容跨平台：将反斜杠统一转为正斜杠，再用系统路径分隔符重建
+	normalized := filepath.FromSlash(strings.ReplaceAll(filePath, "\\", "/"))
+	file, err := os.Open(normalized)
 	if err != nil {
 		return nil, fmt.Errorf("打开背景图失败: %w", err)
 	}

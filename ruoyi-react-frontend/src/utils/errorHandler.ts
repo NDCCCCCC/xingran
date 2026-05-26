@@ -279,13 +279,13 @@ function getErrorTypeByStatus(status: number): HttpErrorType {
 /**
  * 处理未授权错误（登出逻辑）
  */
-function handleUnauthorized(): void {
+async function handleUnauthorized(): Promise<void> {
   // 清除本地存储的 token
   localStorage.removeItem('accessToken');
   localStorage.removeItem('refreshToken');
 
   // 清除 auth store 状态
-  useAuthStore.getState().logout();
+  await useAuthStore.getState().logout();
 
   // 跳转到登录页
   window.location.href = '/login';

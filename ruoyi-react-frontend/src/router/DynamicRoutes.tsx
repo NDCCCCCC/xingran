@@ -3,11 +3,12 @@
  * 根据后端菜单数据动态生成路由配置
  */
 
-import { lazy, useMemo, Suspense, useEffect, useState } from 'react';
+import { useMemo, Suspense, useEffect, useState } from 'react';
 import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useMenuStore } from '@/store/menuStore';
 import { useAuthStore } from '@/store/authStore';
 import { RouteGenerator } from './routeGenerator';
+import { createLazyComponent } from './componentLoader';
 import type { MenuRouteConfig } from '@/types/menu';
 import Layout from '@/components/layout';
 import Login from '@/pages/login';
@@ -50,29 +51,10 @@ export const clearLastPath = (): void => {
 let cachedRoutes: MenuRouteConfig[] | null = null;
 let cachedMenusCount = 0;
 
-// 常量定义
-const DASHBOARD_PATH = 'dashboard'
-const PAGES_PREFIX = 'pages/'
-const PAGES_RELATIVE_PREFIX = '../pages/'
-const TSX_EXTENSION = '.tsx'
-
-const normalizeComponentPath = (componentPath: string): string => {
-  let path = componentPath
-
-  if (path.startsWith(PAGES_PREFIX)) {
-    path = path.slice(PAGES_PREFIX.length)
-  }
-
-  if (!path.endsWith(TSX_EXTENSION)) {
-    path = `${path}${TSX_EXTENSION}`
-  }
-
-  return `${PAGES_RELATIVE_PREFIX}${path}`
-}
+const DASHBOARD_PATH = 'dashboard';
 
 const createLazyRoute = (route: MenuRouteConfig) => {
-  const importPath = normalizeComponentPath(route.component);
-  const Component = lazy(() => import(/* @vite-ignore */ importPath));
+  const Component = createLazyComponent(route.component);
 
   const fallback = <Spin size="large" />;
   const element = (

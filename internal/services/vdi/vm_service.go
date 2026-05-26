@@ -64,6 +64,26 @@ type PageResult struct {
 	PageSize int        `json:"pageSize"`
 }
 
+// VDISyncResult VDI同步结果
+type VDISyncResult struct {
+	Total      int                    `json:"total"`
+	Success    int                    `json:"success"`
+	Failed     int                    `json:"failed"`
+	Duration   string                 `json:"duration"`
+	Servers    []VDIServerSyncResult  `json:"servers"`
+	StartTime  time.Time              `json:"start_time"`
+	EndTime    time.Time              `json:"end_time"`
+}
+
+// VDIServerSyncResult 单个VDI服务器的同步结果
+type VDIServerSyncResult struct {
+	ServerID    string `json:"server_id"`
+	ServerName  string `json:"server_name"`
+	Success     int    `json:"success"`
+	Failed      int    `json:"failed"`
+	ErrorMsg    string `json:"error_msg,omitempty"`
+}
+
 // VMPowerAction 虚拟机电源操作
 type VMPowerAction string
 

@@ -348,7 +348,7 @@ const VirtualMachineList: React.FC = () => {
 
   return (
     <Card>
-      <Space direction="vertical" size="large" style={{ width: '100%' }}>
+      <Space orientation="vertical" size="large" style={{ width: '100%' }}>
         {/* 工具栏 */}
         <Space>
           <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateModalVisible(true)}>

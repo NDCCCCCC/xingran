@@ -169,6 +169,13 @@ func RequestDecryption(encryptor *crypto.RequestEncryptor, staticConfig *Request
 			return
 		}
 
+		// DEBUG: 打印解密后的完整数据
+		applogger.WithFields(map[string]interface{}{
+			"path":                    c.Request.URL.Path,
+			"decrypted_data_preview":  string(decryptedData),
+			"decrypted_data_length":   len(decryptedData),
+		}).Info("[DECRYPTION DEBUG] 解密后的完整数据")
+
 		// 替换请求体
 		c.Request.Body = io.NopCloser(bytes.NewBuffer(decryptedData))
 
@@ -264,6 +271,21 @@ func RefreshEncryptionConfigCache() {
 
 	globalConfigCache.lastUpdate = time.Time{}
 	applogger.Info("请求加密配置缓存已标记为过期，下次请求将从数据库重新读取")
+}
+
+// GetEncryptionConfigFromCache 获取当前加密配置缓存值（用于公共端点）
+// 返回缓存的配置值，不触发数据库查询
+// 如果缓存从未初始化，返回默认值（启用）
+func GetEncryptionConfigFromCache() bool {
+	globalConfigCache.mu.RLock()
+	defer globalConfigCache.mu.RUnlock()
+
+	// 如果缓存从未初始化，返回默认值（启用）
+	if globalConfigCache.lastUpdate.IsZero() {
+		return true
+	}
+
+	return globalConfigCache.value
 }
 
 // isExcludedPath 检查路径是否在排除列表中

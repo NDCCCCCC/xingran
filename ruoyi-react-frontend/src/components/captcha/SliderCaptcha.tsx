@@ -9,9 +9,10 @@ import './SliderCaptcha.css';
 interface SliderCaptchaProps {
   onVerified: (token: string, captchaId: string) => void;
   onError?: (error: string) => void;
+  active?: boolean; // 是否激活（模态框已打开）
 }
 
-const SliderCaptcha: FC<SliderCaptchaProps> = ({ onVerified, onError }) => {
+const SliderCaptcha: FC<SliderCaptchaProps> = ({ onVerified, onError, active = true }) => {
   const [captchaData, setCaptchaData] = useState<CaptchaResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -44,9 +45,13 @@ const SliderCaptcha: FC<SliderCaptchaProps> = ({ onVerified, onError }) => {
     }
   }, [onError]);
 
+  // 只在组件激活（模态框打开）时加载验证码
   useEffect(() => {
-    loadCaptcha();
-  }, [loadCaptcha]);
+    if (active) {
+      loadCaptcha();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active]);
 
   const handleMouseDown = useCallback(() => {
     if (verified) return;
@@ -64,21 +69,26 @@ const SliderCaptcha: FC<SliderCaptchaProps> = ({ onVerified, onError }) => {
 
     // 验证滑动位置
     try {
+      console.log('[SliderCaptcha] 开始验证滑动位置:', { x, captchaId: captchaData.captchaId, token: captchaData.token });
       const result = await verifySliderCaptcha({
         captchaId: captchaData.captchaId,
         xPos: Math.round(x), // 取整
         token: captchaData.token, // 使用后端返回的 token
       });
 
+      console.log('[SliderCaptcha] 验证响应:', result);
       if (result.success) {
+        console.log('[SliderCaptcha] 验证成功，调用onVerified');
         setVerified(true);
         message.success('验证成功');
         onVerified(result.token, captchaData.captchaId);
       } else {
+        console.log('[SliderCaptcha] 验证失败（success=false）');
         message.error('验证失败，请重试');
         loadCaptcha();
       }
     } catch (error) {
+      console.log('[SliderCaptcha] 验证异常（抛出错误）:', error);
       console.error('[SliderCaptcha] 验证失败:', error);
       message.error('验证失败');
       loadCaptcha();

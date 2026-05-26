@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	"github.com/sirupsen/logrus"
 )
 
 // handleJSONBinding 统一处理 JSON 绑定
@@ -18,6 +19,13 @@ func handleJSONBinding(c *gin.Context, v interface{}) bool {
 // handleServiceError 统一处理服务层错误
 func handleServiceError(c *gin.Context, err error, action string) bool {
 	if err != nil {
+		// 记录详细的错误信息到日志
+		logrus.WithFields(logrus.Fields{
+			"action": action,
+			"path":   c.Request.URL.Path,
+			"error":  err.Error(),
+		}).Errorf("VDI %s failed", action)
+
 		response.Error(c, apperrors.Wrap(err, apperrors.CodeServerError, action+"失败"))
 		return false
 	}

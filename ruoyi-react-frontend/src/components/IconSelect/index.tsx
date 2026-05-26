@@ -107,7 +107,7 @@ const IconSelect: FC<IconSelectProps> = ({
         disabled={disabled}
         onClick={() => !disabled && setVisible(true)}
         placeholder={value ? '' : placeholder}
-        suffix={value ? getIconComponent(value) : null}
+        suffix={value ? getIconComponent(value) : <span />}
         style={{ cursor: disabled ? 'not-allowed' : 'pointer' }}
       />
 

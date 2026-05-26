@@ -53,7 +53,7 @@ type DictTypeCreateRequest struct {
 
 // DictTypeUpdateRequest 更新字典类型请求
 type DictTypeUpdateRequest struct {
-	ID       string  `json:"id" binding:"required"`
+	ID       string  `json:"id"` // ID 从 URL 参数获取，不在请求体验证
 	DictName string  `json:"dictName" binding:"required"`
 	Status   int     `json:"status"`
 	Remark   *string `json:"remark"`
@@ -113,7 +113,7 @@ type DictDataCreateRequest struct {
 
 // DictDataUpdateRequest 更新字典数据请求
 type DictDataUpdateRequest struct {
-	ID        string  `json:"id" binding:"required"`
+	ID        string  `json:"id"` // ID 从 URL 参数获取，不在请求体验证
 	DictSort  int     `json:"dictSort"`
 	DictLabel string  `json:"dictLabel" binding:"required"`
 	DictValue string  `json:"dictValue" binding:"required"`

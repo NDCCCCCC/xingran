@@ -178,7 +178,8 @@ func updateCaptchaBackground(core *corepkg.Core) gin.HandlerFunc {
 			updates["difficulty_level"] = *req.DifficultyLevel
 		}
 		if req.AllowedShapes != nil {
-			updates["allowed_shapes"] = *req.AllowedShapes
+			// 必须转换为 StringArray 类型以正确处理 JSONB
+			updates["allowed_shapes"] = models.StringArray(*req.AllowedShapes)
 		}
 		if req.Status != nil {
 			updates["status"] = *req.Status

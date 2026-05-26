@@ -178,6 +178,17 @@ const (
 	// 9000-9999 值班管理模块
 	CodeDutyNotFound ErrorCode = 9000 // 值班不存在
 	CodeDutyExists   ErrorCode = 9001 // 值班已存在
+
+	// 54000-54999 VDI 桌面云模块
+	CodeVDIServerNotFound  ErrorCode = 54001 // VDI 服务器不存在
+	CodeVDIServerExists    ErrorCode = 54002 // VDI 服务器已存在
+	CodeVDIApiFailed       ErrorCode = 54003 // VDI API 调用失败
+	CodeVDIAuthFailed      ErrorCode = 54004 // VDI 认证失败
+	CodeVDITokenExpired    ErrorCode = 54005 // VDI Token 过期
+	CodeVMNotFound         ErrorCode = 54006 // 虚拟机不存在
+	CodeVMExists           ErrorCode = 54007 // 虚拟机已存在
+	CodeVMOperationFailed  ErrorCode = 54008 // 虚拟机操作失败
+	CodeVMInconsistentState ErrorCode = 54009 // 虚拟机状态不一致
 )
 
 // DefaultHTTPStatus 返回错误码对应的默认HTTP状态码
@@ -196,6 +207,8 @@ func (c ErrorCode) DefaultHTTPStatus() int {
 	case c >= 2000 && c < 9000:
 		return http.StatusBadRequest
 	case c >= 9000 && c < 10000:
+		return http.StatusBadRequest
+	case c >= 54000 && c < 55000:
 		return http.StatusBadRequest
 	default:
 		return http.StatusInternalServerError
@@ -435,6 +448,24 @@ func (c ErrorCode) DefaultMessage() string {
 		return "值班不存在"
 	case CodeDutyExists:
 		return "值班已存在"
+	case CodeVDIServerNotFound:
+		return "VDI服务器不存在"
+	case CodeVDIServerExists:
+		return "VDI服务器已存在"
+	case CodeVDIApiFailed:
+		return "VDI API调用失败"
+	case CodeVDIAuthFailed:
+		return "VDI认证失败"
+	case CodeVDITokenExpired:
+		return "VDI Token已过期"
+	case CodeVMNotFound:
+		return "虚拟机不存在"
+	case CodeVMExists:
+		return "虚拟机已存在"
+	case CodeVMOperationFailed:
+		return "虚拟机操作失败"
+	case CodeVMInconsistentState:
+		return "虚拟机状态不一致"
 	default:
 		return "未知错误"
 	}

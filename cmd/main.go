@@ -13,6 +13,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/api"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/server"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
@@ -158,17 +159,6 @@ func setupRoutes(engine *gin.Engine, cfg *config.Config, coreModule *core.Core, 
 	// 遵循 Go 最佳实践：在生产环境禁用 pprof
 	if cfg.Server.Mode != "release" {
 		// 注册 pprof 端点到默认的 ServeMux
-		// pprof 端点包括：
-		//   /debug/pprof/         - pprof 首页
-		//   /debug/pprof/goroutine - goroutine 堆栈
-		//   /debug/pprof/heap      - 堆内存采样
-		//   /debug/pprof/threadcreate - 线程创建堆栈
-		//   /debug/pprof/block     - 阻塞堆栈
-		//   /debug/pprof/mutex     - 互斥锁堆栈
-		//   /debug/pprof/profile   - CPU profile
-		//   /debug/pprof/trace     - 执行 trace
-		//   /debug/pprof/cmdline   - 命令行
-		//   /debug/pprof/symbol    - 符号表
 		engine.GET("/debug/pprof/*any", gin.WrapH(http.DefaultServeMux))
 		applogger.Infof("pprof 性能分析端点已启用: http://localhost:%d/debug/pprof/", cfg.Server.Port)
 	}
@@ -184,11 +174,23 @@ func setupRoutes(engine *gin.Engine, cfg *config.Config, coreModule *core.Core, 
 	// API 路由
 	apiRouter := engine.Group("/api/v1")
 	api.SetupRouter(apiRouter, coreModule, allowedOrigins)
+
+	// 前端静态文件服务（嵌入式）
+	// 注意：这些路由必须在 API 路由之后注册，
+	// 否则 /assets/*filepath 可能会匹配到 /assets/... 的 API 路径
+	engine.GET("/assets/*filepath", server.ServeFrontend)
+	engine.GET("/index.html", server.ServeFrontend)
+	engine.GET("/", server.ServeFrontend)
+
+	// SPA catch-all：所有未匹配的路由返回 index.html
+	// 这确保 /login, /dashboard, /system/users 等客户端路由正常工作
+	// 必须在所有 API 和静态资源路由之后注册
+	engine.NoRoute(server.ServeSPA)
 }
 
 // startServer 启动 HTTP 服务器
 func startServer(cfg *config.Config, engine *gin.Engine) *http.Server {
-	server := &http.Server{
+	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%d", cfg.Server.Port),
 		Handler: engine,
 	}
@@ -200,16 +202,16 @@ func startServer(cfg *config.Config, engine *gin.Engine) *http.Server {
 			applogger.Infof("Swagger 文档: http://localhost:%d/swagger/index.html", cfg.Server.Port)
 		}
 
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			applogger.Fatalf("服务器启动失败: %v", err)
 		}
 	}()
 
-	return server
+	return srv
 }
 
 // waitForShutdown 等待关闭信号并优雅关闭
-func waitForShutdown(server *http.Server, coreModule *core.Core) {
+func waitForShutdown(srv *http.Server, coreModule *core.Core) {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
@@ -219,7 +221,7 @@ func waitForShutdown(server *http.Server, coreModule *core.Core) {
 	ctx, cancel := context.WithTimeout(context.Background(), ShutdownTimeout)
 	defer cancel()
 
-	if err := server.Shutdown(ctx); err != nil {
+	if err := srv.Shutdown(ctx); err != nil {
 		applogger.Errorf("服务器强制关闭: %v", err)
 	}
 

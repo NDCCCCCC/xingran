@@ -747,3 +747,43 @@ func PortCollectionFailed(err error) *AppError {
 func DiscoveryFailed(err error) *AppError {
 	return Wrap(err, CodeDiscoveryFailed, CodeDiscoveryFailed.DefaultMessage())
 }
+
+// ============================================================================
+// VDI 模块错误 - 便捷构造函数
+// ============================================================================
+
+func VDIServerNotFound(id string) *AppError {
+	return New(CodeVDIServerNotFound, fmt.Sprintf("VDI 服务器不存在: %s", id))
+}
+
+func VDIServerExists() *AppError {
+	return New(CodeVDIServerExists, CodeVDIServerExists.DefaultMessage())
+}
+
+func VDIApiFailed(err error) *AppError {
+	return Wrap(err, CodeVDIApiFailed, CodeVDIApiFailed.DefaultMessage())
+}
+
+func VDIAuthFailed() *AppError {
+	return New(CodeVDIAuthFailed, CodeVDIAuthFailed.DefaultMessage())
+}
+
+func VDITokenExpired() *AppError {
+	return New(CodeVDITokenExpired, CodeVDITokenExpired.DefaultMessage())
+}
+
+func VMNotFound(vmID string) *AppError {
+	return New(CodeVMNotFound, fmt.Sprintf("虚拟机不存在: %s", vmID))
+}
+
+func VMExists() *AppError {
+	return New(CodeVMExists, CodeVMExists.DefaultMessage())
+}
+
+func VMOperationFailed(operation string, err error) *AppError {
+	return Wrap(err, CodeVMOperationFailed, fmt.Sprintf("虚拟机%s失败", operation))
+}
+
+func VMInconsistentState(vmID string) *AppError {
+	return New(CodeVMInconsistentState, fmt.Sprintf("虚拟机状态不一致: %s", vmID))
+}

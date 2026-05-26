@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
 	rpamodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/rpa"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
 	"gorm.io/gorm"
 )
 
@@ -58,12 +58,12 @@ type SessionData struct {
 
 type credentialServiceImpl struct {
 	db    *gorm.DB
-	sm4   *security.SM4Cipher
+	sm4   *crypto.SM4Cipher
 	cache CredentialCache
 }
 
 // NewCredentialService 创建凭证服务
-func NewCredentialService(db *gorm.DB, sm4 *security.SM4Cipher, cache CredentialCache) CredentialService {
+func NewCredentialService(db *gorm.DB, sm4 *crypto.SM4Cipher, cache CredentialCache) CredentialService {
 	return &credentialServiceImpl{
 		db:    db,
 		sm4:   sm4,

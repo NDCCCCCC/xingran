@@ -7,21 +7,10 @@ import (
 )
 
 // SetupVMRouter 设置虚拟机路由
+// 始终注册路由，使用动态客户端
 func SetupVMRouter(r *gin.RouterGroup, core *core.Core) {
-	// 创建VDI客户端（使用第一个服务器配置）
-	if len(core.Config.VDI.Servers) == 0 {
-		return // 没有配置VDI服务器，跳过路由注册
-	}
-
-	serverCfg := core.Config.VDI.Servers[0]
-	vdiClient := vdiServices.NewVDIClientExtended(
-		core.GetDB(),
-		"", // serverID将在运行时确定
-		serverCfg,
-	)
-
-	// 创建服务实例
-	vmService := vdiServices.NewVMService(core.GetDB(), vdiClient)
+	// 创建服务实例，传入nil客户端（服务层会动态查找）
+	vmService := vdiServices.NewVMServiceWithDynamicClient(core.GetDB())
 	vmHandler := NewVMHandler(vmService)
 
 	// 注册路由
@@ -38,4 +27,5 @@ func SetupVMRouter(r *gin.RouterGroup, core *core.Core) {
 	r.POST("/:id/bind_user", vmHandler.BindUser)
 	r.POST("/:id/unbind_user", vmHandler.UnbindUser)
 	r.POST("/:id/sync", vmHandler.SyncFromVDI)
+	r.POST("/sync-all", vmHandler.SyncAll)
 }

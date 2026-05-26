@@ -27,9 +27,7 @@ func GetProcessCount() (int, error) {
 			continue
 		}
 
-		if strings.Contains(line, " ") && len(strings.Fields(line)) > 0 {
-			processCount++
-		}
+		processCount++
 	}
 
 	if processCount == 0 {

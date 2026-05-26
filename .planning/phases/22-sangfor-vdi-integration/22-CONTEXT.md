@@ -19,25 +19,47 @@
 - Agent通过HTTPS/gRPC主动连接RuoYi-Next，不依赖VDI网络配置
 
 ### D-02: Agent功能范围
-**选择：账号CRUD操作 + 密码重置功能 + 系统状态监控**
+**选择：账号CRUD操作 + 密码重置功能 + 系统状态监控 + Web Console（网页终端）**
 
 **功能详情：**
 - **账号CRUD：** 创建、删除、启用/禁用本地用户账号（Linux: useradd/userdel/usermod; Windows: New-LocalUser/Remove-LocalUser/Enable-LocalUser/Disable-LocalUser）
 - **密码重置：** 重置用户密码，记录操作到审计日志
 - **系统状态监控：** 定期上报VM系统状态（CPU、内存、磁盘使用率、运行进程等）
+- **Web Console（网页终端）：** 提供WebSocket终端连接，用户可在浏览器中直接打开VM终端（类似堡垒机功能）
+
+**Web Console实现方式：**
+- Agent启动WebSocket服务器，监听终端连接请求
+- 使用xterm.js（前端）+ pty（后端伪终端）实现网页终端
+- 支持Linux（SSH伪终端）和Windows（PowerShell伪终端）
+- Agent通过本地pty/spawn创建终端会话，通过WebSocket转发I/O
+- **安全机制：**
+  - WebSocket连接需要JWT令牌认证（与Agent其他API相同）
+  - 记录所有终端会话到审计日志（连接时间、用户、操作内容哈希）
+  - 会话超时自动断开（默认30分钟，可配置）
+  - 支持管理员强制断开会话
 
 **排除的功能：**
 - ❌ 远程命令执行 - 风险过高，不在本期范围
+- ❌ 文件传输 - Web Console仅用于交互式终端，不支持文件上传/下载
 
 ### D-03: Agent权限设计（Windows）
 **选择：受限管理员账号（Restricted Management）**
 
 **实现方式：**
 - 创建专用本地账号（如`RuoyiAgentUser`）
-- 仅授予「用户管理」权限
+- 授予「用户管理」权限
+- **Web Console权限：** 允许创建PowerShell会话（不需要管理员权限，普通用户即可创建交互式Shell）
 - 使用PowerShell Just Enough Administration (JEA) 或 Restricted Management模式
-- 该账号可以：创建/删除用户、重置密码
-- 该账号不能：修改注册表、安装软件、访问管理员共享文件夹
+
+**该账号可以：**
+- ✅ 创建/删除用户、重置密码
+- ✅ 创建交互式PowerShell会话（用于Web Console）
+
+**该账号不能：**
+- ❌ 修改注册表
+- ❌ 安装软件
+- ❌ 访问管理员共享文件夹
+- ❌ 执行系统级配置
 
 ### D-04: Agent权限设计（Linux）
 **选择：专用服务账号 + 受限sudo**
@@ -47,17 +69,30 @@
 # 创建专用服务账号
 useradd -m ruoyi-agent
 
-# 配置sudoers.d（仅允许用户管理命令）
+# 配置sudoers.d（用户管理命令）
 # /etc/sudoers.d/ruoyi-agent
 ruoyi-agent ALL=(root) NOPASSWD: /usr/sbin/useradd
 ruoyi-agent ALL=(root) NOPASSWD: /usr/sbin/userdel
 ruoyi-agent ALL=(root) NOPASSWD: /usr/sbin/usermod
 ruoyi-agent ALL=(root) NOPASSWD: /usr/bin/passwd
+
+# Web Console伪终端权限（重要）
+# ruoyi-agent可以创建伪终端，但不需要sudo
+# 这是因为agent以ruoyi-agent身份运行，可以创建自己的终端会话
+# 如果需要以其他用户身份登录（如root），才需要sudo
 ```
 
 **权限边界：**
 - ✅ 可以执行：用户管理命令（useradd/userdel/passwd）
+- ✅ 可以创建：伪终端（pty）用于Web Console（普通用户权限即可）
+- ✅ 可以运行：交互式Shell会话（bash/zsh）用于Web Console
 - ❌ 不能执行：系统配置修改、软件安装、访问其他用户文件
+
+**Web Console权限说明：**
+- Agent以`ruoyi-agent`身份运行，可以创建自己的终端会话（不需要sudo）
+- 终端会话受限于`ruoyi-agent`的权限（类似于SSH登录）
+- 如果用户需要root权限，需要在终端内手动使用`sudo`命令
+- Agent不自动提权，保持最小权限原则
 
 ### D-05: Agent安全机制
 **选择：JWT令牌认证 + TLS加密通信 + 操作审计日志 + 速率限制**
@@ -133,7 +168,12 @@ ruoyi-agent ALL=(root) NOPASSWD: /usr/bin/passwd
    - 密码策略配置（最小长度、复杂度要求、有效期）
 
 ### D-09: 前端菜单结构
-**选择：新建一级菜单"虚拟机管理" + 管理/业务功能分离**
+**选择：虚拟机详情页集成账号管理，避免并列菜单混淆**
+
+**设计理由：**
+- **数据关系**：账号属于虚拟机（`vdi_vm_accounts.vm_id` 外键），不存在独立的全局账号
+- **用户体验**：在虚拟机详情页直接管理账号，避免菜单间的来回跳转
+- **业界实践**：VMware vSphere、Azure Portal等成熟产品都在虚拟机详情页管理该虚拟机的用户/权限
 
 **菜单结构：**
 ```
@@ -142,30 +182,62 @@ ruoyi-agent ALL=(root) NOPASSWD: /usr/bin/passwd
 │   ├── VDI服务器列表
 │   ├── 服务器连接测试
 │   └── Agent状态监控
-├── 虚拟机管理 (业务功能)
+├── 虚拟机管理 (业务功能 - 账号管理集成在详情页)
 │   ├── 虚拟机列表
-│   ├── 虚拟机详情
-│   ├── 虚拟机操作 (开关机、重启等)
-│   └── 虚拟机同步
-├── 账号管理 (业务功能)
-│   ├── VM账号列表
-│   ├── 创建账号
-│   ├── 密码重置
-│   └── 操作审计日志
-└── 系统设置 (管理功能)
+│   └── 虚拟机详情
+│       └── 账号管理标签页
+│           ├── VM账号列表
+│           ├── 创建账号
+│           ├── 密码重置
+│           └── 删除账号
+└── 系统设置 (管理功能 - 全局功能)
+    ├── 操作审计日志 (全局，审计所有VM的账号操作)
     ├── 密码策略配置
     ├── 权限管理
     └── 批量操作配置
+```
+
+**UI布局设计：**
+```
+┌─────────────────────────────────────────────────┐
+│ 虚拟机详情: VM-WEB-001                          │
+├─────────────────────────────────────────────────┤
+│ [概览] [账号管理] [操作记录] [监控]            │
+├─────────────────────────────────────────────────┤
+│  账号管理标签页内容：                            │
+│  ┌─────────────────────────────────────────┐   │
+│  │ [+ 创建账号]  [批量导入]               │   │
+│  │ ┌──────┬─────────┬────────┬────────┐  │   │
+│  │ │用户名│操作系统 │状态    │操作    │  │   │
+│  │ ├──────┼─────────┼────────┼────────┤  │   │
+│  │ │admin │Windows  │启用    │重置密码│  │   │
+│  │ │guest │Windows  │禁用    │编辑    │  │   │
+│  │ └──────┴─────────┴────────┴────────┘  │   │
+│  └─────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────┘
 ```
 
 **权限设计：**
 - 一级菜单"虚拟机管理"使用 `vdi:visit` 权限
 - 管理功能子菜单使用 `vdi:admin` 权限
 - 业务功能子菜单使用细粒度权限（如 `vdi:vm:view`、`vdi:vm:operate`）
+- 账号管理操作使用细粒度权限（`vdi:account:create`、`vdi:account:reset`、`vdi:account:delete`）
 - 遵循项目现有的权限管理模式（`pkg/permission/`）
 
 ### D-10: 权限管理集成
-**选择：使用项目现有权限系统，无需自定义权限中间件**
+**选择：使用项目现有权限系统和WebSocket基础设施**
+
+**现有实现复用：**
+- ✅ **数据范围权限**：复用 `internal/models/base.go` 的 `DataScope` 类型
+  - `DataScopeAll = 1` (全部数据)
+  - `DataScopeCustom = 2` (自定义数据)
+  - `DataScopeDept = 3` (本部门数据)
+  - `DataScopeDeptChild = 4` (本部门及子部门数据)
+  - `DataScopeSelf = 5` (仅本人数据)
+  - **实现方式**：Service层查询时根据用户的Role.DataScope过滤数据（参考现有系统服务实现）
+- ✅ **WebSocket基础设施**：复用 `internal/websocket/notice_hub.go` 的 `NoticeHub` 和gorilla/websocket
+  - 为VDI Console创建新的WebSocket Hub（`VDIConsoleHub`）
+  - 复用现有的连接管理、消息广播机制
 
 **权限标识符：**
 - `vdi:visit` — 访问虚拟机管理模块
@@ -177,16 +249,139 @@ ruoyi-agent ALL=(root) NOPASSWD: /usr/bin/passwd
 - `vdi:vm:delete` — 删除虚拟机
 - `vdi:vm:operate` — 虚拟机操作（开关机、重启等）
 - `vdi:vm:sync` — 同步虚拟机状态
+- `vdi:vm:console` — 打开虚拟机控制台（网页终端）
 - `vdi:account:list` — 查看VM账号列表
 - `vdi:account:create` — 创建VM账号
 - `vdi:account:reset` — 重置账号密码
 - `vdi:account:delete` — 删除VM账号
 - `vdi:audit:log` — 查看操作审计日志
 
-**权限实现：**
+**数据范围权限控制（复用现有DataScope）：**
+虚拟机查询和操作必须遵循用户角色的DataScope（参考现有系统服务的实现模式）：
+
+| DataScope | 可查看的虚拟机 | 后端实现 |
+|-----------|--------------|----------|
+| **DataScopeSelf (5)** | 仅 `bound_user_id = 当前用户ID` 的虚拟机 | 查询时添加WHERE条件 |
+| **DataScopeDept (3)** | `bound_user_id IN (部门用户ID)` 的虚拟机 | 关联sys_user表，通过user.dept_id过滤 |
+| **DataScopeAll (1)** | 所有虚拟机（无过滤条件） | 管理员角色，无WHERE限制 |
+
+**操作权限分级（前端按钮根据权限动态显示）：**
+| 角色/权限 | 可执行的操作 |
+|----------|------------|
+| **一般用户** | 开机、关机、重启、查看控制台 |
+| **部门管理员** | 上述 + 部门内VM创建、配置IP、重命名 |
+| **系统管理员** | 所有操作（包括删除、同步、全局配置） |
+
+**权限实现方式：**
 - 后端使用现有的 `middleware.Permission()` 中间件
+- Service层复用现有的数据范围过滤逻辑（参考`system/*_service.go`）
 - 前端路由使用 `useAuth` 和 `usePermission` 检查
-- 角色管理中自动包含VDI权限选项
+- 前端按钮根据权限动态显示/隐藏
+- 角色管理中自动包含VDI权限选项（复用现有角色管理界面）
+
+### D-11: 密码轮换策略（CRITICAL - Phase 22核心需求）
+**选择：自动定期修改VM管理员密码 + 密码历史记录**
+
+**功能背景：**
+这是Phase 22的核心需求！Phase Boundary明确指出：**"VM管理员密码需要定期修改（安全要求），使得SSH/WinRM直连方案不可行（存储的密码会失效）"**
+
+**功能详情：**
+1. **自动定期轮换：**
+   - 系统自动定期修改VM管理员密码（默认每90天，可配置）
+   - 使用现有调度器（`internal/scheduler/cron.go`）实现
+   - 密码长度：16-32位随机字符（大写+小写+数字+特殊符号）
+   - 提前7天通知管理员密码即将过期
+
+2. **密码存储加密：**
+   - 新密码使用AES-128-GCM加密存储在`vdi_vm_accounts.password_encrypted`字段
+   - 不记录明文密码
+   - 仅在需要时通过Agent发送到VM
+
+3. **密码历史记录表：**
+   ```sql
+   CREATE TABLE vdi_password_history (
+     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+     account_id UUID NOT NULL,  -- vdi_vm_accounts.id
+     old_password_hash VARCHAR(64) NOT NULL,  -- 旧密码哈希（用于防重复）
+     new_password_hash VARCHAR(64) NOT NULL,  -- 新密码哈希
+     rotated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+     rotated_by VARCHAR(100),  -- 操作人（system或用户名）
+     reason VARCHAR(500)
+   );
+   ```
+
+4. **密码轮换策略配置（sys_config）：**
+   ```sql
+   INSERT INTO sys_config (config_name, config_key, config_value, config_type, remark) VALUES
+   ('VDI密码轮换启用', 'vdi.password.rotation_enabled', 'true', 'Y', '是否启用VM管理员密码自动轮换'),
+   ('VDI密码轮换间隔', 'vdi.password.rotation_interval', '90', 'N', '密码轮换间隔（天）'),
+   ('VDI密码提前通知', 'vdi.password.rotation_advance', '7', 'N', '密码过期前提前通知天数'),
+   ('VDI密码最小长度', 'vdi.password.min_length', '16', 'N', '密码最小长度'),
+   ('VDI密码历史数量', 'vdi.password.history_count', '5', 'N', '记录最近N次密码（防止重复）');
+   ```
+
+5. **调度任务定义：**
+   ```yaml
+   job_name: "VDI密码自动轮换"
+   cron_expression: "0 0 2 * * *"  # 每天凌晨2点检查
+   description: "检查所有VM管理员账号，自动轮换到期的密码"
+   ```
+
+6. **Service层实现要点：**
+   ```go
+   type PasswordRotationService struct {
+       db          *gorm.DB
+       agentClient AgentClient
+       scheduler   *scheduler.CronScheduler
+       encryption  *encryption.PasswordEncryptor
+       notifier    *notification.NotificationService
+   }
+
+   // CheckAndRotate 检查并轮换密码
+   func (s *PasswordRotationService) CheckAndRotate(ctx context.Context) error {
+       // 1. 查询需要轮换的账号
+       accounts := s.getAccountsDueForRotation(ctx)
+       
+       for _, account := range accounts {
+           // 2. 生成安全随机密码
+           newPassword := s.generateSecurePassword()
+           
+           // 3. 通过Agent调用VM本地命令修改密码
+           err := s.agentClient.RotatePassword(ctx, account.VMID, account.Username, newPassword)
+           if err != nil {
+               logger.Error("密码轮换失败", "vm", account.VMID, "error", err)
+               continue
+           }
+           
+           // 4. 加密存储新密码
+           encrypted := s.encryption.Encrypt(newPassword)
+           s.updateAccountPassword(ctx, account.ID, encrypted)
+           
+           // 5. 记录密码历史
+           s.recordPasswordHistory(ctx, account.ID, oldHash, newHash)
+           
+           // 6. 发送通知
+           s.sendPasswordRotatedNotification(ctx, account)
+       }
+       
+       return nil
+   }
+   ```
+
+**实现Wave：**
+- **Wave 3 (Service层)**: `PasswordRotationService` 实现
+- **Wave 4 (后端API)**: 密码轮换API端点、调度任务注册到`internal/scheduler/`
+- **Wave 5 (前端UI)**: 密码策略配置页面（系统设置标签页）
+
+**安全保证：**
+- 密码生成使用`crypto/rand`（密码学安全的随机数生成器）
+- 密码永不以明文形式记录在日志或数据库中
+- Agent传输密码时使用现有TLS加密（复用Agent通信机制）
+- 支持紧急手动轮换（管理员可立即触发密码轮换）
+- 防止密码重复（检查历史记录中的密码哈希）
+
+**排除的功能：**
+- ❌ 自动分发密码给用户 - 安全风险，用户通过Web Console自行登录
 
 ### Claude's Discretion
 **Agent通信协议：** HTTP REST vs gRPC

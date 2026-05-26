@@ -47,6 +47,7 @@ type UserResult struct {
 // ADUserInfo AD用户信息（用于AD认证成功后同步到本地）
 type ADUserInfo struct {
 	UserDN      string // 用户DN
+	OUDN        string // 用户OU DN（用于部门映射）
 	Username    string // sAMAccountName
 	DisplayName string // 显示名称
 	Email       string // 邮箱

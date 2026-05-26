@@ -2,20 +2,49 @@ package system
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 )
 
 // ConfigHandler 参数配置处理器
 type ConfigHandler struct {
-	service systemServices.ConfigService
+	service        systemServices.ConfigService
+	captchaService *core.CaptchaService
 }
 
 // NewConfigHandler 创建参数配置处理器实例
-func NewConfigHandler(service systemServices.ConfigService) *ConfigHandler {
-	return &ConfigHandler{service: service}
+func NewConfigHandler(service systemServices.ConfigService, captchaService *core.CaptchaService) *ConfigHandler {
+	return &ConfigHandler{
+		service:        service,
+		captchaService: captchaService,
+	}
+}
+
+// isCaptchaConfig 检查配置键是否与验证码相关
+func (h *ConfigHandler) isCaptchaConfig(configKey string) bool {
+	captchaKeys := []string{
+		"sys.account.captchaEnabled",
+		"sys.account.captchaType",
+		"sys.account.captchaExpireTime",
+		"sys.account.captchaMaxAttempts",
+		"sys.account.ipRateLimit",
+		"sys.account.loginMaxRetry",
+		"sys.account.loginLockTime",
+		"sys.account.captchaBackgroundMode",
+		"sys.account.captchaPieceShape",
+		"sys.account.captchaDifficulty",
+	}
+	for _, key := range captchaKeys {
+		if configKey == key {
+			return true
+		}
+	}
+	return false
 }
 
 // Create 创建参数配置
@@ -80,6 +109,13 @@ func (h *ConfigHandler) List(c *gin.Context) {
 			params.PageSize = v
 		}
 	}
+
+	// DEBUG: 打印实际接收的分页参数
+	applogger.WithFields(map[string]interface{}{
+		"rawReq_pageSize": rawReq["pageSize"],
+		"params_pageSize":  params.PageSize,
+		"params_Current":   params.Current,
+	}).Info("[DEBUG] Config List received pagination parameters")
 
 	// 处理字符串字段
 	if val, ok := rawReq["configName"].(string); ok && val != "" {
@@ -193,6 +229,31 @@ func (h *ConfigHandler) Update(c *gin.Context) {
 	if err := h.service.Update(c.Request.Context(), &req); err != nil {
 		response.Error(c, err)
 		return
+	}
+
+	// 热重载：如果更新的是验证码相关配置，立即重新加载
+	config, err := h.service.GetByID(c.Request.Context(), id)
+	if err == nil {
+		// 请求加密开关的处理
+		if config.ConfigKey == "sys.request.encryption.enabled" {
+			// 立即刷新中间件缓存
+			middleware.RefreshEncryptionConfigCache()
+
+			applogger.WithFields(map[string]interface{}{
+				"config_key":   config.ConfigKey,
+				"config_value": config.ConfigValue,
+			}).Info("请求加密配置已更新，中间件缓存已刷新")
+		}
+
+		// 检查是否是验证码相关配置
+		if h.isCaptchaConfig(config.ConfigKey) {
+			if h.captchaService != nil {
+				if loadErr := h.captchaService.LoadConfig(c.Request.Context()); loadErr != nil {
+					// 记录错误但不影响更新成功的响应
+					// 配置已经保存到数据库，下次重启时会生效
+				}
+			}
+		}
 	}
 
 	response.Success(c, gin.H{"message": "更新成功"})

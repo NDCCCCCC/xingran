@@ -1,0 +1,26 @@
+--- a/internal/services/portcollection/utils.go
++++ b/internal/services/portcollection/utils.go
+@@ -9,6 +9,30 @@
+ func normalizeInterfaceName(name string) string {
+ 	name = strings.ReplaceAll(name, " ", "")
++
++	// 全称转简写：GigabitEthernet0/0/1 → GE0/0/1
++	fullToShort := map[string]string{
++		"FastEthernet": "FE",
++		"GigabitEthernet": "GE",
++		"TenGigE": "XGE",
++		"FortyGigE": "FOE",
++		"HundredGigE": "HGE",
++		"Vlanif": "Vlanif",
++		"Loopback": "Loop",
++	}
++
++	for full, short := range fullToShort {
++		if strings.HasPrefix(name, full) {
++			suffix := name[len(full):]
++			return short + suffix
++		}
++	}
++
+ 	validPrefixes := []string{"FastEthernet", "GigabitEthernet", "TenGigE", "FortyGigE", "HundredGigE", "Vlan", "Vlanif", "Loopback", "NULL"}
+ 	for _, prefix := range validPrefixes {

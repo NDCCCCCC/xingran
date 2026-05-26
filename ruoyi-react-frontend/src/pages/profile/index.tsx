@@ -113,9 +113,16 @@ const ProfilePage: FC = () => {
       passwordForm.resetFields();
 
       // 延迟后登出
-      setTimeout(() => {
-        useAuthStore.getState().logout();
-        window.location.href = '/login';
+      setTimeout(async () => {
+        try {
+          await useAuthStore.getState().logout();
+          // 等待 React 状态更新完成
+          await new Promise(resolve => setTimeout(resolve, 0));
+          window.location.href = '/login';
+        } catch (error) {
+          console.error('自动登出失败:', error);
+          window.location.href = '/login';
+        }
       }, 1500);
     } catch (error: unknown) {
       if (isFormValidationError(error)) return;

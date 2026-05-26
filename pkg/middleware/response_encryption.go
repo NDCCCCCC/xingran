@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	"gorm.io/gorm"
 )
 
 // ResponseEncryptionConfig 响应加密配置
@@ -47,10 +48,15 @@ func (w *responseWriter) writeBuffer() {
 
 // ResponseEncryption 创建响应加密中间件
 // 在响应返回前加密响应体
-func ResponseEncryption(encryptor *crypto.RequestEncryptor, config *ResponseEncryptionConfig) gin.HandlerFunc {
+// 使用与请求解密相同的数据库配置，实现统一控制
+func ResponseEncryption(encryptor *crypto.RequestEncryptor, config *ResponseEncryptionConfig, db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// 从数据库获取加密开关配置（与请求解密共享配置）
+		// 使用 false 作为回退值（响应加密默认禁用，向后兼容）
+		enabled := getConfigFromDB(c.Request.Context(), db, false)
+
 		// 检查是否启用加密
-		if !config.Enabled {
+		if !enabled {
 			c.Next()
 			return
 		}

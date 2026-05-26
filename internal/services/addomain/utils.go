@@ -224,3 +224,51 @@ func ExtractOUDNFromUserDN(userDN string) string {
 
 	return ""
 }
+
+// ParseOUDN parses an OU DN string into its component parts.
+// Example: "OU=基础运维科,OU=科技创新部,OU=分公司本部,DC=example,DC=com"
+// Returns: ["OU=基础运维科", "OU=科技创新部", "OU=分公司本部", "DC=example", "DC=com"]
+func ParseOUDN(ouDN string) []string {
+	if ouDN == "" {
+		return nil
+	}
+
+	var parts []string
+	current := ""
+	inEscape := false
+
+	for i := 0; i < len(ouDN); i++ {
+		ch := ouDN[i]
+
+		// Handle escape sequences
+		if inEscape {
+			current += string(ch)
+			inEscape = false
+			continue
+		}
+
+		// Check for escape character
+		if ch == '\\' {
+			inEscape = true
+			continue
+		}
+
+		// Check for separator
+		if ch == ',' {
+			if current != "" {
+				parts = append(parts, strings.TrimSpace(current))
+			}
+			current = ""
+			continue
+		}
+
+		current += string(ch)
+	}
+
+	// Add the last part
+	if current != "" {
+		parts = append(parts, strings.TrimSpace(current))
+	}
+
+	return parts
+}

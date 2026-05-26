@@ -39,7 +39,7 @@ func (r *DepartmentCreateRequest) ToModel(ancestors string) models.Department {
 }
 
 type DepartmentUpdateRequest struct {
-	ID            string            `json:"id" binding:"required"`
+	ID            string            `json:"id"` // ID 从 URL 参数获取，不在请求体验证
 	DeptName      string            `json:"deptName" binding:"required"`
 	DeptCode      string            `json:"deptCode" binding:"required"`
 	ParentID      *string           `json:"parentId"`

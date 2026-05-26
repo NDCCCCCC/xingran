@@ -318,3 +318,36 @@ func (h *VMHandler) SyncFromVDI(c *gin.Context) {
 
 	response.Success(c, nil)
 }
+
+// SyncAll 同步所有虚拟机数据
+// @Summary 同步所有虚拟机
+// @Description 从VDI服务器同步所有虚拟机数据到本地数据库
+// @Tags VDI管理
+// @Accept json
+// @Produce json
+// @Success 200 {object} response.Response{data=map[string]interface{}}
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /vdi/vm/sync-all [post]
+func (h *VMHandler) SyncAll(c *gin.Context) {
+	// 获取第一个启用的VDI服务器ID
+	var req struct {
+		ServerID string `json:"server_id"`
+	}
+	_ = c.ShouldBindJSON(&req)
+
+	// 如果没有指定服务器ID，使用默认的（服务层会自动查找第一个启用的）
+	serverID := req.ServerID
+	if serverID == "" {
+		serverID = "auto"
+	}
+
+	if !handleServiceError(c, h.vmService.SyncAllVMs(c.Request.Context(), serverID), "同步") {
+		return
+	}
+
+	response.Success(c, map[string]interface{}{
+		"message": "同步任务已提交",
+		"server_id": serverID,
+	})
+}

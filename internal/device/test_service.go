@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
@@ -14,14 +14,14 @@ import (
 // TestService 新架构测试服务
 type TestService struct {
 	db        *gorm.DB
-	sm4Cipher *security.SM4Cipher
+	sm4Cipher *crypto.SM4Cipher
 	pool      *DeviceConnectionPool
 	scheduler *DeviceTaskScheduler
 	executor  *DeviceExecutor
 }
 
 // NewTestService 创建测试服务
-func NewTestService(db *gorm.DB, sm4Cipher *security.SM4Cipher) *TestService {
+func NewTestService(db *gorm.DB, sm4Cipher *crypto.SM4Cipher) *TestService {
 	// 创建连接池
 	poolConfig := &PoolConfig{
 		MaxIdle:        5 * time.Minute,

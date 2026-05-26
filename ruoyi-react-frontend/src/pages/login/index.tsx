@@ -5,7 +5,8 @@ import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { useMenuStore } from '@/store/menuStore';
-import { TextCaptcha, SliderCaptcha } from '@/components/captcha';
+import { TextCaptcha } from '@/components/captcha';
+import CaptchaModal, { type CaptchaSuccessData } from '@/components/captcha/CaptchaModal';
 import { getCaptchaConfig } from '@/services/captcha';
 import { DASHBOARD } from '@/constants/routes';
 import type { LoginRequest } from '@/types';
@@ -21,7 +22,12 @@ const Login: FC = () => {
   const [captchaEnabled, setCaptchaEnabled] = useState<CaptchaEnabled>('disabled');
   const [captchaValue, setCaptchaValue] = useState('');
   const [captchaId, setCaptchaId] = useState('');
-  const [sliderVerified, setSliderVerified] = useState(false);
+
+  // 验证码模态框状态
+  const [captchaModalVisible, setCaptchaModalVisible] = useState(false);
+
+  // 保存待提交的登录数据
+  const [pendingLoginData, setPendingLoginData] = useState<LoginRequest | null>(null);
 
   // 加载验证码配置
   useEffect(() => {
@@ -37,41 +43,15 @@ const Login: FC = () => {
     loadCaptchaConfig();
   }, []);
 
-  const handleFinish = async (values: LoginRequest) => {
+  // 执行登录请求
+  const performLogin = async (loginData: LoginRequest) => {
     setLoading(true);
     try {
-      const loginData: LoginRequest = {
-        username: values.username,
-        password: values.password,
-      };
-
-      // 如果启用了验证码，添加验证码参数
-      if (captchaEnabled !== 'disabled') {
-        if (captchaEnabled === 'slider') {
-          if (!sliderVerified) {
-            message.warning('请先完成验证码验证');
-            setLoading(false);
-            return;
-          }
-          // 滑动验证码验证通过后，token 和 captchaId 由组件传递
-          loginData.captcha = 'verified';
-          loginData.captchaId = captchaId;
-        } else {
-          if (!captchaValue) {
-            message.warning('请输入验证码');
-            setLoading(false);
-            return;
-          }
-          loginData.captcha = captchaValue;
-          loginData.captchaId = captchaId;
-        }
-      }
-
       await login(loginData);
       // 登录成功后获取用户菜单和权限
       await Promise.all([
         fetchMenus(),
-        fetchPermissions(), // 获取权限（不从localStorage读取）
+        fetchPermissions(),
       ]);
       message.success('登录成功');
       navigate(DASHBOARD);
@@ -86,14 +66,63 @@ const Login: FC = () => {
     }
   };
 
+  const handleFinish = async (values: LoginRequest) => {
+    const loginData: LoginRequest = {
+      username: values.username,
+      password: values.password,
+    };
+
+    // 如果启用了验证码，根据类型处理
+    if (captchaEnabled !== 'disabled') {
+      if (captchaEnabled === 'slider') {
+        // 滑动验证码：先显示模态框，验证成功后再提交
+        setPendingLoginData(loginData);
+        setCaptchaModalVisible(true);
+        return;
+      } else {
+        // 数字验证码：直接在表单中输入验证码
+        if (!captchaValue) {
+          message.warning('请输入验证码');
+          return;
+        }
+        loginData.captcha = captchaValue;
+        loginData.captchaId = captchaId;
+      }
+    }
+
+    // 执行登录
+    await performLogin(loginData);
+  };
+
+  // 验证码模态框验证成功回调
+  const handleCaptchaModalSuccess = async (data: CaptchaSuccessData) => {
+    setCaptchaModalVisible(false);
+
+    if (pendingLoginData) {
+      // 添加验证码信息
+      const loginDataWithCaptcha = {
+        ...pendingLoginData,
+        captcha: data.verified ? 'verified' : data.captcha,
+        captchaId: data.captchaId,
+      };
+
+      // 执行登录
+      await performLogin(loginDataWithCaptcha);
+
+      // 清空待提交数据
+      setPendingLoginData(null);
+    }
+  };
+
+  // 验证码模态框取消回调
+  const handleCaptchaModalCancel = () => {
+    setCaptchaModalVisible(false);
+    setPendingLoginData(null);
+  };
+
   const handleCaptchaChange = (value: string, id: string) => {
     setCaptchaValue(value);
     setCaptchaId(id);
-  };
-
-  const handleSliderVerified = (_token: string, id: string) => {
-    setCaptchaId(id);
-    setSliderVerified(true);
   };
 
   const handleCaptchaError = (error: string) => {
@@ -167,21 +196,14 @@ const Login: FC = () => {
             />
           </Form.Item>
 
-          {/* 验证码 */}
-          {captchaEnabled !== 'disabled' && (
+          {/* 验证码 - 只显示数字验证码 */}
+          {captchaEnabled === 'normal' && (
             <Form.Item>
-              {captchaEnabled === 'normal' ? (
-                <TextCaptcha
-                  value={captchaValue}
-                  onChange={handleCaptchaChange}
-                  onError={handleCaptchaError}
-                />
-              ) : (
-                <SliderCaptcha
-                  onVerified={handleSliderVerified}
-                  onError={handleCaptchaError}
-                />
-              )}
+              <TextCaptcha
+                value={captchaValue}
+                onChange={handleCaptchaChange}
+                onError={handleCaptchaError}
+              />
             </Form.Item>
           )}
 
@@ -201,6 +223,14 @@ const Login: FC = () => {
           {/* <p>默认账号：admin / admin123</p> */}
         </div>
       </Card>
+
+      {/* 验证码模态框 - 用于滑动验证码 */}
+      <CaptchaModal
+        visible={captchaModalVisible}
+        captchaType={captchaEnabled}
+        onSuccess={handleCaptchaModalSuccess}
+        onCancel={handleCaptchaModalCancel}
+      />
     </div>
   );
 };

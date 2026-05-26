@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -53,8 +54,43 @@ func (m *DeptOUmapper) FindOUDNByDeptID(ctx context.Context, deptID string) (str
 }
 
 // UpsertMapping 创建或更新映射关系（幂等操作）
-// 使用ON CONFLICT确保同一个部门+AD配置只有一个映射
+// 处理数据库的两个唯一约束：
+// 1. uni_dept_ou_mapping_dept (dept_id, ad_config_id) - 一个部门在一个AD配置下只能有一个映射
+// 2. uni_dept_ou_mapping_ou (ad_config_id, ou_dn) - 一个OU在一个AD配置下只能映射到一个部门
 func (m *DeptOUmapper) UpsertMapping(ctx context.Context, mapping *models.DeptOUMapping) error {
+	// 先检查是否已存在相同 ou_dn 的映射
+	var existing models.DeptOUMapping
+	err := m.db.WithContext(ctx).
+		Where("ad_config_id = ? AND ou_dn = ?", mapping.ADConfigID, mapping.OUDN).
+		First(&existing).Error
+
+	if err == nil {
+		// 找到已存在的 ou_dn 映射
+		if existing.DeptID == mapping.DeptID {
+			// 同一个部门，只更新其他字段
+			return m.db.WithContext(ctx).
+				Model(&existing).
+				Updates(map[string]interface{}{
+					"ou_name":      mapping.OUName,
+					"parent_ou_dn": mapping.ParentOUDN,
+					"sync_status":  mapping.SyncStatus,
+					"last_sync_at": mapping.LastSyncAt,
+					"sync_enabled": mapping.SyncEnabled,
+					"updated_at":   "CURRENT_TIMESTAMP",
+				}).Error
+		} else {
+			// ou_dn 已映射到不同部门，删除旧映射
+			applogger.Warnf("OU DN %s 已映射到部门 %s，现在重新映射到部门 %s",
+				mapping.OUDN, existing.DeptID, mapping.DeptID)
+			if err := m.db.WithContext(ctx).Delete(&existing).Error; err != nil {
+				return fmt.Errorf("删除旧映射失败: %w", err)
+			}
+		}
+	} else if err != gorm.ErrRecordNotFound {
+		return fmt.Errorf("查询现有映射失败: %w", err)
+	}
+
+	// 创建新映射（使用 ON CONFLICT 处理 dept_id 约束）
 	return m.db.WithContext(ctx).
 		Clauses(clause.OnConflict{
 			Columns:   []clause.Column{{Name: "dept_id"}, {Name: "ad_config_id"}},

@@ -34,7 +34,7 @@ import { useTableManager } from '@/hooks/useTableManager';
 import { usePagination } from '@/hooks/usePagination';
 import { handleApiError, handleSuccess, isFormValidationError } from '@/utils/errorHandler';
 import ActionButtons from '@/components/shared/ActionButtons';
-import { refreshEncryptionConfig } from '@/utils/authHelpers';
+import { refreshEncryptionConfig } from '@/lib/api';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -131,7 +131,7 @@ const ConfigManagement: FC = () => {
   // 创建参数配置
   const handleCreate = async () => {
     try {
-      const values = await editForm.validateFields();
+      const values = await editForm.validateFields() as Record<string, any>;
       if (editingConfig) {
         // 移除 configKey 和 isSystem 字段，后端 UpdateConfigRequest 不接受这些字段
         const { configKey, isSystem, ...updateValues } = values;

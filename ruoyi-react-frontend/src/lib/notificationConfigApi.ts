@@ -56,32 +56,32 @@ export interface EmailConfigUpdateRequest {
 
 // 获取邮箱配置列表
 export const getEmailConfigList = (params: EmailConfigListParams) => {
-  return post('/system/settings/email-configs/list', params);
+  return post('/system/settings/notification/email-configs/list', params);
 };
 
 // 获取邮箱配置详情
 export const getEmailConfig = (id: string) => {
-  return get(`/system/settings/email-configs/${id}`);
+  return get(`/system/settings/notification/email-configs/${id}`);
 };
 
 // 创建邮箱配置
 export const createEmailConfig = (data: EmailConfigCreateRequest) => {
-  return post('/system/settings/email-configs', data);
+  return post('/system/settings/notification/email-configs', data);
 };
 
 // 更新邮箱配置
 export const updateEmailConfig = (id: string, data: EmailConfigUpdateRequest) => {
-  return put(`/system/settings/email-configs/${id}`, data);
+  return put(`/system/settings/notification/email-configs/${id}`, data);
 };
 
 // 删除邮箱配置
 export const deleteEmailConfig = (id: string) => {
-  return del(`/system/settings/email-configs/${id}`);
+  return del(`/system/settings/notification/email-configs/${id}`);
 };
 
 // 测试邮箱配置
 export const testEmailConfig = (id: string, testTo: string) => {
-  return post(`/system/settings/email-configs/${id}/test`, { testTo });
+  return post(`/system/settings/notification/email-configs/${id}/test`, { testTo });
 };
 
 // ==================== API通知配置 ====================
@@ -163,32 +163,32 @@ export interface APINotificationConfigUpdateRequest {
 
 // 获取API通知配置列表
 export const getAPINotificationConfigList = (params: APINotificationConfigListParams) => {
-  return post('/system/settings/api-notification-configs/list', params);
+  return post('/system/settings/notification/api-notification-configs/list', params);
 };
 
 // 获取API通知配置详情
 export const getAPINotificationConfig = (id: string) => {
-  return get(`/system/settings/api-notification-configs/${id}`);
+  return get(`/system/settings/notification/api-notification-configs/${id}`);
 };
 
 // 创建API通知配置
 export const createAPINotificationConfig = (data: APINotificationConfigCreateRequest) => {
-  return post('/system/settings/api-notification-configs', data);
+  return post('/system/settings/notification/api-notification-configs', data);
 };
 
 // 更新API通知配置
 export const updateAPINotificationConfig = (id: string, data: APINotificationConfigUpdateRequest) => {
-  return put(`/system/settings/api-notification-configs/${id}`, data);
+  return put(`/system/settings/notification/api-notification-configs/${id}`, data);
 };
 
 // 删除API通知配置
 export const deleteAPINotificationConfig = (id: string) => {
-  return del(`/system/settings/api-notification-configs/${id}`);
+  return del(`/system/settings/notification/api-notification-configs/${id}`);
 };
 
 // 测试API通知配置
 export const testAPINotificationConfig = (id: string) => {
-  return post(`/system/settings/api-notification-configs/${id}/test`);
+  return post(`/system/settings/notification/api-notification-configs/${id}/test`);
 };
 
 // ==================== Cron表达式 ====================

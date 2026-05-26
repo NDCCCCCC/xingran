@@ -70,6 +70,7 @@ export interface APIKeyUsageLog {
   path: string;
   status_code: number;
   client_ip: string;
+  ip_address?: string; // 别名，兼容性字段
   user_agent?: string;
   duration: number;
   success: boolean;

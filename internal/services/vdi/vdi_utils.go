@@ -15,28 +15,28 @@ func decryptVDIPassword(encrypted string) string {
 
 	data, err := base64.StdEncoding.DecodeString(encrypted)
 	if err != nil {
-		return encrypted
+		return "" // 返回空字符串表示解密失败
 	}
 
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		return encrypted
+		return "" // 返回空字符串表示解密失败
 	}
 
 	gcm, err := cipher.NewGCM(block)
 	if err != nil {
-		return encrypted
+		return "" // 返回空字符串表示解密失败
 	}
 
 	nonceSize := gcm.NonceSize()
 	if len(data) < nonceSize {
-		return encrypted
+		return "" // 返回空字符串表示解密失败
 	}
 
 	nonce, cipherData := data[:nonceSize], data[nonceSize:]
 	plaintext, err := gcm.Open(nil, nonce, cipherData, nil)
 	if err != nil {
-		return encrypted
+		return "" // 返回空字符串表示解密失败
 	}
 
 	return string(plaintext)

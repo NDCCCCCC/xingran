@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"time"
 
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/db"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
@@ -235,15 +236,30 @@ func (s *CaptchaService) GenerateCaptcha(ctx context.Context, clientIP string) (
 		return nil, nil
 	}
 
-	// IP限流检查
+	// IP限流检查 - 从数据库读取限制次数
+	ipRateLimit := s.getIPRateLimit(ctx)
 	rateLimitKey := fmt.Sprintf("captcha:rate:%s", clientIP)
-	count, err := s.cache.Increment(ctx, rateLimitKey)
-	if err == nil && count == 1 {
-		// 首次访问，设置过期时间为1分钟
-		_ = s.cache.Expire(ctx, rateLimitKey, 1*time.Minute)
+
+	var count int64
+	var err error
+
+	// 尝试使用原子操作（IncrementWithExpire）确保TTL正确设置
+	if redisCache, ok := s.cache.(interface{ IncrementWithExpire(context.Context, string, time.Duration) (int64, error) }); ok {
+		count, err = redisCache.IncrementWithExpire(ctx, rateLimitKey, 1*time.Minute)
+		if err != nil {
+			applogger.Errorf("[Captcha] Rate limit check failed for IP %s: %v", clientIP, err)
+			// 限流检查失败时，为安全起见允许请求继续，但记录错误
+			count = 0 // 重置计数器，允许请求通过
+		}
+	} else {
+		// 降级到普通Increment + Expire（旧逻辑）
+		count, err = s.cache.Increment(ctx, rateLimitKey)
+		if err == nil && count == 1 {
+			_ = s.cache.Expire(ctx, rateLimitKey, 1*time.Minute)
+		}
 	}
 
-	if count > int64(s.config.IPRateLimit) {
+	if count > int64(ipRateLimit) {
 		return nil, fmt.Errorf("获取验证码过于频繁，请稍后再试")
 	}
 
@@ -495,37 +511,60 @@ func (s *CaptchaService) generateSliderWithBackground(ctx context.Context) (map[
 	shape := s.config.PieceShape
 	difficulty := s.config.Difficulty
 
+	// 调试日志：打印配置信息
+	applogger.Debugf("[Captcha] BackgroundMode=%s, PieceShape=%s, Difficulty=%d",
+		s.config.BackgroundMode, shape, difficulty)
+	applogger.Debugf("[Captcha] backgroundService is nil: %v", s.backgroundService == nil)
+
 	// 检查是否使用自定义背景图
 	useCustom := false
 	switch s.config.BackgroundMode {
 	case "custom":
 		useCustom = true
+		applogger.Debugf("[Captcha] Using custom background mode")
 	case "mixed":
 		// 混合模式：50%概率使用自定义背景
 		useCustom = rand.Intn(2) == 0
+		applogger.Debugf("[Captcha] Using mixed background mode, useCustom=%v", useCustom)
 	case "auto":
 		useCustom = false
+		applogger.Debugf("[Captcha] Using auto background mode")
 	default:
 		// 未知模式，使用自动生成
 		useCustom = false
+		applogger.Warnf("[Captcha] Unknown background mode: %s, falling back to auto", s.config.BackgroundMode)
 	}
 
 	// 尝试使用自定义背景图
 	if useCustom && s.backgroundService != nil {
+		applogger.Debugf("[Captcha] Attempting to use custom background")
 		// 先尝试从缓存池获取
 		cached, err := s.backgroundService.GetFromCachePool(ctx, shape, difficulty)
 		if err == nil && cached != nil {
+			applogger.Debugf("[Captcha] Cache pool hit, using cached background")
 			return cached, nil
 		}
+		applogger.Debugf("[Captcha] Cache pool miss: %v", err)
 
 		// 缓存未命中，从数据库获取随机背景图并生成
 		bg, err := s.backgroundService.GetRandomEnabled(ctx, models.PieceShape(shape), difficulty)
-		if err == nil && bg != nil {
+		if err != nil {
+			applogger.Warnf("[Captcha] GetRandomEnabled failed: %v", err)
+		} else if bg == nil {
+			applogger.Warnf("[Captcha] GetRandomEnabled returned nil background")
+		} else {
+			applogger.Debugf("[Captcha] Got background from DB: %s", bg.FileName)
 			generator, _ := captcha.NewSliderCaptchaWithShape(shape)
 			bgImg, err := generator.LoadBackgroundFromFile(bg.FilePath)
-			if err == nil {
+			if err != nil {
+				applogger.Warnf("[Captcha] LoadBackgroundFromFile failed: %v", err)
+			} else {
+				applogger.Debugf("[Captcha] Background loaded successfully")
 				bgBytes, pieceBytes, xPos, yPos, token, err := generator.GenerateSliderWithCustomBackground(bgImg, shape, difficulty)
-				if err == nil {
+				if err != nil {
+					applogger.Warnf("[Captcha] GenerateSliderWithCustomBackground failed: %v", err)
+				} else {
+					applogger.Infof("[Captcha] Successfully generated captcha with custom background: %s", bg.FileName)
 					// 更新使用次数
 					_ = s.backgroundService.IncrementUseCount(bg.ID)
 					return map[string]interface{}{
@@ -542,9 +581,17 @@ func (s *CaptchaService) generateSliderWithBackground(ctx context.Context) (map[
 				}
 			}
 		}
+	} else {
+		if !useCustom {
+			applogger.Debugf("[Captcha] useCustom=false, skipping custom background")
+		}
+		if s.backgroundService == nil {
+			applogger.Warnf("[Captcha] backgroundService is nil, cannot use custom backgrounds")
+		}
 	}
 
 	// 使用自动生成的背景图（降级方案）
+	applogger.Infof("[Captcha] Falling back to auto-generated background")
 	generator, _ := captcha.NewSliderCaptchaWithShape(shape)
 	bgBase64, pieceBase64, xPos, yPos, token, err := generator.GenerateSliderBase64()
 	if err != nil {
@@ -561,4 +608,24 @@ func (s *CaptchaService) generateSliderWithBackground(ctx context.Context) (map[
 		"difficulty": difficulty,
 		"createdAt":  time.Now().Unix(),
 	}, nil
+}
+
+// getIPRateLimit 从数据库读取 IP 限流配置（次/分钟）
+// 如果数据库中没有配置，则使用默认值 10
+func (s *CaptchaService) getIPRateLimit(ctx context.Context) int {
+	var config models.Config
+	err := s.db.GetDB().Where("config_key = ?", "sys.captcha.ip_rate_limit").First(&config).Error
+	if err != nil {
+		// 配置不存在，返回默认值 10
+		return 10
+	}
+
+	// 解析配置值
+	var limit int
+	if _, err := fmt.Sscanf(config.ConfigValue, "%d", &limit); err != nil || limit <= 0 {
+		// 解析失败或值无效，返回默认值 10
+		return 10
+	}
+
+	return limit
 }

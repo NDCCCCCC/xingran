@@ -98,10 +98,10 @@ func (s *CaptchaBackgroundService) Upload(ctx context.Context, req *UploadReques
 	// 计算MD5
 	md5Sum := s.calculateMD5(req.FileData)
 
-	// 创建数据库记录
+	// 创建数据库记录（路径使用正斜杠，兼容跨平台）
 	bg := &models.CaptchaBackground{
 		FileName:        newFileName,
-		FilePath:        destPath,
+		FilePath:        filepath.ToSlash(destPath),
 		FileSize:        req.FileSize,
 		FileWidth:       width,
 		FileHeight:      height,

@@ -26,6 +26,171 @@ func NewVMService(db *gorm.DB, vdiClient VDIClientExtended) VMService {
 	}
 }
 
+// NewVMServiceWithDynamicClient 创建虚拟机服务（动态查找客户端）
+func NewVMServiceWithDynamicClient(db *gorm.DB) VMService {
+	return &vmServiceImpl{
+		db:            db,
+		vdiClient:     nil, // 将动态加载
+		uuidValidator: regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`),
+	}
+}
+
+// getClient 动态查找启用的VDI服务器并返回客户端
+func (s *vmServiceImpl) getClient(ctx context.Context) (VDIClientExtended, error) {
+	// 如果已有客户端，直接返回
+	if s.vdiClient != nil {
+		return s.vdiClient, nil
+	}
+
+	// 动态查找第一个启用的VDI服务器
+	var server models.VDIServer
+	if err := s.db.WithContext(ctx).
+		Where("status = 0").
+		Order("created_at ASC").
+		First(&server).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, fmt.Errorf("no enabled VDI server found")
+		}
+		return nil, fmt.Errorf("failed to query VDI server: %w", err)
+	}
+
+	// 创建并缓存客户端
+	s.vdiClient = NewVDIClientFromDB(s.db, server.ID)
+	return s.vdiClient, nil
+}
+
+// syncVMsFromVDI 从VDI服务器同步虚拟机数据到本地数据库
+func (s *vmServiceImpl) syncVMsFromVDI(ctx context.Context, client VDIClientExtended) error {
+	// 1. 获取所有资源组
+	groups, err := client.ListResourceGroups(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to list resource groups: %w", err)
+	}
+
+	// 2. 遍历每个资源组，获取其下的资源
+	for _, group := range groups {
+		if group.Enable != "1" {
+			continue // 跳过未启用的资源组
+		}
+
+		fmt.Printf("[VDI SYNC] Processing resource group: %s (ID: %s)\n", group.Name, group.ID)
+
+		// 2.1 获取该资源组下的所有资源
+		resources, err := client.ListResources(ctx, group.ID)
+		if err != nil {
+			fmt.Printf("Failed to list resources for group %s: %v\n", group.Name, err)
+			continue
+		}
+
+		fmt.Printf("[VDI SYNC] Found %d resources in group %s\n", len(resources), group.Name)
+
+		// 3. 遍历每个资源，获取虚拟机列表
+		for _, resource := range resources {
+			fmt.Printf("[VDI SYNC] Processing resource: %s (ID: %d)\n", resource.Name, resource.ID)
+
+			// 分页获取该资源下的所有虚拟机
+			page := 1
+			pageSize := 100
+			for {
+				vms, total, err := client.ListResourceServers(ctx, fmt.Sprintf("%d", resource.ID), page, pageSize)
+				if err != nil {
+					// 记录错误但继续处理其他资源
+					fmt.Printf("Failed to list VMs for resource %s: %v\n", resource.Name, err)
+					break
+				}
+
+				// 保存虚拟机数据到本地数据库
+				for _, vm := range vms {
+					s.saveOrUpdateVM(ctx, vm, fmt.Sprintf("%d", resource.ID))
+				}
+
+				// 检查是否还有更多数据
+				if page*pageSize >= total {
+					break
+				}
+				page++
+			}
+		}
+	}
+
+	return nil
+}
+
+// saveOrUpdateVM 保存或更新虚拟机记录
+func (s *vmServiceImpl) saveOrUpdateVM(ctx context.Context, resource VDIVMResource, resourceID string) {
+	var vm models.VDIVirtualMachine
+	err := s.db.WithContext(ctx).
+		Where("vm_id = ?", resource.ID).
+		First(&vm).Error
+
+	if err == gorm.ErrRecordNotFound {
+		// 创建新记录
+		vm = models.VDIVirtualMachine{
+			VMID:        resource.ID,
+			Name:        resource.VMName,
+			ResourceID:  resourceID,
+			Status:      0,
+			PowerState:  s.mapPowerState(resource.Status),
+			IPAddress:   resource.IP,
+			MACAddress:  resource.MAC,
+			OSType:      resource.OSType,
+			CPU:         s.parseIntSafe(resource.CPUNumber),
+			Memory:      s.parseIntSafe(resource.MemAll),
+			Disk:        s.parseIntSafe(resource.DiscAll),
+			BoundUserID: &resource.ApplyUser,
+			VdiServerID: s.vdiServerID(),
+		}
+		s.db.WithContext(ctx).Create(&vm)
+	} else if err == nil {
+		// 更新现有记录
+		updates := map[string]interface{}{
+			"name":        resource.VMName,
+			"resource_id": resourceID,
+			"power_state": s.mapPowerState(resource.Status),
+			"ip_address":  resource.IP,
+			"mac_address": resource.MAC,
+			"os_type":     resource.OSType,
+			"cpu":         s.parseIntSafe(resource.CPUNumber),
+			"memory":      s.parseIntSafe(resource.MemAll),
+			"disk":        s.parseIntSafe(resource.DiscAll),
+		}
+		if resource.ApplyUser != "" {
+			updates["bound_user_id"] = &resource.ApplyUser
+		}
+		s.db.WithContext(ctx).Model(&vm).Updates(updates)
+	}
+}
+
+// mapPowerState 映射VDI状态到电源状态
+func (s *vmServiceImpl) mapPowerState(status string) string {
+	// VDI状态码映射（根据深信服文档）
+	// 11=运行中, 12=关机, 13=暂停, 14=故障, 等
+	switch status {
+	case "11":
+		return "running"
+	case "12":
+		return "stopped"
+	case "13":
+		return "suspended"
+	default:
+		return "unknown"
+	}
+}
+
+// parseIntSafe 安全解析整数
+func (s *vmServiceImpl) parseIntSafe(str string) int {
+	var i int
+	fmt.Sscanf(str, "%d", &i)
+	return i
+}
+
+// vdiServerID 获取当前VDI服务器ID
+func (s *vmServiceImpl) vdiServerID() string {
+	var server models.VDIServer
+	s.db.Where("status = 0").First(&server)
+	return server.ID
+}
+
 // CreateVM 创建虚拟机（调用VDI API）
 func (s *vmServiceImpl) CreateVM(ctx context.Context, req *CreateVMServiceRequest) (*VDIVMDTO, error) {
 	// 1. 验证VDI服务器存在
@@ -71,6 +236,41 @@ func (s *vmServiceImpl) GetVM(ctx context.Context, id string) (*VDIVMDTO, error)
 
 // ListVMs 获取虚拟机列表
 func (s *vmServiceImpl) ListVMs(ctx context.Context, req *ListVMRequest) (*PageResult, error) {
+	// 检查是否有启用的VDI服务器配置
+	var serverCount int64
+	if err := s.db.WithContext(ctx).Model(&models.VDIServer{}).Where("status = 0").Count(&serverCount).Error; err != nil {
+		return nil, fmt.Errorf("failed to check VDI servers: %w", err)
+	}
+
+	// 如果没有启用的VDI服务器，返回空列表并提示
+	if serverCount == 0 {
+		return &PageResult{
+			List:     []VDIVMDTO{},
+			Total:    0,
+			Page:     req.Page,
+			PageSize: req.PageSize,
+		}, nil
+	}
+
+	// 获取VDI客户端
+	client, err := s.getClient(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get VDI client: %w", err)
+	}
+
+	// 检查本地数据库是否有虚拟机数据
+	var localCount int64
+	if err := s.db.WithContext(ctx).Model(&models.VDIVirtualMachine{}).Count(&localCount).Error; err != nil {
+		return nil, fmt.Errorf("failed to check local VMs: %w", err)
+	}
+
+	// 如果本地数据为空，从VDI服务器同步数据
+	if localCount == 0 {
+		if err := s.syncVMsFromVDI(ctx, client); err != nil {
+			return nil, fmt.Errorf("failed to sync VMs from VDI: %w", err)
+		}
+	}
+
 	// 设置默认分页参数
 	if req.Page <= 0 {
 		req.Page = 1
@@ -157,6 +357,12 @@ func (s *vmServiceImpl) UpdateVM(ctx context.Context, id string, req *UpdateVMRe
 
 // DeleteVM 删除虚拟机（调用VDI API）
 func (s *vmServiceImpl) DeleteVM(ctx context.Context, ids []string) error {
+	// 获取VDI客户端
+	client, err := s.getClient(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get VDI client: %w", err)
+	}
+
 	// 1. 查询本地VM记录，获取VM ID
 	var vms []models.VDIVirtualMachine
 	if err := s.db.WithContext(ctx).Where("id IN ?", ids).Find(&vms).Error; err != nil {
@@ -173,7 +379,7 @@ func (s *vmServiceImpl) DeleteVM(ctx context.Context, ids []string) error {
 	}
 
 	// 2. 调用VDI API删除虚拟机
-	if err := s.vdiClient.DeleteVM(ctx, vmIDs); err != nil {
+	if err := client.DeleteVM(ctx, vmIDs); err != nil {
 		return fmt.Errorf("failed to delete VMs from VDI: %w", err)
 	}
 
@@ -187,6 +393,12 @@ func (s *vmServiceImpl) DeleteVM(ctx context.Context, ids []string) error {
 
 // OperateVM 操作虚拟机（调用VDI API）
 func (s *vmServiceImpl) OperateVM(ctx context.Context, req *VMOperateRequest) error {
+	// 获取VDI客户端
+	client, err := s.getClient(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get VDI client: %w", err)
+	}
+
 	// 1. 查询本地VM记录，获取VM ID
 	var vms []models.VDIVirtualMachine
 	if err := s.db.WithContext(ctx).Where("id IN ?", req.VMIDs).Find(&vms).Error; err != nil {
@@ -204,7 +416,7 @@ func (s *vmServiceImpl) OperateVM(ctx context.Context, req *VMOperateRequest) er
 
 	// 2. 调用VDI API操作虚拟机
 	action := string(req.Action)
-	if err := s.vdiClient.OperateVM(ctx, vmIDs, action); err != nil {
+	if err := client.OperateVM(ctx, vmIDs, action); err != nil {
 		return fmt.Errorf("failed to operate VMs: %w", err)
 	}
 
@@ -231,6 +443,12 @@ func (s *vmServiceImpl) OperateVM(ctx context.Context, req *VMOperateRequest) er
 func (s *vmServiceImpl) BatchConfigIP(ctx context.Context, req []VMIPConfigRequest) error {
 	if len(req) == 0 {
 		return nil
+	}
+
+	// 获取VDI客户端
+	client, err := s.getClient(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get VDI client: %w", err)
 	}
 
 	// 1. 查询本地VM记录，验证存在性
@@ -263,7 +481,7 @@ func (s *vmServiceImpl) BatchConfigIP(ctx context.Context, req []VMIPConfigReque
 		}
 	}
 
-	if err := s.vdiClient.ConfigIP(ctx, configReqs); err != nil {
+	if err := client.ConfigIP(ctx, configReqs); err != nil {
 		return fmt.Errorf("failed to config IPs: %w", err)
 	}
 
@@ -280,6 +498,12 @@ func (s *vmServiceImpl) BatchConfigIP(ctx context.Context, req []VMIPConfigReque
 
 // RenameVM 重命名虚拟机（调用VDI API）
 func (s *vmServiceImpl) RenameVM(ctx context.Context, id string, req *RenameVMServiceRequest) error {
+	// 获取VDI客户端
+	client, err := s.getClient(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get VDI client: %w", err)
+	}
+
 	// 1. 查询本地VM记录
 	var vm models.VDIVirtualMachine
 	if err := s.db.WithContext(ctx).Where("id = ?", id).First(&vm).Error; err != nil {
@@ -287,7 +511,7 @@ func (s *vmServiceImpl) RenameVM(ctx context.Context, id string, req *RenameVMSe
 	}
 
 	// 2. 调用VDI API重命名
-	if err := s.vdiClient.RenameVM(ctx, vm.VMID, req.NewName); err != nil {
+	if err := client.RenameVM(ctx, vm.VMID, req.NewName); err != nil {
 		return fmt.Errorf("failed to rename VM: %w", err)
 	}
 
@@ -303,6 +527,12 @@ func (s *vmServiceImpl) RenameVM(ctx context.Context, id string, req *RenameVMSe
 
 // BindUser 绑定用户（调用VDI API）
 func (s *vmServiceImpl) BindUser(ctx context.Context, vmID string, req *BindUserServiceRequest) error {
+	// 获取VDI客户端
+	client, err := s.getClient(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get VDI client: %w", err)
+	}
+
 	// 1. 查询本地VM记录
 	var vm models.VDIVirtualMachine
 	if err := s.db.WithContext(ctx).Where("id = ?", vmID).First(&vm).Error; err != nil {
@@ -310,7 +540,7 @@ func (s *vmServiceImpl) BindUser(ctx context.Context, vmID string, req *BindUser
 	}
 
 	// 2. 调用VDI API绑定用户
-	vdiVMDetail, err := s.vdiClient.BindUser(ctx, vm.VMID, req.UserID)
+	vdiVMDetail, err := client.BindUser(ctx, vm.VMID, req.UserID)
 	if err != nil {
 		return fmt.Errorf("failed to bind user: %w", err)
 	}
@@ -330,6 +560,12 @@ func (s *vmServiceImpl) BindUser(ctx context.Context, vmID string, req *BindUser
 
 // UnbindUser 解绑用户
 func (s *vmServiceImpl) UnbindUser(ctx context.Context, vmID string) error {
+	// 获取VDI客户端
+	client, err := s.getClient(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get VDI client: %w", err)
+	}
+
 	// 1. 查询本地VM记录
 	var vm models.VDIVirtualMachine
 	if err := s.db.WithContext(ctx).Where("id = ?", vmID).First(&vm).Error; err != nil {
@@ -337,7 +573,7 @@ func (s *vmServiceImpl) UnbindUser(ctx context.Context, vmID string) error {
 	}
 
 	// 2. 调用VDI API解绑用户（使用空用户ID）
-	_, err := s.vdiClient.BindUser(ctx, vm.VMID, "")
+	_, err = client.BindUser(ctx, vm.VMID, "")
 	if err != nil {
 		return fmt.Errorf("failed to unbind user: %w", err)
 	}
@@ -357,6 +593,12 @@ func (s *vmServiceImpl) UnbindUser(ctx context.Context, vmID string) error {
 
 // SyncVMFromVDI 从VDI同步虚拟机状态（调用VDI API）
 func (s *vmServiceImpl) SyncVMFromVDI(ctx context.Context, vmID string) error {
+	// 获取VDI客户端
+	client, err := s.getClient(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get VDI client: %w", err)
+	}
+
 	// 1. 查询本地VM记录
 	var vm models.VDIVirtualMachine
 	if err := s.db.WithContext(ctx).Where("id = ?", vmID).First(&vm).Error; err != nil {
@@ -364,7 +606,7 @@ func (s *vmServiceImpl) SyncVMFromVDI(ctx context.Context, vmID string) error {
 	}
 
 	// 2. 调用VDI API获取最新数据
-	vdiVMDetail, err := s.vdiClient.GetVM(ctx, vm.VMID)
+	vdiVMDetail, err := client.GetVM(ctx, vm.VMID)
 	if err != nil {
 		return fmt.Errorf("failed to fetch VM from VDI: %w", err)
 	}

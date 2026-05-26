@@ -60,7 +60,7 @@ type RoleCreateRequest struct {
 
 // RoleUpdateRequest 更新角色请求
 type RoleUpdateRequest struct {
-	ID                string            `json:"id" binding:"required"`
+	ID                string            `json:"id"` // ID 从 URL 参数获取，不在请求体验证
 	RoleName          string            `json:"roleName" binding:"required"`
 	RoleKey           string            `json:"roleKey" binding:"required"`
 	RoleSort          int               `json:"roleSort"`

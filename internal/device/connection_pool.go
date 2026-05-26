@@ -7,8 +7,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
@@ -127,7 +127,7 @@ type DeviceConnectionPool struct {
 	deviceLocks    map[string]*sync.Mutex       // deviceID -> 设备锁
 	poolLock       sync.RWMutex                 // 保护 connections 和 deviceLocks
 	db             *gorm.DB                     // 数据库（用于查询设备和凭证）
-	sm4Cipher      *security.SM4Cipher          // SM4 加密器
+	sm4Cipher      *crypto.SM4Cipher           // SM4 加密器
 	maxIdle        time.Duration                // 空闲连接超时时间
 	maxConnections int                          // 最大连接数
 	cleanupTicker  *time.Ticker                 // 清理定时器
@@ -150,7 +150,7 @@ func DefaultPoolConfig() *PoolConfig {
 }
 
 // NewDeviceConnectionPool 创建设备连接池
-func NewDeviceConnectionPool(db *gorm.DB, sm4Cipher *security.SM4Cipher, config *PoolConfig) *DeviceConnectionPool {
+func NewDeviceConnectionPool(db *gorm.DB, sm4Cipher *crypto.SM4Cipher, config *PoolConfig) *DeviceConnectionPool {
 	if config == nil {
 		config = DefaultPoolConfig()
 	}

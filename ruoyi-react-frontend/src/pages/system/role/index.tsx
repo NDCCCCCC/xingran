@@ -3,7 +3,7 @@
  * Role Management Page
  */
 
-import { useState, useEffect, type FC } from 'react';
+import { useState, useEffect, useCallback, useRef, type FC } from 'react';
 import {
   Table,
   Button,
@@ -67,6 +67,68 @@ const RoleManagement: FC = () => {
     pageSize: paginationProps.pageSize ?? 10,
   });
 
+  // 防重复调用追踪器
+  const loadingMenusRef = useRef(new Set<string>());
+  const loadingDeptsRef = useRef(new Set<string>());
+
+  // 使用 useCallback 包装的 loadRoleMenus - 稳定引用 + 防重复调用
+  const loadRoleMenus = useCallback(async (roleId: string) => {
+    // 参数验证
+    if (!roleId || roleId === 'undefined' || roleId === 'null') {
+      console.warn('[loadRoleMenus] 无效的 roleId:', roleId);
+      return [];
+    }
+
+    // 防重复调用检查
+    if (loadingMenusRef.current.has(roleId)) {
+      console.warn('[loadRoleMenus] 正在加载中，跳过重复请求:', roleId);
+      return [];
+    }
+
+    loadingMenusRef.current.add(roleId);
+    console.log('[loadRoleMenus] 开始加载角色菜单权限:', roleId);
+
+    try {
+      const result = await post(`/system/menus/role-menu-tree-select/${roleId}`) as { data: { checkedKeys: string[] } };
+      const checkedKeys = result.data.checkedKeys || [];
+      console.log('[loadRoleMenus] 加载完成，权限数量:', checkedKeys.length, 'roleId:', roleId);
+      return checkedKeys;
+    } catch (error) {
+      console.error('[loadRoleMenus] 加载失败:', error);
+      return [];
+    } finally {
+      loadingMenusRef.current.delete(roleId);
+    }
+  }, []); // 空依赖数组，保证函数引用稳定
+
+  // 使用 useCallback 包装的 loadRoleDepts - 保持一致性
+  const loadRoleDepts = useCallback(async (roleId: string) => {
+    if (!roleId || roleId === 'undefined' || roleId === 'null') {
+      console.warn('[loadRoleDepts] 无效的 roleId:', roleId);
+      return [];
+    }
+
+    if (loadingDeptsRef.current.has(roleId)) {
+      console.warn('[loadRoleDepts] 正在加载中，跳过重复请求:', roleId);
+      return [];
+    }
+
+    loadingDeptsRef.current.add(roleId);
+    console.log('[loadRoleDepts] 开始加载角色部门权限:', roleId);
+
+    try {
+      const result = await post(`/system/departments/role-dept-tree-select/${roleId}`) as { data: { checkedKeys: string[] } };
+      const checkedKeys = result.data.checkedKeys || [];
+      console.log('[loadRoleDepts] 加载完成，权限数量:', checkedKeys.length, 'roleId:', roleId);
+      return checkedKeys;
+    } catch (error) {
+      console.error('[loadRoleDepts] 加载失败:', error);
+      return [];
+    } finally {
+      loadingDeptsRef.current.delete(roleId);
+    }
+  }, []);
+
   // 使用操作管理 Hook
   const {
     editingRole,
@@ -87,17 +149,14 @@ const RoleManagement: FC = () => {
   } = useRoleActions({
     loadRoles,
     loadStatistics,
-    loadRoleMenus: async (roleId: string) => {
-      const result = await post(`/system/menus/role-menu-tree-select/${roleId}`) as { data: { checkedKeys: string[] } };
-      return result.data.checkedKeys || [];
-    },
-    loadRoleDepts: async (roleId: string) => {
-      const result = await post(`/system/departments/role-dept-tree-select/${roleId}`) as { data: { checkedKeys: string[] } };
-      return result.data.checkedKeys || [];
-    },
+    loadRoleMenus,
+    loadRoleDepts,
     checkedMenuKeys,
     checkedDeptKeys,
+    setCheckedMenuKeys,
+    setCheckedDeptKeys,
     currentDataScope,
+    setCurrentDataScope,
   });
 
   // 初始化加载

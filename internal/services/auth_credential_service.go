@@ -4,19 +4,19 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
 	"gorm.io/gorm"
 )
 
 // AuthCredentialService 授权凭证服务
 type AuthCredentialService struct {
 	db        *gorm.DB
-	sm4Cipher *security.SM4Cipher // SM4 加密器
+	sm4Cipher *crypto.SM4Cipher // SM4 加密器
 }
 
 // NewAuthCredentialService 创建授权凭证服务
-func NewAuthCredentialService(db *gorm.DB, sm4Cipher *security.SM4Cipher) *AuthCredentialService {
+func NewAuthCredentialService(db *gorm.DB, sm4Cipher *crypto.SM4Cipher) *AuthCredentialService {
 	return &AuthCredentialService{
 		db:        db,
 		sm4Cipher: sm4Cipher,

@@ -60,7 +60,7 @@ const VDIServerConfig: React.FC = () => {
     form.resetFields();
     form.setFieldsValue({
       tenant_id: 1,
-      status: 0,
+      status: true, // Switch期望布尔值：true=启用(正常), false=停用
     });
     setModalVisible(true);
   };
@@ -74,7 +74,7 @@ const VDIServerConfig: React.FC = () => {
       endpoint: server.endpoint,
       username: server.username,
       tenant_id: server.tenant_id,
-      status: server.status,
+      status: server.status === 0, // 转换为布尔值：0=true(启用), 1=false(停用)
     });
     setModalVisible(true);
   };

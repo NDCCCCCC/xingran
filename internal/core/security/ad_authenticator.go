@@ -8,7 +8,8 @@ import (
 
 	"github.com/go-ldap/ldap/v3"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/ldaputils"
 	"gorm.io/gorm"
 )
 
@@ -19,6 +20,7 @@ type ADAuthenticator struct {
 	dbName      string       // 用于日志
 	configID    string       // 默认AD配置ID
 	userSyncer  UserSyncer   // 用户同步服务（可选，为nil时不同步）
+	sm4Cipher   *crypto.SM4Cipher // SM4加密器（用于解密AD管理员密码）
 }
 
 // NewADAuthenticator 创建AD认证器
@@ -32,6 +34,23 @@ func NewADAuthenticator(db *gorm.DB, configID string) *ADAuthenticator {
 // SetUserSyncer 设置用户同步服务
 func (a *ADAuthenticator) SetUserSyncer(syncer UserSyncer) {
 	a.userSyncer = syncer
+}
+
+// SetSM4Cipher 设置SM4加密器（用于解密AD管理员密码）
+func (a *ADAuthenticator) SetSM4Cipher(cipher *crypto.SM4Cipher) {
+	a.sm4Cipher = cipher
+}
+
+// decryptPassword 解密AD管理员密码
+func (a *ADAuthenticator) decryptPassword(encrypted string) string {
+	if a.sm4Cipher == nil {
+		return encrypted // 未设置加密器，返回原值
+	}
+	decrypted, err := a.sm4Cipher.Decrypt(encrypted)
+	if err != nil {
+		return encrypted // 解密失败，返回原值
+	}
+	return decrypted
 }
 
 // Authenticate 实现AD域控认证
@@ -61,7 +80,7 @@ func (a *ADAuthenticator) Authenticate(ctx context.Context, req *AuthRequest) (*
 	// 4. 用户绑定成功，现在需要搜索用户详细信息
 	// 需要使用管理员绑定来搜索（因为用户可能没有搜索权限）
 	// 先解密管理员密码
-	config.AdminPassword = addomain.DecryptPassword(config.AdminPassword)
+	config.AdminPassword = a.decryptPassword(config.AdminPassword)
 
 	adminConn, err := a.dialConnection(config, address)
 	if err != nil {
@@ -222,8 +241,12 @@ func (a *ADAuthenticator) searchUserInfo(conn *ldap.Conn, config *models.ADConfi
 
 	entry := sr.Entries[0]
 
+	// 提取用户OU DN
+	ouDN := ldaputils.ExtractOUDNFromUserDN(entry.DN)
+
 	return &ADUserInfo{
 		UserDN:      entry.DN,
+		OUDN:        ouDN,
 		Username:    username,
 		DisplayName: entry.GetAttributeValue("displayName"),
 		Email:       entry.GetAttributeValue("mail"),

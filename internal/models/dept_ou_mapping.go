@@ -12,10 +12,10 @@ import (
 type DeptOUMapping struct {
 	ID         string     `gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id"`
 	DeptID     string     `gorm:"type:uuid;not null;uniqueIndex:uni_dept_ou_mapping_dept,priority:0;index:idx_dept_ou_mapping_dept" json:"deptId"`
-	ADConfigID string     `gorm:"type:uuid;not null;uniqueIndex:uni_dept_ou_mapping_dept,priority:1;uniqueIndex:uni_dept_ou_mapping_ou,priority:0;index:idx_dept_ou_mapping_config" json:"adConfigId"`
-	OUDN       string     `gorm:"size:500;not null;uniqueIndex:uni_dept_ou_mapping_ou,priority:1;index:idx_dept_ou_mapping_dn" json:"ouDn"`
-	OUName     string     `gorm:"size:255;not null" json:"ouName"`
-	ParentOUDN *string    `gorm:"size:500" json:"parentOuDn,omitempty"`
+	ADConfigID string     `gorm:"type:uuid;not null;uniqueIndex:uni_dept_ou_mapping_dept,priority:1;index:idx_dept_ou_mapping_config" json:"adConfigId"`
+	OUDN       string     `gorm:"column:ou_dn;size:500;not null;index:idx_dept_ou_mapping_dn" json:"ouDn"`
+	OUName     string     `gorm:"column:ou_name;size:255;not null" json:"ouName"`
+	ParentOUDN *string    `gorm:"column:parent_ou_dn;size:500" json:"parentOuDn,omitempty"`
 	SyncEnabled bool      `gorm:"default:true" json:"syncEnabled"`
 	SyncStatus string     `gorm:"size:20;default:pending;index:idx_dept_ou_mapping_status" json:"syncStatus"` // pending/synced/failed
 	LastSyncAt *time.Time `json:"lastSyncAt,omitempty"`

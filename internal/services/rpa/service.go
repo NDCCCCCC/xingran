@@ -2,9 +2,9 @@ package rpa
 
 import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/websocket"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
 	"gorm.io/gorm"
 )
 
@@ -19,7 +19,7 @@ type ServiceGroup struct {
 }
 
 // NewServiceGroup 创建RPA服务组
-func NewServiceGroup(db *gorm.DB, cfg *config.Config, noticeHub *websocket.NoticeHub, cacheInstance cache.Cache, sm4 *security.SM4Cipher) *ServiceGroup {
+func NewServiceGroup(db *gorm.DB, cfg *config.Config, noticeHub *websocket.NoticeHub, cacheInstance cache.Cache, sm4 *crypto.SM4Cipher) *ServiceGroup {
 	executionService := NewExecutionService(db, noticeHub)
 	workerService := NewWorkerService(db, executionService, cfg.RPA.Storage.ScreenshotsDir)
 	credentialService := NewCredentialService(db, sm4, cacheInstance)

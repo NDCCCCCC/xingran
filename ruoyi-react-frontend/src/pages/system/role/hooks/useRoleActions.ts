@@ -3,7 +3,7 @@
  * 角色操作管理 Hook
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { message } from 'antd';
 import type { Role } from '@/types';
 import type { Key } from 'antd/es/table/interface';
@@ -17,7 +17,10 @@ export interface UseRoleActionsParams {
   loadRoleDepts: (roleId: string) => Promise<string[]>;
   checkedMenuKeys: Key[];
   checkedDeptKeys: Key[];
+  setCheckedMenuKeys: React.Dispatch<React.SetStateAction<Key[]>>;
+  setCheckedDeptKeys: React.Dispatch<React.SetStateAction<Key[]>>;
   currentDataScope: number;
+  setCurrentDataScope: React.Dispatch<React.SetStateAction<number>>;
 }
 
 export interface UseRoleActionsReturn {
@@ -49,13 +52,19 @@ export function useRoleActions(params: UseRoleActionsParams): UseRoleActionsRetu
     loadRoleDepts,
     checkedMenuKeys,
     checkedDeptKeys,
+    setCheckedMenuKeys,
+    setCheckedDeptKeys,
     currentDataScope,
+    setCurrentDataScope,
   } = params;
 
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [pendingFormData, setPendingFormData] = useState<Record<string, unknown> | null>(null);
   const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
+
+  // 使用 ref 存储待设置的表单数据，解决 React 批处理延迟问题
+  const pendingFormDataRef = useRef<Record<string, unknown> | null>(null);
 
   // 新增角色
   const handleAdd = useCallback(() => {
@@ -66,21 +75,38 @@ export function useRoleActions(params: UseRoleActionsParams): UseRoleActionsRetu
 
   // 编辑角色
   const handleEdit = useCallback(async (record: Role) => {
+    const callStack = new Error().stack;
+    console.log('[handleEdit] ========== 开始编辑角色 ==========');
+    console.log('[handleEdit] 角色ID:', record.id, '角色名:', record.roleName);
+    console.log('[handleEdit] 调用栈:', callStack?.split('\n').slice(2, 5).join('\n'));
     setEditingRole(record);
 
     // 加载角色的菜单和部门权限
+    console.log('[handleEdit] 开始并行加载菜单和部门权限...');
     const [menuIds, deptIds] = await Promise.all([
       loadRoleMenus(record.id),
       loadRoleDepts(record.id),
     ]);
 
+    console.log('[handleEdit] 权限加载完成 - menuIds:', menuIds.length, 'deptIds:', deptIds.length);
+
     // 保存待设置的表单数据
-    setPendingFormData({
+    const formData = {
       ...record,
       menuIds,
       deptIds,
-    });
+    };
+
+    // 同时更新 ref 和 state
+    // ref 更新是同步的，立即生效
+    // state 更新是异步的，用于触发重新渲染
+    pendingFormDataRef.current = formData;
+    setPendingFormData(formData);
+
     setEditModalVisible(true);
+    console.log('[handleEdit] 设置 editModalVisible = true');
+    console.log('[handleEdit] pendingFormDataRef.current 已设置，menuIds数量:', menuIds.length);
+    console.log('[handleEdit] ========== handleEdit 完成 ==========');
   }, [loadRoleMenus, loadRoleDepts]);
 
   // 删除角色
@@ -169,13 +195,39 @@ export function useRoleActions(params: UseRoleActionsParams): UseRoleActionsRetu
     }
   }, []);
 
-  // Modal 打开后的回调
+  // Modal 打开后的回调 - 使用 ref 读取，避免 React 批处理延迟问题
   const handleModalOpenChange = useCallback((open: boolean, editForm: FormInstance<unknown>) => {
-    if (open && pendingFormData) {
-      editForm.setFieldsValue(pendingFormData);
+    console.log('[handleModalOpenChange] 触发，open:', open);
+    console.log('[handleModalOpenChange] pendingFormDataRef.current:', pendingFormDataRef.current);
+    console.log('[handleModalOpenChange] pendingFormData (state):', pendingFormData);
+
+    if (open && pendingFormDataRef.current) {
+      const formData = pendingFormDataRef.current;
+
+      // 1. 设置表单值
+      editForm.setFieldsValue(formData);
+
+      // 2. 同步更新 Tree 组件的 checkedKeys 状态
+      const menuIds = Array.isArray(formData.menuIds) ? formData.menuIds : [];
+      const deptIds = Array.isArray(formData.deptIds) ? formData.deptIds : [];
+
+      setCheckedMenuKeys(menuIds);
+      setCheckedDeptKeys(deptIds);
+
+      // 3. 同时更新 dataScope
+      if (typeof formData.dataScope === 'number') {
+        setCurrentDataScope(formData.dataScope);
+      }
+
+      console.log('[handleModalOpenChange] Modal 打开，设置表单数据');
+      console.log('[handleModalOpenChange] menuIds:', menuIds.length, 'deptIds:', deptIds.length, 'dataScope:', formData.dataScope);
+    } else if (!open) {
+      // Modal 关闭时清理状态和 ref
+      pendingFormDataRef.current = null;
       setPendingFormData(null);
+      console.log('[handleModalOpenChange] Modal 关闭，清理 pendingFormData');
     }
-  }, [pendingFormData]);
+  }, [pendingFormData, setCheckedMenuKeys, setCheckedDeptKeys, setCurrentDataScope]);
 
   return {
     editingRole,

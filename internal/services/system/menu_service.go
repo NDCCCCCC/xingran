@@ -261,6 +261,44 @@ func (s *menuService) UpdateStatus(ctx context.Context, id string, status int) e
 
 // ==================== 私有辅助方法 ====================
 
+// appendAncestorMenuIDs 递归获取所有祖先菜单ID，确保子菜单能正确显示
+// 即使只有二级菜单权限，也会自动包含其一级父菜单
+func (s *menuService) appendAncestorMenuIDs(ctx context.Context, menuIDs []string) []string {
+	result := make(map[string]bool)
+	for _, id := range menuIDs {
+		result[id] = true
+	}
+
+	// 递归查找所有祖先菜单
+	for _, id := range menuIDs {
+		s.collectAncestors(ctx, id, result)
+	}
+
+	// 转换为切片
+	var ids []string
+	for id := range result {
+		ids = append(ids, id)
+	}
+	return ids
+}
+
+// collectAncestors 递归收集祖先菜单ID
+func (s *menuService) collectAncestors(ctx context.Context, menuID string, result map[string]bool) {
+	var menu models.Menu
+	if err := s.db.WithContext(ctx).Select("id, parent_id").Where("id = ?", menuID).First(&menu).Error; err != nil {
+		// 菜单不存在或已被删除，停止递归
+		return
+	}
+
+	// 如果有父菜单，递归收集
+	if menu.ParentID != nil && *menu.ParentID != "" {
+		if !result[*menu.ParentID] {
+			result[*menu.ParentID] = true
+			s.collectAncestors(ctx, *menu.ParentID, result)
+		}
+	}
+}
+
 // buildMenuTree 构建菜单树
 func (s *menuService) buildMenuTree(menus []models.Menu, parentID *string) []models.Menu {
 	var tree []models.Menu
@@ -356,6 +394,17 @@ func (s *menuService) GetUserMenus(ctx context.Context, userID string) ([]models
 		return nil, fmt.Errorf("查询菜单列表失败: %w", err)
 	}
 
+	// 【关键修复】自动包含所有祖先菜单，确保二级菜单能正确显示
+	menuIDs = s.appendAncestorMenuIDs(ctx, menuIDs)
+
+	// 重新获取包含祖先的菜单列表
+	if err := s.db.WithContext(ctx).
+		Where("id IN ? AND status = ? AND visible = ?", menuIDs, int(models.MenuStatusNormal), int(models.VisibleShow)).
+		Order("order_num ASC").
+		Find(&menus).Error; err != nil {
+		return nil, fmt.Errorf("查询菜单列表（含祖先）失败: %w", err)
+	}
+
 	// 构建树形结构
 	menuTree := s.buildMenuTree(menus, nil)
 	return menuTree, nil
@@ -395,13 +444,16 @@ func (s *menuService) GetAllUserMenus(ctx context.Context, userID string) ([]mod
 		menuIDs[i] = rm.MenuID
 	}
 
+	// 【关键修复】自动包含所有祖先菜单，确保二级菜单能正确显示
+	menuIDs = s.appendAncestorMenuIDs(ctx, menuIDs)
+
 	// 获取菜单详情（只获取启用状态的菜单，包含隐藏菜单）
 	var menus []models.Menu
 	if err := s.db.WithContext(ctx).
 		Where("id IN ? AND status = ?", menuIDs, int(models.MenuStatusNormal)).
 		Order("order_num ASC").
 		Find(&menus).Error; err != nil {
-		return nil, fmt.Errorf("查询菜单列表失败: %w", err)
+		return nil, fmt.Errorf("查询菜单列表（含祖先）失败: %w", err)
 	}
 
 	// 构建树形结构

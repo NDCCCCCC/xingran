@@ -172,6 +172,28 @@ func (r *RedisCache) DecrementBy(ctx context.Context, key string, value int64) (
 	return r.client.DecrBy(ctx, r.buildKey(key), value).Result()
 }
 
+// IncrementWithExpire 递增并在首次创建时设置过期时间（原子操作）
+// 使用 Lua 脚本确保 INCR 和 EXPIRE 要么全成功要么全失败，避免 key 永不过期的问题
+func (r *RedisCache) IncrementWithExpire(ctx context.Context, key string, expire time.Duration) (int64, error) {
+	// Lua 脚本：原子操作 INCR + EXPIRE
+	// 当 key 不存在时，INCR 返回 1，此时设置过期时间
+	// 当 key 已存在时，仅递增，不重置过期时间
+	script := redis.NewScript(`
+		local current = redis.call('INCR', KEYS[1])
+		if current == 1 then
+			redis.call('EXPIRE', KEYS[1], ARGV[1])
+		end
+		return current
+	`)
+
+	// expire 参数为秒数
+	result, err := script.Run(ctx, r.client, []string{r.buildKey(key)}, int64(expire.Seconds())).Result()
+	if err != nil {
+		return 0, fmt.Errorf("IncrementWithExpire failed: %w", err)
+	}
+	return result.(int64), nil
+}
+
 // Expire 设置过期时间
 func (r *RedisCache) Expire(ctx context.Context, key string, expiration time.Duration) error {
 	return r.client.Expire(ctx, r.buildKey(key), expiration).Err()

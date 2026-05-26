@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"encoding/json"
 	"net"
 	"strings"
 	"time"
@@ -45,35 +44,28 @@ func MultiAuth(apiKeyService system.APIKeyService, usageLogger services.UsageLog
 			return
 		}
 
-		// 验证 IP 白名单
-		if apiKey.IPWhitelist != "" && apiKey.IPWhitelist != "[]" {
-			var whitelist []string
-			if err := json.Unmarshal([]byte(apiKey.IPWhitelist), &whitelist); err == nil {
-				clientIP := c.ClientIP()
-				if !isIPAllowed(clientIP, whitelist) {
-					response.Error(c, response.ErrForbidden, "客户端IP不在白名单中")
-					c.Abort()
-					return
-				}
+		// 验证 IP 白名单（GORM已自动反序列化为[]string）
+		if len(apiKey.IPWhitelist) > 0 {
+			clientIP := c.ClientIP()
+			if !isIPAllowed(clientIP, apiKey.IPWhitelist) {
+				response.Error(c, response.ErrForbidden, "客户端IP不在白名单中")
+				c.Abort()
+				return
 			}
 		}
 
-		// 解析作用域
-		var scopes []string
-		if apiKey.Scopes != "" && apiKey.Scopes != "[]" {
-			if err := json.Unmarshal([]byte(apiKey.Scopes), &scopes); err != nil {
-				scopes = []string{}
-			}
-		}
-
-		// 设置用户上下文
-		setUserContextForAPIKey(c, apiKey, scopes)
+		// 设置用户上下文（GORM已自动反序列化Scopes为[]string）
+		setUserContextForAPIKey(c, apiKey, apiKey.Scopes)
 
 		// 异步记录使用日志
 		go func() {
+			userID := ""
+			if apiKey.UserID != nil {
+				userID = *apiKey.UserID
+			}
 			usageLogger.LogUsage(c.Request.Context(), &services.LogUsageRequest{
 				APIKeyID: apiKey.ID,
-				UserID:   *apiKey.UserID,
+				UserID:   userID,
 				Method:   c.Request.Method,
 				Path:     c.Request.URL.Path,
 				ClientIP: c.ClientIP(),

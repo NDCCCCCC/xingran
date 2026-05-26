@@ -44,7 +44,7 @@ func (r *MenuCreateRequest) ToModel() models.Menu {
 
 // MenuUpdateRequest 更新菜单请求
 type MenuUpdateRequest struct {
-	ID        string             `json:"id" binding:"required"`
+	ID        string             `json:"id"` // ID 从 URL 参数获取，不在请求体验证
 	MenuName  string             `json:"menuName" binding:"required"`
 	ParentID  *string            `json:"parentId"`
 	OrderNum  int                `json:"orderNum"`

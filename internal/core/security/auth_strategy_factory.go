@@ -94,19 +94,21 @@ func (f *AuthStrategyFactory) getADConfigID() (string, error) {
 	err := f.db.Where("config_key = ?", "sys.auth.ad.config_id").First(&config).Error
 
 	if err == nil {
-		return config.ConfigValue, nil
-	}
-
-	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		// 配置存在，检查值是否为空
+		if config.ConfigValue != "" {
+			return config.ConfigValue, nil
+		}
+		// 配置值为空，继续尝试查找可用配置
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
 		return "", err
 	}
 
-	// 2. sys_config中没有配置，尝试使用第一个启用的AD配置
+	// 2. sys_config中没有配置或配置值为空，尝试使用第一个启用的AD配置
 	var adConfig models.ADConfig
 	err = f.db.Where("status = 0").First(&adConfig).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return "", errors.New("没有找到可用的AD配置")
+			return "", errors.New("没有找到可用的AD配置，请在AD域管理中添加配置")
 		}
 		return "", err
 	}

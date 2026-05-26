@@ -8,7 +8,6 @@ import './TextCaptcha.css';
 
 const TextCaptcha: FC<CaptchaProps> = ({ value, onChange, onError }) => {
   const [captchaData, setCaptchaData] = useState<CaptchaResponse | null>(null);
-  const [inputValue, setInputValue] = useState(value || '');
   const [loading, setLoading] = useState(false);
 
   // 加载验证码
@@ -22,7 +21,6 @@ const TextCaptcha: FC<CaptchaProps> = ({ value, onChange, onError }) => {
       }
       if (data.captchaType === 'normal') {
         setCaptchaData(data);
-        setInputValue('');
         onChange?.('', data.captchaId);
       } else if (data.captchaType === 'slider') {
         // 如果返回的是滑动验证码，通知父组件切换
@@ -37,13 +35,14 @@ const TextCaptcha: FC<CaptchaProps> = ({ value, onChange, onError }) => {
     }
   }, [onChange, onError]);
 
+  // 只在组件挂载时加载验证码
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     loadCaptcha();
-  }, [loadCaptcha]);
+  }, []);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
-    setInputValue(val);
     onChange?.(val, captchaData?.captchaId || '');
   };
 
@@ -52,7 +51,7 @@ const TextCaptcha: FC<CaptchaProps> = ({ value, onChange, onError }) => {
       <div className="captcha-input-wrapper">
         <input
           type="text"
-          value={inputValue}
+          value={value || ''}
           onChange={handleChange}
           placeholder="请输入验证码"
           className="captcha-input"

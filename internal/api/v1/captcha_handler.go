@@ -4,6 +4,7 @@ package v1
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
@@ -45,12 +46,14 @@ func getCaptcha(core *core.Core) gin.HandlerFunc {
 		// 生成验证码
 		captchaResp, err := core.CaptchaService.GenerateCaptcha(c.Request.Context(), clientIP)
 		if err != nil {
+			applogger.Warnf("获取验证码失败: %v, clientIP: %s", err, clientIP)
 			response.Error(c, response.ErrBadRequest, err.Error())
 			return
 		}
 
 		// 如果验证码未启用，返回空数据
 		if captchaResp == nil {
+			applogger.Infof("验证码未启用, clientIP: %s", clientIP)
 			response.Success(c, gin.H{})
 			return
 		}

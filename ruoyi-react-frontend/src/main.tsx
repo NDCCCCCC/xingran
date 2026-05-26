@@ -12,7 +12,6 @@ async function initializeApp(): Promise<void> {
   try {
     // 初始化加密配置（从后端动态获取）
     await initEncryptionConfig();
-    console.log('[App] 应用初始化完成');
   } catch (error) {
     console.error('[App] 应用初始化失败:', error);
     // 即使初始化失败也继续启动应用（使用默认配置）

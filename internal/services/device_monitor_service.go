@@ -7,12 +7,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/lldp"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/portcollection"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/topology"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"golang.org/x/sync/semaphore"
 	"gorm.io/gorm"
@@ -47,7 +47,7 @@ func DefaultDeviceMonitorConfig() *DeviceMonitorConfig {
 }
 
 // NewDeviceMonitorService 创建设备监控服务
-func NewDeviceMonitorService(db *gorm.DB, sm4Cipher *security.SM4Cipher, config *DeviceMonitorConfig) *DeviceMonitorService {
+func NewDeviceMonitorService(db *gorm.DB, sm4Cipher *crypto.SM4Cipher, config *DeviceMonitorConfig) *DeviceMonitorService {
 	if config == nil {
 		config = DefaultDeviceMonitorConfig()
 	}

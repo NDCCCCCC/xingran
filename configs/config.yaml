@@ -3,16 +3,16 @@ server:
   name: "RuoYi-Next"
   host: "0.0.0.0"
   port: 9000
-  mode: "debug"  # debug, release, test
+  mode: release  # debug, release, test
 
 # 数据库配置 - PostgreSQL
 # 环境变量: DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
 database:
-  host: "${DB_HOST}"
-  port: "${DB_PORT:-5432}"
-  user: "${DB_USER}"
-  password: "${DB_PASSWORD}"
-  dbname: "${DB_NAME}"
+  host: "10.62.10.34"
+  port: 5432
+  user: "postgres"
+  password: "Cpic1234"
+  dbname: "ruoyi"
   sslmode: "disable"
   max_open_conns: 10
   max_idle_conns: 5
@@ -68,6 +68,7 @@ log:
 # 安全配置
 security:
   # SM4 加密密钥（16字节，Base64编码）
+  # 用于：设备密码、AD管理员密码、RPA凭证等所有敏感数据加密
   # 默认值: dGVzdC1zZWNyZXQxNiEhIQ== 解码后为 "test-secret16!!!" (16字节)
   # 生产环境请使用: export SM4_KEY="$(openssl rand -base64 16)"
   sm4_key: "dGVzdC1zZWNyZXQxNiEhIQ=="
@@ -76,17 +77,11 @@ security:
     enabled: true  # 是否启用请求体加密
     # 排除的路径（支持通配符）
     exclude_paths:
-      # Critical paths (circular dependencies)
       - "/api/v1/system/auth/public-key"  # 公钥接口必须排除
-      - "/api/v1/system/auth/encryption-config"  # 加密配置接口必须排除
       - "/api/v1/system/auth/test-sm2"   # SM2 测试接口
       # 登录接口已移除 - 启用请求体加密 (Phase 18)
-
-      # File operations
       - "/api/v1/upload/*"                # 文件上传
       - "/api/v1/captcha/*"               # 验证码
-
-      # RPA endpoints
       - "/api/v1/rpa/workers/register"   # RPA Worker 注册
       - "/api/v1/rpa/workers/*/heartbeat"  # RPA Worker 心跳
       - "/api/v1/rpa/workers/progress"  # RPA Worker 进度上报
@@ -96,23 +91,26 @@ security:
     enabled: false  # 是否启用响应加密（默认禁用，向后兼容）
     # 排除的路径（支持通配符，与请求加密共享排除列表）
     exclude_paths:
-      # Critical paths (circular dependencies)
       - "/api/v1/system/auth/public-key"  # 公钥接口必须排除
-      - "/api/v1/system/auth/encryption-config"  # 加密配置接口必须排除
       - "/api/v1/system/auth/test-sm2"   # SM2 测试接口
       # 登录接口已移除 - 启用响应体加密 (Phase 18)
-
-      # File operations
       - "/api/v1/upload/*"                # 文件上传
       - "/api/v1/captcha/*"               # 验证码
-
-      # RPA endpoints
       - "/api/v1/rpa/workers/register"   # RPA Worker 注册
       - "/api/v1/rpa/workers/*/heartbeat"  # RPA Worker 心跳
       - "/api/v1/rpa/workers/progress"  # RPA Worker 进度上报
     # 注意：响应加密与请求加密使用相同的数据库配置键 (sys.request.encryption.enabled)
     # 中间件会从数据库动态读取配置，此处的 enabled 仅用于初始化检查
     # 实际开关由参数管理中的 "sys.request.encryption.enabled" 控制
+
+# AD组同步配置
+ad_group_sync:
+  enabled: false              # 是否启用组同步
+  cron: "0 */15 * * * *"     # 同步Cron表达式（默认15分钟）
+  member_ou: ""               # MemberOU路径（空=使用配置中的OU）
+  auto_create_groups: true    # 是否自动创建组
+  max_concurrent_syncs: 5     # 最大并发同步数
+  sync_batch_size: 100        # 批量同步大小
 
 # 百度地图配置
 # 环境变量: BAIDU_MAP_AK
@@ -179,3 +177,8 @@ rpa:
     downloads_dir: "./uploads/rpa/downloads"
     screenshots_dir: "./uploads/rpa/screenshots"
     max_retained_days: 7
+
+# VDI 配置已迁移到参数管理页面（sys_config表）
+# 请通过参数管理界面配置VDI服务器信息
+# 配置键格式：vdi.server.{index}.{field} (如: vdi.server.0.endpoint)
+

@@ -22,9 +22,17 @@ const Header: FC = () => {
   // WebSocket 连接成功后会自动获取未读数量
   useWebSocket();
 
-  const handleLogout = () => {
-    logout();
-    window.location.href = '/login';
+  const handleLogout = async () => {
+    try {
+      await logout();
+      // 等待 React 状态更新完成
+      await new Promise(resolve => setTimeout(resolve, 0));
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('登出失败:', error);
+      // 即使登出失败，也跳转到登录页
+      window.location.href = '/login';
+    }
   };
 
   const userMenuItems: MenuProps['items'] = [

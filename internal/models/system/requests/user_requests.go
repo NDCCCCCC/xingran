@@ -82,7 +82,7 @@ func (r *UserCreateRequest) ToModel(hashedPassword string) models.User {
 
 // UserUpdateRequest 更新用户请求
 type UserUpdateRequest struct {
-	ID         string            `json:"id" binding:"required"`
+	ID         string            `json:"id"` // ID 从 URL 参数获取，不在请求体验证
 	Nickname   *string           `json:"nickname"`
 	EmployeeNo *string           `json:"employeeNo"`
 	Email      *string           `json:"email"`

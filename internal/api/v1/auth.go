@@ -8,9 +8,11 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
@@ -58,6 +60,9 @@ func SetupAuthRouter(r *gin.RouterGroup, core *core.Core) {
 
 	// GET /api/v1/system/auth/config - 获取认证配置（公开接口，用于登录页面）
 	r.GET("/config", getAuthConfig(core))
+
+	// GET /api/v1/system/auth/encryption-config - 获取加密配置（公开接口，无需认证）
+	r.GET("/encryption-config", getEncryptionConfig(core))
 
 	// POST /api/v1/system/auth/login - 用户登录
 	r.POST("/login", login(core))
@@ -205,6 +210,18 @@ func login(core *core.Core) gin.HandlerFunc {
 		// 7. 登录成功后处理
 		core.CaptchaService.ClearLoginFailure(ctx, req.Username)
 		recordLoginLog(c, core, req.Username, 0, "登录成功")
+
+		// AD登录成功后处理用户OU映射
+		if authResult.AuthSource == "ad" && authResult.ADUserInfo != nil {
+			mapper := addomain.NewDeptOUmapper(core.GetDB())
+			userOUService := addomain.NewUserOUService(core.GetDB(), mapper)
+
+			if authResult.ADUserInfo.OUDN != "" {
+				if err := userOUService.HandleUserLoginAD(ctx, req.Username, authResult.ADUserInfo.UserDN, authResult.ADUserInfo.OUDN); err != nil {
+					applogger.Warnf("处理用户OU失败（不影响登录）: %v", err)
+				}
+			}
+		}
 
 		// 8. 查询用户角色
 		var userRoles []models.UserRole
@@ -487,6 +504,26 @@ func getPublicKey(core *core.Core) gin.HandlerFunc {
 
 		response.Success(c, gin.H{
 			"publicKey": publicKey,
+		})
+	}
+}
+
+// getEncryptionConfig 获取加密配置（公共端点，无需认证）
+// @Summary 获取加密配置
+// @Description 获取当前请求体加密的开关状态（公共端点，无需认证）
+// @Tags 认证
+// @Accept json
+// @Produce json
+// @Success 200 {object} response.Response{data=map[string]interface{}}
+// @Router /system/auth/encryption-config [get]
+func getEncryptionConfig(core *core.Core) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// 直接读取中间件缓存（30秒TTL）
+		enabled := middleware.GetEncryptionConfigFromCache()
+
+		response.Success(c, gin.H{
+			"enabled": enabled,
+			"source":  "cache",
 		})
 	}
 }

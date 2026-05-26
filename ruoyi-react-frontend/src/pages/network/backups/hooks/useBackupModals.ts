@@ -106,7 +106,7 @@ export function useBackupModals(
   // 创建备份
   const handleBackup = useCallback(async (form: FormInstance<unknown>) => {
     try {
-      const values = await form.validateFields();
+      const values = await form.validateFields() as Record<string, unknown>;
       // 调用批量备份端点，添加 backupType 字段
       await post('/network/backups/batch', {
         deviceIds: values.deviceIds,

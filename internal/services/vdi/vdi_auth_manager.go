@@ -3,12 +3,13 @@ package vdi
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"gorm.io/gorm"
 )
@@ -17,42 +18,48 @@ import (
 type VDIAuthManager struct {
 	db         *gorm.DB
 	httpClient *http.Client
-	config     config.VDIServerConfig
+	server     models.VDIServer
 	serverID   string // VDI服务器ID
 }
 
-// NewVDIAuthManager 创建VDI认证管理器
-func NewVDIAuthManager(db *gorm.DB, serverID string, cfg config.VDIServerConfig) *VDIAuthManager {
+// NewVDIAuthManager 创建VDI认证管理器（从数据库模型）
+func NewVDIAuthManager(db *gorm.DB, serverID string, server models.VDIServer) *VDIAuthManager {
 	return &VDIAuthManager{
 		db:         db,
-		httpClient: &http.Client{Timeout: 30 * time.Second},
-		config:     cfg,
-		serverID:   serverID,
+		httpClient: &http.Client{
+			Timeout: 30 * time.Second,
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: true, // 跳过TLS证书验证（VDI服务器使用自签名证书）
+				},
+			},
+		},
+		server:   server,
+		serverID: serverID,
 	}
 }
 
 // Authenticate 认证并获取token
 func (a *VDIAuthManager) Authenticate(ctx context.Context) (string, error) {
 	// 1. 检查缓存的token是否有效
-	var server models.VDIServer
-	err := a.db.WithContext(ctx).Where("id = ?", a.serverID).First(&server).Error
-	if err != nil {
-		return "", fmt.Errorf("failed to query VDI server: %w", err)
-	}
-	if server.AuthToken != "" && !a.isTokenExpired(server.TokenExpiry) {
-		return server.AuthToken, nil
+	if a.server.AuthToken != "" && !a.isTokenExpired(a.server.TokenExpiry) {
+		fmt.Printf("[VDI AUTH DEBUG] Using cached token, length: %d, expiry: %v\n", len(a.server.AuthToken), a.server.TokenExpiry)
+		return a.server.AuthToken, nil
 	}
 
+	fmt.Printf("[VDI AUTH DEBUG] No valid cached token, requesting new token\n")
+	fmt.Printf("[VDI AUTH DEBUG] Username: %s\n", a.server.Username)
+
 	// 2. 从数据库解密密码
-	password := decryptVDIPassword(server.PasswordEncrypted)
+	password := decryptVDIPassword(a.server.PasswordEncrypted)
 	if password == "" {
 		return "", fmt.Errorf("failed to decrypt VDI server password")
 	}
 
-	// 3. 调用VDI API认证
+	// 3. 调用VDI API认证（使用数据库中的服务器配置）
 	req := map[string]interface{}{
 		"auth": map[string]string{
-			"name":     a.config.Username,
+			"name":     a.server.Username,
 			"password": password,
 		},
 	}
@@ -60,29 +67,33 @@ func (a *VDIAuthManager) Authenticate(ctx context.Context) (string, error) {
 	var resp struct {
 		ErrorCode    int    `json:"error_code"`
 		ErrorMessage string `json:"error_message"`
-		Data         struct {
-			Token struct {
-				TenantID  int    `json:"tenant_id"`
-				AuthToken string `json:"auth_token"`
-			} `json:"token"`
-		} `json:"data"`
+		Token        struct {
+			TenantID  int    `json:"tenant_id"`
+			AuthToken string `json:"auth_token"`
+		} `json:"token"`
 	}
 
-	if err := a.callAPI(ctx, "/v1/auth/tokens", req, &resp); err != nil {
+	if err := a.callAPIWithEndpoint(ctx, a.server.Endpoint, "/v1/auth/tokens", req, &resp); err != nil {
 		return "", fmt.Errorf("authentication failed: %w", err)
 	}
 
+	fmt.Printf("[VDI AUTH DEBUG] Auth response - ErrorCode: %d, ErrorMessage: %s\n", resp.ErrorCode, resp.ErrorMessage)
 	if resp.ErrorCode != 0 {
 		return "", &VDIError{Code: resp.ErrorCode, Message: resp.ErrorMessage}
 	}
 
 	// 4. 缓存token到数据库
-	token := resp.Data.Token.AuthToken
+	token := resp.Token.AuthToken
 	expiry := time.Now().Add(23 * time.Hour) // 提前1小时过期
+	fmt.Printf("[VDI AUTH DEBUG] New token received, length: %d, tenant_id: %d\n", len(token), resp.Token.TenantID)
 
 	if err := a.cacheToken(ctx, token, expiry); err != nil {
 		return "", fmt.Errorf("failed to cache token: %w", err)
 	}
+
+	// 更新内存中的服务器信息
+	a.server.AuthToken = token
+	a.server.TokenExpiry = &expiry
 
 	return token, nil
 }
@@ -94,6 +105,7 @@ func (a *VDIAuthManager) RefreshToken(ctx context.Context) (string, error) {
 
 // IsTokenExpired 检查token是否过期
 func (a *VDIAuthManager) IsTokenExpired(ctx context.Context) bool {
+	// 重新从数据库读取最新的token信息
 	var server models.VDIServer
 	err := a.db.WithContext(ctx).Where("id = ?", a.serverID).First(&server).Error
 	if err != nil {
@@ -124,7 +136,19 @@ func (a *VDIAuthManager) cacheToken(ctx context.Context, token string, expiry ti
 
 // callAPI 调用VDI API
 func (a *VDIAuthManager) callAPI(ctx context.Context, path string, body, result interface{}) error {
-	url := fmt.Sprintf("%s%s", a.config.Endpoint, path)
+	return a.callAPIWithEndpoint(ctx, a.server.Endpoint, path, body, result)
+}
+
+// ClearTokenCache 清除 token 缓存（用于处理 token 失效的情况）
+func (a *VDIAuthManager) ClearTokenCache() {
+	fmt.Printf("[VDI AUTH DEBUG] Clearing token cache\n")
+	a.server.AuthToken = ""
+	a.server.TokenExpiry = nil
+}
+
+// callAPIWithEndpoint 使用指定端点调用VDI API
+func (a *VDIAuthManager) callAPIWithEndpoint(ctx context.Context, endpoint, path string, body, result interface{}) error {
+	url := fmt.Sprintf("%s%s", endpoint, path)
 
 	jsonBody, err := json.Marshal(body)
 	if err != nil {
@@ -149,11 +173,22 @@ func (a *VDIAuthManager) callAPI(ctx context.Context, path string, body, result 
 		}
 		defer resp.Body.Close()
 
-		if resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		// 读取原始响应体
+		rawBody, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("failed to read response body: %w", err)
 		}
 
-		return json.NewDecoder(resp.Body).Decode(result)
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("unexpected status code: %d, response: %s", resp.StatusCode, string(rawBody))
+		}
+
+		// 解析JSON响应
+		if err := json.Unmarshal(rawBody, result); err != nil {
+			return fmt.Errorf("failed to decode JSON: %w, raw response: %s", err, string(rawBody))
+		}
+
+		return nil
 	}
 
 	return fmt.Errorf("HTTP request failed after retries: %w", lastErr)

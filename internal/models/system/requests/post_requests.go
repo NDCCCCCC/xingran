@@ -55,7 +55,7 @@ type PostCreateRequest struct {
 
 // PostUpdateRequest 更新岗位请求
 type PostUpdateRequest struct {
-	ID       string            `json:"id" binding:"required"`
+	ID       string            `json:"id"` // ID 从 URL 参数获取，不在请求体验证
 	PostName string            `json:"postName" binding:"required"`
 	PostSort int               `json:"postSort"`
 	Status   models.PostStatus `json:"status"`
