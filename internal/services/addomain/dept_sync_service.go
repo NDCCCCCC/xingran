@@ -10,6 +10,27 @@ import (
 	"gorm.io/gorm"
 )
 
+// DeptSyncError 部门同步错误信息
+type DeptSyncError struct {
+	DeptID   string `json:"deptId"`
+	DeptName string `json:"deptName"`
+	Error    string `json:"error"`
+}
+
+// DeptSyncResult 部门同步结果
+type DeptSyncResult struct {
+	ADConfigID  string          `json:"adConfigId"`
+	Status      string          `json:"status"` // running, completed, failed
+	StartTime   time.Time       `json:"startTime"`
+	EndTime     time.Time       `json:"endTime"`
+	Duration    time.Duration   `json:"duration"`
+	TotalDepts  int             `json:"totalDepts"`
+	SuccessDepts int            `json:"successDepts"`
+	FailedDepts int             `json:"failedDepts"`
+	SkippedDepts int            `json:"skippedDepts"`
+	Errors      []DeptSyncError `json:"errors,omitempty"`
+}
+
 type DeptToADSyncService struct {
 	db     *gorm.DB
 	ldap   *LDAPClient
