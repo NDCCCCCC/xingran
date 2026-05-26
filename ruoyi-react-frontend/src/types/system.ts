@@ -21,7 +21,7 @@ export interface User {
   status: Status;
   deptId?: string;
   deptName?: string;
-  deptPath?: string; // 完整部门路径（从二级开始）
+  deptFullName?: string; // 完整部门路径（从二级开始）
   roles: string[];
   roleIds?: string[];
   permissions: string[];

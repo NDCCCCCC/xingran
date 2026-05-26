@@ -126,7 +126,7 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
       width: 200,
       minWidth: 150,
       ellipsis: true,
-      render: (_, record) => record.deptPath || record.deptName || '-',
+      render: (_, record) => record.deptFullName || record.deptName || '-',
     },
     {
       title: '角色',

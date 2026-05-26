@@ -332,14 +332,23 @@ func (s *userService) List(ctx context.Context, params requests.UserListParams) 
 		return nil, apperrors.DatabaseError(err)
 	}
 
-	// 分页查询
+	// 分页查询 - 使用 SQL JOIN 获取部门信息
 	offset := (params.Current - 1) * params.PageSize
-	if err := query.Preload("Dept").
-		Order("created_at DESC").
+
+	// 定义 SQL JOIN 查询
+	userJoinSelect := "sys_user.*, sys_dept.dept_name, sys_dept.ancestors"
+	userJoinClause := "LEFT JOIN sys_dept ON sys_dept.id::text = sys_user.dept_id"
+
+	if err := query.Select(userJoinSelect).
+		Joins(userJoinClause).
+		Order("sys_user.created_at DESC").
 		Offset(offset).Limit(params.PageSize).
 		Find(&list).Error; err != nil {
 		return nil, apperrors.DatabaseError(err)
 	}
+
+	// 构建完整部门路径并填充部门信息
+	s.buildDepartmentPaths(ctx, list)
 
 	// 填充用户角色信息
 	userIDs := make([]string, len(list))
@@ -424,7 +433,12 @@ func (s *userService) buildDepartmentPaths(ctx context.Context, list []models.Us
 
 	// 批量查询这些部门的ancestors信息
 	var depts []models.Department
-	s.db.WithContext(ctx).Select("id", "dept_name", "ancestors").Where("id IN ?", uniqueDeptIDs).Find(&depts)
+	// 提取map的keys为切片
+	deptIDList := make([]string, 0, len(uniqueDeptIDs))
+	for id := range uniqueDeptIDs {
+		deptIDList = append(deptIDList, id)
+	}
+	s.db.WithContext(ctx).Select("id", "dept_name", "ancestors").Where("id IN ?", deptIDList).Find(&depts)
 
 	// 构建部门ID到部门信息的映射
 	deptMap := make(map[string]*models.Department)
@@ -446,7 +460,12 @@ func (s *userService) buildDepartmentPaths(ctx context.Context, list []models.Us
 	// 查询所有祖先部门
 	var ancestorDepts []models.Department
 	if len(allAncestorIDs) > 0 {
-		s.db.WithContext(ctx).Select("id", "dept_name").Where("id IN ?", allAncestorIDs).Find(&ancestorDepts)
+		// 提取map的keys为切片
+		ancestorIDList := make([]string, 0, len(allAncestorIDs))
+		for id := range allAncestorIDs {
+			ancestorIDList = append(ancestorIDList, id)
+		}
+		s.db.WithContext(ctx).Select("id", "dept_name").Where("id IN ?", ancestorIDList).Find(&ancestorDepts)
 	}
 
 	// 构建祖先部门ID到名称的映射
@@ -492,7 +511,7 @@ func (s *userService) buildDepartmentPaths(ctx context.Context, list []models.Us
 					}
 					path += part
 				}
-				list[i].DeptPath = &path
+				list[i].DeptFullName = &path
 			}
 		}
 	}
