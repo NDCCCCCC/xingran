@@ -2,7 +2,6 @@ package system
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
@@ -460,17 +459,12 @@ func (s *userService) buildDepartmentPaths(ctx context.Context, list []models.Us
 		}
 
 		ancestors := splitAncestors(*user.DeptAncestors)
-		pathParts := make([]string, 0, len(ancestors))
+		pathParts := make([]string, 0, len(ancestors)+1)
 
-		// 添加祖先部门名称（从二级开始，跳过顶级）
-		for j, ancestorID := range ancestors {
-			if j > 0 { // 跳过第一个（顶级）部门
-				if name, exists := ancestorDeptMap[ancestorID]; exists {
-					pathParts = append(pathParts, name)
-				} else {
-					// 调试：记录缺失的祖先部门
-					fmt.Printf("[DEBUG] User %s: ancestor ID %s not found in map\n", user.Username, ancestorID)
-				}
+		// 添加所有祖先部门名称（不跳过任何层级）
+		for _, ancestorID := range ancestors {
+			if name, exists := ancestorDeptMap[ancestorID]; exists {
+				pathParts = append(pathParts, name)
 			}
 		}
 
