@@ -136,12 +136,12 @@ func (s *memberSyncService) SyncDeptMembers(ctx context.Context, deptID string) 
 
 	for _, user := range users {
 		// 跳过没有AD账号的用户
-		if user.ADDN == nil || *user.ADDN == "" {
+		if user.AdDn == nil || *user.AdDn == "" {
 			result.SkippedCount++
 			continue
 		}
 
-		userDN := *user.ADDN
+		userDN := *user.AdDn
 		targetMembers[userDN] = true
 
 		// 如果用户不在组中，添加
@@ -248,12 +248,12 @@ func (s *memberSyncService) HandleDeptChange(ctx context.Context, userID, oldDep
 		return fmt.Errorf("用户不存在")
 	}
 
-	if user.ADDN == nil || *user.ADDN == "" {
+	if user.AdDn == nil || *user.AdDn == "" {
 		applogger.Infof("[成员同步] 用户无AD账号，跳过: %s", user.Username)
 		return nil
 	}
 
-	userDN := *user.ADDN
+	userDN := *user.AdDn
 
 	// 2. 从旧部门组中移除
 	if oldDeptID != "" && oldDeptID != newDeptID {
@@ -299,7 +299,7 @@ func (s *memberSyncService) EnsureExclusiveMembership(ctx context.Context, confi
 	var users []struct {
 		UserID string
 		DeptID *string
-		ADDN   *string
+		AdDn   *string
 	}
 
 	err := s.db.WithContext(ctx).
@@ -368,7 +368,7 @@ func (s *memberSyncService) EnsureExclusiveMembership(ctx context.Context, confi
 			// 查找用户所属部门
 			userDeptID := ""
 			for _, u := range users {
-				if u.ADDN != nil && *u.ADDN == userDN && u.DeptID != nil {
+				if u.AdDn != nil && *u.AdDn == userDN && u.DeptID != nil {
 					userDeptID = *u.DeptID
 					break
 				}

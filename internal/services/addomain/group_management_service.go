@@ -208,8 +208,8 @@ func (s *groupManagementService) AddMembers(ctx context.Context, groupID string,
 	// 4. 批量添加成员
 	userDNs := make([]string, 0, len(users))
 	for _, user := range users {
-		if user.ADDN != nil {
-			userDNs = append(userDNs, *user.ADDN)
+		if user.AdDn != nil {
+			userDNs = append(userDNs, *user.AdDn)
 		}
 	}
 
@@ -266,8 +266,8 @@ func (s *groupManagementService) RemoveMembers(ctx context.Context, groupID stri
 	// 4. 批量移除成员
 	userDNs := make([]string, 0, len(users))
 	for _, user := range users {
-		if user.ADDN != nil {
-			userDNs = append(userDNs, *user.ADDN)
+		if user.AdDn != nil {
+			userDNs = append(userDNs, *user.AdDn)
 		}
 	}
 

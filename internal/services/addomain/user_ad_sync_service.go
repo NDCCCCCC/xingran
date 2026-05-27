@@ -37,7 +37,7 @@ func (s *UserADSyncService) SyncUserUpdateToAD(ctx context.Context, userID strin
 	}
 
 	// 如果用户没有AD DN，跳过同步
-	if user.ADDN == nil || *user.ADDN == "" {
+	if user.AdDn == nil || *user.AdDn == "" {
 		applogger.Infof("用户 %s 无AD DN，跳过AD同步", user.Username)
 		return nil
 	}
@@ -99,12 +99,12 @@ func (s *UserADSyncService) moveUserToNewOU(ctx context.Context, ldapClient *LDA
 		return err
 	}
 
-	if user.ADDN == nil || *user.ADDN == "" {
+	if user.AdDn == nil || *user.AdDn == "" {
 		return fmt.Errorf("用户无AD DN，无法移动")
 	}
 
 	// 3. 移动用户到新OU
-	if err := ldapClient.MoveUser(*user.ADDN, ouDN); err != nil {
+	if err := ldapClient.MoveUser(*user.AdDn, ouDN); err != nil {
 		return fmt.Errorf("移动用户到新OU失败: %w", err)
 	}
 
@@ -159,7 +159,7 @@ func (s *UserADSyncService) syncUserAttributes(ctx context.Context, ldapClient *
 	}
 
 	// 更新AD属性
-	if err := ldapClient.UpdateUserAttribute(*user.ADDN, attributes); err != nil {
+	if err := ldapClient.UpdateUserAttribute(*user.AdDn, attributes); err != nil {
 		return fmt.Errorf("更新AD用户属性失败: %w", err)
 	}
 
@@ -239,11 +239,11 @@ func (s *UserADSyncService) moveSingleUserToOU(ctx context.Context, ldapClient *
 		return fmt.Errorf("查询用户失败: %w", err)
 	}
 
-	if user.ADDN == nil || *user.ADDN == "" {
+	if user.AdDn == nil || *user.AdDn == "" {
 		return fmt.Errorf("用户 %s 无AD DN，跳过移动", user.Username)
 	}
 
-	if err := ldapClient.MoveUser(*user.ADDN, ouDN); err != nil {
+	if err := ldapClient.MoveUser(*user.AdDn, ouDN); err != nil {
 		return fmt.Errorf("LDAP移动失败: %w", err)
 	}
 

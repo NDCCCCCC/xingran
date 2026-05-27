@@ -81,7 +81,7 @@ func (s *UserSyncService) createNewUser(tx *gorm.DB, user *models.User, adUser *
 	user.Status = models.UserStatusEnabled
 	user.AuthSource = "ad"
 	user.ADUsername = &adUsername
-	user.ADDN = &adDN
+	user.AdDn = &adDN
 	user.InitFlag = true    // 标记为初始密码，需要修改
 	user.PwdExpireDays = 90
 
