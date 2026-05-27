@@ -42,6 +42,7 @@ export interface DepartmentTreeSelectProps extends Omit<TreeSelectProps, 'treeDa
 
 /**
  * 将部门数据转换为 TreeSelect 需要的格式
+ * 从二级部门开始显示完整路径（跳过顶级部门）
  * @param departments 部门数据
  * @param parentPath 父级路径（用于构建完整路径显示）
  */
@@ -51,12 +52,22 @@ function convertDeptTreeData(departments: Department[], parentPath: string[] = [
   }
   const convertNodes = (nodes: Department[], currentPath: string[]): TreeNode[] => {
     return nodes.map(node => {
-      const nodePath = [...currentPath, node.deptName];
+      // 构建显示路径：从二级部门开始（跳过顶级）
+      let displayPath: string;
+      if (currentPath.length === 0) {
+        // 顶级部门，直接显示名称
+        displayPath = node.deptName;
+      } else {
+        // 从二级开始显示完整路径
+        const pathFromSecondLevel = [...currentPath.slice(1), node.deptName];
+        displayPath = pathFromSecondLevel.join(' / ');
+      }
+
       return {
-        title: nodePath.join(' / '),
+        title: displayPath,
         value: node.id,
         key: node.id,
-        children: node.children && node.children.length > 0 ? convertNodes(node.children, nodePath) : undefined,
+        children: node.children && node.children.length > 0 ? convertNodes(node.children, [...currentPath, node.deptName]) : undefined,
       };
     });
   };

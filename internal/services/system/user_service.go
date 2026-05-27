@@ -451,6 +451,10 @@ func (s *userService) buildDepartmentPaths(ctx context.Context, list []models.Us
 
 		// 检查是否有部门路径信息
 		if user.DeptID == nil || user.DeptAncestors == nil || *user.DeptAncestors == "" {
+			// 如果没有 ancestors，至少显示当前部门名称
+			if user.DeptName != nil {
+				user.DeptFullName = user.DeptName
+			}
 			continue
 		}
 
