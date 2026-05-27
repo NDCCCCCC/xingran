@@ -22,7 +22,7 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 	}
 
 	// 创建授权凭证服务
-	credentialService := services.NewAuthCredentialService(db, core.SM4Cipher)
+	credentialService := services.NewAuthCredentialService(db, nil)
 
 	// 创建网络设备服务（带缓存）
 	deviceService := networkServices.NewServiceWithCache(

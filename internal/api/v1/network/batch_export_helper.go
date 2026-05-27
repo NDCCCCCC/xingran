@@ -188,7 +188,7 @@ func (h *NetworkExportHandler) generateEntityExcel(entityType string, req Export
 		sheet = "授权凭证"
 		headers = []string{"凭证名称", "协议类型", "用户名", "SNMP版本", "是否默认", "描述", "创建时间"}
 
-		svc := services.NewAuthCredentialService(db, h.core.SM4Cipher)
+		svc := services.NewAuthCredentialService(db, nil)
 		credReq := h.buildCredentialListRequest(req.Filters, current, pageSize)
 		creds, _, err := svc.List(ctx, credReq)
 		if err != nil {

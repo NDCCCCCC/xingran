@@ -48,6 +48,7 @@ type Core struct {
 	JWTManager                  *security.JWTManager                  // JWT令牌管理器
 	PwdManager                  *security.PasswordManager             // 密码管理器
 	SM4Cipher                   addomain.PasswordCipher               // SM4加密器接口（用于AD域密码加密）
+	CryptoSM4Cipher             interface{}                           // 原始SM4加密器（用于设备连接池等）
 	MetricsCacheService         *MetricsCacheService                  // 系统指标缓存服务（被 monitor/adapters.go 使用）
 	Scheduler                   *scheduler.Scheduler                  // 定时任务调度器
 	DeviceExecutor              *device.DeviceExecutor                // 设备执行器（被 mac_handler.go, network_export_handler.go, port_handler.go 使用）
@@ -207,7 +208,7 @@ func (c *Core) Init() error {
 		MaxIdle:        5 * time.Minute,
 		MaxConnections: 20, // 降低并发连接数，减少 scrapligo panic 问题
 	}
-	connectionPool := device.NewDeviceConnectionPool(c.GetDB(), c.SM4Cipher, poolConfig)
+	connectionPool := device.NewDeviceConnectionPool(c.GetDB(), nil, poolConfig)
 	// 8.2 创建任务调度器
 	schedulerConfig := &device.SchedulerConfig{
 		TaskTimeout: 5 * time.Minute,
@@ -297,7 +298,7 @@ func (c *Core) Init() error {
 	}
 
 	// 12. 初始化设备监控服务
-	c.DeviceMonitorService = services.NewDeviceMonitorService(c.GetDB(), c.SM4Cipher, services.DefaultDeviceMonitorConfig())
+	c.DeviceMonitorService = services.NewDeviceMonitorService(c.GetDB(), nil, services.DefaultDeviceMonitorConfig())
 	// 设置执行器并初始化子服务
 	c.DeviceMonitorService.SetExecutor(c.DeviceExecutor)
 	// 设置设备监控服务到调度器，供定时任务调用
@@ -611,7 +612,7 @@ func (c *Core) registerRPATasks() {
 		}
 
 		// 获取 RPA 服务
-		rpaServices := rpa.NewServiceGroup(c.GetDB(), c.Config, c.NoticeHub, c.Cache, c.SM4Cipher)
+		rpaServices := rpa.NewServiceGroup(c.GetDB(), c.Config, c.NoticeHub, c.Cache, nil)
 
 		// 执行 RPA 任务
 		req := &rpa.ExecuteTaskRequest{
