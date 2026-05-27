@@ -431,13 +431,6 @@ export interface UpdateMappingRequest {
   syncEnabled?: boolean;
 }
 
-export interface AutoMapResult {
-  totalDepts: number;
-  mappedCount: number;
-  failedCount: number;
-  failedDepts?: string[];
-}
-
 export function getMappingList(params: MappingListRequest): Promise<BaseResponse<MappingListResponse>> {
   return post('/ad-domain/mappings/list', withDefaultPagination(params));
 }
@@ -455,15 +448,7 @@ export function updateMapping(id: string, data: UpdateMappingRequest): Promise<B
 }
 
 export function deleteMapping(id: string): Promise<BaseResponse<null>> {
-  return post(`/ad-domain/mappings/${id}/delete`, {});
-}
-
-export function autoMapDepartment(deptId: string, configId: string): Promise<BaseResponse<DeptGroupMapping>> {
-  return post('/ad-domain/mappings/auto-map', { deptId, configId });
-}
-
-export function autoMapAllDepartments(configId: string): Promise<BaseResponse<AutoMapResult>> {
-  return post('/ad-domain/mappings/auto-map-all', { configId });
+  return post(`/ad-domain/mappings/${id}/delete}`, {});
 }
 
 // ==================== OU 部门映射 API ====================
@@ -510,13 +495,6 @@ export interface BatchSyncResult {
     username: string;
     error: string;
   }>;
-}
-
-export function batchSyncADUsers(
-  groupId: string,
-  data: BatchSyncUsersRequest
-): Promise<BaseResponse<BatchSyncResult>> {
-  return post(`/ad-domain/groups/${groupId}/members/sync`, data);
 }
 
 // 直接批量同步AD用户（不依赖用户组）
