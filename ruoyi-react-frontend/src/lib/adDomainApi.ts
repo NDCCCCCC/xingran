@@ -465,3 +465,56 @@ export function autoMapDepartment(deptId: string, configId: string): Promise<Bas
 export function autoMapAllDepartments(configId: string): Promise<BaseResponse<AutoMapResult>> {
   return post('/ad-domain/mappings/auto-map-all', { configId });
 }
+
+// ==================== OU 部门映射 API ====================
+
+export interface OUDeptMappingResponse {
+  hasMapping: boolean;
+  message?: string;
+  mapping?: {
+    deptId: string;
+    deptName: string;
+    ouDn: string;
+    ouName: string;
+    syncEnabled: boolean;
+    syncStatus: string;
+  };
+}
+
+export function getOUDeptMapping(ouDn: string): Promise<BaseResponse<OUDeptMappingResponse>> {
+  return get(`/ad-domain/ou/${encodeURIComponent(ouDn)}/dept-mapping`);
+}
+
+export function updateOUDeptMapping(
+  ouDn: string,
+  data: { deptId: string }
+): Promise<BaseResponse<{ message: string; mapping: OUDeptMappingResponse['mapping'] }>> {
+  return post(`/ad-domain/ou/${encodeURIComponent(ouDn)}/dept-mapping`, data);
+}
+
+// ==================== 批量用户同步 API ====================
+
+export interface BatchSyncUsersRequest {
+  configId: string;
+  groupId?: string;
+  userDns: string[];
+  defaultRoleId?: string;
+}
+
+export interface BatchSyncResult {
+  total: number;
+  success: number;
+  failed: number;
+  skipped: number;
+  errors?: Array<{
+    username: string;
+    error: string;
+  }>;
+}
+
+export function batchSyncADUsers(
+  groupId: string,
+  data: BatchSyncUsersRequest
+): Promise<BaseResponse<BatchSyncResult>> {
+  return post(`/ad-domain/groups/${groupId}/members/sync`, data);
+}

@@ -32,10 +32,12 @@ import {
   getADOUTree,
   syncADGroups,
   getADGroupSyncStatus,
+  batchSyncADUsers,
   type ADGroup,
   type ADUser,
   type ADOUNode,
   type ADGroupSyncStatus,
+  type BatchSyncResult,
 } from '@/lib/adDomainApi';
 import { useADConfigs } from '@/hooks/useADConfigs';
 import type { ADConfig } from '@/lib/adDomainApi';
@@ -77,6 +79,10 @@ const ADGroupPage: FC = () => {
   // Group sync state
   const [syncLoading, setSyncLoading] = useState(false);
   const [syncStatus, setSyncStatus] = useState<ADGroupSyncStatus | null>(null);
+
+  // Batch sync state
+  const [selectedMembers, setSelectedMembers] = useState<ADUser[]>([]);
+  const [batchSyncLoading, setBatchSyncLoading] = useState(false);
 
   // 扁平化OU树，提取所有OU
   const flattenOUTree = (nodes: ADOUNode[]): Array<{ dn: string; name: string }> => {
@@ -282,6 +288,61 @@ const ADGroupPage: FC = () => {
     }
   };
 
+  const handleBatchSync = async () => {
+    if (!selectedConfig || selectedMembers.length === 0) return;
+
+    Modal.confirm({
+      title: `确定同步选中的 ${selectedMembers.length} 个用户到系统用户表？`,
+      content: '同步后用户可以使用AD账号登录系统',
+      okText: '确定',
+      cancelText: '取消',
+      onOk: async () => {
+        setBatchSyncLoading(true);
+        try {
+          const userDns = selectedMembers.map(m => m.userDn);
+          const res = await batchSyncADUsers(selectedGroup?.id || '', {
+            configId: selectedConfig,
+            groupId: selectedGroup?.id,
+            userDns,
+          });
+
+          if (res.code === 0) {
+            const { success, failed, skipped } = res.data;
+            message.success(`同步完成: 成功${success}个, 失败${failed}个, 跳过${skipped}个`);
+
+            // 显示错误详情
+            if (res.data.errors && res.data.errors.length > 0) {
+              Modal.warning({
+                title: '部分用户同步失败',
+                width: 600,
+                content: (
+                  <div style={{ maxHeight: 400, overflow: 'auto' }}>
+                    {res.data.errors.map((err, i) => (
+                      <div key={i} style={{ marginBottom: 4 }}>
+                        <strong>{err.username}:</strong> {err.error}
+                      </div>
+                    ))}
+                  </div>
+                ),
+              });
+            }
+
+            // 清空选择
+            setSelectedMembers([]);
+            // 刷新成员列表
+            if (selectedGroup) {
+              fetchMembers(selectedGroup.groupDn);
+            }
+          }
+        } catch (error) {
+          message.error('批量同步失败');
+        } finally {
+          setBatchSyncLoading(false);
+        }
+      },
+    });
+  };
+
   const groupColumns: ColumnsType<ADGroup> = [
     {
       title: '组名称',
@@ -484,23 +545,46 @@ const ADGroupPage: FC = () => {
         title={`组成员 - ${selectedGroup?.groupName}`}
         size="large"
         open={drawerVisible}
-        onClose={() => setDrawerVisible(false)}
+        onClose={() => {
+          setDrawerVisible(false);
+          setSelectedMembers([]); // 清空选择
+        }}
       >
         <Space orientation="vertical" style={{ width: '100%' }} size="middle">
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAddMember}>
-            添加成员
-          </Button>
+          <Space>
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleAddMember}>
+              添加成员
+            </Button>
+            <Button
+              type="primary"
+              icon={<SyncOutlined />}
+              disabled={selectedMembers.length === 0}
+              onClick={handleBatchSync}
+              loading={batchSyncLoading}
+            >
+              批量同步 ({selectedMembers.length})
+            </Button>
+          </Space>
           <Table
             columns={memberColumns}
             dataSource={members}
             loading={memberLoading}
             rowKey="id"
+            rowSelection={{
+              selectedRowKeys: selectedMembers.map(m => m.userDn),
+              onChange: (selectedKeys, selectedRows) => {
+                setSelectedMembers(selectedRows);
+              },
+            }}
             pagination={{
               current: 1,
               pageSize: 50,
               total: memberTotal,
               showTotal: (t) => `共 ${t} 条`,
-              onChange: (page) => fetchMembers(selectedGroup?.groupDn || '', page),
+              onChange: (page) => {
+                setSelectedMembers([]); // 翻页时清空选择
+                fetchMembers(selectedGroup?.groupDn || '', page);
+              },
             }}
           />
         </Space>
