@@ -7,6 +7,7 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -114,10 +115,11 @@ func (s *UserSyncService) createNewUser(tx *gorm.DB, user *models.User, adUser *
 
 // updateExistingUser 更新已存在的用户信息
 func (s *UserSyncService) updateExistingUser(tx *gorm.DB, user *models.User, adUser *ADUserInfoForSync) error {
+	// 使用 GORM 的 Updates 方法，传入数据库列名
 	updates := map[string]interface{}{
-		"email": &adUser.Email,
-		"phone": &adUser.Phone,
-		"ad_dn": &adUser.UserDN,
+		"email":  &adUser.Email,
+		"phone":  &adUser.Phone,
+		"ad_dn": &adUser.UserDN, // 使用数据库列名 ad_dn
 	}
 
 	// 只有当nickname为空时才更新（尊重本地修改）
@@ -136,8 +138,8 @@ func (s *UserSyncService) updateExistingUser(tx *gorm.DB, user *models.User, adU
 func (s *UserSyncService) assignRole(tx *gorm.DB, userID string, roleID string) error {
 	// 使用原生SQL插入角色关联（ON CONFLICT避免重复）
 	sql := `INSERT INTO sys_user_role (user_id, role_id, created_at)
-		VALUES (?, ?, NOW())
-		ON CONFLICT (user_id, role_id) DO NOTHING`
+			VALUES (?, ?, NOW())
+			ON CONFLICT (user_id, role_id) DO NOTHING`
 
 	if err := tx.Exec(sql, userID, roleID).Error; err != nil {
 		return fmt.Errorf("分配角色失败: %w", err)
@@ -159,6 +161,9 @@ func (s *UserSyncService) getDefaultDeptID(tx *gorm.DB) string {
 // SyncADUser 实现 security.UserSyncer 接口
 // 将 security.ADUserInfo 转换为内部类型并调用同步逻辑
 func (s *UserSyncService) SyncADUser(ctx context.Context, adUserInfo *security.ADUserInfo, defaultRoleID string) (*security.SyncedUser, error) {
+	// 添加调试日志
+	applogger.Infof("[SyncADUser] 开始同步 AD 用户: username=%s, userDN=%s", adUserInfo.Username, adUserInfo.UserDN)
+
 	// 转换 ADUserInfo -> ADUserInfoForSync
 	adUser := &ADUserInfoForSync{
 		UserDN:      adUserInfo.UserDN,
@@ -173,8 +178,11 @@ func (s *UserSyncService) SyncADUser(ctx context.Context, adUserInfo *security.A
 
 	user, err := s.SyncUserFromAD(ctx, adUser, defaultRoleID)
 	if err != nil {
+		applogger.Errorf("[SyncADUser] 同步失败: %v", err)
 		return nil, err
 	}
+
+	applogger.Infof("[SyncADUser] 同步成功: userID=%s, username=%s", user.ID, user.Username)
 
 	// 转换 models.User -> security.SyncedUser
 	result := &security.SyncedUser{
