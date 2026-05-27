@@ -87,7 +87,7 @@ func createMemberSyncTestData(t *testing.T, db *gorm.DB) (deptID, configID, grou
 		Status:   models.UserStatusEnabled,
 		AuthSource: "ad",
 		ADUsername: strPtr("user1"),
-		ADDN:       strPtr("CN=user1,OU=Users,DC=test,DC=com"),
+		AdDn:       strPtr("CN=user1,OU=Users,DC=test,DC=com"),
 	}
 	require.NoError(t, db.WithContext(ctx).Create(user1).Error)
 
@@ -264,7 +264,7 @@ func TestMemberSyncService_HandleDeptChange(t *testing.T) {
 		Status:      models.UserStatusEnabled,
 		AuthSource:  "ad",
 		ADUsername:  strPtr("transfer_user"),
-		ADDN:        strPtr("CN=transfer_user,OU=Users,DC=test,DC=com"),
+		AdDn:        strPtr("CN=transfer_user,OU=Users,DC=test,DC=com"),
 	}
 	require.NoError(t, db.WithContext(ctx).Create(user).Error)
 
@@ -360,7 +360,7 @@ func TestMemberSyncService_Integration_EndToEnd(t *testing.T) {
 			Status:      models.UserStatusEnabled,
 			AuthSource:  "ad",
 			ADUsername:  strPtr("dev_user"),
-			ADDN:        strPtr("CN=dev_user,OU=Users,DC=dev,DC=com"),
+			AdDn:        strPtr("CN=dev_user,OU=Users,DC=dev,DC=com"),
 		}
 		require.NoError(t, db.WithContext(ctx).Create(user).Error)
 

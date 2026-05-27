@@ -34,7 +34,7 @@ func TestHandleUserLoginAD_UserNotFound(t *testing.T) {
 		id TEXT PRIMARY KEY,
 		username TEXT NOT NULL,
 		dept_id TEXT,
-		ad_user_dn TEXT,
+		ad_dn TEXT,
 		ad_ou_dn TEXT,
 		ad_synced_at DATETIME
 	)`)
@@ -74,7 +74,7 @@ func TestHandleUserLoginAD_MappingNotFound(t *testing.T) {
 		id TEXT PRIMARY KEY,
 		username TEXT NOT NULL,
 		dept_id TEXT,
-		ad_user_dn TEXT,
+		ad_dn TEXT,
 		ad_ou_dn TEXT,
 		ad_synced_at DATETIME
 	)`)
@@ -117,7 +117,7 @@ func TestHandleUserLoginAD_Success(t *testing.T) {
 		id TEXT PRIMARY KEY,
 		username TEXT NOT NULL,
 		dept_id TEXT,
-		ad_user_dn TEXT,
+		ad_dn TEXT,
 		ad_ou_dn TEXT,
 		ad_synced_at DATETIME
 	)`)
@@ -140,7 +140,7 @@ func TestHandleUserLoginAD_Success(t *testing.T) {
 
 	// 验证用户信息已更新
 	var deptID, adUserDN, adOUDN string
-	row := db.Raw(`SELECT dept_id, ad_user_dn, ad_ou_dn FROM sys_user WHERE username = ?`, "testuser").Row()
+	row := db.Raw(`SELECT dept_id, ad_dn, ad_ou_dn FROM sys_user WHERE username = ?`, "testuser").Row()
 	row.Scan(&deptID, &adUserDN, &adOUDN)
 
 	assert.Equal(t, "dept-1", deptID)
@@ -179,7 +179,7 @@ func TestUpdateUserDeptAndADInfo(t *testing.T) {
 		id TEXT PRIMARY KEY,
 		username TEXT NOT NULL,
 		dept_id TEXT,
-		ad_user_dn TEXT,
+		ad_dn TEXT,
 		ad_ou_dn TEXT,
 		ad_synced_at DATETIME
 	)`)
@@ -198,7 +198,7 @@ func TestUpdateUserDeptAndADInfo(t *testing.T) {
 
 	// 验证更新
 	var deptID, adUserDN, adOUDN string
-	row := db.Raw(`SELECT dept_id, ad_user_dn, ad_ou_dn FROM sys_user WHERE id = ?`, "user-1").Row()
+	row := db.Raw(`SELECT dept_id, ad_dn, ad_ou_dn FROM sys_user WHERE id = ?`, "user-1").Row()
 	row.Scan(&deptID, &adUserDN, &adOUDN)
 
 	assert.Equal(t, "dept-1", deptID)

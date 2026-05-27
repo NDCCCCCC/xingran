@@ -66,7 +66,7 @@ func (s *UserOUService) HandleUserLoginAD(ctx context.Context, username, userDN,
 func (s *UserOUService) updateUserDeptAndADInfo(ctx context.Context, userID, deptID, userDN, ouDN string) error {
 	updates := map[string]interface{}{
 		"dept_id":      deptID,
-		"ad_user_dn":   userDN,
+		"ad_dn":        userDN,
 		"ad_ou_dn":     ouDN,
 		"ad_synced_at": time.Now(),
 	}

@@ -31,9 +31,8 @@ type User struct {
 	// AD认证相关字段
 	AuthSource string  `gorm:"size:10;default:'local';not null" json:"authSource"`
 	ADUsername *string `gorm:"size:100" json:"adUsername,omitempty"`
-	AdDn       *string    `gorm:"type:text;column:ad_dn" json:"adDn,omitempty"`
-	AdOuDn     *string    `gorm:"type:text;column:ad_ou_dn" json:"adOuDn,omitempty"`
-	AdUserDn   *string    `gorm:"type:text;column:ad_user_dn" json:"adUserDn,omitempty"`
+	AdDn       *string `gorm:"type:text;column:ad_dn" json:"adDn,omitempty"`
+	AdOuDn     *string `gorm:"type:text;column:ad_ou_dn" json:"adOuDn,omitempty"`
 	AdSyncedAt *time.Time `gorm:"column:ad_synced_at" json:"adSyncedAt,omitempty"`
 
 	// 关联
