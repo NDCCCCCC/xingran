@@ -21,7 +21,7 @@ progress:
 **Phase**: 22A (深信服VDI基础集成)
 **Plan**: Phase 22-05 (VDI前端UI实现)
 **Status**: ✅ 已完成
-**Last activity**: 2026-05-27 - Completed quick task 260527-gra: 添加 User 模型 AdOuDn 字段并创建数据库迁移
+**Last activity**: 2026-05-27 - Completed quick task 20260527-ou-user-sync: OU组织单位用户批量同步功能
 
 ## Current Position
 
@@ -112,6 +112,7 @@ Plan: Not started
 | 260526-nwn | 用户编辑模态框角色不显示修复 | 2026-05-26 | - | [260526-nwn](./quick/260526-nwn/) |
 | 260527-gdc | 提交 AD 密码加解密修复代码到 git 仓库 | 2026-05-27 | cc2963b | [260527-gdc-ad-git](./quick/260527-gdc-ad-git/) |
 | 260527-gra | 添加 User 模型 AdOuDn 字段并创建数据库迁移 | 2026-05-27 | 89feb82 | [260527-gra-user-adoudn](./quick/260527-gra-user-adoudn/) |
+| 260527-ous | OU组织单位用户批量同步功能 | 2026-05-27 | 92638ce,db506ff,37723f8 | [20260527-ou-user-sync](./quick/20260527-ou-user-sync/) |
 
 ## Accumulated Context
 
