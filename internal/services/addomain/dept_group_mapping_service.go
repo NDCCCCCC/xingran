@@ -29,21 +29,22 @@ type DeptGroupMappingService interface {
 	// AutoMapDepartment 自动为部门创建映射（查找cxhub-{dept}组）
 	AutoMapDepartment(ctx context.Context, deptID, configID string) (*models.DeptGroupMapping, error)
 
-	// AutoMapAllDepartments 批量自动映射所有二级部门
-	AutoMapAllDepartments(ctx context.Context, configID string) (*AutoMapResult, error)
-
 	// GetMappingByDept 根据部门ID获取映射
 	GetMappingByDept(ctx context.Context, deptID string) (*models.DeptGroupMapping, error)
 }
 
 // deptGroupMappingService 服务实现
 type deptGroupMappingService struct {
-	db *gorm.DB
+	db                     *gorm.DB
+	groupManagementService GroupManagementService
 }
 
 // NewDeptGroupMappingService 创建服务实例
 func NewDeptGroupMappingService(db *gorm.DB) DeptGroupMappingService {
-	return &deptGroupMappingService{db: db}
+	return &deptGroupMappingService{
+		db:                     db,
+		groupManagementService: NewGroupManagementService(db),
+	}
 }
 
 // CreateMappingRequest 创建映射请求
@@ -78,14 +79,6 @@ type ListMappingsRequest struct {
 type ListMappingsResponse struct {
 	Total int64                      `json:"total"`
 	List  []models.DeptGroupMapping  `json:"list"`
-}
-
-// AutoMapResult 自动映射结果
-type AutoMapResult struct {
-	TotalDepts  int      `json:"totalDepts"`
-	MappedCount int      `json:"mappedCount"`
-	FailedCount int      `json:"failedCount"`
-	FailedDepts []string `json:"failedDepts,omitempty"`
 }
 
 // CreateMapping 创建部门组映射
@@ -293,36 +286,6 @@ func (s *deptGroupMappingService) AutoMapDepartment(ctx context.Context, deptID,
 	}
 
 	return mapping, nil
-}
-
-// AutoMapAllDepartments 批量自动映射所有二级部门
-func (s *deptGroupMappingService) AutoMapAllDepartments(ctx context.Context, configID string) (*AutoMapResult, error) {
-	// 1. 查询所有二级部门（有parent_id的部门）
-	var depts []models.Department
-	err := s.db.WithContext(ctx).
-		Where("parent_id IS NOT NULL AND parent_id != '' AND status = ?", models.DeptStatusNormal).
-		Find(&depts).Error
-	if err != nil {
-		return nil, fmt.Errorf("查询部门列表失败: %w", err)
-	}
-
-	result := &AutoMapResult{
-		TotalDepts:  len(depts),
-		FailedDepts: []string{},
-	}
-
-	// 2. 逐个尝试自动映射
-	for _, dept := range depts {
-		mapping, err := s.AutoMapDepartment(ctx, dept.ID, configID)
-		if err != nil {
-			result.FailedCount++
-			result.FailedDepts = append(result.FailedDepts, fmt.Sprintf("%s: %s", dept.DeptName, err.Error()))
-		} else if mapping != nil {
-			result.MappedCount++
-		}
-	}
-
-	return result, nil
 }
 
 // GetMappingByDept 根据部门ID获取映射
