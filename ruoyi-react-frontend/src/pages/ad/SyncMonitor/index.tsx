@@ -45,7 +45,7 @@ const SyncMonitor: React.FC = () => {
   const fetchStatus = async () => {
     try {
       const result = await post('/api/v1/ad/groups/sync/status', {});
-      setStatus(result.data);
+      setStatus(result.data as SyncStatus);
     } catch (error) {
       message.error('获取状态失败');
     }
@@ -59,7 +59,7 @@ const SyncMonitor: React.FC = () => {
         current: 1,
         pageSize: 10
       });
-      setLogs(result.data.list);
+      setLogs((result.data as { list: SyncLog[] }).list);
     } catch (error) {
       message.error('获取日志失败');
     } finally {

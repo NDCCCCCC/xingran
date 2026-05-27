@@ -41,8 +41,9 @@ const GroupMapping: React.FC = () => {
         pageSize: params.pageSize || pageSize,
         ...params
       });
-      setMappings(result.data.list);
-      setTotal(result.data.total);
+      const data = result.data as { list: DeptGroupMapping[]; total: number };
+      setMappings(data.list);
+      setTotal(data.total);
     } catch (error) {
       message.error('获取映射列表失败');
     } finally {

@@ -42,7 +42,7 @@ const AutoMapping: React.FC = () => {
   const fetchDepartments = async () => {
     try {
       const result = await post('/api/v1/departments/level/2', {});
-      setDepartments(result.data.list || []);
+      setDepartments((result.data as { list: Department[] }).list || []);
     } catch (error) {
       message.error('获取部门列表失败');
     }
@@ -54,7 +54,7 @@ const AutoMapping: React.FC = () => {
       const result = await post('/api/v1/ad/groups/automap/preview', {
         deptIds
       });
-      setPreviewData(result.data);
+      setPreviewData(result.data as AutoMappingPreview[]);
       setPreviewModal(true);
     } catch (error) {
       message.error('预览失败');
@@ -82,7 +82,7 @@ const AutoMapping: React.FC = () => {
         });
       }, 200);
 
-      message.success(`成功映射 ${result.data.count} 个部门`);
+      message.success(`成功映射 ${(result.data as { count: number }).count} 个部门`);
       setProgress(100);
       clearInterval(interval);
     } catch (error) {

@@ -123,7 +123,7 @@ const ADOUPage: FC = () => {
     setMappingLoading(true);
     try {
       const res = await getOUDeptMapping(ouDn);
-      if (res.code === 0) {
+      if (res.code === 0 && res.data) {
         setDeptMapping(res.data);
       }
     } catch {
@@ -164,10 +164,11 @@ const ADOUPage: FC = () => {
     }
 
     try {
-      const res = await updateOUDeptMapping(selectedOU, selectedDeptId);
+      const res = await updateOUDeptMapping(selectedOU, { deptId: selectedDeptId });
       if (res.code === 0) {
         message.success('关联成功');
-        setDeptMapping(res.data);
+        // 重新获取部门映射信息
+        await fetchDeptMapping(selectedOU);
         setDeptModalVisible(false);
         setSelectedDeptId('');
       }
@@ -273,6 +274,20 @@ const ADOUPage: FC = () => {
       case 'failed': return '同步失败';
       default: return status;
     }
+  };
+
+  // 辅助函数：递归查找部门名称
+  const findDeptName = (depts: Department[], id: string): string => {
+    for (const dept of depts) {
+      if (dept.id === id) {
+        return dept.deptName;
+      }
+      if (dept.children && dept.children.length > 0) {
+        const found = findDeptName(dept.children, id);
+        if (found) return found;
+      }
+    }
+    return '';
   };
 
   return (
@@ -407,7 +422,7 @@ const ADOUPage: FC = () => {
       >
         <Spin spinning={deptTree.length === 0}>
           {deptTree.length > 0 && (
-            <DepartmentTree
+            <Tree
               showLine
               defaultExpandAll
               onSelect={handleDeptSelect}
@@ -418,19 +433,12 @@ const ADOUPage: FC = () => {
         </Spin>
         {selectedDeptId && (
           <div style={{ marginTop: 16 }}>
-            已选择：<Tag color="blue">{deptTree.findDeptName(selectedDeptId)}</Tag>
+            已选择：<Tag color="blue">{findDeptName(deptTree, selectedDeptId)}</Tag>
           </div>
         )}
       </Modal>
     </div>
   );
 };
-
-// 辅助函数：递归查找部门名称
-declare module 'react' {
-  interface Function {
-    findDeptName?(id: string): string;
-  }
-}
 
 export default ADOUPage;

@@ -201,7 +201,7 @@ const VirtualMachineList: React.FC = () => {
       title: '虚拟机 ID',
       dataIndex: 'vm_id',
       key: 'vm_id',
-      width: 200,
+      width: 120,
       ellipsis: true,
     },
     {
@@ -249,7 +249,17 @@ const VirtualMachineList: React.FC = () => {
       title: 'CPU/内存/磁盘',
       key: 'resources',
       width: 150,
-      render: (_, record) => `${record.cpu || 0}核/${record.memory || 0}MB/${record.disk || 0}GB`,
+      render: (_, record) => {
+        const cpu = record.cpu || 0;
+        const memoryMB = parseInt(String(record.memory || '0'), 10);
+        const diskMB = parseInt(String(record.disk || '0'), 10);
+
+        // 转换为 GB
+        const memoryGB = (memoryMB / 1024).toFixed(1);
+        const diskGB = (diskMB / 1024).toFixed(1);
+
+        return `${cpu}核/${memoryGB}GB/${diskGB}GB`;
+      },
     },
     {
       title: '绑定用户',
