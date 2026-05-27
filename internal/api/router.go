@@ -474,7 +474,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 	{
 		systemV1.SetupADDomainRouter(adDomain, core)
 		// AD部门同步路由
-		systemV1.SetupADDeptSyncRouter(adDomain, core)
+		systemV1.SetupADGroupMappingRouter(adDomain, core)
 	}
 
 	// 运维管理模块（物理资源管理）
