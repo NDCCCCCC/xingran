@@ -337,7 +337,7 @@ func (s *userService) List(ctx context.Context, params requests.UserListParams) 
 
 	// 定义 SQL JOIN 查询
 	userJoinSelect := "sys_user.*, sys_dept.dept_name, sys_dept.ancestors"
-	userJoinClause := "LEFT JOIN sys_dept ON sys_dept.id::text = sys_user.dept_id"
+	userJoinClause := "LEFT JOIN sys_dept ON sys_dept.id = sys_user.dept_id::uuid"
 
 	if err := query.Select(userJoinSelect).
 		Joins(userJoinClause).
@@ -413,60 +413,31 @@ func (s *userService) List(ctx context.Context, params requests.UserListParams) 
 
 // buildDepartmentPaths 为用户列表构建完整部门路径（从二级部门开始）
 func (s *userService) buildDepartmentPaths(ctx context.Context, list []models.User) {
-	// 收集所有有部门的用户ID
-	userDeptMap := make(map[string]string) // userID -> deptID
-	for _, user := range list {
-		if user.DeptID != nil && user.Dept != nil {
-			userDeptMap[user.ID] = *user.DeptID
-		}
-	}
-
-	if len(userDeptMap) == 0 {
-		return
-	}
-
-	// 获取所有唯一的部门ID
-	uniqueDeptIDs := make(map[string]bool)
-	for _, deptID := range userDeptMap {
-		uniqueDeptIDs[deptID] = true
-	}
-
-	// 批量查询这些部门的ancestors信息
-	var depts []models.Department
-	// 提取map的keys为切片
-	deptIDList := make([]string, 0, len(uniqueDeptIDs))
-	for id := range uniqueDeptIDs {
-		deptIDList = append(deptIDList, id)
-	}
-	s.db.WithContext(ctx).Select("id", "dept_name", "ancestors").Where("id IN ?", deptIDList).Find(&depts)
-
-	// 构建部门ID到部门信息的映射
-	deptMap := make(map[string]*models.Department)
-	for i := range depts {
-		deptMap[depts[i].ID] = &depts[i]
-	}
-
-	// 对于每个有ancestors的部门，查询其所有祖先部门
+	// 收集所有唯一的祖先部门ID
 	allAncestorIDs := make(map[string]bool)
-	for _, dept := range depts {
-		if dept.Ancestors != "" {
-			ancestors := splitAncestors(dept.Ancestors)
+
+	for _, user := range list {
+		// 使用 DeptAncestors 字段（由 JOIN 查询填充）
+		if user.DeptID != nil && user.DeptAncestors != nil && *user.DeptAncestors != "" {
+			ancestors := splitAncestors(*user.DeptAncestors)
 			for _, ancestorID := range ancestors {
 				allAncestorIDs[ancestorID] = true
 			}
 		}
 	}
 
-	// 查询所有祖先部门
-	var ancestorDepts []models.Department
-	if len(allAncestorIDs) > 0 {
-		// 提取map的keys为切片
-		ancestorIDList := make([]string, 0, len(allAncestorIDs))
-		for id := range allAncestorIDs {
-			ancestorIDList = append(ancestorIDList, id)
-		}
-		s.db.WithContext(ctx).Select("id", "dept_name").Where("id IN ?", ancestorIDList).Find(&ancestorDepts)
+	if len(allAncestorIDs) == 0 {
+		return
 	}
+
+	// 批量查询所有祖先部门
+	ancestorIDList := make([]string, 0, len(allAncestorIDs))
+	for id := range allAncestorIDs {
+		ancestorIDList = append(ancestorIDList, id)
+	}
+
+	var ancestorDepts []models.Department
+	s.db.WithContext(ctx).Select("id", "dept_name").Where("id IN ?", ancestorIDList).Find(&ancestorDepts)
 
 	// 构建祖先部门ID到名称的映射
 	ancestorDeptMap := make(map[string]string)
@@ -476,43 +447,40 @@ func (s *userService) buildDepartmentPaths(ctx context.Context, list []models.Us
 
 	// 为每个用户构建部门路径
 	for i := range list {
-		if list[i].Dept == nil {
+		user := &list[i]
+
+		// 检查是否有部门路径信息
+		if user.DeptID == nil || user.DeptAncestors == nil || *user.DeptAncestors == "" {
 			continue
 		}
 
-		dept, exists := deptMap[list[i].Dept.ID]
-		if !exists {
-			continue
+		ancestors := splitAncestors(*user.DeptAncestors)
+		pathParts := make([]string, 0, len(ancestors))
+
+		// 添加祖先部门名称（从二级开始，跳过顶级）
+		for j, ancestorID := range ancestors {
+			if j > 0 { // 跳过第一个（顶级）部门
+				if name, exists := ancestorDeptMap[ancestorID]; exists {
+					pathParts = append(pathParts, name)
+				}
+			}
 		}
 
-		// 如果有ancestors，构建完整路径
-		if dept.Ancestors != "" {
-			ancestors := splitAncestors(dept.Ancestors)
-			pathParts := make([]string, 0, len(ancestors)+1)
+		// 添加当前部门名称
+		if user.DeptName != nil {
+			pathParts = append(pathParts, *user.DeptName)
+		}
 
-			// 添加祖先部门名称（从二级开始，跳过顶级）
-			for j, ancestorID := range ancestors {
-				if j > 0 { // 跳过第一个（顶级）部门
-					if name, exists := ancestorDeptMap[ancestorID]; exists {
-						pathParts = append(pathParts, name)
-					}
+		// 构建路径字符串
+		if len(pathParts) > 0 {
+			path := ""
+			for k, part := range pathParts {
+				if k > 0 {
+					path += "/"
 				}
+				path += part
 			}
-
-			// 添加当前部门名称
-			pathParts = append(pathParts, dept.DeptName)
-
-			// 构建路径字符串
-			if len(pathParts) > 0 {
-				path := ""
-				for k, part := range pathParts {
-					if k > 0 {
-						path += "/"
-					}
-					path += part
-				}
-				list[i].DeptFullName = &path
-			}
+			user.DeptFullName = &path
 		}
 	}
 }

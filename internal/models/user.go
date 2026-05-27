@@ -19,7 +19,8 @@ type User struct {
 	Status        UserStatus `gorm:"default:0" json:"status"`
 	DeptID        *string    `gorm:"size:64" json:"deptId,omitempty"`
 	DeptName      *string    `gorm:"size:64" json:"deptName,omitempty"`
-	DeptPath      *string    `gorm:"-" json:"deptPath,omitempty"` // 完整部门路径（从二级开始）
+	DeptFullName  *string    `gorm:"-" json:"deptFullName,omitempty"` // 完整部门路径（所有层级）
+	DeptAncestors *string    `gorm:"-" json:"-"`                       // 临时字段，用于接收 JOIN 的 ancestors
 	LoginIP       *string    `gorm:"size:128" json:"loginIp,omitempty"`
 	LoginTime     *time.Time `json:"loginTime,omitempty"`
 	PwdUpdateTime *time.Time `json:"pwdUpdateTime,omitempty"`
