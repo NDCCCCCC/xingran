@@ -4,7 +4,7 @@ milestone: v1.5
 milestone_name: MAC地址历史数据管理
 status: milestone_complete
 stopped_at: context exhaustion at 91% (2026-05-26)
-last_updated: "2026-05-26T08:12:27.688Z"
+last_updated: "2026-05-27T11:54:00.000Z"
 progress:
   total_phases: 1
   completed_phases: 0
@@ -21,7 +21,7 @@ progress:
 **Phase**: 22A (深信服VDI基础集成)
 **Plan**: Phase 22-05 (VDI前端UI实现)
 **Status**: ✅ 已完成
-**Last activity**: 2026-05-25 - Completed quick task 260525-w22: VDI配置页3个Bug修复(500错误/输入警告/弃用警告)
+**Last activity**: 2026-05-27 - Completed quick task 260527-gdc: 提交 AD 密码加解密修复代码到 git 仓库
 
 ## Current Position
 
@@ -110,6 +110,7 @@ Plan: Not started
 | 260525-w22 | VDI配置页3个Bug修复(500错误/输入警告/弃用警告) | 2026-05-25 | aa992fc | [260525-w22-vdi-1-500-2-input-suffix-3-direction-ori](./quick/260525-w22-vdi-1-500-2-input-suffix-3-direction-ori/) |
 | 260526-nij | 用户管理页面部门路径显示修复 | 2026-05-26 | - | [260526-nij](./quick/260526-nij/) |
 | 260526-nwn | 用户编辑模态框角色不显示修复 | 2026-05-26 | - | [260526-nwn](./quick/260526-nwn/) |
+| 260527-gdc | 提交 AD 密码加解密修复代码到 git 仓库 | 2026-05-27 | cc2963b | [260527-gdc-ad-git](./quick/260527-gdc-ad-git/) |
 
 ## Accumulated Context
 
