@@ -42,20 +42,25 @@ export interface DepartmentTreeSelectProps extends Omit<TreeSelectProps, 'treeDa
 
 /**
  * 将部门数据转换为 TreeSelect 需要的格式
+ * @param departments 部门数据
+ * @param parentPath 父级路径（用于构建完整路径显示）
  */
-function convertDeptTreeData(departments: Department[]): TreeNode[] {
+function convertDeptTreeData(departments: Department[], parentPath: string[] = []): TreeNode[] {
   if (!departments || departments.length === 0) {
     return [];
   }
-  const convertNodes = (nodes: Department[]): TreeNode[] => {
-    return nodes.map(node => ({
-      title: node.deptName,
-      value: node.id,
-      key: node.id,
-      children: node.children && node.children.length > 0 ? convertNodes(node.children) : undefined,
-    }));
+  const convertNodes = (nodes: Department[], currentPath: string[]): TreeNode[] => {
+    return nodes.map(node => {
+      const nodePath = [...currentPath, node.deptName];
+      return {
+        title: nodePath.join(' / '),
+        value: node.id,
+        key: node.id,
+        children: node.children && node.children.length > 0 ? convertNodes(node.children, nodePath) : undefined,
+      };
+    });
   };
-  return convertNodes(departments);
+  return convertNodes(departments, parentPath);
 }
 
 /**
