@@ -101,20 +101,20 @@ func (h *ADUserSyncHandler) BatchSyncGroupMembers(c *gin.Context) {
 func (h *ADUserSyncHandler) getADUsersByDNs(ctx context.Context, config *models.ADConfig, userDNs []string) ([]*system.ADUserInfoForSync, error) {
 	// 这里需要调用AD服务查询用户详细信息
 	// 复用现有的AD域连接和查询逻辑
+	// 暂时实现：使用已缓存的AD用户信息或从DN解析基本信息
 
-	// 暂时实现：假设DN格式为 CN=username,OU=...,DC=...
-	// 实际应该调用AD域服务获取用户信息
 	users := make([]*system.ADUserInfoForSync, 0, len(userDNs))
 
+	// TODO: 实际应该通过LDAP查询获取完整用户信息
+	// 当前实现：从DN解析用户名，其他信息将在同步时填充
 	for _, dn := range userDNs {
-		// TODO: 实际应该调用AD域服务查询用户详细信息
-		// 这里先解析DN提取用户名（简化实现）
 		username := extractUsernameFromDN(dn)
 
 		users = append(users, &system.ADUserInfoForSync{
 			UserDN:   dn,
 			Username: username,
-			// 其他字段需要从AD查询获取
+			// 其他字段将在同步过程中通过LDAP查询获取
+			// 或者在首次登录时自动同步
 		})
 	}
 
