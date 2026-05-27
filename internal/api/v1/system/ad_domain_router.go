@@ -11,6 +11,7 @@ import (
 func SetupADDomainRouter(r *gin.RouterGroup, core *core.Core) {
 	service := addomainServices.NewADDomainService(core.GetDB(), core.SM4Cipher)
 	handler := NewADDomainHandler(service, core)
+	syncHandler := NewADUserSyncHandler(core)
 
 	// AD配置管理
 	configs := r.Group("/configs")
@@ -51,6 +52,7 @@ func SetupADDomainRouter(r *gin.RouterGroup, core *core.Core) {
 		groups.GET("/:id", handler.GetGroupDetail)
 		groups.POST("/:id/update", handler.UpdateGroup)
 		groups.POST("/:id/members", handler.GetGroupMembers)
+		groups.POST("/:id/members/sync", syncHandler.BatchSyncGroupMembers)
 		groups.POST("/sync-single", handler.SyncSingleGroup)
 		groups.POST("/sync-status", handler.GetGroupSyncStatus)
 		groups.POST("/sync-by-config/:id", handler.SyncGroups)

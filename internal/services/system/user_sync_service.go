@@ -198,3 +198,73 @@ func (s *UserSyncService) SyncADUser(ctx context.Context, adUserInfo *security.A
 
 	return result, nil
 }
+
+// SyncError 同步错误信息
+type SyncError struct {
+	Username string `json:"username"`
+	Error    string `json:"error"`
+}
+
+// BatchSyncResult 批量同步结果
+type BatchSyncResult struct {
+	Total   int         `json:"total"`
+	Success int         `json:"success"`
+	Failed  int         `json:"failed"`
+	Skipped int         `json:"skipped"`
+	Errors  []SyncError `json:"errors,omitempty"`
+}
+
+// BatchSyncADUsers 批量同步AD用户到sys_user表
+// 支持批量操作，返回成功/失败统计和详细错误信息
+func (s *UserSyncService) BatchSyncADUsers(
+	ctx context.Context,
+	users []*ADUserInfoForSync,
+	defaultRoleID string,
+) (*BatchSyncResult, error) {
+	result := &BatchSyncResult{
+		Total:   len(users),
+		Success: 0,
+		Failed:  0,
+		Skipped: 0,
+		Errors:  []SyncError{},
+	}
+
+	if len(users) == 0 {
+		return result, nil
+	}
+
+	applogger.Infof("[BatchSyncADUsers] 开始批量同步 %d 个AD用户", len(users))
+
+	for _, adUser := range users {
+		// 转换为 security.ADUserInfo 以复用 SyncADUser 方法
+		adUserInfo := &security.ADUserInfo{
+			UserDN:      adUser.UserDN,
+			Username:    adUser.Username,
+			DisplayName: adUser.DisplayName,
+			Email:       adUser.Email,
+			Phone:       adUser.Phone,
+			Mobile:      adUser.Mobile,
+			Title:       adUser.Title,
+			Department:  adUser.Department,
+		}
+
+		// 调用现有的同步逻辑
+		syncedUser, err := s.SyncADUser(ctx, adUserInfo, defaultRoleID)
+		if err != nil {
+			result.Failed++
+			result.Errors = append(result.Errors, SyncError{
+				Username: adUser.Username,
+				Error:    err.Error(),
+			})
+			applogger.Errorf("[BatchSyncADUsers] 同步用户 %s 失败: %v", adUser.Username, err)
+		} else {
+			result.Success++
+			applogger.Infof("[BatchSyncADUsers] 同步用户 %s 成功, userID=%s", adUser.Username, syncedUser.ID)
+		}
+	}
+
+	applogger.Infof("[BatchSyncADUsers] 批量同步完成: 成功%d, 失败%d, 跳过%d",
+		result.Success, result.Failed, result.Skipped)
+
+	return result, nil
+}
