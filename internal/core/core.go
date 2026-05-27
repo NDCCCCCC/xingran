@@ -19,6 +19,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/websocket"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/permission"
 	"gorm.io/gorm"
@@ -48,7 +49,6 @@ type Core struct {
 	JWTManager                  *security.JWTManager                  // JWT令牌管理器
 	PwdManager                  *security.PasswordManager             // 密码管理器
 	SM4Cipher                   addomain.PasswordCipher               // SM4加密器接口（用于AD域密码加密）
-	CryptoSM4Cipher             interface{}                           // 原始SM4加密器（用于设备连接池等）
 	MetricsCacheService         *MetricsCacheService                  // 系统指标缓存服务（被 monitor/adapters.go 使用）
 	Scheduler                   *scheduler.Scheduler                  // 定时任务调度器
 	DeviceExecutor              *device.DeviceExecutor                // 设备执行器（被 mac_handler.go, network_export_handler.go, port_handler.go 使用）
@@ -106,10 +106,19 @@ func New(cfg *config.Config) (*Core, error) {
 }
 
 // initSM4Cipher 初始化SM4加密器
-// initSM4Cipher 初始化SM4加密器
+// 使用配置中的SM4密钥创建加密器，用于AD域密码加解密
 func initSM4Cipher(sm4Key string) addomain.PasswordCipher {
-	// SM4 cipher 由 addomain 包内部管理，这里返回 nil
-	return nil
+	if sm4Key == "" {
+		applogger.Warnf("SM4 密钥未配置，AD域密码加解密将不可用")
+		return nil
+	}
+	cipher, err := crypto.NewSM4Cipher(sm4Key)
+	if err != nil {
+		applogger.Errorf("初始化SM4加密器失败: %v，AD域密码加解密将不可用", err)
+		return nil
+	}
+	applogger.Infof("SM4加密器初始化成功")
+	return cipher
 }
 
 
@@ -121,6 +130,8 @@ func (c *Core) Init() error {
 	if c.SM4Cipher != nil {
 		addomain.SetADSM4Cipher(c.SM4Cipher)
 		applogger.Infof("AD 域 SM4 加密器已设置")
+	} else {
+		applogger.Warnf("AD 域 SM4 加密器未设置，密码将使用 AES-legacy 回退")
 	}
 
 	// 1. 初始化数据库连接
@@ -517,7 +528,7 @@ func (c *Core) initAuthFactory() {
 		applogger.Warnf("数据库未初始化，跳过认证策略工厂初始化")
 		return
 	}
-	c.AuthFactory = security.NewAuthStrategyFactory(c.GetDB(), c.PwdManager)
+	c.AuthFactory = security.NewAuthStrategyFactory(c.GetDB(), c.PwdManager, c.SM4Cipher)
 
 	// 初始化用户同步服务并注入到工厂
 	userSyncService := system.NewUserSyncService(c.GetDB(), c.PwdManager)

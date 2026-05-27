@@ -8,7 +8,8 @@ import (
 
 	"github.com/go-ldap/ldap/v3"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/ldaputils"
 	"gorm.io/gorm"
 )
@@ -17,10 +18,10 @@ import (
 // 使用LDAP绑定验证实现AD域控账号认证
 type ADAuthenticator struct {
 	db          *gorm.DB
-	dbName      string       // 用于日志
-	configID    string       // 默认AD配置ID
-	userSyncer  UserSyncer   // 用户同步服务（可选，为nil时不同步）
-	sm4Cipher   *crypto.SM4Cipher // SM4加密器（用于解密AD管理员密码）
+	dbName      string                       // 用于日志
+	configID    string                       // 默认AD配置ID
+	userSyncer  UserSyncer                   // 用户同步服务（可选，为nil时不同步）
+	sm4Cipher   addomain.PasswordCipher      // SM4加密器（用于解密AD管理员密码）
 }
 
 // NewADAuthenticator 创建AD认证器
@@ -36,21 +37,29 @@ func (a *ADAuthenticator) SetUserSyncer(syncer UserSyncer) {
 	a.userSyncer = syncer
 }
 
-// SetSM4Cipher 设置SM4加密器（用于解密AD管理员密码）
-func (a *ADAuthenticator) SetSM4Cipher(cipher *crypto.SM4Cipher) {
+// SetPasswordCipher 设置SM4加密器（用于解密AD管理员密码）
+// 使用 addomain.PasswordCipher 接口，与 addomain 包的加解密逻辑保持一致
+func (a *ADAuthenticator) SetPasswordCipher(cipher addomain.PasswordCipher) {
 	a.sm4Cipher = cipher
 }
 
 // decryptPassword 解密AD管理员密码
+// 尝试 SM4 解密，失败后回退到 addomain 包的全局解密（含 AES-legacy 回退）
 func (a *ADAuthenticator) decryptPassword(encrypted string) string {
-	if a.sm4Cipher == nil {
-		return encrypted // 未设置加密器，返回原值
+	if encrypted == "" {
+		return ""
 	}
-	decrypted, err := a.sm4Cipher.Decrypt(encrypted)
-	if err != nil {
-		return encrypted // 解密失败，返回原值
+
+	// 1. 尝试使用本地 SM4 cipher
+	if a.sm4Cipher != nil {
+		plaintext, err := a.sm4Cipher.Decrypt(encrypted)
+		if err == nil {
+			return plaintext
+		}
 	}
-	return decrypted
+
+	// 2. 回退到 addomain 包的全局 decryptPassword（含 SM4 + AES-legacy 回退链）
+	return addomain.DecryptPassword(encrypted)
 }
 
 // Authenticate 实现AD域控认证
@@ -86,6 +95,7 @@ func (a *ADAuthenticator) Authenticate(ctx context.Context, req *AuthRequest) (*
 	if err != nil {
 		// 用户认证成功但无法搜索用户信息
 		// 仍然返回成功，但没有AD用户详情
+		applogger.Warnf("[ADAuth] 用户认证成功但无法创建管理员连接: username=%s, error=%v", req.Username, err)
 		return &AuthResult{
 			User:       nil,
 			AuthSource: "ad",
@@ -100,6 +110,7 @@ func (a *ADAuthenticator) Authenticate(ctx context.Context, req *AuthRequest) (*
 	// 管理员绑定
 	if err := a.bindAdmin(adminConn, config); err != nil {
 		// 认证成功但搜索失败，返回基本信息
+		applogger.Warnf("[ADAuth] 管理员绑定失败: username=%s, error=%v", req.Username, err)
 		return &AuthResult{
 			User:       nil,
 			AuthSource: "ad",
@@ -111,9 +122,11 @@ func (a *ADAuthenticator) Authenticate(ctx context.Context, req *AuthRequest) (*
 	}
 
 	// 5. 搜索用户信息
+	applogger.Infof("[ADAuth] 开始搜索AD用户信息: username=%s, BaseDN=%s", req.Username, config.BaseDN)
 	adUserInfo, err := a.searchUserInfo(adminConn, config, req.Username)
 	if err != nil {
 		// 认证成功但搜索失败，返回基本信息
+		applogger.Errorf("[ADAuth] 搜索AD用户信息失败: username=%s, error=%v", req.Username, err)
 		return &AuthResult{
 			User:       nil,
 			AuthSource: "ad",
@@ -123,13 +136,18 @@ func (a *ADAuthenticator) Authenticate(ctx context.Context, req *AuthRequest) (*
 			NeedsSync: true,
 		}, nil
 	}
+	applogger.Infof("[ADAuth] 成功获取AD用户信息: username=%s, displayName=%s, email=%s, dn=%s", adUserInfo.Username, adUserInfo.DisplayName, adUserInfo.Email, adUserInfo.UserDN)
 
 	// 6. 如果设置了用户同步服务，自动同步AD用户到sys_user表
+	applogger.Infof("[ADAuth] 检查用户同步服务: userSyncer是否为nil = %v", a.userSyncer == nil)
 	if a.userSyncer != nil {
 		defaultRoleID := a.getDefaultRoleID()
+		applogger.Infof("[ADAuth] 开始同步AD用户: username=%s, defaultRoleID=%s", adUserInfo.Username, defaultRoleID)
+
 		syncedUser, err := a.userSyncer.SyncADUser(ctx, adUserInfo, defaultRoleID)
 		if err != nil {
 			// 同步失败不影响认证成功，但标记需要同步
+			applogger.Errorf("[ADAuth] 同步AD用户失败: username=%s, error=%v", adUserInfo.Username, err)
 			return &AuthResult{
 				User:       nil,
 				AuthSource: "ad",
@@ -138,6 +156,7 @@ func (a *ADAuthenticator) Authenticate(ctx context.Context, req *AuthRequest) (*
 			}, nil
 		}
 
+		applogger.Infof("[ADAuth] 同步AD用户成功: userID=%s, username=%s", syncedUser.ID, syncedUser.Username)
 		// 同步成功，返回完整的用户信息
 		return &AuthResult{
 			User: &UserResult{
@@ -157,6 +176,7 @@ func (a *ADAuthenticator) Authenticate(ctx context.Context, req *AuthRequest) (*
 	}
 
 	// 没有同步服务，返回AD用户信息，标记需要同步
+	applogger.Warnf("[ADAuth] 用户同步服务未设置，返回 NeedsSync=true")
 	return &AuthResult{
 		User:       nil,
 		AuthSource: "ad",

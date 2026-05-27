@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -184,14 +185,21 @@ func (s *ConfigService) Delete(ctx context.Context, id string) error {
 
 // TestConnection 测试AD连接
 func (s *ConfigService) TestConnection(ctx context.Context, config *models.ADConfig) error {
-	// 解密密码
-	config.AdminPassword = decryptPassword(config.AdminPassword)
+	applogger.Infof("[ADTest] 开始测试AD连接: configID=%s, server=%s:%d, baseDN=%s", config.ID, config.ServerAddress, config.ServerPort, config.BaseDN)
 
+	// 解密密码
+	applogger.Infof("[ADTest] 密码解密前长度=%d", len(config.AdminPassword))
+	config.AdminPassword = decryptPassword(config.AdminPassword)
+	applogger.Infof("[ADTest] 密码解密后长度=%d", len(config.AdminPassword))
+
+	applogger.Infof("[ADTest] 创建LDAP客户端")
 	client := NewLDAPClient(config)
 	if err := client.Connect(); err != nil {
+		applogger.Errorf("[ADTest] LDAP连接失败: %v", err)
 		return err
 	}
 	defer client.Close()
 
+	applogger.Infof("[ADTest] LDAP连接测试成功")
 	return nil
 }

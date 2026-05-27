@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
 	"gorm.io/gorm"
 )
 
@@ -13,15 +14,20 @@ import (
 type AuthStrategyFactory struct {
 	db          *gorm.DB
 	pwdManager  *PasswordManager
-	userSyncer  UserSyncer // 用户同步服务（可选）
+	userSyncer  UserSyncer           // 用户同步服务（可选）
+	sm4Cipher   addomain.PasswordCipher // SM4加密器（用于解密AD管理员密码）
 }
 
 // NewAuthStrategyFactory 创建认证策略工厂
-func NewAuthStrategyFactory(db *gorm.DB, pwdMgr *PasswordManager) *AuthStrategyFactory {
-	return &AuthStrategyFactory{
+func NewAuthStrategyFactory(db *gorm.DB, pwdMgr *PasswordManager, sm4Cipher ...addomain.PasswordCipher) *AuthStrategyFactory {
+	f := &AuthStrategyFactory{
 		db:         db,
 		pwdManager: pwdMgr,
 	}
+	if len(sm4Cipher) > 0 && sm4Cipher[0] != nil {
+		f.sm4Cipher = sm4Cipher[0]
+	}
+	return f
 }
 
 // SetUserSyncer 设置用户同步服务
@@ -44,6 +50,9 @@ func (f *AuthStrategyFactory) GetAuthenticator(mode string) (Authenticator, erro
 		}
 		ad := NewADAuthenticator(f.db, configID)
 		ad.SetUserSyncer(f.userSyncer)
+		if f.sm4Cipher != nil {
+			ad.SetPasswordCipher(f.sm4Cipher)
+		}
 		return ad, nil
 
 	case "hybrid":
@@ -54,6 +63,9 @@ func (f *AuthStrategyFactory) GetAuthenticator(mode string) (Authenticator, erro
 		}
 		ad := NewADAuthenticator(f.db, configID)
 		ad.SetUserSyncer(f.userSyncer)
+		if f.sm4Cipher != nil {
+			ad.SetPasswordCipher(f.sm4Cipher)
+		}
 		return NewHybridAuthenticator(local, ad), nil
 
 	default:
