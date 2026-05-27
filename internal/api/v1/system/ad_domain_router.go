@@ -71,6 +71,7 @@ func SetupADDomainRouter(r *gin.RouterGroup, core *core.Core) {
 		users.POST("/:id/move", handler.MoveUser)
 		users.POST("/:id/enable", handler.EnableUser)
 		users.POST("/:id/disable", handler.DisableUser)
+		users.POST("/batch-sync", syncHandler.BatchSyncADUsers)
 	}
 
 	// 同步日志

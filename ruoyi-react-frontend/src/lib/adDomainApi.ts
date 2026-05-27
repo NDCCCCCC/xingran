@@ -518,3 +518,10 @@ export function batchSyncADUsers(
 ): Promise<BaseResponse<BatchSyncResult>> {
   return post(`/ad-domain/groups/${groupId}/members/sync`, data);
 }
+
+// 直接批量同步AD用户（不依赖用户组）
+export function batchSyncADUsersDirect(
+  data: BatchSyncUsersRequest
+): Promise<BaseResponse<BatchSyncResult>> {
+  return post('/ad-domain/users/batch-sync', data);
+}

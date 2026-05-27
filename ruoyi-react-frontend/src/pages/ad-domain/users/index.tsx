@@ -21,6 +21,7 @@ import {
   EditOutlined,
   SearchOutlined,
   FolderOutlined,
+  SyncOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -30,8 +31,10 @@ import {
   enableADUser,
   disableADUser,
   getADOUTree,
+  batchSyncADUsersDirect,
   type ADUser,
-  type ADOUNode
+  type ADOUNode,
+  type BatchSyncResult,
 } from '@/lib/adDomainApi';
 import type { UnknownError } from '@/types/common';
 import ActionButtons from '@/components/shared/ActionButtons';
@@ -65,6 +68,10 @@ const ADUserPage: FC = () => {
 
   const [moveModalVisible, setMoveModalVisible] = useState(false);
   const [movingUser, setMovingUser] = useState<ADUser | null>(null);
+
+  // Batch sync state
+  const [selectedUsers, setSelectedUsers] = useState<ADUser[]>([]);
+  const [batchSyncLoading, setBatchSyncLoading] = useState(false);
 
   const fetchOUTree = async () => {
     if (!selectedConfig) return;
@@ -209,6 +216,59 @@ const ADUserPage: FC = () => {
       const err = error as UnknownError;
       message.error(err.message || '操作失败');
     }
+  };
+
+  const handleBatchSync = async () => {
+    if (!selectedConfig || selectedUsers.length === 0) return;
+
+    Modal.confirm({
+      title: `确定同步选中的 ${selectedUsers.length} 个用户到系统用户表？`,
+      content: '同步后用户可以使用AD账号登录系统',
+      okText: '确定',
+      cancelText: '取消',
+      onOk: async () => {
+        setBatchSyncLoading(true);
+        try {
+          const userDns = selectedUsers.map(u => u.userDn);
+          const res = await batchSyncADUsersDirect({
+            configId: selectedConfig,
+            userDns,
+          });
+
+          if (res.code === 0 && res.data) {
+            const data = res.data;
+            const { success, failed, skipped } = data;
+            message.success(`同步完成: 成功${success}个, 失败${failed}个, 跳过${skipped}个`);
+
+            // 显示错误详情
+            if (data.errors && data.errors.length > 0) {
+              Modal.warning({
+                title: '部分用户同步失败',
+                width: 600,
+                content: (
+                  <div style={{ maxHeight: 400, overflow: 'auto' }}>
+                    {data.errors.map((err, i) => (
+                      <div key={i} style={{ marginBottom: 4 }}>
+                        <strong>{err.username}:</strong> {err.error}
+                      </div>
+                    ))}
+                  </div>
+                ),
+              });
+            }
+
+            // 清空选择
+            setSelectedUsers([]);
+            // 刷新用户列表
+            fetchUsers();
+          }
+        } catch (error) {
+          message.error('批量同步失败');
+        } finally {
+          setBatchSyncLoading(false);
+        }
+      },
+    });
   };
 
   // 构建TreeSelect所需的数据结构
@@ -376,6 +436,15 @@ const ADUserPage: FC = () => {
               <Button icon={<ReloadOutlined />} onClick={fetchUsers}>
                 刷新
               </Button>
+              <Button
+                type="primary"
+                icon={<SyncOutlined />}
+                disabled={selectedUsers.length === 0}
+                onClick={handleBatchSync}
+                loading={batchSyncLoading}
+              >
+                批量同步 ({selectedUsers.length})
+              </Button>
             </Space>
           </Form.Item>
         </Form>
@@ -388,6 +457,12 @@ const ADUserPage: FC = () => {
           rowKey="id"
           scroll={{ x: 1500 }}
           pagination={paginationProps}
+          rowSelection={{
+            selectedRowKeys: selectedUsers.map(u => u.userDn),
+            onChange: (selectedKeys, selectedRows) => {
+              setSelectedUsers(selectedRows);
+            },
+          }}
         />
       </Space>
 

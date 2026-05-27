@@ -152,3 +152,61 @@ func (h *ADUserSyncHandler) getDefaultRoleID(ctx context.Context) string {
 	}
 	return config.ConfigValue
 }
+
+// BatchSyncADUsers 直接批量同步AD用户到系统用户表
+// @Summary 批量同步AD用户
+// @Description 将选中的AD用户批量同步到系统用户表，复用首次登录同步逻辑
+// @Tags AD域管理
+// @Accept json
+// @Produce json
+// @Param request body BatchSyncUsersRequest true "同步请求"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ad-domain/users/batch-sync [post]
+func (h *ADUserSyncHandler) BatchSyncADUsers(c *gin.Context) {
+	var req BatchSyncUsersRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, 400, "请求参数错误: "+err.Error())
+		return
+	}
+
+	// 验证配置ID是否存在
+	var config models.ADConfig
+	err := h.core.GetDB().WithContext(c.Request.Context()).
+		Where("id = ? AND deleted_at IS NULL", req.ConfigID).
+		First(&config).Error
+	if err != nil {
+		response.Error(c, 404, "AD配置不存在")
+		return
+	}
+
+	// 获取默认角色ID（如果未指定）
+	defaultRoleID := req.DefaultRoleID
+	if defaultRoleID == "" {
+		defaultRoleID = h.getDefaultRoleID(c.Request.Context())
+	}
+
+	// 根据用户DN列表查询用户详细信息
+	users, err := h.getADUsersByDNs(c.Request.Context(), &config, req.UserDNs)
+	if err != nil {
+		response.Error(c, 500, "获取AD用户信息失败: "+err.Error())
+		return
+	}
+
+	// 执行批量同步
+	result, err := h.userSyncService.BatchSyncADUsers(c.Request.Context(), users, defaultRoleID)
+	if err != nil {
+		response.Error(c, 500, "批量同步失败: "+err.Error())
+		return
+	}
+
+	// 返回同步结果
+	response.Success(c, BatchSyncGroupMembersResponse{
+		Total:   result.Total,
+		Success: result.Success,
+		Failed:  result.Failed,
+		Skipped: result.Skipped,
+		Errors:  result.Errors,
+	})
+}
