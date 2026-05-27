@@ -27,8 +27,5 @@ func SetupGroupSyncRouter(r *gin.RouterGroup, adService *addomain.ADDomainServic
 		group.GET("/mappings/:id", handler.GetMapping)      // 获取映射详情
 		group.PUT("/mappings/:id", handler.UpdateMapping)   // 更新映射
 		group.DELETE("/mappings/:id", handler.DeleteMapping) // 删除映射
-
-		// 自动映射
-		group.POST("/automap", handler.AutoMapDepartments) // 批量自动映射
 	}
 }
