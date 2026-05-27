@@ -41,12 +41,6 @@ type UpdateMappingRequest struct {
 	SyncEnabled   *bool   `json:"syncEnabled"`
 }
 
-// AutoMapRequest 自动映射请求
-type AutoMapRequest struct {
-	ConfigID string   `json:"configId" binding:"required"`
-	DeptIDs  []string `json:"deptIds"`
-}
-
 // SyncAllMembers 手动触发同步所有成员
 // @Summary 手动触发AD组成员同步
 // @Description 同步所有有映射的部门的成员到对应的AD组
@@ -262,43 +256,6 @@ func (h *GroupSyncHandler) DeleteMapping(c *gin.Context) {
 	}
 
 	response.Success(c, nil)
-}
-
-// AutoMapDepartments 批量自动映射部门
-// @Summary 批量自动映射部门到AD组
-// @Description 根据部门名称自动匹配对应的AD组（cxhub-{dept}命名规则）
-// @Tags AD Group Sync
-// @Accept json
-// @Produce json
-// @Param request body AutoMapRequest true "自动映射请求"
-// @Success 200 {object} response.Response "自动映射成功"
-// @Router /api/v1/ad/groups/automap [post]
-func (h *GroupSyncHandler) AutoMapDepartments(c *gin.Context) {
-	var req AutoMapRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误")
-		return
-	}
-
-	var result interface{}
-	var err error
-
-	if len(req.DeptIDs) == 0 {
-		// 自动映射所有二级部门
-		result, err = h.adService.DeptGroupMapping.AutoMapAllDepartments(c.Request.Context(), req.ConfigID)
-	} else {
-		// 映射指定部门
-		// TODO: 实现批量指定部门映射
-		response.Error(c, http.StatusNotImplemented, "暂未实现")
-		return
-	}
-
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	response.Success(c, result)
 }
 
 // SyncDeptMembers 同步指定部门的成员
