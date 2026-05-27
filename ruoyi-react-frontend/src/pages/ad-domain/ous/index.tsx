@@ -27,9 +27,11 @@ import {
   getADUserList,
   getOUDeptMapping,
   updateOUDeptMapping,
+  getADGroupList,
   type ADOUNode,
   type ADUser,
-  type OUDeptMappingResponse
+  type OUDeptMappingResponse,
+  type ADGroup
 } from '@/lib/adDomainApi';
 import { useADConfigs } from '@/hooks/useADConfigs';
 import type { ADConfig } from '@/lib/adDomainApi';
@@ -62,6 +64,10 @@ const ADOUPage: FC = () => {
   const [deptTree, setDeptTree] = useState<Department[]>([]);
   const [selectedDeptId, setSelectedDeptId] = useState<string>('');
 
+  // 用户组相关状态
+  const [groups, setGroups] = useState<ADGroup[]>([]);
+  const [groupsLoading, setGroupsLoading] = useState(false);
+
   const fetchOUTree = async () => {
     if (!selectedConfig) return;
 
@@ -91,10 +97,12 @@ const ADOUPage: FC = () => {
       setSelectedOU(ouDn);
       fetchUsers(ouDn);
       fetchDeptMapping(ouDn);
+      fetchGroups(ouDn);
     } else {
       setSelectedOU('');
       setUsers([]);
       setDeptMapping(null);
+      setGroups([]);
     }
   };
 
@@ -130,6 +138,27 @@ const ADOUPage: FC = () => {
       message.error('获取部门映射失败');
     } finally {
       setMappingLoading(false);
+    }
+  };
+
+  const fetchGroups = async (ouDn: string) => {
+    if (!selectedConfig) return;
+
+    setGroupsLoading(true);
+    try {
+      const res = await getADGroupList({
+        configId: selectedConfig,
+        ouDn: ouDn,
+        current: 1,
+        pageSize: 100,
+      });
+      if (res.code === 0) {
+        setGroups(res.data?.list ?? []);
+      }
+    } catch {
+      message.error('获取用户组列表失败');
+    } finally {
+      setGroupsLoading(false);
     }
   };
 
@@ -255,6 +284,38 @@ const ADOUPage: FC = () => {
           {user.passwordExpired && <Tag color="warning">密码过期</Tag>}
         </Space>
       ),
+    },
+  ];
+
+  const groupColumns: ColumnsType<ADGroup> = [
+    {
+      title: '组名称',
+      dataIndex: 'groupName',
+      key: 'groupName',
+    },
+    {
+      title: '描述',
+      dataIndex: 'description',
+      key: 'description',
+      ellipsis: true,
+    },
+    {
+      title: '成员数',
+      dataIndex: 'memberCount',
+      key: 'memberCount',
+      width: 100,
+      render: (count: number) => <Tag color="blue">{count}</Tag>,
+    },
+    {
+      title: '类型',
+      dataIndex: 'groupType',
+      key: 'groupType',
+      width: 100,
+      render: (type: number) => {
+        if (type === 1) return <Tag color="blue">安全组</Tag>;
+        if (type === 2) return <Tag color="default">分发组</Tag>;
+        return '-';
+      },
     },
   ];
 
@@ -400,6 +461,32 @@ const ADOUPage: FC = () => {
               ) : (
                 <div style={{ color: '#999', textAlign: 'center', padding: '20px' }}>
                   {selectedOU ? '该 OU 尚未关联部门' : '请选择 OU'}
+                </div>
+              )}
+            </Card>
+
+            {/* 用户组卡片 */}
+            <Card
+              title={
+                <Space>
+                  <TeamOutlined />
+                  <span>关联用户组</span>
+                </Space>
+              }
+              size="small"
+              loading={groupsLoading}
+            >
+              {groups.length > 0 ? (
+                <Table
+                  columns={groupColumns}
+                  dataSource={groups}
+                  rowKey="id"
+                  pagination={false}
+                  size="small"
+                />
+              ) : (
+                <div style={{ color: '#999', textAlign: 'center', padding: '20px' }}>
+                  {selectedOU ? '该 OU 下暂无用户组' : '请选择 OU'}
                 </div>
               )}
             </Card>
