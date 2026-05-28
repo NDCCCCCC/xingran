@@ -15,6 +15,7 @@ func SetupVMRouter(r *gin.RouterGroup, core *core.Core) {
 
 	// 注册路由
 	r.POST("/list", vmHandler.List)
+	r.POST("/resource-groups", vmHandler.ListResourceGroups)
 	r.POST("", vmHandler.Create)
 	r.POST("/:id", vmHandler.GetByID)
 	r.POST("/:id/update", vmHandler.Update)

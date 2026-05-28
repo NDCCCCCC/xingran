@@ -2,6 +2,7 @@ package vdi
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"time"
@@ -61,6 +62,10 @@ func (s *vmServiceImpl) getClient(ctx context.Context) (VDIClientExtended, error
 
 // syncVMsFromVDI 从VDI服务器同步虚拟机数据到本地数据库
 func (s *vmServiceImpl) syncVMsFromVDI(ctx context.Context, client VDIClientExtended) error {
+	// 用于收集所有从VDI获取的虚拟机ID
+	vdiVMIDs := make(map[string]bool)
+	vdiServerID := s.vdiServerID()
+
 	// 1. 获取所有资源组
 	groups, err := client.ListResourceGroups(ctx)
 	if err != nil {
@@ -99,8 +104,9 @@ func (s *vmServiceImpl) syncVMsFromVDI(ctx context.Context, client VDIClientExte
 					break
 				}
 
-				// 保存虚拟机数据到本地数据库
+				// 保存虚拟机数据到本地数据库并收集ID
 				for _, vm := range vms {
+					vdiVMIDs[vm.ID] = true // 标记该虚拟机存在于VDI服务器
 					s.saveOrUpdateVM(ctx, vm, fmt.Sprintf("%d", resource.ID))
 				}
 
@@ -113,7 +119,48 @@ func (s *vmServiceImpl) syncVMsFromVDI(ctx context.Context, client VDIClientExte
 		}
 	}
 
+	// 4. 清理孤立的虚拟机记录（VDI服务器上不存在的虚拟机）
+	s.cleanupOrphanedVMs(ctx, vdiVMIDs, vdiServerID)
+
 	return nil
+}
+
+// cleanupOrphanedVMs 清理孤立的虚拟机记录
+func (s *vmServiceImpl) cleanupOrphanedVMs(ctx context.Context, vdiVMIDs map[string]bool, vdiServerID string) {
+	fmt.Printf("[VDI SYNC] Starting orphaned VMs cleanup...\n")
+
+	// 获取本地数据库中该VDI服务器的所有虚拟机
+	var localVMs []models.VDIVirtualMachine
+	err := s.db.WithContext(ctx).
+		Where("vdi_server_id = ? AND deleted_at IS NULL", vdiServerID).
+		Find(&localVMs).Error
+	if err != nil {
+		fmt.Printf("[VDI SYNC] Failed to query local VMs: %v\n", err)
+		return
+	}
+
+	// 找出孤立的虚拟机（本地存在但VDI服务器上不存在）
+	var orphanedIDs []string
+	for _, localVM := range localVMs {
+		if !vdiVMIDs[localVM.VMID] {
+			orphanedIDs = append(orphanedIDs, localVM.ID)
+			fmt.Printf("[VDI SYNC] Found orphaned VM: %s (VM ID: %s)\n", localVM.Name, localVM.VMID)
+		}
+	}
+
+	// 删除孤立的虚拟机记录（软删除）
+	if len(orphanedIDs) > 0 {
+		result := s.db.WithContext(ctx).
+			Where("id IN ?", orphanedIDs).
+			Delete(&models.VDIVirtualMachine{})
+		if result.Error != nil {
+			fmt.Printf("[VDI SYNC] Failed to delete orphaned VMs: %v\n", result.Error)
+		} else {
+			fmt.Printf("[VDI SYNC] Successfully cleaned up %d orphaned VM records\n", result.RowsAffected)
+		}
+	} else {
+		fmt.Printf("[VDI SYNC] No orphaned VMs found, database is in sync\n")
+	}
 }
 
 // saveOrUpdateVM 保存或更新虚拟机记录
@@ -134,48 +181,93 @@ func (s *vmServiceImpl) saveOrUpdateVM(ctx context.Context, resource VDIVMResour
 			IPAddress:   resource.IP,
 			MACAddress:  resource.MAC,
 			OSType:      resource.OSType,
-			CPU:         s.parseIntSafe(resource.CPUNumber),
+			CPUNumber:   s.parseIntSafe(resource.CPUNumber),
+			CPUCore:     s.parseIntSafe(resource.CPUCore),
+			CPUPer:      s.parseIntSafe(resource.CPUPer),
 			Memory:      s.parseIntSafe(resource.MemAll),
+			MemoryPer:   s.parseIntSafe(resource.MemPer),
 			Disk:        s.parseIntSafe(resource.DiscAll),
-			BoundUserID: &resource.ApplyUser,
-			VdiServerID: s.vdiServerID(),
-			LastSyncAt:  &time.Time{},
+			DiskPer:     s.parseIntSafe(resource.DiscPer),
+			BoundUserName: &resource.ApplyUser, // ✅ 修复：ApplyUser是用户名，不是ID
+			// 网络配置信息
+			IPType:        s.mapIPType(resource.IPState),
+			SubnetMask:    resource.Subnetmask,
+			DefaultGateway: resource.DefaultGateway,
+			NameServer:    resource.NameServer,
+			AssignIP:      resource.AssignIP,
+			VdiServerID:   s.vdiServerID(),
+			LastSyncAt:    &time.Time{},
+		}
+		// 调试日志：打印CPU使用率原始值和解析后的值
+		if resource.CPUPer != "" {
+			fmt.Printf("[VDI SYNC DEBUG] VM: %s, CPUPer原始值: '%s', 解析后: %d\n",
+				resource.VMName, resource.CPUPer, s.parseIntSafe(resource.CPUPer))
 		}
 		s.db.WithContext(ctx).Create(&vm)
 	} else if err == nil {
 		// 更新现有记录
 		updates := map[string]interface{}{
-			"name":        resource.VMName,
-			"resource_id": resourceID,
-			"power_state": s.mapPowerState(resource.Status),
-			"ip_address":  resource.IP,
-			"mac_address": resource.MAC,
-			"os_type":     resource.OSType,
-			"cpu":         s.parseIntSafe(resource.CPUNumber),
-			"last_sync_at": time.Now(),
-			"memory":      s.parseIntSafe(resource.MemAll),
-			"disk":        s.parseIntSafe(resource.DiscAll),
+			"name":          resource.VMName,
+			"resource_id":   resourceID,
+			"power_state":   s.mapPowerState(resource.Status),
+			"ip_address":    resource.IP,
+			"mac_address":   resource.MAC,
+			"os_type":       resource.OSType,
+			"cpu_number":    s.parseIntSafe(resource.CPUNumber),
+			"cpu_core":      s.parseIntSafe(resource.CPUCore),
+			"cpu_per":       s.parseIntSafe(resource.CPUPer),
+			"last_sync_at":  time.Now(),
+			"memory":        s.parseIntSafe(resource.MemAll),
+			"memory_per":    s.parseIntSafe(resource.MemPer),
+			"disk":          s.parseIntSafe(resource.DiscAll),
+			"disk_per":      s.parseIntSafe(resource.DiscPer),
 		}
 		if resource.ApplyUser != "" {
-			updates["bound_user_id"] = &resource.ApplyUser
+			updates["bound_user_name"] = &resource.ApplyUser // ✅ 修复：ApplyUser是用户名，不是ID
 		}
+		// 网络配置信息更新
+		updates["ip_type"] = s.mapIPType(resource.IPState)
+		updates["subnet_mask"] = resource.Subnetmask
+		updates["default_gateway"] = resource.DefaultGateway
+		updates["name_server"] = resource.NameServer
+		updates["assign_ip"] = resource.AssignIP
 		s.db.WithContext(ctx).Model(&vm).Updates(updates)
 	}
 }
 
-// mapPowerState 映射VDI状态到电源状态
+// mapPowerState 映射VDI状态码到虚拟机状态
 func (s *vmServiceImpl) mapPowerState(status string) string {
-	// VDI状态码映射（根据深信服文档）
-	// 11=运行中, 12=关机, 13=暂停, 14=故障, 等
+	// VDI虚拟机状态码映射（根据深信服文档）
+	// 10=等待agent接入, 11=关机, 12=挂起, 13=待确认, 14=待确认, 15=正常使用
 	switch status {
+	case "10":
+		return "pending"   // 等待agent接入
 	case "11":
-		return "running"
+		return "stopped"   // 关机
 	case "12":
-		return "stopped"
+		return "suspended" // 挂起
 	case "13":
-		return "suspended"
+		return "unknown13" // 待确认
+	case "14":
+		return "unknown14" // 待确认
+	case "15":
+		return "in_use"    // 正常使用
 	default:
 		return "unknown"
+	}
+}
+
+// mapIPType 映射VDI IP状态到IP类型
+func (s *vmServiceImpl) mapIPType(ipState string) string {
+	// VDI IP状态映射
+	// 0=DHCP, 1=静态IP
+	switch ipState {
+	case "0":
+		return "DHCP"
+	case "1":
+		return "STATIC"
+	default:
+		return "DHCP" // 默认DHCP
 	}
 }
 
@@ -191,6 +283,32 @@ func (s *vmServiceImpl) vdiServerID() string {
 	var server models.VDIServer
 	s.db.Where("status = 0").First(&server)
 	return server.ID
+}
+
+// ListResourceGroups 查询资源组列表（从本地数据库查询，不调用VDI API）
+func (s *vmServiceImpl) ListResourceGroups(ctx context.Context, vdiServerID string) ([]VDIResourceGroupDTO, error) {
+	query := s.db.WithContext(ctx).Model(&models.VDIResourceGroup{}).Where("status = 0")
+
+	if vdiServerID != "" {
+		query = query.Where("vdi_server_id = ?", vdiServerID)
+	}
+
+	var groups []models.VDIResourceGroup
+	if err := query.Find(&groups).Error; err != nil {
+		return nil, fmt.Errorf("failed to query resource groups: %w", err)
+	}
+
+	dtos := make([]VDIResourceGroupDTO, len(groups))
+	for i, g := range groups {
+		dtos[i] = VDIResourceGroupDTO{
+			ResourceGroupID: g.ResourceGroupID,
+			Name:            g.Name,
+			VdiServerID:     g.VdiServerID,
+			Type:            g.Type,
+		}
+	}
+
+	return dtos, nil
 }
 
 // CreateVM 创建虚拟机（调用VDI API）
@@ -212,7 +330,8 @@ func (s *vmServiceImpl) CreateVM(ctx context.Context, req *CreateVMServiceReques
 		Name:        req.Name,
 		ResourceID:  req.ResourceID,
 		VdiServerID: req.VdiServerID,
-		CPU:         req.CPU,
+		CPUNumber:   req.CPUNumber,
+		CPUCore:     req.CPUCore,
 		Memory:      req.Memory,
 		Disk:        req.Disk,
 		Status:      0,
@@ -381,11 +500,22 @@ func (s *vmServiceImpl) DeleteVM(ctx context.Context, ids []string) error {
 	}
 
 	// 2. 调用VDI API删除虚拟机
-	if err := client.DeleteVM(ctx, vmIDs); err != nil {
-		return fmt.Errorf("failed to delete VMs from VDI: %w", err)
+	vdiErr := client.DeleteVM(ctx, vmIDs)
+
+	// 检查是否为 error_code 3001（虚拟机ID不存在）
+	if vdiErr != nil {
+		var vdiAPIErr *VDIError
+		if errors.As(vdiErr, &vdiAPIErr) && vdiAPIErr.Code == 3001 {
+			// 特殊处理：VDI服务器上不存在该虚拟机，记录警告但继续删除本地记录
+			fmt.Printf("[VDI DELETE] VM not found on VDI server (error_code 3001), cleaning up local orphaned records. VM IDs: %v\n", vmIDs)
+		} else {
+			// 其他错误：返回原错误，不删除本地记录
+			return fmt.Errorf("failed to delete VMs from VDI: %w", vdiErr)
+		}
 	}
 
 	// 3. 删除本地记录（软删除）
+	// 无论VDI API是否成功（除了3001以外的错误），都删除本地记录
 	if err := s.db.WithContext(ctx).Where("id IN ?", ids).Delete(&models.VDIVirtualMachine{}).Error; err != nil {
 		return fmt.Errorf("failed to delete VM records: %w", err)
 	}
@@ -658,9 +788,13 @@ func (s *vmServiceImpl) SyncVMFromVDI(ctx context.Context, vmID string) error {
 	vm.IPAddress = targetVM.IP
 	vm.MACAddress = targetVM.MAC
 	vm.OSType = targetVM.OSType
-	vm.CPU = s.parseIntSafe(targetVM.CPUNumber)
+	vm.CPUNumber = s.parseIntSafe(targetVM.CPUNumber)
+	vm.CPUCore = s.parseIntSafe(targetVM.CPUCore)
+	vm.CPUPer = s.parseIntSafe(targetVM.CPUPer)
 	vm.Memory = s.parseIntSafe(targetVM.MemAll)
+	vm.MemoryPer = s.parseIntSafe(targetVM.MemPer)
 	vm.Disk = s.parseIntSafe(targetVM.DiscAll)
+	vm.DiskPer = s.parseIntSafe(targetVM.DiscPer)
 	if targetVM.ApplyUser != "" {
 		vm.BoundUserID = &targetVM.ApplyUser
 	}
@@ -724,12 +858,23 @@ func (s *vmServiceImpl) toDTO(vm *models.VDIVirtualMachine) *VDIVMDTO {
 		IPAddress:     vm.IPAddress,
 		MACAddress:    vm.MACAddress,
 		OSType:        vm.OSType,
-		CPU:           vm.CPU,
+		CPUNumber:     vm.CPUNumber,
+		CPUCore:       vm.CPUCore,
+		CPUPer:        vm.CPUPer,
 		Memory:        vm.Memory,
+		MemoryPer:     vm.MemoryPer,
 		Disk:          vm.Disk,
-		BoundUserID:   vm.BoundUserID,
-		BoundUserName: vm.BoundUserName,
-		VdiServerID:   vm.VdiServerID,
-		LastSyncAt:    vm.LastSyncAt,
+		DiskPer:       vm.DiskPer,
+		BoundUserID:    vm.BoundUserID,
+		BoundUserName:  vm.BoundUserName,
+		PolicyGroupID:  vm.PolicyGroupID,
+		// 网络配置信息
+		IPType:         vm.IPType,
+		SubnetMask:     vm.SubnetMask,
+		DefaultGateway: vm.DefaultGateway,
+		NameServer:     vm.NameServer,
+		AssignIP:       vm.AssignIP,
+		VdiServerID:    vm.VdiServerID,
+		LastSyncAt:     vm.LastSyncAt,
 	}
 }

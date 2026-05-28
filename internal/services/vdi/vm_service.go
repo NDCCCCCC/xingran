@@ -3,6 +3,8 @@ package vdi
 import (
 	"context"
 	"time"
+
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 )
 
 // ============ 请求/响应 DTO ============
@@ -12,7 +14,8 @@ type CreateVMServiceRequest struct {
 	Name        string `json:"name" validate:"required"`
 	ResourceID  string `json:"resource_id" validate:"required"`
 	VdiServerID string `json:"vdi_server_id" validate:"required"`
-	CPU         int    `json:"cpu" validate:"min=1,max=64"`
+	CPUNumber   int    `json:"cpu_number" validate:"min=1,max=64"`   // CPU颗数
+	CPUCore     int    `json:"cpu_core" validate:"min=1,max=128"`    // 每颗CPU核数
 	Memory      int    `json:"memory" validate:"min=512,max=131072"`
 	Disk        int    `json:"disk" validate:"min=20,max=2000"`
 }
@@ -47,13 +50,24 @@ type VDIVMDTO struct {
 	IPAddress     string     `json:"ip_address"`
 	MACAddress    string     `json:"mac_address"`
 	OSType        string     `json:"os_type"`
-	CPU           int        `json:"cpu"`
+	CPUNumber     int        `json:"cpu_number"`      // CPU颗数
+	CPUCore       int        `json:"cpu_core"`        // 每颗CPU的核数
+	CPUPer        int        `json:"cpu_per"`         // CPU使用率
 	Memory        int        `json:"memory"`
+	MemoryPer     int        `json:"memory_per"`      // 内存使用率
 	Disk          int        `json:"disk"`
-	BoundUserID   *string    `json:"bound_user_id"`
-	BoundUserName *string    `json:"bound_user_name"`
-	VdiServerID   string     `json:"vdi_server_id"`
-	LastSyncAt    *time.Time `json:"last_sync_at"`
+	DiskPer       int        `json:"disk_per"`        // 磁盘使用率
+	BoundUserID    *string    `json:"bound_user_id"`
+	BoundUserName  *string    `json:"bound_user_name"`
+	PolicyGroupID  *string    `json:"policy_group_id"`
+	// 网络配置信息
+	IPType         string     `json:"ip_type"`              // IP类型：STATIC/DHCP
+	SubnetMask     string     `json:"subnet_mask"`          // 子网掩码
+	DefaultGateway string     `json:"default_gateway"`      // 默认网关
+	NameServer     string     `json:"name_server"`          // DNS服务器
+	AssignIP       string     `json:"assign_ip"`            // 分配的IP地址
+	VdiServerID    string     `json:"vdi_server_id"`
+	LastSyncAt     *time.Time `json:"last_sync_at"`
 }
 
 // PageResult 分页结果
@@ -118,10 +132,22 @@ type BindUserServiceRequest struct {
 	UserID string `json:"user_id" validate:"required"`
 }
 
+// VDIResourceGroupDTO 资源组数据传输对象
+type VDIResourceGroupDTO struct {
+	ResourceGroupID string `json:"resource_group_id"`
+	Name            string `json:"name"`
+	VdiServerID     string `json:"vdi_server_id"`
+	Type            string `json:"type"`
+}
+
 // ============ VM Service 接口 ============
 
 // VMService 虚拟机服务接口
 type VMService interface {
+	// CRUD操作（都会调用VDI API）
+	// 资源组查询
+	ListResourceGroups(ctx context.Context, vdiServerID string) ([]VDIResourceGroupDTO, error)
+
 	// CRUD操作（都会调用VDI API）
 	CreateVM(ctx context.Context, req *CreateVMServiceRequest) (*VDIVMDTO, error)
 	GetVM(ctx context.Context, id string) (*VDIVMDTO, error)
@@ -141,4 +167,5 @@ type VMService interface {
 	// 同步操作
 	SyncVMFromVDI(ctx context.Context, vmID string) error
 	SyncAllVMs(ctx context.Context, serverID string) error
+	SyncVMsFromVDIByServer(ctx context.Context, server *models.VDIServer) error
 }
