@@ -18,12 +18,22 @@ export interface VirtualMachine {
   ip_address?: string;
   mac_address?: string;
   os_type?: string;
-  cpu?: number;
+  cpu_number?: number;      // CPU颗数
+  cpu_core?: number;        // 每颗CPU的核数
+  cpu_per?: number;         // CPU使用率
   memory?: number;
+  memory_per?: number;      // 内存使用率
   disk?: number;
+  disk_per?: number;        // 磁盘使用率
   bound_user_id?: string;
   bound_user_name?: string;
   policy_group_id?: string;
+  // 网络配置信息
+  ip_type?: string;             // IP类型：STATIC/DHCP
+  subnet_mask?: string;          // 子网掩码
+  default_gateway?: string;      // 默认网关
+  name_server?: string;          // DNS服务器
+  assign_ip?: string;            // 分配的IP地址
   last_sync_at?: string;
   vdi_server_id: string;
   created_at: string;
@@ -50,7 +60,8 @@ export interface CreateVMRequest {
   name: string;
   resource_id: string;
   vdi_server_id: string;
-  cpu?: number;
+  cpu_number?: number;    // CPU颗数
+  cpu_core?: number;      // 每颗CPU的核数
   memory?: number;
   disk?: number;
 }
@@ -108,6 +119,16 @@ export interface VMPageResponse {
 }
 
 // ==================== VDI 服务器类型 ====================
+
+/**
+ * VDI 资源组信息（从本地DB查询）
+ */
+export interface VDIResourceGroup {
+  resource_group_id: string;
+  name: string;
+  vdi_server_id: string;
+  type: string;
+}
 
 /**
  * VDI 服务器配置

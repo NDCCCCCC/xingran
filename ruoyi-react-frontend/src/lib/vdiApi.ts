@@ -11,6 +11,7 @@ import type {
 import type {
   VirtualMachine,
   VDIServer,
+  VDIResourceGroup,
   VMAccount,
   VMListParams,
   CreateVMRequest,
@@ -75,6 +76,13 @@ export const vmApi = {
     return await post<void>(`/vdi/vm/${id}/sync`, {});
   },
 
+  // 资源组查询
+  listResourceGroups: async (vdiServerId?: string) => {
+    return await post<VDIResourceGroup[]>('/vdi/vm/resource-groups', {
+      vdi_server_id: vdiServerId || '',
+    });
+  },
+
   // 批量操作辅助方法
   batchOperate: async (vmIds: string[], action: string) => {
     return await post<void>('/vdi/vm/operate', {
@@ -135,6 +143,7 @@ export const vdiServerApi = {
 export type {
   VirtualMachine,
   VDIServer,
+  VDIResourceGroup,
   VMAccount,
   VMListParams,
   CreateVMRequest,
