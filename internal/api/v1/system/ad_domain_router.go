@@ -3,6 +3,7 @@ package system
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
+	addomainAPI "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/addomain"
 	addomainServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
 )
@@ -12,6 +13,9 @@ func SetupADDomainRouter(r *gin.RouterGroup, core *core.Core) {
 	service := addomainServices.NewADDomainService(core.GetDB(), core.SM4Cipher)
 	handler := NewADDomainHandler(service, core)
 	syncHandler := NewADUserSyncHandler(core)
+
+	// 注册组同步路由（包含自动映射功能）
+	addomainAPI.SetupGroupSyncRouter(r, service)
 
 	// AD配置管理
 	configs := r.Group("/configs")
@@ -40,22 +44,19 @@ func SetupADDomainRouter(r *gin.RouterGroup, core *core.Core) {
 		ous.POST("/tree", handler.GetOUTree)
 	}
 
-	// 用户组管理
+	// 用户组管理路由
 	groups := r.Group("/groups")
 	groups.Use(middleware.RequirePermissions([]string{
 		"ops:ad:group:view",
 		"ops:ad:group:edit",
-		"ops:ad:group:sync",
 	}, core))
 	{
 		groups.POST("/list", handler.ListGroups)
-		groups.GET("/:id", handler.GetGroupDetail)
+		groups.POST("/sync-status", handler.GetGroupSyncStatus)
+		groups.POST("/:id", handler.GetGroupDetail)
 		groups.POST("/:id/update", handler.UpdateGroup)
 		groups.POST("/:id/members", handler.GetGroupMembers)
-		groups.POST("/:id/members/sync", syncHandler.BatchSyncGroupMembers)
 		groups.POST("/sync-single", handler.SyncSingleGroup)
-		groups.POST("/sync-status", handler.GetGroupSyncStatus)
-		groups.POST("/sync-by-config/:id", handler.SyncGroups)
 	}
 
 	// 用户管理
@@ -91,4 +92,7 @@ func SetupADDomainRouter(r *gin.RouterGroup, core *core.Core) {
 		computers.POST("/list", handler.ListComputers)
 		computers.POST("/detail", handler.GetComputerDetail)
 	}
+
+	// OU组映射管理
+	SetupOUGroupMappingRouter(r, core)
 }
