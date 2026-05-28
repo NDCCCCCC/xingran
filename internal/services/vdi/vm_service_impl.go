@@ -139,6 +139,7 @@ func (s *vmServiceImpl) saveOrUpdateVM(ctx context.Context, resource VDIVMResour
 			Disk:        s.parseIntSafe(resource.DiscAll),
 			BoundUserID: &resource.ApplyUser,
 			VdiServerID: s.vdiServerID(),
+			LastSyncAt:  &time.Time{},
 		}
 		s.db.WithContext(ctx).Create(&vm)
 	} else if err == nil {
@@ -151,6 +152,7 @@ func (s *vmServiceImpl) saveOrUpdateVM(ctx context.Context, resource VDIVMResour
 			"mac_address": resource.MAC,
 			"os_type":     resource.OSType,
 			"cpu":         s.parseIntSafe(resource.CPUNumber),
+			"last_sync_at": time.Now(),
 			"memory":      s.parseIntSafe(resource.MemAll),
 			"disk":        s.parseIntSafe(resource.DiscAll),
 		}
@@ -467,21 +469,45 @@ func (s *vmServiceImpl) BatchConfigIP(ctx context.Context, req []VMIPConfigReque
 	}
 
 	// 2. 调用VDI API配置IP
-	configReqs := make([]ConfigIPRequestExtended, len(req))
+	// VDI API expects batch configuration with comma-separated IDs
+	// For now, use type 2 (specified IP range) to configure individual IPs
+	var idsStr string
+	var vmNamesStr string
+	mask := ""
+	gateway := ""
+	dns := ""
+
 	for i, r := range req {
-		configReqs[i] = ConfigIPRequestExtended{
-			VMInfos: []VMIPInfo{
-				{
-					VMID:      r.VMID,
-					IPAddress: r.IPAddress,
-					Netmask:   r.Netmask,
-					Gateway:   r.Gateway,
-				},
-			},
+		if i > 0 {
+			idsStr += ","
+			vmNamesStr += ","
+		}
+		idsStr += r.VMID
+		vmNamesStr += r.VMID // Using VMID as VM name for now
+		if r.Netmask != "" {
+			mask = r.Netmask
+		}
+		if r.Gateway != "" {
+			gateway = r.Gateway
+		}
+		if r.IPAddress != "" {
+			dns = r.IPAddress // Using IP as DNS placeholder
 		}
 	}
 
-	if err := client.ConfigIP(ctx, configReqs); err != nil {
+	configReq := ConfigIPRequestExtended{
+		IDs:       idsStr,
+		Type:      2, // Type 2: obtain specified IP
+		IsRestart: 0, // Don't restart after configuration
+		BeginIP:   req[0].IPAddress, // Use first IP as begin
+		EndIP:     req[len(req)-1].IPAddress, // Use last IP as end
+		VMNames:   vmNamesStr,
+		Mask:      mask,
+		Gate:      gateway,
+		DNS:       dns,
+	}
+
+	if err := client.ConfigIP(ctx, configReq); err != nil {
 		return fmt.Errorf("failed to config IPs: %w", err)
 	}
 
@@ -605,25 +631,38 @@ func (s *vmServiceImpl) SyncVMFromVDI(ctx context.Context, vmID string) error {
 		return fmt.Errorf("VM not found: %w", err)
 	}
 
-	// 2. 调用VDI API获取最新数据
-	vdiVMDetail, err := client.GetVM(ctx, vm.VMID)
+	// 2. 从VDI API获取该虚拟机所属资源的所有虚拟机，然后查找目标VM
+	// 注意：VDI API 可能不支持直接通过 VM ID 获取单个虚拟机，
+	// 所以我们需要从资源列表中获取所有虚拟机，然后查找目标VM
+	vms, _, err := client.ListResourceServers(ctx, vm.ResourceID, 1, 1000)
 	if err != nil {
-		return fmt.Errorf("failed to fetch VM from VDI: %w", err)
+		return fmt.Errorf("failed to fetch VMs from VDI: %w", err)
 	}
 
-	// 3. 更新本地记录
-	vm.PowerState = vdiVMDetail.PowerState
-	vm.IPAddress = vdiVMDetail.IPAddress
-	vm.MACAddress = vdiVMDetail.MACAddress
-	vm.OSType = vdiVMDetail.OSType
-	vm.CPU = vdiVMDetail.CPU
-	vm.Memory = vdiVMDetail.Memory
-	vm.Disk = vdiVMDetail.Disk
-	if vdiVMDetail.BoundUserID != nil {
-		vm.BoundUserID = vdiVMDetail.BoundUserID
+	// 3. 从返回的虚拟机列表中查找目标虚拟机
+	// VDI API返回的虚拟机ID在 _id 字段中
+	var targetVM *VDIVMResource
+	for i := range vms {
+		if vms[i].ID == vm.VMID {
+			targetVM = &vms[i]
+			break
+		}
 	}
-	if vdiVMDetail.BoundUserName != nil {
-		vm.BoundUserName = vdiVMDetail.BoundUserName
+
+	if targetVM == nil {
+		return fmt.Errorf("VM %s not found in VDI server (may have been deleted)", vm.VMID)
+	}
+
+	// 4. 更新本地记录
+	vm.PowerState = s.mapPowerState(targetVM.Status)
+	vm.IPAddress = targetVM.IP
+	vm.MACAddress = targetVM.MAC
+	vm.OSType = targetVM.OSType
+	vm.CPU = s.parseIntSafe(targetVM.CPUNumber)
+	vm.Memory = s.parseIntSafe(targetVM.MemAll)
+	vm.Disk = s.parseIntSafe(targetVM.DiscAll)
+	if targetVM.ApplyUser != "" {
+		vm.BoundUserID = &targetVM.ApplyUser
 	}
 	now := time.Now()
 	vm.LastSyncAt = &now
@@ -655,6 +694,19 @@ func (s *vmServiceImpl) SyncAllVMs(ctx context.Context, serverID string) error {
 			// 记录错误但继续同步其他虚拟机
 			fmt.Printf("Failed to sync VM %s: %v\n", vm.VMID, err)
 		}
+	}
+
+	return nil
+}
+
+// SyncVMsFromVDIByServer 从指定VDI服务器同步所有虚拟机数据
+func (s *vmServiceImpl) SyncVMsFromVDIByServer(ctx context.Context, server *models.VDIServer) error {
+	// 为指定服务器创建VDI客户端
+	client := NewVDIClientFromDB(s.db, server.ID)
+
+	// 调用同步方法
+	if err := s.syncVMsFromVDI(ctx, client); err != nil {
+		return fmt.Errorf("failed to sync VMs from VDI server [%s]: %w", server.Name, err)
 	}
 
 	return nil

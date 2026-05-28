@@ -128,8 +128,19 @@ type VDIVMSummary struct {
 }
 
 // ConfigIPRequestExtended 配置IP请求（扩展）
+// VDI API endpoint: PUT /v1/servers/ip
+// type: 0=用户自定义, 1=自动获取, 2=获取指定IP
 type ConfigIPRequestExtended struct {
-	VMInfos []VMIPInfo `json:"vm_infos"`
+	IDs         string `json:"ids"`          // VM IDs separated by commas
+	Type        int    `json:"type"`         // 0:custom, 1:auto, 2:specified IP
+	IsRestart   int    `json:"is_restart"`   // 0:no, 1:yes
+	BeginIP     string `json:"begin_ip,omitempty"`
+	EndIP       string `json:"end_ip,omitempty"`
+	VMNames     string `json:"vm_names,omitempty"`
+	Mask        string `json:"mask,omitempty"`
+	Gate        string `json:"gate,omitempty"`  // Gateway
+	DNS         string `json:"dns,omitempty"`
+	ReserveDNS  string `json:"reserve_dns,omitempty"`
 }
 
 // VMIPInfo 虚拟机IP信息
@@ -167,7 +178,7 @@ type VDIResource struct {
 
 // VDIVMResource VDI虚拟机资源信息（完整）
 type VDIVMResource struct {
-	ID                  string `json:"_id"`
+	ID                  string `json:"_id"` // VDI API返回整数，但Go json会自动转换为字符串
 	Status              string `json:"status"`
 	Graphics            string `json:"graphics"`
 	GraphicsMemAll      string `json:"graphics_mem_all"`
@@ -211,7 +222,7 @@ type VDIVMResource struct {
 	IsClient            bool   `json:"isClient"`
 	GroupPolicyName     string `json:"group_policy_name"`
 	GroupPolicyID       string `json:"group_policy_id"`
-	IsEnableGroupPolicy string `json:"is_enable_group_policy"`
+	IsEnableGroupPolicy bool `json:"is_enable_group_policy"`
 	AreaID              string `json:"araeId"`
 	AreaName            string `json:"areaName"`
 	ApplyWsus           string `json:"apply_wsus"`

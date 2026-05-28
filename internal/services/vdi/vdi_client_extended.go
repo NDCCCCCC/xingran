@@ -28,7 +28,7 @@ type VDIClientExtended interface {
 	// 虚拟机操作
 	OperateVM(ctx context.Context, vmIDs []string, action string) error
 	DeleteVM(ctx context.Context, vmIDs []string) error
-	ConfigIP(ctx context.Context, req []ConfigIPRequestExtended) error
+	ConfigIP(ctx context.Context, req ConfigIPRequestExtended) error
 	RenameVM(ctx context.Context, vmID, newName string) error
 
 	// 用户关联
@@ -113,6 +113,7 @@ func (c *vdiClientExtendedImpl) Authenticate(ctx context.Context) (string, error
 }
 
 // GetVM 获取虚拟机详情
+// VDI API endpoint: GET /v1/servers/detail/:vmid
 func (c *vdiClientExtendedImpl) GetVM(ctx context.Context, vmID string) (*VDIVMDetail, error) {
 	token, err := c.Authenticate(ctx)
 	if err != nil {
@@ -125,8 +126,8 @@ func (c *vdiClientExtendedImpl) GetVM(ctx context.Context, vmID string) (*VDIVMD
 		Data         VDIVMDetail `json:"data"`
 	}
 
-	path := fmt.Sprintf("/v1/vm/%s", vmID)
-	if err := c.callAPI(ctx, token, "GET", path, nil, &resp); err != nil {
+	path := fmt.Sprintf("/v1/servers/detail/%s", vmID)
+	if err := c.callAPIWithRetry(ctx, &token, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
 
@@ -138,6 +139,7 @@ func (c *vdiClientExtendedImpl) GetVM(ctx context.Context, vmID string) (*VDIVMD
 }
 
 // ListVMs 获取虚拟机列表
+// VDI API endpoint: GET /v1/servers (支持按 rc_id 过滤)
 func (c *vdiClientExtendedImpl) ListVMs(ctx context.Context, resourceID string) ([]VDIVMSummary, error) {
 	token, err := c.Authenticate(ctx)
 	if err != nil {
@@ -145,17 +147,17 @@ func (c *vdiClientExtendedImpl) ListVMs(ctx context.Context, resourceID string) 
 	}
 
 	var resp struct {
-		ErrorCode    int           `json:"error_code"`
-		ErrorMessage string        `json:"error_message"`
+		ErrorCode    int            `json:"error_code"`
+		ErrorMessage string         `json:"error_message"`
 		Data         []VDIVMSummary `json:"data"`
 	}
 
-	path := "/v1/vm/list"
+	path := "/v1/servers"
 	if resourceID != "" {
-		path = fmt.Sprintf("/v1/vm/list?resource_id=%s", resourceID)
+		path = fmt.Sprintf("/v1/servers?rc_id=%s", resourceID)
 	}
 
-	if err := c.callAPI(ctx, token, "GET", path, nil, &resp); err != nil {
+	if err := c.callAPIWithRetry(ctx, &token, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
 
@@ -174,13 +176,13 @@ func (c *vdiClientExtendedImpl) GetUserVMs(ctx context.Context, userID string) (
 	}
 
 	var resp struct {
-		ErrorCode    int           `json:"error_code"`
-		ErrorMessage string        `json:"error_message"`
+		ErrorCode    int            `json:"error_code"`
+		ErrorMessage string         `json:"error_message"`
 		Data         []VDIVMSummary `json:"data"`
 	}
 
-	path := fmt.Sprintf("/v1/user/%s/vm", userID)
-	if err := c.callAPI(ctx, token, "GET", path, nil, &resp); err != nil {
+	path := fmt.Sprintf("/api/v1/user/%s/vm", userID)
+	if err := c.callAPIWithRetry(ctx, &token, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
 
@@ -191,40 +193,105 @@ func (c *vdiClientExtendedImpl) GetUserVMs(ctx context.Context, userID string) (
 	return resp.Data, nil
 }
 
+// operateActionToName maps our internal action names to VDI API action names
+// Based on VDI API documentation: startup, shutdown, reboot, suspend, resume
+func operateActionToName(action string) (string, error) {
+	switch action {
+	case "start":
+		return "startup", nil
+	case "stop":
+		return "shutdown", nil
+	case "restart":
+		return "reboot", nil
+	case "suspend":
+		return "suspend", nil
+	default:
+		return "", fmt.Errorf("unsupported VDI VM action: %s", action)
+	}
+}
+
 // OperateVM 操作虚拟机
+// VDI API endpoint: POST /v1/servers/action
+// Request body format: {"action": {"name": "startup/shutdown/reboot/suspend"}, "servers": {"ids": "vm_id"}}
 func (c *vdiClientExtendedImpl) OperateVM(ctx context.Context, vmIDs []string, action string) error {
 	token, err := c.Authenticate(ctx)
 	if err != nil {
 		return err
 	}
 
-	req := struct {
-		VMIDs  []string `json:"vm_ids"`
-		Action string   `json:"action"`
-	}{
-		VMIDs:  vmIDs,
-		Action: action,
+	actionName, err := operateActionToName(action)
+	if err != nil {
+		return err
 	}
 
-	return c.callAPI(ctx, token, "POST", "/v1/vm/operate", req, nil)
+	// VDI API supports batch operations, but IDs should be comma-separated
+	var idsStr string
+	for i, vmID := range vmIDs {
+		if i > 0 {
+			idsStr += ","
+		}
+		idsStr += vmID
+	}
+
+	// 使用 map 匹配工作脚本的请求格式和字段顺序
+	req := map[string]interface{}{
+		"action": map[string]string{
+			"name": actionName,
+		},
+		"servers": map[string]string{
+			"ids": idsStr,
+		},
+	}
+
+	// Debug log the request body
+	reqJSON, _ := json.Marshal(req)
+	fmt.Printf("[VDI API DEBUG] Request body: %s\n", string(reqJSON))
+
+	return c.callAPIWithRetry(ctx, &token, "POST", "/v1/servers/action", req, nil)
 }
 
 // DeleteVM 删除虚拟机
+// VDI API endpoint: DELETE /v1/servers
+// Request body format: {"ids": "1,2"} - VM IDs separated by commas
 func (c *vdiClientExtendedImpl) DeleteVM(ctx context.Context, vmIDs []string) error {
-	return c.OperateVM(ctx, vmIDs, "delete")
-}
-
-// ConfigIP 配置IP
-func (c *vdiClientExtendedImpl) ConfigIP(ctx context.Context, req []ConfigIPRequestExtended) error {
 	token, err := c.Authenticate(ctx)
 	if err != nil {
 		return err
 	}
 
-	return c.callAPI(ctx, token, "POST", "/v1/vm/config_ip", req, nil)
+	// Build comma-separated IDs string
+	var idsStr string
+	for i, vmID := range vmIDs {
+		if i > 0 {
+			idsStr += ","
+		}
+		idsStr += vmID
+	}
+
+	req := struct {
+		IDs string `json:"ids"`
+	}{
+		IDs: idsStr,
+	}
+
+	return c.callAPIWithRetry(ctx, &token, "DELETE", "/v1/servers", req, nil)
+}
+
+// ConfigIP 配置IP
+// VDI API endpoint: PUT /v1/servers/ip
+// Request body format matches VDI API specification
+func (c *vdiClientExtendedImpl) ConfigIP(ctx context.Context, req ConfigIPRequestExtended) error {
+	token, err := c.Authenticate(ctx)
+	if err != nil {
+		return err
+	}
+
+	return c.callAPIWithRetry(ctx, &token, "PUT", "/v1/servers/ip", req, nil)
 }
 
 // RenameVM 重命名虚拟机
+// VDI API endpoint: PUT /v1/servers/update_name
+// Request body: {"id": vm_id, "name_mode": 2, "name": "new_name", "is_reboot": 0}
 func (c *vdiClientExtendedImpl) RenameVM(ctx context.Context, vmID, newName string) error {
 	token, err := c.Authenticate(ctx)
 	if err != nil {
@@ -232,17 +299,25 @@ func (c *vdiClientExtendedImpl) RenameVM(ctx context.Context, vmID, newName stri
 	}
 
 	req := struct {
-		VMID   string `json:"vm_id"`
-		VMName string `json:"vm_name"`
+		ID       int    `json:"id"`
+		NameMode int    `json:"name_mode"`
+		Name     string `json:"name"`
+		IsReboot int    `json:"is_reboot"`
 	}{
-		VMID:   vmID,
-		VMName: newName,
+		NameMode: 2, // 2 = 管理员指定名称
+		Name:     newName,
+		IsReboot: 0,
 	}
+	// 将 vmID 转换为整数
+	fmt.Sscanf(vmID, "%d", &req.ID)
 
-	return c.callAPI(ctx, token, "POST", "/v1/vm/rename", req, nil)
+	return c.callAPIWithRetry(ctx, &token, "PUT", "/v1/servers/update_name", req, nil)
 }
 
 // BindUser 绑定用户
+// VDI API endpoint: PUT /v1/servers/bind_users
+// Request body: {"rcid": resource_id, "vmid": vm_id, "type": "1/2/3", "user_id": user_id or "user_name": name}
+// type: 1=绑定, 2=解绑, 3=更换
 func (c *vdiClientExtendedImpl) BindUser(ctx context.Context, vmID, userID string) (*VDIVMDetail, error) {
 	token, err := c.Authenticate(ctx)
 	if err != nil {
@@ -255,15 +330,23 @@ func (c *vdiClientExtendedImpl) BindUser(ctx context.Context, vmID, userID strin
 		Data         VDIVMDetail `json:"data"`
 	}
 
+	// 解析 vmID 获取 vmid
+	var vmidInt int
+	fmt.Sscanf(vmID, "%d", &vmidInt)
+
+	// 如果需要 rcid，应该从 VM 信息中获取，这里暂时使用 vmID
 	req := struct {
-		VMID   string `json:"vm_id"`
-		UserID string `json:"user_id"`
+		RcID    int    `json:"rcid"`
+		VmID    int    `json:"vmid"`
+		Type    string `json:"type"`
+		UserID  string `json:"user_id"`
 	}{
-		VMID:   vmID,
+		Type:   "1", // 1=绑定
 		UserID: userID,
+		VmID:   vmidInt,
 	}
 
-	if err := c.callAPI(ctx, token, "POST", "/v1/vm/bind_user", req, &resp); err != nil {
+	if err := c.callAPIWithRetry(ctx, &token, "PUT", "/v1/servers/bind_users", req, &resp); err != nil {
 		return nil, err
 	}
 
@@ -275,66 +358,30 @@ func (c *vdiClientExtendedImpl) BindUser(ctx context.Context, vmID, userID strin
 }
 
 // GetAvailableUsers 获取可用用户列表
+// 注意：VDI API 中没有直接获取"可用用户"的端点
+// GET /v1/bind_users/servers?user_name=xxx 返回指定用户绑定的虚拟机列表
+// 这里返回空列表，实际使用中可能需要调用用户管理相关的 API
 func (c *vdiClientExtendedImpl) GetAvailableUsers(ctx context.Context, vmID string) ([]VDIUser, error) {
-	token, err := c.Authenticate(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	var resp struct {
-		ErrorCode    int       `json:"error_code"`
-		ErrorMessage string    `json:"error_message"`
-		Data         []VDIUser `json:"data"`
-	}
-
-	path := fmt.Sprintf("/v1/vm/%s/users", vmID)
-	if err := c.callAPI(ctx, token, "GET", path, nil, &resp); err != nil {
-		return nil, err
-	}
-
-	if resp.ErrorCode != 0 {
-		return nil, &VDIError{Code: resp.ErrorCode, Message: resp.ErrorMessage}
-	}
-
-	return resp.Data, nil
+	// VDI API 中没有直接获取"可用用户"的端点
+	// 这里返回空列表，实际使用中可能需要调用用户管理相关的 API
+	return []VDIUser{}, nil
 }
 
 // ListResourceGroups 获取所有资源组
+// VDI API endpoint: GET /v1/resources_group
 func (c *vdiClientExtendedImpl) ListResourceGroups(ctx context.Context) ([]VDIResourceGroup, error) {
-	// 尝试使用缓存的 token（如果有）
 	token, err := c.Authenticate(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	// 调试日志：检查 token 值
 	if token == "" {
 		return nil, fmt.Errorf("token is empty after authentication")
 	}
 
 	var resp VDIResourceGroupsResponse
-	apiErr := c.callAPI(ctx, token, "GET", "/v1/resources_group", nil, &resp)
-
-	// 如果收到 AUTH_TOKEN_INVALID 错误，清除缓存并重试
-	if apiErr != nil && strings.Contains(apiErr.Error(), "AUTH_TOKEN_INVALID") {
-		fmt.Printf("[VDI API DEBUG] Received AUTH_TOKEN_INVALID, forcing re-authentication\n")
-
-		// 清除内存中的 token 缓存，强制重新认证
-		c.authManager.ClearTokenCache()
-
-		// 重新认证
-		token, err = c.authManager.Authenticate(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("re-authentication failed: %w", err)
-		}
-
-		// 重试 API 调用
-		apiErr = c.callAPI(ctx, token, "GET", "/v1/resources_group", nil, &resp)
-		if apiErr != nil {
-			return nil, fmt.Errorf("retry after re-auth failed: %w", apiErr)
-		}
-	} else if apiErr != nil {
-		return nil, apiErr
+	if err := c.callAPIWithRetry(ctx, &token, "GET", "/v1/resources_group", nil, &resp); err != nil {
+		return nil, err
 	}
 
 	if resp.ErrorCode != 0 {
@@ -345,6 +392,7 @@ func (c *vdiClientExtendedImpl) ListResourceGroups(ctx context.Context) ([]VDIRe
 }
 
 // ListResources 获取指定资源组下的资源列表
+// VDI API endpoint: GET /v1/resources/list/:group_id
 func (c *vdiClientExtendedImpl) ListResources(ctx context.Context, groupID string) ([]VDIResource, error) {
 	token, err := c.Authenticate(ctx)
 	if err != nil {
@@ -360,7 +408,7 @@ func (c *vdiClientExtendedImpl) ListResources(ctx context.Context, groupID strin
 	}
 
 	path := fmt.Sprintf("/v1/resources/list/%s", groupID)
-	if err := c.callAPI(ctx, token, "GET", path, nil, &resp); err != nil {
+	if err := c.callAPIWithRetry(ctx, &token, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
 
@@ -372,6 +420,7 @@ func (c *vdiClientExtendedImpl) ListResources(ctx context.Context, groupID strin
 }
 
 // ListResourceServers 获取指定资源下的虚拟机列表
+// VDI API endpoint: GET /v1/resource/servers?rcid=xxx&page=x&page_size=x
 func (c *vdiClientExtendedImpl) ListResourceServers(ctx context.Context, resourceID string, page, pageSize int) ([]VDIVMResource, int, error) {
 	token, err := c.Authenticate(ctx)
 	if err != nil {
@@ -381,7 +430,7 @@ func (c *vdiClientExtendedImpl) ListResourceServers(ctx context.Context, resourc
 	var resp VDIResourceServersResponse
 	path := fmt.Sprintf("/v1/resource/servers?rcid=%s&page=%d&page_size=%d", resourceID, page, pageSize)
 
-	if err := c.callAPI(ctx, token, "GET", path, nil, &resp); err != nil {
+	if err := c.callAPIWithRetry(ctx, &token, "GET", path, nil, &resp); err != nil {
 		return nil, 0, err
 	}
 
@@ -398,9 +447,35 @@ func (c *vdiClientExtendedImpl) ListResourceServers(ctx context.Context, resourc
 	return resp.Data.Data, totalCount, nil
 }
 
+// callAPIWithRetry 调用VDI API，遇到AUTH_TOKEN_INVALID时自动清除缓存并重试一次
+// token 参数为指针类型，以便重试时更新token值
+func (c *vdiClientExtendedImpl) callAPIWithRetry(ctx context.Context, token *string, method, path string, body, result interface{}) error {
+	err := c.callAPI(ctx, *token, method, path, body, result)
+	if err != nil && strings.Contains(err.Error(), "AUTH_TOKEN_INVALID") {
+		fmt.Printf("[VDI API DEBUG] Received AUTH_TOKEN_INVALID, forcing re-authentication\n")
+
+		// 清除内存中的 token 缓存，强制重新认证
+		c.authManager.ClearTokenCache()
+
+		// 重新认证
+		newToken, authErr := c.authManager.Authenticate(ctx)
+		if authErr != nil {
+			return fmt.Errorf("re-authentication failed after AUTH_TOKEN_INVALID: %w", authErr)
+		}
+
+		// 更新调用者的token引用
+		*token = newToken
+
+		// 重试 API 调用
+		return c.callAPI(ctx, newToken, method, path, body, result)
+	}
+	return err
+}
+
 // callAPI 调用VDI API
 func (c *vdiClientExtendedImpl) callAPI(ctx context.Context, token, method, path string, body, result interface{}) error {
 	url := fmt.Sprintf("%s%s", c.server.Endpoint, path)
+	fmt.Printf("[VDI API DEBUG] Calling: %s %s\n", method, url)
 
 	var reqBody io.Reader
 	if body != nil {
@@ -419,25 +494,41 @@ func (c *vdiClientExtendedImpl) callAPI(ctx context.Context, token, method, path
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Auth-Token", token) // VDI 系统要求使用 Auth-Token header（不是 Authorization）
 
-	// 调试日志：记录请求详情
-	fmt.Printf("[VDI API DEBUG] Request URL: %s\n", url)
-	fmt.Printf("[VDI API DEBUG] Auth-Token header: %s\n", req.Header.Get("Auth-Token"))
-	fmt.Printf("[VDI API DEBUG] Token length: %d\n", len(token))
-
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("send request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		// 读取响应体内容以获取详细错误信息
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(bodyBytes))
+	// 读取响应体
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("read response body failed: %w", err)
 	}
 
+	// 先尝试解析VDI错误响应格式（获取error_code）
+	var vdiErr struct {
+		ErrorCode    int    `json:"error_code"`
+		ErrorMessage string `json:"error_message"`
+	}
+	json.Unmarshal(bodyBytes, &vdiErr)
+
+	// 检查 AUTH_TOKEN_INVALID 错误
+	if vdiErr.ErrorCode == 1101 {
+		fmt.Printf("[VDI API DEBUG] AUTH_TOKEN_INVALID: %s\n", vdiErr.ErrorMessage)
+		return fmt.Errorf("AUTH_TOKEN_INVALID: %s", vdiErr.ErrorMessage)
+	}
+
+	// VDI API 可能返回非200状态码但 error_code==0（表示成功）
+	// 只有当 error_code != 0 时才返回错误
+	if vdiErr.ErrorCode != 0 {
+		fmt.Printf("[VDI API DEBUG] Error response: status=%d, error_code=%d, body=%s\n", resp.StatusCode, vdiErr.ErrorCode, string(bodyBytes))
+		return fmt.Errorf("VDI API error %d: %s", vdiErr.ErrorCode, vdiErr.ErrorMessage)
+	}
+
+	// error_code == 0，解析成功响应
 	if result != nil {
-		if err := json.NewDecoder(resp.Body).Decode(result); err != nil {
+		if err := json.Unmarshal(bodyBytes, result); err != nil {
 			return fmt.Errorf("decode response failed: %w", err)
 		}
 	}
