@@ -11,39 +11,36 @@ import {
   message,
   Col,
   Row,
-  Modal
+  Modal,
+  Transfer
 } from 'antd';
 import {
   ReloadOutlined,
   FolderOutlined,
   TeamOutlined,
-  ApartmentOutlined,
-  EditOutlined
+  EditOutlined,
+  PlusOutlined,
+  DeleteOutlined
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { DataNode } from 'antd/es/tree';
+import type { TransferProps } from 'antd/es/transfer';
 import {
   getADOUTree,
   getADUserList,
-  getOUDeptMapping,
-  updateOUDeptMapping,
   getADGroupList,
+  getOUGroupMappingsByOU,
+  createOUGroupMapping,
+  deleteOUGroupMapping,
   type ADOUNode,
   type ADUser,
-  type OUDeptMappingResponse,
-  type ADGroup
+  type ADGroup,
+  type OUGroupMapping
 } from '@/lib/adDomainApi';
 import { useADConfigs } from '@/hooks/useADConfigs';
 import type { ADConfig } from '@/lib/adDomainApi';
-import { getDeptTree, type SimpleDept } from '@/lib/dutyApi';
 
 import type { FC } from 'react';
-
-interface Department {
-  id: string;
-  deptName: string;
-  children?: Department[];
-}
 
 const ADOUPage: FC = () => {
   const { configs, selectedConfig, setSelectedConfig } = useADConfigs({
@@ -53,20 +50,17 @@ const ADOUPage: FC = () => {
 
   const [ouTree, setOUTree] = useState<ADOUNode[]>([]);
   const [selectedOU, setSelectedOU] = useState<string>('');
+  const [selectedOUName, setSelectedOUName] = useState<string>('');
   const [users, setUsers] = useState<ADUser[]>([]);
   const [treeLoading, setTreeLoading] = useState(false);
   const [usersLoading, setUsersLoading] = useState(false);
 
-  // 部门映射相关状态
-  const [deptMapping, setDeptMapping] = useState<OUDeptMappingResponse | null>(null);
-  const [mappingLoading, setMappingLoading] = useState(false);
-  const [deptModalVisible, setDeptModalVisible] = useState(false);
-  const [deptTree, setDeptTree] = useState<Department[]>([]);
-  const [selectedDeptId, setSelectedDeptId] = useState<string>('');
-
   // 用户组相关状态
-  const [groups, setGroups] = useState<ADGroup[]>([]);
+  const [allGroups, setAllGroups] = useState<ADGroup[]>([]);
+  const [ouGroups, setOuGroups] = useState<OUGroupMapping[]>([]);
   const [groupsLoading, setGroupsLoading] = useState(false);
+  const [groupModalVisible, setGroupModalVisible] = useState(false);
+  const [groupModalLoading, setGroupModalLoading] = useState(false);
 
   const fetchOUTree = async () => {
     if (!selectedConfig) return;
@@ -90,19 +84,21 @@ const ADOUPage: FC = () => {
     }
   }, [selectedConfig]);
 
-  // 当选择OU时获取该OU下的用户和部门映射信息
+  // 当选择OU时获取该OU下的用户和用户组信息
   const handleOUSelect = async (selectedKeys: React.Key[]) => {
     if (selectedKeys.length > 0) {
       const ouDn = selectedKeys[0] as string;
+      const ouNode = ouTree.find(n => n.dn === ouDn);
       setSelectedOU(ouDn);
+      setSelectedOUName(ouNode?.name || ouDn);
       fetchUsers(ouDn);
-      fetchDeptMapping(ouDn);
-      fetchGroups(ouDn);
+      fetchOUGroupMappings(ouDn);
+      fetchAllGroups();
     } else {
       setSelectedOU('');
+      setSelectedOUName('');
       setUsers([]);
-      setDeptMapping(null);
-      setGroups([]);
+      setOuGroups([]);
     }
   };
 
@@ -127,91 +123,84 @@ const ADOUPage: FC = () => {
     }
   };
 
-  const fetchDeptMapping = async (ouDn: string) => {
-    setMappingLoading(true);
-    try {
-      const res = await getOUDeptMapping(ouDn);
-      if (res.code === 0 && res.data) {
-        setDeptMapping(res.data);
-      }
-    } catch {
-      message.error('获取部门映射失败');
-    } finally {
-      setMappingLoading(false);
-    }
-  };
-
-  const fetchGroups = async (_ouDn?: string) => {
+  const fetchAllGroups = async () => {
     if (!selectedConfig) return;
 
-    setGroupsLoading(true);
     try {
       const res = await getADGroupList({
         configId: selectedConfig,
-        // 不传入 ouDn 参数，显示所有用户组（包括本部部门分组下的 CXHUB-* 组）
         current: 1,
-        pageSize: 100,
+        pageSize: 1000, // 获取所有组用于选择
       });
       if (res.code === 0) {
-        setGroups(res.data?.list ?? []);
+        setAllGroups(res.data?.list ?? []);
       }
     } catch {
       message.error('获取用户组列表失败');
+    }
+  };
+
+  const fetchOUGroupMappings = async (ouDn: string) => {
+    setGroupsLoading(true);
+    try {
+      const res = await getOUGroupMappingsByOU(ouDn);
+      if (res.code === 0 && res.data) {
+        setOuGroups(res.data);
+      }
+    } catch {
+      message.error('获取OU组映射失败');
     } finally {
       setGroupsLoading(false);
     }
   };
 
-  const fetchDeptTree = async () => {
+  const openGroupModal = () => {
+    setGroupModalVisible(true);
+  };
+
+  const handleGroupTransfer = async (targetKeys: string[]) => {
+    if (!selectedOU) return;
+
+    setGroupModalLoading(true);
     try {
-      const res = await getDeptTree();
-      if (res.code === 0) {
-        setDeptTree(res.data || []);
+      // 获取当前映射的组ID
+      const currentMappedIds = ouGroups.map(g => g.adGroupId);
+
+      // 找出需要添加的组
+      const toAdd = targetKeys.filter(id => !currentMappedIds.includes(id));
+      // 找出需要删除的组
+      const toRemove = currentMappedIds.filter(id => !targetKeys.includes(id));
+
+      // 创建新映射
+      for (const groupId of toAdd) {
+        const group = allGroups.find(g => g.id === groupId);
+        if (group) {
+          await createOUGroupMapping({
+            adConfigId: selectedConfig,
+            ouDn: selectedOU,
+            ouName: selectedOUName,
+            adGroupId: groupId,
+            syncEnabled: true,
+          });
+        }
       }
-    } catch {
-      message.error('获取部门树失败');
-    }
-  };
 
-  const openDeptModal = () => {
-    setDeptModalVisible(true);
-    if (deptTree.length === 0) {
-      fetchDeptTree();
-    }
-  };
-
-  const handleDeptSelect = (selectedKeys: React.Key[]) => {
-    if (selectedKeys.length > 0) {
-      setSelectedDeptId(selectedKeys[0] as string);
-    }
-  };
-
-  const handleUpdateMapping = async () => {
-    if (!selectedOU || !selectedDeptId) {
-      message.warning('请选择部门');
-      return;
-    }
-
-    try {
-      const res = await updateOUDeptMapping(selectedOU, { deptId: selectedDeptId });
-      if (res.code === 0) {
-        message.success('关联成功');
-        // 重新获取部门映射信息
-        await fetchDeptMapping(selectedOU);
-        setDeptModalVisible(false);
-        setSelectedDeptId('');
+      // 删除映射
+      for (const mappingId of toRemove) {
+        const mapping = ouGroups.find(g => g.adGroupId === mappingId);
+        if (mapping) {
+          await deleteOUGroupMapping(mapping.id);
+        }
       }
-    } catch {
-      message.error('关联失败');
-    }
-  };
 
-  const buildDeptTreeData = (depts: Department[]): DataNode[] => {
-    return depts.map(dept => ({
-      title: dept.deptName,
-      key: dept.id,
-      children: dept.children && dept.children.length > 0 ? buildDeptTreeData(dept.children) : undefined,
-    }));
+      message.success('更新成功');
+      await fetchOUGroupMappings(selectedOU);
+      setGroupModalVisible(false);
+    } catch {
+      message.error('更新失败');
+    } finally {
+      setGroupModalLoading(false);
+    }
   };
 
   const buildTreeData = (nodes: ADOUNode[]): DataNode[] => {
@@ -287,69 +276,56 @@ const ADOUPage: FC = () => {
     },
   ];
 
-  const groupColumns: ColumnsType<ADGroup> = [
+  const ouGroupColumns: ColumnsType<OUGroupMapping> = [
     {
       title: '组名称',
-      dataIndex: 'groupName',
+      dataIndex: 'adGroup',
       key: 'groupName',
+      render: (group) => group?.groupName || '-',
     },
     {
       title: '描述',
-      dataIndex: 'description',
+      dataIndex: 'adGroup',
       key: 'description',
       ellipsis: true,
+      render: (group) => group?.description || '-',
     },
     {
       title: '成员数',
-      dataIndex: 'memberCount',
+      dataIndex: 'adGroup',
       key: 'memberCount',
       width: 100,
-      render: (count: number) => <Tag color="blue">{count}</Tag>,
+      render: (group) => <Tag color="blue">{group?.memberCount || 0}</Tag>,
     },
     {
-      title: '类型',
-      dataIndex: 'groupType',
-      key: 'groupType',
+      title: '同步状态',
+      dataIndex: 'syncEnabled',
+      key: 'syncEnabled',
       width: 100,
-      render: (type: number) => {
-        if (type === 1) return <Tag color="blue">安全组</Tag>;
-        if (type === 2) return <Tag color="default">分发组</Tag>;
-        return '-';
-      },
+      render: (enabled) => (
+        <Tag color={enabled ? 'success' : 'default'}>
+          {enabled ? '已启用' : '未启用'}
+        </Tag>
+      ),
+    },
+    {
+      title: '最后同步',
+      dataIndex: 'lastSyncAt',
+      key: 'lastSyncAt',
+      width: 150,
+      render: (time) => time ? new Date(time).toLocaleString('zh-CN') : '-',
     },
   ];
 
-  const getSyncStatusColor = (status: string) => {
-    switch (status) {
-      case 'synced': return 'success';
-      case 'pending': return 'processing';
-      case 'failed': return 'error';
-      default: return 'default';
-    }
-  };
+  // Transfer组件的dataSource
+  const transferDataSource = allGroups.map(group => ({
+    key: group.id,
+    title: group.groupName,
+    description: group.description,
+  }));
 
-  const getSyncStatusText = (status: string) => {
-    switch (status) {
-      case 'synced': return '已同步';
-      case 'pending': return '待同步';
-      case 'failed': return '同步失败';
-      default: return status;
-    }
-  };
-
-  // 辅助函数：递归查找部门名称
-  const findDeptName = (depts: Department[], id: string): string => {
-    for (const dept of depts) {
-      if (dept.id === id) {
-        return dept.deptName;
-      }
-      if (dept.children && dept.children.length > 0) {
-        const found = findDeptName(dept.children, id);
-        if (found) return found;
-      }
-    }
-    return '';
-  };
+  // 当前已映射的组ID
+  const targetKeys = ouGroups.map(mapping => mapping.adGroupId);
 
   return (
     <div style={{ height: 'calc(100vh - 200px)' }}>
@@ -396,7 +372,7 @@ const ADOUPage: FC = () => {
           </Card>
         </Col>
 
-        {/* 右侧：用户列表和部门映射 */}
+        {/* 右侧：用户列表和用户组映射 */}
         <Col span={18} style={{ height: '100%', overflow: 'auto' }}>
           <Space direction="vertical" style={{ width: '100%' }} size="small">
             {/* 用户列表卡片 */}
@@ -405,7 +381,7 @@ const ADOUPage: FC = () => {
                 <Space>
                   <TeamOutlined />
                   <span>
-                    用户列表 - {selectedOU ? (ouTree.find(n => n.dn === selectedOU)?.name || selectedOU) : '全部'}
+                    用户列表 - {selectedOUName || '全部'}
                   </span>
                 </Space>
               }
@@ -423,12 +399,13 @@ const ADOUPage: FC = () => {
               />
             </Card>
 
-            {/* 部门关联卡片 */}
+            {/* 用户组映射卡片 */}
             <Card
               title={
                 <Space>
-                  <ApartmentOutlined />
-                  <span>关联部门信息</span>
+                  <TeamOutlined />
+                  <span>关联用户组</span>
+                  <Tag color="blue">{ouGroups.length} 个组</Tag>
                 </Space>
               }
               size="small"
@@ -437,56 +414,25 @@ const ADOUPage: FC = () => {
                   type="primary"
                   size="small"
                   icon={<EditOutlined />}
-                  onClick={openDeptModal}
+                  onClick={openGroupModal}
                   disabled={!selectedOU}
                 >
-                  {deptMapping?.hasMapping ? '修改关联' : '关联部门'}
+                  修改关联
                 </Button>
               }
-              loading={mappingLoading}
-            >
-              {deptMapping?.hasMapping ? (
-                <Space direction="vertical" style={{ width: '100%' }}>
-                  <div>
-                    <span style={{ color: '#999' }}>关联部门：</span>
-                    <Tag color="blue" style={{ marginLeft: 8 }}>{deptMapping.mapping?.deptName}</Tag>
-                  </div>
-                  <div>
-                    <span style={{ color: '#999' }}>同步状态：</span>
-                    <Tag color={getSyncStatusColor(deptMapping.mapping?.syncStatus || '')} style={{ marginLeft: 8 }}>
-                      {getSyncStatusText(deptMapping.mapping?.syncStatus || '')}
-                    </Tag>
-                  </div>
-                </Space>
-              ) : (
-                <div style={{ color: '#999', textAlign: 'center', padding: '20px' }}>
-                  {selectedOU ? '该 OU 尚未关联部门' : '请选择 OU'}
-                </div>
-              )}
-            </Card>
-
-            {/* 用户组卡片 */}
-            <Card
-              title={
-                <Space>
-                  <TeamOutlined />
-                  <span>关联用户组</span>
-                </Space>
-              }
-              size="small"
               loading={groupsLoading}
             >
-              {groups.length > 0 ? (
+              {ouGroups.length > 0 ? (
                 <Table
-                  columns={groupColumns}
-                  dataSource={groups}
+                  columns={ouGroupColumns}
+                  dataSource={ouGroups}
                   rowKey="id"
                   pagination={false}
                   size="small"
                 />
               ) : (
                 <div style={{ color: '#999', textAlign: 'center', padding: '20px' }}>
-                  {selectedOU ? '该 OU 下暂无用户组' : '请选择 OU'}
+                  {selectedOU ? '该 OU 尚未关联用户组' : '请选择 OU'}
                 </div>
               )}
             </Card>
@@ -494,35 +440,37 @@ const ADOUPage: FC = () => {
         </Col>
       </Row>
 
-      {/* 部门选择模态框 */}
+      {/* 用户组选择模态框 */}
       <Modal
-        title="选择关联部门"
-        open={deptModalVisible}
-        onOk={handleUpdateMapping}
-        onCancel={() => {
-          setDeptModalVisible(false);
-          setSelectedDeptId('');
-        }}
-        width={600}
-        okText="确认关联"
-        cancelText="取消"
+        title={`选择关联用户组 - ${selectedOUName}`}
+        open={groupModalVisible}
+        onCancel={() => setGroupModalVisible(false)}
+        width={800}
+        footer={null}
       >
-        <Spin spinning={deptTree.length === 0}>
-          {deptTree.length > 0 && (
-            <Tree
-              showLine
-              defaultExpandAll
-              onSelect={handleDeptSelect}
-              treeData={buildDeptTreeData(deptTree)}
-              style={{ maxHeight: 400, overflow: 'auto' }}
-            />
-          )}
+        <Spin spinning={groupModalLoading}>
+          <Transfer
+            dataSource={transferDataSource}
+            targetKeys={targetKeys}
+            onChange={handleGroupTransfer}
+            render={item => (
+              <div>
+                <div>{item.title}</div>
+                <div style={{ fontSize: '12px', color: '#999' }}>{item.description}</div>
+              </div>
+            )}
+            listStyle={{
+              width: 350,
+              height: 400,
+            }}
+            titles={['可用用户组', '已关联用户组']}
+            showSearch
+            filterOption={(inputValue, item) =>
+              item.title?.toLowerCase().includes(inputValue.toLowerCase()) ||
+              item.description?.toLowerCase().includes(inputValue.toLowerCase())
+            }
+          />
         </Spin>
-        {selectedDeptId && (
-          <div style={{ marginTop: 16 }}>
-            已选择：<Tag color="blue">{findDeptName(deptTree, selectedDeptId)}</Tag>
-          </div>
-        )}
       </Modal>
     </div>
   );

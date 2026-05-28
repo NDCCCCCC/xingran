@@ -477,6 +477,80 @@ export function updateOUDeptMapping(
   return post(`/ad-domain/ou/${encodeURIComponent(ouDn)}/dept-mapping`, data);
 }
 
+// ==================== OU组映射 API ====================
+
+export interface OUGroupMapping {
+  id: string;
+  adConfigId: string;
+  ouDn: string;
+  ouName: string;
+  adGroupId: string;
+  mappingStatus: 'active' | 'inactive';
+  syncEnabled: boolean;
+  lastSyncAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  adGroup?: {
+    id: string;
+    groupName: string;
+    groupDn: string;
+    description?: string;
+  };
+}
+
+export interface OUGroupMappingListRequest {
+  adConfigId?: string;
+  ouDn?: string;
+  groupName?: string;
+  status?: string;
+  current?: number;
+  pageSize?: number;
+}
+
+export interface OUGroupMappingListResponse {
+  list: OUGroupMapping[];
+  total: number;
+  current: number;
+  pageSize: number;
+}
+
+export interface OUGroupMappingCreateRequest {
+  adConfigId: string;
+  ouDn: string;
+  ouName: string;
+  adGroupId: string;
+  syncEnabled?: boolean;
+}
+
+export interface OUGroupMappingUpdateRequest {
+  syncEnabled?: boolean;
+  status?: 'active' | 'inactive';
+}
+
+export function getOUGroupMappings(params: OUGroupMappingListRequest): Promise<BaseResponse<OUGroupMappingListResponse>> {
+  return post('/ad-domain/ou-group-mappings/list', withDefaultPagination(params));
+}
+
+export function getOUGroupMapping(id: string): Promise<BaseResponse<OUGroupMapping>> {
+  return get(`/ad-domain/ou-group-mappings/${id}`);
+}
+
+export function createOUGroupMapping(data: OUGroupMappingCreateRequest): Promise<BaseResponse<OUGroupMapping>> {
+  return post('/ad-domain/ou-group-mappings', data);
+}
+
+export function updateOUGroupMapping(id: string, data: OUGroupMappingUpdateRequest): Promise<BaseResponse<{ message: string }>> {
+  return post(`/ad-domain/ou-group-mappings/${id}/update`, data);
+}
+
+export function deleteOUGroupMapping(id: string): Promise<BaseResponse<{ message: string }>> {
+  return post(`/ad-domain/ou-group-mappings/${id}/delete`, {});
+}
+
+export function getOUGroupMappingsByOU(ouDn: string): Promise<BaseResponse<OUGroupMapping[]>> {
+  return get(`/ad-domain/ou-group-mappings/ou/${encodeURIComponent(ouDn)}`);
+}
+
 // ==================== 批量用户同步 API ====================
 
 export interface BatchSyncUsersRequest {
