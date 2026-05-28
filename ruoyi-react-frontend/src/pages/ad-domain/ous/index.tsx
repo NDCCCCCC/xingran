@@ -141,14 +141,14 @@ const ADOUPage: FC = () => {
     }
   };
 
-  const fetchGroups = async (ouDn: string) => {
+  const fetchGroups = async (_ouDn?: string) => {
     if (!selectedConfig) return;
 
     setGroupsLoading(true);
     try {
       const res = await getADGroupList({
         configId: selectedConfig,
-        ouDn: ouDn,
+        // 不传入 ouDn 参数，显示所有用户组（包括本部部门分组下的 CXHUB-* 组）
         current: 1,
         pageSize: 100,
       });

@@ -120,6 +120,7 @@ export interface VDIServer {
   tenant_id: number;
   status: number;
   token_expiry?: string;
+  lastSyncTime?: string;
   created_at: string;
   updated_at: string;
 }

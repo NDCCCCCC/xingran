@@ -57,6 +57,18 @@ const ADUserPage: FC = () => {
   const [users, setUsers] = useState<ADUser[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Debug logging for users data
+  useEffect(() => {
+    console.log('[DEBUG] Users data updated:', {
+      usersCount: users.length,
+      firstUser: users[0] ? {
+        id: users[0].id,
+        userDn: users[0].userDn,
+        username: users[0].username
+      } : null
+    });
+  }, [users]);
+
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
@@ -72,6 +84,30 @@ const ADUserPage: FC = () => {
   // Batch sync state
   const [selectedUsers, setSelectedUsers] = useState<ADUser[]>([]);
   const [batchSyncLoading, setBatchSyncLoading] = useState(false);
+
+  // Debug logging for selected users
+  useEffect(() => {
+    const selectedKeys = selectedUsers.map(u => u.userDn);
+    console.log('[DEBUG] Selected users updated:', {
+      selectedCount: selectedUsers.length,
+      selectedKeys: selectedKeys.slice(0, 3), // First 3 keys
+      firstSelectedUserDn: selectedUsers[0]?.userDn,
+      firstSelectedId: selectedUsers[0]?.id
+    });
+
+    // Test if userDn values in selectedUsers match those in users
+    if (selectedUsers.length > 0 && users.length > 0) {
+      const firstSelectedUserDn = selectedUsers[0].userDn;
+      const matchingUser = users.find(u => u.userDn === firstSelectedUserDn);
+      console.log('[DEBUG] userDn matching test:', {
+        selectedUserDn: firstSelectedUserDn,
+        foundInUsers: !!matchingUser,
+        matchingUserUserDn: matchingUser?.userDn,
+        exactMatch: matchingUser?.userDn === firstSelectedUserDn,
+        stringCompare: matchingUser?.userDn.localeCompare(firstSelectedUserDn)
+      });
+    }
+  }, [selectedUsers, users]);
 
   const fetchOUTree = async () => {
     if (!selectedConfig) return;
@@ -315,6 +351,41 @@ const ADUserPage: FC = () => {
       width: 150,
     },
     {
+      title: 'OU',
+      dataIndex: 'ouDn',
+      key: 'ouDn',
+      width: 300,
+      ellipsis: true,
+      render: (ouDn: string, record: ADUser) => {
+        if (!ouDn) return '-';
+        // 获取当前配置的BaseDN
+        const currentConfig = configs.find(c => c.id === selectedConfig);
+        if (!currentConfig) return ouDn;
+
+        // 去除BaseDN，获取所有OU部分
+        const baseDN = currentConfig.baseDn;
+        let dnToProcess = ouDn;
+
+        // 如果DN以BaseDN结尾，去除BaseDN部分
+        if (ouDn.endsWith(baseDN)) {
+          dnToProcess = ouDn.substring(0, ouDn.length - baseDN.length - 1);
+        }
+
+        // 提取所有OU并格式化显示
+        const parts = dnToProcess.split(',');
+        const ous: string[] = [];
+        for (const part of parts) {
+          const trimmed = part.trim();
+          if (trimmed.startsWith('OU=')) {
+            ous.push(trimmed.replace('OU=', ''));
+          }
+        }
+
+        // 用斜杠显示多个OU层级
+        return ous.length > 0 ? ous.join(' / ') : '-';
+      },
+    },
+    {
       title: '职位',
       dataIndex: 'title',
       key: 'title',
@@ -458,8 +529,15 @@ const ADUserPage: FC = () => {
           scroll={{ x: 1500 }}
           pagination={paginationProps}
           rowSelection={{
-            selectedRowKeys: selectedUsers.map(u => u.userDn),
+            selectedRowKeys: selectedUsers.map(u => u.id),
             onChange: (selectedKeys, selectedRows) => {
+              console.log('[DEBUG] Selection changed:', {
+                selectedKeysCount: selectedKeys.length,
+                selectedRowsCount: selectedRows.length,
+                firstKey: selectedKeys[0],
+                firstRowUserDn: selectedRows[0]?.userDn,
+                firstRowId: selectedRows[0]?.id
+              });
               setSelectedUsers(selectedRows);
             },
           }}

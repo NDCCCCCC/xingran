@@ -194,6 +194,13 @@ const VDIServerConfig: React.FC = () => {
       render: (time: string) => time ? new Date(time).toLocaleString('zh-CN') : '-',
     },
     {
+      title: '最后同步',
+      dataIndex: 'lastSyncTime',
+      key: 'lastSyncTime',
+      width: 160,
+      render: (time: string) => time ? new Date(time).toLocaleString('zh-CN') : '-',
+    },
+    {
       title: '操作',
       key: 'action',
       width: 250,
