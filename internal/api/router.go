@@ -473,8 +473,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 	adDomain.Use(middleware.OperLogMiddleware(core.OperLogService, core))
 	{
 		systemV1.SetupADDomainRouter(adDomain, core)
-		// AD部门同步路由
-		systemV1.SetupADGroupMappingRouter(adDomain, core)
+		// OU部门映射路由
+		systemV1.SetupOUMappingRouter(adDomain, core)
 	}
 
 	// 运维管理模块（物理资源管理）
