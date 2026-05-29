@@ -7,6 +7,7 @@ import (
 
 	_ "github.com/lib/pq"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/db/migrations"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
@@ -294,6 +295,11 @@ func (d *Database) AutoMigrate() error {
 	if err := d.migrateCredentialModel(); err != nil {
 		applogger.Errorf("凭证模型迁移失败: %v", err)
 		// 迁移失败不中断启动，只记录日志
+	}
+
+	// 执行VDI虚拟机status字段移除迁移
+	if err := migrations.Migrate143VDIRemoveVMStatus(d.DB); err != nil {
+		applogger.Errorf("VDI虚拟机status字段移除迁移失败: %v", err)
 	}
 
 	return nil
