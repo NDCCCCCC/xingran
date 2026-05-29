@@ -270,9 +270,11 @@ type RunPosition struct {
 
 // RunPositionResponse 运行位置响应
 type RunPositionResponse struct {
-	ErrorCode    int           `json:"error_code"`
-	ErrorMessage string        `json:"error_message"`
-	Run          []RunPosition `json:"run"`
+	ErrorCode    int                      `json:"error_code"`
+	ErrorMessage string                   `json:"error_message"`
+	Data         struct {
+		Run []RunPosition `json:"run"`
+	} `json:"data"`
 }
 
 // Storage 存储位置
@@ -288,9 +290,11 @@ type Storage struct {
 
 // StorageResponse 存储位置响应
 type StorageResponse struct {
-	ErrorCode    int       `json:"error_code"`
-	ErrorMessage string    `json:"error_message"`
-	Storages     []Storage `json:"storages"`
+	ErrorCode    int                      `json:"error_code"`
+	ErrorMessage string                   `json:"error_message"`
+	Data         struct {
+		Storages []Storage `json:"storages"`
+	} `json:"data"`
 }
 
 // Network 网络接口
@@ -302,9 +306,11 @@ type Network struct {
 
 // NetworkResponse 网络接口响应
 type NetworkResponse struct {
-	ErrorCode    int       `json:"error_code"`
-	ErrorMessage string    `json:"error_message"`
-	Networks     []Network `json:"networks"`
+	ErrorCode    int                      `json:"error_code"`
+	ErrorMessage string                   `json:"error_message"`
+	Data         struct {
+		Networks []Network `json:"networks"`
+	} `json:"data"`
 }
 
 // CreateServerRequest 创建服务器请求（VDI独享桌面虚拟机）

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Table,
   Button,
@@ -14,6 +14,9 @@ import {
   Form,
   Slider,
   InputNumber,
+  Row,
+  Col,
+  Spin,
 } from 'antd';
 import {
   ReloadOutlined,
@@ -53,6 +56,16 @@ const VirtualMachineList: React.FC = () => {
   const [runPositions, setRunPositions] = useState<RunPosition[]>([]);
   const [storages, setStorages] = useState<VDIStorage[]>([]);
   const [networks, setNetworks] = useState<VDINetwork[]>([]);
+
+  // API缓存：5分钟过期
+  const vdiDataCache = useRef<{
+    vtpPlatforms: VDIPlatform[];
+    runPositions: RunPosition[];
+    storages: VDIStorage[];
+    networks: VDINetwork[];
+    timestamp: number;
+  } | null>(null);
+  const CACHE_DURATION = 5 * 60 * 1000; // 5分钟
 
   // 加载虚拟机列表
   const loadVMs = async () => {
@@ -118,29 +131,38 @@ const VirtualMachineList: React.FC = () => {
     }
   }, [selectedResourceGroupId, selectedServerId, createModalVisible, form]);
 
-  // Auto-generate name when resource group is selected
+  // Auto-generate name when resource and VTP are selected (优化命名格式)
   useEffect(() => {
-    if (selectedResourceGroupId) {
+    if (selectedResourceGroupId && selectedResourceFieldId) {
       const group = resourceGroups.find(g => g.resource_group_id === selectedResourceGroupId);
-      if (group) {
-        const suffix = form.getFieldValue('name_suffix') || '';
-        form.setFieldsValue({ name: group.name + (suffix ? '-' + suffix : '') });
+      const resource = resources.find(r => String(r.id) === selectedResourceFieldId);
+      const suffix = form.getFieldValue('name_suffix') || '';
+
+      if (group && resource) {
+        // 优化命名: VDI-{资源组}-{资源}-{后缀/序号}
+        // 示例: VDI-研发部-资源池1-zhangsan-001
+        const baseName = `VDI-${group.name}-${resource.name}`;
+        form.setFieldsValue({
+          name: suffix ? `${baseName}-${suffix}` : baseName
+        });
       }
     }
-  }, [selectedResourceGroupId, resourceGroups, form]);
+  }, [selectedResourceGroupId, selectedResourceFieldId, resourceGroups, resources, form]);
 
-  // Update name when suffix changes
-  const handleSuffixChange = useCallback((suffix: string) => {
-    const selectedGroup = form.getFieldValue('resource_group_id');
-    const group = resourceGroups.find(g => g.resource_group_id === selectedGroup);
-    if (group) {
-      form.setFieldsValue({ name: group.name + (suffix ? '-' + suffix : '') });
-    }
-  }, [resourceGroups, form]);
-
-  // Load VTP platforms when VDI server is selected
+  // Load VTP platforms when VDI server is selected (带缓存优化)
   useEffect(() => {
     if (selectedServerId && createModalVisible) {
+      // 检查缓存
+      const now = Date.now();
+      if (vdiDataCache.current && (now - vdiDataCache.current.timestamp < CACHE_DURATION)) {
+        // 使用缓存数据
+        setVtpPlatforms(vdiDataCache.current.vtpPlatforms);
+        setRunPositions(vdiDataCache.current.runPositions);
+        setStorages(vdiDataCache.current.storages);
+        setNetworks(vdiDataCache.current.networks);
+        return;
+      }
+
       vmApi.listVTPPlatforms(selectedServerId).then(result => {
         setVtpPlatforms(result.data || []);
       }).catch(() => {
@@ -163,44 +185,115 @@ const VirtualMachineList: React.FC = () => {
     }
   }, [selectedServerId, createModalVisible, form]);
 
-  // Load run positions, storages, and networks when VTP platform is selected
+  // Load run positions, storages, and networks when VTP platform is selected (带缓存更新)
   useEffect(() => {
     if (selectedVtpId && selectedServerId && createModalVisible) {
+      let positionsLoaded = false;
+      let storagesLoaded = false;
+      let networksLoaded = false;
+
+      // 检查是否需要从API加载
+      const useCache = vdiDataCache.current &&
+        (Date.now() - vdiDataCache.current.timestamp < CACHE_DURATION);
+
       // Load run positions
-      vmApi.listRunPositions(selectedServerId, selectedVtpId).then(result => {
-        setRunPositions(result.data || []);
-        // Auto-select first position if available
-        if (result.data && result.data.length > 0) {
-          const firstPosition = result.data[0];
-          // Extract host_id (father_id) and run_position_id (id)
+      const loadPositions = () => {
+        if (useCache && vdiDataCache.current!.runPositions.length > 0) {
+          setRunPositions(vdiDataCache.current!.runPositions);
+          positionsLoaded = true;
+        } else {
+          return vmApi.listRunPositions(selectedServerId, selectedVtpId);
+        }
+      };
+
+      // Load storages
+      const loadStorages = () => {
+        if (useCache && vdiDataCache.current!.storages.length > 0) {
+          setStorages(vdiDataCache.current!.storages);
+          storagesLoaded = true;
+        } else {
+          return vmApi.listStorages(selectedServerId, selectedVtpId);
+        }
+      };
+
+      // Load networks
+      const loadNetworks = () => {
+        if (useCache && vdiDataCache.current!.networks.length > 0) {
+          setNetworks(vdiDataCache.current!.networks);
+          networksLoaded = true;
+        } else {
+          return vmApi.listNetworks(selectedServerId, selectedVtpId);
+        }
+      };
+
+      // 如果使用缓存且所有数据都存在，直接返回
+      if (useCache &&
+          vdiDataCache.current!.runPositions.length > 0 &&
+          vdiDataCache.current!.storages.length > 0 &&
+          vdiDataCache.current!.networks.length > 0) {
+        // 从缓存恢复选中状态
+        const cached = vdiDataCache.current!;
+        setRunPositions(cached.runPositions);
+        setStorages(cached.storages);
+        setNetworks(cached.networks);
+
+        // 恢复自动选择逻辑
+        if (cached.runPositions.length > 0) {
+          const firstPosition = cached.runPositions[0];
           form.setFieldsValue({
             host_id: firstPosition.father_id,
             run_position_id: firstPosition.id !== firstPosition.father_id ? firstPosition.id : undefined,
           });
         }
+        if (cached.storages.length > 0) {
+          form.setFieldsValue({ disk_id: cached.storages[0].id, storage_id: cached.storages[0].id });
+        }
+        if (cached.networks.length > 0) {
+          form.setFieldsValue({ network_id: cached.networks[0].id });
+        }
+        return;
+      }
+
+      // 从API加载数据
+      Promise.all([
+        positionsLoaded ? Promise.resolve({ data: [] }) : vmApi.listRunPositions(selectedServerId, selectedVtpId),
+        storagesLoaded ? Promise.resolve({ data: [] }) : vmApi.listStorages(selectedServerId, selectedVtpId),
+        networksLoaded ? Promise.resolve({ data: [] }) : vmApi.listNetworks(selectedServerId, selectedVtpId),
+      ]).then(([positionsResult, storagesResult, networksResult]) => {
+        const newPositions = positionsResult.data || [];
+        const newStorages = storagesResult.data || [];
+        const newNetworks = networksResult.data || [];
+
+        setRunPositions(newPositions);
+        setStorages(newStorages);
+        setNetworks(newNetworks);
+
+        // 更新缓存
+        vdiDataCache.current = {
+          vtpPlatforms,
+          runPositions: newPositions,
+          storages: newStorages,
+          networks: newNetworks,
+          timestamp: Date.now(),
+        };
+
+        // Auto-select first options if available
+        if (newPositions.length > 0) {
+          const firstPosition = newPositions[0];
+          form.setFieldsValue({
+            host_id: firstPosition.father_id,
+            run_position_id: firstPosition.id !== firstPosition.father_id ? firstPosition.id : undefined,
+          });
+        }
+        if (newStorages.length > 0) {
+          form.setFieldsValue({ disk_id: newStorages[0].id, storage_id: newStorages[0].id });
+        }
+        if (newNetworks.length > 0) {
+          form.setFieldsValue({ network_id: newNetworks[0].id });
+        }
       }).catch(() => {
         setRunPositions([]);
-      });
-
-      // Load storages
-      vmApi.listStorages(selectedServerId, selectedVtpId).then(result => {
-        setStorages(result.data || []);
-        // Auto-select first storage if available
-        if (result.data && result.data.length > 0) {
-          form.setFieldsValue({ disk_id: result.data[0].id, storage_id: result.data[0].id });
-        }
-      }).catch(() => {
         setStorages([]);
-      });
-
-      // Load networks
-      vmApi.listNetworks(selectedServerId, selectedVtpId).then(result => {
-        setNetworks(result.data || []);
-        // Auto-select first network if available
-        if (result.data && result.data.length > 0) {
-          form.setFieldsValue({ network_id: result.data[0].id });
-        }
-      }).catch(() => {
         setNetworks([]);
       });
     } else {
@@ -215,7 +308,7 @@ const VirtualMachineList: React.FC = () => {
         network_id: undefined,
       });
     }
-  }, [selectedVtpId, selectedServerId, createModalVisible, form]);
+  }, [selectedVtpId, selectedServerId, createModalVisible, form, vtpPlatforms]);
 
   // Open create modal and load dropdown data
   const openCreateModal = async () => {
@@ -644,141 +737,173 @@ const VirtualMachineList: React.FC = () => {
         />
       </Space>
 
-      {/* 创建虚拟机模态框 */}
+      {/* 创建虚拟机模态框 - 两列响应式布局 */}
       <Modal
         title="创建虚拟机"
         open={createModalVisible}
         onOk={handleCreate}
         onCancel={() => setCreateModalVisible(false)}
         confirmLoading={loading}
+        width={800}
       >
-        <Form form={form} layout="vertical">
-          <Form.Item label="VDI 服务器" name="vdi_server_id" rules={[{ required: true, message: '请选择VDI服务器' }]}>
-            <Select placeholder="请选择VDI服务器" loading={vdiServers.length === 0}>
-              {vdiServers.filter(s => s.status === 0).map(server => (
-                <Select.Option key={server.id} value={server.id}>
-                  {server.name}
-                </Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
+        <Spin spinning={loading && !vtpPlatforms.length} tip="加载VDI配置中...">
+          <Form form={form} layout="vertical">
+            <Row gutter={16}>
+              {/* 左列：基础配置 */}
+              <Col xs={24} md={12}>
+                <Form.Item label="VDI 服务器" name="vdi_server_id" rules={[{ required: true, message: '请选择VDI服务器' }]}>
+                  <Select placeholder="请选择VDI服务器" loading={vdiServers.length === 0}>
+                    {vdiServers.filter(s => s.status === 0).map(server => (
+                      <Select.Option key={server.id} value={server.id}>
+                        {server.name}
+                      </Select.Option>
+                    ))}
+                  </Select>
+                </Form.Item>
 
-          <Form.Item label="资源组" name="resource_group_id" rules={[{ required: true, message: '请选择资源组' }]}>
-            <Select placeholder={selectedServerId ? "请选择资源组" : "请先选择VDI服务器"} disabled={!selectedServerId}>
-              {resourceGroups.map(group => (
-                <Select.Option key={group.resource_group_id} value={group.resource_group_id}>
-                  {group.name} {group.type ? `(${group.type})` : ''}
-                </Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
+                <Form.Item label="资源组" name="resource_group_id" rules={[{ required: true, message: '请选择资源组' }]}>
+                  <Select placeholder={selectedServerId ? "请选择资源组" : "请先选择VDI服务器"} disabled={!selectedServerId}>
+                    {resourceGroups.map(group => (
+                      <Select.Option key={group.resource_group_id} value={group.resource_group_id}>
+                        {group.name} {group.type ? `(${group.type})` : ''}
+                      </Select.Option>
+                    ))}
+                  </Select>
+                </Form.Item>
 
-          <Form.Item label="资源" name="resource_id" rules={[{ required: true, message: '请选择资源' }]}>
-            <Select placeholder={selectedResourceGroupId ? "请选择资源" : "请先选择资源组"} disabled={!selectedResourceGroupId}>
-              {resources.map(r => (
-                <Select.Option key={r.id} value={String(r.id)}>
-                  {r.name} {r.note ? `(${r.note})` : ''}
-                </Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
+                <Form.Item label="资源" name="resource_id" rules={[{ required: true, message: '请选择资源' }]}>
+                  <Select placeholder={selectedResourceGroupId ? "请选择资源" : "请先选择资源组"} disabled={!selectedResourceGroupId}>
+                    {resources.map(r => (
+                      <Select.Option key={r.id} value={String(r.id)}>
+                        {r.name} {r.note ? `(${r.note})` : ''}
+                      </Select.Option>
+                    ))}
+                  </Select>
+                </Form.Item>
 
-          <Form.Item label="VTP 平台" name="vtp_id" rules={[{ required: true, message: '请选择VTP平台' }]}>
-            <Select placeholder={selectedServerId ? "请选择VTP平台" : "请先选择VDI服务器"} disabled={!selectedServerId}>
-              {vtpPlatforms.map(platform => (
-                <Select.Option key={platform.id} value={platform.id}>
-                  {platform.name}
-                </Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
+                <Form.Item label="VTP 平台" name="vtp_id" rules={[{ required: true, message: '请选择VTP平台' }]}>
+                  <Select placeholder={selectedServerId ? "请选择VTP平台" : "请先选择VDI服务器"} disabled={!selectedServerId}>
+                    {vtpPlatforms.map(platform => (
+                      <Select.Option key={platform.id} value={platform.id}>
+                        {platform.name}
+                      </Select.Option>
+                    ))}
+                  </Select>
+                </Form.Item>
 
-          <Form.Item label="运行位置" name="run_position_id" rules={[{ required: true, message: '请选择运行位置' }]}>
-            <Select placeholder={selectedVtpId ? "请选择运行位置" : "请先选择VTP平台"} disabled={!selectedVtpId}>
-              {runPositions.map(position => (
-                <Select.Option key={position.id} value={position.id}>
-                  {position.name} (ID: {position.id}, 父级: {position.father_id})
-                </Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
+                <Form.Item label="运行位置" name="run_position_id" rules={[{ required: true, message: '请选择运行位置' }]}>
+                  <Select placeholder={selectedVtpId ? "请选择运行位置" : "请先选择VTP平台"} disabled={!selectedVtpId}>
+                    {runPositions.map(position => (
+                      <Select.Option key={position.id} value={position.id}>
+                        {position.name}
+                      </Select.Option>
+                    ))}
+                  </Select>
+                </Form.Item>
 
-          <Form.Item label="个人盘" name="disk_id" rules={[{ required: true, message: '请选择个人盘' }]}>
-            <Select placeholder={selectedVtpId ? "请选择个人盘" : "请先选择VTP平台"} disabled={!selectedVtpId}>
-              {storages.map(storage => (
-                <Select.Option key={storage.id} value={storage.id}>
-                  {storage.name} (类型: {storage.type}, 可用: {storage.avail}MB)
-                </Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
+                <Form.Item label="个人盘" name="disk_id" rules={[{ required: true, message: '请选择个人盘' }]}>
+                  <Select placeholder={selectedVtpId ? "请选择个人盘" : "请先选择VTP平台"} disabled={!selectedVtpId}>
+                    {storages.map(storage => (
+                      <Select.Option key={storage.id} value={storage.id}>
+                        {storage.name} ({storage.avail}MB可用)
+                      </Select.Option>
+                    ))}
+                  </Select>
+                </Form.Item>
 
-          <Form.Item label="存储位置" name="storage_id" rules={[{ required: true, message: '请选择存储位置' }]}>
-            <Select placeholder={selectedVtpId ? "请选择存储位置" : "请先选择VTP平台"} disabled={!selectedVtpId}>
-              {storages.map(storage => (
-                <Select.Option key={storage.id} value={storage.id}>
-                  {storage.name} (类型: {storage.type}, 可用: {storage.avail}MB)
-                </Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
+                <Form.Item label="主机位置" name="host_id">
+                  <Input disabled placeholder="自动从运行位置获取 (father_id)" />
+                </Form.Item>
+              </Col>
 
-          <Form.Item label="网络接口" name="network_id" rules={[{ required: true, message: '请选择网络接口' }]}>
-            <Select placeholder={selectedVtpId ? "请选择网络接口" : "请先选择VTP平台"} disabled={!selectedVtpId}>
-              {networks.map(network => (
-                <Select.Option key={network.id} value={network.id}>
-                  {network.name} (模式: {network.mode})
-                </Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
+              {/* 右列：虚拟机配置 */}
+              <Col xs={24} md={12}>
+                <Form.Item label="存储位置" name="storage_id" rules={[{ required: true, message: '请选择存储位置' }]}>
+                  <Select placeholder={selectedVtpId ? "请选择存储位置" : "请先选择VTP平台"} disabled={!selectedVtpId}>
+                    {storages.map(storage => (
+                      <Select.Option key={storage.id} value={storage.id}>
+                        {storage.name} ({storage.avail}MB可用)
+                      </Select.Option>
+                    ))}
+                  </Select>
+                </Form.Item>
 
-          <Form.Item label="创建数量" name="count" initialValue={1} rules={[{ required: true, message: '请输入创建数量' }]}>
-            <InputNumber min={1} max={10} style={{ width: '100%' }} />
-          </Form.Item>
+                <Form.Item label="网络接口" name="network_id" rules={[{ required: true, message: '请选择网络接口' }]}>
+                  <Select placeholder={selectedVtpId ? "请选择网络接口" : "请先选择VTP平台"} disabled={!selectedVtpId}>
+                    {networks.map(network => (
+                      <Select.Option key={network.id} value={network.id}>
+                        {network.name}
+                      </Select.Option>
+                    ))}
+                  </Select>
+                </Form.Item>
 
-          <Form.Item label="主机位置" name="host_id" rules={[{ required: true, message: '请选择运行位置后自动设置' }]}>
-            <Input disabled placeholder="根据运行位置自动设置 (father_id)" />
-          </Form.Item>
+                <Form.Item label="虚拟机名称" name="name" rules={[{ required: true, message: '请输入虚拟机名称' }]}>
+                  <Input placeholder="选择资源组后自动生成：VDI-资源组-资源-后缀" />
+                </Form.Item>
 
-          <Form.Item label="虚拟机名称" name="name" rules={[{ required: true, message: '请输入虚拟机名称' }]}>
-            <Input placeholder="选择资源组后自动生成" />
-          </Form.Item>
-          <Form.Item label="名称后缀（可选）">
-            <Input
-              placeholder="自定义后缀，例如：user01"
-              onChange={(e) => handleSuffixChange(e.target.value)}
-            />
-          </Form.Item>
+                <Form.Item label="名称后缀（可选）" name="name_suffix">
+                  <Input
+                    placeholder="自定义后缀，例如：zhangsan-001"
+                    onChange={(e) => {
+                      const suffix = e.target.value;
+                      const selectedGroup = form.getFieldValue('resource_group_id');
+                      const selectedResource = form.getFieldValue('resource_id');
+                      if (selectedGroup && selectedResource) {
+                        const group = resourceGroups.find(g => g.resource_group_id === selectedGroup);
+                        const resource = resources.find(r => String(r.id) === selectedResource);
+                        if (group && resource) {
+                          const baseName = `VDI-${group.name}-${resource.name}`;
+                          form.setFieldsValue({
+                            name: suffix ? `${baseName}-${suffix}` : baseName
+                          });
+                        }
+                      }
+                    }}
+                  />
+                </Form.Item>
 
-          <Form.Item label="CPU 颗数" name="cpu_number" initialValue={1}>
-            <Slider min={1} max={16} marks={{ 1: '1', 4: '4', 8: '8', 16: '16' }} />
-          </Form.Item>
+                <Form.Item label="创建数量" name="count" initialValue={1} rules={[{ required: true, message: '请输入创建数量' }]}>
+                  <InputNumber min={1} max={10} style={{ width: '100%' }} />
+                </Form.Item>
 
-          <Form.Item label="每颗 CPU 核数" name="cpu_core" initialValue={4}>
-            <Slider min={1} max={32} marks={{ 1: '1', 8: '8', 16: '16', 32: '32' }} />
-          </Form.Item>
+                <Form.Item label="CPU 颗数" name="cpu_number" initialValue={1}>
+                  <Slider min={1} max={16} marks={{ 1: '1', 4: '4', 8: '8', 16: '16' }} />
+                </Form.Item>
 
-          <Form.Item label="内存" name="memory" initialValue={4096}>
-            <Slider
-              min={512}
-              max={65536}
-              step={512}
-              marks={{ 512: '0.5GB', 4096: '4GB', 8192: '8GB', 16384: '16GB', 32768: '32GB', 65536: '64GB' }}
-              tooltip={{ formatter: (v) => v ? `${(v / 1024).toFixed(1)} GB` : '' }}
-            />
-          </Form.Item>
+                <Form.Item label="内存" name="memory" initialValue={4096}>
+                  <Slider
+                    min={512}
+                    max={65536}
+                    step={512}
+                    marks={{ 4096: '4GB', 8192: '8GB', 16384: '16GB', 32768: '32GB' }}
+                    tooltip={{ formatter: (v) => v ? `${(v / 1024).toFixed(1)} GB` : '' }}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
 
-          <Form.Item label="磁盘" name="disk" initialValue={60}>
-            <Slider
-              min={20}
-              max={500}
-              step={10}
-              marks={{ 20: '20GB', 100: '100GB', 200: '200GB', 500: '500GB' }}
-              tooltip={{ formatter: (v) => v ? `${v} GB` : '' }}
-            />
-          </Form.Item>
-        </Form>
+            {/* 全宽行：CPU核数和磁盘 */}
+            <Row gutter={16}>
+              <Col xs={24} md={12}>
+                <Form.Item label="每颗 CPU 核数" name="cpu_core" initialValue={4}>
+                  <Slider min={1} max={32} marks={{ 1: '1', 8: '8', 16: '16', 32: '32' }} />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={12}>
+                <Form.Item label="磁盘 (GB)" name="disk" initialValue={60}>
+                  <Slider
+                    min={20}
+                    max={500}
+                    step={10}
+                    marks={{ 20: '20GB', 100: '100GB', 200: '200GB', 500: '500GB' }}
+                    tooltip={{ formatter: (v) => v ? `${v} GB` : '' }}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+          </Form>
+        </Spin>
       </Modal>
 
       {/* 配置 IP 模态框 */}

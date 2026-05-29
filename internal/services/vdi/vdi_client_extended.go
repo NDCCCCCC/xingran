@@ -628,7 +628,7 @@ func (c *vdiClientExtendedImpl) GetRunPositions(ctx context.Context, vtpID int) 
 		return nil, &VDIError{Code: resp.ErrorCode, Message: resp.ErrorMessage}
 	}
 
-	return resp.Run, nil
+	return resp.Data.Run, nil
 }
 
 // GetStorages 获取存储位置列表
@@ -649,7 +649,7 @@ func (c *vdiClientExtendedImpl) GetStorages(ctx context.Context, vtpID int) ([]S
 		return nil, &VDIError{Code: resp.ErrorCode, Message: resp.ErrorMessage}
 	}
 
-	return resp.Storages, nil
+	return resp.Data.Storages, nil
 }
 
 // GetNetworks 获取网络接口列表
@@ -670,7 +670,7 @@ func (c *vdiClientExtendedImpl) GetNetworks(ctx context.Context, vtpID int) ([]N
 		return nil, &VDIError{Code: resp.ErrorCode, Message: resp.ErrorMessage}
 	}
 
-	return resp.Networks, nil
+	return resp.Data.Networks, nil
 }
 
 // CreateServer 创建VDI虚拟机
