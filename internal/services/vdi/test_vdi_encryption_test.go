@@ -1,64 +1,51 @@
 package vdi
 
 import (
-	"fmt"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
+// TestVDIPasswordEncryptionDecryption tests password encrypt/decrypt roundtrip
 func TestVDIPasswordEncryptionDecryption(t *testing.T) {
-	fmt.Println("=== VDI 密码加密/解密测试 ===")
-
-	// 测试密码
 	testPassword := "sangfor@2020"
-	fmt.Printf("原始密码: %s\n\n", testPassword)
 
-	// 测试1: 加密
-	fmt.Println("测试1: 密码加密")
-	encrypted := encryptVDIPassword(testPassword)
-	if encrypted == "" || encrypted == testPassword {
-		t.Fatalf("加密失败: encrypted = '%s'", encrypted)
-	}
-	fmt.Printf("✅ 加密成功: %s\n\n", encrypted[:min(50, len(encrypted))]+"...")
+	t.Run("encrypt produces different output", func(t *testing.T) {
+		encrypted := encryptVDIPassword(testPassword)
+		assert.NotEmpty(t, encrypted, "encrypted password should not be empty")
+		assert.NotEqual(t, testPassword, encrypted, "encrypted should differ from original")
+	})
 
-	// 测试2: 解密
-	fmt.Println("测试2: 密码解密")
-	decrypted := decryptVDIPassword(encrypted)
-	if decrypted != testPassword {
-		t.Fatalf("解密失败: expected='%s', got='%s'", testPassword, decrypted)
-	}
-	fmt.Printf("✅ 解密成功: %s\n\n", decrypted)
+	t.Run("decrypt roundtrip", func(t *testing.T) {
+		encrypted := encryptVDIPassword(testPassword)
+		decrypted := decryptVDIPassword(encrypted)
+		assert.Equal(t, testPassword, decrypted, "decrypted password should match original")
+	})
 
-	// 测试3: 错误输入处理
-	fmt.Println("测试3: 错误输入处理")
+	t.Run("empty string decrypt returns empty", func(t *testing.T) {
+		result := decryptVDIPassword("")
+		assert.Empty(t, result, "empty string decrypt should return empty")
+	})
 
-	// 3a. 空字符串
-	emptyDecrypted := decryptVDIPassword("")
-	if emptyDecrypted != "" {
-		t.Fatalf("空字符串解密应该返回空字符串，得到: '%s'", emptyDecrypted)
-	}
-	fmt.Println("✅ 空字符串解密正确返回空字符串")
+	t.Run("invalid base64 decrypt returns empty", func(t *testing.T) {
+		result := decryptVDIPassword("not-valid-base64!!!")
+		assert.Empty(t, result, "invalid base64 decrypt should return empty")
+	})
 
-	// 3b. 无效的base64
-	invalidDecrypted := decryptVDIPassword("not-valid-base64!!!")
-	if invalidDecrypted != "" {
-		t.Fatalf("无效base64解密应该返回空字符串，得到: '%s'", invalidDecrypted)
-	}
-	fmt.Println("✅ 无效base64解密正确返回空字符串")
+	t.Run("valid base64 but invalid ciphertext returns empty", func(t *testing.T) {
+		result := decryptVDIPassword("YWJjZGVmZ2hpams=") // "abcdefghijk" in base64
+		assert.Empty(t, result, "invalid ciphertext decrypt should return empty")
+	})
 
-	// 3c. 有效的base64但解密失败
-	validBase64InvalidCrypto := "YWJjZGVmZ2hpams=" // "abcdefghijk" in base64
-	cryptoFailDecrypted := decryptVDIPassword(validBase64InvalidCrypto)
-	if cryptoFailDecrypted != "" {
-		t.Fatalf("解密失败应该返回空字符串，得到: '%s'", cryptoFailDecrypted)
-	}
-	fmt.Println("✅ 解密失败正确返回空字符串")
+	t.Run("different passwords produce different ciphertexts", func(t *testing.T) {
+		enc1 := encryptVDIPassword("password1")
+		enc2 := encryptVDIPassword("password2")
+		assert.NotEqual(t, enc1, enc2, "different passwords should produce different ciphertexts")
+	})
 
-	fmt.Println("\n=== 所有测试通过 ===")
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
+	t.Run("same password produces different ciphertexts due to random nonce", func(t *testing.T) {
+		enc1 := encryptVDIPassword(testPassword)
+		enc2 := encryptVDIPassword(testPassword)
+		assert.NotEqual(t, enc1, enc2, "same password should produce different ciphertexts (random nonce)")
+	})
 }
