@@ -346,6 +346,39 @@ func (h *VMHandler) ListResourceGroups(c *gin.Context) {
 	response.Success(c, groups)
 }
 
+// ListResources 查询资源列表
+// @Summary 查询资源列表
+// @Description 查询指定资源组下的计算资源列表
+// @Tags VDI管理
+// @Accept json
+// @Produce json
+// @Param request body object true "查询参数"
+// @Success 200 {object} response.Response{data=[]vdiServices.VDIResourceDTO}
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /vdi/vm/resources [post]
+func (h *VMHandler) ListResources(c *gin.Context) {
+	var req struct {
+		VdiServerID string `json:"vdi_server_id"`
+		GroupID     string `json:"group_id"`
+	}
+	if !handleJSONBinding(c, &req) {
+		return
+	}
+
+	if req.GroupID == "" {
+		response.Error(c, http.StatusBadRequest, "资源组ID不能为空")
+		return
+	}
+
+	resources, err := h.vmService.ListResources(c.Request.Context(), req.VdiServerID, req.GroupID)
+	if !handleServiceError(c, err, "查询资源") {
+		return
+	}
+
+	response.Success(c, resources)
+}
+
 // SyncAll 同步所有虚拟机数据
 // @Summary 同步所有虚拟机
 // @Description 从VDI服务器同步所有虚拟机数据到本地数据库

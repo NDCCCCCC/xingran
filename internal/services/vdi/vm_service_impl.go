@@ -72,6 +72,9 @@ func (s *vmServiceImpl) syncVMsFromVDI(ctx context.Context, client VDIClientExte
 		return fmt.Errorf("failed to list resource groups: %w", err)
 	}
 
+	// 1.1 同步资源组到本地数据库
+	s.syncResourceGroups(ctx, groups, vdiServerID)
+
 	// 2. 遍历每个资源组，获取其下的资源
 	for _, group := range groups {
 		if group.Enable != "1" {
@@ -125,6 +128,72 @@ func (s *vmServiceImpl) syncVMsFromVDI(ctx context.Context, client VDIClientExte
 	return nil
 }
 
+// syncResourceGroups 同步资源组到本地数据库
+func (s *vmServiceImpl) syncResourceGroups(ctx context.Context, groups []VDIResourceGroup, vdiServerID string) {
+	fmt.Printf("[VDI SYNC] Syncing %d resource groups for server %s\n", len(groups), vdiServerID)
+
+	for _, group := range groups {
+		// 将VDI的enable字段映射到status: enable=1 -> status=0(正常), 其他 -> status=1(停用)
+		status := 1
+		if group.Enable == "1" {
+			status = 0
+		}
+
+		s.saveOrUpdateResourceGroup(ctx, group, vdiServerID, status)
+	}
+
+	// 清理VDI服务器上已不存在的资源组（软删除）
+	var existingGroupIDs []string
+	for _, g := range groups {
+		existingGroupIDs = append(existingGroupIDs, g.ID)
+	}
+
+	if len(existingGroupIDs) > 0 {
+		result := s.db.WithContext(ctx).
+			Where("vdi_server_id = ? AND resource_group_id NOT IN ? AND deleted_at IS NULL", vdiServerID, existingGroupIDs).
+			Delete(&models.VDIResourceGroup{})
+		if result.Error != nil {
+			fmt.Printf("[VDI SYNC] Failed to cleanup orphaned resource groups: %v\n", result.Error)
+		} else if result.RowsAffected > 0 {
+			fmt.Printf("[VDI SYNC] Cleaned up %d orphaned resource groups\n", result.RowsAffected)
+		}
+	}
+}
+
+// saveOrUpdateResourceGroup 保存或更新资源组记录
+func (s *vmServiceImpl) saveOrUpdateResourceGroup(ctx context.Context, group VDIResourceGroup, vdiServerID string, status int) {
+	var existing models.VDIResourceGroup
+	err := s.db.WithContext(ctx).
+		Where("resource_group_id = ? AND vdi_server_id = ?", group.ID, vdiServerID).
+		First(&existing).Error
+
+	if err == gorm.ErrRecordNotFound {
+		// 创建新记录
+		record := models.VDIResourceGroup{
+			ResourceGroupID: group.ID,
+			Name:            group.Name,
+			VdiServerID:     vdiServerID,
+			Type:            group.Note, // 使用Note字段作为Type描述
+			Status:          status,
+		}
+		if err := s.db.WithContext(ctx).Create(&record).Error; err != nil {
+			fmt.Printf("[VDI SYNC] Failed to create resource group %s: %v\n", group.Name, err)
+		}
+	} else if err == nil {
+		// 更新现有记录
+		updates := map[string]interface{}{
+			"name":   group.Name,
+			"type":   group.Note,
+			"status": status,
+		}
+		if err := s.db.WithContext(ctx).Model(&existing).Updates(updates).Error; err != nil {
+			fmt.Printf("[VDI SYNC] Failed to update resource group %s: %v\n", group.Name, err)
+		}
+	} else {
+		fmt.Printf("[VDI SYNC] Failed to query resource group %s: %v\n", group.Name, err)
+	}
+}
+
 // cleanupOrphanedVMs 清理孤立的虚拟机记录
 func (s *vmServiceImpl) cleanupOrphanedVMs(ctx context.Context, vdiVMIDs map[string]bool, vdiServerID string) {
 	fmt.Printf("[VDI SYNC] Starting orphaned VMs cleanup...\n")
@@ -166,7 +235,9 @@ func (s *vmServiceImpl) cleanupOrphanedVMs(ctx context.Context, vdiVMIDs map[str
 // saveOrUpdateVM 保存或更新虚拟机记录
 func (s *vmServiceImpl) saveOrUpdateVM(ctx context.Context, resource VDIVMResource, resourceID string) {
 	var vm models.VDIVirtualMachine
+	// 使用 Unscoped() 包含软删除记录，避免重复插入导致唯一约束冲突
 	err := s.db.WithContext(ctx).
+		Unscoped().
 		Where("vm_id = ?", resource.ID).
 		First(&vm).Error
 
@@ -188,7 +259,7 @@ func (s *vmServiceImpl) saveOrUpdateVM(ctx context.Context, resource VDIVMResour
 			MemoryPer:   s.parseIntSafe(resource.MemPer),
 			Disk:        s.parseIntSafe(resource.DiscAll),
 			DiskPer:     s.parseIntSafe(resource.DiscPer),
-			BoundUserName: &resource.ApplyUser, // ✅ 修复：ApplyUser是用户名，不是ID
+			BoundUserName: &resource.ApplyUser,
 			// 网络配置信息
 			IPType:        s.mapIPType(resource.IPState),
 			SubnetMask:    resource.Subnetmask,
@@ -205,33 +276,70 @@ func (s *vmServiceImpl) saveOrUpdateVM(ctx context.Context, resource VDIVMResour
 		}
 		s.db.WithContext(ctx).Create(&vm)
 	} else if err == nil {
-		// 更新现有记录
-		updates := map[string]interface{}{
-			"name":          resource.VMName,
-			"resource_id":   resourceID,
-			"power_state":   s.mapPowerState(resource.Status),
-			"ip_address":    resource.IP,
-			"mac_address":   resource.MAC,
-			"os_type":       resource.OSType,
-			"cpu_number":    s.parseIntSafe(resource.CPUNumber),
-			"cpu_core":      s.parseIntSafe(resource.CPUCore),
-			"cpu_per":       s.parseIntSafe(resource.CPUPer),
-			"last_sync_at":  time.Now(),
-			"memory":        s.parseIntSafe(resource.MemAll),
-			"memory_per":    s.parseIntSafe(resource.MemPer),
-			"disk":          s.parseIntSafe(resource.DiscAll),
-			"disk_per":      s.parseIntSafe(resource.DiscPer),
+		// 检查记录是否已被软删除
+		if vm.DeletedAt.Valid {
+			// 永久删除旧的软删除记录，避免唯一约束冲突
+			s.db.WithContext(ctx).Unscoped().Delete(&vm)
+			// 创建新记录
+			vm = models.VDIVirtualMachine{
+				VMID:        resource.ID,
+				Name:        resource.VMName,
+				ResourceID:  resourceID,
+				Status:      0,
+				PowerState:  s.mapPowerState(resource.Status),
+				IPAddress:   resource.IP,
+				MACAddress:  resource.MAC,
+				OSType:      resource.OSType,
+				CPUNumber:   s.parseIntSafe(resource.CPUNumber),
+				CPUCore:     s.parseIntSafe(resource.CPUCore),
+				CPUPer:      s.parseIntSafe(resource.CPUPer),
+				Memory:      s.parseIntSafe(resource.MemAll),
+				MemoryPer:   s.parseIntSafe(resource.MemPer),
+				Disk:        s.parseIntSafe(resource.DiscAll),
+				DiskPer:     s.parseIntSafe(resource.DiscPer),
+				BoundUserName: &resource.ApplyUser,
+				IPType:        s.mapIPType(resource.IPState),
+				SubnetMask:    resource.Subnetmask,
+				DefaultGateway: resource.DefaultGateway,
+				NameServer:    resource.NameServer,
+				AssignIP:      resource.AssignIP,
+				VdiServerID:   s.vdiServerID(),
+				LastSyncAt:    &time.Time{},
+			}
+			if resource.CPUPer != "" {
+				fmt.Printf("[VDI SYNC DEBUG] VM: %s, 清理软删除记录后重新创建, CPUPer: %d\n",
+					resource.VMName, s.parseIntSafe(resource.CPUPer))
+			}
+			s.db.WithContext(ctx).Create(&vm)
+		} else {
+			// 更新现有记录
+			updates := map[string]interface{}{
+				"name":          resource.VMName,
+				"resource_id":   resourceID,
+				"power_state":   s.mapPowerState(resource.Status),
+				"ip_address":    resource.IP,
+				"mac_address":   resource.MAC,
+				"os_type":       resource.OSType,
+				"cpu_number":    s.parseIntSafe(resource.CPUNumber),
+				"cpu_core":      s.parseIntSafe(resource.CPUCore),
+				"cpu_per":       s.parseIntSafe(resource.CPUPer),
+				"last_sync_at":  time.Now(),
+				"memory":        s.parseIntSafe(resource.MemAll),
+				"memory_per":    s.parseIntSafe(resource.MemPer),
+				"disk":          s.parseIntSafe(resource.DiscAll),
+				"disk_per":      s.parseIntSafe(resource.DiscPer),
+			}
+			if resource.ApplyUser != "" {
+				updates["bound_user_name"] = &resource.ApplyUser
+			}
+			// 网络配置信息更新
+			updates["ip_type"] = s.mapIPType(resource.IPState)
+			updates["subnet_mask"] = resource.Subnetmask
+			updates["default_gateway"] = resource.DefaultGateway
+			updates["name_server"] = resource.NameServer
+			updates["assign_ip"] = resource.AssignIP
+			s.db.WithContext(ctx).Model(&vm).Updates(updates)
 		}
-		if resource.ApplyUser != "" {
-			updates["bound_user_name"] = &resource.ApplyUser // ✅ 修复：ApplyUser是用户名，不是ID
-		}
-		// 网络配置信息更新
-		updates["ip_type"] = s.mapIPType(resource.IPState)
-		updates["subnet_mask"] = resource.Subnetmask
-		updates["default_gateway"] = resource.DefaultGateway
-		updates["name_server"] = resource.NameServer
-		updates["assign_ip"] = resource.AssignIP
-		s.db.WithContext(ctx).Model(&vm).Updates(updates)
 	}
 }
 
@@ -305,6 +413,38 @@ func (s *vmServiceImpl) ListResourceGroups(ctx context.Context, vdiServerID stri
 			Name:            g.Name,
 			VdiServerID:     g.VdiServerID,
 			Type:            g.Type,
+		}
+	}
+
+	return dtos, nil
+}
+
+// ListResources 查询资源列表（调用VDI API获取资源组下的具体计算资源）
+func (s *vmServiceImpl) ListResources(ctx context.Context, vdiServerID string, groupID string) ([]VDIResourceDTO, error) {
+	if groupID == "" {
+		return nil, fmt.Errorf("group_id is required")
+	}
+
+	// 获取VDI客户端
+	client, err := s.getClient(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get VDI client: %w", err)
+	}
+
+	// 调用VDI API获取资源列表
+	resources, err := client.ListResources(ctx, groupID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list resources: %w", err)
+	}
+
+	// 转换为DTO
+	dtos := make([]VDIResourceDTO, len(resources))
+	for i, r := range resources {
+		dtos[i] = VDIResourceDTO{
+			ID:    r.ID,
+			Name:  r.Name,
+			Note:  r.Note,
+			GrpID: r.GrpID,
 		}
 	}
 

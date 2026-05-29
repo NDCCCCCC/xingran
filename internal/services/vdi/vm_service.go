@@ -140,6 +140,14 @@ type VDIResourceGroupDTO struct {
 	Type            string `json:"type"`
 }
 
+// VDIResourceDTO 资源数据传输对象（资源组下的具体计算资源）
+type VDIResourceDTO struct {
+	ID    int    `json:"id"`
+	Name  string `json:"name"`
+	Note  string `json:"note"`
+	GrpID int    `json:"grp_id"`
+}
+
 // ============ VM Service 接口 ============
 
 // VMService 虚拟机服务接口
@@ -147,6 +155,8 @@ type VMService interface {
 	// CRUD操作（都会调用VDI API）
 	// 资源组查询
 	ListResourceGroups(ctx context.Context, vdiServerID string) ([]VDIResourceGroupDTO, error)
+	// 资源查询（资源组下的具体计算资源）
+	ListResources(ctx context.Context, vdiServerID string, groupID string) ([]VDIResourceDTO, error)
 
 	// CRUD操作（都会调用VDI API）
 	CreateVM(ctx context.Context, req *CreateVMServiceRequest) (*VDIVMDTO, error)
