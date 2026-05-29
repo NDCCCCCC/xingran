@@ -461,11 +461,13 @@ func (c *vdiClientExtendedImpl) callAPIWithRetry(ctx context.Context, token *str
 	if err != nil && strings.Contains(err.Error(), "AUTH_TOKEN_INVALID") {
 		fmt.Printf("[VDI API DEBUG] Received AUTH_TOKEN_INVALID, forcing re-authentication\n")
 
-		// 清除内存中的 token 缓存，强制重新认证
-		c.authManager.ClearTokenCache()
+		// 清除内存中的 token 缓存，强制重新认证（如果 authManager 存在）
+		if c.authManager != nil {
+			c.authManager.ClearTokenCache()
+		}
 
 		// 重新认证
-		newToken, authErr := c.authManager.Authenticate(ctx)
+		newToken, authErr := c.Authenticate(ctx)
 		if authErr != nil {
 			return fmt.Errorf("re-authentication failed after AUTH_TOKEN_INVALID: %w", authErr)
 		}
@@ -544,23 +546,57 @@ func (c *vdiClientExtendedImpl) callAPI(ctx context.Context, token, method, path
 }
 
 // GetVTPPlatforms 获取VTP平台列表
-// VDI API endpoint: GET /v1/vtp
+// 通过遍历所有资源组和资源，从虚拟机列表中提取唯一的 VTP 平台
 func (c *vdiClientExtendedImpl) GetVTPPlatforms(ctx context.Context) ([]VDIPlatform, error) {
-	token, err := c.Authenticate(ctx)
+	// 使用 map 收集唯一的 VTP 平台
+	vtpMap := make(map[int]VDIPlatform)
+
+	// 获取所有资源组
+	groups, err := c.ListResourceGroups(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("获取资源组失败: %w", err)
 	}
 
-	var resp VDIPlatformsResponse
-	if err := c.callAPIWithRetry(ctx, &token, "GET", "/v1/vtp", nil, &resp); err != nil {
-		return nil, err
+	// 遍历每个资源组
+	for _, group := range groups {
+		// 获取该资源组下的资源列表
+		resources, err := c.ListResources(ctx, group.ID)
+		if err != nil {
+			continue // 跳过失败的资源组
+		}
+
+		// 遍历每个资源
+		for _, resource := range resources {
+			// 获取该资源下的虚拟机列表（获取第一页，最多100个虚拟机）
+			resourceID := fmt.Sprintf("%d", resource.ID)
+			vms, _, err := c.ListResourceServers(ctx, resourceID, 1, 100)
+			if err != nil {
+				continue // 跳过失败的资源
+			}
+
+			// 从虚拟机列表中提取 VTP 平台
+			for _, vm := range vms {
+				if vm.VTPID != "" && vm.VTPName != "" {
+					var vtpID int
+					fmt.Sscanf(vm.VTPID, "%d", &vtpID)
+					if vtpID > 0 {
+						vtpMap[vtpID] = VDIPlatform{
+							ID:   vtpID,
+							Name: vm.VTPName,
+						}
+					}
+				}
+			}
+		}
 	}
 
-	if resp.ErrorCode != 0 {
-		return nil, &VDIError{Code: resp.ErrorCode, Message: resp.ErrorMessage}
+	// 转换为切片
+	result := make([]VDIPlatform, 0, len(vtpMap))
+	for _, vtp := range vtpMap {
+		result = append(result, vtp)
 	}
 
-	return resp.Data, nil
+	return result, nil
 }
 
 // GetRunPositions 获取运行位置列表
