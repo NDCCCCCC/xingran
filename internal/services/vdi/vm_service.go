@@ -23,7 +23,6 @@ type CreateVMServiceRequest struct {
 // UpdateVMRequest 更新虚拟机请求
 type UpdateVMRequest struct {
 	Name       *string `json:"name"`
-	Status     *int    `json:"status"`
 	IPAddress  *string `json:"ip_address"`
 	MACAddress *string `json:"mac_address"`
 }
@@ -33,7 +32,6 @@ type ListVMRequest struct {
 	Page        int    `json:"page" validate:"min=1"`
 	PageSize    int    `json:"pageSize" validate:"min=1,max=100"`
 	Name        string `json:"name"`
-	Status      *int   `json:"status"`
 	VdiServerID string `json:"vdi_server_id"`
 	ResourceID  string `json:"resource_id"`
 	PowerState  string `json:"power_state"`
@@ -45,7 +43,6 @@ type VDIVMDTO struct {
 	VMID          string     `json:"vm_id"`
 	Name          string     `json:"name"`
 	ResourceID    string     `json:"resource_id"`
-	Status        int        `json:"status"`
 	PowerState    string     `json:"power_state"`
 	IPAddress     string     `json:"ip_address"`
 	MACAddress    string     `json:"mac_address"`

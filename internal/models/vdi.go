@@ -15,7 +15,6 @@ type VDIVirtualMachine struct {
 	VMID          string    `gorm:"type:varchar(100);uniqueIndex;not null" json:"vm_id"`
 	Name          string    `gorm:"type:varchar(200);not null" json:"name"`
 	ResourceID    string    `gorm:"type:varchar(100);index" json:"resource_id"`
-	Status        int       `gorm:"type:int;default:0" json:"status"`
 	PowerState    string    `gorm:"type:varchar(50)" json:"power_state"`
 	IPAddress     string    `gorm:"type:varchar(50)" json:"ip_address"`
 	MACAddress    string    `gorm:"type:varchar(50)" json:"mac_address"`

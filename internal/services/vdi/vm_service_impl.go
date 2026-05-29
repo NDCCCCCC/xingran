@@ -247,7 +247,6 @@ func (s *vmServiceImpl) saveOrUpdateVM(ctx context.Context, resource VDIVMResour
 			VMID:        resource.ID,
 			Name:        resource.VMName,
 			ResourceID:  resourceID,
-			Status:      0,
 			PowerState:  s.mapPowerState(resource.Status),
 			IPAddress:   resource.IP,
 			MACAddress:  resource.MAC,
@@ -285,7 +284,6 @@ func (s *vmServiceImpl) saveOrUpdateVM(ctx context.Context, resource VDIVMResour
 				VMID:        resource.ID,
 				Name:        resource.VMName,
 				ResourceID:  resourceID,
-				Status:      0,
 				PowerState:  s.mapPowerState(resource.Status),
 				IPAddress:   resource.IP,
 				MACAddress:  resource.MAC,
@@ -474,7 +472,6 @@ func (s *vmServiceImpl) CreateVM(ctx context.Context, req *CreateVMServiceReques
 		CPUCore:     req.CPUCore,
 		Memory:      req.Memory,
 		Disk:        req.Disk,
-		Status:      0,
 		PowerState:  "stopped",
 	}
 
@@ -547,9 +544,6 @@ func (s *vmServiceImpl) ListVMs(ctx context.Context, req *ListVMRequest) (*PageR
 	if req.Name != "" {
 		query = query.Where("name LIKE ?", "%"+req.Name+"%")
 	}
-	if req.Status != nil {
-		query = query.Where("status = ?", *req.Status)
-	}
 	if req.VdiServerID != "" {
 		query = query.Where("vdi_server_id = ?", req.VdiServerID)
 	}
@@ -598,9 +592,6 @@ func (s *vmServiceImpl) UpdateVM(ctx context.Context, id string, req *UpdateVMRe
 	updates := make(map[string]interface{})
 	if req.Name != nil {
 		updates["name"] = *req.Name
-	}
-	if req.Status != nil {
-		updates["status"] = *req.Status
 	}
 	if req.IPAddress != nil {
 		updates["ip_address"] = *req.IPAddress
@@ -993,7 +984,6 @@ func (s *vmServiceImpl) toDTO(vm *models.VDIVirtualMachine) *VDIVMDTO {
 		VMID:          vm.VMID,
 		Name:          vm.Name,
 		ResourceID:    vm.ResourceID,
-		Status:        vm.Status,
 		PowerState:    vm.PowerState,
 		IPAddress:     vm.IPAddress,
 		MACAddress:    vm.MACAddress,
