@@ -21,7 +21,7 @@ progress:
 **Phase**: 22A (深信服VDI基础集成)
 **Plan**: Phase 22-05 (VDI前端UI实现)
 **Status**: ✅ 已完成
-**Last activity**: 2026-05-28 - Completed quick task 260528-vxy: 优化VDI虚拟机创建表单
+**Last activity**: 2026-05-29 - Completed quick task 260529-d95: VDI创建表单添加资源级联下拉选择器
 
 ## Current Position
 
@@ -117,6 +117,7 @@ Plan: Not started
 | 260527-l0k | 修复三个失败的调度任务(VDI同步/AD组同步/部门同步) | 2026-05-27 | - | [260527-enable-three-sync-tasks](./quick/260527-enable-three-sync-tasks/) |
 | 260527-vls | 修复VDI服务器表缺少last_sync_time字段 | 2026-05-27 | - | [20260527-vdi-last-sync-time-fix](./quick/20260527-vdi-last-sync-time-fix/) |
 | 260528-vxy | 优化VDI虚拟机创建表单：名称自动生成、下拉框选择、滑动条设置 | 2026-05-28 | 371aa50 | [260528-vxy-vdi-id-vdi-id-cpu](./quick/260528-vxy-vdi-id-vdi-id-cpu/) |
+| 260529-d95 | VDI创建表单添加资源级联下拉选择器 | 2026-05-29 | 29b80f8,a539277 | [260529-d95-vdi](./quick/260529-d95-vdi/) |
 
 ## Accumulated Context
 
@@ -209,6 +210,6 @@ Plan: Not started
 
 ## Session Continuity
 
-Last session: 2026-05-28T12:27:51.622Z
-Stopped at: context exhaustion at 91% (2026-05-28)
+Last session: 2026-05-29T01:43:00.000Z
+Stopped at: Completed quick task 260529-d95 (2026-05-29)
 Resume file: None
