@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: MAC地址历史数据管理
 status: in_progress
-stopped_at: context exhaustion at 91% (2026-05-28)
-last_updated: "2026-05-28T15:05:00.000Z"
+stopped_at: context exhaustion at 91% (2026-05-29)
+last_updated: "2026-05-29T04:45:43.640Z"
 progress:
   total_phases: 1
   completed_phases: 0
@@ -21,7 +21,7 @@ progress:
 **Phase**: 22A (深信服VDI基础集成)
 **Plan**: Phase 22-05 (VDI前端UI实现)
 **Status**: ✅ 已完成
-**Last activity**: 2026-05-29 - Completed quick task 260529-d95: VDI创建表单添加资源级联下拉选择器
+**Last activity**: 2026-05-29 - Completed quick task 260529-ivp: VDI tests standalone refactor
 
 ## Current Position
 
@@ -118,6 +118,7 @@ Plan: Not started
 | 260527-vls | 修复VDI服务器表缺少last_sync_time字段 | 2026-05-27 | - | [20260527-vdi-last-sync-time-fix](./quick/20260527-vdi-last-sync-time-fix/) |
 | 260528-vxy | 优化VDI虚拟机创建表单：名称自动生成、下拉框选择、滑动条设置 | 2026-05-28 | 371aa50 | [260528-vxy-vdi-id-vdi-id-cpu](./quick/260528-vxy-vdi-id-vdi-id-cpu/) |
 | 260529-d95 | VDI创建表单添加资源级联下拉选择器 | 2026-05-29 | 29b80f8,a539277 | [260529-d95-vdi](./quick/260529-d95-vdi/) |
+| 260529-ivp | VDI测试独立运行重构 | 2026-05-29 | 6dd7ab7 | [260529-ivp](./quick/260529-ivp-vdi-vdi-test-standalone-go-host-id-run-p/) |
 
 ## Accumulated Context
 
@@ -210,6 +211,6 @@ Plan: Not started
 
 ## Session Continuity
 
-Last session: 2026-05-29T01:43:00.000Z
-Stopped at: Completed quick task 260529-d95 (2026-05-29)
+Last session: 2026-05-29T04:45:43.608Z
+Stopped at: context exhaustion at 91% (2026-05-29)
 Resume file: None
