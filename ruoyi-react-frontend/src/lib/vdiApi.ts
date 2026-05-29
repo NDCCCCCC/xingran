@@ -25,6 +25,10 @@ import type {
   VMPageResponse,
   CreateAccountRequest,
   ResetPasswordRequest,
+  VDIPlatform,
+  RunPosition,
+  VDIStorage,
+  VDINetwork,
 } from '@/types/vdi';
 
 // ==================== 虚拟机 API（完整VDI API集成）====================
@@ -117,6 +121,35 @@ export const vmApi = {
   deleteAccount: async (vmId: string, accountId: string) => {
     return await post<void>(`/vdi/vm/${vmId}/accounts/${accountId}/delete`, {});
   },
+
+  // ==================== VDI 创建虚拟机相关 API ====================
+
+  listVTPPlatforms: async (vdiServerId: string) => {
+    return await post<VDIPlatform[]>('/vdi/vm/vtp-platforms', {
+      vdi_server_id: vdiServerId,
+    });
+  },
+
+  listRunPositions: async (vdiServerId: string, vtpId: number) => {
+    return await post<RunPosition[]>('/vdi/vm/run-positions', {
+      vdi_server_id: vdiServerId,
+      vtp_id: vtpId,
+    });
+  },
+
+  listStorages: async (vdiServerId: string, vtpId: number) => {
+    return await post<VDIStorage[]>('/vdi/vm/storages', {
+      vdi_server_id: vdiServerId,
+      vtp_id: vtpId,
+    });
+  },
+
+  listNetworks: async (vdiServerId: string, vtpId: number) => {
+    return await post<VDINetwork[]>('/vdi/vm/networks', {
+      vdi_server_id: vdiServerId,
+      vtp_id: vtpId,
+    });
+  },
 };
 
 // ==================== VDI 服务器 API ====================
@@ -165,4 +198,8 @@ export type {
   VDIServerConfig,
   CreateAccountRequest,
   ResetPasswordRequest,
+  VDIPlatform,
+  RunPosition,
+  VDIStorage,
+  VDINetwork,
 };

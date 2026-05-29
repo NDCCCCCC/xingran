@@ -13,6 +13,7 @@ import {
   Tooltip,
   Form,
   Slider,
+  InputNumber,
 } from 'antd';
 import {
   ReloadOutlined,
@@ -27,7 +28,7 @@ import {
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { vmApi, vdiServerApi } from '@/lib/vdiApi';
-import type { VirtualMachine, VMListParams, CreateVMRequest, VDIServer, VDIResourceGroup, VDIResource } from '@/types/vdi';
+import type { VirtualMachine, VMListParams, CreateVMRequest, VDIServer, VDIResourceGroup, VDIResource, VDIPlatform, RunPosition, VDIStorage, VDINetwork } from '@/types/vdi';
 import type { ColumnsType } from 'antd/es/table';
 
 const VirtualMachineList: React.FC = () => {
@@ -48,6 +49,10 @@ const VirtualMachineList: React.FC = () => {
   const [vdiServers, setVdiServers] = useState<VDIServer[]>([]);
   const [resourceGroups, setResourceGroups] = useState<VDIResourceGroup[]>([]);
   const [resources, setResources] = useState<VDIResource[]>([]);
+  const [vtpPlatforms, setVtpPlatforms] = useState<VDIPlatform[]>([]);
+  const [runPositions, setRunPositions] = useState<RunPosition[]>([]);
+  const [storages, setStorages] = useState<VDIStorage[]>([]);
+  const [networks, setNetworks] = useState<VDINetwork[]>([]);
 
   // 加载虚拟机列表
   const loadVMs = async () => {
@@ -76,6 +81,7 @@ const VirtualMachineList: React.FC = () => {
   const selectedServerId = Form.useWatch('vdi_server_id', form);
   const selectedResourceGroupId = Form.useWatch('resource_group_id', form);
   const selectedResourceFieldId = Form.useWatch('resource_id', form);
+  const selectedVtpId = Form.useWatch('vtp_id', form);
 
   // Load resource groups when VDI server is selected
   useEffect(() => {
@@ -132,11 +138,94 @@ const VirtualMachineList: React.FC = () => {
     }
   }, [resourceGroups, form]);
 
+  // Load VTP platforms when VDI server is selected
+  useEffect(() => {
+    if (selectedServerId && createModalVisible) {
+      vmApi.listVTPPlatforms(selectedServerId).then(result => {
+        setVtpPlatforms(result.data || []);
+      }).catch(() => {
+        setVtpPlatforms([]);
+      });
+      // Clear dependent fields when VDI server changes
+      setRunPositions([]);
+      setStorages([]);
+      setNetworks([]);
+      form.setFieldsValue({
+        vtp_id: undefined,
+        host_id: undefined,
+        run_position_id: undefined,
+        disk_id: undefined,
+        storage_id: undefined,
+        network_id: undefined,
+      });
+    } else {
+      setVtpPlatforms([]);
+    }
+  }, [selectedServerId, createModalVisible, form]);
+
+  // Load run positions, storages, and networks when VTP platform is selected
+  useEffect(() => {
+    if (selectedVtpId && selectedServerId && createModalVisible) {
+      // Load run positions
+      vmApi.listRunPositions(selectedServerId, selectedVtpId).then(result => {
+        setRunPositions(result.data || []);
+        // Auto-select first position if available
+        if (result.data && result.data.length > 0) {
+          const firstPosition = result.data[0];
+          // Extract host_id (father_id) and run_position_id (id)
+          form.setFieldsValue({
+            host_id: firstPosition.father_id,
+            run_position_id: firstPosition.id !== firstPosition.father_id ? firstPosition.id : undefined,
+          });
+        }
+      }).catch(() => {
+        setRunPositions([]);
+      });
+
+      // Load storages
+      vmApi.listStorages(selectedServerId, selectedVtpId).then(result => {
+        setStorages(result.data || []);
+        // Auto-select first storage if available
+        if (result.data && result.data.length > 0) {
+          form.setFieldsValue({ disk_id: result.data[0].id, storage_id: result.data[0].id });
+        }
+      }).catch(() => {
+        setStorages([]);
+      });
+
+      // Load networks
+      vmApi.listNetworks(selectedServerId, selectedVtpId).then(result => {
+        setNetworks(result.data || []);
+        // Auto-select first network if available
+        if (result.data && result.data.length > 0) {
+          form.setFieldsValue({ network_id: result.data[0].id });
+        }
+      }).catch(() => {
+        setNetworks([]);
+      });
+    } else {
+      setRunPositions([]);
+      setStorages([]);
+      setNetworks([]);
+      form.setFieldsValue({
+        host_id: undefined,
+        run_position_id: undefined,
+        disk_id: undefined,
+        storage_id: undefined,
+        network_id: undefined,
+      });
+    }
+  }, [selectedVtpId, selectedServerId, createModalVisible, form]);
+
   // Open create modal and load dropdown data
   const openCreateModal = async () => {
     setCreateModalVisible(true);
     form.resetFields();
     setResources([]);
+    setVtpPlatforms([]);
+    setRunPositions([]);
+    setStorages([]);
+    setNetworks([]);
     try {
       const serverResult = await vdiServerApi.list({ current: 1, pageSize: 100 });
       setVdiServers(serverResult.data?.list || []);
@@ -150,9 +239,30 @@ const VirtualMachineList: React.FC = () => {
     try {
       const values = await form.validateFields();
       setLoading(true);
+
+      // Implement host/run position logic from vdi_test_standalone.go
+      // Extract host_id (father_id) and run_position_id (id) from selected position
+      let hostId = values.host_id;
+      let runPositionId = values.run_position_id;
+
+      // Find the selected position to extract father_id logic
+      if (values.run_position_id) {
+        const selectedPosition = runPositions.find(p => p.id === values.run_position_id);
+        if (selectedPosition) {
+          hostId = selectedPosition.father_id;
+          // If id == father_id, run_position_id should be empty
+          if (selectedPosition.id === selectedPosition.father_id) {
+            runPositionId = undefined;
+          }
+        }
+      }
+
       const data: CreateVMRequest = {
         ...values,
+        host_id: hostId,
+        run_position_id: runPositionId,
       };
+
       await vmApi.create(data);
       message.success('虚拟机创建成功，VDI API 调用完成');
       setCreateModalVisible(false);
@@ -584,6 +694,64 @@ const VirtualMachineList: React.FC = () => {
                 </Select.Option>
               ))}
             </Select>
+          </Form.Item>
+
+          <Form.Item label="VTP 平台" name="vtp_id" rules={[{ required: true, message: '请选择VTP平台' }]}>
+            <Select placeholder={selectedServerId ? "请选择VTP平台" : "请先选择VDI服务器"} disabled={!selectedServerId}>
+              {vtpPlatforms.map(platform => (
+                <Select.Option key={platform.id} value={platform.id}>
+                  {platform.name}
+                </Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+
+          <Form.Item label="运行位置" name="run_position_id" rules={[{ required: true, message: '请选择运行位置' }]}>
+            <Select placeholder={selectedVtpId ? "请选择运行位置" : "请先选择VTP平台"} disabled={!selectedVtpId}>
+              {runPositions.map(position => (
+                <Select.Option key={position.id} value={position.id}>
+                  {position.name} (ID: {position.id}, 父级: {position.father_id})
+                </Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+
+          <Form.Item label="个人盘" name="disk_id" rules={[{ required: true, message: '请选择个人盘' }]}>
+            <Select placeholder={selectedVtpId ? "请选择个人盘" : "请先选择VTP平台"} disabled={!selectedVtpId}>
+              {storages.map(storage => (
+                <Select.Option key={storage.id} value={storage.id}>
+                  {storage.name} (类型: {storage.type}, 可用: {storage.avail}MB)
+                </Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+
+          <Form.Item label="存储位置" name="storage_id" rules={[{ required: true, message: '请选择存储位置' }]}>
+            <Select placeholder={selectedVtpId ? "请选择存储位置" : "请先选择VTP平台"} disabled={!selectedVtpId}>
+              {storages.map(storage => (
+                <Select.Option key={storage.id} value={storage.id}>
+                  {storage.name} (类型: {storage.type}, 可用: {storage.avail}MB)
+                </Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+
+          <Form.Item label="网络接口" name="network_id" rules={[{ required: true, message: '请选择网络接口' }]}>
+            <Select placeholder={selectedVtpId ? "请选择网络接口" : "请先选择VTP平台"} disabled={!selectedVtpId}>
+              {networks.map(network => (
+                <Select.Option key={network.id} value={network.id}>
+                  {network.name} (模式: {network.mode})
+                </Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+
+          <Form.Item label="创建数量" name="count" initialValue={1} rules={[{ required: true, message: '请输入创建数量' }]}>
+            <InputNumber min={1} max={10} style={{ width: '100%' }} />
+          </Form.Item>
+
+          <Form.Item label="主机位置" name="host_id" rules={[{ required: true, message: '请选择运行位置后自动设置' }]}>
+            <Input disabled placeholder="根据运行位置自动设置 (father_id)" />
           </Form.Item>
 
           <Form.Item label="虚拟机名称" name="name" rules={[{ required: true, message: '请输入虚拟机名称' }]}>

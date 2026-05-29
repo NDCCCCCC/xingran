@@ -64,6 +64,14 @@ export interface CreateVMRequest {
   cpu_core?: number;      // 每颗CPU的核数
   memory?: number;
   disk?: number;
+  // VDI API specific fields
+  vtp_id?: number;         // VTP platform ID
+  host_id?: string;       // Host position ID (father_id)
+  run_position_id?: string; // Run position ID (empty if id == father_id)
+  disk_id?: string;       // Personal disk ID
+  storage_id?: string;    // Storage location ID
+  network_id?: string;    // Network interface ID
+  count?: number;         // Number of VMs to create
 }
 
 /**
@@ -138,6 +146,46 @@ export interface VDIResource {
   name: string;
   note: string;
   grp_id: number;
+}
+
+/**
+ * VDI 平台信息
+ */
+export interface VDIPlatform {
+  id: number;
+  name: string;
+  tenant_id: number;
+}
+
+/**
+ * VDI 运行位置
+ */
+export interface RunPosition {
+  id: string;
+  name: string;
+  father_id: string;
+}
+
+/**
+ * VDI 存储位置
+ */
+export interface VDIStorage {
+  id: string;
+  name: string;
+  type: string;
+  total: string;
+  avail: string;
+  shared: number;
+  status: number;
+}
+
+/**
+ * VDI 网络接口
+ */
+export interface VDINetwork {
+  id: string;
+  name: string;
+  mode: string;
 }
 
 /**
