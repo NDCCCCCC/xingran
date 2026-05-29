@@ -340,9 +340,27 @@ const VirtualMachineList: React.FC = () => {
         storagesLoaded ? Promise.resolve({ data: [] }) : vmApi.listStorages(selectedServerId, selectedVtpId),
         networksLoaded ? Promise.resolve({ data: [] }) : vmApi.listNetworks(selectedServerId, selectedVtpId),
       ]).then(([positionsResult, storagesResult, networksResult]) => {
-        const newPositions = positionsResult.data || [];
+        let newPositions = positionsResult.data || [];
         const newStorages = storagesResult.data || [];
         const newNetworks = networksResult.data || [];
+
+        // 过滤：只显示clustered virtual machine下的运行位置
+        // 查找father_id包含"clustered"的位置，找到对应的ID
+        const clusteredHostId = newPositions.find(p =>
+          p.father_id && p.father_id.toLowerCase().includes('clustered')
+        )?.father_id;
+
+        if (clusteredHostId) {
+          // 只保留该host下的运行位置
+          newPositions = newPositions.filter(p => p.father_id === clusteredHostId);
+          console.log('[VDI Positions] 已过滤，只显示clustered下的位置:', {
+            clusteredHostId,
+            count: newPositions.length,
+            total: positionsResult.data?.length || 0
+          });
+        } else {
+          console.warn('[VDI Positions] 未找到clustered host，显示所有位置');
+        }
 
         setRunPositions(newPositions);
         setStorages(newStorages);
