@@ -548,6 +548,8 @@ func (c *vdiClientExtendedImpl) callAPI(ctx context.Context, token, method, path
 // GetVTPPlatforms 获取VTP平台列表
 // 通过遍历所有资源组和资源，从虚拟机列表中提取唯一的 VTP 平台
 func (c *vdiClientExtendedImpl) GetVTPPlatforms(ctx context.Context) ([]VDIPlatform, error) {
+	fmt.Printf("[VDI GetVTPPlatforms] Starting to collect VTP platforms\n")
+
 	// 使用 map 收集唯一的 VTP 平台
 	vtpMap := make(map[int]VDIPlatform)
 
@@ -557,22 +559,30 @@ func (c *vdiClientExtendedImpl) GetVTPPlatforms(ctx context.Context) ([]VDIPlatf
 		return nil, fmt.Errorf("获取资源组失败: %w", err)
 	}
 
+	fmt.Printf("[VDI GetVTPPlatforms] Found %d resource groups\n", len(groups))
+
 	// 遍历每个资源组
 	for _, group := range groups {
 		// 获取该资源组下的资源列表
 		resources, err := c.ListResources(ctx, group.ID)
 		if err != nil {
+			fmt.Printf("[VDI GetVTPPlatforms] Failed to get resources for group %s: %v\n", group.ID, err)
 			continue // 跳过失败的资源组
 		}
+
+		fmt.Printf("[VDI GetVTPPlatforms] Group %s has %d resources\n", group.ID, len(resources))
 
 		// 遍历每个资源
 		for _, resource := range resources {
 			// 获取该资源下的虚拟机列表（获取第一页，最多100个虚拟机）
 			resourceID := fmt.Sprintf("%d", resource.ID)
-			vms, _, err := c.ListResourceServers(ctx, resourceID, 1, 100)
+			vms, totalCount, err := c.ListResourceServers(ctx, resourceID, 1, 100)
 			if err != nil {
+				fmt.Printf("[VDI GetVTPPlatforms] Failed to get VMs for resource %s: %v\n", resourceID, err)
 				continue // 跳过失败的资源
 			}
+
+			fmt.Printf("[VDI GetVTPPlatforms] Resource %s has %d VMs (total: %d)\n", resourceID, len(vms), totalCount)
 
 			// 从虚拟机列表中提取 VTP 平台
 			for _, vm := range vms {
@@ -584,6 +594,7 @@ func (c *vdiClientExtendedImpl) GetVTPPlatforms(ctx context.Context) ([]VDIPlatf
 							ID:   vtpID,
 							Name: vm.VTPName,
 						}
+						fmt.Printf("[VDI GetVTPPlatforms] Found VTP platform: %s (ID: %d)\n", vm.VTPName, vtpID)
 					}
 				}
 			}
