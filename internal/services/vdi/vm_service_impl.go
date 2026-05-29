@@ -459,14 +459,41 @@ func (s *vmServiceImpl) CreateVM(ctx context.Context, req *CreateVMServiceReques
 		return nil, fmt.Errorf("VDI server not found or disabled: %w", err)
 	}
 
-	// 2. 调用VDI API创建虚拟机
-	// 注意：当前VDI客户端扩展接口没有CreateVM方法，需要使用底层VDIClient
-	// 这里我们模拟创建，实际应该调用VDI API
-	// 由于VDI API的CreateVM方法在旧客户端中，我们暂时使用模拟方式
+	// 2. 获取VDI客户端
+	client := NewVDIClientFromDB(s.db, req.VdiServerID)
 
-	// 3. 创建本地虚拟机记录（使用VDI返回的VM ID）
+	// 3. 解析资源ID为整数
+	var resourceID int
+	fmt.Sscanf(req.ResourceID, "%d", &resourceID)
+
+	// 4. 构建VDI API创建请求
+	createReq := CreateServerRequest{
+		Resource: ResourceInfo{ID: resourceID},
+		Host:     HostInfo{ID: req.HostID},
+		RunPosition: PositionInfo{ID: req.RunPositionID},
+		Disk:     DiskInfo{ID: req.DiskID},
+		Storage:  StorageInfo{ID: req.StorageID},
+		Network:  NetworkInfo{ID: req.NetworkID},
+		Servers:  ServerCount{Count: req.Count},
+	}
+
+	// 5. 调用VDI API创建虚拟机
+	resp, err := client.CreateServer(ctx, createReq)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create VM via VDI API: %w", err)
+	}
+
+	// 6. 创建本地虚拟机记录（使用VDI返回的VM ID）
+	// 如果创建多个VM，只记录第一个
+	vmID := ""
+	if len(resp.Data.ServerID) > 0 {
+		vmID = resp.Data.ServerID[0]
+	} else {
+		return nil, fmt.Errorf("VDI API returned no VM IDs")
+	}
+
 	vm := &models.VDIVirtualMachine{
-		VMID:        fmt.Sprintf("vm-%d", time.Now().UnixNano()), // 模拟VDI返回的VM ID
+		VMID:        vmID,
 		Name:        req.Name,
 		ResourceID:  req.ResourceID,
 		VdiServerID: req.VdiServerID,
@@ -475,7 +502,7 @@ func (s *vmServiceImpl) CreateVM(ctx context.Context, req *CreateVMServiceReques
 		Memory:      req.Memory,
 		Disk:        req.Disk,
 		Status:      0,
-		PowerState:  "stopped",
+		PowerState:  "pending", // VDI创建后的初始状态
 	}
 
 	if err := s.db.WithContext(ctx).Create(vm).Error; err != nil {

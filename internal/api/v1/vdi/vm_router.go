@@ -11,7 +11,7 @@ import (
 func SetupVMRouter(r *gin.RouterGroup, core *core.Core) {
 	// 创建服务实例，传入nil客户端（服务层会动态查找）
 	vmService := vdiServices.NewVMServiceWithDynamicClient(core.GetDB())
-	vmHandler := NewVMHandler(vmService)
+	vmHandler := NewVMHandler(vmService, core.GetDB())
 
 	// 注册路由
 	r.POST("/list", vmHandler.List)
@@ -30,4 +30,10 @@ func SetupVMRouter(r *gin.RouterGroup, core *core.Core) {
 	r.POST("/:id/unbind_user", vmHandler.UnbindUser)
 	r.POST("/:id/sync", vmHandler.SyncFromVDI)
 	r.POST("/sync-all", vmHandler.SyncAll)
+
+	// VDI 创建虚拟机相关接口
+	r.POST("/vtp-platforms", vmHandler.ListVTPPlatforms)
+	r.POST("/run-positions", vmHandler.ListRunPositions)
+	r.POST("/storages", vmHandler.ListStorages)
+	r.POST("/networks", vmHandler.ListNetworks)
 }

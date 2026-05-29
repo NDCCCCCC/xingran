@@ -6,16 +6,18 @@ import (
 	"github.com/gin-gonic/gin"
 	vdiServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/vdi"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	"gorm.io/gorm"
 )
 
 // VMHandler 虚拟机处理器
 type VMHandler struct {
 	vmService vdiServices.VMService
+	db        *gorm.DB
 }
 
 // NewVMHandler 创建虚拟机处理器
-func NewVMHandler(vmService vdiServices.VMService) *VMHandler {
-	return &VMHandler{vmService: vmService}
+func NewVMHandler(vmService vdiServices.VMService, db *gorm.DB) *VMHandler {
+	return &VMHandler{vmService: vmService, db: db}
 }
 
 // Create 创建虚拟机
@@ -410,4 +412,159 @@ func (h *VMHandler) SyncAll(c *gin.Context) {
 		"message": "同步任务已提交",
 		"server_id": serverID,
 	})
+}
+
+// ListVTPPlatforms 查询VTP平台列表
+// @Summary 查询VTP平台列表
+// @Description 查询VDI服务器的VTP平台列表，用于虚拟机创建
+// @Tags VDI管理
+// @Accept json
+// @Produce json
+// @Param request body object true "查询参数"
+// @Success 200 {object} response.Response{data=[]vdi.VDIPlatform}
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /vdi/vm/vtp-platforms [post]
+func (h *VMHandler) ListVTPPlatforms(c *gin.Context) {
+	var req struct {
+		VdiServerID string `json:"vdi_server_id"`
+	}
+	if !handleJSONBinding(c, &req) {
+		return
+	}
+
+	if req.VdiServerID == "" {
+		response.Error(c, http.StatusBadRequest, "VDI服务器ID不能为空")
+		return
+	}
+
+	// 获取VDI客户端
+	client := vdiServices.NewVDIClientFromDB(h.db, req.VdiServerID)
+
+	platforms, err := client.GetVTPPlatforms(c.Request.Context())
+	if !handleServiceError(c, err, "查询VTP平台") {
+		return
+	}
+
+	response.Success(c, platforms)
+}
+
+// ListRunPositions 查询运行位置列表
+// @Summary 查询运行位置列表
+// @Description 查询指定VTP平台下的运行位置列表
+// @Tags VDI管理
+// @Accept json
+// @Produce json
+// @Param request body object true "查询参数"
+// @Success 200 {object} response.Response{data=[]vdi.RunPosition}
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /vdi/vm/run-positions [post]
+func (h *VMHandler) ListRunPositions(c *gin.Context) {
+	var req struct {
+		VdiServerID string `json:"vdi_server_id"`
+		VTPID       int    `json:"vtp_id"`
+	}
+	if !handleJSONBinding(c, &req) {
+		return
+	}
+
+	if req.VdiServerID == "" {
+		response.Error(c, http.StatusBadRequest, "VDI服务器ID不能为空")
+		return
+	}
+	if req.VTPID <= 0 {
+		response.Error(c, http.StatusBadRequest, "VTP平台ID不能为空")
+		return
+	}
+
+	// 获取VDI客户端
+	client := vdiServices.NewVDIClientFromDB(h.db, req.VdiServerID)
+
+	positions, err := client.GetRunPositions(c.Request.Context(), req.VTPID)
+	if !handleServiceError(c, err, "查询运行位置") {
+		return
+	}
+
+	response.Success(c, positions)
+}
+
+// ListStorages 查询存储位置列表
+// @Summary 查询存储位置列表
+// @Description 查询指定VTP平台下的存储位置列表
+// @Tags VDI管理
+// @Accept json
+// @Produce json
+// @Param request body object true "查询参数"
+// @Success 200 {object} response.Response{data=[]vdi.Storage}
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /vdi/vm/storages [post]
+func (h *VMHandler) ListStorages(c *gin.Context) {
+	var req struct {
+		VdiServerID string `json:"vdi_server_id"`
+		VTPID       int    `json:"vtp_id"`
+	}
+	if !handleJSONBinding(c, &req) {
+		return
+	}
+
+	if req.VdiServerID == "" {
+		response.Error(c, http.StatusBadRequest, "VDI服务器ID不能为空")
+		return
+	}
+	if req.VTPID <= 0 {
+		response.Error(c, http.StatusBadRequest, "VTP平台ID不能为空")
+		return
+	}
+
+	// 获取VDI客户端
+	client := vdiServices.NewVDIClientFromDB(h.db, req.VdiServerID)
+
+	storages, err := client.GetStorages(c.Request.Context(), req.VTPID)
+	if !handleServiceError(c, err, "查询存储位置") {
+		return
+	}
+
+	response.Success(c, storages)
+}
+
+// ListNetworks 查询网络接口列表
+// @Summary 查询网络接口列表
+// @Description 查询指定VTP平台下的网络接口列表
+// @Tags VDI管理
+// @Accept json
+// @Produce json
+// @Param request body object true "查询参数"
+// @Success 200 {object} response.Response{data=[]vdi.Network}
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /vdi/vm/networks [post]
+func (h *VMHandler) ListNetworks(c *gin.Context) {
+	var req struct {
+		VdiServerID string `json:"vdi_server_id"`
+		VTPID       int    `json:"vtp_id"`
+	}
+	if !handleJSONBinding(c, &req) {
+		return
+	}
+
+	if req.VdiServerID == "" {
+		response.Error(c, http.StatusBadRequest, "VDI服务器ID不能为空")
+		return
+	}
+	if req.VTPID <= 0 {
+		response.Error(c, http.StatusBadRequest, "VTP平台ID不能为空")
+		return
+	}
+
+	// 获取VDI客户端
+	client := vdiServices.NewVDIClientFromDB(h.db, req.VdiServerID)
+
+	networks, err := client.GetNetworks(c.Request.Context(), req.VTPID)
+	if !handleServiceError(c, err, "查询网络接口") {
+		return
+	}
+
+	response.Success(c, networks)
 }

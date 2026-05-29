@@ -39,6 +39,13 @@ type VDIClientExtended interface {
 	ListResources(ctx context.Context, groupID string) ([]VDIResource, error)
 	ListResourceGroups(ctx context.Context) ([]VDIResourceGroup, error)
 	ListResourceServers(ctx context.Context, resourceID string, page, pageSize int) ([]VDIVMResource, int, error)
+
+	// VDI 创建虚拟机相关方法
+	GetVTPPlatforms(ctx context.Context) ([]VDIPlatform, error)
+	GetRunPositions(ctx context.Context, vtpID int) ([]RunPosition, error)
+	GetStorages(ctx context.Context, vtpID int) ([]Storage, error)
+	GetNetworks(ctx context.Context, vtpID int) ([]Network, error)
+	CreateServer(ctx context.Context, req CreateServerRequest) (*CreateServerResponse, error)
 }
 
 // vdiClientExtendedImpl VDI客户端扩展实现
@@ -534,4 +541,108 @@ func (c *vdiClientExtendedImpl) callAPI(ctx context.Context, token, method, path
 	}
 
 	return nil
+}
+
+// GetVTPPlatforms 获取VTP平台列表
+// VDI API endpoint: GET /v1/vtp
+func (c *vdiClientExtendedImpl) GetVTPPlatforms(ctx context.Context) ([]VDIPlatform, error) {
+	token, err := c.Authenticate(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp VDIPlatformsResponse
+	if err := c.callAPIWithRetry(ctx, &token, "GET", "/v1/vtp", nil, &resp); err != nil {
+		return nil, err
+	}
+
+	if resp.ErrorCode != 0 {
+		return nil, &VDIError{Code: resp.ErrorCode, Message: resp.ErrorMessage}
+	}
+
+	return resp.Data, nil
+}
+
+// GetRunPositions 获取运行位置列表
+// VDI API endpoint: GET /v1/run_position?vtp_id={vtpID}
+func (c *vdiClientExtendedImpl) GetRunPositions(ctx context.Context, vtpID int) ([]RunPosition, error) {
+	token, err := c.Authenticate(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp RunPositionResponse
+	path := fmt.Sprintf("/v1/run_position?vtp_id=%d", vtpID)
+	if err := c.callAPIWithRetry(ctx, &token, "GET", path, nil, &resp); err != nil {
+		return nil, err
+	}
+
+	if resp.ErrorCode != 0 {
+		return nil, &VDIError{Code: resp.ErrorCode, Message: resp.ErrorMessage}
+	}
+
+	return resp.Run, nil
+}
+
+// GetStorages 获取存储位置列表
+// VDI API endpoint: GET /v1/storages?vtp_id={vtpID}
+func (c *vdiClientExtendedImpl) GetStorages(ctx context.Context, vtpID int) ([]Storage, error) {
+	token, err := c.Authenticate(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp StorageResponse
+	path := fmt.Sprintf("/v1/storages?vtp_id=%d", vtpID)
+	if err := c.callAPIWithRetry(ctx, &token, "GET", path, nil, &resp); err != nil {
+		return nil, err
+	}
+
+	if resp.ErrorCode != 0 {
+		return nil, &VDIError{Code: resp.ErrorCode, Message: resp.ErrorMessage}
+	}
+
+	return resp.Storages, nil
+}
+
+// GetNetworks 获取网络接口列表
+// VDI API endpoint: GET /v1/networks?vtp_id={vtpID}
+func (c *vdiClientExtendedImpl) GetNetworks(ctx context.Context, vtpID int) ([]Network, error) {
+	token, err := c.Authenticate(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp NetworkResponse
+	path := fmt.Sprintf("/v1/networks?vtp_id=%d", vtpID)
+	if err := c.callAPIWithRetry(ctx, &token, "GET", path, nil, &resp); err != nil {
+		return nil, err
+	}
+
+	if resp.ErrorCode != 0 {
+		return nil, &VDIError{Code: resp.ErrorCode, Message: resp.ErrorMessage}
+	}
+
+	return resp.Networks, nil
+}
+
+// CreateServer 创建VDI虚拟机
+// VDI API endpoint: POST /v1/servers
+// Implements host/run position logic from vdi_test_standalone.go lines 543-554
+func (c *vdiClientExtendedImpl) CreateServer(ctx context.Context, req CreateServerRequest) (*CreateServerResponse, error) {
+	token, err := c.Authenticate(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp CreateServerResponse
+	if err := c.callAPIWithRetry(ctx, &token, "POST", "/v1/servers", req, &resp); err != nil {
+		return nil, err
+	}
+
+	if resp.ErrorCode != 0 {
+		return nil, &VDIError{Code: resp.ErrorCode, Message: resp.ErrorMessage}
+	}
+
+	return &resp, nil
 }

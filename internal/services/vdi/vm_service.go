@@ -11,13 +11,21 @@ import (
 
 // CreateVMServiceRequest 创建虚拟机请求（服务层）
 type CreateVMServiceRequest struct {
-	Name        string `json:"name" validate:"required"`
-	ResourceID  string `json:"resource_id" validate:"required"`
-	VdiServerID string `json:"vdi_server_id" validate:"required"`
-	CPUNumber   int    `json:"cpu_number" validate:"min=1,max=64"`   // CPU颗数
-	CPUCore     int    `json:"cpu_core" validate:"min=1,max=128"`    // 每颗CPU核数
-	Memory      int    `json:"memory" validate:"min=512,max=131072"`
-	Disk        int    `json:"disk" validate:"min=20,max=2000"`
+	Name          string `json:"name" validate:"required"`
+	ResourceID    string `json:"resource_id" validate:"required"`
+	VdiServerID   string `json:"vdi_server_id" validate:"required"`
+	CPUNumber     int    `json:"cpu_number" validate:"min=1,max=64"`   // CPU颗数
+	CPUCore       int    `json:"cpu_core" validate:"min=1,max=128"`    // 每颗CPU核数
+	Memory        int    `json:"memory" validate:"min=512,max=131072"`
+	Disk          int    `json:"disk" validate:"min=20,max=2000"`
+	// VDI API specific fields
+	VTPID         int    `json:"vtp_id" validate:"required,min=1"`           // VTP platform ID
+	HostID        string `json:"host_id" validate:"required"`                 // Host position ID (father_id)
+	RunPositionID string `json:"run_position_id"`                              // Run position ID (empty if id == father_id)
+	DiskID        string `json:"disk_id" validate:"required"`                  // Personal disk ID
+	StorageID     string `json:"storage_id" validate:"required"`               // Storage location ID
+	NetworkID     string `json:"network_id" validate:"required"`               // Network interface ID
+	Count         int    `json:"count" validate:"min=1,max=10"`                // Number of VMs to create
 }
 
 // UpdateVMRequest 更新虚拟机请求

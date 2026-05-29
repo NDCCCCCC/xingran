@@ -244,3 +244,152 @@ type VDIResourceGroupsResponse struct {
 	ErrorMessage string             `json:"error_message"`
 	Data         []VDIResourceGroup `json:"data"`
 }
+
+// ============ VDI 创建虚拟机相关类型 ============
+
+// VDIPlatform VDI平台信息
+type VDIPlatform struct {
+	ID       int    `json:"id"`
+	Name     string `json:"name"`
+	TenantID int    `json:"tenant_id"`
+}
+
+// VDIPlatformsResponse VDI平台列表响应
+type VDIPlatformsResponse struct {
+	ErrorCode    int          `json:"error_code"`
+	ErrorMessage string       `json:"error_message"`
+	Data         []VDIPlatform `json:"data"`
+}
+
+// RunPosition 运行位置
+type RunPosition struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	FatherID string `json:"father_id"`
+}
+
+// RunPositionResponse 运行位置响应
+type RunPositionResponse struct {
+	ErrorCode    int           `json:"error_code"`
+	ErrorMessage string        `json:"error_message"`
+	Run          []RunPosition `json:"run"`
+}
+
+// Storage 存储位置
+type Storage struct {
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Type   string `json:"type"`
+	Total  string `json:"total"`
+	Avail  string `json:"avail"`
+	Shared int    `json:"shared"`
+	Status int    `json:"status"`
+}
+
+// StorageResponse 存储位置响应
+type StorageResponse struct {
+	ErrorCode    int       `json:"error_code"`
+	ErrorMessage string    `json:"error_message"`
+	Storages     []Storage `json:"storages"`
+}
+
+// Network 网络接口
+type Network struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Mode string `json:"mode"`
+}
+
+// NetworkResponse 网络接口响应
+type NetworkResponse struct {
+	ErrorCode    int       `json:"error_code"`
+	ErrorMessage string    `json:"error_message"`
+	Networks     []Network `json:"networks"`
+}
+
+// CreateServerRequest 创建服务器请求（VDI独享桌面虚拟机）
+type CreateServerRequest struct {
+	Resource    ResourceInfo   `json:"resource"`
+	Host        HostInfo       `json:"host"`
+	RunPosition PositionInfo   `json:"run_position"`
+	Disk        DiskInfo       `json:"disk"`
+	Storage     StorageInfo    `json:"storage"`
+	Network     NetworkInfo    `json:"network"`
+	Servers     ServerCount    `json:"servers"`
+}
+
+// ResourceInfo 资源信息
+type ResourceInfo struct {
+	ID int `json:"id"`
+}
+
+// HostInfo 主机信息
+type HostInfo struct {
+	ID string `json:"id"`
+}
+
+// PositionInfo 运行位置信息
+type PositionInfo struct {
+	ID string `json:"id"`
+}
+
+// DiskInfo 个人盘信息
+type DiskInfo struct {
+	ID string `json:"id"`
+}
+
+// StorageInfo 存储信息
+type StorageInfo struct {
+	ID string `json:"id"`
+}
+
+// NetworkInfo 网络信息
+type NetworkInfo struct {
+	ID string `json:"id"`
+}
+
+// ServerCount 服务器数量
+type ServerCount struct {
+	Count int `json:"count"`
+}
+
+// CreateServerResponse 创建服务器响应
+type CreateServerResponse struct {
+	ErrorCode    int      `json:"error_code"`
+	ErrorMessage string   `json:"error_message"`
+	Data         struct {
+		TaskID   int      `json:"task_id"`
+		ServerID []string `json:"server_id"`
+	} `json:"data"`
+}
+
+// ============ VDI 虚拟机分组管理类型 ============
+
+// ServerGroup 虚拟机分组
+type ServerGroup struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// ServerGroupsResponse 虚拟机分组列表响应
+type ServerGroupsResponse struct {
+	ErrorCode    int          `json:"error_code"`
+	ErrorMessage string       `json:"error_message"`
+	Data         struct {
+		List []ServerGroup `json:"list"`
+	} `json:"data"`
+}
+
+// MigrateServersRequest 移动虚拟机到其他分组请求
+type MigrateServersRequest struct {
+	VTPID     int      `json:"vtp_id"`
+	TargetDir string   `json:"target_dir"`
+	VMs       []int    `json:"vms"`
+	Action    string   `json:"action"` // 固定值: "migrate_vms"
+}
+
+// MigrateServersResponse 移动虚拟机响应
+type MigrateServersResponse struct {
+	Success int    `json:"success"`
+	Data    string `json:"data"` // UPID用于查询操作进度
+}
