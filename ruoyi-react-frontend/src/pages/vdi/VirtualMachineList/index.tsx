@@ -941,8 +941,8 @@ const VirtualMachineList: React.FC = () => {
                   </Select>
                 </Form.Item>
 
-                <Form.Item label="主机位置" name="host_id">
-                  <Input disabled placeholder="自动从运行位置获取 (father_id)" />
+                <Form.Item label="CPU 颗数" name="cpu_number" initialValue={1}>
+                  <Slider min={1} max={16} marks={{ 1: '1', 4: '4', 8: '8', 16: '16' }} />
                 </Form.Item>
               </Col>
 
@@ -997,8 +997,8 @@ const VirtualMachineList: React.FC = () => {
                   <InputNumber min={1} max={10} style={{ width: '100%' }} />
                 </Form.Item>
 
-                <Form.Item label="CPU 颗数" name="cpu_number" initialValue={1}>
-                  <Slider min={1} max={16} marks={{ 1: '1', 4: '4', 8: '8', 16: '16' }} />
+                <Form.Item label="主机位置" name="host_id">
+                  <Input disabled placeholder="自动从运行位置获取 (father_id)" />
                 </Form.Item>
 
                 <Form.Item label="内存" name="memory" initialValue={4096}>
