@@ -57,6 +57,10 @@ const VirtualMachineList: React.FC = () => {
   const [storages, setStorages] = useState<VDIStorage[]>([]);
   const [networks, setNetworks] = useState<VDINetwork[]>([]);
 
+  // VDI数据预加载状态
+  const [vdiDataPreloaded, setVdiDataPreloaded] = useState(false);
+  const [vdiDataLoading, setVdiDataLoading] = useState(false);
+
   // API缓存：5分钟过期
   const vdiDataCache = useRef<{
     vtpPlatforms: VDIPlatform[];
@@ -66,6 +70,73 @@ const VirtualMachineList: React.FC = () => {
     timestamp: number;
   } | null>(null);
   const CACHE_DURATION = 5 * 60 * 1000; // 5分钟
+
+  // 预加载VDI配置数据（页面加载时就开始）
+  const preloadVDIData = useCallback(async () => {
+    // 检查缓存
+    if (vdiDataCache.current && (Date.now() - vdiDataCache.current.timestamp < CACHE_DURATION)) {
+      console.log('[VDI Preload] 使用缓存数据，跳过API调用');
+      setVdiDataPreloaded(true);
+      return;
+    }
+
+    console.log('[VDI Preload] 开始后台预加载VDI配置数据...');
+    setVdiDataLoading(true);
+
+    try {
+      // 获取第一个可用的VDI服务器
+      const serverResult = await vdiServerApi.list({ current: 1, pageSize: 100 });
+      const servers = serverResult.data?.list || [];
+      const availableServer = servers.find(s => s.status === 0);
+
+      if (!availableServer) {
+        console.log('[VDI Preload] 没有可用的VDI服务器');
+        setVdiDataLoading(false);
+        return;
+      }
+
+      console.log('[VDI Preload] 使用VDI服务器:', availableServer.name);
+
+      // 并行加载所有VDI配置数据
+      const [platformsResult, positionsResult, storagesResult, networksResult] = await Promise.all([
+        vmApi.listVTPPlatforms(availableServer.id),
+        vmApi.listRunPositions(availableServer.id, 1), // 假设VTP ID为1
+        vmApi.listStorages(availableServer.id, 1),
+        vmApi.listNetworks(availableServer.id, 1),
+      ]);
+
+      const newPlatforms = platformsResult.data || [];
+      const newPositions = positionsResult.data || [];
+      const newStorages = storagesResult.data || [];
+      const newNetworks = networksResult.data || [];
+
+      // 更新缓存
+      vdiDataCache.current = {
+        vtpPlatforms: newPlatforms,
+        runPositions: newPositions,
+        storages: newStorages,
+        networks: newNetworks,
+        timestamp: Date.now(),
+      };
+
+      setVtpPlatforms(newPlatforms);
+      setRunPositions(newPositions);
+      setStorages(newStorages);
+      setNetworks(newNetworks);
+      setVdiDataPreloaded(true);
+
+      console.log('[VDI Preload] 预加载完成:', {
+        platforms: newPlatforms.length,
+        positions: newPositions.length,
+        storages: newStorages.length,
+        networks: newNetworks.length,
+      });
+    } catch (error) {
+      console.error('[VDI Preload] 预加载失败:', error);
+    } finally {
+      setVdiDataLoading(false);
+    }
+  }, []);
 
   // 加载虚拟机列表
   const loadVMs = async () => {
@@ -89,6 +160,15 @@ const VirtualMachineList: React.FC = () => {
   useEffect(() => {
     loadVMs();
   }, [current, pageSize, filters]);
+
+  // 页面加载时预加载VDI配置数据（不阻塞UI渲染）
+  useEffect(() => {
+    // 使用 setTimeout 让出主线程，确保页面先渲染
+    const timer = setTimeout(() => {
+      preloadVDIData();
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [preloadVDIData]);
 
   // Watch form field changes for cascading dropdowns and auto-name
   const selectedServerId = Form.useWatch('vdi_server_id', form);
@@ -310,18 +390,47 @@ const VirtualMachineList: React.FC = () => {
     }
   }, [selectedVtpId, selectedServerId, createModalVisible, form, vtpPlatforms]);
 
-  // Open create modal and load dropdown data
+  // Open create modal and load dropdown data (使用预加载数据)
   const openCreateModal = async () => {
     setCreateModalVisible(true);
     form.resetFields();
-    setResources([]);
+
+    // 如果已有预加载数据，直接使用
+    if (vdiDataPreloaded && vdiDataCache.current) {
+      console.log('[VDI Modal] 使用预加载数据，无需等待API调用');
+      setVtpPlatforms(vdiDataCache.current.vtpPlatforms);
+      setRunPositions(vdiDataCache.current.runPositions);
+      setStorages(vdiDataCache.current.storages);
+      setNetworks(vdiDataCache.current.networks);
+
+      // 加载VDI服务器列表（这个还是需要调用API）
+      try {
+        const serverResult = await vdiServerApi.list({ current: 1, pageSize: 100 });
+        setVdiServers(serverResult.data?.list || []);
+      } catch (e) {
+        // ignore
+      }
+      return;
+    }
+
+    // 如果没有预加载数据，显示加载状态并开始加载
+    console.log('[VDI Modal] 没有预加载数据，开始加载...');
     setVtpPlatforms([]);
     setRunPositions([]);
     setStorages([]);
     setNetworks([]);
+    setResources([]);
+
     try {
       const serverResult = await vdiServerApi.list({ current: 1, pageSize: 100 });
       setVdiServers(serverResult.data?.list || []);
+
+      // 触发VDI数据加载
+      const availableServer = serverResult.data?.list.find(s => s.status === 0);
+      if (availableServer) {
+        // 这会触发useEffect加载VDI数据
+        form.setFieldsValue({ vdi_server_id: availableServer.id });
+      }
     } catch (e) {
       // ignore
     }
@@ -795,7 +904,7 @@ const VirtualMachineList: React.FC = () => {
                   <Select placeholder={selectedVtpId ? "请选择运行位置" : "请先选择VTP平台"} disabled={!selectedVtpId}>
                     {runPositions.map(position => (
                       <Select.Option key={position.id} value={position.id}>
-                        {position.name}
+                        {position.name} <span style={{ color: '#999', fontSize: '12px' }}>(Host: {position.father_id})</span>
                       </Select.Option>
                     ))}
                   </Select>
