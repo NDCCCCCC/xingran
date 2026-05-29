@@ -131,6 +131,16 @@ export interface VDIResourceGroup {
 }
 
 /**
+ * VDI 资源信息（资源组下的具体计算资源）
+ */
+export interface VDIResource {
+  id: number;
+  name: string;
+  note: string;
+  grp_id: number;
+}
+
+/**
  * VDI 服务器配置
  */
 export interface VDIServer {

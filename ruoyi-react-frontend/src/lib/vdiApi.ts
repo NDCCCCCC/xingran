@@ -12,6 +12,7 @@ import type {
   VirtualMachine,
   VDIServer,
   VDIResourceGroup,
+  VDIResource,
   VMAccount,
   VMListParams,
   CreateVMRequest,
@@ -83,6 +84,14 @@ export const vmApi = {
     });
   },
 
+  // 资源查询（资源组下的具体计算资源）
+  listResources: async (vdiServerId: string, groupId: string) => {
+    return await post<VDIResource[]>('/vdi/vm/resources', {
+      vdi_server_id: vdiServerId,
+      group_id: groupId,
+    });
+  },
+
   // 批量操作辅助方法
   batchOperate: async (vmIds: string[], action: string) => {
     return await post<void>('/vdi/vm/operate', {
@@ -144,6 +153,7 @@ export type {
   VirtualMachine,
   VDIServer,
   VDIResourceGroup,
+  VDIResource,
   VMAccount,
   VMListParams,
   CreateVMRequest,

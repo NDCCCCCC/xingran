@@ -27,7 +27,7 @@ import {
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { vmApi, vdiServerApi } from '@/lib/vdiApi';
-import type { VirtualMachine, VMListParams, CreateVMRequest, VDIServer, VDIResourceGroup } from '@/types/vdi';
+import type { VirtualMachine, VMListParams, CreateVMRequest, VDIServer, VDIResourceGroup, VDIResource } from '@/types/vdi';
 import type { ColumnsType } from 'antd/es/table';
 
 const VirtualMachineList: React.FC = () => {
@@ -47,6 +47,7 @@ const VirtualMachineList: React.FC = () => {
   const [form] = Form.useForm();
   const [vdiServers, setVdiServers] = useState<VDIServer[]>([]);
   const [resourceGroups, setResourceGroups] = useState<VDIResourceGroup[]>([]);
+  const [resources, setResources] = useState<VDIResource[]>([]);
 
   // 加载虚拟机列表
   const loadVMs = async () => {
@@ -73,7 +74,8 @@ const VirtualMachineList: React.FC = () => {
 
   // Watch form field changes for cascading dropdowns and auto-name
   const selectedServerId = Form.useWatch('vdi_server_id', form);
-  const selectedResourceId = Form.useWatch('resource_id', form);
+  const selectedResourceGroupId = Form.useWatch('resource_group_id', form);
+  const selectedResourceFieldId = Form.useWatch('resource_id', form);
 
   // Load resource groups when VDI server is selected
   useEffect(() => {
@@ -83,26 +85,48 @@ const VirtualMachineList: React.FC = () => {
       }).catch(() => {
         setResourceGroups([]);
       });
+      // Clear resources when VDI server changes
+      setResources([]);
+      form.setFieldsValue({ resource_group_id: undefined, resource_id: undefined });
     } else {
       setResourceGroups([]);
     }
-  }, [selectedServerId, createModalVisible]);
+  }, [selectedServerId, createModalVisible, form]);
+
+  // Load resources when resource group is selected
+  useEffect(() => {
+    if (selectedResourceGroupId && selectedServerId && createModalVisible) {
+      vmApi.listResources(selectedServerId, selectedResourceGroupId).then(result => {
+        const list = result.data || [];
+        setResources(list);
+        // Auto-select first resource
+        if (list.length > 0) {
+          form.setFieldsValue({ resource_id: String(list[0].id) });
+        }
+      }).catch(() => {
+        setResources([]);
+      });
+    } else {
+      setResources([]);
+      form.setFieldsValue({ resource_id: undefined });
+    }
+  }, [selectedResourceGroupId, selectedServerId, createModalVisible, form]);
 
   // Auto-generate name when resource group is selected
   useEffect(() => {
-    if (selectedResourceId) {
-      const group = resourceGroups.find(g => g.resource_group_id === selectedResourceId);
+    if (selectedResourceGroupId) {
+      const group = resourceGroups.find(g => g.resource_group_id === selectedResourceGroupId);
       if (group) {
         const suffix = form.getFieldValue('name_suffix') || '';
         form.setFieldsValue({ name: group.name + (suffix ? '-' + suffix : '') });
       }
     }
-  }, [selectedResourceId, resourceGroups, form]);
+  }, [selectedResourceGroupId, resourceGroups, form]);
 
   // Update name when suffix changes
   const handleSuffixChange = useCallback((suffix: string) => {
-    const selectedResource = form.getFieldValue('resource_id');
-    const group = resourceGroups.find(g => g.resource_group_id === selectedResource);
+    const selectedGroup = form.getFieldValue('resource_group_id');
+    const group = resourceGroups.find(g => g.resource_group_id === selectedGroup);
     if (group) {
       form.setFieldsValue({ name: group.name + (suffix ? '-' + suffix : '') });
     }
@@ -112,6 +136,7 @@ const VirtualMachineList: React.FC = () => {
   const openCreateModal = async () => {
     setCreateModalVisible(true);
     form.resetFields();
+    setResources([]);
     try {
       const serverResult = await vdiServerApi.list({ current: 1, pageSize: 100 });
       setVdiServers(serverResult.data?.list || []);
@@ -541,11 +566,21 @@ const VirtualMachineList: React.FC = () => {
             </Select>
           </Form.Item>
 
-          <Form.Item label="资源组" name="resource_id" rules={[{ required: true, message: '请选择资源组' }]}>
+          <Form.Item label="资源组" name="resource_group_id" rules={[{ required: true, message: '请选择资源组' }]}>
             <Select placeholder={selectedServerId ? "请选择资源组" : "请先选择VDI服务器"} disabled={!selectedServerId}>
               {resourceGroups.map(group => (
                 <Select.Option key={group.resource_group_id} value={group.resource_group_id}>
                   {group.name} {group.type ? `(${group.type})` : ''}
+                </Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+
+          <Form.Item label="资源" name="resource_id" rules={[{ required: true, message: '请选择资源' }]}>
+            <Select placeholder={selectedResourceGroupId ? "请选择资源" : "请先选择资源组"} disabled={!selectedResourceGroupId}>
+              {resources.map(r => (
+                <Select.Option key={r.id} value={String(r.id)}>
+                  {r.name} {r.note ? `(${r.note})` : ''}
                 </Select.Option>
               ))}
             </Select>
