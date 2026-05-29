@@ -310,19 +310,6 @@ const VirtualMachineList: React.FC = () => {
       },
     },
     {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
-      width: 80,
-      render: (status: number) => {
-        return status === 0 ? (
-          <Tag color="green">正常</Tag>
-        ) : (
-          <Tag color="red">停用</Tag>
-        );
-      },
-    },
-    {
       title: 'IP 地址',
       dataIndex: 'ip_address',
       key: 'ip_address',

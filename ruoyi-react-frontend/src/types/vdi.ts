@@ -13,7 +13,6 @@ export interface VirtualMachine {
   vm_id: string;
   name: string;
   resource_id: string;
-  status: number;
   power_state: 'running' | 'stopped' | 'suspended';
   ip_address?: string;
   mac_address?: string;
@@ -47,7 +46,6 @@ export interface VMListParams {
   current: number;
   pageSize: number;
   name?: string;
-  status?: number;
   vdiServerId?: string;
   resourceId?: string;
   powerState?: 'running' | 'stopped' | 'suspended';
@@ -71,7 +69,6 @@ export interface CreateVMRequest {
  */
 export interface UpdateVMRequest {
   name?: string;
-  status?: number;
   ip_address?: string;
   mac_address?: string;
 }
