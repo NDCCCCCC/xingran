@@ -918,14 +918,13 @@ const VirtualMachineList: React.FC = () => {
                   </Select>
                 </Form.Item>
 
-                <Form.Item label="运行位置" name="run_position_id" rules={[{ required: true, message: '请选择运行位置' }]}>
-                  <Select placeholder={selectedVtpId ? "请选择运行位置" : "请先选择VTP平台"} disabled={!selectedVtpId}>
-                    {runPositions.map(position => (
-                      <Select.Option key={position.id} value={position.id}>
-                        {position.name} <span style={{ color: '#999', fontSize: '12px' }}>(Host: {position.father_id})</span>
-                      </Select.Option>
-                    ))}
-                  </Select>
+                <Form.Item label="运行位置">
+                  <Input
+                    disabled
+                    placeholder="VPM服务器自动分配"
+                    value={runPositions.length > 0 ? "自动分配（clustered资源池）" : ""}
+                  />
+                  <input type="hidden" name="run_position_id" value={runPositions[0]?.id || ''} />
                 </Form.Item>
 
                 <Form.Item label="个人盘" name="disk_id" rules={[{ required: true, message: '请选择个人盘' }]}>
