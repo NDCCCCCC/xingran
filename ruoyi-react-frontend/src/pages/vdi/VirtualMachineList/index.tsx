@@ -730,7 +730,7 @@ const VirtualMachineList: React.FC = () => {
               type="text"
               icon={<PlayCircleOutlined />}
               onClick={() => handleOperate('start', [record.id])}
-              disabled={record.power_state === 'running'}
+              disabled={record.power_state !== 'stopped'}
             />
           </Tooltip>
           <Tooltip title="关机">
@@ -738,7 +738,7 @@ const VirtualMachineList: React.FC = () => {
               type="text"
               icon={<StopOutlined />}
               onClick={() => handleOperate('stop', [record.id])}
-              disabled={record.power_state === 'stopped'}
+              disabled={record.power_state === 'stopped' || record.power_state === 'suspended' || record.power_state === 'pending'}
             />
           </Tooltip>
           <Tooltip title="重启">
@@ -746,7 +746,7 @@ const VirtualMachineList: React.FC = () => {
               type="text"
               icon={<SyncOutlined />}
               onClick={() => handleOperate('restart', [record.id])}
-              disabled={record.power_state !== 'running'}
+              disabled={record.power_state !== 'in_use' && record.power_state !== 'suspended'}
             />
           </Tooltip>
           <Tooltip title="同步">
