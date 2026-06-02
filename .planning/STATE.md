@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: MAC地址历史数据管理
 status: unknown
-stopped_at: "Completed quick task 260529-j0l: VDI VM status removal"
-last_updated: "2026-05-29T06:02:21.064Z"
+stopped_at: context exhaustion at 90% (2026-06-02)
+last_updated: "2026-06-02T02:51:19.542Z"
 progress:
   total_phases: 1
   completed_phases: 0
@@ -17,20 +17,20 @@ progress:
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: 里程碑 v1.10 已完成
-**Phase**: 22A (深信服VDI基础集成)
-**Plan**: Phase 22-05 (VDI前端UI实现)
-**Status**: ✅ 已完成
-**Last activity**: 2026-05-29 - Completed quick task 260529-j0l: 移除VDI虚拟机列表无意义的状态列（全栈）
+**Status**: 里程碑 v1.11 已完成
+**Phase**: 22B (VM Agent 服务)
+**Plan**: Not started
+**Status**: 📋 待开始
+**Last activity**: 2026-06-02 - Phase 22A (VDI基础集成) 全部5个计划已完成
 
 ## Current Position
 
-Phase: 23
+Phase: 22B
 Plan: Not started
 **当前里程碑**: v1.11 — 深信服桌面云集成
-**当前阶段**: Phase 22A — VDI 基础集成 (2/5 plans 完成)
-**状态**: 🔄 进行中
-**上一完成**: 2026-05-25 — Phase 22-05 (VDI前端UI实现) 完成验证
+**当前阶段**: Phase 22A — VDI 基础集成 (5/5 plans 完成) ✅
+**状态**: ✅ 已完成
+**上一完成**: 2026-06-02 — Phase 22A (VDI基础集成) 全部完成
 
 ## Project Reference
 
@@ -59,7 +59,7 @@ Plan: Not started
 | 19 | AD域控账号登录 | ✅ Completed | 6/6 plans |
 | 20 | AD域控OU映射 | ✅ Completed | 5/5 plans |
 | 21 | 网络设备权限修复 | ✅ Completed | 1/1 plan |
-| 22A | VDI 基础集成 | 🔄 In Progress | 2/5 plans |
+| 22A | VDI 基础集成 | ✅ Completed | 5/5 plans |
 | 22B | VM Agent 服务 | 📋 Planned | 0/1 plan |
 | 22C | 账号管理与密码 | 📋 Planned | 0/2 plans |
 | 22D | Web Console 监控 | 📋 Planned | 0/2 plans |
@@ -76,6 +76,7 @@ Plan: Not started
 - ✅ **v1.8 登录端点加密增强** (2026-05-21) — 1 phase, 4 plans
 - ✅ **v1.9 AD域控集成扩展** (2026-05-24) — 2 phases, 11 plans
 - ✅ **v1.10 网络设备权限修复** (2026-05-24) — 1 phase, 1 plan
+- ✅ **v1.11 深信服桌面云集成** (2026-06-02) — 1 phase (22A), 5 plans
 
 ## Session History
 
@@ -95,7 +96,12 @@ Plan: Not started
 | 2026-05-24 | Phase 21 完成 (权限修复) | 21 |
 | 2026-05-25 | 项目状态文档更新 | — |
 | 2026-05-25 | Phase 22-01 完成 (VDI数据模型与配置基础) | 22A |
+| 2026-05-25 | Phase 22-02 完成 (VDI API客户端与认证) | 22A |
+| 2026-05-25 | Phase 22-03 完成 (VDI服务层实现) | 22A |
+| 2026-05-25 | Phase 22-04 完成 (VDI后端API层) | 22A |
 | 2026-05-25 | Phase 22-05 完成 (VDI前端UI实现) | 22A |
+| 2026-06-02 | Phase 22A 完成 (VDI基础集成) - 5个计划全部完成 | 22A |
+| 2026-06-02 | Quick task完成: VMP服务器API验证脚本 | — |
 
 ## Quick Tasks Completed
 
@@ -121,6 +127,8 @@ Plan: Not started
 | 260529-d95 | VDI创建表单添加资源级联下拉选择器 | 2026-05-29 | 29b80f8,a539277 | [260529-d95-vdi](./quick/260529-d95-vdi/) |
 | 260529-ivp | VDI测试独立运行重构 | 2026-05-29 | 6dd7ab7 | [260529-ivp](./quick/260529-ivp-vdi-vdi-test-standalone-go-host-id-run-p/) |
 | 260529-j3y | VDI虚拟机创建功能完整实现：添加运行位置（host.id/run_position.id逻辑）、存储位置、网络接口、VTP平台ID选择器 | 2026-05-29 | 132649f | [260529-j3y-vdi-host-id-run-position-id-vtp-id-vdi-t](./quick/260529-j3y-vdi-host-id-run-position-id-vtp-id-vdi-t/) |
+| 20260602-config-ip | 移除VDI虚拟机列表页面配置IP功能（后端API+前端UI） | 2026-06-02 | - | [20260602-remove-vdi-config-ip](./quick/20260602-remove-vdi-config-ip/) |
+| 20260602-vmp-api-integration | VMP服务器API验证脚本 | 2026-06-02 | a490262 | [20260602-vmp-api-integration](./quick/20260602-vmp-api-integration/) |
 
 ## Accumulated Context
 
@@ -137,10 +145,11 @@ Plan: Not started
 - ✅ v1.8 完成: 登录端点加密增强
 - ✅ v1.9 完成: AD域控集成扩展（Phase 19+20）
 - ✅ v1.10 完成: 网络设备权限修复
-- 📋 v1.11 规划中: 深信服桌面云集成（Phase 22A-22D）
+- ✅ v1.11 完成: 深信服桌面云集成（Phase 22A - VDI基础集成）
+- 📋 Phase 22B-22D 规划中: VM Agent 服务、账号管理与密码、Web Console 监控
 - 📋 Phase 23 added: 阶段23前端UI-部门组映射管理界面
 
-**Total shipped**: 66 plans, 16 phases completed
+**Total shipped**: 71 plans, 17 phases completed
 
 ### Key Technical Achievements
 
@@ -197,22 +206,32 @@ Plan: Not started
 
 **当前选项**:
 
-1. **开始 Phase 22A** (VDI 基础集成)
-   - 5 个计划已准备
-   - 数据模型、API 客户端、服务层、后端 API、前端 UI
+1. **开始 Phase 22B** (VM Agent 服务)
+   - 1 个计划
+   - VM Agent 安装与配置
 
-2. **继续 v1.5** (MAC地址历史数据管理)
+2. **开始 Phase 22C** (账号管理与密码)
+   - 2 个计划
+   - 账号管理、密码重置
+
+3. **开始 Phase 22D** (Web Console 监控)
+   - 2 个计划
+   - VMP 监控数据采集
+
+4. **继续 v1.5** (MAC地址历史数据管理)
    - Phase 13: 查询层与轨迹
    - Phase 14: 前端与用户体验
    - Phase 15: 性能优化
 
-3. **规划新里程碑**
+5. **规划新里程碑**
    - `/gsd-new-milestone` 创建新的里程碑
 
-**推荐**: 开始 Phase 22A (VDI 基础集成)，5 个计划已准备就绪
+**推荐**: 开始 Phase 22B (VM Agent 服务) 或 22C (账号管理与密码)
 
 ## Session Continuity
 
-Last session: 2026-05-29T06:01:54.420Z
-Stopped at: Completed quick task 260529-j0l: VDI VM status removal
+Last session: 2026-06-02T02:51:19.536Z
+Stopped at: context exhaustion at 90% (2026-06-02)
+Resume file: None
+
 Resume file: None
