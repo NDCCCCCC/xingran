@@ -21,7 +21,7 @@ progress:
 **Phase**: 22B (VM Agent 服务)
 **Plan**: Not started
 **Status**: 📋 待开始
-**Last activity**: 2026-06-02 - Phase 22A (VDI基础集成) 全部5个计划已完成
+**Last activity**: 2026-06-02 - Completed quick task 260602-jk9: 虚拟机列表页面操作按钮控制逻辑修复
 
 ## Current Position
 
@@ -129,6 +129,7 @@ Plan: Not started
 | 260529-j3y | VDI虚拟机创建功能完整实现：添加运行位置（host.id/run_position.id逻辑）、存储位置、网络接口、VTP平台ID选择器 | 2026-05-29 | 132649f | [260529-j3y-vdi-host-id-run-position-id-vtp-id-vdi-t](./quick/260529-j3y-vdi-host-id-run-position-id-vtp-id-vdi-t/) |
 | 20260602-config-ip | 移除VDI虚拟机列表页面配置IP功能（后端API+前端UI） | 2026-06-02 | - | [20260602-remove-vdi-config-ip](./quick/20260602-remove-vdi-config-ip/) |
 | 20260602-vmp-api-integration | VMP服务器API验证脚本 | 2026-06-02 | a490262 | [20260602-vmp-api-integration](./quick/20260602-vmp-api-integration/) |
+| 260602-jk9 | 虚拟机列表页面操作按钮控制逻辑修复 | 2026-06-02 | 644e222 | [260602-jk9-vm-list-controls](./quick/260602-jk9-vm-list-controls/) |
 
 ## Accumulated Context
 
