@@ -199,6 +199,47 @@
 - 🎨 Full-featured UI: Virtual machine list, server configuration, operation buttons
 - 🔄 Data synchronization: VM status sync from VDI to local database
 
+### Phase 24: UUID类型一致性优化
+
+**Goal:** 统一代码库中的 UUID 类型处理模式，确保新代码遵循一致的规范。本阶段不涉及大规模重构已有表，而是建立清晰的规范指导未来开发，并通过文档和测试确保规范得到遵守。
+
+**Requirements**:
+- 统一 UUID 生成策略为 Go 侧生成
+- 保持 Go 层使用 string 类型（向后兼容）
+- 明确外部系统 UUID 字段处理方式
+- 建立迁移脚本的编写规范
+- 补充单元测试确保规范执行
+- 更新开发规范文档
+
+**Depends on:** 无（独立规范整理工作）
+**Plans:** 2 plans
+
+**Wave 1 - 文档与规范**:
+- [x] 24-01-PLAN.md — 开发规范文档更新
+- [x] 24-02-PLAN.md — 单元测试覆盖
+
+**Phase Highlights**:
+- 📚 Complete UUID handling standards documentation
+- 🧪 Test coverage for UUID generation and validation
+- 📝 Clear migration script patterns
+- 🚫 Anti-pattern warnings for developers
+
+### Phase 25: 虚拟机数据范围权限配置
+
+**Goal:** 为虚拟机列表配置细粒度权限，包括启动、关机、重启、同步、删除等操作；修改绑定用户功能以支持数据范围权限识别
+
+**Requirements**:
+- 各种操作（启动、关机、重启、同步、删除）需要单独配置权限
+- 绑定用户功能仅用于数据范围权限识别：
+  - 无绑定用户：仅数据范围为"全部"的角色可见
+  - 绑定用户张三：张三所在部门和张三本人可见
+
+**Depends on:** Phase 22 (深信服桌面云集成)
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 25 to break down)
+
 ---
 
 ## Progress
@@ -227,11 +268,13 @@
 | 20. AD域控OU与部门映射 | v1.9 | 5/5 | Complete | 2026-05-24 |
 | 21. 网络设备管理权限泄露修复 | v1.10 | 1/1 | Complete | 2026-05-24 |
 | 23. AD组自动同步系统 | v1.11 | 18/18 | Complete | 2026-05-26 |
+| 24. UUID类型一致性优化 | - | 2/2 | Complete | 2026-05-27 |
+| 25. 虚拟机数据范围权限配置 | - | 0/0 | Planned | - |
 | 22A. VDI 基础集成 | v1.12 | 0/5 | Planned | - |
 | 22B. VM Agent 服务 | v1.12 | 0/1 | Planned | - |
 | 22C. 账号管理与密码 | v1.12 | 0/2 | Planned | - |
 | 22D. Web Console 与监控 | v1.12 | 0/2 | Planned | - |
 
-**Total**: 83 plans completed, 15 plans planned (Phases 13-15), 10 plans planned (Phase 22), 108 total plans
+**Total**: 85 plans completed, 15 plans planned (Phases 13-15), 10 plans planned (Phase 22), 110 total plans
 
-**Completion Rate**: 77% (83/108)
+**Completion Rate**: 77% (85/110)
