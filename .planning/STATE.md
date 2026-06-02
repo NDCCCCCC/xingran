@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: MAC地址历史数据管理
 status: unknown
-stopped_at: context exhaustion at 90% (2026-06-02)
-last_updated: "2026-06-02T06:22:10.349Z"
+stopped_at: Phase 25 context gathered
+last_updated: "2026-06-02T09:23:51.367Z"
 progress:
-  total_phases: 1
+  total_phases: 4
   completed_phases: 0
-  total_plans: 11
+  total_plans: 13
   completed_plans: 5
-  percent: 45
+  percent: 38
 ---
 
 # Project State
@@ -150,6 +150,7 @@ Plan: Not started
 - ✅ v1.10 完成: 网络设备权限修复
 - ✅ v1.11 完成: 深信服桌面云集成（Phase 22A - VDI基础集成）
 - 📋 Phase 22B-22D 规划中: VM Agent 服务、账号管理与密码、Web Console 监控
+- 📋 Phase 24 added: 虚拟机数据范围权限配置
 - 📋 Phase 23 added: 阶段23前端UI-部门组映射管理界面
 
 **Total shipped**: 71 plans, 17 phases completed
@@ -233,8 +234,8 @@ Plan: Not started
 
 ## Session Continuity
 
-Last session: 2026-06-02T06:22:10.343Z
-Stopped at: context exhaustion at 90% (2026-06-02)
-Resume file: None
+Last session: --stopped-at
+Stopped at: Phase 25 context gathered
+Resume file: --resume-file
 
 Resume file: None
