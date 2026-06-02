@@ -4,7 +4,7 @@ milestone: v1.5
 milestone_name: MAC地址历史数据管理
 status: unknown
 stopped_at: context exhaustion at 90% (2026-06-02)
-last_updated: "2026-06-02T02:51:19.542Z"
+last_updated: "2026-06-02T06:22:10.349Z"
 progress:
   total_phases: 1
   completed_phases: 0
@@ -21,7 +21,7 @@ progress:
 **Phase**: 22B (VM Agent 服务)
 **Plan**: Not started
 **Status**: 📋 待开始
-**Last activity**: 2026-06-02 - Completed quick task 260602-jk9: 虚拟机列表页面操作按钮控制逻辑修复
+**Last activity**: 2026-06-02 - Completed quick task 260602-k1b: 去除虚拟机重命名功能和名称自动生成逻辑
 
 ## Current Position
 
@@ -130,6 +130,8 @@ Plan: Not started
 | 20260602-config-ip | 移除VDI虚拟机列表页面配置IP功能（后端API+前端UI） | 2026-06-02 | - | [20260602-remove-vdi-config-ip](./quick/20260602-remove-vdi-config-ip/) |
 | 20260602-vmp-api-integration | VMP服务器API验证脚本 | 2026-06-02 | a490262 | [20260602-vmp-api-integration](./quick/20260602-vmp-api-integration/) |
 | 260602-jk9 | 虚拟机列表页面操作按钮控制逻辑修复 | 2026-06-02 | 644e222 | [260602-jk9-vm-list-controls](./quick/260602-jk9-vm-list-controls/) |
+| 260602-k3r | VDI虚拟机列表页面修复：移除配置IP并恢复快速创建功能 | 2026-06-02 | - | [20260602-vdi-vm-list-fix](./quick/20260602-vdi-vm-list-fix/) |
+| 260602-k1b | 去除虚拟机重命名功能和名称自动生成逻辑 | 2026-06-02 | 9b754b6 | [260602-k1b-vdi](./quick/260602-k1b-vdi/) |
 
 ## Accumulated Context
 
@@ -231,7 +233,7 @@ Plan: Not started
 
 ## Session Continuity
 
-Last session: 2026-06-02T02:51:19.536Z
+Last session: 2026-06-02T06:22:10.343Z
 Stopped at: context exhaustion at 90% (2026-06-02)
 Resume file: None
 
