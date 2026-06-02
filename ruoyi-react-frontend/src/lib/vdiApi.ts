@@ -19,7 +19,6 @@ import type {
   UpdateVMRequest,
   VMOperateRequest,
   VMIPConfigRequest,
-  RenameVMRequest,
   BindUserRequest,
   VDIServerConfig,
   VMPageResponse,
@@ -58,14 +57,6 @@ export const vmApi = {
   // VDI 操作（调用 VDI API）
   operate: async (request: VMOperateRequest) => {
     return await post<void>('/vdi/vm/operate', request);
-  },
-
-  configIP: async (configs: VMIPConfigRequest[]) => {
-    return await post<void>('/vdi/vm/config_ip', configs);
-  },
-
-  rename: async (id: string, request: RenameVMRequest) => {
-    return await post<void>(`/vdi/vm/${id}/rename`, request);
   },
 
   bindUser: async (id: string, request: BindUserRequest) => {
@@ -193,7 +184,6 @@ export type {
   UpdateVMRequest,
   VMOperateRequest,
   VMIPConfigRequest,
-  RenameVMRequest,
   BindUserRequest,
   VDIServerConfig,
   CreateAccountRequest,

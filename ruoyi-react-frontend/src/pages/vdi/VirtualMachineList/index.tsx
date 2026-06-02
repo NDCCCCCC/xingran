@@ -26,7 +26,6 @@ import {
   DeleteOutlined,
   PlusOutlined,
   EditOutlined,
-  SettingOutlined,
   UserAddOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
@@ -44,11 +43,25 @@ const VirtualMachineList: React.FC = () => {
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [filters, setFilters] = useState<Partial<VMListParams>>({});
   const [createModalVisible, setCreateModalVisible] = useState(false);
-  const [configIPModalVisible, setConfigIPModalVisible] = useState(false);
-  const [renameModalVisible, setRenameModalVisible] = useState(false);
+  const [quickCreateModalVisible, setQuickCreateModalVisible] = useState(false);
   const [bindUserModalVisible, setBindUserModalVisible] = useState(false);
   const [selectedVM, setSelectedVM] = useState<VirtualMachine | null>(null);
   const [form] = Form.useForm();
+  const [quickCreateForm] = Form.useForm();
+
+  // 快速创建默认配置状态
+  const [quickConfig, setQuickConfig] = useState<{
+    vdiServerId: string;
+    resourceId: string;
+    runPositionId: string;
+    diskId: string;
+    storageId: string;
+    networkId: string;
+    hostId: string;
+    vtpId: number;
+    resourceGroupId: string;
+    resourceGroupName: string;
+  } | null>(null);
   const [vdiServers, setVdiServers] = useState<VDIServer[]>([]);
   const [resourceGroups, setResourceGroups] = useState<VDIResourceGroup[]>([]);
   const [resources, setResources] = useState<VDIResource[]>([]);
@@ -210,24 +223,6 @@ const VirtualMachineList: React.FC = () => {
       form.setFieldsValue({ resource_id: undefined });
     }
   }, [selectedResourceGroupId, selectedServerId, createModalVisible, form]);
-
-  // Auto-generate name when resource and VTP are selected (优化命名格式)
-  useEffect(() => {
-    if (selectedResourceGroupId && selectedResourceFieldId) {
-      const group = resourceGroups.find(g => g.resource_group_id === selectedResourceGroupId);
-      const resource = resources.find(r => String(r.id) === selectedResourceFieldId);
-      const suffix = form.getFieldValue('name_suffix') || '';
-
-      if (group && resource) {
-        // 优化命名: VDI-{资源组}-{资源}-{后缀/序号}
-        // 示例: VDI-研发部-资源池1-zhangsan-001
-        const baseName = `VDI-${group.name}-${resource.name}`;
-        form.setFieldsValue({
-          name: suffix ? `${baseName}-${suffix}` : baseName
-        });
-      }
-    }
-  }, [selectedResourceGroupId, selectedResourceFieldId, resourceGroups, resources, form]);
 
   // Load VTP platforms when VDI server is selected (带缓存优化)
   useEffect(() => {
@@ -544,45 +539,6 @@ const VirtualMachineList: React.FC = () => {
     }
   };
 
-  // 配置 IP（调用 VDI API）
-  const handleConfigIP = async () => {
-    try {
-      const values = await form.validateFields();
-      setLoading(true);
-      await vmApi.configIP([{
-        vm_id: selectedVM!.vm_id,
-        ip_address: values.ip_address,
-        netmask: values.netmask,
-        gateway: values.gateway,
-      }]);
-      message.success('IP 配置成功，VDI API 调用完成');
-      setConfigIPModalVisible(false);
-      form.resetFields();
-      loadVMs();
-    } catch (error) {
-      message.error('配置 IP 失败，VDI API 调用失败');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 重命名（调用 VDI API）
-  const handleRename = async () => {
-    try {
-      const values = await form.validateFields();
-      setLoading(true);
-      await vmApi.rename(selectedVM!.id, { new_name: values.new_name });
-      message.success('重命名成功，VDI API 调用完成');
-      setRenameModalVisible(false);
-      form.resetFields();
-      loadVMs();
-    } catch (error) {
-      message.error('重命名失败，VDI API 调用失败');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // 绑定用户（调用 VDI API）
   const handleBindUser = async () => {
     try {
@@ -595,6 +551,190 @@ const VirtualMachineList: React.FC = () => {
       loadVMs();
     } catch (error) {
       message.error('绑定用户失败，VDI API 调用失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ============================================================================
+  // 快速创建功能 - 自动加载默认配置
+  // ============================================================================
+  // 快速创建默认值常量
+  const DEFAULT_VTP_ID = 1;
+  const DEFAULT_RESOURCE_GROUP_ID = '0';
+  const DEFAULT_RESOURCE_NAME = '数据';
+  const DEFAULT_POSITION_NAME = '研发';
+
+  // 加载快速创建默认配置
+  const loadQuickCreateDefaults = async () => {
+    try {
+      console.log('[VDI Quick] 开始加载快速创建默认配置...');
+
+      // 1. 获取VDI服务器列表
+      const serverResult = await vdiServerApi.list({ current: 1, pageSize: 100 });
+      const servers = serverResult.data?.list || [];
+      const availableServer = servers.find(s => s.status === 0);
+
+      if (!availableServer) {
+        message.error('没有可用的VDI服务器');
+        return;
+      }
+
+      console.log('[VDI Quick] VDI服务器:', availableServer.name);
+
+      // 2. 获取资源组（选择默认资源组ID=0）
+      const resourceGroups = await vmApi.listResourceGroups(availableServer.id);
+      const defaultGroup = resourceGroups.data?.find(g => g.resource_group_id === DEFAULT_RESOURCE_GROUP_ID);
+
+      if (!defaultGroup) {
+        message.error('未找到默认资源组');
+        return;
+      }
+
+      console.log('[VDI Quick] 资源组:', defaultGroup.name);
+
+      // 3. 获取资源列表（查找"数据"资源）
+      const resources = await vmApi.listResources(availableServer.id, DEFAULT_RESOURCE_GROUP_ID);
+      const resourceList = resources.data || [];
+      const dataResource = resourceList.find(r => r.name === DEFAULT_RESOURCE_NAME);
+
+      if (!dataResource) {
+        message.error(`未找到资源"${DEFAULT_RESOURCE_NAME}"，可用资源: ${resourceList.map(r => r.name).join(', ')}`);
+        return;
+      }
+
+      console.log('[VDI Quick] 资源:', dataResource.name, 'ID:', dataResource.id);
+
+      // 4. 获取VTP平台（VMP, ID=1）
+      const platforms = await vmApi.listVTPPlatforms(availableServer.id);
+      const vmpPlatform = platforms.data?.find(p => p.name === 'VMP' || p.id === DEFAULT_VTP_ID);
+
+      if (!vmpPlatform) {
+        message.error('未找到VMP平台');
+        return;
+      }
+
+      console.log('[VDI Quick] VTP平台:', vmpPlatform.name, 'ID:', vmpPlatform.id);
+
+      // 5. 获取运行位置（查找"研发"）
+      const positions = await vmApi.listRunPositions(availableServer.id, vmpPlatform.id);
+      const positionList = positions.data || [];
+      const devPosition = positionList.find(p => p.name === DEFAULT_POSITION_NAME);
+
+      if (!devPosition) {
+        message.error(`未找到运行位置"${DEFAULT_POSITION_NAME}"，可用位置: ${positionList.map(p => p.name).join(', ')}`);
+        return;
+      }
+
+      console.log('[VDI Quick] 运行位置:', devPosition.name, 'ID:', devPosition.id, 'father_id:', devPosition.father_id);
+
+      // 6. 获取存储位置（选择第一个）
+      const storages = await vmApi.listStorages(availableServer.id, vmpPlatform.id);
+      const storageList = storages.data || [];
+      const firstStorage = storageList[0];
+
+      if (!firstStorage) {
+        message.error('未找到存储位置');
+        return;
+      }
+
+      console.log('[VDI Quick] 存储位置:', firstStorage.name, 'ID:', firstStorage.id);
+
+      // 7. 获取网络接口（选择第一个）
+      const networks = await vmApi.listNetworks(availableServer.id, vmpPlatform.id);
+      const networkList = networks.data || [];
+      const firstNetwork = networkList[0];
+
+      if (!firstNetwork) {
+        message.error('未找到网络接口');
+        return;
+      }
+
+      console.log('[VDI Quick] 网络接口:', firstNetwork.name, 'ID:', firstNetwork.id);
+
+      // 保存配置
+      setQuickConfig({
+        vdiServerId: availableServer.id,
+        resourceId: String(dataResource.id),
+        runPositionId: devPosition.id,
+        diskId: firstStorage.id,
+        storageId: firstStorage.id,
+        networkId: firstNetwork.id,
+        hostId: devPosition.father_id || devPosition.id,
+        vtpId: vmpPlatform.id,
+        resourceGroupId: DEFAULT_RESOURCE_GROUP_ID,
+        resourceGroupName: defaultGroup.name,
+      });
+
+      // 自动设置表单默认值
+      quickCreateForm.setFieldsValue({
+        name: `VDI-${defaultGroup.name}-${dataResource.name}`,
+        cpu_number: 1,
+        memory: 8192,
+        cpu_core: 4,
+        disk: 80,
+        count: 1,
+      });
+
+      message.success('快速创建配置加载成功！');
+    } catch (error) {
+      console.error('[VDI Quick] 加载配置失败:', error);
+      message.error('加载VDI配置失败，请检查网络连接和VDI服务器状态');
+    }
+  };
+
+  // 打开快速创建模态框
+  const openQuickCreateModal = async () => {
+    setQuickCreateModalVisible(true);
+    quickCreateForm.resetFields();
+    await loadQuickCreateDefaults();
+  };
+
+  // 快速创建虚拟机
+  const handleQuickCreate = async () => {
+    if (!quickConfig) {
+      message.error('配置未加载，请重试');
+      return;
+    }
+
+    try {
+      const values = await quickCreateForm.validateFields();
+      setLoading(true);
+
+      // 处理 run_position_id 逻辑
+      let finalRunPositionId = quickConfig.runPositionId;
+      if (quickConfig.runPositionId === quickConfig.hostId) {
+        finalRunPositionId = '';
+      }
+
+      const data: CreateVMRequest = {
+        vdi_server_id: quickConfig.vdiServerId,
+        resource_group_id: quickConfig.resourceGroupId,
+        resource_id: quickConfig.resourceId,
+        vtp_id: quickConfig.vtpId,
+        host_id: quickConfig.hostId,
+        run_position_id: finalRunPositionId,
+        disk_id: quickConfig.diskId,
+        storage_id: quickConfig.storageId,
+        network_id: quickConfig.networkId,
+        name: values.name,
+        cpu_number: values.cpu_number,
+        memory: values.memory,
+        cpu_core: values.cpu_core,
+        disk: values.disk,
+        count: values.count,
+      };
+
+      console.log('[VDI Quick] 创建请求参数:', data);
+
+      await vmApi.create(data);
+      message.success('虚拟机创建成功！');
+      setQuickCreateModalVisible(false);
+      quickCreateForm.resetFields();
+      loadVMs();
+    } catch (error) {
+      console.error('[VDI Quick] 创建失败:', error);
+      message.error('创建虚拟机失败');
     } finally {
       setLoading(false);
     }
@@ -756,26 +896,6 @@ const VirtualMachineList: React.FC = () => {
               onClick={() => handleSync(record.id)}
             />
           </Tooltip>
-          <Tooltip title="配置 IP">
-            <Button
-              type="text"
-              icon={<SettingOutlined />}
-              onClick={() => {
-                setSelectedVM(record);
-                setConfigIPModalVisible(true);
-              }}
-            />
-          </Tooltip>
-          <Tooltip title="重命名">
-            <Button
-              type="text"
-              icon={<EditOutlined />}
-              onClick={() => {
-                setSelectedVM(record);
-                setRenameModalVisible(true);
-              }}
-            />
-          </Tooltip>
           <Tooltip title="绑定用户">
             <Button
               type="text"
@@ -806,6 +926,9 @@ const VirtualMachineList: React.FC = () => {
         <Space>
           <Button type="primary" icon={<PlusOutlined />} onClick={openCreateModal}>
             创建虚拟机
+          </Button>
+          <Button onClick={openQuickCreateModal}>
+            快速创建
           </Button>
           <Input.Search
             placeholder="搜索虚拟机名称"
@@ -968,31 +1091,6 @@ const VirtualMachineList: React.FC = () => {
                   </Select>
                 </Form.Item>
 
-                <Form.Item label="虚拟机名称" name="name" rules={[{ required: true, message: '请输入虚拟机名称' }]}>
-                  <Input placeholder="选择资源组后自动生成：VDI-资源组-资源-后缀" />
-                </Form.Item>
-
-                <Form.Item label="名称后缀（可选）" name="name_suffix">
-                  <Input
-                    placeholder="自定义后缀，例如：zhangsan-001"
-                    onChange={(e) => {
-                      const suffix = e.target.value;
-                      const selectedGroup = form.getFieldValue('resource_group_id');
-                      const selectedResource = form.getFieldValue('resource_id');
-                      if (selectedGroup && selectedResource) {
-                        const group = resourceGroups.find(g => g.resource_group_id === selectedGroup);
-                        const resource = resources.find(r => String(r.id) === selectedResource);
-                        if (group && resource) {
-                          const baseName = `VDI-${group.name}-${resource.name}`;
-                          form.setFieldsValue({
-                            name: suffix ? `${baseName}-${suffix}` : baseName
-                          });
-                        }
-                      }
-                    }}
-                  />
-                </Form.Item>
-
                 <Form.Item label="创建数量" name="count" initialValue={1} rules={[{ required: true, message: '请输入创建数量' }]}>
                   <InputNumber min={1} max={10} style={{ width: '100%' }} />
                 </Form.Item>
@@ -1036,40 +1134,71 @@ const VirtualMachineList: React.FC = () => {
         </Spin>
       </Modal>
 
-      {/* 配置 IP 模态框 */}
+      {/* 快速创建虚拟机模态框 */}
       <Modal
-        title="配置 IP 地址"
-        open={configIPModalVisible}
-        onOk={handleConfigIP}
-        onCancel={() => setConfigIPModalVisible(false)}
+        title="快速创建虚拟机"
+        open={quickCreateModalVisible}
+        onOk={handleQuickCreate}
+        onCancel={() => setQuickCreateModalVisible(false)}
         confirmLoading={loading}
+        width={600}
       >
-        <Form form={form} layout="vertical">
-          <Form.Item label="IP 地址" name="ip_address" rules={[{ required: true }]}>
-            <Input placeholder="192.168.1.100" />
-          </Form.Item>
-          <Form.Item label="子网掩码" name="netmask" rules={[{ required: true }]}>
-            <Input placeholder="255.255.255.0" />
-          </Form.Item>
-          <Form.Item label="网关" name="gateway" rules={[{ required: true }]}>
-            <Input placeholder="192.168.1.1" />
-          </Form.Item>
-        </Form>
-      </Modal>
+        <Spin spinning={loading && !quickConfig} tip="加载配置中...">
+          <Form form={quickCreateForm} layout="vertical">
+            {quickConfig && (
+              <div style={{ marginBottom: 16, padding: 12, background: '#f5f5f5', borderRadius: 4 }}>
+                <div><strong>已加载的默认配置：</strong></div>
+                <div style={{ marginTop: 8, fontSize: '12px', color: '#666' }}>
+                  • VDI 服务器: 自动选择可用服务器<br />
+                  • 资源组: {quickConfig.resourceGroupName}<br />
+                  • 资源: {DEFAULT_RESOURCE_NAME}<br />
+                  • VTP 平台: VMP<br />
+                  • 运行位置: {DEFAULT_POSITION_NAME}<br />
+                  • 存储/网络: 自动选择第一个可用
+                </div>
+              </div>
+            )}
 
-      {/* 重命名模态框 */}
-      <Modal
-        title="重命名虚拟机"
-        open={renameModalVisible}
-        onOk={handleRename}
-        onCancel={() => setRenameModalVisible(false)}
-        confirmLoading={loading}
-      >
-        <Form form={form} layout="vertical">
-          <Form.Item label="新名称" name="new_name" rules={[{ required: true }]}>
-            <Input placeholder="新虚拟机名称" />
-          </Form.Item>
-        </Form>
+            <Form.Item
+              label="虚拟机名称"
+              name="name"
+              rules={[{ required: true, message: '请输入虚拟机名称' }]}
+              extra={`格式: VDI-${quickConfig?.resourceGroupName || '默认资源组'}-${DEFAULT_RESOURCE_NAME}-自定义后缀`}
+            >
+              <Input placeholder={`例如: VDI-${quickConfig?.resourceGroupName || '默认'}-${DEFAULT_RESOURCE_NAME}-zhangsan-001`} />
+            </Form.Item>
+
+            <Form.Item label="CPU 颗数" name="cpu_number" initialValue={1}>
+              <Slider min={1} max={4} step={null} marks={{ 1: '1', 2: '2', 4: '4' }} />
+            </Form.Item>
+
+            <Form.Item label="内存 (GB)" name="memory" initialValue={8}>
+              <Slider
+                min={8}
+                max={32}
+                marks={{ 8: '8GB', 16: '16GB', 32: '32GB' }}
+                tooltip={{ formatter: (v) => `${v} GB` }}
+              />
+            </Form.Item>
+
+            <Form.Item label="CPU 核数" name="cpu_core" initialValue={4}>
+              <Slider min={4} max={16} step={null} marks={{ 4: '4', 8: '8', 16: '16' }} />
+            </Form.Item>
+
+            <Form.Item label="磁盘 (GB)" name="disk" initialValue={80}>
+              <Slider
+                min={80}
+                max={500}
+                marks={{ 80: '80GB', 200: '200GB', 350: '350GB', 500: '500GB' }}
+                tooltip={{ formatter: (v) => `${v} GB` }}
+              />
+            </Form.Item>
+
+            <Form.Item label="创建数量" name="count" initialValue={1} rules={[{ required: true }]}>
+              <InputNumber min={1} max={10} style={{ width: '100%' }} />
+            </Form.Item>
+          </Form>
+        </Spin>
       </Modal>
 
       {/* 绑定用户模态框 */}

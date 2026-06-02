@@ -11,7 +11,7 @@ import (
 
 // CreateVMServiceRequest 创建虚拟机请求（服务层）
 type CreateVMServiceRequest struct {
-	Name          string `json:"name" validate:"required"`
+	Name          string `json:"name,omitempty"`
 	ResourceID    string `json:"resource_id" validate:"required"`
 	VdiServerID   string `json:"vdi_server_id" validate:"required"`
 	CPUNumber     int    `json:"cpu_number" validate:"min=1,max=64"`   // CPU颗数
@@ -119,19 +119,6 @@ type VMOperateRequest struct {
 	Action VMPowerAction `json:"action" validate:"required"`
 }
 
-// VMIPConfigRequest 虚拟机IP配置请求
-type VMIPConfigRequest struct {
-	VMID     string `json:"vm_id" validate:"required"`
-	IPAddress string `json:"ip_address" validate:"required,ip"`
-	Netmask  string `json:"netmask" validate:"required"`
-	Gateway  string `json:"gateway" validate:"required"`
-}
-
-// RenameVMServiceRequest 重命名虚拟机请求（服务层）
-type RenameVMServiceRequest struct {
-	NewName string `json:"new_name" validate:"required,max=200"`
-}
-
 // BindUserServiceRequest 绑定用户请求（服务层）
 type BindUserServiceRequest struct {
 	UserID string `json:"user_id" validate:"required"`
@@ -172,8 +159,6 @@ type VMService interface {
 
 	// VDI操作（完整实现VDI API调用）
 	OperateVM(ctx context.Context, req *VMOperateRequest) error
-	BatchConfigIP(ctx context.Context, req []VMIPConfigRequest) error
-	RenameVM(ctx context.Context, id string, req *RenameVMServiceRequest) error
 
 	// 用户关联
 	BindUser(ctx context.Context, vmID string, req *BindUserServiceRequest) error

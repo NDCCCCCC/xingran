@@ -185,61 +185,6 @@ func (h *VMHandler) Operate(c *gin.Context) {
 	response.Success(c, nil)
 }
 
-// ConfigIP 批量配置虚拟机IP
-// @Summary 配置虚拟机IP
-// @Description 批量设置虚拟机IP地址，调用VDI API
-// @Tags VDI管理
-// @Accept json
-// @Produce json
-// @Param request body []vdiServices.VMIPConfigRequest true "IP配置"
-// @Success 200 {object} response.Response
-// @Failure 400 {object} response.Response
-// @Failure 500 {object} response.Response
-// @Router /vdi/vm/config_ip [post]
-func (h *VMHandler) ConfigIP(c *gin.Context) {
-	var req []vdiServices.VMIPConfigRequest
-	if !handleJSONBinding(c, &req) {
-		return
-	}
-
-	if !handleServiceError(c, h.vmService.BatchConfigIP(c.Request.Context(), req), "配置IP") {
-		return
-	}
-
-	response.Success(c, nil)
-}
-
-// Rename 重命名虚拟机
-// @Summary 重命名虚拟机
-// @Description 修改虚拟机名称，调用VDI API
-// @Tags VDI管理
-// @Accept json
-// @Produce json
-// @Param id path string true "虚拟机ID"
-// @Param request body vdiServices.RenameVMServiceRequest true "新名称"
-// @Success 200 {object} response.Response
-// @Failure 400 {object} response.Response
-// @Failure 500 {object} response.Response
-// @Router /vdi/vm/{id}/rename [post]
-func (h *VMHandler) Rename(c *gin.Context) {
-	id := c.Param("id")
-	if id == "" {
-		response.Error(c, http.StatusBadRequest, "虚拟机ID不能为空")
-		return
-	}
-
-	var req vdiServices.RenameVMServiceRequest
-	if !handleJSONBinding(c, &req) {
-		return
-	}
-
-	if !handleServiceError(c, h.vmService.RenameVM(c.Request.Context(), id, &req), "重命名") {
-		return
-	}
-
-	response.Success(c, nil)
-}
-
 // BindUser 绑定用户到虚拟机
 // @Summary 绑定用户
 // @Description 将虚拟机关联到指定用户，调用VDI API
@@ -433,8 +378,7 @@ func (h *VMHandler) ListVTPPlatforms(c *gin.Context) {
 		return
 	}
 
-	if req.VdiServerID == "" {
-		response.Error(c, http.StatusBadRequest, "VDI服务器ID不能为空")
+	if !ensureVDIServer(c, h.db, req.VdiServerID) {
 		return
 	}
 
@@ -469,8 +413,7 @@ func (h *VMHandler) ListRunPositions(c *gin.Context) {
 		return
 	}
 
-	if req.VdiServerID == "" {
-		response.Error(c, http.StatusBadRequest, "VDI服务器ID不能为空")
+	if !ensureVDIServer(c, h.db, req.VdiServerID) {
 		return
 	}
 	if req.VTPID <= 0 {
@@ -509,8 +452,7 @@ func (h *VMHandler) ListStorages(c *gin.Context) {
 		return
 	}
 
-	if req.VdiServerID == "" {
-		response.Error(c, http.StatusBadRequest, "VDI服务器ID不能为空")
+	if !ensureVDIServer(c, h.db, req.VdiServerID) {
 		return
 	}
 	if req.VTPID <= 0 {
@@ -549,8 +491,7 @@ func (h *VMHandler) ListNetworks(c *gin.Context) {
 		return
 	}
 
-	if req.VdiServerID == "" {
-		response.Error(c, http.StatusBadRequest, "VDI服务器ID不能为空")
+	if !ensureVDIServer(c, h.db, req.VdiServerID) {
 		return
 	}
 	if req.VTPID <= 0 {

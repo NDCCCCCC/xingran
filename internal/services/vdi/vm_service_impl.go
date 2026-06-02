@@ -232,6 +232,17 @@ func (s *vmServiceImpl) cleanupOrphanedVMs(ctx context.Context, vdiVMIDs map[str
 	}
 }
 
+// getBestIPAddress 获取最佳IP地址
+// 优先使用AssignIP（分配的IP地址），如果为空或"-"则使用IP（当前实际IP）
+// 这样可以确保DHCP虚拟机在关机状态下也能显示配置的IP地址
+func getBestIPAddress(resource VDIVMResource) string {
+	ipAddress := resource.AssignIP
+	if ipAddress == "" || ipAddress == "-" {
+		ipAddress = resource.IP
+	}
+	return ipAddress
+}
+
 // saveOrUpdateVM 保存或更新虚拟机记录
 func (s *vmServiceImpl) saveOrUpdateVM(ctx context.Context, resource VDIVMResource, resourceID string) {
 	var vm models.VDIVirtualMachine
@@ -241,6 +252,9 @@ func (s *vmServiceImpl) saveOrUpdateVM(ctx context.Context, resource VDIVMResour
 		Where("vm_id = ?", resource.ID).
 		First(&vm).Error
 
+	// 获取最佳IP地址
+	ipAddress := getBestIPAddress(resource)
+
 	if err == gorm.ErrRecordNotFound {
 		// 创建新记录
 		vm = models.VDIVirtualMachine{
@@ -248,7 +262,7 @@ func (s *vmServiceImpl) saveOrUpdateVM(ctx context.Context, resource VDIVMResour
 			Name:        resource.VMName,
 			ResourceID:  resourceID,
 			PowerState:  s.mapPowerState(resource.Status),
-			IPAddress:   resource.IP,
+			IPAddress:   ipAddress,
 			MACAddress:  resource.MAC,
 			OSType:      resource.OSType,
 			CPUNumber:   s.parseIntSafe(resource.CPUNumber),
@@ -285,7 +299,7 @@ func (s *vmServiceImpl) saveOrUpdateVM(ctx context.Context, resource VDIVMResour
 				Name:        resource.VMName,
 				ResourceID:  resourceID,
 				PowerState:  s.mapPowerState(resource.Status),
-				IPAddress:   resource.IP,
+				IPAddress:   ipAddress,
 				MACAddress:  resource.MAC,
 				OSType:      resource.OSType,
 				CPUNumber:   s.parseIntSafe(resource.CPUNumber),
@@ -315,7 +329,7 @@ func (s *vmServiceImpl) saveOrUpdateVM(ctx context.Context, resource VDIVMResour
 				"name":          resource.VMName,
 				"resource_id":   resourceID,
 				"power_state":   s.mapPowerState(resource.Status),
-				"ip_address":    resource.IP,
+				// ip_address will be set by smart logic below
 				"mac_address":   resource.MAC,
 				"os_type":       resource.OSType,
 				"cpu_number":    s.parseIntSafe(resource.CPUNumber),
@@ -329,6 +343,25 @@ func (s *vmServiceImpl) saveOrUpdateVM(ctx context.Context, resource VDIVMResour
 			}
 			if resource.ApplyUser != "" {
 				updates["bound_user_name"] = &resource.ApplyUser
+
+
+			// Smart IP update strategy
+			// For DHCP VMs, if new IP is empty, keep existing IP (last known DHCP address)
+			// For static IP VMs, or when new IP is not empty, use new IP
+			if ipAddress == "" || ipAddress == "-" {
+				// New IP is empty, check if we should keep old IP
+				if vm.IPType == "dhcp" && vm.IPAddress != "" && vm.IPAddress != "-" {
+					// DHCP VM with history IP, keep old IP
+					updates["ip_address"] = vm.IPAddress
+					fmt.Printf("[VDI SYNC] VM %s: DHCP mode new IP empty, keeping history IP %s\n", resource.VMName, vm.IPAddress)
+				} else {
+					// Static IP or no history IP, use new value (may be empty)
+					updates["ip_address"] = ipAddress
+				}
+			} else {
+				// New IP not empty, use new IP
+				updates["ip_address"] = ipAddress
+			}
 			}
 			// 网络配置信息更新
 			updates["ip_type"] = s.mapIPType(resource.IPState)
@@ -729,116 +762,6 @@ func (s *vmServiceImpl) OperateVM(ctx context.Context, req *VMOperateRequest) er
 	return nil
 }
 
-// BatchConfigIP 批量配置虚拟机IP（调用VDI API）
-func (s *vmServiceImpl) BatchConfigIP(ctx context.Context, req []VMIPConfigRequest) error {
-	if len(req) == 0 {
-		return nil
-	}
-
-	// 获取VDI客户端
-	client, err := s.getClient(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to get VDI client: %w", err)
-	}
-
-	// 1. 查询本地VM记录，验证存在性
-	vmIDs := make([]string, len(req))
-	for i, r := range req {
-		vmIDs[i] = r.VMID
-	}
-
-	var vms []models.VDIVirtualMachine
-	if err := s.db.WithContext(ctx).Where("vm_id IN ?", vmIDs).Find(&vms).Error; err != nil {
-		return fmt.Errorf("failed to query VMs: %w", err)
-	}
-
-	if len(vms) == 0 {
-		return fmt.Errorf("no VMs found")
-	}
-
-	// 2. 调用VDI API配置IP
-	// VDI API expects batch configuration with comma-separated IDs
-	// For now, use type 2 (specified IP range) to configure individual IPs
-	var idsStr string
-	var vmNamesStr string
-	mask := ""
-	gateway := ""
-	dns := ""
-
-	for i, r := range req {
-		if i > 0 {
-			idsStr += ","
-			vmNamesStr += ","
-		}
-		idsStr += r.VMID
-		vmNamesStr += r.VMID // Using VMID as VM name for now
-		if r.Netmask != "" {
-			mask = r.Netmask
-		}
-		if r.Gateway != "" {
-			gateway = r.Gateway
-		}
-		if r.IPAddress != "" {
-			dns = r.IPAddress // Using IP as DNS placeholder
-		}
-	}
-
-	configReq := ConfigIPRequestExtended{
-		IDs:       idsStr,
-		Type:      2, // Type 2: obtain specified IP
-		IsRestart: 0, // Don't restart after configuration
-		BeginIP:   req[0].IPAddress, // Use first IP as begin
-		EndIP:     req[len(req)-1].IPAddress, // Use last IP as end
-		VMNames:   vmNamesStr,
-		Mask:      mask,
-		Gate:      gateway,
-		DNS:       dns,
-	}
-
-	if err := client.ConfigIP(ctx, configReq); err != nil {
-		return fmt.Errorf("failed to config IPs: %w", err)
-	}
-
-	// 3. 更新本地记录
-	for _, r := range req {
-		s.db.WithContext(ctx).
-			Model(&models.VDIVirtualMachine{}).
-			Where("vm_id = ?", r.VMID).
-			Update("ip_address", r.IPAddress)
-	}
-
-	return nil
-}
-
-// RenameVM 重命名虚拟机（调用VDI API）
-func (s *vmServiceImpl) RenameVM(ctx context.Context, id string, req *RenameVMServiceRequest) error {
-	// 获取VDI客户端
-	client, err := s.getClient(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to get VDI client: %w", err)
-	}
-
-	// 1. 查询本地VM记录
-	var vm models.VDIVirtualMachine
-	if err := s.db.WithContext(ctx).Where("id = ?", id).First(&vm).Error; err != nil {
-		return fmt.Errorf("VM not found: %w", err)
-	}
-
-	// 2. 调用VDI API重命名
-	if err := client.RenameVM(ctx, vm.VMID, req.NewName); err != nil {
-		return fmt.Errorf("failed to rename VM: %w", err)
-	}
-
-	// 3. 更新本地记录
-	if err := s.db.WithContext(ctx).
-		Model(&vm).
-		Update("name", req.NewName).Error; err != nil {
-		return fmt.Errorf("failed to update VM record: %w", err)
-	}
-
-	return nil
-}
-
 // BindUser 绑定用户（调用VDI API）
 func (s *vmServiceImpl) BindUser(ctx context.Context, vmID string, req *BindUserServiceRequest) error {
 	// 获取VDI客户端
@@ -941,9 +864,9 @@ func (s *vmServiceImpl) SyncVMFromVDI(ctx context.Context, vmID string) error {
 		return fmt.Errorf("VM %s not found in VDI server (may have been deleted)", vm.VMID)
 	}
 
-	// 4. 更新本地记录
+	// 4. 更新本地记录，使用最佳IP地址
 	vm.PowerState = s.mapPowerState(targetVM.Status)
-	vm.IPAddress = targetVM.IP
+	vm.IPAddress = getBestIPAddress(*targetVM)
 	vm.MACAddress = targetVM.MAC
 	vm.OSType = targetVM.OSType
 	vm.CPUNumber = s.parseIntSafe(targetVM.CPUNumber)

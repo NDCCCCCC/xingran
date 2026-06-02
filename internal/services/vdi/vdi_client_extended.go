@@ -28,8 +28,6 @@ type VDIClientExtended interface {
 	// 虚拟机操作
 	OperateVM(ctx context.Context, vmIDs []string, action string) error
 	DeleteVM(ctx context.Context, vmIDs []string) error
-	ConfigIP(ctx context.Context, req ConfigIPRequestExtended) error
-	RenameVM(ctx context.Context, vmID, newName string) error
 
 	// 用户关联
 	BindUser(ctx context.Context, vmID, userID string) (*VDIVMDetail, error)
@@ -116,6 +114,9 @@ func NewVDIClientFromDB(db *gorm.DB, serverID string) VDIClientExtended {
 
 // Authenticate 认证
 func (c *vdiClientExtendedImpl) Authenticate(ctx context.Context) (string, error) {
+	if c.authManager == nil {
+		return "", fmt.Errorf("VDI server not found: %s", c.serverID)
+	}
 	return c.authManager.Authenticate(ctx)
 }
 
@@ -282,43 +283,6 @@ func (c *vdiClientExtendedImpl) DeleteVM(ctx context.Context, vmIDs []string) er
 	}
 
 	return c.callAPIWithRetry(ctx, &token, "DELETE", "/v1/servers", req, nil)
-}
-
-// ConfigIP 配置IP
-// VDI API endpoint: PUT /v1/servers/ip
-// Request body format matches VDI API specification
-func (c *vdiClientExtendedImpl) ConfigIP(ctx context.Context, req ConfigIPRequestExtended) error {
-	token, err := c.Authenticate(ctx)
-	if err != nil {
-		return err
-	}
-
-	return c.callAPIWithRetry(ctx, &token, "PUT", "/v1/servers/ip", req, nil)
-}
-
-// RenameVM 重命名虚拟机
-// VDI API endpoint: PUT /v1/servers/update_name
-// Request body: {"id": vm_id, "name_mode": 2, "name": "new_name", "is_reboot": 0}
-func (c *vdiClientExtendedImpl) RenameVM(ctx context.Context, vmID, newName string) error {
-	token, err := c.Authenticate(ctx)
-	if err != nil {
-		return err
-	}
-
-	req := struct {
-		ID       int    `json:"id"`
-		NameMode int    `json:"name_mode"`
-		Name     string `json:"name"`
-		IsReboot int    `json:"is_reboot"`
-	}{
-		NameMode: 2, // 2 = 管理员指定名称
-		Name:     newName,
-		IsReboot: 0,
-	}
-	// 将 vmID 转换为整数
-	fmt.Sscanf(vmID, "%d", &req.ID)
-
-	return c.callAPIWithRetry(ctx, &token, "PUT", "/v1/servers/update_name", req, nil)
 }
 
 // BindUser 绑定用户

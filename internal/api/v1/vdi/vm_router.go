@@ -24,8 +24,6 @@ func SetupVMRouter(r *gin.RouterGroup, core *core.Core) {
 
 	// VDI特定操作（调用VDI API）
 	r.POST("/operate", vmHandler.Operate)
-	r.POST("/config_ip", vmHandler.ConfigIP)
-	r.POST("/:id/rename", vmHandler.Rename)
 	r.POST("/:id/bind_user", vmHandler.BindUser)
 	r.POST("/:id/unbind_user", vmHandler.UnbindUser)
 	r.POST("/:id/sync", vmHandler.SyncFromVDI)
