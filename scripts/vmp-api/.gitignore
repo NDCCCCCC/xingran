@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+venv/
+ENV/
+
+# Response files
+vmp_response_*.json
+
+# Environment variables
+.env
+
+# OS
+.DS_Store
+Thumbs.db
