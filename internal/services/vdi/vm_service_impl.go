@@ -77,6 +77,13 @@ func (s *vmServiceImpl) syncVMsFromVDI(ctx context.Context, client VDIClientExte
 
 	// 2. 遍历每个资源组，获取其下的资源
 	for _, group := range groups {
+		// Check context cancellation
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
 		if group.Enable != "1" {
 			continue // 跳过未启用的资源组
 		}
@@ -329,7 +336,6 @@ func (s *vmServiceImpl) saveOrUpdateVM(ctx context.Context, resource VDIVMResour
 				"name":          resource.VMName,
 				"resource_id":   resourceID,
 				"power_state":   s.mapPowerState(resource.Status),
-				// ip_address will be set by smart logic below
 				"mac_address":   resource.MAC,
 				"os_type":       resource.OSType,
 				"cpu_number":    s.parseIntSafe(resource.CPUNumber),
@@ -343,7 +349,7 @@ func (s *vmServiceImpl) saveOrUpdateVM(ctx context.Context, resource VDIVMResour
 			}
 			if resource.ApplyUser != "" {
 				updates["bound_user_name"] = &resource.ApplyUser
-
+			}
 
 			// Smart IP update strategy
 			// For DHCP VMs, if new IP is empty, keep existing IP (last known DHCP address)
@@ -362,7 +368,7 @@ func (s *vmServiceImpl) saveOrUpdateVM(ctx context.Context, resource VDIVMResour
 				// New IP not empty, use new IP
 				updates["ip_address"] = ipAddress
 			}
-			}
+
 			// 网络配置信息更新
 			updates["ip_type"] = s.mapIPType(resource.IPState)
 			updates["subnet_mask"] = resource.Subnetmask
@@ -525,7 +531,7 @@ func (s *vmServiceImpl) CreateVM(ctx context.Context, req *CreateVMServiceReques
 
 	vm := &models.VDIVirtualMachine{
 		VMID:        vmID,
-		Name:        req.Name,
+		Name:        "", // 名称将从VDI服务器同步获取，不使用用户输入
 		ResourceID:  req.ResourceID,
 		VdiServerID: req.VdiServerID,
 		CPUNumber:   req.CPUNumber,
@@ -614,6 +620,22 @@ func (s *vmServiceImpl) ListVMs(ctx context.Context, req *ListVMRequest) (*PageR
 		query = query.Where("power_state = ?", req.PowerState)
 	}
 
+	// 从上下文获取用户信息
+	userIDVal := ctx.Value("user_id")
+	dataScopeVal := ctx.Value("data_scope")
+	
+	// 如果有数据范围权限信息，应用过滤
+	if userIDVal != nil && dataScopeVal != nil {
+		userID, ok1 := userIDVal.(string)
+		dataScope, ok2 := dataScopeVal.(models.DataScope)
+		
+		if ok1 && ok2 {
+			// 应用数据范围过滤
+			query = ApplyVMDataScopeFilter(query, userID, dataScope, s.db)
+			// 应用无绑定用户过滤规则
+			query = ApplyBoundUserFilter(query, dataScope)
+		}
+	}
 	// 获取总数
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
@@ -864,7 +886,8 @@ func (s *vmServiceImpl) SyncVMFromVDI(ctx context.Context, vmID string) error {
 		return fmt.Errorf("VM %s not found in VDI server (may have been deleted)", vm.VMID)
 	}
 
-	// 4. 更新本地记录，使用最佳IP地址
+	// 4. 更新本地记录（包含名称同步，使用最佳IP地址）
+	vm.Name = targetVM.VMName
 	vm.PowerState = s.mapPowerState(targetVM.Status)
 	vm.IPAddress = getBestIPAddress(*targetVM)
 	vm.MACAddress = targetVM.MAC
