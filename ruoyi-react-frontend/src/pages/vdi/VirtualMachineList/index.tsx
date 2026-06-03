@@ -19,6 +19,7 @@ import {
   Row,
   Col,
   Spin,
+  Alert,
 } from 'antd';
 import {
   ReloadOutlined,
@@ -77,6 +78,7 @@ const VirtualMachineList: React.FC = () => {
   // VDI数据预加载状态
   const [vdiDataPreloaded, setVdiDataPreloaded] = useState(false);
   const [vdiDataLoading, setVdiDataLoading] = useState(false);
+  const [preloadError, setPreloadError] = useState<string | null>(null);
 
   // API缓存：5分钟过期
   const vdiDataCache = useRef<{
@@ -150,6 +152,8 @@ const VirtualMachineList: React.FC = () => {
       });
     } catch (error) {
       console.error('[VDI Preload] 预加载失败:', error);
+      setPreloadError('VDI配置加载失败，部分功能可能不可用');
+      message.warning('VDI配置加载失败，将在需要时重试');
     } finally {
       setVdiDataLoading(false);
     }
@@ -933,6 +937,17 @@ n  // 动态生成操作按钮（基于用户权限）
   return (
     <Card>
       <Space orientation="vertical" size="large" style={{ width: '100%' }}>
+        {/* Error banner for VDI data preload failures */}
+        {preloadError && (
+          <Alert
+            type="warning"
+            message={preloadError}
+            closable
+            onClose={() => setPreloadError(null)}
+            style={{ marginBottom: 16 }}
+          />
+        )}
+
         {/* 工具栏 */}
         <Space>
           <Button type="primary" icon={<PlusOutlined />} onClick={openCreateModal}>
