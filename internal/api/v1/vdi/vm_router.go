@@ -3,6 +3,7 @@ package vdi
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
 	vdiServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/vdi"
 )
 
@@ -20,14 +21,20 @@ func SetupVMRouter(r *gin.RouterGroup, core *core.Core) {
 	r.POST("", vmHandler.Create)
 	r.POST("/:id", vmHandler.GetByID)
 	r.POST("/:id/update", vmHandler.Update)
-	r.POST("/:id/delete", vmHandler.Delete)
+	r.POST("/:id/delete", middleware.RequirePermissions([]string{"vdi:vm:delete"}, core), vmHandler.Delete)
 
-	// VDI特定操作（调用VDI API）
-	r.POST("/operate", vmHandler.Operate)
-	r.POST("/:id/bind_user", vmHandler.BindUser)
-	r.POST("/:id/unbind_user", vmHandler.UnbindUser)
-	r.POST("/:id/sync", vmHandler.SyncFromVDI)
-	r.POST("/sync-all", vmHandler.SyncAll)
+	// VDI 电源操作 — 使用细粒度权限，拆分为独立路由
+	r.POST("/start", middleware.RequirePermissions([]string{"vdi:vm:start"}, core), vmHandler.StartVM)
+	r.POST("/stop", middleware.RequirePermissions([]string{"vdi:vm:stop"}, core), vmHandler.StopVM)
+	r.POST("/restart", middleware.RequirePermissions([]string{"vdi:vm:restart"}, core), vmHandler.RestartVM)
+
+	// 用户绑定操作
+	r.POST("/:id/bind_user", middleware.RequirePermissions([]string{"vdi:vm:bind"}, core), vmHandler.BindUser)
+	r.POST("/:id/unbind_user", middleware.RequirePermissions([]string{"vdi:vm:bind"}, core), vmHandler.UnbindUser)
+
+	// 同步操作
+	r.POST("/:id/sync", middleware.RequirePermissions([]string{"vdi:vm:sync"}, core), vmHandler.SyncFromVDI)
+	r.POST("/sync-all", middleware.RequirePermissions([]string{"vdi:vm:sync"}, core), vmHandler.SyncAll)
 
 	// VDI 创建虚拟机相关接口
 	r.POST("/vtp-platforms", vmHandler.ListVTPPlatforms)
