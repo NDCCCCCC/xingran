@@ -64,7 +64,10 @@ func (s *vmServiceImpl) getClient(ctx context.Context) (VDIClientExtended, error
 func (s *vmServiceImpl) syncVMsFromVDI(ctx context.Context, client VDIClientExtended) error {
 	// 用于收集所有从VDI获取的虚拟机ID
 	vdiVMIDs := make(map[string]bool)
-	vdiServerID := s.vdiServerID()
+	vdiServerID, err := s.vdiServerID()
+	if err != nil {
+		return fmt.Errorf("failed to get VDI server ID: %w", err)
+	}
 
 	// 1. 获取所有资源组
 	groups, err := client.ListResourceGroups(ctx)
@@ -117,7 +120,7 @@ func (s *vmServiceImpl) syncVMsFromVDI(ctx context.Context, client VDIClientExte
 				// 保存虚拟机数据到本地数据库并收集ID
 				for _, vm := range vms {
 					vdiVMIDs[vm.ID] = true // 标记该虚拟机存在于VDI服务器
-					s.saveOrUpdateVM(ctx, vm, fmt.Sprintf("%d", resource.ID))
+					s.saveOrUpdateVM(ctx, vm, fmt.Sprintf("%d", resource.ID), vdiServerID)
 				}
 
 				// 检查是否还有更多数据
@@ -251,7 +254,7 @@ func getBestIPAddress(resource VDIVMResource) string {
 }
 
 // saveOrUpdateVM 保存或更新虚拟机记录
-func (s *vmServiceImpl) saveOrUpdateVM(ctx context.Context, resource VDIVMResource, resourceID string) {
+func (s *vmServiceImpl) saveOrUpdateVM(ctx context.Context, resource VDIVMResource, resourceID string, vdiServerID string) {
 	var vm models.VDIVirtualMachine
 	// 使用 Unscoped() 包含软删除记录，避免重复插入导致唯一约束冲突
 	err := s.db.WithContext(ctx).
@@ -286,7 +289,7 @@ func (s *vmServiceImpl) saveOrUpdateVM(ctx context.Context, resource VDIVMResour
 			DefaultGateway: resource.DefaultGateway,
 			NameServer:    resource.NameServer,
 			AssignIP:      resource.AssignIP,
-			VdiServerID:   s.vdiServerID(),
+			VdiServerID:   vdiServerID,
 			LastSyncAt:    &time.Time{},
 		}
 		// 调试日志：打印CPU使用率原始值和解析后的值
@@ -322,7 +325,7 @@ func (s *vmServiceImpl) saveOrUpdateVM(ctx context.Context, resource VDIVMResour
 				DefaultGateway: resource.DefaultGateway,
 				NameServer:    resource.NameServer,
 				AssignIP:      resource.AssignIP,
-				VdiServerID:   s.vdiServerID(),
+				VdiServerID:   vdiServerID,
 				LastSyncAt:    &time.Time{},
 			}
 			if resource.CPUPer != "" {
@@ -424,10 +427,13 @@ func (s *vmServiceImpl) parseIntSafe(str string) int {
 }
 
 // vdiServerID 获取当前VDI服务器ID
-func (s *vmServiceImpl) vdiServerID() string {
+func (s *vmServiceImpl) vdiServerID() (string, error) {
 	var server models.VDIServer
-	s.db.Where("status = 0").First(&server)
-	return server.ID
+	err := s.db.Where("status = 0").First(&server).Error
+	if err != nil {
+		return "", fmt.Errorf("failed to query VDI server: %w", err)
+	}
+	return server.ID, nil
 }
 
 // ListResourceGroups 查询资源组列表（从本地数据库查询，不调用VDI API）
