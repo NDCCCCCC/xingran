@@ -579,7 +579,7 @@ func (s *vmServiceImpl) GetVM(ctx context.Context, id string) (*VDIVMDTO, error)
 }
 
 // ListVMs 获取虚拟机列表
-func (s *vmServiceImpl) ListVMs(ctx context.Context, req *ListVMRequest) (*PageResult, error) {
+func (s *vmServiceImpl) ListVMs(ctx context.Context, req *ListVMRequest, userID string, dataScope models.DataScope) (*PageResult, error) {
 	// 检查是否有启用的VDI服务器配置
 	var serverCount int64
 	if err := s.db.WithContext(ctx).Model(&models.VDIServer{}).Where("status = 0").Count(&serverCount).Error; err != nil {
@@ -640,21 +640,11 @@ func (s *vmServiceImpl) ListVMs(ctx context.Context, req *ListVMRequest) (*PageR
 		query = query.Where("power_state = ?", req.PowerState)
 	}
 
-	// 从上下文获取用户信息
-	userIDVal := ctx.Value("user_id")
-	dataScopeVal := ctx.Value("data_scope")
-	
-	// 如果有数据范围权限信息，应用过滤
-	if userIDVal != nil && dataScopeVal != nil {
-		userID, ok1 := userIDVal.(string)
-		dataScope, ok2 := dataScopeVal.(models.DataScope)
-		
-		if ok1 && ok2 {
-			// 应用数据范围过滤
-			query = ApplyVMDataScopeFilter(query, userID, dataScope, s.db)
-			// 应用无绑定用户过滤规则
-			query = ApplyBoundUserFilter(query, dataScope)
-		}
+	// Apply data scope filtering using explicit parameters from handler
+	// (DataScopePermission middleware sets these in Gin context, handler extracts and passes them)
+	if userID != "" && dataScope > 0 {
+		query = ApplyVMDataScopeFilter(query, userID, dataScope, s.db)
+		query = ApplyBoundUserFilter(query, dataScope)
 	}
 	// 获取总数
 	var total int64

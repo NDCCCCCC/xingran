@@ -153,7 +153,7 @@ type VMService interface {
 	// CRUD操作（都会调用VDI API）
 	CreateVM(ctx context.Context, req *CreateVMServiceRequest) (*VDIVMDTO, error)
 	GetVM(ctx context.Context, id string) (*VDIVMDTO, error)
-	ListVMs(ctx context.Context, req *ListVMRequest) (*PageResult, error)
+	ListVMs(ctx context.Context, req *ListVMRequest, userID string, dataScope models.DataScope) (*PageResult, error)
 	UpdateVM(ctx context.Context, id string, req *UpdateVMRequest) error
 	DeleteVM(ctx context.Context, ids []string) error
 
