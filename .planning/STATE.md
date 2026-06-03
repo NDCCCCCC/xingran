@@ -4,13 +4,13 @@ milestone: v1.5
 milestone_name: MAC地址历史数据管理
 status: unknown
 stopped_at: Phase 25 UI-SPEC approved
-last_updated: "2026-06-02T09:35:53.218Z"
+last_updated: "2026-06-03T06:12:31.269Z"
 progress:
   total_phases: 4
-  completed_phases: 0
-  total_plans: 13
-  completed_plans: 5
-  percent: 38
+  completed_phases: 1
+  total_plans: 18
+  completed_plans: 10
+  percent: 56
 ---
 
 # Project State
