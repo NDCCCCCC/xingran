@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
 	rpamodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/rpa"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
 	"gorm.io/gorm"
 )
 
@@ -57,17 +57,17 @@ type SessionData struct {
 }
 
 type credentialServiceImpl struct {
-	db    *gorm.DB
-	sm4   *crypto.SM4Cipher
-	cache CredentialCache
+	db             *gorm.DB
+	passwordCipher addomain.PasswordCipher
+	cache          CredentialCache
 }
 
 // NewCredentialService 创建凭证服务
-func NewCredentialService(db *gorm.DB, sm4 *crypto.SM4Cipher, cache CredentialCache) CredentialService {
+func NewCredentialService(db *gorm.DB, passwordCipher addomain.PasswordCipher, cache CredentialCache) CredentialService {
 	return &credentialServiceImpl{
-		db:    db,
-		sm4:   sm4,
-		cache: cache,
+		db:             db,
+		passwordCipher: passwordCipher,
+		cache:          cache,
 	}
 }
 
@@ -372,14 +372,14 @@ func (s *credentialServiceImpl) encryptCredentialData(username, password string,
 	result := &encryptedCredentialData{}
 
 	// 加密用户名
-	if encrypted, err := s.sm4.Encrypt(username); err == nil {
+	if encrypted, err := s.passwordCipher.Encrypt(username); err == nil {
 		result.Username = encrypted
 	} else {
 		return nil, err
 	}
 
 	// 加密密码
-	if encrypted, err := s.sm4.Encrypt(password); err == nil {
+	if encrypted, err := s.passwordCipher.Encrypt(password); err == nil {
 		result.Password = encrypted
 	} else {
 		return nil, err
@@ -388,7 +388,7 @@ func (s *credentialServiceImpl) encryptCredentialData(username, password string,
 	// 加密额外数据
 	if extraData != nil {
 		if jsonBytes, err := json.Marshal(extraData); err == nil {
-			if encrypted, err := s.sm4.Encrypt(string(jsonBytes)); err == nil {
+			if encrypted, err := s.passwordCipher.Encrypt(string(jsonBytes)); err == nil {
 				result.ExtraData = encrypted
 			}
 		}
@@ -402,14 +402,14 @@ func (s *credentialServiceImpl) encryptSessionData(req *rpamodels.SessionCreateR
 
 	// 加密 access token
 	if req.AccessToken != "" {
-		if encrypted, err := s.sm4.Encrypt(req.AccessToken); err == nil {
+		if encrypted, err := s.passwordCipher.Encrypt(req.AccessToken); err == nil {
 			result.AccessToken = encrypted
 		}
 	}
 
 	// 加密 refresh token
 	if req.RefreshToken != "" {
-		if encrypted, err := s.sm4.Encrypt(req.RefreshToken); err == nil {
+		if encrypted, err := s.passwordCipher.Encrypt(req.RefreshToken); err == nil {
 			result.RefreshToken = encrypted
 		}
 	}
@@ -417,7 +417,7 @@ func (s *credentialServiceImpl) encryptSessionData(req *rpamodels.SessionCreateR
 	// 加密 cookies
 	if len(req.Cookies) > 0 {
 		if jsonBytes, err := json.Marshal(req.Cookies); err == nil {
-			if encrypted, err := s.sm4.Encrypt(string(jsonBytes)); err == nil {
+			if encrypted, err := s.passwordCipher.Encrypt(string(jsonBytes)); err == nil {
 				result.Cookies = encrypted
 			}
 		}
@@ -426,7 +426,7 @@ func (s *credentialServiceImpl) encryptSessionData(req *rpamodels.SessionCreateR
 	// 加密 session data
 	if req.SessionData != nil {
 		if jsonBytes, err := json.Marshal(req.SessionData); err == nil {
-			if encrypted, err := s.sm4.Encrypt(string(jsonBytes)); err == nil {
+			if encrypted, err := s.passwordCipher.Encrypt(string(jsonBytes)); err == nil {
 				result.SessionData = encrypted
 			}
 		}
@@ -436,14 +436,14 @@ func (s *credentialServiceImpl) encryptSessionData(req *rpamodels.SessionCreateR
 }
 
 func (s *credentialServiceImpl) decryptString(encrypted string) string {
-	if decrypted, err := s.sm4.Decrypt(encrypted); err == nil {
+	if decrypted, err := s.passwordCipher.Decrypt(encrypted); err == nil {
 		return decrypted
 	}
 	return ""
 }
 
 func (s *credentialServiceImpl) decryptExtraData(encrypted string) map[string]interface{} {
-	if decrypted, err := s.sm4.Decrypt(encrypted); err == nil {
+	if decrypted, err := s.passwordCipher.Decrypt(encrypted); err == nil {
 		var result map[string]interface{}
 		if err := json.Unmarshal([]byte(decrypted), &result); err == nil {
 			return result
@@ -465,7 +465,7 @@ func (s *credentialServiceImpl) decryptSessionData(session *rpamodels.RPASession
 
 	// 解密 cookies
 	if session.CookiesEncrypted != "" {
-		if decrypted, err := s.sm4.Decrypt(session.CookiesEncrypted); err == nil {
+		if decrypted, err := s.passwordCipher.Decrypt(session.CookiesEncrypted); err == nil {
 			if err := json.Unmarshal([]byte(decrypted), &session.Cookies); err != nil {
 				applogger.Warnf("反序列化会话 Cookies 数据失败: %v", err)
 			}
@@ -474,7 +474,7 @@ func (s *credentialServiceImpl) decryptSessionData(session *rpamodels.RPASession
 
 	// 解密 session data
 	if session.SessionDataEncrypted != "" {
-		if decrypted, err := s.sm4.Decrypt(session.SessionDataEncrypted); err == nil {
+		if decrypted, err := s.passwordCipher.Decrypt(session.SessionDataEncrypted); err == nil {
 			if err := json.Unmarshal([]byte(decrypted), &session.SessionData); err != nil {
 				applogger.Warnf("反序列化会话 SessionData 数据失败: %v", err)
 			}

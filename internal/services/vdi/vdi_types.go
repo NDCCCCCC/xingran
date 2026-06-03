@@ -49,12 +49,6 @@ type VMOperationRequest struct {
 	VMID string `json:"vM_ID"`
 }
 
-// ConfigIPRequest 配置 IP 请求
-type ConfigIPRequest struct {
-	VMID string `json:"vM_ID"`
-	IP   string `json:"ip"`
-}
-
 // RenameVMRequest 重命名虚拟机请求
 type RenameVMRequest struct {
 	VMID   string `json:"vM_ID"`
@@ -125,22 +119,6 @@ type VDIVMSummary struct {
 	Name       string `json:"name"`
 	PowerState string `json:"power_state"`
 	Status     int    `json:"status"`
-}
-
-// ConfigIPRequestExtended 配置IP请求（扩展）
-// VDI API endpoint: PUT /v1/servers/ip
-// type: 0=用户自定义, 1=自动获取, 2=获取指定IP
-type ConfigIPRequestExtended struct {
-	IDs         string `json:"ids"`          // VM IDs separated by commas
-	Type        int    `json:"type"`         // 0:custom, 1:auto, 2:specified IP
-	IsRestart   int    `json:"is_restart"`   // 0:no, 1:yes
-	BeginIP     string `json:"begin_ip,omitempty"`
-	EndIP       string `json:"end_ip,omitempty"`
-	VMNames     string `json:"vm_names,omitempty"`
-	Mask        string `json:"mask,omitempty"`
-	Gate        string `json:"gate,omitempty"`  // Gateway
-	DNS         string `json:"dns,omitempty"`
-	ReserveDNS  string `json:"reserve_dns,omitempty"`
 }
 
 // VMIPInfo 虚拟机IP信息

@@ -3,7 +3,6 @@ package system
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	addomainAPI "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/addomain"
 	addomainServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
 )
@@ -14,8 +13,8 @@ func SetupADDomainRouter(r *gin.RouterGroup, core *core.Core) {
 	handler := NewADDomainHandler(service, core)
 	syncHandler := NewADUserSyncHandler(core)
 
-	// 注册组同步路由（包含自动映射功能）
-	addomainAPI.SetupGroupSyncRouter(r, service)
+	// 旧的组同步路由已移除 - 使用新的OU组映射功能
+	// addomainAPI.SetupGroupSyncRouter 已删除
 
 	// AD配置管理
 	configs := r.Group("/configs")
@@ -52,11 +51,10 @@ func SetupADDomainRouter(r *gin.RouterGroup, core *core.Core) {
 	}, core))
 	{
 		groups.POST("/list", handler.ListGroups)
-		groups.POST("/sync-status", handler.GetGroupSyncStatus)
+		// sync-status 和 sync-single 已移除 - 依赖旧的部门-组映射
 		groups.POST("/:id", handler.GetGroupDetail)
 		groups.POST("/:id/update", handler.UpdateGroup)
 		groups.POST("/:id/members", handler.GetGroupMembers)
-		groups.POST("/sync-single", handler.SyncSingleGroup)
 	}
 
 	// 用户管理

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
@@ -127,7 +127,7 @@ type DeviceConnectionPool struct {
 	deviceLocks    map[string]*sync.Mutex       // deviceID -> 设备锁
 	poolLock       sync.RWMutex                 // 保护 connections 和 deviceLocks
 	db             *gorm.DB                     // 数据库（用于查询设备和凭证）
-	sm4Cipher      *crypto.SM4Cipher           // SM4 加密器
+	passwordCipher addomain.PasswordCipher      // 密码加密器接口
 	maxIdle        time.Duration                // 空闲连接超时时间
 	maxConnections int                          // 最大连接数
 	cleanupTicker  *time.Ticker                 // 清理定时器
@@ -150,7 +150,7 @@ func DefaultPoolConfig() *PoolConfig {
 }
 
 // NewDeviceConnectionPool 创建设备连接池
-func NewDeviceConnectionPool(db *gorm.DB, sm4Cipher *crypto.SM4Cipher, config *PoolConfig) *DeviceConnectionPool {
+func NewDeviceConnectionPool(db *gorm.DB, passwordCipher addomain.PasswordCipher, config *PoolConfig) *DeviceConnectionPool {
 	if config == nil {
 		config = DefaultPoolConfig()
 	}
@@ -159,7 +159,7 @@ func NewDeviceConnectionPool(db *gorm.DB, sm4Cipher *crypto.SM4Cipher, config *P
 		connections:    make(map[string]*PooledConnection),
 		deviceLocks:    make(map[string]*sync.Mutex),
 		db:             db,
-		sm4Cipher:      sm4Cipher,
+		passwordCipher: passwordCipher,
 		maxIdle:        config.MaxIdle,
 		maxConnections: config.MaxConnections,
 		done:           make(chan struct{}),
@@ -318,14 +318,14 @@ func (p *DeviceConnectionPool) createConnection(ctx context.Context, deviceID st
 
 	// 解密密码
 	password := credential.Password
-	if p.sm4Cipher == nil {
-		return nil, fmt.Errorf("SM4 加密器未初始化，无法解密密码")
+	if p.passwordCipher == nil {
+		return nil, fmt.Errorf("密码加密器未初始化，无法解密密码")
 	}
 	if password == "" {
 		return nil, fmt.Errorf("凭证密码为空")
 	}
 
-	decrypted, err := p.sm4Cipher.Decrypt(password)
+	decrypted, err := p.passwordCipher.Decrypt(password)
 	if err != nil {
 		return nil, fmt.Errorf("密码解密失败: %w", err)
 	}

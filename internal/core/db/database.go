@@ -271,9 +271,13 @@ func (d *Database) AutoMigrate() error {
 		&models.ADGroupMember{},
 		&models.ADComputer{},
 		&models.ADSyncLog{},
-		// 部门组映射相关模型
-		&models.DeptGroupMapping{},
-		&models.DeptGroupMappingSyncLog{},
+		// OU组映射相关模型（替代旧的部门组映射）
+		&models.OUGroupMapping{},
+		// VDI虚拟化相关模型
+		&models.VDIVirtualMachine{},
+		&models.VDIServer{},
+		&models.VDIResourceGroup{},
+		&models.VDIUserBinding{},
 		// 运维管理相关模型（Workstation 复用系统已有的 sys_workstation）
 		&operations.OpsBuilding{},
 		&operations.OpsFloor{},
@@ -300,6 +304,10 @@ func (d *Database) AutoMigrate() error {
 	// 执行VDI虚拟机status字段移除迁移
 	if err := migrations.Migrate143VDIRemoveVMStatus(d.DB); err != nil {
 		applogger.Errorf("VDI虚拟机status字段移除迁移失败: %v", err)
+	}
+	// 执行VDI虚拟机细粒度权限迁移
+	if err := migrations.Migrate144VDIGranularPermissions(d.DB); err != nil {
+		applogger.Errorf("VDI虚拟机细粒度权限迁移失败: %v", err)
 	}
 
 	return nil

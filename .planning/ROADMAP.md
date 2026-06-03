@@ -235,11 +235,21 @@
   - 绑定用户张三：张三所在部门和张三本人可见
 
 **Depends on:** Phase 22 (深信服桌面云集成)
-**Plans:** 0 plans
+**Plans:** 4 plans
 
-Plans:
-- [ ] TBD (run /gsd-plan-phase 25 to break down)
+**Wave 1 - 基础设施**
+- [ ] 25-01-PLAN.md — 数据库迁移：细粒度权限菜单
+- [ ] 25-02-PLAN.md — 后端数据范围过滤函数
 
+**Wave 2 - 路由与前端**
+- [ ] 25-03-PLAN.md — 路由权限中间件配置
+- [ ] 25-04-PLAN.md — 前端动态按钮渲染
+
+**Phase Highlights**:
+- 细粒度操作权限分解（5个操作权限 + 1个绑定权限）
+- 基于 bound_user_id 的数据范围过滤（5种数据范围）
+- 无绑定用户特殊规则（仅 DataScopeAll 可见）
+- 前端权限-按钮动态映射
 ---
 
 ## Progress
@@ -269,12 +279,12 @@ Plans:
 | 21. 网络设备管理权限泄露修复 | v1.10 | 1/1 | Complete | 2026-05-24 |
 | 23. AD组自动同步系统 | v1.11 | 18/18 | Complete | 2026-05-26 |
 | 24. UUID类型一致性优化 | - | 2/2 | Complete | 2026-05-27 |
-| 25. 虚拟机数据范围权限配置 | - | 0/0 | Planned | - |
+| 25. 虚拟机数据范围权限配置 | - | 0/4 | Planned | - |
 | 22A. VDI 基础集成 | v1.12 | 0/5 | Planned | - |
 | 22B. VM Agent 服务 | v1.12 | 0/1 | Planned | - |
 | 22C. 账号管理与密码 | v1.12 | 0/2 | Planned | - |
 | 22D. Web Console 与监控 | v1.12 | 0/2 | Planned | - |
 
-**Total**: 85 plans completed, 15 plans planned (Phases 13-15), 10 plans planned (Phase 22), 110 total plans
+**Total**: 85 plans completed, 15 plans planned (Phases 13-15), 14 plans planned (Phases 22 + 25), 114 total plans
 
-**Completion Rate**: 77% (85/110)
+**Completion Rate**: 75% (85/114)

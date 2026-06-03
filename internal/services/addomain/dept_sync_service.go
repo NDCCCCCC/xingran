@@ -61,10 +61,27 @@ func (s *DeptToADSyncService) SyncDeptStructureToAD(ctx context.Context, adConfi
 		return nil, fmt.Errorf("获取根部门失败: %w", err)
 	}
 
-	result.TotalDepts = s.countTotalDepts(rootDepts)
+	// 4. 跳过顶层部门，直接从二级部门开始同步
+	// 收集所有二级部门（根部门的直接子部门）
+	var secondLevelDepts []*models.Department
+	for _, root := range rootDepts {
+		for _, child := range root.Children {
+			secondLevelDepts = append(secondLevelDepts, child)
+		}
+	}
 
-	// 4. 递归同步部门树到AD OU
-	for _, dept := range rootDepts {
+	if len(secondLevelDepts) == 0 {
+		applogger.Warnf("未找到二级部门，跳过同步")
+		result.Status = "completed"
+		result.EndTime = time.Now()
+		result.Duration = result.EndTime.Sub(result.StartTime)
+		return result, nil
+	}
+
+	result.TotalDepts = s.countTotalDepts(secondLevelDepts)
+
+	// 5. 递归同步二级部门树到AD OU
+	for _, dept := range secondLevelDepts {
 		if err := s.syncDeptTree(ctx, ldapClient, &adConfig, dept, adConfig.BaseDN, result); err != nil {
 			applogger.Errorf("同步部门树失败: %v", err)
 			result.Status = "failed"
@@ -140,8 +157,8 @@ func (s *DeptToADSyncService) getRootDepartments(ctx context.Context) ([]*models
 	var depts []*models.Department
 	err := s.db.WithContext(ctx).
 		Preload("Children.Children.Children"). // 预加载3层子部门
-		Where("parent_id IS NULL OR parent_id = ''").
-		Where("status = 0"). // 0=正常
+		Where("parent_id IS NULL").            // UUID字段不能使用空字符串比较
+		Where("status = 0").                   // 0=正常
 		Find(&depts).Error
 	return depts, err
 }

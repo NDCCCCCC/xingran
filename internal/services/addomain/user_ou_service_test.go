@@ -9,12 +9,9 @@ import (
 	"gorm.io/gorm"
 )
 
-func TestHandleUserLoginAD_UserNotFound(t *testing.T) {
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	assert.NoError(t, err)
-
-	// 创建映射表
-	db.Exec(`CREATE TABLE sys_dept_ou_mapping (
+const (
+	// Shared table creation SQL for user_ou_service tests
+	createDeptOUMappingTable = `CREATE TABLE sys_dept_ou_mapping (
 		id TEXT PRIMARY KEY,
 		dept_id TEXT NOT NULL,
 		ad_config_id TEXT NOT NULL,
@@ -27,17 +24,48 @@ func TestHandleUserLoginAD_UserNotFound(t *testing.T) {
 		created_at DATETIME,
 		updated_at DATETIME,
 		UNIQUE(dept_id, ad_config_id)
-	)`)
+	)`
 
-	// 创建用户表
-	db.Exec(`CREATE TABLE sys_user (
+	createUserTable = `CREATE TABLE sys_user (
 		id TEXT PRIMARY KEY,
-		username TEXT NOT NULL,
+		username TEXT NOT NULL UNIQUE,
+		password TEXT NOT NULL DEFAULT '',
+		salt TEXT NOT NULL DEFAULT '',
+		nickname TEXT,
+		employee_no TEXT,
+		email TEXT,
+		phone TEXT,
+		avatar TEXT,
+		gender INTEGER DEFAULT 0,
+		status INTEGER DEFAULT 0,
 		dept_id TEXT,
+		dept_name TEXT,
+		login_ip TEXT,
+		login_time DATETIME,
+		pwd_update_time DATETIME,
+		pwd_expire_days INTEGER DEFAULT 90,
+		init_flag BOOLEAN DEFAULT FALSE,
+		remark TEXT DEFAULT '',
+		auth_source TEXT DEFAULT 'local',
+		ad_username TEXT,
 		ad_dn TEXT,
 		ad_ou_dn TEXT,
-		ad_synced_at DATETIME
-	)`)
+		ad_synced_at DATETIME,
+		created_at DATETIME,
+		updated_at DATETIME,
+		deleted_at DATETIME,
+		created_by TEXT DEFAULT '',
+		updated_by TEXT DEFAULT '',
+		version INTEGER DEFAULT 0
+	)`
+)
+
+func TestHandleUserLoginAD_UserNotFound(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	assert.NoError(t, err)
+
+	db.Exec(createDeptOUMappingTable)
+	db.Exec(createUserTable)
 
 	mapper := NewDeptOUmapper(db)
 	service := NewUserOUService(db, mapper)
@@ -53,34 +81,11 @@ func TestHandleUserLoginAD_MappingNotFound(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	assert.NoError(t, err)
 
-	// 创建映射表
-	db.Exec(`CREATE TABLE sys_dept_ou_mapping (
-		id TEXT PRIMARY KEY,
-		dept_id TEXT NOT NULL,
-		ad_config_id TEXT NOT NULL,
-		ou_dn TEXT NOT NULL,
-		ou_name TEXT NOT NULL,
-		parent_ou_dn TEXT,
-		sync_enabled INTEGER DEFAULT 1,
-		sync_status TEXT DEFAULT 'pending',
-		last_sync_at DATETIME,
-		created_at DATETIME,
-		updated_at DATETIME,
-		UNIQUE(dept_id, ad_config_id)
-	)`)
-
-	// 创建用户表
-	db.Exec(`CREATE TABLE sys_user (
-		id TEXT PRIMARY KEY,
-		username TEXT NOT NULL,
-		dept_id TEXT,
-		ad_dn TEXT,
-		ad_ou_dn TEXT,
-		ad_synced_at DATETIME
-	)`)
+	db.Exec(createDeptOUMappingTable)
+	db.Exec(createUserTable)
 
 	// 插入测试用户
-	db.Exec(`INSERT INTO sys_user (id, username) VALUES ('user-1', 'testuser')`)
+	db.Exec(`INSERT INTO sys_user (id, username, password, salt, auth_source) VALUES ('user-1', 'testuser', '', '', 'local')`)
 
 	mapper := NewDeptOUmapper(db)
 	service := NewUserOUService(db, mapper)
@@ -96,31 +101,8 @@ func TestHandleUserLoginAD_Success(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	assert.NoError(t, err)
 
-	// 创建映射表
-	db.Exec(`CREATE TABLE sys_dept_ou_mapping (
-		id TEXT PRIMARY KEY,
-		dept_id TEXT NOT NULL,
-		ad_config_id TEXT NOT NULL,
-		ou_dn TEXT NOT NULL,
-		ou_name TEXT NOT NULL,
-		parent_ou_dn TEXT,
-		sync_enabled INTEGER DEFAULT 1,
-		sync_status TEXT DEFAULT 'pending',
-		last_sync_at DATETIME,
-		created_at DATETIME,
-		updated_at DATETIME,
-		UNIQUE(dept_id, ad_config_id)
-	)`)
-
-	// 创建用户表
-	db.Exec(`CREATE TABLE sys_user (
-		id TEXT PRIMARY KEY,
-		username TEXT NOT NULL,
-		dept_id TEXT,
-		ad_dn TEXT,
-		ad_ou_dn TEXT,
-		ad_synced_at DATETIME
-	)`)
+	db.Exec(createDeptOUMappingTable)
+	db.Exec(createUserTable)
 
 	mapper := NewDeptOUmapper(db)
 	service := NewUserOUService(db, mapper)
@@ -132,7 +114,7 @@ func TestHandleUserLoginAD_Success(t *testing.T) {
 		VALUES ('map-1', 'dept-1', 'config-1', 'OU=TestDept,DC=company,DC=com', 'TestDept', 1, 'synced')`)
 
 	// 插入测试用户
-	db.Exec(`INSERT INTO sys_user (id, username) VALUES ('user-1', 'testuser')`)
+	db.Exec(`INSERT INTO sys_user (id, username, password, salt, auth_source) VALUES ('user-1', 'testuser', '', '', 'local')`)
 
 	// 测试成功场景
 	err = service.HandleUserLoginAD(ctx, "testuser", "CN=testuser,OU=TestDept,DC=company,DC=com", "OU=TestDept,DC=company,DC=com")
@@ -152,12 +134,7 @@ func TestGetUserDeptByADOU(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	assert.NoError(t, err)
 
-	// 创建用户表
-	db.Exec(`CREATE TABLE sys_user (
-		id TEXT PRIMARY KEY,
-		username TEXT NOT NULL,
-		dept_id TEXT
-	)`)
+	db.Exec(createUserTable)
 
 	mapper := NewDeptOUmapper(db)
 	service := NewUserOUService(db, mapper)
@@ -174,15 +151,7 @@ func TestUpdateUserDeptAndADInfo(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	assert.NoError(t, err)
 
-	// 创建用户表
-	db.Exec(`CREATE TABLE sys_user (
-		id TEXT PRIMARY KEY,
-		username TEXT NOT NULL,
-		dept_id TEXT,
-		ad_dn TEXT,
-		ad_ou_dn TEXT,
-		ad_synced_at DATETIME
-	)`)
+	db.Exec(createUserTable)
 
 	mapper := NewDeptOUmapper(db)
 	service := NewUserOUService(db, mapper)
@@ -190,7 +159,7 @@ func TestUpdateUserDeptAndADInfo(t *testing.T) {
 	ctx := context.Background()
 
 	// 插入测试用户
-	db.Exec(`INSERT INTO sys_user (id, username) VALUES ('user-1', 'testuser')`)
+	db.Exec(`INSERT INTO sys_user (id, username, password, salt, auth_source) VALUES ('user-1', 'testuser', '', '', 'local')`)
 
 	// 测试更新用户信息
 	err = service.updateUserDeptAndADInfo(ctx, "user-1", "dept-1", "CN=testuser,OU=TestDept,DC=company,DC=com", "OU=TestDept,DC=company,DC=com")

@@ -184,6 +184,87 @@ func (h *VMHandler) Operate(c *gin.Context) {
 
 	response.Success(c, nil)
 }
+// StartVM 启动虚拟机
+// @Summary 启动虚拟机
+// @Description 批量启动指定的虚拟机
+// @Tags VDI管理
+// @Accept json
+// @Produce json
+// @Param request body vdiServices.VMOperateRequest true "虚拟机ID列表"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /vdi/vms/start [post]
+func (h *VMHandler) StartVM(c *gin.Context) {
+	var req vdiServices.VMOperateRequest
+	if !handleJSONBinding(c, &req) {
+		return
+	}
+
+	// 固定动作为 start
+	req.Action = vdiServices.VMPowerOn
+
+	if !handleServiceError(c, h.vmService.OperateVM(c.Request.Context(), &req), "启动虚拟机") {
+		return
+	}
+
+	response.Success(c, nil)
+}
+
+// StopVM 关闭虚拟机
+// @Summary 关闭虚拟机
+// @Description 批量关闭指定的虚拟机
+// @Tags VDI管理
+// @Accept json
+// @Produce json
+// @Param request body vdiServices.VMOperateRequest true "虚拟机ID列表"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /vdi/vms/stop [post]
+func (h *VMHandler) StopVM(c *gin.Context) {
+	var req vdiServices.VMOperateRequest
+	if !handleJSONBinding(c, &req) {
+		return
+	}
+
+	// 固定动作为 stop
+	req.Action = vdiServices.VMPowerOff
+
+	if !handleServiceError(c, h.vmService.OperateVM(c.Request.Context(), &req), "关闭虚拟机") {
+		return
+	}
+
+	response.Success(c, nil)
+}
+
+// RestartVM 重启虚拟机
+// @Summary 重启虚拟机
+// @Description 批量重启指定的虚拟机
+// @Tags VDI管理
+// @Accept json
+// @Produce json
+// @Param request body vdiServices.VMOperateRequest true "虚拟机ID列表"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /vdi/vms/restart [post]
+func (h *VMHandler) RestartVM(c *gin.Context) {
+	var req vdiServices.VMOperateRequest
+	if !handleJSONBinding(c, &req) {
+		return
+	}
+
+	// 固定动作为 restart
+	req.Action = vdiServices.VMPowerRestart
+
+	if !handleServiceError(c, h.vmService.OperateVM(c.Request.Context(), &req), "重启虚拟机") {
+		return
+	}
+
+	response.Success(c, nil)
+}
+
 
 // BindUser 绑定用户到虚拟机
 // @Summary 绑定用户

@@ -2,12 +2,11 @@ package system
 
 import (
 	"context"
-	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
@@ -20,8 +19,10 @@ type ADUserSyncHandler struct {
 
 // NewADUserSyncHandler 创建AD用户同步处理器
 func NewADUserSyncHandler(core *core.Core) *ADUserSyncHandler {
+	mapper := addomain.NewDeptOUmapper(core.GetDB())
+
 	return &ADUserSyncHandler{
-		userSyncService: system.NewUserSyncService(core.GetDB(), core.PwdManager),
+		userSyncService: system.NewUserSyncService(core.GetDB(), core.PwdManager, mapper),
 		core:            core,
 	}
 }
@@ -33,107 +34,35 @@ type BatchSyncUsersRequest struct {
 	DefaultRoleID string   `json:"defaultRoleId"`                     // 默认角色ID（可选）
 }
 
-// BatchSyncGroupMembersResponse 批量同步结果响应
-type BatchSyncGroupMembersResponse struct {
-	Total   int                `json:"total"`
-	Success int                `json:"success"`
-	Failed  int                `json:"failed"`
-	Skipped int                `json:"skipped"`
-	Errors  []system.SyncError `json:"errors,omitempty"`
-}
-
-// BatchSyncGroupMembers 批量同步AD用户组成员到系统用户表
-// POST /ad-domain/groups/:id/members/sync
-func (h *ADUserSyncHandler) BatchSyncGroupMembers(c *gin.Context) {
-	var req BatchSyncUsersRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
-		return
-	}
-
-	groupID := c.Param("id")
-	if groupID == "" {
-		response.Error(c, http.StatusBadRequest, "组ID不能为空")
-		return
-	}
-
-	// 验证配置ID是否存在
-	var config models.ADConfig
-	err := h.core.GetDB().WithContext(c.Request.Context()).
-		Where("id = ? AND deleted_at IS NULL", req.ConfigID).
-		First(&config).Error
-	if err != nil {
-		response.Error(c, http.StatusNotFound, "AD配置不存在")
-		return
-	}
-
-	// 获取默认角色ID（如果未指定）
-	defaultRoleID := req.DefaultRoleID
-	if defaultRoleID == "" {
-		defaultRoleID = h.getDefaultRoleID(c.Request.Context())
-	}
-
-	// 根据用户DN列表查询用户详细信息
-	users, err := h.getADUsersByDNs(c.Request.Context(), &config, req.UserDNs)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "获取AD用户信息失败: "+err.Error())
-		return
-	}
-
-	// 执行批量同步
-	result, err := h.userSyncService.BatchSyncADUsers(c.Request.Context(), users, defaultRoleID)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "批量同步失败: "+err.Error())
-		return
-	}
-
-	// 返回同步结果
-	response.Success(c, BatchSyncGroupMembersResponse{
-		Total:   result.Total,
-		Success: result.Success,
-		Failed:  result.Failed,
-		Skipped: result.Skipped,
-		Errors:  result.Errors,
-	})
-}
-
-// getADUsersByDNs 根据DN列表获取AD用户详细信息
+// getADUsersByDNs 根据DN列表从数据库获取AD用户详细信息
+// 从 sys_ad_user 表查询，而不是LDAP连接，提高性能并复用已同步的数据
 func (h *ADUserSyncHandler) getADUsersByDNs(ctx context.Context, config *models.ADConfig, userDNs []string) ([]*system.ADUserInfoForSync, error) {
-	// 这里需要调用AD服务查询用户详细信息
-	// 复用现有的AD域连接和查询逻辑
-	// 暂时实现：使用已缓存的AD用户信息或从DN解析基本信息
+	// 从数据库查询AD用户信息
+	var adUsers []models.ADUser
+	err := h.core.GetDB().WithContext(ctx).
+		Where("ad_config_id = ? AND user_dn IN ?", config.ID, userDNs).
+		Find(&adUsers).Error
+	if err != nil {
+		return nil, err
+	}
 
-	users := make([]*system.ADUserInfoForSync, 0, len(userDNs))
-
-	// TODO: 实际应该通过LDAP查询获取完整用户信息
-	// 当前实现：从DN解析用户名，其他信息将在同步时填充
-	for _, dn := range userDNs {
-		username := extractUsernameFromDN(dn)
-
+	// 转换为 ADUserInfoForSync
+	users := make([]*system.ADUserInfoForSync, 0, len(adUsers))
+	for _, adUser := range adUsers {
 		users = append(users, &system.ADUserInfoForSync{
-			UserDN:   dn,
-			Username: username,
-			// 其他字段将在同步过程中通过LDAP查询获取
-			// 或者在首次登录时自动同步
+			UserDN:      adUser.UserDN,
+			OuDn:        adUser.OUN,
+			Username:    adUser.Username,
+			DisplayName: adUser.DisplayName,
+			Email:       adUser.Email,
+			Phone:       adUser.Phone,
+			Mobile:      adUser.Mobile,
+			Title:       adUser.Title,
+			Department:  adUser.Department,
 		})
 	}
 
 	return users, nil
-}
-
-// extractUsernameFromDN 从DN中提取用户名
-// 简化实现：CN=username,OU=...,DC=... -> username
-func extractUsernameFromDN(dn string) string {
-	// 简单解析CN=后面的用户名
-	// 实际应该使用ldap包解析DN
-	parts := strings.Split(dn, ",")
-	for _, part := range parts {
-		part = strings.TrimSpace(part)
-		if strings.HasPrefix(part, "CN=") {
-			return strings.TrimPrefix(part, "CN=")
-		}
-	}
-	return ""
 }
 
 // getDefaultRoleID 获取默认角色ID
@@ -202,11 +131,11 @@ func (h *ADUserSyncHandler) BatchSyncADUsers(c *gin.Context) {
 	}
 
 	// 返回同步结果
-	response.Success(c, BatchSyncGroupMembersResponse{
-		Total:   result.Total,
-		Success: result.Success,
-		Failed:  result.Failed,
-		Skipped: result.Skipped,
-		Errors:  result.Errors,
+	response.Success(c, map[string]interface{}{
+		"total":   result.Total,
+		"success": result.Success,
+		"failed":  result.Failed,
+		"skipped": result.Skipped,
+		"errors":  result.Errors,
 	})
 }

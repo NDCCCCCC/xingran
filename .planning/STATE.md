@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: MAC地址历史数据管理
 status: unknown
-stopped_at: Phase 25 context gathered
-last_updated: "2026-06-02T09:23:51.367Z"
+stopped_at: Phase 25 UI-SPEC approved
+last_updated: "2026-06-02T09:35:53.218Z"
 progress:
   total_phases: 4
   completed_phases: 0
@@ -235,7 +235,7 @@ Plan: Not started
 ## Session Continuity
 
 Last session: --stopped-at
-Stopped at: Phase 25 context gathered
+Stopped at: Phase 25 UI-SPEC approved
 Resume file: --resume-file
 
 Resume file: None

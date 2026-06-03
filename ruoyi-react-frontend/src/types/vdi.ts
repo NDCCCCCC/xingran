@@ -90,16 +90,6 @@ export interface VMOperateRequest {
 }
 
 /**
- * IP配置请求
- */
-export interface VMIPConfigRequest {
-  vm_id: string;
-  ip_address: string;
-  netmask: string;
-  gateway: string;
-}
-
-/**
  * 重命名请求
  */
 export interface RenameVMRequest {

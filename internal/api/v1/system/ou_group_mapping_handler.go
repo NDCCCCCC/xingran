@@ -2,7 +2,6 @@ package system
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
@@ -82,6 +81,10 @@ func (h *OUGroupMappingHandler) CreateMapping(c *gin.Context) {
 		return
 	}
 
+	// 从JWT上下文中获取当前用户ID作为审计字段
+	userID := c.GetString("user_id")
+	req.CreatedBy = userID
+
 	mapping, err := h.mappingService.CreateMapping(c.Request.Context(), &req)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
@@ -138,6 +141,9 @@ func (h *OUGroupMappingHandler) UpdateMapping(c *gin.Context) {
 		response.Error(c, http.StatusBadRequest, "请求参数错误")
 		return
 	}
+
+	// 从JWT上下文中获取当前用户ID作为审计字段
+	req.UpdatedBy = c.GetString("user_id")
 
 	if err := h.mappingService.UpdateMapping(c.Request.Context(), id, &req); err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())

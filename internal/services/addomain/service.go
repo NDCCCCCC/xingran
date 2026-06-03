@@ -102,17 +102,18 @@ type ADSyncRequest struct {
 // ADDomainService AD域管理服务（主服务）
 // 提供统一的访问入口，内部委托给各个专门的服务
 type ADDomainService struct {
-	Config           *ConfigService
-	Sync             *SyncService
-	OU               *OUService
-	User             *UserService
-	Group            *GroupService
-	GroupSync        *GroupSyncService
-	DeptGroupMapping DeptGroupMappingService
-	GroupMgmt        GroupManagementService
-	MemberSync       MemberSyncService
-	Log              *LogService
-	Computer         *ComputerService
+	Config    *ConfigService
+	Sync      *SyncService
+	OU        *OUService
+	User      *UserService
+	Group     *GroupService
+	GroupSync *GroupSyncService
+	// OU-组映射替代了部门-组映射
+	OUGroupMapping *OUGroupMappingService
+	GroupMgmt      GroupManagementService
+	// MemberSync 依赖部门-组映射，已移除
+	Log      *LogService
+	Computer *ComputerService
 }
 
 // NewADDomainService creates the AD domain service.
@@ -122,17 +123,17 @@ func NewADDomainService(db *gorm.DB, cipher ...PasswordCipher) *ADDomainService 
 		SetADSM4Cipher(cipher[0])
 	}
 	return &ADDomainService{
-		Config:           NewConfigService(db),
-		Sync:             NewSyncService(db),
-		OU:               NewOUService(db),
-		User:             NewUserService(db),
-		Group:            NewGroupService(db),
-		GroupSync:        NewGroupSyncService(db),
-		DeptGroupMapping: NewDeptGroupMappingService(db),
-		GroupMgmt:        NewGroupManagementService(db),
-		MemberSync:       NewMemberSyncService(db),
-		Log:              NewLogService(db),
-		Computer:         NewComputerService(db),
+		Config:         NewConfigService(db),
+		Sync:           NewSyncService(db),
+		OU:             NewOUService(db),
+		User:           NewUserService(db),
+		Group:          NewGroupService(db),
+		GroupSync:      NewGroupSyncService(db),
+		OUGroupMapping: NewOUGroupMappingService(db),
+		GroupMgmt:      NewGroupManagementService(db),
+		// MemberSync 已移除 - 依赖部门-组映射
+		Log:      NewLogService(db),
+		Computer: NewComputerService(db),
 	}
 }
 

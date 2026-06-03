@@ -1,10 +1,14 @@
 package vdi
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 )
 
 // handleJSONBinding 统一处理 JSON 绑定
@@ -29,5 +33,30 @@ func handleServiceError(c *gin.Context, err error, action string) bool {
 		response.Error(c, apperrors.Wrap(err, apperrors.CodeServerError, action+"失败"))
 		return false
 	}
+	return true
+}
+
+// verifyVDIServerExists 验证VDI服务器是否存在
+func verifyVDIServerExists(db *gorm.DB, serverID string) *models.VDIServer {
+	var server models.VDIServer
+	if err := db.Where("id = ?", serverID).First(&server).Error; err != nil {
+		return nil
+	}
+	return &server
+}
+
+// ensureVDIServer 验证VDI服务器并返回错误响应（如果不存在）
+func ensureVDIServer(c *gin.Context, db *gorm.DB, serverID string) bool {
+	if serverID == "" {
+		response.Error(c, http.StatusBadRequest, "VDI服务器ID不能为空")
+		return false
+	}
+
+	server := verifyVDIServerExists(db, serverID)
+	if server == nil {
+		response.Error(c, http.StatusNotFound, "VDI服务器不存在")
+		return false
+	}
+
 	return true
 }

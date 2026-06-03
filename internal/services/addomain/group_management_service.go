@@ -135,13 +135,13 @@ func (s *groupManagementService) DeleteGroup(ctx context.Context, groupID string
 		return fmt.Errorf("组中有成员，无法删除。请先移除所有成员")
 	}
 
-	// 3. 检查是否有映射关系
+	// 3. 检查是否有OU映射关系
 	var mappingCount int64
-	s.db.WithContext(ctx).Model(&models.DeptGroupMapping{}).
+	s.db.WithContext(ctx).Model(&models.OUGroupMapping{}).
 		Where("ad_group_id = ? AND deleted_at IS NULL", groupID).
 		Count(&mappingCount)
 	if mappingCount > 0 {
-		return fmt.Errorf("存在部门映射关系，无法删除。请先删除映射")
+		return fmt.Errorf("存在OU映射关系，无法删除。请先删除映射")
 	}
 
 	// 4. 连接LDAP并删除组

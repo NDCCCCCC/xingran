@@ -911,6 +911,33 @@ var (
 	GlobalDeviceInfoCollectionServiceMu sync.RWMutex
 )
 
+// VDIVMService VDI虚拟机服务接口
+// 使用接口避免循环依赖
+type VDIVMService interface {
+	SyncAllVMs(ctx context.Context, serverID string) error
+	SyncVMsFromVDIByServer(ctx context.Context, server *models.VDIServer) error
+}
+
+// GlobalVDIVMService 全局VDI虚拟机服务
+var (
+	GlobalVDIVMService   VDIVMService
+	GlobalVDIVMServiceMu sync.RWMutex
+)
+
+// SetVDIVMService 设置VDI虚拟机服务（线程安全）
+func SetVDIVMService(service VDIVMService) {
+	GlobalVDIVMServiceMu.Lock()
+	defer GlobalVDIVMServiceMu.Unlock()
+	GlobalVDIVMService = service
+}
+
+// GetVDIVMService 获取VDI虚拟机服务（线程安全）
+func GetVDIVMService() VDIVMService {
+	GlobalVDIVMServiceMu.RLock()
+	defer GlobalVDIVMServiceMu.RUnlock()
+	return GlobalVDIVMService
+}
+
 // RegisterNetworkDeviceTasks 注册网络设备相关定时任务
 func RegisterNetworkDeviceTasks(scheduler *Scheduler, db *gorm.DB) {
 	// 设备状态检查任务 - 每5分钟执行

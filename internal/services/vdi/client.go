@@ -196,26 +196,6 @@ func (c *VDIClient) RestartVM(vmID string) error {
 	return nil
 }
 
-// ConfigVMIP 配置虚拟机 IP
-func (c *VDIClient) ConfigVMIP(vmID, ip string) error {
-	body, _ := json.Marshal(ConfigIPRequest{VMID: vmID, IP: ip})
-	respBody, err := c.makeRequest("POST", "/api/v1/vm/config_ip", body)
-	if err != nil {
-		return err
-	}
-
-	var resp VDIResponse
-	if err := json.Unmarshal(respBody, &resp); err != nil {
-		return err
-	}
-
-	if resp.Code != 0 {
-		return fmt.Errorf("配置虚拟机 IP 失败: %s", resp.Message)
-	}
-
-	return nil
-}
-
 // RenameVM 重命名虚拟机
 func (c *VDIClient) RenameVM(vmID, newName string) error {
 	body, _ := json.Marshal(RenameVMRequest{VMID: vmID, VMName: newName})

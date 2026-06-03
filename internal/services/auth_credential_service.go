@@ -5,21 +5,21 @@ import (
 	"fmt"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
 	"gorm.io/gorm"
 )
 
 // AuthCredentialService 授权凭证服务
 type AuthCredentialService struct {
-	db        *gorm.DB
-	sm4Cipher *crypto.SM4Cipher // SM4 加密器
+	db             *gorm.DB
+	passwordCipher addomain.PasswordCipher // 密码加密器
 }
 
 // NewAuthCredentialService 创建授权凭证服务
-func NewAuthCredentialService(db *gorm.DB, sm4Cipher *crypto.SM4Cipher) *AuthCredentialService {
+func NewAuthCredentialService(db *gorm.DB, passwordCipher addomain.PasswordCipher) *AuthCredentialService {
 	return &AuthCredentialService{
-		db:        db,
-		sm4Cipher: sm4Cipher,
+		db:             db,
+		passwordCipher: passwordCipher,
 	}
 }
 
@@ -101,16 +101,16 @@ func (s *AuthCredentialService) Create(ctx context.Context, req *CreateCredentia
 	}
 
 	// 使用 SM4 加密密码
-	if s.sm4Cipher == nil {
+	if s.passwordCipher == nil {
 		return nil, fmt.Errorf("SM4 加密器未初始化，无法加密密码")
 	}
 
-	encryptedPassword, err := s.sm4Cipher.Encrypt(req.Password)
+	encryptedPassword, err := s.passwordCipher.Encrypt(req.Password)
 	if err != nil {
 		return nil, fmt.Errorf("密码加密失败: %w", err)
 	}
 
-	encryptedEnablePassword, err := s.sm4Cipher.Encrypt(req.EnablePassword)
+	encryptedEnablePassword, err := s.passwordCipher.Encrypt(req.EnablePassword)
 	if err != nil {
 		return nil, fmt.Errorf("特权密码加密失败: %w", err)
 	}
@@ -214,20 +214,20 @@ func (s *AuthCredentialService) Update(ctx context.Context, req *UpdateCredentia
 
 	// 如果提供了新密码，则加密并更新密码
 	if req.Password != "" {
-		if s.sm4Cipher == nil {
+		if s.passwordCipher == nil {
 			return fmt.Errorf("SM4 加密器未初始化，无法加密密码")
 		}
-		encrypted, err := s.sm4Cipher.Encrypt(req.Password)
+		encrypted, err := s.passwordCipher.Encrypt(req.Password)
 		if err != nil {
 			return fmt.Errorf("密码加密失败: %w", err)
 		}
 		credential.Password = encrypted
 	}
 	if req.EnablePassword != "" {
-		if s.sm4Cipher == nil {
+		if s.passwordCipher == nil {
 			return fmt.Errorf("SM4 加密器未初始化，无法加密特权密码")
 		}
-		encrypted, err := s.sm4Cipher.Encrypt(req.EnablePassword)
+		encrypted, err := s.passwordCipher.Encrypt(req.EnablePassword)
 		if err != nil {
 			return fmt.Errorf("特权密码加密失败: %w", err)
 		}
@@ -350,15 +350,15 @@ func (s *AuthCredentialService) GetDecryptedCredential(ctx context.Context, id s
 	}
 
 	// 解密密码（严格模式，解密失败则拒绝）
-	if s.sm4Cipher != nil && credential.Password != "" {
-		decrypted, err := s.sm4Cipher.Decrypt(credential.Password)
+	if s.passwordCipher != nil && credential.Password != "" {
+		decrypted, err := s.passwordCipher.Decrypt(credential.Password)
 		if err != nil {
 			return nil, fmt.Errorf("密码解密失败，请重新设置凭证密码")
 		}
 		credential.Password = decrypted
 	}
-	if s.sm4Cipher != nil && credential.EnablePassword != "" {
-		decrypted, err := s.sm4Cipher.Decrypt(credential.EnablePassword)
+	if s.passwordCipher != nil && credential.EnablePassword != "" {
+		decrypted, err := s.passwordCipher.Decrypt(credential.EnablePassword)
 		if err != nil {
 			return nil, fmt.Errorf("特权密码解密失败，请重新设置凭证密码")
 		}

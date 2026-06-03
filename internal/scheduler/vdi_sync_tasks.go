@@ -90,25 +90,25 @@ func syncSingleVDIServer(ctx context.Context, db *gorm.DB, serverID string) erro
 }
 
 // syncVDIServerVMs 同步指定 VDI 服务器的虚拟机数据
-// 注意：这个方法需要实际的 VDI 服务实现
-// 由于循环导入问题，实际的同步逻辑应该在 API 层或通过消息队列实现
+// 调用 VDI 服务层执行实际的同步操作
 func syncVDIServerVMs(ctx context.Context, db *gorm.DB, server *models.VDIServer) error {
 	startTime := time.Now()
 	applogger.Infof("开始同步 VDI 服务器 [%s] 的虚拟机数据", server.Name)
 
-	// TODO: 实现实际的同步逻辑
-	// 当前是占位实现，需要：
-	// 1. 创建 VDI 客户端
-	// 2. 获取资源组列表
-	// 3. 遍历资源组获取虚拟机
-	// 4. 更新本地数据库
+	// 获取 VDI 服务实例
+	vmService := GetVDIVMService()
+	if vmService == nil {
+		return fmt.Errorf("VDI 虚拟机服务未初始化，请检查 Core 初始化配置")
+	}
 
-	// 模拟同步过程
-	time.Sleep(100 * time.Millisecond)
+	// 调用 VDI 服务执行实际同步
+	if err := vmService.SyncVMsFromVDIByServer(ctx, server); err != nil {
+		return fmt.Errorf("VDI 服务器 [%s] 同步失败: %w", server.Name, err)
+	}
 
 	// 记录同步日志
 	duration := time.Since(startTime)
-	applogger.Infof("VDI 服务器 [%s] 同步完成（占位实现），耗时: %v", server.Name, duration)
+	applogger.Infof("VDI 服务器 [%s] 同步完成，耗时: %v", server.Name, duration)
 
 	// 更新服务器的最后同步时间
 	if err := db.Model(server).Update("last_sync_time", time.Now()).Error; err != nil {

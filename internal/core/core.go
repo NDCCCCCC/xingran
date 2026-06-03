@@ -17,6 +17,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/rpa"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/vdi"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/websocket"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
@@ -219,7 +220,7 @@ func (c *Core) Init() error {
 		MaxIdle:        5 * time.Minute,
 		MaxConnections: 20, // 降低并发连接数，减少 scrapligo panic 问题
 	}
-	connectionPool := device.NewDeviceConnectionPool(c.GetDB(), nil, poolConfig)
+	connectionPool := device.NewDeviceConnectionPool(c.GetDB(), c.SM4Cipher, poolConfig)
 	// 8.2 创建任务调度器
 	schedulerConfig := &device.SchedulerConfig{
 		TaskTimeout: 5 * time.Minute,
@@ -297,6 +298,18 @@ func (c *Core) Init() error {
 			}
 			scheduler.StartADSyncScheduler(c.GetDB())
 
+			// 初始化VDI虚拟机服务并注入到调度器
+			vdiVMService := vdi.NewVMServiceWithDynamicClient(c.GetDB())
+			scheduler.SetVDIVMService(vdiVMService)
+			applogger.Infof("VDI虚拟机服务初始化完成")
+
+			scheduler.RegisterVDISyncTasks(c.Scheduler)
+			applogger.Infof("VDI同步定时任务注册完成")
+
+			// 注册部门到AD同步定时任务
+			scheduler.RegisterDeptSyncTasks(c.Scheduler)
+			applogger.Infof("部门到AD同步定时任务注册完成")
+
 		// 设置全局数据库访问器，供定时任务使用（必须在同步周期性工单任务之前）
 		scheduler.SetDB(c)
 
@@ -309,7 +322,7 @@ func (c *Core) Init() error {
 	}
 
 	// 12. 初始化设备监控服务
-	c.DeviceMonitorService = services.NewDeviceMonitorService(c.GetDB(), nil, services.DefaultDeviceMonitorConfig())
+	c.DeviceMonitorService = services.NewDeviceMonitorService(c.GetDB(), c.SM4Cipher, services.DefaultDeviceMonitorConfig())
 	// 设置执行器并初始化子服务
 	c.DeviceMonitorService.SetExecutor(c.DeviceExecutor)
 	// 设置设备监控服务到调度器，供定时任务调用
@@ -531,7 +544,8 @@ func (c *Core) initAuthFactory() {
 	c.AuthFactory = security.NewAuthStrategyFactory(c.GetDB(), c.PwdManager, c.SM4Cipher)
 
 	// 初始化用户同步服务并注入到工厂
-	userSyncService := system.NewUserSyncService(c.GetDB(), c.PwdManager)
+		mapper := addomain.NewDeptOUmapper(c.GetDB())
+		userSyncService := system.NewUserSyncService(c.GetDB(), c.PwdManager, mapper)
 	c.AuthFactory.SetUserSyncer(userSyncService)
 
 	applogger.Infof("认证策略工厂初始化完成（支持 local/ad/hybrid 模式）")
@@ -623,7 +637,7 @@ func (c *Core) registerRPATasks() {
 		}
 
 		// 获取 RPA 服务
-		rpaServices := rpa.NewServiceGroup(c.GetDB(), c.Config, c.NoticeHub, c.Cache, nil)
+		rpaServices := rpa.NewServiceGroup(c.GetDB(), c.Config, c.NoticeHub, c.Cache, c.SM4Cipher)
 
 		// 执行 RPA 任务
 		req := &rpa.ExecuteTaskRequest{

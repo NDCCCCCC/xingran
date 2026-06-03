@@ -3,6 +3,7 @@ package addomain
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
@@ -111,17 +112,6 @@ func (s *OUGroupMappingService) ListMappings(ctx context.Context, req *ListMappi
 
 // CreateMapping 创建映射
 func (s *OUGroupMappingService) CreateMapping(ctx context.Context, req *CreateMappingRequest) (*models.OUGroupMapping, error) {
-	// 检查是否已存在相同OU和组的映射
-	var existing models.OUGroupMapping
-	err := s.db.WithContext(ctx).
-		Where("ou_dn = ? AND ad_group_id = ?", req.OUDn, req.ADGroupID).
-		First(&existing).Error
-	if err == nil {
-		return nil, fmt.Errorf("mapping already exists for this OU and group")
-	} else if err != gorm.ErrRecordNotFound {
-		return nil, fmt.Errorf("failed to check existing mapping: %w", err)
-	}
-
 	// 验证AD组是否存在
 	var adGroup models.ADGroup
 	if err := s.db.WithContext(ctx).Where("id = ?", req.ADGroupID).First(&adGroup).Error; err != nil {
@@ -139,15 +129,21 @@ func (s *OUGroupMappingService) CreateMapping(ctx context.Context, req *CreateMa
 		MappingStatus: models.OUGroupMappingStatusActive,
 		SyncEnabled:   req.SyncEnabled,
 		CreatedBy:     req.CreatedBy,
+		UpdatedBy:     req.CreatedBy, // 创建时 updated_by 与 created_by 相同
 	}
 
+	// 直接创建，依赖数据库的唯一约束处理重复
 	if err := s.db.WithContext(ctx).Create(mapping).Error; err != nil {
+		// 检查是否是唯一约束冲突（重复映射）
+		if isUniqueConstraintError(err) {
+			return nil, fmt.Errorf("mapping already exists for this OU and group")
+		}
 		return nil, fmt.Errorf("failed to create mapping: %w", err)
 	}
 
 	// 重新加载关联数据
 	if err := s.db.WithContext(ctx).Preload("ADGroup").Preload("ADConfig").
-		First(mapping, mapping.ID).Error; err != nil {
+		First(mapping, "id = ?", mapping.ID).Error; err != nil {
 		return nil, fmt.Errorf("failed to load mapping associations: %w", err)
 	}
 
@@ -250,4 +246,22 @@ func (s *OUGroupMappingService) UpdateSyncStatus(ctx context.Context, mappingID 
 	}
 
 	return nil
+}
+
+// isUniqueConstraintError 检查是否是唯一约束冲突错误
+func isUniqueConstraintError(err error) bool {
+	if err == nil {
+		return false
+	}
+	// PostgreSQL 唯一约束错误代码
+	// "unique constraint" 错误消息
+	return err.Error() != "" && (containsIgnoreCase(err.Error(), "duplicate key") ||
+		containsIgnoreCase(err.Error(), "unique constraint"))
+}
+
+// containsIgnoreCase 不区分大小写检查字符串包含
+func containsIgnoreCase(s, substr string) bool {
+	s = strings.ToLower(s)
+	substr = strings.ToLower(substr)
+	return strings.Contains(s, substr)
 }

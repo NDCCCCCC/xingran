@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -546,8 +547,10 @@ func TestIntegration_LoginRequest_ExtraFields(t *testing.T) {
 }
 
 // parseTime is a helper to parse time strings for test data
-func parseTime(s string) interface{} {
-	// Return a string representation that matches what gin would serialize
-	// We use a placeholder since the exact time format depends on gin's JSON encoder
-	return s
+func parseTime(s string) time.Time {
+	t, err := time.Parse(time.RFC3339, s)
+	if err != nil {
+		panic(err)
+	}
+	return t
 }

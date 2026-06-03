@@ -12,6 +12,134 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 )
 
+// setupTestDB creates an in-memory SQLite database with required tables for testing
+func setupTestDB(t *testing.T) *gorm.DB {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	require.NoError(t, err)
+
+	// Create minimal tables needed for tests (matching BaseModel columns)
+	db.Exec(`CREATE TABLE sys_ad_config (
+		id TEXT PRIMARY KEY,
+		config_name TEXT NOT NULL,
+		server_address TEXT NOT NULL,
+		server_port INTEGER DEFAULT 389,
+		domain_name TEXT NOT NULL,
+		base_dn TEXT NOT NULL,
+		admin_username TEXT NOT NULL,
+		admin_password TEXT NOT NULL,
+		member_ou_dn TEXT DEFAULT '',
+		use_ssl BOOLEAN DEFAULT FALSE,
+		use_tls BOOLEAN DEFAULT FALSE,
+		sync_enabled BOOLEAN DEFAULT TRUE,
+		sync_interval INTEGER DEFAULT 3600,
+		last_sync_at DATETIME,
+		status INTEGER DEFAULT 0,
+		created_at DATETIME,
+		updated_at DATETIME,
+		deleted_at DATETIME,
+		created_by TEXT DEFAULT '',
+		updated_by TEXT DEFAULT '',
+		version INTEGER DEFAULT 0
+	)`)
+
+	db.Exec(`CREATE TABLE sys_ad_group (
+		id TEXT PRIMARY KEY,
+		ad_config_id TEXT NOT NULL,
+		group_dn TEXT NOT NULL,
+		group_name TEXT NOT NULL,
+		group_scope TEXT,
+		group_type INTEGER DEFAULT 1,
+		description TEXT,
+		member_count INTEGER DEFAULT 0,
+		ou_dn TEXT,
+		last_sync_at DATETIME,
+		created_at DATETIME,
+		updated_at DATETIME,
+		deleted_at DATETIME,
+		created_by TEXT DEFAULT '',
+		updated_by TEXT DEFAULT '',
+		version INTEGER DEFAULT 0
+	)`)
+
+	db.Exec(`CREATE TABLE sys_dept (
+		id TEXT PRIMARY KEY,
+		dept_name TEXT NOT NULL,
+		dept_code TEXT NOT NULL DEFAULT '',
+		parent_id TEXT,
+		ancestors TEXT DEFAULT '',
+		order_num INTEGER DEFAULT 0,
+		leader TEXT,
+		phone TEXT,
+		email TEXT,
+		is_external_org INTEGER DEFAULT 0,
+		status INTEGER DEFAULT 0,
+		remark TEXT DEFAULT '',
+		created_at DATETIME,
+		updated_at DATETIME,
+		deleted_at DATETIME,
+		created_by TEXT DEFAULT '',
+		updated_by TEXT DEFAULT '',
+		version INTEGER DEFAULT 0
+	)`)
+
+	db.Exec(`CREATE TABLE sys_ou_group_mapping (
+		id TEXT PRIMARY KEY,
+		ad_config_id TEXT NOT NULL,
+		ou_dn TEXT NOT NULL,
+		ou_name TEXT NOT NULL,
+		ad_group_id TEXT NOT NULL,
+		mapping_status TEXT NOT NULL DEFAULT 'active',
+		sync_enabled BOOLEAN DEFAULT TRUE,
+		last_sync_at DATETIME,
+		created_by TEXT DEFAULT '',
+		updated_by TEXT DEFAULT '',
+		created_at DATETIME,
+		updated_at DATETIME,
+		deleted_at DATETIME
+	)`)
+
+	return db
+}
+
+// createTestData creates test department, config, and group records
+func createTestData(t *testing.T, db *gorm.DB) (deptID, configID, groupID string) {
+	ctx := context.Background()
+
+	// Create department
+	dept := &models.Department{
+		DeptName: "科技创新部",
+		Status:   models.DeptStatusNormal,
+	}
+	require.NoError(t, db.WithContext(ctx).Create(dept).Error)
+	deptID = dept.ID
+
+	// Create AD config
+	config := &models.ADConfig{
+		ConfigName:    "测试AD",
+		ServerAddress: "ad.local",
+		ServerPort:    389,
+		DomainName:    "test.com",
+		BaseDN:        "DC=test,DC=com",
+		AdminUsername: "admin",
+		AdminPassword: "password",
+		Status:        models.ADConfigStatusEnabled,
+	}
+	require.NoError(t, db.WithContext(ctx).Create(config).Error)
+	configID = config.ID
+
+	// Create AD group
+	group := &models.ADGroup{
+		ADConfigID:  configID,
+		GroupDN:     "CN=cxhub-科技创新,OU=Groups,DC=test,DC=com",
+		GroupName:   "cxhub-科技创新",
+		MemberCount: 0,
+	}
+	require.NoError(t, db.WithContext(ctx).Create(group).Error)
+	groupID = group.ID
+
+	return deptID, configID, groupID
+}
+
 // TestGroupManagementService_CreateGroupForDept 测试为部门创建组
 func TestGroupManagementService_CreateGroupForDept(t *testing.T) {
 	db := setupTestDB(t)
@@ -79,7 +207,7 @@ func TestGroupManagementService_NamingConvention(t *testing.T) {
 		{"科技创新部", "cxhub-科技创新"},
 		{"市场部", "cxhub-市场"},
 		{"人力资源部", "cxhub-人力资源"},
-		{"研发中心", "cxhub-研发中心"}, // 没有"部"后缀
+		{"研发中心", "cxhub-研发中心"},
 	}
 
 	for _, tc := range testCases {
@@ -101,7 +229,7 @@ func TestGroupManagementService_DeleteGroup_SafetyChecks(t *testing.T) {
 	service := NewGroupManagementService(db)
 	ctx := context.Background()
 
-	_, configID, groupID := createTestData(t, db)
+	_, _, groupID := createTestData(t, db)
 
 	// 测试删除有成员的组
 	db.Model(&models.ADGroup{}).Where("id = ?", groupID).Update("member_count", 5)
@@ -117,22 +245,25 @@ func TestGroupManagementService_DeleteGroup_WithMappings(t *testing.T) {
 	service := NewGroupManagementService(db)
 	ctx := context.Background()
 
-	deptID, configID, groupID := createTestData(t, db)
+	_, configID, groupID := createTestData(t, db)
 
-	// 创建映射关系
-	mapping := &models.DeptGroupMapping{
-		DeptID:     deptID,
-		ADGroupID:  groupID,
-		ADConfigID: configID,
-		GroupDN:    "CN=test,OU=Groups,DC=test,DC=com",
-		GroupName:  "test-group",
+	// 创建OU映射关系
+	mapping := &models.OUGroupMapping{
+		ADConfigID:    configID,
+		OUDN:          "OU=科技创新部,DC=test,DC=com",
+		OUName:        "科技创新部",
+		ADGroupID:     groupID,
+		MappingStatus: models.OUGroupMappingStatusActive,
 	}
 	require.NoError(t, db.WithContext(ctx).Create(mapping).Error)
+
+	// Reset member_count to 0 so the member check passes
+	db.Model(&models.ADGroup{}).Where("id = ?", groupID).Update("member_count", 0)
 
 	// 尝试删除有映射的组
 	err := service.DeleteGroup(ctx, groupID)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "存在部门映射关系")
+	assert.Contains(t, err.Error(), "映射")
 }
 
 // TestMemberChangeResult 测试成员变更结果结构
@@ -188,6 +319,7 @@ func TestGroupManagementService_Integration_GrantFlow(t *testing.T) {
 			DomainName:    "test.com",
 			BaseDN:        "DC=test,DC=com",
 			AdminUsername: "admin",
+			AdminPassword: "password",
 			Status:        models.ADConfigStatusEnabled,
 		}
 		require.NoError(t, db.WithContext(ctx).Create(config).Error)

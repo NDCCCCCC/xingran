@@ -96,6 +96,9 @@ func (s *UserOUService) GetUserDeptByADOU(ctx context.Context, username string) 
 
 // createDeptFromOUDN 从 AD OU DN 自动创建部门及映射关系
 // OU DN 格式：OU=基础运维科,OU=科技创新部,OU=分公司本部,OU=湖北分公司,OU=CX,DC=PR,DC=intra,DC=cpic,DC=com,DC=cn
+//
+// 修复flip-flop问题：自下而上处理OU层级时，每一层查找已存在部门必须限定parent_id范围，
+// 确保同名但位于不同分支的部门不会被错误匹配。
 func (s *UserOUService) createDeptFromOUDN(ctx context.Context, ouDN, userDN string) (string, error) {
 	// 1. 获取 AD 配置
 	var adConfig models.ADConfig
@@ -127,16 +130,25 @@ func (s *UserOUService) createDeptFromOUDN(ctx context.Context, ouDN, userDN str
 	for i := len(deptNames) - 1; i >= 0; i-- {
 		deptName := deptNames[i]
 
-		// 检查部门是否已存在
+		// 检查部门是否已存在（限定parent_id范围，避免同名部门跨分支错误匹配）
 		var dept models.Department
-		err := s.db.WithContext(ctx).
-			Where("dept_name = ? AND status = 0", deptName).
-			First(&dept).Error
+		query := s.db.WithContext(ctx).Where("dept_name = ? AND status = 0", deptName)
+		if parentDeptID != nil {
+			query = query.Where("parent_id = ?", *parentDeptID)
+		} else {
+			// 顶层部门：parent_id IS NULL
+			query = query.Where("parent_id IS NULL")
+		}
+		err := query.First(&dept).Error
 
 		if err == gorm.ErrRecordNotFound {
+			// 生成唯一的 DeptCode
+			deptCode := s.generateUniqueDeptCode(ctx, deptName)
+
 			// 部门不存在，创建新部门
 			dept = models.Department{
 				DeptName:  deptName,
+				DeptCode:  deptCode,
 				ParentID:  parentDeptID,
 				Status:    0, // 正常
 				Ancestors: s.buildAncestors(ctx, parentDeptID),
@@ -145,7 +157,7 @@ func (s *UserOUService) createDeptFromOUDN(ctx context.Context, ouDN, userDN str
 			if err := s.db.WithContext(ctx).Create(&dept).Error; err != nil {
 				return "", fmt.Errorf("创建部门 %s 失败: %w", deptName, err)
 			}
-			applogger.Infof("自动创建部门: %s (parent_id=%v)", deptName, parentDeptID)
+			applogger.Infof("自动创建部门: %s (dept_code=%s, parent_id=%v)", deptName, deptCode, parentDeptID)
 		} else if err != nil {
 			return "", fmt.Errorf("查询部门 %s 失败: %w", deptName, err)
 		}
@@ -202,4 +214,36 @@ func (s *UserOUService) buildAncestors(ctx context.Context, parentID *string) st
 		return *parentID
 	}
 	return fmt.Sprintf("%s,%s", parentDept.Ancestors, *parentID)
+}
+
+// generateUniqueDeptCode 为部门生成唯一的编码
+// 优先使用部门名称作为编码，如果名称重复则添加序号后缀
+func (s *UserOUService) generateUniqueDeptCode(ctx context.Context, deptName string) string {
+	// 尝试使用部门名称作为编码
+	var count int64
+	err := s.db.WithContext(ctx).
+		Model(&models.Department{}).
+		Where("dept_code = ?", deptName).
+		Count(&count).Error
+
+	if err != nil || count == 0 {
+		// 部门名称可用作编码
+		return deptName
+	}
+
+	// 部门名称已被占用，尝试添加序号后缀
+	for i := 1; i <= 100; i++ {
+		candidateCode := fmt.Sprintf("%s-%d", deptName, i)
+		err := s.db.WithContext(ctx).
+			Model(&models.Department{}).
+			Where("dept_code = ?", candidateCode).
+			Count(&count).Error
+
+		if err != nil || count == 0 {
+			return candidateCode
+		}
+	}
+
+	// 如果序号方法也失败，使用时间戳生成唯一编码
+	return fmt.Sprintf("%s-%d", deptName, time.Now().Unix())
 }

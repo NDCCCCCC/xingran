@@ -121,7 +121,7 @@ func (h *NetworkExportHandler) ExportCredentials(c *gin.Context) {
 	}
 
 	db := h.core.DB.GetDB()
-	svc := services.NewAuthCredentialService(db, nil)
+	svc := services.NewAuthCredentialService(db, h.core.SM4Cipher)
 	current, pageSize := h.getPaginationParams(&req)
 	credReq := h.buildCredentialListRequest(req.Filters, current, pageSize)
 

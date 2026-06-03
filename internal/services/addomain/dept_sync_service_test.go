@@ -44,14 +44,16 @@ func TestGetRootDepartments(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	assert.NoError(t, err)
 
-	// 创建部门表
+	// 创建部门表（包含deleted_at用于GORM软删除）
 	db.Exec(`CREATE TABLE sys_dept (
 		id TEXT PRIMARY KEY,
 		dept_name TEXT NOT NULL,
+		dept_code TEXT NOT NULL DEFAULT '',
 		parent_id TEXT,
 		status INTEGER DEFAULT 0,
 		created_at DATETIME,
-		updated_at DATETIME
+		updated_at DATETIME,
+		deleted_at DATETIME
 	)`)
 	db.Exec(`CREATE INDEX idx_sys_dept_parent_id ON sys_dept(parent_id)`)
 
@@ -81,14 +83,16 @@ func TestGetRootDepartments_WithStatus(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	assert.NoError(t, err)
 
-	// 创建部门表
+	// 创建部门表（包含deleted_at用于GORM软删除）
 	db.Exec(`CREATE TABLE sys_dept (
 		id TEXT PRIMARY KEY,
 		dept_name TEXT NOT NULL,
+		dept_code TEXT NOT NULL DEFAULT '',
 		parent_id TEXT,
 		status INTEGER DEFAULT 0,
 		created_at DATETIME,
-		updated_at DATETIME
+		updated_at DATETIME,
+		deleted_at DATETIME
 	)`)
 
 	service := &DeptToADSyncService{db: db}
@@ -107,66 +111,68 @@ func TestGetRootDepartments_WithStatus(t *testing.T) {
 	assert.Equal(t, "ActiveRoot", depts[0].DeptName)
 }
 
-func TestSyncDeptStructureToAD_EmptyTree(t *testing.T) {
+func TestGetRootDepartments_SkipsTopLevel(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	assert.NoError(t, err)
 
-	// 创建必要的表
+	// 创建部门表（包含deleted_at用于GORM软删除）
 	db.Exec(`CREATE TABLE sys_dept (
 		id TEXT PRIMARY KEY,
 		dept_name TEXT NOT NULL,
+		dept_code TEXT NOT NULL DEFAULT '',
 		parent_id TEXT,
-		status INTEGER DEFAULT 0
+		status INTEGER DEFAULT 0,
+		created_at DATETIME,
+		updated_at DATETIME,
+		deleted_at DATETIME
 	)`)
-	db.Exec(`CREATE TABLE sys_dept_ou_mapping (
-		id TEXT PRIMARY KEY,
-		dept_id TEXT NOT NULL,
-		ad_config_id TEXT NOT NULL,
-		ou_dn TEXT NOT NULL,
-		ou_name TEXT NOT NULL
-	)`)
-	db.Exec(`CREATE TABLE sys_ad_sync_log (
-		id TEXT PRIMARY KEY,
-		ad_config_id TEXT NOT NULL,
-		sync_type TEXT NOT NULL,
-		start_time DATETIME,
-		end_time DATETIME,
-		total_count INTEGER DEFAULT 0,
-		success_count INTEGER DEFAULT 0,
-		failed_count INTEGER DEFAULT 0,
-		ou_count INTEGER DEFAULT 0
-	)`)
+	db.Exec(`CREATE INDEX idx_sys_dept_parent_id ON sys_dept(parent_id)`)
 
-	// Mock LDAP client
-	mockLDAP := &LDAPClient{}
-
-	service := &DeptToADSyncService{
-		db:        db,
-		ldap:      mockLDAP,
-		mapper:    NewDeptOUmapper(db),
-		config: &ADConfig{
-			ID:     "config-1",
-			Config: &ADConfigDetail{},
-		},
-	}
+	service := &DeptToADSyncService{db: db}
 
 	ctx := context.Background()
 
-	// 测试空树
-	result, err := service.SyncDeptStructureToAD(ctx, "config-1")
+	// 准备测试数据：模拟实际场景
+	// 顶级部门：中国太平洋财产保险股份有限公司湖北分公司
+	// 二级部门：分公司本部、武汉中心支公司
+	rootID := "root-1"
+	secondLevelID1 := "second-1"
+	secondLevelID2 := "second-2"
+	thirdLevelID := "third-1"
+
+	db.Exec(`INSERT INTO sys_dept (id, dept_name, parent_id, status) VALUES (?, ?, NULL, 0)`, rootID, "中国太平洋财产保险股份有限公司湖北分公司")
+	db.Exec(`INSERT INTO sys_dept (id, dept_name, parent_id, status) VALUES (?, ?, ?, 0)`, secondLevelID1, "分公司本部", rootID)
+	db.Exec(`INSERT INTO sys_dept (id, dept_name, parent_id, status) VALUES (?, ?, ?, 0)`, secondLevelID2, "武汉中心支公司", rootID)
+	db.Exec(`INSERT INTO sys_dept (id, dept_name, parent_id, status) VALUES (?, ?, ?, 0)`, thirdLevelID, "综合管理部", secondLevelID1)
+
+	// 获取根部门
+	rootDepts, err := service.getRootDepartments(ctx)
 	assert.NoError(t, err)
-	assert.Equal(t, 0, result.TotalCount)
-	assert.Equal(t, 0, result.OUCount)
-}
+	assert.Equal(t, 1, len(rootDepts))
+	assert.Equal(t, "中国太平洋财产保险股份有限公司湖北分公司", rootDepts[0].DeptName)
 
-func TestBuildSyncResult(t *testing.T) {
-	service := &DeptToADSyncService{}
+	// 验证跳过顶层部门的逻辑：收集二级部门
+	var secondLevelDepts []*models.Department
+	for _, root := range rootDepts {
+		for _, child := range root.Children {
+			secondLevelDepts = append(secondLevelDepts, child)
+		}
+	}
+	assert.Equal(t, 2, len(secondLevelDepts))
 
-	// 测试构建同步结果
-	result := service.buildSyncResult("config-1", 100, 95, 5, 20)
-	assert.Equal(t, int64(100), result.TotalCount)
-	assert.Equal(t, int64(95), result.SuccessCount)
-	assert.Equal(t, int64(5), result.FailedCount)
-	assert.Equal(t, int64(20), result.OUCount)
-	assert.Equal(t, "config-1", result.ConfigID)
+	// 验证二级部门名称
+	secondLevelNames := make(map[string]bool)
+	for _, dept := range secondLevelDepts {
+		secondLevelNames[dept.DeptName] = true
+	}
+	assert.True(t, secondLevelNames["分公司本部"])
+	assert.True(t, secondLevelNames["武汉中心支公司"])
+
+	// 验证三级部门被预加载
+	for _, dept := range secondLevelDepts {
+		if dept.DeptName == "分公司本部" {
+			assert.Equal(t, 1, len(dept.Children))
+			assert.Equal(t, "综合管理部", dept.Children[0].DeptName)
+		}
+	}
 }

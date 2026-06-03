@@ -226,6 +226,7 @@ func ExtractOUDNFromUserDN(userDN string) string {
 }
 
 // ParseOUDN parses an OU DN string into its component parts.
+// Uses strings.Split to properly handle UTF-8 encoded multi-byte characters (like Chinese)
 // Example: "OU=基础运维科,OU=科技创新部,OU=分公司本部,DC=example,DC=com"
 // Returns: ["OU=基础运维科", "OU=科技创新部", "OU=分公司本部", "DC=example", "DC=com"]
 func ParseOUDN(ouDN string) []string {
@@ -233,41 +234,12 @@ func ParseOUDN(ouDN string) []string {
 		return nil
 	}
 
-	var parts []string
-	current := ""
-	inEscape := false
+	// Use strings.Split to correctly handle UTF-8 encoding
+	parts := strings.Split(ouDN, ",")
 
-	for i := 0; i < len(ouDN); i++ {
-		ch := ouDN[i]
-
-		// Handle escape sequences
-		if inEscape {
-			current += string(ch)
-			inEscape = false
-			continue
-		}
-
-		// Check for escape character
-		if ch == '\\' {
-			inEscape = true
-			continue
-		}
-
-		// Check for separator
-		if ch == ',' {
-			if current != "" {
-				parts = append(parts, strings.TrimSpace(current))
-			}
-			current = ""
-			continue
-		}
-
-		current += string(ch)
-	}
-
-	// Add the last part
-	if current != "" {
-		parts = append(parts, strings.TrimSpace(current))
+	// Trim whitespace from each part
+	for i := range parts {
+		parts[i] = strings.TrimSpace(parts[i])
 	}
 
 	return parts

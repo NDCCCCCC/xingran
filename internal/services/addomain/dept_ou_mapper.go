@@ -68,6 +68,7 @@ func (m *DeptOUmapper) UpsertMapping(ctx context.Context, mapping *models.DeptOU
 		// 找到已存在的 ou_dn 映射
 		if existing.DeptID == mapping.DeptID {
 			// 同一个部门，只更新其他字段
+			// GORM 会自动更新 updated_at 字段
 			return m.db.WithContext(ctx).
 				Model(&existing).
 				Updates(map[string]interface{}{
@@ -76,7 +77,6 @@ func (m *DeptOUmapper) UpsertMapping(ctx context.Context, mapping *models.DeptOU
 					"sync_status":  mapping.SyncStatus,
 					"last_sync_at": mapping.LastSyncAt,
 					"sync_enabled": mapping.SyncEnabled,
-					"updated_at":   "CURRENT_TIMESTAMP",
 				}).Error
 		} else {
 			// ou_dn 已映射到不同部门，删除旧映射
@@ -91,10 +91,11 @@ func (m *DeptOUmapper) UpsertMapping(ctx context.Context, mapping *models.DeptOU
 	}
 
 	// 创建新映射（使用 ON CONFLICT 处理 dept_id 约束）
+	// 注意：不包含 updated_at，让 GORM 的 Create 方法自动处理时间戳更新
 	return m.db.WithContext(ctx).
 		Clauses(clause.OnConflict{
 			Columns:   []clause.Column{{Name: "dept_id"}, {Name: "ad_config_id"}},
-			DoUpdates: clause.AssignmentColumns([]string{"ou_dn", "ou_name", "parent_ou_dn", "sync_status", "last_sync_at", "updated_at"}),
+			DoUpdates: clause.AssignmentColumns([]string{"ou_dn", "ou_name", "parent_ou_dn", "sync_status", "last_sync_at"}),
 		}).
 		Create(mapping).Error
 }
@@ -149,11 +150,11 @@ func (m *DeptOUmapper) DisableMapping(ctx context.Context, id string) error {
 
 // UpdateSyncStatus 更新映射的同步状态
 func (m *DeptOUmapper) UpdateSyncStatus(ctx context.Context, id string, status string) error {
+	// GORM 会自动更新 updated_at 字段
 	return m.db.WithContext(ctx).
 		Model(&models.DeptOUMapping{}).
 		Where("id = ?", id).
 		Updates(map[string]interface{}{
 			"sync_status": status,
-			"updated_at":  "CURRENT_TIMESTAMP",
 		}).Error
 }

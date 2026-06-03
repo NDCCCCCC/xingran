@@ -742,24 +742,23 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 		}
 	}
 
-		// VDI管理模块（虚拟桌面基础设施）
-		vdi := r.Group("/vdi")
-		vdi.Use(middleware.JWTAuth(core.JWTManager))
-		// 添加操作日志中间件
-		vdi.Use(middleware.OperLogMiddleware(core.OperLogService, core))
-		{
-			// 虚拟机管理
-			vms := vdi.Group("/vm")
-			vms.Use(middleware.RequirePermissions([]string{
-				"vdi:vm:list",
-				"vdi:vm:add",
-				"vdi:vm:edit",
-				"vdi:vm:delete",
-				"vdi:vm:operate",
-			}, core))
+			// VDI管理模块（虚拟桌面基础设施）
+			vdi := r.Group("/vdi")
+			vdi.Use(middleware.JWTAuth(core.JWTManager))
+			// 添加操作日志中间件
+			vdi.Use(middleware.OperLogMiddleware(core.OperLogService, core))
 			{
-				vdiV1.SetupVMRouter(vms, core)
-			}
+				// 虚拟机管理
+				vms := vdi.Group("/vms")
+				vms.Use(middleware.DataScopePermission(core))
+				vms.Use(middleware.RequirePermissions([]string{
+					"vdi:vm:list",
+					"vdi:vm:add",
+					"vdi:vm:edit",
+				}, core))
+				{
+					vdiV1.SetupVMRouter(vms, core)
+				}
 
 			// VDI服务器管理
 			servers := vdi.Group("/servers")

@@ -8,7 +8,6 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
@@ -210,18 +209,6 @@ func login(core *core.Core) gin.HandlerFunc {
 		// 7. 登录成功后处理
 		core.CaptchaService.ClearLoginFailure(ctx, req.Username)
 		recordLoginLog(c, core, req.Username, 0, "登录成功")
-
-		// AD登录成功后处理用户OU映射
-		if authResult.AuthSource == "ad" && authResult.ADUserInfo != nil {
-			mapper := addomain.NewDeptOUmapper(core.GetDB())
-			userOUService := addomain.NewUserOUService(core.GetDB(), mapper)
-
-			if authResult.ADUserInfo.OUDN != "" {
-				if err := userOUService.HandleUserLoginAD(ctx, req.Username, authResult.ADUserInfo.UserDN, authResult.ADUserInfo.OUDN); err != nil {
-					applogger.Warnf("处理用户OU失败（不影响登录）: %v", err)
-				}
-			}
-		}
 
 		// 8. 查询用户角色
 		var userRoles []models.UserRole

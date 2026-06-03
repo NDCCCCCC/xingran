@@ -31,8 +31,7 @@ func TestExtractRDN(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			client := &LDAPClient{}
-			result := client.extractRDN(tt.dn)
+			result := extractRDNFromDN(tt.dn)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -102,10 +101,9 @@ func TestExtractRDN_EdgeCases(t *testing.T) {
 		},
 	}
 
-	client := &LDAPClient{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := client.extractRDN(tt.dn)
+			result := extractRDNFromDN(tt.dn)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
