@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"sync"
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
@@ -16,6 +17,7 @@ type vmServiceImpl struct {
 	db            *gorm.DB
 	vdiClient     VDIClientExtended
 	uuidValidator *regexp.Regexp
+	clientMutex   sync.RWMutex
 }
 
 // NewVMService 创建虚拟机服务
@@ -38,7 +40,19 @@ func NewVMServiceWithDynamicClient(db *gorm.DB) VMService {
 
 // getClient 动态查找启用的VDI服务器并返回客户端
 func (s *vmServiceImpl) getClient(ctx context.Context) (VDIClientExtended, error) {
-	// 如果已有客户端，直接返回
+	// Fast path: read lock
+	s.clientMutex.RLock()
+	if s.vdiClient != nil {
+		s.clientMutex.RUnlock()
+		return s.vdiClient, nil
+	}
+	s.clientMutex.RUnlock()
+
+	// Slow path: write lock
+	s.clientMutex.Lock()
+	defer s.clientMutex.Unlock()
+
+	// Double-check after acquiring write lock
 	if s.vdiClient != nil {
 		return s.vdiClient, nil
 	}
