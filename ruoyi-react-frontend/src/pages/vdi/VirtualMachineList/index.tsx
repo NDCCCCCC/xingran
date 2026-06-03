@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useAuthStore } from '@/store/authStore';
+import { vmOperationButtons, VMOprationButton } from './vmOperationButtons';
 import {
   Table,
   Button,
@@ -35,6 +37,8 @@ import type { ColumnsType } from 'antd/es/table';
 
 const VirtualMachineList: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
+  const permissions = user?.permissions || [];
   const [loading, setLoading] = useState(false);
   const [vms, setVMs] = useState<VirtualMachine[]>([]);
   const [total, setTotal] = useState(0);
@@ -562,7 +566,7 @@ const VirtualMachineList: React.FC = () => {
   // 快速创建默认值常量
   const DEFAULT_VTP_ID = 1;
   const DEFAULT_RESOURCE_GROUP_ID = '0';
-  const DEFAULT_RESOURCE_NAME = '数据';
+  const DEFAULT_RESOURCE_NAME = 'VDI模板';
   const DEFAULT_POSITION_NAME = '研发';
 
   // 加载快速创建默认配置
@@ -668,11 +672,6 @@ const VirtualMachineList: React.FC = () => {
 
       // 自动设置表单默认值
       quickCreateForm.setFieldsValue({
-        name: `VDI-${defaultGroup.name}-${dataResource.name}`,
-        cpu_number: 1,
-        memory: 8192,
-        cpu_core: 4,
-        disk: 80,
         count: 1,
       });
 
@@ -717,11 +716,6 @@ const VirtualMachineList: React.FC = () => {
         disk_id: quickConfig.diskId,
         storage_id: quickConfig.storageId,
         network_id: quickConfig.networkId,
-        name: values.name,
-        cpu_number: values.cpu_number,
-        memory: values.memory,
-        cpu_core: values.cpu_core,
-        disk: values.disk,
         count: values.count,
       };
 
@@ -736,6 +730,75 @@ const VirtualMachineList: React.FC = () => {
       console.error('[VDI Quick] 创建失败:', error);
       message.error('创建虚拟机失败');
     } finally {
+n  // 动态生成操作按钮（基于用户权限）
+  const renderOperationButtons = (vm: VirtualMachine) => {
+    const allowedButtons = vmOperationButtons.filter(btn => 
+      permissions.includes(btn.permission)
+    );
+
+    return allowedButtons.map(btn => {
+      if (btn.action === 'delete') {
+        return (
+          <Popconfirm
+            key={btn.action}
+            title="确定要删除这个虚拟机吗？此操作将调用 VDI API 删除虚拟机。"
+            onConfirm={() => handleDelete(vm.id)}
+            okText="确定"
+            cancelText="取消"
+          >
+            <Tooltip title={btn.label}>
+              <Button type="text" danger icon={btn.icon} />
+            </Tooltip>
+          </Popconfirm>
+        );
+      }
+
+      if (btn.action === 'bind') {
+        return (
+          <Tooltip key={btn.action} title={btn.label}>
+            <Button
+              type="text"
+              icon={btn.icon}
+              onClick={() => {
+                setSelectedVM(vm);
+                setBindUserModalVisible(true);
+              }}
+            />
+          </Tooltip>
+        );
+      }
+
+      if (btn.action === 'sync') {
+        return (
+          <Tooltip key={btn.action} title={btn.label}>
+            <Button
+              type="text"
+              icon={btn.icon}
+              onClick={() => handleSync(vm.id)}
+            />
+          </Tooltip>
+        );
+      }
+
+      // 电源操作按钮（start, stop, restart）
+      const disabled =
+        btn.action === 'start' ? vm.power_state !== 'stopped' :
+        btn.action === 'stop' ? (vm.power_state === 'stopped' || vm.power_state === 'suspended' || vm.power_state === 'pending') :
+        btn.action === 'restart' ? (vm.power_state !== 'in_use' && vm.power_state !== 'suspended') :
+        false;
+
+      return (
+        <Tooltip key={btn.action} title={btn.label}>
+          <Button
+            type="text"
+            icon={btn.icon}
+            disabled={disabled}
+            onClick={() => handleOperate(btn.action, [vm.id])}
+          />
+        </Tooltip>
+      );
+    });
+  };
       setLoading(false);
     }
   };
@@ -784,65 +847,7 @@ const VirtualMachineList: React.FC = () => {
       dataIndex: 'ip_address',
       key: 'ip_address',
       width: 120,
-      render: (ip: string, record: any) => {
-        const ipType = record.ip_type || 'DHCP';
-        return ip ? (
-          <Tooltip title={`类型: ${ipType === 'STATIC' ? '静态IP' : 'DHCP'}${record.subnet_mask ? `\n子网掩码: ${record.subnet_mask}` : ''}${record.default_gateway ? `\n网关: ${record.default_gateway}` : ''}${record.name_server ? `\nDNS: ${record.name_server}` : ''}`}>
-            <span>{ip} ({ipType === 'STATIC' ? '静态' : 'DHCP'})</span>
-          </Tooltip>
-        ) : '-';
-      },
-    },
-    {
-      title: '操作系统',
-      dataIndex: 'os_type',
-      key: 'os_type',
-      width: 120,
-    },
-    {
-      title: 'CPU/内存/磁盘',
-      key: 'resources',
-      width: 200,
-      render: (_, record) => {
-        const cpuNumber = record.cpu_number || 0;
-        const cpuCore = record.cpu_core || 0;
-        const cpuPer = record.cpu_per || 0;
-        const memoryMB = parseInt(String(record.memory || '0'), 10);
-        const memoryPer = record.memory_per || 0;
-        const diskMB = parseInt(String(record.disk || '0'), 10);
-        const diskPer = record.disk_per || 0;
-
-        // 转换为 GB
-        const memoryGB = (memoryMB / 1024).toFixed(1);
-        const diskGB = (diskMB / 1024).toFixed(1);
-
-        // 构建CPU显示字符串
-        let cpuDisplay = '';
-        if (cpuNumber > 0 && cpuCore > 0) {
-          cpuDisplay = `${cpuNumber}颗 × ${cpuCore}核`;
-          if (cpuPer > 0) {
-            cpuDisplay += ` (${cpuPer}%)`;
-          }
-        } else if (cpuNumber > 0) {
-          cpuDisplay = `${cpuNumber}核`;
-        } else {
-          cpuDisplay = '-';
-        }
-
-        // 构建内存显示字符串
-        let memoryDisplay = `${memoryGB}GB`;
-        if (memoryPer > 0) {
-          memoryDisplay += ` (${memoryPer}%)`;
-        }
-
-        // 构建磁盘显示字符串
-        let diskDisplay = `${diskGB}GB`;
-        if (diskPer > 0) {
-          diskDisplay += ` (${diskPer}%)`;
-        }
-
-        return `${cpuDisplay} / ${memoryDisplay} / ${diskDisplay}`;
-      },
+      render: (ip: string) => ip || '-',
     },
     {
       title: '绑定用户',
@@ -1151,48 +1156,13 @@ const VirtualMachineList: React.FC = () => {
                 <div style={{ marginTop: 8, fontSize: '12px', color: '#666' }}>
                   • VDI 服务器: 自动选择可用服务器<br />
                   • 资源组: {quickConfig.resourceGroupName}<br />
-                  • 资源: {DEFAULT_RESOURCE_NAME}<br />
+                  • 虚拟机: {DEFAULT_RESOURCE_NAME}<br />
                   • VTP 平台: VMP<br />
                   • 运行位置: {DEFAULT_POSITION_NAME}<br />
                   • 存储/网络: 自动选择第一个可用
                 </div>
               </div>
             )}
-
-            <Form.Item
-              label="虚拟机名称"
-              name="name"
-              rules={[{ required: true, message: '请输入虚拟机名称' }]}
-              extra={`格式: VDI-${quickConfig?.resourceGroupName || '默认资源组'}-${DEFAULT_RESOURCE_NAME}-自定义后缀`}
-            >
-              <Input placeholder={`例如: VDI-${quickConfig?.resourceGroupName || '默认'}-${DEFAULT_RESOURCE_NAME}-zhangsan-001`} />
-            </Form.Item>
-
-            <Form.Item label="CPU 颗数" name="cpu_number" initialValue={1}>
-              <Slider min={1} max={4} step={null} marks={{ 1: '1', 2: '2', 4: '4' }} />
-            </Form.Item>
-
-            <Form.Item label="内存 (GB)" name="memory" initialValue={8}>
-              <Slider
-                min={8}
-                max={32}
-                marks={{ 8: '8GB', 16: '16GB', 32: '32GB' }}
-                tooltip={{ formatter: (v) => `${v} GB` }}
-              />
-            </Form.Item>
-
-            <Form.Item label="CPU 核数" name="cpu_core" initialValue={4}>
-              <Slider min={4} max={16} step={null} marks={{ 4: '4', 8: '8', 16: '16' }} />
-            </Form.Item>
-
-            <Form.Item label="磁盘 (GB)" name="disk" initialValue={80}>
-              <Slider
-                min={80}
-                max={500}
-                marks={{ 80: '80GB', 200: '200GB', 350: '350GB', 500: '500GB' }}
-                tooltip={{ formatter: (v) => `${v} GB` }}
-              />
-            </Form.Item>
 
             <Form.Item label="创建数量" name="count" initialValue={1} rules={[{ required: true }]}>
               <InputNumber min={1} max={10} style={{ width: '100%' }} />
