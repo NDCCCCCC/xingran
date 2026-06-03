@@ -193,9 +193,13 @@ const VirtualMachineList: React.FC = () => {
   const selectedResourceFieldId = Form.useWatch('resource_id', form);
   const selectedVtpId = Form.useWatch('vtp_id', form);
 
+  // Track previous createModalVisible value to prevent infinite loop
+  const prevCreateModalVisible = useRef(createModalVisible);
+
   // Load resource groups when VDI server is selected
   useEffect(() => {
-    if (selectedServerId && createModalVisible) {
+    // Only trigger on transition from false to true or when server changes
+    if (selectedServerId && createModalVisible && !prevCreateModalVisible.current) {
       vmApi.listResourceGroups(selectedServerId).then(result => {
         setResourceGroups(result.data || []);
       }).catch(() => {
@@ -204,9 +208,11 @@ const VirtualMachineList: React.FC = () => {
       // Clear resources when VDI server changes
       setResources([]);
       form.setFieldsValue({ resource_group_id: undefined, resource_id: undefined });
-    } else {
+    } else if (!createModalVisible) {
       setResourceGroups([]);
     }
+
+    prevCreateModalVisible.current = createModalVisible;
   }, [selectedServerId, createModalVisible, form]);
 
   // Load resources when resource group is selected
