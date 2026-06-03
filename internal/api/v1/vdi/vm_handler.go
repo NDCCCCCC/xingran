@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	vdiServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/vdi"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	"gorm.io/gorm"
 )
@@ -70,7 +71,21 @@ func (h *VMHandler) List(c *gin.Context) {
 		req.PageSize = 10
 	}
 
-	result, err := h.vmService.ListVMs(c.Request.Context(), &req)
+	// Extract data scope info from Gin context (set by DataScopePermission middleware)
+	var userID string
+	var dataScope models.DataScope
+	if uid, exists := c.Get("user_id"); exists {
+		if uidStr, ok := uid.(string); ok {
+			userID = uidStr
+		}
+	}
+	if ds, exists := c.Get("data_scope"); exists {
+		if dsVal, ok := ds.(models.DataScope); ok {
+			dataScope = dsVal
+		}
+	}
+
+	result, err := h.vmService.ListVMs(c.Request.Context(), &req, userID, dataScope)
 	if !handleServiceError(c, err, "查询") {
 		return
 	}
