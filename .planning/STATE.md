@@ -21,7 +21,7 @@ progress:
 **Phase**: 22B (VM Agent 服务)
 **Plan**: Not started
 **Status**: 📋 待开始
-**Last activity**: 2026-06-02 - Completed quick task 260602-k1b: 去除虚拟机重命名功能和名称自动生成逻辑
+**Last activity**: 2026-06-04 - Completed quick task 260604-cqo: 虚拟机列表页面绑定用户功能，修改为下拉框组件，可以进行模糊查询，数据来源来自系统用户，前端显示nickname，数据库保存username
 
 ## Current Position
 
@@ -132,6 +132,7 @@ Plan: Not started
 | 260602-jk9 | 虚拟机列表页面操作按钮控制逻辑修复 | 2026-06-02 | 644e222 | [260602-jk9-vm-list-controls](./quick/260602-jk9-vm-list-controls/) |
 | 260602-k3r | VDI虚拟机列表页面修复：移除配置IP并恢复快速创建功能 | 2026-06-02 | - | [20260602-vdi-vm-list-fix](./quick/20260602-vdi-vm-list-fix/) |
 | 260602-k1b | 去除虚拟机重命名功能和名称自动生成逻辑 | 2026-06-02 | 9b754b6 | [260602-k1b-vdi](./quick/260602-k1b-vdi/) |
+| 260604-cqo | 虚拟机列表页面绑定用户功能，修改为下拉框组件，可以进行模糊查询，数据来源来自系统用户，前端显示nickname，数据库保存username | 2026-06-04 | 3d26d23 | [260604-cqo-nickname-username](./quick/260604-cqo-nickname-username/) |
 
 ## Accumulated Context
 
