@@ -789,14 +789,8 @@ func (s *vmServiceImpl) OperateVM(ctx context.Context, req *VMOperateRequest) er
 	return nil
 }
 
-// BindUser 绑定用户（调用VDI API）
+// BindUser 绑定用户（仅更新本地权限标识，不调用VDI API）
 func (s *vmServiceImpl) BindUser(ctx context.Context, vmID string, req *BindUserServiceRequest) error {
-	// 获取VDI客户端
-	client, err := s.getClient(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to get VDI client: %w", err)
-	}
-
 	// 1. 查询本地VM记录
 	var vm models.VDIVirtualMachine
 	if err := s.db.WithContext(ctx).Where("id = ?", vmID).First(&vm).Error; err != nil {
@@ -815,20 +809,10 @@ func (s *vmServiceImpl) BindUser(ctx context.Context, vmID string, req *BindUser
 		displayName = fmt.Sprintf("%s (%s)", *systemUser.Nickname, req.Username)
 	}
 
-	// 4. 调用VDI API绑定用户 (pass username to VDI API)
-	vdiVMDetail, err := client.BindUser(ctx, vm.VMID, req.Username)
-	if err != nil {
-		return fmt.Errorf("failed to bind user: %w", err)
-	}
-
-	// 5. 更新本地记录
-	boundUserName := displayName
-	if vdiVMDetail.BoundUserName != nil && *vdiVMDetail.BoundUserName != "" {
-		boundUserName = *vdiVMDetail.BoundUserName
-	}
+	// 4. 仅更新本地记录（不调用VDI API）
 	updates := map[string]interface{}{
 		"bound_user_id":   req.Username,
-		"bound_user_name": boundUserName,
+		"bound_user_name": displayName,
 	}
 
 	if err := s.db.WithContext(ctx).Model(&vm).Updates(updates).Error; err != nil {
@@ -838,27 +822,15 @@ func (s *vmServiceImpl) BindUser(ctx context.Context, vmID string, req *BindUser
 	return nil
 }
 
-// UnbindUser 解绑用户
+// UnbindUser 解绑用户（仅更新本地权限标识，不调用VDI API）
 func (s *vmServiceImpl) UnbindUser(ctx context.Context, vmID string) error {
-	// 获取VDI客户端
-	client, err := s.getClient(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to get VDI client: %w", err)
-	}
-
 	// 1. 查询本地VM记录
 	var vm models.VDIVirtualMachine
 	if err := s.db.WithContext(ctx).Where("id = ?", vmID).First(&vm).Error; err != nil {
 		return fmt.Errorf("VM not found: %w", err)
 	}
 
-	// 2. 调用VDI API解绑用户（使用空用户ID）
-	_, err = client.BindUser(ctx, vm.VMID, "")
-	if err != nil {
-		return fmt.Errorf("failed to unbind user: %w", err)
-	}
-
-	// 3. 更新本地记录
+	// 2. 仅更新本地记录（不调用VDI API）
 	updates := map[string]interface{}{
 		"bound_user_id":   nil,
 		"bound_user_name": nil,
