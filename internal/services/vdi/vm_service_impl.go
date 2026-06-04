@@ -296,7 +296,6 @@ func (s *vmServiceImpl) saveOrUpdateVM(ctx context.Context, resource VDIVMResour
 			MemoryPer:   s.parseIntSafe(resource.MemPer),
 			Disk:        s.parseIntSafe(resource.DiscAll),
 			DiskPer:     s.parseIntSafe(resource.DiscPer),
-			BoundUserName: &resource.ApplyUser,
 			// 网络配置信息
 			IPType:        s.mapIPType(resource.IPState),
 			SubnetMask:    resource.Subnetmask,
@@ -333,7 +332,6 @@ func (s *vmServiceImpl) saveOrUpdateVM(ctx context.Context, resource VDIVMResour
 				MemoryPer:   s.parseIntSafe(resource.MemPer),
 				Disk:        s.parseIntSafe(resource.DiscAll),
 				DiskPer:     s.parseIntSafe(resource.DiscPer),
-				BoundUserName: &resource.ApplyUser,
 				IPType:        s.mapIPType(resource.IPState),
 				SubnetMask:    resource.Subnetmask,
 				DefaultGateway: resource.DefaultGateway,
@@ -363,9 +361,6 @@ func (s *vmServiceImpl) saveOrUpdateVM(ctx context.Context, resource VDIVMResour
 				"memory_per":    s.parseIntSafe(resource.MemPer),
 				"disk":          s.parseIntSafe(resource.DiscAll),
 				"disk_per":      s.parseIntSafe(resource.DiscPer),
-			}
-			if resource.ApplyUser != "" {
-				updates["bound_user_name"] = &resource.ApplyUser
 			}
 
 			// Smart IP update strategy
@@ -925,15 +920,6 @@ func (s *vmServiceImpl) SyncVMFromVDI(ctx context.Context, vmID string) error {
 	vm.MemoryPer = s.parseIntSafe(targetVM.MemPer)
 	vm.Disk = s.parseIntSafe(targetVM.DiscAll)
 	vm.DiskPer = s.parseIntSafe(targetVM.DiscPer)
-	if targetVM.ApplyUser != "" {
-		vm.BoundUserID = &targetVM.ApplyUser
-	}
-	now := time.Now()
-	vm.LastSyncAt = &now
-
-	if err := s.db.WithContext(ctx).Save(&vm).Error; err != nil {
-		return fmt.Errorf("failed to update VM: %w", err)
-	}
 
 	return nil
 }
