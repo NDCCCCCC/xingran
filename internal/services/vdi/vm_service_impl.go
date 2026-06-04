@@ -808,16 +808,32 @@ func (s *vmServiceImpl) BindUser(ctx context.Context, vmID string, req *BindUser
 		return fmt.Errorf("VM not found: %w", err)
 	}
 
-	// 2. 调用VDI API绑定用户
-	vdiVMDetail, err := client.BindUser(ctx, vm.VMID, req.UserID)
+	// 2. Look up system user by username to build display name
+	var systemUser models.User
+	if err := s.db.WithContext(ctx).Where("username = ? AND deleted_at IS NULL", req.Username).First(&systemUser).Error; err != nil {
+		return fmt.Errorf("system user not found: %s: %w", req.Username, err)
+	}
+
+	// 3. Build display name: nickname (username)
+	displayName := req.Username
+	if systemUser.Nickname != nil && *systemUser.Nickname != "" {
+		displayName = fmt.Sprintf("%s (%s)", *systemUser.Nickname, req.Username)
+	}
+
+	// 4. 调用VDI API绑定用户 (pass username to VDI API)
+	vdiVMDetail, err := client.BindUser(ctx, vm.VMID, req.Username)
 	if err != nil {
 		return fmt.Errorf("failed to bind user: %w", err)
 	}
 
-	// 3. 更新本地记录
+	// 5. 更新本地记录
+	boundUserName := displayName
+	if vdiVMDetail.BoundUserName != nil && *vdiVMDetail.BoundUserName != "" {
+		boundUserName = *vdiVMDetail.BoundUserName
+	}
 	updates := map[string]interface{}{
-		"bound_user_id":   &req.UserID,
-		"bound_user_name": vdiVMDetail.BoundUserName,
+		"bound_user_id":   req.Username,
+		"bound_user_name": boundUserName,
 	}
 
 	if err := s.db.WithContext(ctx).Model(&vm).Updates(updates).Error; err != nil {

@@ -121,7 +121,7 @@ type VMOperateRequest struct {
 
 // BindUserServiceRequest 绑定用户请求（服务层）
 type BindUserServiceRequest struct {
-	UserID string `json:"user_id" validate:"required"`
+	Username string `json:"username" validate:"required"`
 }
 
 // VDIResourceGroupDTO 资源组数据传输对象

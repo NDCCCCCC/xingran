@@ -33,6 +33,7 @@ import {
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { vmApi, vdiServerApi } from '@/lib/vdiApi';
+import { post } from '@/lib/api';
 import type { VirtualMachine, VMListParams, CreateVMRequest, VDIServer, VDIResourceGroup, VDIResource, VDIPlatform, RunPosition, VDIStorage, VDINetwork } from '@/types/vdi';
 import type { ColumnsType } from 'antd/es/table';
 
@@ -53,6 +54,12 @@ const VirtualMachineList: React.FC = () => {
   const [selectedVM, setSelectedVM] = useState<VirtualMachine | null>(null);
   const [form] = Form.useForm();
   const [quickCreateForm] = Form.useForm();
+  const [bindUserForm] = Form.useForm();
+
+  // Bind user modal: system user search state
+  const [systemUsers, setSystemUsers] = useState<Array<{id: string; username: string; nickname?: string}>>([]);
+  const [userSearchLoading, setUserSearchLoading] = useState(false);
+  const userSearchTimer = useRef<ReturnType<typeof setTimeout>>();
 
   // 快速创建默认配置状态
   const [quickConfig, setQuickConfig] = useState<{
@@ -553,15 +560,34 @@ const VirtualMachineList: React.FC = () => {
     }
   };
 
+  // Load system users for bind user modal
+  const loadSystemUsers = async (search?: string) => {
+    setUserSearchLoading(true);
+    try {
+      const result = await post<{ list: Array<{id: string; username: string; nickname?: string; status: number}>; total: number }>('/system/users/list', {
+        current: 1,
+        pageSize: 50,
+        username: search || undefined,
+        nickname: search || undefined,
+      });
+      const users = (result.data?.list || []).filter(u => u.status === 0);
+      setSystemUsers(users);
+    } catch {
+      setSystemUsers([]);
+    } finally {
+      setUserSearchLoading(false);
+    }
+  };
+
   // 绑定用户（调用 VDI API）
   const handleBindUser = async () => {
     try {
-      const values = await form.validateFields();
+      const values = await bindUserForm.validateFields();
       setLoading(true);
-      await vmApi.bindUser(selectedVM!.id, { user_id: values.user_id });
+      await vmApi.bindUser(selectedVM!.id, { username: values.username });
       message.success('用户绑定成功，VDI API 调用完成');
       setBindUserModalVisible(false);
-      form.resetFields();
+      bindUserForm.resetFields();
       loadVMs();
     } catch (error) {
       message.error('绑定用户失败，VDI API 调用失败');
@@ -1197,12 +1223,33 @@ n  // 动态生成操作按钮（基于用户权限）
         title="绑定用户"
         open={bindUserModalVisible}
         onOk={handleBindUser}
-        onCancel={() => setBindUserModalVisible(false)}
+        onCancel={() => { setBindUserModalVisible(false); bindUserForm.resetFields(); }}
         confirmLoading={loading}
       >
-        <Form form={form} layout="vertical">
-          <Form.Item label="用户 ID" name="user_id" rules={[{ required: true }]}>
-            <Input placeholder="用户 ID" />
+        <Form form={bindUserForm} layout="vertical">
+          <Form.Item label="用户" name="username" rules={[{ required: true, message: '请选择用户' }]}>
+            <Select
+              showSearch
+              placeholder="请输入用户名或昵称搜索"
+              filterOption={false}
+              loading={userSearchLoading}
+              onSearch={(value) => {
+                if (userSearchTimer.current) clearTimeout(userSearchTimer.current);
+                userSearchTimer.current = setTimeout(() => loadSystemUsers(value), 300);
+              }}
+              onFocus={() => {
+                if (systemUsers.length === 0) {
+                  loadSystemUsers('');
+                }
+              }}
+              notFoundContent={userSearchLoading ? '搜索中...' : '未找到用户'}
+            >
+              {systemUsers.map(user => (
+                <Select.Option key={user.id} value={user.username}>
+                  {user.nickname || user.username}
+                </Select.Option>
+              ))}
+            </Select>
           </Form.Item>
         </Form>
       </Modal>
