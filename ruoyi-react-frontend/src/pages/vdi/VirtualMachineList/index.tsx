@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuthStore } from '@/store/authStore';
+import { useMenuStore } from '@/store/menuStore';
 import { vmOperationButtons } from './vmOperationButtons';
 import {
   Table,
@@ -37,10 +38,16 @@ import { post } from '@/lib/api';
 import type { VirtualMachine, VMListParams, CreateVMRequest, VDIServer, VDIResourceGroup, VDIResource, VDIPlatform, RunPosition, VDIStorage, VDINetwork } from '@/types/vdi';
 import type { ColumnsType } from 'antd/es/table';
 
+// Permission helper
+const hasPermission = (permissions: string[], perm: string) => permissions.includes(perm);
+
 const VirtualMachineList: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const permissions = user?.permissions || [];
+  // Use permissions from menuStore (loaded via /system/my-menus/permissions)
+  // authStore user.permissions is NOT populated from the login API
+  const menuPermissions = useMenuStore(state => state.permissions);
+  const permissions = menuPermissions;
   const [loading, setLoading] = useState(false);
   const [vms, setVMs] = useState<VirtualMachine[]>([]);
   const [total, setTotal] = useState(0);
@@ -87,6 +94,9 @@ const VirtualMachineList: React.FC = () => {
   const [vdiDataLoading, setVdiDataLoading] = useState(false);
   const [preloadError, setPreloadError] = useState<string | null>(null);
 
+  // Whether user has VM create permission (controls preload and toolbar buttons)
+  const canCreateVM = hasPermission(permissions, 'vdi:vm:add');
+
   // API缓存：5分钟过期
   const vdiDataCache = useRef<{
     vtpPlatforms: VDIPlatform[];
@@ -97,16 +107,19 @@ const VirtualMachineList: React.FC = () => {
   } | null>(null);
   const CACHE_DURATION = 5 * 60 * 1000; // 5分钟
 
-  // 预加载VDI配置数据（页面加载时就开始）
+  // 预加载VDI配置数据（仅在用户有 vdi:vm:add 权限时）
   const preloadVDIData = useCallback(async () => {
+    // Skip preload if user lacks create permission
+    if (!canCreateVM) {
+      return;
+    }
+
     // 检查缓存
     if (vdiDataCache.current && (Date.now() - vdiDataCache.current.timestamp < CACHE_DURATION)) {
-      console.log('[VDI Preload] 使用缓存数据，跳过API调用');
       setVdiDataPreloaded(true);
       return;
     }
 
-    console.log('[VDI Preload] 开始后台预加载VDI配置数据...');
     setVdiDataLoading(true);
 
     try {
@@ -116,12 +129,9 @@ const VirtualMachineList: React.FC = () => {
       const availableServer = servers.find(s => s.status === 0);
 
       if (!availableServer) {
-        console.log('[VDI Preload] 没有可用的VDI服务器');
         setVdiDataLoading(false);
         return;
       }
-
-      console.log('[VDI Preload] 使用VDI服务器:', availableServer.name);
 
       // 并行加载所有VDI配置数据
       const [platformsResult, positionsResult, storagesResult, networksResult] = await Promise.all([
@@ -150,21 +160,13 @@ const VirtualMachineList: React.FC = () => {
       setStorages(newStorages);
       setNetworks(newNetworks);
       setVdiDataPreloaded(true);
-
-      console.log('[VDI Preload] 预加载完成:', {
-        platforms: newPlatforms.length,
-        positions: newPositions.length,
-        storages: newStorages.length,
-        networks: newNetworks.length,
-      });
     } catch (error) {
-      console.error('[VDI Preload] 预加载失败:', error);
       setPreloadError('VDI配置加载失败，部分功能可能不可用');
       message.warning('VDI配置加载失败，将在需要时重试');
     } finally {
       setVdiDataLoading(false);
     }
-  }, []);
+  }, [canCreateVM]);
 
   // 加载虚拟机列表
   const loadVMs = async () => {
@@ -189,9 +191,8 @@ const VirtualMachineList: React.FC = () => {
     loadVMs();
   }, [current, pageSize, filters]);
 
-  // 页面加载时预加载VDI配置数据（不阻塞UI渲染）
+  // 页面加载时预加载VDI配置数据（仅在用户有创建权限时）
   useEffect(() => {
-    // 使用 setTimeout 让出主线程，确保页面先渲染
     const timer = setTimeout(() => {
       preloadVDIData();
     }, 100);
@@ -361,21 +362,12 @@ const VirtualMachineList: React.FC = () => {
         const newNetworks = networksResult.data || [];
 
         // 过滤：只显示clustered virtual machine下的运行位置
-        // 查找father_id包含"clustered"的位置，找到对应的ID
         const clusteredHostId = newPositions.find(p =>
           p.father_id && p.father_id.toLowerCase().includes('clustered')
         )?.father_id;
 
         if (clusteredHostId) {
-          // 只保留该host下的运行位置
           newPositions = newPositions.filter(p => p.father_id === clusteredHostId);
-          console.log('[VDI Positions] 已过滤，只显示clustered下的位置:', {
-            clusteredHostId,
-            count: newPositions.length,
-            total: positionsResult.data?.length || 0
-          });
-        } else {
-          console.warn('[VDI Positions] 未找到clustered host，显示所有位置');
         }
 
         setRunPositions(newPositions);
@@ -431,7 +423,6 @@ const VirtualMachineList: React.FC = () => {
 
     // 如果已有预加载数据，直接使用
     if (vdiDataPreloaded && vdiDataCache.current) {
-      console.log('[VDI Modal] 使用预加载数据，无需等待API调用');
       setVtpPlatforms(vdiDataCache.current.vtpPlatforms);
       setRunPositions(vdiDataCache.current.runPositions);
       setStorages(vdiDataCache.current.storages);
@@ -448,7 +439,6 @@ const VirtualMachineList: React.FC = () => {
     }
 
     // 如果没有预加载数据，显示加载状态并开始加载
-    console.log('[VDI Modal] 没有预加载数据，开始加载...');
     setVtpPlatforms([]);
     setRunPositions([]);
     setStorages([]);
@@ -462,7 +452,6 @@ const VirtualMachineList: React.FC = () => {
       // 触发VDI数据加载
       const availableServer = serverResult.data?.list.find(s => s.status === 0);
       if (availableServer) {
-        // 这会触发useEffect加载VDI数据
         form.setFieldsValue({ vdi_server_id: availableServer.id });
       }
     } catch (e) {
@@ -476,17 +465,13 @@ const VirtualMachineList: React.FC = () => {
       const values = await form.validateFields();
       setLoading(true);
 
-      // Implement host/run position logic from vdi_test_standalone.go
-      // Extract host_id (father_id) and run_position_id (id) from selected position
       let hostId = values.host_id;
       let runPositionId = values.run_position_id;
 
-      // Find the selected position to extract father_id logic
       if (values.run_position_id) {
         const selectedPosition = runPositions.find(p => p.id === values.run_position_id);
         if (selectedPosition) {
           hostId = selectedPosition.father_id;
-          // If id == father_id, run_position_id should be empty
           if (selectedPosition.id === selectedPosition.father_id) {
             runPositionId = undefined;
           }
@@ -599,7 +584,6 @@ const VirtualMachineList: React.FC = () => {
   // ============================================================================
   // 快速创建功能 - 自动加载默认配置
   // ============================================================================
-  // 快速创建默认值常量
   const DEFAULT_VTP_ID = 1;
   const DEFAULT_RESOURCE_GROUP_ID = '0';
   const DEFAULT_RESOURCE_NAME = 'VDI模板';
@@ -608,9 +592,6 @@ const VirtualMachineList: React.FC = () => {
   // 加载快速创建默认配置
   const loadQuickCreateDefaults = async () => {
     try {
-      console.log('[VDI Quick] 开始加载快速创建默认配置...');
-
-      // 1. 获取VDI服务器列表
       const serverResult = await vdiServerApi.list({ current: 1, pageSize: 100 });
       const servers = serverResult.data?.list || [];
       const availableServer = servers.find(s => s.status === 0);
@@ -620,9 +601,6 @@ const VirtualMachineList: React.FC = () => {
         return;
       }
 
-      console.log('[VDI Quick] VDI服务器:', availableServer.name);
-
-      // 2. 获取资源组（选择默认资源组ID=0）
       const resourceGroups = await vmApi.listResourceGroups(availableServer.id);
       const defaultGroup = resourceGroups.data?.find(g => g.resource_group_id === DEFAULT_RESOURCE_GROUP_ID);
 
@@ -631,9 +609,6 @@ const VirtualMachineList: React.FC = () => {
         return;
       }
 
-      console.log('[VDI Quick] 资源组:', defaultGroup.name);
-
-      // 3. 获取资源列表（查找"数据"资源）
       const resources = await vmApi.listResources(availableServer.id, DEFAULT_RESOURCE_GROUP_ID);
       const resourceList = resources.data || [];
       const dataResource = resourceList.find(r => r.name === DEFAULT_RESOURCE_NAME);
@@ -643,9 +618,6 @@ const VirtualMachineList: React.FC = () => {
         return;
       }
 
-      console.log('[VDI Quick] 资源:', dataResource.name, 'ID:', dataResource.id);
-
-      // 4. 获取VTP平台（VMP, ID=1）
       const platforms = await vmApi.listVTPPlatforms(availableServer.id);
       const vmpPlatform = platforms.data?.find(p => p.name === 'VMP' || p.id === DEFAULT_VTP_ID);
 
@@ -654,9 +626,6 @@ const VirtualMachineList: React.FC = () => {
         return;
       }
 
-      console.log('[VDI Quick] VTP平台:', vmpPlatform.name, 'ID:', vmpPlatform.id);
-
-      // 5. 获取运行位置（查找"研发"）
       const positions = await vmApi.listRunPositions(availableServer.id, vmpPlatform.id);
       const positionList = positions.data || [];
       const devPosition = positionList.find(p => p.name === DEFAULT_POSITION_NAME);
@@ -666,9 +635,6 @@ const VirtualMachineList: React.FC = () => {
         return;
       }
 
-      console.log('[VDI Quick] 运行位置:', devPosition.name, 'ID:', devPosition.id, 'father_id:', devPosition.father_id);
-
-      // 6. 获取存储位置（选择第一个）
       const storages = await vmApi.listStorages(availableServer.id, vmpPlatform.id);
       const storageList = storages.data || [];
       const firstStorage = storageList[0];
@@ -678,9 +644,6 @@ const VirtualMachineList: React.FC = () => {
         return;
       }
 
-      console.log('[VDI Quick] 存储位置:', firstStorage.name, 'ID:', firstStorage.id);
-
-      // 7. 获取网络接口（选择第一个）
       const networks = await vmApi.listNetworks(availableServer.id, vmpPlatform.id);
       const networkList = networks.data || [];
       const firstNetwork = networkList[0];
@@ -690,9 +653,6 @@ const VirtualMachineList: React.FC = () => {
         return;
       }
 
-      console.log('[VDI Quick] 网络接口:', firstNetwork.name, 'ID:', firstNetwork.id);
-
-      // 保存配置
       setQuickConfig({
         vdiServerId: availableServer.id,
         resourceId: String(dataResource.id),
@@ -706,14 +666,12 @@ const VirtualMachineList: React.FC = () => {
         resourceGroupName: defaultGroup.name,
       });
 
-      // 自动设置表单默认值
       quickCreateForm.setFieldsValue({
         count: 1,
       });
 
       message.success('快速创建配置加载成功！');
     } catch (error) {
-      console.error('[VDI Quick] 加载配置失败:', error);
       message.error('加载VDI配置失败，请检查网络连接和VDI服务器状态');
     }
   };
@@ -736,7 +694,6 @@ const VirtualMachineList: React.FC = () => {
       const values = await quickCreateForm.validateFields();
       setLoading(true);
 
-      // 处理 run_position_id 逻辑
       let finalRunPositionId = quickConfig.runPositionId;
       if (quickConfig.runPositionId === quickConfig.hostId) {
         finalRunPositionId = '';
@@ -755,20 +712,21 @@ const VirtualMachineList: React.FC = () => {
         count: values.count,
       };
 
-      console.log('[VDI Quick] 创建请求参数:', data);
-
       await vmApi.create(data);
       message.success('虚拟机创建成功！');
       setQuickCreateModalVisible(false);
       quickCreateForm.resetFields();
       loadVMs();
     } catch (error) {
-      console.error('[VDI Quick] 创建失败:', error);
       message.error('创建虚拟机失败');
     } finally {
-n  // 动态生成操作按钮（基于用户权限）
+      setLoading(false);
+    }
+  };
+
+  // 动态生成操作按钮（基于用户权限）
   const renderOperationButtons = (vm: VirtualMachine) => {
-    const allowedButtons = vmOperationButtons.filter(btn => 
+    const allowedButtons = vmOperationButtons.filter(btn =>
       permissions.includes(btn.permission)
     );
 
@@ -835,11 +793,8 @@ n  // 动态生成操作按钮（基于用户权限）
       );
     });
   };
-      setLoading(false);
-    }
-  };
 
-  // 表格列定义（包含所有操作按钮）
+  // 表格列定义（操作按钮使用 renderOperationButtons 进行权限过滤）
   const columns: ColumnsType<VirtualMachine> = [
     {
       title: '虚拟机 ID',
@@ -906,55 +861,7 @@ n  // 动态生成操作按钮（基于用户权限）
       fixed: 'right',
       render: (_, record) => (
         <Space size="small">
-          <Tooltip title="开机">
-            <Button
-              type="text"
-              icon={<PlayCircleOutlined />}
-              onClick={() => handleOperate('start', [record.id])}
-              disabled={record.power_state !== 'stopped'}
-            />
-          </Tooltip>
-          <Tooltip title="关机">
-            <Button
-              type="text"
-              icon={<StopOutlined />}
-              onClick={() => handleOperate('stop', [record.id])}
-              disabled={record.power_state === 'stopped' || record.power_state === 'suspended' || record.power_state === 'pending'}
-            />
-          </Tooltip>
-          <Tooltip title="重启">
-            <Button
-              type="text"
-              icon={<SyncOutlined />}
-              onClick={() => handleOperate('restart', [record.id])}
-              disabled={record.power_state !== 'in_use' && record.power_state !== 'suspended'}
-            />
-          </Tooltip>
-          <Tooltip title="同步">
-            <Button
-              type="text"
-              icon={<SyncOutlined />}
-              onClick={() => handleSync(record.id)}
-            />
-          </Tooltip>
-          <Tooltip title="绑定用户">
-            <Button
-              type="text"
-              icon={<UserAddOutlined />}
-              onClick={() => {
-                setSelectedVM(record);
-                setBindUserModalVisible(true);
-              }}
-            />
-          </Tooltip>
-          <Popconfirm
-            title="确定要删除这个虚拟机吗？此操作将调用 VDI API 删除虚拟机。"
-            onConfirm={() => handleDelete(record.id)}
-            okText="确定"
-            cancelText="取消"
-          >
-            <Button type="text" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
+          {renderOperationButtons(record)}
         </Space>
       ),
     },
@@ -963,8 +870,8 @@ n  // 动态生成操作按钮（基于用户权限）
   return (
     <Card>
       <Space orientation="vertical" size="large" style={{ width: '100%' }}>
-        {/* Error banner for VDI data preload failures */}
-        {preloadError && (
+        {/* Error banner for VDI data preload failures (only shown when user has create permission) */}
+        {preloadError && canCreateVM && (
           <Alert
             type="warning"
             message={preloadError}
@@ -976,12 +883,16 @@ n  // 动态生成操作按钮（基于用户权限）
 
         {/* 工具栏 */}
         <Space>
-          <Button type="primary" icon={<PlusOutlined />} onClick={openCreateModal}>
-            创建虚拟机
-          </Button>
-          <Button onClick={openQuickCreateModal}>
-            快速创建
-          </Button>
+          {canCreateVM && (
+            <>
+              <Button type="primary" icon={<PlusOutlined />} onClick={openCreateModal}>
+                创建虚拟机
+              </Button>
+              <Button onClick={openQuickCreateModal}>
+                快速创建
+              </Button>
+            </>
+          )}
           <Input.Search
             placeholder="搜索虚拟机名称"
             style={{ width: 200 }}
@@ -1007,9 +918,9 @@ n  // 动态生成操作按钮（基于用户权限）
         {selectedRowKeys.length > 0 && (
           <Space>
             <span>已选择 {selectedRowKeys.length} 项</span>
-            <Button onClick={() => handleOperate('start')}>批量开机</Button>
-            <Button onClick={() => handleOperate('stop')}>批量关机</Button>
-            <Button onClick={() => handleOperate('restart')}>批量重启</Button>
+            {hasPermission(permissions, 'vdi:vm:start') && <Button onClick={() => handleOperate('start')}>批量开机</Button>}
+            {hasPermission(permissions, 'vdi:vm:stop') && <Button onClick={() => handleOperate('stop')}>批量关机</Button>}
+            {hasPermission(permissions, 'vdi:vm:restart') && <Button onClick={() => handleOperate('restart')}>批量重启</Button>}
           </Space>
         )}
 

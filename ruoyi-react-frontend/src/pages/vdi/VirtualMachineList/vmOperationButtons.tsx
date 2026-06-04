@@ -13,6 +13,6 @@ export const vmOperationButtons: VMOprationButton[] = [
   { action: 'stop', permission: 'vdi:vm:stop', label: '关机', icon: <StopOutlined /> },
   { action: 'restart', permission: 'vdi:vm:restart', label: '重启', icon: <ReloadOutlined /> },
   { action: 'sync', permission: 'vdi:vm:sync', label: '同步', icon: <SyncOutlined /> },
-  { action: 'delete', permission: 'vdi:vm:delete', label: '删除', icon: <DeleteOutlined /> },
+  { action: 'delete', permission: 'vdi:vm:remove', label: '删除', icon: <DeleteOutlined /> },
   { action: 'bind', permission: 'vdi:vm:bind', label: '绑定用户', icon: <UserAddOutlined /> },
 ];
