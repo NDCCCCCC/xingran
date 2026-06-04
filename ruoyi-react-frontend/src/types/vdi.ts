@@ -100,7 +100,7 @@ export interface RenameVMRequest {
  * 绑定用户请求
  */
 export interface BindUserRequest {
-  user_id: string;
+  username: string;
 }
 
 /**
