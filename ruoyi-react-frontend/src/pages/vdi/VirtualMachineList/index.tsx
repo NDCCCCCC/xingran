@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuthStore } from '@/store/authStore';
-import { vmOperationButtons, VMOprationButton } from './vmOperationButtons';
+import { vmOperationButtons } from './vmOperationButtons';
 import {
   Table,
   Button,
