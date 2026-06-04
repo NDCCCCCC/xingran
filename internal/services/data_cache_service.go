@@ -12,6 +12,43 @@ import (
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 )
 
+// ==================== 缓存键命名规范迁移说明 ====================
+//
+// 本文件已更新为使用统一的缓存键命名规范（新规范）。
+//
+// **旧规范**（已弃用）:
+//   - 格式: {type}:{params}
+//   - 例如: user:id:uuid, role:menus:roleId, dept:tree
+//   - 问题: 缺少统一前缀，Redis中键管理混乱
+//
+// **新规范**（当前使用）:
+//   - 格式: cache:{module}:{type}:{params}
+//   - 例如: cache:user:id:uuid, cache:role:menus:roleId, cache:dept:tree
+//   - 优势: 统一前缀，便于管理和批量操作
+//
+// **迁移操作**:
+//   1. 本文件中的键常量已更新为新规范格式
+//   2. 键构建函数保持向后兼容，内部使用新规范
+//   3. Redis中的旧键需要手动清理（见下方迁移脚本）
+//
+// **清理Redis旧键脚本**（在redis-cli中执行）:
+//   // 删除旧规范的键（无cache:前缀）
+//   SCAN 0 MATCH user:* COUNT 1000 | xargs -I {} DEL {}     // 删除用户旧键
+//   SCAN 0 MATCH role:* COUNT 1000 | xargs -I {} DEL {}     // 删除角色旧键
+//   SCAN 0 MATCH dept:* COUNT 1000 | xargs -I {} DEL {}    // 删除部门旧键
+//   SCAN 0 MATCH menu:* COUNT 1000 | xargs -I {} DEL {}    // 删除菜单旧键
+//   SCAN 0 MATCH dict:* COUNT 1000 | xargs -I {} DEL {}    // 删除字典旧键
+//   SCAN 0 MATCH post:* COUNT 1000 | xargs -I {} DEL {}    // 删除岗位旧键
+//
+// **推荐清理方式**（更安全，先查看后删除）:
+//   1. 查看旧键数量: SCAN 0 MATCH user:* COUNT 1000
+//   2. 查看具体键名: KEYS user:id:*
+//   3. 确认后删除: DEL user:id:uuid1 user:id:uuid2 ...
+//
+// **注意**: 新键会自动创建（格式: cache:user:id:uuid），无需手动迁移数据
+//
+// ===========================================================
+
 // DataCacheService 数据缓存服务
 type DataCacheService struct {
 	cache       cache.Cache
@@ -226,47 +263,56 @@ func (b *CacheKeyBuilder) Build(params ...interface{}) string {
 }
 
 // ==================== 预定义的缓存键 ====================
+// 注意：这些键定义已迁移到 system/cache_keys.go 的新规范
+// 使用 CacheKeyManager 构建，键格式为 cache:{module}:{type}:{params}
+// 例如：cache:user:id:uuid, cache:role:menus:roleId
 
 const (
-	CacheKeyDeptTree        = "dept:tree"
-	CacheKeyDeptList        = "dept:list"
-	CacheKeyDeptTreeSelect  = "dept:tree:select"
-	CacheKeyRoleMenus       = "role:menus"
-	CacheKeyRoleMenuTree    = "role:menu:tree"
-	CacheKeyRoleDepts       = "role:depts"
-	CacheKeyRoleAll         = "role:all"
-	CacheKeyRoleEnabled     = "role:enabled"
-	CacheKeyDictType        = "dict:type"
-	CacheKeyDictDataByType  = "dict:data:type"
-	CacheKeyMenuTree        = "menu:tree"
-	CacheKeyMenuRouter      = "menu:router"
-	CacheKeyMenuAll         = "menu:all"
-	CacheKeyPostAll         = "post:all"
-	CacheKeyPostEnabled     = "post:enabled"
-	CacheKeyUserInfo        = "user:info"
-	CacheKeyUserRoles       = "user:roles"
-	CacheKeyUserPermissions = "user:permissions"
-	CacheKeyUserByID        = "user:id"
-	CacheKeyUserByUsername  = "user:username"
-	CacheKeyUserList        = "user:list"
+	// 已弃用的旧规范键常量，保留用于向后兼容
+	// 新代码应使用 system.BuildXxxCacheKey() 函数
+	CacheKeyDeptTree        = "cache:dept:tree"
+	CacheKeyDeptList        = "cache:dept:list"
+	CacheKeyDeptTreeSelect  = "cache:dept:tree:select"
+	CacheKeyRoleMenus       = "cache:role:menus"
+	CacheKeyRoleMenuTree    = "cache:role:menu:tree"
+	CacheKeyRoleDepts       = "cache:role:depts"
+	CacheKeyRoleAll         = "cache:role:all"
+	CacheKeyRoleEnabled     = "cache:role:enabled"
+	CacheKeyDictType        = "cache:dict:type"
+	CacheKeyDictDataByType  = "cache:dict:data:type"
+	CacheKeyMenuTree        = "cache:menu:tree"
+	CacheKeyMenuRouter      = "cache:menu:router"
+	CacheKeyMenuAll         = "cache:menu:all"
+	CacheKeyPostAll         = "cache:post:all"
+	CacheKeyPostEnabled     = "cache:post:enabled"
+	CacheKeyUserInfo        = "cache:user:info"
+	CacheKeyUserRoles       = "cache:user:roles"
+	CacheKeyUserPermissions = "cache:user:permissions"
+	CacheKeyUserByID        = "cache:user:id"
+	CacheKeyUserByUsername  = "cache:user:username"
+	CacheKeyUserList        = "cache:user:list"
 )
 
 // GetDeptTreeKey 获取部门树缓存键
+// 已更新为新规范：cache:dept:tree
 func GetDeptTreeKey() string {
 	return CacheKeyDeptTree
 }
 
 // GetRoleMenusKey 获取角色菜单权限缓存键
+// 已更新为新规范：cache:role:menus:{roleID}
 func GetRoleMenusKey(roleID string) string {
 	return fmt.Sprintf("%s:%s", CacheKeyRoleMenus, roleID)
 }
 
 // GetDictDataByTypeKey 获取字典数据缓存键
+// 已更新为新规范：cache:dict:data:type:{dictType}
 func GetDictDataByTypeKey(dictType string) string {
 	return fmt.Sprintf("%s:%s", CacheKeyDictDataByType, dictType)
 }
 
 // GetMenuTreeKey 获取菜单树缓存键
+// 已更新为新规范：cache:menu:tree 或 cache:menu:tree:all
 func GetMenuTreeKey(includeHidden bool) string {
 	if includeHidden {
 		return CacheKeyMenuTree + ":all"
@@ -275,21 +321,25 @@ func GetMenuTreeKey(includeHidden bool) string {
 }
 
 // GetUserByIDKey 获取用户ID缓存键
+// 已更新为新规范：cache:user:id:{userID}
 func GetUserByIDKey(userID string) string {
 	return fmt.Sprintf("%s:%s", CacheKeyUserByID, userID)
 }
 
 // GetUserByUsernameKey 获取用户名缓存键
+// 已更新为新规范：cache:user:username:{username}
 func GetUserByUsernameKey(username string) string {
 	return fmt.Sprintf("%s:%s", CacheKeyUserByUsername, username)
 }
 
 // GetUserRolesKey 获取用户角色缓存键
+// 已更新为新规范：cache:user:roles:{userID}
 func GetUserRolesKey(userID string) string {
 	return fmt.Sprintf("%s:%s", CacheKeyUserRoles, userID)
 }
 
 // GetUserPermissionsKey 获取用户权限缓存键
+// 已更新为新规范：cache:user:permissions:{userID}
 func GetUserPermissionsKey(userID string) string {
 	return fmt.Sprintf("%s:%s", CacheKeyUserPermissions, userID)
 }
