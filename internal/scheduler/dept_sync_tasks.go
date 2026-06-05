@@ -142,7 +142,7 @@ func executeDeptMemberToADGroupSyncTask(ctx context.Context, params map[string]i
 	// 查询启用的OU-组映射
 	var mappings []models.OUGroupMapping
 	if err := db.WithContext(ctx).
-		Where("ad_config_id = ? AND mapping_status = ? AND sync_enabled = ? AND deleted_at IS NULL",
+		Where("ad_config_id = ? AND mapping_status = ? AND sync_enabled = ?",
 			adConfigID, models.OUGroupMappingStatusActive, true).
 		Find(&mappings).Error; err != nil {
 		return fmt.Errorf("查询OU-组映射失败: %w", err)
