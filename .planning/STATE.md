@@ -138,6 +138,7 @@ Plan: 22-06 (VM Agent 服务实现)
 | 260602-k3r | VDI虚拟机列表页面修复：移除配置IP并恢复快速创建功能 | 2026-06-02 | - | [20260602-vdi-vm-list-fix](./quick/20260602-vdi-vm-list-fix/) |
 | 260602-k1b | 去除虚拟机重命名功能和名称自动生成逻辑 | 2026-06-02 | 9b754b6 | [260602-k1b-vdi](./quick/260602-k1b-vdi/) |
 | 260604-cqo | 虚拟机列表页面绑定用户功能，修改为下拉框组件，可以进行模糊查询，数据来源来自系统用户，前端显示nickname，数据库保存username | 2026-06-04 | 3d26d23 | [260604-cqo-nickname-username](./quick/260604-cqo-nickname-username/) |
+| 260605-h3p | AD组自动化同步功能：实现基于OU-组映射的自动成员同步 | 2026-06-05 | 830aa0d | [260605-h3p-ad-group-auto-sync](./quick/260605-h3p-ad-group-auto-sync/) |
 
 ## Accumulated Context
 
