@@ -70,7 +70,8 @@ try {
 
 # 授予用户管理权限（简化版本，生产环境应使用 JEA）
 try {
-    Add-LocalGroupMember -Group "Administrators" -Member "RuoyiAgentUser" -ErrorAction Stop | Out-Null
+    $user = Get-LocalUser -Name "RuoyiAgentUser" -ErrorAction Stop
+    Add-LocalGroupMember -Group "Administrators" -Member $user -ErrorAction Stop | Out-Null
     Write-Host "Added RuoyiAgentUser to Administrators group"
 } catch {
     Write-Host "WARNING: Failed to add to Administrators group: $_" -ForegroundColor Yellow
