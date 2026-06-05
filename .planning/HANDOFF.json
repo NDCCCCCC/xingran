@@ -1,0 +1,73 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-06-05T04:13:33.563Z",
+  "phase": "22b",
+  "phase_name": "vm-agent-service",
+  "phase_dir": ".planning/phases/22b-vm-agent-service",
+  "plan": 1,
+  "task": 3,
+  "total_tasks": 9,
+  "status": "paused",
+  "completed_tasks": [
+    {"id": 1, "name": "冷启动烟雾测试", "status": "done", "note": "Agent 成功启动，HTTP 服务器运行在 :8443"},
+    {"id": 2, "name": "Agent 配置管理", "status": "done", "note": "支持环境变量和自动注册"},
+    {"id": 2.5, "name": "自动注册功能", "status": "done", "note": "Agent 成功启动并自动注册，HTTP API 正常响应健康检查"},
+    {"id": 3, "name": "JWT 认证中间件验证", "status": "done", "note": "JWT 中间件正确拦截未授权请求，返回 'missing authorization header'"}
+  ],
+  "remaining_tasks": [
+    {"id": 3, "name": "JWT 令牌刷新功能", "status": "not_started", "note": "需要验证令牌自动刷新机制"},
+    {"id": 4, "name": "跨平台账号管理", "status": "not_started", "note": "需要实际 Windows/Linux 环境测试"},
+    {"id": 5, "name": "HTTP API 端点完整性", "status": "not_started", "note": "端点已实现，需验证所有端点功能"},
+    {"id": 6, "name": "部署脚本完整性", "status": "not_started", "note": "脚本已创建"},
+    {"id": 7, "name": "安全性配置", "status": "not_started", "note": "JWT + TLS 已实现"},
+    {"id": 8, "name": "错误处理和重连", "status": "not_started", "note": "重试机制已实现"}
+  ],
+  "blockers": [],
+  "human_actions_pending": [
+    {
+      "action": "在 router.go 中注册 Agent 路由",
+      "context": "创建了 agent_handler.go 和 agent_router.go，但未在主路由中注册",
+      "blocking": false
+    },
+    {
+      "action": "跨平台账号管理需要实际环境测试",
+      "context": "Windows PowerShell 和 Linux Shell 命令需要实际虚拟机测试",
+      "blocking": false
+    }
+  ],
+  "decisions": [
+    {
+      "decision": "实现 Agent 自动注册功能",
+      "rationale": "Agent 将部署到模板中，需要自动获取 vm_id 和 agent_id",
+      "phase": "22b"
+    },
+    {
+      "decision": "通过系统指纹匹配虚拟机",
+      "rationale": "使用 IP、MAC、主机名、机器 GUID 进行指纹匹配",
+      "phase": "22b"
+    },
+    {
+      "decision": "配置加载优先级：环境变量 > 配置文件 > 自动注册",
+      "rationale": "提供灵活的配置方式，支持模板部署场景",
+      "phase": "22b"
+    }
+  ],
+  "uncommitted_files": [
+    "cmd/agent/main.go",
+    "internal/agent/server/config.go",
+    "internal/agent/server/handlers.go",
+    "internal/agent/server/jwt_auth.go",
+    "internal/agent/server/middleware.go",
+    "internal/api/v1/agent/agent_handler.go",
+    "internal/api/v1/agent/agent_router.go",
+    "internal/api/router.go"
+  ],
+  "next_action": "1. 在 router.go 第 777 行后添加 agentV1.SetupAgentRouter(r, core)",
+  "context_notes": "Phase 22B UAT 测试进行中，已完成 4/9 测试。主要功能已实现并验证。需要在 router.go 中注册 Agent 路由才能完整测试自动注册 API。",
+  "uat_progress": {
+    "total": 9,
+    "passed": 4,
+    "issues": 0,
+    "pending": 5
+  }
+}
