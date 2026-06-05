@@ -3,6 +3,7 @@ package scheduler
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
@@ -134,7 +135,7 @@ func executeDeptMemberToADGroupSyncTask(ctx context.Context, params map[string]i
 		return fmt.Errorf("查询AD配置失败: %w", err)
 	}
 
-	// 检查AD配置是否启用
+	// 检查 AD 配置是否启用
 	if adConfig.Status != models.ADConfigStatusEnabled {
 		return fmt.Errorf("AD配置未启用: %s", adConfig.ConfigName)
 	}
@@ -177,22 +178,22 @@ func executeDeptMemberToADGroupSyncTask(ctx context.Context, params map[string]i
 
 		applogger.Infof("开始同步映射: OU=%s → 组ID=%s", mapping.OUName, mapping.ADGroupID)
 
-		// 查询属于该OU的用户
-		var users []models.User
+		// 查询属于该OU及其子OU的AD域控用户（后缀匹配）
+		var adUsers []models.ADUser
 		if err := db.WithContext(ctx).
-			Where("ad_ou_dn = ? AND status = ?", mapping.OUDN, models.UserStatusEnabled).
-			Find(&users).Error; err != nil {
-			applogger.Errorf("查询OU %s 的用户失败: %v", mapping.OUName, err)
+			Where("ou_dn LIKE ? AND is_enabled = ?", "%"+mapping.OUDN, true).
+			Find(&adUsers).Error; err != nil {
+			applogger.Errorf("查询OU %s 的AD用户失败: %v", mapping.OUName, err)
 			totalFailed++
 			continue
 		}
 
-		if len(users) == 0 {
-			applogger.Infof("OU %s 没有启用的用户，跳过", mapping.OUName)
+		if len(adUsers) == 0 {
+			applogger.Infof("OU %s 没有启用的AD用户，跳过", mapping.OUName)
 			continue
 		}
 
-		applogger.Infof("OU %s 找到 %d 个用户，开始添加到AD组", mapping.OUName, len(users))
+		applogger.Infof("OU %s 找到 %d 个AD用户，开始添加到AD组", mapping.OUName, len(adUsers))
 
 		// 查询AD组信息
 		var adGroup models.ADGroup
@@ -202,51 +203,56 @@ func executeDeptMemberToADGroupSyncTask(ctx context.Context, params map[string]i
 			continue
 		}
 
-		// 执行LDAP添加成员操作
-		addedCount := 0
-		failedCount := 0
+		// 记录组DN用于诊断
+		applogger.Infof("目标AD组: 名称=%s, DN=%s", adGroup.GroupName, adGroup.GroupDN)
 
-		for _, user := range users {
-			if user.AdDn == nil || *user.AdDn == "" {
-				applogger.Warnf("用户 %s 的AD DN为空，跳过", user.Username)
-				failedCount++
+		// 执行LDAP添加成员操作
+		addedCount := 0      // 成功添加
+		skippedCount := 0    // 已存在（正常）
+		notFoundCount := 0   // 用户在AD中不存在
+		otherFailedCount := 0 // 其他错误
+
+		for _, adUser := range adUsers {
+			if adUser.UserDN == "" {
+				applogger.Warnf("AD用户 %s 的DN为空，跳过", adUser.Username)
+				otherFailedCount++
 				continue
 			}
 
-			// 添加用户到AD组
-			if err := ldapClient.AddGroupMember(adGroup.GroupDN, *user.AdDn); err != nil {
-				applogger.Errorf("添加用户 %s 到组 %s 失败: %v", user.Username, adGroup.GroupName, err)
-				failedCount++
+			// 添加AD用户到AD组
+			if err := ldapClient.AddGroupMember(adGroup.GroupDN, adUser.UserDN); err != nil {
+				errMsg := err.Error()
+				// 检查错误类型
+				if strings.Contains(errMsg, "Entry Already Exists") || strings.Contains(errMsg, "68") {
+					// 用户已存在 - 正常状态
+					applogger.Infof("AD用户 %s 已在组中（跳过）", adUser.Username)
+					skippedCount++
+				} else if strings.Contains(errMsg, "No Such Object") || strings.Contains(errMsg, "32") {
+					// 用户在AD中不存在
+					applogger.Warnf("AD用户 %s 在AD中不存在: %v", adUser.Username, err)
+					notFoundCount++
+				} else {
+					// 其他错误
+					applogger.Errorf("添加AD用户 %s 到组 %s 失败: %v",
+						adUser.Username, adGroup.GroupName, err)
+					otherFailedCount++
+				}
 			} else {
 				addedCount++
 			}
 		}
 
-		// 记录同步日志
+		// 记录同步结果
 		duration := time.Since(startTime)
-		syncLog := &models.OUGroupMappingSyncLog{
-			MappingID:      mapping.ID,
-			OUdn:           mapping.OUDN,
-			ADGroupID:      mapping.ADGroupID,
-			SyncType:       "ou_member_sync",
-			MembersAdded:   addedCount,
-			MembersRemoved: 0,
-			TotalMembers:   len(users),
-			Status:         "success",
-			StartedAt:      startTime,
-			CompletedAt:    &startTime,
-			DurationMs:     int(duration.Milliseconds()),
-		}
-
-		if failedCount > 0 {
-			status := "partial"
-			syncLog.Status = status
-			errorMsg := fmt.Sprintf("%d/%d 用户添加失败", failedCount, len(users))
-			syncLog.ErrorMsg = &errorMsg
-		}
-
-		if err := db.WithContext(ctx).Create(syncLog).Error; err != nil {
-			applogger.Errorf("创建同步日志失败: %v", err)
+		if otherFailedCount == 0 && notFoundCount == 0 {
+			applogger.Infof("映射同步成功: OU=%s, 添加=%d, 已存在=%d, 耗时=%dms",
+				mapping.OUName, addedCount, skippedCount, duration.Milliseconds())
+		} else if otherFailedCount == 0 {
+			applogger.Warnf("映射同步部分完成: OU=%s, 添加=%d, 已存在=%d, AD中不存在=%d, 耗时=%dms",
+				mapping.OUName, addedCount, skippedCount, notFoundCount, duration.Milliseconds())
+		} else {
+			applogger.Errorf("映射同步失败: OU=%s, 添加=%d, 已存在=%d, AD中不存在=%d, 其他错误=%d, 耗时=%dms",
+				mapping.OUName, addedCount, skippedCount, notFoundCount, otherFailedCount, duration.Milliseconds())
 		}
 
 		// 更新映射的最后同步时间
@@ -255,9 +261,9 @@ func executeDeptMemberToADGroupSyncTask(ctx context.Context, params map[string]i
 			applogger.Errorf("更新映射同步时间失败: %v", err)
 		}
 
-		if failedCount == 0 {
+		// 统计结果（只有真正的失败才算失败）
+		if otherFailedCount == 0 {
 			totalSuccess++
-			applogger.Infof("映射同步成功: OU=%s, 添加用户=%d", mapping.OUName, addedCount)
 		} else {
 			totalFailed++
 		}
