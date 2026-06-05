@@ -60,7 +60,7 @@ export function useJobActions(params: UseJobActionsParams): UseJobActionsReturn 
         invokeTarget: record.invokeTarget,
         cronExpression: record.cronExpression,
         misfirePolicy: record.misfirePolicy,
-        concurrent: record.concurrent ? 1 : 0,
+        concurrent: record.concurrent,
         status: record.status,
         remark: record.remark || ''
       });
@@ -70,7 +70,7 @@ export function useJobActions(params: UseJobActionsParams): UseJobActionsReturn 
       form.resetFields();
       form.setFieldsValue({
         misfirePolicy: 1,
-        concurrent: 0,
+        concurrent: false,
         status: 0
       });
     }
@@ -83,7 +83,7 @@ export function useJobActions(params: UseJobActionsParams): UseJobActionsReturn 
       const values = await form.validateFields() as { id?: string } & Record<string, unknown>;
 
       if (isEdit) {
-        await put(`/monitor/jobs/${values.id}`, values);
+        await post(`/monitor/jobs/${values.id}/update`, values);
       } else {
         await post('/monitor/jobs', values);
       }
@@ -99,7 +99,7 @@ export function useJobActions(params: UseJobActionsParams): UseJobActionsReturn 
   // 删除任务
   const handleDelete = useCallback(async (record: JobInfo) => {
     try {
-      await del(`/monitor/jobs/${record.id}`);
+      await post(`/monitor/jobs/${record.id}/delete`);
       message.success('删除成功');
       fetchJobs();
     } catch (error) {

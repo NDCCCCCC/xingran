@@ -202,6 +202,9 @@ const JobManager: FC = () => {
           layout="vertical"
           initialValues={DEFAULT_FORM_VALUES}
         >
+          <Form.Item name="id" hidden>
+            <Input />
+          </Form.Item>
           <Form.Item
             label="任务名称"
             name="jobName"
