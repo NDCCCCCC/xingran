@@ -3,9 +3,10 @@ package server
 import (
 	"context"
 	"fmt"
-	"log"
 	"sync"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 // ConnectionState 连接状态
@@ -176,17 +177,25 @@ func (cm *ConnectionManager) StartHealthMonitor(ctx context.Context, interval ti
 		case <-ticker.C:
 			if cm.IsConnected() {
 				if err := cm.authenticator.SendHeartbeat(ctx); err != nil {
-					log.Printf("Health check failed: %v", err)
+					log.WithFields(logrus.Fields{
+						"error": err.Error(),
+					}).Warn("Health check failed")
 					go func() {
 						if err := cm.Reconnect(context.Background()); err != nil {
-							log.Printf("Reconnect failed: %v", err)
+							log.WithFields(logrus.Fields{
+								"error":           err.Error(),
+								"reconnect_count": cm.reconnectCount,
+							}).Warn("Reconnect failed")
 						}
 					}()
 				}
 			} else {
 				go func() {
 					if err := cm.Reconnect(context.Background()); err != nil {
-						log.Printf("Reconnect failed: %v", err)
+						log.WithFields(logrus.Fields{
+							"error":           err.Error(),
+							"reconnect_count": cm.reconnectCount,
+						}).Warn("Reconnect failed")
 					}
 				}()
 			}

@@ -1,32 +1,38 @@
 package server
 
 import (
-	"log"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	"github.com/sirupsen/logrus"
 )
+
+var log = logrus.StandardLogger()
+
+// WithRequestID 为日志条目添加 request_id 字段
+func WithRequestID(requestID string) *logrus.Entry {
+	return log.WithField("request_id", requestID)
+}
 
 // 通用错误消息（避免信息泄露）
 const (
-	errMsgGeneric         = "请求处理失败，请稍后重试"
-	errMsgInvalidRequest  = "请求参数无效"
-	errMsgUnauthorized    = "未授权访问"
-	errMsgForbidden       = "权限不足"
-	errMsgNotFound        = "资源不存在"
-	errMsgInternalError   = "服务器内部错误"
+	errMsgGeneric            = "请求处理失败，请稍后重试"
+	errMsgInvalidRequest     = "请求参数无效"
+	errMsgUnauthorized       = "未授权访问"
+	errMsgForbidden          = "权限不足"
+	errMsgNotFound           = "资源不存在"
+	errMsgInternalError      = "服务器内部错误"
 	errMsgServiceUnavailable = "服务暂时不可用"
 )
 
 // 内部错误码（用于日志，不暴露给客户端）
 const (
-	errCodeInternal       = 1001
-	errCodeDatabase       = 1002
-	errCodeExternalAPI    = 1003
-	errCodeConfig         = 1004
-	errCodeAuth           = 1005
+	errCodeInternal    = 1001
+	errCodeDatabase    = 1002
+	errCodeExternalAPI = 1003
+	errCodeConfig      = 1004
+	errCodeAuth        = 1005
 )
 
 // sanitizeError 清理错误消息，移除敏感信息
@@ -47,7 +53,10 @@ func sanitizeError(err error) string {
 	errMsgLower := strings.ToLower(errMsg)
 	for _, pattern := range sensitivePatterns {
 		if strings.Contains(errMsgLower, pattern) {
-			log.Printf("Sanitized error containing '%s': %v", pattern, err)
+			WithFields(logrus.Fields{
+				"pattern": pattern,
+				"error":   errMsg,
+			}).Warn("Sanitized error containing sensitive pattern")
 			return errMsgGeneric
 		}
 	}
@@ -97,92 +106,174 @@ func (h *AgentHandler) RegisterRoutes(r *gin.Engine) {
 
 // CreateAccount 创建账号
 func (h *AgentHandler) CreateAccount(c *gin.Context) {
+	requestID := c.GetHeader("X-Request-ID")
+
 	var req Account
 	if err := c.ShouldBindJSON(&req); err != nil {
+		WithRequestID(requestID).WithField("error", err.Error()).Warn("Invalid request for CreateAccount")
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": errMsgInvalidRequest,
-			"code": errCodeInternal,
+			"code":  errCodeInternal,
 		})
 		return
 	}
 
 	if err := h.accountManager.CreateAccount(c.Request.Context(), &req); err != nil {
-		log.Printf("Failed to create account: %v", err) // 内部日志记录详细错误
+		WithFields(logrus.Fields{
+			"request_id": requestID,
+			"error":      err.Error(),
+			"username":   req.Username,
+		}).Error("Failed to create account")
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": sanitizeError(err), // 客户端收到清理后的错误
-			"code": errCodeInternal,
+			"error": sanitizeError(err),
+			"code":  errCodeInternal,
 		})
 		return
 	}
+
+	WithFields(logrus.Fields{
+		"request_id": requestID,
+		"username":   req.Username,
+	}).Info("Account created successfully")
 
 	c.JSON(http.StatusOK, gin.H{"message": "Account created successfully"})
 }
 
 // DeleteAccount 删除账号
 func (h *AgentHandler) DeleteAccount(c *gin.Context) {
+	requestID := c.GetHeader("X-Request-ID")
 	username := c.Param("username")
 
 	if err := h.accountManager.DeleteAccount(c.Request.Context(), username); err != nil {
-		response.Error(c, response.ErrServerError, err.Error())
+		WithFields(logrus.Fields{
+			"request_id": requestID,
+			"error":      err.Error(),
+			"username":   username,
+		}).Error("Failed to delete account")
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": sanitizeError(err),
+			"code":  errCodeInternal,
+		})
 		return
 	}
 
-	response.Success(c, gin.H{"message": "Account deleted successfully"})
+	WithFields(logrus.Fields{
+		"request_id": requestID,
+		"username":   username,
+	}).Info("Account deleted successfully")
+
+	c.JSON(http.StatusOK, gin.H{"message": "Account deleted successfully"})
 }
 
 // ResetPassword 重置密码
 func (h *AgentHandler) ResetPassword(c *gin.Context) {
+	requestID := c.GetHeader("X-Request-ID")
 	username := c.Param("username")
+
 	var req struct {
 		NewPassword string `json:"new_password"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, response.ErrBadRequest, err.Error())
+		WithRequestID(requestID).WithField("error", err.Error()).Warn("Invalid request for ResetPassword")
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": errMsgInvalidRequest,
+			"code":  errCodeInternal,
+		})
 		return
 	}
 
 	if err := h.accountManager.ResetPassword(c.Request.Context(), username, req.NewPassword); err != nil {
-		response.Error(c, response.ErrServerError, err.Error())
+		WithFields(logrus.Fields{
+			"request_id": requestID,
+			"error":      err.Error(),
+			"username":   username,
+		}).Error("Failed to reset password")
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": sanitizeError(err),
+			"code":  errCodeInternal,
+		})
 		return
 	}
 
-	response.Success(c, gin.H{"message": "Password reset successfully"})
+	WithFields(logrus.Fields{
+		"request_id": requestID,
+		"username":   username,
+	}).Info("Password reset successfully")
+
+	c.JSON(http.StatusOK, gin.H{"message": "Password reset successfully"})
 }
 
 // EnableAccount 启用账号
 func (h *AgentHandler) EnableAccount(c *gin.Context) {
+	requestID := c.GetHeader("X-Request-ID")
 	username := c.Param("username")
 
 	if err := h.accountManager.EnableAccount(c.Request.Context(), username); err != nil {
-		response.Error(c, response.ErrServerError, err.Error())
+		WithFields(logrus.Fields{
+			"request_id": requestID,
+			"error":      err.Error(),
+			"username":   username,
+		}).Error("Failed to enable account")
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": sanitizeError(err),
+			"code":  errCodeInternal,
+		})
 		return
 	}
 
-	response.Success(c, gin.H{"message": "Account enabled successfully"})
+	WithFields(logrus.Fields{
+		"request_id": requestID,
+		"username":   username,
+	}).Info("Account enabled successfully")
+
+	c.JSON(http.StatusOK, gin.H{"message": "Account enabled successfully"})
 }
 
 // DisableAccount 禁用账号
 func (h *AgentHandler) DisableAccount(c *gin.Context) {
+	requestID := c.GetHeader("X-Request-ID")
 	username := c.Param("username")
 
 	if err := h.accountManager.DisableAccount(c.Request.Context(), username); err != nil {
-		response.Error(c, response.ErrServerError, err.Error())
+		WithFields(logrus.Fields{
+			"request_id": requestID,
+			"error":      err.Error(),
+			"username":   username,
+		}).Error("Failed to disable account")
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": sanitizeError(err),
+			"code":  errCodeInternal,
+		})
 		return
 	}
 
-	response.Success(c, gin.H{"message": "Account disabled successfully"})
+	WithFields(logrus.Fields{
+		"request_id": requestID,
+		"username":   username,
+	}).Info("Account disabled successfully")
+
+	c.JSON(http.StatusOK, gin.H{"message": "Account disabled successfully"})
 }
 
 // ListAccounts 列出所有账号
 func (h *AgentHandler) ListAccounts(c *gin.Context) {
+	requestID := c.GetHeader("X-Request-ID")
+
 	accounts, err := h.accountManager.ListAccounts(c.Request.Context())
 	if err != nil {
-		response.Error(c, response.ErrServerError, err.Error())
+		WithFields(logrus.Fields{
+			"request_id": requestID,
+			"error":      err.Error(),
+		}).Error("Failed to list accounts")
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": sanitizeError(err),
+			"code":  errCodeInternal,
+		})
 		return
 	}
 
-	response.Success(c, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"accounts": accounts,
 		"total":    len(accounts),
 	})
@@ -190,7 +281,7 @@ func (h *AgentHandler) ListAccounts(c *gin.Context) {
 
 // HealthCheck 健康检查
 func (h *AgentHandler) HealthCheck(c *gin.Context) {
-	response.Success(c, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"status":  "healthy",
 		"service": "ruoyi-vm-agent",
 	})
@@ -198,13 +289,19 @@ func (h *AgentHandler) HealthCheck(c *gin.Context) {
 
 // Register Agent 注册
 func (h *AgentHandler) Register(c *gin.Context) {
+	requestID := c.GetHeader("X-Request-ID")
+
 	var req struct {
-		VMID   string `json:"vm_id"`
+		VMID    string `json:"vm_id"`
 		AgentID string `json:"agent_id"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, response.ErrBadRequest, err.Error())
+		WithRequestID(requestID).WithField("error", err.Error()).Warn("Invalid request for Register")
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": errMsgInvalidRequest,
+			"code":  errCodeInternal,
+		})
 		return
 	}
 
@@ -217,25 +314,49 @@ func (h *AgentHandler) Register(c *gin.Context) {
 
 	// 调用后端注册 API
 	if err := h.authenticator.RegisterToBackend(c.Request.Context(), map[string]interface{}{}); err != nil {
-		response.Error(c, response.ErrServerError, err.Error())
+		WithFields(logrus.Fields{
+			"request_id": requestID,
+			"error":      err.Error(),
+		}).Error("Failed to register agent with backend")
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": sanitizeError(err),
+			"code":  errCodeInternal,
+		})
 		return
 	}
 
-	response.Success(c, gin.H{"message": "Agent registered successfully"})
+	WithFields(logrus.Fields{
+		"request_id": requestID,
+	}).Info("Agent registered successfully")
+
+	c.JSON(http.StatusOK, gin.H{"message": "Agent registered successfully"})
 }
 
 // Heartbeat 心跳上报
 func (h *AgentHandler) Heartbeat(c *gin.Context) {
+	requestID := c.GetHeader("X-Request-ID")
+
 	if err := h.authenticator.SendHeartbeat(c.Request.Context()); err != nil {
-		response.Error(c, response.ErrServerError, err.Error())
+		WithFields(logrus.Fields{
+			"request_id": requestID,
+			"error":      err.Error(),
+		}).Error("Heartbeat failed")
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": sanitizeError(err),
+			"code":  errCodeInternal,
+		})
 		return
 	}
 
-	response.Success(c, gin.H{"message": "Heartbeat received"})
+	c.JSON(http.StatusOK, gin.H{"message": "Heartbeat received"})
 }
 
 // WebSocketTerminal WebSocket 终端（预留）
 func (h *AgentHandler) WebSocketTerminal(c *gin.Context) {
-	// Wave 9 完整实现
-	response.Error(c, response.ErrNotImplemented, "WebSocket terminal not yet implemented")
+	requestID := c.GetHeader("X-Request-ID")
+	WithRequestID(requestID).Warn("WebSocket terminal not yet implemented")
+	c.JSON(http.StatusNotImplemented, gin.H{
+		"error": errMsgServiceUnavailable,
+		"code":  errCodeInternal,
+	})
 }
