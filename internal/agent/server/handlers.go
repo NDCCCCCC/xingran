@@ -1,10 +1,59 @@
 package server
 
 import (
+	"log"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
+
+// 通用错误消息（避免信息泄露）
+const (
+	errMsgGeneric         = "请求处理失败，请稍后重试"
+	errMsgInvalidRequest  = "请求参数无效"
+	errMsgUnauthorized    = "未授权访问"
+	errMsgForbidden       = "权限不足"
+	errMsgNotFound        = "资源不存在"
+	errMsgInternalError   = "服务器内部错误"
+	errMsgServiceUnavailable = "服务暂时不可用"
+)
+
+// 内部错误码（用于日志，不暴露给客户端）
+const (
+	errCodeInternal       = 1001
+	errCodeDatabase       = 1002
+	errCodeExternalAPI    = 1003
+	errCodeConfig         = 1004
+	errCodeAuth           = 1005
+)
+
+// sanitizeError 清理错误消息，移除敏感信息
+func sanitizeError(err error) string {
+	if err == nil {
+		return ""
+	}
+
+	errMsg := err.Error()
+
+	// 检查是否包含敏感信息
+	sensitivePatterns := []string{
+		"password", "secret", "token", "key", "credential",
+		"internal", "database", "sql", "query", "connection",
+		"file://", "/etc/", "/var/", "C:\\",
+	}
+
+	errMsgLower := strings.ToLower(errMsg)
+	for _, pattern := range sensitivePatterns {
+		if strings.Contains(errMsgLower, pattern) {
+			log.Printf("Sanitized error containing '%s': %v", pattern, err)
+			return errMsgGeneric
+		}
+	}
+
+	return errMsg
+}
 
 // AgentHandler Agent HTTP 处理器
 type AgentHandler struct {
@@ -23,6 +72,9 @@ func NewAgentHandler(accountManager *AccountManager, authenticator *JWTAuthentic
 // RegisterRoutes 注册路由
 func (h *AgentHandler) RegisterRoutes(r *gin.Engine) {
 	api := r.Group("/api/v1")
+
+	// 应用安全响应头中间件（全局）
+	api.Use(SecurityHeaders())
 
 	// 公开端点
 	api.POST("/health", h.HealthCheck)
@@ -47,12 +99,19 @@ func (h *AgentHandler) RegisterRoutes(r *gin.Engine) {
 func (h *AgentHandler) CreateAccount(c *gin.Context) {
 	var req Account
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": errMsgInvalidRequest,
+			"code": errCodeInternal,
+		})
 		return
 	}
 
 	if err := h.accountManager.CreateAccount(c.Request.Context(), &req); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("Failed to create account: %v", err) // 内部日志记录详细错误
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": sanitizeError(err), // 客户端收到清理后的错误
+			"code": errCodeInternal,
+		})
 		return
 	}
 
@@ -64,11 +123,11 @@ func (h *AgentHandler) DeleteAccount(c *gin.Context) {
 	username := c.Param("username")
 
 	if err := h.accountManager.DeleteAccount(c.Request.Context(), username); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.Error(c, response.ErrServerError, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Account deleted successfully"})
+	response.Success(c, gin.H{"message": "Account deleted successfully"})
 }
 
 // ResetPassword 重置密码
@@ -79,16 +138,16 @@ func (h *AgentHandler) ResetPassword(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		response.Error(c, response.ErrBadRequest, err.Error())
 		return
 	}
 
 	if err := h.accountManager.ResetPassword(c.Request.Context(), username, req.NewPassword); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.Error(c, response.ErrServerError, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Password reset successfully"})
+	response.Success(c, gin.H{"message": "Password reset successfully"})
 }
 
 // EnableAccount 启用账号
@@ -96,11 +155,11 @@ func (h *AgentHandler) EnableAccount(c *gin.Context) {
 	username := c.Param("username")
 
 	if err := h.accountManager.EnableAccount(c.Request.Context(), username); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.Error(c, response.ErrServerError, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Account enabled successfully"})
+	response.Success(c, gin.H{"message": "Account enabled successfully"})
 }
 
 // DisableAccount 禁用账号
@@ -108,22 +167,22 @@ func (h *AgentHandler) DisableAccount(c *gin.Context) {
 	username := c.Param("username")
 
 	if err := h.accountManager.DisableAccount(c.Request.Context(), username); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.Error(c, response.ErrServerError, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Account disabled successfully"})
+	response.Success(c, gin.H{"message": "Account disabled successfully"})
 }
 
 // ListAccounts 列出所有账号
 func (h *AgentHandler) ListAccounts(c *gin.Context) {
 	accounts, err := h.accountManager.ListAccounts(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.Error(c, response.ErrServerError, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	response.Success(c, gin.H{
 		"accounts": accounts,
 		"total":    len(accounts),
 	})
@@ -131,7 +190,7 @@ func (h *AgentHandler) ListAccounts(c *gin.Context) {
 
 // HealthCheck 健康检查
 func (h *AgentHandler) HealthCheck(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
+	response.Success(c, gin.H{
 		"status":  "healthy",
 		"service": "ruoyi-vm-agent",
 	})
@@ -145,33 +204,38 @@ func (h *AgentHandler) Register(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		response.Error(c, response.ErrBadRequest, err.Error())
 		return
+	}
+
+	// 如果请求中提供了 agent_id 和 vm_id，使用它们注册
+	// 否则使用 authenticator 中已有的配置
+	if req.AgentID != "" && req.VMID != "" {
+		// TODO: 实现动态更新 agent_id 和 vm_id 的逻辑
+		// 当前使用 authenticator 中的配置
 	}
 
 	// 调用后端注册 API
-	if err := h.authenticator.Register(c.Request.Context()); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.authenticator.RegisterToBackend(c.Request.Context(), map[string]interface{}{}); err != nil {
+		response.Error(c, response.ErrServerError, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Agent registered successfully"})
+	response.Success(c, gin.H{"message": "Agent registered successfully"})
 }
 
 // Heartbeat 心跳上报
 func (h *AgentHandler) Heartbeat(c *gin.Context) {
 	if err := h.authenticator.SendHeartbeat(c.Request.Context()); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.Error(c, response.ErrServerError, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Heartbeat received"})
+	response.Success(c, gin.H{"message": "Heartbeat received"})
 }
 
 // WebSocketTerminal WebSocket 终端（预留）
 func (h *AgentHandler) WebSocketTerminal(c *gin.Context) {
 	// Wave 9 完整实现
-	c.JSON(http.StatusNotImplemented, gin.H{
-		"message": "WebSocket terminal not yet implemented",
-	})
+	response.Error(c, response.ErrNotImplemented, "WebSocket terminal not yet implemented")
 }
