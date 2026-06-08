@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: MAC地址历史数据管理
 status: unknown
-stopped_at: context exhaustion at 90% (2026-06-08)
-last_updated: "2026-06-08T08:12:53.141Z"
+stopped_at: Phase 27 context gathered
+last_updated: "2026-06-08T16:29:54.616Z"
 progress:
-  total_phases: 5
+  total_phases: 6
   completed_phases: 2
-  total_plans: 24
+  total_plans: 25
   completed_plans: 16
-  percent: 67
+  percent: 64
 ---
 
 # Project State
@@ -252,8 +252,8 @@ Plan: 22-06 (VM Agent 服务实现)
 
 ## Session Continuity
 
-Last session: 2026-06-08T08:12:53.134Z
-Stopped at: context exhaustion at 90% (2026-06-08)
-Resume file: None
+Last session: --stopped-at
+Stopped at: Phase 27 context gathered
+Resume file: --resume-file
 
 Resume file: None
