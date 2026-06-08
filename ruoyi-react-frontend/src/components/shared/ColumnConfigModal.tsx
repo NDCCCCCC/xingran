@@ -11,7 +11,7 @@ import { SearchOutlined, HolderOutlined } from '@ant-design/icons';
 import { DndContext, closestCenter, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { ColumnConfig } from '@/hooks/useColumnConfig';
+import type { ColumnConfig } from '@/hooks/useColumnConfig';
 
 interface SortableColumnItemProps {
   config: ColumnConfig;
