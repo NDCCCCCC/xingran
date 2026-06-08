@@ -191,3 +191,100 @@ export interface InfoPoint {
   createdAt: string;
   updatedAt: string;
 }
+
+// ==================== 资产管理 ====================
+
+export type AssetStatus = 0 | 1;
+
+export interface Asset {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
+
+  // 核心标识
+  devicesn: string;              // 设备序列号
+  sequenceNo?: string;           // 序列号
+  fixAssetNo?: string;           // 固定资产编号
+
+  // 设备信息
+  deviceModelName?: string;      // 型号
+  deviceTypeName?: string;       // 类型
+  deviceCategorySecondName?: string; // 中类
+  deviceBasicTypeName?: string;  // 是否固定资产
+
+  // 用户关联
+  deviceUserName?: string;       // 领取人
+  nowUserName?: string;          // 责任人
+  nowUserP13?: string;           // 责任人p13
+  deviceUserP13?: string;        // 领取人p13
+
+  // 部门关联
+  deptName?: string;             // 受益部门
+  nowUserDeptCode?: string;      // 部门编码
+  xnDeptCode?: string;           // 受益部门编码
+
+  // 状态标识
+  useStatusLabel?: string;      // 状态
+  newFlagLabel?: string;         // 新设备标识
+  printFlagName?: string;        // 打印状态
+  nbfStatus?: number;           // 是否拟报废 (0=否, 1=是)
+
+  // 时间字段
+  drawingDate?: string;          // 接收日期
+  useDate?: string;              // 发放日期
+  storageDatetime?: string;      // 入库日期
+  lastUpdateDate?: string;       // APP扫码时间
+  y07UpdateTime?: string;        // Y07更新时间
+  machineUptime?: string;        // 最后上线时间
+  lastInventoryDate?: string;    // 最近一次盘点时间
+
+  // 网络信息
+  mac1?: string;                 // 有线MAC
+  mac2?: string;                 // 无线MAC
+  machineIp?: string;            // 加域IP
+  machineBs?: string;            // 加域标识
+
+  // 合同与属性
+  contractNo?: string;           // 合同号
+  attributeValue?: string;       // 设备属性
+
+  // 位置与归属
+  scanSite?: string;             // AAP扫码地理位置
+  remark?: string;               // 备注
+  qudaoName?: string;            // 设备渠道
+  usingTypeName?: string;        // 用途
+  subUsingTypeName?: string;     // 子用途
+  orgnoName?: string;            // 使用机构
+  storeroomName?: string;        // 库房
+  storageAddress?: string;       // 存放地址
+
+  // 机构与标准
+  signOrgnoName?: string;        // 归属机构
+  isNoStandardName?: string;     // 申请标准名称
+  errorFlagName?: string;        // 异常标识
+
+  // 外部与部门用户
+  outerUser?: string;            // 使用人
+  usefulDeptName?: string;       // 部门名称
+  nowUserJobName?: string;       // 责任人岗位
+  userName?: string;             // APP扫码账号
+  machineUserId?: string;        // 最后上线账号
+  inventoryResult?: string;      // 盘点结果
+
+  // 系统关联
+  deptId?: string;               // 关联 sys_dept.id
+  userId?: string;               // 关联 sys_user.id
+
+  // 状态
+  status: AssetStatus;           // 0=正常, 1=停用
+}
+
+export interface AssetListParams extends PageParams {
+  devicesn?: string;
+  deviceModelName?: string;
+  deptId?: string;
+  userId?: string;
+  status?: number;
+  nbfStatus?: number;
+}

@@ -41,13 +41,14 @@ type Asset struct {
 	PrintFlagName     *string `gorm:"size:50;column:print_flag_name" json:"printFlagName,omitempty"`    // 打印状态
 	NBFStatus         *int    `gorm:"default:0;column:nbf_status" json:"nbfStatus,omitempty"`          // 是否拟报废 (0=否, 1=是)
 
-	// 时间字段 (6 fields)
+	// 时间字段 (7 fields)
 	DrawingDate       *time.Time `gorm:"column:drawing_date" json:"drawingDate,omitempty"`       // 接收日期
 	UseDate           *time.Time `gorm:"column:use_date" json:"useDate,omitempty"`               // 发放日期
 	StorageDatetime   *time.Time `gorm:"column:storage_datetime" json:"storageDatetime,omitempty"` // 入库日期
 	LastUpdateDate    *time.Time `gorm:"column:last_update_date" json:"lastUpdateDate,omitempty"`  // APP扫码时间
 	Y07UpdateTime     *time.Time `gorm:"column:y07_update_time" json:"y07UpdateTime,omitempty"`    // Y07更新时间
 	MachineUptime     *time.Time `gorm:"column:machine_uptime" json:"machineUptime,omitempty"`     // 最后上线时间
+	LastInventoryDate *time.Time `gorm:"column:last_inventory_date" json:"lastInventoryDate,omitempty"` // 最近一次盘点时间
 
 	// 网络信息 (4 fields)
 	MAC1        *string `gorm:"size:100;column:mac1" json:"mac1,omitempty"`           // 有线MAC
@@ -59,24 +60,27 @@ type Asset struct {
 	ContractNo      *string `gorm:"size:100;column:contractno" json:"contractNo,omitempty"`         // 合同号
 	AttributeValue  *string `gorm:"size:500;column:attribute_value" json:"attributeValue,omitempty"` // 设备属性
 
-	// 位置与归属 (6 fields)
+	// 位置与归属 (8 fields)
 	ScanSite              *string `gorm:"size:200;column:scan_site" json:"scanSite,omitempty"`           // AAP扫码地理位置
 	Remark                *string `gorm:"size:1000;column:remark" json:"remark,omitempty"`              // 备注
 	QudaoName             *string `gorm:"size:100;column:qudao_name" json:"qudaoName,omitempty"`       // 设备渠道
 	UsingTypeName         *string `gorm:"size:100;column:using_type_name" json:"usingTypeName,omitempty"` // 用途
+	SubUsingTypeName      *string `gorm:"size:100;column:sub_using_type_name" json:"subUsingTypeName,omitempty"` // 子用途
 	OrgnoName             *string `gorm:"size:100;column:orgno_name" json:"orgnoName,omitempty"`       // 使用机构
-	StoreroomName          *string `gorm:"size:100;column:storeroom_name" json:"storeroomName,omitempty"` // 存放地址
+	StoreroomName         *string `gorm:"size:100;column:storeroom_name" json:"storeroomName,omitempty"` // 库房
+	StorageAddress        *string `gorm:"size:200;column:storage_address" json:"storageAddress,omitempty"` // 存放地址
 
 	// 机构与标准 (3 fields)
 	SignOrgnoName      *string `gorm:"size:100;column:sign_orgno_name" json:"signOrgnoName,omitempty"`      // 归属机构
 	IsNoStandardName   *string `gorm:"size:100;column:is_no_standard_name" json:"isNoStandardName,omitempty"` // 申请标准名称
 	ErrorFlagName      *string `gorm:"size:50;column:error_flag_name" json:"errorFlagName,omitempty"`        // 异常标识
 
-	// 外部与部门用户 (4 fields)
+	// 外部与部门用户 (5 fields)
 	OuterUser         *string `gorm:"size:100;column:outer_user" json:"outerUser,omitempty"`                // 使用人
 	UsefulDeptName    *string `gorm:"size:100;column:useful_dept_name" json:"usefulDeptName,omitempty"`     // 部门名称
 	NowUserJobName    *string `gorm:"size:100;column:nowuser_job_name" json:"nowUserJobName,omitempty"`     // 责任人岗位
 	UserName          *string `gorm:"size:100;column:user_name" json:"userName,omitempty"`                // APP扫码账号
+	InventoryResult   *string `gorm:"size:50;column:inventory_result" json:"inventoryResult,omitempty"`  // 盘点结果
 
 	// 系统关联字段 (2 fields) - 用于关联系统部门和用户
 	DeptID            *string `gorm:"size:64;column:dept_id" json:"deptId,omitempty"`                     // 关联 sys_dept.id
