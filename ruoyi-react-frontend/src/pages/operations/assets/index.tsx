@@ -309,14 +309,13 @@ const AssetList: FC = () => {
       ellipsis: true,
     },
     {
-    },
-    {
       title: '归属机构',
       dataIndex: 'signOrgnoName',
       key: 'signOrgnoName',
       width: 120,
       ellipsis: true,
     },
+    {
       title: '责任人',
       dataIndex: 'nowUserName',
       key: 'nowUserName',
@@ -370,6 +369,27 @@ const AssetList: FC = () => {
       key: 'deviceUserName',
       width: 100,
       ellipsis: true,
+    },
+    {
+      title: '接收日期',
+      dataIndex: 'drawingDate',
+      key: 'drawingDate',
+      width: 140,
+      render: (date) => (date ? dayjs(date).format('YYYY-MM-DD') : '-'),
+    },
+    {
+      title: '最后上线',
+      dataIndex: 'machineUptime',
+      key: 'machineUptime',
+      width: 160,
+      render: (date) => (date ? dayjs(date).format('YYYY-MM-DD HH:mm') : '-'),
+    },
+    {
+      title: '盘点日期',
+      dataIndex: 'lastInventoryDate',
+      key: 'lastInventoryDate',
+      width: 140,
+      render: (date) => (date ? dayjs(date).format('YYYY-MM-DD') : '-'),
     },
     {
       title: '备注',
