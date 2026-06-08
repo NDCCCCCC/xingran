@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { FC } from 'react';
-import { Card, Row, Col, Statistic, Progress, Table, Tag, Button } from 'antd';
+import { Card, Row, Col, Statistic, Table, Tag, Button } from 'antd';
 import {
   ClusterOutlined,
   ReloadOutlined,
@@ -199,7 +199,7 @@ const Dashboard: FC = () => {
 
       {/* 系统概览卡片 */}
       <Row gutter={[16, 16]} className="mb-6">
-        <Col xs={24} sm={12} md={6}>
+        <Col span={6}>
           <Card>
             <Statistic
               title="CPU使用率"
@@ -209,17 +209,9 @@ const Dashboard: FC = () => {
               styles={{ content: { color: metrics?.cpuUsage && metrics.cpuUsage > 80 ? '#cf1322' : '#3f8600' } }}
               prefix={<ClusterOutlined />}
             />
-            {metrics?.cpuUsage && (
-              <Progress
-                percent={metrics.cpuUsage}
-                showInfo={false}
-                strokeColor={metrics.cpuUsage > 80 ? '#cf1322' : '#3f8600'}
-                className="mt-2"
-              />
-            )}
           </Card>
         </Col>
-        <Col xs={24} sm={12} md={6}>
+        <Col span={6}>
           <Card>
             <Statistic
               title="内存使用率"
@@ -229,17 +221,9 @@ const Dashboard: FC = () => {
               styles={{ content: { color: metrics?.memoryUsage && metrics.memoryUsage > 80 ? '#cf1322' : '#3f8600' } }}
               prefix={<DatabaseOutlined />}
             />
-            {metrics?.memoryUsage && (
-              <Progress
-                percent={metrics.memoryUsage}
-                showInfo={false}
-                strokeColor={metrics.memoryUsage > 80 ? '#cf1322' : '#3f8600'}
-                className="mt-2"
-              />
-            )}
           </Card>
         </Col>
-        <Col xs={24} sm={12} md={6}>
+        <Col span={6}>
           <Card>
             <Statistic
               title="磁盘使用率"
@@ -249,17 +233,9 @@ const Dashboard: FC = () => {
               styles={{ content: { color: metrics?.diskUsage && metrics.diskUsage > 80 ? '#cf1322' : '#3f8600' } }}
               prefix={<DatabaseOutlined />}
             />
-            {metrics?.diskUsage && (
-              <Progress
-                percent={metrics.diskUsage}
-                showInfo={false}
-                strokeColor={metrics.diskUsage > 80 ? '#cf1322' : '#3f8600'}
-                className="mt-2"
-              />
-            )}
           </Card>
         </Col>
-        <Col xs={24} sm={12} md={6}>
+        <Col span={6}>
           <Card>
             <Statistic
               title="进程数量"

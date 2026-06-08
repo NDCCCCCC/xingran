@@ -4,7 +4,7 @@ milestone: v1.5
 milestone_name: MAC地址历史数据管理
 status: unknown
 stopped_at: context exhaustion at 90% (2026-06-08)
-last_updated: "2026-06-08T07:20:21.513Z"
+last_updated: "2026-06-08T08:12:53.141Z"
 progress:
   total_phases: 5
   completed_phases: 2
@@ -116,6 +116,7 @@ Plan: 22-06 (VM Agent 服务实现)
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
+| 260608-mdsl | 优化监控仪表盘统计组件布局：移除 Progress，调整固定 span=6 | 2026-06-08 | - | [260608-monitor-dashboard-stats-layout](./quick/260608-monitor-dashboard-stats-layout/) |
 | 260608-ljx | 修复 migration_146_add_asset_menu_permissions.go 编译错误 | 2026-06-08 | - | [260608-ljx-migration-146-add-asset-menu-permissions](./quick/260608-ljx-migration-146-add-asset-menu-permissions/) |
 | 260605-irs | Plan 22b-02 遗留任务：CallBackend 重试逻辑、401/403 令牌刷新、handler 错误消息清理 | 2026-06-05 | 3ea086f | [260605-irs-plan-22b-02-callbackend-401-403-handler](./quick/260605-irs-plan-22b-02-callbackend-401-403-handler/) |
 | 260605-iq7 | 检查AD域组成员同步的数据源是否可以从系统用户替换成AD域控用户 | 2026-06-05 | d90371c | [260605-iq7-ad-ad-1-ad-2-3-ad-4](./quick/260605-iq7-ad-ad-1-ad-2-3-ad-4/) |
@@ -250,7 +251,7 @@ Plan: 22-06 (VM Agent 服务实现)
 
 ## Session Continuity
 
-Last session: 2026-06-08T07:20:21.505Z
+Last session: 2026-06-08T08:12:53.134Z
 Stopped at: context exhaustion at 90% (2026-06-08)
 Resume file: None
 
