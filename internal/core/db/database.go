@@ -309,6 +309,23 @@ func (d *Database) AutoMigrate() error {
 	if err := migrations.Migrate144VDIGranularPermissions(d.DB); err != nil {
 		applogger.Errorf("VDI虚拟机细粒度权限迁移失败: %v", err)
 	}
+	// 执行VDI虚拟机bound_user_id UUID转换迁移
+	if err := migrations.Migration_145_FixBoundUserIDUUID(d.DB); err != nil {
+		applogger.Errorf("VDI虚拟机bound_user_id UUID转换迁移失败: %v", err)
+	}
+	// 执行资产管理菜单和权限迁移
+	if err := migrations.Migrate146AddAssetMenuPermissions(d.DB); err != nil {
+		applogger.Errorf("资产管理菜单和权限迁移失败: %v", err)
+	}
+	// 修复资产管理菜单结构（添加缺失的C类型子菜单）
+	if err := migrations.Migrate147FixAssetMenuStructure(d.DB); err != nil {
+		applogger.Errorf("资产管理菜单结构修复迁移失败: %v", err)
+	}
+
+		// 创建资产管理表
+		if err := migrations.Migrate148CreateOpsAssetTable(d.DB); err != nil {
+			applogger.Errorf("创建资产管理表迁移失败: %v", err)
+		}
 
 	return nil
 }
