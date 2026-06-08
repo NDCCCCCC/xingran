@@ -65,7 +65,7 @@ func importData(entityType string, core *core.Core) gin.HandlerFunc {
 
 		// 验证文件类型
 		if !isValidExcelFile(file.Filename) {
-			response.Error(c, response.ErrBadRequest, "只支持.xlsx格式的Excel文件")
+			response.Error(c, response.ErrBadRequest, "只支持 .xlsx 或 .xls 格式的Excel文件")
 			return
 		}
 
@@ -269,5 +269,9 @@ func GetEntityStatusOptions(entityType string) gin.HandlerFunc {
 
 // isValidExcelFile 验证文件是否为Excel格式
 func isValidExcelFile(filename string) bool {
-	return len(filename) >= 5 && filename[len(filename)-5:] == ".xlsx"
+	ext := filename
+	if len(filename) >= 4 {
+		ext = filename[len(filename)-4:]
+	}
+	return ext == ".xls" || ext == ".xlsx"
 }

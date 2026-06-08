@@ -85,9 +85,9 @@ const ExcelImport: FC<ExcelImportProps> = ({
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'application/vnd.ms-excel',
     ];
-    const isExcelType = validTypes.includes(file.type) || file.name.endsWith('.xlsx');
+    const isExcelType = validTypes.includes(file.type) || file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
     if (!isExcelType) {
-      message.error('只支持 .xlsx 格式的Excel文件');
+      message.error('只支持 .xlsx 或 .xls 格式的Excel文件');
       return Upload.LIST_IGNORE;
     }
 
