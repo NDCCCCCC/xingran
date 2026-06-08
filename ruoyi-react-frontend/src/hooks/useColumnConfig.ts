@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { message } from 'antd';
-import { columnConfigApi, ColumnConfigItem, UserColumnConfig } from '@/lib/columnConfigApi';
+import { columnConfigApi } from '@/lib/columnConfigApi';
+import type { ColumnConfigItem, UserColumnConfig } from '@/lib/columnConfigApi';
 
 export interface ColumnConfig {
   key: string;
