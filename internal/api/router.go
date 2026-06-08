@@ -11,6 +11,7 @@ import (
 	rpaV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/rpa"
 	systemV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/system"
 	vdiV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/vdi"
+	agentV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/agent"
 	workorderV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/workorder"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/scheduler"
@@ -570,6 +571,30 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			operations.SetupExcelRouter(workstations, "workstation", core)
 		}
 
+		// 资产管理
+		assets := ops.Group("/asset")
+		assets.Use(middleware.RequirePermissions([]string{
+			"ops:asset:list",
+			"ops:asset:add",
+			"ops:asset:edit",
+			"ops:asset:delete",
+		}, core))
+		{
+			assetService := opsServices.NewAssetService(core.DB.GetDB())
+			assetHandler := operations.NewAssetHandler(assetService)
+
+			assets.POST("", assetHandler.Create)
+			assets.POST("/list", assetHandler.List)
+			assets.POST("/:id", assetHandler.GetByID)
+				assets.POST("/device-types", assetHandler.GetDeviceTypes)
+			assets.POST("/:id/update", assetHandler.Update)
+			assets.POST("/:id/delete", assetHandler.Delete)
+				assets.POST("/batch", assetHandler.BatchOperation)
+
+				// Excel导入导出
+				operations.SetupExcelRouter(assets, "asset", core)
+			}
+
 		// 信息点管理
 		infoPoints := ops.Group("/infoPoint")
 		infoPoints.Use(middleware.RequirePermissions([]string{
@@ -779,6 +804,9 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 	{
 		rpaV1.SetupPublicWorkerRouter(rpaPublic, core)
 	}
+
+	// Agent 模块（无需认证，供 Agent 自动注册使用）
+	agentV1.SetupAgentRouter(r, core)
 
 	// 需要 JWT 认证的 RPA 路由
 	rpa := r.Group("/rpa")

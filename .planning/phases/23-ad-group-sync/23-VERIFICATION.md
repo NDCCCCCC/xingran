@@ -214,3 +214,68 @@ No requirement IDs are declared in PLAN frontmatter. The REQUIREMENTS.md file co
 _Verified: 2026-05-26_
 _Verifier: Claude (gsd-verifier)_
 _Re-verification Mode: Gap closure assessment after plans 23-08 through 23-14_
+
+---
+
+## ⚠️ Code Verification Update (2026-06-05)
+
+**实际代码检查结果**: ❌ **验证状态需要更正**
+
+### 验证错误更正
+
+| 原验证项 | 原状态 | 实际状态 | 更正说明 |
+|----------|--------|----------|----------|
+| Truth #6: 定时任务自动运行同步逻辑 | VERIFIED | ❌ **NOT VERIFIED** | 15分钟组同步Cron任务不存在 |
+
+### 代码验证证据
+
+```bash
+# 检查15分钟Cron任务
+$ grep -n "AddFunc.*\*/15" internal/scheduler/ad_sync_tasks.go
+# 结果: 无匹配
+
+# 检查checkAndSyncADGroups方法
+$ grep -n "func.*checkAndSyncADGroups" internal/scheduler/ad_sync_tasks.go
+# 结果: 无匹配
+
+# 检查group_sync_next_run状态
+$ grep -n "group_sync_next_run" internal/scheduler/ad_sync_tasks.go
+# 结果: 无匹配
+```
+
+### 更正后的验证得分
+
+**原得分**: 6/6 ✅
+**更正得分**: 5/6 ⚠️
+
+| Truth | 状态 |
+|-------|------|
+| 1. MemberOUDN配置 | ✅ VERIFIED |
+| 2. 自动创建AD组 | ✅ VERIFIED |
+| 3. 部门成员自动成为组成员 | ✅ VERIFIED |
+| 4. 部门变更自动更新组关系 | ✅ VERIFIED |
+| 5. 手动同步API | ✅ VERIFIED |
+| 6. **定时任务自动运行** | ❌ **NOT IMPLEMENTED** |
+
+### 实际部署功能
+
+**已实现**:
+- ✅ 数据模型和映射表
+- ✅ 成员同步服务
+- ✅ 组管理服务
+- ✅ 手动API触发同步
+
+**未实现**:
+- ❌ 15分钟自动组同步Cron任务
+- ❌ `checkAndSyncADGroups()` 智能执行逻辑
+- ❌ `group_sync_next_run` 状态报告
+
+### 影响
+
+Phase 23的核心目标"定时任务自动运行同步逻辑"**未实现**。组同步功能需要通过手动API调用触发，不具备生产环境的自动化能力。
+
+---
+
+**重新验证时间**: 2026-06-05
+**重新验证者**: Claude (code inspection)
+**最终状态**: ⚠️ **PARTIAL - 5/6 truths verified, automated sync missing**

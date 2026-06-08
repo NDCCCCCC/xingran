@@ -126,6 +126,7 @@ func (s *UserSyncService) updateExistingUser(tx *gorm.DB, user *models.User, adU
 		"email":  &adUser.Email,
 		"phone":  &adUser.Phone,
 		"ad_dn": &adUser.UserDN, // 使用数据库列名 ad_dn
+		"ad_ou_dn":  &adUser.OuDn, // 更新用户OU路径（支持用户移动场景）
 	}
 
 	// 只有当nickname为空时才更新（尊重本地修改）

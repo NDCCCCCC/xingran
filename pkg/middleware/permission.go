@@ -68,6 +68,7 @@ func checkUserPermission(core *core.Core, userID, permission string) bool {
 
 	// 1. 首先检查精确匹配的权限
 	var count int64
+	applogger.Infof("[Permission Check] userID=%s, permission=%s", userID, permission)
 	err := core.DB.GetDB().Raw(`
 		SELECT COUNT(DISTINCT rm.menu_id)
 		FROM sys_user_role ur
@@ -76,13 +77,52 @@ func checkUserPermission(core *core.Core, userID, permission string) bool {
 		WHERE ur.user_id = ? AND m.perms = ? AND m.status = ?
 	`, userID, permission, models.MenuStatusNormal).Scan(&count).Error
 
+	applogger.Infof("[Permission Check] exact match: count=%d, err=%v", count, err)
 	if err == nil && count > 0 {
+		applogger.Infof("[Permission Check] exact match PASS")
 		return true
 	}
 
-	// 2. 如果精确匹配失败，检查模块级权限
+	// 2. 如果精确匹配失败，尝试通过子菜单权限检查父菜单权限
+	// 支持子菜单权限自动包含父菜单权限：勾选子菜单时，自动拥有父菜单的页面访问权限
+	// 例如：用户有 vdi:vm:query 权限，检查 vdi:vm:list 时应该通过
+	var menu models.Menu
+	err = core.DB.GetDB().Where("perms = ? AND status = ?", permission, models.MenuStatusNormal).First(&menu).Error
+	if err == nil && menu.ID != "" {
+		// 查找该菜单的所有子菜单
+		var childMenus []models.Menu
+		err = core.DB.GetDB().Where("parent_id = ? AND status = ?", menu.ID, models.MenuStatusNormal).Find(&childMenus).Error
+		if err == nil {
+			// 提取子菜单的权限标识
+			childPerms := make([]interface{}, 0)
+			for _, child := range childMenus {
+				if child.Perms != nil && *child.Perms != "" {
+					childPerms = append(childPerms, *child.Perms)
+				}
+			}
+			// 检查用户是否有任意子菜单的权限
+			if len(childPerms) > 0 {
+				err = core.DB.GetDB().Raw(`
+					SELECT COUNT(DISTINCT rm.menu_id)
+					FROM sys_user_role ur
+					INNER JOIN sys_role_menu rm ON ur.role_id = rm.role_id
+					INNER JOIN sys_menu m ON rm.menu_id = m.id
+					WHERE ur.user_id = ? AND m.perms IN ? AND m.status = ?
+				`, userID, childPerms, models.MenuStatusNormal).Scan(&count).Error
+
+				applogger.Infof("[Permission Check] child menu match: count=%d, childPerms=%v, err=%v", count, childPerms, err)
+				if err == nil && count > 0 {
+					applogger.Infof("[Permission Check] child menu match PASS (子菜单权限自动包含父菜单权限)")
+					return true
+				}
+			}
+		}
+	}
+
+	// 3. 如果精确匹配失败，检查模块级权限
 	// 例如：system:menu:list -> system:menu
 	modulePermission := extractModulePermission(permission)
+	applogger.Infof("[Permission Check] modulePermission=%s", modulePermission)
 	if modulePermission != "" {
 		err = core.DB.GetDB().Raw(`
 			SELECT COUNT(DISTINCT rm.menu_id)
@@ -92,11 +132,14 @@ func checkUserPermission(core *core.Core, userID, permission string) bool {
 			WHERE ur.user_id = ? AND m.perms = ? AND m.status = ?
 		`, userID, modulePermission, models.MenuStatusNormal).Scan(&count).Error
 
+		applogger.Infof("[Permission Check] module match: count=%d, err=%v", count, err)
 		if err == nil && count > 0 {
+			applogger.Infof("[Permission Check] module match PASS")
 			return true
 		}
 	}
 
+	applogger.Infof("[Permission Check] ALL CHECKS FAILED, returning false")
 	return false
 }
 

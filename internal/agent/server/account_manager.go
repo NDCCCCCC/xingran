@@ -5,18 +5,46 @@ import (
 	"fmt"
 	"os/exec"
 	"runtime"
+	"strconv"
 	"strings"
 )
 
+// platformStrategy 平台策略接口
+type platformStrategy interface {
+	createAccount(ctx context.Context, username, password string, isAdmin bool) error
+	deleteAccount(ctx context.Context, username string) error
+	resetPassword(ctx context.Context, username, newPassword string) error
+	enableAccount(ctx context.Context, username string) error
+	disableAccount(ctx context.Context, username string) error
+	listAccounts(ctx context.Context) ([]string, error)
+}
+
+// windowsPlatformStrategy Windows 平台实现
+type windowsPlatformStrategy struct{}
+
+// linuxPlatformStrategy Linux 平台实现
+type linuxPlatformStrategy struct{}
+
 // AccountManager 账号管理器
 type AccountManager struct {
-	platform string
+	strategy platformStrategy
 }
 
 // NewAccountManager 创建账号管理器
 func NewAccountManager() *AccountManager {
+	var strategy platformStrategy
+
+	switch runtime.GOOS {
+	case "windows":
+		strategy = &windowsPlatformStrategy{}
+	case "linux":
+		strategy = &linuxPlatformStrategy{}
+	default:
+		strategy = &linuxPlatformStrategy{} // 默认使用 Linux 策略
+	}
+
 	return &AccountManager{
-		platform: runtime.GOOS,
+		strategy: strategy,
 	}
 }
 
@@ -26,39 +54,56 @@ type Account struct {
 	Password  string `json:"password,omitempty"`
 	IsAdmin   bool   `json:"is_admin"`
 	IsEnabled bool   `json:"is_enabled"`
-	OSType    string `json:"os_type"`
 }
 
 // CreateAccount 创建本地账号
 func (m *AccountManager) CreateAccount(ctx context.Context, account *Account) error {
-	switch m.platform {
-	case "windows":
-		return m.createWindowsAccount(ctx, account)
-	case "linux":
-		return m.createLinuxAccount(ctx, account)
-	default:
-		return fmt.Errorf("unsupported platform: %s", m.platform)
-	}
+	return m.strategy.createAccount(ctx, account.Username, account.Password, account.IsAdmin)
 }
 
-// createWindowsAccount 创建 Windows 账号
-func (m *AccountManager) createWindowsAccount(ctx context.Context, account *Account) error {
-	// 使用 PowerShell 创建账号
-	psCommand := fmt.Sprintf(
-		"New-LocalUser -Name %s -Password (ConvertTo-SecureString %s -AsPlainText -Force) -Description 'RuoYi VDI Account'",
-		account.Username,
-		account.Password,
+// DeleteAccount 删除账号
+func (m *AccountManager) DeleteAccount(ctx context.Context, username string) error {
+	return m.strategy.deleteAccount(ctx, username)
+}
+
+// ResetPassword 重置密码
+func (m *AccountManager) ResetPassword(ctx context.Context, username, newPassword string) error {
+	return m.strategy.resetPassword(ctx, username, newPassword)
+}
+
+// EnableAccount 启用账号
+func (m *AccountManager) EnableAccount(ctx context.Context, username string) error {
+	return m.strategy.enableAccount(ctx, username)
+}
+
+// DisableAccount 禁用账号
+func (m *AccountManager) DisableAccount(ctx context.Context, username string) error {
+	return m.strategy.disableAccount(ctx, username)
+}
+
+// ListAccounts 列出所有账号
+func (m *AccountManager) ListAccounts(ctx context.Context) ([]string, error) {
+	return m.strategy.listAccounts(ctx)
+}
+
+// ============ Windows 平台实现 ============
+
+func (w *windowsPlatformStrategy) createAccount(ctx context.Context, username, password string, isAdmin bool) error {
+	// 使用 PowerShell 创建账号，通过内联脚本传递密码避免命令行泄露
+	psScript := fmt.Sprintf(
+		"$password = ConvertTo-SecureString '%s' -AsPlainText -Force; "+
+			"New-LocalUser -Name %s -Password $password -Description 'RuoYi VDI Account'",
+		password, username,
 	)
 
-	cmd := exec.CommandContext(ctx, "powershell", "-Command", psCommand)
+	cmd := exec.CommandContext(ctx, "powershell", "-Command", psScript)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to create Windows user: %w", err)
 	}
 
-	if account.IsAdmin {
-		// 添加到管理员组
+	if isAdmin {
 		addCmd := exec.CommandContext(ctx, "powershell", "-Command",
-			fmt.Sprintf("Add-LocalGroupMember -Group 'Administrators' -Member %s", account.Username))
+			fmt.Sprintf("Add-LocalGroupMember -Group 'Administrators' -Member %s", username))
 		if err := addCmd.Run(); err != nil {
 			return fmt.Errorf("failed to add to admin group: %w", err)
 		}
@@ -67,37 +112,96 @@ func (m *AccountManager) createWindowsAccount(ctx context.Context, account *Acco
 	return nil
 }
 
-// createLinuxAccount 创建 Linux 账号
-func (m *AccountManager) createLinuxAccount(ctx context.Context, account *Account) error {
-	// 创建用户
-	cmd := exec.CommandContext(ctx, "useradd", "-m", account.Username)
+func (w *windowsPlatformStrategy) deleteAccount(ctx context.Context, username string) error {
+	return exec.CommandContext(ctx, "powershell", "-Command",
+		fmt.Sprintf("Remove-LocalUser -Name %s", username)).Run()
+}
+
+func (w *windowsPlatformStrategy) resetPassword(ctx context.Context, username, newPassword string) error {
+	psScript := fmt.Sprintf(
+		"$password = ConvertTo-SecureString '%s' -AsPlainText -Force; "+
+			"Set-LocalUser -Name %s -Password $password",
+		newPassword, username,
+	)
+	return exec.CommandContext(ctx, "powershell", "-Command", psScript).Run()
+}
+
+func (w *windowsPlatformStrategy) enableAccount(ctx context.Context, username string) error {
+	return exec.CommandContext(ctx, "powershell", "-Command",
+		fmt.Sprintf("Enable-LocalUser -Name %s", username)).Run()
+}
+
+func (w *windowsPlatformStrategy) disableAccount(ctx context.Context, username string) error {
+	return exec.CommandContext(ctx, "powershell", "-Command",
+		fmt.Sprintf("Disable-LocalUser -Name %s", username)).Run()
+}
+
+func (w *windowsPlatformStrategy) listAccounts(ctx context.Context) ([]string, error) {
+	cmd := exec.CommandContext(ctx, "powershell", "-Command", "Get-LocalUser | Select-Object -ExpandProperty Name")
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list Windows users: %w", err)
+	}
+	return parseWindowsUsers(string(output)), nil
+}
+
+// ============ Linux 平台实现 ============
+
+func (l *linuxPlatformStrategy) createAccount(ctx context.Context, username, password string, isAdmin bool) error {
+	cmd := exec.CommandContext(ctx, "useradd", "-m", username)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to create user: %w", err)
 	}
 
-	// 设置密码
-	if err := m.setLinuxPassword(ctx, account.Username, account.Password); err != nil {
+	if err := l.setLinuxPassword(ctx, username, password); err != nil {
 		return err
 	}
 
-	if account.IsAdmin {
-		// 配置 sudo 权限
-		return m.configureSudo(ctx, account.Username)
+	if isAdmin {
+		return l.configureSudo(ctx, username)
 	}
 
 	return nil
 }
 
+func (l *linuxPlatformStrategy) deleteAccount(ctx context.Context, username string) error {
+	return exec.CommandContext(ctx, "userdel", "-r", username).Run()
+}
+
+func (l *linuxPlatformStrategy) resetPassword(ctx context.Context, username, newPassword string) error {
+	return l.setLinuxPassword(ctx, username, newPassword)
+}
+
+func (l *linuxPlatformStrategy) enableAccount(ctx context.Context, username string) error {
+	return exec.CommandContext(ctx, "usermod", "-U", username).Run()
+}
+
+func (l *linuxPlatformStrategy) disableAccount(ctx context.Context, username string) error {
+	return exec.CommandContext(ctx, "usermod", "-L", username).Run()
+}
+
+func (l *linuxPlatformStrategy) listAccounts(ctx context.Context) ([]string, error) {
+	cmd := exec.CommandContext(ctx, "getent", "passwd")
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list Linux users: %w", err)
+	}
+	return parseLinuxUsers(string(output)), nil
+}
+
 // setLinuxPassword 设置 Linux 用户密码
-func (m *AccountManager) setLinuxPassword(ctx context.Context, username, password string) error {
+func (l *linuxPlatformStrategy) setLinuxPassword(ctx context.Context, username, password string) error {
 	cmd := exec.CommandContext(ctx, "chpasswd")
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return err
 	}
 
+	// 确保在 goroutine 出错时也关闭 stdin
+	defer stdin.Close()
+
+	// 使用单独的 goroutine 写入，避免阻塞
 	go func() {
-		defer stdin.Close()
 		fmt.Fprintf(stdin, "%s:%s\n", username, password)
 	}()
 
@@ -109,23 +213,19 @@ func (m *AccountManager) setLinuxPassword(ctx context.Context, username, passwor
 }
 
 // configureSudo 配置 sudo 权限
-func (m *AccountManager) configureSudo(ctx context.Context, username string) error {
-	// 写入 /etc/sudoers.d/ruoyi-agent
+func (l *linuxPlatformStrategy) configureSudo(ctx context.Context, username string) error {
 	sudoersContent := fmt.Sprintf(
 		"%s ALL=(root) NOPASSWD: /usr/sbin/useradd, /usr/sbin/userdel, /usr/sbin/usermod, /usr/bin/passwd\n",
 		username,
 	)
-
 	sudoersPath := fmt.Sprintf("/etc/sudoers.d/%s", username)
 
-	// 使用 tee 写入文件
 	cmd := exec.CommandContext(ctx, "tee", sudoersPath)
 	cmd.Stdin = strings.NewReader(sudoersContent)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to write sudoers file: %w", err)
 	}
 
-	// 设置权限
 	chmodCmd := exec.CommandContext(ctx, "chmod", "440", sudoersPath)
 	if err := chmodCmd.Run(); err != nil {
 		return fmt.Errorf("failed to set sudoers permissions: %w", err)
@@ -134,105 +234,48 @@ func (m *AccountManager) configureSudo(ctx context.Context, username string) err
 	return nil
 }
 
-// DeleteAccount 删除账号
-func (m *AccountManager) DeleteAccount(ctx context.Context, username string) error {
-	switch m.platform {
-	case "windows":
-		return exec.CommandContext(ctx, "powershell", "-Command",
-			fmt.Sprintf("Remove-LocalUser -Name %s", username)).Run()
-	case "linux":
-		return exec.CommandContext(ctx, "userdel", "-r", username).Run()
-	default:
-		return fmt.Errorf("unsupported platform: %s", m.platform)
-	}
-}
-
-// ResetPassword 重置密码
-func (m *AccountManager) ResetPassword(ctx context.Context, username, newPassword string) error {
-	switch m.platform {
-	case "windows":
-		return exec.CommandContext(ctx, "powershell", "-Command",
-			fmt.Sprintf("Set-LocalUser -Name %s -Password (ConvertTo-SecureString %s -AsPlainText -Force)",
-				username, newPassword)).Run()
-	case "linux":
-		return m.setLinuxPassword(ctx, username, newPassword)
-	default:
-		return fmt.Errorf("unsupported platform: %s", m.platform)
-	}
-}
-
-// EnableAccount 启用账号
-func (m *AccountManager) EnableAccount(ctx context.Context, username string) error {
-	switch m.platform {
-	case "windows":
-		return exec.CommandContext(ctx, "powershell", "-Command",
-			fmt.Sprintf("Enable-LocalUser -Name %s", username)).Run()
-	case "linux":
-		return exec.CommandContext(ctx, "usermod", "-U", username).Run()
-	default:
-		return fmt.Errorf("unsupported platform: %s", m.platform)
-	}
-}
-
-// DisableAccount 禁用账号
-func (m *AccountManager) DisableAccount(ctx context.Context, username string) error {
-	switch m.platform {
-	case "windows":
-		return exec.CommandContext(ctx, "powershell", "-Command",
-			fmt.Sprintf("Disable-LocalUser -Name %s", username)).Run()
-	case "linux":
-		return exec.CommandContext(ctx, "usermod", "-L", username).Run()
-	default:
-		return fmt.Errorf("unsupported platform: %s", m.platform)
-	}
-}
-
-// ListAccounts 列出所有账号
-func (m *AccountManager) ListAccounts(ctx context.Context) ([]string, error) {
-	switch m.platform {
-	case "windows":
-		cmd := exec.CommandContext(ctx, "powershell", "-Command", "Get-LocalUser | Select-Object -ExpandProperty Name")
-		output, err := cmd.Output()
-		if err != nil {
-			return nil, fmt.Errorf("failed to list Windows users: %w", err)
-		}
-		return parseWindowsUsers(string(output)), nil
-	case "linux":
-		cmd := exec.CommandContext(ctx, "getent", "passwd")
-		output, err := cmd.Output()
-		if err != nil {
-			return nil, fmt.Errorf("failed to list Linux users: %w", err)
-		}
-		return parseLinuxUsers(string(output)), nil
-	default:
-		return nil, fmt.Errorf("unsupported platform: %s", m.platform)
-	}
-}
+// ============ 解析辅助函数 ============
 
 // parseWindowsUsers 解析 Windows 用户列表
 func parseWindowsUsers(output string) []string {
 	lines := strings.Split(strings.TrimSpace(output), "\n")
 	users := make([]string, 0, len(lines))
+
 	for _, line := range lines {
 		if user := strings.TrimSpace(line); user != "" {
 			users = append(users, user)
 		}
 	}
+
 	return users
 }
 
 // parseLinuxUsers 解析 Linux 用户列表
 func parseLinuxUsers(output string) []string {
 	lines := strings.Split(strings.TrimSpace(output), "\n")
-	users := make([]string, 0, len(lines))
+	users := make([]string, 0)
+
 	for _, line := range lines {
+		// 使用 Index 查找冒号位置，避免分割整个字符串
+		idx := strings.Index(line, ":")
+		if idx <= 0 {
+			continue
+		}
+
+		username := line[:idx]
+
+		// 跳过系统用户（UID < 1000）
+		// 格式: username:x:uid:gid:...
 		parts := strings.Split(line, ":")
-		if len(parts) >= 1 && parts[0] != "" {
-			// 只返回普通用户（UID >= 1000）
-			if len(parts) > 2 {
-				users = append(users, parts[0])
+		if len(parts) >= 3 {
+			uidStr := parts[2]
+			if uid, err := strconv.Atoi(uidStr); err == nil {
+				if uid >= 1000 {
+					users = append(users, username)
+				}
 			}
 		}
 	}
+
 	return users
 }

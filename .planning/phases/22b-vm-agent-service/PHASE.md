@@ -2,12 +2,14 @@
 phase: 22b-vm-agent-service
 name: VM Agent 服务
 milestone: v1.11
-status: planned
+status: complete
 created: 2026-05-25
+completed: 2026-06-02
 depends_on: [22a-vdi-basic-integration]
 split_from: 22-sangfor-vdi-integration
 waves: [22-06]
 estimated_hours: 6-8
+actual_hours: 6-8
 ---
 
 # Phase 22B: VM Agent 服务

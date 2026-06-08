@@ -495,6 +495,9 @@ func (s *menuService) GetUserPermissions(ctx context.Context, userID string) ([]
 		menuIDs[i] = rm.MenuID
 	}
 
+	// 【关键修复】自动包含所有祖先菜单，确保勾选子菜单时拥有父菜单权限
+	menuIDs = s.appendAncestorMenuIDs(ctx, menuIDs)
+
 	// 获取菜单的权限标识（perms字段，不为空的去重）
 	var perms []string
 	if err := s.db.WithContext(ctx).

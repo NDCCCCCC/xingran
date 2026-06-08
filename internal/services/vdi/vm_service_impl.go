@@ -811,7 +811,7 @@ func (s *vmServiceImpl) BindUser(ctx context.Context, vmID string, req *BindUser
 
 	// 4. 仅更新本地记录（不调用VDI API）
 	updates := map[string]interface{}{
-		"bound_user_id":   req.Username,
+		"bound_user_id":   systemUser.ID, // Store UUID for data scope filtering
 		"bound_user_name": displayName,
 	}
 

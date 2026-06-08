@@ -2,6 +2,7 @@ package system
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
@@ -29,6 +30,62 @@ func NewRoleServiceWithCache(
 		cache:            cache,
 		CacheServiceBase: CacheServiceBase{Config: config},
 	}
+}
+
+// List 查询角色列表（带缓存）
+func (s *roleCacheService) List(ctx context.Context, params requests.RoleListParams) (*PageResult, error) {
+	// 构建缓存键
+	cacheKey := s.buildListCacheKey(params)
+	var result PageResult
+
+	// 缓存时间：30分钟
+	expiration := s.GetExpiration(services.CacheConfigRoleMenus, 30*time.Minute)
+
+	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
+		return s.roleService.List(ctx, params)
+	})
+
+	return &result, err
+}
+
+// buildListCacheKey 构建列表查询的缓存键
+func (s *roleCacheService) buildListCacheKey(params requests.RoleListParams) string {
+	// 使用基础缓存键 + 参数构建唯一键
+	// 格式：cache:role:list:roleName:roleKey:status:current:pageSize
+	baseKey := services.CacheKeyRoleAll
+	var keyPart string
+
+	if params.RoleName != "" {
+		keyPart += ":name:" + params.RoleName
+	}
+	if params.RoleKey != "" {
+		keyPart += ":key:" + params.RoleKey
+	}
+	if params.Status != "" {
+		keyPart += ":status:" + params.Status
+	}
+
+	// 添加分页参数
+	keyPart += fmt.Sprintf(":page:%d:size:%d", params.Current, params.PageSize)
+
+	return baseKey + keyPart
+}
+
+// GetByID 获取角色详情（带缓存）
+func (s *roleCacheService) GetByID(ctx context.Context, id string) (*models.Role, error) {
+	cacheKey := services.CacheKeyRoleAll + ":id:" + id
+	var result models.Role
+
+	expiration := s.GetExpiration(services.CacheConfigRoleMenus, 30*time.Minute)
+
+	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
+		return s.roleService.GetByID(ctx, id)
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
 }
 
 // GetAllEnabled 获取所有启用的角色（覆盖基础方法，使用缓存）
@@ -147,6 +204,7 @@ func (s *roleCacheService) InvalidateRoleCache(ctx context.Context, roleID strin
 		keys = append(keys,
 			services.CacheKeyRoleMenus+":"+roleID,
 			services.CacheKeyRoleDepts+":"+roleID,
+			services.CacheKeyRoleAll+":id:"+roleID,
 		)
 	}
 	InvalidateCacheByKey(ctx, s.cache, keys, "ROLE")

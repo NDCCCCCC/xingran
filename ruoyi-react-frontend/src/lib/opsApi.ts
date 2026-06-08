@@ -521,6 +521,11 @@ const assetCrudApi = createCrudApi<Asset>({ basePath: '/ops/asset' });
 export const assetApi = {
   ...assetCrudApi,
 
+  // 获取设备类型列表（动态数据）
+  getDeviceTypes: async () => {
+    return await post<{ value: string; count: number }[]>('/ops/asset/device-types', {});
+  },
+
   // Excel导入导出通过 SetupExcelRouter 注册在 /ops/asset 路由组下：
   // - GET  /ops/asset/template  (下载模板)
   // - POST /ops/asset/import    (上传导入)

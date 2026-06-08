@@ -356,7 +356,7 @@ const RoleManagement: FC = () => {
                 <Form.Item
                   name="menuIds"
                   label="权限菜单"
-                  tooltip="选择角色可以访问的菜单（选择父菜单时自动选择子菜单）"
+                  tooltip="选择角色可以访问的菜单（勾选父菜单时自动勾选所有子菜单）"
                 >
                   <Tree
                     checkable
@@ -391,7 +391,7 @@ const RoleManagement: FC = () => {
                   <Form.Item
                     name="deptIds"
                     label="部门权限"
-                    tooltip="选择角色可以访问的部门数据（选择父部门时自动选择子部门）"
+                    tooltip="选择角色可以访问的部门数据（勾选父部门时自动勾选所有子部门）"
                   >
                     <Tree
                       checkable

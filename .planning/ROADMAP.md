@@ -252,7 +252,87 @@
 - 前端权限-按钮动态映射
 ---
 
-## Progress
+### Phase 26: 资产管理模块 📋
+
+**Goal**: 创建完整的资产管理模块，包含数据库设计、后端 API 和前端页面，支持基于设备序列号 (DEVICESN) 的 Excel 导入/更新功能
+
+**Depends on**: 无（独立新模块）
+**Status**: ✅ Completed
+**Plans**: 6 plans (3 waves)
+
+**Requirements**:
+- **数据模型**: 根据元数据定义创建包含40个字段的资产表结构
+- **导入功能**: Excel 批量导入，根据设备序列号判断更新或新增
+- **导出功能**: 支持导出当前资产数据到 Excel
+- **CRUD 操作**: 完整的增删改查 API
+- **前端页面**: 新的"资产管理"菜单下的列表页面
+
+**技术规范**:
+- 遵循项目 Handler-Service 架构模式
+- 使用 UUID 作为主键
+- 支持软删除 (deleted_at)
+- 遵循 0=正常, 1=停用的状态值规范
+- DeviceSN 作为唯一标识用于 Excel 导入 UpsertKey
+- 参考 building/floor/workstation 模式
+
+**Wave 1 - Database & Model**:
+- [x] 26-01-PLAN.md — Asset model and database schema
+
+**Wave 2 - Backend Service & API**:
+- [x] 26-02-PLAN.md — Asset service layer with UUID validation
+- [x] 26-03-PLAN.md — Asset API handlers and routes
+
+**Wave 3 - Excel Import/Export & Frontend**:
+- [x] 26-04-PLAN.md — Excel import/export configuration
+- [x] 26-05-PLAN.md — Frontend asset list page
+- [x] 26-06-PLAN.md — Menu and permission configuration
+
+**Phase Highlights**:
+- 📊 Complete asset tracking with 40 fields (device info, user/dept associations, network config, status)
+- 🔄 Excel import with DeviceSN as upsert key (update existing, create new)
+- 🔗 Automatic department/user resolution via ReferenceResolver
+- ✅ UUID validation for foreign keys (dept_id, user_id)
+- 📁 Department filtering with sub-department support
+- 🎨 Frontend list page with table display and Excel operations
+
+---
+
+### Phase 27: 全局列自定义显示功能 📋
+
+**Goal**: 为系统中所有列表页面添加可自定义列显示的功能，解决资产列表页面字段过多（43列）的问题
+
+**Depends on**: Phase 26 (资产管理模块 - 资产列表页面作为主要集成目标)
+**Status**: 📋 Planned
+**Plans**: 1 plan (8 tasks, 2 waves)
+
+**Requirements**:
+- **列显示/隐藏**: 用户可以选择显示哪些列
+- **列拖拽排序**: 用户可以调整列的显示顺序
+- **列宽度自定义**: 用户可以设置列宽度（可选）
+- **持久化存储**: 配置保存到数据库，永久生效
+- **重置功能**: 支持重置为默认配置
+- **性能优化**: localStorage 缓存 + 数据库同步，切换列响应 < 200ms
+
+**技术规范**:
+- 页面 key 格式: `{module}.{list}` (如 `asset.list`, `user.list`)
+- 用户隔离: 基于 user_id 的配置隔离
+- 默认配置: 在代码中定义，首次加载自动应用
+- 缓存策略: localStorage (5分钟) + Redis (30分钟)
+
+**Wave 1 - Foundation**:
+- [ ] 27-01-PLAN.md — 数据库、后端 API、前端基础组件
+
+**Phase Highlights**:
+- 🎯 Global column customization system for all list pages
+- 📊 Support for asset list with 43 columns (grouped display)
+- 🔄 Automatic save with debouncing (500ms)
+- 💾 localStorage + Redis dual-layer caching
+- 🔒 User-scoped configurations with database persistence
+- 🖥️ Beautiful column selector UI with drag-and-drop
+- ⚡ Fast performance (< 200ms response time)
+
+---
+
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -284,7 +364,9 @@
 | 22B. VM Agent 服务 | v1.12 | 0/1 | Planned | - |
 | 22C. 账号管理与密码 | v1.12 | 0/2 | Planned | - |
 | 22D. Web Console 与监控 | v1.12 | 0/2 | Planned | - |
+| 26. 资产管理模块 | v1.13 | 6/6 | Complete | 2026-06-08 |
+| 27. 全局列自定义显示功能 | v1.14 | 0/1 | Planned | - |
 
-**Total**: 85 plans completed, 15 plans planned (Phases 13-15), 14 plans planned (Phases 22 + 25), 114 total plans
+**Total**: 91 plans completed, 15 plans planned (Phases 13-15), 14 plans planned (Phases 22 + 25), 1 plan planned (Phase 27), 121 total plans
 
-**Completion Rate**: 75% (85/114)
+**Completion Rate**: 75.2% (91/121)

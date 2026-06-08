@@ -15,15 +15,15 @@ func SetupVMRouter(r *gin.RouterGroup, core *core.Core) {
 	vmHandler := NewVMHandler(vmService, core.GetDB())
 
 	// 注册路由
-	r.POST("/list", vmHandler.List)
+	r.POST("/list", middleware.RequirePermissions([]string{"vdi:vm:query"}, core), vmHandler.List)
 	r.POST("/resource-groups", vmHandler.ListResourceGroups)
 	r.POST("/resources", vmHandler.ListResources)
-	r.POST("", vmHandler.Create)
+	r.POST("", middleware.RequirePermissions([]string{"vdi:vm:add"}, core), vmHandler.Create)
 	r.POST("/:id", vmHandler.GetByID)
-	r.POST("/:id/update", vmHandler.Update)
-	r.POST("/:id/delete", middleware.RequirePermissions([]string{"vdi:vm:delete"}, core), vmHandler.Delete)
+	r.POST("/:id/update", middleware.RequirePermissions([]string{"vdi:vm:edit"}, core), vmHandler.Update)
+	r.POST("/:id/delete", middleware.RequirePermissions([]string{"vdi:vm:remove"}, core), vmHandler.Delete)
 
-	// VDI 电源操作 — 使用细粒度权限，拆分为独立路由
+	// VDI 电源操作 — 使用细粒度权限
 	r.POST("/start", middleware.RequirePermissions([]string{"vdi:vm:start"}, core), vmHandler.StartVM)
 	r.POST("/stop", middleware.RequirePermissions([]string{"vdi:vm:stop"}, core), vmHandler.StopVM)
 	r.POST("/restart", middleware.RequirePermissions([]string{"vdi:vm:restart"}, core), vmHandler.RestartVM)
@@ -36,9 +36,9 @@ func SetupVMRouter(r *gin.RouterGroup, core *core.Core) {
 	r.POST("/:id/sync", middleware.RequirePermissions([]string{"vdi:vm:sync"}, core), vmHandler.SyncFromVDI)
 	r.POST("/sync-all", middleware.RequirePermissions([]string{"vdi:vm:sync"}, core), vmHandler.SyncAll)
 
-	// VDI 创建虚拟机相关接口
-	r.POST("/vtp-platforms", vmHandler.ListVTPPlatforms)
-	r.POST("/run-positions", vmHandler.ListRunPositions)
-	r.POST("/storages", vmHandler.ListStorages)
-	r.POST("/networks", vmHandler.ListNetworks)
+	// VDI 创建虚拟机相关接口 — 需要 vdi:vm:add 权限
+	r.POST("/vtp-platforms", middleware.RequirePermissions([]string{"vdi:vm:add"}, core), vmHandler.ListVTPPlatforms)
+	r.POST("/run-positions", middleware.RequirePermissions([]string{"vdi:vm:add"}, core), vmHandler.ListRunPositions)
+	r.POST("/storages", middleware.RequirePermissions([]string{"vdi:vm:add"}, core), vmHandler.ListStorages)
+	r.POST("/networks", middleware.RequirePermissions([]string{"vdi:vm:add"}, core), vmHandler.ListNetworks)
 }

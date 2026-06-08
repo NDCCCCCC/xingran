@@ -2,6 +2,7 @@ package system
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
@@ -179,6 +180,45 @@ func getRoleIDs(roles []models.Role) []string {
 		ids[i] = r.ID
 	}
 	return ids
+}
+
+// List 查询用户列表（带缓存）
+func (s *userCacheService) List(ctx context.Context, params requests.UserListParams) (*PageResult, error) {
+	// 构建缓存键
+	cacheKey := s.buildListCacheKey(params)
+	var result PageResult
+
+	// 缓存时间：10分钟（列表数据变化较频繁）
+	expiration := s.GetExpiration(services.CacheConfigUserList, 10*time.Minute)
+
+	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
+		return s.userService.List(ctx, params)
+	})
+
+	return &result, err
+}
+
+// buildListCacheKey 构建列表查询的缓存键
+func (s *userCacheService) buildListCacheKey(params requests.UserListParams) string {
+	// 使用基础缓存键 + 参数构建唯一键
+	// 格式：user:list:username:status:deptId:current:pageSize
+	baseKey := services.CacheKeyUserList
+	var keyPart string
+
+	if params.Username != nil && *params.Username != "" {
+		keyPart += ":username:" + *params.Username
+	}
+	if params.Status != nil && *params.Status != 0 {
+		keyPart += ":status:" + fmt.Sprintf("%d", *params.Status)
+	}
+	if params.DeptID != nil && *params.DeptID != "" {
+		keyPart += ":dept:" + *params.DeptID
+	}
+
+	// 添加分页参数
+	keyPart += fmt.Sprintf(":page:%d:size:%d", params.Current, params.PageSize)
+
+	return baseKey + keyPart
 }
 
 // InvalidateUserCache 失效用户相关缓存

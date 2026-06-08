@@ -55,7 +55,72 @@ Write-Host "Configuration created at: $configPath"
 $logPath = "C:\Program Files\RuoyiAgent\logs"
 New-Item -Path $logPath -ItemType Directory -Force | Out-Null
 
-# 创建受限管理员账号
+# Create JEA Session Configuration
+function Create-JEAConfiguration {
+    param(
+        [string]$ConfigPath = "C:\Program Files\WindowsPowerShell\Configuration\sessionConfigs\RuoyiAgent.pssc"
+    )
+
+    Write-Host "Creating JEA session configuration..."
+
+    # Define role capabilities
+    $roleCapabilityPath = "C:\Program Files\WindowsPowerShell\Configuration\RoleCapabilities\RuoyiAgentRole.ps1"
+
+    # Create role capabilities file
+    @"
+@{
+    # ID used to uniquely identify this role capability
+    GUID = 'a8c7f7e3-6d4a-4f5b-9e8a-2d3c4b5a6e7f'
+
+    # Author of this role capability
+    Author = 'RuoYi VDI System'
+
+    # Company or vendor of this role capability
+    CompanyName = 'RuoYi'
+
+    # Description of the functionality provided by these role capabilities
+    Description = 'Restricted role for RuoYi VDI Agent - user account management only'
+
+    # Cmdlets to make visible when applied to a session
+    VisibleCmdlets = @(
+        'Microsoft.PowerShell.LocalAccounts\New-LocalUser',
+        'Microsoft.PowerShell.LocalAccounts\Remove-LocalUser',
+        'Microsoft.PowerShell.LocalAccounts\Enable-LocalUser',
+        'Microsoft.PowerShell.LocalAccounts\Disable-LocalUser',
+        'Microsoft.PowerShell.LocalAccounts\Set-LocalUser',
+        'Microsoft.PowerShell.LocalAccounts\Get-LocalUser',
+        'Microsoft.PowerShell.LocalAccounts\Get-LocalGroup',
+        'Microsoft.PowerShell.LocalAccounts\Add-LocalGroupMember',
+        'Microsoft.PowerShell.LocalAccounts\Remove-LocalGroupMember'
+    )
+
+    # VisibleProviders
+    VisibleProviders = 'Variable', 'Function'
+}
+"@ | Out-File -FilePath $roleCapabilityPath -Encoding UTF8
+
+    # Create session configuration file
+    $sessionConfigParams = @{
+        Path      = $ConfigPath
+        SessionType = 'RestrictedRemoteServer'
+        RunAsVirtualAccount = $true
+        VirtualAccountType = 'LocalAccount'
+        RoleDefinitions = @{
+            'RuoyiAgentUser' = @{ RoleCapabilityFiles = $roleCapabilityPath }
+        }
+        TranscriptDirectory = 'C:\Program Files\RuoyiAgent\transcripts'
+    }
+
+    New-PSSessionConfigurationFile @sessionConfigParams -Force
+
+    Write-Host "JEA configuration created at: $ConfigPath"
+    Write-Host "Role capabilities at: $roleCapabilityPath"
+}
+
+# Create JEA configuration
+Create-JEAConfiguration
+
+# Create JEA-restricted service account
 $password = ConvertTo-SecureString "RuoyiAgent123!" -AsPlainText -Force
 try {
     New-LocalUser -Name "RuoyiAgentUser" -Password $password -Description "RuoYi VDI Agent User" -ErrorAction Stop | Out-Null
@@ -68,14 +133,27 @@ try {
     }
 }
 
-# 授予用户管理权限（简化版本，生产环境应使用 JEA）
+# NO LONGER ADD TO ADMINISTRATORS GROUP - JEA provides restricted elevated privileges
+# User remains a standard user with JEA virtual account for admin tasks
+Write-Host "User configured with JEA restricted privileges (NOT in Administrators group)"
+
+# Register JEA session configuration
+Write-Host "Registering JEA session configuration..."
 try {
-    $user = Get-LocalUser -Name "RuoyiAgentUser" -ErrorAction Stop
-    Add-LocalGroupMember -Group "Administrators" -Member $user -ErrorAction Stop | Out-Null
-    Write-Host "Added RuoyiAgentUser to Administrators group"
+    $psscPath = "C:\Program Files\WindowsPowerShell\Configuration\sessionConfigs\RuoyiAgent.pssc"
+    if (Test-Path $psscPath) {
+        Register-PSSessionConfiguration -Name "RuoyiAgentJEA" -Path $psscPath -Force -NoServiceRestart
+        Write-Host "JEA session 'RuoyiAgentJEA' registered successfully"
+    } else {
+        Write-Host "WARNING: JEA configuration file not found at $psscPath" -ForegroundColor Yellow
+    }
 } catch {
-    Write-Host "WARNING: Failed to add to Administrators group: $_" -ForegroundColor Yellow
+    Write-Host "WARNING: Failed to register JEA configuration: $_" -ForegroundColor Yellow
 }
+
+# Restart WinRM service to apply JEA configuration
+Write-Host "Restarting WinRM service..."
+Restart-Service -Name WinRM -Force
 
 # 注册 Windows 服务
 $serviceName = "RuoyiVMAgent"

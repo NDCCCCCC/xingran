@@ -17,6 +17,13 @@ type AssetService interface {
 	GetByID(ctx context.Context, id string) (*models.Asset, error)
 	List(ctx context.Context, params map[string]interface{}) (*PageResult, error)
 	BatchDelete(ctx context.Context, ids []string) error
+	GetDeviceTypes(ctx context.Context) ([]DeviceTypeCount, error)
+}
+
+// DeviceTypeCount 设备类型统计
+type DeviceTypeCount struct {
+	Value string `json:"value"`
+	Count int64  `json:"count"`
 }
 
 type assetService struct {
@@ -247,4 +254,22 @@ func (s *assetService) validateDeviceSNUnique(ctx context.Context, deviceSN, exc
 	}
 
 	return nil
+}
+
+// GetDeviceTypes 获取设备类型列表及数量统计
+func (s *assetService) GetDeviceTypes(ctx context.Context) ([]DeviceTypeCount, error) {
+	var results []DeviceTypeCount
+
+	err := s.db.WithContext(ctx).Table("ops_asset").
+		Select("device_type_name as value, COUNT(*) as count").
+		Where("device_type_name IS NOT NULL AND device_type_name != ''").
+		Group("device_type_name").
+		Order("count DESC").
+		Scan(&results).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return results, nil
 }

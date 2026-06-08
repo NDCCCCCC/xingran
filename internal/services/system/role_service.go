@@ -338,6 +338,9 @@ func (s *roleService) checkRoleKeyExists(ctx context.Context, roleKey string, ex
 
 // assignRoleMenusAndDepts 分配角色菜单和部门权限
 func (s *roleService) assignRoleMenusAndDepts(tx *gorm.DB, roleID string, menuIds, deptIds []string, isUpdate bool) error {
+	// 【重要】不自动添加父菜单ID，让前端通过 Tree 的父子关联自动勾选父菜单
+	// 这样可以避免父菜单被勾选时所有子菜单都显示为勾选状态的问题
+
 	// 如果是更新操作，先删除旧的菜单和部门权限（不在新列表中的）
 	if isUpdate {
 		// 删除不再需要的菜单权限
@@ -464,3 +467,4 @@ func (s *roleService) InvalidateRoleCache(ctx context.Context, roleID string) er
 }
 
 // toStringPtr 函数已在 user_service.go 中定义
+
