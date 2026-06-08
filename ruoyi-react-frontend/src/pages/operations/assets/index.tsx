@@ -44,6 +44,12 @@ interface Statistics {
   nbf: number;
 }
 
+// 设备类型选项
+interface DeviceTypeOption {
+  value: string;
+  count: number;
+}
+
 const AssetList: FC = () => {
   const [statistics, setStatistics] = useState<Statistics>({
     total: 0,
@@ -53,6 +59,7 @@ const AssetList: FC = () => {
   });
   const [importVisible, setImportVisible] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [deviceTypeOptions, setDeviceTypeOptions] = useState<DeviceTypeOption[]>([]);
 
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
@@ -102,9 +109,32 @@ const AssetList: FC = () => {
     }
   }, []);
 
+  // 加载设备类型选项
+  const loadDeviceTypes = useCallback(async () => {
+    try {
+      const result = await assetApi.getDeviceTypes();
+      if (result.code === 0 && result.data) {
+        setDeviceTypeOptions(result.data);
+      }
+    } catch (error) {
+      console.error('加载设备类型失败:', error);
+      // 降级到固定选项
+      setDeviceTypeOptions([
+        { value: '台式机', count: 0 },
+        { value: '笔记本', count: 0 },
+        { value: '服务器', count: 0 },
+        { value: '打印机', count: 0 },
+        { value: '交换机', count: 0 },
+        { value: '路由器', count: 0 },
+        { value: '其他', count: 0 },
+      ]);
+    }
+  }, []);
+
   useEffect(() => {
     loadStatistics();
-  }, [loadStatistics]);
+    loadDeviceTypes();
+  }, [loadStatistics, loadDeviceTypes]);
 
   const handleDelete = async (id: string) => {
     Modal.confirm({
@@ -309,14 +339,17 @@ const AssetList: FC = () => {
             <Input placeholder="请输入型号" allowClear />
           </Form.Item>
           <Form.Item name="deviceTypeName" label="设备类型">
-            <Select placeholder="请选择设备类型" allowClear style={{ width: 150 }}>
-              <Option value="台式机">台式机</Option>
-              <Option value="笔记本">笔记本</Option>
-              <Option value="服务器">服务器</Option>
-              <Option value="打印机">打印机</Option>
-              <Option value="交换机">交换机</Option>
-              <Option value="路由器">路由器</Option>
-              <Option value="其他">其他</Option>
+            <Select
+              placeholder="请选择设备类型"
+              allowClear
+              style={{ width: 200 }}
+              loading={deviceTypeOptions.length === 0}
+            >
+              {deviceTypeOptions.map((option) => (
+                <Option key={option.value} value={option.value}>
+                  {option.value} ({option.count})
+                </Option>
+              ))}
             </Select>
           </Form.Item>
           <Form.Item name="status" label="状态">
