@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: MAC地址历史数据管理
 status: unknown
-stopped_at: Phase 27 context gathered
-last_updated: "2026-06-08T16:29:54.616Z"
+stopped_at: context exhaustion at 91% (2026-06-08)
+last_updated: "2026-06-08T16:55:21.028Z"
 progress:
   total_phases: 6
   completed_phases: 2
@@ -17,21 +17,21 @@ progress:
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: 里程碑 v1.11 进行中 (Phase 22B 完成)
-**Phase**: 22C (账号管理与密码)
-**Plan**: Not started
-**Status**: 📋 待开始
-**Last activity**: 2026-06-09 - Completed quick task 260609-009: 资产列表页面添加类型筛选组件
+**Status**: 里程碑 v1.15 进行中 (Phase 27 执行中)
+**Phase**: 27 (column-customization)
+**Plan**: 27-01 (1/1)
+**Status**: 🔄 执行中
+**Last activity**: 2026-06-09 - 执行 Phase 27: column-customization
 
 ## Current Position
 
-Phase: 22B
-Plan: 22-06 (VM Agent 服务实现)
-**当前里程碑**: v1.11 — 深信服桌面云集成
-**当前阶段**: Phase 22B — VM Agent 服务 (1/1 plans 完成) ✅
-**状态**: ✅ 已完成
-**完成时间**: 2026-06-02 — Phase 22B (VM Agent 服务) 全部完成
-**下一阶段**: Phase 22C (账号管理与密码) 或 22D (Web Console 监控)
+Phase: 27 (column-customization) — EXECUTING
+Plan: 1 of 1
+**当前里程碑**: v1.15 — 列自定义显示功能
+**当前阶段**: Phase 27 — 列自定义显示功能 (0/1 plans 完成) 🔄
+**状态**: 🔄 执行中
+**开始时间**: 2026-06-09
+**下一阶段**: 验证或完成里程碑
 
 ## Project Reference
 
@@ -117,6 +117,7 @@ Plan: 22-06 (VM Agent 服务实现)
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260609-009 | 资产列表页面添加类型筛选组件 | 2026-06-09 | e3983df | [260609-009-asset-type-filter](./quick/260609-009-asset-type-filter/) |
+| 260609-columns | 添加资产列表5个显示字段：部门编码、归属机构、接收日期、最后上线、盘点日期 | 2026-06-09 | cd62637 | [260609-asset-list-columns-add](./quick/260609-asset-list-columns-add/) |
 | 260608-mdsl | 优化监控仪表盘统计组件布局：移除 Progress，调整固定 span=6 | 2026-06-08 | - | [260608-monitor-dashboard-stats-layout](./quick/260608-monitor-dashboard-stats-layout/) |
 | 260608-ljx | 修复 migration_146_add_asset_menu_permissions.go 编译错误 | 2026-06-08 | - | [260608-ljx-migration-146-add-asset-menu-permissions](./quick/260608-ljx-migration-146-add-asset-menu-permissions/) |
 | 260605-irs | Plan 22b-02 遗留任务：CallBackend 重试逻辑、401/403 令牌刷新、handler 错误消息清理 | 2026-06-05 | 3ea086f | [260605-irs-plan-22b-02-callbackend-401-403-handler](./quick/260605-irs-plan-22b-02-callbackend-401-403-handler/) |
@@ -252,8 +253,10 @@ Plan: 22-06 (VM Agent 服务实现)
 
 ## Session Continuity
 
-Last session: --stopped-at
-Stopped at: Phase 27 context gathered
-Resume file: --resume-file
+Last session: 2026-06-08T16:55:21.021Z
+Stopped at: context exhaustion at 91% (2026-06-08)
+Resume file: None
 
 Resume file: None
+
+**Planned Phase:** 27 (column-customization) — 1 plans — 2026-06-08T16:45:27.427Z
