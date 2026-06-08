@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: MAC地址历史数据管理
 status: unknown
-stopped_at: context exhaustion at 91% (2026-06-05)
-last_updated: "2026-06-05T05:21:09.854Z"
+stopped_at: context exhaustion at 90% (2026-06-08)
+last_updated: "2026-06-08T07:20:21.513Z"
 progress:
-  total_phases: 4
-  completed_phases: 1
-  total_plans: 18
-  completed_plans: 10
-  percent: 56
+  total_phases: 5
+  completed_phases: 2
+  total_plans: 24
+  completed_plans: 16
+  percent: 67
 ---
 
 # Project State
@@ -21,7 +21,7 @@ progress:
 **Phase**: 22C (账号管理与密码)
 **Plan**: Not started
 **Status**: 📋 待开始
-**Last activity**: 2026-06-05 - Completed quick task 260605-irs: Plan 22b-02 遗留任务：CallBackend 重试逻辑、401/403 令牌刷新、handler 错误消息清理
+**Last activity**: 2026-06-08 - Completed quick task 260608-ljx: 修复 migration_146_add_asset_menu_permissions.go 编译错误
 
 ## Current Position
 
@@ -65,6 +65,9 @@ Plan: 22-06 (VM Agent 服务实现)
 | 22C | 账号管理与密码 | 📋 Planned | 0/2 plans |
 | 22D | Web Console 监控 | 📋 Planned | 0/2 plans |
 | 23 | AD组自动同步 | ⚠️ Partial | 6/7 plans (23-13未实现) |
+| 24 | UUID类型一致性优化 | ✅ Completed | 2/2 plans |
+| 25 | 虚拟机数据范围权限配置 | 📋 Planned | 0/4 plans |
+| 26 | 资产管理模块 | ✅ Completed | 6/6 plans |
 
 ## Completed Milestones
 
@@ -113,6 +116,7 @@ Plan: 22-06 (VM Agent 服务实现)
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
+| 260608-ljx | 修复 migration_146_add_asset_menu_permissions.go 编译错误 | 2026-06-08 | - | [260608-ljx-migration-146-add-asset-menu-permissions](./quick/260608-ljx-migration-146-add-asset-menu-permissions/) |
 | 260605-irs | Plan 22b-02 遗留任务：CallBackend 重试逻辑、401/403 令牌刷新、handler 错误消息清理 | 2026-06-05 | 3ea086f | [260605-irs-plan-22b-02-callbackend-401-403-handler](./quick/260605-irs-plan-22b-02-callbackend-401-403-handler/) |
 | 260605-iq7 | 检查AD域组成员同步的数据源是否可以从系统用户替换成AD域控用户 | 2026-06-05 | d90371c | [260605-iq7-ad-ad-1-ad-2-3-ad-4](./quick/260605-iq7-ad-ad-1-ad-2-3-ad-4/) |
 | 260520-jrp | 参数管理页面添加请求加密开关 | 2026-05-20 | a0cddc9 | quick/ |
@@ -159,7 +163,9 @@ Plan: 22-06 (VM Agent 服务实现)
 - ✅ v1.9 完成: AD域控集成扩展（Phase 19+20）
 - ✅ v1.10 完成: 网络设备权限修复
 - ✅ v1.11 完成: 深信服桌面云集成（Phase 22A - VDI基础集成，22B - VM Agent 服务）
+- ✅ v1.12 完成: AD组自动同步系统 (Phase 23)
 - 📋 Phase 22C-22D 规划中: 账号管理与密码、Web Console 监控
+- 📋 v1.13 规划中: 资产管理模块 (Phase 26)
 - 📋 Phase 24 added: 虚拟机数据范围权限配置
 - 📋 Phase 23 added: 阶段23前端UI-部门组映射管理界面
 
@@ -244,8 +250,8 @@ Plan: 22-06 (VM Agent 服务实现)
 
 ## Session Continuity
 
-Last session: 2026-06-05T05:21:09.847Z
-Stopped at: context exhaustion at 91% (2026-06-05)
+Last session: 2026-06-08T07:20:21.505Z
+Stopped at: context exhaustion at 90% (2026-06-08)
 Resume file: None
 
 Resume file: None
