@@ -294,6 +294,64 @@ func (r *referenceResolverImpl) batchQueryIDs(
 	return idMap, nil
 }
 
+// ResolveDept resolves department name to dept_id
+func (r *referenceResolverImpl) ResolveDept(ctx context.Context, deptName string) (string, error) {
+	if deptName == "" {
+		return "", nil
+	}
+
+	var deptID string
+	err := r.db.WithContext(ctx).
+		Table("sys_dept").
+		Where("dept_name = ? OR dept_code = ?", deptName, deptName).
+		Pluck("id", &deptID).Error
+
+	if err != nil {
+		return "", fmt.Errorf("查询部门失败: %w", err)
+	}
+
+	if deptID == "" {
+		return "", fmt.Errorf("部门不存在: %s", deptName)
+	}
+
+	return deptID, nil
+}
+
+// ResolveUser resolves username to user_id
+func (r *referenceResolverImpl) ResolveUser(ctx context.Context, userName string) (string, error) {
+	if userName == "" {
+		return "", nil
+	}
+
+	var userID string
+	err := r.db.WithContext(ctx).
+		Table("sys_user").
+		Where("username = ? OR nickname = ?", userName, userName).
+		Pluck("id", &userID).Error
+
+	if err != nil {
+		return "", fmt.Errorf("查询用户失败: %w", err)
+	}
+
+	if userID == "" {
+		return "", fmt.Errorf("用户不存在: %s", userName)
+	}
+
+	return userID, nil
+}
+
+// ResolveAssetDept resolves department name to dept_id for asset import
+// Usage: Excel import with "deptName" column -> dept_id
+func (r *referenceResolverImpl) ResolveAssetDept(ctx context.Context, deptName string) (string, error) {
+	return r.ResolveDept(ctx, deptName)
+}
+
+// ResolveAssetUser resolves username to user_id for asset import
+// Usage: Excel import with "userName" column -> user_id
+func (r *referenceResolverImpl) ResolveAssetUser(ctx context.Context, userName string) (string, error) {
+	return r.ResolveUser(ctx, userName)
+}
+
 // makeKey 生成缓存键，格式："reference:value"
 func (r *referenceResolverImpl) makeKey(ref, value string) string {
 	return ref + ":" + value
