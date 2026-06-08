@@ -21,7 +21,7 @@ progress:
 **Phase**: 22C (账号管理与密码)
 **Plan**: Not started
 **Status**: 📋 待开始
-**Last activity**: 2026-06-08 - Completed quick task 260608-ljx: 修复 migration_146_add_asset_menu_permissions.go 编译错误
+**Last activity**: 2026-06-09 - Completed quick task 260609-009: 资产列表页面添加类型筛选组件
 
 ## Current Position
 
@@ -116,6 +116,7 @@ Plan: 22-06 (VM Agent 服务实现)
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
+| 260609-009 | 资产列表页面添加类型筛选组件 | 2026-06-09 | e3983df | [260609-009-asset-type-filter](./quick/260609-009-asset-type-filter/) |
 | 260608-mdsl | 优化监控仪表盘统计组件布局：移除 Progress，调整固定 span=6 | 2026-06-08 | - | [260608-monitor-dashboard-stats-layout](./quick/260608-monitor-dashboard-stats-layout/) |
 | 260608-ljx | 修复 migration_146_add_asset_menu_permissions.go 编译错误 | 2026-06-08 | - | [260608-ljx-migration-146-add-asset-menu-permissions](./quick/260608-ljx-migration-146-add-asset-menu-permissions/) |
 | 260605-irs | Plan 22b-02 遗留任务：CallBackend 重试逻辑、401/403 令牌刷新、handler 错误消息清理 | 2026-06-05 | 3ea086f | [260605-irs-plan-22b-02-callbackend-401-403-handler](./quick/260605-irs-plan-22b-02-callbackend-401-403-handler/) |
