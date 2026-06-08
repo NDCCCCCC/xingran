@@ -163,6 +163,11 @@ func (s *assetService) applyFilters(query *gorm.DB, params map[string]interface{
 		query = query.Where("nbf_status = ?", nbfStatus)
 	}
 
+	// 设备类型筛选
+	if deviceType, ok := params["deviceTypeName"].(string); ok && deviceType != "" {
+		query = query.Where("device_type_name = ?", deviceType)
+	}
+
 	return query
 }
 
