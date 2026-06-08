@@ -12,6 +12,11 @@ import (
 	"gorm.io/gorm/schema"
 )
 
+// maxBatchSize 单次批量插入的最大行数
+// PostgreSQL 限制：65535 参数 / 43 字段 ≈ 1524 行
+// 设置为 1000 以留出安全余量
+const maxBatchSize = 1000
+
 // NamingStrategy 字段名命名策略接口
 // 允许自定义字段名转换逻辑
 type NamingStrategy interface {
@@ -112,20 +117,31 @@ func (b *BatchUpsert) standardUpsert(ctx context.Context, records []map[string]i
 		convertedRecords[i]["deleted_at"] = nil
 	}
 
-	result := b.db.WithContext(ctx).
-		Table(b.config.TableName).
-		Unscoped(). // 包含软删除记录
-		Clauses(clause.OnConflict{
-			Columns:   conflictColumns,
-			DoUpdates: clause.AssignmentColumns(updateColumns),
-		}).
-		Create(&convertedRecords)
+	// 分批执行，避免超过 PostgreSQL 参数限制（65535）
+	totalAffected := 0
+	for i := 0; i < len(convertedRecords); i += maxBatchSize {
+		end := i + maxBatchSize
+		if end > len(convertedRecords) {
+			end = len(convertedRecords)
+		}
+		batch := convertedRecords[i:end]
 
-	if result.Error != nil {
-		return 0, 0, fmt.Errorf("批量Upsert失败: %w", result.Error)
+		result := b.db.WithContext(ctx).
+			Table(b.config.TableName).
+			Unscoped(). // 包含软删除记录
+			Clauses(clause.OnConflict{
+				Columns:   conflictColumns,
+				DoUpdates: clause.AssignmentColumns(updateColumns),
+			}).
+			Create(&batch)
+
+		if result.Error != nil {
+			return 0, 0, fmt.Errorf("批量Upsert失败 (batch %d-%d): %w", i, end, result.Error)
+		}
+		totalAffected += int(result.RowsAffected)
 	}
 
-	return int(result.RowsAffected), 0, nil
+	return totalAffected, 0, nil
 }
 
 // partialUpsert 部分更新的Upsert（只更新有值的字段）
@@ -294,12 +310,23 @@ func (b *BatchUpsert) executeInsert(ctx context.Context, records []map[string]in
 	// 转换记录中的字段名
 	convertedRecords := b.convertRecordFields(records)
 
-	result := b.db.WithContext(ctx).Table(b.config.TableName).Create(&convertedRecords)
-	if result.Error != nil {
-		return 0, fmt.Errorf("批量插入失败: %w", result.Error)
+	// 分批执行，避免超过 PostgreSQL 参数限制（65535）
+	totalInserted := 0
+	for i := 0; i < len(convertedRecords); i += maxBatchSize {
+		end := i + maxBatchSize
+		if end > len(convertedRecords) {
+			end = len(convertedRecords)
+		}
+		batch := convertedRecords[i:end]
+
+		result := b.db.WithContext(ctx).Table(b.config.TableName).Create(&batch)
+		if result.Error != nil {
+			return 0, fmt.Errorf("批量插入失败 (batch %d-%d): %w", i, end, result.Error)
+		}
+		totalInserted += int(result.RowsAffected)
 	}
 
-	return int(result.RowsAffected), nil
+	return totalInserted, nil
 }
 
 // executeUpdate 执行批量更新
