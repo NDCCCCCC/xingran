@@ -35,7 +35,8 @@ import { usePagination } from '@/hooks/usePagination';
 import { assetApi } from '@/lib/opsApi';
 import ExcelImport from '@/components/shared/ExcelImport';
 import { getAuthHeaders } from '@/utils/authHelpers';
-import { useColumnConfig, ColumnConfig } from '@/hooks/useColumnConfig';
+import { useColumnConfig } from '@/hooks/useColumnConfig';
+import type { ColumnConfig } from '@/hooks/useColumnConfig';
 import { ColumnConfigModal } from '@/components/shared/ColumnConfigModal';
 
 const { Option } = Select;
