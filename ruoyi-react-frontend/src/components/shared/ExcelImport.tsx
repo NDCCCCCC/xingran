@@ -83,11 +83,10 @@ const ExcelImport: FC<ExcelImportProps> = ({
   const beforeUpload = (file: File) => {
     const validTypes = [
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'application/vnd.ms-excel',
     ];
-    const isExcelType = validTypes.includes(file.type) || file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+    const isExcelType = validTypes.includes(file.type) || file.name.endsWith('.xlsx');
     if (!isExcelType) {
-      message.error('只支持 .xlsx 或 .xls 格式的Excel文件');
+      message.error('只支持 .xlsx 格式。如需导入 .xls 文件，请先用 Excel 或 WPS 另存为 .xlsx 格式');
       return Upload.LIST_IGNORE;
     }
 
