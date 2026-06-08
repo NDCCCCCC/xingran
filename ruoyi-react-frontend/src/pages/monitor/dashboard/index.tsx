@@ -4,7 +4,6 @@ import { Card, Row, Col, Statistic, Table, Tag, Button } from 'antd';
 import {
   ClusterOutlined,
   ReloadOutlined,
-  BarChartOutlined,
   DatabaseOutlined
 } from '@ant-design/icons';
 import { post } from '@/lib/api';
@@ -250,7 +249,7 @@ const Dashboard: FC = () => {
       {/* 详细信息卡片 */}
       <Row gutter={[16, 16]} className="mb-6">
         <Col xs={24} md={8}>
-          <Card title="服务器列表" extra={<Button size="small" icon={<BarChartOutlined />}>详情</Button>}>
+          <Card title="服务器列表">
             <div className="space-y-3">
               {servers.map((server) => (
                 <div key={server.id} className="flex justify-between items-center p-3 bg-gray-50 rounded">
@@ -268,7 +267,7 @@ const Dashboard: FC = () => {
         </Col>
 
         <Col xs={24} md={8}>
-          <Card title="内存详情" extra={<Button size="small" icon={<BarChartOutlined />}>趋势</Button>}>
+          <Card title="内存详情">
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span>总内存</span>
@@ -293,7 +292,7 @@ const Dashboard: FC = () => {
         </Col>
 
         <Col xs={24} md={8}>
-          <Card title="网络流量" extra={<Button size="small" icon={<BarChartOutlined />}>详情</Button>}>
+          <Card title="网络流量">
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span>接收流量</span>
@@ -313,9 +312,7 @@ const Dashboard: FC = () => {
       </Row>
 
       {/* 最近登录日志 */}
-      <Card title="最近登录日志" extra={
-        <Button type="link">查看更多</Button>
-      }>
+      <Card title="最近登录日志">
         <Table
           columns={logColumns}
           dataSource={recentLogs}
