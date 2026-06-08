@@ -308,6 +308,17 @@ const AssetList: FC = () => {
           <Form.Item name="deviceModelName" label="型号">
             <Input placeholder="请输入型号" allowClear />
           </Form.Item>
+          <Form.Item name="deviceTypeName" label="设备类型">
+            <Select placeholder="请选择设备类型" allowClear style={{ width: 150 }}>
+              <Option value="台式机">台式机</Option>
+              <Option value="笔记本">笔记本</Option>
+              <Option value="服务器">服务器</Option>
+              <Option value="打印机">打印机</Option>
+              <Option value="交换机">交换机</Option>
+              <Option value="路由器">路由器</Option>
+              <Option value="其他">其他</Option>
+            </Select>
+          </Form.Item>
           <Form.Item name="status" label="状态">
             <Select placeholder="请选择状态" allowClear style={{ width: 120 }}>
               <Option value={0}>正常</Option>
