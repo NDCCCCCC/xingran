@@ -8,7 +8,8 @@ import {
   Space,
 } from 'antd';
 import { SearchOutlined, HolderOutlined } from '@ant-design/icons';
-import { DndContext, closestCenter, DragEndEvent } from '@dnd-kit/core';
+import { DndContext, closestCenter } from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { ColumnConfig } from '@/hooks/useColumnConfig';
