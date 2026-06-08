@@ -121,6 +121,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			{
 				// 新架构：结构体Handler + Service层
 				systemV1.SetupSettingsRouter(settings, core)
+				// 列配置管理
+				systemV1.SetupColumnConfigRouter(settings, core)
 			}
 
 			// 通知配置管理（需要系统配置权限）
