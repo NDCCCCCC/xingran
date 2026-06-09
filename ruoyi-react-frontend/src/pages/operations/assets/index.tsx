@@ -214,7 +214,8 @@ const AssetList: FC = () => {
   useEffect(() => {
     loadStatistics();
     loadDeviceTypes();
-  }, [loadStatistics, loadDeviceTypes]);
+    loadAssets(); // 页面加载时自动获取资产列表
+  }, [loadStatistics, loadDeviceTypes, loadAssets]);
 
   const handleDelete = async (id: string) => {
     Modal.confirm({

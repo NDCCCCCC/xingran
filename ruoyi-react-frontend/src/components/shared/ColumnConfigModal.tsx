@@ -144,8 +144,10 @@ export const ColumnConfigModal: React.FC<ColumnConfigModalProps> = ({
   };
 
   // 处理保存
-  const handleSave = () => {
-    onSave(localConfig);
+  const handleSave = async () => {
+    await onSave(localConfig);
+    // 保存成功后关闭弹窗
+    onClose();
   };
 
   // 处理重置
