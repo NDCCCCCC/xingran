@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS sys_user_column_config (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     deleted_at TIMESTAMP,
+    created_by VARCHAR(64),
+    updated_by VARCHAR(64),
     version INT DEFAULT 0,
     CONSTRAINT uk_user_page_column UNIQUE (user_id, page_key, column_key)
 );

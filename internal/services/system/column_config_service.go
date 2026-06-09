@@ -56,8 +56,9 @@ func (s *columnConfigService) Save(ctx context.Context, userID string, req *syst
 	}
 
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// 删除旧配置
+		// 永久删除旧配置（包括软删除的记录，避免唯一约束冲突）
 		if err := tx.Where("user_id = ? AND page_key = ?", userID, req.PageKey).
+			Unscoped().
 			Delete(&models.UserColumnConfig{}).Error; err != nil {
 			return fmt.Errorf("删除旧配置失败: %w", err)
 		}
