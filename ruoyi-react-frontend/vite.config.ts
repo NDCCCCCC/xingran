@@ -62,13 +62,13 @@ export default defineConfig({
     proxy: {
       // 将所有 /api 请求代理到后端服务器
       '/api': {
-        target: 'http://10.62.10.33:9000',
+        target: 'http://localhost:9000',
         changeOrigin: true,
         // 不需要重写路径，因为后端就是用 /api/v1 前缀
       },
       // 将 /uploads 请求代理到后端服务器（静态文件）
       '/uploads': {
-        target: 'http://10.62.10.33:9000',
+        target: 'http://localhost:9000',
         changeOrigin: true,
       },
     },
