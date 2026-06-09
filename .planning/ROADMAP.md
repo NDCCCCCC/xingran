@@ -252,7 +252,7 @@
 - 前端权限-按钮动态映射
 ---
 
-### Phase 26: 资产管理模块 📋
+### Phase 26: 资产管理模块 ✅
 
 **Goal**: 创建完整的资产管理模块，包含数据库设计、后端 API 和前端页面，支持基于设备序列号 (DEVICESN) 的 Excel 导入/更新功能
 
@@ -297,18 +297,18 @@
 
 ---
 
-### Phase 27: 全局列自定义显示功能 📋
+### Phase 27: 全局列自定义显示功能 ✅
 
 **Goal**: 为系统中所有列表页面添加可自定义列显示的功能，解决资产列表页面字段过多（43列）的问题
 
 **Depends on**: Phase 26 (资产管理模块 - 资产列表页面作为主要集成目标)
-**Status**: 📋 Planned
-**Plans**: 1 plan (8 tasks, 2 waves)
+**Status**: ✅ Planned
+**Plans**: 1 plan (8 tasks, 1 wave)
 
 **Requirements**:
 - **列显示/隐藏**: 用户可以选择显示哪些列
 - **列拖拽排序**: 用户可以调整列的显示顺序
-- **列宽度自定义**: 用户可以设置列宽度（可选）
+- **列宽度自定义**: 用户可以设置列宽度
 - **持久化存储**: 配置保存到数据库，永久生效
 - **重置功能**: 支持重置为默认配置
 - **性能优化**: localStorage 缓存 + 数据库同步，切换列响应 < 200ms
@@ -317,22 +317,70 @@
 - 页面 key 格式: `{module}.{list}` (如 `asset.list`, `user.list`)
 - 用户隔离: 基于 user_id 的配置隔离
 - 默认配置: 在代码中定义，首次加载自动应用
-- 缓存策略: localStorage (5分钟) + Redis (30分钟)
+- 缓存策略: localStorage (5分钟) + 数据库 (永久)
 
 **Wave 1 - Foundation**:
-- [ ] 27-01-PLAN.md — 数据库、后端 API、前端基础组件
+- [x] 27-01-PLAN.md — 数据库、后端 API、前端 Hook 和组件、资产列表集成
 
 **Phase Highlights**:
 - 🎯 Global column customization system for all list pages
 - 📊 Support for asset list with 43 columns (grouped display)
-- 🔄 Automatic save with debouncing (500ms)
-- 💾 localStorage + Redis dual-layer caching
-- 🔒 User-scoped configurations with database persistence
+- 🔄 Automatic save with immediate API call
+- 💾 localStorage caching (5 minutes) + database persistence
+- 🔒 User-scoped configurations with proper isolation
 - 🖥️ Beautiful column selector UI with drag-and-drop
 - ⚡ Fast performance (< 200ms response time)
 
 ---
 
+### Phase 28: 工位设备关联子表格 ✅
+
+**Goal**: 为工位管理页面添加设备关联功能，通过可展开子表格显示该工位的设备，支持手动输入序列号匹配、域控设备同步、资产系统数据同步
+
+**Depends on**: Phase 26 (资产管理模块 - 需要资产数据用于设备匹配)
+**Status**: ✅ Planned
+**Plans**: 5 plans (3 waves)
+
+**Requirements**:
+- **子表格展示**: 工位列表中每行可展开显示关联设备
+- **三个数据来源**:
+  - 域控设备: 通过工位绑定用户匹配（最后登录账号）
+  - 资产系统: 通过工位绑定用户匹配（责任人）
+  - 实际结果: 优先显示，手动维护
+- **手动输入**: 支持通过序列号从资产系统匹配设备信息
+- **数据同步**: 一键同步域控或资产系统数据到实际结果
+- **序列号匹配**: 域控设备同步时通过序列号匹配资产系统详细信息
+
+**技术规范**:
+- 前端可展开子表格组件（Ant Design Table expandable）
+- 后端设备关联查询 API
+- 工位-设备关联存储（ops_workstation_device 表）
+- 域控设备查询服务（通过用户名）
+- 资产系统设备查询服务（通过责任人）
+
+**Wave 1 - 数据模型与后端服务**:
+- [x] 28-01-PLAN.md — 工位设备关联表设计与迁移
+- [ ] 28-02-PLAN.md — 设备关联服务层实现
+
+**Wave 2 - API 层**:
+- [ ] 28-03-PLAN.md — 设备关联 API 端点
+
+**Wave 3 - 前端集成**:
+- [ ] 28-04-PLAN.md — 设备关联子表格组件
+- [ ] 28-05-PLAN.md — 工位列表页面集成子表格
+
+**Phase Highlights**:
+- 🎯 Workstation-device association with sub-table display
+- 🔍 Multi-source device matching (AD, Asset, Manual)
+- 🔄 One-click sync from AD or Asset system
+- 📊 Serial number based asset information matching
+- 👤 User-based device association (bound user)
+- 🖥️ Full-featured UI with add/edit/delete/sync operations
+- ⚡ Performance optimization with lazy loading
+
+---
+
+    
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -366,7 +414,8 @@
 | 22D. Web Console 与监控 | v1.12 | 0/2 | Planned | - |
 | 26. 资产管理模块 | v1.13 | 6/6 | Complete | 2026-06-08 |
 | 27. 全局列自定义显示功能 | v1.14 | 0/1 | Planned | - |
+| 28. 工位设备关联子表格 | v1.15 | 1/1 | Complete    | 2026-06-09 |
 
-**Total**: 91 plans completed, 15 plans planned (Phases 13-15), 14 plans planned (Phases 22 + 25), 1 plan planned (Phase 27), 121 total plans
+**Total**: 91 plans completed, 15 plans planned (Phases 13-15), 14 plans planned (Phases 22 + 25), 1 plan planned (Phase 27), 5 plans planned (Phase 28), 126 total plans
 
-**Completion Rate**: 75.2% (91/121)
+**Completion Rate**: 72.2% (91/126)
