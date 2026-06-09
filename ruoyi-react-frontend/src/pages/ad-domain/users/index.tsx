@@ -22,10 +22,13 @@ import {
   SearchOutlined,
   FolderOutlined,
   SyncOutlined,
+  CheckSquareOutlined,
+  BorderOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import {
   getADUserList,
+  getADUserIds,
   updateADUser,
   moveADUser,
   enableADUser,
@@ -57,18 +60,6 @@ const ADUserPage: FC = () => {
   const [users, setUsers] = useState<ADUser[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Debug logging for users data
-  useEffect(() => {
-    console.log('[DEBUG] Users data updated:', {
-      usersCount: users.length,
-      firstUser: users[0] ? {
-        id: users[0].id,
-        userDn: users[0].userDn,
-        username: users[0].username
-      } : null
-    });
-  }, [users]);
-
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
@@ -83,31 +74,11 @@ const ADUserPage: FC = () => {
 
   // Batch sync state
   const [selectedUsers, setSelectedUsers] = useState<ADUser[]>([]);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [selectAllMode, setSelectAllMode] = useState(false);
+  const [selectAllTotal, setSelectAllTotal] = useState(0);
   const [batchSyncLoading, setBatchSyncLoading] = useState(false);
-
-  // Debug logging for selected users
-  useEffect(() => {
-    const selectedKeys = selectedUsers.map(u => u.userDn);
-    console.log('[DEBUG] Selected users updated:', {
-      selectedCount: selectedUsers.length,
-      selectedKeys: selectedKeys.slice(0, 3), // First 3 keys
-      firstSelectedUserDn: selectedUsers[0]?.userDn,
-      firstSelectedId: selectedUsers[0]?.id
-    });
-
-    // Test if userDn values in selectedUsers match those in users
-    if (selectedUsers.length > 0 && users.length > 0) {
-      const firstSelectedUserDn = selectedUsers[0].userDn;
-      const matchingUser = users.find(u => u.userDn === firstSelectedUserDn);
-      console.log('[DEBUG] userDn matching test:', {
-        selectedUserDn: firstSelectedUserDn,
-        foundInUsers: !!matchingUser,
-        matchingUserUserDn: matchingUser?.userDn,
-        exactMatch: matchingUser?.userDn === firstSelectedUserDn,
-        stringCompare: matchingUser?.userDn.localeCompare(firstSelectedUserDn)
-      });
-    }
-  }, [selectedUsers, users]);
+  const [loadingAllUserIds, setLoadingAllUserIds] = useState(false);
 
   const fetchOUTree = async () => {
     if (!selectedConfig) return;
@@ -254,18 +225,83 @@ const ADUserPage: FC = () => {
     }
   };
 
+  // 全选所有功能
+  const handleSelectAll = async () => {
+    if (!selectedConfig) return;
+
+    // 如果已经是全选模式，则取消全选
+    if (selectAllMode) {
+      setSelectAllMode(false);
+      setSelectedUserIds([]);
+      setSelectedUsers([]);
+      setSelectAllTotal(0);
+      return;
+    }
+
+    // 获取当前筛选条件
+    const values = form.getFieldsValue();
+
+    setLoadingAllUserIds(true);
+    try {
+      const res = await getADUserIds({
+        configId: selectedConfig,
+        ouDn: values.ouDn,
+        username: values.username,
+        isEnabled: values.isEnabled,
+      });
+
+      if (res.code === 0 && res.data) {
+        const allUserIds = res.data;
+        setSelectAllMode(true);
+        setSelectedUserIds(allUserIds);
+        setSelectAllTotal(allUserIds.length);
+        message.success(`已选择所有 ${allUserIds.length} 个用户`);
+      }
+    } catch (error) {
+      message.error('获取所有用户失败');
+    } finally {
+      setLoadingAllUserIds(false);
+    }
+  };
+
   const handleBatchSync = async () => {
-    if (!selectedConfig || selectedUsers.length === 0) return;
+    if (!selectedConfig) return;
+
+    // 确定要同步的用户数量
+    const syncCount = selectAllMode ? selectAllTotal : selectedUsers.length;
+    if (syncCount === 0) return;
 
     Modal.confirm({
-      title: `确定同步选中的 ${selectedUsers.length} 个用户到系统用户表？`,
-      content: '同步后用户可以使用AD账号登录系统',
+      title: `确定同步选中的 ${syncCount} 个用户到系统用户表？`,
+      content: selectAllMode
+        ? `当前选择的是"全选所有"模式，将同步所有符合筛选条件的 ${selectAllTotal} 个用户`
+        : '同步后用户可以使用AD账号登录系统',
       okText: '确定',
       cancelText: '取消',
       onOk: async () => {
         setBatchSyncLoading(true);
         try {
-          const userDns = selectedUsers.map(u => u.userDn);
+          let userDns: string[] = [];
+
+          if (selectAllMode) {
+            // 全选模式：使用所有用户ID获取用户信息
+            const res = await getADUserList({
+              configId: selectedConfig,
+              ouDn: form.getFieldValue('ouDn'),
+              username: form.getFieldValue('username'),
+              isEnabled: form.getFieldValue('isEnabled'),
+              current: 1,
+              pageSize: selectAllTotal,
+            });
+
+            if (res.code === 0 && res.data) {
+              userDns = res.data.list.map(u => u.userDn);
+            }
+          } else {
+            // 普通模式：使用当前选中的用户
+            userDns = selectedUsers.map(u => u.userDn);
+          }
+
           const res = await batchSyncADUsersDirect({
             configId: selectedConfig,
             userDns,
@@ -295,6 +331,9 @@ const ADUserPage: FC = () => {
 
             // 清空选择
             setSelectedUsers([]);
+            setSelectedUserIds([]);
+            setSelectAllMode(false);
+            setSelectAllTotal(0);
             // 刷新用户列表
             fetchUsers();
           }
@@ -508,13 +547,22 @@ const ADUserPage: FC = () => {
                 刷新
               </Button>
               <Button
+                icon={selectAllMode ? <CheckSquareOutlined /> : <BorderOutlined />}
+                onClick={handleSelectAll}
+                loading={loadingAllUserIds}
+                type={selectAllMode ? 'primary' : 'default'}
+              >
+                {selectAllMode ? '取消全选' : '全选所有'}
+                {selectAllMode && ` (${selectAllTotal})`}
+              </Button>
+              <Button
                 type="primary"
                 icon={<SyncOutlined />}
-                disabled={selectedUsers.length === 0}
+                disabled={selectedUsers.length === 0 && !selectAllMode}
                 onClick={handleBatchSync}
                 loading={batchSyncLoading}
               >
-                批量同步 ({selectedUsers.length})
+                批量同步 ({selectAllMode ? selectAllTotal : selectedUsers.length})
               </Button>
             </Space>
           </Form.Item>
@@ -525,22 +573,19 @@ const ADUserPage: FC = () => {
           columns={columns}
           dataSource={users}
           loading={loading}
-          rowKey="id"
+          rowKey="userDn"
           scroll={{ x: 1500 }}
           pagination={paginationProps}
-          rowSelection={{
-            selectedRowKeys: selectedUsers.map(u => u.id),
-            onChange: (selectedKeys, selectedRows) => {
-              console.log('[DEBUG] Selection changed:', {
-                selectedKeysCount: selectedKeys.length,
-                selectedRowsCount: selectedRows.length,
-                firstKey: selectedKeys[0],
-                firstRowUserDn: selectedRows[0]?.userDn,
-                firstRowId: selectedRows[0]?.id
-              });
-              setSelectedUsers(selectedRows);
-            },
-          }}
+          rowSelection={
+            selectAllMode
+              ? undefined // 全选模式下禁用表格行选择
+              : {
+                  selectedRowKeys: selectedUsers.map(u => u.userDn),
+                  onChange: (selectedKeys, selectedRows) => {
+                    setSelectedUsers(selectedRows);
+                  },
+                }
+          }
         />
       </Space>
 
