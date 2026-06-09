@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: MAC地址历史数据管理
 status: unknown
-stopped_at: context exhaustion at 91% (2026-06-08)
-last_updated: "2026-06-08T16:55:21.028Z"
+stopped_at: context exhaustion at 91% (2026-06-09)
+last_updated: "2026-06-09T04:04:18.354Z"
 progress:
   total_phases: 6
   completed_phases: 2
@@ -116,6 +116,7 @@ Plan: 1 of 1
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
+| 260609-rowselect | 修复域控用户页面多选框显示问题 | 2026-06-09 | 7a5b095 | [20260609-ad-user-rowselection-fix](./quick/20260609-ad-user-rowselection-fix/) |
 | 260609-009 | 资产列表页面添加类型筛选组件 | 2026-06-09 | e3983df | [260609-009-asset-type-filter](./quick/260609-009-asset-type-filter/) |
 | 260609-columns | 添加资产列表5个显示字段：部门编码、归属机构、接收日期、最后上线、盘点日期 | 2026-06-09 | cd62637 | [260609-asset-list-columns-add](./quick/260609-asset-list-columns-add/) |
 | 260608-mdsl | 优化监控仪表盘统计组件布局：移除 Progress，调整固定 span=6 | 2026-06-08 | - | [260608-monitor-dashboard-stats-layout](./quick/260608-monitor-dashboard-stats-layout/) |
@@ -253,8 +254,8 @@ Plan: 1 of 1
 
 ## Session Continuity
 
-Last session: 2026-06-08T16:55:21.021Z
-Stopped at: context exhaustion at 91% (2026-06-08)
+Last session: 2026-06-09T04:04:18.335Z
+Stopped at: context exhaustion at 91% (2026-06-09)
 Resume file: None
 
 Resume file: None
