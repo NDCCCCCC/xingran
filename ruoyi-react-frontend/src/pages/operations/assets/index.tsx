@@ -125,6 +125,7 @@ const AssetList: FC = () => {
   const [importVisible, setImportVisible] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [deviceTypeOptions, setDeviceTypeOptions] = useState<DeviceTypeOption[]>([]);
+  const [deviceCategoryOptions, setDeviceCategoryOptions] = useState<DeviceTypeOption[]>([]);
   const [showColumnConfig, setShowColumnConfig] = useState(false);
 
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
@@ -211,11 +212,30 @@ const AssetList: FC = () => {
     }
   }, []);
 
+  // 加载设备种类选项
+  const loadDeviceCategories = useCallback(async () => {
+    try {
+      const result = await assetApi.getDeviceCategories();
+      if (result.code === 0 && result.data) {
+        setDeviceCategoryOptions(result.data);
+      }
+    } catch (error) {
+      console.error('加载设备种类失败:', error);
+      // 降级到固定选项
+      setDeviceCategoryOptions([
+        { value: '计算机设备', count: 0 },
+        { value: '网络设备', count: 0 },
+        { value: '其他设备', count: 0 },
+      ]);
+    }
+  }, []);
+
   useEffect(() => {
     loadStatistics();
     loadDeviceTypes();
+    loadDeviceCategories();
     loadAssets(); // 页面加载时自动获取资产列表
-  }, [loadStatistics, loadDeviceTypes, loadAssets]);
+  }, [loadStatistics, loadDeviceTypes, loadDeviceCategories, loadAssets]);
 
   const handleDelete = async (id: string) => {
     Modal.confirm({
@@ -517,6 +537,20 @@ const AssetList: FC = () => {
               loading={deviceTypeOptions.length === 0}
             >
               {deviceTypeOptions.map((option) => (
+                <Option key={option.value} value={option.value}>
+                  {option.value} ({option.count})
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
+          <Form.Item name="deviceCategorySecondName" label="设备种类">
+            <Select
+              placeholder="请选择设备种类"
+              allowClear
+              style={{ width: 200 }}
+              loading={deviceCategoryOptions.length === 0}
+            >
+              {deviceCategoryOptions.map((option) => (
                 <Option key={option.value} value={option.value}>
                   {option.value} ({option.count})
                 </Option>

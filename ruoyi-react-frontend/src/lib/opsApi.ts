@@ -526,6 +526,11 @@ export const assetApi = {
     return await post<{ value: string; count: number }[]>('/ops/asset/device-types', {});
   },
 
+  // 获取设备种类列表（动态数据）
+  getDeviceCategories: async () => {
+    return await post<{ value: string; count: number }[]>('/ops/asset/device-categories', {});
+  },
+
   // Excel导入导出通过 SetupExcelRouter 注册在 /ops/asset 路由组下：
   // - GET  /ops/asset/template  (下载模板)
   // - POST /ops/asset/import    (上传导入)
