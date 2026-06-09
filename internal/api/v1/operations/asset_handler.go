@@ -145,3 +145,20 @@ func (h *AssetHandler) GetDeviceTypes(c *gin.Context) {
 
 	response.Success(c, result)
 }
+
+// GetDeviceCategories 获取设备种类列表
+func (h *AssetHandler) GetDeviceCategories(c *gin.Context) {
+	var params map[string]interface{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		response.Error(c, http.StatusBadRequest, "请求参数错误")
+		return
+	}
+
+	result, err := h.assetService.GetDeviceCategories(c.Request.Context())
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response.Success(c, result)
+}

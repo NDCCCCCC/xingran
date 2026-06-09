@@ -18,6 +18,7 @@ type AssetService interface {
 	List(ctx context.Context, params map[string]interface{}) (*PageResult, error)
 	BatchDelete(ctx context.Context, ids []string) error
 	GetDeviceTypes(ctx context.Context) ([]DeviceTypeCount, error)
+	GetDeviceCategories(ctx context.Context) ([]DeviceTypeCount, error)
 }
 
 // DeviceTypeCount 设备类型统计
@@ -264,6 +265,24 @@ func (s *assetService) GetDeviceTypes(ctx context.Context) ([]DeviceTypeCount, e
 		Select("device_type_name as value, COUNT(*) as count").
 		Where("device_type_name IS NOT NULL AND device_type_name != ''").
 		Group("device_type_name").
+		Order("count DESC").
+		Scan(&results).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return results, nil
+}
+
+// GetDeviceCategories 获取设备种类列表及数量统计
+func (s *assetService) GetDeviceCategories(ctx context.Context) ([]DeviceTypeCount, error) {
+	var results []DeviceTypeCount
+
+	err := s.db.WithContext(ctx).Table("ops_asset").
+		Select("device_category_second_name as value, COUNT(*) as count").
+		Where("device_category_second_name IS NOT NULL AND device_category_second_name != ''").
+		Group("device_category_second_name").
 		Order("count DESC").
 		Scan(&results).Error
 

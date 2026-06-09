@@ -589,6 +589,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			assets.POST("/list", assetHandler.List)
 			assets.POST("/:id", assetHandler.GetByID)
 				assets.POST("/device-types", assetHandler.GetDeviceTypes)
+					assets.POST("/device-categories", assetHandler.GetDeviceCategories)
 			assets.POST("/:id/update", assetHandler.Update)
 			assets.POST("/:id/delete", assetHandler.Delete)
 				assets.POST("/batch", assetHandler.BatchOperation)
