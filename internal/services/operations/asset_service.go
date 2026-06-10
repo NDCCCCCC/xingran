@@ -15,10 +15,12 @@ type AssetService interface {
 	Update(ctx context.Context, asset *models.Asset) error
 	Delete(ctx context.Context, id string) error
 	GetByID(ctx context.Context, id string) (*models.Asset, error)
+	GetByDeviceSN(ctx context.Context, deviceSN string) (*models.Asset, error)
 	List(ctx context.Context, params map[string]interface{}) (*PageResult, error)
 	BatchDelete(ctx context.Context, ids []string) error
 	GetDeviceTypes(ctx context.Context) ([]DeviceTypeCount, error)
 	GetDeviceCategories(ctx context.Context) ([]DeviceTypeCount, error)
+	GetStatusValues(ctx context.Context) ([]DeviceTypeCount, error)
 }
 
 // DeviceTypeCount 设备类型统计
@@ -104,6 +106,27 @@ func (s *assetService) GetByID(ctx context.Context, id string) (*models.Asset, e
 	return &asset, nil
 }
 
+// GetByDeviceSN 根据设备序列号获取资产
+func (s *assetService) GetByDeviceSN(ctx context.Context, deviceSN string) (*models.Asset, error) {
+	if deviceSN == "" {
+		return nil, apperrors.ParamMissing("设备序列号")
+	}
+
+	var asset models.Asset
+	err := s.db.WithContext(ctx).
+		Where("devicesn = ? AND deleted_at IS NULL", deviceSN).
+		First(&asset).Error
+
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil // 未找到返回 nil，不是错误
+		}
+		return nil, err
+	}
+
+	return &asset, nil
+}
+
 // List 查询资产列表
 func (s *assetService) List(ctx context.Context, params map[string]interface{}) (*PageResult, error) {
 	query := s.db.WithContext(ctx).Table("ops_asset")
@@ -174,6 +197,16 @@ func (s *assetService) applyFilters(query *gorm.DB, params map[string]interface{
 	// 设备类型筛选（模糊匹配，兼容空格和大小写差异）
 	if deviceType, ok := params["deviceTypeName"].(string); ok && deviceType != "" {
 		query = query.Where("device_type_name LIKE ?", "%"+deviceType+"%")
+	}
+
+	// 设备中类筛选
+	if deviceCategory, ok := params["deviceCategorySecondName"].(string); ok && deviceCategory != "" {
+		query = query.Where("device_category_second_name = ?", deviceCategory)
+	}
+
+	// 状态筛选（useStatusLabel）
+	if useStatusLabel, ok := params["useStatusLabel"].(string); ok && useStatusLabel != "" {
+		query = query.Where("usestatus_label = ?", useStatusLabel)
 	}
 
 	return query
@@ -283,6 +316,24 @@ func (s *assetService) GetDeviceCategories(ctx context.Context) ([]DeviceTypeCou
 		Select("device_category_second_name as value, COUNT(*) as count").
 		Where("device_category_second_name IS NOT NULL AND device_category_second_name != ''").
 		Group("device_category_second_name").
+		Order("count DESC").
+		Scan(&results).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return results, nil
+}
+
+// GetStatusValues 获取状态列表及数量统计
+func (s *assetService) GetStatusValues(ctx context.Context) ([]DeviceTypeCount, error) {
+	var results []DeviceTypeCount
+
+	err := s.db.WithContext(ctx).Table("ops_asset").
+		Select("usestatus_label as value, COUNT(*) as count").
+		Where("usestatus_label IS NOT NULL AND usestatus_label != ''").
+		Group("usestatus_label").
 		Order("count DESC").
 		Scan(&results).Error
 

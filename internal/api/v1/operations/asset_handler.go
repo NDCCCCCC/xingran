@@ -162,3 +162,42 @@ func (h *AssetHandler) GetDeviceCategories(c *gin.Context) {
 
 	response.Success(c, result)
 }
+
+// GetStatusValues 获取状态列表
+func (h *AssetHandler) GetStatusValues(c *gin.Context) {
+	var params map[string]interface{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		response.Error(c, http.StatusBadRequest, "请求参数错误")
+		return
+	}
+
+	result, err := h.assetService.GetStatusValues(c.Request.Context())
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response.Success(c, result)
+}
+
+// SearchBySerial 根据序列号查询资产
+func (h *AssetHandler) SearchBySerial(c *gin.Context) {
+	serial := c.Param("serial")
+	if serial == "" {
+		response.Error(c, http.StatusBadRequest, "序列号不能为空")
+		return
+	}
+
+	asset, err := h.assetService.GetByDeviceSN(c.Request.Context(), serial)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if asset == nil {
+		response.Error(c, http.StatusNotFound, "资产不存在")
+		return
+	}
+
+	response.Success(c, asset)
+}

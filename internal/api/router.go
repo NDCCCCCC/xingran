@@ -588,7 +588,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			workstationDeviceService := opsServices.NewWorkstationDeviceService(core.DB.GetDB())
 			workstationDeviceHandler := operations.NewWorkstationDeviceHandler(workstationDeviceService)
 
-			workstationDevices.GET("/:workstationId", workstationDeviceHandler.GetByWorkstation)
+			workstationDevices.POST("/:id", workstationDeviceHandler.GetByWorkstation)
 			workstationDevices.POST("/manual", workstationDeviceHandler.AddManual)
 			workstationDevices.POST("/sync-ad", workstationDeviceHandler.SyncAD)
 			workstationDevices.POST("/sync-asset", workstationDeviceHandler.SyncAsset)
@@ -608,6 +608,9 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 		{
 			assetService := opsServices.NewAssetService(core.DB.GetDB())
 			assetHandler := operations.NewAssetHandler(assetService)
+
+			// 注意：更具体的路由要放在前面
+			assets.GET("/search-by-serial/:serial", assetHandler.SearchBySerial)
 
 			assets.POST("", assetHandler.Create)
 			assets.POST("/list", assetHandler.List)
