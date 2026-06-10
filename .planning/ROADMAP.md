@@ -302,7 +302,7 @@
 **Goal**: 为系统中所有列表页面添加可自定义列显示的功能，解决资产列表页面字段过多（43列）的问题
 
 **Depends on**: Phase 26 (资产管理模块 - 资产列表页面作为主要集成目标)
-**Status**: ✅ Planned
+**Status**: ✅ Completed
 **Plans**: 1 plan (8 tasks, 1 wave)
 
 **Requirements**:
@@ -333,13 +333,13 @@
 
 ---
 
-### Phase 28: 工位设备关联子表格 ✅
+### Phase 28: 工位设备关联子表格 ⚠️ Gap Closure Required
 
 **Goal**: 为工位管理页面添加设备关联功能，通过可展开子表格显示该工位的设备，支持手动输入序列号匹配、域控设备同步、资产系统数据同步
 
 **Depends on**: Phase 26 (资产管理模块 - 需要资产数据用于设备匹配)
-**Status**: ✅ Completed
-**Plans**: 4 plans (3 waves) - completed 2026-06-10
+**Status**: ⚠️ Gap Closure in Progress - 1/2 gaps closed
+**Plans**: 7 plans (5 completed + 1 gap closure remaining)
 
 **Requirements**:
 - **子表格展示**: 工位列表中每行可展开显示关联设备
@@ -367,6 +367,14 @@
 **Wave 3 - 前端集成**:
 - [x] 28-04-PLAN.md — 设备关联子表格组件
 - [x] 28-05-PLAN.md — 工位列表页面集成子表格
+
+**Wave 4 - Gap Closure** (UAT 2026-06-10):
+- [x] 28-06-PLAN.md — ✅ Gap 1 (Major): 简化手动添加设备模态框为序列号输入 + 自动匹配
+- [ ] 28-07-PLAN.md — 🟡 Gap 2 (Cosmetic): 修复设备来源标签颜色区分
+
+**UAT Diagnosed Gaps**:
+1. **Gap 1 (Major)**: 手动添加设备模态框设计不符 - 应该只显示序列号输入字段，后端自动匹配资产信息
+2. **Gap 2 (Cosmetic)**: 设备来源标签颜色未区分 - 域控蓝色、资产绿色、手动橙色
 
 **Phase Highlights**:
 - 🎯 Workstation-device association with sub-table display
@@ -413,8 +421,8 @@
 | 22D. Web Console 与监控 | v1.12 | 0/2 | Planned | - |
 | 26. 资产管理模块 | v1.13 | 6/6 | Complete | 2026-06-08 |
 | 27. 全局列自定义显示功能 | v1.14 | 1/1 | Complete | 2026-06-09 |
-| 28. 工位设备关联子表格 | v1.15 | 4/4 | Complete | 2026-06-10 |
+| 28. 工位设备关联子表格 | v1.15 | 4/6 | Gap Closure | 2026-06-10 |
 
-**Total**: 96 plans completed, 15 plans planned (Phases 13-15), 14 plans planned (Phases 22 + 25), 1 plan planned (Phase 27), 126 total plans
+**Total**: 96 plans completed, 15 plans planned (Phases 13-15), 14 plans planned (Phases 22 + 25), 2 gap closure plans (Phase 28), 127 total plans
 
-**Completion Rate**: 76.2% (96/126)
+**Completion Rate**: 75.6% (96/127) + 2 gap closure plans pending
