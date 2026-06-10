@@ -5,11 +5,11 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Table, Button, Space, Tag, Popconfirm, message, Modal, Form, Input } from 'antd';
+import { Table, Button, Space, Tag, Popconfirm, message, Modal, Form, Input, Alert } from 'antd';
 import { PlusOutlined, SyncOutlined, EditOutlined, DeleteOutlined, StarOutlined } from '@ant-design/icons';
-import type { WorkstationDevice, DeviceFormData, DeviceSource } from './types';
-import { DEVICE_SOURCE_LABELS } from './types';
-import { workstationDeviceApi } from '@/lib/opsApi';
+import type { WorkstationDevice, DeviceFormData, DeviceSource, Asset } from '@/types';
+import { DEVICE_SOURCE_LABELS } from '@/types/operations';
+import { workstationDeviceApi, assetApi } from '@/lib/opsApi';
 
 export interface WorkstationDeviceTableProps {
   workstationId: string;
@@ -25,7 +25,54 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingDevice, setEditingDevice] = useState<WorkstationDevice | null>(null);
+  const [autoFilledAsset, setAutoFilledAsset] = useState<Asset | null>(null);
+  const [searchingSerial, setSearchingSerial] = useState(false);
   const [form] = Form.useForm();
+
+  // 序列号搜索函数
+  const handleSerialSearch = async (serial: string) => {
+    if (!serial) {
+      setAutoFilledAsset(null);
+      return;
+    }
+    setSearchingSerial(true);
+    try {
+      const result = await assetApi.searchBySerial(serial);
+      if (result.code === 0 && result.data) {
+        setAutoFilledAsset(result.data);
+        // 自动填充表单字段
+        form.setFieldsValue({
+          deviceName: result.data.deviceName,
+          deviceModel: result.data.deviceModelName,
+          deviceType: result.data.deviceTypeName,
+          macAddress: result.data.mac1,
+          responsibleUser: result.data.nowUserName,
+        });
+      } else {
+        setAutoFilledAsset(null);
+        // 清空自动填充字段
+        form.setFieldsValue({
+          deviceName: undefined,
+          deviceModel: undefined,
+          deviceType: undefined,
+          macAddress: undefined,
+          responsibleUser: undefined,
+        });
+      }
+    } catch (error) {
+      setAutoFilledAsset(null);
+      // 清空自动填充字段
+      form.setFieldsValue({
+        deviceName: undefined,
+        deviceModel: undefined,
+        deviceType: undefined,
+        macAddress: undefined,
+        responsibleUser: undefined,
+      });
+    } finally {
+      setSearchingSerial(false);
+    }
+  };
 
   // 加载设备列表
   const fetchDevices = useCallback(async () => {
@@ -48,6 +95,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
   const handleAdd = () => {
     setEditingDevice(null);
     form.resetFields();
+    setAutoFilledAsset(null);
     setModalVisible(true);
   };
 
@@ -283,29 +331,45 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
         onOk={handleModalOk}
         onCancel={() => setModalVisible(false)}
         destroyOnClose
+        width={600}
       >
         <Form form={form} layout="vertical">
           <Form.Item
             name="deviceSerial"
             label="序列号"
             rules={[{ required: true, message: '请输入序列号' }]}
+            extra={searchingSerial ? '正在查询资产信息...' : autoFilledAsset ? '已从资产系统自动匹配' : '未在资产系统中找到'}
           >
-            <Input placeholder="请输入设备序列号" />
+            <Input
+              placeholder="请输入设备序列号"
+              onBlur={(e) => handleSerialSearch(e.target.value)}
+              disabled={!!editingDevice}
+            />
           </Form.Item>
-          <Form.Item name="deviceName" label="设备名称">
-            <Input placeholder="请输入设备名称" />
-          </Form.Item>
-          <Form.Item name="deviceModel" label="设备型号">
-            <Input placeholder="请输入设备型号" />
-          </Form.Item>
-          <Form.Item name="macAddress" label="MAC地址">
-            <Input placeholder="请输入MAC地址" />
-          </Form.Item>
-          <Form.Item name="responsibleUser" label="责任人">
-            <Input placeholder="请输入责任人" />
-          </Form.Item>
+
+          {autoFilledAsset && (
+            <div style={{ marginBottom: 16, padding: 12, background: '#f5f5f5', borderRadius: 4 }}>
+              <div style={{ marginBottom: 8, fontWeight: 'bold' }}>自动匹配的设备信息：</div>
+              <div>设备名称: {autoFilledAsset.deviceName || '-'}</div>
+              <div>设备型号: {autoFilledAsset.deviceModelName || '-'}</div>
+              <div>设备类型: {autoFilledAsset.deviceTypeName || '-'}</div>
+              <div>MAC地址: {autoFilledAsset.mac1 || '-'}</div>
+              <div>责任人: {autoFilledAsset.nowUserName || '-'}</div>
+            </div>
+          )}
+
+          {!autoFilledAsset && form.getFieldValue('deviceSerial') && (
+            <Alert
+              message="未找到资产信息"
+              description="该序列号在资产系统中不存在，您仍可以添加设备，但需要手动填写设备信息"
+              type="warning"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+          )}
+
           <Form.Item name="description" label="备注">
-            <Input.TextArea placeholder="请输入备注" rows={3} />
+            <Input.TextArea placeholder="请输入备注（可选）" rows={2} />
           </Form.Item>
         </Form>
       </Modal>
