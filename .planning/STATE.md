@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: MAC地址历史数据管理
 status: unknown
-stopped_at: context exhaustion at 90% (2026-06-10)
-last_updated: "2026-06-10T05:43:09.649Z"
+stopped_at: Phase 29 context gathered
+last_updated: "2026-06-10T08:01:16.214Z"
 progress:
-  total_phases: 7
+  total_phases: 8
   completed_phases: 2
   total_plans: 32
-  completed_plans: 20
-  percent: 63
+  completed_plans: 21
+  percent: 66
 ---
 
 # Project State
@@ -179,6 +179,7 @@ Plan: 07 (complete) - 已完成 7/7 计划
 - 📋 Phase 24 added: 虚拟机数据范围权限配置
 - 📋 Phase 23 added: 阶段23前端UI-部门组映射管理界面
 - 📋 Phase 28 added: 工位设备关联子表格功能
+- 📋 Phase 29 added: 重构工位状态枚举，从硬编码改为使用数据字典（sys_dict），保证前后端一致性
 
 **Total shipped**: 72 plans, 18 phases completed
 
@@ -261,9 +262,9 @@ Plan: 07 (complete) - 已完成 7/7 计划
 
 ## Session Continuity
 
-Last session: 2026-06-10T03:29:27.941Z
-Stopped at: context exhaustion at 90% (2026-06-10)
-Resume file: None
+Last session: --stopped-at
+Stopped at: Phase 29 context gathered
+Resume file: --resume-file
 
 Resume file: None
 
