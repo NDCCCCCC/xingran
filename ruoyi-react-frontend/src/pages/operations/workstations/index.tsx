@@ -36,6 +36,7 @@ import type { FloorOption, UserOption, DeptTreeNode } from './types';
 // ❌ 移除：import { workstationApi } from '@/lib/opsApi';
 // ✅ 优化：直接导入具体 API，避免 barrel 文件 (bundle-barrel-imports)
 import { buildingApi, floorApi, workstationApi } from '@/lib/opsApi';
+import WorkstationDeviceTable from '@/components/operations/WorkstationDeviceTable';
 
 // Cascader 选项类型
 type CascaderOption = {
@@ -348,6 +349,25 @@ const WorkstationManagement: FC = () => {
           loading={loading}
           rowKey="id"
           pagination={paginationProps}
+          expandable={{
+            expandedRowRender: (record: WorkstationOps) => (
+              <WorkstationDeviceTable
+                workstationId={record.id}
+                onDeviceChange={refreshData}
+              />
+            ),
+            rowExpandable: () => true,
+            expandIcon: ({ expanded, onExpand, record }) => (
+              <Button
+                type="text"
+                size="small"
+                onClick={(e) => onExpand(record, e)}
+                style={{ fontSize: '12px' }}
+              >
+                {expanded ? '收起设备' : '查看设备'}
+              </Button>
+            ),
+          }}
           onChange={(pagination) => {
             const newPage = pagination.current || 1;
             const newPageSize = pagination.pageSize || 10;
