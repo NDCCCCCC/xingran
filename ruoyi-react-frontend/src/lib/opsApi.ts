@@ -2,7 +2,7 @@
  * 运维管理模块 API
  */
 
-import { post, postFormData } from './api';
+import { post, get, postFormData } from './api';
 import { getAccessToken } from '@/utils/authHelpers';
 import type {
   BaseResponse,
@@ -522,6 +522,11 @@ const assetCrudApi = createCrudApi<Asset>({ basePath: '/ops/asset' });
 
 export const assetApi = {
   ...assetCrudApi,
+
+  // 根据序列号查询资产信息
+  searchBySerial: async (serial: string) => {
+    return await get<Asset>(`/ops/asset/search-by-serial/${serial}`, {});
+  },
 
   // 获取设备类型列表（动态数据）
   getDeviceTypes: async () => {
