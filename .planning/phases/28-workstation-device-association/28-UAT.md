@@ -1,9 +1,9 @@
 ---
-status: complete
+status: diagnosed
 phase: 28-workstation-device-association
 source: [28-01-SUMMARY.md, 28-EXECUTE-SUMMARY.md]
 started: 2026-06-10T11:30:00Z
-updated: 2026-06-10T11:56:00Z
+updated: 2026-06-10T12:00:00Z
 ---
 
 ## Current Test
@@ -182,17 +182,28 @@ blocked: 0
   reason: "User reported: 设计不符 - 设计要求输入序列号自动从资产系统匹配相关设备信息，但当前实现显示多个手动输入字段"
   severity: major
   test: 3
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "前端组件设计问题 - WorkstationDeviceTable 组件的'手动添加设备'模态框显示了7个手动输入字段，而根据需求和后端实现，应该只显示序列号输入字段，其他设备信息应该由后端自动从资产系统匹配"
+  artifacts:
+    - path: "ruoyi-react-frontend/src/components/operations/WorkstationDeviceTable/index.tsx:287-309"
+      issue: "模态框表单包含7个可编辑字段，没有体现自动匹配功能"
+    - path: "internal/services/operations/workstation_device_service.go:288-338"
+      issue: "后端已正确实现自动匹配逻辑"
+  missing:
+    - "简化前端表单为只显示序列号输入字段"
+    - "新增后端API端点 GET /ops/asset/search-by-serial/:serial 用于查询资产信息"
+  debug_session: ".planning/debug/device-modal-serial-auto-match.md"
 
 - truth: "设备来源标签应该按来源显示不同颜色（域控蓝色、资产绿色、手动橙色）"
   status: failed
   reason: "User reported: 所有标签颜色都是一样的，没有按来源区分"
   severity: cosmetic
   test: 10
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "可能是数据类型问题 - 后端返回的 deviceSource 可能不是预期的字符串类型（'ad'、'asset'、'manual'），可能是大小写不匹配（如 'AD'、'ASSET'、'MANUAL'）"
+  artifacts:
+    - path: "ruoyi-react-frontend/src/components/operations/WorkstationDeviceTable/index.tsx:164"
+      issue: "颜色区分逻辑正确：color={source === 'ad' ? 'blue' : source === 'asset' ? 'green' : 'orange'}"
+  missing:
+    - "检查后端返回的实际 deviceSource 值"
+    - "检查类型定义 src/types/operations.ts 中 DeviceSource 的类型定义"
+    - "添加大小写转换或类型标准化"
+  debug_session: ".planning/debug/device-tag-color-mismatch.md"
