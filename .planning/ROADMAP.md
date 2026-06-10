@@ -338,8 +338,8 @@
 **Goal**: 为工位管理页面添加设备关联功能，通过可展开子表格显示该工位的设备，支持手动输入序列号匹配、域控设备同步、资产系统数据同步
 
 **Depends on**: Phase 26 (资产管理模块 - 需要资产数据用于设备匹配)
-**Status**: ✅ Planned
-**Plans**: 5 plans (3 waves)
+**Status**: ✅ Completed
+**Plans**: 4 plans (3 waves) - completed 2026-06-10
 
 **Requirements**:
 - **子表格展示**: 工位列表中每行可展开显示关联设备
@@ -360,14 +360,13 @@
 
 **Wave 1 - 数据模型与后端服务**:
 - [x] 28-01-PLAN.md — 工位设备关联表设计与迁移
-- [ ] 28-02-PLAN.md — 设备关联服务层实现
 
 **Wave 2 - API 层**:
-- [ ] 28-03-PLAN.md — 设备关联 API 端点
+- [x] 28-03-PLAN.md — 设备关联 API 端点
 
 **Wave 3 - 前端集成**:
-- [ ] 28-04-PLAN.md — 设备关联子表格组件
-- [ ] 28-05-PLAN.md — 工位列表页面集成子表格
+- [x] 28-04-PLAN.md — 设备关联子表格组件
+- [x] 28-05-PLAN.md — 工位列表页面集成子表格
 
 **Phase Highlights**:
 - 🎯 Workstation-device association with sub-table display
@@ -413,9 +412,9 @@
 | 22C. 账号管理与密码 | v1.12 | 0/2 | Planned | - |
 | 22D. Web Console 与监控 | v1.12 | 0/2 | Planned | - |
 | 26. 资产管理模块 | v1.13 | 6/6 | Complete | 2026-06-08 |
-| 27. 全局列自定义显示功能 | v1.14 | 0/1 | Planned | - |
-| 28. 工位设备关联子表格 | v1.15 | 1/1 | Complete    | 2026-06-09 |
+| 27. 全局列自定义显示功能 | v1.14 | 1/1 | Complete | 2026-06-09 |
+| 28. 工位设备关联子表格 | v1.15 | 4/4 | Complete | 2026-06-10 |
 
-**Total**: 91 plans completed, 15 plans planned (Phases 13-15), 14 plans planned (Phases 22 + 25), 1 plan planned (Phase 27), 5 plans planned (Phase 28), 126 total plans
+**Total**: 96 plans completed, 15 plans planned (Phases 13-15), 14 plans planned (Phases 22 + 25), 1 plan planned (Phase 27), 126 total plans
 
-**Completion Rate**: 72.2% (91/126)
+**Completion Rate**: 76.2% (96/126)

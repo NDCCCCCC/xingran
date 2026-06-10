@@ -17,21 +17,21 @@ progress:
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: 里程碑 v1.15 进行中 (Phase 27 执行中)
-**Phase**: 27 (column-customization)
-**Plan**: 27-01 (1/1)
-**Status**: 🔄 执行中
-**Last activity**: 2026-06-09 - 执行 Phase 27: column-customization
+**Status**: 里程碑 v1.16 进行中 (Phase 28 已完成)
+**Phase**: 28 (workstation-device-association)
+**Plan**: All plans completed
+**Status**: ✅ 完成
+**Last activity**: 2026-06-10 - 完成 Phase 28: 工位设备关联子表格
 
 ## Current Position
 
-Phase: 28
+Phase: 29
 Plan: Not started
-**当前里程碑**: v1.15 — 列自定义显示功能
-**当前阶段**: Phase 27 — 列自定义显示功能 (0/1 plans 完成) 🔄
-**状态**: 🔄 执行中
-**开始时间**: 2026-06-09
-**下一阶段**: 验证或完成里程碑
+**当前里程碑**: v1.16 — 工位设备关联
+**当前阶段**: Phase 28 — 工位设备关联子表格 (4/4 plans 完成) ✅
+**状态**: ✅ 已完成
+**完成时间**: 2026-06-10
+**下一阶段**: 等待用户指示
 
 ## Project Reference
 
@@ -68,6 +68,8 @@ Plan: Not started
 | 24 | UUID类型一致性优化 | ✅ Completed | 2/2 plans |
 | 25 | 虚拟机数据范围权限配置 | 📋 Planned | 0/4 plans |
 | 26 | 资产管理模块 | ✅ Completed | 6/6 plans |
+| 27 | 全局列自定义显示功能 | ✅ Completed | 1/1 plan |
+| 28 | 工位设备关联子表格 | ✅ Completed | 4/4 plans |
 
 ## Completed Milestones
 
@@ -111,6 +113,9 @@ Plan: Not started
 | 2026-05-26 | Phase 23 部分完成 (AD组自动同步) - 6/7计划，23-13未实现 | 23 |
 | 2026-06-05 | Phase 23 验证更新：15分钟组同步Cron任务未在代码库中找到 | 23 |
 | 2026-06-05 | Quick task 260605-iq7: AD域组成员同步数据源分析完成 | — |
+| 2026-06-09 | Quick task完成: 域控用户页面多选框显示修复 | — |
+| 2026-06-09 | Phase 27 完成 (全局列自定义显示功能) | 27 |
+| 2026-06-10 | Phase 28 完成 (工位设备关联子表格) - 4个计划全部完成 | 28 |
 
 ## Quick Tasks Completed
 
