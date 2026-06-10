@@ -208,11 +208,26 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
       title: '来源',
       dataIndex: 'deviceSource',
       key: 'deviceSource',
-      render: (source: DeviceSource) => (
-        <Tag color={source === 'ad' ? 'blue' : source === 'asset' ? 'green' : 'orange'}>
-          {DEVICE_SOURCE_LABELS[source]}
-        </Tag>
-      ),
+      render: (source: DeviceSource) => {
+        const normalizedSource = source?.toLowerCase() as DeviceSource;
+        const getColor = () => {
+          switch (normalizedSource) {
+            case 'ad':
+              return 'blue';
+            case 'asset':
+              return 'green';
+            case 'manual':
+              return 'orange';
+            default:
+              return 'default'; // Fallback for unknown sources
+          }
+        };
+        return (
+          <Tag color={getColor()}>
+            {DEVICE_SOURCE_LABELS[normalizedSource] || source}
+          </Tag>
+        );
+      },
     },
     {
       title: '型号',
