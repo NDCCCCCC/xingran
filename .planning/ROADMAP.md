@@ -338,8 +338,8 @@
 **Goal**: 为工位管理页面添加设备关联功能，通过可展开子表格显示该工位的设备，支持手动输入序列号匹配、域控设备同步、资产系统数据同步
 
 **Depends on**: Phase 26 (资产管理模块 - 需要资产数据用于设备匹配)
-**Status**: ⚠️ Gap Closure in Progress - 1/2 gaps closed
-**Plans**: 7 plans (5 completed + 1 gap closure remaining)
+**Status**: ✅ Complete - All gaps closed
+**Plans**: 7 plans (7 completed)
 
 **Requirements**:
 - **子表格展示**: 工位列表中每行可展开显示关联设备
@@ -370,7 +370,7 @@
 
 **Wave 4 - Gap Closure** (UAT 2026-06-10):
 - [x] 28-06-PLAN.md — ✅ Gap 1 (Major): 简化手动添加设备模态框为序列号输入 + 自动匹配
-- [ ] 28-07-PLAN.md — 🟡 Gap 2 (Cosmetic): 修复设备来源标签颜色区分
+- [x] 28-07-PLAN.md — ✅ Gap 2 (Cosmetic): 修复设备来源标签颜色区分
 
 **UAT Diagnosed Gaps**:
 1. **Gap 1 (Major)**: 手动添加设备模态框设计不符 - 应该只显示序列号输入字段，后端自动匹配资产信息
