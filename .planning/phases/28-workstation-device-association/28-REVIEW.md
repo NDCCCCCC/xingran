@@ -1,276 +1,508 @@
 ---
 phase: 28-workstation-device-association
-reviewed: 2026-06-10T00:00:00Z
+reviewed: 2025-02-10T12:00:00Z
 depth: standard
-files_reviewed: 3
+files_reviewed: 11
 files_reviewed_list:
   - internal/models/workstation_device.go
   - internal/services/operations/workstation_device_service.go
-  - internal/core/db/migrations/030_create_workstation_device.sql
+  - internal/services/operations/asset_service.go
+  - internal/api/v1/operations/asset_handler.go
+  - internal/api/v1/operations/workstation_device_handler.go
+  - internal/api/router.go
+  - ruoyi-react-frontend/src/lib/opsApi.ts
+  - ruoyi-react-frontend/src/types/operations.ts
+  - ruoyi-react-frontend/src/components/operations/WorkstationDeviceTable/types.ts
+  - ruoyi-react-frontend/src/components/operations/WorkstationDeviceTable/index.tsx
+  - ruoyi-react-frontend/src/pages/operations/workstations/index.tsx
 findings:
   critical: 2
-  warning: 3
-  info: 2
-  total: 7
+  warning: 8
+  info: 5
+  total: 15
 status: issues_found
 ---
 
 # Phase 28: Code Review Report
 
-**Reviewed:** 2026-06-10T00:00:00Z
+**Reviewed:** 2025-02-10T12:00:00Z
 **Depth:** standard
-**Files Reviewed:** 3
+**Files Reviewed:** 11
 **Status:** issues_found
 
 ## Summary
 
-Reviewed the workstation device association feature implementation across 3 files: model definition, service layer, and database migration. The implementation follows the established Handler-Service pattern with proper interface-based design and UUID validation. However, several critical issues were identified including missing UUID pattern constant definition, potential race conditions in sync operations, and incomplete AD device integration.
+This review covers the workstation-device association feature implementation across backend Go services and frontend React components. The feature enables associating devices (from AD domain, asset system, or manual entry) with workstations in the operations management system.
+
+**Overall Assessment:** The implementation follows the established Handler-Service pattern well and includes comprehensive functionality. The backend code properly validates UUIDs, uses transactions for atomic operations, and includes proper error handling. The frontend provides a good user experience with auto-fill functionality and clear device source indication. However, there are several bugs, security concerns, and code quality issues that should be addressed before production deployment.
 
 ## Critical Issues
 
-### CR-01: Missing UUID Pattern Constant Definition
+### CR-01: Missing UUID Validation in Department Filter Query
 
-**File:** `internal/services/operations/workstation_device_service.go:98`
-**Issue:** The service uses `uuidPattern` constant that is not defined in the file. It's imported from `building_service.go` but not properly declared as a shared constant, creating implicit coupling.
-
-**Fix:**
-Move the UUID pattern to a shared constants file or define it in `workstation_device_service.go`:
+**File:** `internal/services/operations/asset_service.go:215-230`
+**Issue:** The `applyDeptFilter` method constructs complex LIKE queries for department filtering without first validating that the `deptId` parameter is a valid UUID. While the query uses parameterized values (preventing SQL injection), passing an invalid or malformed UUID could cause performance issues or unexpected behavior.
 
 ```go
-// In internal/services/operations/constants.go (new file)
-package operations
+func (s *assetService) applyDeptFilter(query *gorm.DB, deptId string) *gorm.DB {
+    var deptIDs []string
 
-const (
-    uuidPattern = `^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`
-)
+    // 查询该部门及其所有子部门的ID
+    err := s.db.Table("sys_dept").
+        Where("id = ? OR ancestors LIKE ? OR ancestors LIKE ? OR ancestors = ?",
+            deptId, "%,"+deptId+",%", "%,"+deptId, deptId).
+        Pluck("id", &deptIDs).Error
 
-// Then in workstation_device_service.go:
-import "github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
-
-// Replace:
-// uuidValidator: regexp.MustCompile(uuidPattern),
-// With:
-// uuidValidator: regexp.MustCompile(operations.uuidPattern),
-```
-
-### CR-02: Race Condition in Sync Operations
-
-**File:** `internal/services/operations/workstation_device_service.go:228-282`
-**Issue:** `SyncFromAD` and `SyncFromAsset` methods perform delete-then-insert operations without proper transaction isolation. Between the delete and insert operations, another concurrent request could see an empty device list, causing temporary data inconsistency.
-
-**Fix:**
-Wrap delete and insert operations in a single transaction:
-
-```go
-// SyncFromAD 同步域控设备到实际结果
-func (s *workstationDeviceService) SyncFromAD(ctx context.Context, workstationID string) error {
-    if workstationID == "" {
-        return apperrors.ParamMissing("工位ID")
+    if err != nil || len(deptIDs) == 0 {
+        return query.Where("1 = 0")
     }
 
-    // 使用事务确保原子性
-    return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-        // 获取工位信息
-        var workstation models.Workstation
-        if err := tx.Where("id = ? AND deleted_at IS NULL", workstationID).
-            First(&workstation).Error; err != nil {
-            return fmt.Errorf("工位不存在: %w", err)
-        }
-
-        if workstation.UserName == nil || *workstation.UserName == "" {
-            return fmt.Errorf("工位未绑定用户,无法同步域控设备")
-        }
-
-        // 获取用户的域控设备
-        adDevices, err := s.GetADDevicesByUser(ctx, *workstation.UserName)
-        if err != nil {
-            return fmt.Errorf("获取域控设备失败: %w", err)
-        }
-
-        // 删除现有的域控来源设备
-        if err := tx.Where("workstation_id = ? AND device_source = ? AND deleted_at IS NULL",
-            workstationID, models.DeviceSourceAD).
-            Delete(&models.WorkstationDevice{}).Error; err != nil {
-            return fmt.Errorf("删除现有域控设备失败: %w", err)
-        }
-
-        // 添加新的域控设备
-        for _, adDevice := range adDevices {
-            device := &models.WorkstationDevice{
-                WorkstationID:    workstationID,
-                DeviceSource:     models.DeviceSourceAD,
-                ADComputerID:     &adDevice.ADComputerID,
-                DeviceSerial:     &adDevice.DeviceSerial,
-                DeviceName:       &adDevice.DeviceName,
-                MACAddress:       &adDevice.MACAddress,
-                Status:           0,
-                IsPrimary:        false,
-                Priority:         0,
-            }
-
-            if err := tx.Create(device).Error; err != nil {
-                return fmt.Errorf("添加域控设备失败: %w", err)
-            }
-        }
-
-        return nil
-    })
+    return query.Where("dept_id IN ?", deptIDs)
 }
 ```
 
-Apply the same pattern to `SyncFromAsset` method (lines 284-340).
+**Fix:** Add UUID validation at the start of the method:
+```go
+func (s *assetService) applyDeptFilter(query *gorm.DB, deptId string) *gorm.DB {
+    // Validate UUID format before query
+    if !s.uuidValidator.MatchString(deptId) {
+        return query.Where("1 = 0") // Invalid UUID, return no results
+    }
+
+    var deptIDs []string
+    // ... rest of the logic
+}
+```
+
+### CR-02: Unsafe Pointer Dereference in Device Auto-Fill Logic
+
+**File:** `internal/services/operations/workstation_device_service.go:306-322`
+**Issue:** When auto-filling device information from the asset system, the code checks `deviceModel == nil` before assigning but doesn't validate that the asset's fields themselves are non-nil. This could result in assigning nil pointers to the device, causing potential panics.
+
+```go
+var asset models.Asset
+err := s.db.WithContext(ctx).
+    Where("devicesn = ? AND deleted_at IS NULL", req.DeviceSerial).
+    First(&asset).Error
+
+if err == nil {
+    // 找到匹配的资产
+    assetID = &asset.ID
+    if deviceModel == nil {
+        deviceModel = asset.DeviceModelName  // Could be nil
+    }
+    if deviceType == nil {
+        deviceType = asset.DeviceTypeName  // Could be nil
+    }
+}
+```
+
+**Fix:** Validate asset fields before assignment:
+```go
+if err == nil {
+    // 找到匹配的资产
+    assetID = &asset.ID
+    // Only assign if asset fields are non-nil
+    if asset.DeviceModelName != nil {
+        deviceModel = asset.DeviceModelName
+    }
+    if asset.DeviceTypeName != nil {
+        deviceType = asset.DeviceTypeName
+    }
+}
+```
 
 ## Warnings
 
-### WR-01: Unimplemented AD Device Resolution Logic
+### WR-01: Sync Operations Lack Transaction Wrapping
 
-**File:** `internal/services/operations/workstation_device_service.go:125-136`
-**Issue:** `GetADDevicesByUser` returns empty array with TODO comment. The method is called by `SyncFromAD` but provides no functionality, making the sync operation non-functional for AD devices.
-
-**Fix:**
-Implement the AD device resolution logic or return a clear error indicating the feature is not yet available:
+**File:** `internal/services/operations/workstation_device_service.go:347-405`
+**Issue:** The `SyncFromAD` and `SyncFromAsset` methods perform delete-then-insert operations without transaction wrapping. If the insert fails after a successful delete, the workstation is left without devices, causing data inconsistency.
 
 ```go
-// GetADDevicesByUser 获取用户的域控设备
-func (s *workstationDeviceService) GetADDevicesByUser(ctx context.Context, username string) ([]*ADDeviceMatch, error) {
-    if username == "" {
-        return nil, apperrors.ParamMissing("用户名")
+func (s *workstationDeviceService) SyncFromAsset(ctx context.Context, workstationID string) error {
+    // ... validation code ...
+
+    // 删除现有的资产来源设备
+    if err := s.db.WithContext(ctx).
+        Where("workstation_id = ? AND device_source = ? AND deleted_at IS NULL", workstationID, models.DeviceSourceAsset).
+        Delete(&models.WorkstationDevice{}).Error; err != nil {
+        return fmt.Errorf("删除现有资产设备失败: %w", err)
     }
 
-    // 查询该用户的AD设备记录
-    var adComputers []*models.ADComputer
-    err := s.db.WithContext(ctx).
-        Where("managed_by = ? AND deleted_at IS NULL", username).
-        Find(&adComputers).Error
-
-    if err != nil {
-        return nil, fmt.Errorf("查询用户AD设备失败: %w", err)
+    // 添加新的资产设备
+    for _, assetDevice := range assetDevices {
+        device := &models.WorkstationDevice{...}
+        if err := s.db.WithContext(ctx).Create(device).Error; err != nil {
+            return fmt.Errorf("添加资产设备失败: %w", err)  // Delete already committed!
+        }
     }
-
-    matches := make([]*ADDeviceMatch, 0, len(adComputers))
-    for _, computer := range adComputers {
-        matches = append(matches, &ADDeviceMatch{
-            ADComputerID:    computer.ID,
-            DeviceSerial:    computer.SerialNumber,
-            DeviceName:      computer.ComputerName,
-            MACAddress:      computer.MacAddress,
-            IPAddress:       computer.IPAddress,
-            OperatingSystem: computer.OperatingSystem,
-        })
-    }
-
-    return matches, nil
+    return nil
 }
 ```
 
-### WR-02: Missing UUID Validation for Foreign Keys
-
-**File:** `internal/services/operations/workstation_device_service.go:169-226`
-**Issue:** `AddDeviceManual` method validates `WorkstationID` but doesn't validate the optional `AssetID` or `ADComputerID` fields when they are provided. Invalid UUIDs could cause database foreign key constraint errors.
-
-**Fix:**
-Add UUID validation for optional foreign key fields:
-
+**Fix:** Wrap delete and insert in a transaction:
 ```go
-// AddDeviceManual 手动添加设备
-func (s *workstationDeviceService) AddDeviceManual(ctx context.Context, req *AddDeviceRequest) (*models.WorkstationDevice, error) {
-    // 验证工位ID
-    if req.WorkstationID == "" {
-        return nil, apperrors.ParamMissing("工位ID")
-    }
-    if !s.uuidValidator.MatchString(req.WorkstationID) {
-        return nil, apperrors.ParamInvalid("工位ID")
+return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+    // Delete existing devices using tx
+    if err := tx.
+        Where("workstation_id = ? AND device_source = ? AND deleted_at IS NULL", workstationID, models.DeviceSourceAsset).
+        Delete(&models.WorkstationDevice{}).Error; err != nil {
+        return fmt.Errorf("删除现有资产设备失败: %w", err)
     }
 
-    // 验证序列号
-    if req.DeviceSerial == "" {
-        return nil, apperrors.ParamMissing("设备序列号")
-    }
-
-    // 尝试通过序列号匹配资产系统
-    var assetID *string
-    var deviceModel, deviceType *string
-
-    var asset models.Asset
-    err := s.db.WithContext(ctx).
-        Where("devicesn = ? AND deleted_at IS NULL", req.DeviceSerial).
-        First(&asset).Error
-
-    if err == nil {
-        // 验证找到的资产ID格式
-        if !s.uuidValidator.MatchString(asset.ID) {
-            return nil, fmt.Errorf("资产ID格式无效: %s", asset.ID)
+    // Add new devices using tx
+    for _, assetDevice := range assetDevices {
+        device := &models.WorkstationDevice{...}
+        if err := tx.Create(device).Error; err != nil {
+            return fmt.Errorf("添加资产设备失败: %w", err)
         }
-        assetID = &asset.ID
-        if deviceModel == nil {
-            deviceModel = asset.DeviceModelName
-        }
-        if deviceType == nil {
-            deviceType = asset.DeviceTypeName
-        }
-    } else if err != gorm.ErrRecordNotFound {
-        return nil, fmt.Errorf("查询资产失败: %w", err)
     }
+    return nil
+})
+```
 
-    // ... rest of the method
+### WR-02: Inconsistent Device Source Color Rendering
+
+**File:** `ruoyi-react-frontend/src/components/operations/WorkstationDeviceTable/index.tsx:208-230`
+**Issue:** The device source color rendering applies `toLowerCase()` to the source value, but the enum is already lowercase. This is redundant and could mask type errors.
+
+```typescript
+render: (source: DeviceSource) => {
+  const normalizedSource = source?.toLowerCase() as DeviceSource;  // Unnecessary casting
+  const getColor = () => {
+    switch (normalizedSource) {
+      case 'ad': return 'blue';
+      case 'asset': return 'green';
+      case 'manual': return 'orange';
+      default: return 'default';
+    }
+  };
+  return (
+    <Tag color={getColor()}>
+      {DEVICE_SOURCE_LABELS[normalizedSource] || source}
+    </Tag>
+  );
 }
 ```
 
-### WR-03: Inconsistent Error Handling in UpdateDevice
+**Fix:** Remove unnecessary normalization and use proper type checking:
+```typescript
+const getSourceColor = (source: DeviceSource): string => {
+  switch (source) {
+    case 'ad': return 'blue';
+    case 'asset': return 'green';
+    case 'manual': return 'orange';
+    default: {
+      const _exhaustiveCheck: never = source;
+      return 'default';
+    }
+  }
+};
 
-**File:** `internal/services/operations/workstation_device_service.go:342-400`
-**Issue:** The `UpdateDevice` method creates a map for updates but doesn't validate the device exists before attempting updates. If the device is not found, the error message is unclear about whether it's a validation failure or missing record.
+render: (source: DeviceSource) => (
+  <Tag color={getSourceColor(source)}>
+    {DEVICE_SOURCE_LABELS[source]}
+  </Tag>
+)
+```
 
-**Fix:**
-The method already validates device existence (lines 349-356), which is correct. However, the error handling could be more specific. Consider distinguishing between "not found" and "validation failed" errors by checking for `gorm.ErrRecordNotFound` explicitly:
+### WR-03: Missing Input Length Validation
+
+**File:** `internal/api/v1/operations/asset_handler.go:183-204`
+**Issue:** The `SearchBySerial` handler validates that the serial is non-empty but doesn't check length or format constraints. Extremely long serial numbers could cause performance issues or database errors.
 
 ```go
-if err != nil {
-    if err == gorm.ErrRecordNotFound {
-        return apperrors.NotFound("设备")
+func (h *AssetHandler) SearchBySerial(c *gin.Context) {
+    serial := c.Param("serial")
+    if serial == "" {
+        response.Error(c, http.StatusBadRequest, "序列号不能为空")
+        return
     }
-    return fmt.Errorf("查询设备失败: %w", err)
+    // ... no length validation ...
 }
 ```
+
+**Fix:** Add length and format validation:
+```go
+const (
+    minSerialLength = 3
+    maxSerialLength = 200
+)
+
+func (h *AssetHandler) SearchBySerial(c *gin.Context) {
+    serial := c.Param("serial")
+    if serial == "" {
+        response.Error(c, http.StatusBadRequest, "序列号不能为空")
+        return
+    }
+    if len(serial) < minSerialLength || len(serial) > maxSerialLength {
+        response.Error(c, http.StatusBadRequest, "序列号长度无效")
+        return
+    }
+    // ... rest of handler ...
+}
+```
+
+### WR-04: Race Condition in SetPrimaryDevice
+
+**File:** `internal/services/operations/workstation_device_service.go:579-615`
+**Issue:** While the method uses a transaction, there's no row-level locking. Multiple concurrent requests to set different primary devices could interfere with each other.
+
+```go
+return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+    // 取消该工位下的所有主设备
+    if err := tx.
+        Model(&models.WorkstationDevice{}).
+        Where("workstation_id = ? AND deleted_at IS NULL", device.WorkstationID).
+        Update("is_primary", false).Error; err != nil {
+        return fmt.Errorf("取消主设备失败: %w", err)
+    }
+
+    // 设置新的主设备
+    if err := tx.
+        Model(&models.WorkstationDevice{}).
+        Where("id = ?", id).
+        Update("is_primary", true).Error; err != nil {
+        return fmt.Errorf("设置主设备失败: %w", err)
+    }
+
+    return nil
+})
+```
+
+**Fix:** Lock the target device row first:
+```go
+return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+    // Lock the target device row
+    var targetDevice models.WorkstationDevice
+    if err := tx.
+        Clauses(clause.Locking{Strength: "UPDATE"}).
+        Where("id = ? AND deleted_at IS NULL", id).
+        First(&targetDevice).Error; err != nil {
+        return fmt.Errorf("设备不存在: %w", err)
+    }
+
+    // 取消该工位下的所有主设备
+    if err := tx.
+        Model(&models.WorkstationDevice{}).
+        Where("workstation_id = ? AND deleted_at IS NULL", targetDevice.WorkstationID).
+        Update("is_primary", false).Error; err != nil {
+        return fmt.Errorf("取消主设备失败: %w", err)
+    }
+
+    // 设置新的主设备 (using the locked object)
+    targetDevice.IsPrimary = true
+    if err := tx.Save(&targetDevice).Error; err != nil {
+        return fmt.Errorf("设置主设备失败: %w", err)
+    }
+
+    return nil
+})
+```
+
+### WR-05: Inadequate Audit Logging
+
+**File:** `internal/services/operations/workstation_device_service.go:347-500`
+**Issue:** Critical sync operations (`SyncFromAD`, `SyncFromAsset`) that modify device associations lack comprehensive audit logging. This makes debugging and compliance auditing difficult.
+
+**Current logging:**
+```go
+logger.Infof("[SyncFromAsset] 工位ID: %s, 用户ID: %s, 账号: %s, 姓名: %s", ...)
+logger.Infof("[SyncFromAsset] 查询到 %d 个资产设备", len(assetDevices))
+```
+
+**Fix:** Add structured logging with operation outcomes:
+```go
+logger.Infof("[SyncFromAsset] 开始同步 - 工位ID: %s, 用户ID: %s", workstationID, userID)
+
+// After successful sync
+logger.Infof("[SyncFromAsset] 同步成功 - 工位ID: %s, 新增设备: %d, 耗时: %v",
+    workstationID, len(assetDevices), time.Since(startTime))
+
+// On error
+logger.Errorf("[SyncFromAsset] 同步失败 - 工位ID: %s, 错误: %v", workstationID, err)
+```
+
+### WR-06: Frontend useEffect Infinite Loop Risk
+
+**File:** `ruoyi-react-frontend/src/pages/operations/workstations/index.tsx:157-168`
+**Issue:** The useEffect depends on functions (`loadStatisticsFromHook`, `loadFloorOptions`, etc.) that are recreated on each render unless properly memoized. This could cause infinite re-render loops.
+
+```typescript
+useEffect(() => {
+  Promise.all([
+    loadStatisticsFromHook(),
+    loadFloorOptions(),
+    loadDeptOptions(),
+    loadUserOptions(),
+  ]).catch((error) => {
+    console.error('初始化加载失败:', error);
+  });
+}, [loadStatisticsFromHook, loadFloorOptions, loadDeptOptions, loadUserOptions]);
+```
+
+**Fix:** Use a flag to ensure single execution or verify functions are stable:
+```typescript
+const [initialized, setInitialized] = useState(false);
+
+useEffect(() => {
+  if (initialized) return;
+
+  Promise.all([
+    loadStatisticsFromHook(),
+    loadFloorOptions(),
+    loadDeptOptions(),
+    loadUserOptions(),
+  ]).then(() => {
+    setInitialized(true);
+  }).catch((error) => {
+    console.error('初始化加载失败:', error);
+  });
+}, []); // Empty deps - run once on mount
+```
+
+### WR-07: Inconsistent HTTP Method Usage
+
+**File:** `ruoyi-react-frontend/src/lib/opsApi.ts:527-529`
+**Issue:** The `searchBySerial` method uses GET while all other endpoints use POST, violating the project's API convention.
+
+```typescript
+searchBySerial: async (serial: string) => {
+  return await get<Asset>(`/ops/asset/search-by-serial/${serial}`, {});
+},
+```
+
+**Fix:** Use POST for consistency with the project's REST convention:
+```typescript
+searchBySerial: async (serial: string) => {
+  return await post<Asset>('/ops/asset/search-by-serial', { serial });
+},
+```
+
+And update the backend handler to use POST with JSON body instead of path parameter.
+
+### WR-08: Missing Data Scope Authorization
+
+**File:** `internal/api/router.go:581-598`
+**Issue:** The workstation-device routes don't include `DataScopePermission` middleware, allowing users to modify devices for workstations they may not have access to.
+
+```go
+workstationDevices := ops.Group("/workstation-device")
+workstationDevices.Use(middleware.RequirePermissions([]string{
+    "ops:workstation:list",
+    "ops:workstation:add",
+    "ops:workstation:edit",
+}, core))
+{
+    // ... routes without data scope check ...
+}
+```
+
+**Fix:** Add data scope permission middleware:
+```go
+workstationDevices.Use(middleware.DataScopePermission(core))
+```
+
+This ensures users can only access devices within their authorized organizational scope.
 
 ## Info
 
-### IN-01: Missing Version Field Update
+### IN-01: Duplicate Type Definitions
 
-**File:** `internal/services/operations/workstation_device_service.go:342-400`
-**Issue:** The `UpdateDevice` method doesn't update the `version` field for optimistic locking. The model includes a `Version` field (inherited from BaseModel) but updates don't increment it.
+**Files:** `ruoyi-react-frontend/src/types/operations.ts:321-325` and `ruoyi-react-frontend/src/components/operations/WorkstationDeviceTable/types.ts:18-22`
 
-**Fix:**
-Consider implementing optimistic locking if concurrent updates are expected:
+**Issue:** `DeviceSourceLabels` is defined in two files with different casing (`DeviceSourceLabels` vs `DEVICE_SOURCE_LABELS`), creating maintenance burden and potential inconsistency.
 
-```go
-// In UpdateDevice method, before updates:
-updates["version"] = device.Version + 1
-
-// Then add version check to the WHERE clause:
-if err := s.db.WithContext(ctx).
-    Model(&device).
-    Where("version = ?", device.Version).
-    Updates(updates).
-    Error; err != nil {
-    return fmt.Errorf("更新设备失败: %w", err)
-}
+**Fix:** Keep single definition in shared types file:
+```typescript
+// In WorkstationDeviceTable/types.ts, remove the duplicate and import:
+export { DeviceSourceLabels } from '@/types/operations';
 ```
 
-### IN-02: Missing Index on Priority Field
+### IN-02: Magic Numbers for Default Values
+
+**File:** `internal/services/operations/workstation_device_service.go:334-336, 395-397`
+
+**Issue:** Default values for `Status`, `IsPrimary`, and `Priority` use magic numbers without named constants.
+
+```go
+Status:           0, // 默认正常
+IsPrimary:        false,
+Priority:         0,
+```
+
+**Fix:** Define constants:
+```go
+const (
+    DeviceStatusNormal = 0
+    DeviceStatusDisabled = 1
+    DefaultDevicePriority = 0
+)
+
+// Usage:
+Status: DeviceStatusNormal,
+IsPrimary: false,
+Priority: DefaultDevicePriority,
+```
+
+### IN-03: Missing JSDoc Comments
+
+**File:** `ruoyi-react-frontend/src/lib/opsApi.ts:594-629`
+
+**Issue:** Public API functions lack JSDoc comments, making it harder for developers to understand parameters and return values.
+
+**Fix:** Add documentation:
+```typescript
+export const workstationDeviceApi = {
+  /**
+   * 查询工位设备列表
+   * @param workstationId - 工位ID
+   * @returns 设备列表
+   */
+  getByWorkstation: async (workstationId: string) => {
+    return await post<WorkstationDevice[]>(`/ops/workstation-device/${workstationId}`, {});
+  },
+  // ... etc
+};
+```
+
+### IN-04: Overly Complex React Component
+
+**File:** `ruoyi-react-frontend/src/components/operations/WorkstationDeviceTable/index.tsx`
+
+**Issue:** The component is 396 lines and handles multiple responsibilities (data fetching, state management, modal forms, serial search). This violates the single responsibility principle and makes testing difficult.
+
+**Fix:** Extract smaller components:
+```typescript
+// Suggested extraction:
+- WorkstationDeviceList (table display)
+- DeviceEditModal (form modal)
+- SerialSearchInput (serial input with auto-fill)
+- DeviceActionButtons (action buttons group)
+```
+
+### IN-05: Missing Index on Priority Field
 
 **File:** `internal/models/workstation_device.go:38`
-**Issue:** The `Priority` field is used for ordering (line 115 in service: `Order("priority DESC")`) but doesn't have a database index, which could cause performance issues on large datasets.
 
-**Fix:**
-Add an index to the priority field in the model:
+**Issue:** The `Priority` field is used for ordering (`Order("priority DESC, created_at ASC")`) but lacks a database index, which will cause performance issues as the dataset grows.
 
+```go
+Priority   int  `gorm:"default:0" json:"priority"`
+```
+
+**Fix:** Add an index:
 ```go
 Priority   int  `gorm:"default:0;index:idx_workstation_device_priority" json:"priority"`
 ```
 
 ---
 
-_Reviewed: 2026-06-10T00:00:00Z_
+## Conclusion
+
+The workstation-device association feature is well-architected and follows project conventions. The Handler-Service pattern is properly implemented, UUID validation is present where needed, and the frontend provides good UX. However, the critical issues around pointer safety and transaction integrity should be fixed before production deployment. The warning-level issues around race conditions and authorization should also be addressed to ensure data security and consistency.
+
+_Reviewed: 2025-02-10T12:00:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
