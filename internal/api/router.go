@@ -121,8 +121,12 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			{
 				// 新架构：结构体Handler + Service层
 				systemV1.SetupSettingsRouter(settings, core)
-				// 列配置管理
-				systemV1.SetupColumnConfigRouter(settings, core)
+			}
+
+			// 列配置管理（所有已登录用户可访问）
+			columnConfig := authorized.Group("/column-config")
+			{
+				systemV1.SetupColumnConfigRouter(columnConfig, core)
 			}
 
 			// 通知配置管理（需要系统配置权限）
@@ -573,6 +577,26 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			operations.SetupExcelRouter(workstations, "workstation", core)
 		}
 
+		// 工位设备关联
+		workstationDevices := ops.Group("/workstation-device")
+		workstationDevices.Use(middleware.RequirePermissions([]string{
+			"ops:workstation:list",
+			"ops:workstation:add",
+			"ops:workstation:edit",
+		}, core))
+		{
+			workstationDeviceService := opsServices.NewWorkstationDeviceService(core.DB.GetDB())
+			workstationDeviceHandler := operations.NewWorkstationDeviceHandler(workstationDeviceService)
+
+			workstationDevices.GET("/:workstationId", workstationDeviceHandler.GetByWorkstation)
+			workstationDevices.POST("/manual", workstationDeviceHandler.AddManual)
+			workstationDevices.POST("/sync-ad", workstationDeviceHandler.SyncAD)
+			workstationDevices.POST("/sync-asset", workstationDeviceHandler.SyncAsset)
+			workstationDevices.POST("/:id/update", workstationDeviceHandler.Update)
+			workstationDevices.POST("/:id/delete", workstationDeviceHandler.Delete)
+			workstationDevices.POST("/:id/set-primary", workstationDeviceHandler.SetPrimary)
+		}
+
 		// 资产管理
 		assets := ops.Group("/asset")
 		assets.Use(middleware.RequirePermissions([]string{
@@ -590,6 +614,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			assets.POST("/:id", assetHandler.GetByID)
 				assets.POST("/device-types", assetHandler.GetDeviceTypes)
 					assets.POST("/device-categories", assetHandler.GetDeviceCategories)
+					assets.POST("/status-values", assetHandler.GetStatusValues)
 			assets.POST("/:id/update", assetHandler.Update)
 			assets.POST("/:id/delete", assetHandler.Delete)
 				assets.POST("/batch", assetHandler.BatchOperation)
