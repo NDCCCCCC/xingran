@@ -18,6 +18,8 @@ import type {
   PageResponse,
   Asset,
   AssetListParams,
+  WorkstationDevice,
+  DeviceFormData,
 } from '@/types';
 
 // ==================== 通用 CRUD 工厂函数 ====================
@@ -531,6 +533,10 @@ export const assetApi = {
     return await post<{ value: string; count: number }[]>('/ops/asset/device-categories', {});
   },
 
+  // 获取状态列表（动态数据）
+  getStatusValues: async () => {
+    return await post<{ value: string; count: number }[]>('/ops/asset/status-values', {});
+  },
   // Excel导入导出通过 SetupExcelRouter 注册在 /ops/asset 路由组下：
   // - GET  /ops/asset/template  (下载模板)
   // - POST /ops/asset/import    (上传导入)
@@ -575,5 +581,44 @@ export const assetApi = {
 
       return { code: 0, message: '导出成功', data: null };
     },
+  },
+};
+
+// ==================== 工位设备关联 ====================
+
+export const workstationDeviceApi = {
+  // 查询工位设备列表
+  getByWorkstation: async (workstationId: string) => {
+    return await post<WorkstationDevice[]>(`/ops/workstation-device/${workstationId}`, {});
+  },
+
+  // 手动添加设备
+  addManual: async (data: DeviceFormData) => {
+    return await post<WorkstationDevice>('/ops/workstation-device/manual', data);
+  },
+
+  // 同步 AD 设备
+  syncAD: async (workstationId: string) => {
+    return await post('/ops/workstation-device/sync-ad', { workstation_id: workstationId });
+  },
+
+  // 同步资产设备
+  syncAsset: async (workstationId: string) => {
+    return await post('/ops/workstation-device/sync-asset', { workstation_id: workstationId });
+  },
+
+  // 更新设备
+  update: async (id: string, data: Partial<DeviceFormData>) => {
+    return await post(`/ops/workstation-device/${id}/update`, data);
+  },
+
+  // 删除设备
+  delete: async (id: string) => {
+    return await post(`/ops/workstation-device/${id}/delete`, {});
+  },
+
+  // 设置主设备
+  setPrimary: async (id: string) => {
+    return await post(`/ops/workstation-device/${id}/set-primary`, {});
   },
 };

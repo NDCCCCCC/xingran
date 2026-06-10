@@ -288,3 +288,49 @@ export interface AssetListParams extends PageParams {
   status?: number;
   nbfStatus?: number;
 }
+
+// ==================== 工位设备关联 ====================
+
+export type DeviceSource = 'ad' | 'asset' | 'manual';
+
+export type DeviceStatus = 0 | 1;
+
+export interface WorkstationDevice {
+  id: string;
+  workstationId: string;
+  deviceSource: DeviceSource;
+  deviceSerial?: string;
+  deviceName?: string;
+  deviceModel?: string;
+  deviceType?: string;
+  macAddress?: string;
+  assetId?: string;
+  adComputerId?: string;
+  responsibleUser?: string;
+  responsibleUserId?: string;
+  status: DeviceStatus;
+  isPrimary: boolean;
+  priority: number;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+  // 关联对象
+  asset?: Asset;
+}
+
+export const DeviceSourceLabels: Record<DeviceSource, string> = {
+  ad: '域控',
+  asset: '资产',
+  manual: '手动',
+};
+
+export interface DeviceFormData {
+  workstationId: string;
+  deviceSerial: string;
+  deviceName?: string;
+  deviceModel?: string;
+  deviceType?: string;
+  macAddress?: string;
+  responsibleUser?: string;
+  description?: string;
+}
