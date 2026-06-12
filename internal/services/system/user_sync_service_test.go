@@ -4,9 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
+	"github.com/stretchr/testify/assert"
 	"gorm.io/gorm"
 )
 
@@ -24,9 +23,9 @@ func TestUserSyncService_SyncUserFromAD_FirstTime(t *testing.T) {
 		t.Skip("测试数据库未配置")
 	}
 
-	service := NewUserSyncService(db)
+	service := NewUserSyncService(db, nil, nil)
 
-	adUser := &addomain.ADUser{
+	adUser := &ADUserInfoForSync{
 		UserDN:      "cn=aduser,dc=test,dc=com",
 		Username:    "aduser",
 		DisplayName: "AD User",
@@ -34,7 +33,7 @@ func TestUserSyncService_SyncUserFromAD_FirstTime(t *testing.T) {
 		Phone:       "1234567890",
 	}
 
-	err := service.SyncUserFromAD(context.Background(), adUser, "default-role-id")
+	_, err := service.SyncUserFromAD(context.Background(), adUser, "default-role-id")
 
 	// 验证结果
 	assert.NoError(t, err)
@@ -56,7 +55,7 @@ func TestUserSyncService_SyncUserFromAD_UpdateExisting(t *testing.T) {
 		t.Skip("测试数据库未配置")
 	}
 
-	service := NewUserSyncService(db)
+	service := NewUserSyncService(db, nil, nil)
 
 	// 先创建一个用户
 	existingUser := &models.User{
@@ -70,7 +69,7 @@ func TestUserSyncService_SyncUserFromAD_UpdateExisting(t *testing.T) {
 	db.Create(existingUser)
 
 	// 同步新信息
-	adUser := &addomain.ADUser{
+	adUser := &ADUserInfoForSync{
 		UserDN:      "cn=existinguser,dc=test,dc=com",
 		Username:    "existinguser",
 		DisplayName: "Updated User",
@@ -78,7 +77,7 @@ func TestUserSyncService_SyncUserFromAD_UpdateExisting(t *testing.T) {
 		Phone:       "9876543210",
 	}
 
-	err := service.SyncUserFromAD(context.Background(), adUser, "default-role-id")
+	_, err := service.SyncUserFromAD(context.Background(), adUser, "default-role-id")
 
 	// 验证结果
 	assert.NoError(t, err)
@@ -102,10 +101,10 @@ func TestUserSyncService_SyncUserFromAD_TransactionRollback(t *testing.T) {
 		t.Skip("测试数据库未配置")
 	}
 
-	service := NewUserSyncService(db)
+	service := NewUserSyncService(db, nil, nil)
 
 	// 使用无效的角色ID（会导致事务失败）
-	adUser := &addomain.ADUser{
+	adUser := &ADUserInfoForSync{
 		UserDN:      "cn=rollbackuser,dc=test,dc=com",
 		Username:    "rollbackuser",
 		DisplayName: "Rollback User",
@@ -113,7 +112,7 @@ func TestUserSyncService_SyncUserFromAD_TransactionRollback(t *testing.T) {
 		Phone:       "1111111111",
 	}
 
-	err := service.SyncUserFromAD(context.Background(), adUser, "invalid-role-id")
+	_, err := service.SyncUserFromAD(context.Background(), adUser, "invalid-role-id")
 
 	// 验证事务已回滚
 	assert.Error(t, err)
@@ -132,7 +131,7 @@ func TestUserSyncService_SyncUserFromAD_RoleAssignment(t *testing.T) {
 		t.Skip("测试数据库未配置")
 	}
 
-	service := NewUserSyncService(db)
+	service := NewUserSyncService(db, nil, nil)
 
 	// 创建测试角色
 	role := &models.Role{
@@ -141,7 +140,7 @@ func TestUserSyncService_SyncUserFromAD_RoleAssignment(t *testing.T) {
 	}
 	db.Create(role)
 
-	adUser := &addomain.ADUser{
+	adUser := &ADUserInfoForSync{
 		UserDN:      "cn=roleuser,dc=test,dc=com",
 		Username:    "roleuser",
 		DisplayName: "Role User",
@@ -149,7 +148,7 @@ func TestUserSyncService_SyncUserFromAD_RoleAssignment(t *testing.T) {
 		Phone:       "5555555555",
 	}
 
-	err := service.SyncUserFromAD(context.Background(), adUser, role.ID)
+	_, err := service.SyncUserFromAD(context.Background(), adUser, role.ID)
 
 	// 验证结果
 	assert.NoError(t, err)
@@ -172,7 +171,7 @@ func TestUserSyncService_SyncUserFromAD_DepartmentAssignment(t *testing.T) {
 		t.Skip("测试数据库未配置")
 	}
 
-	service := NewUserSyncService(db)
+	service := NewUserSyncService(db, nil, nil)
 
 	// 创建测试部门
 	dept := &models.Department{
@@ -181,7 +180,7 @@ func TestUserSyncService_SyncUserFromAD_DepartmentAssignment(t *testing.T) {
 	}
 	db.Create(dept)
 
-	adUser := &addomain.ADUser{
+	adUser := &ADUserInfoForSync{
 		UserDN:      "cn=deptuser,dc=test,dc=com",
 		Username:    "deptuser",
 		DisplayName: "Dept User",
@@ -192,7 +191,7 @@ func TestUserSyncService_SyncUserFromAD_DepartmentAssignment(t *testing.T) {
 	// TODO: 配置默认部门ID到sys_config表
 	// 或者通过service方法设置
 
-	err := service.SyncUserFromAD(context.Background(), adUser, "")
+	_, err := service.SyncUserFromAD(context.Background(), adUser, "")
 
 	// 验证结果
 	assert.NoError(t, err)
@@ -215,11 +214,11 @@ func TestUserSyncService_SyncUserFromAD_TableDrivenTests(t *testing.T) {
 		t.Skip("测试数据库未配置")
 	}
 
-	service := NewUserSyncService(db)
+	service := NewUserSyncService(db, nil, nil)
 
 	tests := []struct {
 		name        string
-		adUser      *addomain.ADUser
+		adUser      *ADUserInfoForSync
 		roleID      string
 		setupFunc   func(*gorm.DB)
 		verifyFunc  func(*testing.T, *gorm.DB, error)
@@ -227,7 +226,7 @@ func TestUserSyncService_SyncUserFromAD_TableDrivenTests(t *testing.T) {
 	}{
 		{
 			name: "首次登录创建用户",
-			adUser: &addomain.ADUser{
+			adUser: &ADUserInfoForSync{
 				UserDN:      "cn=newuser,dc=test,dc=com",
 				Username:    "newuser",
 				DisplayName: "New User",
@@ -249,7 +248,7 @@ func TestUserSyncService_SyncUserFromAD_TableDrivenTests(t *testing.T) {
 		},
 		{
 			name: "更新已存在用户",
-			adUser: &addomain.ADUser{
+			adUser: &ADUserInfoForSync{
 				UserDN:      "cn=updateuser,dc=test,dc=com",
 				Username:    "updateuser",
 				DisplayName: "Updated Name",
@@ -289,7 +288,7 @@ func TestUserSyncService_SyncUserFromAD_TableDrivenTests(t *testing.T) {
 			}
 
 			// 执行同步
-			err := service.SyncUserFromAD(context.Background(), tt.adUser, tt.roleID)
+			_, err := service.SyncUserFromAD(context.Background(), tt.adUser, tt.roleID)
 
 			// 验证结果
 			if tt.verifyFunc != nil {
