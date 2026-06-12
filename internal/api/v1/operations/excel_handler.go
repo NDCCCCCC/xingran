@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"mime/multipart"
 	"net/http"
 	"time"
 
@@ -63,9 +64,19 @@ func importData(entityType string, core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		// 验证文件类型
+		// 验证文件类型(扩展名 + 大小上限 + 内容魔数三重校验)
 		if !isValidExcelFile(file.Filename) {
 			response.Error(c, response.ErrBadRequest, "只支持 .xlsx 格式的Excel文件。如需导入 .xls 文件，请先用 Excel 或 WPS 另存为 .xlsx 格式")
+			return
+		}
+		// P1 fix: 防止超大文件触发 OOM / 内存泄漏
+		if file.Size > maxExcelUploadSize {
+			response.Error(c, response.ErrBadRequest, fmt.Sprintf("文件过大(%d 字节,上限 %d 字节)", file.Size, maxExcelUploadSize))
+			return
+		}
+		// P1 fix: 仅按扩展名校验可被改后缀绕过 — 读取前 4 字节验证 OOXML/ZIP 魔数 (PK\x03\x04)
+		if err := verifyExcelMagicBytes(file); err != nil {
+			response.Error(c, response.ErrBadRequest, "文件内容非有效的 .xlsx 格式")
 			return
 		}
 
@@ -270,4 +281,29 @@ func GetEntityStatusOptions(entityType string) gin.HandlerFunc {
 // isValidExcelFile 验证文件是否为Excel格式
 func isValidExcelFile(filename string) bool {
 	return len(filename) >= 5 && filename[len(filename)-5:] == ".xlsx"
+}
+
+// maxExcelUploadSize Excel 上传文件大小上限(50 MB),防止超大文件 OOM
+const maxExcelUploadSize int64 = 50 * 1024 * 1024
+
+// verifyExcelMagicBytes 读取文件前 4 字节,验证 OOXML/ZIP 魔数 (P, K, \x03, \x04)。
+// 防止仅扩展名校验被改后缀绕过 (例如上传 .exe 改名为 .xlsx)。
+// 调用后会重置文件读位置,后续 excelize.OpenReader 仍能读取全部内容。
+func verifyExcelMagicBytes(fileHeader *multipart.FileHeader) error {
+	f, err := fileHeader.Open()
+	if err != nil {
+		return fmt.Errorf("打开文件失败: %w", err)
+	}
+	defer f.Close()
+
+	head := make([]byte, 4)
+	n, err := f.Read(head)
+	if err != nil || n != 4 {
+		return fmt.Errorf("读取文件头失败: %w", err)
+	}
+	// OOXML / ZIP magic bytes: PK\x03\x04
+	if head[0] != 0x50 || head[1] != 0x4B || head[2] != 0x03 || head[3] != 0x04 {
+		return fmt.Errorf("文件内容魔数错误: 期望 PK\\x03\\x04, 实际 % X", head)
+	}
+	return nil
 }
