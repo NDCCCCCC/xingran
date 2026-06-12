@@ -139,9 +139,11 @@ func (c *Core) Init() error {
 	var err error
 	c.DB, err = db.NewDatabase(&c.Config.Database)
 	if err != nil {
+		// F-15: 数据库初始化失败必须终止启动 —
+		// 原代码 return nil 会让应用以为初始化成功继续启动,
+		// 后续所有 DB 操作都会 panic,且错误已被吞掉无法定位。
 		applogger.Errorf("数据库初始化失败: %v", err)
-		// 数据库失败时跳过后续数据库相关操作
-		return nil
+		return fmt.Errorf("数据库初始化失败: %w", err)
 	}
 
 	// 2. 自动迁移数据库表结构
