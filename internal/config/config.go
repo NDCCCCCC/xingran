@@ -281,7 +281,10 @@ func setDefaults() {
 	viper.SetDefault("cache.cleanup_time", 600)
 
 	// JWT默认配置
-	viper.SetDefault("jwt.secret_key", "ruoyi-next-secret-key")
+	// F-04: 不再设置硬编码默认密钥 "ruoyi-next-secret-key" —
+	// 该默认值若被部署进生产,任何人都能用公开已知字符串伪造 JWT。
+	// 启动时由 NewJWTManager 强制校验:必须从 env 或 config 注入非空且非弱默认值。
+	viper.SetDefault("jwt.secret_key", "")
 	viper.SetDefault("jwt.access_key_expire", 7200)
 	viper.SetDefault("jwt.refresh_key_expire", 604800)
 	viper.SetDefault("jwt.issuer", "RuoYi-Next")

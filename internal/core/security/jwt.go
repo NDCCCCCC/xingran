@@ -41,6 +41,21 @@ type TokenPair struct {
 
 // NewJWTManager 创建JWT管理器
 func NewJWTManager(cfg *config.JWTConfig) (*JWTManager, error) {
+	// F-04: 强制校验密钥配置,拒绝空值和已知弱默认值,
+	// 防止生产环境用公开字符串伪造 token。
+	if !cfg.UseSM2 {
+		if cfg.SecretKey == "" {
+			return nil, fmt.Errorf("JWT secret_key 未配置 — 必须通过 env 或 config 注入 (建议 ≥32 字节高熵随机串)")
+		}
+		// 拒绝历史硬编码默认值
+		if cfg.SecretKey == "ruoyi-next-secret-key" {
+			return nil, fmt.Errorf("JWT secret_key 使用了已知弱默认值 'ruoyi-next-secret-key' — 任何人都能伪造 token,必须替换")
+		}
+		if len(cfg.SecretKey) < 16 {
+			return nil, fmt.Errorf("JWT secret_key 长度过短 (%d 字节) — 至少 16 字节,推荐 ≥32 字节", len(cfg.SecretKey))
+		}
+	}
+
 	jwtManager := &JWTManager{
 		secretKey:        cfg.SecretKey,
 		accessKeyExpire:  time.Duration(cfg.AccessKeyExpire) * time.Second,
