@@ -40,7 +40,7 @@ func main() {
 	fmt.Println("✓ 成功连接到 Redis")
 
 	// 验证迁移结果
-	fmt.Println("\n=== 缓存键迁移验证 ===\n")
+	fmt.Println("\n=== 缓存键迁移验证 ===")
 
 	checkOldKeys(ctx, client)
 	checkNewKeys(ctx, client)

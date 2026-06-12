@@ -609,7 +609,7 @@ func (c *VDIAPIClient) CreateServer(resourceID, vtpID int, runPositionID, diskID
 	fmt.Printf("✓ 创建任务已提交!\n")
 	fmt.Printf("  任务ID: %d\n", response.Data.TaskID)
 	fmt.Printf("  虚拟机IDs: %v\n", response.Data.ServerID)
-	fmt.Println("\n【提示】虚拟机创建是异步操作，正在查询虚拟机状态...\n")
+	fmt.Println("\n【提示】虚拟机创建是异步操作，正在查询虚拟机状态...")
 
 	// 查询虚拟机状态（使用虚拟机ID）
 	for _, serverID := range response.Data.ServerID {
@@ -815,7 +815,7 @@ func (c *VDIAPIClient) CloneServer(serverID int, cloneName, storageID, runPositi
 	upid, _ := result["data"].(string)
 	fmt.Printf("✓ 克隆任务已提交!\n")
 	fmt.Printf("  UPID: %s\n", upid)
-	fmt.Println("\n【提示】虚拟机克隆是异步操作，请使用 UPID 查询进度\n")
+	fmt.Println("\n【提示】虚拟机克隆是异步操作，请使用 UPID 查询进度")
 
 	return nil
 }
@@ -943,7 +943,7 @@ func (c *VDIAPIClient) MigrateServers(vtpID int, targetDir string, vmIDs []int) 
 	upid, _ := result["data"].(string)
 	fmt.Printf("✓ 移动任务已提交!\n")
 	fmt.Printf("  UPID: %s\n", upid)
-	fmt.Println("\n【提示】虚拟机移动是异步操作，请使用 UPID 查询进度\n")
+	fmt.Println("\n【提示】虚拟机移动是异步操作，请使用 UPID 查询进度")
 
 	return nil
 }

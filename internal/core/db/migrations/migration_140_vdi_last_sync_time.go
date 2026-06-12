@@ -29,7 +29,7 @@ func Migrate140VDILastSyncTime(db *gorm.DB) error {
 // VDIServer 临时模型定义，用于迁移
 type VDIServer struct {
 	gorm.Model
-	LastSyncTime *string `gorm:"column:last_sync_time" type:timestamp"`
+	LastSyncTime *string `gorm:"column:last_sync_time;type:timestamp"`
 }
 
 // TableName 指定表名
