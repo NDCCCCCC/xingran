@@ -387,11 +387,18 @@ func (s *DashboardServiceImpl) GetTemplates(ctx context.Context, scope *string) 
 		Where("is_template = ?", true).
 		Where("status = ?", models.DashboardStatusNormal)
 
+	// F-21: scope 为 nil 或无效值时,默认只返回 Global 模板,避免泄露私人/部门模板。
+	// 任何登录用户调用本接口时若未传 scope,只应看到公开(Global)模板。
 	if scope != nil {
 		scopeEnum := models.TemplateScope(*scope)
 		if scopeEnum == models.TemplateScopeGlobal || scopeEnum == models.TemplateScopeDept || scopeEnum == models.TemplateScopePersonal {
 			query = query.Where("template_scope = ? OR template_scope = ?", scopeEnum, models.TemplateScopeGlobal)
+		} else {
+			// 无效 scope 值同样降级为仅 Global,而不是放行全部
+			query = query.Where("template_scope = ?", models.TemplateScopeGlobal)
 		}
+	} else {
+		query = query.Where("template_scope = ?", models.TemplateScopeGlobal)
 	}
 
 	var templates []models.Dashboard
