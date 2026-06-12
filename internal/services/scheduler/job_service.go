@@ -3,6 +3,7 @@ package scheduler
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/robfig/cron/v3"
@@ -19,6 +20,9 @@ type SchedulerClient interface {
 	StartJob(id string) error
 	StopJob(id string) error
 	ExecuteJob(id string) error
+	// F-08: IsTaskRegistered 校验给定 taskType 是否在调度器中注册,
+	// 用于 Create/Update 时拒绝未注册的 InvokeTarget (白名单)。
+	IsTaskRegistered(taskType string) bool
 }
 
 // JobService 定时任务服务接口
@@ -108,6 +112,19 @@ func (s *jobServiceImpl) Create(ctx context.Context, req *JobCreateRequest) (*mo
 		return nil, fmt.Errorf("无效的Cron表达式: %w", err)
 	}
 
+	// F-08: 校验 InvokeTarget 的 taskType 必须在调度器中注册 (白名单)。
+	// 拒绝任意字符串被持久化为定时任务,杜绝攻击者通过 API 写入未注册的
+	// 任务名作为命令注入跳板。InvokeTarget 格式: "taskType" 或 "taskType:param"。
+	if s.scheduler != nil {
+		taskType := req.InvokeTarget
+		if idx := strings.Index(req.InvokeTarget, ":"); idx >= 0 {
+			taskType = req.InvokeTarget[:idx]
+		}
+		if !s.scheduler.IsTaskRegistered(taskType) {
+			return nil, fmt.Errorf("InvokeTarget 任务类型未在调度器注册: %q", taskType)
+		}
+	}
+
 	// 创建任务
 	job := &models.Job{
 		JobName:        req.JobName,
@@ -156,6 +173,17 @@ func (s *jobServiceImpl) Update(ctx context.Context, req *JobUpdateRequest) erro
 	// 验证Cron表达式
 	if _, err := cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor).Parse(req.CronExpression); err != nil {
 		return fmt.Errorf("无效的Cron表达式: %w", err)
+	}
+
+	// F-08: Update 同样校验 InvokeTarget taskType 白名单
+	if s.scheduler != nil {
+		taskType := req.InvokeTarget
+		if idx := strings.Index(req.InvokeTarget, ":"); idx >= 0 {
+			taskType = req.InvokeTarget[:idx]
+		}
+		if !s.scheduler.IsTaskRegistered(taskType) {
+			return fmt.Errorf("InvokeTarget 任务类型未在调度器注册: %q", taskType)
+		}
 	}
 
 	// 更新任务信息

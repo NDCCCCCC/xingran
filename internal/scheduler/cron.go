@@ -209,6 +209,15 @@ func (s *Scheduler) GetTaskHandler(taskType string) func(ctx context.Context, pa
 	return s.taskRegistry[taskType]
 }
 
+// IsTaskRegistered 检查任务类型是否已在调度器中注册。
+// 用于 jobService 在创建/更新定时任务时校验 InvokeTarget 白名单 (F-08)。
+func (s *Scheduler) IsTaskRegistered(taskType string) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	_, ok := s.taskRegistry[taskType]
+	return ok
+}
+
 // Start 启动调度器
 func (s *Scheduler) Start(ctx context.Context) error {
 	s.mu.Lock()
