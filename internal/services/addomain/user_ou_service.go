@@ -29,26 +29,29 @@ func NewUserOUService(db *gorm.DB, mapper *DeptOUmapper) *UserOUService {
 func (s *UserOUService) HandleUserLoginAD(ctx context.Context, username, userDN, ouDN string) error {
 	// 1. 通过用户名查找系统用户
 	var user models.User
-	isUserDeleted := false
 	if err := s.db.WithContext(ctx).Where("username = ?", username).First(&user).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			// 用户不存在，检查是否有软删除的同名用户
+			// F-22: 检测是否存在同名软删除用户,但不再自动恢复 —
+			// 否则攻击者可在 AD 创建同名账户登录后接管被删除用户的全部角色/权限。
+			// 改为记录安全审计日志,要求管理员手动恢复。
 			var deletedUser models.User
 			if err := s.db.WithContext(ctx).
-				Unscoped(). // 包含软删除记录
+				Unscoped().
 				Where("username = ?", username).
 				First(&deletedUser).Error; err == nil {
-				// 找到软删除用户，标记需要恢复
-				isUserDeleted = true
-				applogger.Infof("用户 %s 已被软删除 (deleted_at=%v)，将尝试恢复", username, deletedUser.DeletedAt)
-			} else {
-				// 确实不存在，跳过部门设置（由注册流程处理）
-				applogger.Infof("用户 %s 不存在于系统，跳过部门设置", username)
+				applogger.Warnf(
+					"[SECURITY] 软删除用户 %s 再次从 AD 登录被拒绝 (deleted_at=%v, user_dn=%s, ou_dn=%s) — "+
+						"账号接管风险,如需恢复请管理员手动操作",
+					username, deletedUser.DeletedAt, userDN, ouDN,
+				)
+				// 不自动恢复,跳过本次部门设置(由注册/恢复流程统一处理)
 				return nil
 			}
-		} else {
-			return fmt.Errorf("查询用户失败: %w", err)
+			// 确实不存在,跳过部门设置(由注册流程处理)
+			applogger.Infof("用户 %s 不存在于系统,跳过部门设置", username)
+			return nil
 		}
+		return fmt.Errorf("查询用户失败: %w", err)
 	}
 
 	// 2. 通过AD OU DN查找对应的部门
@@ -65,24 +68,13 @@ func (s *UserOUService) HandleUserLoginAD(ctx context.Context, username, userDN,
 		applogger.Infof("成功为用户 %s 自动创建部门: dept_id=%s", username, deptID)
 	}
 
-	// 3. 根据用户状态更新或恢复
-	if isUserDeleted {
-		// 恢复软删除用户并补充AD信息
-		if err := s.restoreDeletedUserWithADInfo(ctx, username, userDN, ouDN, deptID); err != nil {
-			applogger.Errorf("恢复软删除用户失败 %s: %v", username, err)
-			// 不阻断登录流程
-			return nil
-		}
-		applogger.Infof("用户 %s 登录时成功恢复并设置部门: dept_id=%s, ou_dn=%s", username, deptID, ouDN)
-	} else {
-		// 正常用户：更新部门和AD信息
-		if err := s.updateUserDeptAndADInfo(ctx, user.ID, deptID, userDN, ouDN); err != nil {
-			applogger.Errorf("更新用户 %s 部门信息失败: %v", username, err)
-			// 不阻断登录流程，只记录错误
-			return nil
-		}
-		applogger.Infof("用户 %s 登录时自动设置部门: dept_id=%s, ou_dn=%s", username, deptID, ouDN)
+	// 3. 用户存在(到此处已经过滤掉了软删除用户),正常更新部门和AD信息
+	if err := s.updateUserDeptAndADInfo(ctx, user.ID, deptID, userDN, ouDN); err != nil {
+		applogger.Errorf("更新用户 %s 部门信息失败: %v", username, err)
+		// 不阻断登录流程,只记录错误
+		return nil
 	}
+	applogger.Infof("用户 %s 登录时自动设置部门: dept_id=%s, ou_dn=%s", username, deptID, ouDN)
 
 	return nil
 }
