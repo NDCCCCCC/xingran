@@ -15,6 +15,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/server"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
 	swaggerFiles "github.com/swaggo/files"
@@ -112,6 +113,11 @@ func initializeCoreModule(cfg *config.Config) *core.Core {
 	if err := coreModule.Init(); err != nil {
 		applogger.Fatalf("初始化核心模块失败: %v", err)
 	}
+
+	// P1 fix: 注入加密配置变更回调,避免 services/system → pkg/middleware 直接依赖
+	// 形成循环 (system → middleware → core → system)。
+	// 让 config_service.Update 修改 sys.request.encryption.enabled 后能立即失效中间件缓存。
+	system.OnEncryptionConfigChanged = middleware.RefreshEncryptionConfigCache
 
 	// 添加MAC历史保留期默认配置
 	initMACHistoryRetentionConfig(coreModule)

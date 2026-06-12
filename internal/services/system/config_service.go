@@ -10,6 +10,14 @@ import (
 	"gorm.io/gorm"
 )
 
+// OnEncryptionConfigChanged 当 sys.request.encryption.enabled 配置变更时调用的回调。
+// 由 internal/core.Init() 在启动时注入 pkg/middleware.RefreshEncryptionConfigCache,
+// 避免 services/system 直接 import pkg/middleware (会形成
+// system → middleware → core → system 循环依赖)。
+//
+// 若调用方未注入(测试场景或独立构建),保持 nil,Update 静默跳过缓存失效。
+var OnEncryptionConfigChanged func()
+
 // ConfigService 参数配置服务接口
 type ConfigService interface {
 	Create(ctx context.Context, req *requests.ConfigCreateRequest) error
@@ -92,10 +100,11 @@ func (s *configService) Update(ctx context.Context, req *requests.ConfigUpdateRe
 		return fmt.Errorf("更新参数配置失败: %w", err)
 	}
 
-	// 如果更新的是请求加密开关，刷新缓存
-	if config.ConfigKey == "sys.request.encryption.enabled" {
-		// 这里需要导入 middleware 包来调用 RefreshEncryptionConfigCache
-		// 为了避免循环依赖，我们在路由层处理缓存刷新
+	// P1 fix: 修改请求加密开关后立即失效缓存,无需重启进程即可生效。
+	// 通过包级回调变量 OnEncryptionConfigChanged 反转依赖,
+	// 由 core.Init() 注入 middleware.RefreshEncryptionConfigCache。
+	if config.ConfigKey == "sys.request.encryption.enabled" && OnEncryptionConfigChanged != nil {
+		OnEncryptionConfigChanged()
 	}
 
 	return nil
