@@ -254,41 +254,33 @@ func (s *userService) GetByID(ctx context.Context, id string) (*models.User, err
 }
 
 // fillUserRoles 填充用户的角色信息
+//
+// P1 fix: 原实现两次顺序查询 (UserRole → Role IN),改为单次 JOIN,
+// 减少 50% DB 往返,与已有 user_service_optimized.go 的方案保持一致。
 func (s *userService) fillUserRoles(ctx context.Context, user *models.User) {
-	// 查询用户角色关系
-	var userRoles []models.UserRole
-	s.db.WithContext(ctx).Where("user_id = ?", user.ID).Find(&userRoles)
-
-	if len(userRoles) == 0 {
+	type roleRow struct {
+		ID       string
+		RoleName string
+	}
+	var rows []roleRow
+	err := s.db.WithContext(ctx).
+		Table("sys_role AS r").
+		Select("r.id AS id, r.role_name AS role_name").
+		Joins("INNER JOIN sys_user_role ur ON ur.role_id = r.id").
+		Where("ur.user_id = ? AND r.deleted_at IS NULL", user.ID).
+		Scan(&rows).Error
+	if err != nil || len(rows) == 0 {
 		user.Roles = []string{}
 		user.RoleIds = []string{}
 		return
 	}
 
-	// 提取角色ID
-	roleIDs := make([]string, len(userRoles))
-	for i, ur := range userRoles {
-		roleIDs[i] = ur.RoleID
+	roleIDs := make([]string, len(rows))
+	roleNames := make([]string, len(rows))
+	for i, row := range rows {
+		roleIDs[i] = row.ID
+		roleNames[i] = row.RoleName
 	}
-
-	// 查询所有相关角色
-	var allRoles []models.Role
-	s.db.WithContext(ctx).Where("id IN ?", roleIDs).Find(&allRoles)
-
-	// 构建角色ID到角色名称的映射
-	roleMap := make(map[string]string)
-	for _, r := range allRoles {
-		roleMap[r.ID] = r.RoleName
-	}
-
-	// 填充角色名称数组和角色ID数组
-	roleNames := make([]string, 0, len(roleIDs))
-	for _, rid := range roleIDs {
-		if roleName, exists := roleMap[rid]; exists {
-			roleNames = append(roleNames, roleName)
-		}
-	}
-
 	user.Roles = roleNames
 	user.RoleIds = roleIDs
 }
