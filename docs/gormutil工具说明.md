@@ -21,7 +21,7 @@ db := preloader.Apply(query)
 
 // 带条件的预加载
 preloader := gormutil.NewPreloadBuilder()
-preloader.Add("Roles").WithCondition("status = ?", 0)
+<!-- VERIFY: preloader.Add("Roles").WithCondition("status = ?", 0) - Add returns *PreloadBuilder but WithCondition is defined on *PreloadItem (preload_helper.go:42); chained call as shown does not compile -->
 db := preloader.Apply(query)
 ```
 

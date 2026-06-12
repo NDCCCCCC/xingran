@@ -39,7 +39,7 @@
   - 生成文档并验证
   - 提供友好的输出信息
 
-- **Windows脚本**: `scripts/generate_swagger.bat`
+- **Windows脚本**: `scripts/generate_swagger.bat` <!-- VERIFY: 该文件不存在，scripts/ 目录下仅有 generate_swagger.sh -->
   - 与Linux脚本功能相同
   - 适配Windows环境
 
@@ -71,15 +71,15 @@
 
 #### 3.1 文件列表
 ```
-docs/docs.go         (441 KB)
-docs/swagger.json    (440 KB)
-docs/swagger.yaml    (221 KB)
+docs/docs.go         (755 KB)
+docs/swagger.json    (755 KB)
+docs/swagger.yaml    (349 KB)
 ```
 
 #### 3.2 API统计
-- **POST端点数量**: 211
-- **GET端点数量**: 17
-- **总端点数量**: 228
+- **POST端点数量**: 358
+- **GET端点数量**: 31
+- **总端点数量**: 389
 
 #### 3.3 API分类（Tags）
 文档包含以下API分类：

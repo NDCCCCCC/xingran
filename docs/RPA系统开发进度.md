@@ -61,16 +61,14 @@
 - `execution_service.go` - 使用 `FormatLog()`
 - `worker_service.go` - 使用 `FormatLog()`
 
-#### 3. 删除未使用的类型
+#### 3. 清理未使用的类型
 **文件**: `internal/services/rpa/types.go`
 
-删除以下未使用的类型：
-- `ExplainScriptRequest`
-- `ExplainScriptResponse`
-- `GenerateScriptRequest` (类型别名)
-- `GenerateScriptResponse` (类型别名)
-- `AgentDecisionRequest` (类型别名)
-- `AgentAction` (类型别名)
+清理以下未使用的类型：
+- `ExplainScriptRequest` / `ExplainScriptResponse`（已移除）
+- `GenerateScriptRequest` / `GenerateScriptResponse`（类型别名，移除）
+- `AgentDecisionRequest`（已重命名为 `AIAgentDecisionRequest`）
+- `AgentAction`（已重命名为 `AIAgentAction`）
 
 **代码减少**: ~30 行
 
@@ -137,10 +135,11 @@
 - `ai_handler.go` - AI 处理器
 - `handler_helpers.go` - 共享辅助函数
 
-#### 4. 数据模型 (9 个文件)
+#### 4. 数据模型 (10 个文件，目录 internal/models/rpa/)
 - `task.go`, `worker.go`, `execution.go`
 - `schedule.go`, `variable.go`
 - `notification.go`, `audit_log.go`, `template.go`
+- `credentials.go`, `models.go`
 
 #### 5. 前端实现 (15+ 个文件)
 - `src/types/rpa.ts` - 类型定义
@@ -187,9 +186,9 @@ POST /api/v1/rpa/ai/decide         - AI 决策下一步动作
 |------|--------|---------|
 | 后端 Handler | 6 | 468 |
 | 后端 Service | 6 | 897 |
-| 后端 Model | 9 | 500 |
+| 后端 Model | 10 | 500 |
 | 前端 | 15+ | ~2000 |
-| **总计** | **36+** | **~3900** |
+| **总计** | **37+** | **~3900** |
 
 ---
 
@@ -236,12 +235,14 @@ POST /api/v1/rpa/ai/decide         - AI 决策下一步动作
   - `onCompleted()` / `onFailed()` - 订阅完成/失败事件
   - `getProgress()` / `getAllProgress()` - 获取进度状态
 
-#### 3. 自动扩缩容 (5 个文件)
+#### 3. 自动扩缩容 (4 个文件)
 - `scaling_service.go` (615 行) - 扩缩容服务
   - `Start()` / `Stop()` - 启动/停止监控
   - `MonitorAndScale()` - 执行扩缩容检查
   - `ScaleUp()` / `ScaleDown()` - 手动扩缩容
   - `GetStatus()` / `GetHistory()` - 状态和历史查询
+  - 包含 `ScalingConfig` 扩缩容配置结构体
+  - 包含 `ScalingEvent` 扩缩容事件结构体
 
 - `docker_client.go` (400 行) - Docker 客户端
   - `ScaleUp()` - 启动新容器
@@ -256,14 +257,9 @@ POST /api/v1/rpa/ai/decide         - AI 决策下一步动作
   - `GetWorkerCapacity()` - Worker 容量
   - `ShouldScaleUp()` / `ShouldScaleDown()` - 扩缩容判断
   - `CalculateTargetWorkers()` - 计算 Worker 目标数量
-  - `RecordScalingEvent()` - 记录扩缩容事件
+  - `RecordScalingEvent()` - 记录扩缩容事件（`ScalingEvent` 结构体定义在此文件）
 
-- `scaling_event.go` - 扩缩容事件模型
-  - `event_type` - 事件类型（scale_up/scale_down）
-  - `trigger_reason` - 触发原因
-  - `queue_length` / `active_workers` / `worker_capacity` - 决策指标
-
-- `config.go` - 配置扩展
+- 扩缩容配置（定义于 `scaling_service.go`）
   - `rpa.scaling.enabled` - 是否启用
   - `rpa.scaling.min_workers` / `max_workers` - Worker 数量范围
   - `rpa.scaling.scale_up_threshold` - 扩容阈值（70%）
@@ -324,10 +320,10 @@ score = success_rate * 0.6 + frequency_score * 0.2 + recency_score * 0.2
 |------|--------|---------|
 | AI 服务 | 2 | ~450 |
 | 实时进度 | 2 | ~180 |
-| 自动扩缩容 | 5 | ~1500 |
+| 自动扩缩容 | 3 | ~1500 |
 | API 扩展 | 1 | ~100 |
 | 数据库迁移 | 1 | ~50 |
-| **阶段 2 小计** | **11** | **~2280** |
+| **阶段 2 小计** | **9** | **~2280** |
 
 **累计代码（Phase 1 + Phase 2）：**
 | 类型 | 文件数 | 代码行数 |

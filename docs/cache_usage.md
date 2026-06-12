@@ -105,9 +105,9 @@ func InvalidateCacheByKey(ctx context.Context, cache CacheProvider, keys []strin
 
 | 缓存项 | 访问频率 | 缓存键 | 实现状态 | 触发场景 |
 |--------|---------|--------|---------|---------|
-| **角色列表** | ⭐⭐⭐⭐⭐ 最高 | `role:all:enabled` | ✅ 已实现 | 用户编辑、部门编辑等 |
+| **角色列表** | ⭐⭐⭐⭐⭐ 最高 | `role:enabled` | ✅ 已实现 | 用户编辑、部门编辑等 |
 | **岗位列表** | ⭐⭐⭐⭐ 高 | `post:enabled` | ✅ 已实现 | 岗位管理页面（无筛选时） |
-| **部门树** | ⭐⭐⭐ 中 | `dept:tree:all` | ✅ 已实现 | 部门选择器、部门管理 |
+| **部门树** | ⭐⭐⭐ 中 | `dept:tree` | ✅ 已实现 | 部门选择器、部门管理 |
 | **菜单树** | ⭐⭐⭐ 中 | `menu:all`, `menu:tree` | ✅ 已实现 | 菜单管理、用户权限加载 |
 
 #### 🟡 **中优先级** - 关联数据缓存（已实现）
@@ -122,8 +122,8 @@ func InvalidateCacheByKey(ctx context.Context, cache CacheProvider, keys []strin
 
 | 缓存项 | 访问频率 | 缓存键 | 实现状态 | 说明 |
 |--------|---------|--------|---------|------|
-| **单个用户** | ⭐ 低 | `user:id:*` | ✅ 已实现 | 前端编辑时直接使用列表数据，未触发此缓存 |
-| **单个岗位** | ⭐ 低 | `post:id:*` | ✅ 已实现 | 前端编辑时直接使用列表数据，未触发此缓存 |
+| **单个用户** | ⭐ 低 | `user:id` | ✅ 已实现 | 前端编辑时直接使用列表数据，未触发此缓存 |
+| **单个岗位** | ⭐ 低 | `post:id` | ✅ 已实现 | 前端编辑时直接使用列表数据，未触发此缓存 |
 
 **结论**：列表缓存比详情缓存更重要，因为列表查询涉及更多数据库操作（JOIN、分页、排序），缓存收益更大。
 
@@ -231,7 +231,7 @@ type roleCacheService struct {
 ```
 
 **缓存键**：
-- `role:all:enabled` - 所有启用角色列表 ⭐️ **高优先级**
+- `role:enabled` - 所有启用角色列表 ⭐️ **高优先级**
 - `role:menus:{roleId}` - 角色菜单权限缓存
 - `role:depts:{roleId}` - 角色部门权限缓存
 
@@ -332,7 +332,7 @@ type dictTypeCacheService struct {
 ```
 
 **缓存键**：
-- `dict:type:all` - 所有字典类型缓存
+- `dict:type` - 所有字典类型缓存
 
 **主要方法**：
 ```go
@@ -685,9 +685,9 @@ type roleCacheService struct {
 - 菜单缓存：`internal/services/system/menu_cache_impl.go`
 
 ### Legacy 缓存服务（向后兼容）
-- 角色服务：`internal/services/role_cache_service.go`
-- 岗位服务：`internal/services/post_cache_service.go`
-- 部门服务：`internal/services/dept_service.go`
+- 角色服务：`internal/services/role_cache_service.go` <!-- VERIFY: file not found at internal/services/role_cache_service.go -->
+- 岗位服务：`internal/services/post_cache_service.go` <!-- VERIFY: file not found at internal/services/post_cache_service.go -->
+- 部门服务：`internal/services/dept_service.go` <!-- VERIFY: file not found at internal/services/dept_service.go -->
 - 菜单服务：`internal/services/menu_cache_service.go`
 - 字典服务：`internal/services/dict_cache_service.go`
 - 用户服务：`internal/services/user_cache_service.go`
@@ -697,7 +697,7 @@ type roleCacheService struct {
 - 缓存接口：`pkg/cache/cache.go`
 - Redis 实现：`pkg/cache/redis.go`
 - 内存实现：`pkg/cache/memory.go`
-- 多级缓存：`pkg/cache/multilevel.go`
+- 多级缓存：`pkg/cache/multilevel.go` <!-- VERIFY: file not found at pkg/cache/multilevel.go (MultiLevelCache is defined in pkg/cache/redis.go) -->
 
 ### API 层
 - 缓存管理 API：`internal/api/v1/monitor/cache_handler.go`

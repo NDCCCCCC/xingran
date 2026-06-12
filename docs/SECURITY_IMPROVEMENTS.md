@@ -197,27 +197,20 @@ storage: createJSONStorage(() => ({
 **新增的安全标头**:
 ```html
 <!-- Content Security Policy -->
-<meta http-equiv="Content-Security-Policy"
-  content="default-src 'self';
-          script-src 'self' 'unsafe-inline' 'unsafe-eval';
-          style-src 'self' 'unsafe-inline';
-          img-src 'self' data: blob:;
-          font-src 'self' data:;
-          connect-src 'self' http://localhost:* https:;
-          frame-ancestors 'none';" />
+<!-- 注意: CSP 当前以 HTML 注释形式存在，处于禁用状态（开发环境调试需要）。
+     生产部署前应取消注释并通过后端 HTTP 响应头设置 CSP。 -->
+<!-- <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://*.baidu.com http://*.baidu.com https://*.bdimg.com http://*.bdimg.com; style-src 'self' 'unsafe-inline' https://*.baidu.com https://*.bdimg.com; img-src 'self' data: blob: http://10.62.10.33:* https://* http://*; font-src 'self' data:; connect-src 'self' http://localhost:* http://127.0.0.1:* http://10.62.10.33:* https: ws://localhost:* ws://127.0.0.1:* ws://10.62.10.33:* blob:; worker-src 'self' blob:;" /> -->
 
-<!-- 防止 MIME 类型嗅探 -->
+<!-- 其他安全相关 Meta 标签 -->
+<!-- 注意: X-Frame-Options 需要通过 HTTP 头设置，meta 标签无效 -->
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
-
-<!-- 防止点击劫持 -->
-<meta http-equiv="X-Frame-Options" content="DENY" />
-
-<!-- XSS 保护（旧版浏览器） -->
 <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
-
-<!-- Referrer 策略 -->
 <meta name="referrer" content="strict-origin-when-cross-origin" />
 ```
+
+**说明**:
+- 当前 `index.html` 中的 CSP meta 标签被注释禁用（`<!-- 注意: 暂时禁用 CSP 以便调试 -->`）
+- X-Frame-Options 必须通过后端 HTTP 响应头设置，meta 标签无效
 
 ---
 
@@ -326,10 +319,10 @@ VITE_STRICT_MODE=true
 - [x] 添加 fetchPermissions 方法
 - [x] 创建 security.ts 安全工具模块
 - [x] 菜单存储集成 SecureStorage
-- [x] 添加 CSP Meta 标签
-- [x] 添加其他安全标头（X-Frame-Options 等）
+- [ ] 添加 CSP Meta 标签（当前在 index.html 中被注释，生产环境需启用）
+- [x] 添加其他安全标头（X-Content-Type-Options 等）
 - [ ] 更新所有使用 permissions 的组件
-- [ ] 后端添加安全标头
+- [ ] 后端添加安全标头（含 X-Frame-Options、CSP 等）
 - [ ] 安全测试（XSS、数据篡改）
 - [ ] 性能测试（哈希计算开销）
 

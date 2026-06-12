@@ -1,3 +1,4 @@
+<!-- generated-by: gsd-doc-writer -->
 # 代码修复详细指南
 
 **文档版本**: 2.6
@@ -30,15 +31,15 @@
 > 5. **操作日志中间件已实现**，Handler 只需调用 `SetOperLogInfo` 即可自动记录。
 > 6. **登出功能已实现**，使用令牌黑名单机制使 JWT 失效。
 > 7. **用户解锁功能已实现**，管理员可手动解锁被锁定的用户账号。
-> 8. **缓存键处理重复已消除**，添加 `normalizeCacheKey()` 辅助函数。
+> 8. **缓存键处理重复已消除**，添加 `normalizeCacheKeyForService()` 辅助函数。
 
 ---
 
 ## ✅ 已完成修复清单
 
 ### 后端修复
-- ✅ SQL 注入风险防护验证 - `workstation_service.go:99-103` (已实现白名单验证)
-- ✅ 数据库查询错误处理 - `permission.go:280, 288`
+- ✅ SQL 注入风险防护验证 - `workstation_service.go:107-110` (已实现白名单验证)
+- ✅ 数据库查询错误处理 - `pkg/permission/service.go`
 - ✅ JWT 初始化 panic 修复 - `jwt.go`, `core.go`, `main.go`
 - ✅ 操作日志中间件实现 - `pkg/middleware/oper_log.go`
   - ✅ 完善 OperLogMiddleware 实现
@@ -51,8 +52,8 @@
 - ✅ 用户解锁功能实现 - `internal/api/v1/system/user_unlock_handler.go`
   - ✅ 清除登录失败记录
   - ✅ 清除锁定状态
-- ✅ 缓存键处理重复消除 - `internal/api/v1/monitor/cache_helpers.go`
-  - ✅ 添加 `normalizeCacheKey()` 辅助函数
+- ✅ 缓存键处理重复消除 - `internal/services/monitor/cache_service.go`
+  - ✅ 添加 `normalizeCacheKeyForService()` 辅助函数
   - ✅ 替换 6 处重复代码
 - ✅ operations 模块 Handler 错误处理迁移
   - ✅ 迁移 10 个 handler 使用辅助函数
@@ -71,7 +72,7 @@
   - ✅ status.go - 状态值常量
   - ✅ example_test.go - 使用示例
 - ✅ 正确传递 Context - `internal/api/v1/monitor/`
-  - ✅ 修改 cache_helpers.go 辅助函数签名，添加 context 参数
+  - ✅ 修改 `cache_service.go` 辅助函数签名，添加 context 参数
   - ✅ 修复 cache_handler.go 中 13 处 context.Background() 使用
 
 ### 前端修复
@@ -95,18 +96,6 @@
   - ✅ 安装 vitest、@testing-library/react
   - ✅ 配置 vitest.config.ts
   - ✅ 创建测试用例（13 个测试全部通过）
-
-### 前端修复
-- ✅ BaiduMapCache 重命名为 DualLevelCache
-- ✅ cacheStats.ts 删除
-- ✅ 类型错误修复（已完成）
-  - ✅ PageParams 重复导出问题修复
-  - ✅ Workstation → WorkstationOps 类型统一
-  - ✅ CAD 组件导出方式修复（命名导出）
-  - ✅ Building 类型添加 longitude/latitude 属性
-  - ✅ DRAG_THRESHOLD 常量添加
-  - ✅ FloorData 类型添加 code 属性
-  - ✅ 服务文件 PageParams 导入路径修复
 
 ---
 
@@ -132,7 +121,7 @@
 工位查询中 `floorTable` 变量直接拼接 SQL 语句，缺少输入验证，存在 SQL 注入风险。
 
 #### 已实现的防护
-代码中已经实现了白名单验证函数（lines 18-30）：
+代码中已经实现了白名单验证函数（lines 19-28）：
 
 ```go
 // validateTableName 验证表名是否在白名单中
@@ -145,7 +134,7 @@ func validateTableName(tableName string) bool {
 }
 ```
 
-查询逻辑中也已包含验证调用（lines 99-103）：
+查询逻辑中也已包含验证调用（lines 107-110）：
 
 ```go
 if floorCode := extractStringParam(params, "floorCode"); floorCode != "" {
@@ -325,9 +314,9 @@ func (s *BuildingService) List(ctx context.Context, req BuildingListRequest) (*P
 
 ### 修复 5-7: 其他紧急修复 ✅ **已完成**
 
-- ✅ 数据库查询错误处理 - `permission.go:280, 288`
+- ✅ 数据库查询错误处理 - `pkg/permission/service.go`
 - ✅ JWT 初始化 panic 修复 - `jwt.go`, `core.go`, `main.go`
-- ✅ cache_handler.go 拆分 - `cache_helpers.go`
+- ✅ cache_handler.go 拆分 - `cache_service.go`
 - ✅ CADFloorPlanEditor 拆分（前端组件重构）
 
 ---
@@ -338,7 +327,7 @@ func (s *BuildingService) List(ctx context.Context, req BuildingListRequest) (*P
 
 #### 修复内容
 
-**发现**: `auth.go:213` 中 logout 函数只有 TODO，没有实际实现令牌失效机制。
+**发现**: 登出 handler 在 `auth.go` 中原本只有 TODO，未实现令牌失效机制。
 
 **修复内容**:
 
@@ -354,7 +343,7 @@ func (s *BuildingService) List(ctx context.Context, req BuildingListRequest) (*P
 
 3. **完善登出 Handler** (`internal/api/v1/auth.go`)
    - 从上下文获取 token 和 claims
-   - 调用 `AddToBlacklist` 将令牌加入黑名单
+   - 调用 `TokenBlacklistService.AddToBlacklist` 将令牌加入黑名单
    - TTL 设置为令牌的过期时间
 
 4. **更新路由配置** (`internal/api/router.go`)
@@ -444,11 +433,11 @@ curl -X POST http://localhost:8080/api/v1/system/user/unlock \
 **响应**:
 ```json
 {
-  "code": 0,
-  "message": "success",
-  "data": {
-    "message": "用户账号已解锁"
-  }
+    "code": 0,
+    "message": "success",
+    "data": {
+        "message": "用户账号已解锁"
+    }
 }
 ```
 
@@ -632,12 +621,12 @@ console.log('Stats:', cache.getStats());
 **问题**: 缓存键前缀处理逻辑在多处重复（6处）
 
 **修复**:
-- 在 `cache_helpers.go` 添加 `normalizeCacheKey()` 辅助函数
+- 在 `cache_service.go` 添加 `normalizeCacheKeyForService()` 辅助函数
 - 替换 `cache_handler.go` 中的所有重复代码
 - 移除未使用的 `strings` 导入
 
 #### 修改文件
-- `internal/api/v1/monitor/cache_helpers.go` - 添加辅助函数
+- `internal/services/monitor/cache_service.go` - 添加辅助函数
 - `internal/api/v1/monitor/cache_handler.go` - 使用辅助函数
 
 ---
@@ -699,9 +688,6 @@ console.log('Stats:', cache.getStats());
 - SM2 解密失败自动清除公钥缓存
 - 统一的错误消息提示
 
----
-
-### 修复 15: 重构前端 API 错误处理（删除重复项）
 ---
 
 ### 修复 16: 添加前端测试 ✅ **已完成**
@@ -1018,8 +1004,8 @@ type UpdateUserRequest struct {
 
 // ✅ Response 结构体 - PascalCase + Response/Result 后缀（可选）
 type UserResponse struct {
-    ID       string `json:"id"`
-    UserName string `json:"userName"`
+    ID       string
+    UserName string
 }
 
 // ✅ 分页参数 - 统一命名
@@ -1214,8 +1200,8 @@ credentialMap := make(map[string]string)
 if len(credentialIDs) > 0 {
     var credentials []models.AuthCredential
     s.db.WithContext(ctx).Where("id IN ?", credentialIDs).Find(&credentials)
-    for _, cred := range credentials {
-        credentialMap[cred.ID] = cred.CredentialName
+    for _, credential := range credentials {
+        credentialMap[credential.ID] = credential.CredentialName
     }
 }
 
@@ -1356,7 +1342,7 @@ for i := range users {
 **修复范围**: `internal/api/v1/monitor/` 模块
 
 **修复文件**:
-1. **`cache_helpers.go`** - 修改辅助函数签名
+1. **`cache_service.go`** - 修改辅助函数签名
    - `getCachesFromCache()` - 添加 `ctx context.Context` 参数
    - `getCachesFromCacheWithLevel()` - 添加 `ctx context.Context` 参数
 

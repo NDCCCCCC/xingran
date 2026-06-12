@@ -88,7 +88,7 @@ func SetupPublicWorkerRouter(r *gin.RouterGroup, core *core.Core) {
 
 ### 阶段 1: 数据库层
 
-#### 文件: `internal/core/db/migrations/113_add_worker_token.sql`
+<!-- VERIFY: `internal/core/db/migrations/113_add_worker_token.sql` -->
 
 ```sql
 -- 添加 Worker Token 字段
@@ -101,7 +101,7 @@ ADD COLUMN last_token_rotation TIMESTAMP;
 CREATE INDEX idx_rpa_workers_token ON sys_rpa_workers(token) WHERE token IS NOT NULL;
 ```
 
-#### 文件: `internal/models/rpa/worker.go`
+<!-- VERIFY: `internal/models/rpa/worker.go` -->
 
 ```go
 // Worker 模型添加字段
@@ -120,7 +120,7 @@ type Worker struct {
 
 ### 阶段 2: 服务层
 
-#### 文件: `internal/services/rpa/worker_token_service.go` (新建)
+<!-- VERIFY: `internal/services/rpa/worker_token_service.go` -->
 
 ```go
 package rpa
@@ -176,7 +176,7 @@ type WorkerClaims struct {
 ### 阶段 3: 中间件层
 
 #### 文件: `pkg/middleware/worker_auth.go` (新建)
-
+<!-- VERIFY: `pkg/middleware/worker_auth.go` -->
 ```go
 package middleware
 
@@ -235,7 +235,7 @@ func ProvisioningAuth(validTokens map[string]bool) gin.HandlerFunc {
 
 ### 阶段 4: 路由层修改
 
-#### 文件: `internal/api/v1/rpa/rpa_router.go`
+<!-- VERIFY: `internal/api/v1/rpa/rpa_router.go` -->
 
 ```go
 // SetupPublicWorkerRouter 修改后
@@ -268,7 +268,7 @@ func SetupWorkerRouter(r *gin.RouterGroup, services *rpa.ServiceGroup, core *cor
 
 ### 阶段 5: 配置层
 
-#### 文件: `configs/config.yaml`
+<!-- VERIFY: `configs/config.yaml` -->
 
 ```yaml
 # 新增 RPA Worker 配置
@@ -285,7 +285,7 @@ rpa:
       rotation_days: 30           # 自动轮换周期（天）
 ```
 
-#### 文件: `rpa-worker/configs/config.yaml`
+<!-- VERIFY: `rpa-worker/configs/config.yaml` -->
 
 ```yaml
 worker:
@@ -297,7 +297,7 @@ worker:
 
 ### 阶段 6: Worker 客户端
 
-#### 文件: `rpa-worker/internal/communication/api_client.go`
+<!-- VERIFY: `rpa-worker/internal/communication/api_client.go` -->
 
 ```go
 type APIClient struct {
@@ -356,17 +356,17 @@ func (c *APIClient) addAuthHeaders(req *http.Request) {
 
 | 文件 | 用途 |
 |------|------|
-| `internal/core/db/migrations/113_add_worker_token.sql` | 数据库迁移 |
-| `internal/services/rpa/worker_token_service.go` | Token 服务 |
-| `pkg/middleware/worker_auth.go` | 认证中间件 |
-| `docs/RPA-Worker-Token管理界面.md` | 前端管理文档 |
+| `internal/core/db/migrations/113_add_worker_token.sql` <!-- VERIFY: file does not exist --> | 数据库迁移 |
+| `internal/services/rpa/worker_token_service.go` <!-- VERIFY: file does not exist --> | Token 服务 |
+| `pkg/middleware/worker_auth.go` <!-- VERIFY: file does not exist --> | 认证中间件 |
+| `docs/RPA-Worker-Token管理界面.md` <!-- VERIFY: file does not exist --> | 前端管理文档 |
 
 ### 修改文件 (6个)
 
 | 文件 | 修改内容 |
 |------|---------|
-| `internal/models/rpa/worker.go` | 添加 token 字段 |
-| `internal/services/rpa/service_group.go` | 注册 WorkerTokenService |
+| `internal/models/rpa/worker.go` <!-- VERIFY: missing token fields --> | 添加 token 字段 |
+| `internal/services/rpa/service_group.go` <!-- VERIFY: file does not exist --> | 注册 WorkerTokenService |
 | `internal/api/v1/rpa/worker_handler.go` | 修改注册返回 token |
 | `internal/api/v1/rpa/rpa_router.go` | 添加认证中间件 |
 | `configs/config.yaml` | 添加 provisioning_tokens |

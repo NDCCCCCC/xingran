@@ -47,7 +47,7 @@
    - 当数据库配置变更时，前端仍使用旧配置，导致请求失败
 
 2. **Token 刷新失败**
-   - 当后端关闭加密时，前端仍发送加密请求
+   - 当前端默认 `ENABLE_REQUEST_ENCRYPTION = false`（默认禁用以避免循环依赖）
    - Token 刷新请求返回 400 错误：`解密失败`
    - 用户被迫重新登录，影响用户体验
 
@@ -118,7 +118,7 @@ T5: Token 刷新失败，用户会话中断
 │  ┌─────────────────────────────────────────────────────────────┐   │
 │  │  GET /api/v1/system/auth/encryption-config (公共端点)      │   │
 │  │  - No authentication required                             │   │
-│  │  - Returns: { enabled: boolean, key: string, source }      │   │
+│  │  - Returns: { enabled: boolean, source: string }          │   │
 │  │  - Read from middleware cache (30s TTL)                   │   │
 │  └────────────────────┬───────────────────────────────────────┘   │
 │                       │                                            │
@@ -172,7 +172,7 @@ T5: Token 刷新失败，用户会话中断
 3. 缓存为空 → 调用 getEncryptionConfig()
 4. 发起 GET /system/auth/encryption-config（无需认证）
 5. 后端从缓存读取配置（30秒TTL）
-6. 返回 { enabled: true, key: "...", source: "database" }
+6. 返回 { enabled: true, source: "cache" }
 7. 前端更新 ENABLE_REQUEST_ENCRYPTION 变量
 8. 缓存配置到内存（5分钟TTL）
 ```
@@ -211,8 +211,8 @@ T5: Token 刷新失败，用户会话中断
 **文件:** `internal/api/v1/auth.go`
 
 ```go
-// getEncryptionConfig 获取请求加密配置（公共端点，无需认证）
-// @Summary 获取请求加密配置
+// getEncryptionConfig 获取加密配置（公共端点，无需认证）
+// @Summary 获取加密配置
 // @Description 获取当前请求体加密的开关状态（公共端点，无需认证）
 // @Tags 认证
 // @Accept json
@@ -226,8 +226,7 @@ func getEncryptionConfig(core *core.Core) gin.HandlerFunc {
 
         response.Success(c, gin.H{
             "enabled": enabled,
-            "key":     "sys.request.encryption.enabled",
-            "source":  "database",
+            "source":  "cache",
         })
     }
 }
@@ -251,8 +250,7 @@ func SetupAuthRouter(r *gin.RouterGroup, core *core.Core) {
   "message": "success",
   "data": {
     "enabled": true,
-    "key": "sys.request.encryption.enabled",
-    "source": "database"
+    "source": "cache"
   },
   "timestamp": 1734567890,
   "request_id": "uuid-string"
@@ -415,8 +413,8 @@ export default {
 
 **初始化加密配置:**
 ```typescript
-// 是否启用请求体加密（动态配置，默认启用）
-let ENABLE_REQUEST_ENCRYPTION = true;
+// 是否启用请求体加密（动态配置，默认禁用以避免循环依赖）
+let ENABLE_REQUEST_ENCRYPTION = false;
 
 /**
  * 初始化加密配置
@@ -1253,7 +1251,7 @@ touch src/services/encryptionConfig.ts
 // const ENABLE_REQUEST_ENCRYPTION = import.meta.env.VITE_ENABLE_REQUEST_ENCRYPTION === 'true';
 
 // 添加动态配置支持
-let ENABLE_REQUEST_ENCRYPTION = true;
+let ENABLE_REQUEST_ENCRYPTION = false;
 
 export async function initEncryptionConfig(): Promise<void> {
   // ... 前面提供的完整代码 ...
@@ -1438,8 +1436,7 @@ npm run test -- encryptionConfig.test.ts
   "message": "success",
   "data": {
     "enabled": true,
-    "key": "sys.request.encryption.enabled",
-    "source": "database"
+    "source": "cache"
   },
   "timestamp": 1734567890,
   "request_id": "550e8400-e29b-41d4-a716-446655440000"
@@ -1450,8 +1447,7 @@ npm run test -- encryptionConfig.test.ts
 - `enabled` (boolean): 加密开关状态
   - `true`: 启用请求体加密
   - `false`: 禁用请求体加密
-- `key` (string): 配置键名
-- `source` (string): 配置来源（固定为 "database"）
+- `source` (string): 配置来源（当前为 "cache"）
 
 **错误响应:**
 ```json
@@ -1498,7 +1494,6 @@ npm run test -- encryptionConfig.test.ts
 
 **测试:**
 - `internal/api/v1/auth_test.go` - 后端单元测试
-- `src/services/encryptionConfig.test.ts` - 前端单元测试
 
 ---
 

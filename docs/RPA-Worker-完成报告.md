@@ -7,36 +7,36 @@
 ### 1. 浏览器实现 (100%)
 | 文件 | 状态 | 说明 |
 |------|------|------|
-| `internal/browser/chrome_page.go` | ✅ 新增 | 基于rod库的真实Chrome实现 |
-| `internal/browser/pool.go` | ✅ 更新 | 移除mock实现，使用真实Chrome |
-| `internal/browser/page_manager.go` | ✅ 已有 | 页面管理器 |
+| `rpa-worker/internal/browser/chrome_page.go` | ✅ 新增 | 基于rod库的真实Chrome实现 |
+| `rpa-worker/internal/browser/pool.go` | ✅ 更新 | 移除mock实现，使用真实Chrome |
+| `rpa-worker/internal/browser/page_manager.go` | ✅ 已有 | 页面管理器 |
 
 ### 2. 健康检查系统 (100%)
 | 文件 | 状态 | 说明 |
 |------|------|------|
-| `internal/worker/health_server.go` | ✅ 新增 | HTTP健康检查服务器 |
-| `internal/worker/worker.go` | ✅ 更新 | 集成健康检查功能 |
-| `internal/config/config.go` | ✅ 更新 | 添加StartTime字段 |
+| `rpa-worker/internal/worker/health_server.go` | ✅ 新增 | HTTP健康检查服务器 |
+| `rpa-worker/internal/worker/worker.go` | ✅ 更新 | 集成健康检查功能 |
+| `rpa-worker/internal/config/config.go` | ✅ 更新 | 添加StartTime字段 |
 
 ### 3. Docker部署 (100%)
 | 文件 | 状态 | 说明 |
 |------|------|------|
-| `deployments/Dockerfile` | ✅ 更新 | 完整的Chrome环境配置 |
-| `deployments/docker-compose.yml` | ✅ 更新 | 完整的编排配置 |
-| `deployments/.env.example` | ✅ 新增 | 环境变量模板 |
-| `deployments/build.sh` | ✅ 新增 | Linux/Mac构建脚本 |
-| `deployments/build.bat` | ✅ 新增 | Windows构建脚本 |
-| `deployments/README.md` | ✅ 新增 | 部署文档 |
+| `rpa-worker/deployments/Dockerfile` | ✅ 更新 | 完整的Chrome环境配置 |
+| `rpa-worker/deployments/docker-compose.yml` | ✅ 更新 | 完整的编排配置 |
+| `rpa-worker/deployments/.env.example` | ✅ 新增 | 环境变量模板 |
+| `rpa-worker/deployments/build.sh` | ✅ 新增 | Linux/Mac构建脚本 |
+| `rpa-worker/deployments/build.bat` | ✅ 新增 | Windows构建脚本 |
+| `rpa-worker/deployments/README.md` | ✅ 新增 | 部署文档 |
 
 ### 4. 依赖管理
 | 文件 | 状态 | 说明 |
 |------|------|------|
-| `go.mod` | ✅ 更新 | 添加rod库依赖 |
-| `go.sum` | ⚠️ 需更新 | Docker构建时自动更新 |
+| `rpa-worker/go.mod` | ✅ 更新 | 添加rod库依赖 |
+| `rpa-worker/go.sum` | ⚠️ 需更新 | Docker构建时自动更新 |
 
 ## 🎯 功能特性
 
-### 支持的动作类型 (12种)
+### 支持的动作类型 (17种)
 ```
 ✅ ActionNavigate   - 导航到URL
 ✅ ActionClick      - 点击元素
@@ -44,11 +44,16 @@
 ✅ ActionSelect     - 选择下拉框
 ✅ ActionWait       - 等待固定时间
 ✅ ActionScreenshot - 截图
-✅ ActionWaitFor    - 等待元素出现
-✅ ActionLoop       - 循环处理（批量）
-✅ ActionPause      - 暂停等待人工输入
 ✅ ActionExtract    - 提取页面数据
 ✅ ActionScroll     - 页面滚动
+✅ ActionUpload     - 上传文件
+✅ ActionDownload   - 下载文件
+✅ ActionEvaluate   - 执行JS脚本
+✅ ActionWaitFor    - 等待元素出现
+✅ ActionClose      - 关闭页面
+✅ ActionLoop       - 循环处理（批量）
+✅ ActionPause      - 暂停等待人工输入
+✅ ActionCondition  - 条件分支
 ✅ ActionAutoLogin  - 自动登录
 ```
 

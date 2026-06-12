@@ -142,7 +142,7 @@ POST /api/v1/rpa/tasks/{id}/execute - 执行任务
 POST /api/v1/rpa/workers/register      - Worker 注册
 POST /api/v1/rpa/workers/list          - Worker 列表
 POST /api/v1/rpa/workers/{id}/heartbeat - 心跳上报
-POST /api/v1/rpa/workers/{id}/progress  - 进度上报
+POST /api/v1/rpa/workers/progress     - 进度上报
 ```
 
 ### 执行记录 (5 个)
@@ -234,7 +234,7 @@ http://localhost:4000/operations/rpa
 ## 📊 代码统计
 
 | 类型 | 文件数 | 代码行数 |
-|------|--------|---------|
+|------|--------|----------|
 | 数据库迁移 | 4 | ~500 |
 | 数据模型 | 9 | ~550 |
 | 服务层 | 16 | ~3700 |

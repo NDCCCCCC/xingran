@@ -44,7 +44,7 @@ sudo useradd testuser001
 echo "testuser001:TestPass123!" | sudo chpasswd
 
 # 测试 Agent API
-curl -X GET http://localhost:8443/api/v1/health
+curl -X POST http://localhost:8443/api/v1/health
 ```
 
 #### 测试账号管理功能（Windows PowerShell）
@@ -54,7 +54,7 @@ curl -X GET http://localhost:8443/api/v1/health
 New-LocalUser -Name "testuser001" -Password (ConvertTo-SecureString "TestPass123!" -AsPlainText -Force)
 
 # 测试 Agent API
-Invoke-WebRequest -Uri "http://localhost:8443/api/v1/health" -Method GET
+Invoke-WebRequest -Uri "http://localhost:8443/api/v1/health" -Method POST
 ```
 
 ### 3. 集成测试（需要后端服务器）
@@ -73,7 +73,7 @@ curl -X POST http://localhost:8443/api/v1/register \
   -d '{"agent_id":"test-agent-001","vm_id":"test-vm-001"}'
 
 # 2. 健康检查
-curl -X GET http://localhost:8443/api/v1/health
+curl -X POST http://localhost:8443/api/v1/health
 
 # 3. 创建账号（需要 JWT 令牌）
 curl -X POST http://localhost:8443/api/v1/accounts \
@@ -134,7 +134,7 @@ Get-Service RuoyiVMAgent
 Get-Content "C:\Program Files\RuoyiAgent\logs\*.log"
 
 # 5. 测试 API
-Invoke-WebRequest -Uri "https://localhost:8443/api/v1/health" -UseBasicParsing
+Invoke-WebRequest -Uri "https://localhost:8443/api/v1/health" -Method POST -UseBasicParsing
 ```
 
 ### Linux 虚拟机测试
@@ -154,7 +154,7 @@ systemctl status ruoyi-vm-agent
 journalctl -u ruoyi-vm-agent -f
 
 # 5. 测试 API
-curl -k https://localhost:8443/api/v1/health
+curl -k -X POST https://localhost:8443/api/v1/health
 ```
 
 ## 功能测试清单
@@ -163,7 +163,7 @@ curl -k https://localhost:8443/api/v1/health
 
 | 测试项 | 测试命令 | 预期结果 |
 |--------|----------|----------|
-| 健康检查 | `GET /api/v1/health` | 返回 `{"status":"healthy"}` |
+| 健康检查 | `POST /api/v1/health` | 返回 `{"status":"healthy"}` |
 | Agent 注册 | `POST /api/v1/register` | 注册成功，获得 JWT 令牌 |
 | 心跳上报 | `POST /api/v1/heartbeat` | 心跳接收成功 |
 
@@ -228,7 +228,7 @@ ab -n 1000 -c 10 http://localhost:8443/api/v1/health
 
 ```bash
 # 测试 HTTPS 连接
-curl -k https://localhost:8443/api/v1/health
+curl -k -X POST https://localhost:8443/api/v1/health
 
 # 检查证书（生产环境）
 openssl s_client -connect localhost:8443
@@ -276,7 +276,7 @@ curl -X POST http://localhost:8443/api/v1/accounts \
 2. **注册失败**
    ```bash
    # 检查网络连接
-   curl http://backend-url:9000/api/v1/health
+   curl http://backend-url:9000/health
 
    # 检查 JWT Secret 配置
    ```
@@ -342,7 +342,7 @@ test_endpoint() {
 }
 
 # 健康检查
-test_endpoint "Health Check" "GET" "http://localhost:8443/api/v1/health" "healthy"
+test_endpoint "Health Check" "POST" "http://localhost:8443/api/v1/health" "healthy"
 
 # 注册
 test_endpoint "Agent Register" "POST" "http://localhost:8443/api/v1/register" "success"
