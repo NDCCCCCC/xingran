@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/robfig/cron/v3"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
@@ -128,22 +129,18 @@ func executePeriodicWorkOrderCreateTask(ctx context.Context, params map[string]i
 }
 
 // generateWorkOrderNo 生成工单编号
-// 格式: WO + 年月日 + 6位序号
+// 格式: WO + 年月日 + 12位 UUID hex 后缀 (高碰撞概率下 < 10^-12)
+//
+// F-11: 原实现用 Count+1 生成序号,在并发场景下两个 goroutine 同时
+// Count(...) 得到相同值,生成完全相同的工单号,触发 UNIQUE 约束错误
+// 或更糟的数据冲突。改用 UUID v4 后缀彻底消除该竞态。
+//
+// 工单号示例: WO20260612a1b2c3d4e5f6 (人类仍可识别日期前缀)
 func generateWorkOrderNo() string {
 	now := time.Now()
 	dateStr := now.Format("20060102")
-
-	// 查询当天已生成的工单数量
-	var count int64
-	if GlobalDB != nil {
-		GlobalDB.GetDB().Model(&models.WorkOrder{}).
-			Where("work_order_no LIKE ?", "WO"+dateStr+"%").
-			Count(&count)
-	}
-
-	// 生成6位序号
-	seqNo := fmt.Sprintf("%06d", count+1)
-	return fmt.Sprintf("WO%s%s", dateStr, seqNo)
+	suffix := strings.ReplaceAll(uuid.New().String(), "-", "")[:12]
+	return fmt.Sprintf("WO%s%s", dateStr, suffix)
 }
 
 // replaceVariables 替换标题中的变量
