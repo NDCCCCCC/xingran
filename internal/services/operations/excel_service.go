@@ -233,7 +233,19 @@ func (s *ExcelService) ImportData(ctx context.Context, entityType string, file *
 	}
 	defer src.Close()
 
-	f, err := excelize.OpenReader(src)
+	// P1 fix: 给 excelize.OpenReader 加 UnzipSizeLimit (200 MB) 和
+	// UnzipXMLSizeLimit (100 MB) 选项,防御恶意 ZIP bomb / 超大 OOXML 文件
+	// 在内存中解压触发 OOM。配合上层 handler 的 maxExcelUploadSize=50MB
+	// 形成多层防护。
+	const (
+		unzipSizeLimit    = 200 * 1024 * 1024 // 解压后总大小上限
+		unzipXMLSizeLimit = 100 * 1024 * 1024 // 单个 XML 大小上限
+	)
+	f, err := excelize.OpenReader(src,
+		excelize.Options{
+			UnzipSizeLimit:    unzipSizeLimit,
+			UnzipXMLSizeLimit: unzipXMLSizeLimit,
+		})
 	if err != nil {
 		return nil, fmt.Errorf("解析Excel文件失败: %w", err)
 	}
