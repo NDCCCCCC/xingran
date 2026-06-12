@@ -22,9 +22,16 @@ type PasswordConfig struct {
 
 // DefaultPasswordConfig 默认密码配置
 // 提供安全且性能平衡的默认配置
+//
+// P1 fix: Iterations 从 1000 提升到 100000 (100k):
+// - OWASP 2023 推荐 PBKDF2-HMAC-SHA256 ≥ 600,000;SM3 计算成本与 SHA-256 接近
+// - 但 SM3 实现单核效率略低 + 登录响应时间预算,折中选 100k
+// - 100k 比 1k 强 100 倍,显著提高离线爆破成本(从秒级提升到分钟级)
+// - 哈希格式 $sm3$iterations$salt$hash 已嵌入 iterations,旧密码可继续验证
+//   (用 hash 里嵌入的 1000),仅新 hash 用 100k,无迁移成本
 var DefaultPasswordConfig = &PasswordConfig{
-	Iterations: 1000, // SM3-PBKDF2推荐迭代次数，兼顾安全性和性能
-	SaltLength: 16,   // 128位盐值，提供足够的随机性
+	Iterations: 100000, // SM3-PBKDF2 抗离线爆破基线
+	SaltLength: 16,     // 128位盐值，提供足够的随机性
 }
 
 // PasswordManager 密码管理器
