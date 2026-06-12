@@ -3,6 +3,7 @@ package operations
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
@@ -343,42 +344,10 @@ func isDuplicateKeyError(err error) bool {
 		return true
 	}
 	// 2) Fallback 字符串匹配 (SQLite 测试 / 第三方 wrapper)
-	errMsg := err.Error()
-	return containsIgnoreCase(errMsg, "duplicate key") ||
-		containsIgnoreCase(errMsg, "unique constraint") ||
-		containsIgnoreCase(errMsg, "23505")
-}
-
-// containsIgnoreCase 不区分大小写检查子串
-func containsIgnoreCase(s, substr string) bool {
-	return len(s) >= len(substr) &&
-		(s == substr ||
-			len(s) > len(substr) && (s[:len(substr)] == substr ||
-				s[len(s)-len(substr):] == substr ||
-				indexOfIgnoreCase(s, substr) >= 0))
-}
-
-// indexOfIgnoreCase 不区分大小写查找子串位置
-func indexOfIgnoreCase(s, substr string) int {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		match := true
-		for j := 0; j < len(substr); j++ {
-			c1 := s[i+j]
-			c2 := substr[j]
-			if c1 >= 'A' && c1 <= 'Z' {
-				c1 = c1 + 32
-			}
-			if c2 >= 'A' && c2 <= 'Z' {
-				c2 = c2 + 32
-			}
-			if c1 != c2 {
-				match = false
-				break
-			}
-		}
-		if match {
-			return i
-		}
-	}
-	return -1
+	// P2 fix: 用 strings.Contains + ToLower 替代手写 containsIgnoreCase,
+	// 删除 30+ 行手写循环,与 stdlib 等价但更简洁。
+	errMsg := strings.ToLower(err.Error())
+	return strings.Contains(errMsg, "duplicate key") ||
+		strings.Contains(errMsg, "unique constraint") ||
+		strings.Contains(errMsg, "23505")
 }
