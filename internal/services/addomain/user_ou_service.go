@@ -179,7 +179,24 @@ func (s *UserOUService) GetUserDeptByADOU(ctx context.Context, username string) 
 //
 // 修复flip-flop问题：自下而上处理OU层级时，每一层查找已存在部门必须限定parent_id范围，
 // 确保同名但位于不同分支的部门不会被错误匹配。
+//
+// P1 fix: maxAutoCreatedDepts 总数闸门防止恶意员工通过 AD 注册大量
+// 不存在的 OU(或攻击者控制 AD 注入伪 OU)撑爆 sys_dept 表。
 func (s *UserOUService) createDeptFromOUDN(ctx context.Context, ouDN, userDN string) (string, error) {
+	// P1 fix: 总数闸门 — sys_dept 现有部门数 > 上限就拒绝自动创建,要求管理员人工处理
+	const maxAutoCreatedDepts = 5000
+	var deptCount int64
+	if err := s.db.WithContext(ctx).
+		Table("sys_dept").
+		Where("deleted_at IS NULL").
+		Count(&deptCount).Error; err == nil && deptCount >= maxAutoCreatedDepts {
+		applogger.Warnf(
+			"[SECURITY] 拒绝从 AD OU 自动创建部门: 现有部门数 %d 已达上限 %d (ouDN=%s)。"+
+				"管理员请清理无效部门或调高 maxAutoCreatedDepts",
+			deptCount, maxAutoCreatedDepts, ouDN)
+		return "", fmt.Errorf("系统部门数已达上限,拒绝自动创建")
+	}
+
 	// 1. 获取 AD 配置
 	var adConfig models.ADConfig
 	if err := s.db.WithContext(ctx).Where("status = 0").First(&adConfig).Error; err != nil {
@@ -191,6 +208,13 @@ func (s *UserOUService) createDeptFromOUDN(ctx context.Context, ouDN, userDN str
 	ouParts := ParseOUDN(ouDN)
 	if len(ouParts) == 0 {
 		return "", fmt.Errorf("无效的OU DN: %s", ouDN)
+	}
+
+	// P1 fix: 单次调用深度闸门 — 防御深嵌套 OU(攻击者构造极深 DN)耗尽递归栈
+	const maxOUDepth = 16
+	if len(ouParts) > maxOUDepth {
+		applogger.Warnf("[SECURITY] OU DN 嵌套层数 %d 超过上限 %d,拒绝: %s", len(ouParts), maxOUDepth, ouDN)
+		return "", fmt.Errorf("OU 嵌套层数超过上限 %d", maxOUDepth)
 	}
 
 	// 3. 从右到左处理部门层级（跳过域名部分）
