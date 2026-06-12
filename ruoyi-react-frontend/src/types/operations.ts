@@ -304,6 +304,7 @@ export interface WorkstationDevice {
   deviceModel?: string;
   deviceType?: string;
   macAddress?: string;
+  ipAddress?: string;
   assetId?: string;
   adComputerId?: string;
   responsibleUser?: string;
@@ -324,6 +325,9 @@ export const DeviceSourceLabels: Record<DeviceSource, string> = {
   manual: '手动',
 };
 
+// 别名导出，保持命名一致性
+export const DEVICE_SOURCE_LABELS = DeviceSourceLabels;
+
 export interface DeviceFormData {
   workstationId: string;
   deviceSerial: string;
@@ -331,6 +335,7 @@ export interface DeviceFormData {
   deviceModel?: string;
   deviceType?: string;
   macAddress?: string;
+  ipAddress?: string;
   responsibleUser?: string;
   description?: string;
 }
