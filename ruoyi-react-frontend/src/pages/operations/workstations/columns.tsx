@@ -8,8 +8,8 @@ import { Modal } from 'antd';
 import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { WorkstationOps } from '@/types';
 import ActionButtons from '@/components/shared/ActionButtons';
-import { renderWorkstationTypeTag } from './constants';
-import { createStatusColumn, createDateTimeColumn } from '@/utils/tableHelpers';
+import { renderWorkstationTypeTag, renderWorkstationStatusTag } from './constants';
+import { createDateTimeColumn } from '@/utils/tableHelpers';
 
 export interface WorkstationColumnsParams {
   handleEdit: (record: WorkstationOps) => void;
@@ -60,7 +60,15 @@ export function getWorkstationColumns(params: WorkstationColumnsParams): Columns
       width: 100,
       render: (type) => renderWorkstationTypeTag(type),
     },
-    createStatusColumn('status', { width: 100 }),
+    // 工位状态为 3 态枚举（0=空闲, 1=占用, 2=维护），不能使用 createStatusColumn（该 helper 硬编码 0=正常/非0=停用的 2 态语义）。
+    // 改用本模块的 renderWorkstationStatusTag，与卡片视图/平面图/模态框/搜索下拉保持一致。
+    {
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
+      width: 100,
+      render: (status: number) => renderWorkstationStatusTag(status),
+    },
     { title: '描述', dataIndex: 'description', key: 'description', ellipsis: true },
     createDateTimeColumn('createdAt', { width: 180 }),
     {
