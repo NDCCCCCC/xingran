@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: MAC地址历史数据管理
 status: unknown
-stopped_at: Phase 29 context gathered
-last_updated: "2026-06-10T08:01:16.214Z"
+stopped_at: Phase 29 UI-SPEC approved
+last_updated: "2026-06-10T09:03:22.797Z"
 progress:
   total_phases: 8
   completed_phases: 2
@@ -21,7 +21,7 @@ progress:
 **Phase**: 28 (workstation-device-association)
 **Plan**: 07 (修复设备来源标签颜色)
 **Status**: ✅ 已完成
-**Last activity**: 2026-06-10 - 完成 Phase 28 Plan 07: 修复设备来源标签颜色渲染问题
+**Last activity**: 2026-06-12 - 完成 quick task 260612-d2x: 工位管理页面子表格设备信息添加字段ip地址
 
 ## Current Position
 
@@ -121,6 +121,7 @@ Plan: 07 (complete) - 已完成 7/7 计划
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
+| 260612-d2x | 工位管理页面子表格设备信息添加字段ip地址 | 2026-06-12 | 8ad0f4a | [260612-d2x-ip](./quick/260612-d2x-ip/) |
 | 260609-rowselect | 修复域控用户页面多选框显示问题 | 2026-06-09 | 7a5b095 | [20260609-ad-user-rowselection-fix](./quick/20260609-ad-user-rowselection-fix/) |
 | 260609-009 | 资产列表页面添加类型筛选组件 | 2026-06-09 | e3983df | [260609-009-asset-type-filter](./quick/260609-009-asset-type-filter/) |
 | 260609-columns | 添加资产列表5个显示字段：部门编码、归属机构、接收日期、最后上线、盘点日期 | 2026-06-09 | cd62637 | [260609-asset-list-columns-add](./quick/260609-asset-list-columns-add/) |
@@ -263,7 +264,7 @@ Plan: 07 (complete) - 已完成 7/7 计划
 ## Session Continuity
 
 Last session: --stopped-at
-Stopped at: Phase 29 context gathered
+Stopped at: Phase 29 UI-SPEC approved
 Resume file: --resume-file
 
 Resume file: None
