@@ -290,10 +290,10 @@ func (s *ExcelService) ImportData(ctx context.Context, entityType string, file *
 	var validRecords []map[string]any
 	var allRefRequests []ReferenceRequest
 
-	for rowNum := config.StartRow; rowNum <= len(rows); rowNum++ {
-		if rowNum-1 >= len(rows) {
-			break
-		}
+	// F-20: 循环条件改为 `rowNum-1 < len(rows)`,使越界保护与循环不变量等价,
+	// 删除冗余的运行时 break 检查(原代码 `if rowNum-1 >= len(rows) { break }` 是死代码,
+	// 但若误改循环上界为 `<=len(rows)+1` 之类会立刻引发 index out of range panic)。
+	for rowNum := config.StartRow; rowNum-1 < len(rows); rowNum++ {
 		row := rows[rowNum-1]
 
 		if isEmptyRow(row) {
