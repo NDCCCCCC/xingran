@@ -155,7 +155,9 @@ func RequestDecryption(encryptor *crypto.RequestEncryptor, staticConfig *Request
 				"data_length": len(encReq.Data),
 				"error":       err,
 			}).Warn("解密请求体失败")
-			response.Error(c, response.ErrBadRequest, "解密失败: "+err.Error())
+			// F-06: 不向客户端泄露具体解密错误 (key/iv/格式细节会帮助攻击者
+			// 探测密钥结构),改为返回通用错误消息;真实错误仅在 server 日志查询。
+			response.Error(c, response.ErrBadRequest, "解密失败")
 			c.Abort()
 			return
 		}
