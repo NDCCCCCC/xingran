@@ -23,6 +23,11 @@ type shardedNonceStorage struct {
 }
 
 // NewShardedNonceStorage 创建分段锁的 nonce 存储（推荐用于高并发场景）
+//
+// P1 fix: 启动后台清理 goroutine 定期调用 cleanupExpiredNonces,
+// 之前 cleanup 函数虽已定义但从未被调用,导致内存版 nonce 表无限增长 —
+// 长跑进程几天内会因为累积的过期 nonce 占用大量内存。
+// 清理周期 = maxTimeDiff (默认 300s),与 anti-replay 窗口对齐。
 func NewShardedNonceStorage() NonceStorage {
 	s := &shardedNonceStorage{}
 	for i := 0; i < shardCount; i++ {
@@ -30,6 +35,20 @@ func NewShardedNonceStorage() NonceStorage {
 			nonces: make(map[string]int64),
 		}
 	}
+
+	// 启动后台清理 goroutine。本进程单例使用,进程退出时随之结束;
+	// 加 panic recover 防御任何 map 迭代时的隐性错误。
+	go func() {
+		defer func() {
+			_ = recover()
+		}()
+		ticker := time.NewTicker(time.Duration(maxTimeDiff) * time.Second)
+		defer ticker.Stop()
+		for range ticker.C {
+			s.cleanupExpiredNonces()
+		}
+	}()
+
 	return s
 }
 
