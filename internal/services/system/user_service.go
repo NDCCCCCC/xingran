@@ -347,8 +347,7 @@ func (s *userService) List(ctx context.Context, params requests.UserListParams) 
 		return nil, apperrors.DatabaseError(err)
 	}
 
-	// 构建完整部门路径并填充部门信息
-	s.buildDepartmentPaths(ctx, list)
+	// 注: 部门路径在 line 404 角色填充后统一构建,删除此处早期调用(P1 fix)。
 
 	// 填充用户角色信息
 	userIDs := make([]string, len(list))
