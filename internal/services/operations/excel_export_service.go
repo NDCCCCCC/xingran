@@ -194,7 +194,8 @@ func (s *excelExportServiceImpl) setExportColumnWidths(
 	columns []ExcelExportField,
 ) {
 	for i, col := range columns {
-		colName, _ := coordinatesToColumnString(i + 1)
+		// P2 fix: 用 excelize.ColumnNumberToName 替代自实现 coordinatesToColumnString
+		colName, _ := excelize.ColumnNumberToName(i + 1)
 		width := calculateColumnWidth(col.Header)
 		_ = f.SetColWidth(sheetName, colName, colName, width)
 	}
@@ -274,18 +275,4 @@ func calculateColumnWidth(text string) float64 {
 		width = 50
 	}
 	return float64(width)
-}
-
-func coordinatesToColumnString(colNum int) (string, error) {
-	if colNum < 1 {
-		return "", fmt.Errorf("invalid column number: %d", colNum)
-	}
-
-	colName := ""
-	for colNum > 0 {
-		colNum--
-		colName = string(rune('A'+colNum%26)) + colName
-		colNum /= 26
-	}
-	return colName, nil
 }
