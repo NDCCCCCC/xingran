@@ -4,11 +4,11 @@ milestone: v1.5
 milestone_name: MAC地址历史数据管理
 status: unknown
 stopped_at: Phase 30 context gathered
-last_updated: "2026-06-12T17:26:47.471Z"
+last_updated: "2026-06-12T17:57:35.125Z"
 progress:
   total_phases: 26
   completed_phases: 12
-  total_plans: 86
+  total_plans: 90
   completed_plans: 83
   percent: 46
 ---
