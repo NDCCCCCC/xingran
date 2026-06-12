@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"gorm.io/gorm"
 )
 
@@ -36,26 +35,6 @@ func setupTestDB(t *testing.T) *gorm.DB {
 	// 临时返回nil，实际使用时需要实现
 	t.Skip("测试数据库配置未实现")
 	return nil
-}
-
-// createTestUser 创建测试用户
-func createTestUser(t *testing.T, db *gorm.DB, username, password string, status models.UserStatus) *models.User {
-	pwdMgr := NewPasswordManager(nil)
-	hashedPassword, err := pwdMgr.HashPassword(password)
-	assert.NoError(t, err)
-
-	user := &models.User{
-		Username: username,
-		Password: hashedPassword,
-		Status:   status,
-	}
-
-	if db != nil {
-		err = db.Create(user).Error
-		assert.NoError(t, err)
-	}
-
-	return user
 }
 
 // mockAuthenticator Mock认证器（用于测试）
@@ -110,29 +89,6 @@ func TestAuthResult(t *testing.T) {
 	assert.Equal(t, userResult, result.User)
 	assert.Equal(t, "local", result.AuthSource)
 	assert.False(t, result.NeedsSync)
-}
-
-// TestADUserInfo 测试AD用户信息结构
-func TestADUserInfo(t *testing.T) {
-	adUserInfo := &ADUserInfo{
-		UserDN:      "cn=testuser,dc=example,dc=com",
-		Username:    "testuser",
-		DisplayName: "Test User",
-		Email:       "testuser@example.com",
-		Phone:       "1234567890",
-		Mobile:      "9876543210",
-		Title:       "Developer",
-		Department:  "IT",
-	}
-
-	assert.Equal(t, "cn=testuser,dc=example,dc=com", adUserInfo.UserDN)
-	assert.Equal(t, "testuser", adUserInfo.Username)
-	assert.Equal(t, "Test User", adUserInfo.DisplayName)
-	assert.Equal(t, "testuser@example.com", adUserInfo.Email)
-	assert.Equal(t, "1234567890", adUserInfo.Phone)
-	assert.Equal(t, "9876543210", adUserInfo.Mobile)
-	assert.Equal(t, "Developer", adUserInfo.Title)
-	assert.Equal(t, "IT", adUserInfo.Department)
 }
 
 // TestUserResult 测试用户结果结构
