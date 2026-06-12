@@ -166,6 +166,10 @@ func (h *NoticeHub) RegisterClient(userID string, conn *websocket.Conn) *Client 
 	}
 	h.register <- client
 	go client.writePump()
+	// P1 fix: 启动 readPump 探测僵尸连接 — 否则 writePump 仅在主动写时
+	// 才能感知断连,客户端拔网线/睡眠等情况下 conn 残留,FD 与 Client
+	// 记录一起泄漏,长期导致 hub 满和 FD 耗尽。
+	go client.readPump()
 	return client
 }
 
@@ -321,6 +325,42 @@ func (c *Client) writePump() {
 				applogger.Errorf("WebSocket Ping 发送失败 (用户: %s): %v", c.userID, err)
 				return
 			}
+		}
+	}
+}
+
+// readPump 读循环,探测僵尸连接 (P1 fix)
+//
+// 职责:
+//   - 设置 ReadDeadline,定时刷新(基于客户端 pong 响应)
+//   - 监听 pong 消息确认连接活跃
+//   - 监听 close/客户端断连,调用 UnregisterClient 清理 hub
+//
+// 没有 readPump 时,writePump 只有主动发消息才能检测到断连,
+// 客户端拔网线/进程睡眠等情况下 conn 残留,FD + Client 记录泄漏。
+func (c *Client) readPump() {
+	defer func() {
+		// 出循环说明连接异常,主动从 hub 注销
+		c.hub.UnregisterClient(c)
+		_ = c.conn.Close()
+	}()
+
+	// readDeadline = pingInterval (54s) * 2,确保至少 1 个 ping 周期容错
+	const readDeadline = 110 * time.Second
+	_ = c.conn.SetReadDeadline(time.Now().Add(readDeadline))
+	c.conn.SetPongHandler(func(string) error {
+		_ = c.conn.SetReadDeadline(time.Now().Add(readDeadline))
+		return nil
+	})
+
+	for {
+		// 不关心消息内容(本 hub 为单向推送),仅用 ReadMessage
+		// 触发 ReadDeadline / Pong / Close 处理。
+		if _, _, err := c.conn.ReadMessage(); err != nil {
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				applogger.Warnf("WebSocket 异常关闭 (用户: %s): %v", c.userID, err)
+			}
+			return
 		}
 	}
 }
