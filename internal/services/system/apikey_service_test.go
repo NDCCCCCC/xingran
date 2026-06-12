@@ -2,7 +2,6 @@ package system
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
@@ -119,15 +118,13 @@ func createTestUser(t *testing.T, db *gorm.DB) *models.User {
 // createTestAPIKey 创建测试API密钥
 func createTestAPIKey(t *testing.T, db *gorm.DB, userID string, isActive bool) *models.APIKey {
 	key := "rec_" + "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-	scopesJSON, _ := json.Marshal([]string{"read", "write"})
-	ipWhitelistJSON, _ := json.Marshal([]string{})
 
 	apiKey := &models.APIKey{
 		Name:        "Test API Key",
 		Key:         key,
 		UserID:      &userID,
-		Scopes:      string(scopesJSON),
-		IPWhitelist: string(ipWhitelistJSON),
+		Scopes:      []string{"read", "write"},
+		IPWhitelist: []string{},
 		IsActive:    isActive,
 	}
 	err := db.Create(apiKey).Error
@@ -207,12 +204,11 @@ func TestCreateAPIKey(t *testing.T) {
 		// 创建100个密钥达到限制
 		for i := 0; i < MaxKeysPerUser; i++ {
 			key := "rec_" + string(rune(i)) + "000000000000000000000000000000000000000000000000000000000000000"
-			scopesJSON, _ := json.Marshal([]string{"read"})
 			apiKey := &models.APIKey{
 				Key:      key,
 				Name:     "Limit Key",
 				UserID:   &limitUser.ID,
-				Scopes:   string(scopesJSON),
+				Scopes:   []string{"read"},
 				IsActive: true,
 			}
 			err := db.Create(apiKey).Error
@@ -389,15 +385,13 @@ func TestListAPIKeys(t *testing.T) {
 
 	// 创建多个测试密钥
 	key1 := createTestAPIKey(t, db, user.ID, true)
-	scopesJSON1, _ := json.Marshal([]string{"read"})
 	key1.Name = "Active Key"
-	key1.Scopes = string(scopesJSON1)
+	key1.Scopes = []string{"read"}
 	db.Save(key1)
 
 	key2 := createTestAPIKey(t, db, user.ID, false)
-	scopesJSON2, _ := json.Marshal([]string{"write"})
 	key2.Name = "Inactive Key"
-	key2.Scopes = string(scopesJSON2)
+	key2.Scopes = []string{"write"}
 	db.Save(key2)
 
 	t.Run("正常查询", func(t *testing.T) {
