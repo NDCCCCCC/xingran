@@ -2,8 +2,10 @@ package operations
 
 import (
 	"context"
+	"errors"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"gorm.io/gorm"
@@ -320,12 +322,27 @@ func (s *floorService) syncWorkstationBuildingID(ctx context.Context, floorID st
 }
 
 // isDuplicateKeyError 检查是否是 PostgreSQL 唯一约束错误
+//
+// P2 fix: 改用结构化错误类型(pgconn.PgError.Code == "23505")替代
+// 字符串匹配 ("duplicate key" / "unique constraint" / "23505").
+// 后者:
+// - 受 DB 错误信息本地化影响(中文版/i18n 中可能完全不出现这些英文 token)
+// - 不同 PG 驱动可能返回略不同 wording
+// - "23505" 子串在错误中可能巧合出现但不是真正约束错误
+//
+// pgconn.PgError 是 jackc/pgx 标准化的错误类型,Code 字段就是 PG SQLSTATE,
+// 23505 = unique_violation,精确无歧义。
+// 仍保留字符串 fallback 作为退路(SQLite 测试、非 pgconn 错误)。
 func isDuplicateKeyError(err error) bool {
 	if err == nil {
 		return false
 	}
-	// PostgreSQL 唯一约束错误码是 23505
-	// 错误消息包含 "duplicate key" 或 "unique constraint"
+	// 1) 优先用结构化错误类型 (生产 PostgreSQL 路径)
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+		return true
+	}
+	// 2) Fallback 字符串匹配 (SQLite 测试 / 第三方 wrapper)
 	errMsg := err.Error()
 	return containsIgnoreCase(errMsg, "duplicate key") ||
 		containsIgnoreCase(errMsg, "unique constraint") ||
