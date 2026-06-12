@@ -7,28 +7,32 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
 // WorkstationDeviceService 工位设备关联服务接口
 type WorkstationDeviceService interface {
-	// GetDevicesByWorkstation 获取工位关联设备列表
-	GetDevicesByWorkstation(ctx context.Context, workstationID string) ([]*models.WorkstationDevice, error)
+	// GetDevicesByWorkstation 获取工位关联设备列表（可选来源过滤）
+	GetDevicesByWorkstation(ctx context.Context, workstationID string, source ...string) ([]*models.WorkstationDevice, error)
+
+	// GetADDevices 实时查询AD设备（不保存到数据库）
+	GetADDevices(ctx context.Context, workstationID string) ([]*models.WorkstationDevice, error)
+
+	// GetAssetDevices 实时查询资产设备（不保存到数据库）
+	GetAssetDevices(ctx context.Context, workstationID string) ([]*models.WorkstationDevice, error)
 
 	// GetADDevicesByUser 获取用户的域控设备
-	GetADDevicesByUser(ctx context.Context, username string) ([]*ADDeviceMatch, error)
+	GetADDevicesByUser(ctx context.Context, userID string) ([]*ADDeviceMatch, error)
 
 	// GetAssetDevicesByUser 获取用户的资产设备
-	GetAssetDevicesByUser(ctx context.Context, username string) ([]*AssetDeviceMatch, error)
+	GetAssetDevicesByUser(ctx context.Context, userID, username, nickname string) ([]*AssetDeviceMatch, error)
 
 	// AddDeviceManual 手动添加设备（序列号匹配）
 	AddDeviceManual(ctx context.Context, req *AddDeviceRequest) (*models.WorkstationDevice, error)
 
-	// SyncFromAD 同步域控设备到实际结果
-	SyncFromAD(ctx context.Context, workstationID string) error
-
-	// SyncFromAsset 同步资产设备到实际结果
-	SyncFromAsset(ctx context.Context, workstationID string) error
+	// SetPrimaryAndSave 设置主设备并保存到数据库（用于AD/资产设备转为手动设备）
+	SetPrimaryAndSave(ctx context.Context, deviceID string, req *SetPrimaryAndSaveRequest) error
 
 	// UpdateDevice 更新设备信息
 	UpdateDevice(ctx context.Context, id string, req *UpdateDeviceRequest) error
@@ -40,6 +44,18 @@ type WorkstationDeviceService interface {
 	SetPrimaryDevice(ctx context.Context, id string) error
 }
 
+// SetPrimaryAndSaveRequest 设置主设备并保存请求
+type SetPrimaryAndSaveRequest struct {
+	WorkstationID  string  `json:"workstationId"`
+	DeviceSerial   string  `json:"deviceSerial"`
+	DeviceName     string  `json:"deviceName"`
+	DeviceModel    *string `json:"deviceModel,omitempty"`
+	DeviceType     *string `json:"deviceType,omitempty"`
+	MACAddress     *string `json:"macAddress,omitempty"`
+	IPAddress      *string `json:"ipAddress,omitempty"`
+	ResponsibleUser *string `json:"responsibleUser,omitempty"`
+}
+
 // AddDeviceRequest 手动添加设备请求
 type AddDeviceRequest struct {
 	WorkstationID  string  `json:"workstationId"`
@@ -48,6 +64,7 @@ type AddDeviceRequest struct {
 	DeviceModel    *string `json:"deviceModel,omitempty"`
 	DeviceType     *string `json:"deviceType,omitempty"`
 	MACAddress     *string `json:"macAddress,omitempty"`
+	IPAddress      *string `json:"ipAddress,omitempty"`
 	ResponsibleUser *string `json:"responsibleUser,omitempty"`
 	Description    *string `json:"description,omitempty"`
 }
@@ -59,6 +76,7 @@ type UpdateDeviceRequest struct {
 	DeviceModel    *string `json:"deviceModel,omitempty"`
 	DeviceType     *string `json:"deviceType,omitempty"`
 	MACAddress     *string `json:"macAddress,omitempty"`
+	IPAddress      *string `json:"ipAddress,omitempty"`
 	ResponsibleUser *string `json:"responsibleUser,omitempty"`
 	Status         *int    `json:"status,omitempty"`
 	Priority       *int    `json:"priority,omitempty"`
@@ -99,8 +117,8 @@ func NewWorkstationDeviceService(db *gorm.DB) WorkstationDeviceService {
 	}
 }
 
-// GetDevicesByWorkstation 获取工位关联设备列表
-func (s *workstationDeviceService) GetDevicesByWorkstation(ctx context.Context, workstationID string) ([]*models.WorkstationDevice, error) {
+// GetDevicesByWorkstation 获取工位关联设备列表（支持来源过滤）
+func (s *workstationDeviceService) GetDevicesByWorkstation(ctx context.Context, workstationID string, source ...string) ([]*models.WorkstationDevice, error) {
 	// 验证工位ID格式
 	if workstationID == "" {
 		return nil, apperrors.ParamMissing("工位ID")
@@ -110,8 +128,15 @@ func (s *workstationDeviceService) GetDevicesByWorkstation(ctx context.Context, 
 	}
 
 	var devices []*models.WorkstationDevice
-	err := s.db.WithContext(ctx).
-		Where("workstation_id = ? AND deleted_at IS NULL", workstationID).
+	query := s.db.WithContext(ctx).
+		Where("workstation_id = ? AND deleted_at IS NULL", workstationID)
+
+	// 如果指定了来源，添加来源过滤
+	if len(source) > 0 && source[0] != "" {
+		query = query.Where("device_source = ?", source[0])
+	}
+
+	err := query.
 		Order("priority DESC, created_at ASC").
 		Find(&devices).Error
 
@@ -122,33 +147,264 @@ func (s *workstationDeviceService) GetDevicesByWorkstation(ctx context.Context, 
 	return devices, nil
 }
 
-// GetADDevicesByUser 获取用户的域控设备
-func (s *workstationDeviceService) GetADDevicesByUser(ctx context.Context, username string) ([]*ADDeviceMatch, error) {
-	if username == "" {
-		return nil, apperrors.ParamMissing("用户名")
+// GetADDevices 实时查询AD设备（不保存到数据库）
+func (s *workstationDeviceService) GetADDevices(ctx context.Context, workstationID string) ([]*models.WorkstationDevice, error) {
+	if workstationID == "" {
+		return nil, apperrors.ParamMissing("工位ID")
 	}
 
-	// 查询该用户的AD设备记录
-	// TODO: 实现AD用户与设备的关联逻辑
-	// 当前需要扩展ADUser模型或创建ADUserComputer关联表
+	// 获取工位信息以查找绑定的用户
+	var workstation models.Workstation
+	err := s.db.WithContext(ctx).
+		Where("id = ? AND deleted_at IS NULL", workstationID).
+		First(&workstation).Error
 
-	return []*ADDeviceMatch{}, nil
+	if err != nil {
+		return nil, fmt.Errorf("工位不存在: %w", err)
+	}
+
+	// 如果工位没有绑定用户ID，返回空
+	var userID string
+	if workstation.UserID != nil && *workstation.UserID != "" {
+		userID = *workstation.UserID
+	} else {
+		return []*models.WorkstationDevice{}, nil
+	}
+
+	// 获取用户的域控设备
+	adDevices, err := s.GetADDevicesByUser(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("获取域控设备失败: %w", err)
+	}
+
+	// 转换为 WorkstationDevice 格式（不保存）
+	devices := make([]*models.WorkstationDevice, 0, len(adDevices))
+	for _, adDevice := range adDevices {
+		devices = append(devices, &models.WorkstationDevice{
+			WorkstationID:    workstationID,
+			DeviceSource:     models.DeviceSourceAD,
+			ADComputerID:     &adDevice.ADComputerID,
+			DeviceSerial:     &adDevice.DeviceSerial,
+			DeviceName:       &adDevice.DeviceName,
+			MACAddress:       &adDevice.MACAddress,
+			Status:           0,
+			IsPrimary:        false,
+			Priority:         0,
+			// 使用临时ID标识（格式：ad-{index}）
+		})
+	}
+
+	return devices, nil
 }
 
-// GetAssetDevicesByUser 获取用户的资产设备
-func (s *workstationDeviceService) GetAssetDevicesByUser(ctx context.Context, username string) ([]*AssetDeviceMatch, error) {
-	if username == "" {
-		return nil, apperrors.ParamMissing("用户名")
+// GetAssetDevices 实时查询资产设备（不保存到数据库）
+func (s *workstationDeviceService) GetAssetDevices(ctx context.Context, workstationID string) ([]*models.WorkstationDevice, error) {
+	if workstationID == "" {
+		return nil, apperrors.ParamMissing("工位ID")
 	}
 
-	var assets []*models.Asset
+	// 获取工位信息以查找绑定的用户
+	var workstation models.Workstation
 	err := s.db.WithContext(ctx).
-		Where("nowuser_name = ? AND deleted_at IS NULL", username).
+		Where("id = ? AND deleted_at IS NULL", workstationID).
+		First(&workstation).Error
+
+	if err != nil {
+		return nil, fmt.Errorf("工位不存在: %w", err)
+	}
+
+	// 获取工位绑定的用户信息
+	var userInfo struct {
+		ID       string
+		Username string
+		Nickname *string
+	}
+
+	if workstation.UserID != nil && *workstation.UserID != "" {
+		err := s.db.WithContext(ctx).
+			Table("sys_user").
+			Select("id, username, nickname").
+			Where("id = ? AND deleted_at IS NULL", *workstation.UserID).
+			First(&userInfo).Error
+		if err != nil {
+			return nil, fmt.Errorf("查询用户信息失败: %w", err)
+		}
+	} else {
+		return []*models.WorkstationDevice{}, nil
+	}
+
+	// 获取用户的资产设备
+	assetDevices, err := s.GetAssetDevicesByUser(ctx, userInfo.ID, userInfo.Username,
+		func() string {
+			if userInfo.Nickname != nil {
+				return *userInfo.Nickname
+			}
+			return ""
+		}())
+	if err != nil {
+		return nil, fmt.Errorf("获取资产设备失败: %w", err)
+	}
+
+	// 转换为 WorkstationDevice 格式（不保存）
+	devices := make([]*models.WorkstationDevice, 0, len(assetDevices))
+	for _, assetDevice := range assetDevices {
+		devices = append(devices, &models.WorkstationDevice{
+			WorkstationID:    workstationID,
+			DeviceSource:      models.DeviceSourceAsset,
+			AssetID:           &assetDevice.AssetID,
+			DeviceSerial:      &assetDevice.DeviceSN,
+			DeviceModel:       assetDevice.DeviceModel,
+			DeviceType:        assetDevice.DeviceType,
+			MACAddress:        assetDevice.MACAddress,
+			ResponsibleUser:   assetDevice.ResponsibleUser,
+			Status:            0,
+			IsPrimary:         false,
+			Priority:          0,
+			// 使用临时ID标识（格式：asset-{index}）
+		})
+	}
+
+	return devices, nil
+}
+
+// GetADDevicesByUser 获取用户的域控设备（通过用户DN关联）
+func (s *workstationDeviceService) GetADDevicesByUser(ctx context.Context, userID string) ([]*ADDeviceMatch, error) {
+	if userID == "" {
+		return nil, apperrors.ParamMissing("用户ID")
+	}
+
+	logger.Infof("[GetADDevicesByUser] 开始查询AD设备 - UserID: %s", userID)
+
+	// 获取系统用户的username
+	var sysUser models.User
+	err := s.db.WithContext(ctx).
+		Select("username").
+		Where("id = ? AND deleted_at IS NULL", userID).
+		First(&sysUser).Error
+
+	if err != nil {
+		logger.Warnf("[GetADDevicesByUser] 系统用户不存在: %v", err)
+		return []*ADDeviceMatch{}, nil
+	}
+
+	logger.Infof("[GetADDevicesByUser] 系统用户名: %s", sysUser.Username)
+
+	// 通过username查询AD用户获取DN
+	var adUser models.ADUser
+	err = s.db.WithContext(ctx).
+		Where("username = ? AND deleted_at IS NULL", sysUser.Username).
+		First(&adUser).Error
+
+	if err != nil {
+		logger.Warnf("[GetADDevicesByUser] 用户无AD记录: %v", err)
+		return []*ADDeviceMatch{}, nil
+	}
+
+	logger.Infof("[GetADDevicesByUser] 用户AD DN: %s", adUser.UserDN)
+
+	// 查询该用户管理的AD设备（通过 ManagedBy 字段）
+	var adComputers []models.ADComputer
+	err = s.db.WithContext(ctx).
+		Where("managed_by = ? AND deleted_at IS NULL", adUser.UserDN).
+		Find(&adComputers).Error
+
+	if err != nil {
+		return nil, fmt.Errorf("查询AD设备失败: %w", err)
+	}
+
+	logger.Infof("[GetADDevicesByUser] 找到 %d 个AD设备", len(adComputers))
+
+	matches := make([]*ADDeviceMatch, 0, len(adComputers))
+	for _, computer := range adComputers {
+		matches = append(matches, &ADDeviceMatch{
+			ADComputerID:    computer.ID,
+			DeviceSerial:    computer.SerialNumber,
+			DeviceName:      computer.ComputerName,
+			MACAddress:      computer.MacAddress,
+			IPAddress:       computer.IPAddress,
+			OperatingSystem: computer.OperatingSystem,
+		})
+		logger.Infof("[GetADDevicesByUser] 设备详情 - Name: %s, SN: %s, MAC: %s, IP: %s",
+			computer.ComputerName, computer.SerialNumber, computer.MacAddress, computer.IPAddress)
+	}
+
+	return matches, nil
+}
+
+// GetAssetDevicesByUser 获取用户的资产设备（使用姓名匹配，同名时加部门名称匹配）
+func (s *workstationDeviceService) GetAssetDevicesByUser(ctx context.Context, userID, username, nickname string) ([]*AssetDeviceMatch, error) {
+	if nickname == "" {
+		logger.Warnf("[GetAssetDevicesByUser] 缺少用户姓名，无法匹配资产设备")
+		return []*AssetDeviceMatch{}, nil
+	}
+
+	logger.Infof("[GetAssetDevicesByUser] 开始查询资产设备 - UserID: %s, Username: %s, Nickname: %s",
+		userID, username, nickname)
+
+	// 获取用户的部门信息（用于同名匹配）
+	var user struct {
+		ID       string
+		Nickname string
+		DeptID   *string
+		DeptName *string
+	}
+
+	err := s.db.WithContext(ctx).
+		Table("sys_user").
+		Select("sys_user.id, sys_user.nickname, sys_user.dept_id, dept.dept_name").
+		Joins("LEFT JOIN sys_dept dept ON sys_user.dept_id = dept.id").
+		Where("sys_user.id = ? AND sys_user.deleted_at IS NULL", userID).
+		First(&user).Error
+
+	if err != nil {
+		return nil, fmt.Errorf("查询用户部门信息失败: %w", err)
+	}
+
+	deptName := ""
+	if user.DeptName != nil {
+		deptName = *user.DeptName
+	}
+
+	logger.Infof("[GetAssetDevicesByUser] 用户部门信息 - DeptID: %v, DeptName: %s",
+		user.DeptID, deptName)
+
+	var assets []*models.Asset
+
+	// 策略1: 使用姓名匹配
+	logger.Infof("[GetAssetDevicesByUser] 策略1: 使用 nowuser_name='%s' 查询", nickname)
+	err = s.db.WithContext(ctx).
+		Where("nowuser_name = ? AND deleted_at IS NULL", nickname).
 		Find(&assets).Error
 
 	if err != nil {
 		return nil, fmt.Errorf("查询用户资产设备失败: %w", err)
 	}
+	logger.Infof("[GetAssetDevicesByUser] 策略1结果: 找到 %d 个设备", len(assets))
+
+	// 策略2: 如果有多个同名结果，使用姓名+部门名称精确匹配
+	if len(assets) > 1 && deptName != "" {
+		logger.Infof("[GetAssetDevicesByUser] 检测到 %d 个同名设备，使用部门名称进行精确匹配", len(assets))
+		logger.Infof("[GetAssetDevicesByUser] 策略2: 使用 nowuser_name='%s' AND deptname='%s' 查询", nickname, deptName)
+
+		var filteredAssets []*models.Asset
+		err = s.db.WithContext(ctx).
+			Where("nowuser_name = ? AND deptname = ? AND deleted_at IS NULL", nickname, deptName).
+			Find(&filteredAssets).Error
+
+		if err != nil {
+			return nil, fmt.Errorf("精确查询用户资产设备失败: %w", err)
+		}
+
+		// 如果精确匹配找到结果，使用精确匹配结果
+		if len(filteredAssets) > 0 {
+			assets = filteredAssets
+			logger.Infof("[GetAssetDevicesByUser] 策略2结果: 精确匹配找到 %d 个设备", len(assets))
+		} else {
+			logger.Warnf("[GetAssetDevicesByUser] 策略2结果: 部门精确匹配无结果，使用策略1的所有结果")
+		}
+	}
+
+	logger.Infof("[GetAssetDevicesByUser] 最终结果: 找到 %d 个设备", len(assets))
 
 	matches := make([]*AssetDeviceMatch, 0, len(assets))
 	for _, asset := range assets {
@@ -160,6 +416,13 @@ func (s *workstationDeviceService) GetAssetDevicesByUser(ctx context.Context, us
 			MACAddress:      asset.MAC1,
 			ResponsibleUser: asset.NowUserName,
 		})
+		logger.Infof("[GetAssetDevicesByUser] 设备详情 - SN: %s, Model: %v, Type: %v, MAC: %v, NowUserName: %v, DeptName: %v",
+			asset.DeviceSN,
+			asset.DeviceModelName,
+			asset.DeviceTypeName,
+			asset.MAC1,
+			asset.NowUserName,
+			asset.DeptName)
 	}
 
 	return matches, nil
@@ -211,6 +474,7 @@ func (s *workstationDeviceService) AddDeviceManual(ctx context.Context, req *Add
 		DeviceModel:      deviceModel,
 		DeviceType:       deviceType,
 		MACAddress:       req.MACAddress,
+		IPAddress:        req.IPAddress,
 		ResponsibleUser:  req.ResponsibleUser,
 		Status:           0, // 默认正常
 		IsPrimary:        false,
@@ -241,13 +505,18 @@ func (s *workstationDeviceService) SyncFromAD(ctx context.Context, workstationID
 		return fmt.Errorf("工位不存在: %w", err)
 	}
 
-	// 如果工位没有绑定用户,无法同步
-	if workstation.UserName == nil || *workstation.UserName == "" {
-		return fmt.Errorf("工位未绑定用户,无法同步域控设备")
+	// 如果工位没有绑定用户ID,无法同步
+	var userID string
+	if workstation.UserID != nil && *workstation.UserID != "" {
+		userID = *workstation.UserID
+	} else {
+		return fmt.Errorf("工位未绑定用户ID,无法同步域控设备")
 	}
 
+	logger.Infof("[SyncFromAD] 工位ID: %s, 用户ID: %s", workstationID, userID)
+
 	// 获取用户的域控设备
-	adDevices, err := s.GetADDevicesByUser(ctx, *workstation.UserName)
+	adDevices, err := s.GetADDevicesByUser(ctx, userID)
 	if err != nil {
 		return fmt.Errorf("获取域控设备失败: %w", err)
 	}
@@ -297,16 +566,49 @@ func (s *workstationDeviceService) SyncFromAsset(ctx context.Context, workstatio
 		return fmt.Errorf("工位不存在: %w", err)
 	}
 
-	// 如果工位没有绑定用户,无法同步
-	if workstation.UserName == nil || *workstation.UserName == "" {
-		return fmt.Errorf("工位未绑定用户,无法同步资产设备")
+	// 获取工位绑定的用户信息（包括账号和姓名）
+	var userInfo struct {
+		ID       string
+		Username string
+		Nickname *string
 	}
 
+	if workstation.UserID != nil && *workstation.UserID != "" {
+		err := s.db.WithContext(ctx).
+			Table("sys_user").
+			Select("id, username, nickname").
+			Where("id = ? AND deleted_at IS NULL", *workstation.UserID).
+			First(&userInfo).Error
+		if err != nil {
+			return fmt.Errorf("查询用户信息失败: %w", err)
+		}
+	} else {
+		return fmt.Errorf("工位未绑定用户ID,无法同步资产设备")
+	}
+
+	// 添加调试日志
+	logger.Infof("[SyncFromAsset] 工位ID: %s, 用户ID: %s, 账号: %s, 姓名: %s",
+		workstationID, userInfo.ID, userInfo.Username,
+		func() string {
+			if userInfo.Nickname != nil {
+				return *userInfo.Nickname
+			}
+			return "(空)"
+		}())
+
 	// 获取用户的资产设备
-	assetDevices, err := s.GetAssetDevicesByUser(ctx, *workstation.UserName)
+	assetDevices, err := s.GetAssetDevicesByUser(ctx, userInfo.ID, userInfo.Username,
+		func() string {
+			if userInfo.Nickname != nil {
+				return *userInfo.Nickname
+			}
+			return ""
+		}())
 	if err != nil {
 		return fmt.Errorf("获取资产设备失败: %w", err)
 	}
+
+	logger.Infof("[SyncFromAsset] 查询到 %d 个资产设备", len(assetDevices))
 
 	// 删除现有的资产来源设备
 	if err := s.db.WithContext(ctx).
@@ -334,6 +636,9 @@ func (s *workstationDeviceService) SyncFromAsset(ctx context.Context, workstatio
 		if err := s.db.WithContext(ctx).Create(device).Error; err != nil {
 			return fmt.Errorf("添加资产设备失败: %w", err)
 		}
+
+		logger.Infof("[SyncFromAsset] 添加设备: SN=%s, Model=%s, Type=%s",
+			assetDevice.DeviceSN, assetDevice.DeviceModel, assetDevice.DeviceType)
 	}
 
 	return nil
@@ -372,6 +677,9 @@ func (s *workstationDeviceService) UpdateDevice(ctx context.Context, id string, 
 	}
 	if req.MACAddress != nil {
 		updates["mac_address"] = *req.MACAddress
+	}
+	if req.IPAddress != nil {
+		updates["ip_address"] = *req.IPAddress
 	}
 	if req.ResponsibleUser != nil {
 		updates["responsible_user"] = *req.ResponsibleUser
@@ -449,6 +757,98 @@ func (s *workstationDeviceService) SetPrimaryDevice(ctx context.Context, id stri
 			Update("is_primary", true).Error; err != nil {
 			return fmt.Errorf("设置主设备失败: %w", err)
 		}
+
+		return nil
+	})
+}
+
+// SetPrimaryAndSave 设置主设备并保存到数据库（用于AD/资产设备转为手动设备）
+func (s *workstationDeviceService) SetPrimaryAndSave(ctx context.Context, deviceID string, req *SetPrimaryAndSaveRequest) error {
+	if deviceID == "" {
+		return apperrors.ParamMissing("设备ID")
+	}
+
+	// 验证请求参数
+	if req.WorkstationID == "" {
+		return apperrors.ParamMissing("工位ID")
+	}
+	if req.DeviceSerial == "" {
+		return apperrors.ParamMissing("设备序列号")
+	}
+
+	// 验证工位存在
+	var workstation models.Workstation
+	err := s.db.WithContext(ctx).
+		Where("id = ? AND deleted_at IS NULL", req.WorkstationID).
+		First(&workstation).Error
+	if err != nil {
+		return fmt.Errorf("工位不存在: %w", err)
+	}
+
+	// 尝试通过序列号匹配资产系统
+	var assetID *string
+	var deviceModel, deviceType *string
+
+	var asset models.Asset
+	err = s.db.WithContext(ctx).
+		Where("devicesn = ? AND deleted_at IS NULL", req.DeviceSerial).
+		First(&asset).Error
+
+	if err == nil {
+		// 找到匹配的资产
+		assetID = &asset.ID
+		if req.DeviceModel == nil {
+			deviceModel = asset.DeviceModelName
+		}
+		if req.DeviceType == nil {
+			deviceType = asset.DeviceTypeName
+		}
+	}
+
+	// 合并请求数据和资产数据
+	finalDeviceName := &req.DeviceName
+	finalDeviceModel := req.DeviceModel
+	if finalDeviceModel == nil {
+		finalDeviceModel = deviceModel
+	}
+	finalDeviceType := req.DeviceType
+	if finalDeviceType == nil {
+		finalDeviceType = deviceType
+	}
+
+	// 使用事务确保原子性
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 取消该工位下的所有主设备
+		if err := tx.
+			Model(&models.WorkstationDevice{}).
+			Where("workstation_id = ? AND deleted_at IS NULL", req.WorkstationID).
+			Update("is_primary", false).Error; err != nil {
+			return fmt.Errorf("取消主设备失败: %w", err)
+		}
+
+		// 创建新的手动设备记录
+		newDevice := &models.WorkstationDevice{
+			WorkstationID:    req.WorkstationID,
+			DeviceSource:     models.DeviceSourceManual,
+			AssetID:          assetID,
+			DeviceSerial:     &req.DeviceSerial,
+			DeviceName:       finalDeviceName,
+			DeviceModel:      finalDeviceModel,
+			DeviceType:       finalDeviceType,
+			MACAddress:       req.MACAddress,
+			IPAddress:        req.IPAddress,
+			ResponsibleUser:  req.ResponsibleUser,
+			Status:           0,
+			IsPrimary:        true,
+			Priority:         0,
+		}
+
+		if err := tx.Create(newDevice).Error; err != nil {
+			return fmt.Errorf("保存设备失败: %w", err)
+		}
+
+		logger.Infof("[SetPrimaryAndSave] 成功保存主设备 - WorkstationID: %s, DeviceSerial: %s",
+			req.WorkstationID, req.DeviceSerial)
 
 		return nil
 	})
