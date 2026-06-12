@@ -14,17 +14,23 @@ import (
 )
 
 // newWebSocketUpgrader 创建 WebSocket 升级器
-// allowedOrigins: 允许的来源列表，空或含 "*" 表示允许所有（开发环境）
+// allowedOrigins: 允许的来源列表
+//   - 含 "*": 显式允许所有来源 (开发环境,会记录 Warn 日志)
+//   - 空或具体来源: 严格模式,仅允许同源 + localhost + 显式列表
+//
+// F-07: 之前实现把 "空列表" 等同于 "allowAll=true",导致运维忘记配置
+// 时所有来源都被放行 + 仍然接受 cookie/Authorization 凭据,
+// 构成 CSRF 与 token 盗用风险。改为只有显式 "*" 才放行所有。
 func newWebSocketUpgrader(allowedOrigins []string) websocket.Upgrader {
-	allowAll := len(allowedOrigins) == 0 || containsOrigin(allowedOrigins, "*")
+	allowAll := containsOrigin(allowedOrigins, "*")
 
 	return websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
 		CheckOrigin: func(r *http.Request) bool {
 			if allowAll {
-				// 生产环境警告：允许所有来源是不安全的
-				applogger.Warnf("WebSocket CheckOrigin 允许所有来源（开发模式），建议在生产环境配置具体白名单")
+				// 生产环境警告：显式 "*" 允许所有来源是不安全的
+				applogger.Warnf("WebSocket CheckOrigin 允许所有来源（显式 '*' 开发模式），建议生产环境配置具体白名单")
 				return true
 			}
 
