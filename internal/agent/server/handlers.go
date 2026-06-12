@@ -8,13 +8,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var log = logrus.StandardLogger()
-
-// WithRequestID 为日志条目添加 request_id 字段
-func WithRequestID(requestID string) *logrus.Entry {
-	return log.WithField("request_id", requestID)
-}
-
 // 通用错误消息（避免信息泄露）
 const (
 	errMsgGeneric            = "请求处理失败，请稍后重试"

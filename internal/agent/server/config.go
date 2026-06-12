@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -14,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
@@ -144,7 +144,10 @@ func (c *Config) Validate() error {
 	// 如果缺少 AgentID/VMID，将自动注册（不报错）
 	// 但需要警告
 	if c.AgentID == "" || c.VMID == "" {
-		log.Printf("WARNING: agent_id or vm_id not configured, will attempt auto-registration")
+		WithFields(logrus.Fields{
+			"agent_id": c.AgentID,
+			"vm_id":    c.VMID,
+		}).Warn("agent_id or vm_id not configured, will attempt auto-registration")
 	}
 
 	return nil
@@ -191,7 +194,10 @@ func (c *Config) CheckCertificateFiles() error {
 		// 检查文件模式（应限制为 600 或 644）
 		mode := certInfo.Mode()
 		if mode.Perm()&0444 != 0 {
-			log.Printf("WARNING: Certificate file is world-readable: %s", c.TLSCertFile)
+			WithFields(logrus.Fields{
+				"cert_file": c.TLSCertFile,
+				"mode":      mode.Perm().String(),
+			}).Warn("Certificate file is world-readable")
 		}
 
 		keyInfo, err := os.Stat(c.TLSKeyFile)
@@ -354,7 +360,10 @@ func RegisterToBackend(config *Config) (*Config, error) {
 	vmID, agentID, err := AutoRegisterAgent(config.BackendURL, fp)
 	if err != nil {
 		// 注册失败，生成临时 ID
-		log.Printf("自动注册失败: %v，使用临时 ID", err)
+		WithFields(logrus.Fields{
+			"backend_url": config.BackendURL,
+			"error":       err.Error(),
+		}).Warn("auto registration failed, using temporary ID")
 		vmID = fmt.Sprintf("vm-temp-%s", fp.Hostname)
 		agentID = fmt.Sprintf("agent-%s-%s", fp.Hostname, fp.MachineGUID[:8])
 	}

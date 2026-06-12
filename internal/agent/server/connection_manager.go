@@ -177,12 +177,12 @@ func (cm *ConnectionManager) StartHealthMonitor(ctx context.Context, interval ti
 		case <-ticker.C:
 			if cm.IsConnected() {
 				if err := cm.authenticator.SendHeartbeat(ctx); err != nil {
-					log.WithFields(logrus.Fields{
+					WithFields(logrus.Fields{
 						"error": err.Error(),
 					}).Warn("Health check failed")
 					go func() {
 						if err := cm.Reconnect(context.Background()); err != nil {
-							log.WithFields(logrus.Fields{
+							WithFields(logrus.Fields{
 								"error":           err.Error(),
 								"reconnect_count": cm.reconnectCount,
 							}).Warn("Reconnect failed")
@@ -192,7 +192,7 @@ func (cm *ConnectionManager) StartHealthMonitor(ctx context.Context, interval ti
 			} else {
 				go func() {
 					if err := cm.Reconnect(context.Background()); err != nil {
-						log.WithFields(logrus.Fields{
+						WithFields(logrus.Fields{
 							"error":           err.Error(),
 							"reconnect_count": cm.reconnectCount,
 						}).Warn("Reconnect failed")

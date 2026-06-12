@@ -7,7 +7,6 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"runtime"
@@ -118,7 +117,7 @@ func NewTLSConfigFromConfig(certFile, keyFile, caFile string, verifyCertificates
 	config.InsecureSkipVerify = !verifyCertificates
 
 	if !verifyCertificates {
-		log.Printf("WARNING: Certificate verification is DISABLED (insecure)")
+		Warn("Certificate verification is DISABLED (insecure)")
 	}
 
 	return config, nil
