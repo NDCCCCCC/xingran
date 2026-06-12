@@ -25,16 +25,30 @@ func NewUserOUService(db *gorm.DB, mapper *DeptOUmapper) *UserOUService {
 
 // HandleUserLoginAD 处理用户AD登录后的部门设置
 // 新增功能：当OU不存在时，自动创建部门及映射关系
+// 修复：处理软删除用户恢复场景
 func (s *UserOUService) HandleUserLoginAD(ctx context.Context, username, userDN, ouDN string) error {
 	// 1. 通过用户名查找系统用户
 	var user models.User
+	isUserDeleted := false
 	if err := s.db.WithContext(ctx).Where("username = ?", username).First(&user).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			// 用户不存在，跳过部门设置（由注册流程处理）
-			applogger.Infof("用户 %s 不存在于系统，跳过部门设置", username)
-			return nil
+			// 用户不存在，检查是否有软删除的同名用户
+			var deletedUser models.User
+			if err := s.db.WithContext(ctx).
+				Unscoped(). // 包含软删除记录
+				Where("username = ?", username).
+				First(&deletedUser).Error; err == nil {
+				// 找到软删除用户，标记需要恢复
+				isUserDeleted = true
+				applogger.Infof("用户 %s 已被软删除 (deleted_at=%v)，将尝试恢复", username, deletedUser.DeletedAt)
+			} else {
+				// 确实不存在，跳过部门设置（由注册流程处理）
+				applogger.Infof("用户 %s 不存在于系统，跳过部门设置", username)
+				return nil
+			}
+		} else {
+			return fmt.Errorf("查询用户失败: %w", err)
 		}
-		return fmt.Errorf("查询用户失败: %w", err)
 	}
 
 	// 2. 通过AD OU DN查找对应的部门
@@ -51,14 +65,25 @@ func (s *UserOUService) HandleUserLoginAD(ctx context.Context, username, userDN,
 		applogger.Infof("成功为用户 %s 自动创建部门: dept_id=%s", username, deptID)
 	}
 
-	// 3. 更新用户的部门和AD信息
-	if err := s.updateUserDeptAndADInfo(ctx, user.ID, deptID, userDN, ouDN); err != nil {
-		applogger.Errorf("更新用户 %s 部门信息失败: %v", username, err)
-		// 不阻断登录流程，只记录错误
-		return nil
+	// 3. 根据用户状态更新或恢复
+	if isUserDeleted {
+		// 恢复软删除用户并补充AD信息
+		if err := s.restoreDeletedUserWithADInfo(ctx, username, userDN, ouDN, deptID); err != nil {
+			applogger.Errorf("恢复软删除用户失败 %s: %v", username, err)
+			// 不阻断登录流程
+			return nil
+		}
+		applogger.Infof("用户 %s 登录时成功恢复并设置部门: dept_id=%s, ou_dn=%s", username, deptID, ouDN)
+	} else {
+		// 正常用户：更新部门和AD信息
+		if err := s.updateUserDeptAndADInfo(ctx, user.ID, deptID, userDN, ouDN); err != nil {
+			applogger.Errorf("更新用户 %s 部门信息失败: %v", username, err)
+			// 不阻断登录流程，只记录错误
+			return nil
+		}
+		applogger.Infof("用户 %s 登录时自动设置部门: dept_id=%s, ou_dn=%s", username, deptID, ouDN)
 	}
 
-	applogger.Infof("用户 %s 登录时自动设置部门: dept_id=%s, ou_dn=%s", username, deptID, ouDN)
 	return nil
 }
 
@@ -75,6 +100,69 @@ func (s *UserOUService) updateUserDeptAndADInfo(ctx context.Context, userID, dep
 		Model(&models.User{}).
 		Where("id = ?", userID).
 		Updates(updates).Error
+}
+
+// restoreDeletedUserWithADInfo 恢复被软删除的用户并补充AD信息
+// 用于处理用户被软删除后再次从AD登录的场景
+func (s *UserOUService) restoreDeletedUserWithADInfo(ctx context.Context, username, userDN, ouDN, deptID string) error {
+	// 1. 恢复软删除用户（设置 deleted_at 为 NULL）
+	if err := s.db.WithContext(ctx).
+		Model(&models.User{}).
+		Where("username = ?", username).
+		Update("deleted_at", nil).Error; err != nil {
+		return fmt.Errorf("恢复用户失败: %w", err)
+	}
+
+	// 2. 获取恢复后的用户信息
+	var user models.User
+	if err := s.db.WithContext(ctx).
+		Unscoped(). // 包含软删除记录
+		Where("username = ?", username).
+		First(&user).Error; err != nil {
+		return fmt.Errorf("查询恢复用户失败: %w", err)
+	}
+
+	// 3. 补充AD信息
+	updates := map[string]interface{}{
+		"dept_id":      deptID,
+		"ad_dn":        userDN,
+		"ad_ou_dn":     ouDN,
+		"ad_synced_at": time.Now(),
+	}
+
+	if err := s.db.WithContext(ctx).
+		Model(&models.User{}).
+		Where("id = ?", user.ID).
+		Updates(updates).Error; err != nil {
+		return fmt.Errorf("补充AD信息失败: %w", err)
+	}
+
+	// 4. 分配默认角色（如果用户没有角色）
+	var roleCount int64
+	if err := s.db.WithContext(ctx).
+		Table("sys_user_role").
+		Where("user_id = ?", user.ID).
+		Count(&roleCount).Error; err != nil {
+		applogger.Warnf("检查用户角色失败: %v", err)
+	}
+
+	if roleCount == 0 {
+		// 查找默认角色（通常是"普通用户"角色）
+		var defaultRole models.Role
+		if err := s.db.WithContext(ctx).
+			Where("role_key = ?", "common").
+			First(&defaultRole).Error; err == nil {
+			// 分配默认角色
+			if err := s.db.WithContext(ctx).
+				Exec("INSERT INTO sys_user_role (user_id, role_id) VALUES (?, ?)", user.ID, defaultRole.ID).Error; err != nil {
+				applogger.Warnf("分配默认角色失败: %v", err)
+				// 不阻断流程
+				}
+		}
+	}
+
+	applogger.Infof("恢复软删除用户成功: username=%s, user_id=%s, dept_id=%s", username, user.ID, deptID)
+	return nil
 }
 
 // GetUserDeptByADOU 获取用户AD OU对应的部门信息（辅助方法）

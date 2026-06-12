@@ -637,7 +637,7 @@ func (s *workstationDeviceService) SyncFromAsset(ctx context.Context, workstatio
 			return fmt.Errorf("添加资产设备失败: %w", err)
 		}
 
-		logger.Infof("[SyncFromAsset] 添加设备: SN=%s, Model=%s, Type=%s",
+		logger.Infof("[SyncFromAsset] 添加设备: SN=%s, Model=%v, Type=%v",
 			assetDevice.DeviceSN, assetDevice.DeviceModel, assetDevice.DeviceType)
 	}
 
