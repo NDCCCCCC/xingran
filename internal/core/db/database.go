@@ -327,6 +327,14 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate148CreateOpsAssetTable(d.DB); err != nil {
 			applogger.Errorf("创建资产管理表迁移失败: %v", err)
 		}
+		// 修复列配置visible字段默认值问题
+		if err := migrations.Migrate149FixColumnVisibleDefault(d.DB); err != nil {
+			applogger.Errorf("修复列配置visible字段默认值迁移失败: %v", err)
+		}
+		// 为工位设备关联表添加 IP 地址字段
+		if err := migrations.Migrate150AddWorkstationDeviceIPAddress(d.DB); err != nil {
+			applogger.Errorf("工位设备 IP 地址字段迁移失败: %v", err)
+		}
 
 	return nil
 }

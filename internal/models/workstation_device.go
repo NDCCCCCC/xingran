@@ -27,6 +27,7 @@ type WorkstationDevice struct {
 	DeviceModel   *string `gorm:"size:200" json:"deviceModel,omitempty"`                                      // 型号
 	DeviceType    *string `gorm:"size:100" json:"deviceType,omitempty"`                                       // 类型
 	MACAddress    *string `gorm:"size:100" json:"macAddress,omitempty"`                                       // MAC地址
+	IPAddress     *string `gorm:"size:64;index:idx_workstation_device_ip" json:"ipAddress,omitempty"`              // IP地址
 
 	// 责任人信息
 	ResponsibleUser   *string `gorm:"size:100" json:"responsibleUser,omitempty"`    // 责任人
