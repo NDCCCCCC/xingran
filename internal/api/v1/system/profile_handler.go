@@ -1,6 +1,8 @@
 package system
 
 import (
+	"errors"
+
 	"github.com/gin-gonic/gin"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
@@ -125,8 +127,8 @@ func (h *ProfileHandler) ChangePassword(c *gin.Context) {
 	}
 
 	if err := h.service.ChangePassword(c.Request.Context(), userID.(string), req.OldPassword, req.NewPassword); err != nil {
-		// 根据错误类型返回不同的错误码
-		if err.Error() == "旧密码错误" {
+		// P1 fix: 用 errors.Is 比较 sentinel error 替代字符串比较
+		if errors.Is(err, systemServices.ErrOldPasswordIncorrect) {
 			response.Error(c, apperrors.BadRequest("旧密码错误"))
 		} else {
 			response.Error(c, err)

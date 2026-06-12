@@ -2,6 +2,7 @@ package system
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -14,6 +15,11 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"gorm.io/gorm"
 )
+
+// P1 fix: 定义 sentinel error 替代字符串比较。
+// handler 用 errors.Is(err, ErrOldPasswordIncorrect) 而非
+// err.Error() == "旧密码错误" — 后者在错误信息本地化/修改时会静默失效。
+var ErrOldPasswordIncorrect = errors.New("旧密码错误")
 
 // ProfileService 个人设置服务接口
 type ProfileService interface {
@@ -145,7 +151,7 @@ func (s *profileService) ChangePassword(ctx context.Context, userID, oldPassword
 		if err != nil {
 			return fmt.Errorf("密码验证失败: %w", err)
 		}
-		return fmt.Errorf("旧密码错误")
+		return ErrOldPasswordIncorrect
 	}
 
 	// 3. 加密新密码
