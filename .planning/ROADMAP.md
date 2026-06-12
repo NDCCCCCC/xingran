@@ -385,6 +385,27 @@
 - 🖥️ Full-featured UI with add/edit/delete/sync operations
 - ⚡ Performance optimization with lazy loading
 
+### Phase 30: 前端性能优化(消除瀑布流、包大小、重渲染、JS性能)
+
+**Goal:** 基于 Vercel React 最佳实践审计，对 RuoYi-Next 前端做系统化性能优化：消除瀑布流、减小包大小、修复重渲染、提升 JS 性能。
+**Requirements**:
+- 首屏 JS ≤ 500KB（gzip）
+- 首屏路由 LCP ≤ 2.5s
+- vendor chunk 独立拆分：react / antd / echarts / three
+- 4 个重库按需加载：three.js / echarts / xlsx / @uiw/react-md-editor
+- 字典查询全局缓存 (React Query)
+- 资产列表（43 列）启用虚拟滚动
+- 5 条 ESLint 性能规则
+
+**Depends on:** Phase 29
+**Plans:** 4 plans (4 waves)
+
+Plans:
+- [ ] 30-01-PLAN.md — Wave 1: 基础设施 (Vite visualizer、manualChunks、500KB 阈值、基线)
+- [ ] 30-02-PLAN.md — Wave 2: 重库按需加载 (three/echarts/xlsx/md-editor 懒加载)
+- [ ] 30-03-PLAN.md — Wave 3: 查询层 (useDict、QueryClient 默认值、useTableQuery)
+- [ ] 30-04-PLAN.md — Wave 4: 渲染层 (虚拟滚动、React.memo、5 条 ESLint 规则)
+
 ---
 
     
