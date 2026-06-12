@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 )
 
 // ==================== SM4 Cipher Interface ====================
@@ -82,8 +84,17 @@ func decryptPassword(encrypted string) string {
 		return plaintext
 	}
 
-	// Both failed - assume plaintext (backward compatibility for pre-encryption data)
-	return encrypted
+	// F-03: 两种解密都失败时,不再回退返回原文 —
+	// 攻击者可通过 SQL 注入或直接修改 DB 写入伪加密字符串,
+	// 原逻辑会"解密失败 → 返回原文"使该字符串被当成 LDAP bind 密码,
+	// 等于完全绕过加密保护。改为返回空字符串,让后续 LDAP bind
+	// 因密码空而明确失败,且记录 SECURITY 级日志便于排查入侵痕迹。
+	applogger.Errorf(
+		"[SECURITY] decryptPassword: SM4 与 legacy AES 均解密失败,拒绝回退明文 "+
+			"(input_len=%d) — 请检查 DB 是否被篡改或加密密钥是否轮换不一致",
+		len(encrypted),
+	)
+	return ""
 }
 
 // ==================== Legacy AES-GCM (for backward compatibility) ====================
