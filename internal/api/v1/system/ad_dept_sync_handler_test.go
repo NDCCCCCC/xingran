@@ -16,7 +16,7 @@ func TestSyncDeptToADHandler(t *testing.T) {
 	router := gin.New()
 
 	// 创建Handler（传入nil服务用于测试）
-	handler := NewADDeptSyncHandler(nil)
+	handler := NewADDeptSyncHandler(nil, nil)
 	router.POST("/sync/dept-to-ad", handler.SyncDeptToAD)
 
 	// 测试正常请求
@@ -40,7 +40,7 @@ func TestGetDeptSyncStatus(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	handler := NewADDeptSyncHandler(nil)
+	handler := NewADDeptSyncHandler(nil, nil)
 	router.GET("/sync/dept-status/:configId", handler.GetDeptSyncStatus)
 
 	req, _ := http.NewRequest("GET", "/sync/dept-status/config-1", nil)
@@ -55,7 +55,7 @@ func TestTriggerDeptSync(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	handler := NewADDeptSyncHandler(nil)
+	handler := NewADDeptSyncHandler(nil, nil)
 	router.POST("/sync/trigger", handler.TriggerDeptSync)
 
 	reqBody := map[string]string{
