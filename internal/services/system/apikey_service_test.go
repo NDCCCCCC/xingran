@@ -49,7 +49,12 @@ func setupTestDB(t *testing.T) *gorm.DB {
 			pwd_update_time DATETIME,
 			pwd_expire_days INTEGER,
 			init_flag BOOLEAN,
-			remark TEXT
+			remark TEXT,
+			auth_source TEXT,
+			ad_username TEXT,
+			ad_dn TEXT,
+			ad_ou_dn TEXT,
+			ad_synced_at DATETIME
 		)
 	`).Error
 	require.NoError(t, err)
@@ -117,7 +122,10 @@ func createTestUser(t *testing.T, db *gorm.DB) *models.User {
 
 // createTestAPIKey 创建测试API密钥
 func createTestAPIKey(t *testing.T, db *gorm.DB, userID string, isActive bool) *models.APIKey {
-	key := "rec_" + "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+	// 每次生成唯一 key,避免软删除残留导致 UNIQUE 冲突。
+	// 必须恰好 64 hex chars 以通过 isValidKeyFormat(KeyLength=64)。
+	// 高 16 位用 nanos 填充保证唯一,低 48 位填 0 凑足长度。
+	key := fmt.Sprintf("rec_%016x%048x", time.Now().UnixNano(), 0)
 
 	apiKey := &models.APIKey{
 		Name:        "Test API Key",
@@ -132,15 +140,15 @@ func createTestAPIKey(t *testing.T, db *gorm.DB, userID string, isActive bool) *
 	return apiKey
 }
 
-// cleanupTestData 清理测试数据
+// cleanupTestData 清理测试数据(Unscoped 真删,避免软删记录占用 unique key)
 func cleanupTestData(t *testing.T, db *gorm.DB) {
-	err := db.Where("1 = 1").Delete(&models.APIKeyUsageLog{}).Error
+	err := db.Unscoped().Where("1 = 1").Delete(&models.APIKeyUsageLog{}).Error
 	require.NoError(t, err)
 
-	err = db.Where("1 = 1").Delete(&models.APIKey{}).Error
+	err = db.Unscoped().Where("1 = 1").Delete(&models.APIKey{}).Error
 	require.NoError(t, err)
 
-	err = db.Where("1 = 1").Delete(&models.User{}).Error
+	err = db.Unscoped().Where("1 = 1").Delete(&models.User{}).Error
 	require.NoError(t, err)
 }
 
