@@ -187,10 +187,9 @@ func (s *ConfigService) Delete(ctx context.Context, id string) error {
 func (s *ConfigService) TestConnection(ctx context.Context, config *models.ADConfig) error {
 	applogger.Infof("[ADTest] 开始测试AD连接: configID=%s, server=%s:%d, baseDN=%s", config.ID, config.ServerAddress, config.ServerPort, config.BaseDN)
 
-	// 解密密码
-	applogger.Infof("[ADTest] 密码解密前长度=%d", len(config.AdminPassword))
+	// P1 fix: 解密密码 — 移除密码长度日志(侧信道),
+	// 长度泄露在攻击者通过日志枚举多个配置时可缩小破解空间
 	config.AdminPassword = decryptPassword(config.AdminPassword)
-	applogger.Infof("[ADTest] 密码解密后长度=%d", len(config.AdminPassword))
 
 	applogger.Infof("[ADTest] 创建LDAP客户端")
 	client := NewLDAPClient(config)
