@@ -169,12 +169,11 @@ func RequestDecryption(encryptor *crypto.RequestEncryptor, staticConfig *Request
 			return
 		}
 
-		// DEBUG: 打印解密后的完整数据
-		applogger.WithFields(map[string]interface{}{
-			"path":                    c.Request.URL.Path,
-			"decrypted_data_preview":  string(decryptedData),
-			"decrypted_data_length":   len(decryptedData),
-		}).Info("[DECRYPTION DEBUG] 解密后的完整数据")
+		// F-05: 已移除 [DECRYPTION DEBUG] 日志块 —
+		// 原代码将 string(decryptedData) 作为 decrypted_data_preview 写入 INFO 日志,
+		// 该数据是包含明文密码等敏感字段的完整解密请求体,会被持久化到日志文件,
+		// 构成密码等敏感数据落盘的严重安全风险。
+		// 下方 line 187+ 的"请求解密成功"日志只记录非敏感元数据,符合最小化原则。
 
 		// 替换请求体
 		c.Request.Body = io.NopCloser(bytes.NewBuffer(decryptedData))
