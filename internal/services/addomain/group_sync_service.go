@@ -334,6 +334,14 @@ func (s *GroupSyncService) syncGroupEntries(ctx context.Context, config *models.
 
 // handleDeletedGroups detects groups that exist in DB but not in LDAP and soft-deletes them
 func (s *GroupSyncService) handleDeletedGroups(ctx context.Context, config *models.ADConfig, ldapEntries []*ldap.Entry, result *GroupSyncResult) error {
+	// P1 fix: 安全闸门 — 如果 LDAP 返回为空,直接拒绝任何删除。
+	// 否则 AD 不可达/网络抖动/搜索 BaseDN 配错都会导致整个 DB 组全表软删除,
+	// 此时用户彻底失去所有 AD 组关联,恢复极其困难。
+	if len(ldapEntries) == 0 {
+		applogger.Warnf("[组同步] 跳过过期组清理: LDAP 返回 0 条记录,可能 AD 不可达或 BaseDN 配置错误")
+		return nil
+	}
+
 	// Build a set of current LDAP group DNs
 	ldapGroupDNs := make(map[string]bool, len(ldapEntries))
 	for _, entry := range ldapEntries {
@@ -354,6 +362,16 @@ func (s *GroupSyncService) handleDeletedGroups(ctx context.Context, config *mode
 	}
 
 	if len(deletedDNs) > 0 {
+		// P1 fix: 阈值保护 — 若拟删除超过现有 DB 组的 50%,拒绝并要求人工确认。
+		// 防止 LDAP 返回严重不完整(部分 OU 搜索失败/分页中断)时误删大量数据。
+		if len(staleGroups) > 0 && len(deletedDNs)*2 > len(staleGroups) {
+			applogger.Warnf(
+				"[组同步] 跳过过期组清理: 拟删除 %d/%d 个组(>50%%),"+
+					"可能是 LDAP 返回不完整。请人工核实后手动清理",
+				len(deletedDNs), len(staleGroups))
+			return nil
+		}
+
 		// Soft-delete stale groups
 		if err := s.db.WithContext(ctx).
 			Where("ad_config_id = ? AND group_dn IN ?", config.ID, deletedDNs).
