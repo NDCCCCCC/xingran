@@ -170,6 +170,17 @@ func (c *LDAPClient) SearchComputers(baseDN string) ([]*ldap.Entry, error) {
 
 // searchWithPaging 使用 LDAP 分页控制进行搜索
 func (c *LDAPClient) searchWithPaging(baseDN, filter string, attributes []string, pageSize uint32) ([]*ldap.Entry, error) {
+	return c.searchWithPagingDepth(baseDN, filter, attributes, pageSize, 0)
+}
+
+// P1 fix: maxSearchRetryDepth 限制 handleSearchError 的 SizeLimitExceeded
+// 递归降级深度。原实现 minPageSize=100 时最多 ~log2(2^32/100) ≈ 25 层,
+// 理论上不致栈溢出,但配合 attacker 控制的 LDAP 服务器可制造更深降级链。
+// 4 层(pageSize 减半 4 次 = 1/16)足够覆盖正常分页限制场景。
+const maxSearchRetryDepth = 4
+
+// searchWithPagingDepth 带递归深度控制的内部实现
+func (c *LDAPClient) searchWithPagingDepth(baseDN, filter string, attributes []string, pageSize uint32, depth int) ([]*ldap.Entry, error) {
 	var allEntries []*ldap.Entry
 	pagingControl := ldap.NewControlPaging(pageSize)
 
@@ -188,7 +199,7 @@ func (c *LDAPClient) searchWithPaging(baseDN, filter string, attributes []string
 
 		sr, err := c.conn.Search(searchRequest)
 		if err != nil {
-			return c.handleSearchError(err, baseDN, filter, attributes, pageSize)
+			return c.handleSearchError(err, baseDN, filter, attributes, pageSize, depth)
 		}
 
 		allEntries = append(allEntries, sr.Entries...)
@@ -208,10 +219,13 @@ func (c *LDAPClient) searchWithPaging(baseDN, filter string, attributes []string
 }
 
 // handleSearchError 处理搜索错误，必要时重试
-func (c *LDAPClient) handleSearchError(err error, baseDN, filter string, attributes []string, pageSize uint32) ([]*ldap.Entry, error) {
+func (c *LDAPClient) handleSearchError(err error, baseDN, filter string, attributes []string, pageSize uint32, depth int) ([]*ldap.Entry, error) {
 	if ldap.IsErrorWithCode(err, ldap.LDAPResultSizeLimitExceeded) {
+		if depth >= maxSearchRetryDepth {
+			return nil, fmt.Errorf("搜索结果超过服务器限制,递归降级 %d 次后仍失败 (pageSize=%d)", depth, pageSize)
+		}
 		if pageSize > minPageSize {
-			return c.searchWithPaging(baseDN, filter, attributes, pageSize/2)
+			return c.searchWithPagingDepth(baseDN, filter, attributes, pageSize/2, depth+1)
 		}
 		return nil, fmt.Errorf("搜索结果超过服务器限制，即使使用分页也无法获取所有结果")
 	}
