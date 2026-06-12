@@ -328,8 +328,11 @@ func (s *userService) List(ctx context.Context, params requests.UserListParams) 
 	offset := (params.Current - 1) * params.PageSize
 
 	// 定义 SQL JOIN 查询
+	// P1 fix: sys_user.dept_id 是 VARCHAR,sys_dept.id 是 UUID;原直接 cast::uuid
+	// 在 dept_id 为空字符串 '' 时会 panic 'invalid input syntax for type uuid'。
+	// 用 NULLIF 把空字符串先转 NULL,LEFT JOIN 会自动跳过 NULL 行,不再 500。
 	userJoinSelect := "sys_user.*, sys_dept.dept_name, sys_dept.ancestors"
-	userJoinClause := "LEFT JOIN sys_dept ON sys_dept.id = sys_user.dept_id::uuid"
+	userJoinClause := "LEFT JOIN sys_dept ON sys_dept.id = NULLIF(sys_user.dept_id, '')::uuid"
 
 	if err := query.Select(userJoinSelect).
 		Joins(userJoinClause).
