@@ -350,6 +350,11 @@ func (c *PortCollector) parseCiscoPortSecurityLine(line string, result map[strin
 }
 
 // SaveToDatabase 保存端口状态到数据库
+//
+// P1 fix: 改为 GORM CreateInBatches 批量插入,替代原"N 次 Create"循环。
+// 每台设备数十到上百端口,N 台设备同时采集会打爆 DB 连接池
+// (每个 Create 一次 round-trip)。批量插入将 N 次 INSERT 合并为
+// 单次 INSERT 多行,DB 往返从 N 降到 ceil(N/batchSize) ≈ 1-2 次。
 func (c *PortCollector) SaveToDatabase(deviceID string, entries []PortStatusEntry) error {
 	if len(entries) == 0 {
 		return nil
@@ -357,9 +362,10 @@ func (c *PortCollector) SaveToDatabase(deviceID string, entries []PortStatusEntr
 
 	collectedAt := time.Now()
 
-	// 批量插入新数据
+	// 预分配 slice,避免 append 扩容
+	portStatuses := make([]models.DevicePortStatus, 0, len(entries))
 	for _, entry := range entries {
-		portStatus := models.DevicePortStatus{
+		portStatuses = append(portStatuses, models.DevicePortStatus{
 			DeviceID:            deviceID,
 			InterfaceName:       entry.InterfaceName,
 			AdminStatus:         entry.AdminStatus,
@@ -371,10 +377,13 @@ func (c *PortCollector) SaveToDatabase(deviceID string, entries []PortStatusEntr
 			MaxMACCount:         entry.MaxMACCount,
 			CurrentMACCount:     entry.CurrentMACCount,
 			CollectedAt:         collectedAt,
-		}
-		if err := c.db.Create(&portStatus).Error; err != nil {
-			return fmt.Errorf("保存端口状态失败: %w", err)
-		}
+		})
+	}
+
+	// batchSize=100 平衡内存(每行 ~200 B,100 行 ~20 KB)与单语句大小
+	const batchSize = 100
+	if err := c.db.CreateInBatches(portStatuses, batchSize).Error; err != nil {
+		return fmt.Errorf("批量保存端口状态失败: %w", err)
 	}
 
 	return nil
