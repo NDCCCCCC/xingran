@@ -143,9 +143,16 @@ func (h *UserHandler) Update(c *gin.Context) {
 	}
 
 	// 系统更新成功后，异步同步到AD域控（降级处理：不阻断系统更新）
+	// F-10 (最小化防御): 加 panic recover 防止 AD 同步中的解引用/类型断言
+	// panic 级联导致进程崩溃。完整的重试/dedupe/消息队列集成留给 manual phase。
 	if h.userADSyncService != nil {
 		adSyncReq := h.buildADSyncMap(&req)
 		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					applogger.Errorf("[AD-SYNC] SyncUserUpdateToAD panic 已恢复 [ID=%s]: panic=%v", id, r)
+				}
+			}()
 			ctx := context.Background()
 			if err := h.userADSyncService.SyncUserUpdateToAD(ctx, id, adSyncReq); err != nil {
 				applogger.Errorf("同步用户到AD失败 [ID=%s]: %v", id, err)
