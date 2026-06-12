@@ -86,12 +86,17 @@ func checkUserPermission(core *core.Core, userID, permission string) bool {
 	// 2. 如果精确匹配失败，尝试通过子菜单权限检查父菜单权限
 	// 支持子菜单权限自动包含父菜单权限：勾选子菜单时，自动拥有父菜单的页面访问权限
 	// 例如：用户有 vdi:vm:query 权限，检查 vdi:vm:list 时应该通过
+	//
+	// P1 fix (权限提升): 仅允许"按钮类(F)子权限 → 父菜单页面访问权"继承,
+	// 不允许"菜单类(C)子权限 → 父菜单",否则用户拥有任一子页面就自动获得父页面
+	// 的全部 :list/:view 权限,在精细化数据权限场景构成越权读取。
 	var menu models.Menu
 	err = core.DB.GetDB().Where("perms = ? AND status = ?", permission, models.MenuStatusNormal).First(&menu).Error
 	if err == nil && menu.ID != "" {
-		// 查找该菜单的所有子菜单
+		// 查找该菜单的所有"按钮"子菜单 (menu_type='F')
 		var childMenus []models.Menu
-		err = core.DB.GetDB().Where("parent_id = ? AND status = ?", menu.ID, models.MenuStatusNormal).Find(&childMenus).Error
+		err = core.DB.GetDB().Where("parent_id = ? AND menu_type = ? AND status = ?",
+			menu.ID, models.MenuTypeButton, models.MenuStatusNormal).Find(&childMenus).Error
 		if err == nil {
 			// 提取子菜单的权限标识
 			childPerms := make([]interface{}, 0)
