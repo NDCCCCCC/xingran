@@ -42,6 +42,12 @@ type WorkstationDeviceService interface {
 
 	// SetPrimaryDevice 设置主设备
 	SetPrimaryDevice(ctx context.Context, id string) error
+
+	// SyncFromAD 同步域控设备到实际结果
+	SyncFromAD(ctx context.Context, workstationID string) error
+
+	// SyncFromAsset 同步资产设备到实际结果
+	SyncFromAsset(ctx context.Context, workstationID string) error
 }
 
 // SetPrimaryAndSaveRequest 设置主设备并保存请求
