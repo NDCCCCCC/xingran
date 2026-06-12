@@ -7,6 +7,7 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"fmt"
+	"math/big"
 	"strconv"
 	"strings"
 
@@ -159,14 +160,18 @@ func GenerateRandomPassword(length int) (string, error) {
 	// 定义字符集：大小写字母、数字、特殊字符
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*"
 	password := make([]byte, length)
+	charsetLen := big.NewInt(int64(len(charset)))
 
-	// 生成随机密码
+	// P1 fix: 使用 crypto/rand.Int 替代 randomByte[0] % len(charset)。
+	// 取模会引入模偏置 (charset=70 时 256 mod 70 = 46,前 46 字符出现概率
+	// 比后 24 字符高 ~20%),降低密码熵。
+	// rand.Int(reader, max) 使用拒绝采样保证 [0, max) 均匀分布,无偏置。
 	for i := range password {
-		randomByte := make([]byte, 1)
-		if _, err := rand.Read(randomByte); err != nil {
+		idx, err := rand.Int(rand.Reader, charsetLen)
+		if err != nil {
 			return "", fmt.Errorf("生成随机密码失败: %w", err)
 		}
-		password[i] = charset[randomByte[0]%byte(len(charset))]
+		password[i] = charset[idx.Int64()]
 	}
 
 	return string(password), nil
