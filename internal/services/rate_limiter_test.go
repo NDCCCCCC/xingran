@@ -14,7 +14,9 @@ func TestNewRateLimiter(t *testing.T) {
 
 	assert.NotNil(t, limiter)
 	assert.NotNil(t, limiter.limits)
-	assert.NotNil(t, limiter.windows)
+	// 避免 sync.Map 的 noCopy 检查: 通过 Load 验证初始化
+	_, loaded := limiter.windows.Load("never-set-key")
+	assert.False(t, loaded, "未设置的 key 应返回 loaded=false")
 
 	// 验证默认限制配置
 	assert.Contains(t, limiter.limits, "read")

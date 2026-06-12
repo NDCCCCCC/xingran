@@ -28,6 +28,7 @@ func TestUpdateUserWithADSync(t *testing.T) {
 		// - 2. UserADSyncService.SyncUserUpdateToAD被调用（异步）
 		// - 3. 返回成功响应
 
+		_ = router // TODO: 集成测试需要完整的环境配置（Mock UserHandler / UserADSyncService / 测试数据库）
 		assert.True(t, true, "集成测试需要完整的环境配置")
 	})
 }
