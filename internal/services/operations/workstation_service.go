@@ -170,57 +170,91 @@ func (s *workstationService) BatchUpdatePositions(ctx context.Context, items []P
 	}
 
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// 构建 WHEN 子句和收集 IDs
-		var positionXWhens, positionYWhens, rotationWhens, widthWhens, depthWhens, deskTypeWhens strings.Builder
-		var ids []string
+		// F-19: 重构为 GORM 占位符参数化查询,彻底消除 SQL 注入。
+		// 原代码用 fmt.Sprintf 直接拼接 item.ID (UUID 字符串若含 ' 即可注入)
+		// 与 PositionX/Y 等整数字段。本实现按 SQL 中 ? 的出现顺序顺序追加 args。
 
+		ids := make([]string, 0, len(items))
+		args := make([]interface{}, 0, len(items)*12)
+
+		// 必填: position_x / position_y 的 CASE WHEN
+		var positionXClause, positionYClause strings.Builder
+		positionXClause.WriteString("position_x = CASE id ")
+		positionYClause.WriteString("position_y = CASE id ")
 		for _, item := range items {
 			ids = append(ids, item.ID)
-			positionXWhens.WriteString(fmt.Sprintf("WHEN '%s' THEN %d ", item.ID, item.PositionX))
-			positionYWhens.WriteString(fmt.Sprintf("WHEN '%s' THEN %d ", item.ID, item.PositionY))
+			positionXClause.WriteString("WHEN ? THEN ? ")
+		}
+		positionXClause.WriteString("END")
+		for range items {
+			positionYClause.WriteString("WHEN ? THEN ? ")
+		}
+		positionYClause.WriteString("END")
 
-			if item.Rotation != nil {
-				rotationWhens.WriteString(fmt.Sprintf("WHEN '%s' THEN %d ", item.ID, *item.Rotation))
+		// 按 SQL 模板中 ? 的出现顺序追加 args
+		for _, item := range items {
+			args = append(args, item.ID, item.PositionX)
+		}
+		for _, item := range items {
+			args = append(args, item.ID, item.PositionY)
+		}
+
+		setClauses := []string{positionXClause.String(), positionYClause.String()}
+
+		// 可选字段:rotation / width / depth / desk_type
+		// 提取生成 CASE 子句和 args 的公共逻辑
+		appendOptionalClause := func(col string, valuer func(PositionUpdateItem) (int, bool)) {
+			var b strings.Builder
+			b.WriteString(col + " = CASE id ")
+			added := 0
+			for _, item := range items {
+				if v, ok := valuer(item); ok {
+					_ = v
+					b.WriteString("WHEN ? THEN ? ")
+					added++
+				}
 			}
-			if item.Width != nil {
-				widthWhens.WriteString(fmt.Sprintf("WHEN '%s' THEN %d ", item.ID, *item.Width))
+			if added == 0 {
+				return
 			}
-			if item.Depth != nil {
-				depthWhens.WriteString(fmt.Sprintf("WHEN '%s' THEN %d ", item.ID, *item.Depth))
+			b.WriteString("ELSE " + col + " END")
+			setClauses = append(setClauses, b.String())
+			for _, item := range items {
+				if v, ok := valuer(item); ok {
+					args = append(args, item.ID, v)
+				}
 			}
-			if item.DeskType != nil {
-				deskTypeWhens.WriteString(fmt.Sprintf("WHEN '%s' THEN %d ", item.ID, *item.DeskType))
+		}
+		appendOptionalClause("rotation", func(it PositionUpdateItem) (int, bool) {
+			if it.Rotation == nil {
+				return 0, false
 			}
-		}
+			return *it.Rotation, true
+		})
+		appendOptionalClause("width", func(it PositionUpdateItem) (int, bool) {
+			if it.Width == nil {
+				return 0, false
+			}
+			return *it.Width, true
+		})
+		appendOptionalClause("depth", func(it PositionUpdateItem) (int, bool) {
+			if it.Depth == nil {
+				return 0, false
+			}
+			return *it.Depth, true
+		})
+		appendOptionalClause("desk_type", func(it PositionUpdateItem) (int, bool) {
+			if it.DeskType == nil {
+				return 0, false
+			}
+			return *it.DeskType, true
+		})
 
-		// 动态构建 SET 子句，只包含有值的字段
-		// 避免 PostgreSQL 语法错误：CASE 语句必须至少有一个 WHEN 子句
-		var setClauses []string
+		// WHERE id IN (?) — GORM 接受 []string 参数展开
+		sql := fmt.Sprintf("UPDATE sys_workstation SET %s WHERE id IN ?", strings.Join(setClauses, ", "))
+		args = append(args, ids)
 
-		// position_x 和 position_y 是必填字段
-		setClauses = append(setClauses, fmt.Sprintf("position_x = CASE id %sEND", positionXWhens.String()))
-		setClauses = append(setClauses, fmt.Sprintf("position_y = CASE id %sEND", positionYWhens.String()))
-
-		// 可选字段：只在有值时才包含
-		if rotationWhens.Len() > 0 {
-			setClauses = append(setClauses, fmt.Sprintf("rotation = CASE id %sELSE rotation END", rotationWhens.String()))
-		}
-		if widthWhens.Len() > 0 {
-			setClauses = append(setClauses, fmt.Sprintf("width = CASE id %sELSE width END", widthWhens.String()))
-		}
-		if depthWhens.Len() > 0 {
-			setClauses = append(setClauses, fmt.Sprintf("depth = CASE id %sELSE depth END", depthWhens.String()))
-		}
-		if deskTypeWhens.Len() > 0 {
-			setClauses = append(setClauses, fmt.Sprintf("desk_type = CASE id %sELSE desk_type END", deskTypeWhens.String()))
-		}
-
-		// 构建完整的 SQL
-		idList := "'" + strings.Join(ids, "', '") + "'"
-		sql := fmt.Sprintf("UPDATE sys_workstation SET %s WHERE id IN (%s)",
-			strings.Join(setClauses, ", "), idList)
-
-		if err := tx.Exec(sql).Error; err != nil {
+		if err := tx.Exec(sql, args...).Error; err != nil {
 			return fmt.Errorf("批量更新工位位置失败: %w", err)
 		}
 
