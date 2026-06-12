@@ -53,16 +53,6 @@ func ExampleMaxPageSize() {
 	_ = maxPageSize
 }
 
-// ExampleUserStatusEnabled 展示用户状态常量的使用
-func ExampleUserStatusEnabled() {
-	// 使用用户状态常量
-	userStatus := UserStatusEnabled // 0
-	_ = userStatus
-}
-
-// ExampleRoleStatusDisabled 展示角色状态常量的使用
-func ExampleRoleStatusDisabled() {
-	// 使用角色状态常量
-	roleStatus := RoleStatusDisabled // 1
-	_ = roleStatus
-}
+// 注：原本包含 ExampleUserStatusEnabled / ExampleRoleStatusDisabled 两个示例，
+// 展示已删除的 internal/constants/status.go 中的状态常量。
+// 2026-06-12 清理死代码时一并移除。
