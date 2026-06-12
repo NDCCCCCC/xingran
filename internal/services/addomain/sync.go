@@ -9,6 +9,7 @@ import (
 	"github.com/go-ldap/ldap/v3"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	"golang.org/x/sync/singleflight"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -16,6 +17,13 @@ import (
 // SyncService AD数据同步服务
 type SyncService struct {
 	db *gorm.DB
+	// P1 fix: singleflight 防止同一 configID 的同步并发执行
+	// (scheduler 5 分钟轮询 + 用户手动点击 + 调度漂移叠加),
+	// 否则两份同步流程同时跑会产生:
+	//   - LDAP 双倍请求加重 AD 服务器负载
+	//   - 中间状态 DB 写冲突 (OU/Group/User 重复 upsert)
+	//   - 部分软删除被另一份并发恢复导致状态错乱
+	syncGroup singleflight.Group
 }
 
 // NewSyncService 创建同步服务
@@ -42,6 +50,29 @@ func (s *SyncService) SyncDataByID(ctx context.Context, configID string, syncTyp
 
 // SyncData 同步数据
 func (s *SyncService) SyncData(ctx context.Context, config *models.ADConfig, syncType string) (*SyncResult, error) {
+	// P1 fix: 使用 singleflight 保证同 configID + syncType 的并发同步合并为一次。
+	// scheduler 轮询 + 手动触发 + 调度漂移并发场景下:
+	//   - 第一个 goroutine 真正执行同步
+	//   - 后续相同 key 的 goroutine 共享结果,不重复发起 LDAP/写库
+	//   - 极大降低 AD 负载与 DB 写冲突
+	key := fmt.Sprintf("sync:%s:%s", config.ID, syncType)
+	v, err, shared := s.syncGroup.Do(key, func() (interface{}, error) {
+		return s.syncDataInternal(ctx, config, syncType)
+	})
+	if shared {
+		applogger.Infof("[AD同步] 合并并发请求 key=%s, 复用同一次执行结果", key)
+	}
+	if err != nil {
+		return nil, err
+	}
+	if v == nil {
+		return nil, nil
+	}
+	return v.(*SyncResult), nil
+}
+
+// syncDataInternal 实际执行同步逻辑(由 singleflight 包裹保证互斥)
+func (s *SyncService) syncDataInternal(ctx context.Context, config *models.ADConfig, syncType string) (*SyncResult, error) {
 	overallStart := time.Now()
 	applogger.Infof("[AD同步] 开始同步配置: %s", config.ConfigName)
 
