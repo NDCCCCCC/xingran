@@ -262,11 +262,16 @@ func (c *Core) Init() error {
 	}
 
 	// 10. 初始化定时任务调度器
+	// F-16 (部分): Scheduler.Start 失败必须终止启动 —
+	// 所有 cron 任务(AD 同步/工单/MAC清理/VDI 等)都依赖它,
+	// 调度器静默失败会导致这些后台业务全部停摆而管理员无任何感知。
 	c.Scheduler = scheduler.NewScheduler(c.GetDB())
 	if err := c.Scheduler.Start(context.Background()); err != nil {
-		applogger.Warnf("启动调度器失败: %v", err)
-	} else {
-		applogger.Infof("定时任务调度器启动成功")
+		return fmt.Errorf("启动调度器失败: %w", err)
+	}
+	applogger.Infof("定时任务调度器启动成功")
+
+	{
 
 		// 设置全局调度器引用（供定时任务使用）
 		scheduler.SetGlobalScheduler(c.Scheduler)
