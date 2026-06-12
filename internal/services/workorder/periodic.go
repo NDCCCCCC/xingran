@@ -312,6 +312,9 @@ func (s *PeriodicService) GenerateWorkOrder(ctx context.Context, templateID stri
 	// 确定处理人
 	var assigneeID *string
 	var isAutoAssigned bool
+	// F-12: rotationCounted 标记 Rotation 路径是否已通过 UPDATE...RETURNING 原子 +1,
+	// 避免下方 line 447 重复 +1 让 total_generated 翻倍
+	var rotationCounted bool
 	var dutyPoolID *string
 	var dutyType string
 
@@ -364,19 +367,33 @@ func (s *PeriodicService) GenerateWorkOrder(ctx context.Context, templateID stri
 		if template.AssignTargetID != nil {
 			dutyPoolID = template.AssignTargetID
 
-			// 获取已生成的工单数量
-			generatedCount := template.TotalGenerated
-
 			// 查询值班池成员
 			var members []models.DutyPoolMember
 			if err := s.db.WithContext(ctx).
 				Where("pool_id = ?", *dutyPoolID).
 				Order("member_order ASC").
 				Find(&members).Error; err == nil && len(members) > 0 {
-				// 根据已生成数量选择成员（轮询）
-				selectedIndex := generatedCount % len(members)
-				assigneeID = &members[selectedIndex].UserID
-				fmt.Printf("轮询分配：从值班池 %s 中选择成员 %s（索引 %d）\n", *dutyPoolID, *assigneeID, selectedIndex)
+				// F-12 fix: 用 UPDATE...RETURNING 原子化 total_generated +1,
+				// 杜绝并发场景下两个 goroutine 读取相同 generatedCount 后选中
+				// 同一成员的 lost update bug。
+				// RETURNING 返回 +1 后的新值,(newCount-1) 即"本次分配前"的序号,
+				// 取模选择成员。下方 line 447 的 +1 因已在此处完成需跳过。
+				var newCount int64
+				if err := s.db.WithContext(ctx).
+					Raw("UPDATE sys_periodic_workorder_template SET total_generated = total_generated + 1 WHERE id = ? RETURNING total_generated", template.ID).
+					Scan(&newCount).Error; err == nil {
+					selectedIndex := int(newCount-1) % len(members)
+					assigneeID = &members[selectedIndex].UserID
+					fmt.Printf("[F-12 原子分配] 值班池 %s 选中成员 %s (索引 %d/%d, total_generated → %d)\n",
+						*dutyPoolID, *assigneeID, selectedIndex, len(members), newCount)
+					rotationCounted = true
+				} else {
+					// 表名/RETURNING 不可用时降级为原逻辑(SQLite 测试或未 migrate)
+					generatedCount := template.TotalGenerated
+					selectedIndex := generatedCount % len(members)
+					assigneeID = &members[selectedIndex].UserID
+					fmt.Printf("[F-12 降级] RETURNING 不可用,使用 generatedCount=%d 选择成员: %v\n", generatedCount, err)
+				}
 			} else {
 				fmt.Printf("值班池 %s 中没有找到有效成员\n", *dutyPoolID)
 			}
@@ -444,7 +461,10 @@ func (s *PeriodicService) GenerateWorkOrder(ctx context.Context, templateID stri
 	}
 
 	// 更新模板的生成计数和下次执行时间
-	s.db.WithContext(ctx).Model(&template).UpdateColumn("total_generated", gorm.Expr("total_generated + 1"))
+	// F-12: 若 Rotation 路径已经原子 +1,跳过本次更新避免计数翻倍
+	if !rotationCounted {
+		s.db.WithContext(ctx).Model(&template).UpdateColumn("total_generated", gorm.Expr("total_generated + 1"))
+	}
 
 	c := cron.New(cron.WithSeconds(), cron.WithLocation(time.Local))
 	entryID, _ := c.AddFunc(template.CronExpression, func() {})
