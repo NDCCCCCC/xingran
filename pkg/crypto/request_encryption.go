@@ -26,8 +26,15 @@ type EncryptedRequest struct {
 }
 
 const (
-	// maxTimeDiff 允许的最大时间差（秒）
-	maxTimeDiff = 300
+	// maxTimeDiff 允许的最大时间差(秒)
+	//
+	// P1 fix: 从 300s (5 min) 收紧到 120s (2 min)。
+	// 原 300s 给攻击者 5 分钟内重放窗口偏长,降低抗重放效力。
+	// 120s 平衡了 NTP 时钟漂移容忍 (±60s 是 NTP-managed 客户端的合理基线)
+	// 和网络/处理延迟 (留 60s buffer)。
+	// 注意: nonce 清理周期也会随之变为 maxTimeDiff*2=240s,
+	// 与 cleanupExpiredNonces ticker 自动联动 (见 nonce_storage.go)。
+	maxTimeDiff = 120
 	// minTimestamp 最小有效时间戳（2020-01-01）
 	minTimestamp = 1577836800
 )
