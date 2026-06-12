@@ -226,9 +226,22 @@ func ValidateTokenWithSM2(tokenString string, publicKey *sm2.PublicKey) (*Claims
 		return nil, fmt.Errorf("token contains an invalid number of segments")
 	}
 
-	_, err := base64.RawURLEncoding.DecodeString(parts[0])
+	// P1 fix (algorithm confusion): 必须先解析 header 并严格校验 alg 字段。
+	// 之前直接 `_, err := DecodeString(parts[0])` 丢弃 header,攻击者可把
+	// alg 改为 "none" 或 "HS256",服务端仍用 SM2 校验,通过算法误用绕过签名。
+	headerBytes, err := base64.RawURLEncoding.DecodeString(parts[0])
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode token header: %w", err)
+	}
+	var header struct {
+		Alg string `json:"alg"`
+		Typ string `json:"typ"`
+	}
+	if err := json.Unmarshal(headerBytes, &header); err != nil {
+		return nil, fmt.Errorf("failed to parse token header: %w", err)
+	}
+	if header.Alg != sm2Method.Alg() {
+		return nil, fmt.Errorf("unexpected JWT signing algorithm %q (expected %q)", header.Alg, sm2Method.Alg())
 	}
 
 	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
