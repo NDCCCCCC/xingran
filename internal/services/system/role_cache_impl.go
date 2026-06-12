@@ -196,18 +196,21 @@ func (s *roleCacheService) queryDepts(ctx context.Context, roleID string) ([]mod
 
 // InvalidateRoleCache 失效角色缓存
 func (s *roleCacheService) InvalidateRoleCache(ctx context.Context, roleID string) error {
-	keys := []string{
+	// F-18: 含通配符 "*" 的键必须走 DeleteByPattern,否则被当字面量精确删除,失效无效。
+	patterns := []string{
 		services.CacheKeyRoleAll + "*",
 		services.CacheKeyRoleEnabled + "*",
 	}
+	InvalidateCacheByPattern(ctx, s.cache, patterns, "ROLE")
+
 	if roleID != "" {
-		keys = append(keys,
-			services.CacheKeyRoleMenus+":"+roleID,
-			services.CacheKeyRoleDepts+":"+roleID,
-			services.CacheKeyRoleAll+":id:"+roleID,
-		)
+		keys := []string{
+			services.CacheKeyRoleMenus + ":" + roleID,
+			services.CacheKeyRoleDepts + ":" + roleID,
+			services.CacheKeyRoleAll + ":id:" + roleID,
+		}
+		InvalidateCacheByKey(ctx, s.cache, keys, "ROLE")
 	}
-	InvalidateCacheByKey(ctx, s.cache, keys, "ROLE")
 	return nil
 }
 
