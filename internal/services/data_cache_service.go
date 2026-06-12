@@ -10,6 +10,7 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 )
 
 // ==================== 缓存键命名规范迁移说明 ====================
@@ -110,9 +111,18 @@ func (s *DataCacheService) GetOrSet(ctx context.Context, key string, dest interf
 	dataBytes, _ := json.Marshal(data)
 	_ = json.Unmarshal(dataBytes, dest)
 
-	// 异步写入缓存
+	// F-09 (最小化防御): 异步写入缓存的裸 goroutine 加 panic recover,
+	// 防止 cache 层 panic(序列化失败/Redis 客户端 nil 解引用等)级联导致
+	// 整个进程崩溃。完整的 worker pool/重试/dedupe 留给 manual phase 推进。
 	go func() {
-		_ = s.Set(context.Background(), key, data, expiration)
+		defer func() {
+			if r := recover(); r != nil {
+				applogger.Errorf("[CACHE] GetOrSet 异步写入 panic 已恢复: key=%s, panic=%v", key, r)
+			}
+		}()
+		if err := s.Set(context.Background(), key, data, expiration); err != nil {
+			applogger.Warnf("[CACHE] GetOrSet 异步写入失败: key=%s, err=%v", key, err)
+		}
 	}()
 
 	return nil
