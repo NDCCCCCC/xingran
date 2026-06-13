@@ -14,10 +14,11 @@ import {
   CheckCircleOutlined, StopOutlined, WarningOutlined, AppstoreOutlined, TableOutlined,
   ImportOutlined, ExportOutlined, LineChartOutlined,
 } from '@ant-design/icons';
-import type { DedicatedLine, DictData } from '@/types';
+import type { DedicatedLine } from '@/types';
 import { dedicatedLineApi, serverRoomApi } from '@/lib/opsApi';
 import { useTableManager } from '@/hooks/useTableManager';
 import { usePagination } from '@/hooks/usePagination';
+import { useDict } from '@/hooks/useDict';
 import { handleApiError, handleSuccess, isFormValidationError } from '@/utils/errorHandler';
 import { createDateTimeColumn } from '@/utils/tableHelpers';
 import { fetchDedicatedLineStatistics } from '@/utils/statisticsHelper';
@@ -25,7 +26,6 @@ import ActionButtons from '@/components/shared/ActionButtons';
 import ExcelImport from '@/components/shared/ExcelImport';
 import ExcelExport from '@/components/shared/ExcelExport';
 import { StatisticsCards } from '@/components/operations/StatisticsCards';
-import { post } from '@/lib/api';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -51,9 +51,11 @@ const DedicatedLineManagement: FC = () => {
   const [exportVisible, setExportVisible] = useState(false);
   const [exportFilters, setExportFilters] = useState<Record<string, unknown>>({});
   const [serverRooms, setServerRooms] = useState<ServerRoomOption[]>([]);
-  const [lineTypeDict, setLineTypeDict] = useState<DictData[]>([]);
-  const [ispDict, setIspDict] = useState<DictData[]>([]);
   const [statistics, setStatistics] = useState<Statistics>({ total: 0, normal: 0, fault: 0, disabled: 0 });
+
+  // Wave 5: useDict replaces raw post() calls for both line type + ISP dicts
+  const { data: lineTypeDict = [] } = useDict('ops_dedicated_line_type');
+  const { data: ispDict = [] } = useDict('ops_isp');
 
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
@@ -69,24 +71,6 @@ const DedicatedLineManagement: FC = () => {
       })));
     } catch (error) {
       handleApiError(error, '加载机房列表', false);
-    }
-  }, []);
-
-  const loadLineTypeDict = useCallback(async () => {
-    try {
-      const result = await post<{ list: DictData[] }>('/system/dicts/data/list', { dictType: 'ops_dedicated_line_type', current: 1, pageSize: 100 });
-      setLineTypeDict(result.data?.list || []);
-    } catch (error) {
-      handleApiError(error, '加载专线类型字典', false);
-    }
-  }, []);
-
-  const loadIspDict = useCallback(async () => {
-    try {
-      const result = await post<{ list: DictData[] }>('/system/dicts/data/list', { dictType: 'ops_isp', current: 1, pageSize: 100 });
-      setIspDict(result.data?.list || []);
-    } catch (error) {
-      handleApiError(error, '加载运营商字典', false);
     }
   }, []);
 
@@ -129,10 +113,10 @@ const DedicatedLineManagement: FC = () => {
 
   // 初始化加载
   useEffect(() => {
-    Promise.all([loadServerRooms(), loadStatistics(), loadLineTypeDict(), loadIspDict()])
+    Promise.all([loadServerRooms(), loadStatistics()])
       .then(([_, stats]) => setStatistics(stats));
     loadLines();
-  }, [loadServerRooms, loadStatistics, loadLineTypeDict, loadIspDict, loadLines]);
+  }, [loadServerRooms, loadStatistics, loadLines]);
 
   const handleSave = async () => {
     try {

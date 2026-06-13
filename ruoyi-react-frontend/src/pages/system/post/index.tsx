@@ -4,7 +4,6 @@ import {
   Table,
   Button,
   Space,
-  Modal,
   Form,
   Input,
   InputNumber,
@@ -33,6 +32,7 @@ import { usePagination } from '@/hooks/usePagination';
 import { handleApiError, handleSuccess, isFormValidationError } from '@/utils/errorHandler';
 import { createStatusColumn, createDateTimeColumn } from '@/utils/tableHelpers';
 import ActionButtons from '@/components/shared/ActionButtons';
+import { BaseEditModal } from '@/components/modal/BaseEditModal';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -334,7 +334,7 @@ const PostManagement: FC = () => {
       </Card>
 
       {/* 编辑模态框 */}
-      <Modal
+      <BaseEditModal
         title={editingPost ? '编辑岗位' : '新增岗位'}
         open={modalVisible}
         onOk={handleCreate}
@@ -361,7 +361,7 @@ const PostManagement: FC = () => {
             <TextArea rows={3} placeholder="请输入备注" />
           </Form.Item>
         </Form>
-      </Modal>
+      </BaseEditModal>
     </div>
   );
 };
