@@ -96,19 +96,15 @@ func (s *DataCacheService) GetOrSet(ctx context.Context, key string, dest interf
 	dataBytes, _ := json.Marshal(data)
 	_ = json.Unmarshal(dataBytes, dest)
 
-	// F-09 (最小化防御): 异步写入缓存的裸 goroutine 加 panic recover,
-	// 防止 cache 层 panic(序列化失败/Redis 客户端 nil 解引用等)级联导致
-	// 整个进程崩溃。完整的 worker pool/重试/dedupe 留给 manual phase 推进。
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				applogger.Errorf("[CACHE] GetOrSet 异步写入 panic 已恢复: key=%s, panic=%v", key, r)
-			}
-		}()
-		if err := s.Set(context.Background(), key, data, expiration); err != nil {
-			applogger.Warnf("[CACHE] GetOrSet 异步写入失败: key=%s, err=%v", key, err)
-		}
-	}()
+	// P0 #9: 不再起裸 goroutine 异步写缓存。底层 cache（MultiLevelCache）的 Set
+	// 已自带 L1 同步写入 + L2 经 L2Writer worker pool 异步写入（带重试/队列/降级）。
+	// 早期此处的裸 go func() 因无并发上限，在高 QPS 下堆积 goroutine、耗尽 Redis
+	// 连接（审查报告 #9）。改为同步写入后，开销仅为 L1 写 + L2 入队（微秒级），
+	// 既消除 goroutine 堆积，又复用底层重试/降级能力。用 context.Background()
+	// 避免请求提前取消导致缓存未写入。
+	if err := s.Set(context.Background(), key, data, expiration); err != nil {
+		applogger.Warnf("[CACHE] GetOrSet 缓存写入失败: key=%s, err=%v", key, err)
+	}
 
 	return nil
 }
