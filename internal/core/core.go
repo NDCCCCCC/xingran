@@ -130,10 +130,12 @@ func (c *Core) Init() error {
 	}
 
 	// 2. 自动迁移数据库表结构
-	// 根据模型定义自动创建或更新数据库表
+	// P0 #16: 表结构是所有 GORM 操作的基础，迁移失败会导致后续业务在缺失的
+	// 表/列上 panic。fail-fast 比静默继续更安全（审查报告 #16）。
 	if err := c.DB.AutoMigrate(); err != nil {
-		applogger.Warnf("数据库迁移失败: %v", err)
+		return fmt.Errorf("数据库迁移失败: %w", err)
 	}
+	applogger.Infof("数据库表结构迁移完成")
 
 	// 3. 初始化系统基础数据
 	// 包括创建默认管理员账户、基础角色等
@@ -156,14 +158,13 @@ func (c *Core) Init() error {
 	}
 
 	// 5. 初始化缓存系统
-	// 支持Redis多级缓存或纯内存缓存
+	// P0 #16: 大量系统服务通过 CacheProvider 接口依赖缓存。审查报告明确要求
+	// Cache 失败应终止启动，避免服务在无缓存状态下静默退化/性能崩溃。
 	c.Cache, err = c.initCache()
 	if err != nil {
-		applogger.Warnf("初始化缓存系统失败: %v", err)
-		// 缓存失败不影响服务启动
-	} else {
-		applogger.Infof("缓存系统初始化完成")
+		return fmt.Errorf("初始化缓存系统失败: %w", err)
 	}
+	applogger.Infof("缓存系统初始化完成")
 
 	// 6. 初始化缓存服务（用于 System 模块）
 	// System 模块的服务通过 CacheProvider 接口使用缓存
