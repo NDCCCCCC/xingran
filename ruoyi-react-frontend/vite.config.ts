@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import removeConsole from 'vite-plugin-remove-console'
+import { visualizer } from 'rollup-plugin-visualizer'
 import path from 'path'
 
 // https://vite.dev/config/
@@ -11,6 +12,18 @@ export default defineConfig({
     tailwindcss(),
     // 生产构建时移除 console 语句
     removeConsole(),
+    // Bundle analyzer (opt-in via ANALYZE=true env var)
+    // 输出 dist/stats.html，包含 gzip/brotli 大小
+    ...(process.env.ANALYZE === 'true'
+      ? [
+          visualizer({
+            filename: 'dist/stats.html',
+            gzipSize: true,
+            brotliSize: true,
+            template: 'treemap',
+          }),
+        ]
+      : []),
   ],
   resolve: {
     alias: {
@@ -25,36 +38,51 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: (id) => {
-          // React 核心库
-          if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
-            return 'react-vendor';
+        // D-07 vendor chunk 拆分策略
+        // 顺序很重要：three-family 必须先于 react-core 检查，避免 @react-three 被错误归入 vendor-react
+        manualChunks(id) {
+          // 业务代码保持按路由自动 split（不强制归入 vendor chunk）
+          if (!id.includes('node_modules')) {
+            return undefined
           }
-          // UI 组件库
-          if (id.includes('antd') || id.includes('@ant-design')) {
-            return 'antd';
+          // 3D 渲染相关（three 家族）
+          if (
+            id.includes('three') ||
+            id.includes('@react-three') ||
+            id.includes('@react-spring/three') ||
+            id.includes('maath')
+          ) {
+            return 'vendor-three'
           }
-          // 3D 渲染相关
-          if (id.includes('three') || id.includes('@react-three')) {
-            return 'three-vendor';
+          // ECharts 图表
+          if (id.includes('echarts') || id.includes('zrender')) {
+            return 'vendor-echarts'
           }
-          // 工具库
+          // Ant Design UI 库（含 rc-* 工具包）
+          if (id.includes('antd') || id.includes('@ant-design') || id.includes('/rc-')) {
+            return 'vendor-antd'
+          }
+          // React 核心 + 路由
+          // 注意：必须排除 @react-three 等以避免被此规则捕获
+          if (
+            id.includes('/react-dom/') ||
+            id.includes('/react-router') ||
+            id.includes('/scheduler/') ||
+            (id.includes('/react/') && !id.includes('@react-'))
+          ) {
+            return 'vendor-react'
+          }
+          // 工具库（D-06：sm-crypto 保持同步，全站加密接口需要）
           if (id.includes('dayjs') || id.includes('axios') || id.includes('sm-crypto')) {
-            return 'utils';
+            return 'vendor-utils'
           }
-          // 运维管理模块
-          if (id.includes('@/lib/opsApi') || id.includes('@/types/operations') || id.includes('@/utils/three')) {
-            return 'ops-module';
-          }
-          // 其他返回 vendor
-          if (id.includes('node_modules')) {
-            return 'vendor';
-          }
+          // 其他第三方依赖
+          return 'vendor-commons'
         },
       },
     },
-    // 提高警告阈值
-    chunkSizeWarningLimit: 1000,
+    // D-05 / D-07：500KB gzip 预算
+    chunkSizeWarningLimit: 500,
   },
   server: {
     port: 4000,
@@ -76,4 +104,3 @@ export default defineConfig({
     // 这样直接访问 /dashboard 等子路由时也能正常工作
   },
 })
-
