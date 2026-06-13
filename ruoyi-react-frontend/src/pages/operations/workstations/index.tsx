@@ -348,6 +348,8 @@ const WorkstationManagement: FC = () => {
           dataSource={workstations}
           loading={loading}
           rowKey="id"
+          virtual
+          scroll={{ x: 1800, y: 600 }}
           pagination={paginationProps}
           expandable={{
             expandedRowRender: (record: WorkstationOps) => (

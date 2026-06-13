@@ -930,7 +930,8 @@ const VirtualMachineList: React.FC = () => {
           dataSource={vms}
           rowKey="id"
           loading={loading}
-          scroll={{ x: 1400 }}
+          virtual
+          scroll={{ x: 1600, y: 600 }}
           rowSelection={{
             selectedRowKeys,
             onChange: setSelectedRowKeys,

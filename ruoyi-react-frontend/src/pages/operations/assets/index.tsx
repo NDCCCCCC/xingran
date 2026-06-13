@@ -617,6 +617,7 @@ const AssetList: FC = () => {
         columns={tableColumns}
         dataSource={assets}
         loading={loading || configLoading}
+        virtual
         pagination={{
           current: paginationProps.current,
           pageSize: paginationProps.pageSize,
@@ -629,7 +630,7 @@ const AssetList: FC = () => {
             setPageSize(pageSize);
           },
         }}
-        scroll={{ x: 1500 }}
+        scroll={{ x: 4200, y: 600 }}
         rowSelection={{
           selectedRowKeys,
           onChange: setSelectedRowKeys,
