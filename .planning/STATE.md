@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: MAC地址历史数据管理
-status: unknown
-stopped_at: Phase 30 Wave 4 complete — rendering layer (memo / virtual scroll / ESLint)
-last_updated: "2026-06-13T10:30:00.000Z"
+status: shipping
+stopped_at: Phase 31 shipped — F-14 connection_pool refCount + F-17 ConfigKey API (pushed to origin/main)
+last_updated: "2026-06-13T10:50:00.000Z"
 progress:
   total_phases: 27
-  completed_phases: 13
+  completed_phases: 14
   total_plans: 101
-  completed_plans: 93
-  percent: 48
+  completed_plans: 98
+  percent: 51
 ---
 
 # Project State
@@ -25,13 +25,13 @@ progress:
 
 ## Current Position
 
-Phase: 30 (前端性能优化) — Wave 4 of 4 ✅ COMPLETE
-Plan: 04 (Rendering layer) — ✅ COMPLETED 2026-06-13
+Phase: 31 (P0 收尾 — connection_pool lifecycle + Config API) — ✅ SHIPPED 2026-06-13
+Plan: 31-01~05 (5 plans) — ✅ ALL COMPLETED & pushed to origin/main
 **当前里程碑**: v1.16 — 工位设备关联
-**当前阶段**: Phase 30 Wave 4 — 渲染层 (4/4 plans 完成) ✅
-**状态**: ✅ 已完成
+**当前阶段**: Phase 31 ✅ SHIPPED
+**状态**: ✅ 已完成并推送至 origin/main
 **完成时间**: 2026-06-13
-**下一阶段**: Phase 30 已完成 — 等待用户指引 (pre-existing ESLint cleanup / 下一里程碑)
+**下一阶段**: Phase 32 (v1.14 P1 重构与 P2 架构优化) — 待规划/启动
 
 ## Project Reference
 
@@ -72,7 +72,7 @@ Plan: 04 (Rendering layer) — ✅ COMPLETED 2026-06-13
 | 28 | 工位设备关联子表格 | ✅ Completed | 4/4 plans |
 | 29 | sys_dict 重构 | 📋 Planned | 0/0 plans |
 | 30 | 前端性能优化 | ✅ Completed | 4/4 plans |
-| 31 | P0 收尾:连接池 lifecycle + Config API 重设计 | 📋 Planned | 0/0 plans |
+| 31 | P0 收尾:连接池 lifecycle + Config API 重设计 | ✅ Completed | 5/5 plans |
 | 32 | v1.14 P1 重构与 P2 架构优化 | 📋 Planned | 0/0 plans |
 
 ## Completed Milestones
