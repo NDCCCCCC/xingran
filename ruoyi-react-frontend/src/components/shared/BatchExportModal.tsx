@@ -112,7 +112,7 @@ const BatchExportModal: FC<BatchExportModalProps> = ({
       }}
       cancelButtonProps={{ disabled: loading }}
       afterOpenChange={open => open && handleOpen()}
-      destroyOnClose
+      destroyOnHidden
     >
       <Space direction="vertical" style={{ width: '100%' }} size="middle">
         {/* 快捷操作按钮 */}
