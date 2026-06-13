@@ -4,7 +4,7 @@ milestone: v1.5
 milestone_name: MAC地址历史数据管理
 status: unknown
 stopped_at: Phase 30 context gathered
-last_updated: "2026-06-12T17:57:35.125Z"
+last_updated: "2026-06-13T00:50:46.939Z"
 progress:
   total_phases: 26
   completed_phases: 12
@@ -25,13 +25,13 @@ progress:
 
 ## Current Position
 
-Phase: 28 (workstation-device-association)
-Plan: 07 (complete) - 已完成 7/7 计划
+Phase: 30 (前端性能优化) — Wave 1 of 4
+Plan: 01 (bundle-analysis) — ✅ COMPLETED 2026-06-13
 **当前里程碑**: v1.16 — 工位设备关联
-**当前阶段**: Phase 28 — 工位设备关联子表格 (7/7 plans 完成) ✅
+**当前阶段**: Phase 30 Wave 1 — Bundle 基础设施 (1/4 plans 完成) ✅
 **状态**: ✅ 已完成
-**完成时间**: 2026-06-10
-**下一阶段**: Phase 29 或等待用户指示
+**完成时间**: 2026-06-13
+**下一阶段**: Phase 30 Wave 2 — 重库按需加载 (echarts/three/xlsx/md-editor)
 
 ## Project Reference
 
@@ -70,6 +70,8 @@ Plan: 07 (complete) - 已完成 7/7 计划
 | 26 | 资产管理模块 | ✅ Completed | 6/6 plans |
 | 27 | 全局列自定义显示功能 | ✅ Completed | 1/1 plan |
 | 28 | 工位设备关联子表格 | ✅ Completed | 4/4 plans |
+| 29 | sys_dict 重构 | 📋 Planned | 0/0 plans |
+| 30 | 前端性能优化 | 🚧 In Progress | 1/4 plans |
 
 ## Completed Milestones
 
@@ -116,6 +118,7 @@ Plan: 07 (complete) - 已完成 7/7 计划
 | 2026-06-09 | Quick task完成: 域控用户页面多选框显示修复 | — |
 | 2026-06-09 | Phase 27 完成 (全局列自定义显示功能) | 27 |
 | 2026-06-10 | Phase 28 完成 (工位设备关联子表格) - 7个计划全部完成 | 28 |
+| 2026-06-13 | Phase 30 Plan 01 完成 (Bundle 基础设施) - Wave 1 of 4 | 30 |
 
 ## Quick Tasks Completed
 
