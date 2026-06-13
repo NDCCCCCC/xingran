@@ -5,9 +5,11 @@
 
 import { useState, useCallback, type Key } from 'react';
 import { message, type FormInstance } from 'antd';
+import { useQueryClient } from '@tanstack/react-query';
 import type { DictType, DictData } from '@/types';
 import { post } from '@/lib/api';
 import { handleApiError, handleSuccess } from '@/utils/errorHandler';
+import { queryKeys } from '@/lib/queryKeys';
 
 export interface UseDictActionsParams {
   selectedType: string;
@@ -56,6 +58,12 @@ export function useDictActions(params: UseDictActionsParams): UseDictActionsRetu
   const [typeModalVisible, setTypeModalVisible] = useState(false);
   const [dataModalVisible, setDataModalVisible] = useState(false);
 
+  // 全局 dict 缓存失效器：每次字典变更后让所有 useDict(...) 消费者重新拉取 (D-11)
+  const qc = useQueryClient();
+  const invalidateAllDicts = useCallback(() => {
+    qc.invalidateQueries({ queryKey: queryKeys.dict.all });
+  }, [qc]);
+
   // 创建/更新字典类型
   const handleCreateType = useCallback(async (typeForm: FormInstance) => {
     try {
@@ -72,13 +80,14 @@ export function useDictActions(params: UseDictActionsParams): UseDictActionsRetu
       setEditingType(null);
       loadDictTypes();
       loadTypeStatistics();
+      invalidateAllDicts();
     } catch (error: unknown) {
       if (error && typeof error === 'object' && 'errorFields' in error) {
         return;
       }
       handleApiError(error, '操作');
     }
-  }, [editingType, loadDictTypes, loadTypeStatistics]);
+  }, [editingType, loadDictTypes, loadTypeStatistics, invalidateAllDicts]);
 
   // 删除字典类型
   const handleDeleteType = useCallback(async (id: string) => {
@@ -87,10 +96,11 @@ export function useDictActions(params: UseDictActionsParams): UseDictActionsRetu
       handleSuccess('删除');
       loadDictTypes();
       loadTypeStatistics();
+      invalidateAllDicts();
     } catch (error) {
       handleApiError(error, '删除');
     }
-  }, [loadDictTypes, loadTypeStatistics]);
+  }, [loadDictTypes, loadTypeStatistics, invalidateAllDicts]);
 
   // 批量删除字典类型
   const handleBatchDeleteType = useCallback(async (selectedRowKeys: Key[], setSelectedRowKeys: (keys: Key[]) => void) => {
@@ -104,10 +114,11 @@ export function useDictActions(params: UseDictActionsParams): UseDictActionsRetu
       setSelectedRowKeys([]);
       loadDictTypes();
       loadTypeStatistics();
+      invalidateAllDicts();
     } catch (error) {
       handleApiError(error, '批量删除');
     }
-  }, [loadDictTypes, loadTypeStatistics]);
+  }, [loadDictTypes, loadTypeStatistics, invalidateAllDicts]);
 
   // 创建/更新字典数据
   const handleCreateData = useCallback(async (dataForm: FormInstance) => {
@@ -125,13 +136,14 @@ export function useDictActions(params: UseDictActionsParams): UseDictActionsRetu
       setEditingData(null);
       loadDictData();
       loadDataStatistics();
+      invalidateAllDicts();
     } catch (error: unknown) {
       if (error && typeof error === 'object' && 'errorFields' in error) {
         return;
       }
       handleApiError(error, '操作');
     }
-  }, [editingData, selectedType, loadDictData, loadDataStatistics]);
+  }, [editingData, selectedType, loadDictData, loadDataStatistics, invalidateAllDicts]);
 
   // 删除字典数据
   const handleDeleteData = useCallback(async (id: string) => {
@@ -140,10 +152,11 @@ export function useDictActions(params: UseDictActionsParams): UseDictActionsRetu
       handleSuccess('删除');
       loadDictData();
       loadDataStatistics();
+      invalidateAllDicts();
     } catch (error) {
       handleApiError(error, '删除');
     }
-  }, [loadDictData, loadDataStatistics]);
+  }, [loadDictData, loadDataStatistics, invalidateAllDicts]);
 
   // 批量删除字典数据
   const handleBatchDeleteData = useCallback(async (selectedRowKeys: Key[], setSelectedRowKeys: (keys: Key[]) => void) => {
@@ -157,20 +170,22 @@ export function useDictActions(params: UseDictActionsParams): UseDictActionsRetu
       setSelectedRowKeys([]);
       loadDictData();
       loadDataStatistics();
+      invalidateAllDicts();
     } catch (error) {
       handleApiError(error, '批量删除');
     }
-  }, [loadDictData, loadDataStatistics]);
+  }, [loadDictData, loadDataStatistics, invalidateAllDicts]);
 
   // 刷新缓存
   const handleRefreshCache = useCallback(async () => {
     try {
       await post('/system/dicts/refresh-cache', {});
       message.success('刷新缓存成功');
+      invalidateAllDicts();
     } catch {
       message.error('刷新缓存失败');
     }
-  }, []);
+  }, [invalidateAllDicts]);
 
   // 打开类型编辑模态框
   const openTypeModal = useCallback((record: DictType | undefined, typeForm: FormInstance) => {
