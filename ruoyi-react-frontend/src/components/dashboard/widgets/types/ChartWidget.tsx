@@ -5,7 +5,7 @@
  */
 
 import { useMemo } from 'react';
-import ReactECharts from 'echarts-for-react';
+import ReactECharts from '@/components/charts/EChartsWrapper';
 import type { EChartsOption, PieSeriesOption } from 'echarts';
 import type { ChartDisplayConfig, WidgetConfig } from '@/types/dashboard';
 import { BaseWidget } from '../base/BaseWidget';
