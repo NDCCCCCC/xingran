@@ -13,6 +13,39 @@ import type { ExecutionType } from '@/types/notice';
 const { Option } = Select;
 const { TextArea } = Input;
 
+// 内部组件：使用 Form.useWatch 订阅 noticeContent 字段，
+// 避免在 Form 未连接时调用 getFieldValue 触发告警
+const NoticeContentField: React.FC<{
+  form: FormInstance;
+  isMarkdown: boolean;
+  markdownContent: string;
+  onMarkdownContentChange: (content: string) => void;
+}> = ({ form, isMarkdown, markdownContent, onMarkdownContentChange }) => {
+  const noticeContent = Form.useWatch('noticeContent', form) as string | undefined;
+
+  return isMarkdown ? (
+    <MDEditor
+      value={markdownContent}
+      onChange={(val) => {
+        const content = val || '';
+        onMarkdownContentChange(content);
+        form.setFieldValue('noticeContent', content);
+      }}
+      preview="live"
+      height={400}
+    />
+  ) : (
+    <TextArea
+      rows={10}
+      placeholder="请输入公告内容"
+      value={noticeContent ?? ''}
+      onChange={(e) => {
+        form.setFieldValue('noticeContent', e.target.value);
+      }}
+    />
+  );
+};
+
 export interface NoticeFormProps {
   visible: boolean;
   editingNotice: Notice | null;
@@ -329,27 +362,12 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
               wrapperCol={{ span: 19 }}
               rules={[{ required: true, message: '请输入公告内容' }]}
             >
-              {isMarkdown ? (
-                <MDEditor
-                  value={markdownContent}
-                  onChange={(val) => {
-                    const content = val || '';
-                    onMarkdownContentChange(content);
-                    form.setFieldValue('noticeContent', content);
-                  }}
-                  preview="live"
-                  height={400}
-                />
-              ) : (
-                <TextArea
-                  rows={10}
-                  placeholder="请输入公告内容"
-                  value={form.getFieldValue('noticeContent')}
-                  onChange={(e) => {
-                    form.setFieldValue('noticeContent', e.target.value);
-                  }}
-                />
-              )}
+              <NoticeContentField
+                form={form}
+                isMarkdown={isMarkdown}
+                markdownContent={markdownContent}
+                onMarkdownContentChange={onMarkdownContentChange}
+              />
             </Form.Item>
           </Col>
         </Row>
