@@ -2,6 +2,8 @@ package system
 
 import (
 	"context"
+	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
@@ -16,6 +18,9 @@ import (
 type UserHandler struct {
 	service           systemServices.UserService
 	userADSyncService *addomain.UserADSyncService
+	// adSyncInFlight P0 #10: 按用户 ID 去重 AD 同步，避免短时间内
+	// 多次更新同一用户触发并发 LDAP 连接。sync.Map 零值可用，无需初始化。
+	adSyncInFlight sync.Map
 }
 
 // NewUserHandler 创建用户处理器实例
@@ -143,21 +148,44 @@ func (h *UserHandler) Update(c *gin.Context) {
 	}
 
 	// 系统更新成功后，异步同步到AD域控（降级处理：不阻断系统更新）
-	// F-10 (最小化防御): 加 panic recover 防止 AD 同步中的解引用/类型断言
-	// panic 级联导致进程崩溃。完整的重试/dedupe/消息队列集成留给 manual phase。
+	// P0 #10: 在原有 panic recover 基础上增加 (1) dedupe 防止短时间内对同一
+	// 用户的多次更新触发并发 LDAP 连接；(2) 有限重试 + 指数退避，吸收 AD
+	// 连接/网络的瞬时抖动。SyncUserUpdateToAD 每次调用都新建 LDAP 连接，
+	// 故重试在 handler 层做最稳妥。
 	if h.userADSyncService != nil {
 		adSyncReq := h.buildADSyncMap(&req)
-		go func() {
-			defer func() {
-				if r := recover(); r != nil {
-					applogger.Errorf("[AD-SYNC] SyncUserUpdateToAD panic 已恢复 [ID=%s]: panic=%v", id, r)
+		// dedupe：若该用户的同步仍在飞行中，跳过本次重复触发
+		if _, inFlight := h.adSyncInFlight.LoadOrStore(id, struct{}{}); inFlight {
+			applogger.Infof("[AD-SYNC] 用户 %s 的 AD 同步仍在进行中，跳过本次重复触发", id)
+		} else {
+			go func() {
+				defer func() {
+					h.adSyncInFlight.Delete(id) // 释放去重标记（无论成功/失败/panic）
+					if r := recover(); r != nil {
+						applogger.Errorf("[AD-SYNC] SyncUserUpdateToAD panic 已恢复 [ID=%s]: panic=%v", id, r)
+					}
+				}()
+				ctx := context.Background()
+				const maxRetries = 3
+				var lastErr error
+				for attempt := 0; attempt < maxRetries; attempt++ {
+					if attempt > 0 {
+						// 指数退避：1s, 2s（仅阻塞本 goroutine，不影响请求）
+						time.Sleep(time.Duration(1<<uint(attempt-1)) * time.Second)
+					}
+					if err := h.userADSyncService.SyncUserUpdateToAD(ctx, id, adSyncReq); err != nil {
+						lastErr = err
+						applogger.Warnf("[AD-SYNC] 同步失败 [ID=%s] 第%d/%d次: %v", id, attempt+1, maxRetries, err)
+						continue
+					}
+					lastErr = nil
+					break
+				}
+				if lastErr != nil {
+					applogger.Errorf("[AD-SYNC] 同步用户到AD最终失败（已重试%d次）[ID=%s]: %v", maxRetries, id, lastErr)
 				}
 			}()
-			ctx := context.Background()
-			if err := h.userADSyncService.SyncUserUpdateToAD(ctx, id, adSyncReq); err != nil {
-				applogger.Errorf("同步用户到AD失败 [ID=%s]: %v", id, err)
-			}
-		}()
+		}
 	}
 
 	response.Success(c, gin.H{"message": "更新成功"})
