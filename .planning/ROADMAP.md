@@ -445,15 +445,15 @@
 Plans:
 **Wave 1**
 
-- [ ] 30-01-PLAN.md — Wave 1: 基础设施 (Vite visualizer、manualChunks、500KB 阈值、基线)
+- [x] 30-01-PLAN.md — Wave 1: 基础设施 (Vite visualizer、manualChunks、500KB 阈值、基线)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 30-02-PLAN.md — Wave 2: 重库按需加载 (three/echarts/xlsx/md-editor 懒加载)
+- [x] 30-02-PLAN.md — Wave 2: 重库按需加载 (three/echarts/xlsx/md-editor 懒加载)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 30-03-PLAN.md — Wave 3: 查询层 (useDict、QueryClient 默认值、useTableQuery)
+- [x] 30-03-PLAN.md — Wave 3: 查询层 (useDict、QueryClient 默认值、useTableQuery)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
