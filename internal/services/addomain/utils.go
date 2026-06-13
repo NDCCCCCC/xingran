@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -99,11 +100,51 @@ func decryptPassword(encrypted string) string {
 
 // ==================== Legacy AES-GCM (for backward compatibility) ====================
 
+// F-02: legacy AES key 不再仅有硬编码值,优先从环境变量 AD_LEGACY_AES_KEY 读取。
+//
+// 设计:
+//   - 加密路径 (encryptPasswordLegacyAES): env 优先,无 env 时回退硬编码并记一次性告警
+//   - 解密路径 (decryptPasswordLegacyAES): 先试 env key,再试硬编码 key,
+//     保证历史已加密数据(用硬编码 key 加密)在 env 设置后仍能读出
+//
+// env 值必须恰好 16 字节(AES-128 key)。
+// 长期方案: 全量迁移到 SM4 (默认路径) 后可彻底移除 legacy AES。
+const legacyAESKeyHardcoded = "ruoyi-ad-domain-key-16"
+
+var legacyAESWarnOnce sync.Once
+
+func getLegacyAESEncryptKey() []byte {
+	if env := os.Getenv("AD_LEGACY_AES_KEY"); env != "" {
+		if len(env) >= 16 {
+			return []byte(env[:16])
+		}
+		applogger.Warnf("[SECURITY] AD_LEGACY_AES_KEY 长度 %d < 16,回退硬编码 key", len(env))
+	} else {
+		legacyAESWarnOnce.Do(func() {
+			applogger.Warnf(
+				"[SECURITY] AD legacy AES 使用硬编码 key — " +
+					"反汇编二进制即可解密所有 AD 密码,建议设置 AD_LEGACY_AES_KEY 环境变量",
+			)
+		})
+	}
+	return []byte(legacyAESKeyHardcoded[:16])
+}
+
+// getLegacyAESDecryptKeys 返回所有应该尝试的解密 key 列表,先 env 后硬编码,
+// 保证 env 配置后仍能解密旧数据。
+func getLegacyAESDecryptKeys() [][]byte {
+	keys := make([][]byte, 0, 2)
+	if env := os.Getenv("AD_LEGACY_AES_KEY"); env != "" && len(env) >= 16 {
+		keys = append(keys, []byte(env[:16]))
+	}
+	keys = append(keys, []byte(legacyAESKeyHardcoded[:16]))
+	return keys
+}
+
 // encryptPasswordLegacyAES encrypts using the old AES-GCM key.
 // Kept for writing passwords when SM4 cipher is not yet available.
 func encryptPasswordLegacyAES(password string) string {
-	const encryptionKey = "ruoyi-ad-domain-key-16"
-	key := []byte(encryptionKey[:16])
+	key := getLegacyAESEncryptKey()
 
 	block, err := aes.NewCipher(key)
 	if err != nil {
@@ -125,15 +166,26 @@ func encryptPasswordLegacyAES(password string) string {
 }
 
 // decryptPasswordLegacyAES decrypts using the old AES-GCM key.
+// F-02 fix: 依次尝试 env key 与硬编码 key,保证 key 轮换期间历史数据可读。
 func decryptPasswordLegacyAES(encrypted string) (string, error) {
-	const encryptionKey = "ruoyi-ad-domain-key-16"
-	key := []byte(encryptionKey[:16])
-
 	data, err := base64.StdEncoding.DecodeString(encrypted)
 	if err != nil {
 		return "", fmt.Errorf("base64 decode failed: %w", err)
 	}
 
+	var lastErr error
+	for _, key := range getLegacyAESDecryptKeys() {
+		plaintext, err := tryDecryptAESGCM(data, key)
+		if err == nil {
+			return plaintext, nil
+		}
+		lastErr = err
+	}
+	return "", fmt.Errorf("legacy AES decrypt failed (all keys tried): %w", lastErr)
+}
+
+// tryDecryptAESGCM 尝试用指定 key 解密 GCM 密文
+func tryDecryptAESGCM(data, key []byte) (string, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return "", fmt.Errorf("aes cipher failed: %w", err)
