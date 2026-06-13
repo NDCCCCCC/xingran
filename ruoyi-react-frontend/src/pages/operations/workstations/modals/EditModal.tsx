@@ -4,12 +4,13 @@
  */
 
 import { useLayoutEffect } from 'react';
-import { Modal, Form, Input, InputNumber, Select, Row, Col, Cascader } from 'antd';
+import { Form, Input, InputNumber, Select, Row, Col, Cascader } from 'antd';
 import type { FormInstance } from 'antd';
 import type { WorkstationOps } from '@/types';
 import type { DeptTreeNode } from '../types';
 import { DepartmentTreeSelect } from '@/components/shared';
 import { STATUS_OPTIONS, TYPE_OPTIONS } from '../constants';
+import { BaseEditModal } from '@/components/modal/BaseEditModal';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -60,7 +61,7 @@ export function WorkstationEditModal({
   }, [open, editingWorkstation, form]);
 
   return (
-    <Modal
+    <BaseEditModal
       title={editingWorkstation ? '编辑工位' : '新增工位'}
       open={open}
       onOk={async () => {
@@ -79,7 +80,6 @@ export function WorkstationEditModal({
         form.resetFields();
       }}
       width={700}
-      destroyOnHidden
     >
       <Form form={form} layout="horizontal" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
         <Form.Item name="orgId" label="所属机构" rules={[{ required: true, message: '请选择所属机构' }]}>
@@ -179,6 +179,6 @@ export function WorkstationEditModal({
           <TextArea rows={3} placeholder="请输入描述" />
         </Form.Item>
       </Form>
-    </Modal>
+    </BaseEditModal>
   );
 }
