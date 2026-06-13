@@ -118,3 +118,40 @@ func (h *MACHistoryHandler) QueryConnectionStats(c *gin.Context) {
 
 	response.Success(c, result)
 }
+
+// GetVendorRequest 厂商查询请求
+type GetVendorRequest struct {
+	MAC string `json:"mac" binding:"required"`
+}
+
+// GetVendorResponse 厂商查询响应
+type GetVendorResponse struct {
+	VendorName string `json:"vendor_name"`
+}
+
+// GetVendor 查询MAC地址的厂商信息
+// @Summary 查询MAC地址厂商信息
+// @Description 根据MAC地址前6位（OUI）查询设备厂商
+// @Tags 网络设备管理
+// @Accept json
+// @Produce json
+// @Param request body GetVendorRequest true "MAC地址"
+// @Success 200 {object} response.Response{data=GetVendorResponse}
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /network/history/vendor [post]
+func (h *MACHistoryHandler) GetVendor(c *gin.Context) {
+	var req GetVendorRequest
+	if !responseHelpers.HandleJSONBinding(c, &req) {
+		return
+	}
+
+	vendorName, err := h.historyQueryService.GetVendor(c.Request.Context(), req.MAC)
+	if !responseHelpers.HandleServiceError(c, err, "查询MAC厂商信息") {
+		return
+	}
+
+	response.Success(c, GetVendorResponse{
+		VendorName: vendorName,
+	})
+}
