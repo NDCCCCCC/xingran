@@ -337,11 +337,28 @@ export function getADGroupSyncStatus(configId: string): Promise<BaseResponse<ADG
 // ==================== 用户管理 API ====================
 
 export function getADUserList(params: ADUserListRequest): Promise<BaseResponse<PageResponse<ADUser>>> {
-  return post('/ad-domain/users/list', withDefaultPagination(params));
+  return post('/ad-domain/users/list', withDefaultPagination(params))
+}
+
+// D-08/STUB: getADUserIds — placeholder export to unblock build.
+// The full implementation requires a backend endpoint (currently missing).
+// Returns an empty list so the "全选" UI degrades gracefully.
+// TODO(后续阶段): implement backend endpoint and remove stub.
+export function getADUserIds(
+  params: ADUserListRequest
+): Promise<BaseResponse<string[]>> {
+  // Returns empty until backend endpoint is implemented.
+  return Promise.resolve({
+    code: 0,
+    message: 'success',
+    data: [],
+    timestamp: Date.now(),
+    request_id: '',
+  }) as unknown as Promise<BaseResponse<string[]>>
 }
 
 export function getADUserDetail(id: string, configId: string): Promise<BaseResponse<ADUser>> {
-  return post(`/ad-domain/users/${id}`, { configId });
+  return post(`/ad-domain/users/${id}`, { configId })
 }
 
 export function updateADUser(id: string, configId: string, data: ADUserUpdateRequest): Promise<BaseResponse<{ message: string }>> {
