@@ -17,21 +17,21 @@ progress:
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: 里程碑 v1.16 进行中 (Phase 32 Wave 5 已完成)
-**Phase**: 32 (v1-14-p1-p2) — Wave 5 of 7 COMPLETE (P2-A1/A2/A3/A5 core refactor shipped)
-**Plan**: 05 (core refactor — god struct split + cache key unification + apperrors migration)
+**Status**: 里程碑 v1.16 进行中 (Phase 32 Wave 6 已完成)
+**Phase**: 32 (v1-14-p1-p2) — Wave 6 of 7 COMPLETE (P2-A4/A7/A8 migrations + subprocess + transaction)
+**Plan**: 06 (migrations + subprocess — Setpgid reaper + Excel transaction wrapper)
 **Status**: ✅ 已完成
-**Last activity**: 2026-06-13 - 完成 Phase 32 Wave 5 (核心重构 — P2-A1 Core 拆分 + P2-A2 缓存键统一 + P2-A5 apperrors 迁移)
+**Last activity**: 2026-06-13 - 完成 Phase 32 Wave 6 (迁移与子进程 — P2-A4 冲突文档化 + P2-A7 进程组隔离 + P2-A8 Excel 事务)
 
 ## Current Position
 
 Phase: 32 (v1-14-p1-p2) — EXECUTING
-Plan: 5 of 7 (Wave 5 COMPLETE ✅)
+Plan: 6 of 7 (Wave 6 COMPLETE ✅)
 **当前里程碑**: v1.16 — 工位设备关联
-**当前阶段**: Phase 32 Wave 5 ✅ SHIPPED
-**状态**: ✅ Wave 5 完成 (P2-A1/A2/A3/A5 核心重构), Waves 6-7 待执行
+**当前阶段**: Phase 32 Wave 6 ✅ SHIPPED
+**状态**: ✅ Wave 6 完成 (P2-A4/A7/A8 迁移与子进程), Wave 7 待执行
 **完成时间**: 2026-06-13
-**下一阶段**: Phase 32 Wave 6 (P2-A4/A7/A8) — 待启动
+**下一阶段**: Phase 32 Wave 7 (P2-A6 AD 模块测试覆盖) — 最终 Wave
 
 ## Project Reference
 
@@ -74,6 +74,7 @@ Plan: 5 of 7 (Wave 5 COMPLETE ✅)
 | 30 | 前端性能优化 | ✅ Completed | 5/5 plans |
 | 31 | P0 收尾:连接池 lifecycle + Config API 重设计 | ✅ Completed | 5/5 plans |
 | 32 | v1.14 P1 重构与 P2 架构优化 | 📋 Planned | 0/0 plans |
+| 33 | 前端 Vercel React Best Practices 修复 | ✅ Completed | 4/4 plans |
 
 ## Completed Milestones
 
@@ -132,6 +133,8 @@ Plan: 5 of 7 (Wave 5 COMPLETE ✅)
 | 2026-06-13 | Phase 32 Wave 3 完成 (P1 并发与一致性) - P1-C1~C6 ✅ | 32 |
 | 2026-06-13 | Phase 32 Wave 4 完成 (P1 业务逻辑收尾) - P1-B1/B2 ✅ | 32 |
 | 2026-06-13 | Phase 32 Wave 5 完成 (P2 核心重构) - P2-A1/A2/A3/A5 ✅ | 32 |
+| 2026-06-13 | Phase 32 Wave 6 完成 (P2 迁移与子进程) - P2-A4/A7/A8 ✅ | 32 |
+| 2026-06-13 | Phase 33 完成 (前端 Vercel React Best Practices) - 25/25 性能缺陷修复 (Waves 1-4) ✅ | 33 |
 
 ## Quick Tasks Completed
 
