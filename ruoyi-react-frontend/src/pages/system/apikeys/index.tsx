@@ -629,11 +629,11 @@ const APIKeyManagement: FC = () => {
         onOk={handleSubmit}
         onCancel={() => setModalVisible(false)}
         width={600}
-        destroyOnClose
+        destroyOnHidden
       >
         {createdKey ? (
           <Alert
-            message="创建成功"
+            title="创建成功"
             description={
               <div>
                 <p>请妥善保管您的 API 密钥，完整密钥仅显示一次：</p>

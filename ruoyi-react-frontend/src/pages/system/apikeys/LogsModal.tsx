@@ -234,7 +234,7 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
       onCancel={onClose}
       width={1200}
       footer={null}
-      destroyOnClose
+      destroyOnHidden
     >
       {summary && (
         <div style={{ marginBottom: 16 }}>
@@ -255,8 +255,10 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
                   title="成功率"
                   value={(summary.success_rate * 100).toFixed(2)}
                   suffix="%"
-                  valueStyle={{
-                    color: summary.success_rate >= 0.95 ? '#3f8600' : summary.success_rate >= 0.8 ? '#faad14' : '#cf1322',
+                  styles={{
+                    content: {
+                      color: summary.success_rate >= 0.95 ? '#3f8600' : summary.success_rate >= 0.8 ? '#faad14' : '#cf1322',
+                    },
                   }}
                   prefix={summary.success_rate >= 0.95 ? <CheckCircleOutlined /> : summary.success_rate >= 0.8 ? <ClockCircleOutlined /> : <CloseCircleOutlined />}
                 />
@@ -268,8 +270,10 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
                   title="平均耗时"
                   value={summary.avg_duration.toFixed(2)}
                   suffix="ms"
-                  valueStyle={{
-                    color: summary.avg_duration < 100 ? '#3f8600' : summary.avg_duration < 500 ? '#faad14' : '#cf1322',
+                  styles={{
+                    content: {
+                      color: summary.avg_duration < 100 ? '#3f8600' : summary.avg_duration < 500 ? '#faad14' : '#cf1322',
+                    },
                   }}
                 />
               </Card>
@@ -279,8 +283,10 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
                 <Statistic
                   title="错误数"
                   value={summary.total_requests - Math.floor(summary.total_requests * summary.success_rate)}
-                  valueStyle={{
-                    color: '#cf1322',
+                  styles={{
+                    content: {
+                      color: '#cf1322',
+                    },
                   }}
                 />
               </Card>
