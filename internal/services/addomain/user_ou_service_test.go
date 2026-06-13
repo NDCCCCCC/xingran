@@ -174,3 +174,113 @@ func TestUpdateUserDeptAndADInfo(t *testing.T) {
 	assert.Equal(t, "CN=testuser,OU=TestDept,DC=company,DC=com", adUserDN)
 	assert.Equal(t, "OU=TestDept,DC=company,DC=com", adOUDN)
 }
+
+// createDeptTable 为 buildAncestors / generateUniqueDeptCode 测试创建 sys_dept 表。
+const createDeptTable = `CREATE TABLE sys_dept (
+	id TEXT PRIMARY KEY,
+	dept_name TEXT DEFAULT '',
+	dept_code TEXT DEFAULT '',
+	parent_id TEXT,
+	ancestors TEXT DEFAULT '',
+	order_num INTEGER DEFAULT 0,
+	status INTEGER DEFAULT 0,
+	created_at DATETIME,
+	updated_at DATETIME,
+	deleted_at DATETIME
+)`
+
+// setupUserOUSvcDB 构建内存 DB 并返回已注入的 UserOUService。
+func setupUserOUSvcDB(t *testing.T) (*UserOUService, *gorm.DB) {
+	t.Helper()
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	assert.NoError(t, err)
+	db.Exec(createDeptTable)
+	mapper := NewDeptOUmapper(db)
+	return NewUserOUService(db, mapper), db
+}
+
+// TestBuildAncestors_NilParent 验证无父部门时返回空字符串。
+func TestBuildAncestors_NilParent(t *testing.T) {
+	svc, _ := setupUserOUSvcDB(t)
+	ctx := context.Background()
+
+	result := svc.buildAncestors(ctx, nil)
+
+	assert.Equal(t, "", result, "nil parent should yield empty ancestors")
+}
+
+// TestBuildAncestors_WithParent 验证能正确拼接父部门的 ancestors。
+func TestBuildAncestors_WithParent(t *testing.T) {
+	svc, db := setupUserOUSvcDB(t)
+	ctx := context.Background()
+
+	// 插入父部门：ancestors="root-id"
+	db.Exec(`INSERT INTO sys_dept (id, dept_name, dept_code, ancestors) VALUES ('parent-1', '父部门', 'P1', 'root-id')`)
+
+	parentID := "parent-1"
+	result := svc.buildAncestors(ctx, &parentID)
+
+	assert.Equal(t, "root-id,parent-1", result, "ancestors should be parent's ancestors + parent id")
+}
+
+// TestBuildAncestors_ParentWithEmptyAncestors 验证父部门无 ancestors 时只返回 parentID。
+func TestBuildAncestors_ParentWithEmptyAncestors(t *testing.T) {
+	svc, db := setupUserOUSvcDB(t)
+	ctx := context.Background()
+
+	// 父部门 ancestors 为空
+	db.Exec(`INSERT INTO sys_dept (id, dept_name, dept_code, ancestors) VALUES ('top-1', '顶层', 'T1', '')`)
+
+	parentID := "top-1"
+	result := svc.buildAncestors(ctx, &parentID)
+
+	assert.Equal(t, "top-1", result, "when parent has no ancestors, result is just parent id")
+}
+
+// TestBuildAncestors_ParentNotFound 验证父部门不存在时返回空字符串（容错）。
+func TestBuildAncestors_ParentNotFound(t *testing.T) {
+	svc, _ := setupUserOUSvcDB(t)
+	ctx := context.Background()
+
+	parentID := "nonexistent"
+	result := svc.buildAncestors(ctx, &parentID)
+
+	assert.Equal(t, "", result, "missing parent should yield empty ancestors (fail-safe)")
+}
+
+// TestGenerateUniqueDeptCode_Available 验证名称未被占用时直接用作编码。
+func TestGenerateUniqueDeptCode_Available(t *testing.T) {
+	svc, _ := setupUserOUSvcDB(t)
+	ctx := context.Background()
+
+	code := svc.generateUniqueDeptCode(ctx, "新部门")
+
+	assert.Equal(t, "新部门", code, "unused name should be returned as-is")
+}
+
+// TestGenerateUniqueDeptCode_DuplicateAddsSuffix 验证名称已占用时添加序号后缀。
+func TestGenerateUniqueDeptCode_DuplicateAddsSuffix(t *testing.T) {
+	svc, db := setupUserOUSvcDB(t)
+	ctx := context.Background()
+
+	// 已存在 dept_code="测试部门"
+	db.Exec(`INSERT INTO sys_dept (id, dept_name, dept_code, ancestors) VALUES ('d-1', '测试部门', '测试部门', '')`)
+
+	code := svc.generateUniqueDeptCode(ctx, "测试部门")
+
+	assert.Equal(t, "测试部门-1", code, "duplicate name should get -1 suffix")
+}
+
+// TestGenerateUniqueDeptCode_SecondDuplicateAddsIncrementedSuffix 验证多个重名时序号递增。
+func TestGenerateUniqueDeptCode_SecondDuplicateAddsIncrementedSuffix(t *testing.T) {
+	svc, db := setupUserOUSvcDB(t)
+	ctx := context.Background()
+
+	// 占用 "测试部门" 和 "测试部门-1"
+	db.Exec(`INSERT INTO sys_dept (id, dept_name, dept_code) VALUES ('d-1', '测试部门', '测试部门')`)
+	db.Exec(`INSERT INTO sys_dept (id, dept_name, dept_code) VALUES ('d-2', '测试部门', '测试部门-1')`)
+
+	code := svc.generateUniqueDeptCode(ctx, "测试部门")
+
+	assert.Equal(t, "测试部门-2", code, "third duplicate should get -2 suffix")
+}
