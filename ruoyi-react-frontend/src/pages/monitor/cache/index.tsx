@@ -715,14 +715,14 @@ const CacheManager: FC = () => {
                   <Statistic
                     title="命中次数"
                     value={monitor?.l1?.stats?.hitCount || 0}
-                    valueStyle={{ fontSize: '18px', color: '#3f8600' }}
+                    styles={{ content: { fontSize: '18px', color: '#3f8600' } }}
                   />
                 </Col>
                 <Col span={12}>
                   <Statistic
                     title="未命中次数"
                     value={monitor?.l1?.stats?.missCount || 0}
-                    valueStyle={{ fontSize: '18px', color: '#cf1322' }}
+                    styles={{ content: { fontSize: '18px', color: '#cf1322' } }}
                   />
                 </Col>
               </Row>
@@ -756,14 +756,14 @@ const CacheManager: FC = () => {
                   <Statistic
                     title="命中次数"
                     value={monitor?.l2?.stats?.hitCount || 0}
-                    valueStyle={{ fontSize: '18px', color: '#3f8600' }}
+                    styles={{ content: { fontSize: '18px', color: '#3f8600' } }}
                   />
                 </Col>
                 <Col span={12}>
                   <Statistic
                     title="未命中次数"
                     value={monitor?.l2?.stats?.missCount || 0}
-                    valueStyle={{ fontSize: '18px', color: '#cf1322' }}
+                    styles={{ content: { fontSize: '18px', color: '#cf1322' } }}
                   />
                 </Col>
               </Row>
