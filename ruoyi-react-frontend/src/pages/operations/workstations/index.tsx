@@ -595,7 +595,7 @@ const WorkstationManagement: FC = () => {
           </div>
           {selectedRowKeys.length > 0 && (
             <Alert
-              message={
+              title={
                 <span>
                   已选择 <strong>{selectedRowKeys.length}</strong> 个工位，
                   <Button
@@ -619,7 +619,7 @@ const WorkstationManagement: FC = () => {
               type="success"
               showIcon
               style={{ marginTop: 12 }}
-              message={
+              title={
                 <span>
                   useTableQuery (React Query) 已生效: 首页缓存共
                   {' '}<strong>{reactQueryWorkstations.total}</strong> 条工位

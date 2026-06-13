@@ -38,6 +38,8 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
   const [autoFilledAsset, setAutoFilledAsset] = useState<Asset | null>(null);
   const [searchingSerial, setSearchingSerial] = useState(false);
   const [form] = Form.useForm();
+  // 使用 Form.useWatch 订阅序列号字段，避免在未连接 Form 上调用 getFieldValue
+  const deviceSerial = Form.useWatch('deviceSerial', form);
 
   // 子表格分页（默认每页10条，独立于主表格）
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination({ pageSize: 10 });
@@ -493,7 +495,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
         open={modalVisible}
         onOk={handleModalOk}
         onCancel={() => setModalVisible(false)}
-        destroyOnClose
+        destroyOnHidden
         width={600}
       >
         <Form form={form} layout="vertical">
@@ -521,9 +523,9 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
             </div>
           )}
 
-          {!autoFilledAsset && form.getFieldValue('deviceSerial') && (
+          {!autoFilledAsset && deviceSerial && (
             <Alert
-              message="未找到资产信息"
+              title="未找到资产信息"
               description="该序列号在资产系统中不存在，您仍可以添加设备，但需要手动填写设备信息"
               type="warning"
               showIcon

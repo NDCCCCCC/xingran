@@ -12,6 +12,7 @@ export interface StatisticItem {
   value: number;
   prefix?: ReactNode;
   styles?: { content?: { color?: string } };
+  /** @deprecated 请改用 `styles.content` */
   valueStyle?: React.CSSProperties;
 }
 
@@ -48,8 +49,12 @@ export const StatisticsCards: FC<StatisticsCardsProps> = ({
               title={item.title}
               value={item.value}
               prefix={item.prefix}
-              styles={item.styles}
-              valueStyle={item.valueStyle}
+              styles={{
+                content: {
+                  ...(item.valueStyle ?? {}),
+                  ...(item.styles?.content ?? {}),
+                },
+              }}
             />
           </Card>
         </Col>
