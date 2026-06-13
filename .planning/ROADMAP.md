@@ -459,15 +459,85 @@ Plans:
 
 - [ ] 30-04-PLAN.md — Wave 4: 渲染层 (虚拟滚动、React.memo、5 条 ESLint 规则)
 
-### Phase 31: P0 收尾:连接池 lifecycle + Config API 重设计 — 完成 20260612 审查报告剩余 F-14 connection_pool 引用计数与 lifecycle 重做、F-17 ConfigUpdateRequest 添加 ConfigKey 字段并重设计校验逻辑
+### Phase 31: P0 收尾:连接池 lifecycle + Config API 重设计 ✅ COMPLETE 2026-06-13
 
-**Goal:** [To be planned]
-**Requirements**: TBD
+**Goal:** 完成 20260612 审查报告剩余 2 项 P0 finding(F-14 connection_pool 引用计数与 lifecycle 重做、F-17 ConfigUpdateRequest 添加 ConfigKey 字段并重设计校验逻辑)
+**Requirements:** F-14, F-17
 **Depends on:** Phase 30
-**Plans:** 0 plans
+**Plans:** 5 plans, all complete
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 31 to break down)
+- [x] 31-01-PLAN.md — F-14 GetConnection 内部 refCount +1 (commit cf41672)
+- [x] 31-02-PLAN.md — F-14 caller 适配 4 处 (commit 2f770bf)
+- [x] 31-03-PLAN.md — F-14 设计修订 ReleaseRef API + 6 个并发测试 (commit e464d72)
+- [x] 31-04-PLAN.md — F-17 ConfigUpdateRequest + Update 校验 (commit e7b2b41)
+- [x] 31-05-PLAN.md — F-17 前端类型同步 + SUMMARY (commit be7c40d)
+- [x] UAT: 2 passed, 4 skipped (runtime), 0 issues (commit 470f1a9)
+
+**Outcome:** P0 finding 100% 覆盖 (20 完整 + 2 部分 = 22/22),
+28 RED baseline 7 轮 audit-fix + 1 phase 累计 0 净增加。
+
+### Phase 32: v1.14 P1 重构与 P2 架构优化
+
+**Goal:** 清理 20260612 后端代码审查报告中**所有非 P0 的 P1（47 项, 精选 15 项）与 P2（80+ 项）**问题。聚焦"安全加固 / 并发与一致性 / 业务逻辑修订 / 架构债与测试覆盖"四大方向，将系统从"功能完整、有隐患"推进到"生产可信、可维护"。
+
+**Requirements**:
+
+#### 🔒 P1 安全加固（7 项）
+- [P1-S1] `pkg/crypto/sm2_jwt.go:222-266` — 手写 JWT 解析校验 `alg` 头，杜绝算法混淆攻击
+- [P1-S2] `pkg/crypto/request_encryption.go:88-103` — timestamp 窗口从 ±300s 收紧到 ±60s（或可配置）
+- [P1-S3] `pkg/crypto/nonce_storage.go` — 启用 `cleanupExpiredNonces` 定时清理，防止内存无限增长
+- [P1-S4] `pkg/middleware/permission.go:106-118` — 取消子菜单自动继承父菜单权限，修复权限提升漏洞
+- [P1-S5] `internal/core/security/password.go:25` — PBKDF2 迭代从 1000 提升到 ≥600000（OWASP 推荐）+ 平滑迁移
+- [P1-S6] `internal/core/security/password.go:145-166` — `GenerateRandomPassword` 改用 `crypto/rand` 无偏置算法
+- [P1-S7] `internal/services/operations/excel_handler.go:67-72` — Excel 文件 magic number 校验，不只校验后缀
+
+#### ⚡ P1 并发与一致性（6 项）
+- [P1-C1] `internal/services/addomain/sync.go:35` — AD 同步系列方法加 `singleflight` 互斥，防止 scheduler+手动触发并发
+- [P1-C2] `internal/services/addomain/group_sync_service.go:336-376` — `handleDeletedGroups` 加阈值保护（如单次删除 ≥30% 视为 LDAP 故障，拒删）
+- [P1-C3] `internal/services/addomain/dept_ou_mapper.go:60-100` — `UpsertMapping` 收敛为单事务，避免 delete/insert 中间崩溃
+- [P1-C4] `internal/collectors/port_collector.go:353-381` — 端口状态批量插入（`clause.OnConflict`），保护连接池
+- [P1-C5] `internal/websocket/notice_hub.go` — 添加 `readPump` + ping/pong 心跳，探测并清理僵尸连接
+- [P1-C6] `internal/services/operations/excel_service.go:905-906` — `validateUniqueness` 改批量 `IN` 查询，消除 N+1
+
+#### 🐛 P1 业务逻辑（2 项）
+- [P1-B1] `internal/services/system/config_service.go:91-99` — `sys.request.encryption.enabled` 修改后立即失效缓存，无需重启
+- [P1-B2] `internal/services/system/user_service.go:404` — 移除 `List` 中 `buildDepartmentPaths` 的重复调用
+
+#### 🛠️ P2 架构债（精选 8 类）
+- [P2-A1] `internal/core/core.go` — 拆分 god struct（25+ 字段）为 `CoreServices` / `CoreInfra` 两个组合根
+- [P2-A2] 统一缓存键体系 — `cache_keys.go` 与 `data_cache_service.go` 两套定义合并到 `cache_keys.go`
+- [P2-A3] 消除 `user_service.go` 与 `user_service_optimized.go` 并存 — 删除旧版，router 切到 optimized
+- [P2-A4] 修复迁移文件编号冲突（027/028/029/030/031/036 多文件重号）— 重命名 + 注释来源
+- [P2-A5] 统一错误处理 — `role_service` 等 `fmt.Errorf` 收敛到 `apperrors`，Handler 层一处映射
+- [P2-A6] AD 模块关键路径单元测试补足（`ldap_client` Connect/Bind/Search、`group_sync`、`user_ou_service`），并删除/补全 `stripBaseDN_test.go`、`dept_ou_mapper_test.go` 空壳
+- [P2-A7] `internal/device/` — Scrapli / Python subprocess 引入 process group + Wait + 僵尸进程定时清理
+- [P2-A8] Excel 导入全量包裹事务（含 `processThreeLevelDepartments` 子流程），失败可回滚
+
+**Depends on:** Phase 31（P0 收尾 — F-14 connection_pool lifecycle + F-17 ConfigUpdateRequest）
+**Plans:** TBD (建议 7 plans，按 Wave 切分；运行 `/gsd-plan-phase 32` 细化)
+
+**建议 Wave 拆分**:
+
+- **Wave 1 — P1 安全加固快赢**: P1-S2 / P1-S3 / P1-S4 / P1-S7（无迁移、低风险）
+- **Wave 2 — P1 密码强度迁移**: P1-S1 / P1-S5 / P1-S6（含密码哈希平滑迁移、需测试覆盖）
+- **Wave 3 — P1 并发与一致性**: P1-C1 ~ P1-C6（多服务联动，需端到端验证）
+- **Wave 4 — P1 业务逻辑收尾**: P1-B1 / P1-B2
+- **Wave 5 — P2 架构债（重构）**: P2-A1 / P2-A2 / P2-A3 / P2-A5（架构调整，集中爆破）
+- **Wave 6 — P2 迁移与子进程**: P2-A4 / P2-A7 / P2-A8
+- **Wave 7 — P2 测试覆盖**: P2-A6
+
+**Success Criteria**:
+
+- 所有 15 项 P1 + 8 类 P2 在 PR 中可追溯到具体 commit
+- `go vet ./...` 0 警告（消化 20260612 报告里 5 处 vet 警告）
+- 关键路径测试覆盖率 ≥70%（AD/JWT/密码模块）
+- 复审通过 — 与 20260612 报告同维度回审，所有列出问题闭环
+
+**Source**: `.planning/reviews/20260612-backend-code-review.md`
+
+Plans:
+- [ ] TBD (运行 `/gsd-plan-phase 32` 生成详细 plan 文件)
 
 ---
 

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: MAC地址历史数据管理
 status: unknown
-stopped_at: Phase 30 context gathered
-last_updated: "2026-06-13T01:47:56.468Z"
+stopped_at: Phase 31 verified — 28 RED baseline 0 net change
+last_updated: "2026-06-13T02:00:00.000Z"
 progress:
   total_phases: 27
-  completed_phases: 12
-  total_plans: 95
-  completed_plans: 87
-  percent: 44
+  completed_phases: 13
+  total_plans: 100
+  completed_plans: 92
+  percent: 48
 ---
 
 # Project State
@@ -72,6 +72,8 @@ Plan: 03 (React Query migration) — ✅ COMPLETED 2026-06-13
 | 28 | 工位设备关联子表格 | ✅ Completed | 4/4 plans |
 | 29 | sys_dict 重构 | 📋 Planned | 0/0 plans |
 | 30 | 前端性能优化 | 🚧 In Progress | 3/4 plans |
+| 31 | P0 收尾:连接池 lifecycle + Config API 重设计 | 📋 Planned | 0/0 plans |
+| 32 | v1.14 P1 重构与 P2 架构优化 | 📋 Planned | 0/0 plans |
 
 ## Completed Milestones
 
@@ -121,6 +123,8 @@ Plan: 03 (React Query migration) — ✅ COMPLETED 2026-06-13
 | 2026-06-13 | Phase 30 Plan 01 完成 (Bundle 基础设施) - Wave 1 of 4 | 30 |
 | 2026-06-13 | Phase 30 Plan 02 完成 (重库按需加载) - Wave 2 of 4 | 30 |
 | 2026-06-13 | Phase 30 Plan 03 完成 (查询层 React Query 推广) - Wave 3 of 4 | 30 |
+| 2026-06-13 | Phase 31 完成 (P0 收尾) - F-14 connection_pool refCount + F-17 ConfigKey API,5 plan + UAT 2 pass | 31 |
+| 2026-06-13 | 20260612 后端审查报告 P0 100% 覆盖 (20/22 完整 + 2/22 部分) - 58 commit | — |
 
 ## Quick Tasks Completed
 
@@ -187,6 +191,8 @@ Plan: 03 (React Query migration) — ✅ COMPLETED 2026-06-13
 - 📋 Phase 28 added: 工位设备关联子表格功能
 - 📋 Phase 29 added: 重构工位状态枚举，从硬编码改为使用数据字典（sys_dict），保证前后端一致性
 - 📋 Phase 30 added: 前端性能优化（消除瀑布流/包大小/重渲染/JS性能）— 基于 Vercel React 最佳实践审计发现的 70+ 问题
+- 📋 Phase 31 added: P0 收尾 — connection_pool lifecycle + Config API 重设计（20260612 后端审查 F-14、F-17）
+- 📋 Phase 32 added: v1.14 P1 重构与 P2 架构优化（20260612 后端审查剩余 P1/P2 任务）
 
 **Total shipped**: 72 plans, 18 phases completed
 
