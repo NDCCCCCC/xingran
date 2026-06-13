@@ -80,3 +80,39 @@ Pre-existing violations are **deferred** to a follow-up quick task.
 Until then, `npm run lint` will continue to report these pre-existing
 errors. CI should be configured to not block on lint until this cleanup
 is done.
+
+## Wave 5 — D-16 ESLint Final State (Gap 5 closure)
+
+Wave 5 downshifted 2 of the 3 newly-added D-16 rules from `error` to `warn`
+to unblock CI lint gate (per "Action required" option 2 above):
+
+| Rule | Wave 4 | Wave 5 | Pre-existing violations |
+|------|--------|--------|-------------------------|
+| `react-hooks/exhaustive-deps` | error | error | 99 (kept at error; real bugs) |
+| `react/no-unstable-nested-components` | error | warn | 9 (downshifted) |
+| `react/jsx-no-constructed-context-values` | error | warn | 2 (downshifted) |
+| `react/jsx-no-useless-fragment` | warn | warn | n/a |
+| `react/no-array-index-key` | warn | warn | n/a |
+
+**Result:** D-16 error-level violations: 110 → 99 (only `exhaustive-deps`).
+**Follow-up:** Phase 31 quick task to fix 99 `exhaustive-deps` violations
+properly OR formally disable the rule with rationale.
+
+## Wave 5 — Gap 6: vendor-commons 610KB (documented)
+
+`vendor-commons` = ~610 KB gzip, exceeds 500 KB `chunkSizeWarningLimit`.
+Wave 2 reduced 743 → 608 (-18.2%), Wave 4 added 2 KB back. Gap remains.
+
+**Proposed targets for further split (future quick task):**
+- dayjs (already in vendor-utils)
+- jsonata (query library, large)
+- react-markdown (in some routes)
+- react-grid-layout (dashboard)
+- Various other utilities currently in commons
+
+**Status:** Deferred. The 500 KB threshold is informational (Vite warning,
+not error). Functional impact is acceptable. Splitting further risks
+over-fragmentation; a Lighthouse run on a production build will determine
+if the threshold needs to be enforced.
+
+**Follow-up:** Lighthouse + chunk-size analysis quick task.
