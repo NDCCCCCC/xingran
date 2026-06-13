@@ -2,7 +2,9 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -149,6 +151,7 @@ type MACHistoryQueryService interface {
 	QueryDeviceHistory(ctx context.Context, req *DeviceHistoryQuery) (*MACHistoryQueryResult, error)
 	QueryMACTrajectory(ctx context.Context, req *MACTrajectoryQuery) (*MACTrajectoryResult, error)
 	QueryConnectionStats(ctx context.Context, req *ConnectionStatsQuery) (*ConnectionStatsResponse, error)
+	ImportOUIData(ctx context.Context) error
 }
 
 // macHistoryQueryServiceImpl MAC历史查询服务实现
@@ -192,6 +195,46 @@ func validateMACAddress(mac string) error {
 		return fmt.Errorf("无效的MAC地址格式")
 	}
 
+	return nil
+}
+
+// ImportOUIData 启动时从configs/oui-vendors.json导入OUI数据
+func (s *macHistoryQueryServiceImpl) ImportOUIData(ctx context.Context) error {
+	// 检查表是否已有数据
+	var count int64
+	if err := s.db.WithContext(ctx).Table("sys_mac_oui_vendor").Count(&count).Error; err != nil {
+		return fmt.Errorf("failed to check OUI table: %w", err)
+	}
+	if count > 0 {
+		applogger.Infof("OUI table already has %d records, skipping import", count)
+		return nil
+	}
+
+	// 读取JSON文件
+	data, err := os.ReadFile("configs/oui-vendors.json")
+	if err != nil {
+		return fmt.Errorf("failed to read OUI JSON: %w", err)
+	}
+
+	var vendors []models.MACOUIVendor
+	if err := json.Unmarshal(data, &vendors); err != nil {
+		return fmt.Errorf("failed to parse OUI JSON: %w", err)
+	}
+
+	// 批量插入（每批100条）
+	batchSize := 100
+	for i := 0; i < len(vendors); i += batchSize {
+		end := i + batchSize
+		if end > len(vendors) {
+			end = len(vendors)
+		}
+		batch := vendors[i:end]
+		if err := s.db.WithContext(ctx).Create(&batch).Error; err != nil {
+			return fmt.Errorf("failed to insert OUI batch %d: %w", i/batchSize, err)
+		}
+	}
+
+	applogger.Infof("Imported %d OUI vendors", len(vendors))
 	return nil
 }
 

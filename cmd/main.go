@@ -15,6 +15,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/server"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	macHistoryQueryService "github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
@@ -121,6 +122,9 @@ func initializeCoreModule(cfg *config.Config) *core.Core {
 
 	// 添加MAC历史保留期默认配置
 	initMACHistoryRetentionConfig(coreModule)
+
+	// 导入OUI厂商数据
+	importOUIData(coreModule)
 
 	return coreModule
 }
@@ -274,5 +278,16 @@ func initMACHistoryRetentionConfig(coreModule *core.Core) {
 		applogger.Warnf("创建MAC历史保留期配置失败: %v", err)
 	} else {
 		applogger.Infof("MAC历史保留期配置已创建（默认120天）")
+	}
+}
+
+// importOUIData 导入OUI厂商数据
+func importOUIData(coreModule *core.Core) {
+	db := coreModule.GetDB()
+	historyQueryService := macHistoryQueryService.NewMACHistoryQueryService(db)
+
+	applogger.Infof("开始导入OUI厂商数据...")
+	if err := historyQueryService.ImportOUIData(context.Background()); err != nil {
+		applogger.Warnf("导入OUI厂商数据失败: %v", err)
 	}
 }
