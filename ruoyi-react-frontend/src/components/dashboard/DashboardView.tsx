@@ -223,7 +223,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 	if (!initialLoadComplete && externalLoading) {
 		return (
 			<div className="dashboard-view dashboard-view--loading">
-				<Spin size="large" tip="加载仪表盘中..." />
+				<Spin size="large">
+					<div style={{ minHeight: 120 }} />
+				</Spin>
+				<div style={{ marginTop: 8, color: 'rgba(0, 0, 0, 0.45)' }}>加载仪表盘中...</div>
 			</div>
 		);
 	}

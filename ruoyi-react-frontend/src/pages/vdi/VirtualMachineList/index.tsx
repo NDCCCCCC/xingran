@@ -904,7 +904,10 @@ const VirtualMachineList: React.FC = () => {
         confirmLoading={loading}
         width={800}
       >
-        <Spin spinning={loading && !vtpPlatforms.length} tip="加载VDI配置中...">
+        <Spin spinning={loading && !vtpPlatforms.length}>
+          {loading && !vtpPlatforms.length && (
+            <div style={{ padding: 12, color: 'rgba(0, 0, 0, 0.45)' }}>加载VDI配置中...</div>
+          )}
           <Form form={form} layout="vertical">
             <Row gutter={16}>
               {/* 左列：基础配置 */}
@@ -1051,7 +1054,10 @@ const VirtualMachineList: React.FC = () => {
         confirmLoading={loading}
         width={600}
       >
-        <Spin spinning={loading && !quickConfig} tip="加载配置中...">
+        <Spin spinning={loading && !quickConfig}>
+          {loading && !quickConfig && (
+            <div style={{ padding: 12, color: 'rgba(0, 0, 0, 0.45)' }}>加载配置中...</div>
+          )}
           <Form form={quickCreateForm} layout="vertical">
             {quickConfig && (
               <div style={{ marginBottom: 16, padding: 12, background: '#f5f5f5', borderRadius: 4 }}>

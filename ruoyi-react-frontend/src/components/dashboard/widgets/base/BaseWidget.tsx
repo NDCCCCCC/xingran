@@ -230,9 +230,16 @@ export const BaseWidget: React.FC<BaseWidgetProps> = ({
 
 				{/* 正常内容 */}
 				{!showSkeleton && !error && !isEmpty && (
-					<Spin spinning={loading} tip="加载中...">
-						{children}
-					</Spin>
+					<>
+						<Spin spinning={loading}>
+							{children}
+						</Spin>
+						{loading && (
+							<div style={{ marginTop: 8, textAlign: 'center', color: 'rgba(0, 0, 0, 0.45)' }}>
+								加载中...
+							</div>
+						)}
+					</>
 				)}
 			</Card>
 		</div>

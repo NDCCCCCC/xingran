@@ -110,7 +110,12 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({
 				</div>
 			}
 		>
-			<Spin spinning={loading} tip="加载预览数据...">
+			<Spin spinning={loading}>
+				{loading && (
+					<div style={{ textAlign: 'center', padding: 12, color: 'rgba(0, 0, 0, 0.45)' }}>
+						加载预览数据...
+					</div>
+				)}
 				<div style={{ minHeight: 'calc(100vh - 200px)', position: 'relative' }}>
 					{error ? (
 						<div

@@ -29,7 +29,10 @@ const Loading: FC = () => (
       minHeight: 200,
     }}
   >
-    <Spin tip="加载编辑器..." />
+    <Spin>
+      <div style={{ minHeight: 120 }} />
+    </Spin>
+    <div style={{ marginTop: 8, color: 'rgba(0, 0, 0, 0.45)' }}>加载编辑器...</div>
   </div>
 );
 

@@ -156,7 +156,10 @@ const MACTrajectoryChart: React.FC<MACTrajectoryChartProps> = ({
   if (loading) {
     return (
       <div style={{ textAlign: 'center', padding: '50px' }}>
-        <Spin tip="加载轨迹数据..." />
+        <Spin>
+          <div style={{ minHeight: 80 }} />
+        </Spin>
+        <div style={{ marginTop: 8, color: 'rgba(0, 0, 0, 0.45)' }}>加载轨迹数据...</div>
       </div>
     );
   }

@@ -407,7 +407,12 @@ const FloorPlanPanel: React.FC<FloorPlanPanelProps> = ({
 
 const LoadingView: React.FC<{ message?: string }> = ({ message }) => (
   <div style={styles.centerContainer}>
-    <Spin size="large" tip={message} />
+    <Spin size="large">
+      <div style={{ minHeight: 120 }} />
+    </Spin>
+    {message && (
+      <div style={{ marginTop: 8, color: 'rgba(0, 0, 0, 0.45)' }}>{message}</div>
+    )}
   </div>
 );
 

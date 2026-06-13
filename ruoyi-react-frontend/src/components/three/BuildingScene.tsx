@@ -40,7 +40,10 @@ const Loading: FC = () => (
       minHeight: 240,
     }}
   >
-    <Spin size="large" tip="加载 3D 场景..." />
+    <Spin size="large">
+      <div style={{ minHeight: 120 }} />
+    </Spin>
+    <div style={{ marginTop: 8, color: 'rgba(0, 0, 0, 0.45)' }}>加载 3D 场景...</div>
   </div>
 );
 
