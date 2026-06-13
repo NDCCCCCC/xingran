@@ -401,7 +401,12 @@ const WorkstationManagement: FC = () => {
     if (viewMode === 'table') {
       return (
         <Table
-          rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
+          rowSelection={{
+            selectedRowKeys,
+            onChange: setSelectedRowKeys,
+            // 收紧复选框列宽度（默认 62px → 40px）
+            columnWidth: 40,
+          }}
           columns={columns}
           dataSource={workstations}
           loading={loading}
@@ -443,6 +448,8 @@ const WorkstationManagement: FC = () => {
               />
             ),
             rowExpandable: () => true,
+            // 收紧展开图标列宽度（默认 48px → 40px），与复选框列对齐
+            columnWidth: 40,
             // 不再自定义 expandIcon — 使用 Ant Design 默认的三角形展开图标
             // 此前自定义的"查看设备/收起设备"按钮与默认三角图标并存，造成重复 UI
           }}
