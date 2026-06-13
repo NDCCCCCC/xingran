@@ -443,21 +443,8 @@ const WorkstationManagement: FC = () => {
               />
             ),
             rowExpandable: () => true,
-            expandIcon: ({ expanded, onExpand, record }) => (
-              <Button
-                type="text"
-                size="small"
-                data-stop-row-click
-                onClick={(e) => {
-                  // 阻止冒泡到行 onClick，避免"一次点击触发两次切换"
-                  e.stopPropagation();
-                  onExpand(record, e);
-                }}
-                style={{ fontSize: '12px' }}
-              >
-                {expanded ? '收起设备' : '查看设备'}
-              </Button>
-            ),
+            // 不再自定义 expandIcon — 使用 Ant Design 默认的三角形展开图标
+            // 此前自定义的"查看设备/收起设备"按钮与默认三角图标并存，造成重复 UI
           }}
           onChange={(pagination) => {
             const newPage = pagination.current || 1;
