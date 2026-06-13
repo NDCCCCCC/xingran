@@ -123,6 +123,16 @@ None - no external service configuration required.
 - Wave 4 (Business Logic Closeout) complete
 - Ready for Wave 5 onward (per `32-RESEARCH.md` P2 architectural debt items, or any P3 follow-ups)
 
+## Self-Check: PASSED
+
+- `internal/services/system/config_invalidation_test.go` exists (211 lines, 4 sub-tests)
+- `d4adb50` commit present in git log: `test(32-04): P1-B1 config invalidation regression coverage`
+- `d3d9ad7` commit present in git log: `docs(32-04): complete Wave 4 Business Logic Closeout plan`
+- `go build ./...` exits 0
+- `go vet ./...` exits 0
+- `go test -count=1 -run TestConfigService_UpdateEncryptionFlag ./internal/services/system/ -v` passes 4/4 sub-tests
+- `grep -n "buildDepartmentPaths" internal/services/system/user_service.go` shows exactly 1 call site (line 398)
+
 ---
 
 *Phase: 32-v1-14-p1-p2*
