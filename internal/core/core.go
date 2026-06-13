@@ -18,7 +18,6 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/rpa"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/vdi"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/websocket"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
@@ -42,40 +41,17 @@ type warmUpServices struct {
 }
 
 // Core 核心模块管理器
-// 负责管理系统的所有核心服务组件，包括数据库连接、缓存、JWT管理、密码加密等
+// 负责管理系统的所有核心服务组件，包括数据库连接、缓存、JWT管理、密码加密等。
+//
+// 通过嵌入 *CoreInfra 和 *CoreServices 保持向后兼容的字段访问语法
+//（core.DB、core.Cache、core.UserService、core.NoticeHub 等仍可直接访问 — 字段提升）。
+//
+// 字段分组：
+//   - 基础设施层：见 core_infra.go（Config、DB、Cache、JWT、Pwd、SM4、Scheduler、验证码、指标缓存、认证工厂）
+//   - 业务服务层：见 core_services.go（设备、通知、日志、缓存服务、RPA、API 元数据、分区）
 type Core struct {
-	Config                      *config.Config                        // 系统配置
-	DB                          *db.Database                          // 数据库连接管理器
-	Cache                       cache.Cache                           // 缓存管理器
-	JWTManager                  *security.JWTManager                  // JWT令牌管理器
-	PwdManager                  *security.PasswordManager             // 密码管理器
-	SM4Cipher                   addomain.PasswordCipher               // SM4加密器接口（用于AD域密码加密）
-	MetricsCacheService         *MetricsCacheService                  // 系统指标缓存服务（被 monitor/adapters.go 使用）
-	Scheduler                   *scheduler.Scheduler                  // 定时任务调度器
-	DeviceExecutor              *device.DeviceExecutor                // 设备执行器（被 mac_handler.go, network_export_handler.go, port_handler.go 使用）
-	DeviceDiscoveryService      *services.DeviceDiscoveryService      // 设备发现服务（被 network_export_handler.go 使用）
-	DeviceInfoCollectionService *services.DeviceInfoCollectionService // 设备信息采集服务（被 network_export_handler.go 使用）
-	DeviceMonitorService        *services.DeviceMonitorService        // 设备监控服务（被 scheduler.SetDeviceMonitorService() 使用）
-	NoticeHub                   *websocket.NoticeHub                  // WebSocket通知中心（被 router.go 和 rpa_router.go 使用）
-	CaptchaService              *CaptchaService                       // 验证码服务（被 auth.go 和 captcha_handler.go 使用）
-	CaptchaBackgroundService    *CaptchaBackgroundService             // 验证码背景图服务（被 captcha_background_handler.go 使用）
-	OperLogService              services.OperLogService               // 操作日志服务（被 middleware 和 helper.go 使用）
-	TokenBlacklistService       services.TokenBlacklistService        // 令牌黑名单服务（被 middleware 和 auth.go 使用）
-	AuthFactory                 *security.AuthStrategyFactory         // 认证策略工厂（被 auth.go 使用）
-
-	// 缓存服务（用于 System 模块）
-	DataCacheService   *services.DataCacheService   // 通用数据缓存服务
-	CacheConfigService *services.CacheConfigService // 缓存配置服务
-	CacheManager       *system.CacheManager         // 缓存管理器（增强功能）
-
-	// RPA 服务
-	RPAScalingService rpaScalingService // RPA 扩缩容服务（内部使用，仅在 Close() 中停止）
-
-	// API端点元数据服务
-	APIEndpointService *services.APIEndpointService // API端点服务（被 dashboard_router.go 使用）
-
-	// MAC历史分区服务
-	PartitionService services.PartitionService // MAC历史表分区管理服务
+	*CoreInfra
+	*CoreServices
 }
 
 // GetDB 获取数据库连接
@@ -98,11 +74,18 @@ func New(cfg *config.Config) (*Core, error) {
 		return nil, fmt.Errorf("初始化JWT管理器失败: %w", err)
 	}
 
-	return &Core{
+	// 初始化 CoreInfra 与 CoreServices，确保 struct embedding 字段提升能正常工作
+	infra := &CoreInfra{
 		Config:     cfg,
 		JWTManager: jwtManager,
 		PwdManager: security.NewPasswordManager(nil),
 		SM4Cipher:  sm4Cipher,
+	}
+	svcs := &CoreServices{}
+
+	return &Core{
+		CoreInfra:    infra,
+		CoreServices: svcs,
 	}, nil
 }
 

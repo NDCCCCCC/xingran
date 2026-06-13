@@ -38,7 +38,9 @@ func newTestCoreWithSQLite(t *testing.T, setup func(*gorm.DB)) *core.Core {
 	}
 
 	return &core.Core{
-		DB: &db.Database{DB: gormDB, Type: "sqlite"},
+		CoreInfra: &core.CoreInfra{
+			DB: &db.Database{DB: gormDB, Type: "sqlite"},
+		},
 	}
 }
 
