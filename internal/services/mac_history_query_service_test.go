@@ -1,10 +1,15 @@
 package services
 
 import (
+	"context"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 )
 
 // TestValidateMACAddress 测试MAC地址验证
@@ -200,3 +205,87 @@ func TestSameLocation(t *testing.T) {
 		})
 	}
 }
+
+// setupTestService 创建测试用的service实例和内存数据库
+func setupTestService(t *testing.T) *macHistoryQueryServiceImpl {
+	// 创建内存SQLite数据库
+	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	require.NoError(t, err)
+
+	// 创建测试表
+	err = db.AutoMigrate(&models.MACOUIVendor{})
+	require.NoError(t, err)
+
+	// 创建service实例（cache为nil，不测试缓存逻辑）
+	service := &macHistoryQueryServiceImpl{db: db, cache: nil}
+	return service
+}
+
+// TestGetVendor 测试GetVendor方法
+func TestGetVendor(t *testing.T) {
+	service := setupTestService(t)
+
+	// 准备测试数据
+	oui := &models.MACOUIVendor{
+		OUIPrefix:  "AABBCC",
+		VendorName: "Test Vendor Inc",
+	}
+	require.NoError(t, service.db.Create(oui).Error)
+
+	tests := []struct {
+		name       string
+		mac        string
+		wantVendor string
+		wantErr    bool
+	}{
+		{
+			name:       "已知OUI - 大写带分隔符",
+			mac:        "AA:BB:CC:DD:EE:FF",
+			wantVendor: "Test Vendor Inc",
+			wantErr:    false,
+		},
+		{
+			name:       "已知OUI - 小写无分隔符",
+			mac:        "aabbccddeeff",
+			wantVendor: "Test Vendor Inc",
+			wantErr:    false,
+		},
+		{
+			name:       "已知OUI - 点分格式",
+			mac:        "aabb.ccddeeff",
+			wantVendor: "Test Vendor Inc",
+			wantErr:    false,
+		},
+		{
+			name:       "未知OUI",
+			mac:        "DD:EE:FF:11:22:33",
+			wantVendor: "Unknown Vendor",
+			wantErr:    false,
+		},
+		{
+			name:       "无效MAC格式 - 太短",
+			mac:        "AA:BB",
+			wantVendor: "Unknown Vendor",
+			wantErr:    false,
+		},
+		{
+			name:       "无效MAC格式 - 非十六进制",
+			mac:        "GG:HH:II:JJ:KK:LL",
+			wantVendor: "Unknown Vendor",
+			wantErr:    false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			vendor, err := service.GetVendor(context.Background(), tt.mac)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.wantVendor, vendor)
+			}
+		})
+	}
+}
+
