@@ -25,6 +25,13 @@ type ExcelService struct {
 	cacheInvalidator  *CacheInvalidator
 	cache             system.CacheProvider
 	geocoding         *GeocodingService
+
+	// P1-C6 修复: validateUniqueness N+1 防御 — 按 tableName 缓存每个唯一列
+	// 的"已存在值集合",首次调用时单次 IN 查询一次性加载,后续 per-row 调用
+	// 仅做内存 set 查询。把 N(rows) × M(columns) 次 Count 降为 M 次 Pluck。
+	uniqueValueMu     sync.Mutex
+	uniqueValueCache  map[string]map[string]map[string]struct{} // tableName -> colField -> set(value)
+	uniqueValueLoaded map[string]bool                            // tableName -> 是否已加载
 }
 
 func NewExcelService(db *gorm.DB, pwdManager *security.PasswordManager, cache system.CacheProvider, geocoding *GeocodingService) *ExcelService {
@@ -35,6 +42,8 @@ func NewExcelService(db *gorm.DB, pwdManager *security.PasswordManager, cache sy
 		cacheInvalidator:  NewCacheInvalidator(cache),
 		cache:             cache,
 		geocoding:         geocoding,
+		uniqueValueCache:  make(map[string]map[string]map[string]struct{}),
+		uniqueValueLoaded: make(map[string]bool),
 	}
 }
 
@@ -944,31 +953,39 @@ func (s *ExcelService) parseFieldValue(col ExcelColumn, value string) (any, erro
 func (s *ExcelService) validateUniqueness(ctx context.Context, config ExcelConfig, data map[string]any, rowNum int) []ImportError {
 	errors := make([]ImportError, 0)
 
+	// P1-C6 修复: 从 N(rows)×M(cols) 次 Count 降为 M(cols) 次单 IN/Pluck 查询。
+	// 首次访问某 tableName 时,把所有 Unique 列的非空值集合一次性加载到内存缓存,
+	// 后续 per-row 调用直接走 set 查找。
+	if err := s.ensureUniqueValueCacheLoaded(ctx, config); err != nil {
+		// 加载缓存失败时回退到 silent skip,与原实现行为一致(原代码遇到 err 也 continue)
+		logger.Warnf("加载唯一值缓存失败,跳过本行唯一性校验 [%s]: %v", config.TableName, err)
+		return errors
+	}
+
+	s.uniqueValueMu.Lock()
+	tableCache, ok := s.uniqueValueCache[config.TableName]
+	s.uniqueValueMu.Unlock()
+	if !ok {
+		return errors
+	}
+
 	for _, col := range config.Columns {
 		if col.UpsertKey {
 			continue
 		}
 
 		if col.Unique {
-			dbField := s.getDBFieldName(col)
-			code, ok := data[col.Field]
-			if !ok {
+			code, exists := data[col.Field]
+			if !exists {
 				continue
 			}
 
-			var count int64
-			err := s.db.WithContext(ctx).Table(config.TableName).
-				Where(dbField+" = ? AND deleted_at IS NULL", code).
-				Count(&count).Error
-			if err != nil {
-				continue
-			}
-
-			if count > 0 {
+			key := fmt.Sprintf("%v", code)
+			if _, hit := tableCache[col.Field][key]; hit {
 				errors = append(errors, ImportError{
 					Row:   rowNum,
 					Field: col.Header,
-					Value: fmt.Sprintf("%v", code),
+					Value: key,
 					Error: "该值已存在",
 				})
 			}
@@ -976,6 +993,49 @@ func (s *ExcelService) validateUniqueness(ctx context.Context, config ExcelConfi
 	}
 
 	return errors
+}
+
+// ensureUniqueValueCacheLoaded 懒加载 table 级别"已存在值"缓存。
+// 对每个 col.Unique=true 且 col.UpsertKey=false 的列,执行一次
+// `SELECT col FROM table WHERE col IS NOT NULL AND deleted_at IS NULL` 加载
+// 当前已存在的所有值。
+func (s *ExcelService) ensureUniqueValueCacheLoaded(ctx context.Context, config ExcelConfig) error {
+	s.uniqueValueMu.Lock()
+	if s.uniqueValueLoaded[config.TableName] {
+		s.uniqueValueMu.Unlock()
+		return nil
+	}
+	s.uniqueValueMu.Unlock()
+
+	tableCache := make(map[string]map[string]struct{})
+	for _, col := range config.Columns {
+		if col.UpsertKey || !col.Unique {
+			continue
+		}
+		dbField := s.getDBFieldName(col)
+
+		var values []string
+		err := s.db.WithContext(ctx).Table(config.TableName).
+			Select(dbField).
+			Where(dbField + " IS NOT NULL AND deleted_at IS NULL").
+			Pluck(dbField, &values).Error
+		if err != nil {
+			return fmt.Errorf("加载唯一列 %s 现有值失败: %w", dbField, err)
+		}
+
+		set := make(map[string]struct{}, len(values))
+		for _, v := range values {
+			set[v] = struct{}{}
+		}
+		tableCache[col.Field] = set
+	}
+
+	s.uniqueValueMu.Lock()
+	s.uniqueValueCache[config.TableName] = tableCache
+	s.uniqueValueLoaded[config.TableName] = true
+	s.uniqueValueMu.Unlock()
+
+	return nil
 }
 
 func (s *ExcelService) ExportData(ctx context.Context, entityType string, params map[string]any) (*excelize.File, error) {
