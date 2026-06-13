@@ -113,10 +113,8 @@ func (s *CollectionService) collectDevicePort(ctx context.Context, device *model
 		return result
 	}
 
-	if !conn.Acquire() {
-		result.ErrorMessage = "无法获取连接锁"
-		return result
-	}
+	// F-14 Phase 31: GetConnection 内部已 refCount +1,
+	// 直接 defer Release(); 不再需要 conn.Acquire() (会引起双 +1 泄漏)。
 	defer conn.Release()
 
 	wrapper := conn.GetWrapper()

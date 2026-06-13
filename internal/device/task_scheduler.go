@@ -209,18 +209,12 @@ func (s *DeviceTaskScheduler) executeTask(workerCtx context.Context, task *Devic
 
 	applogger.Infof("[任务调度器] 连接获取成功: taskID=%s, deviceID=%s", task.ID, task.DeviceID)
 
-	// 执行任务（worker 已保证串行，手动管理连接获取/释放）
-	if !conn.Acquire() {
-		err := fmt.Errorf("无法获取连接: deviceID=%s", task.DeviceID)
-		applogger.Infof("[任务调度器] %v", err)
-		s.recordFailure()
-		if task.Callback != nil {
-			task.Callback(err)
-		}
-		return
-	}
+	// F-14 Phase 31: GetConnection 内部已 refCount +1,不再需要调用 Acquire。
+	// 用 defer conn.Release() 配对 (refCount -1),保证错误返回路径也释放。
+	// (原 conn.Acquire() 调用已删除 — 它会导致双 +1 而 Release 仅 -1 引发泄漏)
+	defer conn.Release()
 
-	applogger.Infof("[任务调度器] 连接已获取，开始执行任务: taskID=%s", task.ID)
+	applogger.Infof("[任务调度器] 连接已获取,开始执行任务: taskID=%s", task.ID)
 
 	// 执行任务（带 panic 恢复）
 	var execErr error
@@ -231,9 +225,7 @@ func (s *DeviceTaskScheduler) executeTask(workerCtx context.Context, task *Devic
 					task.ID, task.DeviceID, r)
 				execErr = fmt.Errorf("任务执行 panic: %v", r)
 			}
-			// 确保释放连接
-			applogger.Infof("[任务调度器] 释放连接: taskID=%s", task.ID)
-			conn.Release()
+			// F-14: conn.Release() 已由外层 defer 处理,本块无需重复
 		}()
 
 		applogger.Infof("[任务调度器] 调用 task.Execute: taskID=%s", task.ID)

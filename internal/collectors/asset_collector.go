@@ -80,11 +80,8 @@ func (c *AssetCollector) CollectDevice(ctx context.Context, deviceID string) (*A
 		return result, fmt.Errorf("获取设备连接失败: %w", err)
 	}
 
-	if !conn.Acquire() {
-		result.Success = false
-		result.Error = "无法获取连接锁"
-		return result, fmt.Errorf("无法获取连接锁")
-	}
+	// F-14 Phase 31: GetConnection 内部已 refCount +1,直接 defer Release。
+	// (原 conn.Acquire() 检查会引起双 +1 而 Release 仅 -1 导致 refCount 泄漏)
 	defer conn.Release()
 
 	wrapper := conn.GetWrapper()
