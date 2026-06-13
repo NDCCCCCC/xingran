@@ -51,3 +51,32 @@ separate chunk in Wave 2. Wave 1 leaves antd monolithic.
 
 Wave 1 does not implement hover-based route prefetching (D-09/Discretion).
 This is deferred to a future optimization wave.
+
+## Wave 4 — Pre-existing ESLint violations (P2 — follow-up cleanup)
+
+The 5 new performance rules from D-16 (especially `react-hooks/exhaustive-deps`
+made explicit at error, plus the newly-added `no-unstable-nested-components`
+and `jsx-no-constructed-context-values` rules) flagged **97 + 9 + 2 = 108
+pre-existing error-level violations** in code that Wave 4 did not touch.
+
+Pre-existing error-level violations (out of scope for Wave 4):
+
+| Rule | Count | Sample files |
+|------|-------|--------------|
+| `react-hooks/exhaustive-deps` | 97 | `WorkstationDeviceTable`, `KnowledgeViewPage`, `PortStatusPage`, `WorkOrderCategoryPage`, `login`, etc. |
+| `react/no-unstable-nested-components` | 9 | `NotificationBell`, `ChartWidget`, `TableWidget`, `WorkstationDeviceTable`, `KnowledgeViewPage`, `PortStatusPage`, `workstations/index`, `WorkOrderCategoryPage` |
+| `react/jsx-no-constructed-context-values` | 2 | Two `ConfigProvider` / Context.Provider value-construction patterns |
+
+**Wave 4 action:** The rules are added at the spec'd severities per D-16
+(`exhaustive-deps`/`no-unstable-nested-components`/`jsx-no-constructed-context-values`
+at `error`; `jsx-no-useless-fragment`/`no-array-index-key` at `warn`).
+Pre-existing violations are **deferred** to a follow-up quick task.
+
+**Action required:** Run a follow-up quick task to either:
+1. Fix the underlying patterns (wrap values in useMemo, extract nested
+   components, add missing deps, etc.) — preferred, addresses root cause
+2. Or downshift the new rules to `warn` until cleanup is complete
+
+Until then, `npm run lint` will continue to report these pre-existing
+errors. CI should be configured to not block on lint until this cleanup
+is done.
