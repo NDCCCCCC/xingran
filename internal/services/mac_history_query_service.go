@@ -96,11 +96,59 @@ type rawEvent struct {
 	PrevDeviceID       *string
 }
 
+// ConnectionStatsQuery 连接时长统计查询请求
+type ConnectionStatsQuery struct {
+	MACAddress string `json:"macAddress,omitempty"` // 可选，留空统计所有MAC
+	StartTime  string `json:"startTime" binding:"required"` // RFC3339，必填
+	EndTime    string `json:"endTime" binding:"required"`   // RFC3339，必填
+	TopN       int    `json:"topN,omitempty"`        // 默认10
+}
+
+// ConnectionStatsDetail 连接时长统计明细
+type ConnectionStatsDetail struct {
+	MACAddress      string    `json:"macAddress"`
+	DeviceID        string    `json:"deviceId"`
+	DeviceName      string    `json:"deviceName"`
+	Interface       string    `json:"interface"`
+	FirstSeen       time.Time `json:"firstSeen"`
+	LastSeen        time.Time `json:"lastSeen"`
+	Duration        int64     `json:"duration"`       // 秒
+	EventCount      int       `json:"eventCount"`
+	FlappingCount   int       `json:"flappingCount"`  // event_type='moved'计数
+	IsLongOccupancy bool      `json:"isLongOccupancy"` // duration > threshold
+}
+
+// LongOccupancyByMAC 长期占用TOP（按MAC聚合）
+type LongOccupancyByMAC struct {
+	MACAddress    string `json:"macAddress"`
+	Vendor        string `json:"vendor"`        // Phase 13留空字符串，由前端OUI调用补齐
+	TotalDuration int64  `json:"totalDuration"` // 秒
+	PortCount     int    `json:"portCount"`
+}
+
+// HotspotByPort 端口热点TOP（按端口聚合）
+type HotspotByPort struct {
+	DeviceID       string `json:"deviceId"`
+	DeviceName     string `json:"deviceName"`
+	Interface      string `json:"interface"`
+	UniqueMACCount int    `json:"uniqueMacCount"`
+	TotalDuration  int64  `json:"totalDuration"` // 秒
+}
+
+// ConnectionStatsResponse 连接时长统计响应
+type ConnectionStatsResponse struct {
+	Details           []ConnectionStatsDetail `json:"details"`
+	TopByMAC          []LongOccupancyByMAC    `json:"topByMac"`
+	TopByPort         []HotspotByPort         `json:"topByPort"`
+	LongOccupancyDays int                     `json:"longOccupancyDays"` // 当前阈值
+}
+
 // MACHistoryQueryService MAC历史查询服务接口
 type MACHistoryQueryService interface {
 	QueryPortHistory(ctx context.Context, req *PortHistoryQuery) (*MACHistoryQueryResult, error)
 	QueryDeviceHistory(ctx context.Context, req *DeviceHistoryQuery) (*MACHistoryQueryResult, error)
 	QueryMACTrajectory(ctx context.Context, req *MACTrajectoryQuery) (*MACTrajectoryResult, error)
+	QueryConnectionStats(ctx context.Context, req *ConnectionStatsQuery) (*ConnectionStatsResponse, error)
 }
 
 // macHistoryQueryServiceImpl MAC历史查询服务实现
@@ -501,4 +549,257 @@ func (s *macHistoryQueryServiceImpl) sameLocation(node TrajectoryNode, evt rawEv
 		return false
 	}
 	return *node.VLANID == *evt.VLANID
+}
+
+// getLongOccupancyThreshold 获取长期占用阈值（天数）
+// 从sys_config表查询，不存在或解析失败时返回默认值30
+func (s *macHistoryQueryServiceImpl) getLongOccupancyThreshold(ctx context.Context) (int, error) {
+	const defaultDays = 30
+	const configKey = "network.mac.history.long_occupancy_threshold_days"
+
+	var configValue string
+	err := s.db.WithContext(ctx).
+		Table("sys_config").
+		Where("config_key = ?", configKey).
+		Select("config_value").
+		Row().
+		Scan(&configValue)
+
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			// 配置不存在，返回默认值
+			return defaultDays, nil
+		}
+		return defaultDays, fmt.Errorf("查询长期占用阈值配置失败: %w", err)
+	}
+
+	// 解析配置值
+	var days int
+	if _, err := fmt.Sscanf(configValue, "%d", &days); err != nil || days <= 0 {
+		// 解析失败或值无效，返回默认值
+		applogger.Warnf("[MAC历史统计] 长期占用阈值配置值无效: %s，使用默认值 %d 天", configValue, defaultDays)
+		return defaultDays, nil
+	}
+
+	return days, nil
+}
+
+// QueryConnectionStats 查询连接时长统计
+// 输出明细（每个MAC×端口的停留时长+flapping计数）+Top-N（按MAC长期占用Top+按端口热门连接Top）
+func (s *macHistoryQueryServiceImpl) QueryConnectionStats(ctx context.Context, req *ConnectionStatsQuery) (*ConnectionStatsResponse, error) {
+	// 1. 校验StartTime/EndTime必填
+	if req.StartTime == "" || req.EndTime == "" {
+		return nil, fmt.Errorf("开始时间和结束时间为必填项")
+	}
+
+	// 2. 解析时间范围
+	startTime, err := time.Parse(time.RFC3339, req.StartTime)
+	if err != nil {
+		return nil, fmt.Errorf("无效的开始时间格式: %w", err)
+	}
+	endTime, err := time.Parse(time.RFC3339, req.EndTime)
+	if err != nil {
+		return nil, fmt.Errorf("无效的结束时间格式: %w", err)
+	}
+
+	// 3. 验证时间跨度（复用maxQueryRange）
+	const maxQueryRange = 365 * 24 * time.Hour
+	if endTime.Sub(startTime) > maxQueryRange {
+		return nil, fmt.Errorf("查询时间跨度过大，最大允许 %d 天", int(maxQueryRange.Hours()/24))
+	}
+
+	// 4. 调用getLongOccupancyThreshold拿到阈值
+	thresholdDays, err := s.getLongOccupancyThreshold(ctx)
+	if err != nil {
+		applogger.Warnf("[MAC历史统计] 获取长期占用阈值失败，使用默认值30天: %v", err)
+		thresholdDays = 30 // 降级使用默认值
+	}
+	thresholdSec := int64(thresholdDays * 86400)
+
+	// 5. 设置TopN默认值
+	topN := req.TopN
+	if topN <= 0 {
+		topN = 10
+	}
+
+	// 6. 查询明细SQL（按MAC×Device×Interface聚合）
+	detailSQL := `
+		SELECT
+			mac_address, device_id, device_name_snapshot, interface_name,
+			MIN(first_seen) AS first_seen,
+			MAX(last_seen) AS last_seen,
+			EXTRACT(EPOCH FROM (MAX(last_seen) - MIN(first_seen)))::bigint AS duration,
+			COUNT(*) AS event_count,
+			COUNT(*) FILTER (WHERE event_type = 'moved') AS flapping_count
+		FROM sys_device_mac_history
+		WHERE first_seen >= ? AND first_seen <= ?
+	`
+	// 可选：MAC地址过滤
+	args := []interface{}{startTime, endTime}
+	if req.MACAddress != "" {
+		// 验证MAC格式
+		if err := validateMACAddress(req.MACAddress); err != nil {
+			return nil, fmt.Errorf("MAC地址验证失败: %w", err)
+		}
+		// 规范化MAC地址
+		normalizedMAC := strings.ReplaceAll(req.MACAddress, ".", "")
+		normalizedMAC = strings.ReplaceAll(normalizedMAC, ":", "")
+		normalizedMAC = strings.ReplaceAll(normalizedMAC, "-", "")
+		normalizedMAC = strings.ToUpper(normalizedMAC)
+		detailSQL += " AND mac_address = ?"
+		args = append(args, normalizedMAC)
+	}
+
+	detailSQL += `
+		GROUP BY mac_address, device_id, device_name_snapshot, interface_name
+		ORDER BY duration DESC
+		LIMIT ? OFFSET ?
+	`
+
+	type rawDetail struct {
+		MACAddress         string
+		DeviceID           string
+		DeviceNameSnapshot string
+		InterfaceName      string
+		FirstSeen          time.Time
+		LastSeen           time.Time
+		Duration           int64
+		EventCount         int
+		FlappingCount      int
+	}
+
+	var rawDetails []rawDetail
+	if err := s.db.WithContext(ctx).Raw(detailSQL, append(args, 1000, 0)...).Scan(&rawDetails).Error; err != nil {
+		applogger.Errorf("[MAC历史统计] 查询明细失败: %v", err)
+		return nil, fmt.Errorf("查询连接时长明细失败: %w", err)
+	}
+
+	// 转换为响应格式，标记IsLongOccupancy
+	details := make([]ConnectionStatsDetail, 0, len(rawDetails))
+	for _, d := range rawDetails {
+		details = append(details, ConnectionStatsDetail{
+			MACAddress:      d.MACAddress,
+			DeviceID:        d.DeviceID,
+			DeviceName:      d.DeviceNameSnapshot,
+			Interface:       d.InterfaceName,
+			FirstSeen:       d.FirstSeen,
+			LastSeen:        d.LastSeen,
+			Duration:        d.Duration,
+			EventCount:      d.EventCount,
+			FlappingCount:   d.FlappingCount,
+			IsLongOccupancy: d.Duration > thresholdSec,
+		})
+	}
+
+	// 7. 查询TopByMAC SQL（按MAC聚合，过滤长期占用）
+	topByMACSQL := `
+		SELECT
+			mac_address,
+			SUM(EXTRACT(EPOCH FROM (MAX(last_seen) - MIN(first_seen))))::bigint AS total_duration,
+			COUNT(DISTINCT device_id || ':' || interface_name) AS port_count
+		FROM sys_device_mac_history
+		WHERE first_seen >= ? AND first_seen <= ?
+	`
+
+	topByMACArgs := []interface{}{startTime, endTime}
+	if req.MACAddress != "" {
+		normalizedMAC := strings.ReplaceAll(req.MACAddress, ".", "")
+		normalizedMAC = strings.ReplaceAll(normalizedMAC, ":", "")
+		normalizedMAC = strings.ReplaceAll(normalizedMAC, "-", "")
+		normalizedMAC = strings.ToUpper(normalizedMAC)
+		topByMACSQL += " AND mac_address = ?"
+		topByMACArgs = append(topByMACArgs, normalizedMAC)
+	}
+
+	topByMACSQL += `
+		GROUP BY mac_address
+		HAVING SUM(EXTRACT(EPOCH FROM (MAX(last_seen) - MIN(first_seen)))) > ?
+		ORDER BY total_duration DESC
+		LIMIT ?
+	`
+
+	type rawTopMAC struct {
+		MACAddress    string
+		TotalDuration int64
+		PortCount     int
+	}
+
+	var rawTopMACs []rawTopMAC
+	if err := s.db.WithContext(ctx).Raw(topByMACSQL, append(topByMACArgs, thresholdSec, topN)...).Scan(&rawTopMACs).Error; err != nil {
+		applogger.Errorf("[MAC历史统计] 查询TopByMAC失败: %v", err)
+		return nil, fmt.Errorf("查询长期占用TOP失败: %w", err)
+	}
+
+	// 转换为响应格式（Vendor字段留空，由前端OUI调用补齐）
+	topByMAC := make([]LongOccupancyByMAC, 0, len(rawTopMACs))
+	for _, m := range rawTopMACs {
+		topByMAC = append(topByMAC, LongOccupancyByMAC{
+			MACAddress:    m.MACAddress,
+			Vendor:        "", // Phase 13留空，由前端补齐
+			TotalDuration: m.TotalDuration,
+			PortCount:     m.PortCount,
+		})
+	}
+
+	// 8. 查询TopByPort SQL（按端口聚合）
+	topByPortSQL := `
+		SELECT
+			device_id, device_name_snapshot, interface_name,
+			COUNT(DISTINCT mac_address) AS unique_mac_count,
+			SUM(EXTRACT(EPOCH FROM (MAX(last_seen) - MIN(first_seen))))::bigint AS total_duration
+		FROM sys_device_mac_history
+		WHERE first_seen >= ? AND first_seen <= ?
+	`
+
+	topByPortArgs := []interface{}{startTime, endTime}
+	// 注意：TopByPort不过滤MAC，因为用户可能想看特定MAC的端口热点
+	// 但如果请求指定了MAC，则只统计该MAC的端口连接
+	if req.MACAddress != "" {
+		normalizedMAC := strings.ReplaceAll(req.MACAddress, ".", "")
+		normalizedMAC = strings.ReplaceAll(normalizedMAC, ":", "")
+		normalizedMAC = strings.ReplaceAll(normalizedMAC, "-", "")
+		normalizedMAC = strings.ToUpper(normalizedMAC)
+		topByPortSQL += " AND mac_address = ?"
+		topByPortArgs = append(topByPortArgs, normalizedMAC)
+	}
+
+	topByPortSQL += `
+		GROUP BY device_id, device_name_snapshot, interface_name
+		ORDER BY total_duration DESC
+		LIMIT ?
+	`
+
+	type rawTopPort struct {
+		DeviceID           string
+		DeviceNameSnapshot string
+		InterfaceName      string
+		UniqueMACCount     int
+		TotalDuration      int64
+	}
+
+	var rawTopPorts []rawTopPort
+	if err := s.db.WithContext(ctx).Raw(topByPortSQL, append(topByPortArgs, topN)...).Scan(&rawTopPorts).Error; err != nil {
+		applogger.Errorf("[MAC历史统计] 查询TopByPort失败: %v", err)
+		return nil, fmt.Errorf("查询端口热点TOP失败: %w", err)
+	}
+
+	// 转换为响应格式
+	topByPort := make([]HotspotByPort, 0, len(rawTopPorts))
+	for _, p := range rawTopPorts {
+		topByPort = append(topByPort, HotspotByPort{
+			DeviceID:       p.DeviceID,
+			DeviceName:     p.DeviceNameSnapshot,
+			Interface:      p.InterfaceName,
+			UniqueMACCount: p.UniqueMACCount,
+			TotalDuration:  p.TotalDuration,
+		})
+	}
+
+	// 9. 返回三段式响应
+	return &ConnectionStatsResponse{
+		Details:           details,
+		TopByMAC:          topByMAC,
+		TopByPort:         topByPort,
+		LongOccupancyDays: thresholdDays,
+	}, nil
 }
