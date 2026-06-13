@@ -74,9 +74,13 @@ func (s *configService) Update(ctx context.Context, req *requests.ConfigUpdateRe
 		return fmt.Errorf("查询参数配置失败: %w", err)
 	}
 
-	// 系统内置参数不能修改键名
-	if config.IsSystem == models.ConfigIsSystemYes && req.ConfigName != config.ConfigName {
-		return fmt.Errorf("系统内置参数不能修改")
+	// 系统内置参数不能修改键名 (F-17 fix: 校验 ConfigKey 而非 ConfigName,
+	// 原代码写反且 req 没有 ConfigKey 字段使保护不可达。
+	// - req.ConfigKey 为空: 客户端未声明键名,跳过校验 (向后兼容)
+	// - req.ConfigKey 与 DB 一致: 显式声明键名相同,允许更新
+	// - req.ConfigKey 与 DB 不同: 拒绝)
+	if config.IsSystem == models.ConfigIsSystemYes && req.ConfigKey != "" && req.ConfigKey != config.ConfigKey {
+		return fmt.Errorf("系统内置参数不能修改键名 (expected=%q, got=%q)", config.ConfigKey, req.ConfigKey)
 	}
 
 	// 验证请求加密开关的值（T-QUICK-01, T-QUICK-05 mitigation）

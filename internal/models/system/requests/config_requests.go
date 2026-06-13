@@ -60,6 +60,9 @@ type ConfigCreateRequest struct {
 type ConfigUpdateRequest struct {
 	ID          string            `json:"id"` // ID 从 URL 参数获取，不在请求体验证
 	ConfigName  string            `json:"configName" binding:"required"`
+	// F-17: 可选,客户端可显式声明 ConfigKey 触发服务端校验
+	// (系统内置参数的 ConfigKey 不可修改;非内置参数本字段被忽略)
+	ConfigKey   string            `json:"configKey,omitempty"`
 	ConfigValue string            `json:"configValue" binding:"required"`
 	ConfigType  models.ConfigType `json:"configType"`
 	Remark      *string           `json:"remark"`
