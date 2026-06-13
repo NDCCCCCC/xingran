@@ -7,8 +7,9 @@
  * - 优化 useEffect 依赖数组，减少不必要的重渲染
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import type { FC } from 'react';
+import type React from 'react';
 import {
   Table, Button, Space, Form, Input, Select, Card,
   Alert, Radio, Layout,
@@ -23,11 +24,12 @@ import { useTableManager } from '@/hooks/useTableManager';
 import { useTableQuery } from '@/hooks/useTableQuery';
 import { usePagination } from '@/hooks/usePagination';
 import { useSidebarDeptFilter } from '@/hooks/useSidebarDeptFilter';
-import ExcelImport from '@/components/shared/ExcelImport';
+import { ExcelImportLazy } from '@/components/shared';
 import ExcelExport from '@/components/shared/ExcelExport';
 import { DeptSidebar } from '@/components/operations/DeptSidebar';
 import { StatisticsCards } from '@/components/operations/StatisticsCards';
 import { handleSuccess as showSuccessMessage } from '@/utils/errorHandler';
+import { buildSearchParams } from '@/utils/buildSearchParams';
 import { useWorkstationData, useWorkstationModals, useWorkstationView } from './hooks';
 import { getWorkstationColumns } from './columns';
 import { WorkstationEditModal } from './modals';
@@ -126,6 +128,10 @@ const WorkstationManagement: FC = () => {
     setUserOptions
   );
 
+  // Refs for stable column callbacks
+  const handleEditRef = useRef<(record: WorkstationOps) => void>(() => {});
+  const handleDeleteRef = useRef<(id: string) => void>(() => {});
+
   const { closeModal, handleDelete, handleBatchDelete } = useWorkstationModals(loadUserOptions);
 
   const {
@@ -193,12 +199,38 @@ const WorkstationManagement: FC = () => {
     refreshData();
   }, [refreshData]);
 
-  const columns = getWorkstationColumns({
-    handleEdit: (record: WorkstationOps) => {
-      handleOpenModal(record);
-    },
-    handleDelete: (id: string) => handleDelete(id, handleSuccess),
-  });
+  const handleWorkstationModalOk = useCallback(async (values: Record<string, unknown>) => {
+    try {
+      const submitValues = { ...values };
+      if (Array.isArray(submitValues.floorId)) {
+        submitValues.floorId = submitValues.floorId[submitValues.floorId.length - 1];
+      }
+
+      if (editingWorkstation) {
+        await workstationApi.update(editingWorkstation.id, submitValues);
+        showSuccessMessage('更新');
+      } else {
+        await workstationApi.create(submitValues);
+        showSuccessMessage('创建');
+      }
+      closeModal(workstationForm);
+      setModalVisible(false);
+      handleSuccess();
+    } catch (error) {
+      throw error;
+    }
+  }, [editingWorkstation, closeModal, workstationForm, setModalVisible, handleSuccess]);
+
+  // Sync refs with current callbacks
+  handleEditRef.current = (record: WorkstationOps) => {
+    handleOpenModal(record);
+  };
+  handleDeleteRef.current = (id: string) => handleDelete(id, handleSuccess);
+
+  const columns = useMemo(() => getWorkstationColumns({
+    handleEdit: (r) => handleEditRef.current(r),
+    handleDelete: (id) => handleDeleteRef.current(id),
+  }), []);
 
   const handleDeptChange = (deptId: string) => {
     loadUserOptions(deptId);
@@ -383,14 +415,30 @@ const WorkstationManagement: FC = () => {
             ),
             rowExpandable: () => true,
             expandIcon: ({ expanded, onExpand, record }) => (
-              <Button
-                type="text"
-                size="small"
+              <div
+                role="button"
+                tabIndex={0}
                 onClick={(e) => onExpand(record, e)}
-                style={{ fontSize: '12px' }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onExpand(record, e as unknown as React.MouseEvent<HTMLElement>);
+                  }
+                }}
+                style={{ cursor: 'pointer', display: 'inline-block' }}
               >
-                {expanded ? '收起设备' : '查看设备'}
-              </Button>
+                <Button
+                  type="text"
+                  size="small"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onExpand(record, e);
+                  }}
+                  style={{ fontSize: '12px' }}
+                >
+                  {expanded ? '收起设备' : '查看设备'}
+                </Button>
+              </div>
             ),
           }}
           onChange={(pagination) => {
@@ -398,18 +446,10 @@ const WorkstationManagement: FC = () => {
             const newPageSize = pagination.pageSize || 10;
             setCurrent(newPage);
             setPageSize(newPageSize);
-
-            // 获取搜索表单值并合并分页参数
-            const formValues = searchForm.getFieldsValue() as Record<string, unknown>;
-            const searchParams: Record<string, unknown> = { current: newPage, pageSize: newPageSize };
-            Object.keys(formValues).forEach(key => {
-              const value = formValues[key];
-              if (value !== undefined && value !== null && value !== '') {
-                searchParams[key] = value;
-              }
-            });
-
-            loadWorkstations(searchParams);
+            loadWorkstations(buildSearchParams({
+              searchForm,
+              page: { current: newPage, pageSize: newPageSize },
+            }));
           }}
         />
       );
@@ -517,16 +557,7 @@ const WorkstationManagement: FC = () => {
                 导入
               </Button>
               <Button icon={<ExportOutlined />} onClick={() => {
-                // 获取当前筛选条件
-                const values = searchForm.getFieldsValue() as Record<string, unknown>;
-                const currentFilters: Record<string, unknown> = {};
-                Object.keys(values).forEach(key => {
-                  const value = values[key];
-                  if (value !== undefined && value !== null && value !== '') {
-                    currentFilters[key] = value;
-                  }
-                });
-                setExportFilters(currentFilters);
+                setExportFilters(buildSearchParams({ searchForm }));
                 setExportVisible(true);
               }}>
                 导出
@@ -597,37 +628,14 @@ const WorkstationManagement: FC = () => {
           loadingCascader={loadingCascader}
           handleCascaderLoadData={handleCascaderLoadData}
           onOrgChange={handleOrgChange}
-          onOk={async (values) => {
-            try {
-              // 处理级联选择返回的 floorId（可能是数组）
-              const submitValues = { ...values };
-              if (Array.isArray(submitValues.floorId)) {
-                submitValues.floorId = submitValues.floorId[submitValues.floorId.length - 1];
-              }
-
-              if (editingWorkstation) {
-                await workstationApi.update(editingWorkstation.id, submitValues);
-                showSuccessMessage('更新');
-              } else {
-                await workstationApi.create(submitValues);
-                showSuccessMessage('创建');
-              }
-              // 成功后关闭模态框并刷新
-              closeModal(workstationForm);
-              setModalVisible(false);
-              handleSuccess();
-            } catch (error) {
-              // 失败时不关闭模态框
-              throw error;
-            }
-          }}
+          onOk={handleWorkstationModalOk}
           onCancel={() => {
             setModalVisible(false);
             closeModal(workstationForm);
           }}
           onDeptChange={handleDeptChange}
         />
-        <ExcelImport
+        <ExcelImportLazy
           entityType="workstation"
           entityName="工位"
           visible={importVisible}
