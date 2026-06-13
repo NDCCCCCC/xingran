@@ -114,8 +114,8 @@ func (s *CollectionService) collectDevicePort(ctx context.Context, device *model
 	}
 
 	// F-14 Phase 31: GetConnection 内部已 refCount +1,
-	// 直接 defer Release(); 不再需要 conn.Acquire() (会引起双 +1 泄漏)。
-	defer conn.Release()
+	// 直接 defer ReleaseRef() (仅 -1 refCount,不操作 mu)。
+	defer conn.ReleaseRef()
 
 	wrapper := conn.GetWrapper()
 	if wrapper == nil {

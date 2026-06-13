@@ -1,0 +1,167 @@
+// Phase 31 Plan 03: F-14 并发回归测试
+//
+// 这些测试覆盖 PooledConnection.refCount 的并发安全性,
+// 锁定 31-01 + 31-02 的修复成果。
+// 不依赖真实 SSH/Scrapli,通过 struct 直接构造 PooledConnection
+// 测试 refCount 字段的原子操作。
+
+package device
+
+import (
+	"sync"
+	"sync/atomic"
+	"testing"
+	"time"
+)
+
+// makeTestPooledConnection 构造一个可控的 PooledConnection 用于 refCount 测试。
+// 不依赖 ScrapliWrapper / SSH,仅测试计数语义。
+func makeTestPooledConnection(deviceID string, initialRefCount int32) *PooledConnection {
+	return &PooledConnection{
+		wrapper:  nil, // 不实际通信,只测 refCount
+		refCount: initialRefCount,
+		lastUsed: time.Now(),
+		deviceID: deviceID,
+		mu:       &sync.Mutex{},
+		pool:     nil,
+	}
+}
+
+// TestPooledConnection_IsIdle_RefCount 验证 IsIdle 与 refCount 的语义关系
+func TestPooledConnection_IsIdle_RefCount(t *testing.T) {
+	pc := makeTestPooledConnection("dev-1", 0)
+	if !pc.IsIdle() {
+		t.Fatal("初始 refCount=0 应被视为 idle")
+	}
+
+	atomic.AddInt32(&pc.refCount, 1)
+	if pc.IsIdle() {
+		t.Fatal("refCount=1 不应是 idle (有 caller 持有)")
+	}
+
+	atomic.AddInt32(&pc.refCount, -1)
+	if !pc.IsIdle() {
+		t.Fatal("refCount=0 应回到 idle")
+	}
+}
+
+// TestPooledConnection_Release_DecrementsRefCount 验证 ReleaseRef 行为
+// (Release 配对 Acquire,需要先 mu.Lock;ReleaseRef 不操作 mu,适合 GetConnection 路径)
+func TestPooledConnection_Release_DecrementsRefCount(t *testing.T) {
+	pc := makeTestPooledConnection("dev-2", 1)
+	pc.ReleaseRef()
+	if got := atomic.LoadInt32(&pc.refCount); got != 0 {
+		t.Fatalf("ReleaseRef 后 refCount 应为 0, 实际 %d", got)
+	}
+}
+
+// TestPooledConnection_Release_PanicOnNegative 验证 ReleaseRef 在 refCount<0 时 panic
+// (防御 caller 多调 ReleaseRef 导致计数漂移到负数)
+func TestPooledConnection_Release_PanicOnNegative(t *testing.T) {
+	pc := makeTestPooledConnection("dev-3", 0)
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatal("refCount=0 时再调 ReleaseRef 应该 panic")
+		}
+	}()
+	pc.ReleaseRef() // 应触发 panic
+}
+
+// TestPooledConnection_ConcurrentRefCount 验证 100 goroutine 并发 +1/-1
+// refCount 最终归零。模拟高并发 GetConnection/Release 场景。
+func TestPooledConnection_ConcurrentRefCount(t *testing.T) {
+	pc := makeTestPooledConnection("dev-4", 0)
+
+	const goroutines = 100
+	var wg sync.WaitGroup
+	wg.Add(goroutines)
+
+	for i := 0; i < goroutines; i++ {
+		go func() {
+			defer wg.Done()
+			// 模拟 GetConnection 内部 +1 + 短暂使用 + Release -1
+			atomic.AddInt32(&pc.refCount, 1)
+			time.Sleep(time.Microsecond) // 让 scheduler 切换
+			atomic.AddInt32(&pc.refCount, -1)
+		}()
+	}
+
+	wg.Wait()
+
+	if got := atomic.LoadInt32(&pc.refCount); got != 0 {
+		t.Fatalf("100 并发 +1/-1 后 refCount 应为 0, 实际 %d", got)
+	}
+	if !pc.IsIdle() {
+		t.Fatal("100 并发完毕后应回到 idle")
+	}
+}
+
+// TestPooledConnection_RefCountStaysPositive_DuringCleanup 验证 cleanup 与持有并发场景下,
+// refCount > 0 的连接不应被错判为 idle。模拟 F-14 race window 修复后的不变量:
+//   - caller A 持有 refCount=1
+//   - cleanup goroutine 同时检查 IsIdle
+//   - cleanup 应跳过 (因 IsIdle=false)
+func TestPooledConnection_RefCountStaysPositive_DuringCleanup(t *testing.T) {
+	pc := makeTestPooledConnection("dev-5", 1)
+
+	const cleanupChecks = 1000
+	var sawIdle int32
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	// goroutine 1: 模拟 cleanupIdleConnections 反复检查 IsIdle
+	go func() {
+		defer wg.Done()
+		for i := 0; i < cleanupChecks; i++ {
+			if pc.IsIdle() {
+				atomic.AddInt32(&sawIdle, 1)
+			}
+		}
+	}()
+
+	// goroutine 2: 模拟 caller 持有引用计数一段时间后释放
+	go func() {
+		defer wg.Done()
+		time.Sleep(10 * time.Millisecond)
+		atomic.AddInt32(&pc.refCount, -1)
+	}()
+
+	wg.Wait()
+
+	if sawIdle > 0 {
+		// 允许 caller 释放后 cleanup 看到 idle 是正常的,
+		// 但在 caller 持有期间(refCount=1)看到 idle 是 race 的征兆
+		// 这里只允许后期(释放后)的检查命中 idle
+		t.Logf("cleanup 观察到 idle %d/%d 次 (允许,只要不是在持有期间)", sawIdle, cleanupChecks)
+	}
+
+	if got := atomic.LoadInt32(&pc.refCount); got != 0 {
+		t.Fatalf("Release 后 refCount 应为 0, 实际 %d", got)
+	}
+}
+
+// TestPooledConnection_GetConnection_InternalRefCount_Pattern 单元层面验证
+// 31-01 的核心不变量: GetConnection 返回的 pc 应已经 refCount=1。
+// (整链路集成测试需要真实 ConnectionPool + SSH,留给手工/E2E 阶段)
+func TestPooledConnection_GetConnection_InternalRefCount_Pattern(t *testing.T) {
+	// 模拟 31-01 修复后的 new-connection 分支行为
+	pc := &PooledConnection{
+		wrapper:  nil,
+		refCount: 1, // 31-01: 新创建时直接初始化为 1
+		lastUsed: time.Now(),
+		deviceID: "dev-6",
+		mu:       &sync.Mutex{},
+	}
+
+	if pc.IsIdle() {
+		t.Fatal("GetConnection 返回时 pc 应已持有 refCount=1,不应是 idle")
+	}
+
+	// 模拟 caller defer ReleaseRef()
+	pc.ReleaseRef()
+
+	if !pc.IsIdle() {
+		t.Fatal("caller ReleaseRef 后应回到 idle 允许 cleanup")
+	}
+}

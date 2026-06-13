@@ -55,8 +55,8 @@ func (c *PortCollector) CollectFromDevice(ctx context.Context, deviceID string) 
 		return nil, fmt.Errorf("获取设备连接失败: %w", err)
 	}
 
-	// F-14 Phase 31: GetConnection 内部已 refCount +1,直接 defer Release。
-	defer conn.Release()
+	// F-14 Phase 31: GetConnection 内部已 refCount +1,直接 defer ReleaseRef。
+	defer conn.ReleaseRef()
 
 	wrapper := conn.GetWrapper()
 

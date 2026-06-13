@@ -63,6 +63,10 @@ func (pc *PooledConnection) Acquire() bool {
 }
 
 // Release 释放连接使用权（减少引用计数并释放设备锁）
+//
+// Deprecated (F-14): 用于配对 Acquire() 的旧路径。
+// 新 caller 拿到 pc 来自 GetConnection (已 refCount+1 但未 Lock mu),
+// 应该用 ReleaseRef() 而不是 Release(),否则会触发 unlock-of-unlocked-mutex panic。
 func (pc *PooledConnection) Release() {
 	// 减少引用计数
 	newCount := atomic.AddInt32(&pc.refCount, -1)
@@ -74,8 +78,21 @@ func (pc *PooledConnection) Release() {
 	// 更新最后使用时间
 	pc.lastUsed = time.Now()
 
-	// 释放设备级锁
+	// 释放设备级锁(由配对的 Acquire 持有)
 	pc.mu.Unlock()
+}
+
+// ReleaseRef 仅释放引用计数(不操作 mu),配对 GetConnection 内部的 refCount+1。
+//
+// F-14 Phase 31: GetConnection 返回的 pc 已 refCount+1 但 mu 未被持有
+// (deviceLock 已在 GetConnection 内 Unlock)。caller 应该 defer ReleaseRef()。
+// 用 Release() 会触发 unlock-of-unlocked-mutex panic。
+func (pc *PooledConnection) ReleaseRef() {
+	newCount := atomic.AddInt32(&pc.refCount, -1)
+	if newCount < 0 {
+		panic(fmt.Sprintf("负引用计数: deviceID=%s, refCount=%d", pc.deviceID, newCount))
+	}
+	pc.lastUsed = time.Now()
 }
 
 // Execute 在连接上执行命令（自动管理锁和引用计数）

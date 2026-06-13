@@ -210,9 +210,9 @@ func (s *DeviceTaskScheduler) executeTask(workerCtx context.Context, task *Devic
 	applogger.Infof("[任务调度器] 连接获取成功: taskID=%s, deviceID=%s", task.ID, task.DeviceID)
 
 	// F-14 Phase 31: GetConnection 内部已 refCount +1,不再需要调用 Acquire。
-	// 用 defer conn.Release() 配对 (refCount -1),保证错误返回路径也释放。
-	// (原 conn.Acquire() 调用已删除 — 它会导致双 +1 而 Release 仅 -1 引发泄漏)
-	defer conn.Release()
+	// 用 defer conn.ReleaseRef() 配对 (refCount -1,不操作 mu),保证错误返回路径也释放。
+	// (原 conn.Acquire() 调用已删除 — 它会导致双 +1 而 ReleaseRef 仅 -1 引发泄漏)
+	defer conn.ReleaseRef()
 
 	applogger.Infof("[任务调度器] 连接已获取,开始执行任务: taskID=%s", task.ID)
 
