@@ -42,7 +42,12 @@ const ActionButtons: FC<ActionButtonsProps> = ({
     return (
       <Space size="small">
         {actions.map((action) => (
-          <div key={action.key}>
+          <div
+            key={action.key}
+            // 阻止点击冒泡到外层 <Table onRow.onClick>，避免触发行级副作用
+            // （如工位页的"行点击切换展开子表"）
+            onClick={(e) => e.stopPropagation()}
+          >
             {action.render ? (
               action.render()
             ) : (

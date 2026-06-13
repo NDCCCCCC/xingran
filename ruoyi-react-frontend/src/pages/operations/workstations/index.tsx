@@ -78,6 +78,9 @@ const WorkstationManagement: FC = () => {
   const [cascaderOptions, setCascaderOptions] = useState<CascaderOption[]>([]);
   const [loadingCascader, setLoadingCascader] = useState(false);
 
+  // 控制子表（设备列表）展开/收起 — 整行点击切换
+  const [expandedRowKeys, setExpandedRowKeys] = useState<React.Key[]>([]);
+
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
   const { selectedDeptId, handleDeptSelect } = useSidebarDeptFilter({
     searchForm: undefined,
@@ -406,6 +409,32 @@ const WorkstationManagement: FC = () => {
           virtual
           scroll={{ x: 1800, y: 600 }}
           pagination={paginationProps}
+          onRow={(record) => ({
+            onClick: (e) => {
+              // 整行任意位置点击 = 展开/收起设备子表
+              // 排除复选框、展开图标、操作列按钮等已被内部 stopPropagation / 需要原生行为的位置
+              const target = e.target as HTMLElement;
+              if (
+                target.closest('.ant-checkbox-wrapper') ||
+                target.closest('.ant-table-row-expand-icon') ||
+                target.closest('[data-stop-row-click]')
+              ) {
+                return;
+              }
+              if (expandedRowKeys.includes(record.id)) {
+                setExpandedRowKeys([]);
+              } else {
+                setExpandedRowKeys([record.id]);
+              }
+            },
+            style: { cursor: 'pointer' },
+          })}
+          expandedRowKeys={expandedRowKeys}
+          onExpand={(expanded, record) => {
+            setExpandedRowKeys(
+              expanded ? Array.from(new Set([...expandedRowKeys, record.id])) : expandedRowKeys.filter((id) => id !== record.id)
+            );
+          }}
           expandable={{
             expandedRowRender: (record: WorkstationOps) => (
               <WorkstationDeviceTable
@@ -415,30 +444,19 @@ const WorkstationManagement: FC = () => {
             ),
             rowExpandable: () => true,
             expandIcon: ({ expanded, onExpand, record }) => (
-              <div
-                role="button"
-                tabIndex={0}
-                onClick={(e) => onExpand(record, e)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    onExpand(record, e as unknown as React.MouseEvent<HTMLElement>);
-                  }
+              <Button
+                type="text"
+                size="small"
+                data-stop-row-click
+                onClick={(e) => {
+                  // 阻止冒泡到行 onClick，避免"一次点击触发两次切换"
+                  e.stopPropagation();
+                  onExpand(record, e);
                 }}
-                style={{ cursor: 'pointer', display: 'inline-block' }}
+                style={{ fontSize: '12px' }}
               >
-                <Button
-                  type="text"
-                  size="small"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onExpand(record, e);
-                  }}
-                  style={{ fontSize: '12px' }}
-                >
-                  {expanded ? '收起设备' : '查看设备'}
-                </Button>
-              </div>
+                {expanded ? '收起设备' : '查看设备'}
+              </Button>
             ),
           }}
           onChange={(pagination) => {
