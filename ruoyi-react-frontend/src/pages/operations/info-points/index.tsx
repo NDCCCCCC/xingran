@@ -14,11 +14,12 @@ import {
   CheckCircleOutlined, StopOutlined, WarningOutlined, AppstoreOutlined, TableOutlined,
   ImportOutlined, ExportOutlined, DotChartOutlined,
 } from '@ant-design/icons';
-import type { InfoPoint, DictData, WorkstationOps, Floor, Building } from '@/types';
+import type { InfoPoint, WorkstationOps, Floor, Building } from '@/types';
 import { infoPointApi, workstationApi, buildingApi, floorApi } from '@/lib/opsApi';
 import { useTableManager } from '@/hooks/useTableManager';
 import { usePagination } from '@/hooks/usePagination';
 import { useSidebarDeptFilter } from '@/hooks/useSidebarDeptFilter';
+import { useDict } from '@/hooks/useDict';
 import { handleApiError, handleSuccess, isFormValidationError } from '@/utils/errorHandler';
 import { createDateTimeColumn } from '@/utils/tableHelpers';
 import { fetchInfoPointStatistics } from '@/utils/statisticsHelper';
@@ -80,10 +81,12 @@ const InfoPointManagement: FC = () => {
   const [exportVisible, setExportVisible] = useState(false);
   const [exportFilters, setExportFilters] = useState<Record<string, unknown>>({});
   const [workstationOptions, setWorkstationOptions] = useState<WorkstationOption[]>([]);
-  const [infoPointTypeDict, setInfoPointTypeDict] = useState<DictData[]>([]);
   const [networkDevices, setNetworkDevices] = useState<NetworkDeviceOption[]>([]);
   const [devicePorts, setDevicePorts] = useState<DevicePortOption[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
+
+  // Wave 5: useDict replaces raw post() call for ops_info_point_type
+  const { data: infoPointTypeDict = [] } = useDict('ops_info_point_type');
 
   // Cascader 懒加载状态
   const [cascaderOptions, setCascaderOptions] = useState<CascaderOption[]>([]);
@@ -252,15 +255,6 @@ const InfoPointManagement: FC = () => {
 
   // ===========================================================
 
-  const loadInfoPointTypeDict = useCallback(async () => {
-    try {
-      const result = await post('/system/dicts/data/list', { dictType: 'ops_info_point_type', current: 1, pageSize: 100 }) as { data?: { list: DictData[] } };
-      setInfoPointTypeDict(result.data?.list || []);
-    } catch (error) {
-      handleApiError(error, '加载信息点类型字典', false);
-    }
-  }, []);
-
   const loadNetworkDevices = useCallback(async () => {
     try {
       const result = await post('/network/devices/list', { current: 1, pageSize: 1000 }) as { data?: { list: NetworkDeviceOption[] } };
@@ -285,9 +279,10 @@ const InfoPointManagement: FC = () => {
 
   // 初始化加载
   useEffect(() => {
-    Promise.all([loadStatistics(), loadInfoPointTypeDict(), loadNetworkDevices()])
+    Promise.all([loadStatistics(), loadNetworkDevices()])
       .then(([stats]) => setStatistics(stats));
-  }, [loadStatistics, loadInfoPointTypeDict, loadNetworkDevices]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadStatistics, loadNetworkDevices]);
 
   useEffect(() => {
     loadInfoPoints();
