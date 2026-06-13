@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: MAC地址历史数据管理
 status: unknown
-stopped_at: Phase 30 context gathered
-last_updated: "2026-06-13T01:26:32.639Z"
+stopped_at: Phase 30 Plan 02 completed
+last_updated: "2026-06-13T01:35:00.000Z"
 progress:
   total_phases: 27
   completed_phases: 12
   total_plans: 95
-  completed_plans: 85
-  percent: 44
+  completed_plans: 86
+  percent: 45
 ---
 
 # Project State
@@ -18,20 +18,20 @@ progress:
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
 **Status**: 里程碑 v1.16 进行中 (Phase 28 已完成)
-**Phase**: 28 (workstation-device-association)
-**Plan**: 07 (修复设备来源标签颜色)
+**Phase**: 30 (frontend-perf)
+**Plan**: 02 (heavy-library lazy loading)
 **Status**: ✅ 已完成
-**Last activity**: 2026-06-12 - 完成 quick task 260612-d2x: 工位管理页面子表格设备信息添加字段ip地址
+**Last activity**: 2026-06-13 - 完成 Phase 30 Plan 02 (重库按需加载)
 
 ## Current Position
 
-Phase: 30 (前端性能优化) — Wave 1 of 4
-Plan: 01 (bundle-analysis) — ✅ COMPLETED 2026-06-13
+Phase: 30 (前端性能优化) — Wave 2 of 4
+Plan: 02 (heavy-library lazy loading) — ✅ COMPLETED 2026-06-13
 **当前里程碑**: v1.16 — 工位设备关联
-**当前阶段**: Phase 30 Wave 1 — Bundle 基础设施 (1/4 plans 完成) ✅
+**当前阶段**: Phase 30 Wave 2 — 重库按需加载 (2/4 plans 完成) ✅
 **状态**: ✅ 已完成
 **完成时间**: 2026-06-13
-**下一阶段**: Phase 30 Wave 2 — 重库按需加载 (echarts/three/xlsx/md-editor)
+**下一阶段**: Phase 30 Wave 3 — 查询层 (React Query / 字典全局化)
 
 ## Project Reference
 
@@ -71,7 +71,7 @@ Plan: 01 (bundle-analysis) — ✅ COMPLETED 2026-06-13
 | 27 | 全局列自定义显示功能 | ✅ Completed | 1/1 plan |
 | 28 | 工位设备关联子表格 | ✅ Completed | 4/4 plans |
 | 29 | sys_dict 重构 | 📋 Planned | 0/0 plans |
-| 30 | 前端性能优化 | 🚧 In Progress | 1/4 plans |
+| 30 | 前端性能优化 | 🚧 In Progress | 2/4 plans |
 
 ## Completed Milestones
 
@@ -119,6 +119,7 @@ Plan: 01 (bundle-analysis) — ✅ COMPLETED 2026-06-13
 | 2026-06-09 | Phase 27 完成 (全局列自定义显示功能) | 27 |
 | 2026-06-10 | Phase 28 完成 (工位设备关联子表格) - 7个计划全部完成 | 28 |
 | 2026-06-13 | Phase 30 Plan 01 完成 (Bundle 基础设施) - Wave 1 of 4 | 30 |
+| 2026-06-13 | Phase 30 Plan 02 完成 (重库按需加载) - Wave 2 of 4 | 30 |
 
 ## Quick Tasks Completed
 
