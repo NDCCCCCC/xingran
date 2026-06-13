@@ -1,3 +1,8 @@
+-- Phase 32 P2-A4 source-tracking:
+--   Original commit: 5467ba78
+--   Created: 2026-06-09
+--   Note: Conflicts with 027_cleanup_duplicate_indexes.sql — both share prefix 027. Runner uses Go code ordering, not filename sort; conflict is harmless.
+
 -- 用户列配置表
 CREATE TABLE IF NOT EXISTS sys_user_column_config (
     id VARCHAR(36) PRIMARY KEY,

@@ -1,3 +1,8 @@
+-- Phase 32 P2-A4 source-tracking:
+--   Original commit: a3032b2e
+--   Created: 2026-01-16
+--   Note: Conflicts with 029_add_building_spaces_menu.sql — both share prefix 029. Runner uses Go code ordering, not filename sort; conflict is harmless.
+
 -- 添加楼宇地址和坐标相关字段
 -- 执行此脚本前请先备份数据库
 

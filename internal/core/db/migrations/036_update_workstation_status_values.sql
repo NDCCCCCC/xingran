@@ -1,3 +1,8 @@
+-- Phase 32 P2-A4 source-tracking:
+--   Original commit: a3032b2e
+--   Created: 2026-01-16
+--   Note: No direct filename conflict — listed for completeness. Note: gap between 031 and 036 due to Go-based migrations (032-035). Runner uses Go code ordering.
+
 -- 更新工位状态值和注释
 -- Migration: 036
 -- Description: 更新工位状态枚举：0=空闲, 1=占用, 2=维护

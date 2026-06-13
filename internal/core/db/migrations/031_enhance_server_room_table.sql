@@ -1,3 +1,8 @@
+-- Phase 32 P2-A4 source-tracking:
+--   Original commit: a3032b2e
+--   Created: 2026-01-16
+--   Note: Conflicts with 031_update_building_coordinates.sql — both share prefix 031. Runner uses Go code ordering, not filename sort; conflict is harmless.
+
 -- 增强机房表，添加所属楼宇字段
 -- 执行日期: 2026-01-14
 

@@ -1,3 +1,8 @@
+-- Phase 32 P2-A4 source-tracking:
+--   Original commit: a3032b2e
+--   Created: 2026-01-16
+--   Note: Conflicts with 031_enhance_server_room_table.sql — both share prefix 031. Runner uses Go code ordering, not filename sort; conflict is harmless.
+
 -- 更新楼宇地址和坐标信息
 -- 注意：经纬度为根据地址估算的值，如需精确坐标请在百度地图开放平台启用 Geocoding API
 

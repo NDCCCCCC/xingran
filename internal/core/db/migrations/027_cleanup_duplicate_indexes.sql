@@ -1,3 +1,8 @@
+-- Phase 32 P2-A4 source-tracking:
+--   Original commit: 15cb483d
+--   Created: 2026-01-09
+--   Note: Conflicts with 027_create_user_column_config.sql — both share prefix 027. Runner uses Go code ordering, not filename sort; conflict is harmless.
+
 -- ============================================
 -- 清理知识库和工单表的重复索引
 -- 文件: 027_cleanup_duplicate_indexes.sql

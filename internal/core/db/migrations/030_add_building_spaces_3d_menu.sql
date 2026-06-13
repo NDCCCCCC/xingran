@@ -1,3 +1,8 @@
+-- Phase 32 P2-A4 source-tracking:
+--   Original commit: a3032b2e
+--   Created: 2026-01-16
+--   Note: Conflicts with 030_create_workstation_device.sql and 030_enhance_workstation_table.sql — three files share prefix 030. Runner uses Go code ordering, not filename sort; conflict is harmless.
+
 -- 楼宇空间 3D 可视化菜单配置
 -- 添加到运维管理模块（与楼宇空间平级）
 

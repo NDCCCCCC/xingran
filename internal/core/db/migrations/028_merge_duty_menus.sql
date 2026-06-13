@@ -1,3 +1,8 @@
+-- Phase 32 P2-A4 source-tracking:
+--   Original commit: 41d1dd57
+--   Created: 2026-01-09
+--   Note: No filename conflict — listed for completeness. Runner uses Go code ordering.
+
 -- ============================================
 -- 值班管理子菜单合并迁移
 -- 迁移版本: 028

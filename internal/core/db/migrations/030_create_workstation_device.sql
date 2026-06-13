@@ -1,3 +1,8 @@
+-- Phase 32 P2-A4 source-tracking:
+--   Original commit: 71c6fe21
+--   Created: 2026-06-10
+--   Note: Conflicts with 030_add_building_spaces_3d_menu.sql and 030_enhance_workstation_table.sql — three files share prefix 030. Runner uses Go code ordering, not filename sort; conflict is harmless.
+
 -- Migration: 030_create_workstation_device.sql
 -- Description: 创建工位设备关联表
 -- Date: 2026-06-10
