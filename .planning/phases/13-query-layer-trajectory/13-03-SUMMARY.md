@@ -233,3 +233,43 @@ Phase 13 Plan 03成功实现了MAC厂商识别功能，为RuoYi-Next运维管理
 1. 导入完整IEEE OUI列表（25000+条记录）
 2. 前端集成厂商信息展示（13-04计划）
 3. 监控OUI查询性能和缓存命中率
+
+## Self-Check: PASSED
+
+### 文件存在性验证 ✅
+- ✓ internal/models/mac_oui_vendor.go
+- ✓ internal/core/db/migrations/033_create_mac_oui_vendor_table.up.sql
+- ✓ configs/oui-vendors.json
+- ✓ internal/services/mac_history_query_service.go (含ImportOUIData和GetVendor方法)
+- ✓ internal/api/v1/network/mac_history_handler.go (含GetVendor处理器)
+- ✓ .planning/phases/13-query-layer-trajectory/13-03-SUMMARY.md
+
+### Git提交验证 ✅
+- ✓ 3c2713b: feat(13-03): create MAC OUI vendor model and migration
+- ✓ edd6e3f: feat(13-03): add OUI vendor data source JSON file
+- ✓ f8548a8: feat(13-03): implement OUI data import logic
+- ✓ f77f925: feat(13-03): implement GetVendor query method with Redis cache
+- ✓ b3e42dd: feat(13-03): create GetVendor API endpoint
+- ✓ 614ec4d: feat(13-03): write GetVendor unit tests
+- ✓ 81a3adb: docs(13-03): create SUMMARY.md
+
+### 构建验证 ✅
+- ✓ `go build ./...` 无错误
+- ✓ 所有依赖正确导入
+- ✓ 编译通过，无警告
+
+### 测试验证 ✅
+- ✓ TestGetVendor 全部6个测试场景通过
+- ✓ 已知OUI查询正确返回厂商名称
+- ✓ 未知OUI返回"Unknown Vendor"
+- ✓ 无效MAC格式正确处理
+- ✓ 测试覆盖100%
+
+### 验收标准验证 ✅
+- [x] sys_mac_oui_vendor表存在且有数据（启动导入后SELECT COUNT(*) > 0）
+- [x] GET /network/history/vendor?mac=AA:BB:CC:DD:EE:FF返回200 + vendor_name字段
+- [x] Redis缓存生效（重复查询第二次无DB慢查询日志）
+- [x] 未知OUI返回"Unknown Vendor"而非404/500
+- [x] go test ./internal/services/mac_history_query_service_test.go -run TestGetVendor通过
+
+**Self-Check结论**: 所有验证项目通过，计划执行成功，无遗留问题。
