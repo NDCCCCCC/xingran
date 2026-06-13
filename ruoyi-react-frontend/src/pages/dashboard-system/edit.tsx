@@ -17,10 +17,10 @@ import { GridItem, GridItemPlaceholder } from '@/components/dashboard/layout';
 import { Suspense, lazy } from 'react';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { Spin } from 'antd';
+import { Widget } from '@/components/dashboard/Widget';
 
 import './edit.css';
 
-const WidgetRenderer = lazy(() => import('@/components/dashboard/widgets/WidgetRenderer'));
 const WidgetSelector = lazy(() => import('@/components/dashboard/settings/WidgetSelector'));
 
 const DashboardEdit: React.FC = () => {
@@ -100,7 +100,7 @@ const DashboardEdit: React.FC = () => {
 										selected={selectedWidgetId === widget.id}
 										onClick={() => selectWidget(selectedWidgetId === widget.id ? null : widget.id)}
 									>
-										<WidgetRenderer widget={widget} />
+										<Widget widget={widget} />
 									</GridItem>
 								</div>
 							))}

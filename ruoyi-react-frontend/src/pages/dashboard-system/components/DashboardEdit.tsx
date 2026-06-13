@@ -18,8 +18,8 @@ import { Suspense, lazy } from 'react';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { Spin } from 'antd';
 import { DASHBOARD } from '@/constants/routes';
+import { Widget } from '@/components/dashboard/Widget';
 
-const WidgetRenderer = lazy(() => import('@/components/dashboard/widgets/WidgetRenderer'));
 const WidgetSelector = lazy(() => import('@/components/dashboard/settings/WidgetSelector'));
 
 interface DashboardEditProps {
@@ -107,7 +107,7 @@ export const DashboardEdit: React.FC<DashboardEditProps> = ({ dashboardId }) => 
 										selected={selectedWidgetId === widget.id}
 										onClick={() => selectWidget(selectedWidgetId === widget.id ? null : widget.id)}
 									>
-										<WidgetRenderer widget={widget} />
+										<Widget widget={widget} />
 									</GridItem>
 								</div>
 							))}

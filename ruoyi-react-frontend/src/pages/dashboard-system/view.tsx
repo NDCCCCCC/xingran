@@ -9,13 +9,12 @@ import { useParams } from 'react-router-dom';
 import { LayoutToolbar } from '@/components/dashboard/layout/LayoutToolbar';
 import { DashboardGrid, DashboardGridPlaceholder } from '@/components/dashboard/layout/DashboardGrid';
 import { GridItem } from '@/components/dashboard/layout/GridItem';
-import { Suspense, lazy } from 'react';
+import { Suspense } from 'react';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { Spin } from 'antd';
+import { Widget } from '@/components/dashboard/Widget';
 
 import './view.css';
-
-const WidgetRenderer = lazy(() => import('@/components/dashboard/widgets/WidgetRenderer'));
 
 const DashboardView: React.FC = () => {
 	const { id } = useParams<{ id: string }>();
@@ -77,7 +76,7 @@ const DashboardView: React.FC = () => {
 							{widgets.map((widget) => (
 								<div key={widget.id}>
 									<GridItem widget={widget}>
-										<WidgetRenderer widget={widget} />
+										<Widget widget={widget} />
 									</GridItem>
 								</div>
 							))}

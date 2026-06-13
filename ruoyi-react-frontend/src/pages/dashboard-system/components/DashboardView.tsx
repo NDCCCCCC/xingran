@@ -8,14 +8,13 @@ import { useEffect, useMemo } from 'react';
 import { LayoutToolbar } from '@/components/dashboard/layout/LayoutToolbar';
 import { DashboardGrid, DashboardGridPlaceholder } from '@/components/dashboard/layout/DashboardGrid';
 import { GridItem } from '@/components/dashboard/layout/GridItem';
-import { Suspense, lazy } from 'react';
+import { Suspense } from 'react';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { Spin, Space, Button } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { UnorderedListOutlined, EditOutlined } from '@ant-design/icons';
 import { DASHBOARD } from '@/constants/routes';
-
-const WidgetRenderer = lazy(() => import('@/components/dashboard/widgets/WidgetRenderer'));
+import { Widget } from '@/components/dashboard/Widget';
 
 interface DashboardViewProps {
 	dashboardId: string;
@@ -99,7 +98,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dashboardId, isHom
 							{widgets.map((widget) => (
 								<div key={widget.id}>
 									<GridItem widget={widget}>
-										<WidgetRenderer widget={widget} />
+										<Widget widget={widget} />
 									</GridItem>
 								</div>
 							))}
