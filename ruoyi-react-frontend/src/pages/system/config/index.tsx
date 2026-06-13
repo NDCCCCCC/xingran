@@ -133,12 +133,14 @@ const ConfigManagement: FC = () => {
     try {
       const values = await editForm.validateFields() as Record<string, any>;
       if (editingConfig) {
-        // 移除 configKey 和 isSystem 字段，后端 UpdateConfigRequest 不接受这些字段
-        const { configKey, isSystem, ...updateValues } = values;
+        // F-17 Phase 31: 后端 UpdateConfigRequest 现已接受 configKey 字段(可选)。
+        // 显式传 configKey 让后端校验"系统内置参数键不可改",获得二次确认保护。
+        // isSystem 仍移除(只读字段,不参与更新)。
+        const { isSystem, ...updateValues } = values;
         await post(`/system/configs/${editingConfig.id}/update`, updateValues);
 
         // 如果更新的是加密相关配置，刷新加密配置
-        if (configKey === 'sys.request.encryption.enabled') {
+        if (values.configKey === 'sys.request.encryption.enabled') {
           try {
             await refreshEncryptionConfig();
             message.success('配置已更新，加密配置已刷新');
