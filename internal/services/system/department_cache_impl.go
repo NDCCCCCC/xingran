@@ -38,7 +38,7 @@ func (s *departmentCacheService) GetTreeWithFilter(ctx context.Context, includeD
 		return s.departmentService.GetTreeWithFilter(ctx, includeDisabled, params)
 	}
 
-	cacheKey := services.GetDeptTreeKey()
+	cacheKey := BuildDeptCacheKey(CacheKeyDeptTree)
 	if includeDisabled {
 		cacheKey += ":all"
 	}
@@ -75,7 +75,7 @@ func (s *departmentCacheService) queryTree(ctx context.Context, includeDisabled 
 }
 
 func (s *departmentCacheService) GetSelectDataWithCache(ctx context.Context) ([]*models.Department, error) {
-	cacheKey := services.CacheKeyDeptTreeSelect
+	cacheKey := CacheKeyDeptTree
 	var result []*models.Department
 
 	expiration := s.GetExpiration(services.CacheConfigDeptSelect, 30*time.Minute)
@@ -103,9 +103,9 @@ func (s *departmentCacheService) querySelectData(ctx context.Context) ([]*models
 
 func (s *departmentCacheService) InvalidateDeptCache(ctx context.Context) error {
 	InvalidateCacheByPattern(ctx, s.cache, []string{
-		services.CacheKeyDeptTree + "*",
-		services.CacheKeyDeptList + "*",
-		services.CacheKeyDeptTreeSelect + "*",
+		BuildDeptCacheKey(CacheKeyDeptTree) + "*",
+		BuildDeptCacheKey(CacheKeyDeptList) + "*",
+		BuildDeptCacheKey("tree:select") + "*",
 	}, "DEPT")
 	return nil
 }

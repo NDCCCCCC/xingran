@@ -84,15 +84,21 @@ const (
 	CacheKeyUserListByDept = "user:dept" // 部门用户: user:dept:{deptId}
 
 	// 角色相关
-	CacheKeyRoleByID     = "role:id"   // 角色详情: role:id:{uuid}
-	CacheKeyRoleList     = "role:list" // 角色列表: role:list
-	CacheKeyRoleByUserID = "role:user" // 用户角色: role:user:{userId}
+	CacheKeyRoleByID      = "role:id"      // 角色详情: role:id:{uuid}
+	CacheKeyRoleList      = "role:list"    // 角色列表: role:list
+	CacheKeyRoleByUserID  = "role:user"    // 用户角色: role:user:{userId}
+	CacheKeyRoleAll       = "role:all"     // 所有角色: role:all
+	CacheKeyRoleEnabled   = "role:enabled" // 启用的角色: role:enabled
+	CacheKeyRoleMenus     = "role:menus"   // 角色菜单: role:menus:{roleId}
+	CacheKeyRoleDepts     = "role:depts"   // 角色部门: role:depts:{roleId}
 
 	// 菜单相关
-	CacheKeyMenuByID     = "menu:id"   // 菜单详情: menu:id:{uuid}
-	CacheKeyMenuList     = "menu:list" // 菜单列表: menu:list
-	CacheKeyMenuByRoleID = "menu:role" // 角色菜单: menu:role:{roleId}
-	CacheKeyMenuTree     = "menu:tree" // 菜单树: menu:tree
+	CacheKeyMenuByID     = "menu:id"      // 菜单详情: menu:id:{uuid}
+	CacheKeyMenuList     = "menu:list"    // 菜单列表: menu:list
+	CacheKeyMenuByRoleID = "menu:role"    // 角色菜单: menu:role:{roleId}
+	CacheKeyMenuTree     = "menu:tree"    // 菜单树: menu:tree
+	CacheKeyMenuRouter   = "menu:router"  // 菜单路由: menu:router
+	CacheKeyMenuAll      = "menu:all"     // 所有菜单: menu:all
 
 	// 部门相关
 	CacheKeyDeptByID     = "dept:id"       // 部门详情: dept:id:{uuid}
@@ -101,8 +107,10 @@ const (
 	CacheKeyDeptChildren = "dept:children" // 子部门: dept:children:{parentId}
 
 	// 岗位相关
-	CacheKeyPostByID = "post:id"   // 岗位详情: post:id:{uuid}
-	CacheKeyPostList = "post:list" // 岗位列表: post:list
+	CacheKeyPostByID     = "post:id"      // 岗位详情: post:id:{uuid}
+	CacheKeyPostList     = "post:list"    // 岗位列表: post:list
+	CacheKeyPostAll      = "post:all"     // 所有岗位: post:all
+	CacheKeyPostEnabled  = "post:enabled" // 启用的岗位: post:enabled
 
 	// 字典相关
 	CacheKeyDictType       = "dict:type"      // 字典类型: dict:type
@@ -276,4 +284,58 @@ func BuildInvalidatePattern(module string, keyType string) string {
 		return BuildModulePattern(module)
 	}
 	return fmt.Sprintf("%s:%s:%s:*", CachePrefixPrefix, module, keyType)
+}
+
+// ==================== 特殊缓存键辅助函数 ====================
+
+// GetDictDataByTypeKey 根据字典类型构建字典数据缓存键
+// 参数：dictType 字典类型
+// 返回：dict:data:{dictType}
+func GetDictDataByTypeKey(dictType string) string {
+	return CacheKeyDictData + ":" + dictType
+}
+
+// GetMenuTreeKey 根据是否包含隐藏菜单构建菜单树缓存键
+// 参数：includeHidden 是否包含隐藏菜单
+// 返回：menu:tree 或 menu:tree:all
+func GetMenuTreeKey(includeHidden bool) string {
+	if includeHidden {
+		return CacheKeyMenuTree + ":all"
+	}
+	return CacheKeyMenuTree
+}
+
+// GetRoleMenusKey 根据角色ID构建角色菜单缓存键
+// 参数：roleID 角色ID
+// 返回：role:menus:{roleID}
+func GetRoleMenusKey(roleID string) string {
+	return CacheKeyRoleMenus + ":" + roleID
+}
+
+// GetUserByIDKey 根据用户ID构建用户缓存键
+// 参数：id 用户ID
+// 返回：user:id:{id}
+func GetUserByIDKey(id string) string {
+	return CacheKeyUserByID + ":" + id
+}
+
+// GetUserByUsernameKey 根据用户名构建用户缓存键
+// 参数：username 用户名
+// 返回：user:name:{username}
+func GetUserByUsernameKey(username string) string {
+	return CacheKeyUserByUserName + ":" + username
+}
+
+// GetUserRolesKey 根据用户ID构建用户角色缓存键
+// 参数：userID 用户ID
+// 返回：role:user:{userID}
+func GetUserRolesKey(userID string) string {
+	return CacheKeyRoleByUserID + ":" + userID
+}
+
+// GetUserPermissionsKey 根据用户ID构建用户权限缓存键
+// 参数：userID 用户ID
+// 返回：user:permissions:{userID}
+func GetUserPermissionsKey(userID string) string {
+	return "user:permissions:" + userID
 }

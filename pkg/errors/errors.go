@@ -280,6 +280,14 @@ func RoleExists() *AppError {
 	return New(CodeRoleExists, CodeRoleExists.DefaultMessage())
 }
 
+func RoleExistsWithName(name string) *AppError {
+	return New(CodeRoleExists, fmt.Sprintf("角色名称已存在: %s", name))
+}
+
+func RoleKeyExists(key string) *AppError {
+	return New(CodeRoleExists, fmt.Sprintf("权限字符已存在: %s", key))
+}
+
 func RoleHasUsers() *AppError {
 	return New(CodeRoleHasUsers, CodeRoleHasUsers.DefaultMessage())
 }

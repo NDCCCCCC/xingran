@@ -52,7 +52,7 @@ func (s *roleCacheService) List(ctx context.Context, params requests.RoleListPar
 func (s *roleCacheService) buildListCacheKey(params requests.RoleListParams) string {
 	// 使用基础缓存键 + 参数构建唯一键
 	// 格式：cache:role:list:roleName:roleKey:status:current:pageSize
-	baseKey := services.CacheKeyRoleAll
+	baseKey := CacheKeyRoleAll
 	var keyPart string
 
 	if params.RoleName != "" {
@@ -73,7 +73,7 @@ func (s *roleCacheService) buildListCacheKey(params requests.RoleListParams) str
 
 // GetByID 获取角色详情（带缓存）
 func (s *roleCacheService) GetByID(ctx context.Context, id string) (*models.Role, error) {
-	cacheKey := services.CacheKeyRoleAll + ":id:" + id
+	cacheKey := CacheKeyRoleAll + ":id:" + id
 	var result models.Role
 
 	expiration := s.GetExpiration(services.CacheConfigRoleMenus, 30*time.Minute)
@@ -90,7 +90,7 @@ func (s *roleCacheService) GetByID(ctx context.Context, id string) (*models.Role
 
 // GetAllEnabled 获取所有启用的角色（覆盖基础方法，使用缓存）
 func (s *roleCacheService) GetAllEnabled(ctx context.Context) ([]*models.Role, error) {
-	cacheKey := services.CacheKeyRoleEnabled
+	cacheKey := CacheKeyRoleEnabled
 	var result []*models.Role
 
 	expiration := s.GetExpiration(services.CacheConfigRoleMenus, 30*time.Minute)
@@ -104,7 +104,7 @@ func (s *roleCacheService) GetAllEnabled(ctx context.Context) ([]*models.Role, e
 
 // GetAllEnabledWithCache 获取所有启用的角色（带缓存）- 保留以兼容性
 func (s *roleCacheService) GetAllEnabledWithCache(ctx context.Context) ([]*models.Role, error) {
-	cacheKey := services.CacheKeyRoleEnabled
+	cacheKey := CacheKeyRoleEnabled
 	var result []*models.Role
 
 	expiration := s.GetExpiration(services.CacheConfigRoleMenus, 30*time.Minute)
@@ -118,7 +118,7 @@ func (s *roleCacheService) GetAllEnabledWithCache(ctx context.Context) ([]*model
 
 // GetMenusWithCache 获取角色的菜单（带缓存）
 func (s *roleCacheService) GetMenusWithCache(ctx context.Context, roleID string) ([]models.Menu, error) {
-	cacheKey := services.GetRoleMenusKey(roleID)
+	cacheKey := GetRoleMenusKey(roleID)
 	var result []models.Menu
 
 	expiration := s.GetExpiration(services.CacheConfigRoleMenus, 30*time.Minute)
@@ -157,7 +157,7 @@ func (s *roleCacheService) queryMenus(ctx context.Context, roleID string) ([]mod
 
 // GetDeptsWithCache 获取角色的部门（带缓存）
 func (s *roleCacheService) GetDeptsWithCache(ctx context.Context, roleID string) ([]models.Department, error) {
-	cacheKey := services.CacheKeyRoleDepts + ":" + roleID
+	cacheKey := CacheKeyRoleDepts + ":" + roleID
 	var result []models.Department
 
 	expiration := s.GetExpiration(services.CacheConfigRoleDepts, 30*time.Minute)
@@ -198,16 +198,16 @@ func (s *roleCacheService) queryDepts(ctx context.Context, roleID string) ([]mod
 func (s *roleCacheService) InvalidateRoleCache(ctx context.Context, roleID string) error {
 	// F-18: 含通配符 "*" 的键必须走 DeleteByPattern,否则被当字面量精确删除,失效无效。
 	patterns := []string{
-		services.CacheKeyRoleAll + "*",
-		services.CacheKeyRoleEnabled + "*",
+		CacheKeyRoleAll + "*",
+		CacheKeyRoleEnabled + "*",
 	}
 	InvalidateCacheByPattern(ctx, s.cache, patterns, "ROLE")
 
 	if roleID != "" {
 		keys := []string{
-			services.CacheKeyRoleMenus + ":" + roleID,
-			services.CacheKeyRoleDepts + ":" + roleID,
-			services.CacheKeyRoleAll + ":id:" + roleID,
+			CacheKeyRoleMenus + ":" + roleID,
+			CacheKeyRoleDepts + ":" + roleID,
+			CacheKeyRoleAll + ":id:" + roleID,
 		}
 		InvalidateCacheByKey(ctx, s.cache, keys, "ROLE")
 	}
@@ -244,7 +244,7 @@ func (s *roleCacheService) BatchDelete(ctx context.Context, ids []string) error 
 		return err
 	}
 	// 清除所有角色相关缓存
-	InvalidateCacheByPattern(ctx, s.cache, []string{services.CacheKeyRoleAll + "*"}, "ROLE")
+	InvalidateCacheByPattern(ctx, s.cache, []string{CacheKeyRoleAll + "*"}, "ROLE")
 	return nil
 }
 

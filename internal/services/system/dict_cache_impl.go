@@ -34,7 +34,7 @@ func NewDictTypeServiceWithCache(
 
 // GetAllWithCache 获取所有字典类型（覆盖基础方法，使用缓存）
 func (s *dictTypeCacheService) GetAllWithCache(ctx context.Context) ([]*models.DictType, error) {
-	cacheKey := services.CacheKeyDictType
+	cacheKey := CacheKeyDictType
 	var result []*models.DictType
 
 	expiration := s.GetExpiration(services.CacheConfigDictType, 60*time.Minute)
@@ -93,7 +93,7 @@ func (s *dictTypeCacheService) Delete(ctx context.Context, id string) error {
 
 // invalidateCache 失效缓存
 func (s *dictTypeCacheService) invalidateCache(ctx context.Context) {
-	InvalidateCacheByPattern(ctx, s.cache, []string{services.CacheKeyDictType + "*"}, "DICT")
+	InvalidateCacheByPattern(ctx, s.cache, []string{CacheKeyDictType + "*"}, "DICT")
 }
 
 // List 查询字典类型列表（全量缓存+内存筛选版本）
@@ -164,7 +164,7 @@ func NewDictDataServiceWithCache(
 
 // GetByTypeWithCache 根据类型获取字典数据（带缓存）
 func (s *dictDataCacheService) GetByTypeWithCache(ctx context.Context, dictType string) ([]*models.DictData, error) {
-	cacheKey := services.GetDictDataByTypeKey(dictType)
+	cacheKey := GetDictDataByTypeKey(dictType)
 	var result []*models.DictData
 
 	expiration := s.GetExpiration(services.CacheConfigDictData, 30*time.Minute)
@@ -235,6 +235,6 @@ func (s *dictDataCacheService) Delete(ctx context.Context, id string) error {
 
 // invalidateCache 失效缓存
 func (s *dictDataCacheService) invalidateCache(ctx context.Context, dictType string) {
-	cacheKey := services.GetDictDataByTypeKey(dictType)
+	cacheKey := GetDictDataByTypeKey(dictType)
 	InvalidateCacheByKey(ctx, s.cache, []string{cacheKey}, "DICT")
 }

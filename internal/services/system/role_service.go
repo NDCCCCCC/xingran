@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	"gorm.io/gorm"
@@ -47,14 +48,14 @@ func (s *roleService) Create(ctx context.Context, req *requests.RoleCreateReques
 	if exists, err := s.checkRoleNameExists(ctx, req.RoleName, ""); err != nil {
 		return fmt.Errorf("检查角色名称失败: %w", err)
 	} else if exists {
-		return fmt.Errorf("角色名称已存在")
+		return apperrors.RoleExistsWithName(req.RoleName)
 	}
 
 	// 检查权限字符是否已存在
 	if exists, err := s.checkRoleKeyExists(ctx, req.RoleKey, ""); err != nil {
 		return fmt.Errorf("检查权限字符失败: %w", err)
 	} else if exists {
-		return fmt.Errorf("权限字符已存在")
+		return apperrors.RoleKeyExists(req.RoleKey)
 	}
 
 	// 使用事务创建角色及其关联
@@ -90,7 +91,7 @@ func (s *roleService) Update(ctx context.Context, req *requests.RoleUpdateReques
 	var role models.Role
 	if err := s.db.WithContext(ctx).First(&role, "id = ?", req.ID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return fmt.Errorf("角色不存在")
+			return apperrors.RoleNotFound()
 		}
 		return fmt.Errorf("查询角色失败: %w", err)
 	}
@@ -99,14 +100,14 @@ func (s *roleService) Update(ctx context.Context, req *requests.RoleUpdateReques
 	if exists, err := s.checkRoleNameExists(ctx, req.RoleName, req.ID); err != nil {
 		return fmt.Errorf("检查角色名称失败: %w", err)
 	} else if exists {
-		return fmt.Errorf("角色名称已存在")
+		return apperrors.RoleExistsWithName(req.RoleName)
 	}
 
 	// 检查权限字符是否已存在（排除自己）
 	if exists, err := s.checkRoleKeyExists(ctx, req.RoleKey, req.ID); err != nil {
 		return fmt.Errorf("检查权限字符失败: %w", err)
 	} else if exists {
-		return fmt.Errorf("权限字符已存在")
+		return apperrors.RoleKeyExists(req.RoleKey)
 	}
 
 	// 使用事务更新角色及其关联
@@ -140,7 +141,7 @@ func (s *roleService) Delete(ctx context.Context, id string) error {
 	var role models.Role
 	if err := s.db.WithContext(ctx).Where("id = ?", id).First(&role).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return fmt.Errorf("角色不存在")
+			return apperrors.RoleNotFound()
 		}
 		return fmt.Errorf("查询角色失败: %w", err)
 	}
@@ -151,7 +152,7 @@ func (s *roleService) Delete(ctx context.Context, id string) error {
 		return fmt.Errorf("检查角色分配失败: %w", err)
 	}
 	if count > 0 {
-		return fmt.Errorf("角色已分配给用户，无法删除")
+		return apperrors.RoleHasUsers()
 	}
 
 	// 使用事务删除角色及其关联数据
@@ -295,7 +296,7 @@ func (s *roleService) UpdateStatus(ctx context.Context, id string, status int) e
 	var role models.Role
 	if err := s.db.WithContext(ctx).First(&role, "id = ?", id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return fmt.Errorf("角色不存在")
+			return apperrors.RoleNotFound()
 		}
 		return fmt.Errorf("查询角色失败: %w", err)
 	}

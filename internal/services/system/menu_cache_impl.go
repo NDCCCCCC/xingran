@@ -33,7 +33,7 @@ func NewMenuServiceWithCache(
 
 // GetTree 获取菜单树（覆盖基础方法，使用缓存）
 func (s *menuCacheService) GetTree(ctx context.Context) ([]models.Menu, error) {
-	cacheKey := services.GetMenuTreeKey(false) // 默认不包含隐藏菜单
+	cacheKey := GetMenuTreeKey(false) // 默认不包含隐藏菜单
 	var result []models.Menu
 
 	expiration := s.GetExpiration(services.CacheConfigMenuTree, 30*time.Minute)
@@ -47,7 +47,7 @@ func (s *menuCacheService) GetTree(ctx context.Context) ([]models.Menu, error) {
 
 // GetTreeWithCache 获取菜单树（带缓存）- 保留以兼容性
 func (s *menuCacheService) GetTreeWithCache(ctx context.Context, includeHidden bool) ([]models.Menu, error) {
-	cacheKey := services.GetMenuTreeKey(includeHidden)
+	cacheKey := GetMenuTreeKey(includeHidden)
 	var result []models.Menu
 
 	expiration := s.GetExpiration(services.CacheConfigMenuTree, 30*time.Minute)
@@ -77,7 +77,7 @@ func (s *menuCacheService) queryTree(ctx context.Context, includeHidden bool) ([
 
 // GetRouterDataWithCache 获取路由数据（带缓存）
 func (s *menuCacheService) GetRouterDataWithCache(ctx context.Context) ([]models.Menu, error) {
-	cacheKey := services.CacheKeyMenuRouter
+	cacheKey := CacheKeyMenuRouter
 	var result []models.Menu
 
 	expiration := s.GetExpiration(services.CacheConfigMenuRouter, 30*time.Minute)
@@ -105,9 +105,9 @@ func (s *menuCacheService) queryRouterData(ctx context.Context) ([]models.Menu, 
 // InvalidateMenuCache 失效菜单缓存
 func (s *menuCacheService) InvalidateMenuCache(ctx context.Context) error {
 	InvalidateCacheByPattern(ctx, s.cache, []string{
-		services.CacheKeyMenuTree + "*",
-		services.CacheKeyMenuRouter + "*",
-		services.CacheKeyMenuAll + "*",
+		CacheKeyMenuTree + "*",
+		CacheKeyMenuRouter + "*",
+		CacheKeyMenuAll + "*",
 	}, "MENU")
 	return nil
 }

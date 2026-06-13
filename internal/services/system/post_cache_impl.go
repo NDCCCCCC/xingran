@@ -33,7 +33,7 @@ func NewPostServiceWithCache(
 
 // GetAllWithCache 获取所有岗位（覆盖基础方法，使用缓存）
 func (s *postCacheService) GetAllWithCache(ctx context.Context) ([]*models.Post, error) {
-	cacheKey := services.CacheKeyPostAll
+	cacheKey := CacheKeyPostAll
 	var result []*models.Post
 
 	expiration := s.GetExpiration(services.CacheConfigPostAll, 30*time.Minute)
@@ -47,7 +47,7 @@ func (s *postCacheService) GetAllWithCache(ctx context.Context) ([]*models.Post,
 
 // GetEnabledWithCache 获取启用的岗位（带缓存）
 func (s *postCacheService) GetEnabledWithCache(ctx context.Context) ([]*models.Post, error) {
-	cacheKey := services.CacheKeyPostEnabled
+	cacheKey := CacheKeyPostEnabled
 	var result []*models.Post
 
 	expiration := s.GetExpiration(services.CacheConfigPostEnabled, 30*time.Minute)
@@ -95,8 +95,8 @@ func (s *postCacheService) queryEnabled(ctx context.Context) ([]*models.Post, er
 // InvalidatePostCache 失效岗位缓存
 func (s *postCacheService) InvalidatePostCache(ctx context.Context) error {
 	InvalidateCacheByPattern(ctx, s.cache, []string{
-		services.CacheKeyPostAll + "*",
-		services.CacheKeyPostEnabled + "*",
+		CacheKeyPostAll + "*",
+		CacheKeyPostEnabled + "*",
 	}, "POST")
 	return nil
 }

@@ -36,7 +36,7 @@ func NewUserServiceWithCache(
 
 // GetByIDWithCache 获取用户详情（带缓存）
 func (s *userCacheService) GetByIDWithCache(ctx context.Context, id string) (*models.User, error) {
-	cacheKey := services.GetUserByIDKey(id)
+	cacheKey := GetUserByIDKey(id)
 	var result models.User
 
 	expiration := s.GetExpiration(services.CacheConfigUserByID, 30*time.Minute)
@@ -53,7 +53,7 @@ func (s *userCacheService) GetByIDWithCache(ctx context.Context, id string) (*mo
 
 // GetByUsernameWithCache 根据用户名获取用户（带缓存）
 func (s *userCacheService) GetByUsernameWithCache(ctx context.Context, username string) (*models.User, error) {
-	cacheKey := services.GetUserByUsernameKey(username)
+	cacheKey := GetUserByUsernameKey(username)
 	var result models.User
 
 	expiration := s.GetExpiration(services.CacheConfigUserByUsername, 30*time.Minute)
@@ -83,7 +83,7 @@ func (s *userCacheService) getByUsername(ctx context.Context, username string) (
 
 // GetRolesWithCache 获取用户角色（带缓存）
 func (s *userCacheService) GetRolesWithCache(ctx context.Context, userID string) ([]models.Role, error) {
-	cacheKey := services.GetUserRolesKey(userID)
+	cacheKey := GetUserRolesKey(userID)
 	var result []models.Role
 
 	expiration := s.GetExpiration(services.CacheConfigUserRoles, 30*time.Minute)
@@ -121,7 +121,7 @@ func (s *userCacheService) queryRoles(ctx context.Context, userID string) ([]mod
 
 // GetPermissionsWithCache 获取用户权限（带缓存）
 func (s *userCacheService) GetPermissionsWithCache(ctx context.Context, userID string) ([]string, error) {
-	cacheKey := services.GetUserPermissionsKey(userID)
+	cacheKey := GetUserPermissionsKey(userID)
 	var result []string
 
 	expiration := s.GetExpiration(services.CacheConfigUserByID, 30*time.Minute)
@@ -202,7 +202,7 @@ func (s *userCacheService) List(ctx context.Context, params requests.UserListPar
 func (s *userCacheService) buildListCacheKey(params requests.UserListParams) string {
 	// 使用基础缓存键 + 参数构建唯一键
 	// 格式：user:list:username:status:deptId:current:pageSize
-	baseKey := services.CacheKeyUserList
+	baseKey := CacheKeyUserList
 	var keyPart string
 
 	if params.Username != nil && *params.Username != "" {
@@ -224,15 +224,15 @@ func (s *userCacheService) buildListCacheKey(params requests.UserListParams) str
 // InvalidateUserCache 失效用户相关缓存
 func (s *userCacheService) InvalidateUserCache(ctx context.Context, userID string) error {
 	keys := []string{
-		services.GetUserByIDKey(userID),
+		GetUserByIDKey(userID),
 	}
 	// 还需要失效用户名缓存，但需要先查询用户名
 	if user, err := s.userService.GetByID(ctx, userID); err == nil && user.Username != "" {
-		keys = append(keys, services.GetUserByUsernameKey(user.Username))
+		keys = append(keys, GetUserByUsernameKey(user.Username))
 	}
 	keys = append(keys,
-		services.GetUserRolesKey(userID),
-		services.GetUserPermissionsKey(userID),
+		GetUserRolesKey(userID),
+		GetUserPermissionsKey(userID),
 	)
 	InvalidateCacheByKey(ctx, s.cache, keys, "USER")
 	return nil
@@ -240,7 +240,7 @@ func (s *userCacheService) InvalidateUserCache(ctx context.Context, userID strin
 
 // InvalidateAllUserCache 失效所有用户缓存
 func (s *userCacheService) InvalidateAllUserCache(ctx context.Context) error {
-	InvalidateCacheByPattern(ctx, s.cache, []string{services.CacheKeyUserByID + "*"}, "USER")
+	InvalidateCacheByPattern(ctx, s.cache, []string{CacheKeyUserByID + "*"}, "USER")
 	return nil
 }
 
@@ -250,7 +250,7 @@ func (s *userCacheService) Create(ctx context.Context, req *requests.UserCreateR
 		return err
 	}
 	// 新建用户不需要清除缓存，但清除列表缓存
-	InvalidateCacheByPattern(ctx, s.cache, []string{services.CacheKeyUserList + "*"}, "USER")
+	InvalidateCacheByPattern(ctx, s.cache, []string{CacheKeyUserList + "*"}, "USER")
 	return nil
 }
 
@@ -276,7 +276,7 @@ func (s *userCacheService) BatchDelete(ctx context.Context, ids []string) error 
 		return err
 	}
 	// 清除所有用户相关缓存
-	InvalidateCacheByPattern(ctx, s.cache, []string{services.CacheKeyUserByID + "*"}, "USER")
+	InvalidateCacheByPattern(ctx, s.cache, []string{CacheKeyUserByID + "*"}, "USER")
 	return nil
 }
 
