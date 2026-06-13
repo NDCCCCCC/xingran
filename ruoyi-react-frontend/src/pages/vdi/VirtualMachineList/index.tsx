@@ -37,6 +37,7 @@ import { vmApi, vdiServerApi } from '@/lib/vdiApi';
 import { post } from '@/lib/api';
 import type { VirtualMachine, VMListParams, CreateVMRequest, VDIServer, VDIResourceGroup, VDIResource, VDIPlatform, RunPosition, VDIStorage, VDINetwork } from '@/types/vdi';
 import type { ColumnsType } from 'antd/es/table';
+import { VDIRow } from '@/components/table/VDIRow';
 
 // Permission helper
 const hasPermission = (permissions: string[], perm: string) => permissions.includes(perm);
@@ -497,7 +498,7 @@ const VirtualMachineList: React.FC = () => {
   };
 
   // 操作虚拟机（调用 VDI API）
-  const handleOperate = async (action: string, vmIds?: string[]) => {
+  const handleOperate = useCallback(async (action: string, vmIds?: string[]) => {
     const ids = vmIds || selectedRowKeys as string[];
     if (ids.length === 0) {
       message.warning('请选择要操作的虚拟机');
@@ -515,10 +516,10 @@ const VirtualMachineList: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedRowKeys, loadVMs]);
 
   // 删除虚拟机（调用 VDI API）
-  const handleDelete = async (id: string) => {
+  const handleDelete = useCallback(async (id: string) => {
     setLoading(true);
     try {
       await vmApi.delete(id);
@@ -529,10 +530,10 @@ const VirtualMachineList: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [loadVMs]);
 
   // 同步虚拟机（调用 VDI API）
-  const handleSync = async (id: string) => {
+  const handleSync = useCallback(async (id: string) => {
     setLoading(true);
     try {
       await vmApi.sync(id);
@@ -543,7 +544,13 @@ const VirtualMachineList: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [loadVMs]);
+
+  // 绑定用户操作
+  const handleBind = useCallback((vm: VirtualMachine) => {
+    setSelectedVM(vm);
+    setBindUserModalVisible(true);
+  }, []);
 
   // Load system users for bind user modal
   const loadSystemUsers = async (search?: string) => {
@@ -724,77 +731,7 @@ const VirtualMachineList: React.FC = () => {
     }
   };
 
-  // 动态生成操作按钮（基于用户权限）
-  const renderOperationButtons = (vm: VirtualMachine) => {
-    const allowedButtons = vmOperationButtons.filter(btn =>
-      permissions.includes(btn.permission)
-    );
-
-    return allowedButtons.map(btn => {
-      if (btn.action === 'delete') {
-        return (
-          <Popconfirm
-            key={btn.action}
-            title="确定要删除这个虚拟机吗？此操作将调用 VDI API 删除虚拟机。"
-            onConfirm={() => handleDelete(vm.id)}
-            okText="确定"
-            cancelText="取消"
-          >
-            <Tooltip title={btn.label}>
-              <Button type="text" danger icon={btn.icon} />
-            </Tooltip>
-          </Popconfirm>
-        );
-      }
-
-      if (btn.action === 'bind') {
-        return (
-          <Tooltip key={btn.action} title={btn.label}>
-            <Button
-              type="text"
-              icon={btn.icon}
-              onClick={() => {
-                setSelectedVM(vm);
-                setBindUserModalVisible(true);
-              }}
-            />
-          </Tooltip>
-        );
-      }
-
-      if (btn.action === 'sync') {
-        return (
-          <Tooltip key={btn.action} title={btn.label}>
-            <Button
-              type="text"
-              icon={btn.icon}
-              onClick={() => handleSync(vm.id)}
-            />
-          </Tooltip>
-        );
-      }
-
-      // 电源操作按钮（start, stop, restart）
-      const disabled =
-        btn.action === 'start' ? vm.power_state !== 'stopped' :
-        btn.action === 'stop' ? (vm.power_state === 'stopped' || vm.power_state === 'suspended' || vm.power_state === 'pending') :
-        btn.action === 'restart' ? (vm.power_state !== 'in_use' && vm.power_state !== 'suspended') :
-        false;
-
-      return (
-        <Tooltip key={btn.action} title={btn.label}>
-          <Button
-            type="text"
-            icon={btn.icon}
-            disabled={disabled}
-            onClick={() => handleOperate(btn.action, [vm.id])}
-          />
-        </Tooltip>
-      );
-    });
-  };
-
-  // 表格列定义（操作按钮使用 renderOperationButtons 进行权限过滤）
+  // 表格列定义（操作按钮使用 VDIRow 组件进行权限过滤）
   const columns: ColumnsType<VirtualMachine> = [
     {
       title: '虚拟机 ID',
@@ -860,9 +797,15 @@ const VirtualMachineList: React.FC = () => {
       width: 300,
       fixed: 'right',
       render: (_, record) => (
-        <Space size="small">
-          {renderOperationButtons(record)}
-        </Space>
+        <VDIRow
+          vm={record}
+          permissions={permissions}
+          buttons={vmOperationButtons}
+          onOperate={handleOperate}
+          onDelete={handleDelete}
+          onSync={handleSync}
+          onBind={handleBind}
+        />
       ),
     },
   ];

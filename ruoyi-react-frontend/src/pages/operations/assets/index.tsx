@@ -38,6 +38,7 @@ import { getAuthHeaders } from '@/utils/authHelpers';
 import { useColumnConfig } from '@/hooks/useColumnConfig';
 import type { ColumnConfig } from '@/hooks/useColumnConfig';
 import { ColumnConfigModal } from '@/components/shared/ColumnConfigModal';
+import { AssetRow } from '@/components/table/AssetRow';
 
 const { Option } = Select;
 
@@ -237,7 +238,7 @@ const AssetList: FC = () => {
     loadAssets(); // 页面加载时自动获取资产列表
   }, [loadStatistics, loadDeviceTypes, loadDeviceCategories, loadAssets]);
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = useCallback(async (id: string) => {
     Modal.confirm({
       title: '确认删除',
       content: '确定要删除该资产吗？',
@@ -252,7 +253,7 @@ const AssetList: FC = () => {
         }
       },
     });
-  };
+  }, [loadAssets, loadStatistics]);
 
   const handleBatchDelete = async () => {
     if (selectedRowKeys.length === 0) {
@@ -463,14 +464,11 @@ const AssetList: FC = () => {
       width: 120,
       fixed: 'right',
       render: (_, record) => (
-        <Space size="small">
-          <Button type="link" size="small" onClick={() => handleEdit(record)}>
-            编辑
-          </Button>
-          <Button type="link" size="small" danger onClick={() => handleDelete(record.id)}>
-            删除
-          </Button>
-        </Space>
+        <AssetRow
+          record={record}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+        />
       ),
     },
   ];
@@ -493,10 +491,10 @@ const AssetList: FC = () => {
     return visibleCols;
   }, [columns, visibleColumns]);
 
-  const handleEdit = (record: Asset) => {
+  const handleEdit = useCallback((record: Asset) => {
     // TODO: 实现编辑功能
     message.info('编辑功能待实现');
-  };
+  }, []);
 
   return (
     <div className="p-6">
