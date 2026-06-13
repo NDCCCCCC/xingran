@@ -65,10 +65,14 @@ type RPAProgressMessage struct {
 // NewNoticeHub 创建通知中心
 func NewNoticeHub() *NoticeHub {
 	h := &NoticeHub{
-		clients:    make(map[string]*Client),
-		broadcast:  make(chan NoticeMessage, 256),
-		register:   make(chan *Client),
-		unregister: make(chan *Client),
+		clients:   make(map[string]*Client),
+		broadcast: make(chan NoticeMessage, 256),
+		// F-13 fix: register/unregister 改无缓冲 → 缓冲 chan,
+		// 避免高并发连接时 RegisterClient 同步发送阻塞,
+		// 客户端在握手阶段可能耗尽 FD 等待。
+		// 缓冲 256 与 broadcast 保持一致量级,溢出时调用方等待是合理压力反馈。
+		register:   make(chan *Client, 256),
+		unregister: make(chan *Client, 256),
 		stop:       make(chan struct{}),
 	}
 	// 初始化对象池，预分配容量减少后续分配
