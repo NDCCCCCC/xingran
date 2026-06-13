@@ -285,7 +285,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 
 			// WebSocket路由（需要认证，但不需要权限验证）
 			wsGroup := authorized.Group("/ws")
-			wsGroup.Use(middleware.CORSForWebSocket())
+			// 注: WebSocket 握手不走 HTTP CORS，跨域防护由 gorilla Upgrader CheckOrigin（fail-secure）承担
 			{
 				v1.SetupNoticeWebSocketRouter(wsGroup, noticeHub, core, allowedOrigins)
 			}
