@@ -5,14 +5,16 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { message } from 'antd';
+import { useQueryClient } from '@tanstack/react-query';
 import type { Role } from '@/types';
 import type { Key } from 'antd/es/table/interface';
 import type { FormInstance } from 'antd/es/form';
 import { post } from '@/lib/api';
+import { queryKeys } from '@/lib/queryKeys';
 
 export interface UseRoleActionsParams {
   loadRoles: () => Promise<void>;
-  loadStatistics: () => Promise<void>;
+  loadStatistics: () => void;
   loadRoleMenus: (roleId: string) => Promise<string[]>;
   loadRoleDepts: (roleId: string) => Promise<string[]>;
   checkedMenuKeys: Key[];
@@ -66,6 +68,12 @@ export function useRoleActions(params: UseRoleActionsParams): UseRoleActionsRetu
   // 使用 ref 存储待设置的表单数据，解决 React 批处理延迟问题
   const pendingFormDataRef = useRef<Record<string, unknown> | null>(null);
 
+  // 全局 role 缓存失效器：每次角色变更后让所有 useRoleList() 消费者重新拉取 (D-13 Step 2)
+  const qc = useQueryClient();
+  const invalidateAllRoles = useCallback(() => {
+    qc.invalidateQueries({ queryKey: queryKeys.role.all });
+  }, [qc]);
+
   // 新增角色
   const handleAdd = useCallback(() => {
     setEditingRole(null);
@@ -116,10 +124,11 @@ export function useRoleActions(params: UseRoleActionsParams): UseRoleActionsRetu
       message.success('删除成功');
       loadRoles();
       loadStatistics();
+      invalidateAllRoles();
     } catch (error) {
       console.error('删除角色失败:', error);
     }
-  }, [loadRoles, loadStatistics]);
+  }, [loadRoles, loadStatistics, invalidateAllRoles]);
 
   // 批量删除
   const handleBatchDelete = useCallback(async (keys: Key[]) => {
@@ -134,10 +143,11 @@ export function useRoleActions(params: UseRoleActionsParams): UseRoleActionsRetu
       setSelectedRowKeys([]);
       loadRoles();
       loadStatistics();
+      invalidateAllRoles();
     } catch (error) {
       console.error('批量删除失败:', error);
     }
-  }, [loadRoles, loadStatistics]);
+  }, [loadRoles, loadStatistics, invalidateAllRoles]);
 
   // 更新角色状态
   const handleUpdateStatus = useCallback(async (id: string, status: number) => {
@@ -146,10 +156,11 @@ export function useRoleActions(params: UseRoleActionsParams): UseRoleActionsRetu
       message.success(status === 0 ? '启用成功' : '停用成功');
       loadRoles();
       loadStatistics();
+      invalidateAllRoles();
     } catch (error) {
       console.error('更新角色状态失败:', error);
     }
-  }, [loadRoles, loadStatistics]);
+  }, [loadRoles, loadStatistics, invalidateAllRoles]);
 
   // 保存角色
   const handleSave = useCallback(async (editForm: FormInstance<unknown>) => {
@@ -182,10 +193,11 @@ export function useRoleActions(params: UseRoleActionsParams): UseRoleActionsRetu
       setEditModalVisible(false);
       loadRoles();
       loadStatistics();
+      invalidateAllRoles();
     } catch (error) {
       console.error('保存角色失败:', error);
     }
-  }, [editingRole, loadRoles, loadStatistics]);
+  }, [editingRole, loadRoles, loadStatistics, invalidateAllRoles]);
 
   // 数据范围变更
   const handleDataScopeChange = useCallback((value: number, editForm: FormInstance<unknown>) => {

@@ -3,11 +3,12 @@
  * 角色数据管理 Hook
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { TreeDataNode } from 'antd';
 import type { Key } from 'antd/es/table/interface';
 import type { Role } from '@/types';
 import { post } from '@/lib/api';
+import { useRoleList } from '@/hooks/useRoleList';
 
 // 菜单树节点类型（后端返回）
 interface MenuTreeNode {
@@ -66,7 +67,7 @@ export interface UseRoleDataReturn {
 
   // 数据加载方法
   loadRoles: (params?: Record<string, unknown>) => Promise<void>;
-  loadStatistics: () => Promise<void>;
+  loadStatistics: () => void;
   loadMenuTree: () => Promise<void>;
   loadDeptTree: () => Promise<void>;
   loadRoleMenus: (roleId: string) => Promise<string[]>;
@@ -90,6 +91,10 @@ export function useRoleData(params: UseRoleDataParams): UseRoleDataReturn {
   const [checkedDeptKeys, setCheckedDeptKeys] = useState<Key[]>([]);
   const [currentDataScope, setCurrentDataScope] = useState<number>(1);
 
+  // 角色全量列表 — 通过 React Query 全局共享 (D-13 Step 2)
+  // 用于统计计算；useRoleList 返回 pageSize=1000 的全量数据。
+  const { data: allRoles = [] } = useRoleList();
+
   // 加载角色列表
   const loadRoles = useCallback(async (params: Record<string, unknown> = {}) => {
     setLoading(true);
@@ -108,29 +113,24 @@ export function useRoleData(params: UseRoleDataParams): UseRoleDataReturn {
     }
   }, [current, pageSize]);
 
-  // 加载统计数据
-  const loadStatistics = useCallback(async () => {
-    try {
-      const result = await post('/system/roles/list', { current: 1, pageSize: 1000 }) as { data: { list: Role[] } };
-      const allRoles = result.data.list || [];
-      const activeCount = allRoles.filter((r: Role) => r.status === 0).length;
-      const inactiveCount = allRoles.filter((r: Role) => r.status === 1).length;
-      setStatistics({
-        total: allRoles.length,
-        active: activeCount,
-        inactive: inactiveCount,
-      });
-    } catch (error) {
-      console.error('加载统计数据失败', error);
-      const activeCount = roles.filter((r: Role) => r.status === 0).length;
-      const inactiveCount = roles.filter((r: Role) => r.status === 1).length;
-      setStatistics({
-        total: roles.length,
-        active: activeCount,
-        inactive: inactiveCount,
-      });
-    }
-  }, [roles]);
+  // 加载统计数据 — 优先使用 useRoleList 全量缓存 (D-13 Step 2)
+  // 当 useRoleList 数据更新时，statistics 自动同步；首次加载若全量缓存尚未就绪，
+  // 回退到当前表格页的 roles 数据计算，避免统计延迟导致空白。
+  const loadStatistics = useCallback(() => {
+    const list = allRoles.length > 0 ? (allRoles as unknown as Role[]) : roles;
+    const activeCount = list.filter((r: Role) => r.status === 0).length;
+    const inactiveCount = list.filter((r: Role) => r.status === 1).length;
+    setStatistics({
+      total: list.length,
+      active: activeCount,
+      inactive: inactiveCount,
+    });
+  }, [allRoles, roles]);
+
+  // 当 useRoleList 全量数据或当前页数据变化时自动同步 statistics
+  useEffect(() => {
+    loadStatistics();
+  }, [loadStatistics]);
 
   // 加载菜单树
   const loadMenuTree = useCallback(async () => {

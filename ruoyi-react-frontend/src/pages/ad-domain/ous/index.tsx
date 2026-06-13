@@ -43,15 +43,11 @@ import {
 } from '@/lib/adDomainApi';
 import { useADConfigs } from '@/hooks/useADConfigs';
 import type { ADConfig } from '@/lib/adDomainApi';
-import { getDeptTree, type SimpleDept } from '@/lib/dutyApi';
+import { useDeptTree, type DeptTreeNode } from '@/hooks/useDeptTree';
 
 import type { FC } from 'react';
 
-interface Department {
-  id: string;
-  deptName: string;
-  children?: Department[];
-}
+interface Department extends DeptTreeNode {}
 
 const ADOUPage: FC = () => {
   const { configs, selectedConfig, setSelectedConfig } = useADConfigs({
@@ -70,7 +66,9 @@ const ADOUPage: FC = () => {
   const [deptMapping, setDeptMapping] = useState<OUDeptMappingResponse | null>(null);
   const [mappingLoading, setMappingLoading] = useState(false);
   const [deptModalVisible, setDeptModalVisible] = useState(false);
-  const [deptTree, setDeptTree] = useState<Department[]>([]);
+  // 部门树 — 通过 React Query 全局共享缓存 (D-13 Step 2)
+  const { data: deptTreeData, isLoading: deptTreeLoading } = useDeptTree();
+  const deptTree: Department[] = (deptTreeData ?? []) as Department[];
   const [selectedDeptId, setSelectedDeptId] = useState<string>('');
 
   // 用户组相关状态
@@ -188,22 +186,11 @@ const ADOUPage: FC = () => {
     }
   };
 
-  const fetchDeptTree = async () => {
-    try {
-      const res = await getDeptTree();
-      if (res.code === 0) {
-        setDeptTree(res.data || []);
-      }
-    } catch {
-      message.error('获取部门树失败');
-    }
-  };
+  // 部门树 — 通过 useDeptTree() (React Query) 自动获取并全局共享 (D-13 Step 2)
+  // 此处无需手动 fetch；useDeptTree 在组件首次挂载时即触发 query。
 
   const openDeptModal = () => {
     setDeptModalVisible(true);
-    if (deptTree.length === 0) {
-      fetchDeptTree();
-    }
   };
 
   const handleDeptSelect = (selectedKeys: React.Key[]) => {
@@ -617,7 +604,7 @@ const ADOUPage: FC = () => {
         okText="确认关联"
         cancelText="取消"
       >
-        <Spin spinning={deptTree.length === 0}>
+        <Spin spinning={deptTreeLoading || deptTree.length === 0}>
           {deptTree.length > 0 && (
             <Tree
               showLine

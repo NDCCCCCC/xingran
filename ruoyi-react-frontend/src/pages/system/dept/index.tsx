@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import type { FC } from 'react';
 import { Table, Button, Space, Form, Input, Select, Card, Row, Col, Statistic, message } from 'antd';
 import {
@@ -10,6 +10,7 @@ import {
   ImportOutlined,
   ExportOutlined,
 } from '@ant-design/icons';
+import { useQueryClient } from '@tanstack/react-query';
 import type { Department } from '@/types';
 import { useDeptData } from './hooks';
 import { getDeptColumns } from './columns';
@@ -20,6 +21,7 @@ import ExcelImport from '@/components/shared/ExcelImport';
 import ExcelExport from '@/components/shared/ExcelExport';
 
 import { post } from '@/lib/api';
+import { queryKeys } from '@/lib/queryKeys';
 const { Option } = Select;
 
 const DepartmentManagement: FC = () => {
@@ -42,6 +44,12 @@ const DepartmentManagement: FC = () => {
     loadDepartments,
     loadDeptUsers,
   } = useDeptData();
+
+  // 全局 dept 缓存失效器：每次部门变更后让所有 useDeptTree() 消费者重新拉取 (D-13 Step 2)
+  const qc = useQueryClient();
+  const invalidateAllDepts = useCallback(() => {
+    qc.invalidateQueries({ queryKey: queryKeys.dept.all });
+  }, [qc]);
 
   useEffect(() => {
     loadDepartments();
@@ -90,6 +98,7 @@ const DepartmentManagement: FC = () => {
       await post(`/system/departments/${id}/delete`);
       message.success('删除成功');
       loadDepartments();
+      invalidateAllDepts();
     } catch (error) {
       console.error('删除部门失败:', error);
     }
@@ -142,6 +151,7 @@ const DepartmentManagement: FC = () => {
       message.success(editingDept ? '更新成功' : '创建成功');
       setEditModalVisible(false);
       loadDepartments();
+      invalidateAllDepts();
     } catch (error) {
       console.error('保存部门失败:', error);
     }
@@ -151,6 +161,7 @@ const DepartmentManagement: FC = () => {
     message.success('导入成功');
     loadDepartments();
     setImportVisible(false);
+    invalidateAllDepts();
   };
 
   const getRowClassName = (record: Department): string => {
