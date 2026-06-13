@@ -124,7 +124,7 @@ const SyncMonitor: React.FC = () => {
             <Statistic
               title="活跃映射"
               value={status?.activeMappings || 0}
-              valueStyle={{ color: '#3f8600' }}
+              styles={{ content: { color: '#3f8600' } }}
             />
           </Card>
         </Col>
@@ -133,7 +133,7 @@ const SyncMonitor: React.FC = () => {
             <Statistic
               title="同步状态"
               value={status?.enabled ? '已启用' : '已禁用'}
-              valueStyle={{ color: status?.enabled ? '#3f8600' : '#cf1322' }}
+              styles={{ content: { color: status?.enabled ? '#3f8600' : '#cf1322' } }}
             />
           </Card>
         </Col>
