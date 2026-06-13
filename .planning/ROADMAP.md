@@ -440,7 +440,7 @@
 - 5 条 ESLint 性能规则
 
 **Depends on:** Phase 29
-**Plans:** 4 plans (4 waves)
+**Plans:** 4 plans (4 waves) ✅ ALL COMPLETE 2026-06-13
 
 Plans:
 **Wave 1**
@@ -457,7 +457,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 30-04-PLAN.md — Wave 4: 渲染层 (虚拟滚动、React.memo、5 条 ESLint 规则)
+- [x] 30-04-PLAN.md — Wave 4: 渲染层 (虚拟滚动、React.memo、5 条 ESLint 规则) ✅ 2026-06-13
 
 ### Phase 31: P0 收尾:连接池 lifecycle + Config API 重设计 ✅ COMPLETE 2026-06-13
 

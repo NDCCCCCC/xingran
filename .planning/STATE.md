@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: MAC地址历史数据管理
 status: unknown
-stopped_at: Phase 31 verified — 28 RED baseline 0 net change
-last_updated: "2026-06-13T02:00:00.000Z"
+stopped_at: Phase 30 Wave 4 complete — rendering layer (memo / virtual scroll / ESLint)
+last_updated: "2026-06-13T10:30:00.000Z"
 progress:
   total_phases: 27
   completed_phases: 13
-  total_plans: 100
-  completed_plans: 92
+  total_plans: 101
+  completed_plans: 93
   percent: 48
 ---
 
@@ -18,20 +18,20 @@ progress:
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
 **Status**: 里程碑 v1.16 进行中 (Phase 28 已完成)
-**Phase**: 30 (frontend-perf)
-**Plan**: 03 (React Query migration — useDict / useDeptTree / useRoleList / queryKeys / useTableQuery)
+**Phase**: 30 (frontend-perf) — Wave 4 of 4 COMPLETE
+**Plan**: 04 (Rendering layer — React.memo + virtual scroll + 5 ESLint rules)
 **Status**: ✅ 已完成
-**Last activity**: 2026-06-13 - 完成 Phase 30 Plan 03 (查询层 React Query 推广)
+**Last activity**: 2026-06-13 - 完成 Phase 30 Plan 04 (渲染层 memo / 虚拟滚动 / ESLint)
 
 ## Current Position
 
-Phase: 30 (前端性能优化) — Wave 3 of 4
-Plan: 03 (React Query migration) — ✅ COMPLETED 2026-06-13
+Phase: 30 (前端性能优化) — Wave 4 of 4 ✅ COMPLETE
+Plan: 04 (Rendering layer) — ✅ COMPLETED 2026-06-13
 **当前里程碑**: v1.16 — 工位设备关联
-**当前阶段**: Phase 30 Wave 3 — 查询层 (3/4 plans 完成) ✅
+**当前阶段**: Phase 30 Wave 4 — 渲染层 (4/4 plans 完成) ✅
 **状态**: ✅ 已完成
 **完成时间**: 2026-06-13
-**下一阶段**: Phase 30 Wave 4 — 渲染层 (memo / 虚拟滚动 / ESLint 规则)
+**下一阶段**: Phase 30 已完成 — 等待用户指引 (pre-existing ESLint cleanup / 下一里程碑)
 
 ## Project Reference
 
@@ -71,7 +71,7 @@ Plan: 03 (React Query migration) — ✅ COMPLETED 2026-06-13
 | 27 | 全局列自定义显示功能 | ✅ Completed | 1/1 plan |
 | 28 | 工位设备关联子表格 | ✅ Completed | 4/4 plans |
 | 29 | sys_dict 重构 | 📋 Planned | 0/0 plans |
-| 30 | 前端性能优化 | 🚧 In Progress | 3/4 plans |
+| 30 | 前端性能优化 | ✅ Completed | 4/4 plans |
 | 31 | P0 收尾:连接池 lifecycle + Config API 重设计 | 📋 Planned | 0/0 plans |
 | 32 | v1.14 P1 重构与 P2 架构优化 | 📋 Planned | 0/0 plans |
 
@@ -123,6 +123,7 @@ Plan: 03 (React Query migration) — ✅ COMPLETED 2026-06-13
 | 2026-06-13 | Phase 30 Plan 01 完成 (Bundle 基础设施) - Wave 1 of 4 | 30 |
 | 2026-06-13 | Phase 30 Plan 02 完成 (重库按需加载) - Wave 2 of 4 | 30 |
 | 2026-06-13 | Phase 30 Plan 03 完成 (查询层 React Query 推广) - Wave 3 of 4 | 30 |
+| 2026-06-13 | Phase 30 Plan 04 完成 (渲染层 memo/虚拟滚动/ESLint) - Wave 4 of 4 ✅ Phase 30 COMPLETE | 30 |
 | 2026-06-13 | Phase 31 完成 (P0 收尾) - F-14 connection_pool refCount + F-17 ConfigKey API,5 plan + UAT 2 pass | 31 |
 | 2026-06-13 | 20260612 后端审查报告 P0 100% 覆盖 (20/22 完整 + 2/22 部分) - 58 commit | — |
 
