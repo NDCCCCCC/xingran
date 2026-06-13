@@ -12,11 +12,14 @@ import { DynamicRoutes } from '@/router/DynamicRoutes';
 import './App.css';
 
 // 创建React Query客户端
+// 默认配置遵循 D-11：5 分钟 stale、30 分钟 gc、切窗口不重拉。
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
+      staleTime: 5 * 60 * 1000,
+      gcTime: 30 * 60 * 1000,
     },
   },
 });
