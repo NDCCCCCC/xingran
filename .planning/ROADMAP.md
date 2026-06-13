@@ -65,7 +65,7 @@
 <summary>🚧 v1.5 MAC地址历史数据管理 (Phases 12-15) — PARTIALLY COMPLETE</summary>
 
 - [x] Phase 12: 数据模型与采集集成 (5/5 plans) — completed 2026-05-11
-- [ ] Phase 13: 查询层与轨迹 (0/5 plans) — planned
+- [ ] Phase 13: 查询层与轨迹 (5/5 plans) — planned
 - [ ] Phase 14: 前端与用户体验 (0/5 plans) — planned
 - [ ] Phase 15: 性能优化 (0/5 plans) — planned
 
@@ -543,6 +543,16 @@ Plans:
 Plans:
 - [ ] TBD (运行 `/gsd-plan-phase 32` 生成详细 plan 文件)
 
+### Phase 33: 前端 Vercel React Best Practices 修复 - 修复审查报告 20260613 中的 26 个性能/质量缺陷
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 32
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 33 to break down)
+
 ---
 
     
@@ -561,7 +571,7 @@ Plans:
 | 10. 网络设备导出集成 | v1.3 | 1/1 | Complete | 2026-04-27 |
 | 11. MAC地址采集优化 - 过滤设备间互联端口 | v1.4 | 4/4 | Complete | 2026-05-09 |
 | 12. 数据模型与采集集成 | v1.5 | 5/5 | Complete | 2026-05-11 |
-| 13. 查询层与轨迹 | v1.5 | 0/5 | Planned | - |
+| 13. 查询层与轨迹 | v1.5 | 5/5 | Complete   | 2026-06-13 |
 | 14. 前端与用户体验 | v1.5 | 0/5 | Planned | - |
 | 15. 性能优化 | v1.5 | 0/5 | Planned | - |
 | 16. API 密钥管理 | v1.6 | 10/10 | Complete | 2026-05-19 |
