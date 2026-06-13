@@ -440,7 +440,7 @@
 - 5 条 ESLint 性能规则
 
 **Depends on:** Phase 29
-**Plans:** 4 plans (4 waves) ✅ ALL COMPLETE 2026-06-13
+**Plans:** 5 plans (5 waves) ✅ ALL COMPLETE 2026-06-13
 
 Plans:
 **Wave 1**
@@ -458,6 +458,10 @@ Plans:
 **Wave 4** *(blocked on Wave 3 completion)*
 
 - [x] 30-04-PLAN.md — Wave 4: 渲染层 (虚拟滚动、React.memo、5 条 ESLint 规则) ✅ 2026-06-13
+
+**Wave 5** *(gap closure after verification — 23/25 must-haves)*
+
+- [x] 30-05-PLAN.md — Wave 5: 缺口闭合 (useDict/useTableQuery/Widget/BaseEditModal 消费者接 + D-16 ESLint 降级 + gap-6 文档化) ✅ 2026-06-13 — **phase 30 fully shipped (25/25)**
 
 ### Phase 31: P0 收尾:连接池 lifecycle + Config API 重设计 ✅ COMPLETE 2026-06-13
 

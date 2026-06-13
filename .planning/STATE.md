@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: MAC地址历史数据管理
 status: shipping
-stopped_at: Phase 30 context gathered
-last_updated: "2026-06-13T03:57:30.488Z"
+stopped_at: Phase 30 Wave 5 complete — gap closure (useDict/useTableQuery/Widget/BaseEditModal consumer wiring + D-16 downshift)
+last_updated: "2026-06-13T11:55:00.000Z"
 progress:
   total_phases: 29
-  completed_phases: 12
-  total_plans: 103
-  completed_plans: 88
-  percent: 41
+  completed_phases: 13
+  total_plans: 104
+  completed_plans: 94
+  percent: 49
 ---
 
 # Project State
@@ -18,15 +18,15 @@ progress:
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
 **Status**: 里程碑 v1.16 进行中 (Phase 28 已完成)
-**Phase**: 30 (frontend-perf) — Wave 4 of 4 COMPLETE
-**Plan**: 04 (Rendering layer — React.memo + virtual scroll + 5 ESLint rules)
+**Phase**: 30 (frontend-perf) — Wave 5 of 5 COMPLETE (gap closure shipped 25/25 must-haves)
+**Plan**: 05 (gap closure — useDict/useTableQuery/Widget/BaseEditModal consumer wiring + D-16 ESLint downshift + gap-6 deferral docs)
 **Status**: ✅ 已完成
-**Last activity**: 2026-06-13 - 完成 Phase 30 Plan 04 (渲染层 memo / 虚拟滚动 / ESLint)
+**Last activity**: 2026-06-13 - 完成 Phase 30 Plan 05 (缺口闭合 — 5 个原子提交 + 全部验证通过)
 
 ## Current Position
 
-Phase: 31 (P0 收尾 — connection_pool lifecycle + Config API) — ✅ SHIPPED 2026-06-13
-Plan: 31-01~05 (5 plans) — ✅ ALL COMPLETED & pushed to origin/main
+Phase: 32 (v1-14-p1-p2) — EXECUTING
+Plan: 1 of 7
 **当前里程碑**: v1.16 — 工位设备关联
 **当前阶段**: Phase 31 ✅ SHIPPED
 **状态**: ✅ 已完成并推送至 origin/main
@@ -71,7 +71,7 @@ Plan: 31-01~05 (5 plans) — ✅ ALL COMPLETED & pushed to origin/main
 | 27 | 全局列自定义显示功能 | ✅ Completed | 1/1 plan |
 | 28 | 工位设备关联子表格 | ✅ Completed | 4/4 plans |
 | 29 | sys_dict 重构 | 📋 Planned | 0/0 plans |
-| 30 | 前端性能优化 | ✅ Completed | 4/4 plans |
+| 30 | 前端性能优化 | ✅ Completed | 5/5 plans |
 | 31 | P0 收尾:连接池 lifecycle + Config API 重设计 | ✅ Completed | 5/5 plans |
 | 32 | v1.14 P1 重构与 P2 架构优化 | 📋 Planned | 0/0 plans |
 
