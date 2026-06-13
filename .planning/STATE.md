@@ -157,7 +157,7 @@ Plan: 7 of 7 (Wave 7 COMPLETE ✅)
 | 260525-vdi | 添加 VDI 菜单到 sys_menu 表 | 2026-05-25 | 8625031 | quick/ |
 | 260525-lfw | LDAP 客户端连接代码重构 | 2026-05-25 | - | quick/ |
 | 260525-w22 | VDI配置页3个Bug修复(500错误/输入警告/弃用警告) | 2026-05-25 | aa992fc | [260525-w22-vdi-1-500-2-input-suffix-3-direction-ori](./quick/260525-w22-vdi-1-500-2-input-suffix-3-direction-ori/) |
-| 260613-vp5 | 工位管理页面：还原"单击该列任意位置自动展开/关闭子表"行为，并修复点击按钮时事件冒泡 | 2026-06-13 | 0f44b8d | [260613-vp5-workstation-expand-fix](./quick/260613-vp5-workstation-expand-fix/) |
+| 260613-vp5 | 工位管理页面：还原"单击该列任意位置自动展开/关闭子表"行为，并修复点击按钮时事件冒泡 | 2026-06-13 | 2c407c4 | [260613-vp5-workstation-expand-fix](./quick/260613-vp5-workstation-expand-fix/) |
 | 260526-nij | 用户管理页面部门路径显示修复 | 2026-05-26 | - | [260526-nij](./quick/260526-nij/) |
 | 260526-nwn | 用户编辑模态框角色不显示修复 | 2026-05-26 | - | [260526-nwn](./quick/260526-nwn/) |
 | 260527-gdc | 提交 AD 密码加解密修复代码到 git 仓库 | 2026-05-27 | cc2963b | [260527-gdc-ad-git](./quick/260527-gdc-ad-git/) |
