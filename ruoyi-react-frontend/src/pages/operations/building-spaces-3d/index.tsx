@@ -11,8 +11,7 @@ import { buildingApi } from '@/lib/opsApi';
 import { handleApiError } from '@/utils/errorHandler';
 import HubeiMap from './components/HubeiMap';
 import HubeiMapGL from './components/HubeiMapGL';
-import BuildingView3D from './components/BuildingView3D';
-import FloorView3D from './components/FloorView3D';
+import { BuildingView3DLazy, FloorView3DLazy } from '@/components/three/BuildingScene';
 import type { BuildingItem } from './types';
 
 // 常量定义
@@ -83,9 +82,9 @@ const BuildingSpaces3D: React.FC = () => {
       case 'map':
         return <MapComponent buildings={buildings} />;
       case 'building':
-        return <BuildingView3D />;
+        return <BuildingView3DLazy />;
       case 'floor':
-        return <FloorView3D />;
+        return <FloorView3DLazy />;
       default:
         return <MapComponent buildings={buildings} />;
     }
