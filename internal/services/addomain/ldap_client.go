@@ -3,11 +3,28 @@ package addomain
 import (
 	"crypto/tls"
 	"fmt"
+	"os"
 	"strings"
+	"sync"
 
 	"github.com/go-ldap/ldap/v3"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 )
+
+// F-01: 仅记录一次 TLS 跳过验证的安全告警,避免每次 LDAP 连接重复刷屏。
+var (
+	tlsInsecureWarnOnce sync.Once
+)
+
+func logTLSInsecureSkipOnce() {
+	tlsInsecureWarnOnce.Do(func() {
+		applogger.Warnf(
+			"[SECURITY] LDAP TLS InsecureSkipVerify=true 已启用 (env LDAP_TLS_INSECURE_SKIP_VERIFY) — " +
+				"流量可能被 MITM,仅供内网自签证书过渡期使用,生产建议导入 AD 服务器 CA 证书并取消该环境变量",
+		)
+	})
+}
 
 const (
 	// 默认分页大小
@@ -53,9 +70,20 @@ func (c *LDAPClient) Connect() error {
 }
 
 // dialConnection 根据配置建立连接
+//
+// F-01 fix: tlsConfig.InsecureSkipVerify 不再硬编码 true,而是读环境变量
+// LDAP_TLS_INSECURE_SKIP_VERIFY (默认 false = 严格校验)。
+// 生产部署默认拒绝自签证书,杜绝 MITM;
+// 需要兼容自签证书的内网部署可显式 export LDAP_TLS_INSECURE_SKIP_VERIFY=true。
 func (c *LDAPClient) dialConnection(address string) (*ldap.Conn, error) {
+	insecureSkip := strings.EqualFold(os.Getenv("LDAP_TLS_INSECURE_SKIP_VERIFY"), "true")
 	tlsConfig := &tls.Config{
-		InsecureSkipVerify: true,
+		InsecureSkipVerify: insecureSkip,
+		MinVersion:         tls.VersionTLS12,
+	}
+	if insecureSkip {
+		// 仅在启用时记录一次安全告警(避免每次连接都告警污染日志,但不能完全静默)
+		logTLSInsecureSkipOnce()
 	}
 
 	switch {
