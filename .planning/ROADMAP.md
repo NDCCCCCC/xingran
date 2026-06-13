@@ -459,6 +459,16 @@ Plans:
 
 - [ ] 30-04-PLAN.md — Wave 4: 渲染层 (虚拟滚动、React.memo、5 条 ESLint 规则)
 
+### Phase 31: P0 收尾:连接池 lifecycle + Config API 重设计 — 完成 20260612 审查报告剩余 F-14 connection_pool 引用计数与 lifecycle 重做、F-17 ConfigUpdateRequest 添加 ConfigKey 字段并重设计校验逻辑
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 30
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 31 to break down)
+
 ---
 
     
