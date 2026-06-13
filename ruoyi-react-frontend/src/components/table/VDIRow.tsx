@@ -85,13 +85,20 @@ function VDIRowImpl({
         }
 
         // 电源操作按钮（start, stop, restart）
+        // power_state 业务取值：pending | stopped | suspended | in_use
         let disabled = false;
         if (btn.action === 'start') {
+          // 仅 stopped 时可开机
           disabled = vm.power_state !== 'stopped';
         } else if (btn.action === 'stop') {
-          disabled = vm.power_state === 'stopped' || vm.power_state === 'suspended';
+          // 已停 / 已挂起 / 等待 Agent 时无法关机
+          disabled =
+            vm.power_state === 'stopped' ||
+            vm.power_state === 'suspended' ||
+            vm.power_state === 'pending';
         } else if (btn.action === 'restart') {
-          disabled = vm.power_state !== 'running' && vm.power_state !== 'suspended';
+          // 仅 in_use 或 suspended 可重启（注意：业务无 'running' 状态值）
+          disabled = vm.power_state !== 'in_use' && vm.power_state !== 'suspended';
         }
 
         return (

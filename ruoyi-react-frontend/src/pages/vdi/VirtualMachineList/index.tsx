@@ -879,6 +879,7 @@ const VirtualMachineList: React.FC = () => {
           rowSelection={{
             selectedRowKeys,
             onChange: setSelectedRowKeys,
+            columnWidth: 48,
           }}
           pagination={{
             current,
