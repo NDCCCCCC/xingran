@@ -4,13 +4,13 @@ milestone: v1.5
 milestone_name: MAC地址历史数据管理
 status: shipping
 stopped_at: context exhaustion at 75% (2026-06-13)
-last_updated: "2026-06-13T15:45:00.000Z"
+last_updated: "2026-06-13T07:56:19.243Z"
 progress:
-  total_phases: 30
-  completed_phases: 13
-  total_plans: 112
-  completed_plans: 95
-  percent: 43
+  total_phases: 10
+  completed_phases: 6
+  total_plans: 51
+  completed_plans: 38
+  percent: 60
 ---
 
 # Project State
@@ -21,7 +21,7 @@ progress:
 **Phase**: 32 (v1-14-p1-p2) — ALL 7 WAVES COMPLETE (15 P1 + 8 P2 = 23 项全部闭环)
 **Plan**: 07 (test coverage — AD 模块 LDAP 接口 + group_sync + user_ou 测试)
 **Status**: ✅ 已完成
-**Last activity**: 2026-06-13 - 完成 Phase 32 Wave 7 (P2-A6 AD 测试覆盖) — Phase 32 全部 7 Wave 完成
+**Last activity**: 2026-06-13 - Completed quick task 260613-vp5: 工位管理页面 - 修复子表展开点击行为
 
 ## Current Position
 
@@ -51,7 +51,7 @@ Plan: 7 of 7 (Wave 7 COMPLETE ✅)
 |-------|------|--------|----------|
 | 1-11 | v1.0-v1.4 基础功能 | ✅ Completed | 27/27 plans |
 | 12 | 数据模型与采集集成 | ✅ Completed | 5/5 plans |
-| 13 | 查询层与轨迹 | 📋 Planned | 0/5 plans |
+| 13 | 查询层与轨迹 | ✅ Completed | 6/6 plans |
 | 14 | 前端与用户体验 | 📋 Planned | 0/5 plans |
 | 15 | 性能优化 | 📋 Planned | 0/5 plans |
 | 16 | API 密钥管理 | ✅ Completed | 10/10 plans |
@@ -136,6 +136,7 @@ Plan: 7 of 7 (Wave 7 COMPLETE ✅)
 | 2026-06-13 | Phase 32 Wave 6 完成 (P2 迁移与子进程) - P2-A4/A7/A8 ✅ | 32 |
 | 2026-06-13 | Phase 32 Wave 7 完成 (P2 测试覆盖) - P2-A6 ✅ — PHASE 32 FULLY COMPLETE (7/7 waves, 20 commits) | 32 |
 | 2026-06-13 | Phase 33 完成 (前端 Vercel React Best Practices) - 25/25 性能缺陷修复 (Waves 1-4) ✅ | 33 |
+| 2026-06-13 | Phase 13 完成 (查询层与轨迹) - 6/6 计划全部完成 ✅ | 13 |
 
 ## Quick Tasks Completed
 
@@ -156,6 +157,7 @@ Plan: 7 of 7 (Wave 7 COMPLETE ✅)
 | 260525-vdi | 添加 VDI 菜单到 sys_menu 表 | 2026-05-25 | 8625031 | quick/ |
 | 260525-lfw | LDAP 客户端连接代码重构 | 2026-05-25 | - | quick/ |
 | 260525-w22 | VDI配置页3个Bug修复(500错误/输入警告/弃用警告) | 2026-05-25 | aa992fc | [260525-w22-vdi-1-500-2-input-suffix-3-direction-ori](./quick/260525-w22-vdi-1-500-2-input-suffix-3-direction-ori/) |
+| 260613-vp5 | 工位管理页面：还原"单击该列任意位置自动展开/关闭子表"行为，并修复点击按钮时事件冒泡 | 2026-06-13 | aa46631 | [260613-vp5-workstation-expand-fix](./quick/260613-vp5-workstation-expand-fix/) |
 | 260526-nij | 用户管理页面部门路径显示修复 | 2026-05-26 | - | [260526-nij](./quick/260526-nij/) |
 | 260526-nwn | 用户编辑模态框角色不显示修复 | 2026-05-26 | - | [260526-nwn](./quick/260526-nwn/) |
 | 260527-gdc | 提交 AD 密码加解密修复代码到 git 仓库 | 2026-05-27 | cc2963b | [260527-gdc-ad-git](./quick/260527-gdc-ad-git/) |
@@ -176,6 +178,7 @@ Plan: 7 of 7 (Wave 7 COMPLETE ✅)
 | 260602-k1b | 去除虚拟机重命名功能和名称自动生成逻辑 | 2026-06-02 | 9b754b6 | [260602-k1b-vdi](./quick/260602-k1b-vdi/) |
 | 260604-cqo | 虚拟机列表页面绑定用户功能，修改为下拉框组件，可以进行模糊查询，数据来源来自系统用户，前端显示nickname，数据库保存username | 2026-06-04 | 3d26d23 | [260604-cqo-nickname-username](./quick/260604-cqo-nickname-username/) |
 | 260605-h3p | AD组自动化同步功能：实现基于OU-组映射的自动成员同步 | 2026-06-05 | 830aa0d | [260605-h3p-ad-group-auto-sync](./quick/260605-h3p-ad-group-auto-sync/) |
+| 20260613-frontend-perf | 前端性能优化三连：图标按需导入(-15~-25%)、API加密并行化(-30~-40%)、Excel懒加载(-50~-100KB) | 2026-06-13 | - | [20260613-frontend-perf-optimizations](./quick/20260613-frontend-perf-optimizations/) |
 | 260610-wsl | 修复工位管理页面同步设备后筛选条件丢失问题 | 2026-06-10 | - | [20250610-fix-workstation-filter-loss](./quick/20250610-fix-workstation-filter-loss/) |
 
 ## Accumulated Context
@@ -287,7 +290,7 @@ Plan: 7 of 7 (Wave 7 COMPLETE ✅)
 
 ## Session Continuity
 
-Last session: 2026-06-13T06:25:26.150Z
+Last session: 2026-06-13T07:56:19.235Z
 Stopped at: context exhaustion at 75% (2026-06-13)
 Resume file: None
 
