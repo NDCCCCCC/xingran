@@ -11,8 +11,11 @@
  * Per D-09 / D-17: Suspense fallback uses AntD Spin with a descriptive Chinese tip.
  */
 
-import { lazy, Suspense, type FC } from 'react';
+import { lazy, Suspense, type FC, type ComponentProps } from 'react';
 import { Spin } from 'antd';
+
+type BuildingModel3DProps = ComponentProps<typeof BuildingModel3D>;
+type FloorPlan3DProps = ComponentProps<typeof FloorPlan3D>;
 
 const BuildingModel3D = lazy(
   () => import('@/pages/operations/building-spaces-3d/components/BuildingModel3D')
@@ -41,15 +44,15 @@ const Loading: FC = () => (
   </div>
 );
 
-export const BuildingModel3DLazy: FC<Record<string, unknown>> = (props) => (
+export const BuildingModel3DLazy: FC<BuildingModel3DProps> = (props) => (
   <Suspense fallback={<Loading />}>
-    <BuildingModel3D {...(props as never)} />
+    <BuildingModel3D {...props} />
   </Suspense>
 );
 
-export const FloorPlan3DLazy: FC<Record<string, unknown>> = (props) => (
+export const FloorPlan3DLazy: FC<FloorPlan3DProps> = (props) => (
   <Suspense fallback={<Loading />}>
-    <FloorPlan3D {...(props as never)} />
+    <FloorPlan3D {...props} />
   </Suspense>
 );
 

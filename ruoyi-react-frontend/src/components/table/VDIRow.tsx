@@ -85,11 +85,14 @@ function VDIRowImpl({
         }
 
         // 电源操作按钮（start, stop, restart）
-        const disabled =
-          btn.action === 'start' ? vm.power_state !== 'stopped' :
-          btn.action === 'stop' ? (vm.power_state === 'stopped' || vm.power_state === 'suspended' || vm.power_state === 'pending') :
-          btn.action === 'restart' ? (vm.power_state !== 'in_use' && vm.power_state !== 'suspended') :
-          false;
+        let disabled = false;
+        if (btn.action === 'start') {
+          disabled = vm.power_state !== 'stopped';
+        } else if (btn.action === 'stop') {
+          disabled = vm.power_state === 'stopped' || vm.power_state === 'suspended';
+        } else if (btn.action === 'restart') {
+          disabled = vm.power_state !== 'running' && vm.power_state !== 'suspended';
+        }
 
         return (
           <Tooltip key={btn.action} title={btn.label}>

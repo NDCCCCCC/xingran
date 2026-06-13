@@ -67,7 +67,7 @@ const VirtualMachineList: React.FC = () => {
   // Bind user modal: system user search state
   const [systemUsers, setSystemUsers] = useState<Array<{id: string; username: string; nickname?: string}>>([]);
   const [userSearchLoading, setUserSearchLoading] = useState(false);
-  const userSearchTimer = useRef<ReturnType<typeof setTimeout>>();
+  const userSearchTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // 快速创建默认配置状态
   const [quickConfig, setQuickConfig] = useState<{
@@ -707,6 +707,7 @@ const VirtualMachineList: React.FC = () => {
       }
 
       const data: CreateVMRequest = {
+        name: values.name,
         vdi_server_id: quickConfig.vdiServerId,
         resource_group_id: quickConfig.resourceGroupId,
         resource_id: quickConfig.resourceId,

@@ -15,7 +15,7 @@
  * The wrapper preserves the `echarts-for-react` component interface.
  */
 
-import { lazy, Suspense, forwardRef, type Ref, type ComponentProps } from 'react';
+import { lazy, Suspense, forwardRef, type ComponentProps, type ComponentRef } from 'react';
 import { Spin } from 'antd';
 
 const ReactECharts = lazy(() => import('echarts-for-react'));
@@ -23,6 +23,7 @@ const ReactECharts = lazy(() => import('echarts-for-react'));
 // `echarts-for-react` exports a default React component. We accept the same
 // props the original accepts (ComponentProps on the lazy module).
 type ReactEChartsProps = ComponentProps<typeof ReactECharts>;
+type EChartsRef = ComponentRef<typeof ReactECharts>;
 
 const Loading = () => (
   <div
@@ -38,9 +39,9 @@ const Loading = () => (
   </div>
 );
 
-export const EChartsWrapper = forwardRef<unknown, ReactEChartsProps>((props, ref) => (
+export const EChartsWrapper = forwardRef<EChartsRef, ReactEChartsProps>((props, ref) => (
   <Suspense fallback={<Loading />}>
-    <ReactECharts {...props} ref={ref as Ref<unknown>} />
+    <ReactECharts {...props} ref={ref} />
   </Suspense>
 ));
 

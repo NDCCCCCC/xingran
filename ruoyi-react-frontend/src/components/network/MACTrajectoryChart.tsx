@@ -5,19 +5,20 @@ import { Empty, Spin } from 'antd';
 
 interface TrajectoryNode {
   mac: string;
-  device_name: string;
-  port_name: string;
-  vlan_id: number;
-  first_seen: string; // ISO timestamp
-  last_seen: string; // ISO timestamp
-  duration_seconds: number;
-  event_type: 'appeared' | 'disappeared' | 'moved' | 'vlan_changed';
+  deviceId: string;
+  deviceName: string;
+  interface: string;
+  vlanId?: number;
+  startTime: string; // ISO timestamp
+  endTime: string; // ISO timestamp
+  duration: number;
+  eventType: 'appeared' | 'disappeared' | 'moved' | 'vlan_changed';
 }
 
 interface MACTrajectoryChartProps {
   data: TrajectoryNode[];
   loading?: boolean;
-  onError?: (error: Error) => void;
+  onError?: (error: unknown) => void;
 }
 
 const EVENT_COLORS = {
@@ -43,7 +44,7 @@ const MACTrajectoryChart: React.FC<MACTrajectoryChartProps> = ({
 
     // 按设备分组数据
     const deviceGroups = data.reduce((groups, node) => {
-      const device = node.device_name || 'Unknown Device';
+      const device = node.deviceName || 'Unknown Device';
       if (!groups[device]) {
         groups[device] = [];
       }
@@ -54,18 +55,18 @@ const MACTrajectoryChart: React.FC<MACTrajectoryChartProps> = ({
     // 构建Gantt图数据
     const devices = Object.keys(deviceGroups);
     const seriesData = data.map((node, index) => ({
-      name: `${node.port_name} (VLAN ${node.vlan_id})`,
+      name: `${node.interface} (VLAN ${node.vlanId})`,
       value: [
-        devices.indexOf(node.device_name), // Y轴：设备索引
-        new Date(node.first_seen).getTime(), // X轴：开始时间
-        new Date(node.last_seen).getTime(),  // X轴：结束时间
-        node.duration_seconds, // 停留时长（用于tooltip）
-        node.event_type, // 事件类型（用于颜色）
+        devices.indexOf(node.deviceName), // Y轴：设备索引
+        new Date(node.startTime).getTime(), // X轴：开始时间
+        new Date(node.endTime).getTime(),  // X轴：结束时间
+        node.duration, // 停留时长（用于tooltip）
+        node.eventType, // 事件类型（用于颜色）
         node.mac, // MAC地址（用于tooltip）
-        node.device_name, // 设备名（用于tooltip）
+        node.deviceName, // 设备名（用于tooltip）
       ],
       itemStyle: {
-        color: EVENT_COLORS[node.event_type],
+        color: EVENT_COLORS[node.eventType],
       },
     }));
 

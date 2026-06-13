@@ -248,7 +248,7 @@ const VirtualMachineDetail: React.FC = () => {
               <Descriptions.Item label="IP 地址">{vm.ip_address || '-'}</Descriptions.Item>
               <Descriptions.Item label="操作系统">{vm.os_type || '-'}</Descriptions.Item>
               <Descriptions.Item label="资源规格">
-                {vm.cpu || 0}核 / {vm.memory || 0}MB / {vm.disk || 0}GB
+                {vm.cpu_number || 0}核 / {vm.memory || 0}MB / {vm.disk || 0}GB
               </Descriptions.Item>
               <Descriptions.Item label="绑定用户">{vm.bound_user_name || '-'}</Descriptions.Item>
               <Descriptions.Item label="最后同步">

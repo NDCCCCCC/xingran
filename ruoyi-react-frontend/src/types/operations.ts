@@ -2,7 +2,7 @@
  * 运维管理相关类型
  */
 
-import type { Status, PageResponse } from './base';
+import type { Status, PageResponse, PageParams } from './base';
 
 // 统一使用 base.ts 中的 PageResponse 类型
 export type PageData<T> = PageResponse<T>;
@@ -293,7 +293,7 @@ export interface AssetListParams extends PageParams {
 
 export type DeviceSource = 'ad' | 'asset' | 'manual';
 
-export type DeviceStatus = 0 | 1;
+export type OpsDeviceStatus = 0 | 1;
 
 export interface WorkstationDevice {
   id: string;
@@ -309,7 +309,7 @@ export interface WorkstationDevice {
   adComputerId?: string;
   responsibleUser?: string;
   responsibleUserId?: string;
-  status: DeviceStatus;
+  status: OpsDeviceStatus;
   isPrimary: boolean;
   priority: number;
   description?: string;

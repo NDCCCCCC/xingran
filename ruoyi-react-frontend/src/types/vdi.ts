@@ -57,6 +57,7 @@ export interface VMListParams {
 export interface CreateVMRequest {
   name: string;
   resource_id: string;
+  resource_group_id?: string; // 资源组 ID
   vdi_server_id: string;
   cpu_number?: number;    // CPU颗数
   cpu_core?: number;      // 每颗CPU的核数

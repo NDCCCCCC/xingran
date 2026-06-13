@@ -42,38 +42,58 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
   // 子表格分页（默认每页10条，独立于主表格）
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination({ pageSize: 10 });
 
-  // 并行查询三种来源的设备
+  // 并行查询三种来源的设备（手动持久化 + AD/资产实时查询）
   const fetchAllDevices = useCallback(async () => {
     setLoading(true);
     try {
-      // 并行查询三种来源
       const [manualResult, adResult, assetResult] = await Promise.allSettled([
         workstationDeviceApi.getManual(workstationId),
         workstationDeviceApi.getAD(workstationId).catch(() => ({ data: [] })),
         workstationDeviceApi.getAsset(workstationId).catch(() => ({ data: [] })),
       ]);
 
-      // 处理手动设备
+      // 处理手动设备（持久化）
       if (manualResult.status === 'fulfilled' && manualResult.value.data) {
         setManualDevices(manualResult.value.data);
         setTotal(manualResult.value.data.length);
+      } else {
+        setManualDevices([]);
+        setTotal(0);
       }
 
-      // 处理AD设备（查询失败时返回空数组）
+      // 处理 AD 设备（实时查询，失败时返回空数组）
       if (adResult.status === 'fulfilled' && adResult.value.data) {
         setADDevices(adResult.value.data);
       } else {
         setADDevices([]);
       }
 
-      // 处理资产设备（查询失败时返回空数组）
+      // 处理资产设备（实时查询，失败时返回空数组）
       if (assetResult.status === 'fulfilled' && assetResult.value.data) {
         setAssetDevices(assetResult.value.data);
       } else {
         setAssetDevices([]);
       }
+
+      // 任一关键查询失败时给出提示
+      if (manualResult.status === 'rejected') {
+        console.error('[WorkstationDeviceTable] 加载手动设备失败:', manualResult.reason);
+        message.error('加载设备失败');
+      }
+      if (adResult.status === 'rejected') {
+        console.warn('[WorkstationDeviceTable] 加载域控设备失败:', adResult.reason);
+      }
+      if (assetResult.status === 'rejected') {
+        console.warn('[WorkstationDeviceTable] 加载资产设备失败:', assetResult.reason);
+      }
     } catch (error) {
+      // 记录错误便于排查（之前的实现吞掉了真实错误，导致"无声失败"）
+      console.error('[WorkstationDeviceTable] 加载设备失败:', error);
       message.error('加载设备失败');
+      setManualDevices([]);
+      setADDevices([]);
+      setAssetDevices([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
@@ -96,7 +116,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
         setAutoFilledAsset(result.data);
         // 自动填充表单字段
         form.setFieldsValue({
-          deviceName: result.data.deviceName,
+          deviceName: result.data.devicesn,
           deviceModel: result.data.deviceModelName,
           deviceType: result.data.deviceTypeName,
           macAddress: result.data.mac1,
@@ -182,16 +202,17 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
               workstationId,
               deviceSerial: device.deviceSerial || '',
               deviceName: device.deviceName || '',
-              deviceModel: device.deviceModel,
-              deviceType: device.deviceType,
-              macAddress: device.macAddress,
-              ipAddress: device.ipAddress,
-              responsibleUser: device.responsibleUser,
+              deviceModel: device.deviceModel ?? undefined,
+              deviceType: device.deviceType ?? undefined,
+              macAddress: device.macAddress ?? undefined,
+              ipAddress: device.ipAddress ?? undefined,
+              responsibleUser: device.responsibleUser ?? undefined,
             });
             message.success('设置成功');
             fetchAllDevices();
             onDeviceChange?.();
           } catch (error) {
+            console.error('[WorkstationDeviceTable] 设置主设备失败:', error);
             message.error('设置失败');
           }
         },
@@ -492,7 +513,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
           {autoFilledAsset && (
             <div style={{ marginBottom: 16, padding: 12, background: '#f5f5f5', borderRadius: 4 }}>
               <div style={{ marginBottom: 8, fontWeight: 'bold' }}>自动匹配的设备信息：</div>
-              <div>设备名称: {autoFilledAsset.deviceName || '-'}</div>
+              <div>设备名称: {autoFilledAsset.devicesn || '-'}</div>
               <div>设备型号: {autoFilledAsset.deviceModelName || '-'}</div>
               <div>设备类型: {autoFilledAsset.deviceTypeName || '-'}</div>
               <div>MAC地址: {autoFilledAsset.mac1 || '-'}</div>

@@ -1,4 +1,4 @@
-import { post } from './api';
+import { post } from '../api';
 
 interface TrajectoryQueryParams {
   mac: string;
@@ -8,13 +8,14 @@ interface TrajectoryQueryParams {
 
 interface TrajectoryNode {
   mac: string;
-  device_name: string;
-  port_name: string;
-  vlan_id: number;
-  first_seen: string;
-  last_seen: string;
-  duration_seconds: number;
-  event_type: 'appeared' | 'disappeared' | 'moved' | 'vlan_changed';
+  deviceId: string;
+  deviceName: string;
+  interface: string;
+  vlanId?: number;
+  startTime: string;
+  endTime: string;
+  duration: number;
+  eventType: 'appeared' | 'disappeared' | 'moved' | 'vlan_changed';
 }
 
 interface TrajectoryResponse {
@@ -33,7 +34,7 @@ export const queryMACTrajectory = async (
     '/network/history/trajectory',
     params
   );
-  return result.data.trajectory;
+  return result.data!.trajectory;
 };
 
 export default {
