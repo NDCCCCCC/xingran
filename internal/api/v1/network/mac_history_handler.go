@@ -1,8 +1,6 @@
 package network
 
 import (
-	"net/http"
-
 	mac_history_query_service "github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
@@ -96,16 +94,27 @@ func (h *MACHistoryHandler) QueryTrajectory(c *gin.Context) {
 	response.Success(c, result)
 }
 
-// GetStats 获取MAC历史统计信息
-// @Summary 获取MAC历史统计信息
-// @Description 获取MAC历史记录的统计信息
+// QueryConnectionStats 查询MAC连接时长统计
+// @Summary 查询MAC连接时长统计
+// @Description 输出明细(MAC×端口停留时长)+ Top-N(按MAC长期占用、端口热门连接)
 // @Tags 网络设备管理
 // @Accept json
 // @Produce json
-// @Success 200 {object} response.Response{data=map[string]interface{}}
+// @Param request body mac_history_query_service.ConnectionStatsQuery true "统计条件"
+// @Success 200 {object} response.Response{data=mac_history_query_service.ConnectionStatsResponse}
+// @Failure 400 {object} response.Response
 // @Failure 500 {object} response.Response
 // @Router /network/history/stats [post]
-func (h *MACHistoryHandler) GetStats(c *gin.Context) {
-	// TODO: 实现统计功能（Phase 13）
-	response.Error(c, http.StatusNotImplemented, "统计功能尚未实现")
+func (h *MACHistoryHandler) QueryConnectionStats(c *gin.Context) {
+	var req mac_history_query_service.ConnectionStatsQuery
+	if !responseHelpers.HandleJSONBinding(c, &req) {
+		return
+	}
+
+	result, err := h.historyQueryService.QueryConnectionStats(c.Request.Context(), &req)
+	if !responseHelpers.HandleServiceError(c, err, "查询连接时长统计") {
+		return
+	}
+
+	response.Success(c, result)
 }
