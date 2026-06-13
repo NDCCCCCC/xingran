@@ -3,6 +3,7 @@ import './index.css';
 import './design-system/themes/theme-styles.css';
 import App from './App.tsx';
 import { initEncryptionConfig } from '@/lib/api';
+import '@/lib/echarts'; // ECharts 按需加载配置
 
 /**
  * 初始化应用
