@@ -1,5 +1,6 @@
 import js from '@eslint/js'
 import globals from 'globals'
+import react from 'eslint-plugin-react'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
@@ -23,8 +24,12 @@ export default tseslint.config(
       },
     },
     plugins: {
+      react,
       'react-hooks': reactHooks,
       'react-refresh': reactRefresh,
+    },
+    settings: {
+      react: { version: 'detect' },
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
@@ -64,6 +69,13 @@ export default tseslint.config(
       // React 相关
       'react/jsx-uses-react': 'off',
       'react/react-in-jsx-scope': 'off',
+
+      // 性能规则 (D-16) — Wave 4
+      'react-hooks/exhaustive-deps': 'error',
+      'react/jsx-no-constructed-context-values': 'error',
+      'react/no-unstable-nested-components': 'error',
+      'react/jsx-no-useless-fragment': 'warn',
+      'react/no-array-index-key': 'warn',
     },
   }
 )
