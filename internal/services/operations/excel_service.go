@@ -386,26 +386,36 @@ func (s *ExcelService) ImportData(ctx context.Context, entityType string, file *
 		}
 	}
 
-	if entityType == "department" {
-		validRecords, result = s.processThreeLevelDepartments(ctx, validRecords, result, config)
-	}
-
-	upserter := NewBatchUpsert(s.db, config)
-	if len(validRecords) > 0 {
-		records := s.prepareRecordsForUpsert(validRecords, config)
-
-		inserted, updated, err := upserter.Upsert(ctx, records)
-		if err != nil {
-			return nil, fmt.Errorf("批量保存数据失败: %w", err)
+	// P2-A8: Wrap department-processing and upsert in a single transaction so
+	// partial failures roll back the entire import (depts + records).
+	// processThreeLevelDepartments and Upsert share the same tx.
+	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if entityType == "department" {
+			validRecords, result = s.processThreeLevelDepartments(ctx, tx, validRecords, result, config)
 		}
 
-		result.Inserted = inserted
-		result.Updated = updated
+		if len(validRecords) > 0 {
+			upserter := NewBatchUpsert(tx, config)
+			records := s.prepareRecordsForUpsert(validRecords, config)
 
-		if (inserted+updated) > 0 && len(config.CachePatterns) > 0 {
-			if cacheErr := s.cacheInvalidator.InvalidateByEntityType(ctx, entityType, config.CachePatterns); cacheErr != nil {
-				logger.Warnf("[%s] 清理缓存失败: %v", entityType, cacheErr)
+			inserted, updated, err := upserter.Upsert(ctx, records)
+			if err != nil {
+				return fmt.Errorf("批量保存数据失败: %w", err)
 			}
+
+			result.Inserted = inserted
+			result.Updated = updated
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	// P2-A8: Cache invalidation runs post-commit — cache writes are not
+	// transactional, so they must run only after the DB transaction succeeds.
+	if (result.Inserted+result.Updated) > 0 && len(config.CachePatterns) > 0 {
+		if cacheErr := s.cacheInvalidator.InvalidateByEntityType(ctx, entityType, config.CachePatterns); cacheErr != nil {
+			logger.Warnf("[%s] 清理缓存失败: %v", entityType, cacheErr)
 		}
 	}
 
@@ -1329,6 +1339,7 @@ func (s *ExcelService) executeGeocodingTasks(
 
 func (s *ExcelService) processThreeLevelDepartments(
 	ctx context.Context,
+	db *gorm.DB,
 	records []map[string]any,
 	result *ImportResult,
 	config ExcelConfig,
@@ -1416,7 +1427,7 @@ func (s *ExcelService) processThreeLevelDepartments(
 
 	// 第二遍：确保部门组存在
 	for _, group := range groupMap {
-		if err := s.ensureDeptGroupExists(ctx, group.Code, group.Name); err != nil {
+		if err := s.ensureDeptGroupExists(ctx, db, group.Code, group.Name); err != nil {
 			// 部门组创建失败不应该阻止整个导入，只记录错误
 			logger.Warnf("创建部门组失败 [%s]: %v", group.Code, err)
 		}
@@ -1425,13 +1436,13 @@ func (s *ExcelService) processThreeLevelDepartments(
 	// 第三遍：确保部门存在，并设置正确的parent_id
 	for _, dept := range deptMap {
 		// 获取部门组的ID
-		groupID, err := s.findDeptIDByCode(ctx, dept.GroupCode)
+		groupID, err := s.findDeptIDByCode(ctx, db, dept.GroupCode)
 		if err != nil {
 			logger.Warnf("查找部门组失败 [%s]: %v", dept.GroupCode, err)
 			continue // 跳过该部门
 		}
 
-		if err := s.ensureDeptExists(ctx, dept.Code, dept.Name, groupID); err != nil {
+		if err := s.ensureDeptExists(ctx, db, dept.Code, dept.Name, groupID); err != nil {
 			logger.Warnf("创建部门失败 [%s]: %v", dept.Code, err)
 		}
 	}
@@ -1448,7 +1459,7 @@ func (s *ExcelService) processThreeLevelDepartments(
 			ID        string `gorm:"column:id"`
 			Ancestors string `gorm:"column:ancestors"`
 		}
-		err := s.db.WithContext(ctx).
+		err := db.WithContext(ctx).
 			Table("sys_dept").
 			Select("id, ancestors").
 			Where("dept_code = ? AND deleted_at IS NULL", deptCode).
@@ -1504,12 +1515,12 @@ func (s *ExcelService) processThreeLevelDepartments(
 }
 
 // findDeptIDByCode 根据部门编码查找部门ID
-func (s *ExcelService) findDeptIDByCode(ctx context.Context, deptCode string) (string, error) {
+func (s *ExcelService) findDeptIDByCode(ctx context.Context, db *gorm.DB, deptCode string) (string, error) {
 	var result struct {
 		ID string `gorm:"column:id"`
 	}
 
-	err := s.db.WithContext(ctx).
+	err := db.WithContext(ctx).
 		Table("sys_dept").
 		Select("id").
 		Where("dept_code = ? AND deleted_at IS NULL", deptCode).
@@ -1525,10 +1536,10 @@ func (s *ExcelService) findDeptIDByCode(ctx context.Context, deptCode string) (s
 }
 
 // ensureDeptGroupExists 确保部门组存在，不存在则创建
-func (s *ExcelService) ensureDeptGroupExists(ctx context.Context, code, name string) error {
+func (s *ExcelService) ensureDeptGroupExists(ctx context.Context, db *gorm.DB, code, name string) error {
 	// 先查找是否存在（使用数据库字段名）
 	var count int64
-	err := s.db.WithContext(ctx).
+	err := db.WithContext(ctx).
 		Table("sys_dept").
 		Where("dept_code = ? AND deleted_at IS NULL", code).
 		Count(&count).Error
@@ -1554,14 +1565,14 @@ func (s *ExcelService) ensureDeptGroupExists(ctx context.Context, code, name str
 		"updated_at": now,
 	}
 
-	return s.db.WithContext(ctx).Table("sys_dept").Create(dept).Error
+	return db.WithContext(ctx).Table("sys_dept").Create(dept).Error
 }
 
 // ensureDeptExists 确保部门存在，不存在则创建
-func (s *ExcelService) ensureDeptExists(ctx context.Context, code, name, parentID string) error {
+func (s *ExcelService) ensureDeptExists(ctx context.Context, db *gorm.DB, code, name, parentID string) error {
 	// 先查找是否存在（使用数据库字段名）
 	var count int64
-	err := s.db.WithContext(ctx).
+	err := db.WithContext(ctx).
 		Table("sys_dept").
 		Where("dept_code = ? AND deleted_at IS NULL", code).
 		Count(&count).Error
@@ -1578,7 +1589,7 @@ func (s *ExcelService) ensureDeptExists(ctx context.Context, code, name, parentI
 	var parent struct {
 		Ancestors string `gorm:"column:ancestors"`
 	}
-	err = s.db.WithContext(ctx).
+	err = db.WithContext(ctx).
 		Table("sys_dept").
 		Select("ancestors").
 		Where("id = ? AND deleted_at IS NULL", parentID).
@@ -1607,5 +1618,5 @@ func (s *ExcelService) ensureDeptExists(ctx context.Context, code, name, parentI
 		"updated_at": now,
 	}
 
-	return s.db.WithContext(ctx).Table("sys_dept").Create(dept).Error
+	return db.WithContext(ctx).Table("sys_dept").Create(dept).Error
 }
