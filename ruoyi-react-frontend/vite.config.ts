@@ -58,6 +58,14 @@ export default defineConfig({
           if (id.includes('echarts') || id.includes('zrender')) {
             return 'vendor-echarts'
           }
+          // Markdown 编辑器（D-06 Wave 2：按需加载，仅在通知公告表单打开时加载）
+          if (id.includes('@uiw/react-md-editor')) {
+            return 'vendor-md-editor'
+          }
+          // xlsx 表格处理（D-06 Wave 2：按需加载，仅在导入按钮点击时加载）
+          if (id.includes('/xlsx/')) {
+            return 'vendor-xlsx'
+          }
           // Ant Design UI 库（含 rc-* 工具包）
           if (id.includes('antd') || id.includes('@ant-design') || id.includes('/rc-')) {
             return 'vendor-antd'

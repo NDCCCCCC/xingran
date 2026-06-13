@@ -1,11 +1,13 @@
 /**
  * Holiday Utils
  * 节假日页面工具函数
+ *
+ * xlsx 库采用 dynamic import，仅在用户点击"导入"或"下载模板"按钮时按需加载
+ * （D-06 Wave 2: xlsx 按需加载）
  */
 
 import { message } from 'antd';
 import dayjs from 'dayjs';
-import * as XLSX from 'xlsx';
 import type { ExcelHolidayRow, ExcelImportOptions, HolidayType } from './types';
 import { batchCreateHolidays, type Holiday } from '@/lib/dutyApi';
 
@@ -38,6 +40,8 @@ export async function handleExcelImport(
 ): Promise<void> {
   const { file, onError } = options;
   try {
+    // D-06: 动态加载 xlsx，避免进入 holidays 页面时即加载 ~150KB gzip
+    const XLSX = await import('xlsx');
     const data = await file.arrayBuffer();
     const workbook = XLSX.read(data);
     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -115,7 +119,10 @@ export async function handleExcelImport(
 }
 
 /** 下载Excel模板 */
-export function downloadTemplate(): void {
+export async function downloadTemplate(): Promise<void> {
+  // D-06: 动态加载 xlsx，仅在用户点击下载模板时按需加载
+  const XLSX = await import('xlsx');
+
   // 创建模板数据（仅表头，不包含示例数据）
   const template = [
     ['日期', '名称', '类型', '是否休息', '年份', '备注'],

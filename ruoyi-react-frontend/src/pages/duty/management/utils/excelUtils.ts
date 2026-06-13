@@ -1,9 +1,11 @@
 /**
  * Holiday Excel Import Utils
  * 节假日 Excel 导入工具函数
+ *
+ * xlsx 库采用 dynamic import，仅在用户点击"导入"或"下载模板"按钮时按需加载
+ * （D-06 Wave 2: xlsx 按需加载）
  */
 
-import * as XLSX from 'xlsx';
 import { message } from 'antd';
 import dayjs from 'dayjs';
 import type { HolidayExcelRow, ImportOptions, HolidayCreateData } from '../types';
@@ -67,7 +69,9 @@ function parseHolidayRow(row: HolidayExcelRow, rowNum: number): HolidayCreateDat
   };
 }
 
-export function downloadHolidayTemplate() {
+export async function downloadHolidayTemplate() {
+  // D-06: 动态加载 xlsx，仅在用户点击下载模板时按需加载
+  const XLSX = await import('xlsx');
   const worksheet = XLSX.utils.json_to_sheet(TEMPLATE_DATA);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, '节假日模板');
@@ -75,11 +79,15 @@ export function downloadHolidayTemplate() {
   message.success('模板下载成功');
 }
 
-export function handleHolidayImport(
+export async function handleHolidayImport(
   options: ImportOptions,
   batchCreate: (holidays: HolidayCreateData[]) => Promise<boolean | void>
-) {
+): Promise<void> {
   const { file, onProgress, onSuccess, onError } = options;
+
+  // D-06: 动态加载 xlsx，仅在用户点击导入按钮时按需加载
+  const XLSX = await import('xlsx');
+
   const reader = new FileReader();
 
   reader.onprogress = (e) => {

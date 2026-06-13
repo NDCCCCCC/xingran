@@ -1,7 +1,7 @@
 import React from 'react';
 import { Form, Input, Select, Button, Modal, Row, Col, Radio, Switch, DatePicker, Checkbox } from 'antd';
 import type { FormInstance } from 'antd/es/form';
-import MDEditor from '@uiw/react-md-editor';
+import { MarkdownEditor as MDEditor } from '@/components/markdown/MarkdownEditor';
 import '@uiw/react-md-editor/markdown-editor.css';
 import CronSelector from '@/components/CronSelector';
 import { TargetSelector } from './TargetSelector';
