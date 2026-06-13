@@ -3,35 +3,35 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: MAC地址历史数据管理
 status: shipping
-stopped_at: Phase 13 context gathered (4 areas, 16 decisions)
-last_updated: "2026-06-13T04:11:12.933Z"
+stopped_at: context exhaustion at 75% (2026-06-13)
+last_updated: "2026-06-13T15:45:00.000Z"
 progress:
-  total_phases: 29
+  total_phases: 30
   completed_phases: 13
-  total_plans: 103
-  completed_plans: 89
-  percent: 45
+  total_plans: 112
+  completed_plans: 95
+  percent: 43
 ---
 
 # Project State
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: 里程碑 v1.16 进行中 (Phase 28 已完成)
-**Phase**: 30 (frontend-perf) — Wave 5 of 5 COMPLETE (gap closure shipped 25/25 must-haves)
-**Plan**: 05 (gap closure — useDict/useTableQuery/Widget/BaseEditModal consumer wiring + D-16 ESLint downshift + gap-6 deferral docs)
+**Status**: 里程碑 v1.16 进行中 (Phase 32 Wave 5 已完成)
+**Phase**: 32 (v1-14-p1-p2) — Wave 5 of 7 COMPLETE (P2-A1/A2/A3/A5 core refactor shipped)
+**Plan**: 05 (core refactor — god struct split + cache key unification + apperrors migration)
 **Status**: ✅ 已完成
-**Last activity**: 2026-06-13 - 完成 Phase 30 Plan 05 (缺口闭合 — 5 个原子提交 + 全部验证通过)
+**Last activity**: 2026-06-13 - 完成 Phase 32 Wave 5 (核心重构 — P2-A1 Core 拆分 + P2-A2 缓存键统一 + P2-A5 apperrors 迁移)
 
 ## Current Position
 
 Phase: 32 (v1-14-p1-p2) — EXECUTING
-Plan: 1 of 7
+Plan: 5 of 7 (Wave 5 COMPLETE ✅)
 **当前里程碑**: v1.16 — 工位设备关联
-**当前阶段**: Phase 31 ✅ SHIPPED
-**状态**: ✅ 已完成并推送至 origin/main
+**当前阶段**: Phase 32 Wave 5 ✅ SHIPPED
+**状态**: ✅ Wave 5 完成 (P2-A1/A2/A3/A5 核心重构), Waves 6-7 待执行
 **完成时间**: 2026-06-13
-**下一阶段**: Phase 32 (v1.14 P1 重构与 P2 架构优化) — 待规划/启动
+**下一阶段**: Phase 32 Wave 6 (P2-A4/A7/A8) — 待启动
 
 ## Project Reference
 
@@ -124,8 +124,14 @@ Plan: 1 of 7
 | 2026-06-13 | Phase 30 Plan 02 完成 (重库按需加载) - Wave 2 of 4 | 30 |
 | 2026-06-13 | Phase 30 Plan 03 完成 (查询层 React Query 推广) - Wave 3 of 4 | 30 |
 | 2026-06-13 | Phase 30 Plan 04 完成 (渲染层 memo/虚拟滚动/ESLint) - Wave 4 of 4 ✅ Phase 30 COMPLETE | 30 |
+| 2026-06-13 | Phase 30 Plan 05 完成 (缺口闭合) - Wave 5 of 4 ✅ Phase 30 COMPLETE (25/25) | 30 |
 | 2026-06-13 | Phase 31 完成 (P0 收尾) - F-14 connection_pool refCount + F-17 ConfigKey API,5 plan + UAT 2 pass | 31 |
 | 2026-06-13 | 20260612 后端审查报告 P0 100% 覆盖 (20/22 完整 + 2/22 部分) - 58 commit | — |
+| 2026-06-13 | Phase 32 Wave 1 完成 (P1 安全加固快赢) - P1-S2/S3/S4/S7 ✅ | 32 |
+| 2026-06-13 | Phase 32 Wave 2 完成 (P1 密码强度迁移) - P1-S1/S5/S6 ✅ | 32 |
+| 2026-06-13 | Phase 32 Wave 3 完成 (P1 并发与一致性) - P1-C1~C6 ✅ | 32 |
+| 2026-06-13 | Phase 32 Wave 4 完成 (P1 业务逻辑收尾) - P1-B1/B2 ✅ | 32 |
+| 2026-06-13 | Phase 32 Wave 5 完成 (P2 核心重构) - P2-A1/A2/A3/A5 ✅ | 32 |
 
 ## Quick Tasks Completed
 
@@ -194,6 +200,7 @@ Plan: 1 of 7
 - 📋 Phase 30 added: 前端性能优化（消除瀑布流/包大小/重渲染/JS性能）— 基于 Vercel React 最佳实践审计发现的 70+ 问题
 - 📋 Phase 31 added: P0 收尾 — connection_pool lifecycle + Config API 重设计（20260612 后端审查 F-14、F-17）
 - 📋 Phase 32 added: v1.14 P1 重构与 P2 架构优化（20260612 后端审查剩余 P1/P2 任务）
+- 📋 Phase 33 added: 前端 Vercel React Best Practices 修复 — 修复审查报告 20260613 中的 26 个性能/质量缺陷（7 CRITICAL + 5 MEDIUM-HIGH + 8 MEDIUM + 5 LOW + 1 bug：登录重复请求、WebSocket/Polling 抖动、Table 引用稳定化、Map 缓存化、Excel 改用 axios、R7 楼宇状态显示 bug）
 
 **Total shipped**: 72 plans, 18 phases completed
 
@@ -276,9 +283,9 @@ Plan: 1 of 7
 
 ## Session Continuity
 
-Last session: 2026-06-13T04:11:12.920Z
-Stopped at: Phase 13 context gathered (4 areas, 16 decisions)
-Resume file: .planning/phases/13-query-layer-trajectory/13-CONTEXT.md
+Last session: 2026-06-13T06:25:26.150Z
+Stopped at: context exhaustion at 75% (2026-06-13)
+Resume file: None
 
 Resume file: None
 
