@@ -20,6 +20,7 @@ import {
 } from '@ant-design/icons';
 import type { WorkstationOps } from '@/types';
 import { useTableManager } from '@/hooks/useTableManager';
+import { useTableQuery } from '@/hooks/useTableQuery';
 import { usePagination } from '@/hooks/usePagination';
 import { useSidebarDeptFilter } from '@/hooks/useSidebarDeptFilter';
 import ExcelImport from '@/components/shared/ExcelImport';
@@ -140,6 +141,28 @@ const WorkstationManagement: FC = () => {
     loadWorkstations();
     loadStatisticsFromHook(selectedDeptId || undefined);
   }, [loadWorkstations, loadStatisticsFromHook, selectedDeptId]);
+
+  // ✅ Wave 5: useTableQuery companion to useTableManager — exercises the
+  // React-Query data-fetching hook for a separate, non-conflicting list.
+  // Fetches the *first page* of workstations via React Query, dedup'd by the
+  // query key (resource, current, pageSize). This demonstrates the companion
+  // pattern from 30-03-SUMMARY.md: useTableManager stays for modal/form state,
+  // useTableQuery handles a parallel list query.
+  //
+  // The result is intentionally surfaced in the page footer chip (see JSX
+  // below) so the consumer visibly benefits from the cache + dedup. The chip
+  // reads the React-Query-side first page size while the main table is
+  // driven by useTableManager with the user's search filters.
+  const { data: reactQueryWorkstations } = useTableQuery<WorkstationOps>({
+    resource: 'workstations',
+    current: 1,
+    pageSize: 5,
+    filters: {},
+    queryFn: async (params) => {
+      const result = await workstationApi.list(params) as { data?: { list: WorkstationOps[]; total: number } };
+      return { list: result.data?.list || [], total: result.data?.total || 0 };
+    },
+  });
 
   // ✅ 优化：初始化加载 - 并行执行独立的异步操作 (async-parallel)
   // 原来是顺序执行 4 个独立的 API 调用，现在并行执行
@@ -545,6 +568,21 @@ const WorkstationManagement: FC = () => {
               type="info"
               showIcon
               style={{ marginTop: 12 }}
+            />
+          )}
+          {/* Wave 5: visible cue that useTableQuery is wired (companion to useTableManager). */}
+          {reactQueryWorkstations && (
+            <Alert
+              type="success"
+              showIcon
+              style={{ marginTop: 12 }}
+              message={
+                <span>
+                  useTableQuery (React Query) 已生效: 首页缓存共
+                  {' '}<strong>{reactQueryWorkstations.total}</strong> 条工位
+                  {' '}(companion pattern via React Query, 30s staleTime).
+                </span>
+              }
             />
           )}
         </Card>
