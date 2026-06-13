@@ -6,6 +6,7 @@ import (
 	"net"
 	"runtime/debug"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -741,27 +742,20 @@ func nextIP(ip net.IP) net.IP {
 }
 
 // containsIgnoreCase 忽略大小写的字符串包含检查
+//
+// P2 fix: 用 strings.Contains + ToLower 替代手写循环,等价但更简洁。
 func containsIgnoreCase(s, substr string) bool {
-	s = string(s)
-	substr = string(substr)
-
-	return len(s) >= len(substr) &&
-		(s == substr ||
-			len(s) > len(substr) && (s[:len(substr)] == substr ||
-				s[len(s)-len(substr):] == substr ||
-				indexOfIgnoreCase(s, substr) >= 0))
+	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
 }
 
+// indexOfIgnoreCase 忽略大小写的字符串查找索引
+//
+// P2 fix: 原实现存在 bug — 函数名声称 "IgnoreCase" 但实际是大小写敏感的
+// strings.Index。修正为真正的大小写无关,以匹配函数名预期。
+// 注: snmp_client.go 多个 caller 用大写 RG-S/USG/MSR 等字面量,与 sysDescr
+// 通常已是同大小写,因此原 bug 在常见路径下未被触发。
 func indexOfIgnoreCase(s, substr string) int {
-	s = string(s)
-	substr = string(substr)
-
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return i
-		}
-	}
-	return -1
+	return strings.Index(strings.ToLower(s), strings.ToLower(substr))
 }
 
 // ScanResult 扫描结果
