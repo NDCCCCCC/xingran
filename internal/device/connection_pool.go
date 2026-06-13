@@ -24,6 +24,11 @@ type PooledConnection struct {
 }
 
 // Acquire 获取连接使用权（增加引用计数并获取设备锁）
+//
+// Deprecated (F-14): GetConnection 现在内部已完成 refCount +1 并在持有 deviceLock 时执行,
+// 新代码不需要再调用 Acquire。本方法保留仅供独立持有 pc 的旧代码路径使用。
+// 调用 Acquire 会再次 +1,需要对应数量的 Release。
+//
 // 返回 true 表示成功获取，false 表示连接不可用
 func (pc *PooledConnection) Acquire() bool {
 	// 先获取设备级锁
@@ -208,8 +213,12 @@ func (p *DeviceConnectionPool) GetConnection(ctx context.Context, deviceID strin
 		// 连接存在，检查是否有效
 		// 使用 IsReady() 而不是 IsConnected() 以确保 transport 完全初始化
 		if pc.wrapper != nil && pc.wrapper.IsReady() {
-			// CRITICAL: 必须在返回前释放设备锁，否则会导致死锁
-			// 因为后续的 Acquire() 会尝试获取同一个锁（pc.mu 就是 deviceLock）
+			// F-14 fix: 在持有 deviceLock 时直接 +1 refCount,
+			// 阻止 cleanup goroutine 在 unlock 与 caller-use 之间关闭连接。
+			// refCount > 0 是 cleanupIdleConnections 跳过的条件 (见 IsIdle)。
+			// caller 不再需要调用 pc.Acquire(),用完调 pc.Release() 即可。
+			atomic.AddInt32(&pc.refCount, 1)
+			pc.lastUsed = time.Now()
 			deviceLock.Unlock()
 			return pc, nil
 		}
@@ -261,7 +270,7 @@ func (p *DeviceConnectionPool) GetConnection(ctx context.Context, deviceID strin
 	// 创建池化连接
 	pc = &PooledConnection{
 		wrapper:  wrapper,
-		refCount: 0,
+		refCount: 1, // F-14 fix: 直接初始化为 1,表示已有 GetConnection 调用方持有
 		lastUsed: time.Now(),
 		deviceID: deviceID,
 		mu:       deviceLock,
@@ -273,8 +282,7 @@ func (p *DeviceConnectionPool) GetConnection(ctx context.Context, deviceID strin
 	p.connections[deviceID] = pc
 	p.poolLock.Unlock()
 
-	// CRITICAL: 必须在返回前释放设备锁！
-	// Acquire() 方法会负责重新获取这个锁
+	// F-14: 已在 pc 创建时 refCount=1,caller 拿到 pc 不需 Acquire,用完调 Release
 	deviceLock.Unlock()
 
 	return pc, nil
