@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"fmt"
-	"os/exec"
 	"runtime"
 	"strconv"
 	"strings"
@@ -96,15 +95,13 @@ func (w *windowsPlatformStrategy) createAccount(ctx context.Context, username, p
 		password, username,
 	)
 
-	cmd := exec.CommandContext(ctx, "powershell", "-Command", psScript)
-	if err := cmd.Run(); err != nil {
+	if err := runCommand(ctx, "powershell", "-Command", psScript); err != nil {
 		return fmt.Errorf("failed to create Windows user: %w", err)
 	}
 
 	if isAdmin {
-		addCmd := exec.CommandContext(ctx, "powershell", "-Command",
-			fmt.Sprintf("Add-LocalGroupMember -Group 'Administrators' -Member %s", username))
-		if err := addCmd.Run(); err != nil {
+		addScript := fmt.Sprintf("Add-LocalGroupMember -Group 'Administrators' -Member %s", username)
+		if err := runCommand(ctx, "powershell", "-Command", addScript); err != nil {
 			return fmt.Errorf("failed to add to admin group: %w", err)
 		}
 	}
@@ -113,8 +110,8 @@ func (w *windowsPlatformStrategy) createAccount(ctx context.Context, username, p
 }
 
 func (w *windowsPlatformStrategy) deleteAccount(ctx context.Context, username string) error {
-	return exec.CommandContext(ctx, "powershell", "-Command",
-		fmt.Sprintf("Remove-LocalUser -Name %s", username)).Run()
+	return runCommand(ctx, "powershell", "-Command",
+		fmt.Sprintf("Remove-LocalUser -Name %s", username))
 }
 
 func (w *windowsPlatformStrategy) resetPassword(ctx context.Context, username, newPassword string) error {
@@ -123,22 +120,21 @@ func (w *windowsPlatformStrategy) resetPassword(ctx context.Context, username, n
 			"Set-LocalUser -Name %s -Password $password",
 		newPassword, username,
 	)
-	return exec.CommandContext(ctx, "powershell", "-Command", psScript).Run()
+	return runCommand(ctx, "powershell", "-Command", psScript)
 }
 
 func (w *windowsPlatformStrategy) enableAccount(ctx context.Context, username string) error {
-	return exec.CommandContext(ctx, "powershell", "-Command",
-		fmt.Sprintf("Enable-LocalUser -Name %s", username)).Run()
+	return runCommand(ctx, "powershell", "-Command",
+		fmt.Sprintf("Enable-LocalUser -Name %s", username))
 }
 
 func (w *windowsPlatformStrategy) disableAccount(ctx context.Context, username string) error {
-	return exec.CommandContext(ctx, "powershell", "-Command",
-		fmt.Sprintf("Disable-LocalUser -Name %s", username)).Run()
+	return runCommand(ctx, "powershell", "-Command",
+		fmt.Sprintf("Disable-LocalUser -Name %s", username))
 }
 
 func (w *windowsPlatformStrategy) listAccounts(ctx context.Context) ([]string, error) {
-	cmd := exec.CommandContext(ctx, "powershell", "-Command", "Get-LocalUser | Select-Object -ExpandProperty Name")
-	output, err := cmd.Output()
+	output, err := runCommandOutput(ctx, "powershell", "-Command", "Get-LocalUser | Select-Object -ExpandProperty Name")
 	if err != nil {
 		return nil, fmt.Errorf("failed to list Windows users: %w", err)
 	}
@@ -148,8 +144,7 @@ func (w *windowsPlatformStrategy) listAccounts(ctx context.Context) ([]string, e
 // ============ Linux 平台实现 ============
 
 func (l *linuxPlatformStrategy) createAccount(ctx context.Context, username, password string, isAdmin bool) error {
-	cmd := exec.CommandContext(ctx, "useradd", "-m", username)
-	if err := cmd.Run(); err != nil {
+	if err := runCommand(ctx, "useradd", "-m", username); err != nil {
 		return fmt.Errorf("failed to create user: %w", err)
 	}
 
@@ -165,7 +160,7 @@ func (l *linuxPlatformStrategy) createAccount(ctx context.Context, username, pas
 }
 
 func (l *linuxPlatformStrategy) deleteAccount(ctx context.Context, username string) error {
-	return exec.CommandContext(ctx, "userdel", "-r", username).Run()
+	return runCommand(ctx, "userdel", "-r", username)
 }
 
 func (l *linuxPlatformStrategy) resetPassword(ctx context.Context, username, newPassword string) error {
@@ -173,16 +168,15 @@ func (l *linuxPlatformStrategy) resetPassword(ctx context.Context, username, new
 }
 
 func (l *linuxPlatformStrategy) enableAccount(ctx context.Context, username string) error {
-	return exec.CommandContext(ctx, "usermod", "-U", username).Run()
+	return runCommand(ctx, "usermod", "-U", username)
 }
 
 func (l *linuxPlatformStrategy) disableAccount(ctx context.Context, username string) error {
-	return exec.CommandContext(ctx, "usermod", "-L", username).Run()
+	return runCommand(ctx, "usermod", "-L", username)
 }
 
 func (l *linuxPlatformStrategy) listAccounts(ctx context.Context) ([]string, error) {
-	cmd := exec.CommandContext(ctx, "getent", "passwd")
-	output, err := cmd.Output()
+	output, err := runCommandOutput(ctx, "getent", "passwd")
 	if err != nil {
 		return nil, fmt.Errorf("failed to list Linux users: %w", err)
 	}
@@ -191,7 +185,7 @@ func (l *linuxPlatformStrategy) listAccounts(ctx context.Context) ([]string, err
 
 // setLinuxPassword 设置 Linux 用户密码
 func (l *linuxPlatformStrategy) setLinuxPassword(ctx context.Context, username, password string) error {
-	cmd := exec.CommandContext(ctx, "chpasswd")
+	cmd := newCommand(ctx, "chpasswd")
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return err
@@ -220,14 +214,13 @@ func (l *linuxPlatformStrategy) configureSudo(ctx context.Context, username stri
 	)
 	sudoersPath := fmt.Sprintf("/etc/sudoers.d/%s", username)
 
-	cmd := exec.CommandContext(ctx, "tee", sudoersPath)
-	cmd.Stdin = strings.NewReader(sudoersContent)
-	if err := cmd.Run(); err != nil {
+	teeCmd := newCommand(ctx, "tee", sudoersPath)
+	teeCmd.Stdin = strings.NewReader(sudoersContent)
+	if err := teeCmd.Run(); err != nil {
 		return fmt.Errorf("failed to write sudoers file: %w", err)
 	}
 
-	chmodCmd := exec.CommandContext(ctx, "chmod", "440", sudoersPath)
-	if err := chmodCmd.Run(); err != nil {
+	if err := runCommand(ctx, "chmod", "440", sudoersPath); err != nil {
 		return fmt.Errorf("failed to set sudoers permissions: %w", err)
 	}
 

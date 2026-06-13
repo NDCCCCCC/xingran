@@ -371,12 +371,22 @@ func (c *Core) Init() error {
 		applogger.Infof("API端点元数据服务初始化完成")
 	}
 
+	// 19. 启动子进程 reaper（P2-A7: 清理僵尸子进程，防止 FD 泄漏）
+	c.reaperCtx, c.reaperCancel = context.WithCancel(context.Background())
+	c.startSubprocessReaper(c.reaperCtx)
+	applogger.Infof("子进程 reaper 已启动")
+
 	return nil
 }
 
 // Close 关闭核心模块
 // 优雅关闭所有核心服务，释放资源
 func (c *Core) Close() {
+	// 停止子进程 reaper（P2-A7）
+	if c.reaperCancel != nil {
+		c.reaperCancel()
+		applogger.Infof("子进程 reaper 已停止")
+	}
 	// 停止通知中心
 	if c.NoticeHub != nil {
 		c.NoticeHub.Stop()

@@ -3,6 +3,8 @@
 package core
 
 import (
+	"context"
+
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/db"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
@@ -36,4 +38,8 @@ type CoreInfra struct {
 
 	// 认证策略工厂
 	AuthFactory *security.AuthStrategyFactory // 认证策略工厂
+
+	// 子进程 reaper（P2-A7: 清理僵尸子进程，防止 FD 泄漏）
+	reaperCtx    context.Context
+	reaperCancel context.CancelFunc
 }
