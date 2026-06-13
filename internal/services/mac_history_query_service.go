@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
@@ -152,16 +154,18 @@ type MACHistoryQueryService interface {
 	QueryMACTrajectory(ctx context.Context, req *MACTrajectoryQuery) (*MACTrajectoryResult, error)
 	QueryConnectionStats(ctx context.Context, req *ConnectionStatsQuery) (*ConnectionStatsResponse, error)
 	ImportOUIData(ctx context.Context) error
+	GetVendor(ctx context.Context, macAddress string) (string, error)
 }
 
 // macHistoryQueryServiceImpl MAC历史查询服务实现
 type macHistoryQueryServiceImpl struct {
-	db *gorm.DB
+	db    *gorm.DB
+	cache cache.Cache
 }
 
 // NewMACHistoryQueryService 创建MAC历史查询服务
 func NewMACHistoryQueryService(db *gorm.DB) MACHistoryQueryService {
-	return &macHistoryQueryServiceImpl{db: db}
+	return &macHistoryQueryServiceImpl{db: db, cache: nil}
 }
 
 // extractOUIPrefix 提取MAC地址的OUI前缀（前3字节）
@@ -236,6 +240,52 @@ func (s *macHistoryQueryServiceImpl) ImportOUIData(ctx context.Context) error {
 
 	applogger.Infof("Imported %d OUI vendors", len(vendors))
 	return nil
+}
+
+// GetVendor 查询MAC地址的厂商信息（基于OUI前6位）
+func (s *macHistoryQueryServiceImpl) GetVendor(ctx context.Context, macAddress string) (string, error) {
+	// 规范化MAC地址并提取OUI前缀
+	normalized := strings.ReplaceAll(macAddress, ".", "")
+	normalized = strings.ReplaceAll(normalized, ":", "")
+	normalized = strings.ReplaceAll(normalized, "-", "")
+	normalized = strings.ToUpper(normalized)
+
+	if len(normalized) < 6 {
+		return "Unknown Vendor", nil
+	}
+	oui := normalized[:6] // AABBCC格式
+
+	// Redis缓存键
+	cacheKey := fmt.Sprintf("mac:vendor:%s", oui)
+
+	// 尝试从缓存获取（如果cache可用）
+	if s.cache != nil {
+		vendorName, err := s.cache.Get(ctx, cacheKey)
+		if err == nil && vendorName != "" {
+			return vendorName, nil
+		}
+		// 缓存未命中或出错，降级到DB查询
+	}
+
+	// DB查询
+	var vendor models.MACOUIVendor
+	if err := s.db.WithContext(ctx).Where("oui_prefix = ?", oui).First(&vendor).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// 未知OUI，缓存"Unknown Vendor"避免重复查询
+			if s.cache != nil {
+				_ = s.cache.Set(ctx, cacheKey, "Unknown Vendor", 24*time.Hour)
+			}
+			return "Unknown Vendor", nil
+		}
+		return "", fmt.Errorf("failed to query OUI vendor: %w", err)
+	}
+
+	// 缓存结果（24小时）
+	if s.cache != nil {
+		_ = s.cache.Set(ctx, cacheKey, vendor.VendorName, 24*time.Hour)
+	}
+
+	return vendor.VendorName, nil
 }
 
 // QueryPortHistory 查询指定端口的历史记录
