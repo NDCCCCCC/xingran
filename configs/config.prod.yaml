@@ -37,6 +37,11 @@ log:
   max_age: 90          # 保留旧日志文件的最大天数
   compress: true       # 是否压缩旧日志文件
 
+# 安全配置
+security:
+  # 生产环境: 严格 60s,对齐 OWASP V3 会话管理建议
+  replay_window_sec: 60
+
 # 代码生成器配置（生产环境已禁用）
 generator:
   enabled: false

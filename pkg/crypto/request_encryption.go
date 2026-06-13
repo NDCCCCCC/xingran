@@ -26,15 +26,14 @@ type EncryptedRequest struct {
 }
 
 const (
-	// maxTimeDiff 允许的最大时间差(秒)
+	// DefaultReplayWindowSec 默认的最大时间差(秒)
 	//
-	// P1 fix: 从 300s (5 min) 收紧到 120s (2 min)。
-	// 原 300s 给攻击者 5 分钟内重放窗口偏长,降低抗重放效力。
-	// 120s 平衡了 NTP 时钟漂移容忍 (±60s 是 NTP-managed 客户端的合理基线)
+	// P1 fix: 从 300s (5 min) 收紧到 120s (2 min),再收紧到 60s (1 min)。
+	// 60s 平衡了 NTP 时钟漂移容忍 (±60s 是 NTP-managed 客户端的合理基线)
 	// 和网络/处理延迟 (留 60s buffer)。
-	// 注意: nonce 清理周期也会随之变为 maxTimeDiff*2=240s,
-	// 与 cleanupExpiredNonces ticker 自动联动 (见 nonce_storage.go)。
-	maxTimeDiff = 120
+	// 实际窗口可通过 RequestEncryptor.SetReplayWindowSec() 或 NewRequestEncryptorWithConfig()
+	// 覆盖,默认对齐 OWASP V3 会话管理建议。
+	DefaultReplayWindowSec = 60
 	// minTimestamp 最小有效时间戳（2020-01-01）
 	minTimestamp = 1577836800
 )
@@ -71,19 +70,56 @@ func (d *defaultNonceStorage) CheckAndStore(nonce string, timestamp int64) bool 
 
 // RequestEncryptor 请求加密器
 type RequestEncryptor struct {
-	sm2PrivateKey *sm2.PrivateKey // SM2 私钥（用于解密 SM4 密钥）
-	sm2PublicKey  *sm2.PublicKey  // SM2 公钥（用于加密响应，可选）
-	nonceStorage  NonceStorage    // nonce存储（防止重放攻击）
+	sm2PrivateKey  *sm2.PrivateKey // SM2 私钥（用于解密 SM4 密钥）
+	sm2PublicKey   *sm2.PublicKey  // SM2 公钥（用于加密响应，可选）
+	nonceStorage   NonceStorage    // nonce存储（防止重放攻击）
+	replayWindowSec int            // 时间戳容差(秒),±N
 }
 
 // NewRequestEncryptor 创建请求加密器
 // 需要传入 SM2 密钥对，用于加密/解密 SM4 密钥
+//  默认使用 DefaultReplayWindowSec (60s) 作为时间戳容差。
+// 如需自定义,使用 NewRequestEncryptorWithConfig 或 SetReplayWindowSec。
 func NewRequestEncryptor(privateKey *sm2.PrivateKey, publicKey *sm2.PublicKey) *RequestEncryptor {
-	return &RequestEncryptor{
-		sm2PrivateKey: privateKey,
-		sm2PublicKey:  publicKey,
-		nonceStorage:  NewDefaultNonceStorage(),
+	re := &RequestEncryptor{
+		sm2PrivateKey:  privateKey,
+		sm2PublicKey:   publicKey,
+		nonceStorage:   NewDefaultNonceStorage(),
+		replayWindowSec: DefaultReplayWindowSec,
 	}
+	return re
+}
+
+// RequestEncryptorConfig RequestEncryptor 构造配置
+//
+// P1 fix (P1-S2): 将 hardcoded 60s/120s 重放窗口从常量改为可配置。
+// 不同环境 (dev=120s 方便调试; prod=60s 对齐 OWASP) 可独立调整。
+type RequestEncryptorConfig struct {
+	ReplayWindowSec int // 时间戳容差(秒),±N。<=0 时使用 DefaultReplayWindowSec (60)
+}
+
+// NewRequestEncryptorWithConfig 使用配置创建请求加密器
+func NewRequestEncryptorWithConfig(privateKey *sm2.PrivateKey, publicKey *sm2.PublicKey, cfg RequestEncryptorConfig) *RequestEncryptor {
+	re := NewRequestEncryptor(privateKey, publicKey)
+	if cfg.ReplayWindowSec > 0 {
+		re.replayWindowSec = cfg.ReplayWindowSec
+	}
+	return re
+}
+
+// SetReplayWindowSec 设置时间戳容差(秒),±N。值必须 > 0。
+func (re *RequestEncryptor) SetReplayWindowSec(sec int) {
+	if sec > 0 {
+		re.replayWindowSec = sec
+	}
+}
+
+// ReplayWindowSec 获取当前时间戳容差(秒)
+func (re *RequestEncryptor) ReplayWindowSec() int {
+	if re.replayWindowSec <= 0 {
+		return DefaultReplayWindowSec
+	}
+	return re.replayWindowSec
 }
 
 // SetNonceStorage 设置nonce存储（可选，用于自定义存储实现）
@@ -92,7 +128,11 @@ func (re *RequestEncryptor) SetNonceStorage(storage NonceStorage) {
 }
 
 // validateTimestamp 验证时间戳
-func validateTimestamp(timestamp int64) error {
+//
+// P1 fix (P1-S2): 使用 RequestEncryptor.replayWindowSec 作为容差
+// (默认 60s,可由 config 覆盖)。偏移超出 ±window 即拒绝。
+func (re *RequestEncryptor) validateTimestamp(timestamp int64) error {
+	window := re.ReplayWindowSec()
 	// 强制要求时间戳
 	if timestamp <= 0 {
 		return errors.New("时间戳不能为空")
@@ -101,10 +141,10 @@ func validateTimestamp(timestamp int64) error {
 	if timestamp < minTimestamp {
 		return fmt.Errorf("时间戳无效: 过早的日期")
 	}
-	// 检查时间差
+	// 检查时间差(双向)
 	timeDiff := time.Now().Unix() - timestamp
-	if timeDiff < -maxTimeDiff || timeDiff > maxTimeDiff {
-		return fmt.Errorf("请求时间戳无效: 时间差 %d 秒", timeDiff)
+	if timeDiff < -int64(window) || timeDiff > int64(window) {
+		return fmt.Errorf("请求时间戳无效: 时间差 %d 秒,容差 ±%d 秒", timeDiff, window)
 	}
 	return nil
 }
@@ -131,7 +171,7 @@ func (re *RequestEncryptor) validateNonce(nonce string, timestamp int64) error {
 // 7. 去除 PKCS#7 填充
 func (re *RequestEncryptor) DecryptRequest(encReq *EncryptedRequest) ([]byte, error) {
 	// 1. 验证时间戳（防重放攻击，强制要求）
-	if err := validateTimestamp(encReq.Timestamp); err != nil {
+	if err := re.validateTimestamp(encReq.Timestamp); err != nil {
 		return nil, err
 	}
 
@@ -196,7 +236,7 @@ func (re *RequestEncryptor) DecryptRequest(encReq *EncryptedRequest) ([]byte, er
 // 用于响应加密时重用相同的 SM4 密钥和 IV
 func (re *RequestEncryptor) DecryptRequestWithKeyInfo(encReq *EncryptedRequest) (plaintext []byte, sm4Key []byte, iv []byte, err error) {
 	// 1. 验证时间戳（防重放攻击，强制要求）
-	if err := validateTimestamp(encReq.Timestamp); err != nil {
+	if err := re.validateTimestamp(encReq.Timestamp); err != nil {
 		return nil, nil, nil, err
 	}
 

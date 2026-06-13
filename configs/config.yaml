@@ -72,6 +72,11 @@ security:
   # 默认值: dGVzdC1zZWNyZXQxNiEhIQ== 解码后为 "test-secret16!!!" (16字节)
   # 生产环境请使用: export SM4_KEY="$(openssl rand -base64 16)"
   sm4_key: "dGVzdC1zZWNyZXQxNiEhIQ=="
+  # 加密请求时间戳容差(秒),±N。P1 fix (P1-S2): 从 hardcoded 120s 收紧到可配置 60s,
+  # 平衡 NTP 时钟漂移(±60s 是 NTP-managed 客户端的合理基线)与抗重放强度。
+  # nonce 清理周期会随之联动 (清理阈值 = 2 * replay_window_sec)。
+  # 设置为 0 或不设置 = 使用代码默认值 60s。
+  replay_window_sec: 60
   # 请求体加密配置
   request_encryption:
     enabled: true  # 是否启用请求体加密

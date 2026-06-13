@@ -44,8 +44,12 @@ func setupEncryptionMiddlewares(r *gin.RouterGroup, core *core.Core) *crypto.Req
 	if core.Config.Security.RequestEncryption.Enabled {
 		sm2PrivateKey, sm2PublicKey := core.JWTManager.GetSM2KeyPair()
 		if sm2PrivateKey != nil && sm2PublicKey != nil {
-			encryptor = crypto.NewRequestEncryptor(sm2PrivateKey, sm2PublicKey)
-			applogger.Infof("请求体加密器已初始化（SM2+SM4 混合加密）")
+			// P1 fix (P1-S2): 从 security.replay_window_sec 读取时间戳容差,
+			// 默认 60s。<=0 时 NewRequestEncryptorWithConfig 会 fallback 到 DefaultReplayWindowSec。
+			encryptor = crypto.NewRequestEncryptorWithConfig(sm2PrivateKey, sm2PublicKey, crypto.RequestEncryptorConfig{
+				ReplayWindowSec: core.Config.Security.ReplayWindowSec,
+			})
+			applogger.Infof("请求体加密器已初始化（SM2+SM4 混合加密,replay_window=%ds）", encryptor.ReplayWindowSec())
 
 			decryptionConfig := &middleware.RequestDecryptionConfig{
 				Enabled:           true,

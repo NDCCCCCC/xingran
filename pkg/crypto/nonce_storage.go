@@ -19,7 +19,8 @@ type shard struct {
 // shardedNonceStorage 分段锁的 nonce 存储
 // 通过 hash 将 nonce 分散到不同的分片中，减少锁竞争
 type shardedNonceStorage struct {
-	shards [shardCount]*shard
+	shards         [shardCount]*shard
+	replayWindowSec int
 }
 
 // NewShardedNonceStorage 创建分段锁的 nonce 存储（推荐用于高并发场景）
@@ -27,9 +28,24 @@ type shardedNonceStorage struct {
 // P1 fix: 启动后台清理 goroutine 定期调用 cleanupExpiredNonces,
 // 之前 cleanup 函数虽已定义但从未被调用,导致内存版 nonce 表无限增长 —
 // 长跑进程几天内会因为累积的过期 nonce 占用大量内存。
-// 清理周期 = maxTimeDiff (默认 300s),与 anti-replay 窗口对齐。
+// 清理周期 = replayWindowSec (默认 60s, P1-S2 收紧),与 anti-replay 窗口对齐。
+// 过期阈值 = 2 * replayWindowSec,允许一个完整窗口的 clock skew + 处理延迟。
 func NewShardedNonceStorage() NonceStorage {
-	s := &shardedNonceStorage{}
+	return NewShardedNonceStorageWithConfig(DefaultReplayWindowSec)
+}
+
+// NewShardedNonceStorageWithConfig 使用自定义窗口创建分段锁 nonce 存储
+//
+// P1 fix (P1-S2): 接受可配置窗口,与 RequestEncryptor.replayWindowSec 保持同步,
+// 避免清理周期与验证窗口脱节。
+// 窗口必须 > 0,否则 fallback 到 DefaultReplayWindowSec。
+func NewShardedNonceStorageWithConfig(replayWindowSec int) NonceStorage {
+	if replayWindowSec <= 0 {
+		replayWindowSec = DefaultReplayWindowSec
+	}
+	s := &shardedNonceStorage{
+		replayWindowSec: replayWindowSec,
+	}
 	for i := 0; i < shardCount; i++ {
 		s.shards[i] = &shard{
 			nonces: make(map[string]int64),
@@ -42,7 +58,7 @@ func NewShardedNonceStorage() NonceStorage {
 		defer func() {
 			_ = recover()
 		}()
-		ticker := time.NewTicker(time.Duration(maxTimeDiff) * time.Second)
+		ticker := time.NewTicker(time.Duration(replayWindowSec) * time.Second)
 		defer ticker.Stop()
 		for range ticker.C {
 			s.cleanupExpiredNonces()
@@ -73,8 +89,14 @@ func (s *shardedNonceStorage) CheckAndStore(nonce string, timestamp int64) bool 
 }
 
 // cleanupExpiredNonces 清理过期的 nonce
+//
+// P1 fix (P1-S2): 使用 s.replayWindowSec * 2 作为过期阈值,
+// 与 anti-replay 窗口保持同步 — 留 1 个完整窗口的 buffer
+// (clock skew + 网络/处理延迟),保证已被验证的 nonce 不会
+// 在验证窗口内被误清理。
 func (s *shardedNonceStorage) cleanupExpiredNonces() {
 	now := time.Now().Unix()
+	threshold := int64(s.replayWindowSec) * 2
 
 	// 并发清理所有分片
 	var wg sync.WaitGroup
@@ -87,7 +109,7 @@ func (s *shardedNonceStorage) cleanupExpiredNonces() {
 			defer shard.mu.Unlock()
 
 			for nonce, ts := range shard.nonces {
-				if now-ts > maxTimeDiff*2 {
+				if now-ts > threshold {
 					delete(shard.nonces, nonce)
 				}
 			}

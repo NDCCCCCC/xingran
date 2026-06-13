@@ -12,8 +12,9 @@ import (
 // redisNonceStorage 基于 Redis 的分布式 nonce 存储
 // 支持多实例部署，天然防止重放攻击
 type redisNonceStorage struct {
-	client *redis.Client
-	ctx    context.Context
+	client         *redis.Client
+	ctx            context.Context
+	replayWindowSec int // 时间戳容差(秒),用于 nonce TTL。<=0 时使用 DefaultReplayWindowSec
 }
 
 // RedisNonceStorageConfig Redis 配置
@@ -21,6 +22,7 @@ type RedisNonceStorageConfig struct {
 	Addr     string // Redis 地址，如 "localhost:6379"
 	Password string // Redis 密码
 	DB       int    // Redis 数据库编号
+	ReplayWindowSec int // nonce TTL = 2 * ReplayWindowSec (秒),<=0 时使用 DefaultReplayWindowSec
 }
 
 // NewRedisNonceStorage 创建基于 Redis 的 nonce 存储
@@ -39,9 +41,14 @@ func NewRedisNonceStorage(config RedisNonceStorageConfig) (NonceStorage, error) 
 		return nil, fmt.Errorf("redis 连接失败: %w", err)
 	}
 
+	window := config.ReplayWindowSec
+	if window <= 0 {
+		window = DefaultReplayWindowSec
+	}
 	return &redisNonceStorage{
-		client: client,
-		ctx:    context.Background(),
+		client:         client,
+		ctx:            context.Background(),
+		replayWindowSec: window,
 	}, nil
 }
 
@@ -56,8 +63,8 @@ func (r *redisNonceStorage) CheckAndStore(nonce string, timestamp int64) bool {
 	key := r.getNonceKey(nonce)
 
 	// SETNX: 如果 key 不存在则设置，返回 true；如果已存在则不设置，返回 false
-	// 过期时间设置为 maxTimeDiff * 2 秒，避免内存泄漏
-	ok, err := r.client.SetNX(r.ctx, key, timestamp, time.Duration(maxTimeDiff*2)*time.Second).Result()
+	// 过期时间 = 2 * replayWindowSec,与 anti-replay 窗口对齐
+	ok, err := r.client.SetNX(r.ctx, key, timestamp, time.Duration(r.replayWindowSec)*2*time.Second).Result()
 	if err != nil {
 		// Redis 出错时，为安全起见拒绝请求
 		return false
