@@ -28,14 +28,14 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import {
   SearchOutlined, ReloadOutlined, AppstoreOutlined, TableOutlined,
-  CopyOutlined, EyeOutlined, AimOutlined,
+  CopyOutlined, EyeOutlined, AimOutlined, DownloadOutlined,
 } from '@ant-design/icons';
 import { useSearchParams } from 'react-router-dom';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import { useTableQuery } from '@/hooks/useTableQuery';
 import { useColumnConfig, type ColumnConfig } from '@/hooks/useColumnConfig';
-import { queryMACHistory } from '@/lib/api/networkApi';
+import { queryMACHistory, exportMACHistory } from '@/lib/api/networkApi';
 import type {
   MACHistoryRecord,
   MACHistoryQueryParams,
