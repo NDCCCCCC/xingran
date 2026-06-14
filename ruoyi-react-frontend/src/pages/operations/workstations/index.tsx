@@ -135,6 +135,13 @@ const WorkstationManagement: FC = () => {
   const handleEditRef = useRef<(record: WorkstationOps) => void>(() => {});
   const handleDeleteRef = useRef<(id: string) => void>(() => {});
 
+  // 待写入表单的回显值 — 当 cascaderOptions 就绪后由 useEffect 消费
+  // 替代原先 setTimeout(0) 的脆弱时序，避免 React 18 自动批处理下不可靠
+  const pendingCascaderWrite = useRef<{
+    record: WorkstationOps;
+    buildingId: string;
+  } | null>(null);
+
   const { closeModal, handleDelete, handleBatchDelete } = useWorkstationModals(loadUserOptions);
 
   const {
@@ -316,10 +323,13 @@ const WorkstationManagement: FC = () => {
   }, [loadBuildingsForCascader]);
 
   // 预加载 Cascader 路径数据（用于编辑回显）
+  // 入参 orgId 用于加载机构下所有楼宇，buildingId 用于定位需要附加 children 的目标楼宇
   const preloadCascaderPath = useCallback(async (orgId: string, buildingId: string) => {
     try {
-      const buildings = await loadBuildingsForCascader(orgId);
-      const floors = await loadFloorsForCascader(buildingId);
+      const [buildings, floors] = await Promise.all([
+        loadBuildingsForCascader(orgId),
+        loadFloorsForCascader(buildingId),
+      ]);
       const buildingWithFloors = buildings.map(b => ({
         ...b,
         children: b.value === buildingId ? floors : undefined,
@@ -332,6 +342,7 @@ const WorkstationManagement: FC = () => {
 
   // 设置编辑模式表单值的辅助函数
   // ✅ 优化：移除动态导入，并行获取楼层和楼宇信息 (async-parallel, bundle-dynamic-imports)
+  // 不再使用 setTimeout(0)；回显值通过 pendingCascaderWrite ref + cascaderOptions useEffect 协调
   const setEditFormValues = useCallback(async (record: WorkstationOps) => {
     if (!record.floorId) {
       workstationForm.setFieldsValue(record);
@@ -349,33 +360,29 @@ const WorkstationManagement: FC = () => {
         return;
       }
 
-      // 并行获取楼宇信息和预加载 Cascader 路径
-      const [buildingResult] = await Promise.all([
-        buildingApi.get(buildingId),
-        preloadCascaderPath(buildingId, buildingId),
-      ]);
+      // 暂存"等待 cascaderOptions 就绪后写入"的待办值
+      pendingCascaderWrite.current = { record, buildingId };
 
+      // 并行获取楼宇信息（用于拿到 orgId）
+      const buildingResult = await buildingApi.get(buildingId);
       const building = buildingResult.data;
       const orgId = building?.orgId;
 
       if (orgId) {
-        // 等待 React 状态更新和 Cascader 重新渲染
-        setTimeout(() => {
-          workstationForm.setFieldsValue({
-            ...record,
-            orgId,
-            floorId: [buildingId, record.floorId],
-          });
-        }, 0);
+        // 预加载 cascaderOptions；useEffect 会在选项就绪后写入表单
+        await preloadCascaderPath(orgId, buildingId);
       } else {
+        // 没有 orgId 时直接写入表单（不依赖 cascaderOptions）
         workstationForm.setFieldsValue({
           ...record,
           floorId: [buildingId, record.floorId],
         });
+        pendingCascaderWrite.current = null;
       }
     } catch (error) {
       console.error('获取楼层或楼宇信息失败:', error);
       workstationForm.setFieldsValue(record);
+      pendingCascaderWrite.current = null;
     }
   }, [preloadCascaderPath, workstationForm]);
 
@@ -396,6 +403,30 @@ const WorkstationManagement: FC = () => {
     refreshData();
     setImportVisible(false);
   }, [refreshData]);
+
+  // 等待 cascaderOptions 就绪后写入编辑表单的 floorId / orgId
+  // 替代 setEditFormValues 内 setTimeout(0) 的脆弱时序
+  useEffect(() => {
+    const pending = pendingCascaderWrite.current;
+    if (!pending) return;
+
+    // 模态框已关闭或切换到其他工位 → 取消待写入
+    if (!modalVisible || editingWorkstation?.id !== pending.record.id) {
+      pendingCascaderWrite.current = null;
+      return;
+    }
+
+    // cascaderOptions 必须包含目标 buildingId 才算就绪
+    const buildingOption = cascaderOptions.find(opt => opt.value === pending.buildingId);
+    if (!buildingOption) return;
+
+    const { record, buildingId } = pending;
+    workstationForm.setFieldsValue({
+      ...record,
+      floorId: [buildingId, record.floorId],
+    });
+    pendingCascaderWrite.current = null;
+  }, [cascaderOptions, modalVisible, editingWorkstation, workstationForm]);
 
   const renderCurrentView = () => {
     if (viewMode === 'table') {
