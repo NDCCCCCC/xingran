@@ -121,7 +121,8 @@ export function useWorkstationData(
       setUserOptions(
         users.map((u: Record<string, unknown>) => ({
           id: String(u.id),
-          name: String(u.username),
+          username: String(u.username),
+          nickname: u.nickname ? String(u.nickname) : undefined,
         }))
       );
     } catch (error) {

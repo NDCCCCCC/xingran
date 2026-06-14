@@ -26,7 +26,8 @@ export interface FloorOption {
 // 用户选项
 export interface UserOption {
   id: string;
-  name: string;
+  username: string;
+  nickname?: string;
 }
 
 // 部门树节点
