@@ -463,9 +463,10 @@ func (s *ExcelService) applyReferenceResults(
 					// InfoPoint模型有冗余字段（deviceName, portName）用于前端显示
 					// 而Service层没有JOIN设备和端口表，所以需要在导入时保存名称
 					if config.TableName == "ops_info_points" {
-						if col.Field == "deviceName" {
+						switch col.Field {
+						case "deviceName":
 							data["device_name"] = value
-						} else if col.Field == "portName" {
+						case "portName":
 							data["port_name"] = value
 						}
 						// 保留原始字段供前端使用
@@ -479,9 +480,10 @@ func (s *ExcelService) applyReferenceResults(
 					// InfoPoint特殊处理：即使引用解析失败，也保存名称字段
 					// 这样用户能看到原始的Excel值，便于排查问题
 					if config.TableName == "ops_info_points" {
-						if col.Field == "deviceName" {
+						switch col.Field {
+						case "deviceName":
 							data["device_name"] = value
-						} else if col.Field == "portName" {
+						case "portName":
 							data["port_name"] = value
 						}
 					}
