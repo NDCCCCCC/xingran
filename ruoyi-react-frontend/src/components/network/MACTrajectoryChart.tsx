@@ -19,6 +19,24 @@ interface MACTrajectoryChartProps {
   data: TrajectoryNode[];
   loading?: boolean;
   onError?: (error: unknown) => void;
+  /** dataZoom slider 起始百分比 (0-100, 默认 66 表示聚焦最近 1/3) */
+  dataZoomStart?: number;
+  /** dataZoom slider 结束百分比 (0-100, 默认 100) */
+  dataZoomEnd?: number;
+}
+
+// 停留时长热力阈值(秒)— Phase 14-02 锁定
+const DWELL_THRESHOLDS = {
+  short: 3600,        // 1h
+  medium: 86400,      // 24h
+  long: 604800,       // 7d
+} as const;
+
+function getDwellHeatmap(durationSeconds: number): { label: string; color: string } {
+  if (durationSeconds < DWELL_THRESHOLDS.short) return { label: '短', color: '#bfbfbf' };
+  if (durationSeconds < DWELL_THRESHOLDS.medium) return { label: '中', color: '#1890ff' };
+  if (durationSeconds < DWELL_THRESHOLDS.long) return { label: '长', color: '#faad14' };
+  return { label: '超长', color: '#ff4d4f' };
 }
 
 const EVENT_COLORS = {
@@ -31,7 +49,9 @@ const EVENT_COLORS = {
 const MACTrajectoryChart: React.FC<MACTrajectoryChartProps> = ({
   data,
   loading = false,
-  onError
+  onError,
+  dataZoomStart = 66,
+  dataZoomEnd = 100,
 }) => {
   // 处理错误
   if (!loading && (!data || data.length === 0)) {
@@ -80,8 +100,10 @@ const MACTrajectoryChart: React.FC<MACTrajectoryChartProps> = ({
         formatter: (params: any) => {
           const data = params.data.value;
           const durationHours = (data[3] / 3600).toFixed(1);
+          const dwell = getDwellHeatmap(data[3]);
           return `
             <div>
+              <span style="display:inline-block;padding:0 6px;background:${dwell.color};color:#fff;border-radius:2px;font-size:12px;">停留${dwell.label}</span><br/>
               <strong>MAC: ${data[4]}</strong><br/>
               设备: ${data[5]}<br/>
               端口: ${params.name}<br/>
@@ -148,10 +170,12 @@ const MACTrajectoryChart: React.FC<MACTrajectoryChartProps> = ({
           type: 'slider',
           xAxisIndex: 0,
           bottom: '5%',
+          start: dataZoomStart,
+          end: dataZoomEnd,
         },
       ],
     };
-  }, [data]);
+  }, [data, dataZoomStart, dataZoomEnd]);
 
   if (loading) {
     return (

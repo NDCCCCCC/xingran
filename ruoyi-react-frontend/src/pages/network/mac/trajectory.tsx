@@ -1,11 +1,33 @@
-import React, { useState } from 'react';
-import { Card, DatePicker, Input, Button, Form, Space, Alert, message } from 'antd';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  Card, DatePicker, Input, Button, Form, Space, Alert, Drawer, message,
+} from 'antd';
 import { useQuery } from '@tanstack/react-query';
+import { useLocation } from 'react-router-dom';
 import dayjs from 'dayjs';
+import type { Dayjs } from 'dayjs';
 import MACTrajectoryChart from '@/components/network/MACTrajectoryChart';
+import MACEventsTimeline from '@/components/network/MACEventsTimeline';
 import { queryMACTrajectory } from '@/lib/api/networkApi';
 
 const { RangePicker } = DatePicker;
+
+// 时间预设(与 14-01 列表页一致,D-07 锁定)
+type PresetKey = '1h' | '24h' | '7d' | '30d' | '90d' | 'custom';
+interface Preset {
+  key: PresetKey;
+  label: string;
+  amount: number;
+  unit: 'hour' | 'day';
+}
+const PRESETS: Preset[] = [
+  { key: '1h', label: '近 1h', amount: 1, unit: 'hour' },
+  { key: '24h', label: '近 24h', amount: 24, unit: 'hour' },
+  { key: '7d', label: '近 7d', amount: 7, unit: 'day' },
+  { key: '30d', label: '近 30d', amount: 30, unit: 'day' },
+  { key: '90d', label: '近 90d', amount: 90, unit: 'day' },
+  { key: 'custom', label: '自定义', amount: 0, unit: 'day' },
+];
 
 interface TrajectoryQueryParams {
   mac: string;
@@ -15,14 +37,17 @@ interface TrajectoryQueryParams {
 
 const TrajectoryPage: React.FC = () => {
   const [form] = Form.useForm();
+  const location = useLocation();
   const [queryParams, setQueryParams] = useState<TrajectoryQueryParams | null>(null);
+  const [activePreset, setActivePreset] = useState<PresetKey>('7d');
+  const [customRange, setCustomRange] = useState<[Dayjs, Dayjs] | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState<boolean>(true);
 
   // 查询轨迹数据
   const {
     data: trajectoryData,
     isLoading,
     error,
-    refetch,
   } = useQuery({
     queryKey: ['macTrajectory', queryParams],
     queryFn: () => queryMACTrajectory(queryParams!),
@@ -30,12 +55,81 @@ const TrajectoryPage: React.FC = () => {
     staleTime: 5 * 60 * 1000, // 5分钟缓存
   });
 
+  // MAC地址规范化函数(复用后端逻辑)
+  const normalizeMACAddress = (mac: string): string => {
+    const cleaned = mac.replace(/[^a-fA-F0-9]/g, '');
+    if (cleaned.length !== 12) return '';
+    return cleaned.match(/.{2}/g)?.join(':').toUpperCase() || '';
+  };
+
+  // 预设 → 设置表单 dateRange + activePreset
+  const handlePresetClick = useCallback(
+    (preset: Preset) => {
+      if (preset.key === 'custom') {
+        setActivePreset('custom');
+        setCustomRange(null);
+        return;
+      }
+      setActivePreset(preset.key);
+      setCustomRange(null);
+      const start = dayjs().subtract(preset.amount, preset.unit);
+      const end = dayjs();
+      form.setFieldsValue({ dateRange: [start, end] });
+    },
+    [form]
+  );
+
+  const handleCustomRangeChange = useCallback(
+    (values: [Dayjs, Dayjs] | null) => {
+      setCustomRange(values);
+      if (values && values[0] && values[1]) {
+        setActivePreset('custom');
+        form.setFieldsValue({ dateRange: values });
+      }
+    },
+    [form]
+  );
+
+  // URL 参数预填(D-17 锁定)— 进入页面时读取 ?mac=...&startTime=...&endTime=...&deviceId=...
+  useEffect(() => {
+    const sp = new URLSearchParams(location.search);
+    const urlMac = sp.get('mac');
+    const startTime = sp.get('startTime');
+    const endTime = sp.get('endTime');
+    // deviceId 仅供未来扩展;当前不参与查询
+    // const deviceId = sp.get('deviceId');
+
+    const initial: Record<string, unknown> = {};
+    if (urlMac) initial.mac = normalizeMACAddress(urlMac) || urlMac;
+    if (startTime && endTime) {
+      initial.dateRange = [dayjs(startTime), dayjs(endTime)];
+      setActivePreset('custom');
+      setCustomRange([dayjs(startTime), dayjs(endTime)]);
+    }
+    if (Object.keys(initial).length > 0) {
+      form.setFieldsValue(initial);
+    }
+
+    // URL 包含完整查询条件时,自动触发查询(14-01 跳转场景)
+    if (urlMac && startTime && endTime) {
+      const normalizedMAC = normalizeMACAddress(urlMac);
+      if (normalizedMAC) {
+        setQueryParams({
+          mac: normalizedMAC,
+          start_time: dayjs(startTime).toISOString(),
+          end_time: dayjs(endTime).toISOString(),
+        });
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleSearch = async () => {
     try {
       const values = await form.validateFields();
       const { mac, dateRange } = values;
 
-      // 格式化MAC地址（自动规范化）
+      // 格式化MAC地址(自动规范化)
       const normalizedMAC = normalizeMACAddress(mac);
       if (!normalizedMAC) {
         message.error('请输入有效的MAC地址');
@@ -55,21 +149,41 @@ const TrajectoryPage: React.FC = () => {
   const handleReset = () => {
     form.resetFields();
     setQueryParams(null);
-  };
-
-  // MAC地址规范化函数（复用后端逻辑）
-  const normalizeMACAddress = (mac: string): string => {
-    // 移除所有非十六进制字符
-    const cleaned = mac.replace(/[^a-fA-F0-9]/g, '');
-    if (cleaned.length !== 12) return '';
-
-    // 格式化为AA:BB:CC:DD:EE:FF
-    return cleaned.match(/.{2}/g)?.join(':').toUpperCase() || '';
+    setActivePreset('7d');
+    setCustomRange(null);
+    const preset = PRESETS.find((p) => p.key === '7d')!;
+    form.setFieldsValue({
+      dateRange: [dayjs().subtract(preset.amount, preset.unit), dayjs()],
+    });
   };
 
   return (
     <div style={{ padding: '24px' }}>
       <Card title="MAC地址轨迹查询" bordered={false}>
+        {/* 时间预设按钮组(D-07) */}
+        <Space wrap style={{ marginBottom: 12 }}>
+          {PRESETS.map((p) => (
+            <Button
+              key={p.key}
+              type={activePreset === p.key ? 'primary' : 'default'}
+              size="small"
+              onClick={() => handlePresetClick(p)}
+            >
+              {p.label}
+            </Button>
+          ))}
+        </Space>
+        {activePreset === 'custom' && (
+          <div style={{ marginBottom: 12 }}>
+            <RangePicker
+              showTime
+              format="YYYY-MM-DD HH:mm"
+              value={customRange}
+              onChange={handleCustomRangeChange}
+              placeholder={['开始时间', '结束时间']}
+            />
+          </div>
+        )}
         <Form form={form} layout="inline">
           <Form.Item
             name="mac"
@@ -90,6 +204,13 @@ const TrajectoryPage: React.FC = () => {
                 const formatted = normalizeMACAddress(e.target.value);
                 if (formatted) {
                   e.target.value = formatted;
+                }
+              }}
+              onBlur={(e) => {
+                // 失焦自动规范化(增强 UX)
+                const formatted = normalizeMACAddress(e.target.value);
+                if (formatted) {
+                  form.setFieldValue('mac', formatted);
                 }
               }}
             />
@@ -140,6 +261,43 @@ const TrajectoryPage: React.FC = () => {
           }}
         />
       </div>
+
+      {/* 右侧事件时间线 Drawer(14-01 组件复用) */}
+      <Drawer
+        title="事件时间线"
+        placement="right"
+        width={420}
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        mask={false}
+        destroyOnClose={false}
+      >
+        {queryParams ? (
+          <MACEventsTimeline
+            mac={queryParams.mac}
+            startTime={queryParams.start_time}
+            endTime={queryParams.end_time}
+          />
+        ) : (
+          <Alert
+            type="info"
+            showIcon
+            message="请先执行查询"
+            description="查询后将在此显示 MAC 在该时间范围内的事件时间线"
+          />
+        )}
+      </Drawer>
+
+      {/* Drawer 关闭后显示"显示时间线"按钮 */}
+      {!drawerOpen && (
+        <Button
+          type="primary"
+          style={{ position: 'fixed', right: 24, top: 96, zIndex: 100 }}
+          onClick={() => setDrawerOpen(true)}
+        >
+          显示时间线
+        </Button>
+      )}
     </div>
   );
 };
