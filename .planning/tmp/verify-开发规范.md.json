@@ -1,0 +1,20 @@
+{
+  "doc_path": "docs/开发规范.md",
+  "claims_checked": 6,
+  "claims_passed": 4,
+  "claims_failed": 2,
+  "failures": [
+    {
+      "line": 129,
+      "claim": "code: 200",
+      "expected": "success response code is 200 in JSON example",
+      "actual": "actual success code is 0 (pkg/response/response.go:12 successCode = 0). Section 7.3.1 also states '成功: code: 0' (line 302) which contradicts this example"
+    },
+    {
+      "line": 135,
+      "claim": "requestId",
+      "expected": "JSON field named 'requestId' (camelCase)",
+      "actual": "actual JSON field is 'request_id' (snake_case) per pkg/response/response.go:24 RequestID `json:\"request_id\"`"
+    }
+  ]
+}

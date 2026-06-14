@@ -1,0 +1,32 @@
+{
+  "doc_path": "docs/user_service_N+1优化报告.md",
+  "claims_checked": 10,
+  "claims_passed": 6,
+  "claims_failed": 4,
+  "failures": [
+    {
+      "line": 9,
+      "claim": "user_service.go 262-362",
+      "expected": "Original code at lines 262-362 matches the displayed snippet (Preload('Dept') query, 3-query pattern, etc.)",
+      "actual": "Current user_service.go List method spans lines 297-412. The exact snippet shown in the doc does not match: the actual code uses SQL LEFT JOIN via Joins(userJoinClause) at line 342-343 (not Preload('Dept')), and includes a buildDepartmentPaths call before role loading. The 'original' code snippet is stale/misrepresented."
+    },
+    {
+      "line": 13,
+      "claim": "query.Preload(\"Dept\")",
+      "expected": "Original List implementation uses Preload(\"Dept\") for Dept relation",
+      "actual": "Current user_service.go uses SQL LEFT JOIN (Joins(userJoinClause) where userJoinClause = 'LEFT JOIN sys_dept ON sys_dept.id = sys_user.dept_id::uuid') at line 342-343. Preload('Dept') is NOT used in the actual code."
+    },
+    {
+      "line": 226,
+      "claim": "system.NewUserService(core.GetDB(), core.PwdManager, core.Cache)",
+      "expected": "Function NewUserService accepts 3 args (db, pwdManager, cache)",
+      "actual": "NewUserService signature is `func NewUserService(db *gorm.DB, pwdManager PasswordManager) UserService` — 2 args, no cache parameter. Router also never instantiates NewUserService with Cache."
+    },
+    {
+      "line": 229,
+      "claim": "system.NewUserServiceOptimized(core.GetDB(), core.PwdManager, core.Cache)",
+      "expected": "Function NewUserServiceOptimized accepts 3 args (db, pwdManager, cache) and is wired into user_router.go",
+      "actual": "NewUserServiceOptimized signature is `func NewUserServiceOptimized(db *gorm.DB, pwdManager PasswordManager) UserService` — 2 args, no cache parameter. Additionally, user_router.go (internal/api/v1/system/user_router.go) never uses NewUserServiceOptimized — it only uses NewUserServiceWithCache (when DataCacheService is set) or NewUserService. The migration example is not actually wired into the router and will not compile as written."
+    }
+  ]
+}

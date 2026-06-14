@@ -1,0 +1,14 @@
+{
+  "doc_path": "docs/网络设备批量管理功能实施计划.md",
+  "claims_checked": 52,
+  "claims_passed": 51,
+  "claims_failed": 1,
+  "failures": [
+    {
+      "line": 78,
+      "claim": "github.com/andreyvit/diff",
+      "expected": "package in go.mod dependencies",
+      "actual": "package not found in go.mod"
+    }
+  ]
+}

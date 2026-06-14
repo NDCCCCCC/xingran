@@ -1,0 +1,134 @@
+{
+  "doc_path": "docs/项目验证报告.md",
+  "claims_checked": 60,
+  "claims_passed": 39,
+  "claims_failed": 21,
+  "failures": [
+    {
+      "line": 65,
+      "claim": "internal/api/v1/user_handler.go",
+      "expected": "file exists",
+      "actual": "file not found at internal/api/v1/user_handler.go (actual location: internal/api/v1/system/user_handler.go)"
+    },
+    {
+      "line": 66,
+      "claim": "internal/api/v1/role_handler.go",
+      "expected": "file exists",
+      "actual": "file not found at internal/api/v1/role_handler.go (actual location: internal/api/v1/system/role_handler.go)"
+    },
+    {
+      "line": 67,
+      "claim": "internal/api/v1/menu_handler.go",
+      "expected": "file exists",
+      "actual": "file not found at internal/api/v1/menu_handler.go (actual location: internal/api/v1/system/menu_handler.go)"
+    },
+    {
+      "line": 68,
+      "claim": "internal/api/v1/dept_handler.go",
+      "expected": "file exists",
+      "actual": "file not found at internal/api/v1/dept_handler.go (actual file: internal/api/v1/system/department_handler.go - different name)"
+    },
+    {
+      "line": 70,
+      "claim": "internal/api/v1/monitor_handler.go",
+      "expected": "file exists",
+      "actual": "file not found at internal/api/v1/monitor_handler.go (handlers are split into internal/api/v1/monitor/ subdirectory: server_handler.go, cache_handler.go, oper_log_handler.go, login_log_handler.go)"
+    },
+    {
+      "line": 71,
+      "claim": "internal/api/v1/cache_handler.go",
+      "expected": "file exists",
+      "actual": "file not found at internal/api/v1/cache_handler.go (actual location: internal/api/v1/monitor/cache_handler.go)"
+    },
+    {
+      "line": 72,
+      "claim": "internal/api/v1/job_handler.go",
+      "expected": "file exists",
+      "actual": "file not found at internal/api/v1/job_handler.go (actual location: internal/api/v1/scheduler/job_handler.go)"
+    },
+    {
+      "line": 79,
+      "claim": "internal/core/db/postgres.go",
+      "expected": "file exists",
+      "actual": "file not found at internal/core/db/postgres.go (only internal/core/db/database.go exists; PostgreSQL driver is wired via gorm.io/driver/postgres in go.mod)"
+    },
+    {
+      "line": 80,
+      "claim": "internal/core/cache/redis.go",
+      "expected": "file exists",
+      "actual": "file not found at internal/core/cache/redis.go (no internal/core/cache/ directory exists; actual location: pkg/cache/redis.go)"
+    },
+    {
+      "line": 190,
+      "claim": "internal/services/port_collection_service.go",
+      "expected": "file exists",
+      "actual": "file not found at internal/services/port_collection_service.go (actual location: internal/services/portcollection/service.go - service split into multiple files in portcollection/ subpackage)"
+    },
+    {
+      "line": 192,
+      "claim": "internal/services/device_enrichment_service.go",
+      "expected": "file exists",
+      "actual": "file not found: no device_enrichment_service.go exists in internal/services/ (related code is in internal/services/device_info_collection_service.go)"
+    },
+    {
+      "line": 195,
+      "claim": "internal/api/v1/network_device_handler.go",
+      "expected": "file exists",
+      "actual": "file not found at internal/api/v1/network_device_handler.go (actual location: internal/api/v1/network/device_handler.go)"
+    },
+    {
+      "line": 196,
+      "claim": "internal/api/v1/auth_credential_handler.go",
+      "expected": "file exists",
+      "actual": "file not found at internal/api/v1/auth_credential_handler.go (actual location: internal/api/v1/network/credential_handler.go)"
+    },
+    {
+      "line": 197,
+      "claim": "internal/api/v1/config_template_handler.go",
+      "expected": "file exists",
+      "actual": "file not found at internal/api/v1/config_template_handler.go (actual location: internal/api/v1/network/template_handler.go)"
+    },
+    {
+      "line": 198,
+      "claim": "internal/api/v1/config_execution_handler.go",
+      "expected": "file exists",
+      "actual": "file not found at internal/api/v1/config_execution_handler.go (actual location: internal/api/v1/network/execution_handler.go)"
+    },
+    {
+      "line": 199,
+      "claim": "internal/api/v1/config_backup_handler.go",
+      "expected": "file exists",
+      "actual": "file not found at internal/api/v1/config_backup_handler.go (actual location: internal/api/v1/network/backup_handler.go)"
+    },
+    {
+      "line": 200,
+      "claim": "internal/api/v1/device_discovery_handler.go",
+      "expected": "file exists",
+      "actual": "file not found at internal/api/v1/device_discovery_handler.go (actual location: internal/api/v1/network/discovery_handler.go)"
+    },
+    {
+      "line": 201,
+      "claim": "internal/api/v1/device_mac_handler.go",
+      "expected": "file exists",
+      "actual": "file not found at internal/api/v1/device_mac_handler.go (actual location: internal/api/v1/network/mac_handler.go)"
+    },
+    {
+      "line": 202,
+      "claim": "internal/api/v1/device_port_handler.go",
+      "expected": "file exists",
+      "actual": "file not found at internal/api/v1/device_port_handler.go (actual location: internal/api/v1/network/port_handler.go)"
+    },
+    {
+      "line": 203,
+      "claim": "internal/api/v1/command_handler.go",
+      "expected": "file exists",
+      "actual": "file not found at internal/api/v1/command_handler.go (actual location: internal/api/v1/network/command_handler.go)"
+    },
+    {
+      "line": 268,
+      "claim": "Notice status 0=enabled/normal, 1=disabled/stopped (status value convention)",
+      "expected": "Notice status follows 0=enabled/normal, 1=disabled/stopped convention",
+      "actual": "Notice PublishStatus is 0=Draft, 1=Published (per internal/models/notice_enhanced.go and internal/constants/status.go), which is the OPPOSITE of the doc's stated convention"
+    }
+  ]
+}

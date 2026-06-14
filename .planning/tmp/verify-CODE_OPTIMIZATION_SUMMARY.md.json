@@ -1,0 +1,74 @@
+{
+  "doc_path": "docs/CODE_OPTIMIZATION_SUMMARY.md",
+  "claims_checked": 18,
+  "claims_passed": 7,
+  "claims_failed": 11,
+  "failures": [
+    {
+      "line": 18,
+      "claim": "batch_upserter.go 改进前: 128行",
+      "expected": "batch_upserter.go has 128 lines before optimization",
+      "actual": "actual file at internal/services/operations/batch_upserter.go has 570 lines"
+    },
+    {
+      "line": 19,
+      "claim": "batch_upserter.go 改进后: 128行",
+      "expected": "batch_upserter.go has 128 lines after optimization",
+      "actual": "actual file at internal/services/operations/batch_upserter.go has 570 lines"
+    },
+    {
+      "line": 27,
+      "claim": "cache_adapter.go 改进前: 80行",
+      "expected": "cache_adapter.go has 80 lines before optimization",
+      "actual": "actual file at internal/services/system/cache_adapter.go has 248 lines (a sibling also exists at internal/api/v1/system/cache_adapter.go with 82 lines)"
+    },
+    {
+      "line": 28,
+      "claim": "cache_adapter.go 改进后: 80行",
+      "expected": "cache_adapter.go has 80 lines after optimization",
+      "actual": "actual file at internal/services/system/cache_adapter.go has 248 lines"
+    },
+    {
+      "line": 36,
+      "claim": "cache_invalidator.go 改进前: 58行",
+      "expected": "cache_invalidator.go has 58 lines before optimization",
+      "actual": "actual file at internal/services/operations/cache_invalidator.go has 68 lines"
+    },
+    {
+      "line": 37,
+      "claim": "cache_invalidator.go 改进后: 58行",
+      "expected": "cache_invalidator.go has 58 lines after optimization",
+      "actual": "actual file at internal/services/operations/cache_invalidator.go has 68 lines"
+    },
+    {
+      "line": 45,
+      "claim": "reference_resolver.go 改进前: 201行",
+      "expected": "reference_resolver.go has 201 lines before optimization",
+      "actual": "actual file at internal/services/operations/reference_resolver.go has 414 lines"
+    },
+    {
+      "line": 46,
+      "claim": "reference_resolver.go 改进后: 194行",
+      "expected": "reference_resolver.go has 194 lines after optimization",
+      "actual": "actual file at internal/services/operations/reference_resolver.go has 414 lines"
+    },
+    {
+      "line": 115,
+      "claim": "reference_resolver.go | 194 | 低 | 高",
+      "expected": "reference_resolver.go has 194 lines",
+      "actual": "actual file at internal/services/operations/reference_resolver.go has 414 lines"
+    },
+    {
+      "line": 116,
+      "claim": "batch_upserter.go | 128 | 低 | 高",
+      "expected": "batch_upserter.go has 128 lines",
+      "actual": "actual file at internal/services/operations/batch_upserter.go has 570 lines"
+    },
+    {
+      "line": 117,
+      "claim": "cache_invalidator.go | 58 | 低 | 高",
+      "expected": "cache_invalidator.go has 58 lines",
+      "actual": "actual file at internal/services/operations/cache_invalidator.go has 68 lines"
+    }
+  ]
+}

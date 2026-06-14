@@ -121,8 +121,28 @@ export const getMACEvents = async (
   );
 };
 
+/**
+ * 导出 MAC 历史数据为 Excel (14-04 导出功能)
+ * - 复用 /network/history/list 端点,通过 format=xlsx 触发 Excel 导出
+ * - 支持 current(当前查询) 和 all(全量) 两种导出范围
+ * - 返回 Blob 供浏览器下载
+ */
+export const exportMACHistory = async (
+  params: MACHistoryQueryParams,
+  exportScope: 'current' | 'all' = 'current'
+): Promise<Blob> => {
+  const api = await import('../api');
+  const response = await api.default.get('/network/history/list', {
+    params: { ...params, format: 'xlsx', exportScope },
+    responseType: 'blob',
+    timeout: 120000,
+  });
+  return response as Blob;
+};
+
 export default {
   queryMACTrajectory,
   queryMACHistory,
   getMACEvents,
+  exportMACHistory,
 };

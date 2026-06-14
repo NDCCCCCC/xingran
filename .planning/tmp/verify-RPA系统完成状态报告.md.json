@@ -1,0 +1,26 @@
+{
+  "doc_path": "docs/RPA系统完成状态报告.md",
+  "claims_checked": 39,
+  "claims_passed": 36,
+  "claims_failed": 3,
+  "failures": [
+    {
+      "line": 11,
+      "claim": "数据库 (4 个迁移文件)",
+      "expected": "4 migration files listed in section header",
+      "actual": "Only 4 migration files listed (102, 103, 104, 105) but 8 migration files actually exist: 102, 103, 104, 105, 106, 108, 109, 112"
+    },
+    {
+      "line": 36,
+      "claim": "API 层 (8 个文件, ~670 行)",
+      "expected": "8 API files, ~670 lines",
+      "actual": "8 files exist but actual line count is 1528 not 670"
+    },
+    {
+      "line": 152,
+      "claim": "后端 API | 7 | ~670 | ✅",
+      "expected": "7 API files, ~670 lines",
+      "actual": "8 files in internal/api/v1/rpa/ (stats table says 7 but 8 files exist); actual line count is 1528 not 670"
+    }
+  ]
+}

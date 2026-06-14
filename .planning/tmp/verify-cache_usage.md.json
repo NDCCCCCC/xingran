@@ -1,0 +1,80 @@
+{
+  "doc_path": "docs/cache_usage.md",
+  "claims_checked": 25,
+  "claims_passed": 13,
+  "claims_failed": 12,
+  "failures": [
+    {
+      "line": 108,
+      "claim": "role:enabled",
+      "expected": "cache key matches code (CacheKeyRoleEnabled)",
+      "actual": "actual constant is services.CacheKeyRoleEnabled = 'cache:role:enabled' (with cache: prefix)"
+    },
+    {
+      "line": 109,
+      "claim": "post:enabled",
+      "expected": "cache key matches code (CacheKeyPostEnabled)",
+      "actual": "actual constant is services.CacheKeyPostEnabled = 'cache:post:enabled' (with cache: prefix)"
+    },
+    {
+      "line": 110,
+      "claim": "dept:tree",
+      "expected": "cache key matches code (CacheKeyDeptTree)",
+      "actual": "actual constant is services.CacheKeyDeptTree = 'cache:dept:tree' (with cache: prefix)"
+    },
+    {
+      "line": 111,
+      "claim": "menu:all, menu:tree",
+      "expected": "cache keys match code",
+      "actual": "actual constants are CacheKeyMenuAll='cache:menu:all' and CacheKeyMenuTree='cache:menu:tree' (with cache: prefix)"
+    },
+    {
+      "line": 117,
+      "claim": "role:menus:{roleId}",
+      "expected": "cache key matches code (GetRoleMenusKey)",
+      "actual": "actual function GetRoleMenusKey returns 'cache:role:menus:{roleId}' (with cache: prefix)"
+    },
+    {
+      "line": 118,
+      "claim": "role:depts:{roleId}",
+      "expected": "cache key matches code",
+      "actual": "based on data_cache_service.go CacheKeyRoleDepts='cache:role:depts', expected key would be 'cache:role:depts:{roleId}' (with cache: prefix)"
+    },
+    {
+      "line": 119,
+      "claim": "dict:data:type:{type}",
+      "expected": "cache key matches code (GetDictDataByTypeKey)",
+      "actual": "actual function GetDictDataByTypeKey returns 'cache:dict:data:type:{dictType}' (with cache: prefix)"
+    },
+    {
+      "line": 125,
+      "claim": "user:id",
+      "expected": "cache key matches code (CacheKeyUserByID)",
+      "actual": "actual constant is services.CacheKeyUserByID = 'cache:user:id' (with cache: prefix)"
+    },
+    {
+      "line": 126,
+      "claim": "post:id",
+      "expected": "cache key matches code (CacheKeyPostByID)",
+      "actual": "actual constant is services.CacheKeyPostByID = 'cache:post:id' (with cache: prefix)"
+    },
+    {
+      "line": 234,
+      "claim": "role:enabled - all enabled role list",
+      "expected": "cache key constant value",
+      "actual": "actual constant CacheKeyRoleEnabled = 'cache:role:enabled' (with cache: prefix)"
+    },
+    {
+      "line": 691,
+      "claim": "internal/services/menu_cache_service.go",
+      "expected": "file exists at internal/services/menu_cache_service.go",
+      "actual": "file not found - legacy cache services do not exist at internal/services/ root level; only system/menu_cache_impl.go exists"
+    },
+    {
+      "line": 693,
+      "claim": "internal/services/user_cache_service.go",
+      "expected": "file exists at internal/services/user_cache_service.go",
+      "actual": "file not found - legacy cache services do not exist at internal/services/ root level; only system/user_cache_impl.go exists"
+    }
+  ]
+}

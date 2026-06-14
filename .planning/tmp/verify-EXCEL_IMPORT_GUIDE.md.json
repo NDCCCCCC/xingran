@@ -1,0 +1,44 @@
+{
+  "doc_path": "docs/EXCEL_IMPORT_GUIDE.md",
+  "claims_checked": 14,
+  "claims_passed": 8,
+  "claims_failed": 6,
+  "failures": [
+    {
+      "line": 71,
+      "claim": "floor: 唯一键: buildingId + floorNo",
+      "expected": "UniqueKeys is [buildingId, floorNo]",
+      "actual": "UniqueKeys is [building_id, floor_no] (database field names, not struct field names). Source: excel_config.go line 100"
+    },
+    {
+      "line": 75,
+      "claim": "workstation: 唯一键: floorId + workstationName",
+      "expected": "UniqueKeys is [floorId, workstationName]",
+      "actual": "UniqueKeys is [floorName, name] (Excel field names, not database field names). Source: excel_config.go line 116"
+    },
+    {
+      "line": 79,
+      "claim": "infoPoint: 唯一键: workstationId + name",
+      "expected": "UniqueKeys is [workstationId, name]",
+      "actual": "UniqueKeys is [workstation_id, name] (database field name for workstation). Source: excel_config.go line 260"
+    },
+    {
+      "line": 86,
+      "claim": "ExcelService struct: type system.CacheProvider + new fields",
+      "expected": "ExcelService struct has fields {db, pwdManager, referenceResolver, cacheInvalidator, cache} as listed in doc snippet",
+      "actual": "ExcelService struct also includes a sixth field 'geocoding *GeocodingService' not shown in doc. Source: excel_service.go lines 21-28. Constructor NewExcelService signature is (db, pwdManager, cache, geocoding) with 4 params, not 2 as the doc implies (the doc only shows the new fields, omitting geocoding)"
+    },
+    {
+      "line": 119,
+      "claim": "Department.DeptCode gorm:size:50;uniqueIndex;not null",
+      "expected": "DeptCode field with gorm tag 'size:50;uniqueIndex;not null'",
+      "actual": "DeptCode field has gorm tag 'size:100;uniqueIndex;not null'. Source: internal/models/dept.go line 7"
+    },
+    {
+      "line": 141,
+      "claim": "go run cmd/migrate/main.go up",
+      "expected": "cmd/migrate/main.go exists in repository (alternative migration tool path)",
+      "actual": "cmd/migrate/main.go does not exist (Glob returned no files matching that path). The only migration entry is 080_add_dept_code_field.sql in internal/core/db/migrations/. The doc's '方式2' alternative command is invalid"
+    }
+  ]
+}

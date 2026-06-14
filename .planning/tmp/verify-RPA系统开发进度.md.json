@@ -1,0 +1,14 @@
+{
+  "doc_path": "docs/RPA系统开发进度.md",
+  "claims_checked": 45,
+  "claims_passed": 44,
+  "claims_failed": 1,
+  "failures": [
+    {
+      "line": 171,
+      "claim": "POST /api/v1/rpa/workers/{id}/progress",
+      "expected": "route definition in codebase",
+      "actual": "no route definition found for /api/v1/rpa/workers/{id}/progress; actual route is POST /api/v1/rpa/workers/progress (no {id} parameter)"
+    }
+  ]
+}

@@ -1,0 +1,170 @@
+{
+  "doc_path": "docs/项目概述和架构设计.md",
+  "claims_checked": 28,
+  "claims_passed": 1,
+  "claims_failed": 27,
+  "failures": [
+    {
+      "line": 108,
+      "claim": "Go 1.23+",
+      "expected": "Go version 1.23+ documented accurately",
+      "actual": "go.mod shows go 1.24.0 / toolchain go1.24.5 - claim is satisfied (1.23+ as minimum, actual 1.24.0)"
+    },
+    {
+      "line": 113,
+      "claim": "NATS 2.10+",
+      "expected": "NATS 2.10+ used as message queue",
+      "actual": "go.mod does NOT include NATS package at all - claim is FALSE"
+    },
+    {
+      "line": 114,
+      "claim": "Prometheus 2.48+",
+      "expected": "Prometheus 2.48+ for monitoring",
+      "actual": "go.mod does NOT include Prometheus client - claim is FALSE"
+    },
+    {
+      "line": 136,
+      "claim": "Tailwind CSS 3.4+",
+      "expected": "Tailwind CSS 3.4+",
+      "actual": "package.json shows tailwindcss ^4.1.18 - claim is FALSE (actual major version 4, doc says 3.4+)"
+    },
+    {
+      "line": 137,
+      "claim": "Vite 6.0+",
+      "expected": "Vite 6.0+",
+      "actual": "package.json shows vite ^7.2.4 - claim is FALSE (actual major version 7, doc says 6.0+)"
+    },
+    {
+      "line": 141,
+      "claim": "Ant Design 5.21+",
+      "expected": "Ant Design 5.21+",
+      "actual": "package.json shows antd ^6.1.1 - claim is FALSE (actual major version 6, doc says 5.21+)"
+    },
+    {
+      "line": 146,
+      "claim": "Lodash 4.17+",
+      "expected": "Lodash 4.17+ as utility library",
+      "actual": "package.json does NOT include lodash - claim is FALSE"
+    },
+    {
+      "line": 147,
+      "claim": "React Hook Form 7.53+",
+      "expected": "React Hook Form 7.53+",
+      "actual": "package.json does NOT include react-hook-form - claim is FALSE"
+    },
+    {
+      "line": 148,
+      "claim": "Zod 3.23+",
+      "expected": "Zod 3.23+",
+      "actual": "package.json does NOT include zod - claim is FALSE"
+    },
+    {
+      "line": 149,
+      "claim": "ECharts 5.5+",
+      "expected": "ECharts 5.5+",
+      "actual": "package.json shows echarts ^6.0.0 - claim is FALSE (actual major version 6, doc says 5.5+)"
+    },
+    {
+      "line": 150,
+      "claim": "React Virtual 2.10+",
+      "expected": "React Virtual 2.10+",
+      "actual": "package.json does NOT include react-virtual - claim is FALSE"
+    },
+    {
+      "line": 202,
+      "claim": "cmd/server/main.go",
+      "expected": "file exists",
+      "actual": "file not found at cmd/server/main.go (actual cmd dir contains: cmd/main.go, cmd/mainlog.go, cmd/agent/main.go)"
+    },
+    {
+      "line": 205,
+      "claim": "cmd/worker/main.go",
+      "expected": "file exists",
+      "actual": "file not found at cmd/worker/main.go"
+    },
+    {
+      "line": 207,
+      "claim": "cmd/migrate/main.go",
+      "expected": "file exists",
+      "actual": "file not found at cmd/migrate/main.go"
+    },
+    {
+      "line": 215,
+      "claim": "internal/api/v1/middleware/",
+      "expected": "directory exists",
+      "actual": "directory not found at internal/api/v1/middleware/"
+    },
+    {
+      "line": 232,
+      "claim": "internal/core/scheduler/",
+      "expected": "directory exists",
+      "actual": "directory not found at internal/core/scheduler/ (actual scheduler is at internal/scheduler/)"
+    },
+    {
+      "line": 241,
+      "claim": "pkg/cache/multilevel.go",
+      "expected": "file exists",
+      "actual": "file not found at pkg/cache/multilevel.go (multi-level cache logic distributed across cache.go, l2_writer.go, memory.go)"
+    },
+    {
+      "line": 247,
+      "claim": "pkg/utils/",
+      "expected": "directory exists",
+      "actual": "directory not found at pkg/utils/ (no pkg/utils directory exists)"
+    },
+    {
+      "line": 262,
+      "claim": "POST /api/v1/users/list",
+      "expected": "route exists",
+      "actual": "route is at POST /system/users/list (not under /api/v1/users/)"
+    },
+    {
+      "line": 263,
+      "claim": "POST /api/v1/users (create user)",
+      "expected": "route exists",
+      "actual": "actual route is POST /system/users (not /api/v1/users)"
+    },
+    {
+      "line": 264,
+      "claim": "GET /api/v1/users/{id}",
+      "expected": "RESTful GET route exists",
+      "actual": "actual route uses POST /system/users/:id (project uses POST exclusively, not RESTful verbs)"
+    },
+    {
+      "line": 265,
+      "claim": "PUT /api/v1/users/{id}",
+      "expected": "RESTful PUT route exists",
+      "actual": "actual route is POST /system/users/:id/update"
+    },
+    {
+      "line": 266,
+      "claim": "DELETE /api/v1/users/{id}",
+      "expected": "RESTful DELETE route exists",
+      "actual": "actual route is POST /system/users/:id/delete"
+    },
+    {
+      "line": 268,
+      "claim": "PUT /api/v1/users/{id}/status",
+      "expected": "RESTful PUT route exists",
+      "actual": "actual route is POST /system/users/:id/status"
+    },
+    {
+      "line": 317,
+      "claim": "BusinessError struct in section 3.5",
+      "expected": "BusinessError struct exists in codebase",
+      "actual": "BusinessError struct does not exist; codebase uses AppError in pkg/response/response.go with different codes (ErrUserNotFound=1002 instead of 10001, ErrCredentialInvalid=1013 for password error)"
+    },
+    {
+      "line": 269,
+      "claim": "Response format - missing request_id field",
+      "expected": "response format matches Response struct",
+      "actual": "doc omits request_id field; actual Response struct includes request_id (5 fields, doc shows 4)"
+    },
+    {
+      "line": 211,
+      "claim": "internal/api/v1/auth/ - auth handler",
+      "expected": "auth handler in auth/ directory",
+      "actual": "directory exists but contains only auth_handler_test.go; actual auth handler is at internal/api/v1/auth.go"
+    }
+  ]
+}

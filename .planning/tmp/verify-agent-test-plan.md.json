@@ -1,0 +1,14 @@
+{
+  "doc_path": "docs/agent-test-plan.md",
+  "claims_checked": 17,
+  "claims_passed": 16,
+  "claims_failed": 1,
+  "failures": [
+    {
+      "line": 14,
+      "claim": "test-agent-config.yaml",
+      "expected": "file exists at project root",
+      "actual": "file not found at project root; closest match is scripts/agent/test-config.yaml (different filename and location)"
+    }
+  ]
+}

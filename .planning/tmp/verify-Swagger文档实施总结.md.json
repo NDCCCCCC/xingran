@@ -1,0 +1,56 @@
+{
+  "doc_path": "docs/Swagger文档实施总结.md",
+  "claims_checked": 24,
+  "claims_passed": 17,
+  "claims_failed": 7,
+  "failures": [
+    {
+      "line": 42,
+      "claim": "scripts/generate_swagger.bat",
+      "expected": "file exists at scripts/generate_swagger.bat",
+      "actual": "file not found - only scripts/generate_swagger.sh exists. The doc's inline VERIFY marker acknowledges this but the bullet still asserts file existence."
+    },
+    {
+      "line": 97,
+      "claim": "API Tag: 在线用户",
+      "expected": "tag '在线用户' present in docs/swagger.yaml",
+      "actual": "tag not found in swagger.yaml. Actual tags include '认证', '用户管理', etc. but no '在线用户'."
+    },
+    {
+      "line": 106,
+      "claim": "API Tag: 楼层管理",
+      "expected": "tag '楼层管理' present in docs/swagger.yaml",
+      "actual": "tag not found in swagger.yaml. No 楼层管理 tag exists."
+    },
+    {
+      "line": 107,
+      "claim": "API Tag: 工位管理",
+      "expected": "tag '工位管理' present in docs/swagger.yaml",
+      "actual": "tag not found in swagger.yaml. No 工位管理 tag exists."
+    },
+    {
+      "line": 108,
+      "claim": "API Tag: 机房管理",
+      "expected": "tag '机房管理' present in docs/swagger.yaml",
+      "actual": "tag not found in swagger.yaml. No 机房管理 tag exists."
+    },
+    {
+      "line": 117,
+      "claim": "scripts\\generate_swagger.bat",
+      "expected": "file exists at scripts/generate_swagger.bat",
+      "actual": "file not found - the doc instructs running scripts\\generate_swagger.bat on Windows but only scripts/generate_swagger.sh exists."
+    },
+    {
+      "line": 141,
+      "claim": "http://localhost:8080/swagger/index.html",
+      "expected": "Swagger UI accessible at port 8080 (default)",
+      "actual": "configs/config.yaml and config.dev.yaml set server.port=9000 (default dev port). The 8080 in the doc only matches config.prod.yaml."
+    },
+    {
+      "line": 196,
+      "claim": "228 API端点 (endpoints)",
+      "expected": "228 total API endpoints in generated docs",
+      "actual": "swagger.json contains 393 HTTP operations across 387 paths. The 228 figure is stale and does not match the current generated docs (which has 389 POST+GET operations matching the doc's own section 3.2 stats)."
+    }
+  ]
+}
