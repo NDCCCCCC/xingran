@@ -175,6 +175,29 @@
 
 ---
 
+### Phase 14: 前端与用户体验 📋
+
+**Goal**: 基于 Phase 12 (数据模型与采集集成) 与 Phase 13 (查询层与轨迹) 的后端能力,补齐 MAC 地址历史数据管理的完整前端 UX — 包括查询列表页、轨迹可视化页、Excel 导出、菜单与权限注册、与网络设备/工位模块的联动入口,以及移动端响应式适配
+**Depends on**: Phase 12 (数据模型与采集集成), Phase 13 (查询层与轨迹) — 后端 API 必须先就位
+**Status**: 📋 Planned (待规划, 0/5 plans)
+
+**预期子计划 (5 plans)**:
+
+- [ ] 14-01-PLAN.md — MAC 历史查询主列表页 (时间筛选、MAC/设备/端口筛选、分页、操作列)
+- [ ] 14-02-PLAN.md — 轨迹可视化页 UX 增强 (ECharts Gantt 交互、停留时长热力、时间范围预设导出)
+- [ ] 14-03-PLAN.md — 菜单/权限/路由注册 (与 sys_menu 同步,与现有网络设备模块并列展示)
+- [ ] 14-04-PLAN.md — Excel 导出与批量操作 (后端 export 接口 + 前端 download 触发)
+- [ ] 14-05-PLAN.md — 移动端响应式 + 空状态/错误状态打磨 (卡片/表格切换,加载/空数据/异常兜底)
+
+**Phase Highlights**:
+
+- 🎨 复用 Phase 13 已交付的 `MACTrajectoryChart.tsx`,不重写可视化核心
+- 🔍 时间范围筛选复用 `useColumnConfig` 与现有 `useTableManager` hooks
+- 📊 列表页与轨迹页共享 MAC 输入,实现"查询→可视化"单步跳转
+- 🧭 菜单注册与网络设备模块并列,权限点 `network:mac:list/query/export`
+- 📱 移动端使用 Ant Design 6 Grid + 卡片视图,继承现有 `HybridLayout` 侧边栏折叠行为
+- ♻️ 严格遵守 React Query 缓存键规范,避免重复请求(参考 Phase 30 经验)
+
 ### Phase 22: 深信服桌面云集成 📋
 
 **Goal**: 集成深信服虚拟桌面基础设施（VDI），实现虚拟机管理、服务器配置、用户关联和同步功能
