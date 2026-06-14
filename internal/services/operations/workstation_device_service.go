@@ -473,12 +473,8 @@ func (s *workstationDeviceService) AddDeviceManual(ctx context.Context, req *Add
 	if err == nil {
 		// 找到匹配的资产
 		assetID = &asset.ID
-		if deviceModel == nil {
-			deviceModel = asset.DeviceModelName
-		}
-		if deviceType == nil {
-			deviceType = asset.DeviceTypeName
-		}
+		deviceModel = asset.DeviceModelName
+		deviceType = asset.DeviceTypeName
 	} else if err != gorm.ErrRecordNotFound {
 		return nil, fmt.Errorf("查询资产失败: %w", err)
 	}
@@ -679,7 +675,7 @@ func (s *workstationDeviceService) UpdateDevice(ctx context.Context, id string, 
 	}
 
 	// 更新字段
-	updates := make(map[string]interface{})
+	updates := make(map[string]any)
 
 	if req.DeviceSerial != nil {
 		updates["device_serial"] = *req.DeviceSerial
