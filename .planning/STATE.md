@@ -4,7 +4,7 @@ milestone: v1.5
 milestone_name: MAC地址历史数据管理
 status: shipping
 stopped_at: context exhaustion at 75% (2026-06-13)
-last_updated: "2026-06-13T07:56:19.243Z"
+last_updated: "2026-06-13T15:50:51.944Z"
 progress:
   total_phases: 10
   completed_phases: 6
@@ -21,7 +21,7 @@ progress:
 **Phase**: 32 (v1-14-p1-p2) — ALL 7 WAVES COMPLETE (15 P1 + 8 P2 = 23 项全部闭环)
 **Plan**: 07 (test coverage — AD 模块 LDAP 接口 + group_sync + user_ou 测试)
 **Status**: ✅ 已完成
-**Last activity**: 2026-06-13 - Completed quick task 260613-vp5: 工位管理页面 - 修复子表展开点击行为
+**Last activity**: 2026-06-14 - Completed quick task 260614-dpz: 工位设置主设备时按序列号合并资产+域控数据再同步
 
 ## Current Position
 
@@ -142,6 +142,7 @@ Plan: 7 of 7 (Wave 7 COMPLETE ✅)
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
+| 260614-dpz | 工位设置主设备时按序列号合并资产+域控数据再同步 | 2026-06-14 | dcfd552 | [260614-dpz-workstation-main-device-merge](./quick/260614-dpz-workstation-main-device-merge/) |
 | 260612-d2x | 工位管理页面子表格设备信息添加字段ip地址 | 2026-06-12 | 8ad0f4a | [260612-d2x-ip](./quick/260612-d2x-ip/) |
 | 260609-rowselect | 修复域控用户页面多选框显示问题 | 2026-06-09 | 7a5b095 | [20260609-ad-user-rowselection-fix](./quick/20260609-ad-user-rowselection-fix/) |
 | 260609-009 | 资产列表页面添加类型筛选组件 | 2026-06-09 | e3983df | [260609-009-asset-type-filter](./quick/260609-009-asset-type-filter/) |
@@ -290,7 +291,7 @@ Plan: 7 of 7 (Wave 7 COMPLETE ✅)
 
 ## Session Continuity
 
-Last session: 2026-06-13T07:56:19.235Z
+Last session: 2026-06-13T15:50:51.934Z
 Stopped at: context exhaustion at 75% (2026-06-13)
 Resume file: None
 
