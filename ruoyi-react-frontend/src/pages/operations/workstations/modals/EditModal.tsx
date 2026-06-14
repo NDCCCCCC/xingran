@@ -7,7 +7,7 @@ import { useLayoutEffect } from 'react';
 import { Form, Input, InputNumber, Select, Row, Col, Cascader } from 'antd';
 import type { FormInstance } from 'antd';
 import type { WorkstationOps } from '@/types';
-import type { DeptTreeNode } from '../types';
+import type { DeptTreeNode, UserOption } from '../types';
 import { DepartmentTreeSelect } from '@/components/shared';
 import { STATUS_OPTIONS, TYPE_OPTIONS } from '../constants';
 import { BaseEditModal } from '@/components/modal/BaseEditModal';
@@ -28,7 +28,7 @@ export interface WorkstationEditModalProps {
   form: FormInstance;
   editingWorkstation: WorkstationOps | null;
   deptTreeData: DeptTreeNode[];
-  userOptions: { id: string; name: string }[];
+  userOptions: UserOption[];
   cascaderOptions: CascaderOption[];
   loadingCascader: boolean;
   handleCascaderLoadData: (selectedOptions: CascaderOption[]) => Promise<void> | void;
@@ -132,10 +132,10 @@ export function WorkstationEditModal({
           </Col>
           <Col span={12}>
             <Form.Item name="userId" label="所属用户">
-              <Select placeholder="请先选择部门" allowClear>
+              <Select placeholder="请先选择部门" allowClear showSearch optionFilterProp="children">
                 {userOptions.map((u) => (
                   <Option key={u.id} value={u.id}>
-                    {u.name}
+                    {u.nickname ? `${u.username} (${u.nickname})` : u.username}
                   </Option>
                 ))}
               </Select>
