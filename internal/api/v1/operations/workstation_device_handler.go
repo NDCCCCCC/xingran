@@ -23,13 +23,13 @@ func NewWorkstationDeviceHandler(service opsServices.WorkstationDeviceService) *
 // @Tags 运维管理
 // @Accept json
 // @Produce json
-// @Param workstationId path string true "工位ID"
+// @Param id path string true "工位ID"
 // @Success 200 {object} response.Response{data=[]models.WorkstationDevice}
 // @Failure 400 {object} response.Response
 // @Failure 404 {object} response.Response
-// @Router /ops/workstation-device/{workstationId} [get]
+// @Router /ops/workstation-device/{id} [post]
 func (h *WorkstationDeviceHandler) GetByWorkstation(c *gin.Context) {
-	workstationID := c.Param("workstationId")
+	workstationID := c.Param("id")
 	if workstationID == "" {
 		response.Error(c, apperrors.ParamMissing("工位ID"))
 		return
@@ -68,6 +68,90 @@ func (h *WorkstationDeviceHandler) AddManual(c *gin.Context) {
 	}
 
 	response.Success(c, device)
+}
+
+// GetADDevices 实时查询域控设备
+// @Summary 实时查询工位关联的域控设备
+// @Description 通过工位绑定的用户实时查询其域控管理的设备（不保存到数据库）
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param id path string true "工位ID"
+// @Success 200 {object} response.Response{data=[]models.WorkstationDevice}
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/workstation-device/{id}/ad [post]
+func (h *WorkstationDeviceHandler) GetADDevices(c *gin.Context) {
+	workstationID := c.Param("id")
+	if workstationID == "" {
+		response.Error(c, apperrors.ParamMissing("工位ID"))
+		return
+	}
+
+	devices, err := h.service.GetADDevices(c.Request.Context(), workstationID)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	response.Success(c, devices)
+}
+
+// GetAssetDevices 实时查询资产设备
+// @Summary 实时查询工位关联的资产设备
+// @Description 通过工位绑定的用户实时查询其名下的资产设备（不保存到数据库）
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param id path string true "工位ID"
+// @Success 200 {object} response.Response{data=[]models.WorkstationDevice}
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/workstation-device/{id}/asset [post]
+func (h *WorkstationDeviceHandler) GetAssetDevices(c *gin.Context) {
+	workstationID := c.Param("id")
+	if workstationID == "" {
+		response.Error(c, apperrors.ParamMissing("工位ID"))
+		return
+	}
+
+	devices, err := h.service.GetAssetDevices(c.Request.Context(), workstationID)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	response.Success(c, devices)
+}
+
+// SetPrimaryAndSave 设置主设备并保存
+// @Summary 将 AD/资产设备设为主设备并保存为手动设备
+// @Description 用于将实时查询到的 AD 或资产设备持久化到数据库并标记为主设备。
+// 后端在保存前会以 device_serial 为键实时拉取 AD 与资产两侧设备列表并按字段优先级
+// 合并（deviceName 优先 AD；deviceModel/deviceType/responsibleUser 优先资产；
+// macAddress 优先 AD 再资产再请求；ipAddress 优先 AD），并清理该工位下旧的
+// AD/资产来源记录，最终写入 IsPrimary=true 的 manual 记录。
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param id path string true "设备临时ID（ad-{index} 或 asset-{index}，仅用于前端标识）"
+// @Param request body opsServices.SetPrimaryAndSaveRequest true "主设备信息"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/workstation-device/{id}/set-primary-and-save [post]
+func (h *WorkstationDeviceHandler) SetPrimaryAndSave(c *gin.Context) {
+	var req opsServices.SetPrimaryAndSaveRequest
+	if !handleJSONBinding(c, &req) {
+		return
+	}
+
+	if err := h.service.SetPrimaryAndSave(c.Request.Context(), c.Param("id"), &req); err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	response.Success(c, gin.H{"message": "设置成功"})
 }
 
 // SyncAD 同步域控设备

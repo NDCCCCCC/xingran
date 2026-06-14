@@ -592,7 +592,22 @@ export const assetApi = {
 // ==================== 工位设备关联 ====================
 
 export const workstationDeviceApi = {
-  // 查询工位设备列表
+  // 查询工位下手动持久化的设备
+  getManual: async (workstationId: string) => {
+    return await post<WorkstationDevice[]>(`/ops/workstation-device/${workstationId}`, {});
+  },
+
+  // 实时查询工位关联的域控设备
+  getAD: async (workstationId: string) => {
+    return await post<WorkstationDevice[]>(`/ops/workstation-device/${workstationId}/ad`, {});
+  },
+
+  // 实时查询工位关联的资产设备
+  getAsset: async (workstationId: string) => {
+    return await post<WorkstationDevice[]>(`/ops/workstation-device/${workstationId}/asset`, {});
+  },
+
+  // 查询工位下全部设备（手动持久化部分），与 getManual 等价；保留为兼容旧调用
   getByWorkstation: async (workstationId: string) => {
     return await post<WorkstationDevice[]>(`/ops/workstation-device/${workstationId}`, {});
   },
@@ -602,14 +617,32 @@ export const workstationDeviceApi = {
     return await post<WorkstationDevice>('/ops/workstation-device/manual', data);
   },
 
-  // 同步 AD 设备
+  // 同步 AD 设备到数据库（保留旧接口，新流程使用 getAD 实时查询）
   syncAD: async (workstationId: string) => {
     return await post('/ops/workstation-device/sync-ad', { workstation_id: workstationId });
   },
 
-  // 同步资产设备
+  // 同步资产设备到数据库（保留旧接口，新流程使用 getAsset 实时查询）
   syncAsset: async (workstationId: string) => {
     return await post('/ops/workstation-device/sync-asset', { workstation_id: workstationId });
+  },
+
+  // 将 AD/资产设备设为主设备并保存为手动设备
+  // 注：后端在保存前会按 device_serial 自动合并 AD + 资产实时数据，无需前端额外传参
+  setPrimaryAndSave: async (
+    deviceId: string,
+    data: {
+      workstationId: string;
+      deviceSerial: string;
+      deviceName: string;
+      deviceModel?: string;
+      deviceType?: string;
+      macAddress?: string;
+      ipAddress?: string;
+      responsibleUser?: string;
+    }
+  ) => {
+    return await post(`/ops/workstation-device/${deviceId}/set-primary-and-save`, data);
   },
 
   // 更新设备
@@ -622,7 +655,7 @@ export const workstationDeviceApi = {
     return await post(`/ops/workstation-device/${id}/delete`, {});
   },
 
-  // 设置主设备
+  // 设置主设备（仅对已持久化的手动设备生效）
   setPrimary: async (id: string) => {
     return await post(`/ops/workstation-device/${id}/set-primary`, {});
   },
