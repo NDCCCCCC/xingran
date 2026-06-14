@@ -4,11 +4,11 @@ milestone: v1.5
 milestone_name: MAC地址历史数据管理
 status: shipping
 stopped_at: Phase 14 context gathered (5 gray areas clarified, 1 deferred)
-last_updated: "2026-06-14T12:44:38.544Z"
+last_updated: "2026-06-14T13:21:52.734Z"
 progress:
   total_phases: 32
   completed_phases: 16
-  total_plans: 113
+  total_plans: 119
   completed_plans: 107
   percent: 50
 ---

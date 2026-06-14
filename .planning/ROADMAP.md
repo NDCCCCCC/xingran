@@ -66,7 +66,7 @@
 
 - [x] Phase 12: 数据模型与采集集成 (5/5 plans) — completed 2026-05-11
 - [ ] Phase 13: 查询层与轨迹 (5/5 plans) — planned
-- [ ] Phase 14: 前端与用户体验 (0/5 plans) — planned
+- [ ] Phase 14: 前端与用户体验 (0/6 plans) — planned
 - [ ] Phase 15: 性能优化 (0/5 plans) — planned
 
 </details>
@@ -179,15 +179,16 @@
 
 **Goal**: 基于 Phase 12 (数据模型与采集集成) 与 Phase 13 (查询层与轨迹) 的后端能力,补齐 MAC 地址历史数据管理的完整前端 UX — 包括查询列表页、轨迹可视化页、Excel 导出、菜单与权限注册、与网络设备/工位模块的联动入口,以及移动端响应式适配
 **Depends on**: Phase 12 (数据模型与采集集成), Phase 13 (查询层与轨迹) — 后端 API 必须先就位
-**Status**: 📋 Planned (待规划, 0/5 plans)
+**Status**: 📋 Planned (待规划, 0/6 plans)
 
-**预期子计划 (5 plans)**:
+**预期子计划 (6 plans, 14-05 拆分为 14-05a + 14-05b)**:
 
 - [ ] 14-01-PLAN.md — MAC 历史查询主列表页 (时间筛选、MAC/设备/端口筛选、分页、操作列)
 - [ ] 14-02-PLAN.md — 轨迹可视化页 UX 增强 (ECharts Gantt 交互、停留时长热力、时间范围预设导出)
 - [ ] 14-03-PLAN.md — 菜单/权限/路由注册 (与 sys_menu 同步,与现有网络设备模块并列展示)
 - [ ] 14-04-PLAN.md — Excel 导出与批量操作 (后端 export 接口 + 前端 download 触发)
-- [ ] 14-05-PLAN.md — 移动端响应式 + 空状态/错误状态打磨 (卡片/表格切换,加载/空数据/异常兜底)
+- [ ] 14-05a-PLAN.md — 共享三态组件抽取 (EmptyStateWithAction + ErrorAlertWithRetry,Wave 2)
+- [ ] 14-05b-PLAN.md — 列表/轨迹页改造 + 网络设备联动入口 (Wave 3,保留 14-04 导出按钮)
 
 **Phase Highlights**:
 
