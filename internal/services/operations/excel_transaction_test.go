@@ -1,6 +1,7 @@
 package operations
 
 import (
+	"context"
 	"testing"
 
 	"gorm.io/gorm"
@@ -37,13 +38,11 @@ func TestImportData_TransactionSignature(t *testing.T) {
 	var _ func() = func() {
 		var s ExcelService
 		var db *gorm.DB
-		var ctx interface{}
-		var records []map[string]interface{}
+		var records []map[string]any
 		var result *ImportResult
 		var config ExcelConfig
-		_ = ctx
 		// If this compiles, the signature has the db parameter in the right place.
-		_, _ = s.processThreeLevelDepartments(nil, db, records, result, config)
+		_, _ = s.processThreeLevelDepartments(context.TODO(), db, records, result, config)
 	}
 
 	t.Log("processThreeLevelDepartments signature includes db *gorm.DB parameter")
@@ -54,7 +53,7 @@ func TestEnsureDeptGroupExists_Signature(t *testing.T) {
 	var _ func() = func() {
 		var s ExcelService
 		var db *gorm.DB
-		_ = s.ensureDeptGroupExists(nil, db, "code", "name")
+		_ = s.ensureDeptGroupExists(context.TODO(), db, "code", "name")
 	}
 	t.Log("ensureDeptGroupExists signature includes db *gorm.DB parameter")
 }
@@ -64,7 +63,7 @@ func TestEnsureDeptExists_Signature(t *testing.T) {
 	var _ func() = func() {
 		var s ExcelService
 		var db *gorm.DB
-		_ = s.ensureDeptExists(nil, db, "code", "name", "parent")
+		_ = s.ensureDeptExists(context.TODO(), db, "code", "name", "parent")
 	}
 	t.Log("ensureDeptExists signature includes db *gorm.DB parameter")
 }
@@ -74,7 +73,7 @@ func TestFindDeptIDByCode_Signature(t *testing.T) {
 	var _ func() = func() {
 		var s ExcelService
 		var db *gorm.DB
-		_, _ = s.findDeptIDByCode(nil, db, "code")
+		_, _ = s.findDeptIDByCode(context.TODO(), db, "code")
 	}
 	t.Log("findDeptIDByCode signature includes db *gorm.DB parameter")
 }
