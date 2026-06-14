@@ -21,7 +21,7 @@ progress:
 **Phase**: 32 (v1-14-p1-p2) — ALL 7 WAVES COMPLETE (15 P1 + 8 P2 = 23 项全部闭环)
 **Plan**: 07 (test coverage — AD 模块 LDAP 接口 + group_sync + user_ou 测试)
 **Status**: ✅ 已完成
-**Last activity**: 2026-06-14 - Completed quick task 260614-dpz: 工位设置主设备时按序列号合并资产+域控数据再同步
+**Last activity**: 2026-06-14 - Completed quick task 260614-rrk: 工位编辑模态框 Cascader/Select 显示名称而非 UUID
 
 ## Current Position
 
@@ -142,6 +142,7 @@ Plan: 7 of 7 (Wave 7 COMPLETE ✅)
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
+| 260614-rrk | 工位编辑模态框：所属楼层 Cascader + 所属用户 Select 显示名称/账号（昵称）而非 UUID | 2026-06-14 | b9f8894 | [260614-rrk-id](./quick/260614-rrk-id/) |
 | 260614-dpz | 工位设置主设备时按序列号合并资产+域控数据再同步 | 2026-06-14 | dcfd552 | [260614-dpz-workstation-main-device-merge](./quick/260614-dpz-workstation-main-device-merge/) |
 | 260612-d2x | 工位管理页面子表格设备信息添加字段ip地址 | 2026-06-12 | 8ad0f4a | [260612-d2x-ip](./quick/260612-d2x-ip/) |
 | 260609-rowselect | 修复域控用户页面多选框显示问题 | 2026-06-09 | 7a5b095 | [20260609-ad-user-rowselection-fix](./quick/20260609-ad-user-rowselection-fix/) |
