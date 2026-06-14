@@ -31,7 +31,15 @@ type WorkstationDeviceService interface {
 	// AddDeviceManual 手动添加设备（序列号匹配）
 	AddDeviceManual(ctx context.Context, req *AddDeviceRequest) (*models.WorkstationDevice, error)
 
-	// SetPrimaryAndSave 设置主设备并保存到数据库（用于AD/资产设备转为手动设备）
+	// SetPrimaryAndSave 设置主设备并保存到数据库（用于AD/资产设备转为手动设备）。
+	// 在保存为 manual 设备前，会以 device_serial 为键实时拉取 AD/资产两侧数据并合并：
+	//   - deviceName 优先取 AD 的 DeviceName，再 fallback 到 req
+	//   - deviceModel/deviceType 优先取资产
+	//   - macAddress 优先取 AD MAC，再 fallback 资产 MAC1，再 req
+	//   - ipAddress 优先取 AD 的 IPAddress，再 fallback req
+	//   - responsibleUser 优先取资产的 NowUserName，再 fallback req
+	//   - assetID/adComputerID 在两侧分别命中时填充
+	// 任一来源查询失败时仅记录 warn 并降级继续，不阻塞保存。
 	SetPrimaryAndSave(ctx context.Context, deviceID string, req *SetPrimaryAndSaveRequest) error
 
 	// UpdateDevice 更新设备信息
@@ -185,18 +193,20 @@ func (s *workstationDeviceService) GetADDevices(ctx context.Context, workstation
 
 	// 转换为 WorkstationDevice 格式（不保存）
 	devices := make([]*models.WorkstationDevice, 0, len(adDevices))
-	for _, adDevice := range adDevices {
+	for i, adDevice := range adDevices {
+		tempID := fmt.Sprintf("ad-%d", i)
+		adDeviceCopy := adDevice
 		devices = append(devices, &models.WorkstationDevice{
+			BaseModel:        models.BaseModel{ID: tempID},
 			WorkstationID:    workstationID,
 			DeviceSource:     models.DeviceSourceAD,
-			ADComputerID:     &adDevice.ADComputerID,
-			DeviceSerial:     &adDevice.DeviceSerial,
-			DeviceName:       &adDevice.DeviceName,
-			MACAddress:       &adDevice.MACAddress,
+			ADComputerID:     &adDeviceCopy.ADComputerID,
+			DeviceSerial:     &adDeviceCopy.DeviceSerial,
+			DeviceName:       &adDeviceCopy.DeviceName,
+			MACAddress:       &adDeviceCopy.MACAddress,
 			Status:           0,
 			IsPrimary:        false,
 			Priority:         0,
-			// 使用临时ID标识（格式：ad-{index}）
 		})
 	}
 
@@ -253,20 +263,22 @@ func (s *workstationDeviceService) GetAssetDevices(ctx context.Context, workstat
 
 	// 转换为 WorkstationDevice 格式（不保存）
 	devices := make([]*models.WorkstationDevice, 0, len(assetDevices))
-	for _, assetDevice := range assetDevices {
+	for i, assetDevice := range assetDevices {
+		tempID := fmt.Sprintf("asset-%d", i)
+		assetDeviceCopy := assetDevice
 		devices = append(devices, &models.WorkstationDevice{
+			BaseModel:        models.BaseModel{ID: tempID},
 			WorkstationID:    workstationID,
-			DeviceSource:      models.DeviceSourceAsset,
-			AssetID:           &assetDevice.AssetID,
-			DeviceSerial:      &assetDevice.DeviceSN,
-			DeviceModel:       assetDevice.DeviceModel,
-			DeviceType:        assetDevice.DeviceType,
-			MACAddress:        assetDevice.MACAddress,
-			ResponsibleUser:   assetDevice.ResponsibleUser,
-			Status:            0,
-			IsPrimary:         false,
-			Priority:          0,
-			// 使用临时ID标识（格式：asset-{index}）
+			DeviceSource:     models.DeviceSourceAsset,
+			AssetID:          &assetDeviceCopy.AssetID,
+			DeviceSerial:     &assetDeviceCopy.DeviceSN,
+			DeviceModel:      assetDeviceCopy.DeviceModel,
+			DeviceType:       assetDeviceCopy.DeviceType,
+			MACAddress:       assetDeviceCopy.MACAddress,
+			ResponsibleUser:  assetDeviceCopy.ResponsibleUser,
+			Status:           0,
+			IsPrimary:        false,
+			Priority:         0,
 		})
 	}
 
@@ -769,6 +781,20 @@ func (s *workstationDeviceService) SetPrimaryDevice(ctx context.Context, id stri
 }
 
 // SetPrimaryAndSave 设置主设备并保存到数据库（用于AD/资产设备转为手动设备）
+//
+// 合并策略：以传入的 device_serial 为键，实时拉取 AD 与资产两侧设备列表，
+// 按以下优先级填充合并字段。任一来源查询失败时仅记录 warn 并降级继续。
+//   - deviceName:    AD.DeviceName > req.DeviceName
+//   - deviceModel:   asset.DeviceModelName > req.DeviceModel
+//   - deviceType:    asset.DeviceTypeName  > req.DeviceType
+//   - macAddress:    AD.MACAddress > asset.MAC1 > req.MACAddress
+//   - ipAddress:     AD.IPAddress  > req.IPAddress
+//   - responsibleUser: asset.NowUserName > req.ResponsibleUser
+//   - assetID:       asset 命中时填 asset.ID
+//   - adComputerID:  AD 命中时填 ADComputerID
+//
+// 事务内：删除工位下 device_source IN ('ad','asset') 的旧记录 -> 取消旧主设备
+// -> 写入合并后的 manual 记录（IsPrimary=true）。
 func (s *workstationDeviceService) SetPrimaryAndSave(ctx context.Context, deviceID string, req *SetPrimaryAndSaveRequest) error {
 	if deviceID == "" {
 		return apperrors.ParamMissing("设备ID")
@@ -791,39 +817,120 @@ func (s *workstationDeviceService) SetPrimaryAndSave(ctx context.Context, device
 		return fmt.Errorf("工位不存在: %w", err)
 	}
 
-	// 尝试通过序列号匹配资产系统
-	var assetID *string
-	var deviceModel, deviceType *string
-
-	var asset models.Asset
-	err = s.db.WithContext(ctx).
-		Where("devicesn = ? AND deleted_at IS NULL", req.DeviceSerial).
-		First(&asset).Error
-
-	if err == nil {
-		// 找到匹配的资产
-		assetID = &asset.ID
-		if req.DeviceModel == nil {
-			deviceModel = asset.DeviceModelName
-		}
-		if req.DeviceType == nil {
-			deviceType = asset.DeviceTypeName
-		}
+	// 实时拉取 AD/资产两侧设备列表，按 device_serial 做合并。
+	// 拉取失败仅记录 warn 并降级继续，不阻塞保存流程。
+	adDevices, adErr := s.GetADDevices(ctx, req.WorkstationID)
+	if adErr != nil {
+		logger.Warnf("[SetPrimaryAndSave] 拉取AD设备失败,降级继续 - WorkstationID: %s, Error: %v",
+			req.WorkstationID, adErr)
+		adDevices = nil
 	}
 
-	// 合并请求数据和资产数据
-	finalDeviceName := &req.DeviceName
-	finalDeviceModel := req.DeviceModel
-	if finalDeviceModel == nil {
-		finalDeviceModel = deviceModel
+	assetDevices, assetErr := s.GetAssetDevices(ctx, req.WorkstationID)
+	if assetErr != nil {
+		logger.Warnf("[SetPrimaryAndSave] 拉取资产设备失败,降级继续 - WorkstationID: %s, Error: %v",
+			req.WorkstationID, assetErr)
+		assetDevices = nil
 	}
-	finalDeviceType := req.DeviceType
-	if finalDeviceType == nil {
-		finalDeviceType = deviceType
+
+	// 构造以 DeviceSerial 为键的两侧 map（已存在的实时设备不持久化，仅用于查找）。
+	adBySN := make(map[string]*models.WorkstationDevice, len(adDevices))
+	for _, d := range adDevices {
+		if d == nil || d.DeviceSerial == nil {
+			continue
+		}
+		adBySN[*d.DeviceSerial] = d
+	}
+	assetBySN := make(map[string]*models.WorkstationDevice, len(assetDevices))
+	for _, d := range assetDevices {
+		if d == nil || d.DeviceSerial == nil {
+			continue
+		}
+		assetBySN[*d.DeviceSerial] = d
+	}
+
+	// 命中两侧（仅做日志，不影响合并结果）
+	_, adHit := adBySN[req.DeviceSerial]
+	_, assetHit := assetBySN[req.DeviceSerial]
+	logger.Infof("[SetPrimaryAndSave] 合并 - WorkstationID: %s, SN: %s, AD命中: %v, Asset命中: %v",
+		req.WorkstationID, req.DeviceSerial, adHit, assetHit)
+
+	// 合并字段：按"AD优先name/MAC/IP, Asset优先model/type/responsibleUser"策略
+	var (
+		finalDeviceName    *string
+		finalDeviceModel   *string
+		finalDeviceType    *string
+		finalMACAddress    *string
+		finalIPAddress     *string
+		finalResponsible   *string
+		assetID            *string
+		adComputerID       *string
+	)
+
+	// deviceName: AD 优先，其次 req
+	if ad, ok := adBySN[req.DeviceSerial]; ok && ad != nil && ad.DeviceName != nil && *ad.DeviceName != "" {
+		name := *ad.DeviceName
+		finalDeviceName = &name
+	} else if req.DeviceName != "" {
+		name := req.DeviceName
+		finalDeviceName = &name
+	}
+
+	// deviceModel: asset 优先，其次 req
+	if asset, ok := assetBySN[req.DeviceSerial]; ok && asset != nil && asset.DeviceModel != nil && *asset.DeviceModel != "" {
+		finalDeviceModel = asset.DeviceModel
+	} else {
+		finalDeviceModel = req.DeviceModel
+	}
+
+	// deviceType: asset 优先，其次 req
+	if asset, ok := assetBySN[req.DeviceSerial]; ok && asset != nil && asset.DeviceType != nil && *asset.DeviceType != "" {
+		finalDeviceType = asset.DeviceType
+	} else {
+		finalDeviceType = req.DeviceType
+	}
+
+	// macAddress: AD > asset > req
+	if ad, ok := adBySN[req.DeviceSerial]; ok && ad != nil && ad.MACAddress != nil && *ad.MACAddress != "" {
+		finalMACAddress = ad.MACAddress
+	} else if asset, ok := assetBySN[req.DeviceSerial]; ok && asset != nil && asset.MACAddress != nil && *asset.MACAddress != "" {
+		finalMACAddress = asset.MACAddress
+	} else {
+		finalMACAddress = req.MACAddress
+	}
+
+	// ipAddress: AD > req
+	if ad, ok := adBySN[req.DeviceSerial]; ok && ad != nil && ad.IPAddress != nil && *ad.IPAddress != "" {
+		finalIPAddress = ad.IPAddress
+	} else {
+		finalIPAddress = req.IPAddress
+	}
+
+	// responsibleUser: asset 优先，其次 req
+	if asset, ok := assetBySN[req.DeviceSerial]; ok && asset != nil && asset.ResponsibleUser != nil && *asset.ResponsibleUser != "" {
+		finalResponsible = asset.ResponsibleUser
+	} else {
+		finalResponsible = req.ResponsibleUser
+	}
+
+	// assetID / adComputerID: 命中时填充
+	if asset, ok := assetBySN[req.DeviceSerial]; ok && asset != nil && asset.AssetID != nil {
+		assetID = asset.AssetID
+	}
+	if ad, ok := adBySN[req.DeviceSerial]; ok && ad != nil && ad.ADComputerID != nil {
+		adComputerID = ad.ADComputerID
 	}
 
 	// 使用事务确保原子性
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 清理该工位下旧的 AD/资产来源设备（保留 manual 记录）
+		if err := tx.
+			Where("workstation_id = ? AND device_source IN ? AND deleted_at IS NULL",
+				req.WorkstationID, []string{string(models.DeviceSourceAD), string(models.DeviceSourceAsset)}).
+			Delete(&models.WorkstationDevice{}).Error; err != nil {
+			return fmt.Errorf("清理旧AD/资产设备失败: %w", err)
+		}
+
 		// 取消该工位下的所有主设备
 		if err := tx.
 			Model(&models.WorkstationDevice{}).
@@ -832,18 +939,19 @@ func (s *workstationDeviceService) SetPrimaryAndSave(ctx context.Context, device
 			return fmt.Errorf("取消主设备失败: %w", err)
 		}
 
-		// 创建新的手动设备记录
+		// 创建新的手动设备记录（合并字段）
 		newDevice := &models.WorkstationDevice{
 			WorkstationID:    req.WorkstationID,
 			DeviceSource:     models.DeviceSourceManual,
 			AssetID:          assetID,
+			ADComputerID:     adComputerID,
 			DeviceSerial:     &req.DeviceSerial,
 			DeviceName:       finalDeviceName,
 			DeviceModel:      finalDeviceModel,
 			DeviceType:       finalDeviceType,
-			MACAddress:       req.MACAddress,
-			IPAddress:        req.IPAddress,
-			ResponsibleUser:  req.ResponsibleUser,
+			MACAddress:       finalMACAddress,
+			IPAddress:        finalIPAddress,
+			ResponsibleUser:  finalResponsible,
 			Status:           0,
 			IsPrimary:        true,
 			Priority:         0,
@@ -853,8 +961,8 @@ func (s *workstationDeviceService) SetPrimaryAndSave(ctx context.Context, device
 			return fmt.Errorf("保存设备失败: %w", err)
 		}
 
-		logger.Infof("[SetPrimaryAndSave] 成功保存主设备 - WorkstationID: %s, DeviceSerial: %s",
-			req.WorkstationID, req.DeviceSerial)
+		logger.Infof("[SetPrimaryAndSave] 成功保存主设备 - WorkstationID: %s, DeviceSerial: %s, AD命中=%v, Asset命中=%v",
+			req.WorkstationID, req.DeviceSerial, adHit, assetHit)
 
 		return nil
 	})
