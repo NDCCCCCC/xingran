@@ -195,3 +195,13 @@ Phase 14 Plan 02 成功完成 MAC 轨迹页 UX 增强闭环。5 项增强(时间
 **Type Errors:** 0
 **Files Modified:** 1 (MACTrajectoryChart.tsx — 增强)
 **Files Rewritten:** 1 (trajectory.tsx — 增强版)
+## Self-Check: PASSED
+
+All files exist and both commits are recorded in git history:
+- `106fcfb` feat(14-02): enhance trajectory page — time presets, URL prefill, dataZoom, dwell heatmap, timeline Drawer
+- `13db0df` docs(14-02): complete plan execution summary
+
+Files verified:
+- `D:/CODE/ClaudeCode/ruoyi-go-backend/.claude/worktrees/agent-a0227dd1777ddc5c2/.planning/phases/14-frontend-ux/14-02-SUMMARY.md`
+- `D:/CODE/ClaudeCode/ruoyi-go-backend/.claude/worktrees/agent-a0227dd1777ddc5c2/ruoyi-react-frontend/src/components/network/MACTrajectoryChart.tsx`
+- `D:/CODE/ClaudeCode/ruoyi-go-backend/.claude/worktrees/agent-a0227dd1777ddc5c2/ruoyi-react-frontend/src/pages/network/mac/trajectory.tsx`
