@@ -38,8 +38,9 @@ const SettingsPage: FC = () => {
 	const [form] = Form.useForm();
 
 	// 本地状态存储颜色值（字符串格式）
-	const [primaryColor, setPrimaryColor] = useState<string>('#4F46E5');
-	const [sidebarColor, setSidebarColor] = useState<string>('#1E293B');
+	// 初值为空字符串，组件挂载后从用户偏好/admin 默认配置填充，避免硬编码 fallback
+	const [primaryColor, setPrimaryColor] = useState<string>('');
+	const [sidebarColor, setSidebarColor] = useState<string>('');
 
 	// 加载设置
 	useEffect(() => {
@@ -134,11 +135,44 @@ const SettingsPage: FC = () => {
 	};
 
 	// 清除自定义颜色
-	const handleClearCustomColors = () => {
-		setPrimaryColor('#4F46E5');
-		setSidebarColor('#1E293B');
-		form.setFieldValue(['theme', 'customColors'], undefined);
-		message.info('自定义颜色已清除，将使用主题预设颜色');
+	const handleClearCustomColors = async () => {
+		try {
+			// 尝试从后端获取管理员配置的默认主题色
+			const defaultTheme = await getDefaultThemeConfig();
+
+			// 主色调：管理员默认 > 当前用户偏好 > 保持现状
+			if (typeof defaultTheme.customColors?.primary === 'string') {
+				setPrimaryColor(defaultTheme.customColors.primary);
+				applyPrimaryColor(defaultTheme.customColors.primary);
+			} else if (typeof preferences.theme.customColors?.primary === 'string') {
+				setPrimaryColor(preferences.theme.customColors.primary);
+				applyPrimaryColor(preferences.theme.customColors.primary);
+			}
+
+			// 侧边栏色：管理员默认 > 当前用户偏好 > 保持现状
+			if (typeof defaultTheme.customColors?.sidebar === 'string') {
+				setSidebarColor(defaultTheme.customColors.sidebar);
+				applySidebarBackgroundColor(defaultTheme.customColors.sidebar);
+			} else if (typeof preferences.theme.customColors?.sidebar === 'string') {
+				setSidebarColor(preferences.theme.customColors.sidebar);
+				applySidebarBackgroundColor(preferences.theme.customColors.sidebar);
+			}
+
+			form.setFieldValue(['theme', 'customColors'], undefined);
+			message.info('自定义颜色已清除，将使用系统默认主题色');
+		} catch {
+			// 403/网络错误时回退到当前用户偏好，不回退到硬编码
+			if (typeof preferences.theme.customColors?.primary === 'string') {
+				setPrimaryColor(preferences.theme.customColors.primary);
+				applyPrimaryColor(preferences.theme.customColors.primary);
+			}
+			if (typeof preferences.theme.customColors?.sidebar === 'string') {
+				setSidebarColor(preferences.theme.customColors.sidebar);
+				applySidebarBackgroundColor(preferences.theme.customColors.sidebar);
+			}
+			form.setFieldValue(['theme', 'customColors'], undefined);
+			message.warning('无法获取管理员默认主题色，已恢复为当前保存的自定义颜色');
+		}
 	};
 
 	// 主色调变化处理
@@ -161,6 +195,43 @@ const SettingsPage: FC = () => {
 
 		// 更新本地状态
 		setSidebarColor(hexColor);
+	};
+
+	// ColorPicker 清除回调：从管理员默认配置/用户偏好恢复（异步）
+	const handlePrimaryColorClear = async () => {
+		try {
+			const defaultTheme = await getDefaultThemeConfig();
+			if (typeof defaultTheme.customColors?.primary === 'string') {
+				setPrimaryColor(defaultTheme.customColors.primary);
+				applyPrimaryColor(defaultTheme.customColors.primary);
+				return;
+			}
+		} catch {
+			// 403/网络错误：继续走用户偏好回退
+			message.warning('无法获取管理员默认主题色');
+		}
+		// 回退到当前用户偏好而非硬编码
+		if (typeof preferences.theme.customColors?.primary === 'string') {
+			setPrimaryColor(preferences.theme.customColors.primary);
+			applyPrimaryColor(preferences.theme.customColors.primary);
+		}
+	};
+
+	const handleSidebarColorClear = async () => {
+		try {
+			const defaultTheme = await getDefaultThemeConfig();
+			if (typeof defaultTheme.customColors?.sidebar === 'string') {
+				setSidebarColor(defaultTheme.customColors.sidebar);
+				applySidebarBackgroundColor(defaultTheme.customColors.sidebar);
+				return;
+			}
+		} catch {
+			message.warning('无法获取管理员默认主题色');
+		}
+		if (typeof preferences.theme.customColors?.sidebar === 'string') {
+			setSidebarColor(preferences.theme.customColors.sidebar);
+			applySidebarBackgroundColor(preferences.theme.customColors.sidebar);
+		}
 	};
 
 	if (!initialized) {
@@ -234,10 +305,7 @@ const SettingsPage: FC = () => {
 									format="hex"
 									showText
 									allowClear
-									onClear={() => {
-										setPrimaryColor('#4F46E5');
-										applyPrimaryColor('#4F46E5');
-									}}
+									onClear={handlePrimaryColorClear}
 								/>
 							</Col>
 							<Col>
@@ -267,10 +335,7 @@ const SettingsPage: FC = () => {
 									format="hex"
 									showText
 									allowClear
-									onClear={() => {
-										setSidebarColor('#1E293B');
-										applySidebarBackgroundColor('#1E293B');
-									}}
+									onClear={handleSidebarColorClear}
 								/>
 							</Col>
 							<Col>
