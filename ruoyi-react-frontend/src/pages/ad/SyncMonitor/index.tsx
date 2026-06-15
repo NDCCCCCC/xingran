@@ -44,7 +44,7 @@ const SyncMonitor: React.FC = () => {
   // 获取同步状态
   const fetchStatus = async () => {
     try {
-      const result = await post('/api/v1/ad/groups/sync/status', {});
+      const result = await post('/ad/groups/sync/status', {});
       setStatus(result.data as SyncStatus);
     } catch (error) {
       message.error('获取状态失败');
@@ -55,7 +55,7 @@ const SyncMonitor: React.FC = () => {
   const fetchLogs = async () => {
     setLoading(true);
     try {
-      const result = await post('/api/v1/ad/groups/sync/logs', {
+      const result = await post('/ad/groups/sync/logs', {
         current: 1,
         pageSize: 10
       });
@@ -71,7 +71,7 @@ const SyncMonitor: React.FC = () => {
   const handleSync = async () => {
     setSyncing(true);
     try {
-      await post('/api/v1/ad/groups/sync', { configId: 'default' });
+      await post('/ad/groups/sync', { configId: 'default' });
       message.success('同步已触发');
       fetchStatus();
       fetchLogs();
