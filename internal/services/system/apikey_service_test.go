@@ -15,8 +15,11 @@ import (
 )
 
 // setupTestDB 创建测试数据库连接
+// _enable_boolean=true 启用 mattn/go-sqlite3 driver 的布尔整数序列化模式,
+// 让 Go bool 序列化为 1/0 (而非 "true"/"false"),与 GORM bool 字段语义一致,
+// 修复 is_active 等列在 Where("is_active = ?", true) 查询时不匹配的预存问题。
 func setupTestDB(t *testing.T) *gorm.DB {
-	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{
+	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared&_enable_boolean=true"), &gorm.Config{
 		DisableForeignKeyConstraintWhenMigrating: true, // 禁用外键约束以避免SQLite兼容性问题
 	})
 	require.NoError(t, err)
@@ -74,7 +77,7 @@ func setupTestDB(t *testing.T) *gorm.DB {
 			user_id TEXT,
 			expires_at DATETIME,
 			last_used_at DATETIME,
-			is_active BOOLEAN DEFAULT 1,
+			is_active INTEGER DEFAULT 1,
 			scopes TEXT,
 			ip_whitelist TEXT,
 			description TEXT,
@@ -133,10 +136,25 @@ func createTestAPIKey(t *testing.T, db *gorm.DB, userID string, isActive bool) *
 		UserID:      &userID,
 		Scopes:      []string{"read", "write"},
 		IPWhitelist: []string{},
-		IsActive:    isActive,
+		// 注意:不要在 struct 里设 IsActive — GORM SQLite driver 会把 Go bool
+		// 序列化为 SQL 字面量 "true"/"false",SQLite 将 "false" 转 INTEGER 时存为 1
+		// (SQLite 把 "true" 字面量也识别为 1,见 mattn/go-sqlite3 driver 行为)。
+		// 改在 Create 后用 raw SQL 显式写 0/1 整数,确保与 Where("is_active = ?", bool) 语义一致。
 	}
 	err := db.Create(apiKey).Error
 	require.NoError(t, err)
+
+	// 用 raw SQL 显式设置 is_active (整数 0/1,绕过 GORM bool 序列化 bug)
+	// 使用 db.Exec 而非 db.Model().Update() 避免 GORM 事务持有导致 SQLite 共享写锁竞争。
+	activeVal := 0
+	if isActive {
+		activeVal = 1
+	}
+	err = db.Exec("UPDATE sys_api_keys SET is_active = ? WHERE id = ?", activeVal, apiKey.ID).Error
+	require.NoError(t, err)
+
+	// 同步内存对象
+	apiKey.IsActive = isActive
 	return apiKey
 }
 
@@ -294,8 +312,6 @@ func TestValidateAPIKey(t *testing.T) {
 		assert.Equal(t, apiKey.ID, validated.ID)
 		assert.Equal(t, apiKey.Name, validated.Name)
 		assert.True(t, validated.IsActive)
-
-		cleanupTestData(t, db)
 	})
 
 	t.Run("无效格式_无前缀", func(t *testing.T) {
@@ -364,7 +380,7 @@ func TestValidateAPIKey(t *testing.T) {
 
 		// 验证前：last_used_at 为空
 		var beforeUpdate models.APIKey
-		db.First(&beforeUpdate, apiKey.ID)
+		db.First(&beforeUpdate, "id = ?", apiKey.ID)
 		assert.Nil(t, beforeUpdate.LastUsedAt)
 
 		// 验证密钥
@@ -376,7 +392,7 @@ func TestValidateAPIKey(t *testing.T) {
 
 		// 验证后：last_used_at 已更新
 		var afterUpdate models.APIKey
-		db.First(&afterUpdate, apiKey.ID)
+		db.First(&afterUpdate, "id = ?", apiKey.ID)
 		assert.NotNil(t, afterUpdate.LastUsedAt)
 		assert.WithinDuration(t, time.Now(), *afterUpdate.LastUsedAt, 5*time.Second)
 
