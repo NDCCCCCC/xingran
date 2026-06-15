@@ -5,19 +5,28 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	"gorm.io/gorm"
 )
 
 // AgentHandler Agent 注册处理器
 type AgentHandler struct {
-	db *gorm.DB
+	db   *gorm.DB
+	core *core.Core
 }
 
 // NewAgentHandler 创建 Agent 处理器
 func NewAgentHandler(db *gorm.DB) *AgentHandler {
 	return &AgentHandler{db: db}
+}
+
+// WithCore 注入 core 依赖（用于操作日志埋点），链式调用
+func (h *AgentHandler) WithCore(core *core.Core) *AgentHandler {
+	h.core = core
+	return h
 }
 
 // AgentRegisterRequest Agent 注册请求
@@ -57,6 +66,11 @@ func (h *AgentHandler) RegisterAgent(c *gin.Context) {
 
 	// 生成 Agent ID
 	agentID := fmt.Sprintf("agent-%s-%s", req.Hostname, generateRandomString(8))
+
+	// RecordWithBody 屏蔽请求体中可能包含的 agent_key / token / secret 等敏感字段
+	// （T-34-W6-03 缓解）。当前 AgentRegisterRequest 未含 agent_key，但保持
+	// 屏蔽调用以便未来扩展字段时不漏掩。
+	operlog.RecordWithBody(c, h.core.OperLogService, h.core.GetDB(), "Agent注册", operlog.OperTypeRegister)
 
 	response.Success(c, AgentRegisterResponse{
 		VMID:    vmID,

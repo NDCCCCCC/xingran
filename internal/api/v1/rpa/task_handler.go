@@ -6,7 +6,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/rpa"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
@@ -17,6 +19,7 @@ const rpaBatchReportTimeout = 10 * time.Second
 type TaskHandler struct {
 	taskService  rpa.TaskService
 	excelService *rpa.RPAExcelService
+	core         *core.Core
 }
 
 // NewTaskHandler 创建任务处理器
@@ -25,6 +28,12 @@ func NewTaskHandler(taskService rpa.TaskService, excelService *rpa.RPAExcelServi
 		taskService:  taskService,
 		excelService: excelService,
 	}
+}
+
+// WithCore 注入 core 依赖（用于操作日志埋点），链式调用
+func (h *TaskHandler) WithCore(core *core.Core) *TaskHandler {
+	h.core = core
+	return h
 }
 
 // List 任务列表
@@ -56,6 +65,8 @@ func (h *TaskHandler) Create(c *gin.Context) {
 	if handleError(c, err, http.StatusInternalServerError, "创建失败") {
 		return
 	}
+
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "RPA任务", operlog.OperTypeCreate)
 
 	success(c, task)
 }
@@ -94,6 +105,8 @@ func (h *TaskHandler) Update(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "RPA任务", operlog.OperTypeUpdate)
+
 	successMsg(c, "更新成功")
 }
 
@@ -107,6 +120,8 @@ func (h *TaskHandler) Delete(c *gin.Context) {
 	if handleError(c, h.taskService.Delete(c.Request.Context(), id), http.StatusInternalServerError, "删除失败") {
 		return
 	}
+
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "RPA任务", operlog.OperTypeDelete)
 
 	successMsg(c, "删除成功")
 }
@@ -131,6 +146,8 @@ func (h *TaskHandler) Execute(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "RPA任务", operlog.OperTypeOther)
+
 	success(c, execution)
 }
 
@@ -154,6 +171,8 @@ func (h *TaskHandler) UploadExcel(c *gin.Context) {
 	if handleError(c, err, http.StatusInternalServerError, "Excel 解析失败") {
 		return
 	}
+
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "RPA任务", operlog.OperTypeUpload)
 
 	success(c, result)
 }
@@ -204,6 +223,8 @@ func (h *TaskHandler) ExecuteWithExcel(c *gin.Context) {
 			}
 		}()
 	}
+
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "RPA任务", operlog.OperTypeOther)
 
 	success(c, gin.H{
 		"execution":  execution,

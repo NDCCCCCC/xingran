@@ -25,7 +25,7 @@ func SetupRPARouter(r *gin.RouterGroup, core *core.Core) {
 	excelService := rpa.NewRPAExcelService(core.GetDB())
 
 	// 任务路由
-	SetupTaskRouter(r.Group("/tasks"), NewTaskHandler(services.TaskService, excelService))
+	SetupTaskRouter(r.Group("/tasks"), NewTaskHandler(services.TaskService, excelService).WithCore(core))
 
 	// Worker 路由（排除已公开的注册接口）
 	SetupWorkerRouter(r.Group("/workers"), services, core)
@@ -34,7 +34,7 @@ func SetupRPARouter(r *gin.RouterGroup, core *core.Core) {
 	SetupExecutionRouter(r.Group("/executions"), NewExecutionHandler(services.ExecutionService, excelService))
 
 	// 凭证管理路由
-	SetupCredentialRouter(r.Group("/credentials"), NewCredentialHandler(services.CredentialService))
+	SetupCredentialRouter(r.Group("/credentials"), NewCredentialHandler(services.CredentialService).WithCore(core))
 
 	// AI 辅助路由
 	SetupAIRouter(r.Group("/ai"), NewAIHandler(services.AIService))

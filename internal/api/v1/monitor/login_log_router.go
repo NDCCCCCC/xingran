@@ -14,7 +14,7 @@ func SetupLoginLogRouter(r *gin.RouterGroup, core *core.Core) {
 	)
 
 	// 创建Handler
-	handler := NewLoginLogHandler(loginLogService)
+	handler := NewLoginLogHandler(loginLogService).WithCore(core)
 
 	// 注册路由
 	r.POST("/list", handler.List)

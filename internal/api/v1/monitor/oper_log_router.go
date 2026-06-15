@@ -14,7 +14,7 @@ func SetupOperLogRouter(r *gin.RouterGroup, core *core.Core) {
 	)
 
 	// 创建Handler
-	handler := NewOperLogHandler(operLogService)
+	handler := NewOperLogHandler(operLogService).WithCore(core)
 
 	// 注册路由
 	r.POST("/list", handler.List)

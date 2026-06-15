@@ -4,8 +4,10 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	rpamodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/rpa"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/rpa"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
@@ -13,6 +15,7 @@ import (
 type CredentialHandler struct {
 	credentialService rpa.CredentialService
 	sessionService    rpa.CredentialService
+	core              *core.Core
 }
 
 // NewCredentialHandler 创建凭证处理器
@@ -21,6 +24,12 @@ func NewCredentialHandler(credService rpa.CredentialService) *CredentialHandler 
 		credentialService: credService,
 		sessionService:    credService,
 	}
+}
+
+// WithCore 注入 core 依赖（用于操作日志埋点），链式调用
+func (h *CredentialHandler) WithCore(core *core.Core) *CredentialHandler {
+	h.core = core
+	return h
 }
 
 // List 列出凭证
@@ -60,6 +69,9 @@ func (h *CredentialHandler) Create(c *gin.Context) {
 		return
 	}
 
+	// T-34-W6-02 缓解：RecordWithBody 屏蔽 password/secret/key/token 等敏感字段
+	operlog.RecordWithBody(c, h.core.OperLogService, h.core.GetDB(), "RPA凭据", operlog.OperTypeCreate)
+
 	success(c, cred)
 }
 
@@ -97,6 +109,9 @@ func (h *CredentialHandler) Update(c *gin.Context) {
 		return
 	}
 
+	// T-34-W6-02 缓解：RecordWithBody 屏蔽敏感字段
+	operlog.RecordWithBody(c, h.core.OperLogService, h.core.GetDB(), "RPA凭据", operlog.OperTypeUpdate)
+
 	successMsg(c, "更新成功")
 }
 
@@ -111,6 +126,8 @@ func (h *CredentialHandler) Delete(c *gin.Context) {
 	if handleError(c, h.credentialService.DeleteCredential(c.Request.Context(), id, userID), http.StatusInternalServerError, "删除失败") {
 		return
 	}
+
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "RPA凭据", operlog.OperTypeDelete)
 
 	successMsg(c, "删除成功")
 }
@@ -153,6 +170,9 @@ func (h *CredentialHandler) InvalidateSession(c *gin.Context) {
 	if handleError(c, h.sessionService.InvalidateSession(c.Request.Context(), id, reason), http.StatusInternalServerError, "操作失败") {
 		return
 	}
+
+	// T-34-W6-02 缓解：失效会话属于凭据/令牌生命周期变更，使用 OperTypeStatus
+	operlog.RecordWithBody(c, h.core.OperLogService, h.core.GetDB(), "RPA凭据", operlog.OperTypeStatus)
 
 	successMsg(c, "会话已失效")
 }

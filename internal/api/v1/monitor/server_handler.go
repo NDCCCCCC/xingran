@@ -4,8 +4,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	monitorServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/monitor"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
@@ -14,6 +16,7 @@ import (
 // ServerHandler 服务器监控处理器
 type ServerHandler struct {
 	serverService monitorServices.ServerService
+	core          *core.Core
 }
 
 // NewServerHandler 创建服务器监控处理器
@@ -21,6 +24,12 @@ func NewServerHandler(serverService monitorServices.ServerService) *ServerHandle
 	return &ServerHandler{
 		serverService: serverService,
 	}
+}
+
+// WithCore 注入 core 依赖（用于操作日志埋点），链式调用
+func (h *ServerHandler) WithCore(core *core.Core) *ServerHandler {
+	h.core = core
+	return h
 }
 
 // GetServerInfo 获取服务器信息
@@ -134,6 +143,8 @@ func (h *ServerHandler) SaveSystemMetrics(c *gin.Context) {
 	if !responseHelpers.HandleServiceError(c, err, "保存系统指标") {
 		return
 	}
+
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "服务监控", operlog.OperTypeSync)
 
 	response.Success(c, gin.H{"message": "保存成功"})
 }

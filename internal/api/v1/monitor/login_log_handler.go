@@ -2,7 +2,9 @@ package monitor
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	monitorServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/monitor"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
@@ -10,11 +12,18 @@ import (
 // LoginLogHandler 登录日志处理器
 type LoginLogHandler struct {
 	service monitorServices.LoginLogService
+	core    *core.Core
 }
 
 // NewLoginLogHandler 创建登录日志处理器实例
 func NewLoginLogHandler(service monitorServices.LoginLogService) *LoginLogHandler {
 	return &LoginLogHandler{service: service}
+}
+
+// WithCore 注入 core 依赖（用于操作日志埋点），链式调用
+func (h *LoginLogHandler) WithCore(core *core.Core) *LoginLogHandler {
+	h.core = core
+	return h
 }
 
 // LoginLogListRequest 登录日志列表请求
@@ -112,6 +121,8 @@ func (h *LoginLogHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "登录日志", operlog.OperTypeDelete)
+
 	response.Success(c, nil)
 }
 
@@ -139,6 +150,8 @@ func (h *LoginLogHandler) BatchDelete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "登录日志", operlog.OperTypeBatch)
+
 	response.Success(c, nil)
 }
 
@@ -155,6 +168,8 @@ func (h *LoginLogHandler) Clean(c *gin.Context) {
 		response.Error(c, apperrors.InternalServerError(err))
 		return
 	}
+
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "登录日志", operlog.OperTypeClean)
 
 	response.Success(c, gin.H{"message": "清空成功"})
 }

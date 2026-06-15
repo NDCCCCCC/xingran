@@ -9,6 +9,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	monitorServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/monitor"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
@@ -35,6 +36,12 @@ func NewCacheHandler(cacheService monitorServices.CacheService, core *core.Core)
 		cacheService: cacheService,
 		core:         core,
 	}
+}
+
+// WithCore 覆盖 core 依赖（链式调用，供 router 在构造后再次注入用于操作日志埋点）
+func (h *CacheHandler) WithCore(core *core.Core) *CacheHandler {
+	h.core = core
+	return h
 }
 
 // ==================== 辅助方法 ====================
@@ -216,6 +223,8 @@ func (h *CacheHandler) OperateCache(c *gin.Context) {
 	// 异步保存操作日志
 	go h.saveCacheOperationLog(req, result)
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "缓存监控", operlog.OperTypeUpdate)
+
 	response.Success(c, result)
 }
 
@@ -275,6 +284,8 @@ func (h *CacheHandler) BatchOperateCache(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "缓存监控", operlog.OperTypeBatch)
+
 	response.Success(c, results)
 }
 
@@ -292,6 +303,8 @@ func (h *CacheHandler) ClearCache(c *gin.Context) {
 		response.Error(c, apperrors.CacheOperationFailed(err))
 		return
 	}
+
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "缓存监控", operlog.OperTypeClean)
 
 	response.Success(c, gin.H{"message": "清空成功"})
 }
@@ -457,6 +470,8 @@ func (h *CacheHandler) UpdateCacheConfig(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "缓存监控", operlog.OperTypeUpdate)
+
 	response.Success(c, gin.H{"message": "配置更新成功"})
 }
 
@@ -473,6 +488,8 @@ func (h *CacheHandler) ReloadCacheConfigs(c *gin.Context) {
 		response.Error(c, apperrors.CacheOperationFailed(err))
 		return
 	}
+
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "缓存监控", operlog.OperTypeOther)
 
 	response.Success(c, gin.H{"message": "配置重新加载成功"})
 }

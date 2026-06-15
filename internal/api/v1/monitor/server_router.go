@@ -15,7 +15,7 @@ func SetupServerRouter(r *gin.RouterGroup, core *core.Core) {
 	serverService := monitorServices.NewServerService(core.DB.GetDB(), provider)
 
 	// 创建Handler
-	handler := NewServerHandler(serverService)
+	handler := NewServerHandler(serverService).WithCore(core)
 
 	// 注册路由
 	r.POST("/server-info/list", handler.GetServerInfo)
