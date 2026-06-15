@@ -12,6 +12,9 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
+// AD域单分组同步超时时间
+const adSingleGroupSyncTimeout = 2 * time.Minute
+
 // ADDomainHandler AD域管理处理器
 type ADDomainHandler struct {
 	service *addomainServices.ADDomainService
@@ -781,7 +784,7 @@ func (h *ADDomainHandler) SyncSingleGroup(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Minute)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), adSingleGroupSyncTimeout)
 	defer cancel()
 
 	if err := h.service.GroupSync.SyncSingleGroup(ctx, req.ConfigID, req.GroupDN); err != nil {
