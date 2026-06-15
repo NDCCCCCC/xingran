@@ -10,7 +10,7 @@ import (
 // SetupArticleRouter 设置知识库文章路由
 func SetupArticleRouter(r *gin.RouterGroup, core *core.Core) {
 	knowledgeService := createKnowledgeService(core)
-	articleHandler := NewArticleHandler(knowledgeService)
+	articleHandler := NewArticleHandler(knowledgeService).WithCore(core)
 
 	r.POST("/list", articleHandler.List)
 	r.POST("/search", articleHandler.Search)
@@ -24,7 +24,7 @@ func SetupArticleRouter(r *gin.RouterGroup, core *core.Core) {
 // SetupCategoryRouter 设置知识库分类路由
 func SetupCategoryRouter(r *gin.RouterGroup, core *core.Core) {
 	knowledgeService := createKnowledgeService(core)
-	categoryHandler := NewCategoryHandler(knowledgeService)
+	categoryHandler := NewCategoryHandler(knowledgeService).WithCore(core)
 
 	r.POST("/list", categoryHandler.List)
 	r.POST("", categoryHandler.Create)
@@ -36,7 +36,7 @@ func SetupCategoryRouter(r *gin.RouterGroup, core *core.Core) {
 // SetupTagRouter 设置知识库标签路由
 func SetupTagRouter(r *gin.RouterGroup, core *core.Core) {
 	knowledgeService := createKnowledgeService(core)
-	tagHandler := NewTagHandler(knowledgeService)
+	tagHandler := NewTagHandler(knowledgeService).WithCore(core)
 
 	r.POST("/all", tagHandler.GetAll)
 	r.POST("", tagHandler.Create)
@@ -47,7 +47,7 @@ func SetupTagRouter(r *gin.RouterGroup, core *core.Core) {
 // SetupWorkOrderRouter 设置工单转知识库路由
 func SetupWorkOrderRouter(r *gin.RouterGroup, core *core.Core) {
 	knowledgeService := createKnowledgeService(core)
-	articleHandler := NewArticleHandler(knowledgeService)
+	articleHandler := NewArticleHandler(knowledgeService).WithCore(core)
 
 	r.POST("/:id", articleHandler.ConvertFromWorkOrder)
 }
@@ -56,8 +56,8 @@ func SetupWorkOrderRouter(r *gin.RouterGroup, core *core.Core) {
 func SetupKnowledgeViewRouter(r *gin.RouterGroup, core *core.Core) {
 	knowledgeService := createKnowledgeService(core)
 
-	articleHandler := NewArticleHandler(knowledgeService)
-	categoryHandler := NewCategoryHandler(knowledgeService)
+	articleHandler := NewArticleHandler(knowledgeService).WithCore(core)
+	categoryHandler := NewCategoryHandler(knowledgeService).WithCore(core)
 
 	// 文章查看路由
 	articles := r.Group("/articles")

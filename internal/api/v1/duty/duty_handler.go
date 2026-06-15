@@ -5,9 +5,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	dutyServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/duty"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
@@ -16,11 +18,20 @@ import (
 // DutyHandler 值班管理处理器
 type DutyHandler struct {
 	service dutyServices.DutyCacheService
+	core    *core.Core
 }
 
 // NewDutyHandler 创建值班管理处理器实例
 func NewDutyHandler(service dutyServices.DutyCacheService) *DutyHandler {
 	return &DutyHandler{service: service}
+}
+
+// WithCore 注入 core 依赖（操作日志记录所需）。Phase 34 操作日志全模块覆盖。
+func (h *DutyHandler) WithCore(core *core.Core) *DutyHandler {
+	if h != nil && core != nil {
+		h.core = core
+	}
+	return h
 }
 
 // ==================== 值班池管理 ====================
@@ -76,6 +87,7 @@ func (h *DutyHandler) CreatePool(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "值班池", operlog.OperTypeCreate)
 	response.Success(c, pool)
 }
 
@@ -134,6 +146,7 @@ func (h *DutyHandler) UpdatePool(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "值班池", operlog.OperTypeUpdate)
 	response.Success(c, gin.H{"message": "更新成功"})
 }
 
@@ -158,6 +171,7 @@ func (h *DutyHandler) DeletePool(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "值班池", operlog.OperTypeDelete)
 	response.Success(c, gin.H{"message": "删除成功"})
 }
 
@@ -214,6 +228,7 @@ func (h *DutyHandler) GenerateSchedule(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "值班排班", operlog.OperTypeOther)
 	response.Success(c, gin.H{
 		"message": "生成排班成功",
 		"count":   count,
@@ -321,6 +336,7 @@ func (h *DutyHandler) SwapDuty(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "值班排班", operlog.OperTypeOther)
 	response.Success(c, gin.H{"message": "调班成功"})
 }
 
@@ -345,6 +361,7 @@ func (h *DutyHandler) ManualDuty(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "值班排班", operlog.OperTypeOther)
 	response.Success(c, gin.H{"message": "手动排班成功"})
 }
 
@@ -369,6 +386,7 @@ func (h *DutyHandler) DeleteSchedule(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "值班排班", operlog.OperTypeDelete)
 	response.Success(c, gin.H{"message": "删除成功"})
 }
 
@@ -394,6 +412,7 @@ func (h *DutyHandler) BatchDeleteSchedules(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "值班排班", operlog.OperTypeBatch)
 	response.Success(c, gin.H{
 		"message": "批量删除成功",
 		"count":   len(req.IDs),
@@ -473,6 +492,7 @@ func (h *DutyHandler) CreateHoliday(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "值班节假日", operlog.OperTypeCreate)
 	response.Success(c, holiday)
 }
 
@@ -531,6 +551,7 @@ func (h *DutyHandler) DeleteHoliday(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "值班节假日", operlog.OperTypeDelete)
 	response.Success(c, gin.H{"message": "删除成功"})
 }
 
@@ -584,6 +605,7 @@ func (h *DutyHandler) BatchCreateHolidays(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "值班节假日", operlog.OperTypeBatch)
 	response.Success(c, gin.H{
 		"message": "批量创建成功",
 		"count":   len(holidays),
@@ -650,6 +672,7 @@ func (h *DutyHandler) UpdateConfig(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "值班配置", operlog.OperTypeUpdate)
 	response.Success(c, gin.H{"message": "配置更新成功"})
 }
 

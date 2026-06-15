@@ -2,8 +2,10 @@ package knowledge
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	knowledgeServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/knowledge"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
@@ -11,11 +13,20 @@ import (
 // ArticleHandler 知识库文章处理器
 type ArticleHandler struct {
 	service knowledgeServices.KnowledgeCacheService
+	core    *core.Core
 }
 
 // NewArticleHandler 创建文章处理器实例
 func NewArticleHandler(service knowledgeServices.KnowledgeCacheService) *ArticleHandler {
 	return &ArticleHandler{service: service}
+}
+
+// WithCore 注入 core 依赖（操作日志记录所需）。Phase 34 操作日志全模块覆盖。
+func (h *ArticleHandler) WithCore(core *core.Core) *ArticleHandler {
+	if h != nil && core != nil {
+		h.core = core
+	}
+	return h
 }
 
 // List 查询知识库文章列表
@@ -105,6 +116,7 @@ func (h *ArticleHandler) Create(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "知识库文章", operlog.OperTypeCreate)
 	response.Success(c, article)
 }
 
@@ -142,6 +154,7 @@ func (h *ArticleHandler) Update(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "知识库文章", operlog.OperTypeUpdate)
 	response.Success(c, gin.H{"message": "更新成功"})
 }
 
@@ -166,6 +179,7 @@ func (h *ArticleHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "知识库文章", operlog.OperTypeDelete)
 	response.Success(c, gin.H{"message": "删除成功"})
 }
 
@@ -204,6 +218,7 @@ func (h *ArticleHandler) ConvertFromWorkOrder(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "知识库文章", operlog.OperTypeCreate)
 	response.Success(c, article)
 }
 
@@ -262,6 +277,7 @@ func (h *ArticleHandler) Like(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "知识库文章", operlog.OperTypeOther)
 	response.Success(c, gin.H{"message": "点赞成功"})
 }
 
@@ -270,11 +286,20 @@ func (h *ArticleHandler) Like(c *gin.Context) {
 // CategoryHandler 知识库分类处理器
 type CategoryHandler struct {
 	service knowledgeServices.KnowledgeCacheService
+	core    *core.Core
 }
 
 // NewCategoryHandler 创建分类处理器实例
 func NewCategoryHandler(service knowledgeServices.KnowledgeCacheService) *CategoryHandler {
 	return &CategoryHandler{service: service}
+}
+
+// WithCore 注入 core 依赖（操作日志记录所需）。Phase 34 操作日志全模块覆盖。
+func (h *CategoryHandler) WithCore(core *core.Core) *CategoryHandler {
+	if h != nil && core != nil {
+		h.core = core
+	}
+	return h
 }
 
 // List 查询知识库分类列表
@@ -356,6 +381,7 @@ func (h *CategoryHandler) Create(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "知识库分类", operlog.OperTypeCreate)
 	response.Success(c, category)
 }
 
@@ -393,6 +419,7 @@ func (h *CategoryHandler) Update(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "知识库分类", operlog.OperTypeUpdate)
 	response.Success(c, gin.H{"message": "更新成功"})
 }
 
@@ -417,6 +444,7 @@ func (h *CategoryHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "知识库分类", operlog.OperTypeDelete)
 	response.Success(c, gin.H{"message": "删除成功"})
 }
 
@@ -425,11 +453,20 @@ func (h *CategoryHandler) Delete(c *gin.Context) {
 // TagHandler 知识库标签处理器
 type TagHandler struct {
 	service knowledgeServices.KnowledgeCacheService
+	core    *core.Core
 }
 
 // NewTagHandler 创建标签处理器实例
 func NewTagHandler(service knowledgeServices.KnowledgeCacheService) *TagHandler {
 	return &TagHandler{service: service}
+}
+
+// WithCore 注入 core 依赖（操作日志记录所需）。Phase 34 操作日志全模块覆盖。
+func (h *TagHandler) WithCore(core *core.Core) *TagHandler {
+	if h != nil && core != nil {
+		h.core = core
+	}
+	return h
 }
 
 // GetAll 获取所有标签
@@ -474,6 +511,7 @@ func (h *TagHandler) Create(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "知识库标签", operlog.OperTypeCreate)
 	response.Success(c, tag)
 }
 
@@ -507,6 +545,7 @@ func (h *TagHandler) Update(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "知识库标签", operlog.OperTypeUpdate)
 	response.Success(c, gin.H{"message": "更新成功"})
 }
 
@@ -531,5 +570,6 @@ func (h *TagHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "知识库标签", operlog.OperTypeDelete)
 	response.Success(c, gin.H{"message": "删除成功"})
 }

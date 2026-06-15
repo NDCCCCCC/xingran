@@ -10,7 +10,7 @@ import (
 // SetupDutyPoolsRouter 设置值班池路由
 func SetupDutyPoolsRouter(r *gin.RouterGroup, core *core.Core) {
 	service := createDutyService(core)
-	handler := NewDutyHandler(service)
+	handler := NewDutyHandler(service).WithCore(core)
 
 	r.POST("/list", handler.ListPools)
 	r.POST("", handler.CreatePool)
@@ -22,7 +22,7 @@ func SetupDutyPoolsRouter(r *gin.RouterGroup, core *core.Core) {
 // SetupDutySchedulesRouter 设置排班路由
 func SetupDutySchedulesRouter(r *gin.RouterGroup, core *core.Core) {
 	service := createDutyService(core)
-	handler := NewDutyHandler(service)
+	handler := NewDutyHandler(service).WithCore(core)
 
 	r.POST("/list", handler.ListSchedules)
 	r.POST("/generate", handler.GenerateSchedule)
@@ -37,7 +37,7 @@ func SetupDutySchedulesRouter(r *gin.RouterGroup, core *core.Core) {
 // SetupDutyHolidaysRouter 设置节假日路由
 func SetupDutyHolidaysRouter(r *gin.RouterGroup, core *core.Core) {
 	service := createDutyService(core)
-	handler := NewDutyHandler(service)
+	handler := NewDutyHandler(service).WithCore(core)
 
 	r.POST("/list", handler.ListHolidays)
 	r.POST("/years", handler.GetHolidayYears)
@@ -50,7 +50,7 @@ func SetupDutyHolidaysRouter(r *gin.RouterGroup, core *core.Core) {
 // SetupDutyConfigRouter 设置值班配置路由
 func SetupDutyConfigRouter(r *gin.RouterGroup, core *core.Core) {
 	service := createDutyService(core)
-	handler := NewDutyHandler(service)
+	handler := NewDutyHandler(service).WithCore(core)
 
 	r.POST("", handler.GetConfig)
 	r.POST("/update", handler.UpdateConfig)
@@ -59,7 +59,7 @@ func SetupDutyConfigRouter(r *gin.RouterGroup, core *core.Core) {
 // SetupMyDutyRouter 设置我的值班路由
 func SetupMyDutyRouter(r *gin.RouterGroup, core *core.Core) {
 	service := createDutyService(core)
-	handler := NewDutyHandler(service)
+	handler := NewDutyHandler(service).WithCore(core)
 
 	r.POST("/stats", handler.GetMyStats)
 }
