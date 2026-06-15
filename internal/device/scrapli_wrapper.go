@@ -268,6 +268,17 @@ func (w *ScrapliWrapper) releaseOp() {
 	w.opMu.RUnlock()
 }
 
+// GetPrompt 串行化调用 driver.GetPrompt，防御 scrapligo Queue.Dequeue 竞态。
+// scrapligo v1.3.3 的内部 goroutine 在 Dequeue 时存在 TOCTOU 窗口，
+// 并发 GetPrompt 会触发 panic（参见 .planning/debug/scrapligo-queue-panic-windows.md）。
+// v1.4.0 已加双重检查缓解 panic，此处串行化作为稳健的防御纵深保留。
+// 注意：v1.4.0 中 driver.GetPrompt 返回 (string, error)，而非 ([]byte, error)。
+func (w *ScrapliWrapper) GetPrompt() (string, error) {
+	w.getPromptMu.Lock()
+	defer w.getPromptMu.Unlock()
+	return w.driver.GetPrompt()
+}
+
 // Open 打开设备连接（已废弃，使用 OpenContext）
 func (w *ScrapliWrapper) Open() error {
 	// 捕获 scrapligo 库可能的 panic
@@ -356,7 +367,7 @@ func (w *ScrapliWrapper) OpenContext(ctx context.Context) error {
 							_ = r // GetPrompt panic, connection not ready
 						}
 					}()
-					_, err := w.driver.GetPrompt()
+					_, err := w.GetPrompt()
 					if err == nil {
 						ready = true
 					}
@@ -463,7 +474,7 @@ func (w *ScrapliWrapper) IsReady() bool {
 				w.setState(StateClosed)
 			}
 		}()
-		_, err := w.driver.GetPrompt()
+		_, err := w.GetPrompt()
 		return err == nil
 	}()
 
@@ -644,7 +655,7 @@ func (w *ScrapliWrapper) GetResponse() string {
 	}()
 
 	// 安全地获取 prompt，忽略错误（GetPrompt 可能在连接状态不好时失败）
-	prompt, err := w.driver.GetPrompt()
+	prompt, err := w.GetPrompt()
 	if err != nil {
 		return ""
 	}
