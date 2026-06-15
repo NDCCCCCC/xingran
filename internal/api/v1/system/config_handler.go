@@ -5,6 +5,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
@@ -15,6 +16,7 @@ import (
 type ConfigHandler struct {
 	service        systemServices.ConfigService
 	captchaService *core.CaptchaService
+	core           *core.Core
 }
 
 // NewConfigHandler 创建参数配置处理器实例
@@ -23,6 +25,16 @@ func NewConfigHandler(service systemServices.ConfigService, captchaService *core
 		service:        service,
 		captchaService: captchaService,
 	}
+}
+
+// WithCore 注入 core 依赖（操作日志记录所需）。返回 receiver 自身以支持链式调用。
+// Phase 34 操作日志全模块覆盖新增，用于 operlog.Record 访问 core.OperLogService 与
+// core.GetDB()。不改写 NewConfigHandler 双参构造器签名，避免破坏既有调用点。
+func (h *ConfigHandler) WithCore(core *core.Core) *ConfigHandler {
+	if h != nil {
+		h.core = core
+	}
+	return h
 }
 
 // isCaptchaConfig 检查配置键是否与验证码相关
@@ -70,6 +82,7 @@ func (h *ConfigHandler) Create(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "参数管理", operlog.OperTypeCreate)
 	response.Success(c, gin.H{"message": "创建成功"})
 }
 
@@ -256,6 +269,7 @@ func (h *ConfigHandler) Update(c *gin.Context) {
 		}
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "参数管理", operlog.OperTypeUpdate)
 	response.Success(c, gin.H{"message": "更新成功"})
 }
 
@@ -283,6 +297,7 @@ func (h *ConfigHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "参数管理", operlog.OperTypeDelete)
 	response.Success(c, nil)
 }
 
@@ -311,6 +326,7 @@ func (h *ConfigHandler) BatchDelete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "参数管理", operlog.OperTypeBatch)
 	response.Success(c, nil)
 }
 
@@ -329,5 +345,6 @@ func (h *ConfigHandler) RefreshCache(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "参数管理", operlog.OperTypeClean)
 	response.Success(c, gin.H{"message": "刷新缓存成功"})
 }

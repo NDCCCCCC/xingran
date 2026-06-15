@@ -5,10 +5,12 @@ import (
 
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
@@ -19,6 +21,7 @@ type NoticeHandler struct {
 	service          systemServices.NoticeCacheService
 	channelService   systemServices.NotificationChannelService
 	schedulerService SchedulerService
+	core             *core.Core
 }
 
 // SchedulerService 调度器服务接口
@@ -38,6 +41,16 @@ func NewNoticeHandler(
 		channelService:   channelService,
 		schedulerService: schedulerSvc,
 	}
+}
+
+// WithCore 注入 core 依赖（操作日志记录所需）。返回 receiver 自身以支持链式调用。
+// Phase 34 操作日志全模块覆盖新增，用于 operlog.Record 访问 core.OperLogService 与
+// core.GetDB()。不改写 NewNoticeHandler 三参构造器签名，避免破坏既有调用点。
+func (h *NoticeHandler) WithCore(core *core.Core) *NoticeHandler {
+	if h != nil {
+		h.core = core
+	}
+	return h
 }
 
 // Create 创建通知公告
@@ -122,6 +135,7 @@ func (h *NoticeHandler) Create(c *gin.Context) {
 			shouldUpdateToScheduled = true                  // 标记需要更新状态
 		} else {
 			// 没有定时任务，直接返回
+			operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "通知公告", operlog.OperTypeCreate)
 			response.Success(c, gin.H{"id": notice.ID, "message": "创建成功"})
 			return
 		}
@@ -164,6 +178,7 @@ func (h *NoticeHandler) Create(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "通知公告", operlog.OperTypeCreate)
 	response.Success(c, gin.H{"id": notice.ID, "message": "创建成功"})
 }
 
@@ -324,6 +339,7 @@ func (h *NoticeHandler) Update(c *gin.Context) {
 		}
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "通知公告", operlog.OperTypeUpdate)
 	response.Success(c, gin.H{"message": "更新成功"})
 }
 
@@ -358,6 +374,7 @@ func (h *NoticeHandler) Delete(c *gin.Context) {
 		logger.Debugf("[NOTICE] 需要删除定时任务: %s", jobName)
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "通知公告", operlog.OperTypeDelete)
 	response.Success(c, gin.H{"message": "删除成功"})
 }
 
@@ -394,6 +411,7 @@ func (h *NoticeHandler) BatchDelete(c *gin.Context) {
 		}
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "通知公告", operlog.OperTypeBatch)
 	response.Success(c, gin.H{"message": "批量删除成功"})
 }
 
@@ -448,6 +466,7 @@ func (h *NoticeHandler) Publish(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "通知公告", operlog.OperTypeUpdate)
 	response.Success(c, gin.H{"message": "发布成功"})
 }
 
@@ -474,6 +493,7 @@ func (h *NoticeHandler) Withdraw(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "通知公告", operlog.OperTypeUpdate)
 	response.Success(c, gin.H{"message": "撤回成功"})
 }
 
@@ -545,6 +565,7 @@ func (h *NoticeHandler) SetChannels(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "通知公告", operlog.OperTypeUpdate)
 	response.Success(c, gin.H{"message": "设置成功"})
 }
 

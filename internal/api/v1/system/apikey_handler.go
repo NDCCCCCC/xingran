@@ -2,9 +2,11 @@ package system
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
@@ -12,6 +14,7 @@ import (
 // APIKeyHandler API密钥处理器
 type APIKeyHandler struct {
 	apiKeyService systemServices.APIKeyService
+	core          *core.Core
 }
 
 // NewAPIKeyHandler 创建API密钥处理器实例
@@ -19,6 +22,16 @@ func NewAPIKeyHandler(apiKeyService systemServices.APIKeyService) *APIKeyHandler
 	return &APIKeyHandler{
 		apiKeyService: apiKeyService,
 	}
+}
+
+// WithCore 注入 core 依赖（操作日志记录所需）。返回 receiver 自身以支持链式调用。
+// Phase 34 操作日志全模块覆盖新增，用于 operlog.Record 访问 core.OperLogService 与
+// core.GetDB()。不改写 NewAPIKeyHandler 单参构造器签名，避免破坏既有调用点。
+func (h *APIKeyHandler) WithCore(core *core.Core) *APIKeyHandler {
+	if h != nil {
+		h.core = core
+	}
+	return h
 }
 
 // Create 创建API密钥
@@ -53,6 +66,9 @@ func (h *APIKeyHandler) Create(c *gin.Context) {
 		return
 	}
 
+	// T-34-W2-01: API 密钥创建属于敏感路径，用 RecordWithBody 读+还原+遮蔽，
+	// 确保请求体中的 name/scopes 等正常记录，但任何含 secret/key 的字段被遮蔽。
+	operlog.RecordWithBody(c, h.core.OperLogService, h.core.GetDB(), "API密钥管理", operlog.OperTypeCreate)
 	// 返回完整密钥（仅此一次）
 	response.Success(c, gin.H{"key": *key})
 }
@@ -161,6 +177,7 @@ func (h *APIKeyHandler) Update(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "API密钥管理", operlog.OperTypeUpdate)
 	response.Success(c, gin.H{"message": "更新成功"})
 }
 
@@ -187,6 +204,7 @@ func (h *APIKeyHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "API密钥管理", operlog.OperTypeDelete)
 	response.Success(c, gin.H{"message": "删除成功"})
 }
 
@@ -213,6 +231,7 @@ func (h *APIKeyHandler) ToggleStatus(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "API密钥管理", operlog.OperTypeStatus)
 	response.Success(c, gin.H{"message": "状态切换成功"})
 }
 

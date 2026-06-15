@@ -12,7 +12,7 @@ func SetupAPIKeyRouter(r *gin.RouterGroup, coreCore *core.Core) {
 	apiKeyService := systemServices.NewAPIKeyService(coreCore.GetDB())
 
 	// 创建API密钥处理器实例
-	apikeyHandler := NewAPIKeyHandler(apiKeyService)
+	apikeyHandler := NewAPIKeyHandler(apiKeyService).WithCore(coreCore)
 
 	// 注册路由
 	r.POST("", apikeyHandler.Create)

@@ -20,7 +20,7 @@ func SetupNoticeRouter(r *gin.RouterGroup, core *core.Core) {
 	}
 
 	// 创建Handler
-	noticeHandler := NewNoticeHandler(noticeService, channelService, schedulerSvc)
+	noticeHandler := NewNoticeHandler(noticeService, channelService, schedulerSvc).WithCore(core)
 
 	// 通知公告路由
 	r.POST("/list", noticeHandler.List)

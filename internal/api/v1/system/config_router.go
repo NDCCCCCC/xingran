@@ -23,7 +23,7 @@ func SetupConfigRouter(r *gin.RouterGroup, core *core.Core) {
 		configService = systemServices.NewConfigService(core.DB.GetDB())
 	}
 
-	configHandler := NewConfigHandler(configService, core.CaptchaService)
+	configHandler := NewConfigHandler(configService, core.CaptchaService).WithCore(core)
 
 	// 参数配置路由
 	r.POST("/list", configHandler.List)
