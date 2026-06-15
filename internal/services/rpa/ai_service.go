@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
@@ -65,7 +64,7 @@ func NewAIService(cfg *config.Config, db *gorm.DB, cache cache.Cache) AIService 
 		cfg.RPA.AI.Generator.APIKey,
 		cfg.RPA.AI.Generator.Model,
 		cfg.RPA.AI.Generator.MaxTokens,
-		30*time.Second,
+		rpaAIClientDefaultTimeout,
 	)
 
 	// 创建 AI Agent 客户端
@@ -74,7 +73,7 @@ func NewAIService(cfg *config.Config, db *gorm.DB, cache cache.Cache) AIService 
 		cfg.RPA.AI.Agent.APIKey,
 		cfg.RPA.AI.Agent.Model,
 		cfg.RPA.AI.Agent.MaxTokens,
-		30*time.Second,
+		rpaAIClientDefaultTimeout,
 	)
 
 	return &aiServiceImpl{

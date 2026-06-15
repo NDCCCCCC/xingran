@@ -10,6 +10,9 @@ import (
 	"time"
 )
 
+// rpaAIClientDefaultTimeout RPA AI 客户端默认请求超时
+const rpaAIClientDefaultTimeout = 30 * time.Second
+
 // AIClient AI API 客户端（共享）
 type AIClient struct {
 	baseURL   string
