@@ -24,6 +24,10 @@ import (
 	"gorm.io/gorm"
 )
 
+// captchaPregenerateTimeout 图形验证码异步预生成超时
+// 在异步补充缓存 goroutine 中使用的 context 超时，避免散落的硬编码字面量
+const captchaPregenerateTimeout = 30 * time.Second
+
 // CaptchaBackgroundService 验证码背景图服务
 type CaptchaBackgroundService struct {
 	db     *db.Database
@@ -340,7 +344,7 @@ func (s *CaptchaBackgroundService) GetFromCachePool(ctx context.Context, shape s
 
 	// 异步补充缓存
 	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), captchaPregenerateTimeout)
 		defer cancel()
 		_ = s.preGenerateForConfig(ctx, shape, difficulty)
 	}()
