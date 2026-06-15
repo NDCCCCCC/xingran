@@ -21,6 +21,8 @@ func SetupMACHistoryRouter(r *gin.RouterGroup, core *core.Core) {
 	r.POST("/history/trajectory", historyHandler.QueryTrajectory)
 	r.POST("/history/stats", historyHandler.QueryConnectionStats)
 	r.POST("/history/vendor", historyHandler.GetVendor)
+	r.POST("/history/list", historyHandler.QueryHistory)
+	r.GET("/history/list", historyHandler.ExportHistory)
 
-	applogger.Infof("[路由注册] MAC历史查询路由已注册: /history/port, /history/device, /history/trajectory, /history/stats, /history/vendor")
+	applogger.Infof("[路由注册] MAC历史查询路由已注册: /history/port, /history/device, /history/trajectory, /history/stats, /history/vendor, /history/list (POST/GET)")
 }

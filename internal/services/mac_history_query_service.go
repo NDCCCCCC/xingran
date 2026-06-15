@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"regexp"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	"github.com/xuri/excelize/v2"
 	"gorm.io/gorm"
 )
 
@@ -48,6 +50,21 @@ type MACHistoryRecord struct {
 	FirstSeen          time.Time   `json:"firstSeen"`
 	LastSeen           time.Time   `json:"lastSeen"`
 	CollectedAt        time.Time   `json:"collectedAt"`
+}
+
+// MACHistoryListQuery 通用MAC历史列表查询请求（支持过滤+分页）
+type MACHistoryListQuery struct {
+	Current       int    `json:"current" form:"current" binding:"min=1"`
+	PageSize      int    `json:"pageSize" form:"pageSize" binding:"min=1,max=100"`
+	MAC           string `json:"mac,omitempty" form:"mac"`
+	DeviceID      string `json:"deviceId,omitempty" form:"deviceId"`
+	InterfaceName string `json:"interfaceName,omitempty" form:"interfaceName"`
+	VLANID        *int   `json:"vlanId,omitempty" form:"vlanId"`
+	EventType     string `json:"eventType,omitempty" form:"eventType"`
+	Status        *int   `json:"status,omitempty" form:"status"`
+	StartTime     string `json:"startTime,omitempty" form:"startTime"`
+	EndTime       string `json:"endTime,omitempty" form:"endTime"`
+	ExportScope   string `json:"exportScope,omitempty" form:"exportScope"` // "current" or "all"，仅 ExportHistory 使用
 }
 
 // MACHistoryQueryResult MAC历史查询结果
@@ -151,6 +168,8 @@ type ConnectionStatsResponse struct {
 type MACHistoryQueryService interface {
 	QueryPortHistory(ctx context.Context, req *PortHistoryQuery) (*MACHistoryQueryResult, error)
 	QueryDeviceHistory(ctx context.Context, req *DeviceHistoryQuery) (*MACHistoryQueryResult, error)
+	QueryHistory(ctx context.Context, req *MACHistoryListQuery) (*MACHistoryQueryResult, error)
+	ExportHistory(ctx context.Context, req *MACHistoryListQuery, w io.Writer) error
 	QueryMACTrajectory(ctx context.Context, req *MACTrajectoryQuery) (*MACTrajectoryResult, error)
 	QueryConnectionStats(ctx context.Context, req *ConnectionStatsQuery) (*ConnectionStatsResponse, error)
 	ImportOUIData(ctx context.Context) error
@@ -493,6 +512,270 @@ func (s *macHistoryQueryServiceImpl) QueryDeviceHistory(ctx context.Context, req
 	}
 
 	return result, nil
+}
+
+// normalizeMAC 规范化MAC地址：移除分隔符、转大写
+func normalizeMAC(mac string) string {
+	normalized := strings.ReplaceAll(mac, ".", "")
+	normalized = strings.ReplaceAll(normalized, ":", "")
+	normalized = strings.ReplaceAll(normalized, "-", "")
+	normalized = strings.ToUpper(normalized)
+	return normalized
+}
+
+// QueryHistory 通用MAC历史查询（支持任意字段过滤 + 分页）
+// 用于 Phase 14 前端列表页 POST /network/history/list
+func (s *macHistoryQueryServiceImpl) QueryHistory(ctx context.Context, req *MACHistoryListQuery) (*MACHistoryQueryResult, error) {
+	// MAC 地址校验（可选）
+	if req.MAC != "" {
+		if err := validateMACAddress(req.MAC); err != nil {
+			return nil, fmt.Errorf("MAC地址验证失败: %w", err)
+		}
+	}
+
+	// DeviceID UUID 校验（可选）
+	if req.DeviceID != "" {
+		if _, err := uuid.Parse(req.DeviceID); err != nil {
+			return nil, fmt.Errorf("无效的设备ID格式: %w", err)
+		}
+	}
+
+	// 默认值
+	if req.Current < 1 {
+		req.Current = 1
+	}
+	if req.PageSize < 1 {
+		req.PageSize = 20
+	}
+
+	// 构建 GORM 查询链
+	query := s.db.WithContext(ctx).Table("sys_device_mac_history")
+
+	if req.DeviceID != "" {
+		query = query.Where("device_id = ?", req.DeviceID)
+	}
+	if req.InterfaceName != "" {
+		query = query.Where("interface_name = ?", req.InterfaceName)
+	}
+	if req.MAC != "" {
+		query = query.Where("mac_address = ?", normalizeMAC(req.MAC))
+	}
+	if req.VLANID != nil {
+		query = query.Where("vlan_id = ?", *req.VLANID)
+	}
+	if req.EventType != "" {
+		query = query.Where("event_type = ?", req.EventType)
+	}
+	if req.Status != nil {
+		query = query.Where("status = ?", *req.Status)
+	}
+
+	// 时间范围过滤（可选）
+	const maxQueryRange = 365 * 24 * time.Hour
+
+	if req.StartTime != "" && req.EndTime != "" {
+		startTime, err := time.Parse(time.RFC3339, req.StartTime)
+		if err != nil {
+			return nil, fmt.Errorf("无效的开始时间格式: %w", err)
+		}
+		endTime, err := time.Parse(time.RFC3339, req.EndTime)
+		if err != nil {
+			return nil, fmt.Errorf("无效的结束时间格式: %w", err)
+		}
+		if endTime.Sub(startTime) > maxQueryRange {
+			return nil, fmt.Errorf("查询时间跨度过大，最大允许 %d 天", int(maxQueryRange.Hours()/24))
+		}
+		query = query.Where("first_seen >= ?", startTime).
+			Where("first_seen <= ?", endTime)
+	} else if req.StartTime != "" {
+		startTime, err := time.Parse(time.RFC3339, req.StartTime)
+		if err != nil {
+			return nil, fmt.Errorf("无效的开始时间格式: %w", err)
+		}
+		query = query.Where("first_seen >= ?", startTime)
+	} else if req.EndTime != "" {
+		endTime, err := time.Parse(time.RFC3339, req.EndTime)
+		if err != nil {
+			return nil, fmt.Errorf("无效的结束时间格式: %w", err)
+		}
+		query = query.Where("first_seen <= ?", endTime)
+	}
+
+	// 总数
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		applogger.Errorf("[MAC历史查询] 查询总数失败: %v", err)
+		return nil, fmt.Errorf("查询历史记录总数失败: %w", err)
+	}
+
+	// 分页查询
+	offset := (req.Current - 1) * req.PageSize
+	var records []models.DeviceMACHistory
+	if err := query.
+		Order("first_seen DESC").
+		Limit(req.PageSize).
+		Offset(offset).
+		Find(&records).Error; err != nil {
+		applogger.Errorf("[MAC历史查询] 查询记录失败: %v", err)
+		return nil, fmt.Errorf("查询历史记录失败: %w", err)
+	}
+
+	result := &MACHistoryQueryResult{
+		List:     make([]MACHistoryRecord, 0, len(records)),
+		Total:    total,
+		Current:  req.Current,
+		PageSize: req.PageSize,
+	}
+
+	for _, record := range records {
+		result.List = append(result.List, MACHistoryRecord{
+			ID:                 record.ID,
+			DeviceID:           record.DeviceID,
+			DeviceNameSnapshot: record.DeviceNameSnapshot,
+			MACAddress:         record.MACAddress,
+			InterfaceName:      record.InterfaceName,
+			VLANID:             record.VLANID,
+			EventType:          string(record.EventType),
+			FirstSeen:          record.FirstSeen,
+			LastSeen:           record.LastSeen,
+			CollectedAt:        record.CollectedAt,
+		})
+	}
+
+	return result, nil
+}
+
+// ExportHistory 导出MAC历史为 xlsx，写入 io.Writer
+// 用于 Phase 14 前端 GET /network/history/list?format=xlsx
+// 强制 30 天时间上限（UI-02 锁定）；最多 100000 行（DoS 保护）
+func (s *macHistoryQueryServiceImpl) ExportHistory(ctx context.Context, req *MACHistoryListQuery, w io.Writer) error {
+	// MAC 地址校验（可选）
+	if req.MAC != "" {
+		if err := validateMACAddress(req.MAC); err != nil {
+			return fmt.Errorf("MAC地址验证失败: %w", err)
+		}
+	}
+
+	// DeviceID UUID 校验（可选）
+	if req.DeviceID != "" {
+		if _, err := uuid.Parse(req.DeviceID); err != nil {
+			return fmt.Errorf("无效的设备ID格式: %w", err)
+		}
+	}
+
+	// 强制 30 天上限（导出）
+	const maxExportRange = 30 * 24 * time.Hour
+
+	var startTime, endTime time.Time
+	if req.StartTime != "" && req.EndTime != "" {
+		var err error
+		startTime, err = time.Parse(time.RFC3339, req.StartTime)
+		if err != nil {
+			return fmt.Errorf("无效的开始时间格式: %w", err)
+		}
+		endTime, err = time.Parse(time.RFC3339, req.EndTime)
+		if err != nil {
+			return fmt.Errorf("无效的结束时间格式: %w", err)
+		}
+		if endTime.Sub(startTime) > maxExportRange {
+			return fmt.Errorf("导出范围最大 30 天,请缩小查询条件")
+		}
+	} else {
+		// 无时间范围时使用最近 30 天
+		endTime = time.Now()
+		startTime = endTime.Add(-30 * 24 * time.Hour)
+	}
+
+	// 构建 GORM 查询链（不带分页，但加 LIMIT 100000）
+	query := s.db.WithContext(ctx).Table("sys_device_mac_history").
+		Where("first_seen >= ?", startTime).
+		Where("first_seen <= ?", endTime)
+
+	if req.DeviceID != "" {
+		query = query.Where("device_id = ?", req.DeviceID)
+	}
+	if req.InterfaceName != "" {
+		query = query.Where("interface_name = ?", req.InterfaceName)
+	}
+	if req.MAC != "" {
+		query = query.Where("mac_address = ?", normalizeMAC(req.MAC))
+	}
+	if req.VLANID != nil {
+		query = query.Where("vlan_id = ?", *req.VLANID)
+	}
+	if req.EventType != "" {
+		query = query.Where("event_type = ?", req.EventType)
+	}
+	if req.Status != nil {
+		query = query.Where("status = ?", *req.Status)
+	}
+
+	var records []models.DeviceMACHistory
+	if err := query.
+		Order("first_seen DESC").
+		Limit(100000).
+		Find(&records).Error; err != nil {
+		applogger.Errorf("[MAC历史导出] 查询失败: %v", err)
+		return fmt.Errorf("查询导出记录失败: %w", err)
+	}
+
+	// 构建 xlsx 文件
+	f := excelize.NewFile()
+	defer func() {
+		_ = f.Close()
+	}()
+
+	sheetName := "MAC 历史"
+	if _, err := f.NewSheet(sheetName); err != nil {
+		return fmt.Errorf("创建工作表失败: %w", err)
+	}
+	// 删除默认 Sheet1
+	if err := f.DeleteSheet("Sheet1"); err != nil {
+		applogger.Warnf("[MAC历史导出] 删除默认 Sheet1 失败: %v", err)
+	}
+
+	// 表头（9 列）
+	headers := []string{"时间", "MAC", "设备", "端口", "VLAN", "事件类型", "首次出现", "最后出现", "采集时间"}
+	for i, h := range headers {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 1)
+		if err := f.SetCellValue(sheetName, cell, h); err != nil {
+			return fmt.Errorf("写表头失败: %w", err)
+		}
+	}
+
+	// 数据行
+	const timeFormat = "2006-01-02 15:04:05"
+	for rowIdx, record := range records {
+		row := rowIdx + 2 // 第 1 行是表头
+		rowData := []interface{}{
+			record.FirstSeen.Format(timeFormat),
+			record.MACAddress,
+			record.DeviceNameSnapshot,
+			record.InterfaceName,
+			"", // VLAN 默认空
+			record.EventType,
+			record.FirstSeen.Format(timeFormat),
+			record.LastSeen.Format(timeFormat),
+			record.CollectedAt.Format(timeFormat),
+		}
+		if record.VLANID != nil {
+			rowData[4] = *record.VLANID
+		}
+		for colIdx, val := range rowData {
+			cell, _ := excelize.CoordinatesToCellName(colIdx+1, row)
+			if err := f.SetCellValue(sheetName, cell, val); err != nil {
+				return fmt.Errorf("写数据行失败: %w", err)
+			}
+		}
+	}
+
+	// 写入 io.Writer
+	if err := f.Write(w); err != nil {
+		applogger.Errorf("[MAC历史导出] 写入 xlsx 失败: %v", err)
+		return fmt.Errorf("写入 xlsx 失败: %w", err)
+	}
+
+	return nil
 }
 
 // QueryMACTrajectory 查询MAC地址移动轨迹
