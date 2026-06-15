@@ -36,6 +36,9 @@ var (
 	globalADSM4CipherMu      sync.RWMutex
 )
 
+// adSchedulerSyncTimeout AD调度器同步任务超时
+const adSchedulerSyncTimeout = 30 * time.Minute
+
 // SetADSM4Cipher 设置全局AD域SM4加密器（线程安全）
 func SetADSM4Cipher(cipher addomain.PasswordCipher) {
 	globalADSM4CipherMu.Lock()
@@ -174,7 +177,7 @@ func (s *ADSyncScheduler) checkAndSyncADConfigs() {
 			// 使用信号量控制并发数，异步执行同步
 			// 遵循 Go 最佳实践：使用带超时的 context
 			go func(configID string, configName string) {
-				syncCtx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+				syncCtx, cancel := context.WithTimeout(context.Background(), adSchedulerSyncTimeout)
 				defer cancel()
 
 				// 尝试获取信号量
@@ -285,7 +288,7 @@ func ScheduleADSyncForConfig(configID string, delay time.Duration) {
 			return
 		case <-time.After(delay):
 			// 延迟结束，执行同步
-			syncCtx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+			syncCtx, cancel := context.WithTimeout(context.Background(), adSchedulerSyncTimeout)
 			defer cancel()
 			globalADSyncScheduler.syncADConfig(syncCtx, configID)
 		}
