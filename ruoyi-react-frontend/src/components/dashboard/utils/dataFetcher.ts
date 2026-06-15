@@ -184,7 +184,8 @@ export class DataFetcher {
 	private getWebSocketUrl(channel: string): string {
 		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 		const host = import.meta.env.VITE_WS_HOST || window.location.host;
-		return `${protocol}//${host}/ws/${channel}`;
+		const basePath = import.meta.env.VITE_WS_BASE_PATH || '/ws';
+		return `${protocol}//${host}${basePath}/${channel}`;
 	}
 
 	/**
