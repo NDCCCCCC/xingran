@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.12
 milestone_name: 深信服桌面云集成
 status: executing
-stopped_at: Plan 34-10 完成 (Phase 34 操作日志全模块集成 ✅ CLOSED — 10/10 plans, CLAUDE.md + 开发规范.md 文档约定 + regression_test.go 公共 API 锁定)
+stopped_at: Phase 34 Gap-closure 完成 (34-gap — 修复 34-VERIFICATION 25 个遗漏写端点 + e2e 差异扫描加固; operlog 调用 282→308 in api/v1)
 last_updated: "2026-06-16T00:00:00.000Z"
 progress:
   total_phases: 14
@@ -149,6 +149,7 @@ Plan: 10 of 10 (Plan 34-01 ✅ / 34-02 ✅ / 34-03 ✅ / 34-04 ✅ / 34-05 ✅ /
 | 2026-06-16 | Phase 34 Plan 08 完成 (system 子模块操作日志 Wave 7 — FINAL Wave 2 plan) - 8 handler 31 写端点 (dashboard/column_config/notification_config/notice_user/ou_group_mapping/ou_mapping/ad_domain_user_sync/ad_dept_sync) ✅ | 34 |
 | 2026-06-16 | Phase 34 Plan 09 完成 (e2e 验证 harness) - scripts/operlog_e2e_verify.sh 32 抽样端点 + Go 包装 + coverage_test.go 单元测试 ✅ | 34 |
 | 2026-06-16 | Phase 34 Plan 10 完成 (文档 + 回归测试) - CLAUDE.md + docs/开发规范.md 新增强制操作日志约定 + regression_test.go 4 测试锁定公共 API ✅ **PHASE 34 CLOSED (10/10)** | 34 |
+| 2026-06-16 | Phase 34 Gap-closure 完成 (34-gap) - 修复 34-VERIFICATION 发现的 25 个遗漏写端点 (6 handler 文件) + e2e 差异扫描加固 (阈值 250→290 + handler-vs-operlog 全集校验) + user_unlock 合规审计 ✅ | 34 |
 
 ## Quick Tasks Completed
 

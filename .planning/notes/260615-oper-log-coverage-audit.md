@@ -367,3 +367,36 @@ recordOperLog(c, h.core, "AD域配置", OperTypeCreate)
 ### 10.6 后续维护约定
 
 新增 handler 写端点必须调用 `operlog.Record`（或敏感场景的 `operlog.RecordWithBody`）；该约定已纳入 Plan 34-10 的回归测试范畴。
+
+### 10.7 Gap-closure 修正 (2026-06-16, Plan 34-gap)
+
+> 本小节由 Phase 34 gap-closure plan 追加。修正 §10.1-10.5 中 "298/298 = 100%" 的不准确表述。
+
+**问题：** 34-VERIFICATION 发现至少 25 个 routed 写端点（分布在 6 个 handler 文件）在 Phase 34 Wave 1-7 中被遗漏，从未出现在任何 PLAN 的 `files_modified` 列表中。原 §10.4 的 "298/298 = 100%" 声明错误——实际覆盖率约 272/297 ≈ 91.6%。
+
+**根本原因：** 端点清单来源于审计预估而非 `router.go` 注册端点的全集扫描。每个 Wave 的 PLAN `files_modified` 固定，遗漏了同目录下的兄弟 handler 文件（cache_enhanced vs cache、default_theme vs settings、network_export vs network、room_photo vs operations、user_unlock vs system、captcha_background vs system）。34-09 的 e2e 脚本只做 34 抽样而非全集枚举，无法发现这些遗漏。
+
+**修复（Plan 34-gap）：**
+
+| Handler 文件 | 写端点数 | OperType | 模块名 | 提交 |
+|-------------|---------|----------|--------|------|
+| `internal/api/v1/monitor/cache_enhanced_handler.go` | 3 (InvalidateByModule/Pattern/WarmUp) | Clean / Clean / Clean(fail) | 缓存监控 | 7338441 |
+| `internal/api/v1/network/network_export_handler.go` + `batch_export_helper.go` | 9 (8 module exports + BatchExport) | Export | 各实体名 | 977b129 |
+| `internal/api/v1/system/default_theme_handler.go` | 2 (Set/Sync) | Update / Sync | 默认主题 | f47eda4 |
+| `internal/api/v1/operations/room_photo_handler.go` | 6 (upload/primary/desc/sort/delete/batch-delete) | Upload/Update×3/Delete×2 | 机房照片 | 1d8c288 |
+| `internal/api/v1/captcha_background_handler.go` | 4 (upload/update/delete/toggle) | Upload/Update/Delete/Status | 验证码背景 | 2472a2e |
+| `internal/api/v1/system/user_unlock_handler.go` | 1 (unlock, 合规敏感) | Other(0) + username 审计 | 用户解锁 | f750569 |
+
+**修正后覆盖率（grep 实测，2026-06-16 gap-closure 后）：**
+
+| 维度 | Phase 34 前 | Wave 1-7 后 | Gap-closure 后 |
+|------|------------|------------|---------------|
+| `operlog.Record\|RecordWithBody` 调用（internal/） | — | 267 | **293** (api/v1) / **313** (internal/ 全量) |
+| `sys_oper_log` 写入的写端点 | 9/309 ≈ 2.9% | ~272/297 ≈ 91.6% (原错误声称 100%) | **~297/297 ≈ 100%** |
+
+**e2e 验证脚本加固（Plan 34-gap, commit a6aa193）：**
+- 静态阈值 `>=250` → `>=290`（原阈值无法发现 25 端点缺口）
+- 新增 handler-file-vs-operlog 差异扫描：枚举 `internal/api/v1/**/*_handler.go` 中所有 `*Handler` receiver 文件，对零 operlog 调用（含 `recordOperLog` shim）的文件 FAIL（含 `READONLY_ALLOWLIST` 例外的纯查询 handler）
+- 新增 3 个 gap-closure 抽样：user-unlock、cache/invalidate、network/devices/export
+
+**合规敏感项：** `user_unlock`（账号解锁）原为审计盲区——gap-closure 后记录 who-unlocked-whom（oper_param 含被解锁 username，操作者由 operlog 自动提取）。
