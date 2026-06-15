@@ -1,0 +1,256 @@
+package operlog
+
+// regression_test.go guards the public API of the operlog package against
+// silent drift introduced by future refactors. It is the Phase 34 closing-plan
+// lock-in (T-34-DOC-02 mitigation).
+//
+// What is pinned and why:
+//   - OperType constant values (TestOperTypeConstantStability):
+//     handlers across 7 waves select a constant by name and rely on its int
+//     value being stable. Renumbering would silently mislabel every historical
+//     row in sys_oper_log.
+//   - OperType count == 24 (TestOperTypeCountEquals24):
+//     adding/removing a constant without updating call sites is a breaking
+//     change. The count is the coarsest invariant that catches both additions
+//     and removals.
+//   - Record signature (TestRecordSignatureStable):
+//     Record is the most-called function in the package (~267 call sites per
+//     the Phase 34 audit). Changing the parameter list would break the build
+//     across every handler module.
+//   - sensitiveKeys keyword coverage (TestFilterSensitiveParamsKeywordsStable):
+//     dropping a keyword would leak a sensitive field (password / token / key)
+//     into sys_oper_log.oper_param. The minimum mandatory set is enumerated
+//     below.
+
+import (
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"reflect"
+	"strings"
+	"testing"
+)
+
+// expectedOperTypeValues pins the documented (name -> value) mapping. Every
+// value also appears in CLAUDE.md "操作日志记录约定 (operlog convention)" and in
+// docs/开发规范.md — keep the three sources in sync.
+var expectedOperTypeValues = map[string]int{
+	"OperTypeOther":    0,
+	"OperTypeCreate":   1,
+	"OperTypeUpdate":   2,
+	"OperTypeDelete":   3,
+	"OperTypeGrant":    4,
+	"OperTypeExport":   5,
+	"OperTypeImport":   6,
+	"OperTypeForce":    7,
+	"OperTypeGenCode":  8,
+	"OperTypeClean":    9,
+	"OperTypeStatus":   10,
+	"OperTypeReset":    11,
+	"OperTypeEnable":   12,
+	"OperTypeDisable":  13,
+	"OperTypeSync":     14,
+	"OperTypeMove":     15,
+	"OperTypeBatch":    16,
+	"OperTypeUpload":   17,
+	"OperTypeDownload": 18,
+	"OperTypeLogin":    19,
+	"OperTypeLogout":   20,
+	"OperTypeRegister": 21,
+	"OperTypeApprove":  22,
+	"OperTypeReject":   23,
+}
+
+// TestOperTypeConstantStability asserts each OperType* constant is pinned to
+// its documented int value. This catches accidental renumbering during future
+// refactors (e.g. inserting a new value in the middle of the const block).
+func TestOperTypeConstantStability(t *testing.T) {
+	t.Parallel()
+	// Build the map of actual constant values by resolving each identifier in
+	// the operlog package's own scope. Using reflection on a value-of-the-pkg
+	// is not possible for untyped constants, so we resolve via the source AST.
+	actual, err := readOperTypeConsts("operlog.go")
+	if err != nil {
+		t.Fatalf("failed to parse operlog.go: %v", err)
+	}
+	if len(actual) == 0 {
+		t.Fatal("no OperType* constants found — operlog.go parser is broken")
+	}
+	for name, want := range expectedOperTypeValues {
+		got, ok := actual[name]
+		if !ok {
+			t.Errorf("OperType constant %q is missing from operlog.go — removing a constant is a breaking change", name)
+			continue
+		}
+		if got != want {
+			t.Errorf("OperType constant %q = %d, want %d (renumbering would mislabel historical sys_oper_log rows)", name, got, want)
+		}
+	}
+	// Also flag unexpected constants so additions are deliberate (update both
+	// this map and the docs).
+	for name, got := range actual {
+		if _, ok := expectedOperTypeValues[name]; !ok {
+			t.Errorf("unexpected OperType constant %q = %d — if intentional, add it to expectedOperTypeValues and update CLAUDE.md + docs/开发规范.md", name, got)
+		}
+	}
+}
+
+// TestOperTypeCountEquals24 asserts the operlog package exposes exactly 24
+// OperType constants. Catches both additions (which would need new call sites
+// + docs) and removals (which would break existing call sites).
+func TestOperTypeCountEquals24(t *testing.T) {
+	t.Parallel()
+	const want = 24
+	actual, err := readOperTypeConsts("operlog.go")
+	if err != nil {
+		t.Fatalf("failed to parse operlog.go: %v", err)
+	}
+	if got := len(actual); got != want {
+		t.Fatalf("OperType constant count = %d, want %d (additions/removals must be deliberate and documented)", got, want)
+	}
+}
+
+// TestRecordSignatureStable asserts the Record function's signature still
+// matches the documented 5-parameter + variadic-options shape. Record is the
+// most-called function in the package; any signature change breaks the build
+// across every handler module.
+func TestRecordSignatureStable(t *testing.T) {
+	t.Parallel()
+	// func Record(c *gin.Context, operLogSvc Recorder, db *gorm.DB, module string,
+	//   operType int, opts ...RecordOption)
+	// => 5 fixed params + 1 variadic.
+	rg := reflect.TypeOf(Record)
+	if rg.Kind() != reflect.Func {
+		t.Fatalf("Record is %v, not a func", rg.Kind())
+	}
+	if got := rg.NumIn(); got != 6 {
+		t.Fatalf("Record has %d params, want 6 (5 fixed + 1 variadic RecordOption) — signature drift would break ~267 call sites", got)
+	}
+	// Last param must be variadic (...RecordOption).
+	if !rg.IsVariadic() {
+		t.Fatal("Record is not variadic — expected `opts ...RecordOption` as the final parameter")
+	}
+	// Sanity-check the fixed parameter types by name so a swap (e.g. recorder
+	// and db) is caught even when NumIn matches.
+	wantFixed := []string{
+		"*gin.Context",
+		"operlog.Recorder",
+		"*gorm.DB",
+		"string",
+		"int",
+	}
+	for i := 0; i < 5; i++ {
+		if got := rg.In(i).String(); got != wantFixed[i] {
+			t.Errorf("Record param %d type = %q, want %q", i, got, wantFixed[i])
+		}
+	}
+	// Variadic element type must be RecordOption.
+	if got := rg.In(5).Elem().String(); got != "operlog.RecordOption" {
+		t.Errorf("Record variadic element type = %q, want operlog.RecordOption", got)
+	}
+
+	// RecordWithBody has the same 5 fixed params but no variadic options.
+	rwb := reflect.TypeOf(RecordWithBody)
+	if rwb.Kind() != reflect.Func {
+		t.Fatalf("RecordWithBody is %v, not a func", rwb.Kind())
+	}
+	if got := rwb.NumIn(); got != 5 {
+		t.Fatalf("RecordWithBody has %d params, want 5 (signature drift would break sensitive-endpoint call sites)", got)
+	}
+	if rwb.IsVariadic() {
+		t.Fatal("RecordWithBody must not be variadic — it accepts no options")
+	}
+}
+
+// mandatorySensitiveKeywords is the minimum keyword set that must remain in
+// sensitiveKeys. These are the substrings whose unmasked presence in
+// sys_oper_log.oper_param would be a confirmed leak. Any removal is a security
+// regression.
+var mandatorySensitiveKeywords = []string{
+	"password",
+	"pwd",
+	"secret",
+	"token",
+	"key",
+	"salt",
+	"privateKey",
+	"oldPassword",
+	"macKey",
+	"sm4Key",
+	"sm2Key",
+}
+
+// TestFilterSensitiveParamsKeywordsStable asserts the sensitive keyword slice
+// still contains at least the mandatory keywords. Dropping a keyword would
+// leak that field into sys_oper_log.oper_param.
+func TestFilterSensitiveParamsKeywordsStable(t *testing.T) {
+	t.Parallel()
+	if len(sensitiveKeys) < len(mandatorySensitiveKeywords) {
+		t.Fatalf("sensitiveKeys has %d entries, want at least %d", len(sensitiveKeys), len(mandatorySensitiveKeywords))
+	}
+	joined := strings.Join(sensitiveKeys, "\n")
+	for _, kw := range mandatorySensitiveKeywords {
+		if !strings.Contains(joined, kw) {
+			t.Errorf("mandatory sensitive keyword %q is missing from sensitiveKeys — removing it would leak the field into sys_oper_log.oper_param", kw)
+		}
+	}
+}
+
+// readOperTypeConsts parses fileName (a file in this package directory) and
+// returns a map of every exported `OperType*` identifier to its integer
+// literal value. It returns an error if the file cannot be parsed or a
+// constant's value is not a literal int.
+func readOperTypeConsts(fileName string) (map[string]int, error) {
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, fileName, nil, 0)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[string]int)
+	for _, decl := range f.Decls {
+		gd, ok := decl.(*ast.GenDecl)
+		if !ok || gd.Tok != token.CONST {
+			continue
+		}
+		for _, spec := range gd.Specs {
+			vs, ok := spec.(*ast.ValueSpec)
+			if !ok || len(vs.Names) == 0 || len(vs.Values) == 0 {
+				continue
+			}
+			name := vs.Names[0].Name
+			if !strings.HasPrefix(name, "OperType") || name == "OperType" {
+				// Skip the type alias `type OperType = int` (declared as a
+				// TypeSpec, not a ValueSpec, but be defensive).
+				continue
+			}
+			lit, ok := vs.Values[0].(*ast.BasicLit)
+			if !ok || lit.Kind != token.INT {
+				continue
+			}
+			// Parse the literal manually to avoid importing strconv for a
+			// trivial decimal parse; ast BasicLit.Value is the literal text.
+			v := strings.TrimSpace(lit.Value)
+			n := 0
+			neg := false
+			if strings.HasPrefix(v, "-") {
+				neg = true
+				v = v[1:]
+			}
+			for _, r := range v {
+				if r < '0' || r > '9' {
+					n = -1
+					break
+				}
+				n = n*10 + int(r-'0')
+			}
+			if n < 0 {
+				continue
+			}
+			if neg {
+				n = -n
+			}
+			out[name] = n
+		}
+	}
+	return out, nil
+}

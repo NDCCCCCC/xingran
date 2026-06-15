@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.12
 milestone_name: 深信服桌面云集成
 status: executing
-stopped_at: Plan 34-08 完成 (Wave 7 system submodules ✅ — FINAL Wave 2 plan), Phase 34 还剩 Plan 09-10
-last_updated: "2026-06-15T17:19:37.164Z"
+stopped_at: Plan 34-10 完成 (Phase 34 操作日志全模块集成 ✅ CLOSED — 10/10 plans, CLAUDE.md + 开发规范.md 文档约定 + regression_test.go 公共 API 锁定)
+last_updated: "2026-06-16T00:00:00.000Z"
 progress:
   total_phases: 14
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 69
-  completed_plans: 57
-  percent: 50
+  completed_plans: 58
+  percent: 51
 ---
 
 # Project State
@@ -25,13 +25,13 @@ progress:
 
 ## Current Position
 
-Phase: 34 (oper-log-full-coverage) — EXECUTING
-Plan: 10 of 10 (Plan 34-01 ✅ / 34-02 ✅ / 34-03 ✅ / 34-04 ✅ / 34-05 ✅ / 34-06 ✅ / 34-07 ✅ / 34-08 ✅ / 34-09 ✅ 完成 2026-06-16)
+Phase: 34 (oper-log-full-coverage) — ✅ CLOSED (10/10 plans complete)
+Plan: 10 of 10 (Plan 34-01 ✅ / 34-02 ✅ / 34-03 ✅ / 34-04 ✅ / 34-05 ✅ / 34-06 ✅ / 34-07 ✅ / 34-08 ✅ / 34-09 ✅ / 34-10 ✅ 全部完成 2026-06-16)
 **当前里程碑**: v1.16 — 工位设备关联
-**当前阶段**: Phase 34 进行中 — Wave 1 (基础设施) ✅ + Wave 2 (system 核心 ✅) + Wave 2 (system 外围 ✅) + Wave 3 (operations ✅) + Wave 4 (network ✅) + Wave 5 (cross-module ✅) + Wave 6 (monitor+rpa+agent ✅) + Wave 7 (system 子模块 ✅) + Wave 3 (e2e 验证 ✅) 完成
-**状态**: ✅ Phase 34 Plan 09 完成 (端到端验证脚本 scripts/operlog_e2e_verify.sh 32 抽样端点; Go 测试包装 scripts/e2e/operlog_e2e_verify_test.go; 单元测试 internal/utils/operlog/coverage_test.go 覆盖 18 关键词遮罩 + RecordWithBody 恢复; ADMIN_USER/ADMIN_PASSWORD 环境变量契约 + DEV_MODE 回退门; Phase 34 最终覆盖率 298/298 = 100%, 由 9/309 = 2.9% 提升; 267 grep-verifiable Record 调用; 23 RecordWithBody 端点)
-**完成时间**: 2026-06-16 (Plan 34-09)
-**下一计划**: Plan 34-10 (文档与回归测试 — Phase 34 收尾)
+**当前阶段**: Phase 34 ✅ CLOSED — Wave 1 (基础设施) ✅ + Wave 2 (system 核心 ✅) + Wave 2 (system 外围 ✅) + Wave 3 (operations ✅) + Wave 4 (network ✅) + Wave 5 (cross-module ✅) + Wave 6 (monitor+rpa+agent ✅) + Wave 7 (system 子模块 ✅) + Wave 3 (e2e 验证 ✅) + Wave 3 (文档与回归 ✅) 完成
+**状态**: ✅ Phase 34 Plan 10 完成 (Phase 34 收尾 — CLAUDE.md 新增 "操作日志记录约定 (operlog convention)" 强制章节 + docs/开发规范.md 新增 5.1.1 操作日志记录强制条款 + internal/utils/operlog/regression_test.go 4 个回归测试锁定公共 API: 24 个 OperType 常量值/数量、Record 5参+可变参签名、11 个强制敏感关键词; Phase 34 全部 10/10 plans 闭环)
+**完成时间**: 2026-06-16 (Plan 34-10, Phase 34 CLOSED)
+**下一计划**: Phase 34 已闭环，可推进 Phase 22C/22D/25 或新里程碑
 
 ## Project Reference
 
@@ -75,6 +75,7 @@ Plan: 10 of 10 (Plan 34-01 ✅ / 34-02 ✅ / 34-03 ✅ / 34-04 ✅ / 34-05 ✅ /
 | 31 | P0 收尾:连接池 lifecycle + Config API 重设计 | ✅ Completed | 5/5 plans |
 | 32 | v1.14 P1 重构与 P2 架构优化 | 📋 Planned | 0/0 plans |
 | 33 | 前端 Vercel React Best Practices 修复 | ✅ Completed | 4/4 plans |
+| 34 | 操作日志全模块集成 | ✅ Completed | 10/10 plans |
 
 ## Completed Milestones
 
@@ -146,6 +147,8 @@ Plan: 10 of 10 (Plan 34-01 ✅ / 34-02 ✅ / 34-03 ✅ / 34-04 ✅ / 34-05 ✅ /
 | 2026-06-15 | Phase 34 Plan 06 完成 (跨域模块操作日志 Wave 5) - 5 个模块 59 写端点 (vdi/workorder/duty/knowledge/scheduler) ✅ | 34 |
 | 2026-06-16 | Phase 34 Plan 07 完成 (跨模块操作日志 Wave 6) - monitor+rpa+agent 11 handler 45 写端点 (cache/login_log/oper_log/server/agent/task/credential/execution/ai/flow/worker) ✅ | 34 |
 | 2026-06-16 | Phase 34 Plan 08 完成 (system 子模块操作日志 Wave 7 — FINAL Wave 2 plan) - 8 handler 31 写端点 (dashboard/column_config/notification_config/notice_user/ou_group_mapping/ou_mapping/ad_domain_user_sync/ad_dept_sync) ✅ | 34 |
+| 2026-06-16 | Phase 34 Plan 09 完成 (e2e 验证 harness) - scripts/operlog_e2e_verify.sh 32 抽样端点 + Go 包装 + coverage_test.go 单元测试 ✅ | 34 |
+| 2026-06-16 | Phase 34 Plan 10 完成 (文档 + 回归测试) - CLAUDE.md + docs/开发规范.md 新增强制操作日志约定 + regression_test.go 4 测试锁定公共 API ✅ **PHASE 34 CLOSED (10/10)** | 34 |
 
 ## Quick Tasks Completed
 
@@ -302,8 +305,8 @@ Plan: 10 of 10 (Plan 34-01 ✅ / 34-02 ✅ / 34-03 ✅ / 34-04 ✅ / 34-05 ✅ /
 
 ## Session Continuity
 
-Last session: 2026-06-15T17:19:37.152Z
-Stopped at: Plan 34-08 完成 (Wave 7 system submodules ✅ — FINAL Wave 2 plan), Phase 34 还剩 Plan 09-10
-Resume file: Completed 34-09-PLAN.md
+Last session: 2026-06-16T00:00:00.000Z
+Stopped at: Plan 34-10 完成 (Phase 34 操作日志全模块集成 ✅ CLOSED — 10/10 plans, CLAUDE.md + 开发规范.md 文档约定 + regression_test.go 公共 API 锁定)
+Resume file: Completed 34-10-PLAN.md
 
-**Planned Phase:** 34 (oper-log-full-coverage) — 10 plans — Wave 1 ✅ / Wave 2 ✅ / Wave 3 ✅ / Wave 4 ✅ / Wave 5 ✅ / Wave 6 ✅ / Wave 7 ✅ / Plans 09-10 待执行
+**Planned Phase:** 34 (oper-log-full-coverage) — 10 plans — ALL COMPLETE ✅ (Wave 1-7 + e2e + 文档回归) — Phase 34 CLOSED

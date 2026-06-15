@@ -577,7 +577,7 @@ Plans:
 Plans:
 - [ ] TBD (run /gsd-plan-phase 33 to break down)
 
-### Phase 34: 操作日志全模块集成 📋
+### Phase 34: 操作日志全模块集成 ✅
 
 **Goal**: 为 RuoYi-Next 后端所有 309 个业务写操作端点集成操作日志记录，覆盖率从 2.9%（9/309）提升到 100%（309/309）。基于 AD 域控参考实现（`recordOperLog` 模式），按 7 个 Wave 分批实施，确保敏感字段（password/token/key）自动脱敏、异步写入不影响响应。
 
@@ -619,7 +619,7 @@ Plans:
   - 补充单元测试覆盖 helper 函数边界情况
   - 删除中间件方案（保留中间件作为兜底安全网，handler 主动调用 recordOperLog 提供精确语义）
 
-**Plans:** 9/10 plans executed
+**Plans:** 10/10 plans executed — ALL COMPLETE ✅ (Phase 34 CLOSED 2026-06-16)
 
 Plans:
 **Wave 1 — 基础设施 (Foundation)**
@@ -639,6 +639,7 @@ Plans:
 - [x] 34-07-PLAN.md — monitor / rpa / agent 集成 operlog.Record (45 写端点埋点 + rpa credential/AI 全部 RecordWithBody 屏蔽 password/secret/key/token + agent Register 用 OperTypeRegister + cache Clear 用 OperTypeClean) ✅ 2026-06-16 (commits cbb4ef0, 1a3bdf8)
 - [x] 34-08-PLAN.md — system 子模块: dashboard / column_config / notification_config / notice_user / ou_group_mapping / ou_mapping / ad_domain_user_sync / ad_dept_sync 集成 operlog.Record (31 写端点埋点 + 通知配置 Create/Update 用 RecordWithBody 屏蔽 SMTP password 与 API headers/bodyTemplate 密钥 + AD 同步用 OperTypeSync) ✅ 2026-06-16 (commit 3c229ba)
 - [x] 34-09-PLAN.md — Wave 3 e2e 验证: scripts/operlog_e2e_verify.sh 32 抽样端点 + scripts/e2e/operlog_e2e_verify_test.go Go 包装 + internal/utils/operlog/coverage_test.go 单元测试 (FilterSensitiveParams 18 关键词 + RecordWithBody 遮罩+恢复 + 26 模块/operType 抽样) + ADMIN_USER/ADMIN_PASSWORD 环境变量契约 + DEV_MODE 回退门 + 审计笔记 Section 10 (Phase 34 最终覆盖率 298/298 = 100%, 由 9/309 = 2.9% 提升; 267 grep-verifiable Record 调用; 23 RecordWithBody 端点; 18 关键词) ✅ 2026-06-16 (commit 6a0799b)
+- [x] 34-10-PLAN.md — Wave 3 文档与回归 (Phase 34 收尾): CLAUDE.md 新增 "操作日志记录约定 (operlog convention)" 强制章节 (调用模式 + RecordWithBody + 24 OperType 值映射表 + module 中文名规范 + 参考实现) + docs/开发规范.md 新增 5.1.1 操作日志记录强制条款 (7 条规则要点) + internal/utils/operlog/regression_test.go 4 个回归测试锁定公共 API (OperType 24 常量值稳定性 / 常量数=24 / Record 5参+可变参签名 + RecordWithBody 5参非可变参 / 11 个强制敏感关键词覆盖) ✅ 2026-06-16 — **PHASE 34 CLOSED (10/10)**
 
 **Success Criteria**:
 - sys_oper_log 表有效记录数对应 309 个端点，**覆盖率 ≥ 95%**（允许少量内部管理端点豁免）
@@ -690,8 +691,8 @@ Plans:
 | 26. 资产管理模块 | v1.13 | 6/6 | Complete | 2026-06-08 |
 | 27. 全局列自定义显示功能 | v1.14 | 1/1 | Complete | 2026-06-09 |
 | 28. 工位设备关联子表格 | v1.15 | 4/6 | Gap Closure | 2026-06-10 |
-| 34. 操作日志全模块集成 | - | 9/10 | In Progress|  |
+| 34. 操作日志全模块集成 | - | 10/10 | Complete | 2026-06-16 |
 
-**Total**: 122 plans completed, 8 gap closure plans, 24 plans planned (Phases 22C + 22D + 25 + 34), 154 total plans
+**Total**: 123 plans completed, 8 gap closure plans, 23 plans planned (Phases 22C + 22D + 25), 154 total plans
 
 **Completion Rate**: 84.7% (122/144) + 8 gap closure plans shipped

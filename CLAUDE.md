@@ -231,6 +231,63 @@ src/
 
 ## Critical Development Rules
 
+### 操作日志记录约定 (operlog convention) — 强制
+
+**规则:** 所有业务写操作（POST 创建 / 更新 / 删除 / 状态变更 / 导入导出 / 同步 / 批量等）handler 必须在 success path 末尾、`response.Success(...)` **之前**调用 `operlog.Record(...)` 记录操作日志。该约定由 Phase 34（操作日志全模块集成）落地，用于满足审计与可追溯性要求（参考 `.planning/notes/260615-oper-log-coverage-audit.md`）。
+
+**helper 包路径:** `github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog`
+
+**调用模式（非敏感端点）:**
+
+```go
+import "github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
+
+// success path 末尾，response.Success 之前
+operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "用户管理", operlog.OperTypeCreate)
+response.Success(c, user)
+```
+
+**敏感端点（密码 / 密钥 / token / 凭据 / SMTP password / API headers）使用 `RecordWithBody`，自动读取并恢复请求体，对 `password / pwd / secret / token / key / salt / privateKey / oldPassword / macKey / sm4Key / sm2Key / adminPassword / clientSecret / accessKey / secretKey / private_key / publicKey` 等关键词的值脱敏为 `******`:**
+
+```go
+operlog.RecordWithBody(c, h.core.OperLogService, h.core.GetDB(), "API密钥管理", operlog.OperTypeCreate)
+```
+
+**OperType 业务类型常量集（共 24 个，值固定不可重排）:**
+
+| 常量 | 值 | 语义 |
+|------|----|----|
+| `OperTypeOther` | 0 | 其他 |
+| `OperTypeCreate` | 1 | 新增 |
+| `OperTypeUpdate` | 2 | 修改 |
+| `OperTypeDelete` | 3 | 删除 |
+| `OperTypeGrant` | 4 | 授权 |
+| `OperTypeExport` | 5 | 导出 |
+| `OperTypeImport` | 6 | 导入 |
+| `OperTypeForce` | 7 | 强退 |
+| `OperTypeGenCode` | 8 | 生成代码 |
+| `OperTypeClean` | 9 | 清空数据 |
+| `OperTypeStatus` | 10 | 状态变更（启用/停用） |
+| `OperTypeReset` | 11 | 密码/密钥重置 |
+| `OperTypeEnable` | 12 | 启用 |
+| `OperTypeDisable` | 13 | 停用 |
+| `OperTypeSync` | 14 | LDAP/VDI/资产/外部同步 |
+| `OperTypeMove` | 15 | 移动 OU/部门/虚拟机 |
+| `OperTypeBatch` | 16 | 批量新增/删除 |
+| `OperTypeUpload` | 17 | 文件上传 |
+| `OperTypeDownload` | 18 | 文件/模板下载 |
+| `OperTypeLogin` | 19 | 登录 |
+| `OperTypeLogout` | 20 | 登出 |
+| `OperTypeRegister` | 21 | Agent/虚拟机注册 |
+| `OperTypeApprove` | 22 | 审批通过 |
+| `OperTypeReject` | 23 | 审批驳回 |
+
+**module 中文名称规范:** 用户管理 / 角色管理 / 部门管理 / 菜单管理 / 通知公告 / API密钥管理 / 参数管理 / 字典管理 / 岗位管理 / 楼宇管理 / 楼层管理 / 工位管理 / 机房管理 / 资产管理 / 专线管理 / 信息点 / 网络设备 / 设备凭据 / 命令模板 / 拓扑 / MAC地址 / 端口采集 / 虚拟机管理 / VDI服务器 / 工单管理 / 值班池 / 知识库文章 / 定时任务 / 缓存监控 / 操作日志 / Agent管理 / RPA任务 / 仪表盘 / 列配置 / 通知配置 / AD域控同步 等。
+
+**参考实现:** `internal/api/v1/system/ad_domain_handler.go`（Phase 34 之前的唯一参考，现已成为全模块通用约定）。
+
+**回归守护:** `internal/utils/operlog/regression_test.go` 通过 4 个测试锁定公共 API（常量值 / 常量数=24 / Record 5参+可变参 / 11 个强制敏感关键词），任何静默改动都会立即失败。
+
 ### Status Value Convention (IMPORTANT)
 
 **Universal Rule:** `0 = enabled/normal/visible, 1 = disabled/stopped/hidden`
