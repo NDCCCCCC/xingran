@@ -17,6 +17,14 @@ const (
 	MessageTypeRPAFailed    = "rpa_failed"
 )
 
+// noticeHubBufferSize NoticeHub 内部 channel 缓冲大小
+//
+// 适用于 broadcast / register / unregister 三个 hub 内部 channel。
+// F-13 fix: register/unregister 改无缓冲 → 缓冲 chan,避免高并发连接时
+// RegisterClient 同步发送阻塞,客户端在握手阶段可能耗尽 FD 等待。
+// 缓冲 256 与 broadcast 保持一致量级,溢出时调用方等待是合理压力反馈。
+const noticeHubBufferSize = 256
+
 // NoticeHub WebSocket通知中心
 type NoticeHub struct {
 	clients    map[string]*Client
@@ -66,14 +74,10 @@ type RPAProgressMessage struct {
 func NewNoticeHub() *NoticeHub {
 	h := &NoticeHub{
 		clients:   make(map[string]*Client),
-		broadcast: make(chan NoticeMessage, 256),
-		// F-13 fix: register/unregister 改无缓冲 → 缓冲 chan,
-		// 避免高并发连接时 RegisterClient 同步发送阻塞,
-		// 客户端在握手阶段可能耗尽 FD 等待。
-		// 缓冲 256 与 broadcast 保持一致量级,溢出时调用方等待是合理压力反馈。
-		register:   make(chan *Client, 256),
-		unregister: make(chan *Client, 256),
-		stop:       make(chan struct{}),
+		broadcast: make(chan NoticeMessage, noticeHubBufferSize),
+		register:  make(chan *Client, noticeHubBufferSize),
+		unregister: make(chan *Client, noticeHubBufferSize),
+		stop:      make(chan struct{}),
 	}
 	// 初始化对象池，预分配容量减少后续分配
 	h.toDeletePool.New = func() interface{} {
