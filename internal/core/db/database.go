@@ -151,50 +151,64 @@ func (d *Database) GetDB() *gorm.DB {
 }
 
 // cleanupOldConstraints 清理可能存在的旧约束
+//
+// 设计原因: GORM AutoMigrate 与手写 SQL migration 混用导致 unique 约束命名冲突 ——
+//   - SQL inline `UNIQUE`     → PG 自动命名 `<table>_<column>_key`
+//   - GORM `uniqueIndex` tag  → GORM 拼接 `uni_<table>_<column>` 或显式名 `uni_*_*`
+// GORM Migrator.DropConstraint 无 IF EXISTS,试图 DROP 自己命名的旧约束失败 → FATA。
+// 本函数在 AutoMigrate 之前主动清理已知所有可能命名,让 AutoMigrate 走 ADD path 而非 DROP+ADD。
+//
+// 实现: 用 `DROP CONSTRAINT IF EXISTS`(PG 9.0+)单步替代旧的"SELECT count + DROP"两步,
+// 更原子、更少 round-trip、对不存在的约束安全跳过。
 func (d *Database) cleanupOldConstraints() {
 	constraints := []struct {
 		table      string
 		constraint string
 	}{
-		// 知识库分类表：清理旧的唯一约束（保留 idx_kb_category_name）
+		// === 知识库 (SQL CONSTRAINT 命名 vs GORM uniqueIndex:idx_kb_*) ===
 		{"sys_knowledge_category", "uk_knowledge_category_name"},
-		// 知识库标签表：清理旧的唯一约束（如果存在）
 		{"sys_knowledge_tag", "uk_knowledge_tag_name"},
 		{"sys_knowledge_tag", "uni_sys_knowledge_tag_tag_name"},
-		// 工单分类表：清理旧的唯一约束（保留 idx_wo_category_name）
+		// === 工单管理 ===
 		{"sys_workorder_category", "uk_workorder_category_name"},
 		{"sys_workorder_category", "uni_sys_workorder_category_name"},
-		// 工单表：清理旧的唯一约束（保留 idx_wo_no）
 		{"sys_workorder", "uk_workorder_no"},
 		{"sys_workorder", "uni_sys_workorder_work_order_no"},
+		// === 资产管理 (ops_asset.devicesn) ===
+		// migration_148 用 inline UNIQUE → PG 自动名 ops_asset_devicesn_key
+		// models.Asset.DeviceSN 标 uniqueIndex → GORM 期望 uni_ops_asset_devicesn
+		{"ops_asset", "uni_ops_asset_devicesn"},
+		{"ops_asset", "ops_asset_devicesn_key"},
+		// === VDI (128_create_vdi_tables.sql 多个 inline UNIQUE) ===
+		{"sys_vdi_virtual_machines", "sys_vdi_virtual_machines_vm_id_key"},
+		{"sys_vdi_virtual_machines", "uni_sys_vdi_virtual_machines_vm_id"},
+		{"sys_vdi_resource_groups", "sys_vdi_resource_groups_resource_group_id_key"},
+		{"sys_vdi_resource_groups", "uni_sys_vdi_resource_groups_resource_group_id"},
+		// === RPA (102_add_rpa_tables.sql:97 name UNIQUE) ===
+		// 注: 表名待定(需根据实际 SQL 确认), 留作占位由 AutoMigrate 路径走
+		// === AD 域 (016_create_ad_domain_tables.sql named `uk_*` vs model `uni_sys_ad_*`) ===
+		{"sys_ad_groups", "uk_ad_group_dn"},
+		{"sys_ad_users", "uk_ad_user_dn"},
+		{"sys_ad_ous", "uk_ad_ou_dn"},
+		{"sys_ad_configs", "uk_ad_config_name"},
+		{"sys_ad_group_members", "uk_ad_group_member"},
 	}
 
 	for _, c := range constraints {
-		// 先检查约束是否存在
-		var count int64
-		checkSQL := `
-			SELECT COUNT(*)
-			FROM pg_constraint
-			WHERE conname = ? AND conrelid::regclass = ?::regclass
-		`
-
-		err := d.DB.Raw(checkSQL, c.constraint, c.table).Scan(&count).Error
-		if err != nil {
-			// 查询失败，跳过
+		// 先检查表是否存在,不存在则跳过(避免对未创建的表 ALTER 触发 ERRO 日志)
+		// 多数 sys_* / ops_* 表由后续 AutoMigrate 创建,此处 cleanup 阶段尚未存在
+		if !d.DB.Migrator().HasTable(c.table) {
 			continue
 		}
 
-		// 只有约束存在时才删除
-		if count > 0 {
-			sql := fmt.Sprintf("ALTER TABLE %s DROP CONSTRAINT %s", c.table, c.constraint)
-			if err := d.DB.Exec(sql).Error; err != nil {
-				applogger.Warnf("删除约束 %s.%s 失败: %v", c.table, c.constraint, err)
-			} else {
-				applogger.Infof("成功删除约束 %s.%s", c.table, c.constraint)
-			}
+		// PG 9.0+ 支持 `DROP CONSTRAINT IF EXISTS`,单步原子,不存在则安全跳过
+		sql := fmt.Sprintf("ALTER TABLE %s DROP CONSTRAINT IF EXISTS %s", c.table, c.constraint)
+		if err := d.DB.Exec(sql).Error; err != nil {
+			applogger.Debugf("清理约束 %s.%s 跳过: %v", c.table, c.constraint, err)
+			continue
 		}
 
-		// 尝试删除可能存在的同名索引
+		// 同步清理可能存在的同名索引(GORM 有时用 CREATE UNIQUE INDEX 而非 ADD CONSTRAINT)
 		d.DB.Exec(fmt.Sprintf("DROP INDEX IF EXISTS %s", c.constraint))
 	}
 }
@@ -335,8 +349,79 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate150AddWorkstationDeviceIPAddress(d.DB); err != nil {
 			applogger.Errorf("工位设备 IP 地址字段迁移失败: %v", err)
 		}
+		// Phase 15: 性能优化 (PERF-01 复合索引 + PERF-02 物化视图 DDL)
+		if err := migrations.Migrate151MACPerfIndexes(d.DB); err != nil {
+			applogger.Errorf("MAC 历史复合索引迁移失败: %v", err)
+		}
+		if err := migrations.Migrate152MACMatView(d.DB); err != nil {
+			applogger.Errorf("MAC 历史物化视图迁移失败: %v", err)
+		}
+		// 创建 MAC 地址过滤规则表(对应 117_create_mac_filter_rules.sql, 含 5 条系统默认规则)
+		if err := migrations.Migrate117CreateMacFilterRules(d.DB); err != nil {
+			applogger.Errorf("MAC 过滤规则表迁移失败: %v", err)
+		}
+		// 创建 OUI 厂商表(对应 033_create_mac_oui_vendor_table.up.sql)
+		if err := migrations.Migrate033CreateMacOuiVendorTable(d.DB); err != nil {
+			applogger.Errorf("OUI 厂商表迁移失败: %v", err)
+		}
+
+	// 所有迁移完成后,审计约束命名是否一致,提前暴露潜在 AutoMigrate 冲突
+	d.auditConstraintNaming()
 
 	return nil
+}
+
+// auditConstraintNaming 启动期审计 unique 约束命名一致性
+//
+// 背景: GORM `uniqueIndex` tag 期望约束/索引名为 `uni_<table>_<column>`;
+// 而 SQL inline `UNIQUE` 会被 PostgreSQL 自动命名为 `<table>_<column>_key`。
+// 两者并存且 model 有 uniqueIndex tag 时,AutoMigrate 可能 DROP `uni_*`(无 IF EXISTS)→ FATA。
+//
+// 本审计仅扫描 PG 端 `_key` 后缀的 unique 约束并以 INFO 提示 —— 这些"潜在风险"约束
+// 不一定造成实际问题(取决于对应 model 是否有冲突的 uniqueIndex tag):
+//   - 若 model 该字段无 uniqueIndex tag(如纯关联表的 PK,或仅做 NOT NULL UNIQUE):安全,可忽略
+//   - 若 model 该字段有 uniqueIndex tag:需要把 {table, <table>_<col>_key} 加入 cleanupOldConstraints,
+//     并最好把 SQL 改为显式命名 `CONSTRAINT uni_<table>_<col> UNIQUE` 与 GORM 对齐
+func (d *Database) auditConstraintNaming() {
+	if d.Type != "postgres" {
+		return
+	}
+
+	type auditRow struct {
+		TableName      string `gorm:"column:table_name"`
+		ConstraintName string `gorm:"column:constraint_name"`
+	}
+
+	var rows []auditRow
+	err := d.DB.Raw(`
+		SELECT
+			conrelid::regclass::text AS table_name,
+			conname AS constraint_name
+		FROM pg_constraint
+		WHERE contype = 'u'
+		  AND conname LIKE '%\_key' ESCAPE '\'
+		  AND (conrelid::regclass::text LIKE 'sys\_%' ESCAPE '\'
+		    OR conrelid::regclass::text LIKE 'ops\_%' ESCAPE '\')
+		ORDER BY table_name, constraint_name
+	`).Scan(&rows).Error
+
+	if err != nil {
+		applogger.Debugf("约束命名审计跳过: %v", err)
+		return
+	}
+
+	if len(rows) == 0 {
+		applogger.Infof("[约束审计] 所有 unique 约束命名规范一致")
+		return
+	}
+
+	// 改为 INFO 级别,因为多数是历史关联表/复合 unique,不一定造成实际冲突
+	// 真正冲突会在 AutoMigrate 阶段 FATA,届时根据错误信息加入 cleanupOldConstraints
+	applogger.Infof("[约束审计] 发现 %d 个 PG 自动命名 unique 约束(若对应 model 无 uniqueIndex tag 可忽略):", len(rows))
+	for _, r := range rows {
+		applogger.Infof("  · %s.%s", r.TableName, r.ConstraintName)
+	}
+	applogger.Infof("[约束审计] 如遇 `DROP CONSTRAINT uni_*` FATA,把 {表名,约束名} 加入 cleanupOldConstraints 即可")
 }
 
 // migrateCredentialModel 迁移凭证模型（从 credential_type 到 protocol_type）
