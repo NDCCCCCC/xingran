@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -105,20 +106,20 @@ func (s *vmServiceImpl) syncVMsFromVDI(ctx context.Context, client VDIClientExte
 			continue // 跳过未启用的资源组
 		}
 
-		fmt.Printf("[VDI SYNC] Processing resource group: %s (ID: %s)\n", group.Name, group.ID)
+		applogger.Debugf("[VDI] SYNC Processing resource group: %s (ID: %s)", group.Name, group.ID)
 
 		// 2.1 获取该资源组下的所有资源
 		resources, err := client.ListResources(ctx, group.ID)
 		if err != nil {
-			fmt.Printf("Failed to list resources for group %s: %v\n", group.Name, err)
+			applogger.Warnf("[VDI] SYNC Failed to list resources for group %s: %v", group.Name, err)
 			continue
 		}
 
-		fmt.Printf("[VDI SYNC] Found %d resources in group %s\n", len(resources), group.Name)
+		applogger.Debugf("[VDI] SYNC Found %d resources in group %s", len(resources), group.Name)
 
 		// 3. 遍历每个资源，获取虚拟机列表
 		for _, resource := range resources {
-			fmt.Printf("[VDI SYNC] Processing resource: %s (ID: %d)\n", resource.Name, resource.ID)
+			applogger.Debugf("[VDI] SYNC Processing resource: %s (ID: %d)", resource.Name, resource.ID)
 
 			// 分页获取该资源下的所有虚拟机
 			page := 1
@@ -127,7 +128,7 @@ func (s *vmServiceImpl) syncVMsFromVDI(ctx context.Context, client VDIClientExte
 				vms, total, err := client.ListResourceServers(ctx, fmt.Sprintf("%d", resource.ID), page, pageSize)
 				if err != nil {
 					// 记录错误但继续处理其他资源
-					fmt.Printf("Failed to list VMs for resource %s: %v\n", resource.Name, err)
+					applogger.Warnf("[VDI] SYNC Failed to list VMs for resource %s: %v", resource.Name, err)
 					break
 				}
 
@@ -154,7 +155,7 @@ func (s *vmServiceImpl) syncVMsFromVDI(ctx context.Context, client VDIClientExte
 
 // syncResourceGroups 同步资源组到本地数据库
 func (s *vmServiceImpl) syncResourceGroups(ctx context.Context, groups []VDIResourceGroup, vdiServerID string) {
-	fmt.Printf("[VDI SYNC] Syncing %d resource groups for server %s\n", len(groups), vdiServerID)
+	applogger.Debugf("[VDI] SYNC Syncing %d resource groups for server %s", len(groups), vdiServerID)
 
 	for _, group := range groups {
 		// 将VDI的enable字段映射到status: enable=1 -> status=0(正常), 其他 -> status=1(停用)
@@ -177,9 +178,9 @@ func (s *vmServiceImpl) syncResourceGroups(ctx context.Context, groups []VDIReso
 			Where("vdi_server_id = ? AND resource_group_id NOT IN ? AND deleted_at IS NULL", vdiServerID, existingGroupIDs).
 			Delete(&models.VDIResourceGroup{})
 		if result.Error != nil {
-			fmt.Printf("[VDI SYNC] Failed to cleanup orphaned resource groups: %v\n", result.Error)
+			applogger.Warnf("[VDI] SYNC Failed to cleanup orphaned resource groups: %v", result.Error)
 		} else if result.RowsAffected > 0 {
-			fmt.Printf("[VDI SYNC] Cleaned up %d orphaned resource groups\n", result.RowsAffected)
+			applogger.Debugf("[VDI] SYNC Cleaned up %d orphaned resource groups", result.RowsAffected)
 		}
 	}
 }
@@ -201,7 +202,7 @@ func (s *vmServiceImpl) saveOrUpdateResourceGroup(ctx context.Context, group VDI
 			Status:          status,
 		}
 		if err := s.db.WithContext(ctx).Create(&record).Error; err != nil {
-			fmt.Printf("[VDI SYNC] Failed to create resource group %s: %v\n", group.Name, err)
+			applogger.Warnf("[VDI] SYNC Failed to create resource group %s: %v", group.Name, err)
 		}
 	} else if err == nil {
 		// 更新现有记录
@@ -211,16 +212,16 @@ func (s *vmServiceImpl) saveOrUpdateResourceGroup(ctx context.Context, group VDI
 			"status": status,
 		}
 		if err := s.db.WithContext(ctx).Model(&existing).Updates(updates).Error; err != nil {
-			fmt.Printf("[VDI SYNC] Failed to update resource group %s: %v\n", group.Name, err)
+			applogger.Warnf("[VDI] SYNC Failed to update resource group %s: %v", group.Name, err)
 		}
 	} else {
-		fmt.Printf("[VDI SYNC] Failed to query resource group %s: %v\n", group.Name, err)
+		applogger.Warnf("[VDI] SYNC Failed to query resource group %s: %v", group.Name, err)
 	}
 }
 
 // cleanupOrphanedVMs 清理孤立的虚拟机记录
 func (s *vmServiceImpl) cleanupOrphanedVMs(ctx context.Context, vdiVMIDs map[string]bool, vdiServerID string) {
-	fmt.Printf("[VDI SYNC] Starting orphaned VMs cleanup...\n")
+	applogger.Debugf("[VDI] SYNC Starting orphaned VMs cleanup...")
 
 	// 获取本地数据库中该VDI服务器的所有虚拟机
 	var localVMs []models.VDIVirtualMachine
@@ -228,7 +229,7 @@ func (s *vmServiceImpl) cleanupOrphanedVMs(ctx context.Context, vdiVMIDs map[str
 		Where("vdi_server_id = ? AND deleted_at IS NULL", vdiServerID).
 		Find(&localVMs).Error
 	if err != nil {
-		fmt.Printf("[VDI SYNC] Failed to query local VMs: %v\n", err)
+		applogger.Warnf("[VDI] SYNC Failed to query local VMs: %v", err)
 		return
 	}
 
@@ -237,7 +238,7 @@ func (s *vmServiceImpl) cleanupOrphanedVMs(ctx context.Context, vdiVMIDs map[str
 	for _, localVM := range localVMs {
 		if !vdiVMIDs[localVM.VMID] {
 			orphanedIDs = append(orphanedIDs, localVM.ID)
-			fmt.Printf("[VDI SYNC] Found orphaned VM: %s (VM ID: %s)\n", localVM.Name, localVM.VMID)
+			applogger.Debugf("[VDI] SYNC Found orphaned VM: %s (VM ID: %s)", localVM.Name, localVM.VMID)
 		}
 	}
 
@@ -247,12 +248,12 @@ func (s *vmServiceImpl) cleanupOrphanedVMs(ctx context.Context, vdiVMIDs map[str
 			Where("id IN ?", orphanedIDs).
 			Delete(&models.VDIVirtualMachine{})
 		if result.Error != nil {
-			fmt.Printf("[VDI SYNC] Failed to delete orphaned VMs: %v\n", result.Error)
+			applogger.Warnf("[VDI] SYNC Failed to delete orphaned VMs: %v", result.Error)
 		} else {
-			fmt.Printf("[VDI SYNC] Successfully cleaned up %d orphaned VM records\n", result.RowsAffected)
+			applogger.Debugf("[VDI] SYNC Successfully cleaned up %d orphaned VM records", result.RowsAffected)
 		}
 	} else {
-		fmt.Printf("[VDI SYNC] No orphaned VMs found, database is in sync\n")
+		applogger.Debugf("[VDI] SYNC No orphaned VMs found, database is in sync")
 	}
 }
 
@@ -307,7 +308,7 @@ func (s *vmServiceImpl) saveOrUpdateVM(ctx context.Context, resource VDIVMResour
 		}
 		// 调试日志：打印CPU使用率原始值和解析后的值
 		if resource.CPUPer != "" {
-			fmt.Printf("[VDI SYNC DEBUG] VM: %s, CPUPer原始值: '%s', 解析后: %d\n",
+			applogger.Debugf("[VDI] SYNC DEBUG VM: %s, CPUPer原始值: '%s', 解析后: %d",
 				resource.VMName, resource.CPUPer, s.parseIntSafe(resource.CPUPer))
 		}
 		s.db.WithContext(ctx).Create(&vm)
@@ -341,7 +342,7 @@ func (s *vmServiceImpl) saveOrUpdateVM(ctx context.Context, resource VDIVMResour
 				LastSyncAt:    &time.Time{},
 			}
 			if resource.CPUPer != "" {
-				fmt.Printf("[VDI SYNC DEBUG] VM: %s, 清理软删除记录后重新创建, CPUPer: %d\n",
+				applogger.Debugf("[VDI] SYNC DEBUG VM: %s, 清理软删除记录后重新创建, CPUPer: %d",
 					resource.VMName, s.parseIntSafe(resource.CPUPer))
 			}
 			s.db.WithContext(ctx).Create(&vm)
@@ -371,7 +372,7 @@ func (s *vmServiceImpl) saveOrUpdateVM(ctx context.Context, resource VDIVMResour
 				if vm.IPType == "dhcp" && vm.IPAddress != "" && vm.IPAddress != "-" {
 					// DHCP VM with history IP, keep old IP
 					updates["ip_address"] = vm.IPAddress
-					fmt.Printf("[VDI SYNC] VM %s: DHCP mode new IP empty, keeping history IP %s\n", resource.VMName, vm.IPAddress)
+					applogger.Debugf("[VDI] SYNC VM %s: DHCP mode new IP empty, keeping history IP %s", resource.VMName, vm.IPAddress)
 				} else {
 					// Static IP or no history IP, use new value (may be empty)
 					updates["ip_address"] = ipAddress
@@ -725,7 +726,7 @@ func (s *vmServiceImpl) DeleteVM(ctx context.Context, ids []string) error {
 		var vdiAPIErr *VDIError
 		if errors.As(vdiErr, &vdiAPIErr) && vdiAPIErr.Code == 3001 {
 			// 特殊处理：VDI服务器上不存在该虚拟机，记录警告但继续删除本地记录
-			fmt.Printf("[VDI DELETE] VM not found on VDI server (error_code 3001), cleaning up local orphaned records. VM IDs: %v\n", vmIDs)
+			applogger.Warnf("[VDI] DELETE VM not found on VDI server (error_code 3001), cleaning up local orphaned records. VM IDs: %v", vmIDs)
 		} else {
 			// 其他错误：返回原错误，不删除本地记录
 			return fmt.Errorf("failed to delete VMs from VDI: %w", vdiErr)
@@ -914,7 +915,7 @@ func (s *vmServiceImpl) SyncAllVMs(ctx context.Context, serverID string) error {
 	for _, vm := range vms {
 		if err := s.SyncVMFromVDI(ctx, vm.ID); err != nil {
 			// 记录错误但继续同步其他虚拟机
-			fmt.Printf("Failed to sync VM %s: %v\n", vm.VMID, err)
+			applogger.Warnf("[VDI] SYNC Failed to sync VM %s: %v", vm.VMID, err)
 		}
 	}
 

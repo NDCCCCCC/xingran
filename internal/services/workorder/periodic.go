@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/robfig/cron/v3"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -341,7 +342,7 @@ func (s *PeriodicService) GenerateWorkOrder(ctx context.Context, templateID stri
 				Where("pool_id = ? AND schedule_date = ? AND status = ?", *dutyPoolID, todayTime, models.DutyStatusNormal).
 				Find(&schedules).Error; err != nil {
 				// 查询失败，记录日志但不中断流程
-				fmt.Printf("查询值班池 %s 的排班记录失败: %v\n", *dutyPoolID, err)
+				applogger.Warnf("[workorder] 查询值班池 %s 的排班记录失败: %v", *dutyPoolID, err)
 			} else if len(schedules) > 0 {
 				// 获取第一个值班人员的 ID
 				assigneeID = &schedules[0].UserID
@@ -354,9 +355,9 @@ func (s *PeriodicService) GenerateWorkOrder(ctx context.Context, templateID stri
 					Order("member_order ASC").
 					Find(&members).Error; err == nil && len(members) > 0 {
 					assigneeID = &members[0].UserID
-					fmt.Printf("未找到排班记录，从值班池 %s 中选择成员 %s\n", *dutyPoolID, *assigneeID)
+					applogger.Debugf("[workorder] 未找到排班记录，从值班池 %s 中选择成员 %s", *dutyPoolID, *assigneeID)
 				} else {
-					fmt.Printf("值班池 %s 中没有找到有效成员\n", *dutyPoolID)
+					applogger.Warnf("[workorder] 值班池 %s 中没有找到有效成员", *dutyPoolID)
 				}
 			}
 		}
@@ -384,7 +385,7 @@ func (s *PeriodicService) GenerateWorkOrder(ctx context.Context, templateID stri
 					Scan(&newCount).Error; err == nil {
 					selectedIndex := int(newCount-1) % len(members)
 					assigneeID = &members[selectedIndex].UserID
-					fmt.Printf("[F-12 原子分配] 值班池 %s 选中成员 %s (索引 %d/%d, total_generated → %d)\n",
+					applogger.Debugf("[workorder] [F-12 原子分配] 值班池 %s 选中成员 %s (索引 %d/%d, total_generated → %d)",
 						*dutyPoolID, *assigneeID, selectedIndex, len(members), newCount)
 					rotationCounted = true
 				} else {
@@ -392,10 +393,10 @@ func (s *PeriodicService) GenerateWorkOrder(ctx context.Context, templateID stri
 					generatedCount := template.TotalGenerated
 					selectedIndex := generatedCount % len(members)
 					assigneeID = &members[selectedIndex].UserID
-					fmt.Printf("[F-12 降级] RETURNING 不可用,使用 generatedCount=%d 选择成员: %v\n", generatedCount, err)
+					applogger.Warnf("[workorder] [F-12 降级] RETURNING 不可用,使用 generatedCount=%d 选择成员: %v", generatedCount, err)
 				}
 			} else {
-				fmt.Printf("值班池 %s 中没有找到有效成员\n", *dutyPoolID)
+				applogger.Warnf("[workorder] 值班池 %s 中没有找到有效成员", *dutyPoolID)
 			}
 		}
 
@@ -409,7 +410,7 @@ func (s *PeriodicService) GenerateWorkOrder(ctx context.Context, templateID stri
 	if assigneeID != nil && *assigneeID != "" {
 		var user models.User
 		if err := s.db.WithContext(ctx).Where("id = ?", *assigneeID).First(&user).Error; err != nil {
-			fmt.Printf("警告：分配的用户 ID %s 不存在，将设置为未分配\n", *assigneeID)
+			applogger.Warnf("[workorder] 警告：分配的用户 ID %s 不存在，将设置为未分配", *assigneeID)
 			assigneeID = nil
 		}
 	}
@@ -423,7 +424,7 @@ func (s *PeriodicService) GenerateWorkOrder(ctx context.Context, templateID stri
 			submitterID = submitter.ID
 		} else {
 			// 如果指定的用户不存在，记录日志并回退到 admin
-			fmt.Printf("警告：模板创建者 ID %s 不存在，将使用系统管理员作为提交者\n", template.CreatedBy)
+			applogger.Warnf("[workorder] 警告：模板创建者 ID %s 不存在，将使用系统管理员作为提交者", template.CreatedBy)
 		}
 	}
 

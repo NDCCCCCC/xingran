@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -253,7 +254,7 @@ func (c *vdiClientExtendedImpl) OperateVM(ctx context.Context, vmIDs []string, a
 
 	// Debug log the request body
 	reqJSON, _ := json.Marshal(req)
-	fmt.Printf("[VDI API DEBUG] Request body: %s\n", string(reqJSON))
+	applogger.Debugf("[VDI API] Request body: %s", string(reqJSON))
 
 	return c.callAPIWithRetry(ctx, &token, "POST", "/v1/servers/action", req, nil)
 }
@@ -423,7 +424,7 @@ func (c *vdiClientExtendedImpl) ListResourceServers(ctx context.Context, resourc
 func (c *vdiClientExtendedImpl) callAPIWithRetry(ctx context.Context, token *string, method, path string, body, result interface{}) error {
 	err := c.callAPI(ctx, *token, method, path, body, result)
 	if err != nil && strings.Contains(err.Error(), "AUTH_TOKEN_INVALID") {
-		fmt.Printf("[VDI API DEBUG] Received AUTH_TOKEN_INVALID, forcing re-authentication\n")
+		applogger.Warnf("[VDI] Received AUTH_TOKEN_INVALID, forcing re-authentication")
 
 		// 清除内存中的 token 缓存，强制重新认证（如果 authManager 存在）
 		if c.authManager != nil {
@@ -448,7 +449,7 @@ func (c *vdiClientExtendedImpl) callAPIWithRetry(ctx context.Context, token *str
 // callAPI 调用VDI API
 func (c *vdiClientExtendedImpl) callAPI(ctx context.Context, token, method, path string, body, result interface{}) error {
 	url := fmt.Sprintf("%s%s", c.server.Endpoint, path)
-	fmt.Printf("[VDI API DEBUG] Calling: %s %s\n", method, url)
+	applogger.Debugf("[VDI] Calling: %s %s", method, url)
 
 	var reqBody io.Reader
 	if body != nil {
@@ -488,14 +489,14 @@ func (c *vdiClientExtendedImpl) callAPI(ctx context.Context, token, method, path
 
 	// 检查 AUTH_TOKEN_INVALID 错误
 	if vdiErr.ErrorCode == 1101 {
-		fmt.Printf("[VDI API DEBUG] AUTH_TOKEN_INVALID: %s\n", vdiErr.ErrorMessage)
+		applogger.Warnf("[VDI] AUTH_TOKEN_INVALID: %s", vdiErr.ErrorMessage)
 		return fmt.Errorf("AUTH_TOKEN_INVALID: %s", vdiErr.ErrorMessage)
 	}
 
 	// VDI API 可能返回非200状态码但 error_code==0（表示成功）
 	// 只有当 error_code != 0 时才返回错误
 	if vdiErr.ErrorCode != 0 {
-		fmt.Printf("[VDI API DEBUG] Error response: status=%d, error_code=%d, body=%s\n", resp.StatusCode, vdiErr.ErrorCode, string(bodyBytes))
+		applogger.Warnf("[VDI] Error response: status=%d, error_code=%d, body=%s", resp.StatusCode, vdiErr.ErrorCode, string(bodyBytes))
 		return fmt.Errorf("VDI API error %d: %s", vdiErr.ErrorCode, vdiErr.ErrorMessage)
 	}
 
@@ -512,7 +513,7 @@ func (c *vdiClientExtendedImpl) callAPI(ctx context.Context, token, method, path
 // GetVTPPlatforms 获取VTP平台列表
 // 通过遍历所有资源组和资源，从虚拟机列表中提取唯一的 VTP 平台
 func (c *vdiClientExtendedImpl) GetVTPPlatforms(ctx context.Context) ([]VDIPlatform, error) {
-	fmt.Printf("[VDI GetVTPPlatforms] Starting to collect VTP platforms\n")
+	applogger.Debugf("[VDI] GetVTPPlatforms Starting to collect VTP platforms")
 
 	// 使用 map 收集唯一的 VTP 平台
 	vtpMap := make(map[int]VDIPlatform)
@@ -523,18 +524,18 @@ func (c *vdiClientExtendedImpl) GetVTPPlatforms(ctx context.Context) ([]VDIPlatf
 		return nil, fmt.Errorf("获取资源组失败: %w", err)
 	}
 
-	fmt.Printf("[VDI GetVTPPlatforms] Found %d resource groups\n", len(groups))
+	applogger.Debugf("[VDI] GetVTPPlatforms Found %d resource groups", len(groups))
 
 	// 遍历每个资源组
 	for _, group := range groups {
 		// 获取该资源组下的资源列表
 		resources, err := c.ListResources(ctx, group.ID)
 		if err != nil {
-			fmt.Printf("[VDI GetVTPPlatforms] Failed to get resources for group %s: %v\n", group.ID, err)
+			applogger.Warnf("[VDI] GetVTPPlatforms Failed to get resources for group %s: %v", group.ID, err)
 			continue // 跳过失败的资源组
 		}
 
-		fmt.Printf("[VDI GetVTPPlatforms] Group %s has %d resources\n", group.ID, len(resources))
+		applogger.Debugf("[VDI] GetVTPPlatforms Group %s has %d resources", group.ID, len(resources))
 
 		// 遍历每个资源
 		for _, resource := range resources {
@@ -542,11 +543,11 @@ func (c *vdiClientExtendedImpl) GetVTPPlatforms(ctx context.Context) ([]VDIPlatf
 			resourceID := fmt.Sprintf("%d", resource.ID)
 			vms, totalCount, err := c.ListResourceServers(ctx, resourceID, 1, 100)
 			if err != nil {
-				fmt.Printf("[VDI GetVTPPlatforms] Failed to get VMs for resource %s: %v\n", resourceID, err)
+				applogger.Warnf("[VDI] GetVTPPlatforms Failed to get VMs for resource %s: %v", resourceID, err)
 				continue // 跳过失败的资源
 			}
 
-			fmt.Printf("[VDI GetVTPPlatforms] Resource %s has %d VMs (total: %d)\n", resourceID, len(vms), totalCount)
+			applogger.Debugf("[VDI] GetVTPPlatforms Resource %s has %d VMs (total: %d)", resourceID, len(vms), totalCount)
 
 			// 从虚拟机列表中提取 VTP 平台
 			for _, vm := range vms {
@@ -558,7 +559,7 @@ func (c *vdiClientExtendedImpl) GetVTPPlatforms(ctx context.Context) ([]VDIPlatf
 							ID:   vtpID,
 							Name: vm.VTPName,
 						}
-						fmt.Printf("[VDI GetVTPPlatforms] Found VTP platform: %s (ID: %d)\n", vm.VTPName, vtpID)
+						applogger.Debugf("[VDI] GetVTPPlatforms Found VTP platform: %s (ID: %d)", vm.VTPName, vtpID)
 					}
 				}
 			}

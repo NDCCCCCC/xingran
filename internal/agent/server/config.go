@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -92,7 +93,7 @@ func LoadConfig(path string) (*Config, error) {
 			}
 		} else {
 			// 配置文件读取失败，记录警告但继续（可能使用环境变量）
-			fmt.Printf("Warning: could not read config file '%s': %v (will use env vars)\n", path, err)
+			applogger.Warnf("Warning: could not read config file '%s': %v (will use env vars)", path, err)
 		}
 	}
 
