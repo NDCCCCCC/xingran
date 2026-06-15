@@ -13,6 +13,9 @@ import (
 	"gorm.io/gorm/clause"
 )
 
+// portCollectionDeviceTimeout 单设备端口采集超时
+const portCollectionDeviceTimeout = 10 * time.Minute
+
 // CollectionService 端口采集服务
 type CollectionService struct {
 	db            *gorm.DB
@@ -66,7 +69,7 @@ func (s *CollectionService) CollectAllDevices(ctx context.Context) ([]*Collectio
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
 
-			deviceCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+			deviceCtx, cancel := context.WithTimeout(ctx, portCollectionDeviceTimeout)
 			defer cancel()
 
 			result := s.collectDevicePort(deviceCtx, &device)
