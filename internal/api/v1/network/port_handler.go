@@ -5,6 +5,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/portcollection"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
@@ -105,6 +106,8 @@ func (h *PortHandler) Collect(c *gin.Context) {
 		return
 	}
 
+	// Collect 采集端口状态 — OperTypeSync (设备→系统数据同步)
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "端口管理", operlog.OperTypeSync)
 	response.Success(c, result)
 }
 
@@ -124,6 +127,7 @@ func (h *PortHandler) CollectAll(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "端口管理", operlog.OperTypeSync)
 	response.Success(c, results)
 }
 
@@ -168,6 +172,7 @@ func (h *PortHandler) BatchDelete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "端口管理", operlog.OperTypeBatch)
 	response.Success(c, gin.H{"deletedCount": len(req.IDs)})
 }
 
@@ -194,5 +199,6 @@ func (h *PortHandler) Clean(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "端口管理", operlog.OperTypeClean)
 	response.Success(c, gin.H{"deletedCount": count})
 }

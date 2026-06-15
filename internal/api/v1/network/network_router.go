@@ -41,13 +41,13 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 	discoveryService := core.DeviceDiscoveryService
 
 	// 创建Handler
-	credentialHandler := NewCredentialHandler(credentialService)
-	deviceHandler := NewDeviceHandler(deviceService)
-	templateHandler := NewTemplateHandler(templateService)
-	commandHandler := NewCommandHandler(commandService, db)
-	executionHandler := NewExecutionHandler(executionService)
-	backupHandler := NewBackupHandler(backupService, db)
-	discoveryHandler := NewDiscoveryHandler(discoveryService)
+	credentialHandler := NewCredentialHandler(credentialService).WithCore(core)
+	deviceHandler := NewDeviceHandler(deviceService).WithCore(core)
+	templateHandler := NewTemplateHandler(templateService).WithCore(core)
+	commandHandler := NewCommandHandler(commandService, db).WithCore(core)
+	executionHandler := NewExecutionHandler(executionService).WithCore(core)
+	backupHandler := NewBackupHandler(backupService, db).WithCore(core)
+	discoveryHandler := NewDiscoveryHandler(discoveryService).WithCore(core)
 	exportHandler := NewNetworkExportHandler(core)
 
 	// ==================== 网络设备路由 ====================

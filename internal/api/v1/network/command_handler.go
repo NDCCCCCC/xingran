@@ -2,8 +2,10 @@ package network
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
@@ -14,6 +16,7 @@ import (
 type CommandHandler struct {
 	commandService *services.CommandDispatchService
 	db             *gorm.DB
+	core           *core.Core
 }
 
 // NewCommandHandler 创建命令分发处理器实例
@@ -22,6 +25,14 @@ func NewCommandHandler(commandService *services.CommandDispatchService, db *gorm
 		commandService: commandService,
 		db:             db,
 	}
+}
+
+// WithCore 注入 core 依赖（操作日志记录所需）。Phase 34 操作日志全模块覆盖。
+func (h *CommandHandler) WithCore(core *core.Core) *CommandHandler {
+	if h != nil {
+		h.core = core
+	}
+	return h
 }
 
 // Dispatch 分发命令
@@ -58,6 +69,9 @@ func (h *CommandHandler) Dispatch(c *gin.Context) {
 		return
 	}
 
+	// Dispatch 是在网络设备上执行命令的高价值审计点 — 用 OperTypeOther 标记"其他操作"。
+	// 模块名"命令执行"对应 plan 指定的中文模块名。
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "命令执行", operlog.OperTypeOther)
 	response.Success(c, result)
 }
 
@@ -89,6 +103,7 @@ func (h *CommandHandler) QuickCommand(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "命令执行", operlog.OperTypeOther)
 	response.Success(c, result)
 }
 

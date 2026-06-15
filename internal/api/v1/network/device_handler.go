@@ -2,9 +2,11 @@ package network
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	networkServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/network"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
@@ -13,11 +15,20 @@ import (
 // DeviceHandler 网络设备处理器
 type DeviceHandler struct {
 	deviceService networkServices.CacheService
+	core          *core.Core
 }
 
 // NewDeviceHandler 创建网络设备处理器实例
 func NewDeviceHandler(deviceService networkServices.CacheService) *DeviceHandler {
 	return &DeviceHandler{deviceService: deviceService}
+}
+
+// WithCore 注入 core 依赖（操作日志记录所需）。Phase 34 操作日志全模块覆盖。
+func (h *DeviceHandler) WithCore(core *core.Core) *DeviceHandler {
+	if h != nil {
+		h.core = core
+	}
+	return h
 }
 
 // List 查询网络设备列表
@@ -131,6 +142,7 @@ func (h *DeviceHandler) Create(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "网络设备", operlog.OperTypeCreate)
 	response.Success(c, device)
 }
 
@@ -166,6 +178,7 @@ func (h *DeviceHandler) Update(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "网络设备", operlog.OperTypeUpdate)
 	response.Success(c, gin.H{"message": "更新成功"})
 }
 
@@ -190,6 +203,7 @@ func (h *DeviceHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "网络设备", operlog.OperTypeDelete)
 	response.Success(c, gin.H{"message": "删除成功"})
 }
 
@@ -215,6 +229,7 @@ func (h *DeviceHandler) BatchDelete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "网络设备", operlog.OperTypeBatch)
 	response.Success(c, gin.H{
 		"message": "批量删除成功",
 		"count":   len(req.IDs),
@@ -243,6 +258,7 @@ func (h *DeviceHandler) BatchDelete(c *gin.Context) {
 			return
 		}
 
+		operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "网络设备", operlog.OperTypeCreate)
 		response.Success(c, gin.H{"id": device.ID})
 	}
 

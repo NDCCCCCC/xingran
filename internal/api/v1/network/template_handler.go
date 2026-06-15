@@ -2,8 +2,10 @@ package network
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
@@ -12,11 +14,20 @@ import (
 // TemplateHandler 配置模板处理器
 type TemplateHandler struct {
 	templateService *services.TemplateService
+	core            *core.Core
 }
 
 // NewTemplateHandler 创建配置模板处理器实例
 func NewTemplateHandler(templateService *services.TemplateService) *TemplateHandler {
 	return &TemplateHandler{templateService: templateService}
+}
+
+// WithCore 注入 core 依赖（操作日志记录所需）。Phase 34 操作日志全模块覆盖。
+func (h *TemplateHandler) WithCore(core *core.Core) *TemplateHandler {
+	if h != nil {
+		h.core = core
+	}
+	return h
 }
 
 // List 查询配置模板列表
@@ -121,6 +132,7 @@ func (h *TemplateHandler) Create(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "命令模板", operlog.OperTypeCreate)
 	response.Success(c, template)
 }
 
@@ -156,6 +168,7 @@ func (h *TemplateHandler) Update(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "命令模板", operlog.OperTypeUpdate)
 	response.Success(c, gin.H{"message": "更新成功"})
 }
 
@@ -180,6 +193,7 @@ func (h *TemplateHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "命令模板", operlog.OperTypeDelete)
 	response.Success(c, gin.H{"message": "删除成功"})
 }
 
@@ -205,6 +219,7 @@ func (h *TemplateHandler) BatchDelete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "命令模板", operlog.OperTypeBatch)
 	response.Success(c, gin.H{
 		"message": "批量删除成功",
 		"count":   len(req.IDs),
@@ -273,6 +288,8 @@ func (h *TemplateHandler) Clone(c *gin.Context) {
 		return
 	}
 
+	// Clone 语义上等价于 Create（生成新模板）
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "命令模板", operlog.OperTypeCreate)
 	response.Success(c, template)
 }
 

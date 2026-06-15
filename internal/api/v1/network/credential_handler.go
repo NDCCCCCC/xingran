@@ -2,8 +2,10 @@ package network
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
@@ -12,11 +14,20 @@ import (
 // CredentialHandler 授权凭证处理器
 type CredentialHandler struct {
 	credentialService *services.AuthCredentialService
+	core              *core.Core
 }
 
 // NewCredentialHandler 创建授权凭证处理器实例
 func NewCredentialHandler(credentialService *services.AuthCredentialService) *CredentialHandler {
 	return &CredentialHandler{credentialService: credentialService}
+}
+
+// WithCore 注入 core 依赖（操作日志记录所需）。Phase 34 操作日志全模块覆盖。
+func (h *CredentialHandler) WithCore(core *core.Core) *CredentialHandler {
+	if h != nil {
+		h.core = core
+	}
+	return h
 }
 
 // List 查询授权凭证列表
@@ -97,6 +108,10 @@ func (h *CredentialHandler) GetByID(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Router /network/credentials [post]
 func (h *CredentialHandler) Create(c *gin.Context) {
+	// 记录操作日志（含请求体敏感字段脱敏 — password/enablePassword/snmpCommunity/sshKey）
+	// T-34-W4-01 缓解：必须使用 RecordWithBody 读+还原 body，再经 FilterSensitiveParams 脱敏。
+	operlog.RecordWithBody(c, h.core.OperLogService, h.core.GetDB(), "网络设备凭据", operlog.OperTypeCreate)
+
 	var req services.CreateCredentialRequest
 	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
@@ -129,6 +144,9 @@ func (h *CredentialHandler) Update(c *gin.Context) {
 		response.Error(c, apperrors.ParamMissing("凭证ID"))
 		return
 	}
+
+	// 记录操作日志（含请求体敏感字段脱敏 — T-34-W4-01 缓解）
+	operlog.RecordWithBody(c, h.core.OperLogService, h.core.GetDB(), "网络设备凭据", operlog.OperTypeUpdate)
 
 	var req services.UpdateCredentialRequest
 	if !responseHelpers.HandleJSONBinding(c, &req) {
@@ -169,6 +187,7 @@ func (h *CredentialHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "网络设备凭据", operlog.OperTypeDelete)
 	response.Success(c, gin.H{"message": "删除成功"})
 }
 
@@ -194,6 +213,7 @@ func (h *CredentialHandler) BatchDelete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "网络设备凭据", operlog.OperTypeBatch)
 	response.Success(c, gin.H{
 		"message": "批量删除成功",
 		"count":   len(req.IDs),
@@ -222,6 +242,8 @@ func (h *CredentialHandler) SetDefault(c *gin.Context) {
 		return
 	}
 
+	// SetDefault 语义上是"授权"（指定哪个凭证为默认/主用），用 OperTypeGrant
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "网络设备凭据", operlog.OperTypeGrant)
 	response.Success(c, gin.H{"message": "设置成功"})
 }
 

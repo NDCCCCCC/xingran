@@ -4,8 +4,10 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/topology"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	"gorm.io/gorm"
 )
@@ -13,15 +15,24 @@ import (
 // TopologyHandler 拓扑管理处理器
 type TopologyHandler struct {
 	filterRuleService topology.FilterRuleService
-	db                 *gorm.DB
+	db                *gorm.DB
+	core              *core.Core
 }
 
 // NewTopologyHandler 创建拓扑管理处理器实例
 func NewTopologyHandler(filterRuleSvc topology.FilterRuleService, db *gorm.DB) *TopologyHandler {
 	return &TopologyHandler{
 		filterRuleService: filterRuleSvc,
-		db:                 db,
+		db:                db,
 	}
+}
+
+// WithCore 注入 core 依赖（操作日志记录所需）。Phase 34 操作日志全模块覆盖。
+func (h *TopologyHandler) WithCore(core *core.Core) *TopologyHandler {
+	if h != nil {
+		h.core = core
+	}
+	return h
 }
 
 // CreateRule 创建MAC过滤规则
@@ -50,6 +61,7 @@ func (h *TopologyHandler) CreateRule(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "网络拓扑", operlog.OperTypeCreate)
 	response.Success(c, rule)
 }
 
@@ -87,6 +99,7 @@ func (h *TopologyHandler) UpdateRule(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "网络拓扑", operlog.OperTypeUpdate)
 	response.Success(c, nil)
 }
 
@@ -114,6 +127,7 @@ func (h *TopologyHandler) DeleteRule(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "网络拓扑", operlog.OperTypeDelete)
 	response.Success(c, nil)
 }
 

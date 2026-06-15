@@ -6,6 +6,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/lldp"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/topology"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
@@ -93,6 +94,8 @@ func (h *MACHandler) Collect(c *gin.Context) {
 		return
 	}
 
+	// Collect 从设备采集 MAC 地址 — OperTypeSync (设备→系统数据同步)
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "MAC地址采集", operlog.OperTypeSync)
 	response.Success(c, result)
 }
 
@@ -114,6 +117,7 @@ func (h *MACHandler) CollectAll(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "MAC地址采集", operlog.OperTypeSync)
 	response.Success(c, results)
 }
 
@@ -163,6 +167,7 @@ func (h *MACHandler) Clean(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "MAC地址采集", operlog.OperTypeClean)
 	response.Success(c, gin.H{"deletedCount": count})
 }
 
@@ -191,5 +196,6 @@ func (h *MACHandler) BatchDelete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "MAC地址采集", operlog.OperTypeBatch)
 	response.Success(c, gin.H{"deletedCount": count})
 }

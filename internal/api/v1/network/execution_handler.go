@@ -2,7 +2,9 @@ package network
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
@@ -11,11 +13,20 @@ import (
 // ExecutionHandler 配置执行处理器
 type ExecutionHandler struct {
 	executionService *services.ConfigExecutionService
+	core             *core.Core
 }
 
 // NewExecutionHandler 创建配置执行处理器实例
 func NewExecutionHandler(executionService *services.ConfigExecutionService) *ExecutionHandler {
 	return &ExecutionHandler{executionService: executionService}
+}
+
+// WithCore 注入 core 依赖（操作日志记录所需）。Phase 34 操作日志全模块覆盖。
+func (h *ExecutionHandler) WithCore(core *core.Core) *ExecutionHandler {
+	if h != nil {
+		h.core = core
+	}
+	return h
 }
 
 // List 查询配置执行列表
@@ -85,6 +96,8 @@ func (h *ExecutionHandler) ExecuteByTemplate(c *gin.Context) {
 		return
 	}
 
+	// ExecuteByTemplate 是在网络设备上批量下发配置的高价值审计点 — 用 OperTypeOther
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "命令执行", operlog.OperTypeOther)
 	response.Success(c, result)
 }
 
@@ -134,6 +147,7 @@ func (h *ExecutionHandler) Cancel(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "命令执行", operlog.OperTypeOther)
 	response.Success(c, gin.H{"message": "取消成功"})
 }
 
@@ -158,6 +172,7 @@ func (h *ExecutionHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "命令执行", operlog.OperTypeDelete)
 	response.Success(c, gin.H{"message": "删除成功"})
 }
 
@@ -183,6 +198,7 @@ func (h *ExecutionHandler) BatchDelete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "命令执行", operlog.OperTypeBatch)
 	response.Success(c, gin.H{
 		"message": "批量删除成功",
 		"count":   len(req.ExecutionIDs),

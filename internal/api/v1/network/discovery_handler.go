@@ -2,7 +2,9 @@ package network
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
@@ -11,6 +13,15 @@ import (
 // DiscoveryHandler 设备发现处理器
 type DiscoveryHandler struct {
 	discoveryService *services.DeviceDiscoveryService
+	core             *core.Core
+}
+
+// WithCore 注入 core 依赖（操作日志记录所需）。Phase 34 操作日志全模块覆盖。
+func (h *DiscoveryHandler) WithCore(core *core.Core) *DiscoveryHandler {
+	if h != nil {
+		h.core = core
+	}
+	return h
 }
 
 // Probe 探测单台设备
@@ -35,6 +46,8 @@ func (h *DiscoveryHandler) Probe(c *gin.Context) {
 		return
 	}
 
+	// Probe 探测单台设备连通性 — 高价值审计（"谁探测了哪台设备"）
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "网络设备发现", operlog.OperTypeOther)
 	response.Success(c, result)
 }
 
@@ -105,6 +118,7 @@ func (h *DiscoveryHandler) Create(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "网络设备发现", operlog.OperTypeCreate)
 	response.Success(c, gin.H{"discoveryId": discoveryID})
 }
 
@@ -179,6 +193,8 @@ func (h *DiscoveryHandler) Execute(c *gin.Context) {
 		return
 	}
 
+	// Execute 扫描网段发现设备 — OperTypeSync (外部网络同步)
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "网络设备发现", operlog.OperTypeSync)
 	response.Success(c, result)
 }
 
@@ -203,6 +219,7 @@ func (h *DiscoveryHandler) Cancel(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "网络设备发现", operlog.OperTypeOther)
 	response.Success(c, gin.H{"message": "取消成功"})
 }
 
@@ -227,6 +244,7 @@ func (h *DiscoveryHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "网络设备发现", operlog.OperTypeDelete)
 	response.Success(c, gin.H{"message": "删除成功"})
 }
 
@@ -252,6 +270,7 @@ func (h *DiscoveryHandler) BatchDelete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "网络设备发现", operlog.OperTypeBatch)
 	response.Success(c, gin.H{
 		"message": "批量删除成功",
 		"count":   len(req.DiscoveryIDs),
@@ -281,5 +300,7 @@ func (h *DiscoveryHandler) ImportDevices(c *gin.Context) {
 		return
 	}
 
+	// Import 把发现的设备导入系统 — OperTypeImport
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "网络设备发现", operlog.OperTypeImport)
 	response.Success(c, gin.H{"count": count})
 }

@@ -4,8 +4,10 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
@@ -16,6 +18,7 @@ import (
 type BackupHandler struct {
 	backupService *services.ConfigBackupService
 	db            *gorm.DB
+	core          *core.Core
 }
 
 // NewBackupHandler 创建配置备份处理器实例
@@ -24,6 +27,14 @@ func NewBackupHandler(backupService *services.ConfigBackupService, db *gorm.DB) 
 		backupService: backupService,
 		db:            db,
 	}
+}
+
+// WithCore 注入 core 依赖（操作日志记录所需）。Phase 34 操作日志全模块覆盖。
+func (h *BackupHandler) WithCore(core *core.Core) *BackupHandler {
+	if h != nil {
+		h.core = core
+	}
+	return h
 }
 
 // List 查询备份列表
@@ -105,6 +116,7 @@ func (h *BackupHandler) Create(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "配置备份", operlog.OperTypeCreate)
 	response.Success(c, result)
 }
 
@@ -179,6 +191,7 @@ func (h *BackupHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "配置备份", operlog.OperTypeDelete)
 	response.Success(c, gin.H{"message": "删除成功"})
 }
 
@@ -204,6 +217,7 @@ func (h *BackupHandler) BatchDelete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "配置备份", operlog.OperTypeBatch)
 	response.Success(c, gin.H{
 		"message": "批量删除成功",
 		"count":   len(req.BackupIDs),
@@ -268,6 +282,8 @@ func (h *BackupHandler) Restore(c *gin.Context) {
 		return
 	}
 
+	// Restore 是把备份配置下发到设备 — 属高危写操作
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "配置备份", operlog.OperTypeUpdate)
 	response.Success(c, gin.H{"message": "恢复成功"})
 }
 
@@ -312,6 +328,7 @@ func (h *BackupHandler) BatchBackup(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "配置备份", operlog.OperTypeBatch)
 	response.Success(c, results)
 }
 

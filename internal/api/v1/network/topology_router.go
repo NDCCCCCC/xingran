@@ -2,17 +2,18 @@ package network
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/topology"
 	"gorm.io/gorm"
 )
 
 // SetupTopologyRouter 设置拓扑管理路由
-func SetupTopologyRouter(r *gin.RouterGroup, db *gorm.DB) {
+func SetupTopologyRouter(r *gin.RouterGroup, db *gorm.DB, core *core.Core) {
 	// 创建过滤规则服务
 	filterRuleService := topology.NewFilterRuleService(db)
 
 	// 创建拓扑处理器
-	topologyHandler := NewTopologyHandler(filterRuleService, db)
+	topologyHandler := NewTopologyHandler(filterRuleService, db).WithCore(core)
 
 	// 注册拓扑管理路由
 	topology := r.Group("/topology")
