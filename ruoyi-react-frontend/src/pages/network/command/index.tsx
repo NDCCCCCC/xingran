@@ -222,7 +222,7 @@ const CommandDispatch: FC = () => {
                   快速命令
                 </Button>
                 <NetworkExport
-                  exportUrl="/api/v1/network/command/export"
+                  entityType="command"
                   entityName="命令分发"
                   filters={Object.fromEntries(
                     Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(([, v]) => v !== undefined && v !== null && v !== '')

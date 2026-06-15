@@ -656,7 +656,7 @@ const DeviceManagement: FC = () => {
               </Form>
               <Space>
                 <NetworkExport
-                  exportUrl="/api/v1/network/devices/export"
+                  entityType="devices"
                   entityName="网络设备"
                   filters={(() => {
                     const values = searchForm.getFieldsValue() as Record<string, unknown>;

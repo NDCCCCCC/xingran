@@ -226,7 +226,7 @@ const TemplateManagement: FC = () => {
               批量删除
             </Button>
             <NetworkExport
-              exportUrl="/api/v1/network/templates/export"
+              entityType="templates"
               entityName="配置模板"
               filters={Object.fromEntries(
                 Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(([, v]) => v !== undefined && v !== null && v !== '')

@@ -395,7 +395,7 @@ const PortStatusPage: FC = () => {
           </Form>
           <Space>
             <NetworkExport
-              exportUrl="/api/v1/network/ports/export"
+              entityType="ports"
               entityName="端口状态"
               filters={(() => {
                 const values = searchForm.getFieldsValue() as Record<string, unknown>;

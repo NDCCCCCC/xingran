@@ -269,7 +269,7 @@ const MACAddressPage: FC = () => {
           </Form>
           <Space>
             <NetworkExport
-              exportUrl="/api/v1/network/mac/export"
+              entityType="mac"
               entityName="MAC地址"
               filters={(() => {
                 const values = searchForm.getFieldsValue() as Record<string, unknown>;

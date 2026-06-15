@@ -529,7 +529,7 @@ const [batchExporting, setBatchExporting] = useState(false);
               创建备份
             </Button>
             <NetworkExport
-              exportUrl="/api/v1/network/backups/export"
+              entityType="backups"
               entityName="配置备份"
               filters={Object.fromEntries(
                 Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(([, v]) => v !== undefined && v !== null && v !== '')

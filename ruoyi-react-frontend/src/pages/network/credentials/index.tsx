@@ -424,7 +424,7 @@ const CredentialManagement: FC = () => {
               </Button>
             )}
             <NetworkExport
-              exportUrl="/api/v1/network/credentials/export"
+              entityType="credentials"
               entityName="授权凭证"
               filters={Object.fromEntries(
                 Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(([, v]) => v !== undefined && v !== null && v !== '')

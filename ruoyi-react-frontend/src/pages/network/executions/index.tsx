@@ -227,7 +227,7 @@ const ConfigExecutionPage: FC = () => {
               执行配置模板
             </Button>
             <NetworkExport
-              exportUrl="/api/v1/network/executions/export"
+              entityType="executions"
               entityName="配置执行"
               filters={Object.fromEntries(
                 Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(([, v]) => v !== undefined && v !== null && v !== '')

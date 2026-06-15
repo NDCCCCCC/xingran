@@ -10,7 +10,7 @@ import { ExportOutlined, DownloadOutlined } from '@ant-design/icons';
 import { getAccessToken } from '@/utils/authHelpers';
 
 export interface NetworkExportProps {
-  exportUrl: string;          // 导出API地址
+  entityType: string;         // 实体类型（用于拼接导出路径 /api/v1/network/${entityType}/export）
   entityName: string;         // 实体名称（用于文件名和提示）
   filters?: Record<string, any>; // 当前筛选条件
   current?: number;           // 当前页码
@@ -18,12 +18,13 @@ export interface NetworkExportProps {
 }
 
 const NetworkExport: FC<NetworkExportProps> = ({
-  exportUrl,
+  entityType,
   entityName,
   filters = {},
   current = 1,
   pageSize = 10,
 }) => {
+  const exportUrl = `/api/v1/network/${entityType}/export`;
   const [exporting, setExporting] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [exportMode, setExportMode] = useState<string>('filtered');

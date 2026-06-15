@@ -292,7 +292,7 @@ const DeviceDiscoveryPage: FC = () => {
           </Form>
           <Space>
             <NetworkExport
-              exportUrl="/api/v1/network/discoveries/export"
+              entityType="discoveries"
               entityName="设备发现"
               filters={{}}
               current={paginationProps.current}
