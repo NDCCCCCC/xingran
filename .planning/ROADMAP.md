@@ -65,9 +65,9 @@
 <summary>🚧 v1.5 MAC地址历史数据管理 (Phases 12-15) — PARTIALLY COMPLETE</summary>
 
 - [x] Phase 12: 数据模型与采集集成 (5/5 plans) — completed 2026-05-11
-- [ ] Phase 13: 查询层与轨迹 (5/5 plans) — planned
-- [ ] Phase 14: 前端与用户体验 (0/6 plans) — planned
-- [ ] Phase 15: 性能优化 (0/5 plans) — planned
+- [x] Phase 13: 查询层与轨迹 (5/5 plans) — completed
+- [x] Phase 14: 前端与用户体验 (5/6 plans) — completed
+- [x] Phase 15: 性能优化 (5/5 plans) — completed 2026-06-15
 
 </details>
 
