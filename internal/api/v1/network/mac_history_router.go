@@ -15,6 +15,10 @@ func SetupMACHistoryRouter(r *gin.RouterGroup, core *core.Core) {
 	// 创建处理器
 	historyHandler := NewMACHistoryHandler(historyQueryService)
 
+	// Phase 15 PERF-04: 热力图 handler + 路由
+	heatmapService := mac_history_query_service.NewMACHistoryHeatmapService(core.GetDB(), nil, nil)
+	heatmapHandler := NewMACHistoryHeatmapHandler(heatmapService)
+
 	// 注册路由
 	r.POST("/history/port", historyHandler.QueryPortHistory)
 	r.POST("/history/device", historyHandler.QueryDeviceHistory)
@@ -23,6 +27,7 @@ func SetupMACHistoryRouter(r *gin.RouterGroup, core *core.Core) {
 	r.POST("/history/vendor", historyHandler.GetVendor)
 	r.POST("/history/list", historyHandler.QueryHistory)
 	r.GET("/history/list", historyHandler.ExportHistory)
+	r.POST("/history/heatmap", heatmapHandler.QueryHeatmap)
 
-	applogger.Infof("[路由注册] MAC历史查询路由已注册: /history/port, /history/device, /history/trajectory, /history/stats, /history/vendor, /history/list (POST/GET)")
+	applogger.Infof("[路由注册] MAC历史查询路由已注册: /history/port, /history/device, /history/trajectory, /history/stats, /history/vendor, /history/list (POST/GET), /history/heatmap")
 }
