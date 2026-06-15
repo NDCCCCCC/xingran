@@ -68,6 +68,9 @@ func buildWidgetCacheKey(widgetID string, params map[string]interface{}) string 
 // widgetDefaultCacheTTL Widget 默认缓存 TTL（per D-06 决定）
 const widgetDefaultCacheTTL = 5 * time.Minute
 
+// widgetMaxConcurrency Widget 并发抓取上限（per D-03 决定）
+const widgetMaxConcurrency = 10
+
 // calculateTTL 计算缓存 TTL
 func calculateTTL(refreshInterval int) time.Duration {
 	if refreshInterval > 0 {
@@ -203,7 +206,7 @@ func (f *WidgetDataFetcherImpl) FetchBatchWidgetData(ctx context.Context, widget
 
 	// 创建 errgroup，设置最大并发数（per D-03）
 	g, ctx := errgroup.WithContext(ctx)
-	g.SetLimit(10) // 最大 10 个并发
+	g.SetLimit(widgetMaxConcurrency)
 
 	for _, widgetID := range widgetIDs {
 		widgetID := widgetID // 捕获循环变量
