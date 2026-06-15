@@ -317,5 +317,5 @@ func (h *UserHandler) ResetPassword(c *gin.Context) {
 		return
 	}
 
-	response.Success(c, gin.H{"message": "重置成功，新密码为：123456"})
+	response.Success(c, gin.H{"message": "密码重置成功"})
 }
