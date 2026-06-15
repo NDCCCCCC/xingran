@@ -8,6 +8,9 @@ export type { ActionButton } from './ActionButtons';
 export { default as ExcelImport } from './ExcelImport';
 export type { ExcelImportProps } from './ExcelImport';
 
+export { default as ExcelImportLazy } from './ExcelImportLazy';
+export type { ExcelImportLazyProps } from './ExcelImportLazy';
+
 export { default as ExcelExport } from './ExcelExport';
 export type { ExcelExportProps } from './ExcelExport';
 

@@ -11,7 +11,7 @@ const ExcelImport = lazy(() =>
   import('./ExcelImport').then(module => ({ default: module.default }))
 );
 
-interface ExcelImportLazyProps {
+export interface ExcelImportLazyProps {
   entityType: string;
   entityName: string;
   visible: boolean;
