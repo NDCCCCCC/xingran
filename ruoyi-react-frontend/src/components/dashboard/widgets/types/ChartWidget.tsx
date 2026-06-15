@@ -81,19 +81,19 @@ function getLineOption(data: Record<string, unknown>, display: ChartDisplayConfi
 		xAxis: {
 			type: 'category',
 			data: xData,
-			axisLine: { lineStyle: { color: '#d9d9d9' } },
+			axisLine: { lineStyle: { color: 'var(--theme-border-primary, #d9d9d9)' } },
 		},
 		yAxis: {
 			type: 'value',
 			axisLine: { show: false },
-			splitLine: { lineStyle: { color: '#f0f0f0' } },
+			splitLine: { lineStyle: { color: 'var(--theme-border-secondary, #f0f0f0)' } },
 		},
 		series: [{
 			data: yData,
 			type: 'line',
 			smooth: display.smooth ?? false,
 			lineStyle: { width: 2 },
-			itemStyle: { color: display.colors?.[0] ?? '#1890ff' },
+			itemStyle: { color: display.colors?.[0] ?? 'var(--theme-info, #1890ff)' },
 		}],
 		tooltip: {
 			trigger: 'axis',
@@ -111,18 +111,18 @@ function getBarOption(data: Record<string, unknown>, display: ChartDisplayConfig
 		xAxis: {
 			type: 'category',
 			data: xData,
-			axisLine: { lineStyle: { color: '#d9d9d9' } },
+			axisLine: { lineStyle: { color: 'var(--theme-border-primary, #d9d9d9)' } },
 		},
 		yAxis: {
 			type: 'value',
 			axisLine: { show: false },
-			splitLine: { lineStyle: { color: '#f0f0f0' } },
+			splitLine: { lineStyle: { color: 'var(--theme-border-secondary, #f0f0f0)' } },
 		},
 		series: [{
 			data: yData,
 			type: 'bar',
 			itemStyle: {
-				color: display.colors?.[0] ?? '#1890ff',
+				color: display.colors?.[0] ?? 'var(--theme-info, #1890ff)',
 				borderRadius: [4, 4, 0, 0],
 			},
 		}],
@@ -164,7 +164,7 @@ function getPieOption(data: Record<string, unknown>, _display: ChartDisplayConfi
 			radius: ['40%', '70%'],
 			itemStyle: {
 				borderRadius: 4,
-				borderColor: '#fff',
+				borderColor: 'var(--theme-neutral-white, #fff)',
 				borderWidth: 2,
 			},
 		}],
@@ -185,12 +185,12 @@ function getAreaOption(data: Record<string, unknown>, display: ChartDisplayConfi
 		xAxis: {
 			type: 'category',
 			data: xData,
-			axisLine: { lineStyle: { color: '#d9d9d9' } },
+			axisLine: { lineStyle: { color: 'var(--theme-border-primary, #d9d9d9)' } },
 		},
 		yAxis: {
 			type: 'value',
 			axisLine: { show: false },
-			splitLine: { lineStyle: { color: '#f0f0f0' } },
+			splitLine: { lineStyle: { color: 'var(--theme-border-secondary, #f0f0f0)' } },
 		},
 		series: [{
 			data: yData,
@@ -201,7 +201,7 @@ function getAreaOption(data: Record<string, unknown>, display: ChartDisplayConfi
 					type: 'linear',
 					x: 0, y: 0, x2: 0, y2: 1,
 					colorStops: [
-						{ offset: 0, color: display.colors?.[0] ?? '#1890ff' },
+						{ offset: 0, color: display.colors?.[0] ?? 'var(--theme-info, #1890ff)' },
 						{ offset: 1, color: 'rgba(24, 144, 255, 0.1)' },
 					],
 				},
@@ -221,7 +221,7 @@ function getEmptyOption(): EChartsOption {
 			text: '暂无数据',
 			left: 'center',
 			top: 'center',
-			textStyle: { color: '#bfbfbf' },
+			textStyle: { color: 'var(--theme-text-tertiary, #bfbfbf)' },
 		},
 	};
 }

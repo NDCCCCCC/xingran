@@ -34,10 +34,10 @@ const DWELL_THRESHOLDS = {
 } as const;
 
 function getDwellHeatmap(durationSeconds: number): { label: string; color: string } {
-  if (durationSeconds < DWELL_THRESHOLDS.short) return { label: '短', color: '#bfbfbf' };
-  if (durationSeconds < DWELL_THRESHOLDS.medium) return { label: '中', color: '#1890ff' };
-  if (durationSeconds < DWELL_THRESHOLDS.long) return { label: '长', color: '#faad14' };
-  return { label: '超长', color: '#ff4d4f' };
+  if (durationSeconds < DWELL_THRESHOLDS.short) return { label: '短', color: 'var(--theme-text-tertiary, #bfbfbf)' };
+  if (durationSeconds < DWELL_THRESHOLDS.medium) return { label: '中', color: 'var(--theme-info, #1890ff)' };
+  if (durationSeconds < DWELL_THRESHOLDS.long) return { label: '长', color: 'var(--theme-warning, #faad14)' };
+  return { label: '超长', color: 'var(--theme-error, #ff4d4f)' };
 }
 
 const MACTrajectoryChart: React.FC<MACTrajectoryChartProps> = ({

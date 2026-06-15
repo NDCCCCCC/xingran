@@ -102,7 +102,7 @@ const MACHeatmapChart: React.FC<MACHeatmapChartProps> = ({
           type: 'heatmap',
           data: points,
           label: { show: false },
-          emphasis: { itemStyle: { borderColor: '#000', borderWidth: 1 } },
+          emphasis: { itemStyle: { borderColor: 'var(--theme-neutral-900, #000)', borderWidth: 1 } },
         },
       ],
     };
