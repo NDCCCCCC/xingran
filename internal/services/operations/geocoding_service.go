@@ -17,11 +17,11 @@ import (
 )
 
 const (
-	geocodeCacheKeyPrefix = "baidu_map:geocode:"
-	defaultCacheTTL       = 30 * time.Minute
-	maxConcurrency        = 5
-	apiTimeout            = 10 * time.Second
-	baiduGeocodingAPIURL  = "https://api.map.baidu.com/geocoding/v3/"
+	geocodeCacheKeyPrefix    = "baidu_map:geocode:"
+	geocodingDefaultCacheTTL = 30 * time.Minute
+	geocodingMaxConcurrency  = 5
+	geocodingAPITimeout      = 10 * time.Second
+	baiduGeocodingAPIURL     = "https://api.map.baidu.com/geocoding/v3/"
 )
 
 // BaiduGeocodingResponse 百度地图地理编码响应
@@ -74,7 +74,7 @@ func NewGeocodingService(apiKey string) *GeocodingService {
 	return &GeocodingService{
 		apiKey: apiKey,
 		httpClient: &http.Client{
-			Timeout: apiTimeout,
+			Timeout: geocodingAPITimeout,
 		},
 		stats:       &CacheStats{},
 		rateLimiter: BaiduAPIRateLimiter,
@@ -86,7 +86,7 @@ func NewGeocodingServiceWithCache(apiKey string, redisCache cache.Cache) *Geocod
 	return &GeocodingService{
 		apiKey: apiKey,
 		httpClient: &http.Client{
-			Timeout: apiTimeout,
+			Timeout: geocodingAPITimeout,
 		},
 		redisCache:  redisCache,
 		stats:       &CacheStats{},
@@ -161,7 +161,7 @@ func (s *GeocodingService) setToCache(ctx context.Context, cacheKey string, resu
 func (s *GeocodingService) BatchGeocode(ctx context.Context, addresses []string) (map[string]Coordinate, error) {
 	results := make(map[string]Coordinate)
 	var mu sync.Mutex
-	sem := make(chan struct{}, maxConcurrency)
+	sem := make(chan struct{}, geocodingMaxConcurrency)
 	var wg sync.WaitGroup
 
 	for _, addr := range addresses {
@@ -227,11 +227,11 @@ func (s *GeocodingService) getFromMemoryCache(cacheKey string) (*GeocodingResult
 func (s *GeocodingService) setToMemoryCache(cacheKey string, result *GeocodingResult) {
 	entry := &cacheEntry{
 		result:    result,
-		expiresAt: time.Now().Add(defaultCacheTTL),
+		expiresAt: time.Now().Add(geocodingDefaultCacheTTL),
 	}
 	s.cache.Store(cacheKey, entry)
 
-	time.AfterFunc(defaultCacheTTL, func() {
+	time.AfterFunc(geocodingDefaultCacheTTL, func() {
 		s.cache.Delete(cacheKey)
 	})
 }
@@ -259,7 +259,7 @@ func (s *GeocodingService) setToRedisCache(ctx context.Context, cacheKey string,
 		return
 	}
 
-	if err := s.redisCache.Set(ctx, cacheKey, string(data), defaultCacheTTL); err != nil {
+	if err := s.redisCache.Set(ctx, cacheKey, string(data), geocodingDefaultCacheTTL); err != nil {
 		logger.Warnf("保存Redis缓存失败: %v", err)
 	}
 }
