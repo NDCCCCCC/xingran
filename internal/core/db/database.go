@@ -356,6 +356,10 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate152MACMatView(d.DB); err != nil {
 			applogger.Errorf("MAC 历史物化视图迁移失败: %v", err)
 		}
+		// Phase 15 PERF-04: 端口使用热力图菜单与权限
+		if err := migrations.Migrate153MacHeatmapMenu(d.DB); err != nil {
+			applogger.Errorf("MAC 端口使用热力图菜单迁移失败: %v", err)
+		}
 		// 创建 MAC 地址过滤规则表(对应 117_create_mac_filter_rules.sql, 含 5 条系统默认规则)
 		if err := migrations.Migrate117CreateMacFilterRules(d.DB); err != nil {
 			applogger.Errorf("MAC 过滤规则表迁移失败: %v", err)

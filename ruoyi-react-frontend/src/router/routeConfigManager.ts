@@ -52,6 +52,7 @@ const PATH_TRANSLATIONS: Record<string, string> = {
   'network': '网络',
   'devices': '设备',
   'ports': '端口',
+  'heatmap': '热力图',
   'monitor': '监控',
   'dashboard': '仪表盘',
   'settings': '设置',
