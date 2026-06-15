@@ -15,6 +15,12 @@ import (
 // AD域单分组同步超时时间
 const adSingleGroupSyncTimeout = 2 * time.Minute
 
+// adFullSyncTimeout AD域全量同步超时
+const adFullSyncTimeout = 30 * time.Minute
+
+// adGroupSyncTimeout AD域分组同步超时
+const adGroupSyncTimeout = 10 * time.Minute
+
 // ADDomainHandler AD域管理处理器
 type ADDomainHandler struct {
 	service *addomainServices.ADDomainService
@@ -260,7 +266,7 @@ func (h *ADDomainHandler) SyncData(c *gin.Context) {
 		req.SyncType = "full"
 	}
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Minute)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), adFullSyncTimeout)
 	defer cancel()
 
 	result, err := h.service.SyncADData(ctx, id, req.SyncType)
@@ -746,7 +752,7 @@ func (h *ADDomainHandler) SyncGroups(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Minute)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), adGroupSyncTimeout)
 	defer cancel()
 
 	result, err := h.service.GroupSync.SyncGroupsByConfig(ctx, id)
