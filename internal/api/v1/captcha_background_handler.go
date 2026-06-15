@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	corepkg "github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
@@ -138,6 +139,7 @@ func uploadCaptchaBackground(core *corepkg.Core) gin.HandlerFunc {
 			return
 		}
 
+		operlog.Record(c, core.OperLogService, core.GetDB(), "验证码背景", operlog.OperTypeUpload)
 		response.Success(c, bg.ToDTO())
 	}
 }
@@ -201,6 +203,8 @@ func updateCaptchaBackground(core *corepkg.Core) gin.HandlerFunc {
 			return
 		}
 
+		operlog.Record(c, core.OperLogService, core.GetDB(), "验证码背景", operlog.OperTypeUpdate,
+			operlog.WithOperParam("id="+id))
 		response.Success(c, gin.H{"message": "更新成功"})
 	}
 }
@@ -230,6 +234,8 @@ func deleteCaptchaBackground(core *corepkg.Core) gin.HandlerFunc {
 			return
 		}
 
+		operlog.Record(c, core.OperLogService, core.GetDB(), "验证码背景", operlog.OperTypeDelete,
+			operlog.WithOperParam("id="+id))
 		response.Success(c, gin.H{"message": "删除成功"})
 	}
 }
@@ -258,6 +264,8 @@ func toggleCaptchaBackgroundStatus(core *corepkg.Core) gin.HandlerFunc {
 			return
 		}
 
+		operlog.Record(c, core.OperLogService, core.GetDB(), "验证码背景", operlog.OperTypeStatus,
+			operlog.WithOperParam("id="+id))
 		response.Success(c, gin.H{"message": "状态更新成功", "status": newStatus})
 	}
 }
