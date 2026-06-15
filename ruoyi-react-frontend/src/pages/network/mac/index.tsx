@@ -285,7 +285,7 @@ const MACAddressPage: FC = () => {
               current={paginationProps.current}
               pageSize={paginationProps.pageSize}
             />
-            <Button icon={<DeleteOutlined />} onClick={handleBatchDelete} disabled={selectedRowKeys.length === 0} style={{ color: '#ff4d4f' }}>
+            <Button icon={<DeleteOutlined />} onClick={handleBatchDelete} disabled={selectedRowKeys.length === 0} style={{ color: 'var(--theme-error, #ff4d4f)' }}>
               批量删除 ({selectedRowKeys.length})
             </Button>
           </Space>{/* 批量导出 Modal */}

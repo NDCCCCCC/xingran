@@ -155,7 +155,7 @@ function getCacheTableColumns(props: CacheTableColumnsProps): ColumnsType<CacheI
                 title="确定要删除这个缓存吗？"
                 onConfirm={() => handleBatchOperate('del', [record.key])}
               >
-                <Button type="link" icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }} size="small">
+                <Button type="link" icon={<DeleteOutlined />} style={{ color: 'var(--theme-error, #ff4d4f)' }} size="small">
                   删除
                 </Button>
               </Popconfirm>
@@ -503,7 +503,7 @@ const CacheManager: FC = () => {
                 <Button icon={<ExportOutlined />} onClick={handleExport}>
                   导出
                 </Button>
-                <Button icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }} onClick={handleClearAll}>
+                <Button icon={<DeleteOutlined />} style={{ color: 'var(--theme-error, #ff4d4f)' }} onClick={handleClearAll}>
                   清空
                 </Button>
               </Space>

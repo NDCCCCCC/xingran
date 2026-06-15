@@ -256,7 +256,7 @@ const DedicatedLineManagement: FC = () => {
                 <EditOutlined key="edit" onClick={() => openModal(line)} />,
                 <DeleteOutlined
                   key="delete"
-                  style={{ color: '#ff4d4f' }}
+                  style={{ color: 'var(--theme-error, #ff4d4f)' }}
                   onClick={() => {
                     Modal.confirm({
                       title: '确定要删除这条专线吗？',
@@ -380,7 +380,7 @@ const DedicatedLineManagement: FC = () => {
               setExportFilters(currentFilters);
               setExportVisible(true);
             }}>导出</Button>
-            {selectedRowKeys.length > 0 && <Button icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }} onClick={handleBatchDelete}>批量删除 ({selectedRowKeys.length})</Button>}
+            {selectedRowKeys.length > 0 && <Button icon={<DeleteOutlined />} style={{ color: 'var(--theme-error, #ff4d4f)' }} onClick={handleBatchDelete}>批量删除 ({selectedRowKeys.length})</Button>}
             <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>新增专线</Button>
           </Space>
         </div>

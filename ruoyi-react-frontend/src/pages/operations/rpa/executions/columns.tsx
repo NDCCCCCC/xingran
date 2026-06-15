@@ -87,7 +87,7 @@ export function getExecutionColumns(params: ExecutionColumnsParams): ColumnsType
       width: 200,
       ellipsis: true,
       render: (text) => text ? (
-        <span title={text} style={{ color: '#ff4d4f' }}>
+        <span title={text} style={{ color: 'var(--theme-error, #ff4d4f)' }}>
           {text}
         </span>
       ) : '-',

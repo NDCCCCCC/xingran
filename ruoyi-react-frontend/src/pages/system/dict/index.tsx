@@ -358,7 +358,7 @@ const DictManagement: FC = () => {
                     <Space>
                       {selectedRowKeys.length > 0 && (
                         <Button
-                          icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }}
+                          icon={<DeleteOutlined />} style={{ color: 'var(--theme-error, #ff4d4f)' }}
                           onClick={() => handleBatchDeleteType(selectedRowKeys, setSelectedRowKeys)}
                         >
                           批量删除 ({selectedRowKeys.length})
@@ -491,7 +491,7 @@ const DictManagement: FC = () => {
                     <Space>
                       {selectedRowKeys.length > 0 && (
                         <Button
-                          icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }}
+                          icon={<DeleteOutlined />} style={{ color: 'var(--theme-error, #ff4d4f)' }}
                           onClick={() => handleBatchDeleteData(selectedRowKeys, setSelectedRowKeys)}
                         >
                           批量删除 ({selectedRowKeys.length})

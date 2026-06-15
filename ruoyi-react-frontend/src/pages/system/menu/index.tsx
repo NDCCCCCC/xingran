@@ -129,7 +129,7 @@ function getMenuTableColumns(props: MenuTableColumnsProps): ColumnsType<Menu> {
           </Button>
           <Button
             type="link"
-            icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }}
+            icon={<DeleteOutlined />} style={{ color: 'var(--theme-error, #ff4d4f)' }}
             onClick={() => handleDeleteConfirm(record)}
           >
             删除
@@ -298,7 +298,7 @@ const MenuManagement: FC = () => {
           <Space>
             {selectedRowKeys.length > 0 && (
               <Button
-                icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }}
+                icon={<DeleteOutlined />} style={{ color: 'var(--theme-error, #ff4d4f)' }}
                 onClick={handleBatchDelete}
               >
                 批量删除 ({selectedRowKeys.length})

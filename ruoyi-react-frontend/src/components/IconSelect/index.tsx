@@ -256,7 +256,7 @@ const IconSelect: FC<IconSelectProps> = ({
         {/* 清空按钮 */}
         {value && (
           <div style={{ marginTop: 12, textAlign: 'center' }}>
-            <a onClick={handleClear} style={{ color: '#ff4d4f' }}>
+            <a onClick={handleClear} style={{ color: 'var(--theme-error, #ff4d4f)' }}>
               清空已选图标
             </a>
           </div>

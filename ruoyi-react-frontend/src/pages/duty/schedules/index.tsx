@@ -192,7 +192,7 @@ function getDutyTableColumns(props: DutyTableColumnsProps): ColumnsType<DutySche
           type="link"
           size="small"
           icon={<DeleteOutlined />}
-          style={{ color: '#ff4d4f' }}
+          style={{ color: 'var(--theme-error, #ff4d4f)' }}
           onClick={() => {
             Modal.confirm({
               title: '确定要删除这条排班吗？',
@@ -483,7 +483,7 @@ const DutySchedulePage: FC = () => {
             {selectedRowKeys.length > 0 && (
               <Button
                 icon={<DeleteOutlined />}
-                style={{ color: '#ff4d4f' }}
+                style={{ color: 'var(--theme-error, #ff4d4f)' }}
                 onClick={() => {
                   Modal.confirm({
                     title: '确定要批量删除选中的排班记录吗？',

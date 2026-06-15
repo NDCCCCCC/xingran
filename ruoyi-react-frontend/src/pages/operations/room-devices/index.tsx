@@ -286,7 +286,7 @@ const RoomDeviceManagement: FC = () => {
                 <EditOutlined key="edit" onClick={() => openModal(device)} />,
                 <DeleteOutlined
                   key="delete"
-                  style={{ color: '#ff4d4f' }}
+                  style={{ color: 'var(--theme-error, #ff4d4f)' }}
                   onClick={() => {
                     Modal.confirm({
                       title: '确定要删除这个设备吗？',
@@ -403,7 +403,7 @@ const RoomDeviceManagement: FC = () => {
                 setExportFilters(currentFilters);
                 setExportVisible(true);
               }}>导出</Button>
-              {selectedRowKeys.length > 0 && <Button icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }} onClick={handleBatchDelete}>批量删除 ({selectedRowKeys.length})</Button>}
+              {selectedRowKeys.length > 0 && <Button icon={<DeleteOutlined />} style={{ color: 'var(--theme-error, #ff4d4f)' }} onClick={handleBatchDelete}>批量删除 ({selectedRowKeys.length})</Button>}
               <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>新增设备</Button>
             </Space>
           </div>

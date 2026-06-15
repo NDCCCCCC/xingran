@@ -368,6 +368,13 @@ const WorkstationManagement: FC = () => {
       const building = buildingResult.data;
       const orgId = building?.orgId;
 
+      // 不管有没有 orgId 都要把 orgId 写入表单（来自 building.get 的 orgId）
+      // 这样编辑模式下"所属机构"字段才能正确回显
+      pendingCascaderWrite.current = {
+        record: { ...record, orgId },
+        buildingId,
+      };
+
       if (orgId) {
         // 预加载 cascaderOptions；useEffect 会在选项就绪后写入表单
         await preloadCascaderPath(orgId, buildingId);
@@ -375,6 +382,7 @@ const WorkstationManagement: FC = () => {
         // 没有 orgId 时直接写入表单（不依赖 cascaderOptions）
         workstationForm.setFieldsValue({
           ...record,
+          orgId,
           floorId: [buildingId, record.floorId],
         });
         pendingCascaderWrite.current = null;
@@ -536,7 +544,7 @@ const WorkstationManagement: FC = () => {
           items={[
             { title: '总工位数', value: statistics.total, prefix: <DesktopOutlined /> },
             { title: '空闲', value: statistics.available, styles: { content: { color: '#52c41a' } }, prefix: <CheckCircleOutlined /> },
-            { title: '占用', value: statistics.occupied, styles: { content: { color: '#ff4d4f' } }, prefix: <StopOutlined /> },
+            { title: '占用', value: statistics.occupied, styles: { content: { color: 'var(--theme-error, #ff4d4f)' } }, prefix: <StopOutlined /> },
             { title: '维护', value: statistics.maintain, styles: { content: { color: '#faad14' } }, prefix: <StopOutlined /> },
           ]}
         />
@@ -607,7 +615,7 @@ const WorkstationManagement: FC = () => {
               </Button>
               {selectedRowKeys.length > 0 && (
                 <Button
-                  icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }}
+                  icon={<DeleteOutlined />} style={{ color: 'var(--theme-error, #ff4d4f)' }}
                   onClick={() => handleBatchDelete(selectedRowKeys, handleSuccess, resetSelection)}
                 >
                   批量删除 ({selectedRowKeys.length})

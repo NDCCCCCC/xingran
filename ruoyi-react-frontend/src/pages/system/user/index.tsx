@@ -518,7 +518,7 @@ const UserManagement: FC = () => {
                     icon={<DeleteOutlined />}
                     onClick={handleBatchDelete}
                     style={{
-                      color: '#ff4d4f',
+                      color: 'var(--theme-error, #ff4d4f)',
                     }}
                   >
                     批量删除 ({selectedRowKeys.length})

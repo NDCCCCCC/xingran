@@ -524,7 +524,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
           gap: 16,
         }}
       >
-        <div style={{ fontSize: 18, color: '#ff4d4f' }}>未配置百度地图 AK</div>
+        <div style={{ fontSize: 18, color: 'var(--theme-error, #ff4d4f)' }}>未配置百度地图 AK</div>
         <div style={{ color: '#666' }}>
           请在 .env.development 文件中配置 VITE_BAIDU_MAP_AK
         </div>
@@ -710,7 +710,7 @@ const TooltipPanel: React.FC<TooltipPanelProps> = ({ buildings, position }) => (
       </div>
     ) : (
       <div>
-        <div style={{ fontWeight: 'bold', color: '#ff4d4f', marginBottom: 4 }}>
+        <div style={{ fontWeight: 'bold', color: 'var(--theme-error, #ff4d4f)', marginBottom: 4 }}>
           {buildings.length} 栋楼宇
         </div>
         {buildings.slice(0, 3).map((b, i) => (
@@ -821,7 +821,7 @@ const ClusterSidebar: React.FC<ClusterSidebarProps> = ({
       }}
     >
       <div>
-        <div style={{ fontWeight: 'bold', fontSize: 16, color: '#ff4d4f' }}>
+        <div style={{ fontWeight: 'bold', fontSize: 16, color: 'var(--theme-error, #ff4d4f)' }}>
           📍 {cluster.buildings.length} 栋楼宇
         </div>
         <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>

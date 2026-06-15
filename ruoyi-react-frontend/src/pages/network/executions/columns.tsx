@@ -146,7 +146,7 @@ export function getDetailColumns(params: DetailColumnsParams): ColumnsType<Confi
       ellipsis: true,
       render: (msg: string) => msg ? (
         <Tooltip title={msg}>
-          <span style={{ color: '#ff4d4f' }}>{msg}</span>
+          <span style={{ color: 'var(--theme-error, #ff4d4f)' }}>{msg}</span>
         </Tooltip>
       ) : '-',
     },

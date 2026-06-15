@@ -92,13 +92,27 @@ export function useWorkstationData(
   }, []);
 
   // 构建树形结构数据
+  // 节点的 title 显示从第二级开始的完整路径（参考 DepartmentTreeSelect 中
+  // convertDeptTreeData 的约定），例如 "集团总部/财务中心/财务部"。
+  // 这样在编辑模态框的"所属部门"字段中回显时，能看到完整部门链，
+  // 而非只显示最末级部门名。
   const buildTreeData = useCallback((depts: DepartmentNode[]): DeptTreeNode[] => {
-    return depts.map((dept) => ({
-      title: dept.deptName || dept.name || '',
-      value: dept.id,
-      key: dept.id,
-      children: dept.children?.length ? buildTreeData(dept.children) : undefined,
-    }));
+    const build = (nodes: DepartmentNode[], ancestorNames: string[]): DeptTreeNode[] => {
+      return nodes.map((node) => {
+        const name = node.deptName || node.name || '';
+        // 顶级部门直接显示名称；从第二级开始拼接完整路径
+        const title = ancestorNames.length === 0
+          ? name
+          : [...ancestorNames, name].join(' / ');
+        return {
+          title,
+          value: node.id,
+          key: node.id,
+          children: node.children?.length ? build(node.children, [...ancestorNames, name]) : undefined,
+        };
+      });
+    };
+    return build(depts, []);
   }, []);
 
   const loadDeptOptions = useCallback(async () => {

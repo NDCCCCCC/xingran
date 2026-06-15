@@ -196,7 +196,7 @@ function getWorkOrderTableColumns(props: WorkOrderTableColumnsProps): ColumnsTyp
                 okText="确定"
                 cancelText="取消"
               >
-                <Button type="link" icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }} size="small">
+                <Button type="link" icon={<DeleteOutlined />} style={{ color: 'var(--theme-error, #ff4d4f)' }} size="small">
                   删除
                 </Button>
               </Popconfirm>
@@ -500,7 +500,7 @@ const WorkOrderPage: FC = () => {
           </Form>
           <Space>
             {selectedRowKeys.length > 0 && (
-              <Button type="primary" onClick={handleBatchDelete} style={{ color: '#ff4d4f', borderColor: '#ff4d4f' }}>
+              <Button type="primary" onClick={handleBatchDelete} style={{ color: 'var(--theme-error, #ff4d4f)', borderColor: '#ff4d4f' }}>
                 批量删除 ({selectedRowKeys.length})
               </Button>
             )}

@@ -419,7 +419,7 @@ const CredentialManagement: FC = () => {
           <Space>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新增</Button>
             {selectedRowKeys.length > 0 && (
-              <Button icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }} onClick={handleBatchDelete}>
+              <Button icon={<DeleteOutlined />} style={{ color: 'var(--theme-error, #ff4d4f)' }} onClick={handleBatchDelete}>
                 批量删除 ({selectedRowKeys.length})
               </Button>
             )}

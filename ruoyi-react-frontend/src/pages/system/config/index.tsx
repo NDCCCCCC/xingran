@@ -269,7 +269,7 @@ const ConfigManagement: FC = () => {
                 title="确认删除?"
                 onConfirm={() => handleDelete(record.id, record.isSystem)}
               >
-                <Button type="link" icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }} size="small" disabled={record.isSystem === 1}>
+                <Button type="link" icon={<DeleteOutlined />} style={{ color: 'var(--theme-error, #ff4d4f)' }} size="small" disabled={record.isSystem === 1}>
                   删除
                 </Button>
               </Popconfirm>
@@ -350,7 +350,7 @@ const ConfigManagement: FC = () => {
           <Space>
             {selectedRowKeys.length > 0 && (
               <Button
-                icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }}
+                icon={<DeleteOutlined />} style={{ color: 'var(--theme-error, #ff4d4f)' }}
                 onClick={handleBatchDelete}
               >
                 批量删除 ({selectedRowKeys.length})

@@ -106,7 +106,7 @@ export function ExecutionDetailModal({
       case 'info':
         return <CheckCircleOutlined style={{ color: '#52c41a' }} />;
       case 'error':
-        return <CloseCircleOutlined style={{ color: '#ff4d4f' }} />;
+        return <CloseCircleOutlined style={{ color: 'var(--theme-error, #ff4d4f)' }} />;
       case 'warn':
         return <CloseCircleOutlined style={{ color: '#faad14' }} />;
       default:

@@ -262,7 +262,7 @@ const RoleManagement: FC = () => {
             </Button>
             {selectedRowKeys.length > 0 && (
               <Button
-                icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }}
+                icon={<DeleteOutlined />} style={{ color: 'var(--theme-error, #ff4d4f)' }}
                 onClick={() => handleBatchDelete(selectedRowKeys)}
               >
                 批量删除 ({selectedRowKeys.length})

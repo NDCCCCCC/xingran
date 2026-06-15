@@ -168,7 +168,7 @@ const CommandDispatch: FC = () => {
             <Statistic
               title="失败"
               value={statistics.failed}
-              styles={{ content: { color: '#ff4d4f' } }}
+              styles={{ content: { color: 'var(--theme-error, #ff4d4f)' } }}
               prefix={<CloseCircleOutlined />}
             />
           </Card>

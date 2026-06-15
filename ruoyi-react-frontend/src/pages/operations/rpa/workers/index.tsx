@@ -154,7 +154,7 @@ const WorkerMonitor: FC = () => {
               title="错误"
               value={stats.error}
               prefix={<CloseCircleOutlined />}
-              styles={{ content: { color: '#ff4d4f' } }}
+              styles={{ content: { color: 'var(--theme-error, #ff4d4f)' } }}
             />
           </Card>
         </Col>

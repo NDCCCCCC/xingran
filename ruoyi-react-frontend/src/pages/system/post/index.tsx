@@ -197,7 +197,7 @@ const PostManagement: FC = () => {
                 okText="确定"
                 cancelText="取消"
               >
-                <Button type="link" icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }} size="small">
+                <Button type="link" icon={<DeleteOutlined />} style={{ color: 'var(--theme-error, #ff4d4f)' }} size="small">
                   删除
                 </Button>
               </Popconfirm>
@@ -278,7 +278,7 @@ const PostManagement: FC = () => {
           <Space>
             {selectedRowKeys.length > 0 && (
               <Button
-                icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }}
+                icon={<DeleteOutlined />} style={{ color: 'var(--theme-error, #ff4d4f)' }}
                 onClick={handleBatchDelete}
               >
                 批量删除 ({selectedRowKeys.length})
