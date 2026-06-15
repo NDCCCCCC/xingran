@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
@@ -87,6 +88,8 @@ func (h *CacheEnhancedHandler) InvalidateByModule(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "缓存监控", operlog.OperTypeClean,
+		operlog.WithOperParam("module="+req.Module))
 	response.Success(c, nil)
 }
 
@@ -122,6 +125,8 @@ func (h *CacheEnhancedHandler) InvalidateByPattern(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "缓存监控", operlog.OperTypeClean,
+		operlog.WithOperParam("pattern="+req.Pattern))
 	response.Success(c, nil)
 }
 
@@ -155,6 +160,10 @@ func (h *CacheEnhancedHandler) WarmUpCache(c *gin.Context) {
 	// 注意：预热功能需要在路由注册时传入相应的服务实例
 	// 这里提供一个框架，实际使用时需要根据具体的服务实例构建预热函数
 
+	// 记录操作日志（即使未实现，缓存预热属合规敏感操作，需审计调用尝试）。
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "缓存监控", operlog.OperTypeClean,
+		operlog.WithErrorMsg("warmup not implemented"),
+		operlog.WithStatus(1))
 	response.Error(c, apperrors.NotImplemented())
 }
 
