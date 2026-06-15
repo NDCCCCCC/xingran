@@ -14,7 +14,7 @@ import {
   Descriptions,
 } from 'antd';
 import { ExportOutlined } from '@ant-design/icons';
-import { getAccessToken } from '@/utils/authHelpers';
+import { getAuthHeaders } from '@/utils/authHelpers';
 import { excelApi } from '@/lib/opsApi';
 
 export interface ExcelExportProps {
@@ -46,11 +46,11 @@ const ExcelExport: FC<ExcelExportProps> = ({
         await excelApi.export(entityType, filters);
       } else {
         // 自定义路径：保留原内联 fetch（处理 system/dept 等非 ops 模块的导出）
-        const token = await getAccessToken();
+        const authHeaders = await getAuthHeaders();
         const response = await fetch(exportUrl, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${token}`,
+            ...authHeaders,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(filters),
