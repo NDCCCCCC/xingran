@@ -39,6 +39,7 @@ import {
   ApiOutlined,
   EyeOutlined,
   CloudUploadOutlined,
+  HistoryOutlined,
 } from '@ant-design/icons';
 import type { NetworkDevice } from '@/types';
 import type { BaseResponse, PageResponse } from '@/types';
@@ -54,6 +55,7 @@ import NetworkExport from '@/components/shared/NetworkExport';
 import { BatchExportModal } from '@/components/shared';
 import { DownloadOutlined } from '@ant-design/icons';
 import { usePagination } from '@/hooks/usePagination';
+import { useMenuStore } from '@/store/menuStore';
 
 // 导入提取的常量、工具和 Hook
 import {
@@ -84,10 +86,11 @@ interface DeviceTableColumnsProps {
   openModal: (record?: NetworkDevice) => void;
   handleDelete: (id: string) => void;
   collectingDeviceId: string | null;
+  canViewMACHistory: boolean;
 }
 
 function getDeviceTableColumns(props: DeviceTableColumnsProps): ColumnsType<NetworkDevice> {
-  const { navigate, handleCollectPorts, openDetailModal, openModal, handleDelete, collectingDeviceId } = props;
+  const { navigate, handleCollectPorts, openDetailModal, openModal, handleDelete, collectingDeviceId, canViewMACHistory } = props;
 
   return [
     {
@@ -169,6 +172,18 @@ function getDeviceTableColumns(props: DeviceTableColumnsProps): ColumnsType<Netw
             icon: <EyeOutlined />,
             onClick: () => openDetailModal(record),
           },
+          // 14-05b:网络设备 → MAC 历史联动入口(D-16 锁定)
+          ...(canViewMACHistory
+            ? [
+                {
+                  key: 'mac-history',
+                  label: '查看 MAC 历史',
+                  icon: <HistoryOutlined />,
+                  onClick: () =>
+                    navigate(`/network/mac/history?deviceId=${record.id}`),
+                },
+              ]
+            : []),
           {
             key: 'edit',
             label: '编辑',
@@ -202,6 +217,10 @@ function getDeviceTableColumns(props: DeviceTableColumnsProps): ColumnsType<Netw
 
 const DeviceManagement: FC = () => {
   const navigate = useNavigate();
+
+  // 权限(14-05b:查看 MAC 历史联动入口)— 与 history 页主权限点 network:mac:list 保持一致
+  const menuPermissions = useMenuStore((s) => s.permissions);
+  const canViewMACHistory = menuPermissions.includes('network:mac:list');
 
   // 表单实例
   const [quickCreateForm] = Form.useForm();
@@ -562,6 +581,7 @@ const DeviceManagement: FC = () => {
     openModal,
     handleDelete,
     collectingDeviceId,
+    canViewMACHistory,
   });
 
   return (
@@ -916,6 +936,22 @@ const DeviceManagement: FC = () => {
         open={detailModalVisible}
         onCancel={() => setDetailModalVisible(false)}
         footer={[
+          // 14-05b:详情页头部操作区新增 查看 MAC 历史 联动入口(D-16 锁定)
+          ...(canViewMACHistory && viewingDevice
+            ? [
+                <Button
+                  key="mac-history"
+                  icon={<HistoryOutlined />}
+                  onClick={() => {
+                    if (viewingDevice) {
+                      navigate(`/network/mac/history?deviceId=${viewingDevice.id}`);
+                    }
+                  }}
+                >
+                  查看 MAC 历史
+                </Button>,
+              ]
+            : []),
           <Button key="close" onClick={() => setDetailModalVisible(false)}>关闭</Button>,
         ]}
         width={800}
