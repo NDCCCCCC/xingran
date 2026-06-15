@@ -628,7 +628,7 @@ Plans:
 
 **Wave 2 — system 核心** *(依赖 Wave 1)*
 
-- [ ] 34-02-PLAN.md — system 核心: user / role / dept / menu / dict / post 集成 operlog.Record / RecordWithBody
+- [x] 34-02-PLAN.md — system 核心: user / role / dept / menu / dict / post 集成 operlog.Record / RecordWithBody (31 写端点埋点 + WithCore() 链式注入 + SM4 兼容烟雾测试 TestResetPassword_SM4MiddlewareCompat) ✅ 2026-06-15 (commits ffd8bae, 6867d3e)
 
 **Success Criteria**:
 - sys_oper_log 表有效记录数对应 309 个端点，**覆盖率 ≥ 95%**（允许少量内部管理端点豁免）
