@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.12
 milestone_name: 深信服桌面云集成
 status: executing
-stopped_at: Plan 34-06 完成 (Wave 5 cross-module ✅), 准备进入 Plan 34-07+ (Waves 6-7)
-last_updated: "2026-06-15T16:54:39.855Z"
+stopped_at: Plan 34-08 完成 (Wave 7 system submodules ✅ — FINAL Wave 2 plan), Phase 34 还剩 Plan 09-10
+last_updated: "2026-06-16T00:00:00.000Z"
 progress:
   total_phases: 14
   completed_phases: 7
   total_plans: 69
-  completed_plans: 55
-  percent: 50
+  completed_plans: 58
+  percent: 52
 ---
 
 # Project State
@@ -26,12 +26,12 @@ progress:
 ## Current Position
 
 Phase: 34 (oper-log-full-coverage) — EXECUTING
-Plan: 8 of 10 (Plan 34-01 ✅ / 34-02 ✅ / 34-03 ✅ / 34-04 ✅ / 34-05 ✅ / 34-06 ✅ 完成 2026-06-15)
+Plan: 9 of 10 (Plan 34-01 ✅ / 34-02 ✅ / 34-03 ✅ / 34-04 ✅ / 34-05 ✅ / 34-06 ✅ / 34-07 ✅ / 34-08 ✅ 完成 2026-06-16)
 **当前里程碑**: v1.16 — 工位设备关联
-**当前阶段**: Phase 34 进行中 — Wave 1 (基础设施) ✅ + Wave 2 (system 核心 ✅) + Wave 2 (system 外围 ✅) + Wave 3 (operations ✅) + Wave 4 (network ✅) + Wave 5 (cross-module ✅) 完成
-**状态**: 🚧 Phase 34 Plan 06 完成 (5 个跨域模块 59 个写端点全部埋点 operlog.Record; VM 电源操作 OperTypeStatus / 同步 OperTypeSync / 用户绑定 OperTypeGrant; 合并文件结构知识/duty/workorder 各 1 个 handler 文件)
-**完成时间**: 2026-06-15 (Plan 34-06)
-**下一计划**: Plan 34-07+ (Waves 6-7 — monitor/remaining 模块 operlog 集成)
+**当前阶段**: Phase 34 进行中 — Wave 1 (基础设施) ✅ + Wave 2 (system 核心 ✅) + Wave 2 (system 外围 ✅) + Wave 3 (operations ✅) + Wave 4 (network ✅) + Wave 5 (cross-module ✅) + Wave 6 (monitor+rpa+agent ✅) + Wave 7 (system 子模块 ✅) 完成
+**状态**: 🚧 Phase 34 Plan 08 完成 (Wave 7 system 子模块 8 handler 31 写端点全部埋点 operlog.Record/RecordWithBody; 通知配置 Create/Update 用 RecordWithBody 屏蔽 SMTP password 与 API headers/bodyTemplate 密钥; AD 用户/部门同步用 OperTypeSync; Rule 3 修复 ad_dept_sync_handler_test.go 预先存在 nil-deref panic)
+**完成时间**: 2026-06-16 (Plan 34-08)
+**下一计划**: Plan 34-09+ (Phase 34 收尾)
 
 ## Project Reference
 
@@ -144,6 +144,8 @@ Plan: 8 of 10 (Plan 34-01 ✅ / 34-02 ✅ / 34-03 ✅ / 34-04 ✅ / 34-05 ✅ / 
 | 2026-06-15 | Phase 34 Plan 04 完成 (operations 模块操作日志) - Wave 3, 10 handler 56 写端点 (building/floor/workstation/excel/...) ✅ | 34 |
 | 2026-06-15 | Phase 34 Plan 05 完成 (network 模块操作日志) - Wave 4, 10 handler 44 写端点 (device/credential/template/discovery/...) + RecordWithBody 脱敏 ✅ | 34 |
 | 2026-06-15 | Phase 34 Plan 06 完成 (跨域模块操作日志 Wave 5) - 5 个模块 59 写端点 (vdi/workorder/duty/knowledge/scheduler) ✅ | 34 |
+| 2026-06-16 | Phase 34 Plan 07 完成 (跨模块操作日志 Wave 6) - monitor+rpa+agent 11 handler 45 写端点 (cache/login_log/oper_log/server/agent/task/credential/execution/ai/flow/worker) ✅ | 34 |
+| 2026-06-16 | Phase 34 Plan 08 完成 (system 子模块操作日志 Wave 7 — FINAL Wave 2 plan) - 8 handler 31 写端点 (dashboard/column_config/notification_config/notice_user/ou_group_mapping/ou_mapping/ad_domain_user_sync/ad_dept_sync) ✅ | 34 |
 
 ## Quick Tasks Completed
 
@@ -300,8 +302,8 @@ Plan: 8 of 10 (Plan 34-01 ✅ / 34-02 ✅ / 34-03 ✅ / 34-04 ✅ / 34-05 ✅ / 
 
 ## Session Continuity
 
-Last session: 2026-06-15T16:54:34.170Z
-Stopped at: Plan 34-06 完成 (Wave 5 cross-module ✅), 准备进入 Plan 34-07+ (Waves 6-7)
+Last session: 2026-06-16T00:00:00.000Z
+Stopped at: Plan 34-08 完成 (Wave 7 system submodules ✅ — FINAL Wave 2 plan), Phase 34 还剩 Plan 09-10
 Resume file: None
 
-**Planned Phase:** 34 (oper-log-full-coverage) — 10 plans — Wave 1 ✅ / Wave 2 ✅ / Wave 3 ✅ / Wave 4 ✅ / Wave 5 ✅ / Waves 6-7 待执行
+**Planned Phase:** 34 (oper-log-full-coverage) — 10 plans — Wave 1 ✅ / Wave 2 ✅ / Wave 3 ✅ / Wave 4 ✅ / Wave 5 ✅ / Wave 6 ✅ / Wave 7 ✅ / Plans 09-10 待执行
