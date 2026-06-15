@@ -28,6 +28,9 @@ type ConfigBackupService struct {
 // 配置备份并发数的默认配置键
 const backupConcurrentConfigKey = "network.config.backup.concurrent"
 
+// defaultBackupThresholdKB 配置备份变更阈值 fallback（单位：KB）
+const defaultBackupThresholdKB = 100
+
 // NewConfigBackupService 创建配置备份服务
 func NewConfigBackupService(db *gorm.DB, executor *device.DeviceExecutor) *ConfigBackupService {
 	svc := &ConfigBackupService{
@@ -69,12 +72,12 @@ func (s *ConfigBackupService) getDefaultThreshold(ctx context.Context) int {
 	err := s.db.WithContext(ctx).Where("config_key = ?", "network.config.backup.threshold").First(&config).Error
 	if err != nil {
 		// 默认阈值：100KB
-		return 100
+		return defaultBackupThresholdKB
 	}
 
 	threshold, err := strconv.Atoi(config.ConfigValue)
 	if err != nil {
-		return 100 // 默认100KB
+		return defaultBackupThresholdKB // 默认100KB
 	}
 	return threshold
 }
