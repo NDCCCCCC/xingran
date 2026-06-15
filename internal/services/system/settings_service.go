@@ -2,6 +2,7 @@ package system
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -19,12 +20,13 @@ type SettingsService interface {
 
 // settingsService 系统设置服务实现
 type settingsService struct {
-	db *gorm.DB
+	db            *gorm.DB
+	configService ConfigService
 }
 
 // NewSettingsService 创建系统设置服务实例
-func NewSettingsService(db *gorm.DB) SettingsService {
-	return &settingsService{db: db}
+func NewSettingsService(db *gorm.DB, configService ConfigService) SettingsService {
+	return &settingsService{db: db, configService: configService}
 }
 
 // UserPreference 用户个人设置模型（扩展版）
@@ -96,19 +98,9 @@ func (s *settingsService) GetUserPreferences(ctx context.Context, userID string)
 	var pref UserPreference
 	err := s.db.WithContext(ctx).Where("user_id = ?", userID).First(&pref).Error
 
-	// 如果不存在，返回默认值
+	// 如果不存在，返回默认值（优先合并管理员配置的默认主题）
 	if err == gorm.ErrRecordNotFound {
-		return &UserPreferences{
-			Theme:                 "light",
-			ThemeStyle:            "minimal",
-			LayoutType:            "classic",
-			LayoutDensity:         "comfortable",
-			SidebarWidth:          280,
-			SidebarCollapsedWidth: 64,
-			SidebarCollapsed:      false,
-			PageSize:              10,
-			Language:              "zh-CN",
-		}, nil
+		return s.buildDefaultPreferences(ctx), nil
 	}
 
 	if err != nil {
@@ -138,6 +130,54 @@ func (s *settingsService) GetUserPreferences(ctx context.Context, userID string)
 		CustomSidebarColor:    pref.CustomSidebarColor,
 		Language:              pref.Language,
 	}, nil
+}
+
+// buildDefaultPreferences 构建用户无偏好记录时的默认值
+// 优先合并管理员在 sys.theme.default 中配置的默认主题；管理员未配置时回退到硬编码值。
+func (s *settingsService) buildDefaultPreferences(ctx context.Context) *UserPreferences {
+	prefs := &UserPreferences{
+		Theme:                 "light",
+		ThemeStyle:            "minimal",
+		LayoutType:            "classic",
+		LayoutDensity:         "comfortable",
+		SidebarWidth:          280,
+		SidebarCollapsedWidth: 64,
+		SidebarCollapsed:      false,
+		PageSize:              10,
+		Language:              "zh-CN",
+	}
+
+	// 尝试合并管理员配置的默认主题
+	if s.configService == nil {
+		return prefs
+	}
+
+	config, err := s.configService.GetByKey(ctx, "sys.theme.default")
+	if err != nil || config == nil {
+		// 配置不存在或读取失败，保持硬编码默认值
+		return prefs
+	}
+
+	var themeCfg ThemeConfiguration
+	if err := json.Unmarshal([]byte(config.ConfigValue), &themeCfg); err != nil {
+		// 解析失败，保持硬编码默认值
+		return prefs
+	}
+
+	if themeCfg.Mode != "" {
+		prefs.Theme = themeCfg.Mode
+	}
+	if themeCfg.Style != "" {
+		prefs.ThemeStyle = themeCfg.Style
+	}
+	if primary, ok := themeCfg.CustomColors["primary"]; ok && primary != "" {
+		prefs.CustomPrimaryColor = primary
+	}
+	if sidebar, ok := themeCfg.CustomColors["sidebar"]; ok && sidebar != "" {
+		prefs.CustomSidebarColor = sidebar
+	}
+
+	return prefs
 }
 
 // UpdateUserPreferences 更新用户个人设置

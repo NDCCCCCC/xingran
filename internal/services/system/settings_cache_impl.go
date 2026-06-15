@@ -22,8 +22,9 @@ func NewSettingsServiceWithCache(
 	db *gorm.DB,
 	cache CacheProvider,
 	config *services.CacheConfigService,
+	configService ConfigService,
 ) SettingsService {
-	base := &settingsService{db: db}
+	base := &settingsService{db: db, configService: configService}
 	return &settingsCacheService{
 		settingsService:  base,
 		cache:            cache,

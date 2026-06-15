@@ -71,12 +71,21 @@ const DefaultThemePage: React.FC = () => {
     try {
       setLoading(true);
 
+      // ColorPicker 返回的是 Color 对象,需要 toHexString() 转成 hex 字符串;
+      // 空值或未选择时退化为 undefined,后端 bind 不会报错
+      const toHex = (v: any): string | undefined => {
+        if (!v) return undefined;
+        if (typeof v === 'string') return v;
+        if (typeof v?.toHexString === 'function') return v.toHexString();
+        return undefined;
+      };
+
       const config: ThemeConfiguration = {
         mode: values.mode,
         style: values.style,
         customColors: {
-          primary: values.primaryColor,
-          sidebar: values.sidebarColor,
+          primary: toHex(values.primaryColor),
+          sidebar: toHex(values.sidebarColor),
         },
       };
 
