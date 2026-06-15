@@ -26,6 +26,9 @@ const (
 	StateClosed                              // 已关闭
 )
 
+// scrapliInitTimeout Scrapli 客户端初始化就绪等待超时
+const scrapliInitTimeout = 30 * time.Second
+
 // String 返回状态的字符串表示
 func (s ConnectionState) String() string {
 	switch s {
@@ -48,14 +51,15 @@ func (s ConnectionState) String() string {
 //   - 操作方法获取 RLock（允许多个操作并发）
 //   - Close() 获取 Lock（等待所有操作完成后才关闭）
 type ScrapliWrapper struct {
-	driver    *network.Driver
-	device    *models.NetworkDevice
-	state     ConnectionState // 连接状态
-	stateMu   sync.RWMutex    // 保护状态读写
-	opMu      sync.RWMutex    // 保护 driver 操作与 Close() 的竞态
-	closing   chan struct{}   // 用于通知关闭信号（用于 OpenContext 初始化循环等非 opMu 路径）
-	initDone  chan struct{}   // 初始化完成信号
-	closeOnce sync.Once       // 确保 initDone 只关闭一次
+	driver      *network.Driver
+	device      *models.NetworkDevice
+	state       ConnectionState // 连接状态
+	stateMu     sync.RWMutex    // 保护状态读写
+	opMu        sync.RWMutex    // 保护 driver 操作与 Close() 的竞态
+	getPromptMu sync.Mutex      // 串行化 GetPrompt 调用（防御 scrapligo Queue 竞态）
+	closing     chan struct{}   // 用于通知关闭信号（用于 OpenContext 初始化循环等非 opMu 路径）
+	initDone    chan struct{}   // 初始化完成信号
+	closeOnce   sync.Once       // 确保 initDone 只关闭一次
 }
 
 // PlatformName 平台名称映射
@@ -318,7 +322,7 @@ func (w *ScrapliWrapper) OpenContext(ctx context.Context) error {
 		// Open 成功后，进入初始化阶段
 		// 等待 scrapligo 内部的 goroutine（如 GetPrompt）完成初始化
 		// 使用轮询方式验证连接真正就绪
-		initCtx, cancelInit := context.WithTimeout(context.Background(), 30*time.Second)
+		initCtx, cancelInit := context.WithTimeout(context.Background(), scrapliInitTimeout)
 		defer cancelInit()
 
 		ticker := time.NewTicker(100 * time.Millisecond)
