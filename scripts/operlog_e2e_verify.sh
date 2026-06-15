@@ -56,8 +56,11 @@ fi
 echo "== Static checks =="
 CALLS=$(grep -rE "operlog\.(Record|RecordWithBody)\(" internal/ 2>/dev/null | wc -l | tr -d ' ')
 echo "operlog.Record|RecordWithBody calls in internal/: ${CALLS}"
-if [[ "${CALLS}" -lt 250 ]]; then
-  echo "FAIL: expected >=250 operlog calls, got ${CALLS}" >&2
+# Threshold raised from 250 to 290 after Phase 34 gap-closure (34-gap) instrumented
+# 25 previously-missed write endpoints across 6 handler files. The previous loose
+# >=250 threshold could not detect the 25-endpoint gap — see 34-VERIFICATION.md.
+if [[ "${CALLS}" -lt 290 ]]; then
+  echo "FAIL: expected >=290 operlog calls, got ${CALLS}" >&2
   exit 1
 fi
 
@@ -67,6 +70,64 @@ if [[ "${SENSITIVE_KEYS}" -lt 17 ]]; then
   echo "FAIL: expected >=17 sensitive-key entries, got ${SENSITIVE_KEYS}" >&2
   exit 1
 fi
+
+# ----- Handler-file-vs-operlog differential check --------------------
+# F-OPLOG-VER gap-closure: enumerate every *_handler.go file under
+# internal/api/v1/ that defines a write-method receiver (func (h *...Handler))
+# and FAIL if it contains ZERO operlog.Record / RecordWithBody calls.
+# This catches the class of gap found in 34-VERIFICATION (6 handler files with
+# routed POST/PUT/DELETE writes but zero operlog calls).
+#
+# Read-only handler allowlist — files that legitimately contain no write methods
+# (pure GET / list / tree / stats endpoints). Add a file here ONLY with a
+# documented reason; every entry below is a read-only handler by construction.
+READONLY_ALLOWLIST=(
+  # Read-only handlers: define only query/list/stats/export-via-GET methods (no
+  # state mutation). The POST verbs below are query-with-body patterns, not
+  # writes. Add a file here ONLY if every routed method is a read.
+  "network/mac_history_handler.go"         # all methods are /history/* queries + 1 GET export
+  "network/mac_history_heatmap_handler.go" # only QueryHeatmap (POST /history/heatmap, read)
+)
+
+echo
+echo "== Handler-file operlog coverage differential =="
+HANDLER_FILES=$(grep -rlE '^func \(h \*[A-Za-z]+Handler\) [A-Za-z]+\(' internal/api/v1/ --include='*_handler.go' 2>/dev/null | sort -u)
+ZERO_OPLOG_HANDLERS=()
+for f in ${HANDLER_FILES}; do
+  # grep -c prints the match count but exits 1 when count==0; suppress that
+  # exit code so set -e / pipefail don't abort, and capture only the number.
+  direct=$(grep -cE "operlog\.(Record|RecordWithBody)\(" "$f" 2>/dev/null || true)
+  direct=$(echo "${direct}" | tr -d '[:space:]')
+  [[ -z "${direct}" ]] && direct=0
+  # Also count the legacy recordOperLog shim (internal/api/v1/system/helper.go)
+  # which delegates to operlog.Record — AD-domain handlers (Wave 1 backward-compat)
+  # use this shim instead of the direct call.
+  shim=$(grep -cE "recordOperLog\(" "$f" 2>/dev/null || true)
+  shim=$(echo "${shim}" | tr -d '[:space:]')
+  [[ -z "${shim}" ]] && shim=0
+  count=$((direct + shim))
+  if [[ "${count}" -eq 0 ]]; then
+    # Check allowlist
+    allowed=0
+    for wl in "${READONLY_ALLOWLIST[@]}"; do
+      if [[ "$f" == *"$wl" ]]; then allowed=1; break; fi
+    done
+    if [[ "${allowed}" -eq 0 ]]; then
+      ZERO_OPLOG_HANDLERS+=("$f")
+    fi
+  fi
+done
+
+if [[ ${#ZERO_OPLOG_HANDLERS[@]} -gt 0 ]]; then
+  echo "FAIL: the following *_handler.go files define methods on a *Handler receiver" >&2
+  echo "      but contain ZERO operlog.Record / RecordWithBody calls:" >&2
+  for f in "${ZERO_OPLOG_HANDLERS[@]}"; do
+    echo "        - $f" >&2
+  done
+  echo "      If a file is genuinely read-only, add it to READONLY_ALLOWLIST with a reason." >&2
+  exit 1
+fi
+echo "all *Handler-receiver files contain >=1 operlog call (or are allowlisted read-only)"
 
 # ----- Live-DB portion (optional) ------------------------------------
 if [[ "${SKIP_LIVE:-}" =~ ^(1|true)$ ]]; then
@@ -221,6 +282,11 @@ assert_logged POST "/api/v1/agent/register"             '{"hostname":"e2e-host"}
 # --- Wave 7 (system submodules) ---
 assert_logged POST "/api/v1/system/dashboards"          '{"name":"e2e_dash"}'                                "仪表盘管理" 1
 assert_logged POST "/api/v1/system/column-config/save"  '{"page":"e2e","config":"{}"}'                       "列设置" 2
+
+# --- Gap-closure (34-gap): compliance-sensitive + previously-missed endpoints ---
+assert_logged POST "/api/v1/system/user-unlock/unlock"  '{"username":"e2e_locked"}'                          "用户解锁" 0
+assert_logged POST "/api/v1/monitor/cache/invalidate"   '{"module":"user"}'                                  "缓存监控" 9
+assert_logged POST "/api/v1/network/devices/export"     '{"exportMode":"all"}'                               "网络设备" 5
 
 echo
 echo "== Summary =="
