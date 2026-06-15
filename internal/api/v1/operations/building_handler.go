@@ -5,6 +5,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 	opsServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
@@ -12,10 +13,20 @@ import (
 type BuildingHandler struct {
 	service          opsServices.BuildingService
 	geocodingService *opsServices.GeocodingService
+	core             *core.Core
 }
 
 func NewBuildingHandler(service opsServices.BuildingService, geocodingService *opsServices.GeocodingService) *BuildingHandler {
 	return &BuildingHandler{service: service, geocodingService: geocodingService}
+}
+
+// WithCore 注入 core 依赖（操作日志记录所需）。Phase 34 操作日志全模块覆盖。
+// 链式注入而非改写 NewBuildingHandler 签名以保持既有调用点（router.go）兼容。
+func (h *BuildingHandler) WithCore(core *core.Core) *BuildingHandler {
+	if h != nil {
+		h.core = core
+	}
+	return h
 }
 
 // NewBuildingHandlerWithCore 使用 core 创建 BuildingHandler（向后兼容）
@@ -44,6 +55,7 @@ func (h *BuildingHandler) Create(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "楼宇管理", operlog.OperTypeCreate)
 	response.Success(c, building)
 }
 
@@ -119,6 +131,7 @@ func (h *BuildingHandler) Update(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "楼宇管理", operlog.OperTypeUpdate)
 	response.Success(c, nil)
 }
 
@@ -140,6 +153,7 @@ func (h *BuildingHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "楼宇管理", operlog.OperTypeDelete)
 	response.Success(c, nil)
 }
 
@@ -174,6 +188,7 @@ func (h *BuildingHandler) BatchOperation(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "楼宇管理", operlog.OperTypeBatch)
 	response.Success(c, nil)
 }
 
@@ -222,6 +237,8 @@ func (h *BuildingHandler) Geocode(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "楼宇管理", operlog.OperTypeOther,
+		operlog.WithOperParam(`{"address":"`+req.Address+`"}`))
 	response.Success(c, GeocodeResponse{
 		Longitude: lng,
 		Latitude:  lat,

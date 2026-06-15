@@ -3,18 +3,29 @@ package operations
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	operationsmodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 	opsServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
 type DoorHandler struct {
 	service opsServices.DoorService
+	core    *core.Core
 }
 
 func NewDoorHandler(service opsServices.DoorService) *DoorHandler {
 	return &DoorHandler{service: service}
+}
+
+// WithCore 注入 core 依赖（操作日志记录所需）。Phase 34 操作日志全模块覆盖。
+func (h *DoorHandler) WithCore(core *core.Core) *DoorHandler {
+	if h != nil {
+		h.core = core
+	}
+	return h
 }
 
 // Create 创建门
@@ -38,6 +49,7 @@ func (h *DoorHandler) Create(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "门窗管理", operlog.OperTypeCreate)
 	response.Success(c, door)
 }
 
@@ -113,6 +125,7 @@ func (h *DoorHandler) Update(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "门窗管理", operlog.OperTypeUpdate)
 	response.Success(c, nil)
 }
 
@@ -134,6 +147,7 @@ func (h *DoorHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "门窗管理", operlog.OperTypeDelete)
 	response.Success(c, nil)
 }
 
@@ -163,5 +177,6 @@ func (h *DoorHandler) BatchOperation(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "门窗管理", operlog.OperTypeBatch)
 	response.Success(c, nil)
 }

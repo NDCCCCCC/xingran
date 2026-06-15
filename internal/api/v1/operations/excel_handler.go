@@ -3,6 +3,7 @@ package operations
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"mime/multipart"
 	"net/http"
@@ -13,9 +14,33 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 	opsServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	"github.com/xuri/excelize/v2"
 )
+
+// excelEntityModuleNames maps each entityType to its Chinese module name for operlog.
+// Used so audit log rows for Excel import/export carry the same module name as the
+// underlying entity's own CRUD handlers (e.g. /ops/buildings/excel/import → 楼宇管理).
+var excelEntityModuleNames = map[string]string{
+	"building":      "楼宇管理",
+	"floor":         "楼层管理",
+	"workstation":   "工位管理",
+	"serverRoom":    "机房管理",
+	"roomDevice":    "机房设备",
+	"dedicatedLine": "专线管理",
+	"infoPoint":     "信息点管理",
+	"asset":         "资产管理",
+}
+
+// excelModuleName returns the Chinese module name for entityType, defaulting to
+// "Excel导入导出" if the entity is not in the known map (defensive).
+func excelModuleName(entityType string) string {
+	if name, ok := excelEntityModuleNames[entityType]; ok {
+		return name
+	}
+	return "Excel导入导出"
+}
 
 // SetupExcelRouter 设置Excel导入导出路由
 func SetupExcelRouter(r *gin.RouterGroup, entityType string, core *core.Core) {
@@ -88,6 +113,11 @@ func importData(entityType string, core *core.Core) gin.HandlerFunc {
 			return
 		}
 
+		// Phase 34 操作日志：只记录 filename + 行数统计（inserted/updated/failed），
+		// 绝不记录原始 Excel 行数据（T-34-W3-01 信息泄露缓解）。OperType=Import(6)。
+		operlog.Record(c, core.OperLogService, core.GetDB(), excelModuleName(entityType), operlog.OperTypeImport,
+			operlog.WithOperParam(fmt.Sprintf(`{"filename":%q,"size":%d,"inserted":%d,"updated":%d,"failed":%d}`,
+				file.Filename, file.Size, result.Inserted, result.Updated, result.Failed)))
 		response.Success(c, gin.H{
 			"inserted": result.Inserted,
 			"updated":  result.Updated,
@@ -114,6 +144,14 @@ func exportData(entityType string, core *core.Core) gin.HandlerFunc {
 			return
 		}
 
+		// Phase 34 操作日志：OperType=Export(5)。审计"谁在何时导出过哪份数据"。
+		// 不记录导出的具体行（可能很大），只记录 module + 请求参数摘要。
+		if paramBytes, err := json.Marshal(req); err == nil {
+			operlog.Record(c, core.OperLogService, core.GetDB(), excelModuleName(entityType), operlog.OperTypeExport,
+				operlog.WithOperParam(operlog.FilterSensitiveParams(string(paramBytes))))
+		} else {
+			operlog.Record(c, core.OperLogService, core.GetDB(), excelModuleName(entityType), operlog.OperTypeExport)
+		}
 		filename := generateExcelFilename(entityType, "export")
 		if err := writeExcelResponse(c, file, filename); err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
@@ -131,6 +169,9 @@ func downloadTemplate(entityType string, core *core.Core) gin.HandlerFunc {
 			return
 		}
 
+		// Phase 34 操作日志：OperType=Download(18)。模板下载虽是只读，但记录可审计
+		// "谁在何时拉取过导入模板"（合规场景下有意义）。
+		operlog.Record(c, core.OperLogService, core.GetDB(), excelModuleName(entityType), operlog.OperTypeDownload)
 		filename := generateExcelFilename(entityType, "template")
 		if err := writeExcelResponse(c, file, filename); err != nil {
 			response.Error(c, response.ErrServerError, err.Error())

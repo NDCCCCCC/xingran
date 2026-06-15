@@ -2,7 +2,9 @@ package operations
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	opsServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
@@ -10,11 +12,20 @@ import (
 // WorkstationDeviceHandler 工位设备关联处理器
 type WorkstationDeviceHandler struct {
 	service opsServices.WorkstationDeviceService
+	core    *core.Core
 }
 
 // NewWorkstationDeviceHandler 创建工位设备关联处理器实例
 func NewWorkstationDeviceHandler(service opsServices.WorkstationDeviceService) *WorkstationDeviceHandler {
 	return &WorkstationDeviceHandler{service: service}
+}
+
+// WithCore 注入 core 依赖（操作日志记录所需）。Phase 34 操作日志全模块覆盖。
+func (h *WorkstationDeviceHandler) WithCore(core *core.Core) *WorkstationDeviceHandler {
+	if h != nil {
+		h.core = core
+	}
+	return h
 }
 
 // GetByWorkstation 获取工位关联设备列表
@@ -67,6 +78,7 @@ func (h *WorkstationDeviceHandler) AddManual(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "工位设备", operlog.OperTypeCreate)
 	response.Success(c, device)
 }
 
@@ -151,6 +163,7 @@ func (h *WorkstationDeviceHandler) SetPrimaryAndSave(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "工位设备", operlog.OperTypeUpdate)
 	response.Success(c, gin.H{"message": "设置成功"})
 }
 
@@ -178,6 +191,7 @@ func (h *WorkstationDeviceHandler) SyncAD(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "工位设备", operlog.OperTypeSync)
 	response.Success(c, gin.H{"message": "同步成功"})
 }
 
@@ -205,6 +219,7 @@ func (h *WorkstationDeviceHandler) SyncAsset(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "工位设备", operlog.OperTypeSync)
 	response.Success(c, gin.H{"message": "同步成功"})
 }
 
@@ -237,6 +252,7 @@ func (h *WorkstationDeviceHandler) Update(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "工位设备", operlog.OperTypeUpdate)
 	response.Success(c, nil)
 }
 
@@ -263,6 +279,7 @@ func (h *WorkstationDeviceHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "工位设备", operlog.OperTypeDelete)
 	response.Success(c, nil)
 }
 
@@ -289,5 +306,6 @@ func (h *WorkstationDeviceHandler) SetPrimary(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "工位设备", operlog.OperTypeGrant)
 	response.Success(c, nil)
 }

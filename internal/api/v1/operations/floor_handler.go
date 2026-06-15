@@ -2,18 +2,29 @@ package operations
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 	opsServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
 type FloorHandler struct {
 	service opsServices.FloorService
+	core    *core.Core
 }
 
 func NewFloorHandler(service opsServices.FloorService) *FloorHandler {
 	return &FloorHandler{service: service}
+}
+
+// WithCore 注入 core 依赖（操作日志记录所需）。Phase 34 操作日志全模块覆盖。
+func (h *FloorHandler) WithCore(core *core.Core) *FloorHandler {
+	if h != nil {
+		h.core = core
+	}
+	return h
 }
 
 // Create 创建楼层
@@ -37,6 +48,7 @@ func (h *FloorHandler) Create(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "楼层管理", operlog.OperTypeCreate)
 	response.Success(c, floor)
 }
 
@@ -133,6 +145,7 @@ func (h *FloorHandler) Update(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "楼层管理", operlog.OperTypeUpdate)
 	response.Success(c, nil)
 }
 
@@ -154,6 +167,7 @@ func (h *FloorHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "楼层管理", operlog.OperTypeDelete)
 	response.Success(c, nil)
 }
 
@@ -188,5 +202,6 @@ func (h *FloorHandler) BatchOperation(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "楼层管理", operlog.OperTypeBatch)
 	response.Success(c, nil)
 }

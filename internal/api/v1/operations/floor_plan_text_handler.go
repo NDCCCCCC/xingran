@@ -3,18 +3,29 @@ package operations
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	operationsmodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 	opsServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
 type FloorPlanTextHandler struct {
 	service opsServices.FloorPlanTextService
+	core    *core.Core
 }
 
 func NewFloorPlanTextHandler(service opsServices.FloorPlanTextService) *FloorPlanTextHandler {
 	return &FloorPlanTextHandler{service: service}
+}
+
+// WithCore 注入 core 依赖（操作日志记录所需）。Phase 34 操作日志全模块覆盖。
+func (h *FloorPlanTextHandler) WithCore(core *core.Core) *FloorPlanTextHandler {
+	if h != nil {
+		h.core = core
+	}
+	return h
 }
 
 // Create 创建平面图文本
@@ -38,6 +49,7 @@ func (h *FloorPlanTextHandler) Create(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "楼层文本", operlog.OperTypeCreate)
 	response.Success(c, text)
 }
 
@@ -114,6 +126,7 @@ func (h *FloorPlanTextHandler) Update(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "楼层文本", operlog.OperTypeUpdate)
 	response.Success(c, nil)
 }
 
@@ -135,6 +148,7 @@ func (h *FloorPlanTextHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "楼层文本", operlog.OperTypeDelete)
 	response.Success(c, nil)
 }
 
@@ -165,5 +179,6 @@ func (h *FloorPlanTextHandler) BatchOperation(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "楼层文本", operlog.OperTypeBatch)
 	response.Success(c, nil)
 }

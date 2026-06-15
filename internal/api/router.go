@@ -505,7 +505,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 		{
 			buildingService := opsServices.NewBuildingService(core.DB.GetDB())
 			geocodingService := opsServices.NewGeocodingService(core.Config.Baidu.MapAK)
-			buildingHandler := operations.NewBuildingHandler(buildingService, geocodingService)
+			buildingHandler := operations.NewBuildingHandler(buildingService, geocodingService).WithCore(core)
 
 			buildings.POST("", buildingHandler.Create)
 			buildings.POST("/list", buildingHandler.List)
@@ -541,7 +541,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			} else {
 				floorService = opsServices.NewFloorService(core.DB.GetDB())
 			}
-			floorHandler := operations.NewFloorHandler(floorService)
+			floorHandler := operations.NewFloorHandler(floorService).WithCore(core)
 
 			// 注意：更具体的路由要放在前面，避免被通用路由匹配
 			floors.POST("/list", floorHandler.List)
@@ -566,7 +566,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 		}, core))
 		{
 			workstationService := opsServices.NewWorkstationService(core.DB.GetDB())
-			workstationHandler := operations.NewWorkstationHandler(workstationService)
+			workstationHandler := operations.NewWorkstationHandler(workstationService).WithCore(core)
 
 			// 注意：更具体的路由要放在前面，避免被通用路由匹配
 			workstations.POST("/list", workstationHandler.List)
@@ -590,7 +590,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 		}, core))
 		{
 			workstationDeviceService := opsServices.NewWorkstationDeviceService(core.DB.GetDB())
-			workstationDeviceHandler := operations.NewWorkstationDeviceHandler(workstationDeviceService)
+			workstationDeviceHandler := operations.NewWorkstationDeviceHandler(workstationDeviceService).WithCore(core)
 
 			workstationDevices.POST("/:id", workstationDeviceHandler.GetByWorkstation)
 			workstationDevices.POST("/manual", workstationDeviceHandler.AddManual)
@@ -611,7 +611,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 		}, core))
 		{
 			assetService := opsServices.NewAssetService(core.DB.GetDB())
-			assetHandler := operations.NewAssetHandler(assetService)
+			assetHandler := operations.NewAssetHandler(assetService).WithCore(core)
 
 			// 注意：更具体的路由要放在前面
 			assets.GET("/search-by-serial/:serial", assetHandler.SearchBySerial)
@@ -640,7 +640,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 		}, core))
 		{
 			infoPointService := opsServices.NewInfoPointService(core.DB.GetDB())
-			infoPointHandler := operations.NewInfoPointHandler(infoPointService)
+			infoPointHandler := operations.NewInfoPointHandler(infoPointService).WithCore(core)
 
 			// 注意：更具体的路由要放在前面
 			infoPoints.POST("/list", infoPointHandler.List)
@@ -664,7 +664,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 		}, core))
 		{
 			serverRoomService := opsServices.NewServerRoomService(core.DB.GetDB())
-			serverRoomHandler := operations.NewServerRoomHandler(serverRoomService)
+			serverRoomHandler := operations.NewServerRoomHandler(serverRoomService).WithCore(core)
 
 			// 注意：更具体的路由要放在前面
 			serverRooms.POST("/list", serverRoomHandler.List)
@@ -694,7 +694,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 		}, core))
 		{
 			dedicatedLineService := opsServices.NewDedicatedLineService(core.DB.GetDB())
-			dedicatedLineHandler := operations.NewDedicatedLineHandler(dedicatedLineService)
+			dedicatedLineHandler := operations.NewDedicatedLineHandler(dedicatedLineService).WithCore(core)
 
 			// 注意：更具体的路由要放在前面
 			dedicatedLines.POST("/list", dedicatedLineHandler.List)
@@ -718,7 +718,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 		}, core))
 		{
 			roomDeviceService := opsServices.NewRoomDeviceService(core.DB.GetDB())
-			roomDeviceHandler := operations.NewRoomDeviceHandler(roomDeviceService)
+			roomDeviceHandler := operations.NewRoomDeviceHandler(roomDeviceService).WithCore(core)
 
 			// 注意：更具体的路由要放在前面
 			roomDevices.POST("/list", roomDeviceHandler.List)
@@ -747,7 +747,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 		}, core))
 		{
 			wallService := opsServices.NewWallService(core.DB.GetDB())
-			wallHandler := operations.NewWallHandler(wallService)
+			wallHandler := operations.NewWallHandler(wallService).WithCore(core)
 
 			walls.POST("/list", wallHandler.List)
 			walls.POST("/batch", wallHandler.BatchOperation)
@@ -771,7 +771,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 		}, core))
 		{
 			doorService := opsServices.NewDoorService(core.DB.GetDB())
-			doorHandler := operations.NewDoorHandler(doorService)
+			doorHandler := operations.NewDoorHandler(doorService).WithCore(core)
 
 			doors.POST("/list", doorHandler.List)
 			doors.POST("/batch", doorHandler.BatchOperation)
@@ -791,7 +791,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 		}, core))
 		{
 			textService := opsServices.NewFloorPlanTextService(core.DB.GetDB())
-			textHandler := operations.NewFloorPlanTextHandler(textService)
+			textHandler := operations.NewFloorPlanTextHandler(textService).WithCore(core)
 
 			texts.POST("/list", textHandler.List)
 			texts.POST("/batch", textHandler.BatchOperation)

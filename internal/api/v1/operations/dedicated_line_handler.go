@@ -3,18 +3,29 @@ package operations
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 	opsServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
 type DedicatedLineHandler struct {
 	service opsServices.DedicatedLineService
+	core    *core.Core
 }
 
 func NewDedicatedLineHandler(service opsServices.DedicatedLineService) *DedicatedLineHandler {
 	return &DedicatedLineHandler{service: service}
+}
+
+// WithCore 注入 core 依赖（操作日志记录所需）。Phase 34 操作日志全模块覆盖。
+func (h *DedicatedLineHandler) WithCore(core *core.Core) *DedicatedLineHandler {
+	if h != nil {
+		h.core = core
+	}
+	return h
 }
 
 // Create 创建专线
@@ -38,6 +49,7 @@ func (h *DedicatedLineHandler) Create(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "专线管理", operlog.OperTypeCreate)
 	response.Success(c, line)
 }
 
@@ -114,6 +126,7 @@ func (h *DedicatedLineHandler) Update(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "专线管理", operlog.OperTypeUpdate)
 	response.Success(c, nil)
 }
 
@@ -135,6 +148,7 @@ func (h *DedicatedLineHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "专线管理", operlog.OperTypeDelete)
 	response.Success(c, nil)
 }
 
@@ -165,5 +179,6 @@ func (h *DedicatedLineHandler) BatchOperation(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "专线管理", operlog.OperTypeBatch)
 	response.Success(c, nil)
 }

@@ -4,14 +4,17 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
 // AssetHandler 资产处理器
 type AssetHandler struct {
 	assetService operations.AssetService
+	core         *core.Core
 }
 
 // NewAssetHandler 创建资产处理器实例
@@ -19,6 +22,14 @@ func NewAssetHandler(assetService operations.AssetService) *AssetHandler {
 	return &AssetHandler{
 		assetService: assetService,
 	}
+}
+
+// WithCore 注入 core 依赖（操作日志记录所需）。Phase 34 操作日志全模块覆盖。
+func (h *AssetHandler) WithCore(core *core.Core) *AssetHandler {
+	if h != nil {
+		h.core = core
+	}
+	return h
 }
 
 // Create 创建资产
@@ -34,6 +45,7 @@ func (h *AssetHandler) Create(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "资产管理", operlog.OperTypeCreate)
 	response.Success(c, asset)
 }
 
@@ -50,6 +62,7 @@ func (h *AssetHandler) Update(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "资产管理", operlog.OperTypeUpdate)
 	response.Success(c, asset)
 }
 
@@ -66,6 +79,7 @@ func (h *AssetHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "资产管理", operlog.OperTypeDelete)
 	response.Success(c, nil)
 }
 
@@ -126,6 +140,7 @@ func (h *AssetHandler) BatchOperation(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "资产管理", operlog.OperTypeBatch)
 	response.Success(c, nil)
 }
 
