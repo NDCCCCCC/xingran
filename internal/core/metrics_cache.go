@@ -12,6 +12,9 @@ import (
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 )
 
+// cacheHealthCheckTimeout 缓存健康检查超时
+const cacheHealthCheckTimeout = 5 * time.Second
+
 // MetricsCacheService 系统指标缓存服务
 type MetricsCacheService struct {
 	core    *Core
@@ -248,7 +251,7 @@ func (s *MetricsCacheService) GetHealthStatus(ctx context.Context) *CacheHealthS
 	start := time.Now()
 
 	// 测试缓存性能
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, cacheHealthCheckTimeout)
 	defer cancel()
 
 	// 尝试获取系统指标测试缓存响应
