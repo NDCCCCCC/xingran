@@ -11,6 +11,7 @@ import { useEffect } from 'react';
 import type { LayoutType, LayoutConfig, DensityMode } from '@/types/layout';
 import type { LayoutConfiguration } from '@/types/config';
 import { defaultLayoutConfiguration } from '@/types/config';
+import { ZUSTAND_STORAGE_KEYS } from '@/constants/storage';
 
 interface LayoutState {
 	// 从 SettingsStore 衍生的配置
@@ -152,7 +153,7 @@ function loadInitialLayoutState(): {
 	density: DensityMode;
 } {
 	try {
-		const stored = localStorage.getItem('settings-storage');
+		const stored = localStorage.getItem(ZUSTAND_STORAGE_KEYS.SETTINGS);
 		if (stored) {
 			const parsed = JSON.parse(stored);
 			const savedLayout = parsed.state?.preferences?.layout;

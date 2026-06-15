@@ -13,6 +13,7 @@ import { create } from 'zustand';
 import { getUserMenus, getAllUserMenus, getUserPermissions } from '@/lib/menuApi';
 import type { Menu } from '@/types';
 import { getMenuCache } from '@/services/cache/TTLMenuCache';
+import { ZUSTAND_STORAGE_KEYS } from '@/constants/storage';
 
 interface MenuState {
 	menus: Menu[];
@@ -221,6 +222,6 @@ export const refreshMenuCache = async () => {
  */
 export const clearMenuCache = () => {
 	// 清除旧的 localStorage 数据（如果有）
-	localStorage.removeItem('menu-storage');
+	localStorage.removeItem(ZUSTAND_STORAGE_KEYS.MENU);
 	useMenuStore.getState().clearMenus();
 };

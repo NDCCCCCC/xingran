@@ -11,6 +11,7 @@ import { persist } from 'zustand/middleware';
 import type { UserPreferences, ThemeConfiguration, LayoutConfiguration, DataConfiguration } from '@/types/config';
 import { defaultUserPreferences } from '@/types/config';
 import { configService } from '@/services/configService';
+import { ZUSTAND_STORAGE_KEYS } from '@/constants/storage';
 
 interface SettingsState {
 	// 权威数据
@@ -196,7 +197,7 @@ export const useSettingsStore = create<SettingsStore>()(
 			},
 		}),
 		{
-			name: 'settings-storage',
+			name: ZUSTAND_STORAGE_KEYS.SETTINGS,
 			partialize: (state) => ({
 				preferences: state.preferences,
 				version: state.version,
