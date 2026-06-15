@@ -25,6 +25,10 @@ import (
 	"gorm.io/gorm"
 )
 
+// rpaDefaultScaleDownCooldown RPA 缩容冷却时间 fallback
+// 在配置项缺失或解析失败时使用，避免散落的硬编码字面量
+const rpaDefaultScaleDownCooldown = 5 * time.Minute
+
 // rpaScalingService RPA扩缩容服务最小接口
 // 在 core 包内定义以避免循环依赖，rpa.ScalingService 自动满足此接口
 type rpaScalingService interface {
@@ -679,7 +683,7 @@ func (c *Core) initRPAScalingService(rpaConfig *config.RPAConfig) error {
 		MinWorkers:        rpaConfig.Scaling.MinWorkers,
 		MaxWorkers:        rpaConfig.Scaling.MaxWorkers,
 		ScaleUpThreshold:  rpaConfig.Scaling.ScaleUpThreshold,
-		ScaleDownCooldown: parseDuration(rpaConfig.Scaling.ScaleDownCooldown, 5*time.Minute),
+		ScaleDownCooldown: parseDuration(rpaConfig.Scaling.ScaleDownCooldown, rpaDefaultScaleDownCooldown),
 		ScaleUpLimit:      rpaConfig.Scaling.ScaleUpLimit,
 		EnableMockDocker:  rpaConfig.Scaling.EnableMockDocker,
 	}
