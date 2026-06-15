@@ -15,6 +15,7 @@ import (
 	networkServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/network"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/topology"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	"github.com/xuri/excelize/v2"
 )
@@ -109,6 +110,7 @@ func (h *NetworkExportHandler) ExportDevices(c *gin.Context) {
 		})
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "网络设备", operlog.OperTypeExport)
 	h.setExportHeader(c, file, "网络设备")
 }
 
@@ -154,6 +156,7 @@ func (h *NetworkExportHandler) ExportCredentials(c *gin.Context) {
 		})
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "授权凭证", operlog.OperTypeExport)
 	h.setExportHeader(c, file, "授权凭证")
 }
 
@@ -214,6 +217,7 @@ func (h *NetworkExportHandler) ExportTemplates(c *gin.Context) {
 		})
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "配置模板", operlog.OperTypeExport)
 	h.setExportHeader(c, file, "配置模板")
 }
 
@@ -261,6 +265,7 @@ func (h *NetworkExportHandler) ExportCommands(c *gin.Context) {
 		})
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "命令分发", operlog.OperTypeExport)
 	h.setExportHeader(c, file, "命令分发")
 }
 
@@ -308,6 +313,7 @@ func (h *NetworkExportHandler) ExportExecutions(c *gin.Context) {
 		})
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "配置执行", operlog.OperTypeExport)
 	h.setExportHeader(c, file, "配置执行")
 }
 
@@ -370,6 +376,7 @@ func (h *NetworkExportHandler) ExportBackups(c *gin.Context) {
 		})
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "配置备份", operlog.OperTypeExport)
 	h.setExportHeader(c, file, "配置备份")
 }
 
@@ -425,6 +432,7 @@ func (h *NetworkExportHandler) ExportDiscoveries(c *gin.Context) {
 		})
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "设备发现", operlog.OperTypeExport)
 	h.setExportHeader(c, file, "设备发现")
 }
 
@@ -478,6 +486,7 @@ func (h *NetworkExportHandler) ExportMACAddresses(c *gin.Context) {
 		})
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "MAC地址", operlog.OperTypeExport)
 	h.setExportHeader(c, file, "MAC地址")
 }
 
@@ -563,6 +572,7 @@ func (h *NetworkExportHandler) ExportPorts(c *gin.Context) {
 		})
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "端口状态", operlog.OperTypeExport)
 	h.setExportHeader(c, file, "端口状态")
 }
 

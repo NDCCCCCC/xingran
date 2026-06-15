@@ -15,6 +15,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/portcollection"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/topology"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	"github.com/xuri/excelize/v2"
 )
@@ -123,6 +124,8 @@ func (h *NetworkExportHandler) BatchExport(c *gin.Context) {
 	// 设置响应头
 	timestamp := time.Now().Format("20060102_150405")
 	filename := fmt.Sprintf("网络管理_批量导出_%s.zip", timestamp)
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "网络管理批量导出", operlog.OperTypeExport,
+		operlog.WithOperParam("entities="+fmt.Sprintf("%v", req.EntityTypes)))
 	c.Header("Content-Type", "application/zip")
 	c.Header("Content-Disposition", "attachment; filename=\""+filename+"\"")
 	c.Data(http.StatusOK, "application/zip", zipBuf.Bytes())
