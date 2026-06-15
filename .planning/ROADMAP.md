@@ -630,6 +630,10 @@ Plans:
 
 - [x] 34-02-PLAN.md — system 核心: user / role / dept / menu / dict / post 集成 operlog.Record / RecordWithBody (31 写端点埋点 + WithCore() 链式注入 + SM4 兼容烟雾测试 TestResetPassword_SM4MiddlewareCompat) ✅ 2026-06-15 (commits ffd8bae, 6867d3e)
 
+**Wave 2 — system 外围** *(依赖 Wave 1)*
+
+- [x] 34-03-PLAN.md — system 外围: notice / apikey / config / profile / settings / file 集成 operlog.Record / RecordWithBody (23 写端点埋点 + WithCore() 链式注入 + apikey Create RecordWithBody 遮蔽 api_secret + profile ChangePassword 显式 WithOperParam 遮蔽 oldPassword/newPassword + 上传端点 multipart-safe {filename,size}) ✅ 2026-06-15 (commits d72fd0b, a47ec65)
+
 **Success Criteria**:
 - sys_oper_log 表有效记录数对应 309 个端点，**覆盖率 ≥ 95%**（允许少量内部管理端点豁免）
 - 抽样 30 个端点验证 title 与业务语义匹配，businessType 与操作类型匹配
