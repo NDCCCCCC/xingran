@@ -6,6 +6,7 @@
  * 文档: https://www.npmjs.com/package/sm-crypto
  */
 
+import { get } from '@/lib/api';
 import { hexToBase64, base64ToHex, arrayBufferToHex, hexToArrayBuffer, generateRandomHex } from './encoding';
 
 // SM4 模块接口定义
@@ -187,8 +188,7 @@ export function generateSessionKey(): string {
  */
 export async function fetchSM4KeyForPassword(): Promise<string> {
   try {
-    const response = await fetch('/api/v1/system/auth/sm4-key');
-    const result = await response.json();
+    const result = await get<{ encryptedKey?: string; keyHex?: string }>('/system/auth/sm4-key');
 
     if (result.code === 0 && result.data?.encryptedKey) {
       // 使用 SM2 解密密钥
