@@ -1,9 +1,12 @@
 package operations
 
 import (
+	"fmt"
+
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	opsServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
@@ -79,6 +82,8 @@ func uploadPhotos(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
+		operlog.Record(c, core.OperLogService, core.GetDB(), "机房照片", operlog.OperTypeUpload,
+			operlog.WithOperParam("roomId="+req.RoomID))
 		response.Success(c, gin.H{
 			"count":  len(photos),
 			"photos": photos,
@@ -166,6 +171,8 @@ func setPrimary(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
+		operlog.Record(c, core.OperLogService, core.GetDB(), "机房照片", operlog.OperTypeUpdate,
+			operlog.WithOperParam("photoId="+photoID))
 		response.Success(c, nil)
 	}
 }
@@ -191,6 +198,8 @@ func updateDescription(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
+		operlog.Record(c, core.OperLogService, core.GetDB(), "机房照片", operlog.OperTypeUpdate,
+			operlog.WithOperParam("photoId="+photoID))
 		response.Success(c, nil)
 	}
 }
@@ -210,6 +219,7 @@ func updateSort(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
+		operlog.Record(c, core.OperLogService, core.GetDB(), "机房照片", operlog.OperTypeUpdate)
 		response.Success(c, nil)
 	}
 }
@@ -229,6 +239,8 @@ func deletePhoto(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
+		operlog.Record(c, core.OperLogService, core.GetDB(), "机房照片", operlog.OperTypeDelete,
+			operlog.WithOperParam("photoId="+photoID))
 		response.Success(c, nil)
 	}
 }
@@ -253,6 +265,8 @@ func batchDeletePhotos(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
+		operlog.Record(c, core.OperLogService, core.GetDB(), "机房照片", operlog.OperTypeDelete,
+			operlog.WithOperParam(fmt.Sprintf("count=%d", len(req.IDs))))
 		response.Success(c, gin.H{
 			"count": len(req.IDs),
 		})
