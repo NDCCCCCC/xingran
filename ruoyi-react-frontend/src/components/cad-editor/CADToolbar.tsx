@@ -98,15 +98,15 @@ export function CADToolbar({
     alignItems: 'center',
     gap: 8,
     padding: '8px 16px',
-    background: '#fff',
-    borderBottom: '1px solid #e8e8e8',
+    background: 'var(--theme-text-inverse, #fff)',
+    borderBottom: '1px solid var(--theme-border-divider, #e8e8e8)',
     ...style,
   };
 
   const dividerStyle: React.CSSProperties = {
     width: 1,
     height: 24,
-    background: '#e8e8e8',
+    background: 'var(--theme-border-divider, #e8e8e8)',
   };
 
   return (

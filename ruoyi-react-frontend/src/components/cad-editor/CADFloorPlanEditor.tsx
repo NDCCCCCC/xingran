@@ -452,7 +452,7 @@ export function CADFloorPlanEditor({
       position: textInputPosition,
       content: tempTextContent.trim(),
       fontSize: 14,
-      color: '#333333',
+      color: 'var(--theme-text-primary, #333333)',
     };
 
     setFloorPlanData((prev) => ({

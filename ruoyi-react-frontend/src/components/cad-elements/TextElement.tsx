@@ -16,7 +16,7 @@ export interface TextElementProps {
 }
 
 const DEFAULT_FONT_SIZE = 14;
-const DEFAULT_FONT_COLOR = '#333333';
+const DEFAULT_FONT_COLOR = 'var(--theme-text-primary, #333333)';
 const DEFAULT_FONT_FAMILY = 'Arial, sans-serif';
 const SELECTION_BG_COLOR = 'rgba(24, 144, 255, 0.1)';
 const SELECTION_BORDER_COLOR = '#1890ff';
