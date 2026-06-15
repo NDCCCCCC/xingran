@@ -71,6 +71,9 @@ const widgetDefaultCacheTTL = 5 * time.Minute
 // widgetMaxConcurrency Widget 并发抓取上限（per D-03 决定）
 const widgetMaxConcurrency = 10
 
+// widgetFetchTimeout Widget 单个抓取超时
+const widgetFetchTimeout = 5 * time.Second
+
 // calculateTTL 计算缓存 TTL
 func calculateTTL(refreshInterval int) time.Duration {
 	if refreshInterval > 0 {
@@ -213,7 +216,7 @@ func (f *WidgetDataFetcherImpl) FetchBatchWidgetData(ctx context.Context, widget
 
 		g.Go(func() error {
 			// 设置单个 Widget 超时
-			widgetCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			widgetCtx, cancel := context.WithTimeout(ctx, widgetFetchTimeout)
 			defer cancel()
 
 			// 查询 Widget 配置
