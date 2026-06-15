@@ -2,6 +2,8 @@
  * 运维管理模块 API
  */
 
+import axios from 'axios';
+import type { AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import { post, get, postFormData } from './api';
 import { getAccessToken } from '@/utils/authHelpers';
 import type {
@@ -212,33 +214,29 @@ export const infoPointApi = createCrudApi<InfoPoint>({ basePath: '/ops/infoPoint
 
 // ==================== Excel导入导出 ====================
 
-// 通用文件下载函数
-async function downloadFile(url: string, filename: string): Promise<void> {
+// 专用于文件下载的 axios 实例：
+// - 复用与主 API 客户端相同的 baseURL（去掉硬编码 /api/v1/ 前缀）
+// - 不挂载响应拦截器，因为响应是 Blob 二进制流，无法 JSON 解析
+// - 请求拦截器只做 Token 注入，行为与其他 CRUD 保持一致
+const blobAxios: AxiosInstance = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://10.62.10.33:9000/api/v1',
+  timeout: 30000,
+});
+
+blobAxios.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
   const token = await getAccessToken();
-  const response = await fetch(url, {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`下载失败: ${filename}`);
+  if (token && config.headers) {
+    config.headers.set('Authorization', `Bearer ${token}`);
   }
-
-  const blob = await response.blob();
-  const blobUrl = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = blobUrl;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  window.URL.revokeObjectURL(blobUrl);
-  document.body.removeChild(a);
-}
+  return config;
+});
 
 // 从响应头提取文件名
-function extractFilenameFromResponse(response: Response, defaultFilename: string): string {
-  const contentDisposition = response.headers.get('content-disposition');
+function extractFilenameFromBlobResponse(
+  response: AxiosResponse<Blob>,
+  defaultFilename: string
+): string {
+  const contentDisposition: string | undefined = response.headers['content-disposition'];
   if (!contentDisposition) {
     return defaultFilename;
   }
@@ -251,9 +249,32 @@ function extractFilenameFromResponse(response: Response, defaultFilename: string
   return defaultFilename;
 }
 
+// 触发浏览器下载 Blob
+function triggerBrowserDownload(blob: Blob, filename: string): void {
+  const blobUrl = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = blobUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  window.URL.revokeObjectURL(blobUrl);
+  document.body.removeChild(a);
+}
+
+// 通用文件下载函数
+async function downloadFile(url: string, filename: string): Promise<void> {
+  const response = await blobAxios.get<Blob>(url, { responseType: 'blob' });
+
+  if (response.status < 200 || response.status >= 300) {
+    throw new Error(`下载失败: ${filename}`);
+  }
+
+  triggerBrowserDownload(response.data, filename);
+}
+
 export const excelApi = {
   downloadTemplate: async (entityType: string) => {
-    await downloadFile(`/api/v1/ops/${entityType}/template`, `${entityType}_template.xlsx`);
+    await downloadFile(`/ops/${entityType}/template`, `${entityType}_template.xlsx`);
   },
 
   import: async (entityType: string, file: File) => {
@@ -263,30 +284,21 @@ export const excelApi = {
   },
 
   export: async (entityType: string, params: Record<string, unknown> = {}) => {
-    const token = await getAccessToken();
-    const response = await fetch(`/api/v1/ops/${entityType}/export`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(params),
-    });
+    const response = await blobAxios.post<Blob>(
+      `/ops/${entityType}/export`,
+      params,
+      { responseType: 'blob' }
+    );
 
-    if (!response.ok) {
+    if (response.status < 200 || response.status >= 300) {
       throw new Error('导出失败');
     }
 
-    const blob = await response.blob();
-    const filename = extractFilenameFromResponse(response, `${entityType}_${Date.now()}.xlsx`);
-    const blobUrl = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = blobUrl;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(blobUrl);
-    document.body.removeChild(a);
+    const filename = extractFilenameFromBlobResponse(
+      response,
+      `${entityType}_${Date.now()}.xlsx`
+    );
+    triggerBrowserDownload(response.data, filename);
   },
 
   getStatusOptions: async (entityType: string) => {
@@ -559,30 +571,18 @@ export const assetApi = {
     },
 
     export: async (params: AssetListParams & Record<string, unknown>) => {
-      const token = await getAccessToken();
-      const response = await fetch('/api/v1/ops/asset/export', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(params),
-      });
+      const response = await blobAxios.post<Blob>(
+        '/ops/asset/export',
+        params,
+        { responseType: 'blob' }
+      );
 
-      if (!response.ok) {
+      if (response.status < 200 || response.status >= 300) {
         throw new Error('导出失败');
       }
 
-      const blob = await response.blob();
       const filename = `资产列表_${Date.now()}.xlsx`;
-      const blobUrl = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(blobUrl);
-      document.body.removeChild(a);
+      triggerBrowserDownload(response.data, filename);
 
       return { code: 0, message: '导出成功', data: null };
     },
