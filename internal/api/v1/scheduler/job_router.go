@@ -16,7 +16,7 @@ func SetupJobRouter(r *gin.RouterGroup, core *core.Core) {
 	jobLogService := schedulerServices.NewJobLogService(core.DB.GetDB())
 
 	// 创建Handler实例
-	handler := NewJobHandler(jobService, jobLogService)
+	handler := NewJobHandler(jobService, jobLogService).WithCore(core)
 
 	// 注册路由
 	r.POST("/list", handler.List)

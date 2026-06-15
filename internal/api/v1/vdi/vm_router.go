@@ -12,7 +12,7 @@ import (
 func SetupVMRouter(r *gin.RouterGroup, core *core.Core) {
 	// 创建服务实例，传入nil客户端（服务层会动态查找）
 	vmService := vdiServices.NewVMServiceWithDynamicClient(core.GetDB())
-	vmHandler := NewVMHandler(vmService, core.GetDB())
+	vmHandler := NewVMHandler(vmService, core.GetDB()).WithCore(core)
 
 	// 注册路由
 	r.POST("/list", middleware.RequirePermissions([]string{"vdi:vm:query"}, core), vmHandler.List)

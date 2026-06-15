@@ -4,18 +4,29 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	vdiServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/vdi"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
 // VDIServerHandler VDI服务器处理器
 type VDIServerHandler struct {
 	serverService vdiServices.VDIServerService
+	core          *core.Core
 }
 
 // NewVDIServerHandler 创建VDI服务器处理器
 func NewVDIServerHandler(serverService vdiServices.VDIServerService) *VDIServerHandler {
 	return &VDIServerHandler{serverService: serverService}
+}
+
+// WithCore 注入 core 依赖（操作日志记录所需）。Phase 34 操作日志全模块覆盖。
+func (h *VDIServerHandler) WithCore(core *core.Core) *VDIServerHandler {
+	if h != nil && core != nil {
+		h.core = core
+	}
+	return h
 }
 
 // Create 创建VDI服务器
@@ -40,6 +51,7 @@ func (h *VDIServerHandler) Create(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "VDI服务器", operlog.OperTypeCreate)
 	response.Success(c, server)
 }
 
@@ -134,6 +146,7 @@ func (h *VDIServerHandler) Update(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "VDI服务器", operlog.OperTypeUpdate)
 	response.Success(c, nil)
 }
 
@@ -159,6 +172,7 @@ func (h *VDIServerHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "VDI服务器", operlog.OperTypeDelete)
 	response.Success(c, nil)
 }
 
@@ -184,5 +198,6 @@ func (h *VDIServerHandler) TestConnection(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "VDI服务器", operlog.OperTypeOther)
 	response.Success(c, nil)
 }

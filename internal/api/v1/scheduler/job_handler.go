@@ -2,8 +2,10 @@ package scheduler
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/common"
 	schedulerServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/scheduler"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
@@ -13,6 +15,7 @@ import (
 type JobHandler struct {
 	jobService    schedulerServices.JobService
 	jobLogService schedulerServices.JobLogService
+	core          *core.Core
 }
 
 // NewJobHandler 创建定时任务处理器实例
@@ -24,6 +27,14 @@ func NewJobHandler(
 		jobService:    jobService,
 		jobLogService: jobLogService,
 	}
+}
+
+// WithCore 注入 core 依赖（操作日志记录所需）。Phase 34 操作日志全模块覆盖。
+func (h *JobHandler) WithCore(core *core.Core) *JobHandler {
+	if h != nil && core != nil {
+		h.core = core
+	}
+	return h
 }
 
 // Create 创建定时任务
@@ -48,6 +59,7 @@ func (h *JobHandler) Create(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "定时任务", operlog.OperTypeCreate)
 	response.Success(c, job)
 }
 
@@ -175,6 +187,7 @@ func (h *JobHandler) Update(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "定时任务", operlog.OperTypeUpdate)
 	response.Success(c, gin.H{"message": "更新成功"})
 }
 
@@ -203,6 +216,7 @@ func (h *JobHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "定时任务", operlog.OperTypeDelete)
 	response.Success(c, gin.H{"message": "删除成功"})
 }
 
@@ -238,6 +252,7 @@ func (h *JobHandler) UpdateStatus(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "定时任务", operlog.OperTypeStatus)
 	statusText := "启用"
 	if req.Status == 1 {
 		statusText = "暂停"
@@ -270,6 +285,7 @@ func (h *JobHandler) Execute(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "定时任务", operlog.OperTypeOther)
 	response.Success(c, gin.H{"message": "任务执行成功"})
 }
 
@@ -368,5 +384,6 @@ func (h *JobHandler) CleanLogs(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "定时任务", operlog.OperTypeClean)
 	response.Success(c, gin.H{"message": "清理成功"})
 }

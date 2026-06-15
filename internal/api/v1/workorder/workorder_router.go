@@ -21,7 +21,7 @@ func getWorkOrderService(core *core.Core) workorder.WorkOrderCacheService {
 // SetupWorkOrdersRouter 设置工单管理路由
 func SetupWorkOrdersRouter(r *gin.RouterGroup, core *core.Core) {
 	service := getWorkOrderService(core)
-	handler := NewWorkOrderHandler(service)
+	handler := NewWorkOrderHandler(service).WithCore(core)
 
 	// 工单基础操作
 	r.POST("/list", handler.List)
@@ -48,7 +48,7 @@ func SetupWorkOrdersRouter(r *gin.RouterGroup, core *core.Core) {
 // SetupWorkOrderCategoriesRouter 设置工单分类路由
 func SetupWorkOrderCategoriesRouter(r *gin.RouterGroup, core *core.Core) {
 	service := getWorkOrderService(core)
-	handler := NewWorkOrderHandler(service)
+	handler := NewWorkOrderHandler(service).WithCore(core)
 
 	r.POST("/list", handler.ListCategories)
 	r.POST("/enabled", handler.GetEnabledCategories)
@@ -68,7 +68,7 @@ func SetupWorkOrderRatingsRouter(r *gin.RouterGroup, core *core.Core) {
 // SetupPeriodicWorkOrderRouter 设置周期性工单路由
 func SetupPeriodicWorkOrderRouter(r *gin.RouterGroup, core *core.Core) {
 	service := getWorkOrderService(core)
-	handler := NewWorkOrderHandler(service)
+	handler := NewWorkOrderHandler(service).WithCore(core)
 
 	// 注意：原有路由使用了/templates前缀，这里保持一致
 	templates := r.Group("/templates")
@@ -90,7 +90,7 @@ func SetupPeriodicWorkOrderRouter(r *gin.RouterGroup, core *core.Core) {
 // SetupWorkOrderConfigRouter 设置工单配置路由
 func SetupWorkOrderConfigRouter(r *gin.RouterGroup, core *core.Core) {
 	service := getWorkOrderService(core)
-	handler := NewWorkOrderHandler(service)
+	handler := NewWorkOrderHandler(service).WithCore(core)
 
 	r.POST("", handler.GetConfig)
 	r.POST("/update", handler.UpdateConfig)
@@ -99,7 +99,7 @@ func SetupWorkOrderConfigRouter(r *gin.RouterGroup, core *core.Core) {
 // SetupWorkOrderStatisticsRouter 设置工单统计路由
 func SetupWorkOrderStatisticsRouter(r *gin.RouterGroup, core *core.Core) {
 	service := getWorkOrderService(core)
-	handler := NewWorkOrderHandler(service)
+	handler := NewWorkOrderHandler(service).WithCore(core)
 
 	r.POST("", handler.GetStatistics)
 }

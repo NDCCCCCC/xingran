@@ -4,8 +4,10 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	vdiServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/vdi"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	"gorm.io/gorm"
 )
@@ -14,11 +16,20 @@ import (
 type VMHandler struct {
 	vmService vdiServices.VMService
 	db        *gorm.DB
+	core      *core.Core
 }
 
 // NewVMHandler 创建虚拟机处理器
 func NewVMHandler(vmService vdiServices.VMService, db *gorm.DB) *VMHandler {
 	return &VMHandler{vmService: vmService, db: db}
+}
+
+// WithCore 注入 core 依赖（操作日志记录所需）。Phase 34 操作日志全模块覆盖。
+func (h *VMHandler) WithCore(core *core.Core) *VMHandler {
+	if h != nil && core != nil {
+		h.core = core
+	}
+	return h
 }
 
 // Create 创建虚拟机
@@ -43,6 +54,7 @@ func (h *VMHandler) Create(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "虚拟机管理", operlog.OperTypeCreate)
 	response.Success(c, vm)
 }
 
@@ -148,6 +160,7 @@ func (h *VMHandler) Update(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "虚拟机管理", operlog.OperTypeUpdate)
 	response.Success(c, nil)
 }
 
@@ -173,6 +186,7 @@ func (h *VMHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "虚拟机管理", operlog.OperTypeDelete)
 	response.Success(c, nil)
 }
 
@@ -197,6 +211,7 @@ func (h *VMHandler) Operate(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "虚拟机管理", operlog.OperTypeStatus)
 	response.Success(c, nil)
 }
 // StartVM 启动虚拟机
@@ -223,6 +238,7 @@ func (h *VMHandler) StartVM(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "虚拟机管理", operlog.OperTypeStatus)
 	response.Success(c, nil)
 }
 
@@ -250,6 +266,7 @@ func (h *VMHandler) StopVM(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "虚拟机管理", operlog.OperTypeStatus)
 	response.Success(c, nil)
 }
 
@@ -277,6 +294,7 @@ func (h *VMHandler) RestartVM(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "虚拟机管理", operlog.OperTypeStatus)
 	response.Success(c, nil)
 }
 
@@ -309,6 +327,7 @@ func (h *VMHandler) BindUser(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "虚拟机管理", operlog.OperTypeGrant)
 	response.Success(c, nil)
 }
 
@@ -334,6 +353,7 @@ func (h *VMHandler) UnbindUser(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "虚拟机管理", operlog.OperTypeStatus)
 	response.Success(c, nil)
 }
 
@@ -359,6 +379,7 @@ func (h *VMHandler) SyncFromVDI(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "虚拟机管理", operlog.OperTypeSync)
 	response.Success(c, nil)
 }
 
@@ -449,6 +470,7 @@ func (h *VMHandler) SyncAll(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "虚拟机管理", operlog.OperTypeSync)
 	response.Success(c, map[string]interface{}{
 		"message": "同步任务已提交",
 		"server_id": serverID,

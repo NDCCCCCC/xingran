@@ -9,7 +9,7 @@ import (
 // SetupVDIServerRouter 设置VDI服务器路由
 func SetupVDIServerRouter(r *gin.RouterGroup, core *core.Core) {
 	serverService := vdiServices.NewVDIServerService(core.GetDB())
-	serverHandler := NewVDIServerHandler(serverService)
+	serverHandler := NewVDIServerHandler(serverService).WithCore(core)
 
 	r.POST("/list", serverHandler.List)
 	r.POST("", serverHandler.Create)
