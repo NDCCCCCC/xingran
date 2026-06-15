@@ -1,12 +1,12 @@
 import { useEffect } from 'react';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ConfigProvider as AntConfigProvider } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import { useMenuStore } from '@/store/menuStore';
 import { routeConfigManager } from '@/router/routeConfigManager';
 import { ThemeProvider } from '@/design-system/components/ThemeProvider';
 import LayoutProvider from '@/design-system/components/LayoutProvider';
+import AntdThemeBridge from '@/design-system/components/AntdThemeBridge';
 import ConfigProvider from '@/components/ConfigProvider';
 import { DynamicRoutes } from '@/router/DynamicRoutes';
 import './App.css';
@@ -38,7 +38,13 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AntConfigProvider locale={zhCN}>
+      {/*
+        AntdThemeBridge 读取 settingsStore 中的 customColors / mode / density
+        并把 AntD ThemeConfig 喂给 ConfigProvider。这是解决"AntD 组件硬编码蓝色"
+        （如工位管理页面表格/卡片/平面图 Radio.Group）跟随用户主色变化的关键。
+        locale 通过 AntdThemeBridge 内部直接传给 ConfigProvider。
+      */}
+      <AntdThemeBridge>
         <ConfigProvider>
           <ThemeProvider>
             <LayoutProvider>
@@ -48,7 +54,7 @@ function App() {
             </LayoutProvider>
           </ThemeProvider>
         </ConfigProvider>
-      </AntConfigProvider>
+      </AntdThemeBridge>
     </QueryClientProvider>
   );
 }

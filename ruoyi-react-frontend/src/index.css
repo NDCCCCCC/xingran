@@ -2643,6 +2643,41 @@ html, body {
   background-color: transparent !important;
 }
 
+/* 浅色模式：Radio Button 选中态跟随主色
+   AntdThemeBridge 已经把 colorPrimary 喂给 AntD ThemeConfig，
+   但部分 Tailwind 兼容样式下需要显式覆盖以保证一致 */
+.ant-radio-button-wrapper-checked {
+  background-color: var(--theme-primary) !important;
+  border-color: var(--theme-primary) !important;
+  color: #FFFFFF !important;
+}
+
+.ant-radio-button-wrapper-checked:hover {
+  background-color: var(--theme-primary-hover) !important;
+  border-color: var(--theme-primary-hover) !important;
+  color: #FFFFFF !important;
+}
+
+.ant-radio-button-wrapper-checked::before {
+  background-color: var(--theme-primary) !important;
+}
+
+/* 浅色模式：Segmented 选中态跟随主色 */
+.ant-segmented-item-selected {
+  color: var(--theme-primary) !important;
+  background-color: #FFFFFF !important;
+  border-color: var(--theme-primary) !important;
+}
+
+.ant-segmented-item-selected:hover {
+  color: var(--theme-primary-hover) !important;
+  border-color: var(--theme-primary-hover) !important;
+}
+
+.ant-segmented-thumb {
+  border-color: var(--theme-primary) !important;
+}
+
 /* 暗色模式：ColorPicker 颜色选择器 */
 [data-color-mode="dark"] .color-picker-wrapper,
 [data-color-mode="dark"] .ant-color-picker-trigger,
