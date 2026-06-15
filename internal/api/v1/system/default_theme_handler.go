@@ -2,7 +2,9 @@ package system
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
@@ -10,11 +12,21 @@ import (
 // DefaultThemeHandler 默认主题处理器
 type DefaultThemeHandler struct {
 	service systemServices.DefaultThemeService
+	core    *core.Core
 }
 
 // NewDefaultThemeHandler 创建默认主题处理器实例
 func NewDefaultThemeHandler(service systemServices.DefaultThemeService) *DefaultThemeHandler {
 	return &DefaultThemeHandler{service: service}
+}
+
+// WithCore 注入 core 依赖（操作日志记录所需）。返回 receiver 自身以支持链式调用。
+// 之所以单独提供此方法而非改写 NewDefaultThemeHandler 签名，是为了不破坏既有调用点。
+func (h *DefaultThemeHandler) WithCore(core *core.Core) *DefaultThemeHandler {
+	if h != nil {
+		h.core = core
+	}
+	return h
 }
 
 // GetDefaultThemeConfig 获取默认主题配置
@@ -60,6 +72,7 @@ func (h *DefaultThemeHandler) SetDefaultThemeConfig(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "默认主题", operlog.OperTypeUpdate)
 	response.Success(c, gin.H{"message": "默认主题配置已更新"})
 }
 
@@ -89,5 +102,7 @@ func (h *DefaultThemeHandler) SyncUserThemeToDefault(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "默认主题", operlog.OperTypeSync,
+		operlog.WithOperParam("user_id="+req.UserID))
 	response.Success(c, gin.H{"message": "已同步用户配置到默认主题"})
 }

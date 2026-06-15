@@ -45,7 +45,7 @@ func SetupSettingsRouter(r *gin.RouterGroup, core *core.Core) {
 
 	// 创建默认主题服务和处理器（复用上面的 configService）
 	defaultThemeService := systemServices.NewDefaultThemeService(core.DB.GetDB(), configService)
-	defaultThemeHandler := NewDefaultThemeHandler(defaultThemeService)
+	defaultThemeHandler := NewDefaultThemeHandler(defaultThemeService).WithCore(core)
 
 	// 默认主题路由 — GET 公开给所有登录用户（用于前端 reset / 用户首次访问应用管理员默认）
 	//                    POST 仍需 system:config:manage 权限（仅管理员可修改）
