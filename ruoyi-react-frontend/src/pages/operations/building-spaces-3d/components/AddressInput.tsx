@@ -157,7 +157,7 @@ const AddressInput: React.FC<AddressInputProps> = ({ value, onChange, disabled }
                   纬度：{localValue.latitude?.toFixed(6)}
                 </div>
                 {localValue.address && (
-                  <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
+                  <div style={{ fontSize: 12, color: 'var(--theme-text-tertiary, #666)', marginTop: 4 }}>
                     {localValue.address}
                   </div>
                 )}

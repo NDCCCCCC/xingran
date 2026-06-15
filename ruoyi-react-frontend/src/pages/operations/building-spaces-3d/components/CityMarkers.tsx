@@ -70,7 +70,7 @@ const CityMarkers: React.FC<CityMarkersProps> = ({
                   transition: 'all 0.3s',
                 }}
               >
-                <EnvironmentOutlined style={{ color: '#fff', fontSize: 16 }} />
+                <EnvironmentOutlined style={{ color: 'var(--theme-text-inverse, #fff)', fontSize: 16 }} />
               </div>
             </CustomOverlay>
 

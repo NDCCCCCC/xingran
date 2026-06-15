@@ -498,7 +498,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
         <div style={{ fontSize: 18, color: 'var(--theme-error, #ff4d4f)' }}>
           未配置百度地图 AK
         </div>
-        <div style={{ color: '#666' }}>
+        <div style={{ color: 'var(--theme-text-tertiary, #666)' }}>
           请在 .env.development 文件中配置 VITE_BAIDU_MAP_AK
         </div>
       </div>
@@ -553,10 +553,10 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
         >
           {hoveredBuildings.length === 1 ? (
             <div>
-              <div style={{ fontWeight: 'bold', color: '#1890ff', marginBottom: 4 }}>
+              <div style={{ fontWeight: 'bold', color: 'var(--theme-text-accent, #1890ff)', marginBottom: 4 }}>
                 {hoveredBuildings[0].name}
               </div>
-              <div style={{ fontSize: 11, color: '#666' }}>
+              <div style={{ fontSize: 11, color: 'var(--theme-text-tertiary, #666)' }}>
                 {hoveredBuildings[0].floorCount || 0}层 · {hoveredBuildings[0].workstationCount || 0}工位
               </div>
             </div>
@@ -566,7 +566,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
                 {hoveredBuildings.length} 栋楼宇
               </div>
               {hoveredBuildings.slice(0, 3).map((b, i) => (
-                <div key={i} style={{ fontSize: 11, color: '#666' }}>
+                <div key={i} style={{ fontSize: 11, color: 'var(--theme-text-tertiary, #666)' }}>
                   · {b.name}
                 </div>
               ))}
@@ -594,7 +594,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
           borderRadius: '8px',
           boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
           fontSize: 12,
-          color: '#666',
+          color: 'var(--theme-text-tertiary, #666)',
           zIndex: 100,
         }}
       >
@@ -611,7 +611,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
         </div>
 
         {/* 层级说明 */}
-        <div style={{ marginTop: 8, padding: '8px', background: '#e6f7ff', borderRadius: '4px', border: '1px solid #91d5ff', color: '#096dd9' }}>
+        <div style={{ marginTop: 8, padding: '8px', background: 'var(--theme-primary-lighter, #e6f7ff)', borderRadius: '4px', border: '1px solid var(--theme-primary-subtle, #91d5ff)', color: 'var(--theme-primary, #096dd9)' }}>
           <div style={{ fontWeight: 'bold', marginBottom: 4 }}>📋 层级说明</div>
           <div style={{ fontSize: 11 }}>• 缩放级别 8-9: 显示一级楼宇（城市级汇总）</div>
           <div style={{ fontSize: 11 }}>• 缩放级别 10: 显示全部楼宇（一级+二级）</div>
@@ -619,7 +619,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
 
         {/* 有坐标的楼宇为 0 时的提示 */}
         {buildings.filter(b => b.longitude && b.latitude).length === 0 && buildings.length > 0 && (
-          <div style={{ marginTop: 8, padding: '8px', background: '#fff2e8', borderRadius: '4px', border: '1px solid #ffbb96', color: '#d46b08' }}>
+          <div style={{ marginTop: 8, padding: '8px', background: 'var(--theme-warning-bg, #fff2e8)', borderRadius: '4px', border: '1px solid var(--theme-warning, #ffbb96)', color: 'var(--theme-warning, #d46b08)' }}>
             <div style={{ fontWeight: 'bold', marginBottom: 4 }}>⚠️ 楼宇缺少坐标</div>
             <div style={{ fontSize: 11 }}>请在楼宇管理中为楼宇设置经纬度坐标</div>
           </div>
@@ -725,7 +725,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
                   <div style={{ width: '100%' }}>
                     {/* 标题行 */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                      <div style={{ fontWeight: 'bold', color: '#1890ff', fontSize: 14 }}>
+                      <div style={{ fontWeight: 'bold', color: 'var(--theme-text-accent, #1890ff)', fontSize: 14 }}>
                         {building.name}
                       </div>
                       <Tag color={building.status === 1 ? 'red' : 'green'} style={{ margin: 0 }}>
@@ -734,7 +734,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
                     </div>
 
                     {/* 详细信息 */}
-                    <div style={{ fontSize: 12, color: '#666', lineHeight: 1.8 }}>
+                    <div style={{ fontSize: 12, color: 'var(--theme-text-tertiary, #666)', lineHeight: 1.8 }}>
                       <div>📌 {building.address || '暂无地址'}</div>
                       <div style={{ marginTop: 4 }}>
                         <span>🏢 {building.floorCount || 0} 层</span>

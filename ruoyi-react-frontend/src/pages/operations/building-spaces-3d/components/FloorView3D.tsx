@@ -329,7 +329,7 @@ const styles = {
   },
   statLabel: {
     fontSize: 12,
-    color: '#666',
+    color: 'var(--theme-text-tertiary, #666)',
   },
   workstationListContainer: {
     marginTop: 24,
@@ -352,7 +352,7 @@ const styles = {
   },
   workstationStatus: {
     fontSize: 12,
-    color: '#666',
+    color: 'var(--theme-text-tertiary, #666)',
     marginBottom: 4,
   },
   workstationType: {

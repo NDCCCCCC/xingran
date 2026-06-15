@@ -84,7 +84,7 @@ const WorkstationView: React.FC<WorkstationViewProps> = ({ floor, onBack }) => {
 
       <div style={{ marginBottom: 16 }}>
         <h3>{floor.name} ({floor.floorNo}F)</h3>
-        <p style={{ color: '#666', margin: 0 }}>
+        <p style={{ color: 'var(--theme-text-tertiary, #666)', margin: 0 }}>
           共 {workstations.length} 个工位
         </p>
       </div>

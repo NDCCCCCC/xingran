@@ -512,9 +512,9 @@ const FloorPlanScene: React.FC<FloorPlanSceneProps> = ({
       {/* 图例 */}
       <Html position={[-12, 0.3, -12]} center distanceFactor={10} style={{ pointerEvents: 'none' }}>
         <div style={styles.legend}>
-          <div style={{ color: '#388e3c' }}>● {STATUS_TEXT.AVAILABLE}</div>
-          <div style={{ color: '#d32f2f' }}>● {STATUS_TEXT.OCCUPIED}</div>
-          <div style={{ color: '#f57c00' }}>● {STATUS_TEXT.MAINTENANCE}</div>
+          <div style={{ color: 'var(--theme-success, #388e3c)' }}>● {STATUS_TEXT.AVAILABLE}</div>
+          <div style={{ color: 'var(--theme-error, #d32f2f)' }}>● {STATUS_TEXT.OCCUPIED}</div>
+          <div style={{ color: 'var(--theme-warning, #f57c00)' }}>● {STATUS_TEXT.MAINTENANCE}</div>
         </div>
       </Html>
     </group>
@@ -603,7 +603,7 @@ const styles = {
     flexDirection: 'column' as const,
     gap: 16,
     background: '#f5f5f5',
-    color: '#8c8c8c',
+    color: 'var(--theme-text-tertiary, #8c8c8c)',
   },
   emptyIcon: {
     fontSize: 48,
@@ -623,7 +623,7 @@ const styles = {
     backdropFilter: 'blur(10px)',
     padding: '10px 14px',
     borderRadius: 6,
-    color: '#595959',
+    color: 'var(--theme-text-secondary, #595959)',
     fontSize: 12,
     display: 'flex',
     gap: 16,
@@ -642,12 +642,12 @@ const styles = {
   tooltipName: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#262626',
+    color: 'var(--theme-text-primary, #262626)',
     marginBottom: 8,
   },
   tooltipContent: {
     fontSize: 12,
-    color: '#595959',
+    color: 'var(--theme-text-secondary, #595959)',
     display: 'flex',
     flexDirection: 'column' as const,
     gap: 4,

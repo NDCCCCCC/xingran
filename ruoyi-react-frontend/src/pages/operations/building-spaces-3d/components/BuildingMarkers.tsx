@@ -62,7 +62,7 @@ const BuildingMarkers: React.FC<BuildingMarkersProps> = ({
                   transition: 'all 0.3s',
                 }}
               >
-                <BuildOutlined style={{ color: '#fff', fontSize: 12 }} />
+                <BuildOutlined style={{ color: 'var(--theme-text-inverse, #fff)', fontSize: 12 }} />
               </div>
             </CustomOverlay>
 
@@ -77,7 +77,7 @@ const BuildingMarkers: React.FC<BuildingMarkersProps> = ({
                   <h3 style={{ margin: '0 0 8px 0', fontSize: 16 }}>
                     {building.name}
                   </h3>
-                  <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>
+                  <div style={{ fontSize: 12, color: 'var(--theme-text-tertiary, #666)', marginBottom: 4 }}>
                     <div>📍 {building.cityName}</div>
                     <div>📌 {building.address}</div>
                   </div>

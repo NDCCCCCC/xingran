@@ -88,7 +88,7 @@ const Floor3D: React.FC<Floor3DProps> = ({ floor, position, onClick, isSelected 
       >
         <div style={{
           background: hovered || isSelected ? 'rgba(24, 144, 255, 0.95)' : 'rgba(0, 0, 0, 0.75)',
-          color: '#fff',
+          color: 'var(--theme-text-inverse, #fff)',
           padding: '8px 16px',
           borderRadius: 8,
           fontSize: '18px',
@@ -120,17 +120,17 @@ const Floor3D: React.FC<Floor3DProps> = ({ floor, position, onClick, isSelected 
             <div style={{
               fontSize: 16,
               fontWeight: 'bold',
-              color: '#262626',
+              color: 'var(--theme-text-primary, #262626)',
               marginBottom: 12,
               paddingBottom: 10,
               borderBottom: '1px solid #f0f0f0',
             }}>
               {floor.name || floor.floorNo}
             </div>
-            <div style={{ fontSize: 14, color: '#595959', display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ fontSize: 14, color: 'var(--theme-text-secondary, #595959)', display: 'flex', flexDirection: 'column', gap: 6 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span>工位数量：</span>
-                <span style={{ fontWeight: 'bold', color: '#1890ff', fontSize: 15 }}>
+                <span style={{ fontWeight: 'bold', color: 'var(--theme-text-accent, #1890ff)', fontSize: 15 }}>
                   {floor.workstationCount} 个
                 </span>
               </div>
@@ -144,7 +144,7 @@ const Floor3D: React.FC<Floor3DProps> = ({ floor, position, onClick, isSelected 
                   {getFloorStatusText(floor.status)}
                 </span>
               </div>
-              <div style={{ fontSize: 13, color: '#8c8c8c', marginTop: 6, textAlign: 'center', paddingTop: 4 }}>
+              <div style={{ fontSize: 13, color: 'var(--theme-text-tertiary, #8c8c8c)', marginTop: 6, textAlign: 'center', paddingTop: 4 }}>
                 👇 点击查看平面图
               </div>
             </div>
@@ -199,7 +199,7 @@ const BuildingModel3D: React.FC<BuildingModel3DProps> = ({ floors, onFloorClick,
         flexDirection: 'column',
         gap: 16,
         background: '#f5f5f5',
-        color: '#8c8c8c',
+        color: 'var(--theme-text-tertiary, #8c8c8c)',
       }}>
         <div style={{ fontSize: 48 }}>{EMPTY_STATE.icon}</div>
         <div style={{ fontSize: 16 }}>{EMPTY_STATE.title}</div>
@@ -237,7 +237,7 @@ const BuildingModel3D: React.FC<BuildingModel3DProps> = ({ floors, onFloorClick,
         backdropFilter: 'blur(10px)',
         padding: '10px 14px',
         borderRadius: 6,
-        color: '#595959',
+        color: 'var(--theme-text-secondary, #595959)',
         fontSize: 12,
         display: 'flex',
         gap: 16,

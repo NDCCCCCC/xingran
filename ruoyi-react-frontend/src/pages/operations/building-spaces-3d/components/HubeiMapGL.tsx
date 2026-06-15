@@ -525,7 +525,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
         }}
       >
         <div style={{ fontSize: 18, color: 'var(--theme-error, #ff4d4f)' }}>未配置百度地图 AK</div>
-        <div style={{ color: '#666' }}>
+        <div style={{ color: 'var(--theme-text-tertiary, #666)' }}>
           请在 .env.development 文件中配置 VITE_BAIDU_MAP_AK
         </div>
       </div>
@@ -645,7 +645,7 @@ const MapInfoPanel: React.FC<MapInfoPanelProps> = ({
       borderRadius: '8px',
       boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
       fontSize: 12,
-      color: '#666',
+      color: 'var(--theme-text-tertiary, #666)',
       zIndex: 100,
     }}
   >
@@ -700,10 +700,10 @@ const TooltipPanel: React.FC<TooltipPanelProps> = ({ buildings, position }) => (
   >
     {buildings.length === 1 ? (
       <div>
-        <div style={{ fontWeight: 'bold', color: '#1890ff', marginBottom: 4 }}>
+        <div style={{ fontWeight: 'bold', color: 'var(--theme-text-accent, #1890ff)', marginBottom: 4 }}>
           {buildings[0].name}
         </div>
-        <div style={{ fontSize: 11, color: '#666' }}>
+        <div style={{ fontSize: 11, color: 'var(--theme-text-tertiary, #666)' }}>
           {buildings[0].floorCount || 0}层 · {buildings[0].workstationCount || 0}
           工位
         </div>
@@ -714,7 +714,7 @@ const TooltipPanel: React.FC<TooltipPanelProps> = ({ buildings, position }) => (
           {buildings.length} 栋楼宇
         </div>
         {buildings.slice(0, 3).map((b, i) => (
-          <div key={i} style={{ fontSize: 11, color: '#666' }}>
+          <div key={i} style={{ fontSize: 11, color: 'var(--theme-text-tertiary, #666)' }}>
             · {b.name}
           </div>
         ))}
@@ -743,7 +743,7 @@ const ControlHints: React.FC<ControlHintsProps> = ({ is3DMode }) => (
       borderRadius: '8px',
       boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
       fontSize: 12,
-      color: '#666',
+      color: 'var(--theme-text-tertiary, #666)',
       zIndex: 100,
     }}
   >
@@ -770,10 +770,10 @@ const ControlHints: React.FC<ControlHintsProps> = ({ is3DMode }) => (
       style={{
         marginTop: 8,
         padding: '8px',
-        background: '#e6f7ff',
+        background: 'var(--theme-primary-lighter, #e6f7ff)',
         borderRadius: '4px',
-        border: '1px solid #91d5ff',
-        color: '#096dd9',
+        border: '1px solid var(--theme-primary-subtle, #91d5ff)',
+        color: 'var(--theme-primary, #096dd9)',
       }}
     >
       <div style={{ fontWeight: 'bold', marginBottom: 4 }}>📋 WebGL 功能</div>
@@ -873,7 +873,7 @@ const ClusterSidebar: React.FC<ClusterSidebarProps> = ({
                 }}
               >
                 <div
-                  style={{ fontWeight: 'bold', color: '#1890ff', fontSize: 14 }}
+                  style={{ fontWeight: 'bold', color: 'var(--theme-text-accent, #1890ff)', fontSize: 14 }}
                 >
                   {building.name}
                 </div>
@@ -882,7 +882,7 @@ const ClusterSidebar: React.FC<ClusterSidebarProps> = ({
                 </Tag>
               </div>
 
-              <div style={{ fontSize: 12, color: '#666', lineHeight: 1.8 }}>
+              <div style={{ fontSize: 12, color: 'var(--theme-text-tertiary, #666)', lineHeight: 1.8 }}>
                 <div>📌 {building.address || '暂无地址'}</div>
                 <div style={{ marginTop: 4 }}>
                   <span>🏢 {building.floorCount || 0} 层</span>
