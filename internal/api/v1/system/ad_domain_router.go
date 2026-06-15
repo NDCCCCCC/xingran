@@ -51,7 +51,9 @@ func SetupADDomainRouter(r *gin.RouterGroup, core *core.Core) {
 	}, core))
 	{
 		groups.POST("/list", handler.ListGroups)
-		// sync-status 和 sync-single 已移除 - 依赖旧的部门-组映射
+		// sync-status 已恢复 - groups/index.tsx UI 依赖此端点显示总组数/已同步/未同步/成员关系数
+		// 历史说明：旧的"依赖部门-组映射"实现已迁移到 OU 组映射；handler.GetGroupSyncStatus 现直接基于 groups/dept_ou_mapping 聚合统计
+		groups.POST("/sync-status", handler.GetGroupSyncStatus)
 		groups.POST("/:id", handler.GetGroupDetail)
 		groups.POST("/:id/update", handler.UpdateGroup)
 		groups.POST("/:id/members", handler.GetGroupMembers)
