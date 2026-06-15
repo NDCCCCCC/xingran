@@ -1,4 +1,5 @@
 import { post } from '../api';
+import { getAccessToken } from '@/utils/authHelpers';
 
 interface TrajectoryQueryParams {
   mac: string;
@@ -122,22 +123,50 @@ export const getMACEvents = async (
 };
 
 /**
- * 导出 MAC 历史数据为 Excel (14-04 导出功能)
- * - 复用 /network/history/list 端点,通过 format=xlsx 触发 Excel 导出
+ * 导出 MAC 历史数据为 Excel (14-fix-02 重写)
+ * - 走 fetch + getAccessToken + response.blob(),绕过 src/lib/api.ts 响应拦截器
+ *   (后者会解包 BaseResponse envelope,导致 xlsx bytes 被错误转 JSON 对象)
+ * - 与 Phase 33 M2 opsApi.excelApi.export 模式对齐
  * - 支持 current(当前查询) 和 all(全量) 两种导出范围
- * - 返回 Blob 供浏览器下载
+ * - 返回 { blob, filename };filename 优先取 Content-Disposition header,
+ *   缺失时回退 mac_history_<scope>_<ts>.xlsx
  */
 export const exportMACHistory = async (
   params: MACHistoryQueryParams,
   exportScope: 'current' | 'all' = 'current'
-): Promise<Blob> => {
-  const api = await import('../api');
-  const response = await api.default.get('/network/history/list', {
-    params: { ...params, format: 'xlsx', exportScope },
-    responseType: 'blob',
-    timeout: 120000,
+): Promise<{ blob: Blob; filename: string }> => {
+  const token = await getAccessToken();
+  const search = new URLSearchParams();
+  Object.entries({ ...params, format: 'xlsx', exportScope }).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== '') search.set(k, String(v));
   });
-  return response as Blob;
+  const response = await fetch(`/api/v1/network/history/list?${search.toString()}`, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) {
+    throw new Error(`导出失败:HTTP ${response.status}`);
+  }
+  const blob = await response.blob();
+  // CR-01 错误反序列化:若 blob 实际是 JSON 错误体,后端在异常时仍可能返回 application/json
+  if (blob.size < 1024 && blob.type.includes('json')) {
+    const text = await blob.text();
+    try {
+      const errBody = JSON.parse(text) as { message?: string; msg?: string };
+      throw new Error(errBody.message || errBody.msg || '导出失败');
+    } catch (e) {
+      if (e instanceof Error && e.message !== '导出失败') throw e;
+      // parse 失败说明不是 JSON,降级为通用错误
+      throw new Error(`导出失败:${response.status}`);
+    }
+  }
+  const contentDisposition = response.headers.get('content-disposition');
+  let filename = `mac_history_${exportScope}_${Date.now()}.xlsx`;
+  if (contentDisposition) {
+    const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+    if (match && match[1]) filename = decodeURIComponent(match[1].replace(/['"]/g, ''));
+  }
+  return { blob, filename };
 };
 
 export default {

@@ -374,14 +374,11 @@ const MACHistoryPage: React.FC = () => {
           });
         }
 
-        const blob = await exportMACHistory(
+        const { blob, filename } = await exportMACHistory(
           baseParams as unknown as MACHistoryQueryParams,
           exportScope
         );
 
-        // 从 blob.size 推测文件名
-        const ts = dayjs().format('YYYYMMDD_HHmmss');
-        const filename = `mac_history_${exportScope}_${ts}.xlsx`;
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
