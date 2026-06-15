@@ -22,6 +22,7 @@ import {
 import type { UploadFile } from 'antd';
 import type { UploadRequestOption } from './FileUpload';
 import { getAuthHeaders } from '@/utils/authHelpers';
+import { excelApi } from '@/lib/opsApi';
 
 const { Text } = Typography;
 
@@ -52,12 +53,18 @@ export interface ExcelImportProps {
 const ExcelImport: FC<ExcelImportProps> = ({
   entityType,
   entityName = entityType,
-  templateUrl = `/api/v1/ops/${entityType}/template`,
-  importUrl = `/api/v1/ops/${entityType}/import`,
+  templateUrl,
+  importUrl,
   onImportSuccess,
   visible = false,
   onClose,
 }) => {
+  // 解析默认导入 URL：
+  // - 调用方显式传入 importUrl 时（如 system/dept 模块使用 /api/v1/system/departments/import），
+  //   直接使用该 URL；
+  // - 未传入时回退到 /api/v1/ops/${entityType}/import，与 opsApi.excelApi.import 的路径保持一致。
+  const resolvedImportUrl = importUrl ?? `/api/v1/ops/${entityType}/import`;
+
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
@@ -65,15 +72,22 @@ const ExcelImport: FC<ExcelImportProps> = ({
 
   const handleDownloadTemplate = async () => {
     try {
-      const headers = await getAuthHeaders();
-      const response = await fetch(templateUrl, { headers });
+      if (!templateUrl) {
+        // 默认路径：调用 opsApi 包装函数，避免硬编码 /api/v1/ops/ 前缀
+        await excelApi.downloadTemplate(entityType);
+      } else {
+        // 自定义路径：保留原内联 fetch（处理 system/dept 等非 ops 模块的下载）
+        const headers = await getAuthHeaders();
+        const response = await fetch(templateUrl, { headers });
 
-      if (!response.ok) {
-        throw new Error('下载模板失败');
+        if (!response.ok) {
+          throw new Error('下载模板失败');
+        }
+
+        const filename = `${entityName}_模板.xlsx`;
+        await downloadFile(response, filename);
       }
 
-      const filename = `${entityName}_模板.xlsx`;
-      await downloadFile(response, filename);
       message.success('模板下载成功');
     } catch {
       message.error('下载模板失败');
@@ -169,7 +183,7 @@ const ExcelImport: FC<ExcelImportProps> = ({
         message.error('导入失败');
       };
 
-      xhr.open('POST', importUrl, true);
+      xhr.open('POST', resolvedImportUrl, true);
       const headers = await getAuthHeaders();
       if (headers['Authorization']) {
         xhr.setRequestHeader('Authorization', headers['Authorization']);
