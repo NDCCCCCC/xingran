@@ -14,6 +14,9 @@ import (
 	"gorm.io/gorm"
 )
 
+// defaultShutdownTimeout 调度器关闭时等待任务完成的默认超时时间
+const defaultShutdownTimeout = 5 * time.Second
+
 // JobTask 任务执行接口
 type JobTask interface {
 	Execute(ctx context.Context) error
@@ -258,9 +261,9 @@ func (s *Scheduler) Stop() {
 
 	ctx := s.cron.Stop()
 
-	// 等待所有正在运行的任务完成，但设置 5 秒超时
+	// 等待所有正在运行的任务完成，但设置 defaultShutdownTimeout 超时
 	// 避免某个任务卡住导致整个服务无法关闭
-	timeout := time.After(5 * time.Second)
+	timeout := time.After(defaultShutdownTimeout)
 	select {
 	case <-ctx.Done():
 		// 所有任务正常完成
