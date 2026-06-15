@@ -142,7 +142,7 @@ const MACHistoryPage: React.FC = () => {
     if (deviceId) initial.deviceId = deviceId;
     if (portName) initial.interfaceName = portName;
     if (mac) initial.mac = normalizeMACAddress(mac) || mac;
-    form.setFieldsValue(initial);
+    if (Object.keys(initial).length > 0) form.setFieldsValue(initial);
 
     if (startTime && endTime) {
       // 视为自定义
@@ -150,8 +150,7 @@ const MACHistoryPage: React.FC = () => {
       setCustomRange([dayjs(startTime), dayjs(endTime)]);
       setTimeRange({ startTime, endTime });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchParams, form]);
 
   // 切换预设
   const handlePresetClick = useCallback(
@@ -403,8 +402,16 @@ const MACHistoryPage: React.FC = () => {
   );
 
   // 复制 MAC
-  const copyMAC = (mac: string) => {
-    void navigator.clipboard?.writeText(mac);
+  const copyMAC = async (mac: string) => {
+    try {
+      if (!navigator.clipboard) {
+        throw new Error('Clipboard API unavailable');
+      }
+      await navigator.clipboard.writeText(mac);
+      message.success(`已复制 ${mac}`);
+    } catch (err) {
+      message.error(err instanceof Error ? `复制失败:${err.message}` : '复制失败,请手动复制');
+    }
   };
 
   // 桌面表格
@@ -546,7 +553,7 @@ const MACHistoryPage: React.FC = () => {
                       type="text"
                       size="small"
                       icon={<CopyOutlined />}
-                      onClick={() => copyMAC(record.macAddress)}
+                      onClick={() => { void copyMAC(record.macAddress); }}
                     />
                   </Tooltip>
                   <Tag color={EVENT_TAG_COLORS[record.eventType] ?? 'default'}>

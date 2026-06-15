@@ -12,7 +12,7 @@
  * 使用场景:React Query / API 调用失败的内联错误展示。
  */
 
-import { useEffect, type FC } from 'react';
+import { useEffect, useRef, type FC } from 'react';
 import { Alert, Button, Space } from 'antd';
 import { ReloadOutlined } from '@ant-design/icons';
 import { useAuthStore } from '@/store/authStore';
@@ -77,13 +77,26 @@ const ErrorAlertWithRetry: FC<ErrorAlertWithRetryProps> = ({ error, onRetry }) =
   const logout = useAuthStore((s) => s.logout);
 
   // 1007 业务错误码:token 失效,自动登出并跳转登录页
+  // ranRef 跨 render 持久化,即使父组件 state 变化导致重渲染也不会再触发 logout;
+  // cancelledRef 在组件卸载时设为 true,避免在已卸载状态下操作 window.location
+  const ranRef = useRef<number | null>(null);
+  const cancelledRef = useRef(false);
   useEffect(() => {
-    if (code === 1007) {
-      // 调用 authStore.logout 清理 token / 用户状态 / 菜单
-      logout().finally(() => {
-        window.location.href = '/login';
+    if (code !== 1007) return;
+    if (ranRef.current === code) return; // 同一个 code 已经处理过,跳过
+    ranRef.current = code;
+    cancelledRef.current = false;
+    // 调用 authStore.logout 清理 token / 用户状态 / 菜单
+    logout()
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelledRef.current) {
+          window.location.href = '/login';
+        }
       });
-    }
+    return () => {
+      cancelledRef.current = true;
+    };
   }, [code, logout]);
 
   // 根据错误码生成对应的 Alert 文案

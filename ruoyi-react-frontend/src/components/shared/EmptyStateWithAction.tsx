@@ -29,7 +29,10 @@ const EmptyStateWithAction: FC<EmptyStateWithActionProps> = ({
   actionPath,
   icon,
 }) => {
-  const showAction = Boolean(actionLabel && actionPath);
+  const showAction =
+    Boolean(actionLabel) &&
+    typeof actionPath === 'string' &&
+    actionPath.length > 0;
 
   return (
     <Empty
@@ -39,7 +42,7 @@ const EmptyStateWithAction: FC<EmptyStateWithActionProps> = ({
     >
       {showAction && (
         <Space>
-          <Link to={actionPath as string}>
+          <Link to={actionPath}>
             <Button type="primary">{actionLabel}</Button>
           </Link>
         </Space>
