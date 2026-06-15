@@ -84,10 +84,10 @@ func NewWithHTTPStatus(code ErrorCode, httpStatus int, message string) *AppError
 }
 
 // Wrap 包装错误
+// 即使 err == nil 也返回 *AppError（不返回 nil），
+// 避免调用方拿到 nil error 后误判为"成功"（导致业务逻辑错乱或 nil 指针 panic）。
+// 如需创建"无底层错误"的纯业务错误，请使用 New(code, message)。
 func Wrap(err error, code ErrorCode, message string) *AppError {
-	if err == nil {
-		return nil
-	}
 	return &AppError{
 		Code:       code,
 		Message:    message,
