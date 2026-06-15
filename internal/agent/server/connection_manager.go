@@ -34,6 +34,9 @@ func (s ConnectionState) String() string {
 	}
 }
 
+// agentMaxReconnectDelay Agent 重连延迟上限
+const agentMaxReconnectDelay = 5 * time.Minute
+
 // ConnectionManager 连接管理器
 type ConnectionManager struct {
 	mu              sync.RWMutex
@@ -146,8 +149,8 @@ func (cm *ConnectionManager) Reconnect(ctx context.Context) error {
 	}
 	cm.reconnectCount++
 	currentDelay := cm.reconnectDelay * time.Duration(cm.reconnectCount)
-	if currentDelay > 5*time.Minute {
-		currentDelay = 5 * time.Minute
+	if currentDelay > agentMaxReconnectDelay {
+		currentDelay = agentMaxReconnectDelay
 	}
 	cm.state = Reconnecting
 	cm.mu.Unlock()
