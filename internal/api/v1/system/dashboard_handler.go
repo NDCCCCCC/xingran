@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
@@ -25,11 +26,20 @@ type UserContext struct {
 // DashboardHandler 仪表盘处理器
 type DashboardHandler struct {
 	service systemServices.DashboardService
+	core    *core.Core
 }
 
 // NewDashboardHandler 创建仪表盘处理器实例
 func NewDashboardHandler(service systemServices.DashboardService) *DashboardHandler {
 	return &DashboardHandler{service: service}
+}
+
+// WithCore 注入 core 依赖（用于操作日志埋点），链式调用。Phase 34 Wave 7 新增。
+func (h *DashboardHandler) WithCore(core *core.Core) *DashboardHandler {
+	if h != nil {
+		h.core = core
+	}
+	return h
 }
 
 // getUserContext 从gin上下文中提取用户信息
@@ -212,6 +222,8 @@ func (h *DashboardHandler) Create(c *gin.Context) {
 		return
 	}
 
+	recordOperLog(c, h.core, "仪表盘配置", OperTypeCreate)
+
 	response.Success(c, gin.H{"dashboard": dashboard})
 }
 
@@ -247,6 +259,8 @@ func (h *DashboardHandler) Update(c *gin.Context) {
 		return
 	}
 
+	recordOperLog(c, h.core, "仪表盘配置", OperTypeUpdate)
+
 	response.Success(c, gin.H{"message": "更新成功"})
 }
 
@@ -274,6 +288,8 @@ func (h *DashboardHandler) Delete(c *gin.Context) {
 	if h.handleServiceError(c, err) {
 		return
 	}
+
+	recordOperLog(c, h.core, "仪表盘配置", OperTypeDelete)
 
 	response.Success(c, gin.H{"message": "删除成功"})
 }
@@ -304,6 +320,9 @@ func (h *DashboardHandler) Duplicate(c *gin.Context) {
 		return
 	}
 
+	// Duplicate creates a new dashboard — record as Create.
+	recordOperLog(c, h.core, "仪表盘配置", OperTypeCreate)
+
 	response.Success(c, gin.H{"dashboard": dashboard})
 }
 
@@ -331,6 +350,9 @@ func (h *DashboardHandler) SetDefault(c *gin.Context) {
 	if h.handleServiceError(c, err) {
 		return
 	}
+
+	// SetDefault changes the default-state of one dashboard vs another — record as Update.
+	recordOperLog(c, h.core, "仪表盘配置", OperTypeUpdate)
 
 	response.Success(c, gin.H{"message": "设置成功"})
 }
@@ -401,6 +423,9 @@ func (h *DashboardHandler) CreateFromTemplate(c *gin.Context) {
 		return
 	}
 
+	// CreateFromTemplate instantiates a new dashboard — record as Create.
+	recordOperLog(c, h.core, "仪表盘配置", OperTypeCreate)
+
 	response.Success(c, gin.H{"dashboard": dashboard})
 }
 
@@ -462,6 +487,9 @@ func (h *DashboardHandler) CreateVersion(c *gin.Context) {
 		return
 	}
 
+	// CreateVersion persists a new version snapshot — record as Create.
+	recordOperLog(c, h.core, "仪表盘配置", OperTypeCreate)
+
 	response.Success(c, gin.H{"version": version})
 }
 
@@ -494,6 +522,9 @@ func (h *DashboardHandler) RestoreVersion(c *gin.Context) {
 		return
 	}
 
+	// RestoreVersion overwrites the dashboard layout from a snapshot — record as Update.
+	recordOperLog(c, h.core, "仪表盘配置", OperTypeUpdate)
+
 	response.Success(c, gin.H{"message": "恢复成功"})
 }
 
@@ -519,6 +550,8 @@ func (h *DashboardHandler) Export(c *gin.Context) {
 		response.Error(c, err)
 		return
 	}
+
+	recordOperLog(c, h.core, "仪表盘配置", OperTypeExport)
 
 	response.Success(c, gin.H{"config": config})
 }
@@ -551,6 +584,8 @@ func (h *DashboardHandler) Import(c *gin.Context) {
 		response.Error(c, err)
 		return
 	}
+
+	recordOperLog(c, h.core, "仪表盘配置", OperTypeImport)
 
 	response.Success(c, gin.H{"dashboard": dashboard})
 }
@@ -723,6 +758,9 @@ func (h *DashboardHandler) InvalidateEndpointCache(c *gin.Context) {
 	}
 
 	h.service.InvalidateUserCache(c.Request.Context(), userCtx.UserID)
+
+	// InvalidateEndpointCache is a maintenance action — record as Other.
+	recordOperLog(c, h.core, "仪表盘配置", OperTypeOther)
 
 	response.Success(c, gin.H{
 		"message": "缓存已清除",

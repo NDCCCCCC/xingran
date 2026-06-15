@@ -130,6 +130,11 @@ func (h *ADUserSyncHandler) BatchSyncADUsers(c *gin.Context) {
 		return
 	}
 
+	// BatchSyncADUsers synchronizes selected AD users into sys_user —
+	// record as Sync. T-34-W7-01 mitigation: manual sync triggers must be
+	// attributable for repudiation protection.
+	recordOperLog(c, h.core, "AD用户同步", OperTypeSync)
+
 	// 返回同步结果
 	response.Success(c, map[string]interface{}{
 		"total":   result.Total,

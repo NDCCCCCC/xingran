@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
@@ -14,6 +15,7 @@ import (
 type OUMappingHandler struct {
 	db     *gorm.DB
 	mapper *addomain.DeptOUmapper
+	core   *core.Core
 }
 
 func NewOUMappingHandler(db *gorm.DB, mapper *addomain.DeptOUmapper) *OUMappingHandler {
@@ -21,6 +23,14 @@ func NewOUMappingHandler(db *gorm.DB, mapper *addomain.DeptOUmapper) *OUMappingH
 		db:     db,
 		mapper: mapper,
 	}
+}
+
+// WithCore 注入 core 依赖（用于操作日志埋点），链式调用。Phase 34 Wave 7 新增。
+func (h *OUMappingHandler) WithCore(core *core.Core) *OUMappingHandler {
+	if h != nil {
+		h.core = core
+	}
+	return h
 }
 
 // DeptMappingResponse 部门映射响应
@@ -137,6 +147,7 @@ func (h *OUMappingHandler) UpdateOUDeptMapping(c *gin.Context) {
 	}
 
 	applogger.Infof("成功更新 OU 部门映射: ou=%s, dept=%s", ouDn, dept.DeptName)
+	recordOperLog(c, h.core, "OU部门映射", OperTypeUpdate)
 	response.Success(c, gin.H{
 		"message": "关联成功",
 		"mapping": DeptMappingResponse{

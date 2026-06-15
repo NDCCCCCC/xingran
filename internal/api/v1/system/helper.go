@@ -9,7 +9,9 @@ import (
 // OperType constants are re-exported as local aliases pointing to the shared
 // operlog package constants. Existing callers (e.g. the 9 AD domain handler
 // sites that reference OperTypeCreate / OperTypeUpdate / OperTypeDelete /
-// OperTypeOther) continue to compile without modification.
+// OperTypeOther) continue to compile without modification. Phase 34 Wave 7
+// additionally aliases the new state/sync/reset verbs so handlers in this
+// package can reference them without qualifying with the operlog package name.
 const (
 	OperTypeOther   = operlog.OperTypeOther
 	OperTypeCreate  = operlog.OperTypeCreate
@@ -21,6 +23,13 @@ const (
 	OperTypeForce   = operlog.OperTypeForce
 	OperTypeGenCode = operlog.OperTypeGenCode
 	OperTypeClean   = operlog.OperTypeClean
+
+	// Phase 34 Wave 7 additions — state / sync / reset verbs used by the
+	// dashboard / column-config / notification-config / notice / OU-mapping /
+	// AD-sync handlers.
+	OperTypeStatus = operlog.OperTypeStatus
+	OperTypeReset  = operlog.OperTypeReset
+	OperTypeSync   = operlog.OperTypeSync
 )
 
 // recordOperLog records an operation log entry. Function signature is preserved

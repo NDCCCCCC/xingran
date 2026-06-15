@@ -16,7 +16,7 @@ func SetupDashboardRouter(r *gin.RouterGroup, core *core.Core) {
 	)
 
 	// 创建Handler
-	handler := NewDashboardHandler(dashboardService)
+	handler := NewDashboardHandler(dashboardService).WithCore(core)
 
 	// 注册路由（注意：更具体的路由要放在前面，避免被通用路由匹配）
 	// 仪表盘默认入口

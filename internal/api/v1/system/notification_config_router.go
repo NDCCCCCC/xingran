@@ -15,7 +15,7 @@ func SetupNotificationConfigRouter(r *gin.RouterGroup, core *core.Core) {
 	emailSenderService := services.NewEmailSenderService(core.DB.GetDB())
 
 	// 创建Handler
-	handler := NewNotificationConfigHandler(emailConfigService, apiNotificationService, emailSenderService)
+	handler := NewNotificationConfigHandler(emailConfigService, apiNotificationService, emailSenderService).WithCore(core)
 
 	// 邮箱配置路由
 	emailConfigs := r.Group("/email-configs")

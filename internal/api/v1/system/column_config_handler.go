@@ -2,17 +2,27 @@ package system
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
+	systemRequests "github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
-	systemRequests "github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 )
 
 type ColumnConfigHandler struct {
 	service systemServices.ColumnConfigService
+	core    *core.Core
 }
 
 func NewColumnConfigHandler(service systemServices.ColumnConfigService) *ColumnConfigHandler {
 	return &ColumnConfigHandler{service: service}
+}
+
+// WithCore 注入 core 依赖（用于操作日志埋点），链式调用。Phase 34 Wave 7 新增。
+func (h *ColumnConfigHandler) WithCore(core *core.Core) *ColumnConfigHandler {
+	if h != nil {
+		h.core = core
+	}
+	return h
 }
 
 // GetByPageKey 获取页面列配置
@@ -71,6 +81,8 @@ func (h *ColumnConfigHandler) Save(c *gin.Context) {
 		return
 	}
 
+	recordOperLog(c, h.core, "列自定义配置", OperTypeUpdate)
+
 	response.Success(c, gin.H{"message": "保存成功"})
 }
 
@@ -99,6 +111,8 @@ func (h *ColumnConfigHandler) Reset(c *gin.Context) {
 		response.Error(c, err)
 		return
 	}
+
+	recordOperLog(c, h.core, "列自定义配置", OperTypeReset)
 
 	response.Success(c, gin.H{"message": "重置成功"})
 }

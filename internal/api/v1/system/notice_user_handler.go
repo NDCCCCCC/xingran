@@ -2,6 +2,7 @@ package system
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
@@ -13,6 +14,7 @@ import (
 type NoticeUserHandler struct {
 	noticeService systemServices.NoticeCacheService
 	db            *gorm.DB
+	core          *core.Core
 }
 
 // NewNoticeUserHandler 创建用户通知处理器实例
@@ -21,6 +23,14 @@ func NewNoticeUserHandler(noticeService systemServices.NoticeCacheService, db *g
 		noticeService: noticeService,
 		db:            db,
 	}
+}
+
+// WithCore 注入 core 依赖（用于操作日志埋点），链式调用。Phase 34 Wave 7 新增。
+func (h *NoticeUserHandler) WithCore(core *core.Core) *NoticeUserHandler {
+	if h != nil {
+		h.core = core
+	}
+	return h
 }
 
 // NoticeWithReadStatus 带已读状态的通知
@@ -207,6 +217,8 @@ func (h *NoticeUserHandler) MarkNoticeRead(c *gin.Context) {
 		return
 	}
 
+	recordOperLog(c, h.core, "我的通知", OperTypeUpdate)
+
 	response.Success(c, gin.H{"message": "标记成功"})
 }
 
@@ -229,6 +241,8 @@ func (h *NoticeUserHandler) MarkAllNoticesRead(c *gin.Context) {
 		response.Error(c, err)
 		return
 	}
+
+	recordOperLog(c, h.core, "我的通知", OperTypeUpdate)
 
 	response.Success(c, gin.H{"message": "全部标记成功"})
 }
@@ -285,6 +299,8 @@ func (h *NoticeUserHandler) IgnoreNotice(c *gin.Context) {
 		return
 	}
 
+	recordOperLog(c, h.core, "我的通知", OperTypeUpdate)
+
 	response.Success(c, gin.H{"message": "已忽略该通知"})
 }
 
@@ -321,6 +337,8 @@ func (h *NoticeUserHandler) UnignoreNotice(c *gin.Context) {
 		response.Error(c, err)
 		return
 	}
+
+	recordOperLog(c, h.core, "我的通知", OperTypeUpdate)
 
 	response.Success(c, gin.H{"message": "已恢复该通知"})
 }

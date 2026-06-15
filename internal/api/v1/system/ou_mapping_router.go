@@ -10,7 +10,7 @@ import (
 func SetupOUMappingRouter(r *gin.RouterGroup, core *core.Core) {
 	// 创建 DeptOUmapper 和 OUMappingHandler
 	mapper := addomain.NewDeptOUmapper(core.DB.GetDB())
-	handler := NewOUMappingHandler(core.DB.GetDB(), mapper)
+	handler := NewOUMappingHandler(core.DB.GetDB(), mapper).WithCore(core)
 
 	// OU 部门映射路由
 	r.GET("/ou/:ouDn/dept-mapping", handler.GetOUDeptMapping)

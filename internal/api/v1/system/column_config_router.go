@@ -8,7 +8,7 @@ import (
 
 func SetupColumnConfigRouter(r *gin.RouterGroup, core *core.Core) {
 	columnConfigService := systemServices.NewColumnConfigService(core.GetDB())
-	columnConfigHandler := NewColumnConfigHandler(columnConfigService)
+	columnConfigHandler := NewColumnConfigHandler(columnConfigService).WithCore(core)
 
 	r.GET("/:page_key", columnConfigHandler.GetByPageKey)
 	r.POST("", columnConfigHandler.Save)

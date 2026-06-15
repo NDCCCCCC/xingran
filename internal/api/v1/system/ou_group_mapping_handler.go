@@ -91,6 +91,8 @@ func (h *OUGroupMappingHandler) CreateMapping(c *gin.Context) {
 		return
 	}
 
+	recordOperLog(c, h.core, "OU组映射", OperTypeCreate)
+
 	response.Success(c, mapping)
 }
 
@@ -150,6 +152,8 @@ func (h *OUGroupMappingHandler) UpdateMapping(c *gin.Context) {
 		return
 	}
 
+	recordOperLog(c, h.core, "OU组映射", OperTypeUpdate)
+
 	response.Success(c, nil)
 }
 
@@ -173,6 +177,8 @@ func (h *OUGroupMappingHandler) DeleteMapping(c *gin.Context) {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	recordOperLog(c, h.core, "OU组映射", OperTypeDelete)
 
 	response.Success(c, nil)
 }

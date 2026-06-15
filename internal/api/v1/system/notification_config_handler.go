@@ -2,8 +2,10 @@ package system
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
@@ -13,6 +15,7 @@ type NotificationConfigHandler struct {
 	emailConfigService     systemServices.EmailConfigService
 	apiNotificationService systemServices.APINotificationConfigService
 	emailSenderService     *services.EmailSenderService
+	core                   *core.Core
 }
 
 // NewNotificationConfigHandler 创建通知配置处理器实例
@@ -26,6 +29,14 @@ func NewNotificationConfigHandler(
 		apiNotificationService: apiNotificationService,
 		emailSenderService:     emailSenderService,
 	}
+}
+
+// WithCore 注入 core 依赖（用于操作日志埋点），链式调用。Phase 34 Wave 7 新增。
+func (h *NotificationConfigHandler) WithCore(core *core.Core) *NotificationConfigHandler {
+	if h != nil {
+		h.core = core
+	}
+	return h
 }
 
 // ============= 邮箱配置 Handler =============
@@ -149,6 +160,10 @@ func (h *NotificationConfigHandler) CreateEmailConfig(c *gin.Context) {
 		return
 	}
 
+	// RecordWithBody so SMTP password in the request body is masked before
+	// being persisted to sys_oper_log.oper_param (Phase 34 sensitive-masking).
+	operlog.RecordWithBody(c, h.core.OperLogService, h.core.GetDB(), "通知配置", OperTypeCreate)
+
 	response.Success(c, gin.H{"message": "创建成功"})
 }
 
@@ -184,6 +199,9 @@ func (h *NotificationConfigHandler) UpdateEmailConfig(c *gin.Context) {
 		return
 	}
 
+	// RecordWithBody: SMTP password may be in the update payload — mask it.
+	operlog.RecordWithBody(c, h.core.OperLogService, h.core.GetDB(), "通知配置", OperTypeUpdate)
+
 	response.Success(c, gin.H{"message": "更新成功"})
 }
 
@@ -210,6 +228,8 @@ func (h *NotificationConfigHandler) DeleteEmailConfig(c *gin.Context) {
 		response.Error(c, err)
 		return
 	}
+
+	recordOperLog(c, h.core, "通知配置", OperTypeDelete)
 
 	response.Success(c, nil)
 }
@@ -244,6 +264,10 @@ func (h *NotificationConfigHandler) TestEmailConfig(c *gin.Context) {
 	result := h.emailSenderService.TestEmailConfig(c.Request.Context(), id, req.TestTo)
 
 	if result.Success {
+		// TestEmailConfig sends an outbound test email — record the trigger
+		// as Other (one-shot action, not CRUD). Only success is recorded;
+		// failures are surfaced via response.Error below.
+		recordOperLog(c, h.core, "通知配置", OperTypeOther)
 		response.Success(c, gin.H{"message": "测试邮件已发送，请检查收件箱"})
 	} else {
 		errMsg := result.Message
@@ -369,6 +393,10 @@ func (h *NotificationConfigHandler) CreateAPINotificationConfig(c *gin.Context) 
 		return
 	}
 
+	// RecordWithBody: API headers/bodyTemplate may embed secrets (Bearer tokens,
+	// HMAC keys). Mask them before persisting to sys_oper_log.oper_param.
+	operlog.RecordWithBody(c, h.core.OperLogService, h.core.GetDB(), "通知配置", OperTypeCreate)
+
 	response.Success(c, gin.H{"message": "创建成功"})
 }
 
@@ -404,6 +432,9 @@ func (h *NotificationConfigHandler) UpdateAPINotificationConfig(c *gin.Context) 
 		return
 	}
 
+	// RecordWithBody: API headers/bodyTemplate may embed secrets — mask them.
+	operlog.RecordWithBody(c, h.core.OperLogService, h.core.GetDB(), "通知配置", OperTypeUpdate)
+
 	response.Success(c, gin.H{"message": "更新成功"})
 }
 
@@ -430,6 +461,8 @@ func (h *NotificationConfigHandler) DeleteAPINotificationConfig(c *gin.Context) 
 		response.Error(c, err)
 		return
 	}
+
+	recordOperLog(c, h.core, "通知配置", OperTypeDelete)
 
 	response.Success(c, nil)
 }

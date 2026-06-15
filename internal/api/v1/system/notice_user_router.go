@@ -20,7 +20,7 @@ func getNoticeCacheService(core *core.Core) systemServices.NoticeCacheService {
 // SetupNoticeUserRouter 设置用户端通知路由（所有已登录用户可访问，无需额外权限）
 func SetupNoticeUserRouter(r *gin.RouterGroup, core *core.Core) {
 	noticeService := getNoticeCacheService(core)
-	handler := NewNoticeUserHandler(noticeService, core.DB.GetDB())
+	handler := NewNoticeUserHandler(noticeService, core.DB.GetDB()).WithCore(core)
 
 	// 通知查询
 	r.GET("/my-notices", handler.GetMyNotices)

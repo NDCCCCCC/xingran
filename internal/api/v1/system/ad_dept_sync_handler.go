@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
@@ -12,8 +13,9 @@ import (
 )
 
 type ADDeptSyncHandler struct {
-	db         *gorm.DB
+	db          *gorm.DB
 	syncService *addomain.DeptToADSyncService
+	core        *core.Core
 }
 
 func NewADDeptSyncHandler(db *gorm.DB, syncService *addomain.DeptToADSyncService) *ADDeptSyncHandler {
@@ -21,6 +23,16 @@ func NewADDeptSyncHandler(db *gorm.DB, syncService *addomain.DeptToADSyncService
 		db:          db,
 		syncService: syncService,
 	}
+}
+
+// WithCore 注入 core 依赖（用于操作日志埋点），链式调用。Phase 34 Wave 7 新增。
+// NOTE: 该 handler 当前未注册在任何 router（仅 test 引用），但保留 setter
+// 以便未来 wire-up 时立即可用。
+func (h *ADDeptSyncHandler) WithCore(core *core.Core) *ADDeptSyncHandler {
+	if h != nil {
+		h.core = core
+	}
+	return h
 }
 
 // SyncDeptToAD 同步部门结构到AD
@@ -40,6 +52,8 @@ func (h *ADDeptSyncHandler) SyncDeptToAD(c *gin.Context) {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	recordOperLog(c, h.core, "AD部门同步", OperTypeSync)
 
 	response.Success(c, result)
 }
@@ -88,6 +102,10 @@ func (h *ADDeptSyncHandler) TriggerDeptSync(c *gin.Context) {
 			applogger.Errorf("手动触发部门同步失败: %v", err)
 		}
 	}()
+
+	// TriggerDeptSync starts an async sync goroutine. Record the trigger as
+	// Sync — the actual completion is logged to sys_ad_sync_log separately.
+	recordOperLog(c, h.core, "AD部门同步", OperTypeSync)
 
 	response.Success(c, gin.H{
 		"message": "部门同步已启动",
