@@ -1,6 +1,6 @@
 ---
 slug: reset-theme-hardcoded-colors
-status: fixing
+status: awaiting_human_verify
 trigger: "默认主题修改保存成功了，但是在用户设置界面重置主题时还是恢复到了硬编码的颜色和布局"
 created: 2026-06-15
 updated: 2026-06-15
@@ -66,6 +66,24 @@ reasoning_checkpoint:
 
 **Next action**: Verify root cause with reasoning checkpoint, then apply minimal scoped fix to the reset path.
 
+## Resolution
+
+**root_cause**: `handleReset()` in `pages/settings/index.tsx` (lines 90-105) restored theme color pickers to hardcoded literal hex values (`#4F46E5` and `#1E293B`) when the user had no `customColors` in their preferences. The reset path never consulted the admin-configured default theme, so any admin change made via the default-theme admin page was completely ignored by the user-facing reset button. The form's `initialValues={preferences}` only restored current user preferences, and the form fields were set with `form.setFieldsValue(preferences)`, so `layout` fields were also restored to user prefs, not system defaults.
+
+**fix**: Replaced the synchronous `handleReset` with an async handler that:
+1. Calls `getDefaultThemeConfig()` from `@/lib/defaultThemeApi` to fetch the admin-configured default theme (mode, style, customColors).
+2. Resets the form and overrides `theme.mode` and `theme.style` with the admin defaults.
+3. Sets the color picker state to admin `customColors` (if present), otherwise keeps current user preferences.
+4. Applies the admin default colors to the DOM via `applyPrimaryColor`/`applySidebarBackgroundColor` for immediate visual feedback.
+5. On API failure (e.g., 403 for non-admin users), falls back to the previous behavior (restore current user preferences) and shows a `message.warning`.
+
+**verification**:
+- `npm run type-check` (tsc --noEmit) passes cleanly
+- `npx eslint src/pages/settings/index.tsx` reports 9 problems (5 errors, 4 warnings) — all pre-existing, none introduced by this change. The change itself removed one pre-existing error (line 122 unused `error` → `catch {}`).
+
+**files_changed**:
+- `ruoyi-react-frontend/src/pages/settings/index.tsx`
+
 ## Evidence
 
 - timestamp: 2026-06-15
@@ -88,9 +106,23 @@ reasoning_checkpoint:
   - checked: `internal/services/system/default_theme_service.go`
   - found: `GetDefaultThemeConfig` returns admin-configured `Mode`, `Style`, and `CustomColors` from `sys_config` table.
   - implication: Backend correctly serves admin default; frontend never calls it on reset.
+- timestamp: 2026-06-15
+  - checked: `internal/api/v1/system/settings_router.go` line 51
+  - found: `configGroup.Use(middleware.Permission("system:config:manage", core))` guards the admin default theme routes.
+  - implication: Non-admin users get 403; the fix's catch block handles this gracefully by falling back to current user prefs.
+- timestamp: 2026-06-15
+  - checked: `internal/services/system/settings_service.go` `GetUserPreferences`
+  - found: Returns hardcoded `light`/`minimal` defaults when no user prefs row exists; does NOT merge admin default theme.
+  - implication: Confirms the user's report — the user prefs are independent of admin default; only the user settings reset path can be made to honor admin default without backend refactor.
 
 ## Eliminated
 
 - hypothesis: "themeStore.resetTheme ignores the admin default"
   - evidence: themeStore has no `resetTheme` action; the reset is in the settings page handler.
+  - timestamp: 2026-06-15
+- hypothesis: "GetUserPreferences backend already merges admin default"
+  - evidence: `settings_service.go` `GetUserPreferences` returns hardcoded `light`/`minimal` defaults when no user row exists; no merge with `sys.theme.default` config.
+  - timestamp: 2026-06-15
+- hypothesis: "Refactor themeStore or layout system is needed"
+  - evidence: themeStore has no reset action; the reset is purely in `pages/settings/index.tsx`. Fixing the handler resolves the bug without touching themeStore.
   - timestamp: 2026-06-15
