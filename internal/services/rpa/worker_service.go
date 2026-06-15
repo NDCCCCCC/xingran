@@ -15,6 +15,9 @@ import (
 	"gorm.io/gorm"
 )
 
+// rpaWorkerProgressPublishTimeout RPA Worker 进度发布超时
+const rpaWorkerProgressPublishTimeout = 5 * time.Second
+
 // ==================== 接口定义（遵循接口隔离原则）====================
 
 // WorkerRepository Worker 基础查询接口
@@ -235,7 +238,7 @@ func (s *workerServiceImpl) Progress(ctx context.Context, req *WorkerProgressReq
 		go func() {
 			// 使用带超时的派生 context，确保 goroutine 不会永远阻塞
 			// 从父 context 派生，支持请求取消时一并取消 goroutine
-			pubCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			pubCtx, cancel := context.WithTimeout(ctx, rpaWorkerProgressPublishTimeout)
 			defer cancel()
 			_ = s.executionService.PublishProgress(pubCtx, progressUpdate)
 		}()
