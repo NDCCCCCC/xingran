@@ -93,9 +93,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 		}
 	};
 
+	// WebSocket URL（使用环境变量配置，支持部署到非默认路径）
+	const wsUrl = useMemo(() => {
+		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+		const host = import.meta.env.VITE_WS_HOST || window.location.host;
+		const basePath = import.meta.env.VITE_WS_BASE_PATH || '/ws';
+		return `${protocol}//${host}${basePath}/dashboard/${dashboard?.id}`;
+	}, [dashboard?.id]);
+
 	// WebSocket 连接
 	const { status: wsConnStatus, connect, disconnect } = useWebSocket({
-		url: `/ws/dashboard/${dashboard?.id}`,
+		url: wsUrl,
 		onMessage: handleWebSocketMessage,
 		onOpen: () => {
 			setWsStatus('connected');
