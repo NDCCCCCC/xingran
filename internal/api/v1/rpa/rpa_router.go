@@ -31,16 +31,16 @@ func SetupRPARouter(r *gin.RouterGroup, core *core.Core) {
 	SetupWorkerRouter(r.Group("/workers"), services, core)
 
 	// 执行记录路由
-	SetupExecutionRouter(r.Group("/executions"), NewExecutionHandler(services.ExecutionService, excelService))
+	SetupExecutionRouter(r.Group("/executions"), NewExecutionHandler(services.ExecutionService, excelService).WithCore(core))
 
 	// 凭证管理路由
 	SetupCredentialRouter(r.Group("/credentials"), NewCredentialHandler(services.CredentialService).WithCore(core))
 
 	// AI 辅助路由
-	SetupAIRouter(r.Group("/ai"), NewAIHandler(services.AIService))
+	SetupAIRouter(r.Group("/ai"), NewAIHandler(services.AIService).WithCore(core))
 
 	// 流程控制路由（第三阶段高级功能）
-	SetupFlowRouter(r.Group("/flow"), services)
+	SetupFlowRouter(r.Group("/flow"), services, core)
 }
 
 // SetupTaskRouter 设置任务路由
@@ -114,12 +114,12 @@ func SetupAIRouter(r *gin.RouterGroup, handler *AIHandler) {
 }
 
 // SetupFlowRouter 设置流程控制路由
-func SetupFlowRouter(r *gin.RouterGroup, services *rpa.ServiceGroup) {
+func SetupFlowRouter(r *gin.RouterGroup, services *rpa.ServiceGroup, core *core.Core) {
 	flowService := rpa.NewFlowControlService(services.DB(), services.ExecutionService)
 	errorService := rpa.NewErrorHandlingService(services.DB(), flowService, services.ExecutionService)
 	mapperService := rpa.NewDataMapperService(services.DB())
 
-	handler := NewFlowHandler(flowService, errorService, mapperService)
+	handler := NewFlowHandler(flowService, errorService, mapperService).WithCore(core)
 
 	// 条件评估
 	r.POST("/evaluate-condition", handler.EvaluateCondition)

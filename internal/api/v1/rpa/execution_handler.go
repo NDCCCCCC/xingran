@@ -11,7 +11,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/rpa"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
@@ -19,6 +21,7 @@ import (
 type ExecutionHandler struct {
 	executionService rpa.ExecutionService
 	excelService     *rpa.RPAExcelService
+	core             *core.Core
 }
 
 // NewExecutionHandler 创建执行记录处理器
@@ -27,6 +30,12 @@ func NewExecutionHandler(executionService rpa.ExecutionService, excelService *rp
 		executionService: executionService,
 		excelService:     excelService,
 	}
+}
+
+// WithCore 注入 core 依赖（用于操作日志埋点），链式调用
+func (h *ExecutionHandler) WithCore(core *core.Core) *ExecutionHandler {
+	h.core = core
+	return h
 }
 
 // List 执行记录列表
@@ -72,6 +81,8 @@ func (h *ExecutionHandler) Cancel(c *gin.Context) {
 	if handleError(c, h.executionService.Cancel(c.Request.Context(), id), http.StatusInternalServerError, "取消失败") {
 		return
 	}
+
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "RPA执行", operlog.OperTypeStatus)
 
 	successMsg(c, "执行已取消")
 }
@@ -174,6 +185,8 @@ func (h *ExecutionHandler) SubmitHumanIntervention(c *gin.Context) {
 	if err := h.excelService.ProcessHumanIntervention(c.Request.Context(), event.ID, true); err != nil {
 		_ = err // 记录日志但不影响响应
 	}
+
+	operlog.RecordWithBody(c, h.core.OperLogService, h.core.GetDB(), "RPA执行", operlog.OperTypeOther)
 
 	success(c, gin.H{
 		"eventId": event.ID,

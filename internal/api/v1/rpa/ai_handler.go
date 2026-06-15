@@ -4,17 +4,26 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/rpa"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 )
 
 // AIHandler AI 处理器
 type AIHandler struct {
 	aiService rpa.AIService
+	core      *core.Core
 }
 
 // NewAIHandler 创建 AI 处理器
 func NewAIHandler(aiService rpa.AIService) *AIHandler {
 	return &AIHandler{aiService: aiService}
+}
+
+// WithCore 注入 core 依赖（用于操作日志埋点），链式调用
+func (h *AIHandler) WithCore(core *core.Core) *AIHandler {
+	h.core = core
+	return h
 }
 
 // GenerateScript 生成脚本
@@ -28,6 +37,9 @@ func (h *AIHandler) GenerateScript(c *gin.Context) {
 	if handleError(c, err, http.StatusInternalServerError, "脚本生成失败") {
 		return
 	}
+
+	// RecordWithBody：prompt 可能含用户提供的密钥/令牌，统一屏蔽
+	operlog.RecordWithBody(c, h.core.OperLogService, h.core.GetDB(), "RPA AI", operlog.OperTypeOther)
 
 	success(c, result)
 }
@@ -44,6 +56,8 @@ func (h *AIHandler) OptimizeScript(c *gin.Context) {
 		return
 	}
 
+	operlog.RecordWithBody(c, h.core.OperLogService, h.core.GetDB(), "RPA AI", operlog.OperTypeOther)
+
 	success(c, result)
 }
 
@@ -58,6 +72,8 @@ func (h *AIHandler) Decide(c *gin.Context) {
 	if handleError(c, err, http.StatusInternalServerError, "AI 决策失败") {
 		return
 	}
+
+	operlog.RecordWithBody(c, h.core.OperLogService, h.core.GetDB(), "RPA AI", operlog.OperTypeOther)
 
 	success(c, result)
 }
@@ -74,6 +90,8 @@ func (h *AIHandler) AnalyzeFailure(c *gin.Context) {
 		return
 	}
 
+	operlog.RecordWithBody(c, h.core.OperLogService, h.core.GetDB(), "RPA AI", operlog.OperTypeOther)
+
 	success(c, result)
 }
 
@@ -88,6 +106,8 @@ func (h *AIHandler) SuggestFix(c *gin.Context) {
 	if handleError(c, err, http.StatusInternalServerError, "修复建议失败") {
 		return
 	}
+
+	operlog.RecordWithBody(c, h.core.OperLogService, h.core.GetDB(), "RPA AI", operlog.OperTypeOther)
 
 	success(c, result)
 }
@@ -106,6 +126,8 @@ func (h *AIHandler) ClassifyError(c *gin.Context) {
 		return
 	}
 
+	operlog.RecordWithBody(c, h.core.OperLogService, h.core.GetDB(), "RPA AI", operlog.OperTypeOther)
+
 	success(c, result)
 }
 
@@ -120,6 +142,8 @@ func (h *AIHandler) RecordSelectorSuccess(c *gin.Context) {
 		return
 	}
 
+	operlog.RecordWithBody(c, h.core.OperLogService, h.core.GetDB(), "RPA AI", operlog.OperTypeOther)
+
 	successMsg(c, "记录成功")
 }
 
@@ -133,6 +157,8 @@ func (h *AIHandler) RecordSelectorFailure(c *gin.Context) {
 	if handleError(c, h.aiService.RecordSelectorFailure(c.Request.Context(), &req), http.StatusInternalServerError, "记录失败") {
 		return
 	}
+
+	operlog.RecordWithBody(c, h.core.OperLogService, h.core.GetDB(), "RPA AI", operlog.OperTypeOther)
 
 	successMsg(c, "记录成功")
 }

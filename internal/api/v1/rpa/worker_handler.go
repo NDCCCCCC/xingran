@@ -12,12 +12,14 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/rpa"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 )
 
 // WorkerHandler Worker 处理器
 type WorkerHandler struct {
 	workerService rpa.WorkerService
 	redisClient   *redis.Client
+	core          *core.Core
 }
 
 // NewWorkerHandler 创建 Worker 处理器
@@ -25,6 +27,7 @@ func NewWorkerHandler(workerService rpa.WorkerService, core *core.Core) *WorkerH
 	// Get Redis client from cache
 	h := &WorkerHandler{
 		workerService: workerService,
+		core:          core,
 	}
 
 	// Try to get Redis client from cache
@@ -40,6 +43,12 @@ func NewWorkerHandler(workerService rpa.WorkerService, core *core.Core) *WorkerH
 		})
 	}
 
+	return h
+}
+
+// WithCore 覆盖 core 依赖（链式调用，供 router 在构造后再次注入用于操作日志埋点）
+func (h *WorkerHandler) WithCore(core *core.Core) *WorkerHandler {
+	h.core = core
 	return h
 }
 
@@ -72,6 +81,8 @@ func (h *WorkerHandler) Register(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "RPA工作节点", operlog.OperTypeRegister)
+
 	success(c, worker)
 }
 
@@ -93,6 +104,8 @@ func (h *WorkerHandler) Heartbeat(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "RPA工作节点", operlog.OperTypeOther)
+
 	successMsg(c, "心跳更新成功")
 }
 
@@ -106,6 +119,8 @@ func (h *WorkerHandler) Progress(c *gin.Context) {
 	if handleError(c, h.workerService.Progress(c.Request.Context(), &req), http.StatusInternalServerError, "进度更新失败") {
 		return
 	}
+
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "RPA工作节点", operlog.OperTypeOther)
 
 	successMsg(c, "进度更新成功")
 }
@@ -143,6 +158,8 @@ func (h *WorkerHandler) ScaleUp(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "RPA工作节点", operlog.OperTypeStatus)
+
 	successMsg(c, "扩容指令已发送")
 }
 
@@ -179,6 +196,8 @@ func (h *WorkerHandler) ScaleDown(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "RPA工作节点", operlog.OperTypeStatus)
+
 	successMsg(c, "缩容指令已发送")
 }
 
@@ -210,6 +229,8 @@ func (h *WorkerHandler) ScaleAll(c *gin.Context) {
 		handleError(c, err, http.StatusInternalServerError, "发送批量扩缩容指令失败")
 		return
 	}
+
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "RPA工作节点", operlog.OperTypeStatus)
 
 	successMsg(c, "批量扩缩容指令已发送")
 }
@@ -246,6 +267,8 @@ func (h *WorkerHandler) UpdateAutoScaleConfig(c *gin.Context) {
 	}
 
 	// TODO: 保存配置到数据库
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "RPA工作节点", operlog.OperTypeUpdate)
+
 	successMsg(c, "自动扩缩容配置已更新")
 }
 

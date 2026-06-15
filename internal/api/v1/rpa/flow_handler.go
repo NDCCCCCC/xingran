@@ -4,7 +4,9 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/rpa"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 )
 
 // FlowHandler 流程控制处理器
@@ -12,6 +14,7 @@ type FlowHandler struct {
 	flowService   rpa.FlowControlService
 	errorService  rpa.ErrorHandlingService
 	mapperService rpa.DataMapperService
+	core          *core.Core
 }
 
 // NewFlowHandler 创建流程控制处理器
@@ -25,6 +28,12 @@ func NewFlowHandler(
 		errorService:  errorService,
 		mapperService: mapperService,
 	}
+}
+
+// WithCore 注入 core 依赖（用于操作日志埋点），链式调用
+func (h *FlowHandler) WithCore(core *core.Core) *FlowHandler {
+	h.core = core
+	return h
 }
 
 // EvaluateConditionRequest 条件评估请求
@@ -51,6 +60,8 @@ func (h *FlowHandler) EvaluateCondition(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "RPA流程", operlog.OperTypeOther)
+
 	success(c, &EvaluateConditionResponse{Result: result})
 }
 
@@ -71,6 +82,8 @@ func (h *FlowHandler) MapData(c *gin.Context) {
 	if handleError(c, err, http.StatusInternalServerError, "数据映射失败") {
 		return
 	}
+
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "RPA流程", operlog.OperTypeOther)
 
 	success(c, result)
 }
@@ -94,6 +107,8 @@ func (h *FlowHandler) TransformValue(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "RPA流程", operlog.OperTypeOther)
+
 	success(c, gin.H{"value": result})
 }
 
@@ -114,6 +129,8 @@ func (h *FlowHandler) ExtractJSONPath(c *gin.Context) {
 	if handleError(c, err, http.StatusInternalServerError, "路径提取失败") {
 		return
 	}
+
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "RPA流程", operlog.OperTypeOther)
 
 	success(c, gin.H{"value": result})
 }
@@ -150,6 +167,8 @@ func (h *FlowHandler) HandleError(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "RPA流程", operlog.OperTypeOther)
+
 	success(c, result)
 }
 
@@ -182,6 +201,8 @@ func (h *FlowHandler) ExecuteRetry(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "RPA流程", operlog.OperTypeOther)
+
 	success(c, result)
 }
 
@@ -211,6 +232,8 @@ func (h *FlowHandler) AggregateData(c *gin.Context) {
 	if handleError(c, err, http.StatusInternalServerError, "数据聚合失败") {
 		return
 	}
+
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "RPA流程", operlog.OperTypeOther)
 
 	success(c, gin.H{"value": result})
 }
