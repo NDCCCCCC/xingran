@@ -29,6 +29,14 @@ import (
 // 在配置项缺失或解析失败时使用，避免散落的硬编码字面量
 const rpaDefaultScaleDownCooldown = 5 * time.Minute
 
+// fallbackMemoryCacheSize 核心初始化失败时使用的内存缓存容量 fallback
+// 在Redis不可用或配置缺失时作为L1缓存的兜底容量
+const fallbackMemoryCacheSize = 1000
+
+// fallbackMemoryCacheCleanup 核心初始化失败时使用的内存缓存清理间隔 fallback
+// 在Redis不可用或配置缺失时作为L1缓存的兜底清理周期
+const fallbackMemoryCacheCleanup = 10 * time.Minute
+
 // rpaScalingService RPA扩缩容服务最小接口
 // 在 core 包内定义以避免循环依赖，rpa.ScalingService 自动满足此接口
 type rpaScalingService interface {
@@ -470,8 +478,8 @@ func (c *Core) initCache() (cache.Cache, error) {
 		}
 
 		// 创建内存缓存作为L1缓存，提供快速访问
-		// 容量：1000个键值对，过期时间：10分钟
-		memoryCache := cache.NewMemoryCache(1000, 10*time.Minute)
+		// 容量与清理周期来自 package-level fallback 常量，便于集中调优
+		memoryCache := cache.NewMemoryCache(fallbackMemoryCacheSize, fallbackMemoryCacheCleanup)
 
 		// 创建多级缓存：L1(内存) -> L2(Redis)
 		// 先查内存缓存，命中则返回；未命中则查Redis缓存
