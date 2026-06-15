@@ -13,7 +13,7 @@
   aspect-ratio: 2 / 1;
   border-radius: 8px;
   overflow: hidden;
-  background: #f0f0f0;
+  background: var(--theme-bg-tertiary, #f0f0f0);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -102,9 +102,9 @@
   position: relative;
   width: 100%;
   height: 40px;
-  background: #f0f0f0;
+  background: var(--theme-bg-tertiary, #f0f0f0);
   border-radius: 20px;
-  border: 1px solid #d9d9d9;
+  border: 1px solid var(--input-border, #d9d9d9);
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
@@ -113,7 +113,7 @@
   top: 2px;
   width: 50px;
   height: 36px;
-  background: linear-gradient(135deg, #1890ff, #096dd9);
+  background: linear-gradient(135deg, var(--theme-primary, #1890ff), var(--theme-primary-hover, #096dd9));
   border-radius: 18px;
   display: flex;
   align-items: center;
@@ -128,15 +128,15 @@
 }
 
 .slider-button:hover {
-  background: linear-gradient(135deg, #40a9ff, #1890ff);
+  background: linear-gradient(135deg, var(--input-border-focus, #40a9ff), var(--theme-primary, #1890ff));
 }
 
 .slider-button.dragging {
   cursor: grabbing;
-  background: linear-gradient(135deg, #096dd9, #0050b3);
+  background: linear-gradient(135deg, var(--theme-primary-hover, #096dd9), #0050b3);
 }
 
 .slider-button.verified {
-  background: linear-gradient(135deg, #52c41a, #389e0d);
+  background: linear-gradient(135deg, var(--theme-success, #52c41a), #389e0d);
   cursor: default;
 }
