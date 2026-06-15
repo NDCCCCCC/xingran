@@ -12,6 +12,14 @@ import (
 	"gorm.io/gorm"
 )
 
+// MAC历史保留期配置常量 (F-BE-39)
+const (
+	// defaultMACHistoryRetentionDays MAC历史数据默认保留期（天）
+	defaultMACHistoryRetentionDays = 120
+	// minMACHistoryRetentionDays MAC历史数据最小保留期（天），低于该值视为误配置
+	minMACHistoryRetentionDays = 30
+)
+
 // PartitionService MAC历史表分区管理服务接口
 type PartitionService interface {
 	// CreateMonthlyPartition 创建指定年月的月度分区
@@ -131,16 +139,17 @@ func (s *partitionServiceImpl) GetRetentionDays(ctx context.Context) int {
 		// 尝试解析为整数
 		if days, parseErr := strconv.Atoi(config.ConfigValue); parseErr == nil && days > 0 {
 			// 验证最小值为30天（防止误配置导致数据丢失）
-			if days < 30 {
-				applogger.Warnf("配置的保留期 %d 天小于最小值30天，使用默认值120天", days)
-				return 120
+			if days < minMACHistoryRetentionDays {
+				applogger.Warnf("配置的保留期 %d 天小于最小值%d天，使用默认值%d天",
+					days, minMACHistoryRetentionDays, defaultMACHistoryRetentionDays)
+				return defaultMACHistoryRetentionDays
 			}
 			return days
 		}
 	}
 
 	// 配置不存在或解析失败，返回默认值
-	return 120
+	return defaultMACHistoryRetentionDays
 }
 
 // DropExpiredPartitions 删除过期的分区
