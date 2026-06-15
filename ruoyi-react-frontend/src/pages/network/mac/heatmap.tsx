@@ -199,7 +199,7 @@ const HeatmapPage: React.FC = () => {
         )}
 
         {heatmapData && heatmapData.cells.length > 0 && (
-          <div style={{ marginTop: 16, fontSize: 12, color: '#999' }}>
+          <div style={{ marginTop: 16, fontSize: 12, color: 'var(--theme-text-tertiary, #999)' }}>
             数据快照: {heatmapData.snapshot} | TopN: {heatmapData.topN} | 总计:{' '}
             {heatmapData.total} 条
           </div>

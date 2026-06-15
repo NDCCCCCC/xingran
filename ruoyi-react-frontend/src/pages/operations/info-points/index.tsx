@@ -568,7 +568,7 @@ const InfoPointManagement: FC = () => {
   ];
 
   const renderCardView = () => {
-    if (infoPoints.length === 0) return <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>暂无数据</div>;
+    if (infoPoints.length === 0) return <div style={{ textAlign: 'center', padding: '40px', color: 'var(--theme-text-tertiary, #999)' }}>暂无数据</div>;
     return (
       <Row gutter={[16, 16]}>
         {infoPoints.map((infoPoint) => (

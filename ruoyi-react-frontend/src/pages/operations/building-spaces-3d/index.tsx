@@ -109,7 +109,7 @@ const BuildingSpaces3D: React.FC = () => {
             unCheckedChildren="普通"
           />
         </div>
-        <div style={{ fontSize: 11, color: '#999', marginTop: 4 }}>
+        <div style={{ fontSize: 11, color: 'var(--theme-text-tertiary, #999)', marginTop: 4 }}>
           {useWebGL ? 'WebGL 版本支持 3D 视角' : '普通版本兼容性更好'}
         </div>
       </div>

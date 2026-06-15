@@ -310,7 +310,7 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
                   ))}
                 </Descriptions>
                 {Object.keys(summary.requests_by_method).length === 0 && (
-                  <div style={{ textAlign: 'center', color: '#999', padding: '8px 0' }}>
+                  <div style={{ textAlign: 'center', color: 'var(--theme-text-tertiary, #999)', padding: '8px 0' }}>
                     暂无数据
                   </div>
                 )}
@@ -349,7 +349,7 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
                       );
                     })}
                   {Object.keys(summary.requests_by_path).length === 0 && (
-                    <div style={{ textAlign: 'center', color: '#999', padding: '8px 0' }}>
+                    <div style={{ textAlign: 'center', color: 'var(--theme-text-tertiary, #999)', padding: '8px 0' }}>
                       暂无数据
                     </div>
                   )}
@@ -372,7 +372,7 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
                       </div>
                     ))}
                   {Object.keys(summary.errors_by_status).length === 0 && (
-                    <div style={{ textAlign: 'center', color: '#999', padding: '8px 0' }}>
+                    <div style={{ textAlign: 'center', color: 'var(--theme-text-tertiary, #999)', padding: '8px 0' }}>
                       暂无错误
                     </div>
                   )}

@@ -136,7 +136,7 @@ export const ParamsEditor: React.FC<ParamsEditorProps> = ({
 
 								<MinusCircleOutlined
 									onClick={() => remove(name)}
-									style={{ fontSize: 16, color: '#999', cursor: 'pointer', marginTop: 8 }}
+									style={{ fontSize: 16, color: 'var(--theme-text-tertiary, #999)', cursor: 'pointer', marginTop: 8 }}
 								/>
 							</Space>
 						))}
@@ -161,7 +161,7 @@ export const ParamsEditor: React.FC<ParamsEditorProps> = ({
 					<div style={{ fontSize: 12, color: '#666' }}>
 						<strong>参数说明：</strong>
 					</div>
-					<div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>
+					<div style={{ fontSize: 12, color: 'var(--theme-text-tertiary, #999)', marginTop: 4 }}>
 						添加的参数将作为请求参数发送到API端点。支持动态变量替换，
 						如使用 <code>{`{{userId}}`}</code> 将在请求时替换为当前用户ID。
 					</div>

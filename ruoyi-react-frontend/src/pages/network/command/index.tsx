@@ -138,7 +138,7 @@ const CommandDispatch: FC = () => {
             <Statistic
               title="待执行"
               value={statistics.pending}
-              styles={{ content: { color: '#999' } }}
+              styles={{ content: { color: 'var(--theme-text-tertiary, #999)' } }}
               prefix={<ClockCircleOutlined />}
             />
           </Card>

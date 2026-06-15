@@ -54,7 +54,7 @@ export function TemplateVariablesModal({ open, variables, onClose }: TemplateVar
           rowKey="key"
         />
       ) : (
-        <p style={{ textAlign: 'center', color: '#999' }}>此模板没有定义变量</p>
+        <p style={{ textAlign: 'center', color: 'var(--theme-text-tertiary, #999)' }}>此模板没有定义变量</p>
       )}
     </Modal>
   );

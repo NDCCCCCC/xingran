@@ -26,13 +26,13 @@ export interface UserColumnConfig {
 export const columnConfigApi = {
   // 获取页面列配置
   getByPageKey: (pageKey: string) =>
-    get<UserColumnConfig[]>(`/system/settings/${pageKey}`),
+    get<UserColumnConfig[]>(`/system/column-config/${pageKey}`),
 
   // 保存列配置
   save: (data: ColumnConfigData) =>
-    post('/system/settings', data),
+    post('/system/column-config', data),
 
   // 重置列配置
   reset: (pageKey: string) =>
-    del(`/system/settings/${pageKey}`),
+    del(`/system/column-config/${pageKey}`),
 };

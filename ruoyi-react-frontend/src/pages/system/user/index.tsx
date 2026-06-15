@@ -136,7 +136,7 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
       minWidth: 120,
       render: (roles: string[] | Array<{ roleName?: string; roleKey?: string; id?: string }>) => {
         if (!roles || roles.length === 0) {
-          return <span style={{ color: '#999' }}>无角色</span>;
+          return <span style={{ color: 'var(--theme-text-tertiary, #999)' }}>无角色</span>;
         }
         return (
           <Space size="small" wrap>

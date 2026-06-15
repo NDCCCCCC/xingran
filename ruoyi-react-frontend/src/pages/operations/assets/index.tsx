@@ -56,7 +56,7 @@ interface DeviceTypeOption {
   count: number;
 }
 
-// 默认列配置（43 列）
+// 默认列配置（52 列）
 const defaultAssetColumns: ColumnConfig[] = [
   // 核心标识 (3列)
   { key: 'devicesn', label: '设备序列号', visible: true, order: 1, width: 150, group: '核心标识' },
@@ -114,6 +114,17 @@ const defaultAssetColumns: ColumnConfig[] = [
   { key: 'accumulatorDepreciation', label: '累计折旧', visible: false, order: 42, width: 120, group: '财务信息' },
   // 其他信息 (1列)
   { key: 'remark', label: '备注', visible: true, order: 43, width: 200, group: '其他' },
+  // 归属与责任 (5列)
+  { key: 'signOrgnoName', label: '归属机构', visible: true, order: 44, width: 150, group: '归属与责任' },
+  { key: 'nowUserName', label: '责任人', visible: true, order: 45, width: 100, group: '归属与责任' },
+  { key: 'nowUserDeptCode', label: '部门编码', visible: true, order: 46, width: 120, group: '归属与责任' },
+  { key: 'deviceUserName', label: '领取人', visible: true, order: 47, width: 100, group: '归属与责任' },
+  // 状态与日期 (4列)
+  { key: 'status', label: '状态', visible: true, order: 48, width: 80, group: '状态与日期' },
+  { key: 'nbfStatus', label: '拟报废', visible: true, order: 49, width: 80, group: '状态与日期' },
+  { key: 'drawingDate', label: '接收日期', visible: true, order: 50, width: 120, group: '状态与日期' },
+  { key: 'machineUptime', label: '最后上线', visible: true, order: 51, width: 150, group: '状态与日期' },
+  { key: 'lastInventoryDate', label: '盘点日期', visible: true, order: 52, width: 120, group: '状态与日期' },
 ];
 
 const AssetList: FC = () => {

@@ -688,7 +688,7 @@ const ADUserPage: FC = () => {
             </Space>
           </div>
           {commonOUs.length === 0 && (
-            <div style={{ textAlign: 'center', color: '#999', padding: '40px' }}>
+            <div style={{ textAlign: 'center', color: 'var(--theme-text-tertiary, #999)', padding: '40px' }}>
               暂无常用OU配置
             </div>
           )}

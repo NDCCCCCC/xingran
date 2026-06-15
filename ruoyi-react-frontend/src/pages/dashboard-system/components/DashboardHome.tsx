@@ -42,7 +42,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ isEmbedded = false
 					description={
 						<div>
 							<div style={{ fontSize: 16, marginBottom: 8 }}>您还没有设置默认仪表盘</div>
-							<div style={{ color: '#999' }}>创建仪表盘或从列表中选择一个设为默认</div>
+							<div style={{ color: 'var(--theme-text-tertiary, #999)' }}>创建仪表盘或从列表中选择一个设为默认</div>
 						</div>
 					}
 				>

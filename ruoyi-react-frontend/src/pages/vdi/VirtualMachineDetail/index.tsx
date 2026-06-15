@@ -285,14 +285,14 @@ const VirtualMachineDetail: React.FC = () => {
 
           {/* 操作记录标签页 */}
           <Tabs.TabPane tab="操作记录" key="operations">
-            <div style={{ padding: '20px', textAlign: 'center', color: '#999' }}>
+            <div style={{ padding: '20px', textAlign: 'center', color: 'var(--theme-text-tertiary, #999)' }}>
               操作记录功能（未来实现）
             </div>
           </Tabs.TabPane>
 
           {/* 监控标签页 */}
           <Tabs.TabPane tab="监控" key="monitor">
-            <div style={{ padding: '20px', textAlign: 'center', color: '#999' }}>
+            <div style={{ padding: '20px', textAlign: 'center', color: 'var(--theme-text-tertiary, #999)' }}>
               监控数据功能（未来实现）
             </div>
           </Tabs.TabPane>

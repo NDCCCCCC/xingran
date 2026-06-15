@@ -75,7 +75,7 @@ export function WorkstationFloorPlanView({
               style={{
                 textAlign: 'center',
                 padding: '60px',
-                color: '#999',
+                color: 'var(--theme-text-tertiary, #999)',
                 height: '100%',
                 display: 'flex',
                 flexDirection: 'column',
@@ -91,7 +91,7 @@ export function WorkstationFloorPlanView({
               style={{
                 textAlign: 'center',
                 padding: '60px',
-                color: '#999',
+                color: 'var(--theme-text-tertiary, #999)',
                 height: '100%',
                 display: 'flex',
                 flexDirection: 'column',
@@ -122,7 +122,7 @@ export function WorkstationFloorPlanView({
       >
         <div style={{ padding: '8px' }}>
           {floorPlanWorkstations.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '20px', color: '#999' }}>暂无工位数据</div>
+            <div style={{ textAlign: 'center', padding: '20px', color: 'var(--theme-text-tertiary, #999)' }}>暂无工位数据</div>
           ) : (
             <Space orientation="vertical" style={{ width: '100%' }} size={[8, 8]}>
               {floorPlanWorkstations.map((ws) => {

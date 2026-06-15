@@ -193,7 +193,7 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
               {CRON_PRESETS.map(preset => (
                 <Select.Option key={preset.value} value={preset.value}>
                   {preset.label}
-                  <span style={{ color: '#999', fontSize: 12, marginLeft: 8 }}>
+                  <span style={{ color: 'var(--theme-text-tertiary, #999)', fontSize: 12, marginLeft: 8 }}>
                     ({preset.value})
                   </span>
                 </Select.Option>
@@ -240,7 +240,7 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
                 {getNextRunTimes(cronExpression, 5).map((item, index) => (
                   <div key={index} style={{ padding: '4px 0' }}>
                     <Space>
-                      <span style={{ color: '#999', minWidth: 60 }}>
+                      <span style={{ color: 'var(--theme-text-tertiary, #999)', minWidth: 60 }}>
                         第{index + 1}次
                       </span>
                       <span style={{ fontFamily: 'monospace', color: '#333' }}>

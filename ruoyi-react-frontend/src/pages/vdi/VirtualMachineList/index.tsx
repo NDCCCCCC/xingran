@@ -961,7 +961,7 @@ const VirtualMachineList: React.FC = () => {
                       </Select.Option>
                     ))}
                   </Select>
-                  <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--theme-text-tertiary, #999)', marginTop: '4px' }}>
                     服务器会自动分配到 10.62.0.73 或 10.62.0.74
                   </div>
                 </Form.Item>

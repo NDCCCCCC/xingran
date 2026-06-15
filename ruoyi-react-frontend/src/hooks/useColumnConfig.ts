@@ -100,11 +100,27 @@ export function useColumnConfig(options: UseColumnConfigOptions) {
   const loadConfig = useCallback(async () => {
     setLoading(true);
     try {
+      // 健全性检查：可见列数过少视为损坏配置，回退默认（防御被误清空的缓存/服务端数据）
+      const minVisible = Math.max(
+        1,
+        Math.floor(defaultColumns.filter(c => c.visible).length / 2)
+      );
+      const isConfigSane = (cfg: ColumnConfig[] | null | undefined): boolean => {
+        if (!cfg || cfg.length === 0) return false;
+        const visibleCount = cfg.filter(c => c.visible).length;
+        return visibleCount >= minVisible;
+      };
+
       // 尝试从缓存加载
       if (enableCache) {
         const cached = getFromLocalStorage(pageKey);
-        if (cached) {
+        if (cached && isConfigSane(cached)) {
           setConfig(cached);
+        } else if (cached) {
+          console.warn(
+            `[useColumnConfig] Cached config for "${pageKey}" has <${minVisible} visible columns, falling back to default`
+          );
+          removeFromLocalStorage(pageKey);
         }
       }
 
@@ -114,10 +130,19 @@ export function useColumnConfig(options: UseColumnConfigOptions) {
 
       if (userConfig && userConfig.length > 0) {
         const transformedConfig = transformToColumnConfig(userConfig, defaultColumns);
-        setConfig(transformedConfig);
-
-        if (enableCache) {
-          saveToLocalStorage(pageKey, transformedConfig);
+        if (isConfigSane(transformedConfig)) {
+          setConfig(transformedConfig);
+          if (enableCache) {
+            saveToLocalStorage(pageKey, transformedConfig);
+          }
+        } else {
+          console.warn(
+            `[useColumnConfig] Server config for "${pageKey}" has <${minVisible} visible columns, falling back to default`
+          );
+          setConfig(defaultColumns);
+          if (enableCache) {
+            saveToLocalStorage(pageKey, defaultColumns);
+          }
         }
       } else {
         // 使用默认配置

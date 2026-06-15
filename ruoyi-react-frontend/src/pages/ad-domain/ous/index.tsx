@@ -452,7 +452,7 @@ const ADOUPage: FC = () => {
                 loading={treeLoading}
               />
             }
-            bodyStyle={{ maxHeight: 'calc(100vh - 280px)', overflow: 'auto' }}
+            styles={{ body: { maxHeight: 'calc(100vh - 280px)', overflow: 'auto' } }}
           >
             <Space orientation="vertical" style={{ width: '100%' }} size="small">
               <Select
@@ -472,7 +472,7 @@ const ADOUPage: FC = () => {
                     style={{ fontSize: '13px' }}
                   />
                 ) : (
-                  <div style={{ textAlign: 'center', color: '#999', padding: '20px' }}>
+                  <div style={{ textAlign: 'center', color: 'var(--theme-text-tertiary, #999)', padding: '20px' }}>
                     {selectedConfig ? '暂无OU数据，请先同步' : '请选择AD配置'}
                   </div>
                 )}
@@ -483,7 +483,7 @@ const ADOUPage: FC = () => {
 
         {/* 右侧：用户列表、部门映射和用户组映射 */}
         <Col span={18} style={{ height: '100%', overflow: 'auto' }}>
-          <Space direction="vertical" style={{ width: '100%' }} size="small">
+          <Space orientation="vertical" style={{ width: '100%' }} size="small">
             {/* 用户列表卡片 */}
             <Card
               title={
@@ -495,7 +495,7 @@ const ADOUPage: FC = () => {
                 </Space>
               }
               size="small"
-              bodyStyle={{ maxHeight: 'calc(100vh - 550px)', overflow: 'auto' }}
+              styles={{ body: { maxHeight: 'calc(100vh - 550px)', overflow: 'auto' } }}
             >
               <Table
                 columns={userColumns}
@@ -531,20 +531,20 @@ const ADOUPage: FC = () => {
               loading={mappingLoading}
             >
               {deptMapping?.hasMapping ? (
-                <Space direction="vertical" style={{ width: '100%' }}>
+                <Space orientation="vertical" style={{ width: '100%' }}>
                   <div>
-                    <span style={{ color: '#999' }}>关联部门：</span>
+                    <span style={{ color: 'var(--theme-text-tertiary, #999)' }}>关联部门：</span>
                     <Tag color="blue" style={{ marginLeft: 8 }}>{deptMapping.mapping?.deptName}</Tag>
                   </div>
                   <div>
-                    <span style={{ color: '#999' }}>同步状态：</span>
+                    <span style={{ color: 'var(--theme-text-tertiary, #999)' }}>同步状态：</span>
                     <Tag color={getSyncStatusColor(deptMapping.mapping?.syncStatus || '')} style={{ marginLeft: 8 }}>
                       {getSyncStatusText(deptMapping.mapping?.syncStatus || '')}
                     </Tag>
                   </div>
                 </Space>
               ) : (
-                <div style={{ color: '#999', textAlign: 'center', padding: '20px' }}>
+                <div style={{ color: 'var(--theme-text-tertiary, #999)', textAlign: 'center', padding: '20px' }}>
                   {selectedOU ? '该 OU 尚未关联部门' : '请选择 OU'}
                 </div>
               )}
@@ -582,7 +582,7 @@ const ADOUPage: FC = () => {
                   size="small"
                 />
               ) : (
-                <div style={{ color: '#999', textAlign: 'center', padding: '20px' }}>
+                <div style={{ color: 'var(--theme-text-tertiary, #999)', textAlign: 'center', padding: '20px' }}>
                   {selectedOU ? '该 OU 尚未关联用户组' : '请选择 OU'}
                 </div>
               )}
@@ -633,7 +633,7 @@ const ADOUPage: FC = () => {
             render={item => (
               <div>
                 <div>{item.title}</div>
-                <div style={{ fontSize: '12px', color: '#999' }}>{item.description}</div>
+                <div style={{ fontSize: '12px', color: 'var(--theme-text-tertiary, #999)' }}>{item.description}</div>
               </div>
             )}
             listStyle={{

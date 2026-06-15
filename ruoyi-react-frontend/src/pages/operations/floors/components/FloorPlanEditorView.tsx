@@ -75,7 +75,7 @@ export const FloorPlanEditorView: FC<FloorPlanEditorViewProps> = ({
         }}
       >
         <Spin size="large" />
-        <span style={{ color: '#999' }}>加载中...</span>
+        <span style={{ color: 'var(--theme-text-tertiary, #999)' }}>加载中...</span>
       </div>
     );
   }

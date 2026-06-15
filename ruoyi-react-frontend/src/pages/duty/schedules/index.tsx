@@ -378,7 +378,7 @@ const DutySchedulePage: FC = () => {
                         </Text>
                       </div>
                       <div>
-                        <Text style={{ fontSize: '11px', color: '#999' }}>
+                        <Text style={{ fontSize: '11px', color: 'var(--theme-text-tertiary, #999)' }}>
                           {day.format('MM-DD')}
                         </Text>
                       </div>

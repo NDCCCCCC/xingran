@@ -246,7 +246,7 @@ export const DisplayConfigForm: React.FC<DisplayConfigFormProps> = ({
 							style={{ width: 100 }}
 						/>
 					</Form.Item>
-					<span style={{ color: '#999' }}>条/页</span>
+					<span style={{ color: 'var(--theme-text-tertiary, #999)' }}>条/页</span>
 				</Space>
 			</Form.Item>
 			<Divider titlePlacement="left" plain>
@@ -411,7 +411,7 @@ export const DisplayConfigForm: React.FC<DisplayConfigFormProps> = ({
 				return renderProgressConfig();
 			default:
 				return (
-					<div style={{ color: '#999', textAlign: 'center', padding: 20 }}>
+					<div style={{ color: 'var(--theme-text-tertiary, #999)', textAlign: 'center', padding: 20 }}>
 						暂无额外配置项
 					</div>
 				);

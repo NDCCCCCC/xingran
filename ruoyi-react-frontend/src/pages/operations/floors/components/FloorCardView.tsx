@@ -26,7 +26,7 @@ export const FloorCardView: FC<FloorCardViewProps> = ({
 }) => {
   if (floors.length === 0) {
     return (
-      <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
+      <div style={{ textAlign: 'center', padding: '40px', color: 'var(--theme-text-tertiary, #999)' }}>
         暂无数据
       </div>
     );

@@ -58,7 +58,7 @@ export function CommandDispatchModal({
             size="small"
             scroll={{ y: 200 }}
           />
-          <div style={{ marginTop: 8, color: '#999' }}>
+          <div style={{ marginTop: 8, color: 'var(--theme-text-tertiary, #999)' }}>
             已选择 {selectedRowKeys.length} 台设备
           </div>
         </Form.Item>

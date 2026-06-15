@@ -571,11 +571,11 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
                 </div>
               ))}
               {hoveredBuildings.length > 3 && (
-                <div style={{ fontSize: 11, color: '#999' }}>
+                <div style={{ fontSize: 11, color: 'var(--theme-text-tertiary, #999)' }}>
                   ...还有 {hoveredBuildings.length - 3} 栋
                 </div>
               )}
-              <div style={{ fontSize: 10, color: '#999', marginTop: 4 }}>
+              <div style={{ fontSize: 10, color: 'var(--theme-text-tertiary, #999)', marginTop: 4 }}>
                 点击查看全部
               </div>
             </div>
@@ -604,7 +604,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
         <div>一级楼宇: <Badge count={buildings.filter(b => b.level === 1).length} showZero /></div>
         <div>二级楼宇: <Badge count={buildings.filter(b => b.level === 2).length} showZero /></div>
         <div>有坐标: <Badge count={buildings.filter(b => b.longitude && b.latitude).length} showZero style={{ backgroundColor: buildings.filter(b => b.longitude && b.latitude).length > 0 ? '#52c41a' : '#ff4d4f' }} /></div>
-        <div style={{ marginTop: 8, fontSize: 11, color: '#999' }}>
+        <div style={{ marginTop: 8, fontSize: 11, color: 'var(--theme-text-tertiary, #999)' }}>
           <div>👆 滚轮缩放切换层级</div>
           <div>👆 悬停查看简要信息</div>
           <div>🖱️ 点击查看详细信息</div>
@@ -656,7 +656,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
               <div style={{ fontWeight: 'bold', fontSize: 16, color: 'var(--theme-error, #ff4d4f)' }}>
                 📍 {selectedCluster.buildings.length} 栋楼宇
               </div>
-              <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>
+              <div style={{ fontSize: 12, color: 'var(--theme-text-tertiary, #999)', marginTop: 4 }}>
                 位置相近，已聚类显示
               </div>
             </div>
@@ -667,7 +667,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
                 background: 'none',
                 fontSize: 24,
                 cursor: 'pointer',
-                color: '#999',
+                color: 'var(--theme-text-tertiary, #999)',
                 padding: 0,
                 width: 32,
                 height: 32,
@@ -761,7 +761,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
               borderTop: '1px solid #f0f0f0',
               background: '#fafafa',
               fontSize: 11,
-              color: '#999',
+              color: 'var(--theme-text-tertiary, #999)',
               textAlign: 'center',
             }}
           >

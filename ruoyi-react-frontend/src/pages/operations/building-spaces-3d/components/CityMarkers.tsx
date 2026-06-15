@@ -90,7 +90,7 @@ const CityMarkers: React.FC<CityMarkersProps> = ({
                   </div>
                   {city.buildings.length > 0 && (
                     <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #eee' }}>
-                      <div style={{ fontSize: 12, color: '#999', marginBottom: 8 }}>
+                      <div style={{ fontSize: 12, color: 'var(--theme-text-tertiary, #999)', marginBottom: 8 }}>
                         主要楼宇：
                       </div>
                       {showMainBuildings.map((building) => (
@@ -110,7 +110,7 @@ const CityMarkers: React.FC<CityMarkersProps> = ({
                         </div>
                       ))}
                       {hasMoreBuildings && (
-                        <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>
+                        <div style={{ fontSize: 12, color: 'var(--theme-text-tertiary, #999)', marginTop: 4 }}>
                           ...等 {city.buildings.length} 栋楼宇
                         </div>
                       )}

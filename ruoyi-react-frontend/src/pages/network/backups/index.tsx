@@ -652,7 +652,7 @@ const [batchExporting, setBatchExporting] = useState(false);
                         <Tag color={backup.backupType === 'auto' ? 'blue' : 'green'}>
                           {backup.backupType === 'auto' ? '自动' : '手动'}
                         </Tag>
-                        <span style={{ color: '#999' }}>{formatDateTime(backup.createdAt)}</span>
+                        <span style={{ color: 'var(--theme-text-tertiary, #999)' }}>{formatDateTime(backup.createdAt)}</span>
                       </Space>
                     </Option>
                   ))}

@@ -84,7 +84,7 @@ export const WeeklyView: React.FC<WeeklyViewProps> = ({
                     >
                       {getWeekdayText(day)}
                     </Text>
-                    <Text style={{ fontSize: '12px', color: '#999', display: 'block' }}>
+                    <Text style={{ fontSize: '12px', color: 'var(--theme-text-tertiary, #999)', display: 'block' }}>
                       {day.format('MM-DD')}
                     </Text>
                   </div>

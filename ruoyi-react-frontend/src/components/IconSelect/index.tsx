@@ -134,7 +134,7 @@ const IconSelect: FC<IconSelectProps> = ({
 
         {/* 搜索结果统计 */}
         {searchText && (
-          <div style={{ marginBottom: 12, color: '#999' }}>
+          <div style={{ marginBottom: 12, color: 'var(--theme-text-tertiary, #999)' }}>
             找到 <strong>{totalMatchedIcons}</strong> 个匹配的图标
           </div>
         )}
@@ -142,7 +142,7 @@ const IconSelect: FC<IconSelectProps> = ({
         {/* 图标分类展示 */}
         <div style={{ maxHeight: 400, overflowY: 'auto' }}>
           {Object.keys(filteredCategories).length === 0 ? (
-            <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>
+            <div style={{ textAlign: 'center', padding: 40, color: 'var(--theme-text-tertiary, #999)' }}>
               未找到匹配的图标
             </div>
           ) : (

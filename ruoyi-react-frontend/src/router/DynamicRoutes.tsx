@@ -95,7 +95,7 @@ function InitializingFallback() {
       alignItems: 'center',
       height: '100vh',
       fontSize: '16px',
-      color: '#999'
+      color: 'var(--theme-text-tertiary, #999)'
     }}>
       <Spin size="large" />
       <div style={{ marginTop: 16 }}>加载中...</div>

@@ -387,7 +387,7 @@ const ADOUPage: FC = () => {
                     style={{ fontSize: '13px' }}
                   />
                 ) : (
-                  <div style={{ textAlign: 'center', color: '#999', padding: '20px' }}>
+                  <div style={{ textAlign: 'center', color: 'var(--theme-text-tertiary, #999)', padding: '20px' }}>
                     {selectedConfig ? '暂无OU数据，请先同步' : '请选择AD配置'}
                   </div>
                 )}
@@ -448,18 +448,18 @@ const ADOUPage: FC = () => {
               {deptMapping?.hasMapping ? (
                 <Space direction="vertical" style={{ width: '100%' }}>
                   <div>
-                    <span style={{ color: '#999' }}>关联部门：</span>
+                    <span style={{ color: 'var(--theme-text-tertiary, #999)' }}>关联部门：</span>
                     <Tag color="blue" style={{ marginLeft: 8 }}>{deptMapping.mapping?.deptName}</Tag>
                   </div>
                   <div>
-                    <span style={{ color: '#999' }}>同步状态：</span>
+                    <span style={{ color: 'var(--theme-text-tertiary, #999)' }}>同步状态：</span>
                     <Tag color={getSyncStatusColor(deptMapping.mapping?.syncStatus || '')} style={{ marginLeft: 8 }}>
                       {getSyncStatusText(deptMapping.mapping?.syncStatus || '')}
                     </Tag>
                   </div>
                 </Space>
               ) : (
-                <div style={{ color: '#999', textAlign: 'center', padding: '20px' }}>
+                <div style={{ color: 'var(--theme-text-tertiary, #999)', textAlign: 'center', padding: '20px' }}>
                   {selectedOU ? '该 OU 尚未关联部门' : '请选择 OU'}
                 </div>
               )}
@@ -485,7 +485,7 @@ const ADOUPage: FC = () => {
                   size="small"
                 />
               ) : (
-                <div style={{ color: '#999', textAlign: 'center', padding: '20px' }}>
+                <div style={{ color: 'var(--theme-text-tertiary, #999)', textAlign: 'center', padding: '20px' }}>
                   {selectedOU ? '该 OU 下暂无用户组' : '请选择 OU'}
                 </div>
               )}

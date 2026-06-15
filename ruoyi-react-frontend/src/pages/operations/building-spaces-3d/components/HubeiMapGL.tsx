@@ -668,7 +668,7 @@ const MapInfoPanel: React.FC<MapInfoPanelProps> = ({
       />
     </div>
     {is3DMode && (
-      <div style={{ fontSize: 11, color: '#999', marginTop: 4 }}>
+      <div style={{ fontSize: 11, color: 'var(--theme-text-tertiary, #999)', marginTop: 4 }}>
         拖拽地图旋转视角
       </div>
     )}
@@ -719,7 +719,7 @@ const TooltipPanel: React.FC<TooltipPanelProps> = ({ buildings, position }) => (
           </div>
         ))}
         {buildings.length > 3 && (
-          <div style={{ fontSize: 11, color: '#999' }}>
+          <div style={{ fontSize: 11, color: 'var(--theme-text-tertiary, #999)' }}>
             ...还有 {buildings.length - 3} 栋
           </div>
         )}
@@ -751,11 +751,11 @@ const ControlHints: React.FC<ControlHintsProps> = ({ is3DMode }) => (
     {is3DMode ? (
       <>
         <div>🎮 当前为 3D 视角模式</div>
-        <div style={{ fontSize: 11, color: '#999', marginTop: 4 }}>
+        <div style={{ fontSize: 11, color: 'var(--theme-text-tertiary, #999)', marginTop: 4 }}>
           • 右键拖拽旋转视角
         </div>
-        <div style={{ fontSize: 11, color: '#999' }}>• 滚轮缩放地图</div>
-        <div style={{ fontSize: 11, color: '#999' }}>• 双击重置视角</div>
+        <div style={{ fontSize: 11, color: 'var(--theme-text-tertiary, #999)' }}>• 滚轮缩放地图</div>
+        <div style={{ fontSize: 11, color: 'var(--theme-text-tertiary, #999)' }}>• 双击重置视角</div>
       </>
     ) : (
       <>
@@ -824,7 +824,7 @@ const ClusterSidebar: React.FC<ClusterSidebarProps> = ({
         <div style={{ fontWeight: 'bold', fontSize: 16, color: 'var(--theme-error, #ff4d4f)' }}>
           📍 {cluster.buildings.length} 栋楼宇
         </div>
-        <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>
+        <div style={{ fontSize: 12, color: 'var(--theme-text-tertiary, #999)', marginTop: 4 }}>
           位置相近，已聚类显示
         </div>
       </div>
@@ -835,7 +835,7 @@ const ClusterSidebar: React.FC<ClusterSidebarProps> = ({
           background: 'none',
           fontSize: 24,
           cursor: 'pointer',
-          color: '#999',
+          color: 'var(--theme-text-tertiary, #999)',
           padding: 0,
           width: 32,
           height: 32,
@@ -907,7 +907,7 @@ const ClusterSidebar: React.FC<ClusterSidebarProps> = ({
         borderTop: '1px solid #f0f0f0',
         background: '#fafafa',
         fontSize: 11,
-        color: '#999',
+        color: 'var(--theme-text-tertiary, #999)',
         textAlign: 'center',
       }}
     >

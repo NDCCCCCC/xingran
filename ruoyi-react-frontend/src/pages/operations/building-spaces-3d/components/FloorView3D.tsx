@@ -357,7 +357,7 @@ const styles = {
   },
   workstationType: {
     fontSize: 11,
-    color: '#999',
+    color: 'var(--theme-text-tertiary, #999)',
   },
 };
 

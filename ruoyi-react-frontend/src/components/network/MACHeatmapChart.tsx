@@ -128,7 +128,7 @@ const MACHeatmapChart: React.FC<MACHeatmapChartProps> = ({
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <div style={{ fontWeight: 500 }}>{cell.deviceNameSnapshot}</div>
-                <div style={{ fontSize: 12, color: '#999' }}>{cell.interfaceName}</div>
+                <div style={{ fontSize: 12, color: 'var(--theme-text-tertiary, #999)' }}>{cell.interfaceName}</div>
               </div>
               <Tag color={getHeatColor(cell.changeCount, maxCount)}>
                 {cell.changeCount} 次

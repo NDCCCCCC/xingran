@@ -326,7 +326,7 @@ export function TaskEditModal({
 
                     <div style={{ maxHeight: 400, overflowY: 'auto' }}>
                       {actions.length === 0 ? (
-                        <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
+                        <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--theme-text-tertiary, #999)' }}>
                           暂无动作，请点击上方按钮添加或使用 AI 生成
                         </div>
                       ) : (

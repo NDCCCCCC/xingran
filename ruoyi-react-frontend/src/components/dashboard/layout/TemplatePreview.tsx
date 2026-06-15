@@ -104,7 +104,7 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({
 			title={
 				<div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
 					<span>模板预览</span>
-					<span style={{ color: '#999', fontSize: 14, fontWeight: 'normal' }}>
+					<span style={{ color: 'var(--theme-text-tertiary, #999)', fontSize: 14, fontWeight: 'normal' }}>
 						{template.name}
 					</span>
 				</div>

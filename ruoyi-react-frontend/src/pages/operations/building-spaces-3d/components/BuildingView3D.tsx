@@ -418,7 +418,7 @@ const LoadingView: React.FC<{ message?: string }> = ({ message }) => (
 
 const EmptyView: React.FC<{ message: string }> = ({ message }) => (
   <div style={styles.centerContainer}>
-    <span style={{ color: '#999' }}>{message}</span>
+    <span style={{ color: 'var(--theme-text-tertiary, #999)' }}>{message}</span>
   </div>
 );
 
