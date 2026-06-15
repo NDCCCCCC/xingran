@@ -619,7 +619,7 @@ Plans:
   - 补充单元测试覆盖 helper 函数边界情况
   - 删除中间件方案（保留中间件作为兜底安全网，handler 主动调用 recordOperLog 提供精确语义）
 
-**Plans:** 8/10 plans executed
+**Plans:** 9/10 plans executed
 
 Plans:
 **Wave 1 — 基础设施 (Foundation)**
@@ -634,6 +634,11 @@ Plans:
 
 - [x] 34-03-PLAN.md — system 外围: notice / apikey / config / profile / settings / file 集成 operlog.Record / RecordWithBody (23 写端点埋点 + WithCore() 链式注入 + apikey Create RecordWithBody 遮蔽 api_secret + profile ChangePassword 显式 WithOperParam 遮蔽 oldPassword/newPassword + 上传端点 multipart-safe {filename,size}) ✅ 2026-06-15 (commits d72fd0b, a47ec65)
 - [x] 34-04-PLAN.md — operations 模块: building / floor / workstation / workstation_device / server_room / room_device / dedicated_line / infopoint / wall / door / floor_plan_text / excel / asset 集成 operlog.Record (56 写端点埋点 + WithCore() 链式注入 + Excel 导入只记录 filename+size+inserted/updated/failed 缓解 T-34-W3-01 + Excel 导出 FilterSensitiveParams + 模板下载 OperTypeDownload + workstation_device SyncAD/SyncAsset 用 OperTypeSync + SetPrimary 用 OperTypeGrant) ✅ 2026-06-16 (commit d7f8903)
+- [x] 34-05-PLAN.md — network 模块: device / credential / template / command / execution / backup / discovery / topology / mac / port 集成 operlog.Record (44 写端点埋点 + credential Create/Update 用 RecordWithBody 屏蔽 enablePassword) ✅ 2026-06-16 (commit 93e2a6e)
+- [x] 34-06-PLAN.md — vdi / workorder / duty / knowledge / scheduler 集成 operlog.Record (59 写端点埋点 + VM Start/Stop/Restart 用 OperTypeStatus + Sync 用 OperTypeSync + 工单 Approve/Reject 用 OperTypeApprove/Reject) ✅ 2026-06-16 (commits a4cc17c, 278f678)
+- [x] 34-07-PLAN.md — monitor / rpa / agent 集成 operlog.Record (45 写端点埋点 + rpa credential/AI 全部 RecordWithBody 屏蔽 password/secret/key/token + agent Register 用 OperTypeRegister + cache Clear 用 OperTypeClean) ✅ 2026-06-16 (commits cbb4ef0, 1a3bdf8)
+- [x] 34-08-PLAN.md — system 子模块: dashboard / column_config / notification_config / notice_user / ou_group_mapping / ou_mapping / ad_domain_user_sync / ad_dept_sync 集成 operlog.Record (31 写端点埋点 + 通知配置 Create/Update 用 RecordWithBody 屏蔽 SMTP password 与 API headers/bodyTemplate 密钥 + AD 同步用 OperTypeSync) ✅ 2026-06-16 (commit 3c229ba)
+- [x] 34-09-PLAN.md — Wave 3 e2e 验证: scripts/operlog_e2e_verify.sh 32 抽样端点 + scripts/e2e/operlog_e2e_verify_test.go Go 包装 + internal/utils/operlog/coverage_test.go 单元测试 (FilterSensitiveParams 18 关键词 + RecordWithBody 遮罩+恢复 + 26 模块/operType 抽样) + ADMIN_USER/ADMIN_PASSWORD 环境变量契约 + DEV_MODE 回退门 + 审计笔记 Section 10 (Phase 34 最终覆盖率 298/298 = 100%, 由 9/309 = 2.9% 提升; 267 grep-verifiable Record 调用; 23 RecordWithBody 端点; 18 关键词) ✅ 2026-06-16 (commit 6a0799b)
 
 **Success Criteria**:
 - sys_oper_log 表有效记录数对应 309 个端点，**覆盖率 ≥ 95%**（允许少量内部管理端点豁免）
@@ -685,7 +690,7 @@ Plans:
 | 26. 资产管理模块 | v1.13 | 6/6 | Complete | 2026-06-08 |
 | 27. 全局列自定义显示功能 | v1.14 | 1/1 | Complete | 2026-06-09 |
 | 28. 工位设备关联子表格 | v1.15 | 4/6 | Gap Closure | 2026-06-10 |
-| 34. 操作日志全模块集成 | - | 8/10 | In Progress|  |
+| 34. 操作日志全模块集成 | - | 9/10 | In Progress|  |
 
 **Total**: 122 plans completed, 8 gap closure plans, 24 plans planned (Phases 22C + 22D + 25 + 34), 154 total plans
 
