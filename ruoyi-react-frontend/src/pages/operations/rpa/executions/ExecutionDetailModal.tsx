@@ -15,6 +15,7 @@ import {
 import type { Execution, ExecutionLog } from '@/types/rpa';
 import { renderExecutionStatusTag } from '../constants';
 import { post } from '@/lib/api';
+import { getAuthHeaders } from '@/utils/authHelpers';
 
 const { Text } = Typography;
 
@@ -240,8 +241,30 @@ export function ExecutionDetailModal({
     if (!execution?.id) return;
 
     try {
-      // 直接使用 window.location.href 进行文件下载
-      window.location.href = `/api/v1/rpa/executions/${execution.id}/download`;
+      // 使用 fetch + Authorization 头获取 blob，避免 window.location.href 走 GET 缺失鉴权头
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${baseUrl}/rpa/executions/${execution.id}/download`, { headers });
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          message.error('登录已过期，请重新登录');
+        } else {
+          message.error('下载失败');
+        }
+        return;
+      }
+
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = `execution_${execution.id}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(blobUrl);
+      document.body.removeChild(a);
+
       message.success('开始下载执行产物...');
     } catch (error) {
       message.error('下载失败');
