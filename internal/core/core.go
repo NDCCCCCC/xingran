@@ -283,6 +283,14 @@ func (c *Core) Init() error {
 			applogger.Infof("MAC历史清理任务注册完成")
 		}
 
+		// Phase 15: 性能优化 — 物化视图刷新任务 + 性能配置 seed
+		if err := services.SeedMACPerfConfigs(c.GetDB()); err != nil {
+			applogger.Errorf("MAC 性能配置 seed 失败: %v", err)
+		}
+		matViewSvc := services.NewMACHistoryMatViewService(c.GetDB())
+		scheduler.RegisterMACHistoryMatViewTasks(c.Scheduler, c.GetDB(), matViewSvc)
+		applogger.Infof("MAC历史物化视图刷新任务注册完成")
+
 		// 启动AD域同步调度器（每5分钟检查需要同步的配置）
 		if c.SM4Cipher != nil {
 				scheduler.SetADSM4Cipher(c.SM4Cipher)
