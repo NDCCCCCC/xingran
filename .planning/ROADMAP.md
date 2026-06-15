@@ -619,7 +619,16 @@ Plans:
   - 补充单元测试覆盖 helper 函数边界情况
   - 删除中间件方案（保留中间件作为兜底安全网，handler 主动调用 recordOperLog 提供精确语义）
 
-**Plans:** TBD（运行 `/gsd:plan-phase 34` 生成详细 plan 文件，约 10 plans，7 waves）
+**Plans:** 10 plans (7 waves) — 进行中
+
+Plans:
+**Wave 1 — 基础设施 (Foundation)**
+
+- [x] 34-01-PLAN.md — Wave 1: 共享 operlog 包 (Record 可变参 + RecordWithBody + 24 OperType + 17 关键词 FilterSensitiveParams + 委托层改造) ✅ 2026-06-15 (commits 5f73691, 14a238d)
+
+**Wave 2 — system 核心** *(依赖 Wave 1)*
+
+- [ ] 34-02-PLAN.md — system 核心: user / role / dept / menu / dict / post 集成 operlog.Record / RecordWithBody
 
 **Success Criteria**:
 - sys_oper_log 表有效记录数对应 309 个端点，**覆盖率 ≥ 95%**（允许少量内部管理端点豁免）
