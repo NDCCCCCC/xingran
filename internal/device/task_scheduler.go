@@ -10,6 +10,12 @@ import (
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 )
 
+// 调度器默认配置
+const (
+	defaultTaskTimeout = 5 * time.Minute // 默认任务超时
+	defaultQueueSize   = 100              // 每个设备的任务队列大小
+)
+
 // DeviceTask 设备任务
 type DeviceTask struct {
 	ID       string // 任务ID
@@ -53,8 +59,8 @@ type SchedulerConfig struct {
 // DefaultSchedulerConfig 默认调度器配置
 func DefaultSchedulerConfig() *SchedulerConfig {
 	return &SchedulerConfig{
-		TaskTimeout: 5 * time.Minute,
-		QueueSize:   100,
+		TaskTimeout: defaultTaskTimeout,
+		QueueSize:   defaultQueueSize,
 	}
 }
 
