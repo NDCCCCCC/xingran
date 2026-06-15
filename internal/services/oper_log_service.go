@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	"gorm.io/gorm"
 )
 
@@ -190,24 +190,9 @@ func (s *operLogService) getResponseResult(c *gin.Context) *string {
 	return nil
 }
 
-// FilterSensitiveParams 过滤敏感参数
+// FilterSensitiveParams 过滤敏感参数。Delegates to the shared
+// internal/utils/operlog.FilterSensitiveParams implementation which masks a
+// 17-keyword case-insensitive set and replaces every occurrence per keyword.
 func (s *operLogService) FilterSensitiveParams(params string) string {
-	sensitiveKeys := []string{"password", "pwd", "secret", "token", "key"}
-	filtered := params
-	for _, key := range sensitiveKeys {
-		// 替换敏感参数的值
-		searchKey := `"` + key + `":"`
-		index := strings.Index(filtered, searchKey)
-		if index != -1 {
-			// 找到值的开始位置
-			start := index + len(searchKey)
-			// 找到值的结束位置
-			end := strings.Index(filtered[start:], `"`)
-			if end != -1 {
-				// 替换值为 ******
-				filtered = filtered[:start] + "******" + filtered[start+end:]
-			}
-		}
-	}
-	return filtered
+	return operlog.FilterSensitiveParams(params)
 }

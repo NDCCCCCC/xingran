@@ -20,7 +20,6 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils"
 	"gorm.io/gorm"
 )
@@ -67,6 +66,17 @@ const (
 // maxFilteredBytes bounds the CPU cost of the sensitive-param filter. Inputs
 // larger than this are truncated for scanning and logged with a warning.
 const maxFilteredBytes = 8192
+
+// Recorder is the minimal subset of services.OperLogService that Record and
+// RecordWithBody actually call. Defining it locally (instead of importing
+// internal/services) keeps operlog a leaf package with no internal deps beyond
+// internal/utils, so internal/services/oper_log_service.go can import operlog
+// for FilterSensitiveParams without forming an import cycle. The concrete
+// services.OperLogService implementation satisfies this interface structurally.
+type Recorder interface {
+	RecordAsync(db *gorm.DB, title string, businessType int, method, requestMethod, operUrl string,
+		operatorName, deptName *string, operIP *string, operParam, jsonResult, errorMsg *string, status int, costTime int64)
+}
 
 // sensitiveKeys is the case-insensitive keyword set masked by
 // FilterSensitiveParams. Order does not matter; matching is performed in a
@@ -134,7 +144,7 @@ func WithErrorMsg(msg string) RecordOption {
 //
 // For sensitive endpoints that need to capture the request body, prefer
 // RecordWithBody which reads+restores c.Request.Body for you.
-func Record(c *gin.Context, operLogSvc services.OperLogService, db *gorm.DB, module string, operType int, opts ...RecordOption) {
+func Record(c *gin.Context, operLogSvc Recorder, db *gorm.DB, module string, operType int, opts ...RecordOption) {
 	// Panic-safety (threat T-34-01): a logging failure must never crash the
 	// handler chain.
 	defer func() {
@@ -184,7 +194,7 @@ func Record(c *gin.Context, operLogSvc services.OperLogService, db *gorm.DB, mod
 //
 // Prefer RecordWithBody ONLY for sensitive write endpoints. For non-sensitive
 // write endpoints prefer plain Record to avoid reading the body unnecessarily.
-func RecordWithBody(c *gin.Context, operLogSvc services.OperLogService, db *gorm.DB, module string, operType int) {
+func RecordWithBody(c *gin.Context, operLogSvc Recorder, db *gorm.DB, module string, operType int) {
 	// Panic-safety for the body-read path.
 	defer func() {
 		_ = recover()
