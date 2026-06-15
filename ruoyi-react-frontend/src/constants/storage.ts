@@ -7,8 +7,6 @@
  * 注意：
  * - token 存储相关 key（rt / tm）保留在 SecureTokenStorageImpl.ts 内部，
  *   因为它们是加密 token 专用的简短 key，外部不应直接引用。
- * - 路由 last visited path（ruoyi_last_visited_path）目前保留在 DynamicRoutes.tsx
- *   本地，未来可统一迁移至此文件。
  */
 
 /**
@@ -27,3 +25,20 @@ export const ZUSTAND_STORAGE_KEYS = {
  */
 export type ZustandStorageKey =
 	(typeof ZUSTAND_STORAGE_KEYS)[keyof typeof ZUSTAND_STORAGE_KEYS];
+
+/**
+ * Session / Local Storage keys
+ * 用于非 Zustand persist 的浏览器原生存储 key 集中管理
+ */
+export const STORAGE_KEYS = {
+	/**
+	 * 路由最后访问路径
+	 * 存储于 sessionStorage，用于登录后跳转到用户上次访问的页面
+	 */
+	LAST_PATH: 'ruoyi_last_visited_path',
+} as const;
+
+/**
+ * 类型导出：所有原生 storage key 的联合类型
+ */
+export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];

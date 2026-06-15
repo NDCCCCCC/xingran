@@ -13,14 +13,12 @@ import type { MenuRouteConfig } from '@/types/menu';
 import Layout from '@/components/layout';
 import Login from '@/pages/login';
 import { Spin } from 'antd';
-
-// sessionStorage key for storing last visited path
-const LAST_PATH_KEY = 'ruoyi_last_visited_path';
+import { STORAGE_KEYS } from '@/constants/storage';
 
 // Get last visited path from sessionStorage
 export const getLastPath = (): string | null => {
   try {
-    return sessionStorage.getItem(LAST_PATH_KEY);
+    return sessionStorage.getItem(STORAGE_KEYS.LAST_PATH);
   } catch {
     return null;
   }
@@ -31,7 +29,7 @@ export const saveLastPath = (path: string): void => {
   try {
     // 保存所有路径，除了 /login
     if (path && path !== '/login') {
-      sessionStorage.setItem(LAST_PATH_KEY, path);
+      sessionStorage.setItem(STORAGE_KEYS.LAST_PATH, path);
     }
   } catch {
     // Ignore sessionStorage errors
@@ -41,7 +39,7 @@ export const saveLastPath = (path: string): void => {
 // Clear last path (for logout)
 export const clearLastPath = (): void => {
   try {
-    sessionStorage.removeItem(LAST_PATH_KEY);
+    sessionStorage.removeItem(STORAGE_KEYS.LAST_PATH);
   } catch {
     // Ignore sessionStorage errors
   }
