@@ -15,6 +15,13 @@ import (
 	"gorm.io/gorm"
 )
 
+const (
+	// apiSenderTimeout API 发送 HTTP 客户端超时
+	apiSenderTimeout = 30 * time.Second
+	// apiSenderRetryBaseMs API 发送重试退避基数（毫秒）
+	apiSenderRetryBaseMs = 200
+)
+
 // APISenderService API发送服务
 type APISenderService struct {
 	db     *gorm.DB
@@ -26,7 +33,7 @@ func NewAPISenderService(db *gorm.DB) *APISenderService {
 	return &APISenderService{
 		db: db,
 		client: &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout: apiSenderTimeout,
 		},
 	}
 }
@@ -87,7 +94,7 @@ func (s *APISenderService) Send(ctx context.Context, configID string, msg *APIMe
 
 		// 如果不是最后一次重试，等待一段时间
 		if i < config.RetryCount {
-			time.Sleep(time.Duration(200*(i+1)) * time.Millisecond)
+			time.Sleep(time.Duration(apiSenderRetryBaseMs*(i+1)) * time.Millisecond)
 		}
 	}
 
