@@ -15,6 +15,7 @@ import {
 } from 'antd';
 import { ExportOutlined } from '@ant-design/icons';
 import { getAccessToken } from '@/utils/authHelpers';
+import { excelApi } from '@/lib/opsApi';
 
 export interface ExcelExportProps {
   entityType: string;
@@ -29,7 +30,7 @@ export interface ExcelExportProps {
 const ExcelExport: FC<ExcelExportProps> = ({
   entityType,
   entityName = entityType,
-  exportUrl = `/api/v1/ops/${entityType}/export`,
+  exportUrl,
   visible = false,
   onClose,
   filters = {},
@@ -40,22 +41,28 @@ const ExcelExport: FC<ExcelExportProps> = ({
     setExporting(true);
 
     try {
-      const token = await getAccessToken();
-      const response = await fetch(exportUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(filters),
-      });
+      if (!exportUrl) {
+        // 默认路径：调用 opsApi 包装函数，避免硬编码 /api/v1/ops/ 前缀
+        await excelApi.export(entityType, filters);
+      } else {
+        // 自定义路径：保留原内联 fetch（处理 system/dept 等非 ops 模块的导出）
+        const token = await getAccessToken();
+        const response = await fetch(exportUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(filters),
+        });
 
-      if (!response.ok) {
-        throw new Error('导出失败');
+        if (!response.ok) {
+          throw new Error('导出失败');
+        }
+
+        const filename = extractFilename(response.headers.get('content-disposition'), entityName);
+        await downloadFile(response, filename);
       }
-
-      const filename = extractFilename(response.headers.get('content-disposition'), entityName);
-      await downloadFile(response, filename);
 
       message.success('导出成功');
       onClose?.();
@@ -64,7 +71,7 @@ const ExcelExport: FC<ExcelExportProps> = ({
     } finally {
       setExporting(false);
     }
-  }, [exportUrl, entityName, onClose, filters]);
+  }, [exportUrl, entityType, entityName, onClose, filters]);
 
   return (
     <Modal
