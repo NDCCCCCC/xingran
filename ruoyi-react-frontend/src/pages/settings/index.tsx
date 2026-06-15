@@ -29,6 +29,7 @@ import type { UserPreferences } from '@/types/config';
 import { themePresets } from '@/design-system/themes';
 import type { ColorPickerProps } from 'antd';
 import { applyPrimaryColor, applySidebarBackgroundColor } from '@/design-system/themes';
+import { getDefaultThemeConfig } from '@/lib/defaultThemeApi';
 
 const { Option } = Select;
 
@@ -86,21 +87,49 @@ const SettingsPage: FC = () => {
 		}
 	};
 
-	// 重置设置
-	const handleReset = () => {
-		form.resetFields();
-		form.setFieldsValue(preferences);
+	// 重置设置 - 从后端获取管理员配置的默认主题，覆盖当前用户偏好
+	const handleReset = async () => {
+		try {
+			// 获取管理员配置的默认主题（mode、style、customColors）
+			const defaultTheme = await getDefaultThemeConfig();
 
-		// 重置颜色值
-		if (typeof preferences.theme.customColors?.primary === 'string') {
-			setPrimaryColor(preferences.theme.customColors.primary);
-		} else {
-			setPrimaryColor('#4F46E5');
-		}
-		if (typeof preferences.theme.customColors?.sidebar === 'string') {
-			setSidebarColor(preferences.theme.customColors.sidebar);
-		} else {
-			setSidebarColor('#1E293B');
+			// 用默认主题覆盖表单的主题/布局相关字段
+			form.resetFields();
+			form.setFieldsValue({
+				...preferences,
+				theme: {
+					...preferences.theme,
+					mode: defaultTheme.mode,
+					style: defaultTheme.style,
+				},
+			});
+
+			// 颜色取管理员默认自定义颜色（如有），否则保持当前用户偏好
+			if (typeof defaultTheme.customColors?.primary === 'string') {
+				setPrimaryColor(defaultTheme.customColors.primary);
+			} else if (typeof preferences.theme.customColors?.primary === 'string') {
+				setPrimaryColor(preferences.theme.customColors.primary);
+			}
+			if (typeof defaultTheme.customColors?.sidebar === 'string') {
+				setSidebarColor(defaultTheme.customColors.sidebar);
+			} else if (typeof preferences.theme.customColors?.sidebar === 'string') {
+				setSidebarColor(preferences.theme.customColors.sidebar);
+			}
+
+			// 立即预览应用默认主题到 DOM
+			applyPrimaryColor(defaultTheme.customColors?.primary ?? primaryColor);
+			applySidebarBackgroundColor(defaultTheme.customColors?.sidebar ?? sidebarColor);
+		} catch (error) {
+			// 获取失败时回退到当前用户偏好
+			form.resetFields();
+			form.setFieldsValue(preferences);
+			if (typeof preferences.theme.customColors?.primary === 'string') {
+				setPrimaryColor(preferences.theme.customColors.primary);
+			}
+			if (typeof preferences.theme.customColors?.sidebar === 'string') {
+				setSidebarColor(preferences.theme.customColors.sidebar);
+			}
+			message.warning('获取系统默认主题失败，已重置为当前保存值');
 		}
 	};
 

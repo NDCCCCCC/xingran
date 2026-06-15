@@ -125,6 +125,8 @@ const DefaultThemePage: React.FC = () => {
     form.setFieldsValue({
       mode: preferences.theme.mode,
       style: preferences.theme.style,
+      primaryColor: preferences.theme.customColors?.primary,
+      sidebarColor: preferences.theme.customColors?.sidebar,
     });
     message.info('已加载当前设置到表单，请点击保存按钮保存');
   };
