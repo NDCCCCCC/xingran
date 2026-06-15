@@ -201,9 +201,72 @@ export const exportMACHistory = async (
   return { blob, filename };
 };
 
+/**
+ * 触发浏览器下载(从 Blob + filename)
+ * - 私有工具函数,供 batchExport 使用
+ * - 抽取后 9 个调用方不再需要重复 a/link/click/revokeObjectURL 模板
+ */
+const triggerBrowserDownload = (blob: Blob, filename: string): void => {
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  window.URL.revokeObjectURL(url);
+  document.body.removeChild(a);
+};
+
+/**
+ * 批量导出网络模块数据 (F-PATH-08 重构)
+ * - 走本地 blobAxios 实例(无 BaseResponse 解包拦截器),确保 zip bytes 正确返回为 Blob
+ * - 移除硬编码 /api/v1/ 前缀,改用 VITE_API_BASE_URL(经 baseURL 自动拼接)
+ * - 9 个网络模块页面(devices/ports/mac/backups/command/credentials/
+ *   discoveries/executions/templates)共用此函数
+ * - 内部完成:HTTP POST → filename 提取(Content-Disposition) → 触发浏览器下载
+ * @param entityTypes 实体类型列表(如 ['devices', 'ports'])
+ * @param filters 过滤条件(键值对对象,序列化为 JSON body)
+ * @param fallbackFilename 下载头缺失时使用的默认文件名
+ * @returns 实际下载使用的 filename
+ */
+export const batchExport = async (
+  entityTypes: string[],
+  filters: Record<string, unknown> = {},
+  fallbackFilename = `网络管理_批量导出_${Date.now()}.zip`
+): Promise<string> => {
+  const response = await blobAxios.post<Blob>(
+    '/network/batch-export',
+    { entityTypes, filters },
+    { responseType: 'blob' }
+  );
+  const blob = response.data as unknown as Blob;
+  // CR-01 错误反序列化:若 blob 实际是 JSON 错误体,后端在异常时仍可能返回 application/json
+  if (blob && blob.size < 1024 && blob.type && blob.type.includes('json')) {
+    const text = await blob.text();
+    try {
+      const errBody = JSON.parse(text) as { message?: string; msg?: string };
+      throw new Error(errBody.message || errBody.msg || '导出失败');
+    } catch (e) {
+      if (e instanceof Error && e.message !== '导出失败') throw e;
+      // parse 失败说明不是 JSON,降级为通用错误
+      throw new Error(`导出失败:${response.status}`);
+    }
+  }
+  const contentDisposition = (response.headers as Record<string, string>)['content-disposition']
+    || (response.headers as Record<string, string>)['Content-Disposition'];
+  let filename = fallbackFilename;
+  if (contentDisposition) {
+    const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+    if (match && match[1]) filename = decodeURIComponent(match[1].replace(/['"]/g, ''));
+  }
+  triggerBrowserDownload(blob, filename);
+  return filename;
+};
+
 export default {
   queryMACTrajectory,
   queryMACHistory,
   getMACEvents,
   exportMACHistory,
+  batchExport,
 };

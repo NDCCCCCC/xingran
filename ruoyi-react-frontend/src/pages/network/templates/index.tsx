@@ -18,7 +18,7 @@ import {
   ExportOutlined,
 } from '@ant-design/icons';
 import type { ConfigTemplate } from '@/types';
-import { getAccessToken } from '@/utils/authHelpers';
+import { batchExport } from '@/lib/api/networkApi';
 import { useTemplateData, useTemplateModals } from './hooks';
 import { getTemplateColumns } from './columns';
 import {
@@ -112,34 +112,7 @@ const TemplateManagement: FC = () => {
   const handleBatchExport = async (entityTypes: string[]) => {
     setBatchExporting(true);
     try {
-      const token = await getAccessToken();
-      const response = await fetch('/api/v1/network/batch-export', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          entityTypes,
-          filters: {},
-        }),
-      });
-      if (!response.ok) throw new Error('导出失败');
-      const disposition = response.headers.get('content-disposition');
-      let filename = `网络管理_批量导出_${Date.now()}.zip`;
-      if (disposition) {
-        const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-        if (match?.[1]) filename = decodeURIComponent(match[1].replace(/['"]/g, ''));
-      }
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      const filename = await batchExport(entityTypes, {});
       message.success(`批量导出成功，文件: ${filename}`);
       setBatchModalVisible(false);
     } catch (error: any) {
