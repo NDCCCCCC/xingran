@@ -21,8 +21,8 @@ export interface ThemeConfiguration {
  * 获取默认主题配置
  */
 export async function getDefaultThemeConfig(): Promise<ThemeConfiguration> {
-  const result = await get('/system/settings/config/theme/default');
-  return result.data;
+  const result = await get<ThemeConfiguration>('/system/settings/config/theme/default');
+  return result.data!;
 }
 
 /**

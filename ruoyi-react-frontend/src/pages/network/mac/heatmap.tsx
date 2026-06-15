@@ -15,6 +15,8 @@ import {
 } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import dayjs, { type Dayjs } from 'dayjs';
+
+type RangePickerOnChange = React.ComponentProps<typeof DatePicker.RangePicker>['onChange'];
 import { queryMACHeatmap, type HeatmapResult } from '@/lib/api/macHeatmapApi';
 import { ErrorAlertWithRetry, EmptyStateWithAction } from '@/components/shared';
 
@@ -80,8 +82,8 @@ const HeatmapPage: React.FC = () => {
   );
 
   // 自定义范围
-  const handleCustomRange = useCallback((dates: [Dayjs, Dayjs] | null) => {
-    setCustomRange(dates);
+  const handleCustomRange = useCallback<NonNullable<RangePickerOnChange>>((dates) => {
+    setCustomRange(dates as [Dayjs, Dayjs] | null);
     if (dates && dates[0] && dates[1]) {
       setActivePreset('custom');
     }

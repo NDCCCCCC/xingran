@@ -4,7 +4,7 @@ import type { EChartsOption } from 'echarts';
 import { Empty, Spin } from 'antd';
 import { EVENT_COLORS, type MACEventType } from './macEventMeta';
 
-interface TrajectoryNode {
+export interface TrajectoryNode {
   mac: string;
   deviceId: string;
   deviceName: string;

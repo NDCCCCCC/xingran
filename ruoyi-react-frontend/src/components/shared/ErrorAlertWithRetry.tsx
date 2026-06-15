@@ -30,6 +30,8 @@ export interface ErrorAlertWithRetryProps {
   error: Error | ApiErrorShape | null | undefined;
   /** 重试回调(可选) */
   onRetry?: () => void;
+  /** 自定义错误描述(可选,覆盖默认的错误码描述) */
+  description?: string;
 }
 
 /**
@@ -71,7 +73,7 @@ function extractErrorMessage(error: Error | ApiErrorShape | null | undefined): s
   );
 }
 
-const ErrorAlertWithRetry: FC<ErrorAlertWithRetryProps> = ({ error, onRetry }) => {
+const ErrorAlertWithRetry: FC<ErrorAlertWithRetryProps> = ({ error, onRetry, description }) => {
   const code = extractErrorCode(error);
   const messageText = extractErrorMessage(error);
   const logout = useAuthStore((s) => s.logout);
@@ -121,9 +123,9 @@ const ErrorAlertWithRetry: FC<ErrorAlertWithRetryProps> = ({ error, onRetry }) =
         type="error"
         message={alertMessage}
         showIcon
-        description={code === undefined || code === 1006 || code === 500
+        description={description ?? (code === undefined || code === 1006 || code === 500
           ? undefined
-          : `错误码:${code}`}
+          : `错误码:${code}`)}
       />
       {onRetry && (
         <Button icon={<ReloadOutlined />} onClick={onRetry}>

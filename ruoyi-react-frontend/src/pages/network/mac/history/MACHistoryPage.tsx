@@ -26,6 +26,8 @@ import {
   Typography, message,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+
+type RangePickerOnChange = React.ComponentProps<typeof DatePicker.RangePicker>['onChange'];
 import {
   SearchOutlined, ReloadOutlined, AppstoreOutlined, TableOutlined,
   CopyOutlined, EyeOutlined, AimOutlined, DownloadOutlined,
@@ -158,14 +160,15 @@ const MACHistoryPage: React.FC = () => {
   );
 
   // 切换自定义 RangePicker
-  const handleCustomRangeChange = useCallback(
-    (values: [Dayjs, Dayjs] | null) => {
-      setCustomRange(values);
-      if (values && values[0] && values[1]) {
+  const handleCustomRangeChange = useCallback<NonNullable<RangePickerOnChange>>(
+    (values) => {
+      const arr = values as [Dayjs, Dayjs] | null;
+      setCustomRange(arr);
+      if (arr && arr[0] && arr[1]) {
         setActivePreset('custom');
         setTimeRange({
-          startTime: values[0].toISOString(),
-          endTime: values[1].toISOString(),
+          startTime: arr[0].toISOString(),
+          endTime: arr[1].toISOString(),
         });
         setCurrent(1);
       }
@@ -193,7 +196,7 @@ const MACHistoryPage: React.FC = () => {
     current,
     pageSize,
     filters: filters as Record<string, unknown>,
-    queryFn: queryMACHistory,
+    queryFn: (params) => queryMACHistory(params as unknown as MACHistoryQueryParams),
   });
 
   const list = pageData?.list ?? [];

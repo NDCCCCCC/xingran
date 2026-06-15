@@ -285,7 +285,7 @@ const AssetList: FC = () => {
       const params = {
         current: 1,
         pageSize: 10000,
-        ...searchValues,
+        ...(searchValues as Record<string, unknown>),
       };
 
       await assetApi.excel.export(params as any);

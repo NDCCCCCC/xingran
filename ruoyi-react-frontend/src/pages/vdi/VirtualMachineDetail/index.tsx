@@ -238,10 +238,10 @@ const VirtualMachineDetail: React.FC = () => {
               <Descriptions.Item label="名称">{vm.name}</Descriptions.Item>
               <Descriptions.Item label="电源状态">
                 <Tag color={
-                  vm.power_state === 'running' ? 'success' :
+                  vm.power_state === 'in_use' ? 'success' :
                   vm.power_state === 'stopped' ? 'error' : 'warning'
                 }>
-                  {vm.power_state === 'running' ? '运行中' :
+                  {vm.power_state === 'in_use' ? '运行中' :
                    vm.power_state === 'stopped' ? '已关机' : '已休眠'}
                 </Tag>
               </Descriptions.Item>

@@ -4,6 +4,8 @@ import {
 } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation } from 'react-router-dom';
+
+type RangePickerOnChange = React.ComponentProps<typeof DatePicker.RangePicker>['onChange'];
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import MACTrajectoryChart from '@/components/network/MACTrajectoryChart';
@@ -81,12 +83,13 @@ const TrajectoryPage: React.FC = () => {
     [form]
   );
 
-  const handleCustomRangeChange = useCallback(
-    (values: [Dayjs, Dayjs] | null) => {
-      setCustomRange(values);
-      if (values && values[0] && values[1]) {
+  const handleCustomRangeChange = useCallback<NonNullable<RangePickerOnChange>>(
+    (values) => {
+      const arr = values as [Dayjs, Dayjs] | null;
+      setCustomRange(arr);
+      if (arr && arr[0] && arr[1]) {
         setActivePreset('custom');
-        form.setFieldsValue({ dateRange: values });
+        form.setFieldsValue({ dateRange: arr });
       }
     },
     [form]
