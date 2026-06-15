@@ -178,13 +178,33 @@ type MACHistoryQueryService interface {
 
 // macHistoryQueryServiceImpl MAC历史查询服务实现
 type macHistoryQueryServiceImpl struct {
-	db    *gorm.DB
-	cache cache.Cache
+	db         *gorm.DB
+	cache      cache.Cache
+	dataCache  *DataCacheService
+	perfConfig *CacheConfigService
 }
 
 // NewMACHistoryQueryService 创建MAC历史查询服务
 func NewMACHistoryQueryService(db *gorm.DB) MACHistoryQueryService {
 	return &macHistoryQueryServiceImpl{db: db, cache: nil}
+}
+
+// NewMACHistoryQueryServiceWithCache 创建带缓存的查询服务 (Phase 15 PERF-03)
+func NewMACHistoryQueryServiceWithCache(db *gorm.DB, dataCache *DataCacheService, perfConfig *CacheConfigService) MACHistoryQueryService {
+	return &macHistoryQueryServiceImpl{db: db, cache: nil, dataCache: dataCache, perfConfig: perfConfig}
+}
+
+// perfCacheTTL 读取 MAC 性能缓存 TTL (5 分钟兜底)
+func (s *macHistoryQueryServiceImpl) perfCacheTTL() time.Duration {
+	const fallback = 5 * time.Minute
+	if s.perfConfig == nil {
+		return fallback
+	}
+	d := s.perfConfig.GetDuration(MACPerfConfigCacheTTLSeconds)
+	if d <= 0 {
+		return fallback
+	}
+	return d
 }
 
 // extractOUIPrefix 提取MAC地址的OUI前缀（前3字节）
@@ -322,6 +342,25 @@ func (s *macHistoryQueryServiceImpl) QueryPortHistory(ctx context.Context, req *
 		req.PageSize = 20
 	}
 
+	// Phase 15 PERF-03: cache-aside 装饰 (D-12 锁定)
+	if s.dataCache != nil {
+		var cached MACHistoryQueryResult
+		cacheKey, keyErr := BuildMACQueryCacheKey("port-history", req)
+		if keyErr == nil {
+			err := s.dataCache.GetOrSet(ctx, cacheKey, &cached, s.perfCacheTTL(), func() (interface{}, error) {
+				return s.queryPortHistoryFromDB(ctx, req)
+			})
+			if err == nil {
+				return &cached, nil
+			}
+			applogger.Warnf("[MAC缓存] port-history 走直查: %v", err)
+		}
+	}
+	return s.queryPortHistoryFromDB(ctx, req)
+}
+
+// queryPortHistoryFromDB 实际执行 SQL 查询 (无缓存)
+func (s *macHistoryQueryServiceImpl) queryPortHistoryFromDB(ctx context.Context, req *PortHistoryQuery) (*MACHistoryQueryResult, error) {
 	// 构建查询
 	query := s.db.WithContext(ctx).Table("sys_device_mac_history")
 
@@ -428,6 +467,25 @@ func (s *macHistoryQueryServiceImpl) QueryDeviceHistory(ctx context.Context, req
 		req.PageSize = 20
 	}
 
+	// Phase 15 PERF-03: cache-aside 装饰 (D-12 锁定)
+	if s.dataCache != nil {
+		var cached MACHistoryQueryResult
+		cacheKey, keyErr := BuildMACQueryCacheKey("device-history", req)
+		if keyErr == nil {
+			err := s.dataCache.GetOrSet(ctx, cacheKey, &cached, s.perfCacheTTL(), func() (interface{}, error) {
+				return s.queryDeviceHistoryFromDB(ctx, req)
+			})
+			if err == nil {
+				return &cached, nil
+			}
+			applogger.Warnf("[MAC缓存] device-history 走直查: %v", err)
+		}
+	}
+	return s.queryDeviceHistoryFromDB(ctx, req)
+}
+
+// queryDeviceHistoryFromDB 实际执行 SQL 查询 (无缓存)
+func (s *macHistoryQueryServiceImpl) queryDeviceHistoryFromDB(ctx context.Context, req *DeviceHistoryQuery) (*MACHistoryQueryResult, error) {
 	// 构建查询
 	query := s.db.WithContext(ctx).Table("sys_device_mac_history")
 
@@ -963,6 +1021,25 @@ func (s *macHistoryQueryServiceImpl) getLongOccupancyThreshold(ctx context.Conte
 // QueryConnectionStats 查询连接时长统计
 // 输出明细（每个MAC×端口的停留时长+flapping计数）+Top-N（按MAC长期占用Top+按端口热门连接Top）
 func (s *macHistoryQueryServiceImpl) QueryConnectionStats(ctx context.Context, req *ConnectionStatsQuery) (*ConnectionStatsResponse, error) {
+	// Phase 15 PERF-03: cache-aside 装饰 (D-12 锁定)
+	if s.dataCache != nil {
+		var cached ConnectionStatsResponse
+		cacheKey, keyErr := BuildMACQueryCacheKey("stats", req)
+		if keyErr == nil {
+			err := s.dataCache.GetOrSet(ctx, cacheKey, &cached, s.perfCacheTTL(), func() (interface{}, error) {
+				return s.queryConnectionStatsFromDB(ctx, req)
+			})
+			if err == nil {
+				return &cached, nil
+			}
+			applogger.Warnf("[MAC缓存] stats 走直查: %v", err)
+		}
+	}
+	return s.queryConnectionStatsFromDB(ctx, req)
+}
+
+// queryConnectionStatsFromDB 实际执行 SQL 查询 (无缓存)
+func (s *macHistoryQueryServiceImpl) queryConnectionStatsFromDB(ctx context.Context, req *ConnectionStatsQuery) (*ConnectionStatsResponse, error) {
 	// 1. 校验StartTime/EndTime必填
 	if req.StartTime == "" || req.EndTime == "" {
 		return nil, fmt.Errorf("开始时间和结束时间为必填项")
