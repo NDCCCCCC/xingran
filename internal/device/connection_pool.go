@@ -13,6 +13,12 @@ import (
 	"gorm.io/gorm"
 )
 
+// 网络设备连接默认端口（避免散落的硬编码数字字面量）
+const (
+	defaultSSHPort   = 22
+	defaultTelnetPort = 23
+)
+
 // PooledConnection 池化连接，带有引用计数和设备级锁
 type PooledConnection struct {
 	wrapper  *ScrapliWrapper
@@ -359,7 +365,7 @@ func (p *DeviceConnectionPool) createConnection(ctx context.Context, deviceID st
 
 	// 创建连接
 	var wrapper *ScrapliWrapper
-	if device.Port > 0 && device.Port != 22 {
+	if device.Port > 0 && device.Port != defaultSSHPort {
 		wrapper, err = NewScrapliWrapperWithPort(&device, credential.Username, password, device.Port, credential.ProtocolType)
 	} else {
 		wrapper, err = NewScrapliWrapper(&device, credential.Username, password, credential.ProtocolType)
@@ -373,9 +379,9 @@ func (p *DeviceConnectionPool) createConnection(ctx context.Context, deviceID st
 	port := device.Port
 	if port <= 0 {
 		if credential.ProtocolType == models.ProtocolTypeTelnet {
-			port = 23
+			port = defaultTelnetPort
 		} else {
-			port = 22
+			port = defaultSSHPort
 		}
 	}
 
