@@ -577,9 +577,66 @@ Plans:
 Plans:
 - [ ] TBD (run /gsd-plan-phase 33 to break down)
 
+### Phase 34: 操作日志全模块集成 📋
+
+**Goal**: 为 RuoYi-Next 后端所有 309 个业务写操作端点集成操作日志记录，覆盖率从 2.9%（9/309）提升到 100%（309/309）。基于 AD 域控参考实现（`recordOperLog` 模式），按 7 个 Wave 分批实施，确保敏感字段（password/token/key）自动脱敏、异步写入不影响响应。
+
+**Background**: 2026-06-15 审计发现：
+- ✅ 基础设施完整（sys_oper_log 表 + OperLog 模型 + OperLogService + 查询 Handler/Router）
+- ⚠️ `OperLogMiddleware` 已挂载到 9 个业务路由组但实际从未生效（因 handler 未调用 `SetOperLogInfo`）
+- ✅ AD 域控的 `ad_domain_handler.go` 通过 `recordOperLog` 实现 9 处有效记录（唯一参考实现）
+- ❌ 其他 300 个写操作端点未集成
+
+**Depends on:** Phase 32（中间件架构依赖）
+**Source:** `.planning/notes/260615-oper-log-coverage-audit.md`
+
+**Requirements**:
+
+- **基础设施增强**:
+  - 将 `recordOperLog` helper 从 `internal/api/v1/system/helper.go` 迁移到共享包（`internal/utils/` 或 `pkg/operlog/`）
+  - 扩展 `OperType` 业务类型常量（Grpc/Import/Export 等更精细）
+  - 增强 `FilterSensitiveParams` 黑名单（增加 salt/privateKey/oldPassword/macKey/sm4Key 等）
+  - helper 函数支持 `costTime`、`errorMsg`、`operParam` 附加字段
+
+- **业务侧集成** (按 Wave 分批):
+  - Wave 1 — system 核心: user / role / dept / menu / dict / post（47 端点）
+  - Wave 2 — system 周边: notice / apikey / config / profile / settings / files（25 端点）
+  - Wave 3 — operations 全部: 楼宇/楼层/工位/工位设备/机房/资产等（63 端点）
+  - Wave 4 — network 全部: 设备/凭据/模板/命令/执行/备份/拓扑/MAC/端口（53 端点）
+  - Wave 5 — vdi + workorder + duty + knowledge + scheduler（58 端点）
+  - Wave 6 — monitor + rpa + agent（46 端点）
+  - Wave 7 — 其他 system 子模块: dashboard / column-config / my-notices / notification-config / ou-group-mapping（8 端点）
+
+- **端到端验证**:
+  - 编写脚本枚举所有 309 个写操作端点
+  - 逐个触发后查询 sys_oper_log 验证记录成功
+  - 抽样检查 title / businessType 字段准确性
+  - 验证敏感字段过滤（password 应显示为 `******`）
+  - 验证异步写入性能（不应阻塞响应）
+
+- **文档与回归**:
+  - 更新 `docs/开发规范.md` 添加"新增 handler 必须调用 recordOperLog"约定
+  - 补充单元测试覆盖 helper 函数边界情况
+  - 删除中间件方案（保留中间件作为兜底安全网，handler 主动调用 recordOperLog 提供精确语义）
+
+**Plans:** TBD（运行 `/gsd:plan-phase 34` 生成详细 plan 文件，约 10 plans，7 waves）
+
+**Success Criteria**:
+- sys_oper_log 表有效记录数对应 309 个端点，**覆盖率 ≥ 95%**（允许少量内部管理端点豁免）
+- 抽样 30 个端点验证 title 与业务语义匹配，businessType 与操作类型匹配
+- 密码/密钥类字段全部脱敏为 `******`
+- 操作日志写入不阻塞 API 响应（P95 < 50ms）
+- 每个 Wave 独立 commit 便于回滚
+
+**Phase Highlights**:
+- 📊 全模块操作日志覆盖从 2.9% 提升到 95%+
+- 🔒 敏感字段自动脱敏
+- ⚡ 异步写入，不影响业务性能
+- 🎯 与 AD 域控参考实现保持一致
+- 🔄 分 7 Wave 渐进式集成，风险可控
+
 ---
 
-    
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -614,7 +671,8 @@ Plans:
 | 26. 资产管理模块 | v1.13 | 6/6 | Complete | 2026-06-08 |
 | 27. 全局列自定义显示功能 | v1.14 | 1/1 | Complete | 2026-06-09 |
 | 28. 工位设备关联子表格 | v1.15 | 4/6 | Gap Closure | 2026-06-10 |
+| 34. 操作日志全模块集成 | - | 0/10 | Planned | - |
 
-**Total**: 122 plans completed, 8 gap closure plans, 14 plans planned (Phases 22C + 22D + 25), 144 total plans
+**Total**: 122 plans completed, 8 gap closure plans, 24 plans planned (Phases 22C + 22D + 25 + 34), 154 total plans
 
 **Completion Rate**: 84.7% (122/144) + 8 gap closure plans shipped

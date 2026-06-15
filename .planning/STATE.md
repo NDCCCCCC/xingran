@@ -4,13 +4,13 @@ milestone: v1.12
 milestone_name: 深信服桌面云集成
 status: executing
 stopped_at: context exhaustion at 76% (2026-06-15)
-last_updated: "2026-06-15T07:05:54.388Z"
+last_updated: "2026-06-15T14:45:04.146Z"
 progress:
-  total_phases: 11
+  total_phases: 14
   completed_phases: 7
-  total_plans: 61
+  total_plans: 69
   completed_plans: 48
-  percent: 64
+  percent: 50
 ---
 
 # Project State
@@ -211,6 +211,7 @@ Plan: 7 of 7 (Wave 7 COMPLETE ✅)
 - 📋 Phase 31 added: P0 收尾 — connection_pool lifecycle + Config API 重设计（20260612 后端审查 F-14、F-17）
 - 📋 Phase 32 added: v1.14 P1 重构与 P2 架构优化（20260612 后端审查剩余 P1/P2 任务）
 - 📋 Phase 33 added: 前端 Vercel React Best Practices 修复 — 修复审查报告 20260613 中的 26 个性能/质量缺陷（7 CRITICAL + 5 MEDIUM-HIGH + 8 MEDIUM + 5 LOW + 1 bug：登录重复请求、WebSocket/Polling 抖动、Table 引用稳定化、Map 缓存化、Excel 改用 axios、R7 楼宇状态显示 bug）
+- 📋 Phase 34 added: 操作日志全模块集成 — 审计发现 309 个写操作端点中仅 9 处（2.9%）有效记录（AD 域控），OperLogMiddleware 中间件已挂载但从未生效。基于 AD 域控参考实现分 7 Wave 集成全部端点
 
 **Total shipped**: 72 plans, 18 phases completed
 
