@@ -1303,8 +1303,8 @@ func (s *ExcelService) executeGeocodingTasks(
 	tasks []geocodingTask,
 	records []map[string]any,
 ) (successCount, failCount int) {
-	const maxConcurrency = 5
-	sem := make(chan struct{}, maxConcurrency)
+	const excelGeocodingMaxConcurrency = 5
+	sem := make(chan struct{}, excelGeocodingMaxConcurrency)
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 
