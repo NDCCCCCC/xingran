@@ -30,6 +30,9 @@ type MACCollectionService struct {
 // MAC采集并发数的默认配置键
 const macConcurrentConfigKey = "network.mac.collection.concurrent"
 
+// macCollectionDeviceTimeout MAC 采集单设备超时
+const macCollectionDeviceTimeout = 10 * time.Minute
+
 // NewMACCollectionService 创建MAC采集服务
 func NewMACCollectionService(db *gorm.DB, executor *device.DeviceExecutor, lldpSvc *lldp.LLDPService, filterRuleSvc topology.FilterRuleService) *MACCollectionService {
 	svc := &MACCollectionService{
@@ -81,7 +84,7 @@ func (s *MACCollectionService) CollectAllDevices(ctx context.Context) ([]*MACCol
 
 			// 为每个设备创建独立的 context（带超时控制）
 			// 这样单个设备的问题不会影响其他设备
-			deviceCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+			deviceCtx, cancel := context.WithTimeout(ctx, macCollectionDeviceTimeout)
 			defer cancel()
 
 			result := s.collectDeviceMAC(deviceCtx, &device)
