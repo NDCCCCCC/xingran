@@ -195,20 +195,34 @@ interface WorkstationStatsCardProps {
   stats: WorkstationStats;
 }
 
+/**
+ * 工位统计色板
+ * 注意：与 AntD 主题色（colorPrimary / colorSuccess / colorError / 紫色）保持一致
+ * 原因：本地 StatCard 组件的 `color` prop 类型为 string，
+ *      不支持 AntD status token；如需主题联动需改 StatCard 组件签名（超出本次修复范围）。
+ * 当前策略：将字面量提升为命名常量，便于后续统一替换为 token / CSS 变量。
+ */
+const WORKSTATION_STAT_COLORS = {
+  primary: '#1890ff',   // 总工位 - AntD colorPrimary
+  success: '#52c41a',   // 空闲工位 - AntD colorSuccess
+  error: '#ff4d4f',     // 占用工位 - AntD colorError
+  purple: '#722ed1',    // 灵活工位 - AntD 紫色
+} as const;
+
 const WorkstationStatsCard: React.FC<WorkstationStatsCardProps> = ({ stats }) => (
   <Card size="small" title={<><DesktopOutlined /> 工位统计</>} style={styles.statsCard}>
     <Row gutter={16}>
       <Col span={6}>
-        <StatCard value={stats.total} label="总工位数" color="#1890ff" />
+        <StatCard value={stats.total} label="总工位数" color={WORKSTATION_STAT_COLORS.primary} />
       </Col>
       <Col span={6}>
-        <StatCard value={stats.available} label="空闲工位" color="#52c41a" />
+        <StatCard value={stats.available} label="空闲工位" color={WORKSTATION_STAT_COLORS.success} />
       </Col>
       <Col span={6}>
-        <StatCard value={stats.occupied} label="占用工位" color="#ff4d4f" />
+        <StatCard value={stats.occupied} label="占用工位" color={WORKSTATION_STAT_COLORS.error} />
       </Col>
       <Col span={6}>
-        <StatCard value={stats.flexible} label="灵活工位" color="#722ed1" />
+        <StatCard value={stats.flexible} label="灵活工位" color={WORKSTATION_STAT_COLORS.purple} />
       </Col>
     </Row>
   </Card>
