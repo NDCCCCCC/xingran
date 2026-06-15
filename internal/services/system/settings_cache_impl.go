@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -57,7 +58,7 @@ func (s *settingsCacheService) UpdateUserPreferences(ctx context.Context, userID
 	cacheKey := fmt.Sprintf("settings:user:%s", userID)
 	if err := s.cache.Delete(ctx, cacheKey); err != nil {
 		// 记录日志但不影响更新操作
-		fmt.Printf("[SETTINGS_CACHE] 清除用户设置缓存失败: %v\n", err)
+		applogger.Warnf("[SETTINGS_CACHE] 清除用户设置缓存失败: %v", err)
 	}
 
 	return nil

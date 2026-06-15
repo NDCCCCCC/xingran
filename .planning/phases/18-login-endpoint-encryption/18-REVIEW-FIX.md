@@ -31,7 +31,7 @@ status: partial
 - Changed `host: "10.62.10.34"` to `host: "${DB_HOST}"`
 - Changed `port: 5432` to `port: "${DB_PORT:-5432}"`
 - Changed `user: "postgres"` to `user: "${DB_USER}"`
-- Changed `password: "Cpic1234"` to `password: "${DB_PASSWORD}"`
+- Changed `password: "[REDACTED]"` to `password: "${DB_PASSWORD}"`
 - Changed `dbname: "ruoyi"` to `dbname: "${DB_NAME}"`
 
 This prevents credentials from being exposed in version control and allows proper credential rotation in production environments.

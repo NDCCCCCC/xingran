@@ -1,5 +1,4 @@
 //go:build ignore
-// +build ignore
 
 package main
 
@@ -13,12 +12,16 @@ import (
 )
 
 func main() {
-	// 使用config.yaml中的实际值
+	// 数据库连接配置(密码必须从环境变量 DB_PASSWORD 读取)
 	host := "10.62.10.34"
 	port := 5432
 	user := "postgres"
-	password := "Cpic1234"
+	password := os.Getenv("DB_PASSWORD")
 	dbname := "ruoyi"
+
+	if password == "" {
+		log.Fatal("环境变量 DB_PASSWORD 未设置")
+	}
 
 	database := getDB(host, port, user, password, dbname)
 	defer database.Close()

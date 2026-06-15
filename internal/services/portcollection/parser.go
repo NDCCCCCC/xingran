@@ -161,13 +161,13 @@ func parseInterfaceDescriptions(wrapper *device.ScrapliWrapper, vendor models.De
 			descriptions[desc.InterfaceName] = desc
 			// 输出前3条调试信息
 			if len(descriptions) <= 3 {
-				applogger.Infof("[parseInterfaceDescriptions] 解析到: interface=%s admin=%s oper=%s desc='%s'",
+				applogger.Debugf("[parseInterfaceDescriptions] 解析到: interface=%s admin=%s oper=%s desc='%s'",
 					desc.InterfaceName, desc.AdminStatus, desc.OperStatus, desc.Description)
 			}
 		}
 	}
 
-	applogger.Infof("[parseInterfaceDescriptions] 共解析到 %d 条接口描述", len(descriptions))
+	applogger.Debugf("[parseInterfaceDescriptions] 共解析到 %d 条接口描述", len(descriptions))
 	return descriptions, nil
 }
 

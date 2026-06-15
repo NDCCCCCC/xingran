@@ -26,7 +26,9 @@ func Migrate148CreateOpsAssetTable(db *gorm.DB) error {
 		deleted_at TIMESTAMP,
 
 		-- 核心标识 (3 fields)
-		devicesn VARCHAR(200) NOT NULL UNIQUE,
+		-- 命名约束: 使用 GORM 命名规范 uni_<table>_<column> 与 models.Asset.DeviceSN uniqueIndex 对齐
+		-- 避免 PG 默认命名 ops_asset_devicesn_key 与 GORM 期望 uni_ops_asset_devicesn 冲突
+		devicesn VARCHAR(200) NOT NULL,
 		sequenceno VARCHAR(100),
 		fixassetno VARCHAR(100),
 
@@ -113,6 +115,19 @@ func Migrate148CreateOpsAssetTable(db *gorm.DB) error {
 	CREATE INDEX IF NOT EXISTS idx_asset_status ON ops_asset(status);
 	CREATE INDEX IF NOT EXISTS idx_asset_deleted_at ON ops_asset(deleted_at);
 	CREATE INDEX IF NOT EXISTS idx_asset_dept_status ON ops_asset(dept_id, status) WHERE deleted_at IS NULL;
+
+	-- 显式命名 unique constraint (与 GORM uniqueIndex 命名规范一致,避免 AutoMigrate 重建冲突)
+	-- 注意: 用 DO 块保证幂等,避免重复运行报错
+	DO $$
+	BEGIN
+		IF NOT EXISTS (
+			SELECT 1 FROM pg_constraint
+			WHERE conname = 'uni_ops_asset_devicesn'
+			  AND conrelid = 'ops_asset'::regclass
+		) THEN
+			ALTER TABLE ops_asset ADD CONSTRAINT uni_ops_asset_devicesn UNIQUE (devicesn);
+		END IF;
+	END$$;
 	`
 
 	if err := db.Exec(sql).Error; err != nil {

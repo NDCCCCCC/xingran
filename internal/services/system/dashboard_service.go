@@ -121,8 +121,7 @@ type UpdateDashboardRequest struct {
 }
 
 const (
-	dashboardCachePrefix     = "dashboard:"
-	dashboardListCachePrefix = "dashboard:list:"
+	dashboardCachePrefix = "dashboard:"
 )
 
 // ==================== 辅助方法 ====================

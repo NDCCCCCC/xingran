@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
 )
 
 // SetupSettingsRouter 设置系统设置路由
@@ -28,4 +29,29 @@ func SetupSettingsRouter(r *gin.RouterGroup, core *core.Core) {
 	// 系统设置路由（所有已登录用户可访问）
 	r.GET("/preferences", settingsHandler.GetUserPreferences)
 	r.PUT("/preferences", settingsHandler.UpdateUserPreferences)
+
+	// 创建配置服务
+	var configService systemServices.ConfigService
+	if core.DataCacheService != nil {
+		configService = systemServices.NewConfigServiceWithCache(
+			core.DB.GetDB(),
+			cacheProvider,
+			core.CacheConfigService,
+		)
+	} else {
+		configService = systemServices.NewConfigService(core.DB.GetDB())
+	}
+
+	// 创建默认主题服务和处理器
+	defaultThemeService := systemServices.NewDefaultThemeService(core.DB.GetDB(), configService)
+	defaultThemeHandler := NewDefaultThemeHandler(defaultThemeService)
+
+	// 默认主题路由（需要管理员权限）
+	configGroup := r.Group("/config")
+	configGroup.Use(middleware.Permission("system:config:manage", core))
+	{
+		configGroup.GET("/theme/default", defaultThemeHandler.GetDefaultThemeConfig)
+		configGroup.POST("/theme/default", defaultThemeHandler.SetDefaultThemeConfig)
+		configGroup.POST("/theme/sync", defaultThemeHandler.SyncUserThemeToDefault)
+	}
 }

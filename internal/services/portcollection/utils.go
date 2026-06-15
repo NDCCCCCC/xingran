@@ -101,9 +101,9 @@ func buildPortStatus(deviceID, interfaceName string, iface InterfaceInfo, adminS
 		default:
 			portStatus.Dot1xPortStatus = models.Dot1xStatusUnknown
 		}
-		applogger.Infof("[调试] 接口 %s 匹配到dot1x数据: Enabled=%v, Status=%s", interfaceName, dot1x.Enabled, dot1x.PortStatus)
+		applogger.Debugf("接口 %s 匹配到dot1x数据: Enabled=%v, Status=%s", interfaceName, dot1x.Enabled, dot1x.PortStatus)
 	} else {
-		applogger.Infof("[调试] 接口 %s 没有匹配到dot1x数据", interfaceName)
+		applogger.Debugf("接口 %s 没有匹配到dot1x数据", interfaceName)
 	}
 
 	// 添加端口安全配置

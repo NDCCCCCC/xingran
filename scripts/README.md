@@ -7,7 +7,7 @@
 ```
 scripts/
 ├── build/          # 构建脚本
-├── migrate/        # 已执行的迁移脚本（归档）
+├── .archive-migrate-2026-06-15/  # 已归档的一次性迁移脚本(原 migrate/)
 ├── tools/          # 可复用的维护工具
 ├── sql/            # SQL 修复脚本
 └── README.md       # 本文档
@@ -61,9 +61,14 @@ cd scripts/build
 ./generate_swagger.bat
 ```
 
-## migrate/ - 已执行的迁移脚本
+## .archive-migrate-2026-06-15/ - 已归档的一次性迁移脚本
 
-这些迁移脚本已经执行过，归档在这里用于参考：
+> **历史归档目录**(2026-06-15 重命名,原名 `migrate/`)。
+> 这些一次性运维脚本全部带 `//go:build ignore`,正常编译不会包含。所有脚本对应的迁移已经在生产 DB 执行过,无需重跑。
+> 配套的 SQL 文件已移至 `internal/core/db/migrations/archive/legacy-2026-06-15/`。
+> 详见归档说明: `internal/core/db/migrations/archive/legacy-2026-06-15/README.md`
+
+历史脚本清单(供参考):
 
 ### 用户中心菜单路径修复 (2026-01)
 - `056_fix_user_center_paths.go` - 修复用户中心子菜单路径
@@ -123,7 +128,7 @@ cd scripts/tools
 set DB_HOST=10.62.10.34
 set DB_PORT=5432
 set DB_USER=postgres
-set DB_PASSWORD=Cpic1234
+set DB_PASSWORD=<your-db-password>
 set DB_NAME=ruoyi
 
 # 列出所有菜单
@@ -150,10 +155,10 @@ psql -h localhost -U postgres -d ruoyi -f cleanup_duplicate_menus.sql
 ## 测试
 
 ### Excel 导入测试
-- `migrate/test_excel_import.go` - Excel 导入功能测试脚本
+- `.archive-migrate-2026-06-15/test_excel_import.go` - Excel 导入功能测试脚本(已归档)
 
 ```bash
-cd scripts/migrate
+cd scripts/.archive-migrate-2026-06-15
 
 # 运行 Excel 导入测试
 go run test_excel_import.go
@@ -165,7 +170,7 @@ go run test_excel_import.go
 2. 确保环境变量配置正确
 3. 建议先在测试环境验证脚本
 4. 某些脚本需要按顺序执行（如用户中心路径修复系列）
-5. **migrate/ 目录中的脚本已执行过，通常不需要再次运行**
+5. **`.archive-migrate-2026-06-15/` 目录中的脚本已执行过(原 migrate/),通常不需要再次运行**
 
 ## 数据库连接工具
 

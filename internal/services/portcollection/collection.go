@@ -95,7 +95,7 @@ func (s *CollectionService) CollectDevice(ctx context.Context, deviceID string) 
 func (s *CollectionService) collectDevicePort(ctx context.Context, device *models.NetworkDevice) *CollectionResult {
 	defer func() {
 		if r := recover(); r != nil {
-			applogger.Infof("[端口采集] 设备 %s 发生 panic: %v", device.DeviceName, r)
+			applogger.Warnf("[端口采集] 设备 %s 发生 panic: %v", device.DeviceName, r)
 		}
 	}()
 
@@ -108,7 +108,7 @@ func (s *CollectionService) collectDevicePort(ctx context.Context, device *model
 	pool := s.executor.GetScheduler().GetConnectionPool()
 	conn, err := pool.GetConnection(ctx, device.ID)
 	if err != nil {
-		applogger.Infof("[端口采集] %s (%s): 获取连接失败: %v", device.DeviceName, device.IPAddress, err)
+		applogger.Warnf("[端口采集] %s (%s): 获取连接失败: %v", device.DeviceName, device.IPAddress, err)
 		result.ErrorMessage = err.Error()
 		return result
 	}
@@ -132,28 +132,28 @@ func (s *CollectionService) collectDevicePort(ctx context.Context, device *model
 		// 华为/H3C：只解析接口描述
 		descs, err := parseInterfaceDescriptions(wrapper, device.Vendor)
 		if err != nil {
-			applogger.Infof("[端口采集] %s (%s): 解析接口描述失败: %v", device.DeviceName, device.IPAddress, err)
+			applogger.Debugf("[端口采集] %s (%s): 解析接口描述失败: %v", device.DeviceName, device.IPAddress, err)
 		} else {
 			descriptionMap = descs
-			applogger.Infof("[端口采集] %s (%s): 获取到 %d 个接口描述", device.DeviceName, device.IPAddress, len(descs))
+			applogger.Debugf("[端口采集] %s (%s): 获取到 %d 个接口描述", device.DeviceName, device.IPAddress, len(descs))
 		}
 	} else {
 		// 锐捷/迈普：先获取接口列表
 		interfaces, err = parseInterfaceList(wrapper, device.Vendor)
 		if err != nil {
-			applogger.Infof("[端口采集] %s (%s): 解析接口列表失败: %v", device.DeviceName, device.IPAddress, err)
+			applogger.Warnf("[端口采集] %s (%s): 解析接口列表失败: %v", device.DeviceName, device.IPAddress, err)
 			result.ErrorMessage = err.Error()
 			return result
 		}
-		applogger.Infof("[端口采集] %s (%s): 获取到 %d 个接口", device.DeviceName, device.IPAddress, len(interfaces))
+		applogger.Debugf("[端口采集] %s (%s): 获取到 %d 个接口", device.DeviceName, device.IPAddress, len(interfaces))
 
 		// 再获取接口描述
 		descs, err := parseInterfaceDescriptions(wrapper, device.Vendor)
 		if err != nil {
-			applogger.Infof("[端口采集] %s (%s): 解析接口描述失败: %v", device.DeviceName, device.IPAddress, err)
+			applogger.Debugf("[端口采集] %s (%s): 解析接口描述失败: %v", device.DeviceName, device.IPAddress, err)
 		} else {
 			descriptionMap = descs
-			applogger.Infof("[端口采集] %s (%s): 获取到 %d 个接口描述", device.DeviceName, device.IPAddress, len(descs))
+			applogger.Debugf("[端口采集] %s (%s): 获取到 %d 个接口描述", device.DeviceName, device.IPAddress, len(descs))
 		}
 	}
 
@@ -162,7 +162,7 @@ func (s *CollectionService) collectDevicePort(ctx context.Context, device *model
 	if device.Vendor == models.VendorHuawei || device.Vendor == models.VendorH3C {
 		vlanMap, err = parseInterfaceVLANInfo(wrapper, device.Vendor)
 		if err != nil {
-			applogger.Infof("[警告] %s (%s): 获取VLAN信息失败: %v", device.DeviceName, device.IPAddress, err)
+			applogger.Warnf("[端口采集] %s (%s): 获取VLAN信息失败: %v", device.DeviceName, device.IPAddress, err)
 			vlanMap = make(map[string]*int)
 		}
 	}
@@ -170,13 +170,13 @@ func (s *CollectionService) collectDevicePort(ctx context.Context, device *model
 	// 批量获取802.1X状态
 	dot1xMap, err := getAllDot1xStatus(wrapper, device.Vendor, s.templateCache)
 	if err != nil {
-		applogger.Infof("[警告] 获取802.1X状态失败: %v", err)
+		applogger.Warnf("[端口采集] 获取802.1X状态失败: %v", err)
 		dot1xMap = make(map[string]Dot1xInfo)
 	} else {
 		// 调试：输出dot1xMap的键
-		applogger.Infof("[调试] dot1xMap包含 %d 个接口:", len(dot1xMap))
+		applogger.Debugf("[端口采集] dot1xMap包含 %d 个接口:", len(dot1xMap))
 		for ifaceName := range dot1xMap {
-			applogger.Infof("[调试]   - %s", ifaceName)
+			applogger.Debugf("[端口采集]   - %s", ifaceName)
 		}
 	}
 
@@ -185,7 +185,7 @@ func (s *CollectionService) collectDevicePort(ctx context.Context, device *model
 	if device.Vendor == models.VendorRuijie || device.Vendor == models.VendorMaipu {
 		securityMap, err = getAllPortSecurity(wrapper, device.Vendor, s.templateCache)
 		if err != nil {
-			applogger.Infof("[警告] 获取端口安全配置失败: %v", err)
+			applogger.Warnf("[端口采集] 获取端口安全配置失败: %v", err)
 			securityMap = make(map[string]PortSecurityInfo)
 		}
 	} else {
@@ -199,10 +199,14 @@ func (s *CollectionService) collectDevicePort(ctx context.Context, device *model
 		// 华为/H3C：使用接口列表 + descriptionMap（确保所有接口都被处理）
 		interfaces, err = parseInterfaceList(wrapper, device.Vendor)
 		if err != nil {
-			applogger.Infof("[端口采集] %s (%s): 解析接口列表失败: %v", device.DeviceName, device.IPAddress, err)
-		} else {
-			applogger.Infof("[端口采集] %s (%s): 获取到 %d 个接口", device.DeviceName, device.IPAddress, len(interfaces))
+			// 接口列表是端口记录的必要数据来源，解析失败（如连接已 Closed）必须终止该设备采集，
+			// 避免空端口列表进入后续批量 upsert 触发 GORM "empty slice found" 错误。
+			// 与锐捷/迈普分支（上方 line 142-147）保持一致的早返回语义。
+			applogger.Warnf("[端口采集] %s (%s): 解析接口列表失败: %v", device.DeviceName, device.IPAddress, err)
+			result.ErrorMessage = fmt.Sprintf("解析接口列表失败: %v", err)
+			return result
 		}
+		applogger.Debugf("[端口采集] %s (%s): 获取到 %d 个接口", device.DeviceName, device.IPAddress, len(interfaces))
 		emptySecurityMap := make(map[string]PortSecurityInfo)
 		for _, iface := range interfaces {
 			normalizedName := normalizeInterfaceName(iface.Name)
@@ -237,16 +241,32 @@ func (s *CollectionService) collectDevicePort(ctx context.Context, device *model
 
 	// 批量保存（使用 OnConflict 处理重复键）
 	// 使用 device_id 和 interface_name 作为唯一键，如果存在则更新
+	// 判空保护：GORM 对空/nil 切片会生成空 VALUES 子句并返回 "empty slice found" 错误。
+	// 当采集流程因连接 Closed、接口列表解析返回空等场景导致 portStatuses 为空时，
+	// 跳过 upsert 并记录日志，而非让 GORM 抛错。
+	if len(portStatuses) == 0 {
+		applogger.Warnf("[端口采集] %s (%s): 未采集到任何端口数据，跳过批量保存", device.DeviceName, device.IPAddress)
+		result.SuccessCount = 0
+		result.FailedCount = 0
+		if result.ErrorMessage == "" {
+			result.ErrorMessage = "未采集到任何端口数据"
+		}
+		return result
+	}
+
 	err = s.db.WithContext(ctx).Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "device_id"}, {Name: "interface_name"}},
 		DoUpdates: clause.AssignmentColumns([]string{"admin_status", "oper_status", "description", "vlan", "duplex", "speed", "port_type", "dot1x_enabled", "dot1x_port_status", "collected_at"}),
 	}).Create(&portStatuses).Error
 	if err != nil {
-		applogger.Infof("[端口采集] %s (%s): 批量保存失败: %v", device.DeviceName, device.IPAddress, err)
+		applogger.Warnf("[端口采集] %s (%s): 批量保存失败: %v", device.DeviceName, device.IPAddress, err)
 		result.SuccessCount = 0
 		result.FailedCount = len(portStatuses)
+		if result.ErrorMessage == "" {
+			result.ErrorMessage = err.Error()
+		}
 	} else {
-		applogger.Infof("[端口采集] %s (%s): 成功=%d", device.DeviceName, device.IPAddress, len(portStatuses))
+		applogger.Debugf("[端口采集] %s (%s): 成功=%d", device.DeviceName, device.IPAddress, len(portStatuses))
 		result.SuccessCount = len(portStatuses)
 	}
 

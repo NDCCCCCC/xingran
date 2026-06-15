@@ -598,7 +598,12 @@ func (m *MultiLevelCache) Set(ctx context.Context, key string, value interface{}
 	// L2 缓存异步写入
 	if m.l2WriterEnabled && m.l2Writer != nil {
 		// 使用 Worker Pool 模式
-		if err := m.l2Writer.Enqueue(ctx, m.l2Cache, key, value, expiration); err != nil {
+		// P1 fix: 不能用请求 ctx 去做 L2 异步入队 —— HTTP 请求 ctx 通常只有 5-30s 截止时间,
+		// 但 L2 写入是后台任务,应当独立于请求生命周期。改用独立 ctx 隔离,
+		// 真正的客户端取消不应阻塞 L2 异步刷盘。
+		enqueueCtx, cancelEnqueue := context.WithTimeout(context.Background(), m.l2Writer.GetFallbackTimeout())
+		defer cancelEnqueue()
+		if err := m.l2Writer.Enqueue(enqueueCtx, m.l2Cache, key, value, expiration); err != nil {
 			// 入队失败（队列满或超时），降级为同步写入以保证数据一致性
 			logger.Warnf("[MultiLevelCache] L2写入入队失败，降级为同步写入: key=%s, error=%v", key, err)
 
@@ -721,6 +726,12 @@ func (m *MultiLevelCache) GetL2WriterQueueSize() int {
 // IsL2WriterEnabled 检查L2写入Worker是否启用
 func (m *MultiLevelCache) IsL2WriterEnabled() bool {
 	return m.l2WriterEnabled && m.l2Writer != nil && m.l2Writer.IsRunning()
+}
+
+// GetL2Cache 获取底层L2缓存（Redis）用于需要同步写入的场景
+// 避免通过L2Writer异步写入，确保数据立即可用
+func (m *MultiLevelCache) GetL2Cache() Cache {
+	return m.l2Cache
 }
 
 func (m *MultiLevelCache) Expire(ctx context.Context, key string, expiration time.Duration) error {

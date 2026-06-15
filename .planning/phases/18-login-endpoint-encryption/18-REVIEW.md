@@ -53,7 +53,7 @@ database:
   host: "10.62.10.34"
   port: 5432
   user: "postgres"
-  password: "Cpic1234"
+  password: "[REDACTED]"
   dbname: "ruoyi"
 ```
 

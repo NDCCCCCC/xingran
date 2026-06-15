@@ -92,9 +92,10 @@ CREATE TABLE IF NOT EXISTS sys_rpa_schedules (
 );
 
 -- ==================== 全局变量表 ====================
+-- 命名规约: unique 约束显式命名 uni_<table>_<col> 与 GORM `uniqueIndex` tag 对齐
 CREATE TABLE IF NOT EXISTS sys_rpa_variables (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(100) NOT NULL UNIQUE,
+    name VARCHAR(100) NOT NULL,
     value TEXT NOT NULL,
     type VARCHAR(20) NOT NULL DEFAULT 'string',
     description TEXT,
@@ -105,7 +106,8 @@ CREATE TABLE IF NOT EXISTS sys_rpa_variables (
     deleted_at TIMESTAMP,
     created_by VARCHAR(64),
     updated_by VARCHAR(64),
-    version INTEGER DEFAULT 0
+    version INTEGER DEFAULT 0,
+    CONSTRAINT uni_sys_rpa_variables_name UNIQUE (name)
 );
 
 -- ==================== 通知配置表 ====================

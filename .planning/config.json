@@ -39,6 +39,7 @@
     "_auto_chain_active": false
   },
   "hooks": {
+    "community": true,
     "context_warnings": true
   },
   "response_language": "Chinese",

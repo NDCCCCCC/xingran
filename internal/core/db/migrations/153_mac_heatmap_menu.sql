@@ -4,6 +4,9 @@
 -- Description: Phase 15 PERF-04 — 在 网络管理/MAC地址历史 父菜单下挂载 端口使用热力图 子菜单
 -- 权限点: network:mac:heatmap (D-18 锁定)
 -- 父菜单候选: '历史查询' 或 'MAC地址历史' (Phase 13 已创建)
+--
+-- Schema 注: Go 版 sys_menu 已用 Meta JSONB 字段统一元数据
+-- 不存在 RuoYi-Java 原版的 query / is_frame / is_cache 字段, 仅插入实际存在的列
 -- =============================================
 
 -- ================================
@@ -16,9 +19,6 @@ INSERT INTO sys_menu (
     order_num,
     path,
     component,
-    query,
-    is_frame,
-    is_cache,
     menu_type,
     visible,
     status,
@@ -35,12 +35,9 @@ SELECT
     COALESCE((SELECT MAX(order_num) + 1 FROM sys_menu WHERE parent_id = p.id), 1),
     'heatmap',
     'network/mac/heatmap',
-    NULL,
-    '1',
-    '0',
     'C',
-    '0',
-    '0',
+    1,
+    0,
     'network:mac:heatmap',
     'heat-map',
     'MAC 端口使用热力图 (Phase 15 PERF-04, 数据源 MV-04)',
@@ -67,9 +64,6 @@ INSERT INTO sys_menu (
     order_num,
     path,
     component,
-    query,
-    is_frame,
-    is_cache,
     menu_type,
     visible,
     status,
@@ -86,12 +80,9 @@ SELECT
     1,
     '',
     NULL,
-    NULL,
-    '1',
-    '0',
     'F',
-    '0',
-    '0',
+    1,
+    0,
     'network:mac:heatmap:query',
     '#',
     '查询 MAC 端口使用热力图按钮权限',

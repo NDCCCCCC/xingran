@@ -12,7 +12,7 @@ import (
 // TestRoleService_Create_RoleNameExists 测试创建角色时角色名已存在的错误
 func TestRoleService_Create_RoleNameExists(t *testing.T) {
 	// Setup
-	db := setupTestDB()
+	db := setupTestDB(t)
 	roleService := NewRoleService(db)
 	ctx := context.Background()
 
@@ -48,7 +48,7 @@ func TestRoleService_Create_RoleNameExists(t *testing.T) {
 // TestRoleService_Update_RoleNotFound 测试更新不存在的角色
 func TestRoleService_Update_RoleNotFound(t *testing.T) {
 	// Setup
-	db := setupTestDB()
+	db := setupTestDB(t)
 	roleService := NewRoleService(db)
 	ctx := context.Background()
 
@@ -77,7 +77,7 @@ func TestRoleService_Update_RoleNotFound(t *testing.T) {
 // TestRoleService_Delete_RoleHasUsers 测试删除已分配用户的角色
 func TestRoleService_Delete_RoleHasUsers(t *testing.T) {
 	// Setup
-	db := setupTestDB()
+	db := setupTestDB(t)
 	roleService := NewRoleService(db)
 	ctx := context.Background()
 
@@ -115,7 +115,7 @@ func TestRoleService_Delete_RoleHasUsers(t *testing.T) {
 // TestRoleService_RoleKeyExists 测试权限字符已存在的错误
 func TestRoleService_Create_RoleKeyExists(t *testing.T) {
 	// Setup
-	db := setupTestDB()
+	db := setupTestDB(t)
 	roleService := NewRoleService(db)
 	ctx := context.Background()
 
@@ -146,12 +146,4 @@ func TestRoleService_Create_RoleKeyExists(t *testing.T) {
 	assert.NotNil(t, appErr)
 	assert.Equal(t, apperrors.CodeRoleExists, appErr.Code)
 	assert.Contains(t, appErr.Message, "权限字符已存在")
-}
-
-// Helper function to set up test database
-func setupTestDB() *gorm.DB {
-	// In a real test setup, this would create an in-memory database
-	// For now, return nil to indicate this is a structural test
-	// The actual implementation would use a test database
-	return nil
 }

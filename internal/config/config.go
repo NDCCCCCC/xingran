@@ -221,6 +221,8 @@ func Load() *Config {
 	overrideFromEnv(&config.Database.Password, "DB_PASSWORD")
 	overrideFromEnv(&config.Database.DBName, "DB_NAME")
 	overrideFromEnv(&config.Database.SSLMode, "DB_SSLMODE")
+	overrideFromEnv(&config.Cache.Host, "REDIS_HOST")
+	overrideFromEnv(&config.Cache.Password, "REDIS_PASSWORD")
 	overrideFromEnv(&config.JWT.SecretKey, "JWT_SECRET")
 	overrideFromEnv(&config.Security.SM4Key, "SM4_KEY")
 	overrideFromEnv(&config.Baidu.MapAK, "BAIDU_MAP_AK")
@@ -234,6 +236,11 @@ func Load() *Config {
 	if port := os.Getenv("DB_PORT"); port != "" {
 		if p, err := strconv.Atoi(port); err == nil {
 			config.Database.Port = p
+		}
+	}
+	if redisPort := os.Getenv("REDIS_PORT"); redisPort != "" {
+		if p, err := strconv.Atoi(redisPort); err == nil {
+			config.Cache.Port = p
 		}
 	}
 	if serverPort := os.Getenv("SERVER_PORT"); serverPort != "" {

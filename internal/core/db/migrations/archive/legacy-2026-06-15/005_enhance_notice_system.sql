@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS sys_notice_target (
     target_type VARCHAR(20) NOT NULL,
     target_id UUID NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(notice_id, target_type, target_id)
+    CONSTRAINT uni_sys_notice_target_notice_type_target UNIQUE (notice_id, target_type, target_id)
 );
 
 -- 添加外键约束
@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS sys_notice_read (
     user_id UUID NOT NULL,
     read_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     read_ip VARCHAR(128),
-    UNIQUE(notice_id, user_id)
+    CONSTRAINT uni_sys_notice_read_notice_user UNIQUE (notice_id, user_id)
 );
 
 -- 添加外键约束

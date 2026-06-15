@@ -7,11 +7,12 @@ server:
 
 # 数据库配置 - PostgreSQL
 # 环境变量: DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
+# 安全提示: password 留空, 必须通过环境变量 DB_PASSWORD 注入 (见 internal/config/config.go overrideFromEnv)
 database:
   host: "10.62.10.34"
   port: 5432
   user: "postgres"
-  password: "Cpic1234"
+  password: ""
   dbname: "ruoyi"
   sslmode: "disable"
   max_open_conns: 10
@@ -20,11 +21,12 @@ database:
 
 # 缓存配置 - 开发环境
 # 环境变量: REDIS_URL, REDIS_PASSWORD
+# 安全提示: password 留空, 必须通过环境变量 REDIS_PASSWORD 注入
 cache:
   type: "redis"  # redis, memory
   host: "10.62.10.34"
   port: 6379
-  password: ")(PO09po"
+  password: ""
   db: 0
   pool_size: 10
   max_size: 1000

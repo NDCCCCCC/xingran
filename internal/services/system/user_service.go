@@ -328,11 +328,12 @@ func (s *userService) List(ctx context.Context, params requests.UserListParams) 
 	offset := (params.Current - 1) * params.PageSize
 
 	// 定义 SQL JOIN 查询
-	// P1 fix: sys_user.dept_id 是 VARCHAR,sys_dept.id 是 UUID;原直接 cast::uuid
-	// 在 dept_id 为空字符串 '' 时会 panic 'invalid input syntax for type uuid'。
-	// 用 NULLIF 把空字符串先转 NULL,LEFT JOIN 会自动跳过 NULL 行,不再 500。
+	// P4 fix: sys_user.dept_id 和 sys_dept.id 都是 PostgreSQL 原生 uuid 类型列,无需任何类型转换。
+	// 之前的 NULLIF/CASE WHEN 防御性写法是错误的:基于"dept_id 是 VARCHAR"的错误假设,
+	// 实际查询中触发的是 PostgreSQL planner 在 uuid 列上做 != '' / ~ regex 比较时的类型推断错误。
+	// 简化为直接等值比较,数据库直接处理类型,LEFT JOIN 对 NULL 自动跳过。
 	userJoinSelect := "sys_user.*, sys_dept.dept_name, sys_dept.ancestors"
-	userJoinClause := "LEFT JOIN sys_dept ON sys_dept.id = NULLIF(sys_user.dept_id, '')::uuid"
+	userJoinClause := "LEFT JOIN sys_dept ON sys_dept.id = sys_user.dept_id"
 
 	if err := query.Select(userJoinSelect).
 		Joins(userJoinClause).

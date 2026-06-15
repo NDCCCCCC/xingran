@@ -7,10 +7,9 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-)
 
-// debug 模式开关（设置为 true 启用 TextFSM 调试日志）
-const debugTextFSM = true
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+)
 
 // TextFSM 解析器 - 简化且正确的实现
 type FSM struct {
@@ -107,20 +106,18 @@ func parseTemplateContent(filename string, content []byte) (*FSM, error) {
 		return nil, err
 	}
 
-	// 输出调试信息
-	if debugTextFSM {
-		fmt.Printf("[TextFSM] 模板解析成功: %s\n", filename)
-		fmt.Printf("[TextFSM] 变量数量: %d\n", len(fsm.Variables))
-		for name, v := range fsm.Variables {
-			fmt.Printf("[TextFSM]   变量: %s = %s (Required=%v, List=%v)\n", name, v.Regex, v.Required, v.List)
-		}
-		fmt.Printf("[TextFSM] 状态数量: %d\n", len(fsm.States))
-		for name, state := range fsm.States {
-			fmt.Printf("[TextFSM]   状态: %s, 规则数: %d\n", name, len(state.Rules))
-			for i, rule := range state.Rules {
-				fmt.Printf("[TextFSM]     规则%d: %s -> %s\n", i, rule.RegexPattern, rule.NextState)
-				fmt.Printf("[TextFSM]       编译后正则: %s\n", rule.Regex.String())
-			}
+	// 模板解析调试信息（受日志级别控制：prod=info 静默，dev=debug 可见）
+	applogger.Debugf("[TextFSM] 模板解析成功: %s", filename)
+	applogger.Debugf("[TextFSM] 变量数量: %d", len(fsm.Variables))
+	for name, v := range fsm.Variables {
+		applogger.Debugf("[TextFSM]   变量: %s = %s (Required=%v, List=%v)", name, v.Regex, v.Required, v.List)
+	}
+	applogger.Debugf("[TextFSM] 状态数量: %d", len(fsm.States))
+	for name, state := range fsm.States {
+		applogger.Debugf("[TextFSM]   状态: %s, 规则数: %d", name, len(state.Rules))
+		for i, rule := range state.Rules {
+			applogger.Debugf("[TextFSM]     规则%d: %s -> %s", i, rule.RegexPattern, rule.NextState)
+			applogger.Debugf("[TextFSM]       编译后正则: %s", rule.Regex.String())
 		}
 	}
 
@@ -259,13 +256,11 @@ func parseRule(line string, fsm *FSM) (*Rule, error) {
 		regexPattern += "$"
 	}
 
-	// 调试输出
-	if debugTextFSM {
-		fmt.Printf("[TextFSM] parseRule: 原始规则=%s\n", originalLine)
-		fmt.Printf("[TextFSM] parseRule: 处理后模式=%s\n", line)
-		fmt.Printf("[TextFSM] parseRule: 编译后正则=%s\n", regexPattern)
-		fmt.Printf("[TextFSM] parseRule: 变量列表=%v\n", varNames)
-	}
+	// 调试输出（受日志级别控制）
+	applogger.Debugf("[TextFSM] parseRule: 原始规则=%s", originalLine)
+	applogger.Debugf("[TextFSM] parseRule: 处理后模式=%s", line)
+	applogger.Debugf("[TextFSM] parseRule: 编译后正则=%s", regexPattern)
+	applogger.Debugf("[TextFSM] parseRule: 变量列表=%v", varNames)
 
 	// 编译正则
 	compiled, err := regexp.Compile(regexPattern)
@@ -326,15 +321,11 @@ func buildRegexWithVariables(pattern string, fsm *FSM) (string, []string) {
 		if variable, ok := fsm.Variables[varName]; ok {
 			// 使用变量的正则表达式作为捕获组
 			result += fmt.Sprintf("(%s)", variable.Regex)
-			if debugTextFSM {
-				fmt.Printf("[TextFSM] buildRegex: 变量 %s = (%s)\n", varName, variable.Regex)
-			}
+			applogger.Debugf("[TextFSM] buildRegex: 变量 %s = (%s)", varName, variable.Regex)
 		} else {
 			// 未知变量，使用通用捕获组
 			result += "(.+)"
-			if debugTextFSM {
-				fmt.Printf("[TextFSM] buildRegex: 未知变量 %s，使用通用捕获组\n", varName)
-			}
+			applogger.Debugf("[TextFSM] buildRegex: 未知变量 %s，使用通用捕获组", varName)
 		}
 
 		lastEnd = match[1]
@@ -469,12 +460,10 @@ func (f *FSM) ParseText(text string) ([]map[string]string, error) {
 	// 克隆自身，避免修改缓存中的模板实例
 	clone := f.Clone()
 
-	if debugTextFSM {
-		fmt.Printf("[TextFSM] 开始解析文本，共 %d 行\n", len(strings.Split(text, "\n")))
-	}
+	applogger.Debugf("[TextFSM] 开始解析文本，共 %d 行", len(strings.Split(text, "\n")))
 
 	lines := strings.Split(text, "\n")
-	for lineNum, line := range lines {
+	for _, line := range lines {
 		line = strings.TrimSpace(line)
 
 		// 获取当前状态
@@ -494,25 +483,11 @@ func (f *FSM) ParseText(text string) ([]map[string]string, error) {
 
 			if rule.Regex.MatchString(line) {
 				matched = true
-				if debugTextFSM {
-					fmt.Printf("[TextFSM] 行%d匹配: %s\n", lineNum, rule.RegexPattern)
-
-					// 提取捕获组并赋值给变量
-					matches := rule.Regex.FindStringSubmatch(line)
-					fmt.Printf("[TextFSM]   捕获组: %v\n", matches)
-					for i, varName := range rule.VarNames {
-						if i+1 < len(matches) {
-							clone.CurrentRecord[varName] = matches[i+1]
-							fmt.Printf("[TextFSM]   %s = %s\n", varName, matches[i+1])
-						}
-					}
-				} else {
-					// 提取捕获组并赋值给变量（不输出日志）
-					matches := rule.Regex.FindStringSubmatch(line)
-					for i, varName := range rule.VarNames {
-						if i+1 < len(matches) {
-							clone.CurrentRecord[varName] = matches[i+1]
-						}
+				// 提取捕获组并赋值给变量
+				matches := rule.Regex.FindStringSubmatch(line)
+				for i, varName := range rule.VarNames {
+					if i+1 < len(matches) {
+						clone.CurrentRecord[varName] = matches[i+1]
 					}
 				}
 
@@ -523,21 +498,8 @@ func (f *FSM) ParseText(text string) ([]map[string]string, error) {
 			}
 		}
 
-		// 如果没有匹配任何规则，打印详细的调试信息
+		// 如果没有匹配任何规则，使用状态默认转换
 		if !matched {
-			if debugTextFSM {
-				fmt.Printf("[TextFSM] 行%d不匹配任何规则: %s\n", lineNum, line)
-				// 显示前3条规则的匹配尝试
-				maxShow := 3
-				if len(state.Rules) < maxShow {
-					maxShow = len(state.Rules)
-				}
-				for i := 0; i < maxShow; i++ {
-					rule := state.Rules[i]
-					fmt.Printf("[TextFSM]   尝试规则%d: %s\n", i+1, rule.RegexPattern)
-					fmt.Printf("[TextFSM]   正则表达式: %s\n", rule.Regex.String())
-				}
-			}
 			if state.Default != "" {
 				clone.handleStateTransition(state.Default)
 			}
@@ -549,9 +511,7 @@ func (f *FSM) ParseText(text string) ([]map[string]string, error) {
 		clone.copyCurrentRecord()
 	}
 
-	if debugTextFSM {
-		fmt.Printf("[TextFSM] 解析完成，提取 %d 条记录\n", len(clone.Records))
-	}
+	applogger.Debugf("[TextFSM] 解析完成，提取 %d 条记录", len(clone.Records))
 
 	return clone.Records, nil
 }

@@ -7,14 +7,14 @@
 - ✅ **v1.2 可配置仪表盘生产级改造** — Phases 4-7 (shipped 2026-04-21)
 - ✅ **v1.3 技术债清理** — Phases 8-10 (shipped 2026-04-27)
 - ✅ **v1.4 MAC地址采集优化** — Phase 11 (shipped 2026-05-09)
-- 🚧 **v1.5 MAC地址历史数据管理** — Phases 12-15 (部分完成)
+- ✅ **v1.5 MAC地址历史数据管理** — Phases 12-15 (已完成)
 - ✅ **v1.6 API密钥管理系统** — Phase 16 (shipped 2026-05-19)
 - ✅ **v1.7 前后端加密配置同步** — Phase 17 (shipped 2026-05-20)
 - ✅ **v1.8 登录端点加密增强** — Phase 18 (shipped 2026-05-21)
 - ✅ **v1.9 AD域控集成扩展** — Phases 19-20 (shipped 2026-05-24)
 - ✅ **v1.10 网络设备权限修复** — Phase 21 (shipped 2026-05-24)
 - ✅ **v1.11 AD组自动同步系统** — Phase 23 (shipped 2026-05-26)
-- 📋 **v1.12 深信服桌面云集成** — Phases 22A-22D (planned)
+- 🚧 **v1.12 深信服桌面云集成** — Phases 22A-22D (部分完成)
 
 ## Phases
 
@@ -62,11 +62,11 @@
 ---
 
 <details>
-<summary>🚧 v1.5 MAC地址历史数据管理 (Phases 12-15) — PARTIALLY COMPLETE</summary>
+<summary>✅ v1.5 MAC地址历史数据管理 (Phases 12-15) — SHIPPED 2026-06-15</summary>
 
 - [x] Phase 12: 数据模型与采集集成 (5/5 plans) — completed 2026-05-11
-- [x] Phase 13: 查询层与轨迹 (5/5 plans) — completed
-- [x] Phase 14: 前端与用户体验 (5/6 plans) — completed
+- [x] Phase 13: 查询层与轨迹 (6/6 plans) — completed 2026-06-13
+- [x] Phase 14: 前端与用户体验 (10/10 plans) — completed 2026-06-15
 - [x] Phase 15: 性能优化 (5/5 plans) — completed 2026-06-15
 
 </details>
@@ -595,9 +595,9 @@ Plans:
 | 10. 网络设备导出集成 | v1.3 | 1/1 | Complete | 2026-04-27 |
 | 11. MAC地址采集优化 - 过滤设备间互联端口 | v1.4 | 4/4 | Complete | 2026-05-09 |
 | 12. 数据模型与采集集成 | v1.5 | 5/5 | Complete | 2026-05-11 |
-| 13. 查询层与轨迹 | v1.5 | 5/5 | Complete   | 2026-06-13 |
-| 14. 前端与用户体验 | v1.5 | 0/5 | Planned | - |
-| 15. 性能优化 | v1.5 | 0/5 | Planned | - |
+| 13. 查询层与轨迹 | v1.5 | 6/6 | Complete | 2026-06-13 |
+| 14. 前端与用户体验 | v1.5 | 10/10 | Complete | 2026-06-15 |
+| 15. 性能优化 | v1.5 | 5/5 | Complete | 2026-06-15 |
 | 16. API 密钥管理 | v1.6 | 10/10 | Complete | 2026-05-19 |
 | 17. 前后端加密配置同步 | v1.7 | 6/6 | Complete | 2026-05-20 |
 | 18. 登录端点请求体加密 | v1.8 | 4/4 | Complete | 2026-05-21 |
@@ -615,6 +615,6 @@ Plans:
 | 27. 全局列自定义显示功能 | v1.14 | 1/1 | Complete | 2026-06-09 |
 | 28. 工位设备关联子表格 | v1.15 | 4/6 | Gap Closure | 2026-06-10 |
 
-**Total**: 96 plans completed, 15 plans planned (Phases 13-15), 14 plans planned (Phases 22 + 25), 2 gap closure plans (Phase 28), 127 total plans
+**Total**: 122 plans completed, 8 gap closure plans, 14 plans planned (Phases 22C + 22D + 25), 144 total plans
 
-**Completion Rate**: 75.6% (96/127) + 2 gap closure plans pending
+**Completion Rate**: 84.7% (122/144) + 8 gap closure plans shipped

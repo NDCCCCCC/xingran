@@ -165,12 +165,29 @@ func executeInlineSQL(db *gorm.DB) error {
 }
 
 // executeSQL executes SQL statements from a string
+//
+// 解析约定(简化版,不是完整 SQL parser):
+//   - 先去除每行 `--` 之后的行内注释(避免注释里的 `;` 误触发 split)
+//   - 按 `;` 分割成语句
+//   - 跳过空语句和整行注释
+//
+// 不支持: 字符串字面量内的 `;`, dollar-quoted 字符串 `$$...;...$$`, 多行 /* ... */ 注释。
+// 如需这些场景,改用 `db.Exec(整段 SQL)` 单次执行。
 func executeSQL(db *gorm.DB, sqlContent string) error {
-	// Split by semicolon and execute each statement
-	statements := strings.Split(sqlContent, ";")
+	// 去掉每行 `--` 之后的内容,避免注释中的 `;` 干扰分割
+	var cleaned []string
+	for line := range strings.SplitSeq(sqlContent, "\n") {
+		if idx := strings.Index(line, "--"); idx >= 0 {
+			line = line[:idx]
+		}
+		cleaned = append(cleaned, line)
+	}
+	sanitized := strings.Join(cleaned, "\n")
+
+	statements := strings.Split(sanitized, ";")
 	for i, stmt := range statements {
 		stmt = strings.TrimSpace(stmt)
-		if stmt == "" || strings.HasPrefix(stmt, "--") {
+		if stmt == "" {
 			continue
 		}
 
@@ -182,6 +199,5 @@ func executeSQL(db *gorm.DB, sqlContent string) error {
 		}
 	}
 
-	log.Println("Migration 136 completed successfully")
 	return nil
 }

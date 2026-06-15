@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/api"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
@@ -34,7 +35,21 @@ const (
 )
 
 func init() {
+	loadDotEnv()
 	setTimeZone()
+}
+
+// loadDotEnv 在程序启动早期加载项目根目录的 .env 文件
+// (Go 不像 Node.js 自动加载 .env, 需要显式调用)
+// 已通过 os.Setenv 注入的真实环境变量优先级高于 .env (godotenv.Load 默认不覆盖)
+// 文件不存在时静默忽略 — 生产环境应通过真实环境变量注入而非 .env
+func loadDotEnv() {
+	if err := godotenv.Load(); err != nil {
+		// 没有 .env 文件是合法情况(生产环境用真实环境变量), 仅在 debug 输出提示
+		if os.Getenv("DEBUG_ENV") != "" {
+			fmt.Printf("[init] .env 文件未加载: %v\n", err)
+		}
+	}
 }
 
 // setTimeZone 设置全局时区

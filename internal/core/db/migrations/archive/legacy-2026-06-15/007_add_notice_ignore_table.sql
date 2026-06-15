@@ -1,5 +1,6 @@
 -- 用户忽略通知表
 -- 说明: 用户可以隐藏不想看的通知，被忽略的通知不会再显示在用户的通知列表中
+-- 命名规约: 复合 unique 约束显式命名 uni_<table>_<col1>_<col2>
 
 -- 创建用户忽略通知表
 CREATE TABLE IF NOT EXISTS sys_notice_ignore (
@@ -7,7 +8,7 @@ CREATE TABLE IF NOT EXISTS sys_notice_ignore (
     notice_id UUID NOT NULL,
     user_id UUID NOT NULL,
     ignored_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(notice_id, user_id)
+    CONSTRAINT uni_sys_notice_ignore_notice_user UNIQUE (notice_id, user_id)
 );
 
 -- 添加索引

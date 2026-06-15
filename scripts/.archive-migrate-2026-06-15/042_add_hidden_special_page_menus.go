@@ -12,12 +12,16 @@ import (
 )
 
 func main() {
-	// 数据库连接配置（从 .env 文件读取）
+	// 数据库连接配置(密码必须从环境变量 DB_PASSWORD 读取)
 	host := "10.62.10.34"
 	port := 5432
 	user := "postgres"
-	password := "Cpic1234"
+	password := os.Getenv("DB_PASSWORD")
 	dbname := "ruoyi"
+
+	if password == "" {
+		log.Fatal("环境变量 DB_PASSWORD 未设置")
+	}
 
 	// 构建连接字符串
 	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",

@@ -1,6 +1,8 @@
 -- Migration: Create ops_asset table for asset management
 -- Purpose: Support comprehensive asset tracking with 40 fields
 -- Date: 2026-06-08
+-- 命名规约: unique 约束显式命名 uni_<table>_<col> 与 GORM Asset.DeviceSN `uniqueIndex` 对齐
+-- 注: 此 .sql 文件当前不被自动加载, 实际建表逻辑见 migration_148_create_ops_asset_table.go
 
 -- Create ops_asset table
 CREATE TABLE IF NOT EXISTS ops_asset (
@@ -11,7 +13,7 @@ CREATE TABLE IF NOT EXISTS ops_asset (
     deleted_at TIMESTAMP,
 
     -- 核心标识 (3 fields)
-    devicesn VARCHAR(200) NOT NULL UNIQUE,              -- 设备序列号（唯一标识）
+    devicesn VARCHAR(200) NOT NULL,                      -- 设备序列号（唯一标识）
     sequenceno VARCHAR(100),                             -- 序列号
     fixassetno VARCHAR(100),                             -- 固定资产编号
 

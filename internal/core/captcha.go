@@ -435,7 +435,29 @@ func (s *CaptchaService) VerifySliderCaptcha(ctx context.Context, captchaID stri
 
 	// 验证成功，设置"验证通过"标记（用于后续登录验证）
 	verifiedKey := fmt.Sprintf("captcha:verified:%s", captchaID)
-	_ = s.cache.Set(ctx, verifiedKey, "1", 5*time.Minute) // 5分钟有效期
+
+	// CRITICAL: Write verified marker directly to Redis (bypass L2Writer async worker pool)
+	// to ensure immediate availability for subsequent login verification
+	// L2Writer queues writes asynchronously, causing race condition where
+	// Exists check happens before Redis write completes
+	if mlCache, ok := s.cache.(interface{ GetL2Cache() cache.Cache }); ok {
+		// Bypass L2Writer - write directly to L2 (Redis) for immediate availability
+		l2Cache := mlCache.GetL2Cache()
+		err = l2Cache.Set(ctx, verifiedKey, "1", 5*time.Minute)
+		if err != nil {
+			applogger.Errorf("[Captcha] Failed to set verified marker directly to Redis: %v", err)
+			return fmt.Errorf("设置验证标记失败")
+		}
+		applogger.Infof("[Captcha] Set verified marker directly to Redis: %s", verifiedKey)
+	} else {
+		// Fallback to normal cache set (may use L2Writer)
+		err = s.cache.Set(ctx, verifiedKey, "1", 5*time.Minute)
+		if err != nil {
+			applogger.Errorf("[Captcha] Failed to set verified marker: %v", err)
+		} else {
+			applogger.Infof("[Captcha] Set verified marker via normal cache: %s", verifiedKey)
+		}
+	}
 
 	// 删除原始验证码数据（防止重复验证）
 	_ = s.cache.Delete(ctx, storageKey)

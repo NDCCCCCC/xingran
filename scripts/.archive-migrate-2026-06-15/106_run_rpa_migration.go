@@ -118,7 +118,7 @@ func getDB() *sql.DB {
 	host := getEnv("DB_HOST", "10.62.10.34")
 	port := getEnvInt("DB_PORT", 5432)
 	user := getEnv("DB_USER", "postgres")
-	password := getEnv("DB_PASSWORD", "Cpic1234")
+	password := getEnv("DB_PASSWORD", "")
 	dbname := getEnv("DB_NAME", "ruoyi")
 
 	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",

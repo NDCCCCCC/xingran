@@ -19,9 +19,10 @@ CREATE TABLE IF NOT EXISTS sys_vdi_server (
 );
 
 -- VDI虚拟机表
+-- 命名规约: unique 约束显式命名 uni_<table>_<col> 与 GORM `uniqueIndex` tag 对齐
 CREATE TABLE IF NOT EXISTS sys_vdi_vm (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    vm_id VARCHAR(100) NOT NULL UNIQUE,         -- 深信服VM ID
+    vm_id VARCHAR(100) NOT NULL,                -- 深信服VM ID
     name VARCHAR(200) NOT NULL,                 -- 虚拟机名称
     resource_id VARCHAR(100),                   -- 资源组ID
     status INT DEFAULT 0,                       -- 状态: 0=正常, 1=停用
@@ -42,13 +43,14 @@ CREATE TABLE IF NOT EXISTS sys_vdi_vm (
     deleted_at TIMESTAMP,
     created_by VARCHAR(64),
     updated_by VARCHAR(64),
-    version INT DEFAULT 0
+    version INT DEFAULT 0,
+    CONSTRAINT uni_sys_vdi_vm_vm_id UNIQUE (vm_id)
 );
 
 -- VDI资源组表
 CREATE TABLE IF NOT EXISTS sys_vdi_resource_group (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    resource_group_id VARCHAR(100) NOT NULL UNIQUE, -- 资源组ID（深信服返回的ID）
+    resource_group_id VARCHAR(100) NOT NULL,    -- 资源组ID（深信服返回的ID）
     name VARCHAR(200) NOT NULL,                 -- 资源组名称
     vdi_server_id VARCHAR(100) NOT NULL,        -- VDI服务器ID
     type VARCHAR(50),                           -- 类型: 独享桌面/池桌面
@@ -58,7 +60,8 @@ CREATE TABLE IF NOT EXISTS sys_vdi_resource_group (
     deleted_at TIMESTAMP,
     created_by VARCHAR(64),
     updated_by VARCHAR(64),
-    version INT DEFAULT 0
+    version INT DEFAULT 0,
+    CONSTRAINT uni_sys_vdi_resource_group_resource_group_id UNIQUE (resource_group_id)
 );
 
 -- VDI用户绑定表

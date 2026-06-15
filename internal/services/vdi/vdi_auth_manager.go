@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -43,12 +44,12 @@ func NewVDIAuthManager(db *gorm.DB, serverID string, server models.VDIServer) *V
 func (a *VDIAuthManager) Authenticate(ctx context.Context) (string, error) {
 	// 1. 检查缓存的token是否有效
 	if a.server.AuthToken != "" && !a.isTokenExpired(a.server.TokenExpiry) {
-		fmt.Printf("[VDI AUTH DEBUG] Using cached token, length: %d, expiry: %v\n", len(a.server.AuthToken), a.server.TokenExpiry)
+		applogger.Debugf("[VDI AUTH] Using cached token, length: %d, expiry: %v", len(a.server.AuthToken), a.server.TokenExpiry)
 		return a.server.AuthToken, nil
 	}
 
-	fmt.Printf("[VDI AUTH DEBUG] No valid cached token, requesting new token\n")
-	fmt.Printf("[VDI AUTH DEBUG] Username: %s\n", a.server.Username)
+	applogger.Debugf("[VDI AUTH] No valid cached token, requesting new token")
+	applogger.Debugf("[VDI AUTH] Username: %s", a.server.Username)
 
 	// 2. 从数据库解密密码
 	password := decryptVDIPassword(a.server.PasswordEncrypted)
@@ -77,7 +78,7 @@ func (a *VDIAuthManager) Authenticate(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("authentication failed: %w", err)
 	}
 
-	fmt.Printf("[VDI AUTH DEBUG] Auth response - ErrorCode: %d, ErrorMessage: %s\n", resp.ErrorCode, resp.ErrorMessage)
+	applogger.Debugf("[VDI AUTH] Auth response - ErrorCode: %d, ErrorMessage: %s", resp.ErrorCode, resp.ErrorMessage)
 	if resp.ErrorCode != 0 {
 		return "", &VDIError{Code: resp.ErrorCode, Message: resp.ErrorMessage}
 	}
@@ -85,7 +86,7 @@ func (a *VDIAuthManager) Authenticate(ctx context.Context) (string, error) {
 	// 4. 缓存token到数据库
 	token := resp.Token.AuthToken
 	expiry := time.Now().Add(23 * time.Hour) // 提前1小时过期
-	fmt.Printf("[VDI AUTH DEBUG] New token received, length: %d, tenant_id: %d\n", len(token), resp.Token.TenantID)
+	applogger.Debugf("[VDI AUTH] New token received, length: %d, tenant_id: %d", len(token), resp.Token.TenantID)
 
 	if err := a.cacheToken(ctx, token, expiry); err != nil {
 		return "", fmt.Errorf("failed to cache token: %w", err)
@@ -141,7 +142,7 @@ func (a *VDIAuthManager) callAPI(ctx context.Context, path string, body, result 
 
 // ClearTokenCache 清除 token 缓存（用于处理 token 失效的情况）
 func (a *VDIAuthManager) ClearTokenCache() {
-	fmt.Printf("[VDI AUTH DEBUG] Clearing token cache\n")
+	applogger.Debugf("[VDI AUTH] Clearing token cache")
 	a.server.AuthToken = ""
 	a.server.TokenExpiry = nil
 }
