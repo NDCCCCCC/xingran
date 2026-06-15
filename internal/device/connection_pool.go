@@ -20,6 +20,9 @@ const (
 
 	// deviceConnectionTimeout 设备连接池建立连接超时
 	deviceConnectionTimeout = 60 * time.Second
+
+	// deviceReachableCheckTimeout 设备可达性 ping 超时
+	deviceReachableCheckTimeout = 5 * time.Second
 )
 
 // PooledConnection 池化连接，带有引用计数和设备级锁
@@ -388,13 +391,13 @@ func (p *DeviceConnectionPool) createConnection(ctx context.Context, deviceID st
 		}
 	}
 
-	checkCtx, cancelCheck := context.WithTimeout(ctx, 5*time.Second)
+	checkCtx, cancelCheck := context.WithTimeout(ctx, deviceReachableCheckTimeout)
 	defer cancelCheck()
 
 	// 在单独的 goroutine 中执行检查
 	reachableCh := make(chan error, 1)
 	go func() {
-		reachableCh <- checkDeviceReachable(device.IPAddress, port, 5*time.Second)
+		reachableCh <- checkDeviceReachable(device.IPAddress, port, deviceReachableCheckTimeout)
 	}()
 
 	select {
