@@ -15,6 +15,15 @@ import (
 	"gorm.io/gorm"
 )
 
+const (
+	// vdiAuthHTTPTimeout VDI 认证 HTTP 客户端超时
+	vdiAuthHTTPTimeout = 30 * time.Second
+	// vdiTokenRefreshSkew VDI token 提前刷新阈值
+	vdiTokenRefreshSkew = 5 * time.Minute
+	// vdiAuthMaxRetries VDI 认证重试次数
+	vdiAuthMaxRetries = 3
+)
+
 // VDIAuthManager VDI认证管理器
 type VDIAuthManager struct {
 	db         *gorm.DB
@@ -28,7 +37,7 @@ func NewVDIAuthManager(db *gorm.DB, serverID string, server models.VDIServer) *V
 	return &VDIAuthManager{
 		db:         db,
 		httpClient: &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout: vdiAuthHTTPTimeout,
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
 					InsecureSkipVerify: true, // 跳过TLS证书验证（VDI服务器使用自签名证书）
@@ -120,8 +129,8 @@ func (a *VDIAuthManager) isTokenExpired(expiry *time.Time) bool {
 	if expiry == nil {
 		return true
 	}
-	// 提前5分钟判断为过期，避免临界情况
-	return time.Now().Add(5 * time.Minute).After(*expiry)
+	// 提前 vdiTokenRefreshSkew 判断为过期，避免临界情况
+	return time.Now().Add(vdiTokenRefreshSkew).After(*expiry)
 }
 
 // cacheToken 缓存token到数据库
@@ -165,7 +174,7 @@ func (a *VDIAuthManager) callAPIWithEndpoint(ctx context.Context, endpoint, path
 
 	// 重试逻辑
 	var lastErr error
-	for i := 0; i < 3; i++ {
+	for i := 0; i < vdiAuthMaxRetries; i++ {
 		resp, err := a.httpClient.Do(req)
 		if err != nil {
 			lastErr = err

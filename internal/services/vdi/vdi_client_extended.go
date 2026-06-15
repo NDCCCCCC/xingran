@@ -56,11 +56,14 @@ type vdiClientExtendedImpl struct {
 	httpClient  *http.Client
 }
 
+// vdiHTTPTimeout VDI HTTP 客户端超时
+const vdiHTTPTimeout = 30 * time.Second
+
 // newVDIHTTPClient 创建跳过TLS证书验证的HTTP客户端
 // VDI服务器通常使用自签名证书，需要跳过验证
 func newVDIHTTPClient() *http.Client {
 	return &http.Client{
-		Timeout: 30 * time.Second,
+		Timeout: vdiHTTPTimeout,
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true, // 跳过TLS证书验证（VDI服务器使用自签名证书）
