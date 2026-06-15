@@ -16,6 +16,7 @@ import { useEffect, useRef, type FC } from 'react';
 import { Alert, Button, Space } from 'antd';
 import { ReloadOutlined } from '@ant-design/icons';
 import { useAuthStore } from '@/store/authStore';
+import { LOGIN } from '@/constants/routes';
 
 /** 业务错误对象,支持从 API 响应中提取的 code 字段 */
 export interface ApiErrorShape {
@@ -93,7 +94,7 @@ const ErrorAlertWithRetry: FC<ErrorAlertWithRetryProps> = ({ error, onRetry, des
       .catch(() => undefined)
       .finally(() => {
         if (!cancelledRef.current) {
-          window.location.href = '/login';
+          window.location.href = LOGIN;
         }
       });
     return () => {

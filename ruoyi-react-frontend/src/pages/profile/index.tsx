@@ -28,6 +28,7 @@ import { getProfileInfo, updateProfileInfo, changePassword, uploadAvatar } from 
 import { getMyDutyStats, type MyDutyStats } from '@/lib/dutyApi';
 import { useAuthStore } from '@/store/authStore';
 import { isFormValidationError } from '@/utils/errorHandler';
+import { LOGIN } from '@/constants/routes';
 import type { UserProfile } from '@/types';
 import { formatDateTime } from '@/utils/datetime';
 
@@ -118,10 +119,10 @@ const ProfilePage: FC = () => {
           await useAuthStore.getState().logout();
           // 等待 React 状态更新完成
           await new Promise(resolve => setTimeout(resolve, 0));
-          window.location.href = '/login';
+          window.location.href = LOGIN;
         } catch (error) {
           console.error('自动登出失败:', error);
-          window.location.href = '/login';
+          window.location.href = LOGIN;
         }
       }, 1500);
     } catch (error: unknown) {

@@ -5,7 +5,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import NotificationBell from '@/components/NotificationBell';
 import GlobalSearch from '@/components/shared/GlobalSearch';
-import { USER_PROFILE, USER_SETTINGS } from '@/constants/routes';
+import { USER_PROFILE, USER_SETTINGS, LOGIN } from '@/constants/routes';
 import type { MenuProps } from 'antd';
 import type { FC } from 'react';
 import { AVATAR_BORDER_OPACITY, AVATAR_BORDER_WIDTH, HEADER_Z_INDEX } from './header.constants';
@@ -27,11 +27,11 @@ const Header: FC = () => {
       await logout();
       // 等待 React 状态更新完成
       await new Promise(resolve => setTimeout(resolve, 0));
-      window.location.href = '/login';
+      window.location.href = LOGIN;
     } catch (error) {
       console.error('登出失败:', error);
       // 即使登出失败，也跳转到登录页
-      window.location.href = '/login';
+      window.location.href = LOGIN;
     }
   };
 

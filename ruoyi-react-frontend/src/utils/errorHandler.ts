@@ -1,6 +1,7 @@
 import { message } from 'antd';
 import { useAuthStore } from '@/store/authStore';
 import { clearPublicKeyCache } from './sm2';
+import { LOGIN } from '@/constants/routes';
 
 // ============================================================================
 // 向后兼容性重新导出
@@ -288,7 +289,7 @@ async function handleUnauthorized(): Promise<void> {
   await useAuthStore.getState().logout();
 
   // 跳转到登录页
-  window.location.href = '/login';
+  window.location.href = LOGIN;
 }
 
 // ==================== 类型安全的异步操作包装 ====================

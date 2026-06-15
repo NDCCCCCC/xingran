@@ -11,7 +11,7 @@ import LayoutSwitcher from '@/design-system/components/LayoutSwitcher';
 import DensitySwitcher from '@/design-system/components/DensitySwitcher';
 import ColorSwitcher from '@/design-system/components/ColorSwitcher';
 import { useAuthStore } from '@/store/authStore';
-import { DASHBOARD, MONITOR_DASHBOARD } from '@/constants/routes';
+import { DASHBOARD, MONITOR_DASHBOARD, LOGIN } from '@/constants/routes';
 import {
   DashboardOutlined,
   UserOutlined,
@@ -141,7 +141,7 @@ const InnovativeLayout: FC<InnovativeLayoutProps> = ({ children }) => {
 
   const handleLogout = () => {
     logout();
-    window.location.href = '/login';
+    window.location.href = LOGIN;
   };
 
   return (

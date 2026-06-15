@@ -17,6 +17,7 @@ import {
 } from '@/utils/errorHandler';
 import type { BaseResponse } from '@/types/base';
 import { getCachedEncryptionConfig, clearEncryptionConfigCache } from '@/services/encryptionConfig';
+import { LOGIN } from '@/constants/routes';
 
 // 工具函数：生成请求ID
 function generateRequestId(): string {
@@ -220,7 +221,7 @@ api.interceptors.request.use(
 				// 跳过登录接口的错误处理
 				if (!config.url?.includes('/system/auth/login')) {
 					// 跳转到登录页
-					window.location.href = '/login';
+					window.location.href = LOGIN;
 				}
 			}
 		}
@@ -401,7 +402,7 @@ api.interceptors.response.use(
 			if (config.url?.includes('/system/auth/refresh')) {
 				const tokenManager = getTokenManager();
 				await tokenManager.clearTokens();
-				window.location.href = '/login';
+				window.location.href = LOGIN;
 				return Promise.reject(error);
 			}
 
@@ -440,7 +441,7 @@ api.interceptors.response.use(
 				processRefreshQueue(refreshError);
 
 				// 跳转到登录页
-				window.location.href = '/login';
+				window.location.href = LOGIN;
 
 				return Promise.reject(refreshError);
 			} finally {
