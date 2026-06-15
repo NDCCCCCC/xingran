@@ -6,6 +6,7 @@
  * 文档: https://www.npmjs.com/package/sm-crypto
  */
 
+import { get } from '@/lib/api';
 import { hexToBase64, bytesToHex } from './encoding';
 
 // SM2 模块接口定义（与 sm-crypto 实际签名匹配）
@@ -51,8 +52,7 @@ export async function fetchPublicKey(forceRefresh = false): Promise<string> {
     return cachedPublicKeyHex;
   }
 
-  const response = await fetch('/api/v1/system/auth/public-key');
-  const result = await response.json();
+  const result = await get<{ publicKey: string }>('/system/auth/public-key');
 
   if (result.code === 0 && result.data?.publicKey) {
     cachedPublicKeyHex = result.data.publicKey;
