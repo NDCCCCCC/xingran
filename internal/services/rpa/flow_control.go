@@ -40,6 +40,11 @@ const (
 	LoopTypeUntil   LoopType = "until"   // 直到循环
 )
 
+// varPlaceholderRegex 变量占位符正则表达式
+// 匹配 ${varName} 格式，varName 不含 '}'
+// 提取为 package-level var 避免每次 EvaluateString 调用重复编译
+var varPlaceholderRegex = regexp.MustCompile(`\$\{([^}]+)\}`)
+
 // ExpressionEvaluator 表达式求值器
 type ExpressionEvaluator interface {
 	// EvaluateBool 计算布尔表达式
@@ -91,9 +96,8 @@ func (e *expressionEvaluatorImpl) EvaluateBool(ctx context.Context, expr string,
 func (e *expressionEvaluatorImpl) EvaluateString(ctx context.Context, expr string, variables map[string]interface{}) (string, error) {
 	// 替换变量占位符 ${varName}
 	result := expr
-	re := regexp.MustCompile(`\$\{([^}]+)\}`)
 
-	matches := re.FindAllStringSubmatch(expr, -1)
+	matches := varPlaceholderRegex.FindAllStringSubmatch(expr, -1)
 	for _, match := range matches {
 		if len(match) > 1 {
 			varName := match[1]
