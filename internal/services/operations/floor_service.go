@@ -12,6 +12,9 @@ import (
 	"gorm.io/gorm"
 )
 
+// floorSyncBuildingTimeout 楼层变更后异步同步工位 building_id 超时
+const floorSyncBuildingTimeout = 30 * time.Second
+
 type FloorService interface {
 	Create(ctx context.Context, floor *operations.OpsFloor) error
 	Update(ctx context.Context, floor *operations.OpsFloor) error
@@ -97,7 +100,7 @@ func (s *floorService) Update(ctx context.Context, floor *operations.OpsFloor) e
 		// 异步同步工位 building_id（非阻塞，避免影响主流程性能）
 		// 使用带超时的衍生上下文，避免长时间运行
 		go func() {
-			syncCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			syncCtx, cancel := context.WithTimeout(context.Background(), floorSyncBuildingTimeout)
 			defer cancel()
 			// best-effort: 同步工位 building_id，忽略错误以避免阻塞主流程
 				_ = s.syncWorkstationBuildingID(syncCtx, floor.ID, floor.BuildingID)
