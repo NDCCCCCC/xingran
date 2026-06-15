@@ -8,6 +8,9 @@ import (
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 )
 
+// deviceExecutorTimeoutBuffer 设备执行器等待任务完成时相对于任务超时的额外缓冲时间
+const deviceExecutorTimeoutBuffer = 1 * time.Minute
+
 // ExecutionConfig 执行配置
 type ExecutionConfig struct {
 	MaxRetries          int           // 最大重试次数
@@ -75,7 +78,7 @@ func (e *DeviceExecutor) ExecuteOnDevice(ctx context.Context, deviceID string, c
 	}
 
 	// 等待任务完成
-	waitCtx, cancel := context.WithTimeout(ctx, e.config.Timeout+time.Minute)
+	waitCtx, cancel := context.WithTimeout(ctx, e.config.Timeout+deviceExecutorTimeoutBuffer)
 	defer cancel()
 
 	// 使用 ticker 进行轮询
@@ -126,7 +129,7 @@ func (e *DeviceExecutor) ExecuteMultipleOnDevice(ctx context.Context, deviceID s
 	}
 
 	// 等待任务完成
-	waitCtx, cancel := context.WithTimeout(ctx, taskTimeout+time.Minute)
+	waitCtx, cancel := context.WithTimeout(ctx, taskTimeout+deviceExecutorTimeoutBuffer)
 	defer cancel()
 
 	// 使用 ticker 进行轮询
@@ -166,7 +169,7 @@ func (e *DeviceExecutor) ExecuteCustom(ctx context.Context, deviceID string, exe
 	}
 
 	// 等待任务完成
-	waitCtx, cancel := context.WithTimeout(ctx, timeout+time.Minute)
+	waitCtx, cancel := context.WithTimeout(ctx, timeout+deviceExecutorTimeoutBuffer)
 	defer cancel()
 
 	// 使用 ticker 进行轮询
