@@ -13,10 +13,13 @@ import (
 	"gorm.io/gorm"
 )
 
-// 网络设备连接默认端口（避免散落的硬编码数字字面量）
+// 网络设备连接默认端口与超时（避免散落的硬编码数字字面量）
 const (
 	defaultSSHPort   = 22
 	defaultTelnetPort = 23
+
+	// deviceConnectionTimeout 设备连接池建立连接超时
+	deviceConnectionTimeout = 60 * time.Second
 )
 
 // PooledConnection 池化连接，带有引用计数和设备级锁
@@ -404,7 +407,7 @@ func (p *DeviceConnectionPool) createConnection(ctx context.Context, deviceID st
 	}
 
 	// 设置连接超时（增加到60秒，给设备更多响应时间）
-	connectCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	connectCtx, cancel := context.WithTimeout(ctx, deviceConnectionTimeout)
 	defer cancel()
 
 	if err := wrapper.OpenContext(connectCtx); err != nil {
