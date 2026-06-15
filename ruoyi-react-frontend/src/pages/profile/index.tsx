@@ -28,9 +28,10 @@ import { getProfileInfo, updateProfileInfo, changePassword, uploadAvatar } from 
 import { getMyDutyStats, type MyDutyStats } from '@/lib/dutyApi';
 import { useAuthStore } from '@/store/authStore';
 import { isFormValidationError } from '@/utils/errorHandler';
-import { LOGIN } from '@/constants/routes';
+import { LOGIN, DUTY_MY_DUTY } from '@/constants/routes';
 import type { UserProfile } from '@/types';
 import { formatDateTime } from '@/utils/datetime';
+import { Link } from 'react-router-dom';
 
 const { Option } = Select;
 
@@ -235,9 +236,11 @@ const ProfilePage: FC = () => {
               </Space>
             }
             extra={
-              <Button type="link" href="/duty/my-duty">
-                查看详情 →
-              </Button>
+              <Link to={DUTY_MY_DUTY}>
+                <Button type="link">
+                  查看详情 →
+                </Button>
+              </Link>
             }
             loading={dutyStatsLoading}
           >
