@@ -10,6 +10,9 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
+// rpaBatchReportTimeout RPA 任务批量报告生成超时
+const rpaBatchReportTimeout = 10 * time.Second
+
 // TaskHandler 任务处理器
 type TaskHandler struct {
 	taskService  rpa.TaskService
@@ -193,7 +196,7 @@ func (h *TaskHandler) ExecuteWithExcel(c *gin.Context) {
 	// 初始化批量报告（异步执行，避免阻塞响应）
 	if h.excelService != nil {
 		go func() {
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), rpaBatchReportTimeout)
 			defer cancel()
 			task, err := h.taskService.GetByID(ctx, id)
 			if err == nil && task != nil {
