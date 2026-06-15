@@ -116,7 +116,12 @@ export const getMACEvents = async (
     current: 1,
     pageSize: 100,
   });
-  return (result.data?.list ?? []).slice().sort(
+  const list = result.data?.list ?? [];
+  const total = result.data?.total ?? 0;
+  if (total > list.length) {
+    console.warn(`[getMACEvents] 事件被截断:total=${total}, returned=${list.length}。前端 pageSize=100 上限。考虑添加 sort 扩展或扩大分页。`);
+  }
+  return list.slice().sort(
     (a, b) =>
       new Date(b.firstSeen).getTime() - new Date(a.firstSeen).getTime()
   );

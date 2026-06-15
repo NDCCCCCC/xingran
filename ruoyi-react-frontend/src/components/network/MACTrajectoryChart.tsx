@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { Empty, Spin } from 'antd';
+import { EVENT_COLORS, type MACEventType } from './macEventMeta';
 
 interface TrajectoryNode {
   mac: string;
@@ -38,13 +39,6 @@ function getDwellHeatmap(durationSeconds: number): { label: string; color: strin
   if (durationSeconds < DWELL_THRESHOLDS.long) return { label: '长', color: '#faad14' };
   return { label: '超长', color: '#ff4d4f' };
 }
-
-const EVENT_COLORS = {
-  appeared: '#52c41a',     // 绿色
-  disappeared: '#ff4d4f',   // 红色
-  moved: '#faad14',        // 黄色
-  vlan_changed: '#1890ff', // 蓝色
-};
 
 const MACTrajectoryChart: React.FC<MACTrajectoryChartProps> = ({
   data,
@@ -86,7 +80,7 @@ const MACTrajectoryChart: React.FC<MACTrajectoryChartProps> = ({
         node.deviceName, // 设备名（用于tooltip）
       ],
       itemStyle: {
-        color: EVENT_COLORS[node.eventType],
+        color: EVENT_COLORS[node.eventType as MACEventType],
       },
     }));
 

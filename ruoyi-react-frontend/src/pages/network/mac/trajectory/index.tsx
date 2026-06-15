@@ -1,2 +1,2 @@
 // Re-export trajectory page for route compatibility
-export { default } from '../trajectory';
+export { default } from './TrajectoryPage';

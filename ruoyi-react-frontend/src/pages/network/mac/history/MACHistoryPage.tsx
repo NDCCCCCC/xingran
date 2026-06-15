@@ -46,6 +46,7 @@ import {
   ErrorAlertWithRetry,
 } from '@/components/shared';
 import { useMenuStore } from '@/store/menuStore';
+import { EVENT_LABEL, EVENT_TAG_COLOR } from '@/components/network/macEventMeta';
 
 const { RangePicker } = DatePicker;
 const { useBreakpoint } = Grid;
@@ -66,20 +67,6 @@ const PRESETS: Preset[] = [
   { key: '90d', label: '近 90d', amount: 90, unit: 'day' },
   { key: 'custom', label: '自定义', amount: 0, unit: 'day' },
 ];
-
-// 事件类型颜色(D-10 锁定,与 MACTrajectoryChart.tsx:24-29 一致)
-const EVENT_TAG_COLORS: Record<string, string> = {
-  appeared: 'green',
-  moved: 'gold',
-  disappeared: 'red',
-  vlan_changed: 'blue',
-};
-const EVENT_TYPE_LABELS: Record<string, string> = {
-  appeared: '出现',
-  moved: '迁移',
-  disappeared: '消失',
-  vlan_changed: 'VLAN 变更',
-};
 
 // 8 列默认配置(D-08 锁定)
 const defaultHistoryColumns: ColumnConfig[] = [
@@ -260,8 +247,8 @@ const MACHistoryPage: React.FC = () => {
         key: 'eventType',
         width: 110,
         render: (_: unknown, record: MACHistoryRecord) => (
-          <Tag color={EVENT_TAG_COLORS[record.eventType] ?? 'default'}>
-            {EVENT_TYPE_LABELS[record.eventType] ?? record.eventType}
+          <Tag color={EVENT_TAG_COLOR[record.eventType as keyof typeof EVENT_TAG_COLOR] ?? 'default'}>
+            {EVENT_LABEL[record.eventType as keyof typeof EVENT_LABEL] ?? record.eventType}
           </Tag>
         ),
       },
@@ -556,8 +543,8 @@ const MACHistoryPage: React.FC = () => {
                       onClick={() => { void copyMAC(record.macAddress); }}
                     />
                   </Tooltip>
-                  <Tag color={EVENT_TAG_COLORS[record.eventType] ?? 'default'}>
-                    {EVENT_TYPE_LABELS[record.eventType] ?? record.eventType}
+                  <Tag color={EVENT_TAG_COLOR[record.eventType as keyof typeof EVENT_TAG_COLOR] ?? 'default'}>
+                    {EVENT_LABEL[record.eventType as keyof typeof EVENT_LABEL] ?? record.eventType}
                   </Tag>
                   <Tag color={record.status === 0 ? 'green' : 'red'}>
                     {record.status === 0 ? '正常' : '停用'}

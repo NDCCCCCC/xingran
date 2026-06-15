@@ -13,39 +13,13 @@
 
 import React from 'react';
 import { Timeline, Empty, Skeleton, Tag, Card, Space, Typography } from 'antd';
-import {
-  PlusCircleOutlined,
-  SwapOutlined,
-  MinusCircleOutlined,
-  TagOutlined,
-} from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { getMACEvents } from '@/lib/api/networkApi';
 import type { MACHistoryRecord } from '@/lib/api/networkApi';
-
-// 颜色常量(必须与 MACTrajectoryChart.tsx:24-29 一致)
-const EVENT_COLORS = {
-  appeared: '#52c41a',     // 绿色
-  disappeared: '#ff4d4f',   // 红色
-  moved: '#faad14',        // 黄色
-  vlan_changed: '#1890ff', // 蓝色
-} as const;
-
-const EVENT_META: Record<
-  MACHistoryRecord['eventType'],
-  {
-    color: string;
-    icon: React.ComponentType<{ style?: React.CSSProperties }>;
-    label: string;
-  }
-> = {
-  appeared: { color: EVENT_COLORS.appeared, icon: PlusCircleOutlined, label: '出现' },
-  moved: { color: EVENT_COLORS.moved, icon: SwapOutlined, label: '迁移' },
-  disappeared: { color: EVENT_COLORS.disappeared, icon: MinusCircleOutlined, label: '消失' },
-  vlan_changed: { color: EVENT_COLORS.vlan_changed, icon: TagOutlined, label: 'VLAN 变更' },
-};
+import { EVENT_COLORS, EVENT_ICON, EVENT_LABEL, EVENT_TAG_COLOR, type MACEventType } from './macEventMeta';
+import { ErrorAlertWithRetry } from '@/components/shared';
 
 export interface MACEventsTimelineProps {
   /** MAC 地址(必填) */
@@ -65,8 +39,10 @@ const TimelineItem: React.FC<{
   event: MACHistoryRecord;
   onClick: () => void;
 }> = ({ event, onClick }) => {
-  const meta = EVENT_META[event.eventType] ?? EVENT_META.appeared;
-  const Icon = meta.icon;
+  const eventType = (event.eventType ?? 'appeared') as MACEventType;
+  const Icon = EVENT_ICON[eventType];
+  const color = EVENT_COLORS[eventType];
+  const label = EVENT_LABEL[eventType];
 
   return (
     <div
@@ -86,7 +62,7 @@ const TimelineItem: React.FC<{
           <Typography.Text strong>
             {dayjs(event.firstSeen).format('YYYY-MM-DD HH:mm')}
           </Typography.Text>
-          <Tag color={meta.color}>{meta.label}</Tag>
+          <Tag color={EVENT_TAG_COLOR[eventType]}>{label}</Tag>
           {event.vlanId != null && <Tag> VLAN {event.vlanId} </Tag>}
         </Space>
         <Space size={4} wrap>
@@ -108,7 +84,7 @@ const MACEventsTimeline: React.FC<MACEventsTimelineProps> = ({
 }) => {
   const navigate = useNavigate();
 
-  const { data: events, isLoading, error } = useQuery({
+  const { data: events, isLoading, error, refetch } = useQuery({
     queryKey: ['macEvents', mac, startTime, endTime],
     queryFn: () => getMACEvents(mac, startTime, endTime),
     enabled: !!mac,
@@ -119,7 +95,7 @@ const MACEventsTimeline: React.FC<MACEventsTimelineProps> = ({
   if (error) {
     return (
       <Card size="small" title={`MAC 事件时间线 — ${mac}`} bordered={false}>
-        <Empty description="加载失败" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+        <ErrorAlertWithRetry error={error as Error} onRetry={() => { void refetch(); }} />
       </Card>
     );
   }
@@ -147,12 +123,13 @@ const MACEventsTimeline: React.FC<MACEventsTimelineProps> = ({
       <Timeline
         mode="left"
         items={events.map((event) => {
-          const meta = EVENT_META[event.eventType] ?? EVENT_META.appeared;
-          const Icon = meta.icon;
+          const eventType = (event.eventType ?? 'appeared') as MACEventType;
+          const Icon = EVENT_ICON[eventType];
+          const color = EVENT_COLORS[eventType];
           return {
-            color: meta.color,
+            color,
             dot: React.createElement(Icon, {
-              style: { color: meta.color, fontSize: 16 },
+              style: { color, fontSize: 16 },
             }),
             children: (
               <TimelineItem
