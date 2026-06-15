@@ -9,6 +9,7 @@ import type { Dayjs } from 'dayjs';
 import MACTrajectoryChart from '@/components/network/MACTrajectoryChart';
 import MACEventsTimeline from '@/components/network/MACEventsTimeline';
 import { queryMACTrajectory } from '@/lib/api/networkApi';
+import { EmptyStateWithAction, ErrorAlertWithRetry } from '@/components/shared';
 
 const { RangePicker } = DatePicker;
 
@@ -48,6 +49,7 @@ const TrajectoryPage: React.FC = () => {
     data: trajectoryData,
     isLoading,
     error,
+    refetch,
   } = useQuery({
     queryKey: ['macTrajectory', queryParams],
     queryFn: () => queryMACTrajectory(queryParams!),
@@ -242,14 +244,22 @@ const TrajectoryPage: React.FC = () => {
         </Form>
       </Card>
 
+      {/* 14-05b:错误态替换为 ErrorAlertWithRetry(D-20 错误码 1006/1007/500 分级文案) */}
       {error && (
-        <Alert
-          message="查询失败"
-          description={(error as Error).message}
-          type="error"
-          showIcon
-          style={{ marginTop: '16px' }}
-        />
+        <div style={{ marginTop: '16px' }}>
+          <ErrorAlertWithRetry error={error} onRetry={() => refetch()} />
+        </div>
+      )}
+
+      {/* 14-05b:数据为空时 EmptyStateWithAction 提示(D-18 引导)— queryParams 已就绪但轨迹数据为空 */}
+      {!error && queryParams && !isLoading && (!trajectoryData || trajectoryData.length === 0) && (
+        <div style={{ marginTop: '16px' }}>
+          <EmptyStateWithAction
+            description="该 MAC 在此时间范围内无轨迹数据"
+            actionLabel="查看事件时间线"
+            actionPath="#timeline"
+          />
+        </div>
       )}
 
       <div style={{ marginTop: '16px' }}>
