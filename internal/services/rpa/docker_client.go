@@ -13,6 +13,9 @@ import (
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 )
 
+// dockerClientTimeout Docker API 客户端超时
+const dockerClientTimeout = 30 * time.Second
+
 // DockerClient Docker 客户端接口
 type DockerClient interface {
 	// ScaleUp 扩容 - 启动新的 Worker 容器
@@ -59,7 +62,7 @@ func NewDockerClient(config *DockerConfig) DockerClient {
 		imageName:     config.ImageName,
 		networkName:   config.NetworkName,
 		httpClient: &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout: dockerClientTimeout,
 		},
 	}
 }
