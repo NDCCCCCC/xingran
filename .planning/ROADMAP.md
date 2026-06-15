@@ -619,7 +619,7 @@ Plans:
   - 补充单元测试覆盖 helper 函数边界情况
   - 删除中间件方案（保留中间件作为兜底安全网，handler 主动调用 recordOperLog 提供精确语义）
 
-**Plans:** 10 plans (7 waves) — 进行中
+**Plans:** 4/10 plans executed
 
 Plans:
 **Wave 1 — 基础设施 (Foundation)**
@@ -633,6 +633,7 @@ Plans:
 **Wave 2 — system 外围** *(依赖 Wave 1)*
 
 - [x] 34-03-PLAN.md — system 外围: notice / apikey / config / profile / settings / file 集成 operlog.Record / RecordWithBody (23 写端点埋点 + WithCore() 链式注入 + apikey Create RecordWithBody 遮蔽 api_secret + profile ChangePassword 显式 WithOperParam 遮蔽 oldPassword/newPassword + 上传端点 multipart-safe {filename,size}) ✅ 2026-06-15 (commits d72fd0b, a47ec65)
+- [x] 34-04-PLAN.md — operations 模块: building / floor / workstation / workstation_device / server_room / room_device / dedicated_line / infopoint / wall / door / floor_plan_text / excel / asset 集成 operlog.Record (56 写端点埋点 + WithCore() 链式注入 + Excel 导入只记录 filename+size+inserted/updated/failed 缓解 T-34-W3-01 + Excel 导出 FilterSensitiveParams + 模板下载 OperTypeDownload + workstation_device SyncAD/SyncAsset 用 OperTypeSync + SetPrimary 用 OperTypeGrant) ✅ 2026-06-16 (commit d7f8903)
 
 **Success Criteria**:
 - sys_oper_log 表有效记录数对应 309 个端点，**覆盖率 ≥ 95%**（允许少量内部管理端点豁免）
@@ -684,7 +685,7 @@ Plans:
 | 26. 资产管理模块 | v1.13 | 6/6 | Complete | 2026-06-08 |
 | 27. 全局列自定义显示功能 | v1.14 | 1/1 | Complete | 2026-06-09 |
 | 28. 工位设备关联子表格 | v1.15 | 4/6 | Gap Closure | 2026-06-10 |
-| 34. 操作日志全模块集成 | - | 0/10 | Planned | - |
+| 34. 操作日志全模块集成 | - | 4/10 | In Progress|  |
 
 **Total**: 122 plans completed, 8 gap closure plans, 24 plans planned (Phases 22C + 22D + 25 + 34), 154 total plans
 
