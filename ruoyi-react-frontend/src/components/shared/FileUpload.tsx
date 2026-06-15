@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import type { FC } from 'react';
 import { Upload, message, Image, Progress, Button, Space } from 'antd';
 import { PlusOutlined, LoadingOutlined } from '@ant-design/icons';
-import { getAccessToken } from '@/utils/authHelpers';
+import { getAuthHeaders } from '@/utils/authHelpers';
 import type { UploadFile, UploadProps } from 'antd';
 import { MAX_IMAGE_SIZE } from '@/constants/upload';
 
@@ -190,10 +190,11 @@ const FileUpload: FC<FileUploadProps> = ({
       onError?.(error);
     };
 
-    xhr.open('POST', '/api/v1/system/files/upload', true);
-    const token = await getAccessToken();
-    if (token) {
-      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+    xhr.open('POST', `${baseUrl}/system/files/upload`, true);
+    const headers = await getAuthHeaders();
+    if (headers['Authorization']) {
+      xhr.setRequestHeader('Authorization', headers['Authorization']);
     }
     xhr.send(formData);
   }, [category, handleUploadSuccess, handleUploadError]);
@@ -216,12 +217,11 @@ const FileUpload: FC<FileUploadProps> = ({
   const handleRemove = useCallback(async (file: UploadFile) => {
     if (file.response?.data?.id) {
       try {
-        const token = await getAccessToken();
-        await fetch(`/api/v1/system/files/${file.response.data.id}`, {
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+        const headers = await getAuthHeaders();
+        await fetch(`${baseUrl}/system/files/${file.response.data.id}`, {
           method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
+          headers,
         });
       } catch (error) {
         console.error('删除文件失败:', error);
