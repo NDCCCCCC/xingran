@@ -1,20 +1,35 @@
 package system
 
 import (
+	"strconv"
+
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
 // FileHandler 文件处理器
 type FileHandler struct {
 	service *systemServices.FileService
+	core    *core.Core
 }
 
 // NewFileHandler 创建文件处理器实例
 func NewFileHandler(service *systemServices.FileService) *FileHandler {
 	return &FileHandler{service: service}
+}
+
+// WithCore 注入 core 依赖（操作日志记录所需）。返回 receiver 自身以支持链式调用。
+// Phase 34 操作日志全模块覆盖新增，用于 operlog.Record 访问 core.OperLogService 与
+// core.GetDB()。不改写 NewFileHandler 单参构造器签名，避免破坏既有调用点。
+func (h *FileHandler) WithCore(core *core.Core) *FileHandler {
+	if h != nil {
+		h.core = core
+	}
+	return h
 }
 
 // Upload 上传文件
@@ -58,6 +73,10 @@ func (h *FileHandler) Upload(c *gin.Context) {
 	userName := utils.GetUsername(c)
 	_ = h.service.LogAccess(c.Request.Context(), sysFile.ID, "upload", userID, userName, utils.GetClientIP(c))
 
+	// T-34-W2-04: 上传是 multipart 表单，FilterSensitiveParams 对其是 no-op。
+	// 手工构造 oper_param 记录文件名与大小，绝不记录原始 multipart body（避免元数据泄露）。
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "文件管理", operlog.OperTypeUpload,
+		operlog.WithOperParam(`{"filename":"`+file.Filename+`","size":`+strconv.FormatInt(file.Size, 10)+`,"category":"`+req.Category+`"}`))
 	response.Success(c, buildFileResponse(sysFile, h.service.GetFileURL(sysFile)))
 }
 
@@ -113,6 +132,7 @@ func (h *FileHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "文件管理", operlog.OperTypeDelete)
 	response.Success(c, nil)
 }
 
@@ -176,6 +196,7 @@ func (h *FileHandler) BatchDelete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "文件管理", operlog.OperTypeBatch)
 	response.Success(c, utils.BuildCountResponse(len(req.IDs)))
 }
 

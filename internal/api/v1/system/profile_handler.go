@@ -2,9 +2,12 @@ package system
 
 import (
 	"errors"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
@@ -12,11 +15,22 @@ import (
 // ProfileHandler 个人设置处理器
 type ProfileHandler struct {
 	service systemServices.ProfileService
+	core    *core.Core
 }
 
 // NewProfileHandler 创建个人设置处理器实例
 func NewProfileHandler(service systemServices.ProfileService) *ProfileHandler {
 	return &ProfileHandler{service: service}
+}
+
+// WithCore 注入 core 依赖（操作日志记录所需）。返回 receiver 自身以支持链式调用。
+// Phase 34 操作日志全模块覆盖新增，用于 operlog.Record 访问 core.OperLogService 与
+// core.GetDB()。不改写 NewProfileHandler 单参构造器签名，避免破坏既有调用点。
+func (h *ProfileHandler) WithCore(core *core.Core) *ProfileHandler {
+	if h != nil {
+		h.core = core
+	}
+	return h
 }
 
 // GetInfo 获取当前用户个人信息
@@ -92,6 +106,7 @@ func (h *ProfileHandler) UpdateInfo(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "个人中心", operlog.OperTypeUpdate)
 	response.Success(c, gin.H{"message": "更新成功"})
 }
 
@@ -136,6 +151,12 @@ func (h *ProfileHandler) ChangePassword(c *gin.Context) {
 		return
 	}
 
+	// T-34-W2-02: 修改密码属于敏感路径，oldPassword/newPassword 必须在 oper_param 中
+	// 被遮蔽。ShouldBindJSON 已消费 body 流，所以 RecordWithBody 的 GetRawData 会 EOF
+	// 并回退到普通 Record —— 这里改为显式构造已遮蔽的 oper_param 以保证密码不出现在
+	// sys_oper_log 中。
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "个人中心", operlog.OperTypeReset,
+		operlog.WithOperParam(operlog.FilterSensitiveParams(`{"oldPassword":"******","newPassword":"******"}`)))
 	response.Success(c, gin.H{"message": "密码修改成功"})
 }
 
@@ -177,6 +198,10 @@ func (h *ProfileHandler) UploadAvatar(c *gin.Context) {
 		return
 	}
 
+	// T-34-W2-04: 头像是 multipart 表单，FilterSensitiveParams 对其是 no-op。
+	// 手工构造 oper_param 记录文件名与大小，绝不记录原始 multipart body。
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "个人中心", operlog.OperTypeUpload,
+		operlog.WithOperParam(`{"filename":"`+file.Filename+`","size":`+strconv.FormatInt(file.Size, 10)+`}`))
 	response.Success(c, gin.H{
 		"avatar":  avatarURL,
 		"message": "头像上传成功",

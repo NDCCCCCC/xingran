@@ -14,7 +14,7 @@ func SetupFileRouter(r *gin.RouterGroup, core *core.Core) {
 	)
 
 	// 创建Handler
-	handler := NewFileHandler(fileService)
+	handler := NewFileHandler(fileService).WithCore(core)
 
 	// 注册路由
 	r.POST("/upload", handler.Upload)

@@ -2,7 +2,9 @@ package system
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
@@ -10,11 +12,22 @@ import (
 // SettingsHandler 系统设置处理器
 type SettingsHandler struct {
 	service systemServices.SettingsService
+	core    *core.Core
 }
 
 // NewSettingsHandler 创建系统设置处理器实例
 func NewSettingsHandler(service systemServices.SettingsService) *SettingsHandler {
 	return &SettingsHandler{service: service}
+}
+
+// WithCore 注入 core 依赖（操作日志记录所需）。返回 receiver 自身以支持链式调用。
+// Phase 34 操作日志全模块覆盖新增，用于 operlog.Record 访问 core.OperLogService 与
+// core.GetDB()。不改写 NewSettingsHandler 单参构造器签名，避免破坏既有调用点。
+func (h *SettingsHandler) WithCore(core *core.Core) *SettingsHandler {
+	if h != nil {
+		h.core = core
+	}
+	return h
 }
 
 // GetUserPreferences 获取用户个人设置
@@ -73,5 +86,6 @@ func (h *SettingsHandler) UpdateUserPreferences(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "用户设置", operlog.OperTypeUpdate)
 	response.Success(c, gin.H{"message": "设置保存成功"})
 }

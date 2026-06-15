@@ -10,7 +10,7 @@ import (
 func SetupProfileRouter(r *gin.RouterGroup, core *core.Core) {
 	// 创建个人设置服务
 	profileService := systemServices.NewProfileService(core.DB.GetDB())
-	profileHandler := NewProfileHandler(profileService)
+	profileHandler := NewProfileHandler(profileService).WithCore(core)
 
 	// 个人设置路由
 	r.GET("/info", profileHandler.GetInfo)

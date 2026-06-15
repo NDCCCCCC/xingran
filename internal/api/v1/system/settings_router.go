@@ -37,7 +37,7 @@ func SetupSettingsRouter(r *gin.RouterGroup, core *core.Core) {
 		settingsService = systemServices.NewSettingsService(core.DB.GetDB(), configService)
 	}
 
-	settingsHandler := NewSettingsHandler(settingsService)
+	settingsHandler := NewSettingsHandler(settingsService).WithCore(core)
 
 	// 系统设置路由（所有已登录用户可访问）
 	r.GET("/preferences", settingsHandler.GetUserPreferences)
