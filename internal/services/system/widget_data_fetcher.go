@@ -65,12 +65,15 @@ func buildWidgetCacheKey(widgetID string, params map[string]interface{}) string 
 	return fmt.Sprintf("widget:data:%s:%x", widgetID, paramsHash[:8])
 }
 
+// widgetDefaultCacheTTL Widget 默认缓存 TTL（per D-06 决定）
+const widgetDefaultCacheTTL = 5 * time.Minute
+
 // calculateTTL 计算缓存 TTL
 func calculateTTL(refreshInterval int) time.Duration {
 	if refreshInterval > 0 {
 		return time.Duration(refreshInterval) * time.Second
 	}
-	return 5 * time.Minute // 默认 5 分钟，per D-06
+	return widgetDefaultCacheTTL
 }
 
 // FetchWidgetData 获取 Widget 数据
