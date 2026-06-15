@@ -32,7 +32,8 @@ import {
   SearchOutlined, ReloadOutlined, AppstoreOutlined, TableOutlined,
   CopyOutlined, EyeOutlined, AimOutlined, DownloadOutlined,
 } from '@ant-design/icons';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { NETWORK_MAC_TRAJECTORY } from '@/constants/routes';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import { useTableQuery } from '@/hooks/useTableQuery';
@@ -92,6 +93,7 @@ const normalizeMACAddress = (mac: string): string => {
 const MACHistoryPage: React.FC = () => {
   const [form] = Form.useForm();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const breakpoint = useBreakpoint();
   const isMobile = !!breakpoint.xs;
 
@@ -289,7 +291,7 @@ const MACHistoryPage: React.FC = () => {
                 search.set('startTime', timeRange.startTime);
                 search.set('endTime', timeRange.endTime);
                 if (record.deviceId) search.set('deviceId', record.deviceId);
-                window.location.href = `/network/mac/trajectory?${search.toString()}`;
+                navigate(`${NETWORK_MAC_TRAJECTORY}?${search.toString()}`);
               }}
             >
               查看轨迹
@@ -312,7 +314,7 @@ const MACHistoryPage: React.FC = () => {
         ),
       },
     }),
-    [timeRange, expandedRowKeys]
+    [timeRange, expandedRowKeys, navigate]
   );
 
   // 列配置过滤(根据 visibleColumns 顺序)
@@ -513,7 +515,7 @@ const MACHistoryPage: React.FC = () => {
                   search.set('mac', record.macAddress);
                   search.set('startTime', timeRange.startTime);
                   search.set('endTime', timeRange.endTime);
-                  window.location.href = `/network/mac/trajectory?${search.toString()}`;
+                  navigate(`${NETWORK_MAC_TRAJECTORY}?${search.toString()}`);
                 }}
               >
                 查看轨迹

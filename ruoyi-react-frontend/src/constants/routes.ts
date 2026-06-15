@@ -33,6 +33,7 @@ export const SYSTEM_NOTICE = '/system/notice'; // 通知公告
 export const NETWORK_DEVICES = '/network/devices'; // 设备管理
 export const NETWORK_PORTS = '/network/ports'; // 端口管理
 export const NETWORK_DISCOVERIES = '/network/discoveries'; // 设备发现
+export const NETWORK_MAC_TRAJECTORY = '/network/mac/trajectory'; // MAC 轨迹
 
 // ============================================
 // 工单管理相关路由
