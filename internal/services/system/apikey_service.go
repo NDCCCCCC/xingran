@@ -43,6 +43,7 @@ const (
 	KeyPrefix      = "rec_"            // 密钥前缀
 	KeyLength      = 64                // 密钥长度（十六进制字符数）
 	MaxKeysPerUser = 100               // 单用户最大密钥数
+	apiKeyByteLen  = 32                // API Key 字节长度（256-bit，对应 KeyLength=64 hex chars）
 )
 
 // PageResult is declared in user_service.go to avoid redeclaration
@@ -97,7 +98,7 @@ func validateScopes(scopes []string) error {
 
 // generateKey 生成随机密钥
 func generateKey() (string, error) {
-	bytes := make([]byte, 32) // 32 bytes = 64 hex chars
+	bytes := make([]byte, apiKeyByteLen) // 32 bytes = 64 hex chars
 	if _, err := rand.Read(bytes); err != nil {
 		return "", err
 	}
