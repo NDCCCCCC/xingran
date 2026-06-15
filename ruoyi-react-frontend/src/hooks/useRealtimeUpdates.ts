@@ -56,7 +56,8 @@ export function useRealtimeUpdates(
 	const getWsUrl = useCallback(() => {
 		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 		const host = import.meta.env.VITE_WS_HOST || window.location.host;
-		return `${protocol}//${host}/ws/dashboard`;
+		const basePath = import.meta.env.VITE_WS_BASE_PATH || '/ws';
+		return `${protocol}//${host}${basePath}/dashboard`;
 	}, []);
 
 	// 连接WebSocket
