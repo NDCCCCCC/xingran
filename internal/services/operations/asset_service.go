@@ -4,6 +4,7 @@ import (
 	"context"
 	"regexp"
 
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/constants"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"gorm.io/gorm"
@@ -38,7 +39,7 @@ type assetService struct {
 func NewAssetService(db *gorm.DB) AssetService {
 	return &assetService{
 		db:            db,
-		uuidValidator: regexp.MustCompile(uuidPattern),
+		uuidValidator: constants.UuidPattern,
 	}
 }
 

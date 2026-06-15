@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"regexp"
 
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/constants"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
@@ -127,7 +128,7 @@ type workstationDeviceService struct {
 func NewWorkstationDeviceService(db *gorm.DB) WorkstationDeviceService {
 	return &workstationDeviceService{
 		db:            db,
-		uuidValidator: regexp.MustCompile(uuidPattern),
+		uuidValidator: constants.UuidPattern,
 	}
 }
 

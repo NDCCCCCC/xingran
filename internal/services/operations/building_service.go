@@ -4,14 +4,10 @@ import (
 	"context"
 	"regexp"
 
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/constants"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"gorm.io/gorm"
-)
-
-const (
-	// uuidPattern UUID格式正则表达式
-	uuidPattern = `^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`
 )
 
 // BuildingService 楼宇服务接口
@@ -35,7 +31,7 @@ func NewBuildingService(db *gorm.DB) BuildingService {
 	return &buildingService{
 		db:            db,
 		codeGenerator: NewCodeGenerator(db),
-		uuidValidator: regexp.MustCompile(uuidPattern),
+		uuidValidator: constants.UuidPattern,
 	}
 }
 

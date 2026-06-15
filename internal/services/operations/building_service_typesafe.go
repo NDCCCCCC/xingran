@@ -5,6 +5,7 @@ import (
 	"regexp"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/constants"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"gorm.io/gorm"
@@ -31,7 +32,7 @@ type buildingServiceTypeSafe struct {
 func NewBuildingServiceTypeSafe(db *gorm.DB) BuildingServiceTypeSafe {
 	return &buildingServiceTypeSafe{
 		db:            db,
-		uuidValidator: regexp.MustCompile(uuidPattern),
+		uuidValidator: constants.UuidPattern,
 	}
 }
 

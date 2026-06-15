@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/constants"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
@@ -26,7 +27,7 @@ func NewVMService(db *gorm.DB, vdiClient VDIClientExtended) VMService {
 	return &vmServiceImpl{
 		db:            db,
 		vdiClient:     vdiClient,
-		uuidValidator: regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`),
+		uuidValidator: constants.UuidPattern,
 	}
 }
 
@@ -35,7 +36,7 @@ func NewVMServiceWithDynamicClient(db *gorm.DB) VMService {
 	return &vmServiceImpl{
 		db:            db,
 		vdiClient:     nil, // 将动态加载
-		uuidValidator: regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`),
+		uuidValidator: constants.UuidPattern,
 	}
 }
 

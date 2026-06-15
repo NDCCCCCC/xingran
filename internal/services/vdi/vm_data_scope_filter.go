@@ -1,19 +1,15 @@
 package vdi
 
 import (
-	"regexp"
-
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/constants"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
-// uuidRegex 预编译的正则表达式，用于UUID格式验证
-var uuidRegex = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
-
 // isValidUUID 验证字符串是否符合UUID格式
 func isValidUUID(id string) bool {
-	return uuidRegex.MatchString(id)
+	return constants.UuidPattern.MatchString(id)
 }
 
 // ApplyVMDataScopeFilter 应用虚拟机数据范围过滤
