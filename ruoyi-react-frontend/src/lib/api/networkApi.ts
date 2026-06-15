@@ -1,5 +1,35 @@
+import axios, { type AxiosInstance } from 'axios';
 import { post } from '../api';
 import { getAccessToken } from '@/utils/authHelpers';
+
+/**
+ * 专用于 Blob/文件下载的 axios 实例(本文件内私有)
+ * - 绕过 src/lib/api.ts 响应拦截器(后者会解包 BaseResponse envelope,
+ *   导致 xlsx bytes 被错误转 JSON 对象)
+ * - 与 Phase 33 M2 opsApi.excelApi.export 模式对齐(F-PATH-06)
+ * - 自动注入 Authorization 头(从 TokenManager / getAccessToken)
+ * - 移除硬编码 /api/v1/ 前缀,改用环境变量 VITE_API_BASE_URL
+ */
+const blobAxios: AxiosInstance = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://10.62.10.33:9000/api/v1',
+  timeout: 30000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+blobAxios.interceptors.request.use(async (config) => {
+  try {
+    const token = await getAccessToken();
+    if (token && config.headers) {
+      config.headers.set('Authorization', `Bearer ${token}`);
+    }
+  } catch (e) {
+    // Token 获取失败不阻断,让后端 401 路径处理
+    console.warn('[networkApi.blobAxios] 获取 token 失败:', e);
+  }
+  return config;
+});
 
 interface TrajectoryQueryParams {
   mac: string;
@@ -128,10 +158,10 @@ export const getMACEvents = async (
 };
 
 /**
- * 导出 MAC 历史数据为 Excel (14-fix-02 重写)
- * - 走 fetch + getAccessToken + response.blob(),绕过 src/lib/api.ts 响应拦截器
- *   (后者会解包 BaseResponse envelope,导致 xlsx bytes 被错误转 JSON 对象)
- * - 与 Phase 33 M2 opsApi.excelApi.export 模式对齐
+ * 导出 MAC 历史数据为 Excel (14-fix-02 重写, F-PATH-07 重构)
+ * - 走本地 blobAxios 实例(无 BaseResponse 解包拦截器),确保 xlsx bytes 正确返回为 Blob
+ * - 移除硬编码 /api/v1/ 前缀,改用 VITE_API_BASE_URL(经 baseURL 自动拼接)
+ * - 与 Phase 33 M2 opsApi.excelApi.export / F-PATH-06 模式对齐
  * - 支持 current(当前查询) 和 all(全量) 两种导出范围
  * - 返回 { blob, filename };filename 优先取 Content-Disposition header,
  *   缺失时回退 mac_history_<scope>_<ts>.xlsx
@@ -140,21 +170,17 @@ export const exportMACHistory = async (
   params: MACHistoryQueryParams,
   exportScope: 'current' | 'all' = 'current'
 ): Promise<{ blob: Blob; filename: string }> => {
-  const token = await getAccessToken();
-  const search = new URLSearchParams();
-  Object.entries({ ...params, format: 'xlsx', exportScope }).forEach(([k, v]) => {
-    if (v !== undefined && v !== null && v !== '') search.set(k, String(v));
+  const queryParams: Record<string, string> = { format: 'xlsx', exportScope };
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== '') queryParams[k] = String(v);
   });
-  const response = await fetch(`/api/v1/network/history/list?${search.toString()}`, {
-    method: 'GET',
-    headers: { Authorization: `Bearer ${token}` },
+  const response = await blobAxios.get<Blob>('/network/history/list', {
+    params: queryParams,
+    responseType: 'blob',
   });
-  if (!response.ok) {
-    throw new Error(`导出失败:HTTP ${response.status}`);
-  }
-  const blob = await response.blob();
+  const blob = response.data as unknown as Blob;
   // CR-01 错误反序列化:若 blob 实际是 JSON 错误体,后端在异常时仍可能返回 application/json
-  if (blob.size < 1024 && blob.type.includes('json')) {
+  if (blob && blob.size < 1024 && blob.type && blob.type.includes('json')) {
     const text = await blob.text();
     try {
       const errBody = JSON.parse(text) as { message?: string; msg?: string };
@@ -165,7 +191,8 @@ export const exportMACHistory = async (
       throw new Error(`导出失败:${response.status}`);
     }
   }
-  const contentDisposition = response.headers.get('content-disposition');
+  const contentDisposition = (response.headers as Record<string, string>)['content-disposition']
+    || (response.headers as Record<string, string>)['Content-Disposition'];
   let filename = `mac_history_${exportScope}_${Date.now()}.xlsx`;
   if (contentDisposition) {
     const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
