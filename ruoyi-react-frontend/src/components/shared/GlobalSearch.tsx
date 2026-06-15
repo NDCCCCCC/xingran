@@ -7,7 +7,16 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Modal, Input, List, Typography, Tag, Divider } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import type { FC } from 'react';
-import { DASHBOARD, MONITOR_DASHBOARD } from '@/constants/routes';
+import {
+  DASHBOARD,
+  MONITOR_DASHBOARD,
+  SYSTEM_USER,
+  SYSTEM_ROLE,
+  SYSTEM_MENU,
+  NETWORK_DEVICES,
+  DUTY_MY_DUTY,
+  WORKORDER_ORDERS,
+} from '@/constants/routes';
 import {
   SearchOutlined,
   DashboardOutlined,
@@ -50,7 +59,7 @@ const searchResults: SearchResult[] = [
     title: '用户管理',
     description: '管理系统用户信息',
     icon: <UserOutlined />,
-    path: '/system/user',
+    path: SYSTEM_USER,
     category: '系统管理',
     keywords: ['user', '用户', '用户管理', '系统'],
   },
@@ -59,7 +68,7 @@ const searchResults: SearchResult[] = [
     title: '角色管理',
     description: '管理系统角色权限',
     icon: <SettingOutlined />,
-    path: '/system/role',
+    path: SYSTEM_ROLE,
     category: '系统管理',
     keywords: ['role', '角色', '角色管理', '权限'],
   },
@@ -68,7 +77,7 @@ const searchResults: SearchResult[] = [
     title: '菜单管理',
     description: '管理系统菜单配置',
     icon: <AppstoreOutlined />,
-    path: '/system/menu',
+    path: SYSTEM_MENU,
     category: '系统管理',
     keywords: ['menu', '菜单', '菜单管理', '配置'],
   },
@@ -86,7 +95,7 @@ const searchResults: SearchResult[] = [
     title: '设备管理',
     description: '网络设备管理',
     icon: <CloudServerOutlined />,
-    path: '/network/devices',
+    path: NETWORK_DEVICES,
     category: '网络',
     keywords: ['device', '设备', '网络', '路由器', '交换机'],
   },
@@ -95,7 +104,7 @@ const searchResults: SearchResult[] = [
     title: '我的值班',
     description: '值班安排与日历',
     icon: <CalendarOutlined />,
-    path: '/duty/my-duty',
+    path: DUTY_MY_DUTY,
     category: '值班',
     keywords: ['duty', '值班', '日历', '排班'],
   },
@@ -104,7 +113,7 @@ const searchResults: SearchResult[] = [
     title: '工单管理',
     description: '工单查看与处理',
     icon: <FileTextOutlined />,
-    path: '/workorder/orders',
+    path: WORKORDER_ORDERS,
     category: '工单',
     keywords: ['workorder', '工单', '任务', '问题'],
   },

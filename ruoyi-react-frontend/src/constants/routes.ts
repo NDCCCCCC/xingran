@@ -46,3 +46,8 @@ export const WORKORDER_STATISTICS = '/workorder/statistics'; // 工单统计
 // 运维管理相关路由
 // ============================================
 export const OPS_BUILDINGS = '/ops/operations/buildings'; // 楼宇管理
+
+// ============================================
+// 值班管理相关路由
+// ============================================
+export const DUTY_MY_DUTY = '/duty/my-duty'; // 我的值班
