@@ -23,6 +23,7 @@ import type { UploadFile } from 'antd';
 import type { UploadRequestOption } from './FileUpload';
 import { getAuthHeaders } from '@/utils/authHelpers';
 import { excelApi } from '@/lib/opsApi';
+import { MAX_GENERAL_FILE_SIZE } from '@/constants/upload';
 
 const { Text } = Typography;
 
@@ -104,7 +105,7 @@ const ExcelImport: FC<ExcelImportProps> = ({
       return Upload.LIST_IGNORE;
     }
 
-    const maxSize = 10 * 1024 * 1024;
+    const maxSize = MAX_GENERAL_FILE_SIZE;
     if (file.size > maxSize) {
       message.error('文件大小不能超过 10MB');
       return Upload.LIST_IGNORE;

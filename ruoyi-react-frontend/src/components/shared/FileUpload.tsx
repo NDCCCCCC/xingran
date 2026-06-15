@@ -4,6 +4,7 @@ import { Upload, message, Image, Progress, Button, Space } from 'antd';
 import { PlusOutlined, LoadingOutlined } from '@ant-design/icons';
 import { getAccessToken } from '@/utils/authHelpers';
 import type { UploadFile, UploadProps } from 'antd';
+import { MAX_IMAGE_SIZE } from '@/constants/upload';
 
 // 自定义 UploadRequestOption 类型定义
 export interface UploadRequestOption {
@@ -46,7 +47,7 @@ export interface FileUploadProps {
   onUploadError?: (file: UploadFile, error: unknown) => void;
 }
 
-const DEFAULT_MAX_SIZE = 5 * 1024 * 1024;
+const DEFAULT_MAX_SIZE = MAX_IMAGE_SIZE;
 
 const FileUpload: FC<FileUploadProps> = ({
   value = [],

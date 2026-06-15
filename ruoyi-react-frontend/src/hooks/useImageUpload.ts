@@ -6,6 +6,7 @@ import { useState, useCallback } from 'react';
 import { message } from 'antd';
 import type { UploadFile } from 'antd';
 import type { FileUploadResponse } from '@/components/shared/FileUpload';
+import { MAX_IMAGE_SIZE } from '@/constants/upload';
 
 export interface UseImageUploadOptions {
   businessType?: string;
@@ -26,7 +27,7 @@ export interface UseImageUploadReturn {
   setInitialValue: (fileId: string, fileUrl?: string) => void;
 }
 
-const DEFAULT_MAX_SIZE = 5 * 1024 * 1024;
+const DEFAULT_MAX_SIZE = MAX_IMAGE_SIZE;
 
 export function useImageUpload(options: UseImageUploadOptions = {}): UseImageUploadReturn {
   const {

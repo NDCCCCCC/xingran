@@ -7,6 +7,7 @@ import { STATUS_OPTIONS, DEFAULT_FORM_VALUES } from '../constants';
 import { DepartmentTreeSelect, type Department } from '@/components/shared/DepartmentTreeSelect';
 import FileUpload from '@/components/shared/FileUpload';
 import { useImageUpload } from '@/hooks/useImageUpload';
+import { MAX_IMAGE_SIZE } from '@/constants/upload';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -41,7 +42,7 @@ export const FloorModal: FC<FloorModalProps> = ({
 }) => {
   const planImageUpload = useImageUpload({
     businessType: 'floor-plan',
-    maxSize: 5 * 1024 * 1024,
+    maxSize: MAX_IMAGE_SIZE,
   });
 
   useEffect(() => {
@@ -149,7 +150,7 @@ export const FloorModal: FC<FloorModalProps> = ({
           <FileUpload
             category="floor-plan"
             accept="image/*"
-            maxSize={5 * 1024 * 1024}
+            maxSize={MAX_IMAGE_SIZE}
             maxCount={1}
             listType="picture-card"
             value={planImageUpload.fileList}
