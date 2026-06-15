@@ -2,8 +2,10 @@ package system
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
@@ -11,11 +13,20 @@ import (
 // PostHandler 岗位处理器
 type PostHandler struct {
 	service systemServices.PostService
+	core    *core.Core
 }
 
 // NewPostHandler 创建岗位处理器实例
 func NewPostHandler(service systemServices.PostService) *PostHandler {
 	return &PostHandler{service: service}
+}
+
+// WithCore 注入 core 依赖（Phase 34 操作日志记录所需）。
+func (h *PostHandler) WithCore(core *core.Core) *PostHandler {
+	if h != nil {
+		h.core = core
+	}
+	return h
 }
 
 // Create 创建岗位
@@ -41,6 +52,7 @@ func (h *PostHandler) Create(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "岗位管理", operlog.OperTypeCreate)
 	response.Success(c, gin.H{"message": "创建成功"})
 }
 
@@ -172,6 +184,7 @@ func (h *PostHandler) Update(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "岗位管理", operlog.OperTypeUpdate)
 	response.Success(c, gin.H{"message": "更新成功"})
 }
 
@@ -199,6 +212,7 @@ func (h *PostHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "岗位管理", operlog.OperTypeDelete)
 	response.Success(c, nil)
 }
 
@@ -228,6 +242,7 @@ func (h *PostHandler) BatchDelete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "岗位管理", operlog.OperTypeBatch)
 	response.Success(c, nil)
 }
 

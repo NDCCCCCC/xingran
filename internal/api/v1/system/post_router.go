@@ -24,7 +24,7 @@ func SetupPostRouter(r *gin.RouterGroup, core *core.Core) {
 	}
 
 	// 创建Handler
-	handler := NewPostHandler(postService)
+	handler := NewPostHandler(postService).WithCore(core)
 
 	// 注册路由
 	r.POST("/list", handler.List)

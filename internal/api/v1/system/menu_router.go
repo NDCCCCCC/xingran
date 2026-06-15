@@ -24,7 +24,7 @@ func SetupMenuRouter(r *gin.RouterGroup, core *core.Core) {
 	}
 
 	// 创建Handler
-	handler := NewMenuHandler(menuService)
+	handler := NewMenuHandler(menuService).WithCore(core)
 
 	// 注册路由（注意：更具体的路由要放在前面，避免被通用路由匹配）
 	r.POST("/tree", handler.GetTree)                                     // 获取菜单树
@@ -58,7 +58,7 @@ func SetupUserMenuRouter(r *gin.RouterGroup, core *core.Core) {
 	}
 
 	// 创建Handler
-	handler := NewMenuHandler(menuService)
+	handler := NewMenuHandler(menuService).WithCore(core)
 
 	// 用户菜单相关路由
 	// 注意：由于路由组是 /my-menus，所以完整路径是 /system/my-menus/*

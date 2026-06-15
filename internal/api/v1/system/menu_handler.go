@@ -2,8 +2,10 @@ package system
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
@@ -17,11 +19,20 @@ const (
 // MenuHandler 菜单处理器
 type MenuHandler struct {
 	service systemServices.MenuService
+	core    *core.Core
 }
 
 // NewMenuHandler 创建菜单处理器实例
 func NewMenuHandler(service systemServices.MenuService) *MenuHandler {
 	return &MenuHandler{service: service}
+}
+
+// WithCore 注入 core 依赖（Phase 34 操作日志记录所需）。
+func (h *MenuHandler) WithCore(core *core.Core) *MenuHandler {
+	if h != nil {
+		h.core = core
+	}
+	return h
 }
 
 // ==================== 辅助方法 ====================
@@ -144,6 +155,7 @@ func (h *MenuHandler) Create(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "菜单管理", operlog.OperTypeCreate)
 	response.Success(c, gin.H{"message": "创建成功"})
 }
 
@@ -174,6 +186,7 @@ func (h *MenuHandler) Update(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "菜单管理", operlog.OperTypeUpdate)
 	response.Success(c, gin.H{"message": "更新成功"})
 }
 
@@ -201,6 +214,7 @@ func (h *MenuHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "菜单管理", operlog.OperTypeDelete)
 	response.Success(c, nil)
 }
 
@@ -228,6 +242,7 @@ func (h *MenuHandler) BatchDelete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "菜单管理", operlog.OperTypeBatch)
 	response.Success(c, nil)
 }
 
@@ -259,6 +274,7 @@ func (h *MenuHandler) UpdateStatus(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "菜单管理", operlog.OperTypeStatus)
 	response.Success(c, gin.H{"message": "状态更新成功"})
 }
 

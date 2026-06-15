@@ -2,8 +2,10 @@ package system
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
@@ -11,11 +13,20 @@ import (
 // DictTypeHandler 字典类型处理器
 type DictTypeHandler struct {
 	service systemServices.DictTypeService
+	core    *core.Core
 }
 
 // NewDictTypeHandler 创建字典类型处理器实例
 func NewDictTypeHandler(service systemServices.DictTypeService) *DictTypeHandler {
 	return &DictTypeHandler{service: service}
+}
+
+// WithCore 注入 core 依赖（Phase 34 操作日志记录所需）。
+func (h *DictTypeHandler) WithCore(core *core.Core) *DictTypeHandler {
+	if h != nil {
+		h.core = core
+	}
+	return h
 }
 
 // Create 创建字典类型
@@ -41,6 +52,7 @@ func (h *DictTypeHandler) Create(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "字典类型", operlog.OperTypeCreate)
 	response.Success(c, gin.H{"message": "创建成功"})
 }
 
@@ -172,6 +184,7 @@ func (h *DictTypeHandler) Update(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "字典类型", operlog.OperTypeUpdate)
 	response.Success(c, gin.H{"message": "更新成功"})
 }
 
@@ -199,6 +212,7 @@ func (h *DictTypeHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "字典类型", operlog.OperTypeDelete)
 	response.Success(c, nil)
 }
 
@@ -224,11 +238,20 @@ func (h *DictTypeHandler) GetAll(c *gin.Context) {
 // DictDataHandler 字典数据处理器
 type DictDataHandler struct {
 	service systemServices.DictDataService
+	core    *core.Core
 }
 
 // NewDictDataHandler 创建字典数据处理器实例
 func NewDictDataHandler(service systemServices.DictDataService) *DictDataHandler {
 	return &DictDataHandler{service: service}
+}
+
+// WithCore 注入 core 依赖（Phase 34 操作日志记录所需）。
+func (h *DictDataHandler) WithCore(core *core.Core) *DictDataHandler {
+	if h != nil {
+		h.core = core
+	}
+	return h
 }
 
 // Create 创建字典数据
@@ -254,6 +277,7 @@ func (h *DictDataHandler) Create(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "字典数据", operlog.OperTypeCreate)
 	response.Success(c, gin.H{"message": "创建成功"})
 }
 
@@ -370,6 +394,7 @@ func (h *DictDataHandler) Update(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "字典数据", operlog.OperTypeUpdate)
 	response.Success(c, gin.H{"message": "更新成功"})
 }
 
@@ -397,6 +422,7 @@ func (h *DictDataHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "字典数据", operlog.OperTypeDelete)
 	response.Success(c, nil)
 }
 

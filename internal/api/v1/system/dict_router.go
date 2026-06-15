@@ -22,7 +22,7 @@ func SetupDictRouter(r *gin.RouterGroup, core *core.Core) {
 	} else {
 		dictTypeService = systemServices.NewDictTypeService(core.DB.GetDB())
 	}
-	dictTypeHandler := NewDictTypeHandler(dictTypeService)
+	dictTypeHandler := NewDictTypeHandler(dictTypeService).WithCore(core)
 
 	// 字典类型路由
 	types := r.Group("/types")
@@ -46,7 +46,7 @@ func SetupDictRouter(r *gin.RouterGroup, core *core.Core) {
 	} else {
 		dictDataService = systemServices.NewDictDataService(core.DB.GetDB())
 	}
-	dictDataHandler := NewDictDataHandler(dictDataService)
+	dictDataHandler := NewDictDataHandler(dictDataService).WithCore(core)
 
 	// 字典数据路由
 	data := r.Group("/data")
