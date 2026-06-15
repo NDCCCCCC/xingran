@@ -14,6 +14,11 @@ import (
 	"gorm.io/gorm"
 )
 
+const (
+	defaultDeviceInfoQueueSize = 1000
+	defaultDeviceInfoWorkers   = 5
+)
+
 // DeviceInfoCollectionService 设备信息采集服务
 // 统一负责设备详细信息的采集和更新（纯异步架构）
 type DeviceInfoCollectionService struct {
@@ -32,8 +37,8 @@ func NewDeviceInfoCollectionService(db *gorm.DB, deviceExecutor *device.DeviceEx
 	svc := &DeviceInfoCollectionService{
 		db:             db,
 		deviceExecutor: deviceExecutor,
-		taskQueue:      make(chan string, 1000), // 缓冲队列，最多1000个任务
-		workerCount:    5,                       // 默认5个工作协程
+		taskQueue:      make(chan string, defaultDeviceInfoQueueSize), // 缓冲队列，最多1000个任务
+		workerCount:    defaultDeviceInfoWorkers,                      // 默认5个工作协程
 		stopChan:       make(chan struct{}),
 	}
 	// 从数据库加载配置
