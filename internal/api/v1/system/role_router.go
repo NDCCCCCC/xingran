@@ -24,7 +24,7 @@ func SetupRoleRouter(r *gin.RouterGroup, core *core.Core) {
 	}
 
 	// 创建Handler
-	handler := NewRoleHandler(roleService)
+	handler := NewRoleHandler(roleService).WithCore(core)
 
 	// 注册路由
 	r.POST("/list", handler.List)

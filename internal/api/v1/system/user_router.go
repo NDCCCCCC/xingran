@@ -33,7 +33,7 @@ func SetupUserRouter(r *gin.RouterGroup, core *core.Core) {
 	userADSyncService := addomain.NewUserADSyncService(core.DB.GetDB(), nil, mapper)
 
 	// 创建用户处理器，注入AD同步服务
-	handler := NewUserHandler(userService, userADSyncService)
+	handler := NewUserHandler(userService, userADSyncService).WithCore(core)
 
 	// 注册路由
 	r.POST("", handler.Create)

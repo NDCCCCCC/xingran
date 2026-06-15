@@ -25,7 +25,7 @@ func SetupDepartmentRouter(r *gin.RouterGroup, core *core.Core) {
 	}
 
 	// 创建Handler
-	handler := NewDepartmentHandler(departmentService)
+	handler := NewDepartmentHandler(departmentService).WithCore(core)
 
 	// 注册路由
 	r.POST("/tree", handler.GetTree)                                     // 获取部门树

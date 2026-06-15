@@ -6,9 +6,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
@@ -18,18 +20,32 @@ import (
 type UserHandler struct {
 	service           systemServices.UserService
 	userADSyncService *addomain.UserADSyncService
+	core              *core.Core
 	// adSyncInFlight P0 #10: 按用户 ID 去重 AD 同步，避免短时间内
 	// 多次更新同一用户触发并发 LDAP 连接。sync.Map 零值可用，无需初始化。
 	adSyncInFlight sync.Map
 }
 
 // NewUserHandler 创建用户处理器实例
+// 注：core 参数为 Phase 34 操作日志全模块覆盖新增，用于 operlog.Record 访问
+// core.OperLogService 与 core.GetDB()。为保持向后兼容，core 以可变参形式追加在
+// 末尾（现有 NewUserHandler(service) / NewUserHandler(service, adSync) 调用点无需修改）。
 func NewUserHandler(service systemServices.UserService, userADSyncService ...*addomain.UserADSyncService) *UserHandler {
 	handler := &UserHandler{service: service}
 	if len(userADSyncService) > 0 && userADSyncService[0] != nil {
 		handler.userADSyncService = userADSyncService[0]
 	}
 	return handler
+}
+
+// WithCore 注入 core 依赖（操作日志记录所需）。返回 receiver 自身以支持链式调用。
+// 之所以单独提供此方法而非改写 NewUserHandler 签名，是为了不破坏既有可变参构造器
+// 的所有调用点（含 NewUserHandler(service) 单参形态）。
+func (h *UserHandler) WithCore(core *core.Core) *UserHandler {
+	if h != nil {
+		h.core = core
+	}
+	return h
 }
 
 // Create 创建用户
@@ -55,6 +71,7 @@ func (h *UserHandler) Create(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "用户管理", operlog.OperTypeCreate)
 	response.Success(c, gin.H{"message": "创建成功"})
 }
 
@@ -188,6 +205,7 @@ func (h *UserHandler) Update(c *gin.Context) {
 		}
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "用户管理", operlog.OperTypeUpdate)
 	response.Success(c, gin.H{"message": "更新成功"})
 }
 
@@ -231,6 +249,7 @@ func (h *UserHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "用户管理", operlog.OperTypeDelete)
 	response.Success(c, nil)
 }
 
@@ -258,6 +277,7 @@ func (h *UserHandler) BatchDelete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "用户管理", operlog.OperTypeBatch)
 	response.Success(c, nil)
 }
 
@@ -291,6 +311,7 @@ func (h *UserHandler) UpdateStatus(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "用户管理", operlog.OperTypeStatus)
 	response.Success(c, gin.H{"message": "状态更新成功"})
 }
 
@@ -317,5 +338,10 @@ func (h *UserHandler) ResetPassword(c *gin.Context) {
 		return
 	}
 
+	// 敏感端点（密码重置）使用 RecordWithBody：读取+还原 c.Request.Body，
+	// 并对 password 字段做遮蔽（FilterSensitiveParams）。即使当前 handler 不从
+	// body 读密码（使用硬编码默认值），也按敏感路径记录以应对未来改造，且
+	// 兼容 SM2+SM4 加密中间件（中间件先解密还原 body，本调用再读取+还原一次）。
+	operlog.RecordWithBody(c, h.core.OperLogService, h.core.GetDB(), "用户管理", operlog.OperTypeReset)
 	response.Success(c, gin.H{"message": "密码重置成功"})
 }

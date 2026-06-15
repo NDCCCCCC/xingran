@@ -2,8 +2,10 @@ package system
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
@@ -11,11 +13,20 @@ import (
 // RoleHandler 角色处理器
 type RoleHandler struct {
 	service systemServices.RoleService
+	core    *core.Core
 }
 
 // NewRoleHandler 创建角色处理器实例
 func NewRoleHandler(service systemServices.RoleService) *RoleHandler {
 	return &RoleHandler{service: service}
+}
+
+// WithCore 注入 core 依赖（Phase 34 操作日志记录所需）。
+func (h *RoleHandler) WithCore(core *core.Core) *RoleHandler {
+	if h != nil {
+		h.core = core
+	}
+	return h
 }
 
 // Create 创建角色
@@ -41,6 +52,7 @@ func (h *RoleHandler) Create(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "角色管理", operlog.OperTypeCreate)
 	response.Success(c, gin.H{"message": "创建成功"})
 }
 
@@ -127,6 +139,7 @@ func (h *RoleHandler) Update(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "角色管理", operlog.OperTypeUpdate)
 	response.Success(c, gin.H{"message": "更新成功"})
 }
 
@@ -152,6 +165,7 @@ func (h *RoleHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "角色管理", operlog.OperTypeDelete)
 	response.Success(c, nil)
 }
 
@@ -179,6 +193,7 @@ func (h *RoleHandler) BatchDelete(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "角色管理", operlog.OperTypeBatch)
 	response.Success(c, nil)
 }
 
@@ -212,6 +227,7 @@ func (h *RoleHandler) UpdateStatus(c *gin.Context) {
 		return
 	}
 
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "角色管理", operlog.OperTypeStatus)
 	response.Success(c, gin.H{"message": "状态更新成功"})
 }
 
