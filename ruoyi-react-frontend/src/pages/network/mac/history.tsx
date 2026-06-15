@@ -22,8 +22,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Table, Button, Space, Form, Input, InputNumber, Select,
-  Tag, Card, Empty, Alert, DatePicker, List, Grid, Spin, Tooltip,
-  Typography,
+  Tag, Card, DatePicker, List, Grid, Spin, Tooltip, Skeleton,
+  Typography, message,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -41,6 +41,11 @@ import type {
   MACHistoryQueryParams,
 } from '@/lib/api/networkApi';
 import { MACEventsTimeline } from '@/components/network';
+import {
+  EmptyStateWithAction,
+  ErrorAlertWithRetry,
+} from '@/components/shared';
+import { useMenuStore } from '@/store/menuStore';
 
 const { RangePicker } = DatePicker;
 const { useBreakpoint } = Grid;
@@ -101,12 +106,18 @@ const MACHistoryPage: React.FC = () => {
   const breakpoint = useBreakpoint();
   const isMobile = !!breakpoint.xs;
 
+  // 权限(从 menuStore 拉取)— 14-04 导出按钮可见性控制
+  const menuPermissions = useMenuStore((s) => s.permissions);
+  const hasPermission = (perm: string) => menuPermissions.includes(perm);
+  const canExport = hasPermission('network:mac:export');
+
   // 状态
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [activePreset, setActivePreset] = useState<PresetKey>('7d');
   const [customRange, setCustomRange] = useState<[Dayjs, Dayjs] | null>(null);
   const [expandedRowKeys, setExpandedRowKeys] = useState<React.Key[]>([]);
+  const [exporting, setExporting] = useState<boolean>(false);
 
   // 计算当前时间范围(ISO 字符串)用于查询
   const [timeRange, setTimeRange] = useState<{ startTime: string; endTime: string }>(
@@ -188,7 +199,7 @@ const MACHistoryPage: React.FC = () => {
   const {
     data: pageData,
     isLoading,
-    isPlaceholderData,
+    isFetching,
     error,
     refetch,
   } = useTableQuery<MACHistoryRecord>({
@@ -341,75 +352,147 @@ const MACHistoryPage: React.FC = () => {
     setSearchParams(new URLSearchParams());
   }, [form, setSearchParams]);
 
+  // 14-04 导出按钮处理器 — exportScope = 'current' 时透传当前过滤;'all' 时只保留时间范围
+  const handleExport = useCallback(
+    async (exportScope: 'current' | 'all') => {
+      if (exporting) return;
+      setExporting(true);
+      try {
+        const formValues = (await form.validateFields()) as Record<string, unknown>;
+        // 构造查询参数(必带 startTime / endTime + 分页,后端按 exportScope 决定范围)
+        const baseParams: Record<string, unknown> = {
+          startTime: timeRange.startTime,
+          endTime: timeRange.endTime,
+        };
+        if (exportScope === 'current') {
+          // 透传当前过滤条件
+          Object.keys(formValues).forEach((k) => {
+            const v = formValues[k];
+            if (v !== undefined && v !== null && v !== '') {
+              baseParams[k] = v;
+            }
+          });
+        }
+
+        const blob = await exportMACHistory(
+          baseParams as unknown as MACHistoryQueryParams,
+          exportScope
+        );
+
+        // 从 blob.size 推测文件名
+        const ts = dayjs().format('YYYYMMDD_HHmmss');
+        const filename = `mac_history_${exportScope}_${ts}.xlsx`;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        message.success(`已导出 ${exportScope === 'current' ? '当前查询' : '全量'} 数据`);
+      } catch (err) {
+        if (err && typeof err === 'object' && 'errorFields' in err) {
+          // form.validateFields 失败,直接返回
+          return;
+        }
+        const msg = err instanceof Error ? err.message : String(err);
+        message.error(`导出失败:${msg}`);
+      } finally {
+        setExporting(false);
+      }
+    },
+    [exporting, form, timeRange]
+  );
+
   // 复制 MAC
   const copyMAC = (mac: string) => {
     void navigator.clipboard?.writeText(mac);
   };
 
   // 桌面表格
-  const renderTable = () => (
-    <Table<MACHistoryRecord>
-      rowKey="id"
-      size="middle"
-      virtual
-      scroll={{ x: 1200, y: 600 }}
-      dataSource={list}
-      columns={tableColumns}
-      loading={isLoading || isPlaceholderData}
-      pagination={{
-        current,
-        pageSize,
-        total,
-        showSizeChanger: true,
-        showQuickJumper: true,
-        showTotal: (t) => `共 ${t} 条`,
-        onChange: (page, size) => {
-          setCurrent(page);
-          setPageSize(size);
-        },
-      }}
-      expandedRowKeys={expandedRowKeys}
-      onExpand={(expanded, record) => {
-        setExpandedRowKeys((prev) =>
-          expanded
-            ? [...prev, record.id]
-            : prev.filter((k) => k !== record.id)
-        );
-      }}
-      expandedRowRender={(record) => (
-        <MACEventsTimeline
-          mac={record.macAddress}
-          startTime={timeRange.startTime}
-          endTime={timeRange.endTime}
-          deviceId={record.deviceId}
+  const renderTable = () => {
+    // 首次加载(无数据 + isLoading)— 用 Skeleton 占位,不渲染 Table(D-19)
+    if (isLoading && list.length === 0) {
+      return (
+        <Skeleton
+          active
+          paragraph={{ rows: 3 }}
+          title={false}
+          style={{ padding: '24px 12px' }}
         />
-      )}
-      locale={{
-        emptyText: (
-          <Empty
-            description="该范围内未采集到 MAC 记录,请检查设备是否启用了 MAC 采集/端口采集周期"
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
+      );
+    }
+    return (
+      <Table<MACHistoryRecord>
+        rowKey="id"
+        size="middle"
+        virtual
+        scroll={{ x: 1200, y: 600 }}
+        dataSource={list}
+        columns={tableColumns}
+        // 后续分页/筛选不显示骨架,使用 isFetching 触发表头 Spin(D-19)
+        loading={isFetching}
+        pagination={{
+          current,
+          pageSize,
+          total,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (t) => `共 ${t} 条`,
+          onChange: (page, size) => {
+            setCurrent(page);
+            setPageSize(size);
+          },
+        }}
+        expandedRowKeys={expandedRowKeys}
+        onExpand={(expanded, record) => {
+          setExpandedRowKeys((prev) =>
+            expanded
+              ? [...prev, record.id]
+              : prev.filter((k) => k !== record.id)
+          );
+        }}
+        expandedRowRender={(record) => (
+          <MACEventsTimeline
+            mac={record.macAddress}
+            startTime={timeRange.startTime}
+            endTime={timeRange.endTime}
+            deviceId={record.deviceId}
           />
-        ),
-      }}
-    />
-  );
+        )}
+        locale={{
+          // total === 0 时使用 EmptyStateWithAction 引导去设备管理(D-18)
+          emptyText: (
+            <EmptyStateWithAction
+              description="该范围内未采集到 MAC 记录,请检查设备是否启用了 MAC 采集/端口采集周期"
+              actionLabel="前往设备管理"
+              actionPath="/network/devices"
+            />
+          ),
+        }}
+      />
+    );
+  };
 
   // 移动卡片
   const renderCardList = () => {
     if (isLoading && list.length === 0) {
       return (
-        <div style={{ textAlign: 'center', padding: '40px' }}>
-          <Spin />
-        </div>
+        <Skeleton
+          active
+          paragraph={{ rows: 3 }}
+          title={false}
+          style={{ padding: '24px 12px' }}
+        />
       );
     }
     if (list.length === 0) {
       return (
-        <Empty
-          description="该范围内未采集到 MAC 记录"
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          style={{ padding: '40px 0' }}
+        <EmptyStateWithAction
+          description="该范围内未采集到 MAC 记录,请检查设备是否启用了 MAC 采集/端口采集周期"
+          actionLabel="前往设备管理"
+          actionPath="/network/devices"
         />
       );
     }
@@ -609,7 +692,7 @@ const MACHistoryPage: React.FC = () => {
             />
           </Form.Item>
           <Form.Item>
-            <Space>
+            <Space wrap>
               <Button
                 type="primary"
                 icon={<SearchOutlined />}
@@ -620,25 +703,36 @@ const MACHistoryPage: React.FC = () => {
               <Button icon={<ReloadOutlined />} onClick={handleReset}>
                 重置
               </Button>
+              {/* 14-04 注入的导出按钮 — prop 名称 exportScope='current'|'all' 保留,工具栏查询/重置按钮之后位置不变 */}
+              {canExport && (
+                <>
+                  <Button
+                    type="primary"
+                    icon={<DownloadOutlined />}
+                    onClick={() => handleExport('current')}
+                    loading={exporting}
+                  >
+                    导出当前查询
+                  </Button>
+                  <Button
+                    icon={<DownloadOutlined />}
+                    onClick={() => handleExport('all')}
+                    loading={exporting}
+                  >
+                    导出全量
+                  </Button>
+                </>
+              )}
             </Space>
           </Form.Item>
         </Form>
       </Card>
 
-      {/* 错误兜底(TODO: 14-05 替换为 ErrorAlertWithRetry) */}
+      {/* 错误兜底(14-05b:替换为 ErrorAlertWithRetry — D-20 错误码 1006/1007/500 分级文案) */}
       {error && (
-        <Alert
-          type="error"
-          showIcon
-          message="查询失败"
-          description={(error as Error).message}
-          style={{ marginBottom: 16 }}
-          action={
-            <Button size="small" onClick={() => refetch()}>
-              重试
-            </Button>
-          }
-        />
+        <div style={{ marginBottom: 16 }}>
+          <ErrorAlertWithRetry error={error} onRetry={() => refetch()} />
+        </div>
       )}
 
       <Card
