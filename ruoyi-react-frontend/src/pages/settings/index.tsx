@@ -119,7 +119,7 @@ const SettingsPage: FC = () => {
 			// 立即预览应用默认主题到 DOM
 			applyPrimaryColor(defaultTheme.customColors?.primary ?? primaryColor);
 			applySidebarBackgroundColor(defaultTheme.customColors?.sidebar ?? sidebarColor);
-		} catch (error) {
+		} catch {
 			// 获取失败时回退到当前用户偏好
 			form.resetFields();
 			form.setFieldsValue(preferences);
