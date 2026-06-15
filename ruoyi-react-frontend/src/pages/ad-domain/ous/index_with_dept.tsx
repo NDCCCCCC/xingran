@@ -367,7 +367,7 @@ const ADOUPage: FC = () => {
                 loading={treeLoading}
               />
             }
-            bodyStyle={{ maxHeight: 'calc(100vh - 280px)', overflow: 'auto' }}
+            styles={{ body: { maxHeight: 'calc(100vh - 280px)', overflow: 'auto' } }}
           >
             <Space orientation="vertical" style={{ width: '100%' }} size="small">
               <Select
@@ -398,7 +398,7 @@ const ADOUPage: FC = () => {
 
         {/* 右侧：用户列表和部门映射 */}
         <Col span={18} style={{ height: '100%', overflow: 'auto' }}>
-          <Space direction="vertical" style={{ width: '100%' }} size="small">
+          <Space orientation="vertical" style={{ width: '100%' }} size="small">
             {/* 用户列表卡片 */}
             <Card
               title={
@@ -410,7 +410,7 @@ const ADOUPage: FC = () => {
                 </Space>
               }
               size="small"
-              bodyStyle={{ maxHeight: 'calc(100vh - 450px)', overflow: 'auto' }}
+              styles={{ body: { maxHeight: 'calc(100vh - 450px)', overflow: 'auto' } }}
             >
               <Table
                 columns={userColumns}
@@ -446,7 +446,7 @@ const ADOUPage: FC = () => {
               loading={mappingLoading}
             >
               {deptMapping?.hasMapping ? (
-                <Space direction="vertical" style={{ width: '100%' }}>
+                <Space orientation="vertical" style={{ width: '100%' }}>
                   <div>
                     <span style={{ color: 'var(--theme-text-tertiary, #999)' }}>关联部门：</span>
                     <Tag color="blue" style={{ marginLeft: 8 }}>{deptMapping.mapping?.deptName}</Tag>
