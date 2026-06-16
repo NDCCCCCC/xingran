@@ -247,7 +247,6 @@ Run `/gsd:new-milestone` to formally start v1.16.
 - 📋 Phase 32 added: v1.14 P1 重构与 P2 架构优化（20260612 后端审查剩余 P1/P2 任务）
 - 📋 Phase 33 added: 前端 Vercel React Best Practices 修复 — 修复审查报告 20260613 中的 26 个性能/质量缺陷（7 CRITICAL + 5 MEDIUM-HIGH + 8 MEDIUM + 5 LOW + 1 bug：登录重复请求、WebSocket/Polling 抖动、Table 引用稳定化、Map 缓存化、Excel 改用 axios、R7 楼宇状态显示 bug）
 - 📋 Phase 34 added: 操作日志全模块集成 — 审计发现 309 个写操作端点中仅 9 处（2.9%）有效记录（AD 域控），OperLogMiddleware 中间件已挂载但从未生效。基于 AD 域控参考实现分 7 Wave 集成全部端点
-- 📋 Phase 35 added: UI 标准化 — 将所有页面样式对齐到工位管理页面的布局结构（基于 commit fb82859 HybridLayout 方案 B：删除 L0d page-card div，白底下放到 L0c Content；工位页面 L1 Layout 黑底 + L2 Content 白底）
 
 **Total shipped**: 72 plans, 18 phases completed
 
