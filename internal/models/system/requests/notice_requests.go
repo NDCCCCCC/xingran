@@ -88,5 +88,10 @@ type NoticeUpdateRequest struct {
 	Status           *int                         `json:"status"`
 	PublishTime      *time.Time                   `json:"publishTime"`
 	ClearPublishTime bool                         `json:"clearPublishTime"`
-	Channels         []NotificationChannelRequest `json:"channels"`
+	// PublishStatus 显式发布状态覆盖（Phase 34 WR-003 修复引入）
+	// 0=草稿 1=已发布 2=定时发布中 3=已撤回
+	PublishStatus *models.PublishStatus `json:"publishStatus,omitempty"`
+	// EndDate 周期性通知结束时间（Phase 34 WR-003 修复引入）
+	EndDate *time.Time `json:"endDate,omitempty"`
+	Channels []NotificationChannelRequest `json:"channels"`
 }

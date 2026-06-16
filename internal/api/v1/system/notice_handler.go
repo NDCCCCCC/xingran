@@ -157,20 +157,25 @@ func (h *NoticeHandler) Create(c *gin.Context) {
 			return
 		}
 
-		// 定时任务创建成功后，更新发布状态为"定时发布中"，并保存结束时间
+		// 定时任务创建成功后，更新发布状态为"定时发布中"，并保存结束时间。
+		// Phase 34 WR-003 修复：原实现只有 logger.Debugf 占位，未真正写入 sys_notice.publish_status，
+		// 产生"幻影成功"审计行（operlog 记录创建成功，但 DB 中状态未更新）。
 		if shouldUpdateToScheduled {
-			updates := map[string]interface{}{
-				"publish_status": models.PublishStatusScheduled,
+			publishStatus := models.PublishStatusScheduled
+			updateReq := &requests.NoticeUpdateRequest{
+				PublishStatus: &publishStatus,
 			}
 			// 如果是周期性任务且有结束时间，保存结束时间
 			if executionType == "recurring" && req.RecurrenceConfig != nil && req.RecurrenceConfig.EndDate != nil {
 				// 解析 ISO 格式的时间字符串
 				if endTime, err := time.Parse(time.RFC3339, *req.RecurrenceConfig.EndDate); err == nil {
-					updates["end_date"] = endTime
+					updateReq.EndDate = &endTime
 				}
 			}
-			// 这里需要DB访问来更新，暂时记录日志
-			logger.Debugf("[NOTICE] 需要更新发布状态为定时发布中，通知ID: %s", notice.ID)
+			if err := h.service.Update(c.Request.Context(), notice.ID, updateReq); err != nil {
+				response.Error(c, apperrors.InternalServerErrorWithMsg("更新发布状态失败"))
+				return
+			}
 		}
 	} else if executionType == "recurring" || (req.PublishTime != nil && req.PublishTime.After(time.Now())) {
 		// 需要定时任务但调度器不可用

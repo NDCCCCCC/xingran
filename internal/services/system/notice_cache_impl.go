@@ -94,6 +94,13 @@ func (s *noticeCacheService) Create(ctx context.Context, req *requests.NoticeCre
 
 // Update 更新通知（带缓存失效）
 func (s *noticeCacheService) Update(ctx context.Context, id string, req *requests.NoticeUpdateRequest) error {
+	// PublishStatus 显式转发（Phase 34 WR-003 修复引入）
+	// EndDate 周期性通知结束时间（Phase 34 WR-003 修复引入）
+	publishStatus := (*models.PublishStatus)(nil)
+	if req.PublishStatus != nil {
+		ps := models.PublishStatus(*req.PublishStatus)
+		publishStatus = &ps
+	}
 	if err := s.base.UpdateNotice(ctx, id, &services.UpdateNoticeRequest{
 		NoticeTitle:      req.NoticeTitle,
 		NoticeType:       req.NoticeType,
@@ -102,6 +109,8 @@ func (s *noticeCacheService) Update(ctx context.Context, id string, req *request
 		Status:           req.Status,
 		PublishTime:      req.PublishTime,
 		ClearPublishTime: req.ClearPublishTime,
+		PublishStatus:    publishStatus,
+		EndDate:          req.EndDate,
 	}); err != nil {
 		return err
 	}

@@ -44,6 +44,11 @@ type UpdateNoticeRequest struct {
 	Status           *int                   `json:"status" binding:"omitempty,min=0,max=1"`
 	PublishTime      *time.Time             `json:"publishTime,omitempty"`
 	ClearPublishTime bool                   `json:"clearPublishTime,omitempty"` // 是否清除定时发布时间
+	// PublishStatus 显式发布状态覆盖（Phase 34 WR-003 修复引入）
+	// 0=草稿 1=已发布 2=定时发布中 3=已撤回
+	PublishStatus *models.PublishStatus `json:"publishStatus,omitempty" binding:"omitempty,min=0,max=3"`
+	// EndDate 周期性通知结束时间（Phase 34 WR-003 修复引入）
+	EndDate *time.Time `json:"endDate,omitempty"`
 }
 
 // ==================== 基本 CRUD 操作 ====================
@@ -171,6 +176,16 @@ func (s *NoticeService) UpdateNotice(ctx context.Context, noticeID string, req *
 			// 如果设置的是过去时间或当前时间，保持草稿状态
 			updates["publish_status"] = models.PublishStatusDraft
 		}
+	}
+
+	// 显式发布状态覆盖（Phase 34 WR-003 修复引入）
+	// 当调用方明确传入了 PublishStatus 时直接写入（优先级高于上述推算结果）
+	if req.PublishStatus != nil {
+		updates["publish_status"] = *req.PublishStatus
+	}
+	// 周期性通知结束时间（Phase 34 WR-003 修复引入）
+	if req.EndDate != nil {
+		updates["end_date"] = *req.EndDate
 	}
 
 	if len(updates) == 0 {
