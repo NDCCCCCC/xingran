@@ -43,7 +43,7 @@ interface HubeiMapProps {
 const toBase64 = (str: string): string => {
   try {
     return btoa(unescape(encodeURIComponent(str)));
-  } catch (e) {
+  } catch (_e) {
     return btoa(str);
   }
 };

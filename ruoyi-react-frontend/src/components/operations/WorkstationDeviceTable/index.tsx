@@ -135,7 +135,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
           responsibleUser: undefined,
         });
       }
-    } catch (error) {
+    } catch (_error) {
       setAutoFilledAsset(null);
       // 清空自动填充字段
       form.setFieldsValue({

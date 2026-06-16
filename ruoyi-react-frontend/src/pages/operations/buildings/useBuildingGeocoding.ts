@@ -52,7 +52,7 @@ export function useBuildingGeocoding() {
         });
         return null;
       }
-    } catch (error) {
+    } catch (_error) {
       setState({
         loading: false,
         result: null,

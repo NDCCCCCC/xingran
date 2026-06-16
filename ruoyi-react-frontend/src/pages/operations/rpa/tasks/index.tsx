@@ -77,7 +77,7 @@ const TaskManagement: FC = () => {
       await post(`/rpa/tasks/${id}/delete`, {});
       showSuccessMessage("删除");
       refreshData();
-    } catch (error) {
+    } catch (_error) {
       // 错误已在 errorHandler 中处理
     }
   }, [refreshData]);

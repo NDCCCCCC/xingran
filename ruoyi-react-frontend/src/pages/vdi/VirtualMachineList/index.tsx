@@ -161,7 +161,7 @@ const VirtualMachineList: React.FC = () => {
       setStorages(newStorages);
       setNetworks(newNetworks);
       setVdiDataPreloaded(true);
-    } catch (error) {
+    } catch (_error) {
       setPreloadError("VDI配置加载失败，部分功能可能不可用");
       message.warning("VDI配置加载失败，将在需要时重试");
     } finally {
@@ -433,7 +433,7 @@ const VirtualMachineList: React.FC = () => {
       try {
         const serverResult = await vdiServerApi.list({ current: 1, pageSize: 100 });
         setVdiServers(serverResult.data?.list || []);
-      } catch (e) {
+      } catch (_e) {
         // ignore
       }
       return;
@@ -455,7 +455,7 @@ const VirtualMachineList: React.FC = () => {
       if (availableServer) {
         form.setFieldsValue({ vdi_server_id: availableServer.id });
       }
-    } catch (e) {
+    } catch (_e) {
       // ignore
     }
   };

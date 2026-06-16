@@ -51,7 +51,7 @@ export function useGeocodingForm(): GeocodingFormState {
         setGeocodingWarning("地址解析失败，将保存不含经纬度的信息");
         setGeocodingResult(null);
       }
-    } catch (error) {
+    } catch (_error) {
       setGeocodingWarning("地址解析出错，将保存不含经纬度的信息");
       setGeocodingResult(null);
     } finally {

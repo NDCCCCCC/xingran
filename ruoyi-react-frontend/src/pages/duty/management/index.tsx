@@ -121,7 +121,7 @@ export default function DutyManagement() {
         await holidayData.create(data);
       }
       setHolidayModalVisible(false);
-    } catch (error) {
+    } catch (_error) {
       // 表单验证失败
     }
   }, [holidayData, holidayForm]);

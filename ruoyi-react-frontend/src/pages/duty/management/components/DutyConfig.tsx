@@ -31,7 +31,7 @@ export const DutyConfig: React.FC<DutyConfigProps> = ({
     try {
       const values = await form.validateFields();
       await onSave(values);
-    } catch (error) {
+    } catch (_error) {
       // 表单验证失败
     }
   };
