@@ -3,12 +3,15 @@ phase: 34
 phase_name: oper-log-full-coverage
 date: 2026-06-16
 depth: standard
-status: warnings
+status: clean
 files_reviewed: 110
 critical: 0
-warning: 3
-info: 3
-total: 6
+warning: 0
+info: 0
+total: 0
+severity_history:
+  - { date: 2026-06-16T10:30, status: warnings, critical: 0, warning: 3, info: 3, total: 6, note: "first review pass" }
+  - { date: 2026-06-16T10:50, status: clean, critical: 0, warning: 0, info: 0, total: 0, note: "after --fix --all + critical fix; IN-001 escalated to CR-001 then resolved in 7bebb08" }
 ---
 
 # Phase 34 Code Review: oper-log-full-coverage
@@ -20,24 +23,31 @@ modules with the shared `operlog.Record` / `operlog.RecordWithBody` helper.
 The helper package (`internal/utils/operlog/operlog.go`) is well-designed:
 panic-safe (`defer recover()`), variadic options (`WithOperParam` / `WithStatus`
 / `WithErrorMsg`), body-restore via `io.NopCloser(bytes.NewBuffer(raw))`, and a
-17-keyword masking set. The regression test (`regression_test.go`) pins four
-critical invariants: 24 `OperType` constants, their int values, the `Record`
-signature (5 fixed + 1 variadic), and the 11 mandatory sensitive keywords.
+34-keyword masking set (originally 17, expanded in commit `7bebb08`).
 
 The instrumentation is broad and consistent — the static-coverage gate in
 `scripts/operlog_e2e_verify.sh` (allowlist of read-only handlers + per-file
 non-zero call check + 290-call / 17-keyword thresholds) closes the class of gap
-that produced the `34-gap` follow-up. After verifying the agent's
-adversarial findings against the actual source, **no Critical issues remain**
-that block the phase. Three Warnings are surfaced for follow-up in a future
-patch, plus three Info notes.
+that produced the `34-gap` follow-up.
 
-> **Reviewer note:** This report downgraded one agent claim from Critical to
-> Info after re-reading `maskKeyOccurrences` (`internal/utils/operlog/operlog.go:267`).
-> The needle `"key":"` does occur inside `"apiKey":"supersecret"` at offset 2
-> (substring `"key":"` follows `"ap` of `"apiKey"`), so `strings.Index` returns
-> the correct position. The actual concern is **untested** (no camelCase test
-> case in `operlog_test.go`), not a confirmed leak — see IN-001.
+**Final status: clean (0 Critical / 0 Warning / 0 Info).** The three Warning
+findings from the first review pass and the three Info findings from the
+initial scope were all applied as atomic commits. The `IN-001 → CR-001`
+escalation in the second pass discovered a confirmed information-disclosure
+bug (camelCase field names like `apiKey` were not masked because the
+substring search needle `"key":"` does not occur inside `"apiKey":"value"`)
+which was fixed in `7bebb08` by expanding `sensitiveKeys` from 17 to 34
+entries and locking the new mandatory set in the regression test.
+
+> **Reviewer lesson (preserved for future reviewers):** When the
+> `--fix --all` fixer agent empirically ran a test case pinned in the
+> first review pass, it discovered the case failed. The first review had
+> **incorrectly downgraded** the original CR-001 (claiming `"key":"` is a
+> substring of `"apiKey":"supersecret"` at offset 2) without verifying
+> with a 5-line Go test program. The fixer's empirical test caught the
+> error and surfaced the real bug. The lesson: never downgrade an
+> agent-flagged Critical claim without first running a direct substring
+> test.
 
 ## Findings
 
@@ -136,34 +146,59 @@ service layer (eliminating the placeholder comment), or move the
 `operlog.Record` calls into a single point immediately before the final
 `response.Success` to eliminate the double-record risk.
 
-### IN-001 — `maskKeyOccurrences` substring algorithm is correct but unexercised by camelCase tests
+### IN-001 → CR-001 — CONFIRMED: `maskKeyOccurrences` does NOT mask `apiKey` and other camelCase fields
 
-**Severity:** Info
-**File:** `internal/utils/operlog/operlog.go:267-301`,
-`internal/utils/operlog/operlog_test.go:31-99`
-**Issue:** The agent reviewer initially claimed a Critical leak:
-`"key":"` is 7 chars; `"apiKey":"supersecret"` does NOT contain it as a
-substring. **This claim is incorrect** — the substring does appear at offset 2
-(`"apikey":"supersecret"[2:9] == "key":""`), so `strings.Index` returns the
-correct position and the value is masked.
+**Severity:** ~~Info~~ → **CRITICAL** (severity corrected 2026-06-16 after
+empirical verification by the `--fix --all` fixer agent)
+**File:** `internal/utils/operlog/operlog.go:267-301, 85-103`
+**Issue:** The original CR-001 (agent-flagged "substring match in
+`maskKeyOccurrences` does not mask `apiKey`") was **initially downgraded to
+Info** in the first review pass on the (incorrect) claim that `"key":"`
+appears as a substring of `"apiKey":"supersecret"`. Empirical verification
+with a direct Go test program contradicts that claim:
 
-The real concern is **test coverage**: `TestFilterSensitiveParams` exercises
-exactly one field shape per keyword (`"password":"x"`, `"oldPassword":"x"`,
-`"sm4Key":"x"`, `"privateKey":"x"`, etc.) but no test confirms the algorithm
-behaves correctly for fields where the keyword is a **prefix** of a longer
-identifier (`apiKey`, `macKey`, `sm2Key`, `accessKey`, `secretKey`,
-`privateKey` already — wait, `privateKey` IS prefix-only too). A future
-refactor that anchors the needle to a strict JSON-key boundary would
-silently regress this case without test failure.
-
-**Suggested fix:** Add camelCase test cases to `TestFilterSensitiveParams`:
-```go
-{name: "apiKey (camelCase prefix)", in: `{"apiKey":"supersecret"}`, want: `{"apiKey":"******"}`},
-{name: "macKey (camelCase prefix)", in: `{"macKey":"k"}`, want: `{"macKey":"******"}`},
-{name: "secretKey (camelCase prefix)", in: `{"secretKey":"sk"}`, want: `{"secretKey":"******"}`},
 ```
-These lock the current substring behavior so any future tightening of the
-algorithm (e.g. word-boundary regex) is intentional.
+Needle:  "\"key\":\""   (7 chars)
+Haystack: "\"apiKey\":\"supersecret\""   (22 chars)
+strings.Index(haystack, needle) = -1
+```
+
+The substring `"key":"` does NOT appear at any offset of `"apiKey":"supersecret"`
+because the inner `"` after `api` is preceded by `i`, not by `k`. **The
+plain `key` keyword in `sensitiveKeys` never matches `apiKey`.** The
+`apiKey` field name was not in `sensitiveKeys`, so `FilterSensitiveParams`
+returned the body unchanged and the secret value was written verbatim to
+`sys_oper_log.oper_param`.
+
+The same defect applied to every camelCase / snake_case variant that was
+not its own literal entry in `sensitiveKeys`:
+- `apiKey` (apikey handler)
+- `sm3Key`, `sm4Key`, `sm2Key` (only `sm4Key`/`sm2Key` were present, with
+  a chance of substring overlap; `sm3Key` was not)
+- `accessKeyId`, `accessKeySecret` (only `accessKey` was present, with
+  only partial match — `accessKeyId` would have been left in cleartext)
+- `v1Key`, `v2Key`, `appKey`, `appSecret`, `hmacKey`, `signKey`, `aesKey`,
+  `desKey`, `rsaPrivateKey`, `rsaPublicKey`, `certPassword`,
+  `keystorePassword`, `truststorePassword`
+
+**Fix applied in `7bebb08`:** Expand `sensitiveKeys` from 17 to 34 entries
+with every camelCase / snake_case variant observed in handler request
+structs. Extend `mandatorySensitiveKeywords` in `regression_test.go` from
+11 to 18 entries so the expanded set is locked by the regression test.
+Add a `TestFilterSensitiveParams` case pinning the `apiKey` mask behavior
+with a docstring that documents the substring-search trap.
+
+**Verification:** All 14 `TestFilterSensitiveParams` subtests PASS
+(includes the new `apiKey masked (Phase 34 review critical)` case);
+`TestFilterSensitiveParamsKeywordsStable` PASS (18/18 mandatory
+keywords present); `go build ./...` clean.
+
+**Reviewer lesson:** When the agent's adversarial claim appears
+plausible-but-not-fully-verified, prefer to verify with a one-line Go
+test program (5 seconds of work) before downgrading the severity. The
+first review pass made a needle-offset counting error that was only
+caught when the `--fix --all` fixer tried to actually run the proposed
+test case.
 
 ### IN-002 — `helper.go` system-package shim does not nil-check `core` parameter
 
@@ -257,21 +292,25 @@ correct but lives in the wrong layer.
 - /gsd:code-review 34 --fix --all — also apply the three Info fixes (camelCase
   tests, nil-check shim, coverage harness rename)
 
-## Fix Status (post `/gsd:code-review 34 --fix`)
+## Fix Status (post `/gsd:code-review 34 --fix` and `/gsd:code-review 34 --fix --all`)
 
-3 atomic fix commits applied to `main`:
+7 atomic fix commits applied to `main`:
 
-| Commit  | Scope | Files |
-|---------|-------|-------|
-| `4da0289` | feat(34-review): add `OperTypeUnlock` constant (WR-001) | `operlog.go` + `regression_test.go` (24→25) + `user_unlock_handler.go` + `CLAUDE.md` + `docs/开发规范.md` + `operlog_e2e_verify.sh` |
-| `822f83d` | fix(34-review): mask export request params (WR-002) | `network_export_handler.go` (9 record sites) |
-| `1a52723` | fix(34-review): persist `publish_status` (WR-003) | `notice_handler.go` + `notice_service.go` + `notice_cache_impl.go` + `notice_requests.go` |
+| # | Commit  | Severity | Scope |
+|---|---------|----------|-------|
+| 1 | `4da0289` | WR-001 | feat(34-review): add `OperTypeUnlock` constant for account unlock |
+| 2 | `822f83d` | WR-002 | fix(34-review): mask export request params in `network_export_handler` (9 sites) |
+| 3 | `1a52723` | WR-003 | fix(34-review): persist `publish_status` in `notice_handler.Create` |
+| 4 | `e2bfd1c` | IN-001 | test(34-review): add camelCase masking test cases (macKey, secretKey) |
+| 5 | `05be7ff` | IN-002 | fix(34-review): guard `recordOperLog` shim against nil `core` |
+| 6 | `a64ffc0` | IN-003 | docs(34-review): label static vs live sections in `operlog_e2e_verify.sh` |
+| 7 | `7bebb08` | CR-001 (escalated from IN-001) | fix(34-review): **expand `sensitiveKeys` to cover camelCase field names (CRITICAL)** — adds 17 missing variants, locks 18 mandatory keywords, pins `apiKey` mask with a regression test |
 
-**Verification:** `go build ./...` clean; `go test ./internal/utils/operlog/...` PASS
-(constant stability + count=25 + signature + keyword set all green).
+**Final verification:** `go build ./...` clean; `go test ./internal/utils/operlog/...` PASS
+(OperType constant stability + count=25 + signature + 18 mandatory keywords all green;
+14 `TestFilterSensitiveParams` subtests + 5 large-input / nil-svc / signature variants all pass).
 
-3 Info findings (IN-001 / IN-002 / IN-003) deliberately NOT auto-applied — see
-the user's selection. Track for a future plan-phase.
+All Phase 34 review findings resolved. Status: **clean**.
 
 ## Post-Fix Diagnostics
 
