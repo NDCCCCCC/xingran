@@ -1,12 +1,41 @@
-# 工位导入部门/用户关联功能
+---
+last_updated: 2026-06-16
+update_trigger: state-sync after Phase 34 review closure (commit 5c2fc95)
+previous_update: 2026-05-09 after v1.3 milestone (now obsolete for current-state section)
+---
+
+# RuoYi-Next 运维管理系统
 
 ## What This Is
 
-为 RuoYi-Next 运维管理系统的 Excel 导入功能添加可选关联字段。v1.0 实现了工位导入时通过部门/用户名称自动匹配并关联；v1.1 扩展到信息点导入，支持设备名/端口名自动匹配；v1.2 实现可配置仪表盘系统生产级改造（仿 Zabbix）；v1.3 完成技术债清理，修复 SNMP panic 崩溃问题，优化后端代码结构，实现网络设备批量导出功能。
+RuoYi-Nect is a Go backend + React frontend enterprise IT operations
+management system. It has evolved from a workstation-import
+association feature (v1.0) into a multi-domain platform covering:
+
+- **Operations domain**: buildings, floors, workstations, server rooms,
+  info-points, dedicated lines, assets (CRUD + Excel import/export
+  with geocoding).
+- **Network domain**: device discovery, SNMP, Scrapli-based command
+  execution, credential vault, topology, MAC history, port collection.
+- **Identity domain**: AD/LDAP integration (login, OU-dept mapping,
+  group auto-sync), user/role/dept/menu management, RBAC.
+- **VDI domain** (v1.11): Sangfor VDI virtual desktop management with
+  VM CRUD, power operations, user binding, server config.
+- **Audit domain** (v1.15 / Phase 34): full-coverage operation logging
+  for all 309 write endpoints with sensitive-keyword masking.
+
+National cryptography (SM2/SM3/SM4) is mandatory for in-transit and
+at-rest data on sensitive endpoints.
 
 ## Core Value
 
-Excel 导入时自动关联关联实体（部门、用户、设备、端口），避免手动逐条配置，提升批量管理效率。可配置仪表盘系统提供类似 Zabbix 的监控可视化能力，支持自定义 Widget、实时数据刷新、权限控制。批量导出功能支持一次性导出多个实体类型并打包为 ZIP 下载。
+End-to-end operational observability and auditability: every write
+action in the system produces a traceable record (who, when, what,
+from-where, before/after-state) with sensitive fields auto-masked.
+Combined with Excel-driven bulk management (import/export with
+auto-resolution of references like dept-name → UUID), this gives
+operators a single trustworthy system-of-record for the entire IT
+estate.
 
 ## Requirements
 
@@ -35,14 +64,26 @@ Excel 导入时自动关联关联实体（部门、用户、设备、端口）�
 
 ### Active
 
-## Current Milestone: v1.5 MAC地址历史数据管理 — 🚧 IN PROGRESS
+## Current Milestone: v1.15 工位设备关联 (Phase 28) — ✅ SHIPPED 2026-06-10
 
-**目标:** 在现有 MAC 地址采集基础上，增加历史数据保留和分析能力，支持追溯、审计和报表功能
+Most recent shipped milestone. Since v1.15, additional work has
+shipped in **unlabeled phases** (30, 31, 32, 33, 34) covering
+frontend perf, P0 closure, P1/P2 review fixes, Vercel React
+best-practices, and operlog full coverage. See "Active" section
+for the v1.16 planning state.
 
-**核心功能:**
-- **数据记录**: 仅在 MAC 地址变化时记录快照（节省存储）
-- **查询功能**: 按端口查询历史、按 MAC 地址查询轨迹、异常告警、数据导出
-- **应用场景**: 设备连接历史追溯、安全审计和异常检测、网络变更分析、报表和统计
+## Active: v1.16 (planning) — see `.planning/REQUIREMENTS.md`
+
+The v1.16 scope is **not yet defined**. Candidate areas from the
+state-sync report (20260616):
+
+- Triage the 103 open items from `gsd-sdk query audit-open`
+  (45 debug sessions, 51 quick tasks, 4 UAT gaps, 3 verification gaps)
+- Decide whether to extend Phase 22 (VDI 22C/22D) or move to a
+  new domain
+- Decide whether to build on the Phase 34 operlog foundation
+  (e.g., realtime audit dashboard) or stabilize it (linter fixes,
+  CI gate for e2e harness)
 
 ### Completed
 
@@ -116,20 +157,34 @@ Excel 导入时自动关联关联实体（部门、用户、设备、端口）�
   - `/dashboard-system` — 可配置仪表盘（v1.2 改进目标）
 - **批量导出**: ZIP 打包多个 Excel 文件，支持 9 个实体类型
 
-### 当前状态
-- Shipped v1.0 + v1.1 + v1.2 + v1.3, 10 phases, 27 plans, all complete
-- 配置驱动模式已验证：添加新关联列只需修改 `excel_config.go` 和 `excel_service.go`
-- ReferenceResolver 管道支持任意表+字段匹配
-- 可配置仪表盘基础架构已搭建完成
-- SNMP 稳定性问题已完全修复
-- 后端代码质量提升，安全漏洞已修复
-- 网络管理批量导出功能已实现
+### Current state (2026-06-16)
 
-### 已知技术债
-- ~~`batch_upserter_test.go` 测试需要活跃 DB 连接~~ — 已优化
-- ~~`dashboard_service.go` GetWidgetData/GetBatchWidgetData 返回未实现错误~~ — 已实现
-- ~~前端 LayoutToolbar 多个 TODO 未实现~~ — 已完成
-- 前端批量导出筛选条件未传递给后端 API（低优先级，后续改进）
+- **Shipped**: v1.0 through v1.15 (and Phase 22 VDI 22A/22B partial for v1.11) —
+  18 phases, 133 plans completed, ≈85% of total plan count.
+- **Phases 30 / 31 / 32 / 33 / 34**: unlabeled (no v1.x tag in ROADMAP
+  milestones list) but fully shipped. Phase 34 included a full code
+  review with 1 critical security finding (sensitiveKeys did not
+  match camelCase field names) and 7 atomic fix commits.
+- **Codebase size**: 485 Go files (backend), 506 TS/TSX files
+  (frontend) per `CLAUDE.md`.
+- **Test coverage**: regression_test.go for operlog locks 25 OperType
+  constants, 18 mandatory sensitive keywords, Record signature, keyword
+  stability. 14 subtests in TestFilterSensitiveParams + 5 edge cases.
+- **Build status** (post-Phase 34 review closure): `go build ./...`
+  clean, full operlog test suite PASS, system test suite PASS.
+
+### Known technical debt (post-v1.15)
+
+- VDI 22C (账号管理) and 22D (Web Console) — listed in ROADMAP as
+  v1.12 sub-phases but not started. Blocked on 22A/22B production
+  observability data.
+- Phase 25 (VM 数据范围权限) — depends on Phase 22, also not started.
+- `operlog_e2e_verify.sh` live-DB section gated on `SKIP_E2E=1` by
+  default — should be promoted to a CI gate.
+- `regression_test.go:146` — `for i := 0; i < 5; i++` can be
+  modernized to `for i := range 5` (Go 1.22+). Cosmetic, single line.
+- 103 open items in `gsd-sdk query audit-open` (most are stale
+  `root_cause_found` debug sessions from May 2026).
 
 ## Key Decisions
 
@@ -148,6 +203,12 @@ Excel 导入时自动关联关联实体（部门、用户、设备、端口）�
 | Core 清理: 文档化而非删除 | 大多数字段有外部依赖 | ✓ Good |
 | TDD 方法: RED→GREEN→REFACTOR | 确保测试覆盖和安全修复质量 | ✓ Good |
 | 批量导出: ZIP 格式打包多个 Excel | 用户需求，简化下载流程 | ✓ Good |
+| VDI 集成: 拆分 22A→22D 4 子阶段 (P1) | 渐进式集成降低风险 | ✓ Good (22A/22B done; 22C/22D pending) |
+| operlog 共享包: 提取到 `internal/utils/operlog` (P34) | 避免 handler module 间的循环依赖 | ✓ Good |
+| OperType 25 常量集 (P34) | 锁定审计语义，不再用 OperTypeOther 兜底 | ✓ Good |
+| OperTypeUnlock = 24 新增 (P34 review) | 解锁是独立审计动作 | ✓ Good |
+| sensitiveKeys 34 条 camelCase/snake_case 全覆盖 (P34 review) | 修复 substring-search 不匹配 camelCase 字段的 critical bug | ✓ Good (CR-001) |
+| 工位设备关联子表格: Ant Design Table expandable (P28) | 复用现有 Table 组件 | ✓ Good |
 
 ## Constraints
 
@@ -165,5 +226,31 @@ Excel 导入时自动关联关联实体（部门、用户、设备、端口）�
 
 This document evolves at phase transitions and milestone boundaries.
 
+## Validated — v1.0 through v1.15 (summary)
+
+The full Validated section listing all shipped requirements is preserved
+in `.planning/REQUIREMENTS.md` history. High-level milestones:
+
+- ✓ v1.0 工位导入部门/用户关联 (2026-04-16) — 2 phases, 7 plans
+- ✓ v1.1 信息点导入设备端口关联 (2026-04-16) — 1 phase, 1 plan
+- ✓ v1.2 可配置仪表盘生产级改造 (2026-04-21) — 4 phases, 11 plans
+- ✓ v1.3 技术债清理 (2026-04-27) — 3 phases, 9 plans
+- ✓ v1.4 MAC地址采集优化 (2026-05-09) — 1 phase, 4 plans
+- ✓ v1.5 MAC地址历史数据管理 (2026-06-15) — 4 phases, 26 plans (REQ archive: `.planning/milestones/v1.5-REQUIREMENTS.md`)
+- ✓ v1.6 API密钥管理系统 (2026-05-19) — 1 phase, 10 plans
+- ✓ v1.7 前后端加密配置同步 (2026-05-20) — 1 phase, 6 plans
+- ✓ v1.8 登录端点加密增强 (2026-05-21) — 1 phase, 4 plans
+- ✓ v1.9 AD域控集成扩展 (2026-05-24) — 2 phases, 11 plans
+- ✓ v1.10 网络设备权限修复 (2026-05-24) — 1 phase, 1 plan
+- ✓ v1.11 深信服桌面云集成 (VDI 22A+22B partial) (2026-06-02) — 1 phase (22), 6 plans
+- ✓ v1.13 资产管理模块 (Phase 26) (2026-06-08) — 1 phase, 6 plans
+- ✓ v1.14 全局列自定义 (Phase 27) (2026-06-09) — 1 phase, 1 plan
+- ✓ v1.15 工位设备关联 (Phase 28) (2026-06-10) — 1 phase, 4 plans
+- ✓ Phase 30 前端性能优化 (unlabeled, 2026-06-13) — 5 plans
+- ✓ Phase 31 P0 收尾 (2026-06-13) — 5 plans
+- ✓ Phase 32 v1.14 P1/P2 (unlabeled, 2026-06-13) — 7 waves, 20 commits
+- ✓ Phase 33 Vercel React Best Practices (unlabeled, 2026-06-13) — 4 waves
+- ✓ Phase 34 操作日志全模块集成 + review (2026-06-16) — 11 plans + 7 review-fix commits
+
 ---
-*Last updated: 2026-04-27 after v1.3 milestone*
+*Last updated: 2026-06-16 after state-sync for v1.16 planning*

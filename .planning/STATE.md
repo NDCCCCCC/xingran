@@ -1,37 +1,60 @@
 ---
-gsd_state_version: 1.0
-milestone: v1.12
-milestone_name: 深信服桌面云集成
-status: milestone_complete
-stopped_at: Milestone complete (Phase 34 was final phase)
-last_updated: 2026-06-15T18:12:41.075Z
+gsd_state_version: 1.1
+milestone: v1.15
+milestone_name: 工位设备关联 (Phase 28)
+status: idle
+stopped_at: Phase 34 review closure (commit 5c2fc95) — awaiting v1.16 scope
+last_updated: 2026-06-16T03:30:00.000Z
 progress:
-  total_phases: 14
-  completed_phases: 8
-  total_plans: 69
+  total_phases: 24
+  completed_phases: 21
+  total_plans: 154
   completed_plans: 133
-  percent: 57
+  percent: 86
+  audit_open_items: 103
 ---
 
 # Project State
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: 里程碑 v1.16 进行中 (Phase 32 全部完成 ✅)
-**Phase**: 32 (v1-14-p1-p2) — ALL 7 WAVES COMPLETE (15 P1 + 8 P2 = 23 项全部闭环)
-**Plan**: 07 (test coverage — AD 模块 LDAP 接口 + group_sync + user_ou 测试)
-**Status**: ✅ 已完成
-**Last activity**: 2026-06-15 - Completed Plan 34-06 (Wave 5 cross-module operlog: 59 endpoints across vdi/workorder/duty/knowledge/scheduler)
+**Status**: 🚧 IDLE — Phase 34 review closure complete, awaiting v1.16 scope
+**Last activity**: 2026-06-16 - Phase 34 review closure (commit 5c2fc95:
+                docs(34-review): correct severity history; preceded by
+                7bebb08 critical sensitiveKeys expansion fix)
+**See**: `.planning/milestones/20260616-state-sync-report.md` for the
+        reconciliation report that motivated this state update.
 
 ## Current Position
 
-Phase: 34
-Plan: Not started
-**当前里程碑**: v1.16 — 工位设备关联
-**当前阶段**: Phase 34 ✅ CLOSED — Wave 1 (基础设施) ✅ + Wave 2 (system 核心 ✅) + Wave 2 (system 外围 ✅) + Wave 3 (operations ✅) + Wave 4 (network ✅) + Wave 5 (cross-module ✅) + Wave 6 (monitor+rpa+agent ✅) + Wave 7 (system 子模块 ✅) + Wave 3 (e2e 验证 ✅) + Wave 3 (文档与回归 ✅) 完成
-**状态**: ✅ Phase 34 Plan 10 完成 (Phase 34 收尾 — CLAUDE.md 新增 "操作日志记录约定 (operlog convention)" 强制章节 + docs/开发规范.md 新增 5.1.1 操作日志记录强制条款 + internal/utils/operlog/regression_test.go 4 个回归测试锁定公共 API: 24 个 OperType 常量值/数量、Record 5参+可变参签名、11 个强制敏感关键词; Phase 34 全部 10/10 plans 闭环)
-**完成时间**: 2026-06-16 (Plan 34-10, Phase 34 CLOSED)
-**下一计划**: Phase 34 已闭环，可推进 Phase 22C/22D/25 或新里程碑
+**Latest shipped milestone**: v1.15 工位设备关联 (Phase 28, 2026-06-10)
+**Latest shipped phase**: Phase 34 操作日志全模块集成 + review (2026-06-16)
+**Most recent commit**: 5c2fc95 docs(34-review): correct severity history
+  (preceded by critical 7bebb08 sensitiveKeys expansion)
+
+**Shipped since last state file update (v1.15 was the milestone label
+in PROJECT.md before this sync)**:
+- Phase 30 (frontend perf) — 5/5 plans, 2026-06-13
+- Phase 31 (P0 close: connection_pool lifecycle + ConfigKey API) — 5/5 plans
+- Phase 32 (v1.14 P1/P2 重构) — 7 waves, 20 commits
+- Phase 33 (Vercel React Best Practices) — 4 waves, 25/25 perf defects fixed
+- Phase 34 (operlog full coverage) — 10 plans + gap-closure + 4 review commits
+  + 1 critical fix (sensitiveKeys 17→34 expansion to cover camelCase
+  field names that the substring-search needle did not match)
+
+**Audit**: 103 open items in `gsd-sdk query audit-open` (45 debug
+sessions, 51 quick tasks, 4 UAT gaps, 3 verification gaps). Most
+debug sessions are `root_cause_found` from May 2026 — bulk-defer
+candidate for v1.16.
+
+**Next step**: `git log` shows main is at `5c2fc95`, build is clean,
+operlog test suite green. v1.16 scope is undecided. Recommended
+candidates (from state-sync report):
+1. Triage the 103 audit items
+2. Decide on VDI 22C/22D vs new domain
+3. Decide on Phase 34 operlog follow-up (CI gate, property test)
+
+Run `/gsd:new-milestone` to formally start v1.16.
 
 ## Project Reference
 
