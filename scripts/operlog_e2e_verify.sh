@@ -1,13 +1,25 @@
 #!/usr/bin/env bash
 # operlog_e2e_verify.sh — Phase 34 end-to-end verification
 #
-# Triggers 30 sampled write endpoints across all 7 Phase-34 waves (+ the 9
-# pre-existing AD endpoints that Wave 1 inherited) and verifies that each one
-# inserts a row in `sys_oper_log` with the expected title, businessType, and
-# (where applicable) masked sensitive param.
+# This script contains TWO clearly-separated sections:
+#   1. STATIC COVERAGE CHECK (no DB / no running API required)
+#      Grep + awk over the source tree: total operlog.Record call count,
+#      sensitive-key count, and the per-handler differential that
+#      catches handler files with ZERO operlog calls. Runs unconditionally
+#      (even when SKIP_LIVE=1) and is what CI uses as a PR-time lint.
+#   2. LIVE E2E CHECK (requires a running API + reachable DB)
+#      Triggers 30 sampled write endpoints across all 7 Phase-34 waves
+#      (+ the 9 pre-existing AD endpoints that Wave 1 inherited) and
+#      verifies that each one inserts a row in `sys_oper_log` with the
+#      expected title, businessType, and (where applicable) masked
+#      sensitive param. Skipped when SKIP_LIVE=1.
+#
+# The two sections are also called out inline by `==========` banners so a
+# maintainer running the script can tell at a glance which assertions are
+# static vs. live.
 #
 # ------------------------------------------------------------------
-# Required environment variables:
+# Required environment variables (LIVE E2E CHECK only):
 #   API_BASE          (default: http://localhost:9000)
 #   DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD  (database connection)
 #   ADMIN_USER        (admin username for JWT login)
@@ -17,8 +29,9 @@
 #   DEV_MODE          (set to 1/true/dev/development to allow fallback default
 #                     credentials admin/admin123 for local dev runs only;
 #                     ABSENT in any non-dev environment = script exits 1)
-#   SKIP_LIVE         (set to 1/true to skip the live-DB portion and only run
-#                     the static checks — useful in CI without a backend)
+#   SKIP_LIVE         (set to 1/true to skip the LIVE E2E CHECK and only run
+#                     the STATIC COVERAGE CHECK — useful in CI without a
+#                     backend)
 #
 # Exit codes:
 #   0  all checks passed
@@ -52,7 +65,15 @@ else
   exit 1
 fi
 
-# ----- Static checks (run even when SKIP_LIVE) -----------------------
+# ============================================================
+# STATIC COVERAGE CHECK (no DB required)
+# Walks every internal/api/v1/*/handler.go and asserts the file
+# contains at least one operlog.Record / RecordWithBody call
+# (or the legacy recordOperLog shim in internal/api/v1/system/
+# helper.go). Also counts the total operlog.Record call sites and
+# the sensitiveKeys keyword set size. This is a PR-time lint,
+# not a live e2e test — see the LIVE E2E CHECK section below.
+# ============================================================
 echo "== Static checks =="
 CALLS=$(grep -rE "operlog\.(Record|RecordWithBody)\(" internal/ 2>/dev/null | wc -l | tr -d ' ')
 echo "operlog.Record|RecordWithBody calls in internal/: ${CALLS}"
@@ -129,6 +150,14 @@ if [[ ${#ZERO_OPLOG_HANDLERS[@]} -gt 0 ]]; then
 fi
 echo "all *Handler-receiver files contain >=1 operlog call (or are allowlisted read-only)"
 
+# ============================================================
+# LIVE E2E CHECK (requires running API + DB)
+# Skipped when SKIP_LIVE=1; otherwise sends real HTTP requests
+# and asserts against sys_oper_log rows. See
+# scripts/e2e/operlog_e2e_verify_test.go for the Go test driver
+# that wraps this script in `go test`. Reciprocal of the
+# STATIC COVERAGE CHECK banner above.
+# ============================================================
 # ----- Live-DB portion (optional) ------------------------------------
 if [[ "${SKIP_LIVE:-}" =~ ^(1|true)$ ]]; then
   echo "SKIP_LIVE=1 set — skipping live-DB portion (static checks PASSED)" >&2
