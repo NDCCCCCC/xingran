@@ -18,6 +18,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/rpa"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/vdi"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
@@ -94,6 +95,12 @@ func New(cfg *config.Config) (*Core, error) {
 		SM4Cipher:  sm4Cipher,
 	}
 	svcs := &CoreServices{}
+
+	// Phase 35 OPERLOG-01: wire the configured operlog exclude list before
+	// any handler can call operlog.Record / RecordWithBody. This MUST happen
+	// here (not in Init) because the call has no dependency on DB/Cache/JWT
+	// and we want heartbeat endpoints excluded from the very first request.
+	operlog.Configure(cfg.OperLog.ExcludePaths)
 
 	return &Core{
 		CoreInfra:    infra,

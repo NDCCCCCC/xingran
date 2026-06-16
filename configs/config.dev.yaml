@@ -41,3 +41,11 @@ log:
 security:
   # 开发环境放宽时间戳容差到 120s,便于手动调试、模拟慢客户端
   replay_window_sec: 120
+
+# 操作日志配置（Phase 35 OPERLOG-01..04）
+# dev 默认关闭排除 — 保留心跳审计以便本地排查 Agent 状态。
+# 如需与 prod 行为一致,放开下面注释行:
+# exclude_paths:
+#   - "/api/v1/rpa/workers/*/heartbeat"
+operlog:
+  exclude_paths: []  # dev 默认全量审计;若想与 prod 一致请改为注释示例

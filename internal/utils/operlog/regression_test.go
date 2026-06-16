@@ -23,12 +23,20 @@ package operlog
 //     below.
 
 import (
+	"bytes"
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
+	"gorm.io/gorm"
 )
 
 // expectedOperTypeValues pins the documented (name -> value) mapping. Every
@@ -271,4 +279,84 @@ func readOperTypeConsts(fileName string) (map[string]int, error) {
 		}
 	}
 	return out, nil
+}
+
+// excludedMockRecorder is a minimal Recorder implementation that captures
+// RecordAsync call counts and the last operUrl. Used by
+// TestExcludedPathsEarlyReturn to assert the operlog package-level exclude
+// list short-circuits RecordAsync without actually wiring a real
+// services.OperLogService.
+type excludedMockRecorder struct {
+	called  int
+	lastURL string
+}
+
+func (m *excludedMockRecorder) RecordAsync(db *gorm.DB, title string, businessType int, method, requestMethod, operUrl string,
+	operatorName, deptName *string, operIP *string, operParam, jsonResult, errorMsg *string, status int, costTime int64) {
+	m.called++
+	m.lastURL = operUrl
+}
+
+// TestExcludedPathsEarlyReturn（Phase 35 OPERLOG-05）
+// 双子测试覆盖:
+//   - Phase A: Record 在排除路径（heartbeat）早退,
+//     非排除路径（register、progress）仍调用 RecordAsync
+//   - Phase B: RecordWithBody 在排除路径上**完全跳过 GetRawData**,
+//     c.Request.Body 在调用后仍可被下游 handler 绑定（核心威胁 T-35-03 缓解）
+func TestExcludedPathsEarlyReturn(t *testing.T) {
+	// Phase A: Record early-return
+	t.Run("Record skips excluded path", func(t *testing.T) {
+		Configure([]string{"/api/v1/rpa/workers/*/heartbeat"})
+		defer Configure(nil)
+		mock := &excludedMockRecorder{}
+		gin.SetMode(gin.TestMode)
+		db := noopDB()
+
+		// Excluded — must early-return (mock.called stays 0)
+		c, _ := gin.CreateTestContext(httptest.NewRecorder())
+		c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/rpa/workers/w-001/heartbeat", nil)
+		Record(c, mock, db, "RPA Worker", OperTypeOther)
+		assert.Equal(t, 0, mock.called, "heartbeat path must skip RecordAsync")
+
+		// Not excluded — must record (mock.called becomes 1)
+		c2, _ := gin.CreateTestContext(httptest.NewRecorder())
+		c2.Request = httptest.NewRequest(http.MethodPost, "/api/v1/rpa/workers/register", nil)
+		Record(c2, mock, db, "RPA Worker", OperTypeRegister)
+		assert.Equal(t, 1, mock.called, "register path must call RecordAsync")
+
+		// progress is NOT excluded (audit value retained per OPERLOG-04)
+		c3, _ := gin.CreateTestContext(httptest.NewRecorder())
+		c3.Request = httptest.NewRequest(http.MethodPost, "/api/v1/rpa/workers/progress", nil)
+		Record(c3, mock, db, "RPA Worker", OperTypeOther)
+		assert.Equal(t, 2, mock.called, "progress path must call RecordAsync (not in exclude list)")
+	})
+
+	// Phase B: RecordWithBody pre-GetRawData contract (CRITICAL)
+	t.Run("RecordWithBody skips GetRawData on excluded path", func(t *testing.T) {
+		Configure([]string{"/api/v1/rpa/workers/*/heartbeat"})
+		defer Configure(nil)
+		body := []byte(`{"password":"hunter2"}`)
+		mock := &excludedMockRecorder{}
+		db := noopDB()
+
+		// Excluded path with body — must early-return BEFORE consuming body
+		c, _ := gin.CreateTestContext(httptest.NewRecorder())
+		c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/rpa/workers/w-001/heartbeat", bytes.NewReader(body))
+		c.Request.Header.Set("Content-Type", "application/json")
+		RecordWithBody(c, mock, db, "RPA Worker", OperTypeOther)
+		assert.Equal(t, 0, mock.called, "heartbeat path must skip RecordAsync entirely")
+
+		// Body must still be readable (GetRawData was NOT called) so downstream
+		// SM2+SM4 decryption middleware and handler binding still work.
+		remaining, err := io.ReadAll(c.Request.Body)
+		assert.NoError(t, err)
+		assert.Equal(t, body, remaining, "request body must NOT be consumed on excluded path")
+
+		// Non-excluded path with body — must record via masking + restore
+		c2, _ := gin.CreateTestContext(httptest.NewRecorder())
+		c2.Request = httptest.NewRequest(http.MethodPost, "/api/v1/rpa/workers/register", bytes.NewReader(body))
+		c2.Request.Header.Set("Content-Type", "application/json")
+		RecordWithBody(c2, mock, db, "RPA Worker", OperTypeRegister)
+		assert.Equal(t, 1, mock.called, "register path must call RecordAsync via RecordWithBody")
+	})
 }

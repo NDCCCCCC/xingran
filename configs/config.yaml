@@ -110,6 +110,15 @@ security:
     # 中间件会从数据库动态读取配置，此处的 enabled 仅用于初始化检查
     # 实际开关由参数管理中的 "sys.request.encryption.enabled" 控制
 
+# 操作日志配置（Phase 35 OPERLOG-01..04）
+# exclude_paths: 排除写入 sys_oper_log 的请求路径（filepath.Match + /* 后缀通配，
+# 与 security.request_encryption.exclude_paths 语义完全一致）。
+# 默认仅排除 heartbeat；progress（任务进度审计）与 register（生命周期事件）保留。
+# 详情: .planning/phases/35-operlog-exclude-paths/
+operlog:
+  exclude_paths:
+    - "/api/v1/rpa/workers/*/heartbeat"
+
 # AD组同步配置
 ad_group_sync:
   enabled: false              # 是否启用组同步

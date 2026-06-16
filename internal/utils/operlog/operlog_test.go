@@ -246,3 +246,97 @@ func (s *stubOperLogSvc) RecordAsync(_ *gorm.DB, _ string, _ int, _ string, _ st
 	s.lastStatus = status
 	s.lastErrorMsg = errorMsg
 }
+
+// TestIsExcludedPath（Phase 35 OPERLOG-02 + OPERLOG-05）
+// 表驱动测试覆盖 filepath.Match + /* 后缀通配的所有关键语义:
+// exact match / /* single-segment wildcard / no-match / /list 误伤防护 /
+// 空列表 / 多模式 OR 语义 / 大小写敏感 / /* 不跨 /。
+func TestIsExcludedPath(t *testing.T) {
+	cases := []struct {
+		name     string
+		patterns []string
+		path     string
+		want     bool
+	}{
+		{
+			name:     "exact match",
+			patterns: []string{"/api/v1/rpa/workers/register"},
+			path:     "/api/v1/rpa/workers/register",
+			want:     true,
+		},
+		{
+			name:     "/* single-segment wildcard",
+			patterns: []string{"/api/v1/rpa/workers/*/heartbeat"},
+			path:     "/api/v1/rpa/workers/w-001/heartbeat",
+			want:     true,
+		},
+		{
+			name:     "/* does not cross /",
+			patterns: []string{"/api/v1/rpa/workers/*/heartbeat"},
+			path:     "/api/v1/rpa/workers/list",
+			want:     false,
+		},
+		{
+			name:     "/* matches any single worker id",
+			patterns: []string{"/api/v1/rpa/workers/*/heartbeat"},
+			path:     "/api/v1/rpa/workers/abc-def-123/heartbeat",
+			want:     true,
+		},
+		{
+			name:     "no match returns false",
+			patterns: []string{"/api/v1/rpa/workers/*/heartbeat"},
+			path:     "/api/v1/system/user/list",
+			want:     false,
+		},
+		{
+			name:     "empty list returns false",
+			patterns: []string{},
+			path:     "/anything/at/all",
+			want:     false,
+		},
+		{
+			name:     "/list mis-fire protection",
+			patterns: []string{"/api/v1/rpa/workers/*/heartbeat"},
+			path:     "/system/user/list",
+			want:     false,
+		},
+		{
+			name:     "multiple patterns OR-semantics",
+			patterns: []string{"/a", "/b/*", "/c/*/d"},
+			path:     "/c/x/d",
+			want:     true,
+		},
+		{
+			name:     "non-match with prefix only",
+			patterns: []string{"/api/v1/rpa/workers/*/heartbeat"},
+			path:     "/api/v1/rpa/workers",
+			want:     false,
+		},
+		{
+			name:     "trailing-slash only pattern",
+			patterns: []string{"/api/v1/upload/*"},
+			path:     "/api/v1/upload/",
+			want:     true,
+		},
+		{
+			name:     "trailing-slash with subpath",
+			patterns: []string{"/api/v1/upload/*"},
+			path:     "/api/v1/upload/foo/bar.jpeg",
+			want:     true,
+		},
+		{
+			name:     "case-sensitive match",
+			patterns: []string{"/API/v1/rpa/workers/*/heartbeat"},
+			path:     "/api/v1/rpa/workers/w-001/heartbeat",
+			want:     false,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			Configure(tc.patterns) // arrange
+			defer Configure(nil)   // cleanup so other tests start clean
+			got := IsExcludedPath(tc.path)
+			assert.Equal(t, tc.want, got, "patterns=%v path=%q", tc.patterns, tc.path)
+		})
+	}
+}

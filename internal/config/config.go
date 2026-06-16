@@ -23,6 +23,7 @@ type Config struct {
 	RPA      RPAConfig      `mapstructure:"rpa"`
 	VDI      VDIConfig      `mapstructure:"vdi"`
 	AD       ADTLSConfig    `mapstructure:"ad"`
+	OperLog  OperLogConfig  `mapstructure:"operlog"` // 操作日志配置（Phase 35）
 }
 
 // VDIConfig VDI 客户端配置
@@ -117,6 +118,14 @@ type RequestEncryptionConfig struct {
 	Enabled           bool     `mapstructure:"enabled"`            // 是否启用
 	ExcludePaths      []string `mapstructure:"exclude_paths"`      // 排除路径
 	RequireEncryption bool     `mapstructure:"require_encryption"` // 是否强制加密
+}
+
+// OperLogConfig 操作日志配置（Phase 35 OPERLOG-01..04）
+type OperLogConfig struct {
+	// ExcludePaths 排除写入 sys_oper_log 的请求路径。
+	// 匹配语义: filepath.Match + /* 后缀通配,与 security.request_encryption.exclude_paths 完全一致。
+	// 默认包含 /api/v1/rpa/workers/*/heartbeat（30s/Worker 高频心跳写入会淹没日志表）。
+	ExcludePaths []string `mapstructure:"exclude_paths"`
 }
 
 // BaiduConfig 百度地图配置

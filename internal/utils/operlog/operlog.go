@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"io"
 	"log"
+	"path/filepath"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -77,6 +78,47 @@ const maxFilteredBytes = 8192
 type Recorder interface {
 	RecordAsync(db *gorm.DB, title string, businessType int, method, requestMethod, operUrl string,
 		operatorName, deptName *string, operIP *string, operParam, jsonResult, errorMsg *string, status int, costTime int64)
+}
+
+// ExcludedPaths is the active exclude list (Phase 35 OPERLOG-01). Configure()
+// replaces it at startup; IsExcludedPath reads it. Exported so debug
+// introspection (e.g. pprof, /debug vars) can inspect the live list without
+// poking private state. Not safe for concurrent mutation — single startup call.
+var ExcludedPaths []string
+
+// Configure replaces the package-level exclude list. Call exactly once at
+// startup from core.New() before any handler may invoke Record or
+// RecordWithBody. Subsequent calls overwrite the list (used by tests for
+// cleanup via `defer Configure(nil)`).
+func Configure(paths []string) {
+	ExcludedPaths = paths
+}
+
+// IsExcludedPath returns true if path matches any pattern in ExcludedPaths
+// using filepath.Match + /* suffix wildcard semantics (mirrors
+// pkg/middleware/request_decryption.go:294-315 isExcludedPath so the two
+// exclude lists share one mental model).
+//
+// filepath.Match's `*` is a single-segment wildcard that does NOT cross `/`,
+// so "/api/v1/rpa/workers/*/heartbeat" matches any worker id but will NOT
+// accidentally match "/api/v1/rpa/workers/list" or any path under a deeper
+// segment.
+func IsExcludedPath(path string) bool {
+	for _, pattern := range ExcludedPaths {
+		if pattern == path {
+			return true
+		}
+		if matched, _ := filepath.Match(pattern, path); matched {
+			return true
+		}
+		// /* suffix means "this prefix plus anything starting with / or empty".
+		if prefix, ok := strings.CutSuffix(pattern, "/*"); ok {
+			if rest := strings.TrimPrefix(path, prefix); rest != path && (rest == "" || strings.HasPrefix(rest, "/")) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // sensitiveKeys is the case-insensitive keyword set masked by
@@ -176,6 +218,13 @@ func Record(c *gin.Context, operLogSvc Recorder, db *gorm.DB, module string, ope
 		_ = recover()
 	}()
 
+	// Path-based early return (Phase 35 OPERLOG-01): configured high-frequency
+	// endpoints (e.g. rpa-worker heartbeat at 30s/Worker) skip logging to
+	// avoid drowning sys_oper_log in low-value audit rows.
+	if c != nil && c.Request != nil && IsExcludedPath(c.Request.URL.Path) {
+		return
+	}
+
 	if c == nil || operLogSvc == nil || db == nil {
 		return
 	}
@@ -224,6 +273,15 @@ func RecordWithBody(c *gin.Context, operLogSvc Recorder, db *gorm.DB, module str
 	defer func() {
 		_ = recover()
 	}()
+
+	// Path-based early return (Phase 35 OPERLOG-01): MUST happen BEFORE
+	// c.GetRawData() below, otherwise GetRawData would silently consume the
+	// request body even though we end up not logging anything — which would
+	// break downstream SM2+SM4 decryption middleware and handler body binding
+	// for excluded endpoints.
+	if c != nil && c.Request != nil && IsExcludedPath(c.Request.URL.Path) {
+		return
+	}
 
 	if c == nil || c.Request == nil {
 		Record(c, operLogSvc, db, module, operType)
