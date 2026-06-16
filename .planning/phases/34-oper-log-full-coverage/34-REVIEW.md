@@ -256,3 +256,30 @@ correct but lives in the wrong layer.
 - /gsd:code-review 34 --fix — auto-apply WR-001 / WR-002 / WR-003 fixes
 - /gsd:code-review 34 --fix --all — also apply the three Info fixes (camelCase
   tests, nil-check shim, coverage harness rename)
+
+## Fix Status (post `/gsd:code-review 34 --fix`)
+
+3 atomic fix commits applied to `main`:
+
+| Commit  | Scope | Files |
+|---------|-------|-------|
+| `4da0289` | feat(34-review): add `OperTypeUnlock` constant (WR-001) | `operlog.go` + `regression_test.go` (24→25) + `user_unlock_handler.go` + `CLAUDE.md` + `docs/开发规范.md` + `operlog_e2e_verify.sh` |
+| `822f83d` | fix(34-review): mask export request params (WR-002) | `network_export_handler.go` (9 record sites) |
+| `1a52723` | fix(34-review): persist `publish_status` (WR-003) | `notice_handler.go` + `notice_service.go` + `notice_cache_impl.go` + `notice_requests.go` |
+
+**Verification:** `go build ./...` clean; `go test ./internal/utils/operlog/...` PASS
+(constant stability + count=25 + signature + keyword set all green).
+
+3 Info findings (IN-001 / IN-002 / IN-003) deliberately NOT auto-applied — see
+the user's selection. Track for a future plan-phase.
+
+## Post-Fix Diagnostics
+
+After the 3 fix commits, the linter surfaced a `default` severity style
+suggestion on the regression test introduced in Phase 34 (not modified by
+this review's fixes):
+
+- `internal/utils/operlog/regression_test.go:146` — `for i := 0; i < 5; i++`
+  can be modernized to `for i := range 5` (Go 1.22+ range-over-int). This is
+  a stylistic suggestion, not a defect, and is out of scope for the WR-001
+  follow-up. Track for the next `lint:fix` pass.
