@@ -52,6 +52,16 @@ export const MARKER_COLORS = {
   BOUNDARY: '#1890ff',
 } as const;
 
+// 3D 楼宇视图状态色（业务专属色，暂不归入 design-system）
+// 后续如需主题切换可考虑迁移到 design-system/tokens/colors.ts
+export const THREE_D_STATUS_COLORS = {
+  ANOMALY: { MAIN: '#ff6b35', BORDER: '#ff4d4f' },
+  INACTIVE: { MAIN: '#9e9e9e', BORDER: '#757575' },
+  ABNORMAL: { MAIN: '#ff4d4f', BORDER: '#ff4d4f' },
+  BOUNDARY: { MAIN: '#1890ff', BORDER: '#096dd9' },
+  MAINTENANCE: { MAIN: '#f57c00', BORDER: '#d46b08' },
+} as const;
+
 // 3D 楼层颜色配置
 export const FLOOR_3D_COLORS = {
   STOPPED: 0xd32f2f,      // 停用 - 深红色
