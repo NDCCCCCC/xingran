@@ -24,7 +24,7 @@ import {
 } from "antd";
 import {
   ReloadOutlined,
-import { SyncOutlined, EditOutlined, UserAddOutlined } from "@ant-design/icons";
+} from "@ant-design/icons";
 import { post } from "@/lib/api";
 import type { VirtualMachine, VMListParams, CreateVMRequest, VDIServer, VDIResourceGroup, VDIResource, VDIPlatform, RunPosition, VDIStorage, VDINetwork } from "@/types/vdi";
 import type { ColumnsType } from "antd/es/table";
