@@ -104,21 +104,16 @@ const TaskManagement: FC = () => {
   }, [refreshData]);
 
   const handleModalOk = useCallback(async (values: Record<string, unknown>) => {
-    try {
-      if (editingTask) {
-        await post(`/rpa/tasks/${editingTask.id}/update`, values);
-        showSuccessMessage("更新");
-      } else {
-        await post("/rpa/tasks", values);
-        showSuccessMessage("创建");
-      }
-      setModalVisible(false);
-      taskForm.resetFields();
-      refreshData();
-    } catch (error) {
-      // 失败时不关闭模态框
-      throw error;
+    if (editingTask) {
+      await post(`/rpa/tasks/${editingTask.id}/update`, values);
+      showSuccessMessage("更新");
+    } else {
+      await post("/rpa/tasks", values);
+      showSuccessMessage("创建");
     }
+    setModalVisible(false);
+    taskForm.resetFields();
+    refreshData();
   }, [editingTask, setModalVisible, taskForm, refreshData]);
 
   const handleModalCancel = useCallback(() => {

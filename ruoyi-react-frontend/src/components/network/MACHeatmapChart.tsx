@@ -34,21 +34,9 @@ const MACHeatmapChart: React.FC<MACHeatmapChartProps> = ({
   loading = false,
   isMobile = false,
 }) => {
-  if (loading) {
-    return (
-      <div style={{ textAlign: "center", padding: 60 }}>
-        <Spin tip="加载中..." />
-      </div>
-    );
-  }
-
-  if (!data?.cells || data.cells.length === 0) {
-    return <Empty description="暂无热力图数据" />;
-  }
-
-  // 桌面端: ECharts heatmap
+  // 桌面端: ECharts heatmap (hooks 必须无条件调用,放在 early return 之前)
   const desktopOption: EChartsOption = useMemo(() => {
-    const cells = data.cells;
+    const cells = data?.cells ?? [];
     const maxCount = Math.max(...cells.map((c) => c.changeCount), 1);
 
     // 提取 x (端口) + y (设备) 维度
@@ -107,6 +95,18 @@ const MACHeatmapChart: React.FC<MACHeatmapChartProps> = ({
       ],
     };
   }, [data]);
+
+  if (loading) {
+    return (
+      <div style={{ textAlign: "center", padding: 60 }}>
+        <Spin tip="加载中..." />
+      </div>
+    );
+  }
+
+  if (!data?.cells || data.cells.length === 0) {
+    return <Empty description="暂无热力图数据" />;
+  }
 
   if (isMobile) {
     // 移动端: Top-20 端口列表 + 颜色卡片

@@ -98,7 +98,7 @@ const Sidebar = () => {
   }, [menus]);
 
   // 构建菜单路径映射表
-  const menuPathMap = useMemo(() => buildMenuPathMap(menus), [JSON.stringify(menus)]);
+  const menuPathMap = useMemo(() => buildMenuPathMap(menus), [menus]);
 
   /**
    * 构建完整的父级菜单链
@@ -192,12 +192,13 @@ const Sidebar = () => {
 
     switch (menuLevel) {
       case 1:
-      case undefined:
+      case undefined: {
         // 一级菜单或以 top_ 开头的菜单：应用手风琴效果
         // 保留新展开的一级菜单和所有非一级菜单，移除其他一级菜单
         const nonTopLevelKeys = keys.filter(key => !isTopLevelMenu(key, menuPathMap));
         setOpenKeys([latestOpenKey, ...nonTopLevelKeys]);
         break;
+      }
 
       case 2: {
         // 二级菜单：应用手风琴效果（仅在同一一级菜单下）

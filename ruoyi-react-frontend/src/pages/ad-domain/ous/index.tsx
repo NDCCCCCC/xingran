@@ -47,7 +47,7 @@ import { useDeptTree, type DeptTreeNode } from "@/hooks/useDeptTree";
 
 import type { FC } from "react";
 
-interface Department extends DeptTreeNode {}
+type Department = DeptTreeNode;
 
 const ADOUPage: FC = () => {
   const { configs, selectedConfig, setSelectedConfig } = useADConfigs({

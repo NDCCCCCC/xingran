@@ -226,10 +226,12 @@ export function getNextRunTimes(expression: string, count: number = 5): Date[] {
 
     // 解析 cron 表达式，必须正确传递 hasSeconds 参数
     // @ts-expect-error - later库类型定义不完整，但运行时正常
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const schedule = later.parse.cron(normalizedExpression, hasSeconds);
 
     // 使用 later.schedule(schedule).next(count) 一次性获取多次执行时间
     // @ts-expect-error - later库类型定义不完整，但运行时正常
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const times = later.schedule(schedule).next(count);
 
     // 确保返回的是 Date 数组

@@ -29,21 +29,23 @@ export const applyWidgetDataFilter = (
 	}
 
 	switch (filterType) {
-		case "dept":
+		case "dept": {
 			// 按部门过滤
 			const field = filterConfig.field || "deptId";
 			return {
 				...baseParams,
 				[field]: user.deptId,
 			};
+		}
 
-		case "user":
+		case "user": {
 			// 按用户过滤
 			const userField = filterConfig.field || "userId";
 			return {
 				...baseParams,
 				[userField]: user.id,
 			};
+		}
 
 		case "custom":
 			// 自定义过滤

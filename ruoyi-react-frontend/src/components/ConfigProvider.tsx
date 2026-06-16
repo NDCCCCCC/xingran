@@ -70,7 +70,7 @@ export const ConfigProvider: FC<ConfigProviderProps> = ({ children }) => {
 		};
 	}, []);
 
-	return <>{children}</>;
+	return children;
 };
 
 export default ConfigProvider;

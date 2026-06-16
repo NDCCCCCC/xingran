@@ -65,15 +65,10 @@ export function WorkstationEditModal({
       title={editingWorkstation ? "编辑工位" : "新增工位"}
       open={open}
       onOk={async () => {
-        try {
-          // 验证表单并获取值
-          const values = await form.validateFields();
-          // 将表单值传递给父组件的 onOk 处理
-          await onOk(values);
-        } catch (error) {
-          // 表单验证失败，不关闭模态框
-          throw error;
-        }
+        // 验证表单并获取值
+        const values = await form.validateFields();
+        // 将表单值传递给父组件的 onOk 处理
+        await onOk(values);
       }}
       onCancel={() => {
         onCancel();

@@ -760,7 +760,6 @@ const MACHistoryPage: React.FC = () => {
 
       {/* 列配置抽屉(D-08):此处仅占位,具体抽屉 UI 由 14-05 提供 */}
       {/* TODO(14-05):挂载 ColumnConfigModal,传入 config / saveConfig / resetConfig */}
-      {false && <div data-config-hint={JSON.stringify(config.slice(0, 2))} aria-hidden />}
     </div>
   );
 };

@@ -203,33 +203,29 @@ export function TaskEditModal({
   }, []);
 
   const handleOk = useCallback(async () => {
-    try {
-      const values = await form.validateFields();
+    const values = await form.validateFields();
 
-      // 构建 script 数组格式（后端期望的是 ScriptAction 数组）
-      const script = actions.map(action => ({
-        type: action.type,
-        selector: action.selector?.value || "",
-        value: action.params?.value as string || "",
-        attributes: {
-          description: action.description,
-          ...(action.params?.duration !== undefined && { duration: action.params.duration }),
-        },
-        timeout: action.timeout || 30000,
-        retry: 0,
-      }));
+    // 构建 script 数组格式（后端期望的是 ScriptAction 数组）
+    const script = actions.map(action => ({
+      type: action.type,
+      selector: action.selector?.value || "",
+      value: action.params?.value as string || "",
+      attributes: {
+        description: action.description,
+        ...(action.params?.duration !== undefined && { duration: action.params.duration }),
+      },
+      timeout: action.timeout || 30000,
+      retry: 0,
+    }));
 
-      // 将 tags 数组转换为逗号分隔的字符串
-      const tags = Array.isArray(values.tags) ? values.tags.join(",") : "";
+    // 将 tags 数组转换为逗号分隔的字符串
+    const tags = Array.isArray(values.tags) ? values.tags.join(",") : "";
 
-      await onOk({
-        ...values,
-        tags,
-        script,
-      });
-    } catch (error) {
-      throw error;
-    }
+    await onOk({
+      ...values,
+      tags,
+      script,
+    });
   }, [form, actions, onOk]);
 
   return (

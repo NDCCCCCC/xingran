@@ -3,7 +3,7 @@
  * 根据后端菜单数据动态生成路由配置
  */
 
-import { useMemo, Suspense, useEffect, useState } from "react";
+import { useMemo, Suspense, useEffect, useRef, useState } from "react";
 import { Routes, Route, Navigate, Outlet, useLocation } from "react-router-dom";
 import { useMenuStore } from "@/store/menuStore";
 import { useAuthStore } from "@/store/authStore";
@@ -45,9 +45,8 @@ export const clearLastPath = (): void => {
   }
 };
 
-// 路由缓存
-let cachedRoutes: MenuRouteConfig[] | null = null;
-let cachedMenusCount = 0;
+// 路由缓存（移入组件 useRef,避免模块级可变状态被组件改写）
+// 注意:这意味着每个 DynamicRoutes 实例有独立缓存;如需跨实例共享,需要提升到 store
 
 const DASHBOARD_PATH = "dashboard";
 
@@ -108,6 +107,10 @@ export function DynamicRoutes() {
   const { isAuthenticated, initialized } = useAuthStore();
   const location = useLocation();
 
+  // 路由缓存 (使用 useRef,避免模块级可变状态)
+  const cachedRoutesRef = useRef<MenuRouteConfig[] | null>(null);
+  const cachedMenusCountRef = useRef(0);
+
   // 使用 state 来保存上次访问的路径
   const [lastPath, setLastPath] = useState<string | null>(() => getLastPath());
 
@@ -143,13 +146,14 @@ export function DynamicRoutes() {
       return [];
     }
 
-    const configs = cachedRoutes && cachedMenusCount === allMenus.length
+    const cachedRoutes = cachedRoutesRef.current;
+    const configs = cachedRoutes && cachedMenusCountRef.current === allMenus.length
       ? cachedRoutes
       : RouteGenerator.generate(allMenus);
 
-    if (!cachedRoutes || cachedMenusCount !== allMenus.length) {
-      cachedRoutes = configs;
-      cachedMenusCount = allMenus.length;
+    if (!cachedRoutes || cachedMenusCountRef.current !== allMenus.length) {
+      cachedRoutesRef.current = configs;
+      cachedMenusCountRef.current = allMenus.length;
     }
 
     return configs.map(createLazyRoute).filter(Boolean);

@@ -47,12 +47,7 @@ const MACTrajectoryChart: React.FC<MACTrajectoryChartProps> = ({
   dataZoomStart = 66,
   dataZoomEnd = 100,
 }) => {
-  // 处理错误
-  if (!loading && (!data || data.length === 0)) {
-    return <Empty description="暂无轨迹数据" />;
-  }
-
-  // ECharts配置
+  // ECharts 配置 (hooks 必须无条件调用,放在 early return 之前)
   const option: EChartsOption = useMemo(() => {
     if (!data || data.length === 0) return {};
 
@@ -170,6 +165,11 @@ const MACTrajectoryChart: React.FC<MACTrajectoryChartProps> = ({
       ],
     };
   }, [data, dataZoomStart, dataZoomEnd]);
+
+  // 处理空数据
+  if (!loading && (!data || data.length === 0)) {
+    return <Empty description="暂无轨迹数据" />;
+  }
 
   if (loading) {
     return (

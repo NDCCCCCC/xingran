@@ -210,25 +210,21 @@ const WorkstationManagement: FC = () => {
   }, [refreshData]);
 
   const handleWorkstationModalOk = useCallback(async (values: Record<string, unknown>) => {
-    try {
-      const submitValues = { ...values };
-      if (Array.isArray(submitValues.floorId)) {
-        submitValues.floorId = submitValues.floorId[submitValues.floorId.length - 1];
-      }
-
-      if (editingWorkstation) {
-        await workstationApi.update(editingWorkstation.id, submitValues);
-        showSuccessMessage("更新");
-      } else {
-        await workstationApi.create(submitValues);
-        showSuccessMessage("创建");
-      }
-      closeModal(workstationForm);
-      setModalVisible(false);
-      handleSuccess();
-    } catch (error) {
-      throw error;
+    const submitValues = { ...values };
+    if (Array.isArray(submitValues.floorId)) {
+      submitValues.floorId = submitValues.floorId[submitValues.floorId.length - 1];
     }
+
+    if (editingWorkstation) {
+      await workstationApi.update(editingWorkstation.id, submitValues);
+      showSuccessMessage("更新");
+    } else {
+      await workstationApi.create(submitValues);
+      showSuccessMessage("创建");
+    }
+    closeModal(workstationForm);
+    setModalVisible(false);
+    handleSuccess();
   }, [editingWorkstation, closeModal, workstationForm, setModalVisible, handleSuccess]);
 
   // Sync refs with current callbacks
