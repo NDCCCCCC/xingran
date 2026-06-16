@@ -19,6 +19,9 @@ scripts/tools/
 tmpclaude-*
 .cache/
 
+# Claude 并行 agent worktree 快照（临时状态，不应入库）
+.claude/worktrees/
+
 # 环境变量文件
 .env
 .env.local
