@@ -643,6 +643,7 @@ const AssetList: FC = () => {
         rowSelection={{
           selectedRowKeys,
           onChange: setSelectedRowKeys,
+          columnWidth: 50,
         }}
       />
 
