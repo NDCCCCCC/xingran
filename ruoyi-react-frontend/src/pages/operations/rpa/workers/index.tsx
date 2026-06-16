@@ -114,7 +114,7 @@ const WorkerMonitor: FC = () => {
               title="Worker 总数"
               value={stats.total}
               prefix={<CloudServerOutlined />}
-              styles={{ content: { color: '#1890ff' } }}
+              styles={{ content: { color: 'var(--theme-info, #1890ff)' } }}
             />
           </Card>
         </Col>
@@ -124,7 +124,7 @@ const WorkerMonitor: FC = () => {
               title="在线"
               value={stats.online}
               prefix={<CheckCircleOutlined />}
-              styles={{ content: { color: '#52c41a' } }}
+              styles={{ content: { color: 'var(--theme-success, #52c41a)' } }}
             />
           </Card>
         </Col>
@@ -134,7 +134,7 @@ const WorkerMonitor: FC = () => {
               title="忙碌"
               value={stats.busy}
               prefix={<LoadingOutlined />}
-              styles={{ content: { color: '#1890ff' } }}
+              styles={{ content: { color: 'var(--theme-info, #1890ff)' } }}
             />
           </Card>
         </Col>
@@ -144,7 +144,7 @@ const WorkerMonitor: FC = () => {
               title="离线"
               value={stats.offline}
               prefix={<ClockCircleOutlined />}
-              styles={{ content: { color: '#8c8c8c' } }}
+              styles={{ content: { color: 'var(--theme-text-tertiary, #8c8c8c)' } }}
             />
           </Card>
         </Col>

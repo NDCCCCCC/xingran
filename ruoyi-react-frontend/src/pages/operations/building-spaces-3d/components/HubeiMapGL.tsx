@@ -184,7 +184,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
       boundaries.forEach((boundaryStr: string) => {
         const points = parseBoundaryPoints(boundaryStr, BMapGL);
         const polygon = new BMapGL.Polygon(points, {
-          strokeColor: '#1890ff',
+          strokeColor: 'var(--theme-info, #1890ff)',
           strokeWeight: 4,
           strokeOpacity: 1,
           fillColor: 'transparent',
@@ -203,7 +203,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
       (coord) => new BMapGL.Point(coord[0], coord[1])
     );
     const polygon = new BMapGL.Polygon(points, {
-      strokeColor: '#1890ff',
+      strokeColor: 'var(--theme-info, #1890ff)',
       strokeWeight: 4,
       strokeOpacity: 0.8,
       fillColor: 'transparent',
@@ -442,10 +442,10 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
 
     const content = `
       <div style="padding: 12px; min-width: 260px;">
-        <h3 style="margin: 0 0 12px 0; font-size: 16px; color: #1890ff; border-bottom: 2px solid #1890ff; padding-bottom: 8px;">
+        <h3 style="margin: 0 0 12px 0; font-size: 16px; color: var(--theme-info, #1890ff); border-bottom: 2px solid #1890ff; padding-bottom: 8px;">
           ${building.name}
         </h3>
-        <div style="font-size: 13px; color: #666; line-height: 1.8;">
+        <div style="font-size: 13px; color: var(--theme-text-tertiary, #666); line-height: 1.8;">
           <div>📌 ${building.address || '暂无地址'}</div>
           <div style="margin-top: 8px;">
             <span style="display: inline-block; padding: 2px 10px; background: ${statusBg}; color: ${statusColor}; border-radius: 12px; font-size: 12px; font-weight: 500;">
@@ -654,7 +654,7 @@ const MapInfoPanel: React.FC<MapInfoPanelProps> = ({
     </div>
     <div>
       缩放级别:{' '}
-      <Badge count={currentZoom} showZero style={{ backgroundColor: '#1890ff' }} />
+      <Badge count={currentZoom} showZero style={{ backgroundColor: 'var(--theme-info, #1890ff)' }} />
     </div>
     <div>
       3D 视角:
@@ -662,7 +662,7 @@ const MapInfoPanel: React.FC<MapInfoPanelProps> = ({
         count={is3DMode ? `${currentTilt}°` : '关闭'}
         showZero
         style={{
-          backgroundColor: is3DMode ? '#722ed1' : '#d9d9d9',
+          backgroundColor: is3DMode ? 'var(--theme-purple, #722ed1)' : '#d9d9d9',
           marginLeft: 8,
         }}
       />

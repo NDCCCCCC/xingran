@@ -455,7 +455,7 @@ const FloorManagement: FC = () => {
           show={total > 10}
           items={[
             { title: '总楼层数', value: statistics.total },
-            { title: '正常', value: statistics.active, styles: { content: { color: '#52c41a' } } },
+            { title: '正常', value: statistics.active, styles: { content: { color: 'var(--theme-success, #52c41a)' } } },
             { title: '停用', value: statistics.inactive, styles: { content: { color: 'var(--theme-error, #ff4d4f)' } } },
           ]}
         />

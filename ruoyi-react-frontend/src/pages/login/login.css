@@ -41,12 +41,12 @@
 }
 
 .auth-mode-selector .ant-radio-wrapper:hover {
-  border-color: #1890ff;
+  border-color: var(--theme-info, #1890ff);
   background-color: #f0f7ff;
 }
 
 .auth-mode-selector .ant-radio-wrapper-checked {
-  border-color: #1890ff;
+  border-color: var(--theme-info, #1890ff);
   background-color: #e6f7ff;
 }
 

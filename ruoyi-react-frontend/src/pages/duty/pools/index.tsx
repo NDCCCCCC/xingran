@@ -371,10 +371,10 @@ const DutyPoolPage: FC = () => {
             <Statistic title="总值班池" value={stats.total} prefix={<TeamOutlined />} />
           </Col>
           <Col span={6}>
-            <Statistic title="启用中" value={stats.enabled} styles={{ content: { color: '#3f8600' } }} />
+            <Statistic title="启用中" value={stats.enabled} styles={{ content: { color: 'var(--theme-success, #3f8600)' } }} />
           </Col>
           <Col span={6}>
-            <Statistic title="已停用" value={stats.disabled} styles={{ content: { color: '#cf1322' } }} />
+            <Statistic title="已停用" value={stats.disabled} styles={{ content: { color: 'var(--theme-error, #cf1322)' } }} />
           </Col>
           <Col span={6}>
             <Statistic title="总成员数" value={stats.totalMembers} prefix={<UserOutlined />} />

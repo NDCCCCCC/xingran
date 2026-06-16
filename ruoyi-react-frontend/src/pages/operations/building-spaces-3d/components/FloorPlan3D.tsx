@@ -416,8 +416,8 @@ const WorkstationTooltip: React.FC<WorkstationTooltipProps> = ({
   type,
 }) => {
   const statusColor =
-    status === 0 ? '#52c41a' : status === 1 ? '#ff4d4f' : '#faad14';
-  const typeColor = type === 0 ? '#1890ff' : type === 1 ? '#722ed1' : '#13c2c2';
+    status === 0 ? 'var(--theme-success, #52c41a)' : status === 1 ? '#ff4d4f' : 'var(--theme-warning, #faad14)';
+  const typeColor = type === 0 ? 'var(--theme-info, #1890ff)' : type === 1 ? 'var(--theme-purple, #722ed1)' : '#13c2c2';
 
   return (
     <div style={styles.tooltip}>

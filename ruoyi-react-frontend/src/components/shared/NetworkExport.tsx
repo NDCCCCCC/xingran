@@ -123,7 +123,7 @@ const NetworkExport: FC<NetworkExportProps> = ({
           <Space direction="vertical" style={{ width: '100%' }}>
             <Radio value="filtered">
               筛选导出 — 按当前筛选条件导出所有匹配数据
-              {Object.keys(filters).length > 0 && <span style={{ color: '#1890ff', marginLeft: 8 }}>(已设置筛选条件)</span>}
+              {Object.keys(filters).length > 0 && <span style={{ color: 'var(--theme-info, #1890ff)', marginLeft: 8 }}>(已设置筛选条件)</span>}
             </Radio>
             <Radio value="currentPage">
               导出当前页 — 仅导出当前页面显示的数据（第{current}页，每页{pageSize}条）

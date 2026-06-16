@@ -300,7 +300,7 @@ const JobManager: FC = () => {
                 <Statistic
                   title="成功次数"
                   value={jobLogs.filter(log => log.status === 0).length}
-                  styles={{ content: { color: '#3f8600' } }}
+                  styles={{ content: { color: 'var(--theme-success, #3f8600)' } }}
                 />
               </Card>
             </Col>
@@ -309,7 +309,7 @@ const JobManager: FC = () => {
                 <Statistic
                   title="失败次数"
                   value={jobLogs.filter(log => log.status === 1).length}
-                  styles={{ content: { color: '#cf1322' } }}
+                  styles={{ content: { color: 'var(--theme-error, #cf1322)' } }}
                 />
               </Card>
             </Col>

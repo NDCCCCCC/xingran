@@ -242,7 +242,7 @@ const MenuManagement: FC = () => {
             <Statistic
               title="目录数量"
               value={statistics.directories}
-              styles={{ content: { color: '#1890ff' } }}
+              styles={{ content: { color: 'var(--theme-info, #1890ff)' } }}
               prefix={<FolderOutlined />}
             />
           </Card>
@@ -252,7 +252,7 @@ const MenuManagement: FC = () => {
             <Statistic
               title="菜单数量"
               value={statistics.menus}
-              styles={{ content: { color: '#52c41a' } }}
+              styles={{ content: { color: 'var(--theme-success, #52c41a)' } }}
               prefix={<FileOutlined />}
             />
           </Card>

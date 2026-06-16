@@ -210,7 +210,7 @@ const DeviceDiscoveryPage: FC = () => {
             <Statistic
               title="扫描中"
               value={statistics.running}
-              styles={{ content: { color: '#1890ff' } }}
+              styles={{ content: { color: 'var(--theme-info, #1890ff)' } }}
               prefix={<CloudServerOutlined />}
             />
           </Card>
@@ -220,7 +220,7 @@ const DeviceDiscoveryPage: FC = () => {
             <Statistic
               title="已完成"
               value={statistics.completed}
-              styles={{ content: { color: '#52c41a' } }}
+              styles={{ content: { color: 'var(--theme-success, #52c41a)' } }}
               prefix={<CheckCircleOutlined />}
             />
           </Card>

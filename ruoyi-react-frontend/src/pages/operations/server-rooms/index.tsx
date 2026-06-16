@@ -333,8 +333,8 @@ const ServerRoomManagement: FC = () => {
           show={total > 10}
           items={[
             { title: '总机房数', value: statistics.total, prefix: <CheckCircleOutlined /> },
-            { title: '正常机房', value: statistics.active, styles: { content: { color: '#3f8600' } }, prefix: <CheckCircleOutlined /> },
-            { title: '停用机房', value: statistics.inactive, styles: { content: { color: '#cf1322' } }, prefix: <StopOutlined /> },
+            { title: '正常机房', value: statistics.active, styles: { content: { color: 'var(--theme-success, #3f8600)' } }, prefix: <CheckCircleOutlined /> },
+            { title: '停用机房', value: statistics.inactive, styles: { content: { color: 'var(--theme-error, #cf1322)' } }, prefix: <StopOutlined /> },
           ]}
         />
         <Card style={{ marginBottom: 16 }}>

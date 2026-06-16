@@ -87,7 +87,7 @@ export const FloorPlanEditorView: FC<FloorPlanEditorViewProps> = ({
         extra={
           <Space size="middle">
             <Space size="small" style={{ display: 'flex', alignItems: 'center' }}>
-              <BuildOutlined style={{ color: '#1890ff' }} />
+              <BuildOutlined style={{ color: 'var(--theme-info, #1890ff)' }} />
               <DepartmentTreeSelect
                 style={{ width: 180 }}
                 placeholder="选择机构"
@@ -100,7 +100,7 @@ export const FloorPlanEditorView: FC<FloorPlanEditorViewProps> = ({
             </Space>
 
             <Space size="small" style={{ display: 'flex', alignItems: 'center' }}>
-              <AppstoreOutlined style={{ color: '#722ed1' }} />
+              <AppstoreOutlined style={{ color: 'var(--theme-purple, #722ed1)' }} />
               <Select
                 style={{ width: 150 }}
                 placeholder="选择楼宇"
@@ -116,7 +116,7 @@ export const FloorPlanEditorView: FC<FloorPlanEditorViewProps> = ({
             </Space>
 
             <Space size="small" style={{ display: 'flex', alignItems: 'center' }}>
-              <AppstoreOutlined style={{ color: '#52c41a' }} />
+              <AppstoreOutlined style={{ color: 'var(--theme-success, #52c41a)' }} />
               <Select
                 style={{ width: 150 }}
                 placeholder="选择楼层"

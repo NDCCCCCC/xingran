@@ -203,10 +203,10 @@ interface WorkstationStatsCardProps {
  * 当前策略：将字面量提升为命名常量，便于后续统一替换为 token / CSS 变量。
  */
 const WORKSTATION_STAT_COLORS = {
-  primary: '#1890ff',   // 总工位 - AntD colorPrimary
-  success: '#52c41a',   // 空闲工位 - AntD colorSuccess
+  primary: 'var(--theme-info, #1890ff)',   // 总工位 - AntD colorPrimary
+  success: 'var(--theme-success, #52c41a)',   // 空闲工位 - AntD colorSuccess
   error: '#ff4d4f',     // 占用工位 - AntD colorError
-  purple: '#722ed1',    // 灵活工位 - AntD 紫色
+  purple: 'var(--theme-purple, #722ed1)',    // 灵活工位 - AntD 紫色
 } as const;
 
 const WorkstationStatsCard: React.FC<WorkstationStatsCardProps> = ({ stats }) => (

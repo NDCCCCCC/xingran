@@ -216,11 +216,11 @@ export function getWorkstationColor(workstation: {
 export function getWorkstationStatusColorCSS(status: number): string {
   switch (status) {
     case 0:
-      return '#52c41a';
+      return 'var(--theme-success, #52c41a)';
     case 1:
       return '#ff4d4f';
     case 2:
-      return '#faad14';
+      return 'var(--theme-warning, #faad14)';
     default:
       return '#d9d9d9';
   }
@@ -234,9 +234,9 @@ export function getWorkstationStatusColorCSS(status: number): string {
 export function getWorkstationTypeColorCSS(type: number): string {
   switch (type) {
     case 0:
-      return '#1890ff';
+      return 'var(--theme-info, #1890ff)';
     case 1:
-      return '#722ed1';
+      return 'var(--theme-purple, #722ed1)';
     case 2:
       return '#13c2c2';
     default:

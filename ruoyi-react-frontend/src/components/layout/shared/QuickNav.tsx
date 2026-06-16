@@ -16,11 +16,11 @@ interface QuickNavItem {
 }
 
 const quickNavItems: QuickNavItem[] = [
-  { title: '仪表盘', icon: '📊', path: DASHBOARD, color: '#3b82f6' },
+  { title: '仪表盘', icon: '📊', path: DASHBOARD, color: 'var(--theme-info, #3b82f6)' },
   { title: '用户管理', icon: '👥', path: '/system/user', color: '#10b981' },
   { title: '菜单管理', icon: '📋', path: '/system/menu', color: '#f59e0b' },
   { title: '系统监控', icon: '📈', path: MONITOR_DASHBOARD, color: '#ef4444' },
-  { title: '设备管理', icon: '🌐', path: '/network/devices', color: '#8b5cf6' },
+  { title: '设备管理', icon: '🌐', path: '/network/devices', color: 'var(--theme-purple, #8b5cf6)' },
   { title: '我的值班', icon: '📅', path: '/duty/my-duty', color: '#ec4899' },
 ];
 

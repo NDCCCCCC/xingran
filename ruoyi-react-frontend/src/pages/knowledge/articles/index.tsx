@@ -147,10 +147,10 @@ const KnowledgeArticlePage: FC = () => {
               <Statistic title="总文章" value={statistics.total} prefix={<FileTextOutlined />} />
             </Col>
             <Col span={5}>
-              <Statistic title="草稿" value={statistics.draft} styles={{ content: { color: '#faad14' } }} />
+              <Statistic title="草稿" value={statistics.draft} styles={{ content: { color: 'var(--theme-warning, #faad14)' } }} />
             </Col>
             <Col span={5}>
-              <Statistic title="已发布" value={statistics.published} styles={{ content: { color: '#52c41a' } }} />
+              <Statistic title="已发布" value={statistics.published} styles={{ content: { color: 'var(--theme-success, #52c41a)' } }} />
             </Col>
             <Col span={4}>
               <Statistic title="总浏览" value={statistics.totalViews} />

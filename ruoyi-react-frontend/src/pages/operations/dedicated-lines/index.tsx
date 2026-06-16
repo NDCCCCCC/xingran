@@ -300,9 +300,9 @@ const DedicatedLineManagement: FC = () => {
         show={total > 10}
         items={[
           { title: '总专线数', value: statistics.total, prefix: <LineChartOutlined /> },
-          { title: '正常', value: statistics.normal, styles: { content: { color: '#3f8600' } }, prefix: <CheckCircleOutlined /> },
-          { title: '故障', value: statistics.fault, styles: { content: { color: '#cf1322' } }, prefix: <WarningOutlined /> },
-          { title: '停用', value: statistics.disabled, styles: { content: { color: '#8c8c8c' } }, prefix: <StopOutlined /> },
+          { title: '正常', value: statistics.normal, styles: { content: { color: 'var(--theme-success, #3f8600)' } }, prefix: <CheckCircleOutlined /> },
+          { title: '故障', value: statistics.fault, styles: { content: { color: 'var(--theme-error, #cf1322)' } }, prefix: <WarningOutlined /> },
+          { title: '停用', value: statistics.disabled, styles: { content: { color: 'var(--theme-text-tertiary, #8c8c8c)' } }, prefix: <StopOutlined /> },
         ]}
       />
       <Card style={{ marginBottom: 16 }}>

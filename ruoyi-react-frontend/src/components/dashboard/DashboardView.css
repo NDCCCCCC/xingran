@@ -34,7 +34,7 @@
 
 .dashboard-view__title p {
 	margin: 0;
-	color: #666;
+	color: var(--theme-text-tertiary, #666);
 	font-size: 12px;
 }
 
@@ -47,6 +47,6 @@
 /* 暗色主题适配 */
 @media (prefers-color-scheme: dark) {
 	.dashboard-view__title p {
-		color: #8c8c8c;
+		color: var(--theme-text-tertiary, #8c8c8c);
 	}
 }

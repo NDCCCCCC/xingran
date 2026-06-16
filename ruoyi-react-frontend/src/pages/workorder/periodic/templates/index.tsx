@@ -321,10 +321,10 @@ const PeriodicTemplatePage: FC = () => {
               <Statistic title="总模板" value={statistics.total} />
             </Col>
             <Col span={6}>
-              <Statistic title="已启用" value={statistics.enabled} styles={{ content: { color: '#3f8600' } }} />
+              <Statistic title="已启用" value={statistics.enabled} styles={{ content: { color: 'var(--theme-success, #3f8600)' } }} />
             </Col>
             <Col span={6}>
-              <Statistic title="已禁用" value={statistics.disabled} styles={{ content: { color: '#cf1322' } }} />
+              <Statistic title="已禁用" value={statistics.disabled} styles={{ content: { color: 'var(--theme-error, #cf1322)' } }} />
             </Col>
             <Col span={6}>
               <Statistic title="已生成工单" value={statistics.totalGenerated} />

@@ -543,9 +543,9 @@ const WorkstationManagement: FC = () => {
           show={total > 10}
           items={[
             { title: '总工位数', value: statistics.total, prefix: <DesktopOutlined /> },
-            { title: '空闲', value: statistics.available, styles: { content: { color: '#52c41a' } }, prefix: <CheckCircleOutlined /> },
+            { title: '空闲', value: statistics.available, styles: { content: { color: 'var(--theme-success, #52c41a)' } }, prefix: <CheckCircleOutlined /> },
             { title: '占用', value: statistics.occupied, styles: { content: { color: 'var(--theme-error, #ff4d4f)' } }, prefix: <StopOutlined /> },
-            { title: '维护', value: statistics.maintain, styles: { content: { color: '#faad14' } }, prefix: <StopOutlined /> },
+            { title: '维护', value: statistics.maintain, styles: { content: { color: 'var(--theme-warning, #faad14)' } }, prefix: <StopOutlined /> },
           ]}
         />
         <Card style={{ marginBottom: 16 }}>

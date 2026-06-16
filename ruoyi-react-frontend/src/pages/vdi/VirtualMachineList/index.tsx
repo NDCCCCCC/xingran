@@ -749,7 +749,7 @@ const VirtualMachineList: React.FC = () => {
       render: (text: string, record) => (
         <a
           onClick={() => navigate(`/vdi/vm/${record.id}`)}
-          style={{ color: '#1890ff', textDecoration: 'underline' }}
+          style={{ color: 'var(--theme-info, #1890ff)', textDecoration: 'underline' }}
         >
           {text}
         </a>
@@ -1063,7 +1063,7 @@ const VirtualMachineList: React.FC = () => {
             {quickConfig && (
               <div style={{ marginBottom: 16, padding: 12, background: '#f5f5f5', borderRadius: 4 }}>
                 <div><strong>已加载的默认配置：</strong></div>
-                <div style={{ marginTop: 8, fontSize: '12px', color: '#666' }}>
+                <div style={{ marginTop: 8, fontSize: '12px', color: 'var(--theme-text-tertiary, #666)' }}>
                   • VDI 服务器: 自动选择可用服务器<br />
                   • 资源组: {quickConfig.resourceGroupName}<br />
                   • 虚拟机: {DEFAULT_RESOURCE_NAME}<br />

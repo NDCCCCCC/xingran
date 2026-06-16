@@ -107,7 +107,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
       boundaries.forEach((boundaryStr) => {
         const points = parseBoundaryPoints(boundaryStr, BMap);
         const polygon = new BMap.Polygon(points, {
-          strokeColor: '#1890ff',
+          strokeColor: 'var(--theme-info, #1890ff)',
           strokeWeight: 4,           // 加粗边界线
           strokeOpacity: 1,          // 完全不透明
           fillColor: 'transparent',   // 无填充
@@ -126,7 +126,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
     // 绘制简化边界（只显示边线，无遮罩）
     const points = HUBEI_BOUNDARY.map(coord => new BMap.Point(coord[0], coord[1]));
     const polygon = new BMap.Polygon(points, {
-      strokeColor: '#1890ff',
+      strokeColor: 'var(--theme-info, #1890ff)',
       strokeWeight: 4,           // 加粗边界线
       strokeOpacity: 0.8,
       fillColor: 'transparent',   // 无填充
@@ -417,10 +417,10 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
 
     const content = `
       <div style="padding: 12px; min-width: 260px;">
-        <h3 style="margin: 0 0 12px 0; font-size: 16px; color: #1890ff; border-bottom: 2px solid #1890ff; padding-bottom: 8px;">
+        <h3 style="margin: 0 0 12px 0; font-size: 16px; color: var(--theme-info, #1890ff); border-bottom: 2px solid #1890ff; padding-bottom: 8px;">
           ${building.name}
         </h3>
-        <div style="font-size: 13px; color: #666; line-height: 1.8;">
+        <div style="font-size: 13px; color: var(--theme-text-tertiary, #666); line-height: 1.8;">
           <div>📌 ${building.address || '暂无地址'}</div>
           <div style="margin-top: 8px;">
             <span style="display: inline-block; padding: 2px 10px; background: ${statusBg}; color: ${statusColor}; border-radius: 12px; font-size: 12px; font-weight: 500;">
@@ -599,11 +599,11 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
         }}
       >
         <div style={{ fontWeight: 'bold', marginBottom: 8, fontSize: 14 }}>数据统计</div>
-        <div>当前缩放: <Badge count={currentZoom} showZero style={{ backgroundColor: '#1890ff' }} /></div>
-        <div>显示层级: <Badge count={currentZoom === 10 ? '全部' : '一级(城市)'} showZero style={{ backgroundColor: currentZoom === 10 ? '#722ed1' : '#13c2c2' }} /></div>
+        <div>当前缩放: <Badge count={currentZoom} showZero style={{ backgroundColor: 'var(--theme-info, #1890ff)' }} /></div>
+        <div>显示层级: <Badge count={currentZoom === 10 ? '全部' : '一级(城市)'} showZero style={{ backgroundColor: currentZoom === 10 ? 'var(--theme-purple, #722ed1)' : '#13c2c2' }} /></div>
         <div>一级楼宇: <Badge count={buildings.filter(b => b.level === 1).length} showZero /></div>
         <div>二级楼宇: <Badge count={buildings.filter(b => b.level === 2).length} showZero /></div>
-        <div>有坐标: <Badge count={buildings.filter(b => b.longitude && b.latitude).length} showZero style={{ backgroundColor: buildings.filter(b => b.longitude && b.latitude).length > 0 ? '#52c41a' : '#ff4d4f' }} /></div>
+        <div>有坐标: <Badge count={buildings.filter(b => b.longitude && b.latitude).length} showZero style={{ backgroundColor: buildings.filter(b => b.longitude && b.latitude).length > 0 ? 'var(--theme-success, #52c41a)' : '#ff4d4f' }} /></div>
         <div style={{ marginTop: 8, fontSize: 11, color: 'var(--theme-text-tertiary, #999)' }}>
           <div>👆 滚轮缩放切换层级</div>
           <div>👆 悬停查看简要信息</div>
@@ -675,7 +675,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
-              onMouseEnter={(e) => e.currentTarget.style.color = '#666'}
+              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--theme-text-tertiary, #666)'}
               onMouseLeave={(e) => e.currentTarget.style.color = '#999'}
             >
               ×
@@ -698,7 +698,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
                     transition: 'all 0.2s',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = '#1890ff';
+                    e.currentTarget.style.borderColor = 'var(--theme-info, #1890ff)';
                     e.currentTarget.style.boxShadow = '0 2px 8px rgba(24, 144, 255, 0.2)';
                   }}
                   onMouseLeave={(e) => {

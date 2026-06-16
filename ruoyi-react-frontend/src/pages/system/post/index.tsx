@@ -229,7 +229,7 @@ const PostManagement: FC = () => {
               <Statistic
                 title="正常岗位"
                 value={statistics.active}
-                styles={{ content: { color: '#3f8600' } }}
+                styles={{ content: { color: 'var(--theme-success, #3f8600)' } }}
                 prefix={<CheckCircleOutlined />}
               />
             </Card>
@@ -239,7 +239,7 @@ const PostManagement: FC = () => {
               <Statistic
                 title="停用岗位"
                 value={statistics.inactive}
-                styles={{ content: { color: '#cf1322' } }}
+                styles={{ content: { color: 'var(--theme-error, #cf1322)' } }}
                 prefix={<StopOutlined />}
               />
             </Card>

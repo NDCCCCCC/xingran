@@ -250,7 +250,7 @@ const ProfilePage: FC = () => {
                   <Statistic
                     title="今日状态"
                     value={dutyStats.isOnDutyToday ? "值班中" : "休息"}
-                    styles={{ content: { color: dutyStats.isOnDutyToday ? '#3f8600' : '#8c8c8c' } }}
+                    styles={{ content: { color: dutyStats.isOnDutyToday ? 'var(--theme-success, #3f8600)' : 'var(--theme-text-tertiary, #8c8c8c)' } }}
                   />
                 </Col>
                 <Col xs={12} sm={6}>
@@ -279,7 +279,7 @@ const ProfilePage: FC = () => {
                           )}
                         </Space>
                       ) : (
-                        <span style={{ color: '#8c8c8c' }}>暂无排班</span>
+                        <span style={{ color: 'var(--theme-text-tertiary, #8c8c8c)' }}>暂无排班</span>
                       )}
                     </div>
                   </div>

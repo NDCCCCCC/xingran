@@ -320,7 +320,7 @@ const PortStatusPage: FC = () => {
             <Statistic
               title="UP端口"
               value={statistics.up}
-              styles={{ content: { color: '#3f8600' } }}
+              styles={{ content: { color: 'var(--theme-success, #3f8600)' } }}
               prefix={<CheckCircleOutlined />}
             />
           </Card>
@@ -330,7 +330,7 @@ const PortStatusPage: FC = () => {
             <Statistic
               title="DOWN端口"
               value={statistics.down}
-              styles={{ content: { color: '#cf1322' } }}
+              styles={{ content: { color: 'var(--theme-error, #cf1322)' } }}
               prefix={<WarningOutlined />}
             />
           </Card>
@@ -340,7 +340,7 @@ const PortStatusPage: FC = () => {
             <Statistic
               title="802.1X启用"
               value={statistics.dot1xEnabled}
-              styles={{ content: { color: '#1890ff' } }}
+              styles={{ content: { color: 'var(--theme-info, #1890ff)' } }}
               prefix={<ApiOutlined />}
             />
           </Card>

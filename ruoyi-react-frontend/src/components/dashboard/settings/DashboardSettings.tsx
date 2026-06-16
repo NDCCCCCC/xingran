@@ -180,7 +180,7 @@ export const DashboardSettings: React.FC<DashboardSettingsProps> = ({ visible, o
 						仪表盘信息
 					</Divider>
 
-					<div style={{ color: '#666', fontSize: 12 }}>
+					<div style={{ color: 'var(--theme-text-tertiary, #666)', fontSize: 12 }}>
 						<p>
 							<strong>ID:</strong> {currentDashboard.id}
 						</p>
@@ -194,12 +194,12 @@ export const DashboardSettings: React.FC<DashboardSettingsProps> = ({ visible, o
 							<strong>更新时间:</strong> {currentDashboard.updatedAt}
 						</p>
 						{currentDashboard.isDefault && (
-							<p style={{ color: '#1890ff' }}>
+							<p style={{ color: 'var(--theme-info, #1890ff)' }}>
 								<strong>★ 这是默认仪表盘</strong>
 							</p>
 						)}
 						{currentDashboard.isTemplate && (
-							<p style={{ color: '#52c41a' }}>
+							<p style={{ color: 'var(--theme-success, #52c41a)' }}>
 								<strong>📋 这是一个模板</strong>
 							</p>
 						)}

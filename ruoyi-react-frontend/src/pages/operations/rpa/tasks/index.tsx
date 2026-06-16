@@ -184,7 +184,7 @@ const TaskManagement: FC = () => {
           </Space>
         </div>
         {selectedRowKeys.length > 0 && (
-          <div style={{ marginTop: 12, color: '#1890ff' }}>
+          <div style={{ marginTop: 12, color: 'var(--theme-info, #1890ff)' }}>
             已选择 <strong>{selectedRowKeys.length}</strong> 个任务
           </div>
         )}

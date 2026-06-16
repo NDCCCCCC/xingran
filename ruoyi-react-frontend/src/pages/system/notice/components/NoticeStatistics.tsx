@@ -32,7 +32,7 @@ export const NoticeStatisticsCard: React.FC<NoticeStatisticsCardProps> = ({ stat
           <Statistic
             title="已发布"
             value={statistics.published}
-            styles={{ content: { color: '#3f8600' } }}
+            styles={{ content: { color: 'var(--theme-success, #3f8600)' } }}
             prefix={<CheckCircleOutlined />}
           />
         </Card>
@@ -42,7 +42,7 @@ export const NoticeStatisticsCard: React.FC<NoticeStatisticsCardProps> = ({ stat
           <Statistic
             title="草稿/撤回"
             value={statistics.draft}
-            styles={{ content: { color: '#faad14' } }}
+            styles={{ content: { color: 'var(--theme-warning, #faad14)' } }}
             prefix={<StopOutlined />}
           />
         </Card>
@@ -52,7 +52,7 @@ export const NoticeStatisticsCard: React.FC<NoticeStatisticsCardProps> = ({ stat
           <Statistic
             title="定时发布"
             value={statistics.scheduled}
-            styles={{ content: { color: '#1890ff' } }}
+            styles={{ content: { color: 'var(--theme-info, #1890ff)' } }}
             prefix={<SearchOutlined />}
           />
         </Card>

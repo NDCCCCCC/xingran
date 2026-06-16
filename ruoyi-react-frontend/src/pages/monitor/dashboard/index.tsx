@@ -205,7 +205,7 @@ const Dashboard: FC = () => {
               value={metrics?.cpuUsage || 0}
               precision={1}
               suffix="%"
-              styles={{ content: { color: metrics?.cpuUsage && metrics.cpuUsage > 80 ? '#cf1322' : '#3f8600' } }}
+              styles={{ content: { color: metrics?.cpuUsage && metrics.cpuUsage > 80 ? 'var(--theme-error, #cf1322)' : 'var(--theme-success, #3f8600)' } }}
               prefix={<ClusterOutlined />}
             />
           </Card>
@@ -217,7 +217,7 @@ const Dashboard: FC = () => {
               value={metrics?.memoryUsage || 0}
               precision={1}
               suffix="%"
-              styles={{ content: { color: metrics?.memoryUsage && metrics.memoryUsage > 80 ? '#cf1322' : '#3f8600' } }}
+              styles={{ content: { color: metrics?.memoryUsage && metrics.memoryUsage > 80 ? 'var(--theme-error, #cf1322)' : 'var(--theme-success, #3f8600)' } }}
               prefix={<DatabaseOutlined />}
             />
           </Card>
@@ -229,7 +229,7 @@ const Dashboard: FC = () => {
               value={metrics?.diskUsage || 0}
               precision={1}
               suffix="%"
-              styles={{ content: { color: metrics?.diskUsage && metrics.diskUsage > 80 ? '#cf1322' : '#3f8600' } }}
+              styles={{ content: { color: metrics?.diskUsage && metrics.diskUsage > 80 ? 'var(--theme-error, #cf1322)' : 'var(--theme-success, #3f8600)' } }}
               prefix={<DatabaseOutlined />}
             />
           </Card>
@@ -239,7 +239,7 @@ const Dashboard: FC = () => {
             <Statistic
               title="进程数量"
               value={metrics?.processCount || 0}
-              styles={{ content: { color: '#1890ff' } }}
+              styles={{ content: { color: 'var(--theme-info, #1890ff)' } }}
               prefix={<ClusterOutlined />}
             />
           </Card>

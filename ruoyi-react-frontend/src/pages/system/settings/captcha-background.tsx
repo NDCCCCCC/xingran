@@ -371,7 +371,7 @@ const CaptchaBackgroundSettingsPage: FC = () => {
               <Statistic
                 title="启用数量"
                 value={statistics.enabledCount}
-                styles={{ content: { color: '#3f8600' } }}
+                styles={{ content: { color: 'var(--theme-success, #3f8600)' } }}
               />
             </Card>
           </Col>
@@ -380,7 +380,7 @@ const CaptchaBackgroundSettingsPage: FC = () => {
               <Statistic
                 title="禁用数量"
                 value={statistics.disabledCount}
-                styles={{ content: { color: '#cf1322' } }}
+                styles={{ content: { color: 'var(--theme-error, #cf1322)' } }}
               />
             </Card>
           </Col>

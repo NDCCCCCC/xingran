@@ -272,7 +272,7 @@ const MyDutyPage: FC = () => {
               value={stats?.isOnDutyToday ? "值班中" : "休息"}
               prefix={stats?.isOnDutyToday ? <ClockCircleOutlined /> : <CoffeeOutlined />}
               styles={{ content: {
-                color: stats?.isOnDutyToday ? '#3f8600' : '#8c8c8c',
+                color: stats?.isOnDutyToday ? 'var(--theme-success, #3f8600)' : 'var(--theme-text-tertiary, #8c8c8c)',
                 fontSize: '20px'
               } }}
             />
@@ -286,7 +286,7 @@ const MyDutyPage: FC = () => {
               value={stats?.thisMonthCount || 0}
               suffix="次"
               prefix={<CalendarOutlined />}
-              styles={{ content: { color: '#1890ff', fontSize: '20px' } }}
+              styles={{ content: { color: 'var(--theme-info, #1890ff)', fontSize: '20px' } }}
             />
           </Card>
         </Col>
@@ -298,7 +298,7 @@ const MyDutyPage: FC = () => {
               value={stats?.totalCount || 0}
               suffix="次"
               prefix={<CheckCircleOutlined />}
-              styles={{ content: { color: '#722ed1', fontSize: '20px' } }}
+              styles={{ content: { color: 'var(--theme-purple, #722ed1)', fontSize: '20px' } }}
             />
           </Card>
         </Col>
@@ -318,7 +318,7 @@ const MyDutyPage: FC = () => {
                     )}
                   </Space>
                 ) : (
-                  <span style={{ color: '#8c8c8c' }}>暂无排班</span>
+                  <span style={{ color: 'var(--theme-text-tertiary, #8c8c8c)' }}>暂无排班</span>
                 )}
               </div>
             </div>

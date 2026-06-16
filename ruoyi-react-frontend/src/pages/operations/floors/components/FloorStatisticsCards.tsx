@@ -41,7 +41,7 @@ export const FloorStatisticsCards: FC<FloorStatisticsCardsProps> = ({
           <Statistic
             title="正常楼层"
             value={statistics.active}
-            styles={{ content: { color: '#3f8600' } }}
+            styles={{ content: { color: 'var(--theme-success, #3f8600)' } }}
             prefix={<CheckCircleOutlined />}
           />
         </Card>
@@ -51,7 +51,7 @@ export const FloorStatisticsCards: FC<FloorStatisticsCardsProps> = ({
           <Statistic
             title="停用楼层"
             value={statistics.inactive}
-            styles={{ content: { color: '#cf1322' } }}
+            styles={{ content: { color: 'var(--theme-error, #cf1322)' } }}
             prefix={<StopOutlined />}
           />
         </Card>

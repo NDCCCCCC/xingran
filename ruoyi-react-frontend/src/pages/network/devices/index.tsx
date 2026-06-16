@@ -101,7 +101,7 @@ function getDeviceTableColumns(props: DeviceTableColumnsProps): ColumnsType<Netw
       render: (deviceName: string, record: NetworkDevice) => (
         <a
           onClick={() => navigate(`/network/ports?deviceId=${record.id}`)}
-          style={{ color: '#1890ff', cursor: 'pointer' }}
+          style={{ color: 'var(--theme-info, #1890ff)', cursor: 'pointer' }}
         >
           {deviceName}
         </a>
@@ -587,7 +587,7 @@ const DeviceManagement: FC = () => {
                   <Statistic
                     title="在线设备"
                     value={statistics.online}
-                    styles={{ content: { color: '#3f8600' } }}
+                    styles={{ content: { color: 'var(--theme-success, #3f8600)' } }}
                     prefix={<CheckCircleOutlined />}
                   />
                 </Card>
@@ -597,7 +597,7 @@ const DeviceManagement: FC = () => {
                   <Statistic
                     title="离线设备"
                     value={statistics.offline}
-                    styles={{ content: { color: '#cf1322' } }}
+                    styles={{ content: { color: 'var(--theme-error, #cf1322)' } }}
                     prefix={<CloseCircleOutlined />}
                   />
                 </Card>
@@ -607,7 +607,7 @@ const DeviceManagement: FC = () => {
                   <Statistic
                     title="未知状态"
                     value={statistics.unknown}
-                    styles={{ content: { color: '#faad14' } }}
+                    styles={{ content: { color: 'var(--theme-warning, #faad14)' } }}
                     prefix={<WarningOutlined />}
                   />
                 </Card>

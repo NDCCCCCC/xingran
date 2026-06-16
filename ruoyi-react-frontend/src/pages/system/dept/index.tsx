@@ -190,7 +190,7 @@ const DepartmentManagement: FC = () => {
             <Statistic
               title="顶级部门"
               value={statistics.topLevel}
-              styles={{ content: { color: '#3f8600' } }}
+              styles={{ content: { color: 'var(--theme-success, #3f8600)' } }}
               prefix={<TeamOutlined />}
             />
           </Card>
@@ -200,7 +200,7 @@ const DepartmentManagement: FC = () => {
             <Statistic
               title="子部门"
               value={statistics.subLevel}
-              styles={{ content: { color: '#1890ff' } }}
+              styles={{ content: { color: 'var(--theme-info, #1890ff)' } }}
               prefix={<ApartmentOutlined />}
             />
           </Card>

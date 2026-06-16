@@ -41,7 +41,7 @@ const getDefaultDisplayConfig = (widgetType: WidgetType): DisplayConfig => {
 			return {
 				type: 'stat-card',
 				icon: '📊',
-				iconColor: '#1890ff',
+				iconColor: 'var(--theme-info, #1890ff)',
 				decimals: 0,
 				showTrend: false,
 			} as StatCardDisplayConfig;
@@ -83,7 +83,7 @@ const getDefaultDisplayConfig = (widgetType: WidgetType): DisplayConfig => {
 			return {
 				type: 'stat-card',
 				icon: '📊',
-				iconColor: '#1890ff',
+				iconColor: 'var(--theme-info, #1890ff)',
 			} as StatCardDisplayConfig;
 	}
 };
@@ -383,7 +383,7 @@ export const DisplayConfigForm: React.FC<DisplayConfigFormProps> = ({
 								disabled={disabled}
 								placeholder="添加阈值..."
 								onChange={() => {
-									add({ value: 50, color: '#faad14' });
+									add({ value: 50, color: 'var(--theme-warning, #faad14)' });
 								}}
 								value={undefined}
 								options={[{ value: 'add', label: '添加颜色阈值' }]}

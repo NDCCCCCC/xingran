@@ -148,7 +148,7 @@ const CommandDispatch: FC = () => {
             <Statistic
               title="执行中"
               value={statistics.running}
-              styles={{ content: { color: '#1890ff' } }}
+              styles={{ content: { color: 'var(--theme-info, #1890ff)' } }}
               prefix={<ApiOutlined />}
             />
           </Card>
@@ -158,7 +158,7 @@ const CommandDispatch: FC = () => {
             <Statistic
               title="成功"
               value={statistics.success}
-              styles={{ content: { color: '#52c41a' } }}
+              styles={{ content: { color: 'var(--theme-success, #52c41a)' } }}
               prefix={<CheckCircleOutlined />}
             />
           </Card>

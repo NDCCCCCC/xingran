@@ -54,7 +54,7 @@ export function DetailDrawer({
             />
             <div style={{ marginTop: 8, display: 'flex', gap: 24 }}>
               <span>总设备: {currentExecution.totalDevices}</span>
-              <span style={{ color: '#52c41a' }}>成功: {currentExecution.successCount}</span>
+              <span style={{ color: 'var(--theme-success, #52c41a)' }}>成功: {currentExecution.successCount}</span>
               <span style={{ color: 'var(--theme-error, #ff4d4f)' }}>失败: {currentExecution.failureCount}</span>
             </div>
           </Card>

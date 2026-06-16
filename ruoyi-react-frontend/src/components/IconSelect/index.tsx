@@ -166,7 +166,7 @@ const IconSelect: FC<IconSelectProps> = ({
                           key={iconName}
                           onClick={() => handleIconClick(iconName)}
                           style={{
-                            border: `1px solid ${isSelected ? '#1890ff' : '#d9d9d9'}`,
+                            border: `1px solid ${isSelected ? 'var(--theme-info, #1890ff)' : '#d9d9d9'}`,
                             borderRadius: 4,
                             padding: 12,
                             textAlign: 'center',
@@ -176,7 +176,7 @@ const IconSelect: FC<IconSelectProps> = ({
                           }}
                           onMouseEnter={(e) => {
                             if (!isSelected) {
-                              e.currentTarget.style.borderColor = '#1890ff';
+                              e.currentTarget.style.borderColor = 'var(--theme-info, #1890ff)';
                               e.currentTarget.style.backgroundColor = '#f0f0f0';
                             }
                           }}
@@ -193,7 +193,7 @@ const IconSelect: FC<IconSelectProps> = ({
                           <div
                             style={{
                               fontSize: 12,
-                              color: '#666',
+                              color: 'var(--theme-text-tertiary, #666)',
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
                               whiteSpace: 'nowrap',
@@ -211,7 +211,7 @@ const IconSelect: FC<IconSelectProps> = ({
                                 width: 16,
                                 height: 16,
                                 borderRadius: '50%',
-                                backgroundColor: '#1890ff',
+                                backgroundColor: 'var(--theme-info, #1890ff)',
                                 color: '#fff',
                                 fontSize: 10,
                                 display: 'flex',

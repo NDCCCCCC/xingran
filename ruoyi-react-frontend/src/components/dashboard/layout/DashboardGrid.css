@@ -174,7 +174,7 @@
 		--grid-placeholder-bg: rgba(255, 255, 255, 0.05);
 		--grid-placeholder-border: #434343;
 		--resize-handle-color: #595959;
-		--resize-handle-hover-color: #8c8c8c;
+		--resize-handle-hover-color: var(--theme-text-tertiary, #8c8c8c);
 	}
 
 	.dashboard-grid-placeholder {

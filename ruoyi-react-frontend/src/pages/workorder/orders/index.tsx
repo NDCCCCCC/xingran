@@ -417,16 +417,16 @@ const WorkOrderPage: FC = () => {
               <Statistic title="总工单" value={stats.total} prefix={<FileTextOutlined />} />
             </Col>
             <Col span={4}>
-              <Statistic title="待处理" value={stats.pending} styles={{ content: { color: '#faad14' } }} />
+              <Statistic title="待处理" value={stats.pending} styles={{ content: { color: 'var(--theme-warning, #faad14)' } }} />
             </Col>
             <Col span={4}>
-              <Statistic title="处理中" value={stats.processing} styles={{ content: { color: '#1890ff' } }} />
+              <Statistic title="处理中" value={stats.processing} styles={{ content: { color: 'var(--theme-info, #1890ff)' } }} />
             </Col>
             <Col span={4}>
-              <Statistic title="已完成" value={stats.completed} styles={{ content: { color: '#52c41a' } }} />
+              <Statistic title="已完成" value={stats.completed} styles={{ content: { color: 'var(--theme-success, #52c41a)' } }} />
             </Col>
             <Col span={4}>
-              <Statistic title="已关闭" value={stats.closed} styles={{ content: { color: '#8c8c8c' } }} />
+              <Statistic title="已关闭" value={stats.closed} styles={{ content: { color: 'var(--theme-text-tertiary, #8c8c8c)' } }} />
             </Col>
             <Col span={4}>
               <Button

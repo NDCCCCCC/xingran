@@ -208,7 +208,7 @@ const MACAddressPage: FC = () => {
             <Statistic
               title="动态MAC"
               value={statistics.dynamic}
-              styles={{ content: { color: '#1890ff' } }}
+              styles={{ content: { color: 'var(--theme-info, #1890ff)' } }}
             />
           </Card>
         </Col>
@@ -217,7 +217,7 @@ const MACAddressPage: FC = () => {
             <Statistic
               title="静态MAC"
               value={statistics.static}
-              styles={{ content: { color: '#52c41a' } }}
+              styles={{ content: { color: 'var(--theme-success, #52c41a)' } }}
             />
           </Card>
         </Col>
@@ -226,7 +226,7 @@ const MACAddressPage: FC = () => {
             <Statistic
               title="安全MAC"
               value={statistics.secure}
-              styles={{ content: { color: '#faad14' } }}
+              styles={{ content: { color: 'var(--theme-warning, #faad14)' } }}
             />
           </Card>
         </Col>

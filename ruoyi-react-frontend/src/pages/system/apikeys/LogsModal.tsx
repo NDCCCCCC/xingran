@@ -257,7 +257,7 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
                   suffix="%"
                   styles={{
                     content: {
-                      color: summary.success_rate >= 0.95 ? '#3f8600' : summary.success_rate >= 0.8 ? '#faad14' : '#cf1322',
+                      color: summary.success_rate >= 0.95 ? 'var(--theme-success, #3f8600)' : summary.success_rate >= 0.8 ? 'var(--theme-warning, #faad14)' : 'var(--theme-error, #cf1322)',
                     },
                   }}
                   prefix={summary.success_rate >= 0.95 ? <CheckCircleOutlined /> : summary.success_rate >= 0.8 ? <ClockCircleOutlined /> : <CloseCircleOutlined />}
@@ -272,7 +272,7 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
                   suffix="ms"
                   styles={{
                     content: {
-                      color: summary.avg_duration < 100 ? '#3f8600' : summary.avg_duration < 500 ? '#faad14' : '#cf1322',
+                      color: summary.avg_duration < 100 ? 'var(--theme-success, #3f8600)' : summary.avg_duration < 500 ? 'var(--theme-warning, #faad14)' : 'var(--theme-error, #cf1322)',
                     },
                   }}
                 />
@@ -285,7 +285,7 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
                   value={summary.total_requests - Math.floor(summary.total_requests * summary.success_rate)}
                   styles={{
                     content: {
-                      color: '#cf1322',
+                      color: 'var(--theme-error, #cf1322)',
                     },
                   }}
                 />
@@ -331,7 +331,7 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
                       return (
                         <div key={path} style={{ marginBottom: 12 }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                            <span style={{ fontSize: 12, color: '#666' }}>
+                            <span style={{ fontSize: 12, color: 'var(--theme-text-tertiary, #666)' }}>
                               {index + 1}. {path.length > 30 ? `${path.slice(0, 30)}...` : path}
                             </span>
                             <span style={{ fontSize: 12, fontWeight: 'bold' }}>
@@ -341,7 +341,7 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
                           <Progress
                             percent={percentage}
                             showInfo={false}
-                            strokeColor="#1890ff"
+                            strokeColor="var(--theme-info, #1890ff)'
                             trailColor="#f0f0f0"
                             size="small"
                           />

@@ -412,7 +412,7 @@ const CacheManager: FC = () => {
                 value={monitor?.l1?.stats?.hitRate || 0}
                 precision={1}
                 suffix="%"
-                styles={{ content: { fontSize: '20px', color: '#3f8600' } }}
+                styles={{ content: { fontSize: '20px', color: 'var(--theme-success, #3f8600)' } }}
               />
               <Divider className="my-2" />
               <Statistic
@@ -420,7 +420,7 @@ const CacheManager: FC = () => {
                 value={monitor?.l2?.stats?.hitRate || 0}
                 precision={1}
                 suffix="%"
-                styles={{ content: { fontSize: '16px', color: '#1890ff' } }}
+                styles={{ content: { fontSize: '16px', color: 'var(--theme-info, #1890ff)' } }}
               />
             </Card>
           </Col>
@@ -576,7 +576,7 @@ const CacheManager: FC = () => {
                         value={monitor?.l1?.stats?.hitRate || 0}
                         precision={2}
                         suffix="%"
-                        styles={{ content: { color: '#3f8600' } }}
+                        styles={{ content: { color: 'var(--theme-success, #3f8600)' } }}
                       />
                       <Divider className="my-2" />
                       <Row gutter={8}>
@@ -584,14 +584,14 @@ const CacheManager: FC = () => {
                           <Statistic
                             title="命中"
                             value={monitor?.l1?.stats?.hitCount || 0}
-                            styles={{ content: { fontSize: '16px', color: '#3f8600' } }}
+                            styles={{ content: { fontSize: '16px', color: 'var(--theme-success, #3f8600)' } }}
                           />
                         </Col>
                         <Col span={12}>
                           <Statistic
                             title="未命中"
                             value={monitor?.l1?.stats?.missCount || 0}
-                            styles={{ content: { fontSize: '16px', color: '#cf1322' } }}
+                            styles={{ content: { fontSize: '16px', color: 'var(--theme-error, #cf1322)' } }}
                           />
                         </Col>
                       </Row>
@@ -603,7 +603,7 @@ const CacheManager: FC = () => {
                         value={monitor?.l2?.stats?.hitRate || 0}
                         precision={2}
                         suffix="%"
-                        styles={{ content: { color: '#1890ff' } }}
+                        styles={{ content: { color: 'var(--theme-info, #1890ff)' } }}
                       />
                       <Divider className="my-2" />
                       <Row gutter={8}>
@@ -611,14 +611,14 @@ const CacheManager: FC = () => {
                           <Statistic
                             title="命中"
                             value={monitor?.l2?.stats?.hitCount || 0}
-                            styles={{ content: { fontSize: '16px', color: '#3f8600' } }}
+                            styles={{ content: { fontSize: '16px', color: 'var(--theme-success, #3f8600)' } }}
                           />
                         </Col>
                         <Col span={12}>
                           <Statistic
                             title="未命中"
                             value={monitor?.l2?.stats?.missCount || 0}
-                            styles={{ content: { fontSize: '16px', color: '#cf1322' } }}
+                            styles={{ content: { fontSize: '16px', color: 'var(--theme-error, #cf1322)' } }}
                           />
                         </Col>
                       </Row>
@@ -715,14 +715,14 @@ const CacheManager: FC = () => {
                   <Statistic
                     title="命中次数"
                     value={monitor?.l1?.stats?.hitCount || 0}
-                    styles={{ content: { fontSize: '18px', color: '#3f8600' } }}
+                    styles={{ content: { fontSize: '18px', color: 'var(--theme-success, #3f8600)' } }}
                   />
                 </Col>
                 <Col span={12}>
                   <Statistic
                     title="未命中次数"
                     value={monitor?.l1?.stats?.missCount || 0}
-                    styles={{ content: { fontSize: '18px', color: '#cf1322' } }}
+                    styles={{ content: { fontSize: '18px', color: 'var(--theme-error, #cf1322)' } }}
                   />
                 </Col>
               </Row>
@@ -732,7 +732,7 @@ const CacheManager: FC = () => {
                 value={monitor?.l1?.stats?.hitRate || 0}
                 precision={2}
                 suffix="%"
-                styles={{ content: { fontSize: '20px', color: '#1890ff' } }}
+                styles={{ content: { fontSize: '20px', color: 'var(--theme-info, #1890ff)' } }}
               />
               <Divider className="my-2" />
               <Statistic
@@ -756,14 +756,14 @@ const CacheManager: FC = () => {
                   <Statistic
                     title="命中次数"
                     value={monitor?.l2?.stats?.hitCount || 0}
-                    styles={{ content: { fontSize: '18px', color: '#3f8600' } }}
+                    styles={{ content: { fontSize: '18px', color: 'var(--theme-success, #3f8600)' } }}
                   />
                 </Col>
                 <Col span={12}>
                   <Statistic
                     title="未命中次数"
                     value={monitor?.l2?.stats?.missCount || 0}
-                    styles={{ content: { fontSize: '18px', color: '#cf1322' } }}
+                    styles={{ content: { fontSize: '18px', color: 'var(--theme-error, #cf1322)' } }}
                   />
                 </Col>
               </Row>
@@ -773,7 +773,7 @@ const CacheManager: FC = () => {
                 value={monitor?.l2?.stats?.hitRate || 0}
                 precision={2}
                 suffix="%"
-                styles={{ content: { fontSize: '20px', color: '#1890ff' } }}
+                styles={{ content: { fontSize: '20px', color: 'var(--theme-info, #1890ff)' } }}
               />
               <Divider className="my-2" />
               <Statistic

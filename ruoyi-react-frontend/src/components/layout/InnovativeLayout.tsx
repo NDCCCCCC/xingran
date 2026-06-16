@@ -46,7 +46,7 @@ const SPACE_NAVS: SpaceNav[] = [
     title: '仪表盘',
     icon: <DashboardOutlined />,
     path: DASHBOARD,
-    color: '#3b82f6',
+    color: 'var(--theme-info, #3b82f6)',
     description: '数据概览与统计',
   },
   {
@@ -70,7 +70,7 @@ const SPACE_NAVS: SpaceNav[] = [
     title: '网络设备',
     icon: <CloudServerOutlined />,
     path: '/network/devices',
-    color: '#8b5cf6',
+    color: 'var(--theme-purple, #8b5cf6)',
     description: '设备、凭证、配置',
   },
   {
@@ -110,7 +110,7 @@ const SPACE_NAVS: SpaceNav[] = [
     title: '系统设置',
     icon: <SettingOutlined />,
     path: '/user/settings',
-    color: '#8b5cf6',
+    color: 'var(--theme-purple, #8b5cf6)',
     description: '配置、偏好、主题',
   },
 ];

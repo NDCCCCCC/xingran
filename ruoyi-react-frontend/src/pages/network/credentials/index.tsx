@@ -377,7 +377,7 @@ const CredentialManagement: FC = () => {
             <Statistic
               title="SSH凭证"
               value={statistics.ssh}
-              styles={{ content: { color: '#1890ff' } }}
+              styles={{ content: { color: 'var(--theme-info, #1890ff)' } }}
               prefix={<ApiOutlined />}
             />
           </Card>
@@ -387,7 +387,7 @@ const CredentialManagement: FC = () => {
             <Statistic
               title="Telnet凭证"
               value={statistics.telnet}
-              styles={{ content: { color: '#52c41a' } }}
+              styles={{ content: { color: 'var(--theme-success, #52c41a)' } }}
               prefix={<ApiOutlined />}
             />
           </Card>

@@ -386,8 +386,8 @@ const BuildingManagement: FC = () => {
         <div>
           <Row gutter={16} style={{ marginBottom: 16 }}>
             <Col span={8}><Card><Statistic title="总楼宇数" value={statistics.total} prefix={<CheckCircleOutlined />} /></Card></Col>
-            <Col span={8}><Card><Statistic title="正常楼宇" value={statistics.active} styles={{ content: { color: '#3f8600' } }} prefix={<CheckCircleOutlined />} /></Card></Col>
-            <Col span={8}><Card><Statistic title="停用楼宇" value={statistics.inactive} styles={{ content: { color: '#cf1322' } }} prefix={<StopOutlined />} /></Card></Col>
+            <Col span={8}><Card><Statistic title="正常楼宇" value={statistics.active} styles={{ content: { color: 'var(--theme-success, #3f8600)' } }} prefix={<CheckCircleOutlined />} /></Card></Col>
+            <Col span={8}><Card><Statistic title="停用楼宇" value={statistics.inactive} styles={{ content: { color: 'var(--theme-error, #cf1322)' } }} prefix={<StopOutlined />} /></Card></Col>
           </Row>
           <Card style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>

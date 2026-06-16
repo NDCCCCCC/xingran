@@ -98,10 +98,10 @@ export function generateBuildingInfoHTML(building: BuildingItem): string {
 
   return `
     <div style="padding: 12px; min-width: 260px;">
-      <h3 style="margin: 0 0 12px 0; font-size: 16px; color: #1890ff; border-bottom: 2px solid #1890ff; padding-bottom: 8px;">
+      <h3 style="margin: 0 0 12px 0; font-size: 16px; color: var(--theme-info, #1890ff); border-bottom: 2px solid #1890ff; padding-bottom: 8px;">
         ${building.name}
       </h3>
-      <div style="font-size: 13px; color: #666; line-height: 1.8;">
+      <div style="font-size: 13px; color: var(--theme-text-tertiary, #666); line-height: 1.8;">
         <div>📌 ${building.address || '暂无地址'}</div>
         <div style="margin-top: 8px;">
           <span style="display: inline-block; padding: 2px 10px; background: ${isStopped ? '#f5f5f5' : '#fff2e8'}; color: ${colors.main}; border-radius: 12px; font-size: 12px; font-weight: 500;">

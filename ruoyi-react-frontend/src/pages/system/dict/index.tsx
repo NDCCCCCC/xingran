@@ -309,7 +309,7 @@ const DictManagement: FC = () => {
                         <Statistic
                           title="正常类型"
                           value={typeStatistics.active}
-                          styles={{ content: { color: '#3f8600' } }}
+                          styles={{ content: { color: 'var(--theme-success, #3f8600)' } }}
                           prefix={<CheckCircleOutlined />}
                         />
                       </Card>
@@ -319,7 +319,7 @@ const DictManagement: FC = () => {
                         <Statistic
                           title="停用类型"
                           value={typeStatistics.inactive}
-                          styles={{ content: { color: '#cf1322' } }}
+                          styles={{ content: { color: 'var(--theme-error, #cf1322)' } }}
                           prefix={<StopOutlined />}
                         />
                       </Card>
@@ -438,7 +438,7 @@ const DictManagement: FC = () => {
                         <Statistic
                           title="正常数据"
                           value={dataStatistics.active}
-                          styles={{ content: { color: '#3f8600' } }}
+                          styles={{ content: { color: 'var(--theme-success, #3f8600)' } }}
                           prefix={<CheckCircleOutlined />}
                         />
                       </Card>
@@ -448,7 +448,7 @@ const DictManagement: FC = () => {
                         <Statistic
                           title="停用数据"
                           value={dataStatistics.inactive}
-                          styles={{ content: { color: '#cf1322' } }}
+                          styles={{ content: { color: 'var(--theme-error, #cf1322)' } }}
                           prefix={<StopOutlined />}
                         />
                       </Card>

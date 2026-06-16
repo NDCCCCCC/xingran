@@ -138,7 +138,7 @@ const Floor3D: React.FC<Floor3DProps> = ({ floor, position, onClick, isSelected 
                 <span>楼层状态：</span>
                 <span style={{
                   fontWeight: 'bold',
-                  color: floor.status === 0 ? '#52c41a' : '#ff4d4f',
+                  color: floor.status === 0 ? 'var(--theme-success, #52c41a)' : '#ff4d4f',
                   fontSize: 14
                 }}>
                   {getFloorStatusText(floor.status)}

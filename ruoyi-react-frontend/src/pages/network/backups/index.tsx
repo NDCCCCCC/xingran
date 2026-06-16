@@ -238,8 +238,8 @@ const [batchExporting, setBatchExporting] = useState(false);
       }
     }
 
-    const textColor = isRemoved ? '#c92a2a' : isAdded ? '#2b7a41' : '#8c8c8c';
-    const contentColor = isRemoved ? '#c92a2a' : isAdded ? '#2b7a41' : '#262626';
+    const textColor = isRemoved ? '#c92a2a' : isAdded ? '#2b7a41' : 'var(--theme-text-tertiary, #8c8c8c)';
+    const contentColor = isRemoved ? '#c92a2a' : isAdded ? '#2b7a41' : 'var(--theme-text-primary, #262626)';
 
     if (isEmpty) {
       return (
@@ -248,7 +248,7 @@ const [batchExporting, setBatchExporting] = useState(false);
             width: 50,
             padding: '0 8px',
             textAlign: 'right',
-            color: '#8c8c8c',
+            color: 'var(--theme-text-tertiary, #8c8c8c)',
             userSelect: 'none',
             flexShrink: 0,
             borderRight: '1px solid #e8e8e8',
@@ -477,7 +477,7 @@ const [batchExporting, setBatchExporting] = useState(false);
             <Statistic
               title="自动备份"
               value={statistics.auto}
-              styles={{ content: { color: '#1890ff' } }}
+              styles={{ content: { color: 'var(--theme-info, #1890ff)' } }}
               prefix={<ClockCircleOutlined />}
             />
           </Card>
@@ -487,7 +487,7 @@ const [batchExporting, setBatchExporting] = useState(false);
             <Statistic
               title="手动备份"
               value={statistics.manual}
-              styles={{ content: { color: '#52c41a' } }}
+              styles={{ content: { color: 'var(--theme-success, #52c41a)' } }}
               prefix={<SaveOutlined />}
             />
           </Card>
@@ -803,7 +803,7 @@ const [batchExporting, setBatchExporting] = useState(false);
                 borderRight: '1px solid #d9d9d9',
                 fontSize: 13,
                 fontWeight: 500,
-                color: '#262626',
+                color: 'var(--theme-text-primary, #262626)',
               }}>
                 {diffResult.oldVersion}
               </div>
@@ -813,7 +813,7 @@ const [batchExporting, setBatchExporting] = useState(false);
                 background: '#f5f5f5',
                 fontSize: 13,
                 fontWeight: 500,
-                color: '#262626',
+                color: 'var(--theme-text-primary, #262626)',
               }}>
                 {diffResult.newVersion}
               </div>

@@ -328,7 +328,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
       width: 60,
       align: 'center' as const,
       render: (isPrimary: boolean) => (
-        isPrimary ? <StarOutlined style={{ color: '#faad14', fontSize: 12 }} /> : null
+        isPrimary ? <StarOutlined style={{ color: 'var(--theme-warning, #faad14)', fontSize: 12 }} /> : null
       ),
     },
     {

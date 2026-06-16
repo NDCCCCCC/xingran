@@ -356,7 +356,7 @@ const DutySchedulePage: FC = () => {
                 <Card
                   size="small"
                   style={{
-                    borderColor: isToday ? '#1890ff' : undefined,
+                    borderColor: isToday ? 'var(--theme-info, #1890ff)' : undefined,
                     backgroundColor: isToday ? '#e6f7ff' : undefined,
                     borderRadius: '4px',
                     minHeight: '80px',
@@ -371,7 +371,7 @@ const DutySchedulePage: FC = () => {
                           strong
                           style={{
                             fontSize: '12px',
-                            color: isToday ? '#1890ff' : undefined,
+                            color: isToday ? 'var(--theme-info, #1890ff)' : undefined,
                           }}
                         >
                           {getWeekdayText(day)}

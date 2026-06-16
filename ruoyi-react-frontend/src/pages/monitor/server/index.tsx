@@ -408,7 +408,7 @@ const ServerMonitor: FC = () => {
                     value={75.2}
                     precision={1}
                     suffix="%"
-                    styles={{ content: { color: '#cf1322' } }}
+                    styles={{ content: { color: 'var(--theme-error, #cf1322)' } }}
                   />
                   <Progress percent={75.2} className="mt-2" />
                 </Col>
@@ -418,7 +418,7 @@ const ServerMonitor: FC = () => {
                     value={68.5}
                     precision={1}
                     suffix="%"
-                    styles={{ content: { color: '#3f8600' } }}
+                    styles={{ content: { color: 'var(--theme-success, #3f8600)' } }}
                   />
                   <Progress percent={68.5} className="mt-2" />
                 </Col>
@@ -428,7 +428,7 @@ const ServerMonitor: FC = () => {
                     value={45.8}
                     precision={1}
                     suffix="%"
-                    styles={{ content: { color: '#3f8600' } }}
+                    styles={{ content: { color: 'var(--theme-success, #3f8600)' } }}
                   />
                   <Progress percent={45.8} className="mt-2" />
                 </Col>
@@ -452,7 +452,7 @@ const ServerMonitor: FC = () => {
                     value={1234.56}
                     precision={2}
                     suffix="MB/s"
-                    styles={{ content: { color: '#1890ff' } }}
+                    styles={{ content: { color: 'var(--theme-info, #1890ff)' } }}
                   />
                 </Col>
                 <Col span={12}>
@@ -461,7 +461,7 @@ const ServerMonitor: FC = () => {
                     value={987.32}
                     precision={2}
                     suffix="MB/s"
-                    styles={{ content: { color: '#52c41a' } }}
+                    styles={{ content: { color: 'var(--theme-success, #52c41a)' } }}
                   />
                 </Col>
               </Row>

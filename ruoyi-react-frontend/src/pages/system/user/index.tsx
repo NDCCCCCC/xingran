@@ -466,7 +466,7 @@ const UserManagement: FC = () => {
                 <Statistic
                   title="正常用户"
                   value={statistics.active}
-                  styles={{ content: { color: '#3f8600' } }}
+                  styles={{ content: { color: 'var(--theme-success, #3f8600)' } }}
                   prefix={<UnlockOutlined />}
                 />
               </Card>
@@ -476,7 +476,7 @@ const UserManagement: FC = () => {
                 <Statistic
                   title="禁用用户"
                   value={statistics.inactive}
-                  styles={{ content: { color: '#cf1322' } }}
+                  styles={{ content: { color: 'var(--theme-error, #cf1322)' } }}
                   prefix={<LockOutlined />}
                 />
               </Card>
