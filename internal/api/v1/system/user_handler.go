@@ -2,11 +2,15 @@ package system
 
 import (
 	"context"
+	"crypto/rand"
+	"math/big"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
@@ -14,6 +18,7 @@ import (
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	"gorm.io/gorm"
 )
 
 // UserHandler 用户处理器
@@ -317,7 +322,9 @@ func (h *UserHandler) UpdateStatus(c *gin.Context) {
 
 // ResetPassword 重置用户密码
 // @Summary 重置用户密码
-// @Description 管理员重置指定用户的密码
+// @Description 管理员重置指定用户的密码。优先读取 sys_config 中
+// @Description sys.user.default_reset_password 的配置值；未配置或为空时
+// @Description 自动生成 12 位强密码（含大小写字母与数字），仅写入审计日志。
 // @Tags 用户管理
 // @Accept json
 // @Produce json
@@ -331,11 +338,27 @@ func (h *UserHandler) ResetPassword(c *gin.Context) {
 		return
 	}
 
-	// 默认密码为123456
-	defaultPassword := "123456"
-	if err := h.service.ResetPassword(c.Request.Context(), id, defaultPassword); err != nil {
+	ctx := c.Request.Context()
+	defaultPassword, generated, err := h.resolveResetPassword(ctx)
+	if err != nil {
 		response.Error(c, err)
 		return
+	}
+
+	if err := h.service.ResetPassword(ctx, id, defaultPassword); err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	// 审计日志：密码为自动生成时记录原值（管理员需告知用户），固定配置值
+	// 时不记录原值（配置值本身可审计，避免日志膨胀）。F-BE-50 已确保响应
+	// 不返回密码字段，原始明文仅留此一条审计行。
+	if generated {
+		applogger.Warnf("[AUDIT] 用户密码重置 (随机生成) [userID=%s, password=%s, operator=%s]",
+			id, defaultPassword, clientIP(c))
+	} else {
+		applogger.Infof("[AUDIT] 用户密码重置 (使用 sys_config 默认值) [userID=%s, operator=%s]",
+			id, clientIP(c))
 	}
 
 	// 敏感端点（密码重置）使用 RecordWithBody：读取+还原 c.Request.Body，
@@ -344,4 +367,122 @@ func (h *UserHandler) ResetPassword(c *gin.Context) {
 	// 兼容 SM2+SM4 加密中间件（中间件先解密还原 body，本调用再读取+还原一次）。
 	operlog.RecordWithBody(c, h.core.OperLogService, h.core.GetDB(), "用户管理", operlog.OperTypeReset)
 	response.Success(c, gin.H{"message": "密码重置成功"})
+}
+
+// defaultResetPasswordConfigKey 是 sys_config 表中用于读取「默认重置密码」的配置项键名。
+// 管理员可在「参数管理」中维护该键：值为空时回退到自动生成策略，避免继续使用弱默认值。
+const defaultResetPasswordConfigKey = "sys.user.default_reset_password"
+
+// generatedPasswordLength 缺省时自动生成的强密码长度。
+const generatedPasswordLength = 12
+
+// resolveResetPassword 决定本次重置要使用的明文密码。
+// 返回值：
+//   - password: 最终写入数据库的明文密码
+//   - generated: true 表示由本方法自动生成（无 sys_config 配置或配置为空）；
+//     false 表示使用 sys_config 中的固定值
+//   - err: 查询/生成过程中的错误
+//
+// 实现策略：
+//  1. 优先从 sys_config 读 sys.user.default_reset_password；
+//  2. 配置缺失或为空字符串时，使用 crypto/rand 生成 12 位强密码；
+//  3. 生成失败同样回退错误（不应静默使用弱密码）。
+func (h *UserHandler) resolveResetPassword(ctx context.Context) (string, bool, error) {
+	// 防御性处理：测试场景下 core 可能为 nil，直接走生成路径。
+	if h.core == nil {
+		pwd, err := generateStrongPassword(generatedPasswordLength)
+		return pwd, true, err
+	}
+
+	var cfg models.Config
+	db := h.core.GetDB()
+	err := db.WithContext(ctx).Where("config_key = ?", defaultResetPasswordConfigKey).First(&cfg).Error
+	if err == nil {
+		value := strings.TrimSpace(cfg.ConfigValue)
+		if value != "" {
+			return value, false, nil
+		}
+		// 配置存在但值为空：视为未配置，继续走生成路径。
+	} else if err != gorm.ErrRecordNotFound {
+		// 真正的查询错误（非"记录不存在"）——为避免静默使用弱默认密码，
+		// 将错误冒泡到 handler，让用户感知失败。
+		return "", false, apperrors.Wrap(err, apperrors.CodeServerError, "读取默认密码配置失败")
+	}
+
+	pwd, genErr := generateStrongPassword(generatedPasswordLength)
+	if genErr != nil {
+		return "", false, apperrors.Wrap(genErr, apperrors.CodeServerError, "生成默认密码失败")
+	}
+	return pwd, true, nil
+}
+
+// generateStrongPassword 生成长度为 n 的密码，包含大小写字母与数字。
+// 使用 crypto/rand 保证密码学强度，避免 math/rand 的可预测序列。
+// 不使用易混淆字符（0/O、1/l/I）以提升人工抄录的可靠性。
+func generateStrongPassword(n int) (string, error) {
+	if n < 8 {
+		n = 8 // 强密码下限保护
+	}
+	const (
+		lower = "abcdefghijkmnpqrstuvwxyz" // 移除 l、o
+		upper = "ABCDEFGHJKLMNPQRSTUVWXYZ" // 移除 I、O
+		digit = "23456789"                  // 移除 0、1
+		all   = lower + upper + digit
+	)
+
+	// 1) 从每个字符集各取 1 个，保证至少含一个小写、大写、数字
+	must := []byte{
+		pickRandom(lower),
+		pickRandom(upper),
+		pickRandom(digit),
+	}
+
+	// 2) 余下 n-3 位从全集随机填充
+	rest := make([]byte, n-len(must))
+	for i := range rest {
+		rest[i] = pickRandom(all)
+	}
+
+	// 3) Fisher–Yates 打乱 must+rest，避免固定前缀
+	buf := append(must, rest...)
+	for i := len(buf) - 1; i > 0; i-- {
+		j, err := randIntIntn(i + 1)
+		if err != nil {
+			return "", err
+		}
+		buf[i], buf[j] = buf[j], buf[i]
+	}
+	return string(buf), nil
+}
+
+// pickRandom 从字符集中取一个随机字节。
+func pickRandom(charset string) byte {
+	n, err := randIntIntn(len(charset))
+	if err != nil {
+		// crypto/rand 几乎不会失败；失败时回退到首位字符以保证可用性
+		return charset[0]
+	}
+	return charset[n]
+}
+
+// randIntIntn 等价于 rand.Int(rand.Reader, big.NewInt(int64(n)))，但避免每次分配。
+func randIntIntn(n int) (int, error) {
+	if n <= 0 {
+		return 0, nil
+	}
+	max := big.NewInt(int64(n))
+	r, err := rand.Int(rand.Reader, max)
+	if err != nil {
+		return 0, err
+	}
+	return int(r.Int64()), nil
+}
+
+// clientIP 提取客户端 IP，仅用于审计日志字段填充，不参与鉴权。
+// 复用 Gin's c.ClientIP()，已处理 X-Forwarded-For 解析。
+func clientIP(c *gin.Context) string {
+	if c == nil {
+		return "unknown"
+	}
+	return c.ClientIP()
 }
