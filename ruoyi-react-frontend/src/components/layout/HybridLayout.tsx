@@ -175,20 +175,11 @@ const HybridLayout: FC<HybridLayoutProps> = ({ children }) => {
           className="overflow-auto"
           style={{
             padding: sidebarCollapsed ? '16px' : '24px',
+            background: 'var(--theme-bg-surface)',
             transition: 'padding var(--theme-transition-base)',
           }}
         >
-          <div
-            style={{
-              background: 'var(--theme-bg-surface)',
-              borderRadius: 'var(--theme-radius-lg)',
-              padding: '24px',
-              minHeight: '100%',
-              transition: 'all var(--theme-transition-base)',
-            }}
-          >
-            {children}
-          </div>
+          {children}
         </Content>
       </AntLayout>
     </AntLayout>

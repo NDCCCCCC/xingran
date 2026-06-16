@@ -536,9 +536,9 @@ const WorkstationManagement: FC = () => {
   };
 
   return (
-    <Layout style={{ background: '#f0f2f5', minHeight: 'calc(100vh - 64px)' }}>
+    <Layout style={{ background: '#000', minHeight: 'calc(100vh - 64px)' }}>
       <DeptSidebar selectedDeptId={selectedDeptId} onSelect={handleDeptSelect} externalOnly={false} />
-      <Content style={{ padding: '16px', background: '#f0f2f5' }}>
+      <Content style={{ background: '#fff' }}>
         <StatisticsCards
           show={total > 10}
           items={[
