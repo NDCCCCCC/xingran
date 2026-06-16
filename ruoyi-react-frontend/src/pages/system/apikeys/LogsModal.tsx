@@ -341,7 +341,7 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
                           <Progress
                             percent={percentage}
                             showInfo={false}
-                            strokeColor="var(--theme-info, #1890ff)'
+                            strokeColor="var(--theme-info, #1890ff)"
                             trailColor="#f0f0f0"
                             size="small"
                           />
