@@ -5,7 +5,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import type { FC } from 'react';
 import {
-  Table, Button, Space, Form, Input, Select, Card, Modal, message,
+  Table, Button, Space, Form, Input, Select, Card, Modal, message, Layout,
 } from 'antd';
 import {
   PlusOutlined, SearchOutlined, ReloadOutlined, PlayCircleOutlined,
@@ -21,6 +21,7 @@ import { TASK_STATUS_OPTIONS } from '../constants';
 import { post } from '@/lib/api';
 
 const { Option } = Select;
+const { Content } = Layout;
 
 const TaskManagement: FC = () => {
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
@@ -134,7 +135,8 @@ const TaskManagement: FC = () => {
   });
 
   return (
-    <div style={{ padding: 16, background: '#000', minHeight: 'calc(100vh - 64px)' }}>
+    <Layout style={{ background: '#000', minHeight: 'calc(100vh - 64px)' }}>
+      <Content style={{ background: '#fff', padding: 16 }}>
       <Card style={{ marginBottom: 16 }}>
         <div
           style={{
@@ -223,7 +225,8 @@ const TaskManagement: FC = () => {
         onOk={handleModalOk}
         onCancel={handleModalCancel}
       />
-    </div>
+      </Content>
+    </Layout>
   );
 };
 

@@ -6,7 +6,7 @@ import { useState, useCallback, useEffect } from 'react';
 import type { FC } from 'react';
 import {
   Table, Button, Space, Form, Input, Select, Card, Row, Col, Statistic,
-  Tag, Alert, Progress,
+  Tag, Alert, Progress, Layout,
 } from 'antd';
 import {
   SearchOutlined, ReloadOutlined, CloudServerOutlined,
@@ -22,6 +22,7 @@ import { post } from '@/lib/api';
 import dayjs from 'dayjs';
 
 const { Option } = Select;
+const { Content } = Layout;
 
 // 心跳超时时间（秒）
 const HEARTBEAT_TIMEOUT = 120; // 2分钟无心跳视为离线
@@ -105,7 +106,8 @@ const WorkerMonitor: FC = () => {
     : 0;
 
   return (
-    <div style={{ padding: 16, background: '#000', minHeight: 'calc(100vh - 64px)' }}>
+    <Layout style={{ background: '#000', minHeight: 'calc(100vh - 64px)' }}>
+      <Content style={{ background: '#fff', padding: 16 }}>
       {/* 统计卡片 */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={4}>
@@ -271,7 +273,8 @@ const WorkerMonitor: FC = () => {
           background-color: #fff2f0;
         }
       `}</style>
-    </div>
+      </Content>
+    </Layout>
   );
 };
 

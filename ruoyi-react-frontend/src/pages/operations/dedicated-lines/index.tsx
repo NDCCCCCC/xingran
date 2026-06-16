@@ -6,7 +6,7 @@ import { useState, useCallback, useEffect } from 'react';
 import type { FC } from 'react';
 import {
   Table, Button, Space, Modal, Form, Input, InputNumber, Select,
-  Tag, Card, Row, Col, Alert, Radio,
+  Tag, Card, Row, Col, Alert, Radio, Layout,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -29,6 +29,7 @@ import { StatisticsCards } from '@/components/operations/StatisticsCards';
 
 const { Option } = Select;
 const { TextArea } = Input;
+const { Content } = Layout;
 
 interface ServerRoomOption {
   id: string;
@@ -295,7 +296,8 @@ const DedicatedLineManagement: FC = () => {
   };
 
   return (
-    <div style={{ padding: '16px', background: '#000', minHeight: 'calc(100vh - 64px)' }}>
+    <Layout style={{ background: '#000', minHeight: 'calc(100vh - 64px)' }}>
+      <Content style={{ background: '#fff', padding: 16 }}>
       <StatisticsCards
         show={total > 10}
         items={[
@@ -551,7 +553,8 @@ const DedicatedLineManagement: FC = () => {
       </Modal>
       <ExcelImport entityType="dedicatedLine" entityName="专线" visible={importVisible} onClose={() => setImportVisible(false)} onImportSuccess={handleImportSuccess} />
       <ExcelExport entityType="dedicatedLine" entityName="专线" visible={exportVisible} onClose={() => setExportVisible(false)} filters={exportFilters} />
-    </div>
+      </Content>
+    </Layout>
   );
 };
 
