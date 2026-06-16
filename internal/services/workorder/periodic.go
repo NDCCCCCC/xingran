@@ -415,26 +415,10 @@ func (s *PeriodicService) GenerateWorkOrder(ctx context.Context, templateID stri
 		}
 	}
 
-	// 获取提交者
-	submitterID := ""
-	if template.CreatedBy != "" {
-		// CreatedBy 存储的是用户 ID，直接查询用户是否存在
-		var submitter models.User
-		if err := s.db.WithContext(ctx).Where("id = ?", template.CreatedBy).First(&submitter).Error; err == nil {
-			submitterID = submitter.ID
-		} else {
-			// 如果指定的用户不存在，记录日志并回退到 admin
-			applogger.Warnf("[workorder] 警告：模板创建者 ID %s 不存在，将使用系统管理员作为提交者", template.CreatedBy)
-		}
-	}
-
-	if submitterID == "" {
-		var adminUser models.User
-		if err := s.db.WithContext(ctx).Where("username = ?", "admin").First(&adminUser).Error; err == nil {
-			submitterID = adminUser.ID
-		} else {
-			return nil, fmt.Errorf("无法确定工单提交者：未找到模板创建者或系统管理员")
-		}
+	// 获取提交者（F-BE-35: 通过 sys_config 读取默认提交人，避免硬编码 'admin'）
+	submitterID, err := s.resolveDefaultSubmitter(ctx, template.CreatedBy)
+	if err != nil {
+		return nil, err
 	}
 
 	// 创建工单
@@ -538,4 +522,66 @@ func getWeekdayName(wd time.Weekday) string {
 		time.Saturday:  "周六",
 	}
 	return weekdays[wd]
+}
+
+// defaultSubmitterConfigKey 是 sys_config 表中用于读取「周期性工单默认提交人用户名」的配置项键名。
+// 管理员可在「参数管理」中维护该键，未配置时回退到 hardcoded "admin"（与 F-SEC-02 模式一致：
+// 优先从 sys_config 读业务配置，缺失时硬编码兜底以保证向后兼容）。
+const defaultSubmitterConfigKey = "sys.workorder.default_submitter_username"
+
+// defaultSubmitterFallback 是 sys_config 缺失或查询失败时的硬编码兜底用户名。
+// 仅作保险使用，避免静默使用弱默认值——最终若该用户也不存在则返回错误。
+const defaultSubmitterFallback = "admin"
+
+// resolveDefaultSubmitter 决定本次周期性工单要使用的提交人用户 ID。
+// 解析策略：
+//  1. 若模板创建者（templateCreatedBy）非空，先按 ID 查询该用户是否存在；
+//  2. 不存在则读取 sys_config 中 sys.workorder.default_submitter_username 配置；
+//  3. sys_config 也缺失/为空/查询出错时，回退到 hardcoded "admin" 用户；
+//  4. 三层兜底全部失败时返回错误，调用方应中止工单创建而非继续。
+func (s *PeriodicService) resolveDefaultSubmitter(ctx context.Context, templateCreatedBy string) (string, error) {
+	// 1. 优先尝试模板创建者
+	if templateCreatedBy != "" {
+		var submitter models.User
+		if err := s.db.WithContext(ctx).Where("id = ?", templateCreatedBy).First(&submitter).Error; err == nil {
+			return submitter.ID, nil
+		} else if err != gorm.ErrRecordNotFound {
+			// 真正的查询错误（非"记录不存在"）——为避免静默绑定 admin，将错误冒泡。
+			return "", fmt.Errorf("查询模板创建者 %s 失败: %w", templateCreatedBy, err)
+		}
+		applogger.Warnf("[workorder] 警告：模板创建者 ID %s 不存在，回退到 sys_config 默认提交人", templateCreatedBy)
+	}
+
+	// 2. 读取 sys_config 中的默认提交人用户名
+	var cfg models.Config
+	err := s.db.WithContext(ctx).Where("config_key = ?", defaultSubmitterConfigKey).First(&cfg).Error
+	username := defaultSubmitterFallback
+	switch {
+	case err == nil:
+		trimmed := strings.TrimSpace(cfg.ConfigValue)
+		if trimmed != "" {
+			username = trimmed
+			applogger.Debugf("[workorder] 使用 sys_config 配置的默认提交人: %s", username)
+		} else {
+			applogger.Warnf("[workorder] sys_config %s 值为空，使用 hardcoded fallback: %s",
+				defaultSubmitterConfigKey, defaultSubmitterFallback)
+		}
+	case err == gorm.ErrRecordNotFound:
+		applogger.Warnf("[workorder] sys_config 未配置 %s，使用 hardcoded fallback: %s",
+			defaultSubmitterConfigKey, defaultSubmitterFallback)
+	default:
+		// 真正的查询错误——为避免静默绑定 admin，将错误冒泡。
+		return "", fmt.Errorf("读取默认提交人配置 %s 失败: %w", defaultSubmitterConfigKey, err)
+	}
+
+	// 3. 按用户名查询提交人
+	var fallbackUser models.User
+	if err := s.db.WithContext(ctx).Where("username = ?", username).First(&fallbackUser).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return "", fmt.Errorf("无法确定工单提交者：默认提交人用户名 %q 不存在（请在 sys_config 中配置 %s 或确保该用户已创建）",
+				username, defaultSubmitterConfigKey)
+		}
+		return "", fmt.Errorf("查询默认提交人 %s 失败: %w", username, err)
+	}
+	return fallbackUser.ID, nil
 }
