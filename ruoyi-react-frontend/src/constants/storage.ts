@@ -42,3 +42,22 @@ export const STORAGE_KEYS = {
  * 类型导出：所有原生 storage key 的联合类型
  */
 export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];
+
+/**
+ * Table 状态持久化前缀（用于 useTableManager / usePagination / usePersistedState）
+ * 与前缀名规则保持一致: `ruoyi_table_state_<sanitizedPath>_<slotName>`
+ */
+export const TABLE_STATE_PREFIX = "ruoyi_table_state_";
+
+/**
+ * 将 URL 路径转换为可作为 storage key 的一部分的字符串。
+ * 规则:去除前导斜杠，将中间的所有 `/` 替换为 `_`，以便安全拼接到 key 中。
+ *
+ * @example
+ * sanitizePathForKey("/system/user")  // "system_user"
+ * sanitizePathForKey("/ops/buildings") // "ops_buildings"
+ */
+export function sanitizePathForKey(path: string): string {
+  if (!path) return "";
+  return path.replace(/^\/+/, "").replace(/\//g, "_");
+}
