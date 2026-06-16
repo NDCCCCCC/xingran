@@ -656,6 +656,16 @@ Plans:
 - 🎯 与 AD 域控参考实现保持一致
 - 🔄 分 7 Wave 渐进式集成，风险可控
 
+### Phase 35: UI 标准化：将所有页面样式对齐到工位管理页面的布局结构 (L1 Layout + L2 Content + 移除冗余 page-card div，参考 HybridLayout 方案 B 已落地)
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 34
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 35 to break down)
+
 ---
 
 
