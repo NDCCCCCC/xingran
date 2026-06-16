@@ -146,10 +146,14 @@ export function getNotificationList(params: { current?: number; pageSize?: numbe
  * 构建 WebSocket 连接 URL
  */
 export function buildWebSocketUrl(): string {
-  const baseURL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
-  const wsURL = baseURL.replace(/^http/, 'ws');
+  // 与 VITE_API_BASE_URL 解耦：优先使用独立的 VITE_WS_BASE_URL，
+  // 未设置时从 API base 推导（去掉 /api/vN 后缀并将 http(s) 转成 ws(s)），
+  // 保持向后兼容，不再硬编码开发机 IP。
+  const apiBaseURL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+  const wsBaseURL =
+    import.meta.env.VITE_WS_BASE_URL || apiBaseURL.replace(/\/api\/v\d+$/, '').replace(/^http/, 'ws');
   const token = tokenStorage.getAccessToken();
 
   // 通过 query 参数传递 token
-  return `${wsURL}/system/ws/notices?token=${token || ''}`;
+  return `${wsBaseURL}/system/ws/notices?token=${token || ''}`;
 }
