@@ -85,6 +85,16 @@ func TestFilterSensitiveParams(t *testing.T) {
 			want: `{"username":"alice","role":"admin"}`,
 		},
 		{
+			name: "macKey (camelCase prefix) masked",
+			in:   `{"macKey":"k1"}`,
+			want: `{"macKey":"******"}`,
+		},
+		{
+			name: "secretKey (camelCase prefix) masked",
+			in:   `{"secretKey":"sk-1234"}`,
+			want: `{"secretKey":"******"}`,
+		},
+		{
 			name: "empty string returns empty",
 			in:   ``,
 			want: ``,
