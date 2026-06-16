@@ -689,10 +689,10 @@ Plans:
 - `/rpa/workers/autoscale/config` (POST) 无持久化（handler 内 `// TODO`）→ 独立 todo
 - operlog 运行时热改 `Refresh()` API → 待运维需求出现
 
-**Plans:** TBD (run /gsd:plan-phase 35)
+**Plans:** 1 plan (1 wave)
 
 Plans:
-- TBD
+- [ ] 35-01-PLAN.md — 单 Wave 计划（configs + operlog 包 + core bootstrap + 2 测试, 5 tasks）
 
 **Success Criteria**:
 - heartbeat 端点在 5 分钟连续运行下，sys_oper_log 中 0 条新增审计行（OPERLOG-06）
@@ -744,8 +744,8 @@ Plans:
 | 27. 全局列自定义显示功能 | v1.14 | 1/1 | Complete | 2026-06-09 |
 | 28. 工位设备关联子表格 | v1.15 | 4/6 | Gap Closure | 2026-06-10 |
 | 34. 操作日志全模块集成 | - | 11/10 | Complete    | 2026-06-15 |
-| 35. operlog.exclude_paths 配置驱动白名单 | v1.16 | 0/TBD | Planned | - |
+| 35. operlog.exclude_paths 配置驱动白名单 | v1.16 | 0/1 | Planned | - |
 
-**Total**: 123 plans completed, 8 gap closure plans, 23 plans planned (Phases 22C + 22D + 25), 154 total plans
+**Total**: 123 plans completed, 8 gap closure plans, 24 plans planned (Phases 22C + 22D + 25 + 35), 155 total plans
 
 **Completion Rate**: 84.7% (122/144) + 8 gap closure plans shipped
