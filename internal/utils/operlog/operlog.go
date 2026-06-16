@@ -82,6 +82,13 @@ type Recorder interface {
 // sensitiveKeys is the case-insensitive keyword set masked by
 // FilterSensitiveParams. Order does not matter; matching is performed in a
 // loop-with-resume so every occurrence per keyword is replaced.
+//
+// IMPORTANT: the matcher is a contiguous-substring search for `"<key>":"`,
+// NOT a prefix-tolerant or word-boundary match. Each camelCase or snake_case
+// variant of a sensitive concept MUST be added as its own literal entry
+// below — relying on a base word (e.g. "key") to match "apiKey" or "sm4Key"
+// would silently fail. See regression_test.go's `mandatorySensitiveKeywords`
+// for the locked minimum set.
 var sensitiveKeys = []string{
 	"password",
 	"pwd",
@@ -94,9 +101,26 @@ var sensitiveKeys = []string{
 	"macKey",
 	"sm4Key",
 	"sm2Key",
+	"sm3Key",
+	"apiKey",
+	"v1Key",
+	"v2Key",
+	"appKey",
+	"appSecret",
+	"hmacKey",
+	"signKey",
+	"aesKey",
+	"desKey",
+	"rsaPrivateKey",
+	"rsaPublicKey",
+	"certPassword",
+	"keystorePassword",
+	"truststorePassword",
 	"adminPassword",
 	"clientSecret",
 	"accessKey",
+	"accessKeyId",
+	"accessKeySecret",
 	"secretKey",
 	"private_key",
 	"publicKey",

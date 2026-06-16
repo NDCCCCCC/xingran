@@ -170,6 +170,13 @@ func TestRecordSignatureStable(t *testing.T) {
 // sensitiveKeys. These are the substrings whose unmasked presence in
 // sys_oper_log.oper_param would be a confirmed leak. Any removal is a security
 // regression.
+//
+// Critical invariant: each entry MUST be the EXACT field name (case-folded
+// later by the matcher). "key" alone does NOT match "apiKey" or "sm4Key" —
+// the matcher does a contiguous-substring search for `"<key>":"`, not a
+// word-boundary match. The 14 entries below lock the camelCase / snake_case
+// variants of the password / key / secret / token family that have actually
+// appeared in handler request structs.
 var mandatorySensitiveKeywords = []string{
 	"password",
 	"pwd",
@@ -182,6 +189,13 @@ var mandatorySensitiveKeywords = []string{
 	"macKey",
 	"sm4Key",
 	"sm2Key",
+	"sm3Key",
+	"apiKey",
+	"accessKey",
+	"secretKey",
+	"clientSecret",
+	"private_key",
+	"publicKey",
 }
 
 // TestFilterSensitiveParamsKeywordsStable asserts the sensitive keyword slice

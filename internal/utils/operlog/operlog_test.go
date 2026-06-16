@@ -70,6 +70,16 @@ func TestFilterSensitiveParams(t *testing.T) {
 			want: `{"sm4Key":"******","sm2Key":"******"}`,
 		},
 		{
+			// Phase 34 review CRITICAL: apiKey MUST be masked. Prior to the
+			// sensitiveKeys expansion in this same commit, "key" alone did
+			// NOT match "apiKey" — substring `"key":"` does not appear inside
+			// `"apiKey":"supersecret"` (positions 4-10 are `ey":"su`, not
+			// `"key":"`). This test pins the new "apiKey" entry.
+			name: "apiKey masked (Phase 34 review critical)",
+			in:   `{"apiKey":"supersecret"}`,
+			want: `{"apiKey":"******"}`,
+		},
+		{
 			name: "adminPassword masked",
 			in:   `{"adminPassword":"root"}`,
 			want: `{"adminPassword":"******"}`,
