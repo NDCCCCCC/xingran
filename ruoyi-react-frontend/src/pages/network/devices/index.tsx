@@ -3,7 +3,8 @@
  */
 
 import { useState, useEffect, useCallback, type FC } from "react";
-import type { ReactElement } from "react";
+import { useLocation } from "react-router-dom";
+import { usePersistedState } from "@/hooks/usePersistedState";
 import {
   Table,
   Button,
@@ -228,7 +229,12 @@ const DeviceManagement: FC = () => {
   const [editForm] = Form.useForm();
 
   // 自定义状态
-  const [selectedDeptId, setSelectedDeptId] = useState<string>("");
+  const location = useLocation();
+  const { value: selectedDeptId, setValue: setSelectedDeptId } = usePersistedState<string>({
+    keyPrefix: location.pathname,
+    keySuffix: "selectedDeptId",
+    defaultValue: "",
+  });
   const [collectingDeviceId, setCollectingDeviceId] = useState<string | null>(null);
   const [batchModalVisible, setBatchModalVisible] = useState(false);
   const [batchExporting, setBatchExporting] = useState(false);

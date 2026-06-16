@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
+import { useLocation } from "react-router-dom";
+import { usePersistedState } from "@/hooks/usePersistedState";
 import {
   Input,
   Card,
@@ -46,9 +48,22 @@ const KnowledgeViewPage: FC = () => {
   const [categories, setCategories] = useState<KnowledgeCategory[]>([]);
   const [tags, setTags] = useState<KnowledgeTag[]>([]);
 
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
-  const [selectedTag, setSelectedTag] = useState<string>("");
-  const [keyword, setKeyword] = useState<string>("");
+  const location = useLocation();
+  const { value: selectedCategory, setValue: setSelectedCategory } = usePersistedState<string>({
+    keyPrefix: location.pathname,
+    keySuffix: "selectedCategory",
+    defaultValue: "",
+  });
+  const { value: selectedTag, setValue: setSelectedTag } = usePersistedState<string>({
+    keyPrefix: location.pathname,
+    keySuffix: "selectedTag",
+    defaultValue: "",
+  });
+  const { value: keyword, setValue: setKeyword } = usePersistedState<string>({
+    keyPrefix: location.pathname,
+    keySuffix: "keyword",
+    defaultValue: "",
+  });
 
   const [detailVisible, setDetailVisible] = useState(false);
   const [selectedArticle, setSelectedArticle] = useState<KnowledgeArticle | null>(null);

@@ -20,6 +20,8 @@
  */
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { useLocation } from "react-router-dom";
+import { usePersistedState } from "@/hooks/usePersistedState";
 import {
   Table, Button, Space, Form, Input, InputNumber, Select,
   Tag, Card, DatePicker, List, Grid, Spin, Tooltip, Skeleton,
@@ -105,7 +107,12 @@ const MACHistoryPage: React.FC = () => {
   // 状态
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [activePreset, setActivePreset] = useState<PresetKey>("7d");
+  const location = useLocation();
+  const { value: activePreset, setValue: setActivePreset } = usePersistedState<PresetKey>({
+    keyPrefix: location.pathname,
+    keySuffix: "activePreset",
+    defaultValue: "7d",
+  });
   const [customRange, setCustomRange] = useState<[Dayjs, Dayjs] | null>(null);
   const [expandedRowKeys, setExpandedRowKeys] = useState<React.Key[]>([]);
   const [exporting, setExporting] = useState<boolean>(false);

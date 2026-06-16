@@ -4,6 +4,8 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
+import { useLocation } from "react-router-dom";
+import { usePersistedState } from "@/hooks/usePersistedState";
 import { Tabs, Button, Modal, Form } from "antd";
 import { LeftOutlined, RightOutlined, CalendarOutlined, SettingOutlined, TeamOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
@@ -33,7 +35,12 @@ export default function DutyManagement() {
   const dutyConfig = useDutyConfig();
 
   // ==================== 其他状态 ====================
-  const [activeTab, setActiveTab] = useState("weekly");
+  const location = useLocation();
+  const { value: activeTab, setValue: setActiveTab } = usePersistedState<string>({
+    keyPrefix: location.pathname,
+    keySuffix: "activeTab",
+    defaultValue: "weekly",
+  });
   const [pools, setPools] = useState<DutyPool[]>([]);
   const [users, setUsers] = useState<SimpleUser[]>([]);
 

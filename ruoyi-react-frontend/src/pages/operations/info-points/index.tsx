@@ -4,6 +4,8 @@
 
 import { useState, useCallback, useEffect, useMemo } from "react";
 import type { FC } from "react";
+import { useLocation } from "react-router-dom";
+import { usePersistedState } from "@/hooks/usePersistedState";
 import {
   Table, Button, Space, Modal, Form, Input, Select,
   Tag, Card, Row, Col, Alert, Radio, Cascader, Tooltip, Layout,
@@ -76,7 +78,12 @@ interface Statistics {
 
 const InfoPointManagement: FC = () => {
   const [statistics, setStatistics] = useState<Statistics>({ total: 0, normal: 0, fault: 0, disabled: 0 });
-  const [viewMode, setViewMode] = useState<ViewMode>("table");
+  const location = useLocation();
+  const { value: viewMode, setValue: setViewMode } = usePersistedState<ViewMode>({
+    keyPrefix: location.pathname,
+    keySuffix: "viewMode",
+    defaultValue: "table",
+  });
   const [importVisible, setImportVisible] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
   const [exportFilters, setExportFilters] = useState<Record<string, unknown>>({});

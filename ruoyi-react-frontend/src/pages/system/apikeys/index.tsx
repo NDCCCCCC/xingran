@@ -3,6 +3,8 @@
  */
 
 import { useState, useEffect, useCallback, useMemo, type FC } from "react";
+import { useLocation } from "react-router-dom";
+import { usePersistedState } from "@/hooks/usePersistedState";
 import {
   Table,
   Button,
@@ -129,8 +131,17 @@ const APIKeyManagement: FC = () => {
 
   // 搜索筛选状态
   const [searchKeyword, setSearchKeyword] = useState<string>("");
-  const [filterStatus, setFilterStatus] = useState<boolean | undefined>(undefined);
-  const [filterScope, setFilterScope] = useState<string | undefined>(undefined);
+  const location = useLocation();
+  const { value: filterStatus, setValue: setFilterStatus } = usePersistedState<boolean | undefined>({
+    keyPrefix: location.pathname,
+    keySuffix: "filterStatus",
+    defaultValue: undefined,
+  });
+  const { value: filterScope, setValue: setFilterScope } = usePersistedState<string | undefined>({
+    keyPrefix: location.pathname,
+    keySuffix: "filterScope",
+    defaultValue: undefined,
+  });
 
   // Form 实例
   const [form] = Form.useForm();

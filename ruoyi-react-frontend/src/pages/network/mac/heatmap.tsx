@@ -14,6 +14,8 @@ import {
   Card, DatePicker, Space, Button, Form, Alert, Grid, Spin, Tag,
 } from "antd";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "react-router-dom";
+import { usePersistedState } from "@/hooks/usePersistedState";
 import dayjs, { type Dayjs } from "dayjs";
 
 type RangePickerOnChange = React.ComponentProps<typeof DatePicker.RangePicker>["onChange"];
@@ -48,7 +50,12 @@ const HeatmapPage: React.FC = () => {
   const isMobile = !screens.sm;
 
   const [queryParams, setQueryParams] = useState<{ startTime: string; endTime: string } | null>(null);
-  const [activePreset, setActivePreset] = useState<PresetKey>("7d");
+  const location = useLocation();
+  const { value: activePreset, setValue: setActivePreset } = usePersistedState<PresetKey>({
+    keyPrefix: location.pathname,
+    keySuffix: "activePreset",
+    defaultValue: "7d",
+  });
   const [customRange, setCustomRange] = useState<[Dayjs, Dayjs] | null>(null);
 
   // 拉数据

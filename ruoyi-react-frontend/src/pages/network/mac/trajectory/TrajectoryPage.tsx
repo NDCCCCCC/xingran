@@ -4,6 +4,7 @@ import {
 } from "antd";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "react-router-dom";
+import { usePersistedState } from "@/hooks/usePersistedState";
 
 type RangePickerOnChange = React.ComponentProps<typeof DatePicker.RangePicker>["onChange"];
 import dayjs from "dayjs";
@@ -42,7 +43,11 @@ const TrajectoryPage: React.FC = () => {
   const [form] = Form.useForm();
   const location = useLocation();
   const [queryParams, setQueryParams] = useState<TrajectoryQueryParams | null>(null);
-  const [activePreset, setActivePreset] = useState<PresetKey>("7d");
+  const { value: activePreset, setValue: setActivePreset } = usePersistedState<PresetKey>({
+    keyPrefix: location.pathname,
+    keySuffix: "activePreset",
+    defaultValue: "7d",
+  });
   const [customRange, setCustomRange] = useState<[Dayjs, Dayjs] | null>(null);
   const [drawerOpen, setDrawerOpen] = useState<boolean>(true);
 

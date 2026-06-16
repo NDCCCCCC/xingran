@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useLocation } from "react-router-dom";
+import { usePersistedState } from "@/hooks/usePersistedState";
 import { useAuthStore } from "@/store/authStore";
 import { useMenuStore } from "@/store/menuStore";
 import { vmOperationButtons } from "./vmOperationButtons";
@@ -7,11 +9,9 @@ import {
   Button,
   Space,
   Tag,
-  Modal,
   message,
   Popconfirm,
   Select,
-  Input,
   Card,
   Tooltip,
   Form,
@@ -24,16 +24,7 @@ import {
 } from "antd";
 import {
   ReloadOutlined,
-  PlayCircleOutlined,
-  StopOutlined,
-  SyncOutlined,
-  DeleteOutlined,
-  PlusOutlined,
-  EditOutlined,
-  UserAddOutlined,
-} from "@ant-design/icons";
-import { useNavigate } from "react-router-dom";
-import { vmApi, vdiServerApi } from "@/lib/vdiApi";
+import { SyncOutlined, EditOutlined, UserAddOutlined } from "@ant-design/icons";
 import { post } from "@/lib/api";
 import type { VirtualMachine, VMListParams, CreateVMRequest, VDIServer, VDIResourceGroup, VDIResource, VDIPlatform, RunPosition, VDIStorage, VDINetwork } from "@/types/vdi";
 import type { ColumnsType } from "antd/es/table";
@@ -55,7 +46,12 @@ const VirtualMachineList: React.FC = () => {
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-  const [filters, setFilters] = useState<Partial<VMListParams>>({});
+  const location = useLocation();
+  const { value: filters, setValue: setFilters } = usePersistedState<Partial<VMListParams>>({
+    keyPrefix: location.pathname,
+    keySuffix: "filters",
+    defaultValue: {},
+  });
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [quickCreateModalVisible, setQuickCreateModalVisible] = useState(false);
   const [bindUserModalVisible, setBindUserModalVisible] = useState(false);

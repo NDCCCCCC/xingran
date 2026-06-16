@@ -4,6 +4,8 @@
 
 import { useState, useCallback, useEffect } from "react";
 import type { FC } from "react";
+import { useLocation } from "react-router-dom";
+import { usePersistedState } from "@/hooks/usePersistedState";
 import {
   Table, Button, Space, Modal, Form, Input, InputNumber, Select,
   Tag, Card, Row, Col, Alert, Radio, Layout,
@@ -47,7 +49,12 @@ interface Statistics {
 }
 
 const DedicatedLineManagement: FC = () => {
-  const [viewMode, setViewMode] = useState<ViewMode>("table");
+  const location = useLocation();
+  const { value: viewMode, setValue: setViewMode } = usePersistedState<ViewMode>({
+    keyPrefix: location.pathname,
+    keySuffix: "viewMode",
+    defaultValue: "table",
+  });
   const [importVisible, setImportVisible] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
   const [exportFilters, setExportFilters] = useState<Record<string, unknown>>({});

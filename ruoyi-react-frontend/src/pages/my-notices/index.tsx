@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import type { FC } from "react";
+import { useLocation } from "react-router-dom";
+import { usePersistedState } from "@/hooks/usePersistedState";
 import {
   Card,
   Table,
@@ -38,7 +40,12 @@ const MyNoticesPage: FC = () => {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [total, setTotal] = useState(0);
   const [allTotal, setAllTotal] = useState(0); // 全部通知总数（用于标签显示）
-  const [activeTab, setActiveTab] = useState<"all" | "unread" | "read">("all");
+  const location = useLocation();
+  const { value: activeTab, setValue: setActiveTab } = usePersistedState<"all" | "unread" | "read">({
+    keyPrefix: location.pathname,
+    keySuffix: "activeTab",
+    defaultValue: "all",
+  });
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize } = usePagination();

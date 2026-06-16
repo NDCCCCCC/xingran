@@ -3,13 +3,14 @@
  */
 
 import { useState, useEffect, useCallback, type FC, type Key } from "react";
+import { useLocation } from "react-router-dom";
+import { usePersistedState } from "@/hooks/usePersistedState";
 import {
   Table,
   Button,
   Space,
   Modal,
   Form,
-  Input,
   Select,
   TreeSelect,
   Tag,
@@ -225,7 +226,12 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
 
 const UserManagement: FC = () => {
   // 自定义状态
-  const [selectedDeptId, setSelectedDeptId] = useState<string>("");
+  const location = useLocation();
+  const { value: selectedDeptId, setValue: setSelectedDeptId } = usePersistedState<string>({
+    keyPrefix: location.pathname,
+    keySuffix: "selectedDeptId",
+    defaultValue: "",
+  });
 
   // 使用自定义 Hooks
   const { statistics, roles, departments, loadStatistics, loadRoles, loadDepartments } = useUserData();

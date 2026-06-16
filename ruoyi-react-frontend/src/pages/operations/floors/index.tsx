@@ -4,6 +4,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import type { FC } from "react";
+import { useLocation } from "react-router-dom";
+import { usePersistedState } from "@/hooks/usePersistedState";
 import { Table, Button, Card, Alert, Layout } from "antd";
 import type { Floor, Building } from "@/types";
 import type { FloorPlanData } from "@/components/cad-editor/types";
@@ -34,9 +36,18 @@ import { DEFAULT_FORM_VALUES } from "./constants";
 const { Content } = Layout;
 
 const FloorManagement: FC = () => {
-  const [pageMode, setPageMode] = useState<PageMode>("list");
+  const location = useLocation();
+  const { value: pageMode, setValue: setPageMode } = usePersistedState<PageMode>({
+    keyPrefix: location.pathname,
+    keySuffix: "pageMode",
+    defaultValue: "list",
+  });
   const [currentFloor, setCurrentFloor] = useState<Floor | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>("table");
+  const { value: viewMode, setValue: setViewMode } = usePersistedState<ViewMode>({
+    keyPrefix: location.pathname,
+    keySuffix: "viewMode",
+    defaultValue: "table",
+  });
   const [importVisible, setImportVisible] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
   const [exportFilters, setExportFilters] = useState<Record<string, unknown>>({});

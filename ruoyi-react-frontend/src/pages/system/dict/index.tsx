@@ -4,6 +4,8 @@
  */
 
 import { useState, useEffect, type FC, type Key } from "react";
+import { useLocation } from "react-router-dom";
+import { usePersistedState } from "@/hooks/usePersistedState";
 import {
   Table,
   Button,
@@ -203,7 +205,12 @@ const DictManagement: FC = () => {
   const [typeForm] = Form.useForm();
   const [dataForm] = Form.useForm();
   const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
-  const [activeTab, setActiveTab] = useState("type");
+  const location = useLocation();
+  const { value: activeTab, setValue: setActiveTab } = usePersistedState<string>({
+    keyPrefix: location.pathname,
+    keySuffix: "activeTab",
+    defaultValue: "type",
+  });
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
