@@ -9,7 +9,7 @@ package operlog
 //     handlers across 7 waves select a constant by name and rely on its int
 //     value being stable. Renumbering would silently mislabel every historical
 //     row in sys_oper_log.
-//   - OperType count == 24 (TestOperTypeCountEquals24):
+//   - OperType count == 25 (TestOperTypeCountEquals25):
 //     adding/removing a constant without updating call sites is a breaking
 //     change. The count is the coarsest invariant that catches both additions
 //     and removals.
@@ -59,6 +59,7 @@ var expectedOperTypeValues = map[string]int{
 	"OperTypeRegister": 21,
 	"OperTypeApprove":  22,
 	"OperTypeReject":   23,
+	"OperTypeUnlock":   24,
 }
 
 // TestOperTypeConstantStability asserts each OperType* constant is pinned to
@@ -95,12 +96,15 @@ func TestOperTypeConstantStability(t *testing.T) {
 	}
 }
 
-// TestOperTypeCountEquals24 asserts the operlog package exposes exactly 24
+// TestOperTypeCountEquals25 asserts the operlog package exposes exactly 25
 // OperType constants. Catches both additions (which would need new call sites
 // + docs) and removals (which would break existing call sites).
-func TestOperTypeCountEquals24(t *testing.T) {
+//
+// History: was 24 at Phase 34 close; bumped to 25 in Phase 34 review closure
+// to add OperTypeUnlock (24) for the user-unlock audit verb.
+func TestOperTypeCountEquals25(t *testing.T) {
 	t.Parallel()
-	const want = 24
+	const want = 25
 	actual, err := readOperTypeConsts("operlog.go")
 	if err != nil {
 		t.Fatalf("failed to parse operlog.go: %v", err)

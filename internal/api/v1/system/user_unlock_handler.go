@@ -44,9 +44,10 @@ func unlockUser(core *core.Core) gin.HandlerFunc {
 		_ = core.Cache.Delete(c.Request.Context(), lockKey)
 
 		// 记录操作日志（合规敏感：账号解锁需审计 who-unlocked-whom）。
-		// 使用 OperTypeOther(0) —— 解锁不属于状态变更语义（不修改 sys_user.status），
-		// 而是清除登录锁定缓存。oper_param 记录被解锁的用户名，操作者由 operlog 自动提取。
-		operlog.Record(c, core.OperLogService, core.GetDB(), "用户解锁", operlog.OperTypeOther,
+		// 使用专用 OperTypeUnlock(24) 而非 OperTypeOther(0)：解锁是独立的审计动词，
+		// 不属于状态变更语义（不修改 sys_user.status），而是清除登录锁定缓存。
+		// oper_param 记录被解锁的用户名，操作者由 operlog 自动提取。
+		operlog.Record(c, core.OperLogService, core.GetDB(), "用户解锁", operlog.OperTypeUnlock,
 			operlog.WithOperParam("username="+req.Username))
 		response.Success(c, gin.H{
 			"message": "用户账号已解锁",

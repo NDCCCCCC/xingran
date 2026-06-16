@@ -253,7 +253,7 @@ response.Success(c, user)
 operlog.RecordWithBody(c, h.core.OperLogService, h.core.GetDB(), "API密钥管理", operlog.OperTypeCreate)
 ```
 
-**OperType 业务类型常量集（共 24 个，值固定不可重排）:**
+**OperType 业务类型常量集（共 25 个，值固定不可重排）:**
 
 | 常量 | 值 | 语义 |
 |------|----|----|
@@ -281,12 +281,13 @@ operlog.RecordWithBody(c, h.core.OperLogService, h.core.GetDB(), "API密钥管�
 | `OperTypeRegister` | 21 | Agent/虚拟机注册 |
 | `OperTypeApprove` | 22 | 审批通过 |
 | `OperTypeReject` | 23 | 审批驳回 |
+| `OperTypeUnlock` | 24 | 账号解锁（管理员手动解锁被锁定的用户） |
 
 **module 中文名称规范:** 用户管理 / 角色管理 / 部门管理 / 菜单管理 / 通知公告 / API密钥管理 / 参数管理 / 字典管理 / 岗位管理 / 楼宇管理 / 楼层管理 / 工位管理 / 机房管理 / 资产管理 / 专线管理 / 信息点 / 网络设备 / 设备凭据 / 命令模板 / 拓扑 / MAC地址 / 端口采集 / 虚拟机管理 / VDI服务器 / 工单管理 / 值班池 / 知识库文章 / 定时任务 / 缓存监控 / 操作日志 / Agent管理 / RPA任务 / 仪表盘 / 列配置 / 通知配置 / AD域控同步 等。
 
 **参考实现:** `internal/api/v1/system/ad_domain_handler.go`（Phase 34 之前的唯一参考，现已成为全模块通用约定）。
 
-**回归守护:** `internal/utils/operlog/regression_test.go` 通过 4 个测试锁定公共 API（常量值 / 常量数=24 / Record 5参+可变参 / 11 个强制敏感关键词），任何静默改动都会立即失败。
+**回归守护:** `internal/utils/operlog/regression_test.go` 通过 4 个测试锁定公共 API（常量值 / 常量数=25 / Record 5参+可变参 / 11 个强制敏感关键词），任何静默改动都会立即失败。
 
 ### Status Value Convention (IMPORTANT)
 

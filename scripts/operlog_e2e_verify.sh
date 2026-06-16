@@ -284,7 +284,7 @@ assert_logged POST "/api/v1/system/dashboards"          '{"name":"e2e_dash"}'   
 assert_logged POST "/api/v1/system/column-config/save"  '{"page":"e2e","config":"{}"}'                       "列设置" 2
 
 # --- Gap-closure (34-gap): compliance-sensitive + previously-missed endpoints ---
-assert_logged POST "/api/v1/system/user-unlock/unlock"  '{"username":"e2e_locked"}'                          "用户解锁" 0
+assert_logged POST "/api/v1/system/user-unlock/unlock"  '{"username":"e2e_locked"}'                          "用户解锁" 24
 assert_logged POST "/api/v1/monitor/cache/invalidate"   '{"module":"user"}'                                  "缓存监控" 9
 assert_logged POST "/api/v1/network/devices/export"     '{"exportMode":"all"}'                               "网络设备" 5
 

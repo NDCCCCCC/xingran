@@ -61,6 +61,7 @@ const (
 	OperTypeRegister = 21 // Agent/虚拟机注册
 	OperTypeApprove  = 22 // 审批通过
 	OperTypeReject   = 23 // 审批驳回
+	OperTypeUnlock   = 24 // 账号解锁（管理员手动解锁被锁定的用户）
 )
 
 // maxFilteredBytes bounds the CPU cost of the sensitive-param filter. Inputs
