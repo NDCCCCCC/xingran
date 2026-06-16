@@ -295,7 +295,7 @@ const DedicatedLineManagement: FC = () => {
   };
 
   return (
-    <div style={{ padding: '16px', background: '#f0f2f5', minHeight: 'calc(100vh - 64px)' }}>
+    <div style={{ padding: '16px', background: '#000', minHeight: 'calc(100vh - 64px)' }}>
       <StatisticsCards
         show={total > 10}
         items={[

@@ -558,7 +558,7 @@ const DeviceManagement: FC = () => {
   });
 
   return (
-    <Layout style={{ background: '#f0f2f5', minHeight: 'calc(100vh - 64px)' }}>
+    <Layout style={{ background: '#000', minHeight: 'calc(100vh - 64px)' }}>
       {/* 左侧部门树 */}
       <Sider width={360} className="dept-list-sider" style={{ background: '#fff', padding: '0 16px 16px 0', borderRight: '1px solid #f0f0f0' }}>
         <DeptTree
@@ -568,7 +568,7 @@ const DeviceManagement: FC = () => {
       </Sider>
 
       {/* 右侧内容区 */}
-      <Content style={{ padding: '16px', background: '#f0f2f5' }}>
+      <Content style={{ background: '#fff' }}>
         <div>
           {/* 统计卡片 */}
           {statistics.total > 10 && (

@@ -87,7 +87,7 @@ const ExecutionManagement: FC = () => {
   }), [executions]);
 
   return (
-    <div style={{ padding: 16, background: '#f0f2f5', minHeight: 'calc(100vh - 64px)' }}>
+    <div style={{ padding: 16, background: '#000', minHeight: 'calc(100vh - 64px)' }}>
       <Card style={{ marginBottom: 16 }}>
         <div
           style={{

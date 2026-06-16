@@ -105,7 +105,7 @@ const WorkerMonitor: FC = () => {
     : 0;
 
   return (
-    <div style={{ padding: 16, background: '#f0f2f5', minHeight: 'calc(100vh - 64px)' }}>
+    <div style={{ padding: 16, background: '#000', minHeight: 'calc(100vh - 64px)' }}>
       {/* 统计卡片 */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={4}>

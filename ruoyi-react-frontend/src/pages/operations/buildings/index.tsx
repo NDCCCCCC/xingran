@@ -371,7 +371,7 @@ const BuildingManagement: FC = () => {
   };
 
   return (
-    <Layout style={{ background: '#f0f2f5', minHeight: 'calc(100vh - 64px)' }}>
+    <Layout style={{ background: '#000', minHeight: 'calc(100vh - 64px)' }}>
       {/* 左侧部门树 */}
       <Sider width={360} className="dept-list-sider" style={{ background: '#fff', padding: '0 16px 16px 0', borderRight: '1px solid #f0f0f0' }}>
         <DeptTree
@@ -382,7 +382,7 @@ const BuildingManagement: FC = () => {
       </Sider>
 
       {/* 右侧内容区 */}
-      <Content style={{ padding: '16px', background: '#f0f2f5' }}>
+      <Content style={{ background: '#fff' }}>
         <div>
           <Row gutter={16} style={{ marginBottom: 16 }}>
             <Col span={8}><Card><Statistic title="总楼宇数" value={statistics.total} prefix={<CheckCircleOutlined />} /></Card></Col>
