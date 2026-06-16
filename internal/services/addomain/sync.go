@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-ldap/ldap/v3"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"golang.org/x/sync/singleflight"
 	"gorm.io/gorm"
@@ -194,6 +195,21 @@ func extractDNs(entries []*ldap.Entry) []string {
 	return ouDNs
 }
 
+// safeAttr 从 LDAP entry 读取属性值并清洗为可安全写入 PostgreSQL 的字符串。
+//
+// 与 utils.SanitizeForDB 的区别:此处同时裁剪到对应模型列宽上限,
+// 防止 AD 返回超长 description/displayName 触发 GORM Data too long 错误。
+// 长度参考 internal/models/ad_domain.go 的 gorm:"size:XXX" 标签:
+//   - size:255 → 255
+//   - size:500 → 500
+//   - size:50  → 50
+//   - type:text → 4000(防止单字段爆炸)
+//
+// 调用方不需要再二次清洗。
+func safeAttr(s string, maxLen int) string {
+	return utils.SanitizeAndTruncate(s, maxLen)
+}
+
 // getExistingOUs 获取已存在的OU
 func (s *SyncService) getExistingOUs(ctx context.Context, configID string, ouDNs []string) []models.ADOU {
 	var existingOUs []models.ADOU
@@ -213,8 +229,8 @@ func (s *SyncService) categorizeOUs(entries []*ldap.Entry, existingOUs []models.
 
 	for _, entry := range entries {
 		ouDN := entry.DN
-		ouName := entry.GetAttributeValue("ou")
-		description := entry.GetAttributeValue("description")
+		ouName := safeAttr(entry.GetAttributeValue("ou"), 255)
+		description := safeAttr(entry.GetAttributeValue("description"), 4000)
 		parentDN := extractParentDN(ouDN)
 		ouPath := buildOUPath(ouDN, config.BaseDN)
 
@@ -316,8 +332,8 @@ func (s *SyncService) syncGroups(ctx context.Context, config *models.ADConfig, e
 		groupScope, groupType := parseGroupTypeFromLDAP(entry.GetAttributeValue("groupType"))
 
 		if existingGroup, exists := existingGroupMap[groupDN]; exists {
-			existingGroup.GroupName = entry.GetAttributeValue("cn")
-			existingGroup.Description = entry.GetAttributeValue("description")
+			existingGroup.GroupName = safeAttr(entry.GetAttributeValue("cn"), 255)
+			existingGroup.Description = safeAttr(entry.GetAttributeValue("description"), 4000)
 			existingGroup.MemberCount = len(members)
 			existingGroup.OUN = ouDN
 			existingGroup.GroupScope = groupScope
@@ -328,8 +344,8 @@ func (s *SyncService) syncGroups(ctx context.Context, config *models.ADConfig, e
 			groupsToCreate = append(groupsToCreate, models.ADGroup{
 				ADConfigID:  config.ID,
 				GroupDN:     groupDN,
-				GroupName:   entry.GetAttributeValue("cn"),
-				Description: entry.GetAttributeValue("description"),
+				GroupName:   safeAttr(entry.GetAttributeValue("cn"), 255),
+				Description: safeAttr(entry.GetAttributeValue("description"), 4000),
 				MemberCount: len(members),
 				OUN:         ouDN,
 				GroupScope:  groupScope,
@@ -456,7 +472,7 @@ func (s *SyncService) syncUsers(ctx context.Context, config *models.ADConfig, en
 
 	for _, entry := range entries {
 		userDN := entry.DN
-		username := entry.GetAttributeValue("sAMAccountName")
+		username := safeAttr(entry.GetAttributeValue("sAMAccountName"), 255)
 		if username == "" {
 			continue
 		}
@@ -469,8 +485,15 @@ func (s *SyncService) syncUsers(ctx context.Context, config *models.ADConfig, en
 		userAccountControl := parseIntOrDefault(uacStr, 512)
 
 		// memberOf is multi-valued, store as semicolon-separated
+		// (对每个值单独清洗,然后 join,避免 NUL/无效 UTF-8 污染连接结果)
 		memberOfValues := entry.GetAttributeValues("memberOf")
-		memberOf := strings.Join(memberOfValues, ";")
+		memberOfParts := make([]string, 0, len(memberOfValues))
+		for _, v := range memberOfValues {
+			if s := safeAttr(v, 500); s != "" {
+				memberOfParts = append(memberOfParts, s)
+			}
+		}
+		memberOf := strings.Join(memberOfParts, ";")
 
 		// 解析时间字段
 		var lastLogon, pwdLastSet *time.Time
@@ -484,14 +507,14 @@ func (s *SyncService) syncUsers(ctx context.Context, config *models.ADConfig, en
 		if existingUser, exists := existingUserMap[userDN]; exists {
 			// 已存在，标记为需要更新
 			existingUser.Username = username
-			existingUser.DisplayName = entry.GetAttributeValue("displayName")
-			existingUser.Email = entry.GetAttributeValue("mail")
-			existingUser.Phone = entry.GetAttributeValue("telephoneNumber")
-			existingUser.Mobile = entry.GetAttributeValue("mobile")
-			existingUser.Title = entry.GetAttributeValue("title")
-			existingUser.Department = entry.GetAttributeValue("department")
-			existingUser.Company = entry.GetAttributeValue("company")
-			existingUser.Description = entry.GetAttributeValue("description")
+			existingUser.DisplayName = safeAttr(entry.GetAttributeValue("displayName"), 255)
+			existingUser.Email = safeAttr(entry.GetAttributeValue("mail"), 255)
+			existingUser.Phone = safeAttr(entry.GetAttributeValue("telephoneNumber"), 50)
+			existingUser.Mobile = safeAttr(entry.GetAttributeValue("mobile"), 50)
+			existingUser.Title = safeAttr(entry.GetAttributeValue("title"), 100)
+			existingUser.Department = safeAttr(entry.GetAttributeValue("department"), 255)
+			existingUser.Company = safeAttr(entry.GetAttributeValue("company"), 255)
+			existingUser.Description = safeAttr(entry.GetAttributeValue("description"), 4000)
 			existingUser.OUN = ouDN
 			existingUser.UserAccountControl = userAccountControl
 			existingUser.IsEnabled = !existingUser.IsDisabledByUAC()
@@ -508,14 +531,14 @@ func (s *SyncService) syncUsers(ctx context.Context, config *models.ADConfig, en
 				ADConfigID:         config.ID,
 				UserDN:             userDN,
 				Username:           username,
-				DisplayName:        entry.GetAttributeValue("displayName"),
-				Email:              entry.GetAttributeValue("mail"),
-				Phone:              entry.GetAttributeValue("telephoneNumber"),
-				Mobile:             entry.GetAttributeValue("mobile"),
-				Title:              entry.GetAttributeValue("title"),
-				Department:         entry.GetAttributeValue("department"),
-				Company:            entry.GetAttributeValue("company"),
-				Description:        entry.GetAttributeValue("description"),
+				DisplayName:        safeAttr(entry.GetAttributeValue("displayName"), 255),
+				Email:              safeAttr(entry.GetAttributeValue("mail"), 255),
+				Phone:              safeAttr(entry.GetAttributeValue("telephoneNumber"), 50),
+				Mobile:             safeAttr(entry.GetAttributeValue("mobile"), 50),
+				Title:              safeAttr(entry.GetAttributeValue("title"), 100),
+				Department:         safeAttr(entry.GetAttributeValue("department"), 255),
+				Company:            safeAttr(entry.GetAttributeValue("company"), 255),
+				Description:        safeAttr(entry.GetAttributeValue("description"), 4000),
 				OUN:                ouDN,
 				UserAccountControl: userAccountControl,
 				MemberOf:           memberOf,
@@ -612,6 +635,13 @@ func (s *SyncService) syncGroupMembers(ctx context.Context, config *models.ADCon
 }
 
 // updateSyncLog 更新同步日志
+//
+// DB 安全:errorMsg 在写入 PostgreSQL TEXT 列之前必须经过 SanitizeForDB,
+// 因为 go-ldap v3.4.12 在 error.go:223 直接把 AD 服务器的原始诊断字节
+// 包装成 error message,某些 AD 服务器返回的诊断消息含有 NUL (0x00) 或
+// 非 UTF-8 序列,会触发 PostgreSQL SQLSTATE 22021 拒绝写入,导致整个
+// handler 返回 500。
+// 触发场景参见 .planning/debug/ad-sync-500-nul-byte.md (待写)。
 func (s *SyncService) updateSyncLog(ctx context.Context, logID string, status models.ADSyncStatus, ouCount, groupCount, userCount, computerCount int, errorMsg string) {
 	// 先获取原始日志记录以计算耗时
 	var log models.ADSyncLog
@@ -638,11 +668,19 @@ func (s *SyncService) updateSyncLog(ctx context.Context, logID string, status mo
 	}
 
 	if errorMsg != "" {
-		updates["error_message"] = errorMsg
+		// 关键:剥离 NUL 字节与无效 UTF-8,避免 PostgreSQL 拒绝写入
+		safe := utils.SanitizeAndTruncate(errorMsg, 4000)
+		updates["error_message"] = safe
 		updates["error_count"] = 1
+		if safe != errorMsg {
+			applogger.Warnf("[AD同步] sync_log.error_message 含非法字符已被清洗 (id=%s)", logID)
+		}
 	}
 
-	s.db.WithContext(ctx).Model(&models.ADSyncLog{}).Where("id = ?", logID).Updates(updates)
+	if err := s.db.WithContext(ctx).Model(&models.ADSyncLog{}).Where("id = ?", logID).Updates(updates).Error; err != nil {
+		// 写入失败仅记录,不影响同步主流程的错误向上传播
+		applogger.Errorf("[AD同步] 写入 sync_log 失败 (id=%s): %v", logID, err)
+	}
 }
 
 // parseGroupTypeFromLDAP parses the AD groupType integer flag into GroupScope and GroupType

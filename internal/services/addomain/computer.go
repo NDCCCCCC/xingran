@@ -269,21 +269,21 @@ func buildComputerFromEntry(configID string, entry *ldap.Entry, parsedDesc map[s
 
 	return models.ADComputer{
 		ADConfigID:          configID,
-		ComputerName:        computerName,
+		ComputerName:        safeAttr(computerName, 255),
 		DistinguishedName:   computerDN,
 		OUDN:                extractParentDN(computerDN),
-		OriginalDescription: entry.GetAttributeValue("description"),
-		IPAddress:           parsedDesc["ipAddress"],
-		MacAddress:          parsedDesc["macAddress"],
-		ManagedBy:           entry.GetAttributeValue("managedBy"),
-		OperatingSystem:     entry.GetAttributeValue("operatingSystem"),
-		OSVersion:           entry.GetAttributeValue("operatingSystemVersion"),
-		CPUModel:            parsedDesc["cpuModel"],
-		Architecture:        parsedDesc["architecture"],
-		MemoryCapacity:      parsedDesc["memoryCapacity"],
-		HardDiskCapacity:    parsedDesc["hardDiskCapacity"],
-		SerialNumber:        parsedDesc["serialNumber"],
-		SystemInfo:          entry.GetAttributeValue("description"),
+		OriginalDescription: safeAttr(entry.GetAttributeValue("description"), 4000),
+		IPAddress:           safeAttr(parsedDesc["ipAddress"], 50),
+		MacAddress:          safeAttr(parsedDesc["macAddress"], 50),
+		ManagedBy:           safeAttr(entry.GetAttributeValue("managedBy"), 255),
+		OperatingSystem:     safeAttr(entry.GetAttributeValue("operatingSystem"), 255),
+		OSVersion:           safeAttr(entry.GetAttributeValue("operatingSystemVersion"), 255),
+		CPUModel:            safeAttr(parsedDesc["cpuModel"], 255),
+		Architecture:        safeAttr(parsedDesc["architecture"], 50),
+		MemoryCapacity:      safeAttr(parsedDesc["memoryCapacity"], 50),
+		HardDiskCapacity:    safeAttr(parsedDesc["hardDiskCapacity"], 50),
+		SerialNumber:        safeAttr(parsedDesc["serialNumber"], 255),
+		SystemInfo:          safeAttr(entry.GetAttributeValue("description"), 4000),
 		LastLogon:           lastLogon,
 		PasswordLastSet:     pwdLastSet,
 		LogonCount:          logonCount,
@@ -294,21 +294,21 @@ func buildComputerFromEntry(configID string, entry *ldap.Entry, parsedDesc map[s
 
 // updateComputerFields 更新电脑对象字段
 func updateComputerFields(computer *models.ADComputer, entry *ldap.Entry, parsedDesc map[string]string, status models.ComputerStatus, now time.Time) {
-	computer.ComputerName = entry.GetAttributeValue("cn")
+	computer.ComputerName = safeAttr(entry.GetAttributeValue("cn"), 255)
 	computer.DistinguishedName = entry.DN
 	computer.OUDN = extractParentDN(entry.DN)
-	computer.OriginalDescription = entry.GetAttributeValue("description")
-	computer.IPAddress = parsedDesc["ipAddress"]
-	computer.MacAddress = parsedDesc["macAddress"]
-	computer.ManagedBy = entry.GetAttributeValue("managedBy")
-	computer.OperatingSystem = entry.GetAttributeValue("operatingSystem")
-	computer.OSVersion = entry.GetAttributeValue("operatingSystemVersion")
-	computer.CPUModel = parsedDesc["cpuModel"]
-	computer.Architecture = parsedDesc["architecture"]
-	computer.MemoryCapacity = parsedDesc["memoryCapacity"]
-	computer.HardDiskCapacity = parsedDesc["hardDiskCapacity"]
-	computer.SerialNumber = parsedDesc["serialNumber"]
-	computer.SystemInfo = entry.GetAttributeValue("description")
+	computer.OriginalDescription = safeAttr(entry.GetAttributeValue("description"), 4000)
+	computer.IPAddress = safeAttr(parsedDesc["ipAddress"], 50)
+	computer.MacAddress = safeAttr(parsedDesc["macAddress"], 50)
+	computer.ManagedBy = safeAttr(entry.GetAttributeValue("managedBy"), 255)
+	computer.OperatingSystem = safeAttr(entry.GetAttributeValue("operatingSystem"), 255)
+	computer.OSVersion = safeAttr(entry.GetAttributeValue("operatingSystemVersion"), 255)
+	computer.CPUModel = safeAttr(parsedDesc["cpuModel"], 255)
+	computer.Architecture = safeAttr(parsedDesc["architecture"], 50)
+	computer.MemoryCapacity = safeAttr(parsedDesc["memoryCapacity"], 50)
+	computer.HardDiskCapacity = safeAttr(parsedDesc["hardDiskCapacity"], 50)
+	computer.SerialNumber = safeAttr(parsedDesc["serialNumber"], 255)
+	computer.SystemInfo = safeAttr(entry.GetAttributeValue("description"), 4000)
 
 	var lastLogon, pwdLastSet *time.Time
 	if lastLogonStr := entry.GetAttributeValue("lastLogon"); lastLogonStr != "" {
@@ -389,6 +389,12 @@ func (s *ComputerService) syncComputers(ctx context.Context, config *models.ADCo
 	// 5. 处理LDAP条目
 	step5Start := time.Now()
 	var computersToCreate []models.ADComputer
+	// 关键修复:F-01 — toUpdate key 必须是 (config_id, computer_name) 而不是 DN。
+	// 原因:batchUpdate 用 ON CONFLICT (ad_config_id, computer_name) upsert;
+	// 如果 LDAP 返回两个不同 DN 但同名 cn 的 entry(AD tombstone + active, 或 OU move
+	// 后旧记录未清理),用 DN 作 key 会让两条都进 toUpdate,触发 PostgreSQL
+	// SQLSTATE 21000 "ON CONFLICT DO UPDATE command cannot affect row a second time"。
+	// 复现:同 config 下两台不同 DN 但同名 cn 的电脑同时存在。
 	computersToUpdate := make(map[string]*models.ADComputer)
 	now := time.Now()
 
@@ -410,7 +416,32 @@ func (s *ComputerService) syncComputers(ctx context.Context, config *models.ADCo
 
 		s.processComputerEntry(entry, config.ID, parsedDesc, status, now, existingComputerMap, existingComputerNameMap, &computersToCreate, computersToUpdate)
 	}
-	applogger.Infof("[电脑同步] 步骤5-处理条目: 耗时 %.2fs, 待创建: %d, 待更新: %d", time.Since(step5Start).Seconds(), len(computersToCreate), len(computersToUpdate))
+
+	// 关键修复:F-02 — computersToCreate 也必须按 (config_id, computer_name) 去重。
+	// 否则两个新电脑同名会触发 batchCreate 撞 unique 约束(uni_sys_ad_computer_config_name)。
+	// 实现:把 toCreate 转为 map 再回 slice。同一 (config_id, cn) 只保留最后一次写入
+	// 的记录(后写覆盖前写,与 AD 期望"最新为准"一致)。
+	if len(computersToCreate) > 0 {
+		dedupMap := make(map[string]models.ADComputer, len(computersToCreate))
+		for _, c := range computersToCreate {
+			key := c.ADConfigID + "/" + c.ComputerName
+			if _, exists := dedupMap[key]; !exists {
+				dedupMap[key] = c
+			}
+		}
+		deduped := make([]models.ADComputer, 0, len(dedupMap))
+		for _, c := range dedupMap {
+			deduped = append(deduped, c)
+		}
+		if len(deduped) < len(computersToCreate) {
+			applogger.Warnf("[电脑同步] 待创建列表去重: %d → %d 条(同名 cn 冲突,保留最新)",
+				len(computersToCreate), len(deduped))
+		}
+		computersToCreate = deduped
+	}
+
+	applogger.Infof("[电脑同步] 步骤5-处理条目: 耗时 %.2fs, 待创建: %d, 待更新: %d",
+		time.Since(step5Start).Seconds(), len(computersToCreate), len(computersToUpdate))
 
 	// 6. 批量创建
 	step6Start := time.Now()
@@ -497,6 +528,11 @@ func (s *ComputerService) buildComputerMaps(existingByDN []models.ADComputer, al
 }
 
 // processComputerEntry 处理单个电脑条目
+//
+// F-01 修复:toUpdate 的 key 从 DN 改为 (config_id, computer_name) 复合键,
+// 与 batchUpdate 的 ON CONFLICT (ad_config_id, computer_name) 对齐。
+// 这样可以避免 LDAP 返回多个同名 cn 但不同 DN 的 entry 时,batch upsert
+// 在同一 batch 内多次冲突同一行导致 SQLSTATE 21000。
 func (s *ComputerService) processComputerEntry(
 	entry *ldap.Entry,
 	configID string,
@@ -511,12 +547,18 @@ func (s *ComputerService) processComputerEntry(
 	computerDN := entry.DN
 	computerName := entry.GetAttributeValue("cn")
 
+	// 复合 key:configID + "/" + computerName
+	conflictKey := configID + "/" + computerName
+
 	if existingComputer, exists := existingDNMap[computerDN]; exists {
 		updateComputerFields(existingComputer, entry, parsedDesc, status, now)
-		toUpdate[computerDN] = existingComputer
+		toUpdate[conflictKey] = existingComputer
 	} else if existingByName, nameExists := existingNameMap[computerName]; nameExists {
 		updateComputerFields(existingByName, entry, parsedDesc, status, now)
-		toUpdate[existingByName.DistinguishedName] = existingByName
+		// 用现有记录的 DN 更新其内部字段,但 map key 改为复合键。
+		// 这样如果另一个 LDAP entry 也命中这个现有记录,后写覆盖前者
+		// (同一指针),最终 toUpdate 中只占一个 slot,避免 ON CONFLICT 重复。
+		toUpdate[conflictKey] = existingByName
 	} else {
 		newComputer := buildComputerFromEntry(configID, entry, parsedDesc, status)
 		*toCreate = append(*toCreate, newComputer)
