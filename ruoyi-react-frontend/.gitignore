@@ -7,6 +7,10 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Allow log page directories (overrides the `logs` pattern above)
+!src/pages/**/logs
+!src/pages/**/logs/**
+
 node_modules
 dist
 dist-ssr
