@@ -139,18 +139,16 @@ const ConfigManagement: FC = () => {
         const { isSystem, ...updateValues } = values;
         await post(`/system/configs/${editingConfig.id}/update`, updateValues);
 
-        // 如果更新的是加密相关配置，刷新加密配置
-        if (values.configKey === 'sys.request.encryption.enabled') {
-          try {
-            await refreshEncryptionConfig();
-            message.success('配置已更新，加密配置已刷新');
-          } catch (refreshError) {
-            console.error('刷新加密配置失败:', refreshError);
-            // 刷新失败不影响配置更新成功
-          }
-        } else {
-          handleSuccess('更新');
+        // 任何配置更新后都刷新加密配置（避免前后端加密开关状态脱同步 — 见 .planning/debug/login-400-bad-request.md）
+        // 此前只在 configKey === 'sys.request.encryption.enabled' 时刷新，
+        // 但表单的 configKey 字段可编辑 + Vite HMR 可能重置模块，导致 5 月修复在生产链路中失效。
+        try {
+          await refreshEncryptionConfig();
+        } catch (refreshError) {
+          // refreshEncryptionConfig 内部已 try/catch 吞错，这里是兜底
+          console.error('刷新加密配置失败:', refreshError);
         }
+        handleSuccess('更新');
       } else {
         await post('/system/configs', values);
         handleSuccess('创建');
