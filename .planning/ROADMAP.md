@@ -658,6 +658,57 @@ Plans:
 
 ---
 
+### Phase 35: operlog.exclude_paths 配置驱动白名单
+
+**Goal**: 在 `internal/utils/operlog` 包内引入配置驱动的操作日志排除路径机制，解决 Phase 34 关闭后暴露的 RPA Worker 心跳请求（30s/Worker）每分钟向 `sys_oper_log` 写入大量无意义审计行的问题。同时为未来其他需要排除的高频端点（健康检查、metrics 上报）提供统一配置入口。
+
+**Background**: Phase 34 完成时 `operlog.Record` 被设计为无条件写入（"路径过滤应在 handler 层做"，见 `34-01-PLAN.md:53-55`、`34-REVIEW.md:280-287`）。但 Phase 34 集成后暴露了一个实际场景：rpa-worker Agent（`rpa-worker/internal/communication/api_client.go:61-62`）每 30 秒/Worker 调用 `POST /rpa/workers/:id/heartbeat`，N 个 Worker 每小时产 ≈120N 条 `business_type=0` 的审计行，无 user 归属（公开端点，`GetUsernamePtr` 返回 nil），仅做状态续期（UPDATE `last_heartbeat/current_tasks/status`），审计价值低。
+
+调研发现现有架构已有可复用蓝本：`security.request_encryption.exclude_paths`（`configs/config.yaml:86-95`）使用 `filepath.Match` + `/*` 后缀通配，由 `pkg/middleware/request_decryption.go:294-315` 的 `isExcludedPath` 实现。本 Phase 复用同款风格。
+
+**Depends on:** Phase 34（operlog 包已稳定，regression_test.go 锁定公共 API）
+**Source:** `.planning/notes/260616-rpa-heartbeat-log-flooding.md`
+**Todo:** `.planning/todos/pending/operlog-exclude-paths.md`
+
+**Requirements** (full text: `.planning/REQUIREMENTS.md`):
+- OPERLOG-01: `operlog.exclude_paths` 配置项 + `Configure(paths)` + `IsExcludedPath(path)` 实现 + `Record`/`RecordWithBody` 首行判定 + 早退
+- OPERLOG-02: `IsExcludedPath` 行为对齐 `pkg/middleware/request_decryption.go:294-315` `isExcludedPath`（`filepath.Match`，不会跨 `/`）
+- OPERLOG-03: regression_test.go 锁定的公共 API 不变（Record 6+variadic / RecordWithBody 5 / 25 OperType / 34 关键词）
+- OPERLOG-04: 默认配置含 `/api/v1/rpa/workers/*/heartbeat`，不含 progress / register
+- OPERLOG-05: regression_test.go 新增 `TestExcludedPathsEarlyReturn`
+- OPERLOG-06: 5 分钟心跳端点运行后 SQL 计数为 0
+
+**Architecture Decision** (locked):
+- **位置**：handler 层判定不变（仍显式调用 `Record`），但 `Record` 函数体内部根据配置跳过；与 Phase 34 哲学一致（"在 helper 层做集中判定"扩展，不替代"handler 显式调用"语义）
+- **匹配语义**：复用 `filepath.Match` + `/*` 后缀通配，与 `security.request_encryption.exclude_paths` 完全一致
+- **配置加载**：`core.go` 配置加载后调一次 `operlog.Configure(core.Config.OperLog.ExcludePaths)`；启动期单次调用，无并发问题
+- **默认排除范围**：仅 heartbeat；progress 保留（任务进度审计轨迹）；register 保留（生命周期事件）
+
+**Deferred items**:
+- rpaApi.ts 路径错配（前端的 `/${id}/progress` 与后端 `/progress` 不匹配）→ 独立 todo
+- `/rpa/workers/autoscale/config` (POST) 无持久化（handler 内 `// TODO`）→ 独立 todo
+- operlog 运行时热改 `Refresh()` API → 待运维需求出现
+
+**Plans:** TBD (run /gsd:plan-phase 35)
+
+Plans:
+- TBD
+
+**Success Criteria**:
+- heartbeat 端点在 5 分钟连续运行下，sys_oper_log 中 0 条新增审计行（OPERLOG-06）
+- register / scale-up / scale-down / autoscale-config 等"真业务写"端点仍然记录
+- regression_test.go 全部用例通过（含 25 OperType 常量、6 参数 Record、5 参数 RecordWithBody、34 敏感关键词）
+- `go build ./...` 0 错误；`go test ./internal/utils/operlog/...` 全部通过
+- 行为可观察：配置 `operlog.exclude_paths: ["/api/v1/rpa/workers/*/heartbeat"]` 后，心跳端点不写 sys_oper_log
+
+**Phase Highlights**:
+- 🎯 与现有 `security.request_encryption.exclude_paths` 风格完全一致
+- 🔒 不破坏 Phase 34 regression_test.go 锁定的公共 API
+- ⚙️ 配置驱动，集中可观测
+- 🚀 单 Wave 即可完成（改动面 3 文件 + 1 bootstrap + 2 测试）
+
+---
+
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -693,6 +744,7 @@ Plans:
 | 27. 全局列自定义显示功能 | v1.14 | 1/1 | Complete | 2026-06-09 |
 | 28. 工位设备关联子表格 | v1.15 | 4/6 | Gap Closure | 2026-06-10 |
 | 34. 操作日志全模块集成 | - | 11/10 | Complete    | 2026-06-15 |
+| 35. operlog.exclude_paths 配置驱动白名单 | v1.16 | 0/TBD | Planned | - |
 
 **Total**: 123 plans completed, 8 gap closure plans, 23 plans planned (Phases 22C + 22D + 25), 154 total plans
 

@@ -67,6 +67,15 @@ state-sync-report (20260616):
 - **AUDIT-06**: Range-over-int modernization pass on the 1 file flagged
   by `rangeint` linter (cosmetic, single line in regression_test.go).
 
+### Phase 35 — operlog 配置驱动排除白名单 (post-Phase 34 review)
+
+- **OPERLOG-01**: 在 `internal/utils/operlog` 包内引入配置驱动的操作日志排除路径机制。`Record` 与 `RecordWithBody` 函数体首行通过 `filepath.Match` + `/*` 后缀通配判定，命中即早退（不调用 `RecordAsync`），未命中走原路径。排除列表在 `core.go` 配置加载后调一次 `operlog.Configure(...)` 注入。默认值由 `configs/config.yaml` 的 `operlog.exclude_paths` 数组决定。
+- **OPERLOG-02**: 暴露 `func IsExcludedPath(path string) bool` 给外部使用，行为对齐 `pkg/middleware/request_decryption.go:294-315` 的 `isExcludedPath`（同样 `filepath.Match`，不会跨 `/`）。
+- **OPERLOG-03**: 保留 `internal/utils/operlog/regression_test.go` 锁定的所有公共 API：`Record(6 参数+1 variadic)` / `RecordWithBody(5 参数非 variadic)` 签名不变；25 个 OperType 常量值不变；34 个敏感关键词列表不变；任何新增 API 都是扩展（不替换）。
+- **OPERLOG-04**: 默认配置 `operlog.exclude_paths` 应包含 `/api/v1/rpa/workers/*/heartbeat`（**仅** heartbeat，不含 progress / register）。`progress` 端点保留审计价值（任务轨迹）；`register` 保留生命周期事件。
+- **OPERLOG-05**: 在 `regression_test.go` 新增 `TestExcludedPathsEarlyReturn`：mock Recorder，断言路径命中时 `RecordAsync` 不被调用、路径未命中时仍被调用、断言 `RecordWithBody` 在排除路径上不消费 request body。
+- **OPERLOG-06**: 行为可观察 — 配置 `operlog.exclude_paths` 后，启动后端 + 一个 rpa-worker Agent 连续运行 5 分钟，SQL `SELECT COUNT(*) FROM sys_oper_log WHERE oper_url LIKE '%heartbeat%' AND oper_time > NOW() - INTERVAL '5 minutes'` 必须返回 0。
+
 ---
 
 ## Out of Scope (v1.16)
@@ -83,7 +92,7 @@ state-sync-report (20260616):
 
 | REQ-ID | Description | Phase | Status |
 |--------|-------------|-------|--------|
-| (none yet) | TBD after v1.16 scope is finalized | TBD | Pending |
+| OPERLOG-01..06 | operlog.exclude_paths 配置驱动白名单 | 35 | Planned |
 
 ---
 
